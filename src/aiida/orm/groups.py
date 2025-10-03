@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
     from aiida.orm import Node, User
     from aiida.orm.implementation import StorageBackend
-    from aiida.orm.implementation.groups import BackendGroup  # noqa: F401
+    from aiida.orm.implementation.groups import BackendGroup
 
 __all__ = ('AutoGroup', 'Group', 'ImportGroup', 'UpfFamily')
 

@@ -12,6 +12,7 @@ import pathlib
 import warnings
 from collections import defaultdict
 from functools import partial
+from typing import Any
 
 import click
 
@@ -31,7 +32,7 @@ def verdi_code():
     """Setup and manage codes."""
 
 
-def create_code(ctx: click.Context, cls, **kwargs):
+def create_code(ctx: click.Context, cls, **kwargs) -> None:
     """Create a new `Code` instance."""
     try:
         instance = cls._from_model(cls.Model(**kwargs))
@@ -57,14 +58,15 @@ def code_create():
     """Create a new code."""
 
 
-def get_default(key, ctx):
+def get_default(key: str, ctx: click.Context) -> 'Any | None':
     """Get the default argument using a user instance property
-    :param value: The name of the property to use
+
+    :param key: The name of the property to use
     :param ctx: The click context (which will be used to get the user)
     :return: The default value, or None
     """
     try:
-        value = getattr(ctx.code_builder, key)
+        value = getattr(ctx.code_builder, key)  # type: ignore[attr-defined]
         if value == '':
             value = None
     except KeyError:
@@ -73,21 +75,21 @@ def get_default(key, ctx):
     return value
 
 
-def get_computer_name(ctx):
-    return getattr(ctx.code_builder, 'computer').label
+def get_computer_name(ctx: click.Context) -> str:
+    return getattr(ctx.code_builder, 'computer').label  # type: ignore[attr-defined]
 
 
-def get_on_computer(ctx):
-    return not getattr(ctx.code_builder, 'is_local')()
+def get_on_computer(ctx: click.Context) -> bool:
+    return not getattr(ctx.code_builder, 'is_local')()  # type: ignore[attr-defined]
 
 
-def set_code_builder(ctx, param, value):
+def set_code_builder(ctx: click.Context, _param: Any, value: Any) -> Any:
     """Set the code spec for defaults of following options."""
     from aiida.orm.utils.builders.code import CodeBuilder
 
     # TODO(danielhollas): CodeBuilder is deprecated, rewrite this somehow?
     with warnings.catch_warnings(record=True):
-        ctx.code_builder = CodeBuilder.from_code(value)
+        ctx.code_builder = CodeBuilder.from_code(value)  # type: ignore[attr-defined]
     return value
 
 
@@ -388,8 +390,8 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
         if 'user' not in project:
             project = project + ('user',)
 
-    filters = defaultdict(dict)
-    projections = defaultdict(list)
+    filters: dict[str, Any] = defaultdict(dict)
+    projections: dict[str, Any] = defaultdict(list)
 
     for key in project:
         for entity, projection in VALID_PROJECTIONS[key]:
@@ -400,7 +402,10 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
         filters['code'][f'extras.{orm.Code.HIDDEN_KEY}'] = {'!==': True}
 
     if not all_users:
-        filters['user']['email'] = orm.User.collection.get_default().email
+        if default_user := orm.User.collection.get_default():
+            filters['user']['email'] = default_user.email
+        else:
+            echo.echo_critical("No default user set. Set the default user or specify '--all-users'")
 
     if computer is not None:
         filters['computer']['uuid'] = computer.uuid

@@ -456,7 +456,7 @@ class StorageBackend(abc.ABC):
         """
         from aiida.orm import Comment, Computer, Group, Log, Node, QueryBuilder, User
 
-        data = {}
+        data: dict[str, Any] = {}
 
         query_user = QueryBuilder(self).append(User, project=['email'])
         data['Users'] = {'count': query_user.count()}

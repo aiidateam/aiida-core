@@ -12,19 +12,26 @@ from __future__ import annotations
 
 import json
 import shutil
+import tarfile
 import tempfile
+import zipfile
 from contextlib import contextmanager
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import BinaryIO, Iterable, Iterator, Optional, Sequence, Tuple, cast
+from typing import BinaryIO, Iterable, Iterator, Optional, Sequence, Tuple, Union, cast
 from zipfile import ZipFile, is_zipfile
 
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from aiida import __version__
-from aiida.common.exceptions import ClosedStorage, CorruptStorage, IncompatibleExternalDependencies
+from aiida.common.exceptions import (
+    ClosedStorage,
+    CorruptStorage,
+    IncompatibleExternalDependencies,
+    StorageMigrationError,
+)
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
@@ -134,12 +141,24 @@ class SqliteZipBackend(StorageBackend):
         if filepath_archive.exists() and not reset:
             from .migrator import migrate
 
+            # Check if migration is needed. If we are already at the desired version, then no migration is required
+            target_version = cls.version_head()
+            current_version = cls.get_current_archive_version(inpath=filepath_archive)
+            cls.validate_archive_versions(current_version=current_version, target_version=target_version)
+            if current_version == target_version:
+                LOGGER.report(
+                    f'Existing {cls.__name__} is already at target version {target_version}. No migration needed.'
+                )
+                return False
+
             # The archive exists but ``reset == False``, so we try to migrate to the latest schema version. If the
             # migration works, we replace the original archive with the migrated one.
             with tempfile.TemporaryDirectory() as dirpath:
                 filepath_migrated = Path(dirpath) / 'migrated.zip'
-                LOGGER.report(f'Migrating existing {cls.__name__}')
-                migrate(filepath_archive, filepath_migrated, cls.version_head())
+                LOGGER.report(
+                    f'Migrating existing {cls.__name__} from version {current_version} to version {target_version}'
+                )
+                migrate(filepath_archive, filepath_migrated, target_version)
                 shutil.move(filepath_migrated, filepath_archive)  # type: ignore[arg-type]
                 return False
 
@@ -337,6 +356,39 @@ class SqliteZipBackend(StorageBackend):
             results.update(super().get_info(detailed=detailed))
             results['repository'] = self.get_repository().get_info(detailed)
         return results
+
+    @staticmethod
+    def get_current_archive_version(inpath: Union[str, Path]) -> str:
+        """Return the current version from metadata, raising if invalid/corrupt."""
+
+        inpath = Path(inpath)
+        if not (tarfile.is_tarfile(str(inpath)) or zipfile.is_zipfile(str(inpath))):
+            raise CorruptStorage(f'The input file is neither a tar nor a zip file: {inpath}')
+
+        metadata = extract_metadata(inpath, search_limit=None)
+
+        if 'export_version' not in metadata:
+            raise CorruptStorage('No export_version found in metadata')
+
+        return metadata['export_version']
+
+    @staticmethod
+    def validate_archive_versions(current_version: str, target_version: str) -> None:
+        """Check if migration is needed, raising if legacy/unsupported/invalid."""
+        from .migrator import list_versions
+
+        if current_version in ('0.1', '0.2', '0.3') or target_version in ('0.1', '0.2', '0.3'):
+            raise StorageMigrationError(
+                f"Legacy migration from '{current_version}' -> '{target_version}' "
+                'is not supported in aiida-core v2. First migrate them to the latest '
+                'version in aiida-core v1.'
+            )
+
+        all_versions = list_versions()
+        if target_version not in all_versions:
+            raise StorageMigrationError(f"Unknown target version '{target_version}'")
+        if current_version not in all_versions:
+            raise StorageMigrationError(f"Unknown current version '{current_version}'")
 
 
 class _RoBackendRepository(AbstractRepositoryBackend):

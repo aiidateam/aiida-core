@@ -26,6 +26,9 @@ from .config import ConfigFileOption
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
 
+if t.TYPE_CHECKING:
+    from click.decorators import FC
+
 __all__ = (
     'ALL',
     'ALL_STATES',
@@ -177,10 +180,10 @@ def active_process_states() -> list[str]:
     ]
 
 
-def graph_traversal_rules(rules: dict) -> t.Callable:
+def graph_traversal_rules(rules: dict[t.Any, t.Any]) -> t.Callable[[FC], FC]:
     """Apply the graph traversal rule options to the command."""
 
-    def decorator(command):
+    def decorator(command: FC) -> FC:
         """Only apply to traversal rules if they are toggleable."""
         for name, traversal_rule in sorted(rules.items(), reverse=True):
             if traversal_rule.toggleable:

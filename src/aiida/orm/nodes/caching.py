@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import typing as t
+from typing import TYPE_CHECKING, Any, Iterator
 
 from aiida.common import exceptions
 from aiida.common.hashing import make_hash
@@ -11,7 +11,7 @@ from aiida.common.warnings import warn_deprecation
 
 from ..querybuilder import QueryBuilder
 
-if t.TYPE_CHECKING:
+if TYPE_CHECKING:
     from .node import Node
 
 
@@ -27,7 +27,7 @@ class NodeCaching:
         """Initialize the caching interface."""
         self._node = node
 
-    def compute_hash(self, ignore_errors: bool = True, **kwargs: t.Any) -> str | None:
+    def compute_hash(self, ignore_errors: bool = True, **kwargs: Any) -> str | None:
         """Return the computed hash for this node based on its attributes.
 
         :param ignore_errors: return ``None`` on ``aiida.common.exceptions.HashingError`` (logging the exception)
@@ -37,7 +37,7 @@ class NodeCaching:
 
         return self._compute_hash(ignore_errors=ignore_errors, **kwargs)
 
-    def _compute_hash(self, ignore_errors: bool = True, **kwargs: t.Any) -> str | None:
+    def _compute_hash(self, ignore_errors: bool = True, **kwargs: Any) -> str | None:
         """Return the hash for this node based on its attributes.
 
         This will always work, even before storing.
@@ -53,13 +53,13 @@ class NodeCaching:
                 self._node.logger.exception('Node hashing failed')
             return None
 
-    def _get_objects_to_hash(self) -> dict[str, t.Any]:
+    def _get_objects_to_hash(self) -> dict[str, Any]:
         warn_deprecation(
             '`NodeCaching._get_objects_to_hash` is deprecated, use `NodeCaching.get_objects_to_hash` instead', version=3
         )
         return self.get_objects_to_hash()
 
-    def get_objects_to_hash(self) -> dict[str, t.Any]:
+    def get_objects_to_hash(self) -> dict[str, Any]:
         """Return a list of objects which should be included in the hash."""
 
         return {
@@ -141,7 +141,7 @@ class NodeCaching:
         """
         return list(self._iter_all_same_nodes())
 
-    def _iter_all_same_nodes(self, allow_before_store=False) -> t.Iterator['Node']:
+    def _iter_all_same_nodes(self, allow_before_store=False) -> Iterator['Node']:
         """Returns an iterator of all same nodes.
 
         Note: this should be only called on stored nodes, or internally from .store() since it first calls

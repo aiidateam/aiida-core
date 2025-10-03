@@ -1,8 +1,10 @@
 """Data plugin that allows to easily wrap objects that are JSON-able."""
 
+from __future__ import annotations
+
 import importlib
 import json
-import typing
+from typing import Any, MutableMapping, Protocol, runtime_checkable
 
 from pydantic import ConfigDict
 
@@ -13,9 +15,9 @@ from .data import Data
 __all__ = ('JsonableData',)
 
 
-@typing.runtime_checkable
-class JsonSerializableProtocol(typing.Protocol):
-    def as_dict(self) -> typing.MutableMapping[typing.Any, typing.Any]: ...
+@runtime_checkable
+class JsonSerializableProtocol(Protocol):
+    def as_dict(self) -> MutableMapping[Any, Any]: ...
 
 
 class JsonableData(Data):
@@ -91,7 +93,7 @@ class JsonableData(Data):
         self.base.attributes.set_many(serialized)
 
     @classmethod
-    def _deserialize_float_constants(cls, data: typing.Any):
+    def _deserialize_float_constants(cls, data: Any):
         """Deserialize the contents of a dictionary ``data`` deserializing infinity and NaN string constants.
 
         The ``data`` dictionary is recursively checked for the ``Infinity``, ``-Infinity`` and ``NaN`` strings, which

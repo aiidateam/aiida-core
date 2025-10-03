@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Any, ContextManager, List, Optional, Sequence, TypeVar, Union
+from typing import TYPE_CHECKING, Any, ContextManager, Sequence, TypeVar
 
 if TYPE_CHECKING:
     from aiida.manage.configuration.profile import Profile
@@ -61,7 +61,7 @@ class StorageBackend(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def version_profile(cls, profile: 'Profile') -> Optional[str]:
+    def version_profile(cls, profile: 'Profile') -> str | None:
         """Return the schema version of the given profile's storage, or None for empty/uninitialised storage.
 
         :raises: `~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed
@@ -105,7 +105,7 @@ class StorageBackend(abc.ABC):
         from aiida.orm.autogroup import AutogroupManager
 
         self._profile = profile
-        self._default_user: Optional['User'] = None
+        self._default_user: 'User' | None = None
         self._autogroup = AutogroupManager(self)
 
     @abc.abstractmethod
@@ -192,7 +192,7 @@ class StorageBackend(abc.ABC):
         """Return the collection of users"""
 
     @property
-    def default_user(self) -> Optional['User']:
+    def default_user(self) -> 'User' | None:
         """Return the default user for the profile, if it has been created.
 
         This is cached, since it is a frequently used operation, for creating other entities.
@@ -223,7 +223,12 @@ class StorageBackend(abc.ABC):
         """Return whether a transaction is currently active."""
 
     @abc.abstractmethod
-    def bulk_insert(self, entity_type: 'EntityTypes', rows: List[dict], allow_defaults: bool = False) -> List[int]:
+    def bulk_insert(
+        self,
+        entity_type: 'EntityTypes',
+        rows: list[dict],
+        allow_defaults: bool = False,
+    ) -> list[int]:
         """Insert a list of entities into the database, directly into a backend transaction.
 
         :param entity_type: The type of the entity
@@ -238,7 +243,7 @@ class StorageBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    def bulk_update(self, entity_type: 'EntityTypes', rows: List[dict]) -> None:
+    def bulk_update(self, entity_type: 'EntityTypes', rows: list[dict]) -> None:
         """Update a list of entities in the database, directly with a backend transaction.
 
         :param entity_type: The type of the entity
@@ -269,7 +274,11 @@ class StorageBackend(abc.ABC):
 
     @abc.abstractmethod
     def set_global_variable(
-        self, key: str, value: Union[None, str, int, float], description: Optional[str] = None, overwrite=True
+        self,
+        key: str,
+        value: None | str | int | float,
+        description: str | None = None,
+        overwrite=True,
     ) -> None:
         """Set a global variable in the storage.
 
@@ -282,7 +291,7 @@ class StorageBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_global_variable(self, key: str) -> Union[None, str, int, float]:
+    def get_global_variable(self, key: str) -> None | str | int | float:
         """Return a global variable from the storage.
 
         :param key: the key of the setting
@@ -308,7 +317,7 @@ class StorageBackend(abc.ABC):
     def _backup(
         self,
         dest: str,
-        keep: Optional[int] = None,
+        keep: int | None = None,
     ):
         raise NotImplementedError
 
@@ -395,7 +404,7 @@ class StorageBackend(abc.ABC):
     def backup(
         self,
         dest: str,
-        keep: Optional[int] = None,
+        keep: int | None = None,
     ):
         """Create a backup of the storage contents.
 

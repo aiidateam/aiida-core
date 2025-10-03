@@ -1,5 +1,5 @@
 append_text: QbStrField('append_text', dtype=<class 'str'>, is_attribute=True)
-attributes: QbDictField('attributes', dtype=typing.Optional[typing.Dict[str, typing.Any]],
+attributes: QbDictField('attributes', dtype=typing.Optional[dict[str, typing.Any]],
   is_attribute=False, is_subscriptable=True)
 computer: QbStrField('computer', dtype=<class 'str'>, is_attribute=True)
 ctime: QbNumericField('ctime', dtype=typing.Optional[datetime.datetime], is_attribute=False)
@@ -7,8 +7,8 @@ default_calc_job_plugin: QbStrField('default_calc_job_plugin', dtype=typing.Opti
   is_attribute=True)
 description: QbStrField('description', dtype=<class 'str'>, is_attribute=True)
 engine_command: QbStrField('engine_command', dtype=<class 'str'>, is_attribute=True)
-extras: QbDictField('extras', dtype=typing.Optional[typing.Dict[str, typing.Any]],
-  is_attribute=False, is_subscriptable=True)
+extras: QbDictField('extras', dtype=typing.Optional[dict[str, typing.Any]], is_attribute=False,
+  is_subscriptable=True)
 filepath_executable: QbStrField('filepath_executable', dtype=<class 'str'>, is_attribute=True)
 image_name: QbStrField('image_name', dtype=<class 'str'>, is_attribute=True)
 label: QbStrField('label', dtype=<class 'str'>, is_attribute=True)
@@ -19,7 +19,7 @@ prepend_text: QbStrField('prepend_text', dtype=<class 'str'>, is_attribute=True)
 process_type: QbStrField('process_type', dtype=typing.Optional[str], is_attribute=False)
 repository_content: QbDictField('repository_content', dtype=typing.Optional[dict[str,
   bytes]], is_attribute=False)
-repository_metadata: QbDictField('repository_metadata', dtype=typing.Optional[typing.Dict[str,
+repository_metadata: QbDictField('repository_metadata', dtype=typing.Optional[dict[str,
   typing.Any]], is_attribute=False)
 source: QbDictField('source', dtype=typing.Optional[dict], is_attribute=True, is_subscriptable=True)
 use_double_quotes: QbField('use_double_quotes', dtype=<class 'bool'>, is_attribute=True)

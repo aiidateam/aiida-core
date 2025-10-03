@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import copy
-import typing as t
+from typing import Any, Optional
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -51,7 +51,8 @@ class Dict(Data):
     """
 
     class Model(Data.Model):
-        value: t.Dict[str, t.Any] = MetadataField(
+        value: Optional[dict[str, Any]] = MetadataField(
+            None,
             description='Dictionary content.',
             is_attribute=False,
             is_subscriptable=True,
@@ -90,7 +91,7 @@ class Dict(Data):
         """Return whether the node contains a key."""
         return key in self.base.attributes
 
-    def get(self, key: str, default: t.Any | None = None, /):  # type: ignore[override]
+    def get(self, key: str, default: Any | None = None, /):  # type: ignore[override]
         """Return the value for key if key is in the dictionary, else default.
 
         :param key: The key whose value to return.
@@ -150,7 +151,7 @@ class Dict(Data):
             yield key, value
 
     @property
-    def value(self) -> dict[str, t.Any]:
+    def value(self) -> dict[str, Any]:
         """Return the value of this node, which is the dictionary content.
 
         :return: The dictionary content.

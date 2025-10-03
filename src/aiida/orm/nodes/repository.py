@@ -8,12 +8,12 @@ import io
 import pathlib
 import shutil
 import tempfile
-import typing as t
+from typing import TYPE_CHECKING, Any, BinaryIO, Iterable, Iterator, Literal, TextIO, overload
 
 from aiida.common import exceptions
 from aiida.manage import get_config_option
 
-if t.TYPE_CHECKING:
+if TYPE_CHECKING:
     from aiida.common.typing import FilePath
     from aiida.repository import File, Repository
 
@@ -46,7 +46,7 @@ class NodeRepository:
         self._repository_instance: Repository | None = None
 
     @property
-    def metadata(self) -> dict[str, t.Any]:
+    def metadata(self) -> dict[str, Any]:
         """Return the repository metadata, representing the virtual file hierarchy.
 
         Note, this is only accurate if the node is stored.
@@ -183,16 +183,16 @@ class NodeRepository:
         """
         return self._repository.list_object_names(path)
 
-    @t.overload
+    @overload
     @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['r']) -> t.Iterator[t.TextIO]: ...
+    def open(self, path: FilePath, mode: Literal['r']) -> Iterator[TextIO]: ...
 
-    @t.overload
+    @overload
     @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['rb']) -> t.Iterator[t.BinaryIO]: ...
+    def open(self, path: FilePath, mode: Literal['rb']) -> Iterator[BinaryIO]: ...
 
     @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['r', 'rb'] = 'r') -> t.Iterator[t.BinaryIO] | t.Iterator[t.TextIO]:
+    def open(self, path: FilePath, mode: Literal['r', 'rb'] = 'r') -> Iterator[BinaryIO] | Iterator[TextIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -215,7 +215,7 @@ class NodeRepository:
                 yield handle
 
     @contextlib.contextmanager
-    def as_path(self, path: FilePath | None = None) -> t.Iterator[pathlib.Path]:
+    def as_path(self, path: FilePath | None = None) -> Iterator[pathlib.Path]:
         """Make the contents of the repository available as a normal filepath on the local file system.
 
         :param path: optional relative path of the object within the repository.
@@ -249,13 +249,13 @@ class NodeRepository:
         """
         return self._repository.get_object(path)
 
-    @t.overload
-    def get_object_content(self, path: str, mode: t.Literal['r']) -> str: ...
+    @overload
+    def get_object_content(self, path: str, mode: Literal['r']) -> str: ...
 
-    @t.overload
-    def get_object_content(self, path: str, mode: t.Literal['rb']) -> bytes: ...
+    @overload
+    def get_object_content(self, path: str, mode: Literal['rb']) -> bytes: ...
 
-    def get_object_content(self, path: str, mode: t.Literal['r', 'rb'] = 'r') -> str | bytes:
+    def get_object_content(self, path: str, mode: Literal['r', 'rb'] = 'r') -> str | bytes:
         """Return the content of a object identified by key.
 
         :param path: the relative path of the object within the repository.
@@ -330,7 +330,7 @@ class NodeRepository:
         self._repository.put_object_from_tree(filepath, path)
         self._update_repository_metadata()
 
-    def walk(self, path: FilePath | None = None) -> t.Iterable[tuple[pathlib.PurePath, list[str], list[str]]]:
+    def walk(self, path: FilePath | None = None) -> Iterable[tuple[pathlib.PurePath, list[str], list[str]]]:
         """Walk over the directories and files contained within this repository.
 
         .. note:: the order of the dirname and filename lists that are returned is not necessarily sorted. This is in
@@ -343,7 +343,7 @@ class NodeRepository:
         """
         yield from self._repository.walk(path)
 
-    def glob(self) -> t.Iterable[pathlib.PurePath]:
+    def glob(self) -> Iterable[pathlib.PurePath]:
         """Yield a recursive list of all paths (files and directories)."""
         for dirpath, dirnames, filenames in self.walk():
             for dirname in dirnames:

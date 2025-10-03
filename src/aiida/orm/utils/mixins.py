@@ -11,8 +11,9 @@
 from __future__ import annotations
 
 import inspect
+from typing import Optional
 
-import pydantic
+from pydantic import BaseModel
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, override, type_check
@@ -183,8 +184,12 @@ class Sealable:
 
     SEALED_KEY = 'sealed'
 
-    class Model(pydantic.BaseModel, defer_build=True):
-        sealed: bool = MetadataField(description='Whether the node is sealed')
+    class Model(BaseModel, defer_build=True):
+        sealed: Optional[bool] = MetadataField(
+            None,
+            description='Whether the node is sealed',
+            exclude_to_orm=True,
+        )
 
     @classproperty
     def _updatable_attributes(cls) -> tuple[str, ...]:  # noqa: N805

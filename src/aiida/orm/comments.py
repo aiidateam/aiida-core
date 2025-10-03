@@ -8,8 +8,10 @@
 ###########################################################################
 """Comment objects and functions"""
 
+from __future__ import annotations
+
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional, Type, cast
+from typing import TYPE_CHECKING, Optional, cast
 
 from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
@@ -29,7 +31,7 @@ class CommentCollection(entities.Collection['Comment']):
     """The collection of Comment entries."""
 
     @staticmethod
-    def _entity_base_cls() -> Type['Comment']:
+    def _entity_base_cls() -> type['Comment']:
         return Comment
 
     def delete(self, pk: int) -> None:
@@ -49,7 +51,7 @@ class CommentCollection(entities.Collection['Comment']):
         """
         self._backend.comments.delete_all()
 
-    def delete_many(self, filters: dict) -> List[int]:
+    def delete_many(self, filters: dict) -> list[int]:
         """Delete Comments from the Collection based on ``filters``
 
         :param filters: similar to QueryBuilder filter
@@ -69,30 +71,49 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
 
     class Model(entities.Entity.Model):
         uuid: Optional[str] = MetadataField(
-            description='The UUID of the comment', is_attribute=False, exclude_to_orm=True
+            None,
+            description='The UUID of the comment',
+            is_attribute=False,
+            exclude_to_orm=True,
         )
         ctime: Optional[datetime] = MetadataField(
-            description='Creation time of the comment', is_attribute=False, exclude_to_orm=True
+            None,
+            description='Creation time of the comment',
+            is_attribute=False,
+            exclude_to_orm=True,
         )
         mtime: Optional[datetime] = MetadataField(
-            description='Modified time of the comment', is_attribute=False, exclude_to_orm=True
+            None,
+            description='Modified time of the comment',
+            is_attribute=False,
+            exclude_to_orm=True,
         )
-        node: int = MetadataField(
+        node: Optional[int] = MetadataField(
+            None,
             description='Node PK that the comment is attached to',
             is_attribute=False,
             orm_class='core.node',
             orm_to_model=lambda comment, _: cast('Comment', comment).node.pk,
         )
-        user: int = MetadataField(
+        user: Optional[int] = MetadataField(
+            None,
             description='User PK that created the comment',
             is_attribute=False,
             orm_class='core.user',
             orm_to_model=lambda comment, _: cast('Comment', comment).user.pk,
         )
-        content: str = MetadataField(description='Content of the comment', is_attribute=False)
+        content: Optional[str] = MetadataField(
+            None,
+            description='Content of the comment',
+            is_attribute=False,
+        )
 
     def __init__(
-        self, node: 'Node', user: 'User', content: Optional[str] = None, backend: Optional['StorageBackend'] = None
+        self,
+        node: 'Node',
+        user: 'User',
+        content: str | None = None,
+        backend: 'StorageBackend' | None = None,
     ):
         """Create a Comment for a given node and user
 
@@ -104,7 +125,11 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         :return: a Comment object associated to the given node and user
         """
         backend = backend or get_manager().get_profile_storage()
-        model = backend.comments.create(node=node.backend_entity, user=user.backend_entity, content=content)
+        model = backend.comments.create(
+            node=node.backend_entity,
+            user=user.backend_entity,
+            content=content,
+        )
         super().__init__(model)
 
     def __str__(self) -> str:

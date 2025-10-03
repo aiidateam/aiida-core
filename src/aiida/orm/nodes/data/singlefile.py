@@ -10,11 +10,14 @@
 
 from __future__ import annotations
 
+import base64
 import contextlib
 import io
 import os
 import pathlib
-import typing as t
+from typing import IO, Any, BinaryIO, Iterator, Literal, Optional, TextIO, overload
+
+from pydantic import field_serializer, field_validator
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -35,10 +38,29 @@ class SinglefileData(Data):
             description='The file content.',
             model_to_orm=lambda model: io.BytesIO(model.content),  # type: ignore[attr-defined]
         )
-        filename: t.Optional[str] = MetadataField(None, description='The filename. Defaults to `file.txt`.')
+        filename: Optional[str] = MetadataField(
+            None,
+            description='The filename. Defaults to `file.txt`.',
+        )
+
+        @field_serializer('content')
+        def _encode_content(self, value: bytes) -> str:
+            """Encode content as base64 string for serialization."""
+            return base64.b64encode(value).decode()
+
+        @field_validator('content')
+        @classmethod
+        def _decode_content(cls, value: str | bytes) -> bytes:
+            """Decode base64 content if needed."""
+            if isinstance(value, str):
+                try:
+                    return base64.b64decode(value, validate=True)
+                except Exception as exc:
+                    raise ValueError('if `content` is a string, it must be valid base64-encoded data') from exc
+            return value
 
     @classmethod
-    def from_string(cls, content: str, filename: str | pathlib.Path | None = None, **kwargs: t.Any) -> 'SinglefileData':
+    def from_string(cls, content: str, filename: str | pathlib.Path | None = None, **kwargs: Any) -> 'SinglefileData':
         """Construct a new instance and set ``content`` as its contents.
 
         :param content: The content as a string.
@@ -47,9 +69,7 @@ class SinglefileData(Data):
         return cls(io.StringIO(content), filename, **kwargs)
 
     @classmethod
-    def from_bytes(
-        cls, content: bytes, filename: str | pathlib.Path | None = None, **kwargs: t.Any
-    ) -> 'SinglefileData':
+    def from_bytes(cls, content: bytes, filename: str | pathlib.Path | None = None, **kwargs: Any) -> 'SinglefileData':
         """Construct a new instance and set ``content`` as its contents.
 
         :param content: The content as bytes.
@@ -59,10 +79,10 @@ class SinglefileData(Data):
 
     def __init__(
         self,
-        file: str | pathlib.Path | t.IO | None = None,
+        file: str | pathlib.Path | IO | None = None,
         filename: str | pathlib.Path | None = None,
-        content: str | pathlib.Path | t.IO | None = None,
-        **kwargs: t.Any,
+        content: str | pathlib.Path | IO | None = None,
+        **kwargs: Any,
     ) -> None:
         """Construct a new instance and set the contents to that of the file.
 
@@ -93,26 +113,26 @@ class SinglefileData(Data):
         """
         return self.base.attributes.get('filename')
 
-    @t.overload
+    @overload
     @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['r'] = ...) -> t.Iterator[t.TextIO]: ...
+    def open(self, path: FilePath, mode: Literal['r'] = ...) -> Iterator[TextIO]: ...
 
-    @t.overload
+    @overload
     @contextlib.contextmanager
-    def open(self, path: FilePath, mode: t.Literal['rb']) -> t.Iterator[t.BinaryIO]: ...
+    def open(self, path: FilePath, mode: Literal['rb']) -> Iterator[BinaryIO]: ...
 
-    @t.overload
+    @overload
     @contextlib.contextmanager
-    def open(self, path: None = None, mode: t.Literal['r'] = ...) -> t.Iterator[t.TextIO]: ...
+    def open(self, path: None = None, mode: Literal['r'] = ...) -> Iterator[TextIO]: ...
 
-    @t.overload
+    @overload
     @contextlib.contextmanager
-    def open(self, path: None = None, mode: t.Literal['rb'] = ...) -> t.Iterator[t.BinaryIO]: ...
+    def open(self, path: None = None, mode: Literal['rb'] = ...) -> Iterator[BinaryIO]: ...
 
     @contextlib.contextmanager
     def open(
-        self, path: FilePath | None = None, mode: t.Literal['r', 'rb'] = 'r'
-    ) -> t.Iterator[t.BinaryIO] | t.Iterator[t.TextIO]:
+        self, path: FilePath | None = None, mode: Literal['r', 'rb'] = 'r'
+    ) -> Iterator[BinaryIO] | Iterator[TextIO]:
         """Return an open file handle to the content of this data node.
 
         :param path: the relative path of the object within the repository.
@@ -126,7 +146,7 @@ class SinglefileData(Data):
             yield handle
 
     @contextlib.contextmanager
-    def as_path(self) -> t.Iterator[pathlib.Path]:
+    def as_path(self) -> Iterator[pathlib.Path]:
         """Make the contents of the file available as a normal filepath on the local file system.
 
         :param path: optional relative path of the object within the repository.
@@ -137,11 +157,11 @@ class SinglefileData(Data):
         with self.base.repository.as_path(self.filename) as filepath:
             yield filepath
 
-    @t.overload
-    def get_content(self, mode: t.Literal['rb']) -> bytes: ...
+    @overload
+    def get_content(self, mode: Literal['rb']) -> bytes: ...
 
-    @t.overload
-    def get_content(self, mode: t.Literal['r']) -> str: ...
+    @overload
+    def get_content(self, mode: Literal['r']) -> str: ...
 
     def get_content(self, mode: str = 'r') -> str | bytes:
         """Return the content of the single file stored for this data node.
@@ -152,7 +172,7 @@ class SinglefileData(Data):
         with self.open(mode=mode) as handle:  # type: ignore[call-overload]
             return handle.read()
 
-    def set_file(self, file: str | pathlib.Path | t.IO, filename: str | pathlib.Path | None = None) -> None:
+    def set_file(self, file: str | pathlib.Path | IO, filename: str | pathlib.Path | None = None) -> None:
         """Store the content of the file in the node's repository, deleting any other existing objects.
 
         :param file: an absolute filepath or filelike object whose contents to copy

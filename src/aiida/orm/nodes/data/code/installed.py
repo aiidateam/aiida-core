@@ -47,7 +47,7 @@ class InstalledCode(Code):
         computer: str = MetadataField(  # type: ignore[assignment]
             ...,
             title='Computer',
-            description='The remote computer on which the executable resides.',
+            description='The computer on which the executable resides.',
             orm_to_model=lambda node, _: cast('InstalledCode', node).computer.label,
             short_name='-Y',
             priority=2,
@@ -55,26 +55,26 @@ class InstalledCode(Code):
         filepath_executable: str = MetadataField(
             ...,
             title='Filepath executable',
-            description='Filepath of the executable on the remote computer.',
+            description='Filepath of the executable on the computer.',
             orm_to_model=lambda node, _: str(cast('InstalledCode', node).filepath_executable),
             short_name='-X',
             priority=1,
         )
 
-        @field_validator('computer')
-        @classmethod
-        def validate_computer(cls, value: str) -> Computer:
-            """Override the validator for the ``label`` of the base class since uniqueness is defined on full label."""
-            from aiida.orm import load_computer
+        # @field_validator('computer')
+        # @classmethod
+        # def validate_computer(cls, value: str) -> Computer:
+        #     """Override the validator for the ``label`` of the base class since uniqueness is defined on full label."""
+        #     from aiida.orm import load_computer
 
-            try:
-                return load_computer(value)
-            except exceptions.NotExistent as exception:
-                raise ValueError(exception) from exception
+        #     try:
+        #         return load_computer(value)
+        #     except exceptions.NotExistent as exception:
+        #         raise ValueError(exception) from exception
 
-        @field_serializer('computer')
-        def serialize_computer(self, computer: Computer, _info):
-            return computer.label
+        # @field_serializer('computer')
+        # def serialize_computer(self, computer: Computer) -> str:
+        #     return computer.label
 
     def __init__(self, computer: Computer, filepath_executable: str, **kwargs):
         """Construct a new instance.

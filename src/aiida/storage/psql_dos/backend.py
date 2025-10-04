@@ -11,8 +11,9 @@
 import functools
 import gc
 import pathlib
+from collections.abc import Iterable
 from contextlib import contextmanager, nullcontext
-from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
+from typing import TYPE_CHECKING, Iterator, List, Optional, Set, Union
 
 from disk_objectstore import Container, backup_utils
 from pydantic import BaseModel, Field
@@ -378,7 +379,7 @@ class PsqlDosBackend(StorageBackend):
             postgres.drop_dbuser(config['database_username'])
             LOGGER.report(f'Deleted database user `{config["database_username"]}`.')
 
-    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:
+    def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
         from aiida.storage.psql_dos.models.group import DbGroupNode
         from aiida.storage.psql_dos.models.node import DbLink, DbNode
 

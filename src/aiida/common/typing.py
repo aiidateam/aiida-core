@@ -13,12 +13,14 @@ from __future__ import annotations
 import pathlib
 from typing import Union
 
+# TypeAlias was added in 3.10
+# Self was added in 3.11
 try:
-    from typing import Self
+    from typing import Self, TypeAlias
 except ImportError:
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
-__all__ = ('FilePath', 'Self')
+__all__ = ('FilePath', 'Self', 'TypeAlias')
 
 
 FilePath = Union[str, pathlib.PurePath]

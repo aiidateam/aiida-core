@@ -15,11 +15,12 @@ import shutil
 import tarfile
 import tempfile
 import zipfile
+from collections.abc import Collection, Iterable, Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import BinaryIO, Iterable, Iterator, Optional, Sequence, Tuple, Union, cast
+from typing import BinaryIO, Optional, Tuple, Union, cast
 from zipfile import ZipFile, is_zipfile
 
 from pydantic import BaseModel, Field, field_validator
@@ -337,7 +338,7 @@ class SqliteZipBackend(StorageBackend):
             filepath.unlink()
             LOGGER.report(f'Deleted archive at `{filepath}`.')
 
-    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]):
+    def delete_nodes_and_connections(self, pks_to_delete: Collection[int]) -> None:
         raise ReadOnlyError()
 
     def get_global_variable(self, key: str):

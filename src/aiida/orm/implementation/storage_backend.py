@@ -11,7 +11,8 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Any, ContextManager, List, Optional, Sequence, TypeVar, Union
+from collections.abc import Collection
+from typing import TYPE_CHECKING, Any, ContextManager, List, Optional, TypeVar, Union
 
 if TYPE_CHECKING:
     from aiida.manage.configuration.profile import Profile
@@ -253,7 +254,7 @@ class StorageBackend(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]):
+    def delete_nodes_and_connections(self, pks_to_delete: Collection[int]) -> None:
         """Delete all nodes corresponding to pks in the input and any links to/from them.
 
         This method is intended to be used within a transaction context.

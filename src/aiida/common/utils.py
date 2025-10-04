@@ -18,7 +18,7 @@ import re
 import sys
 from collections.abc import Iterable, Iterator
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
 from uuid import UUID
 
 from aiida.common.typing import Self
@@ -31,6 +31,9 @@ if TYPE_CHECKING:
         from typing import TypeAlias
     except ImportError:
         from typing_extensions import TypeAlias
+
+T = TypeVar('T')
+R = TypeVar('R')
 
 
 def get_new_uuid() -> str:
@@ -608,3 +611,35 @@ def format_directory_size(size_in_bytes: int) -> str:
 
     # Format the size to two decimal places
     return f'{converted_size:.2f} {prefixes[index]}'
+
+
+@overload
+def batch_iter(iterable: Iterable[T], size: int, transform: None = None) -> Iterable[tuple[int, list[T]]]: ...
+
+
+@overload
+def batch_iter(iterable: Iterable[T], size: int, transform: Callable[[T], R]) -> Iterable[tuple[int, list[R]]]: ...
+
+
+def batch_iter(
+    iterable: Iterable[T], size: int, transform: Callable[[T], Any] | None = None
+) -> Iterable[tuple[int, list[Any]]]:
+    """Yield an iterable in batches of a set number of items.
+
+    Note, the final yield may be less than this size.
+
+    :param transform: a transform to apply to each item
+    :returns: (number of items, list of items)
+    """
+    transform = transform or (lambda x: x)
+    current = []
+    length = 0
+    for item in iterable:
+        current.append(transform(item))
+        length += 1
+        if length >= size:
+            yield length, current
+            current = []
+            length = 0
+    if current:
+        yield length, current

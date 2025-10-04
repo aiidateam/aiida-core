@@ -8,19 +8,20 @@
 ###########################################################################
 """Import an archive."""
 
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, Literal, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, Literal, Optional, Set, Tuple, Union
 
 from tabulate import tabulate
 
 from aiida import orm
 from aiida.common import timezone
+from aiida.common.datastructures import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE, QueryParams
 from aiida.common.exceptions import IncompatibleStorageSchema
 from aiida.common.lang import type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter
+from aiida.common.utils import batch_iter
 from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
@@ -28,7 +29,7 @@ from aiida.orm.querybuilder import QueryBuilder
 from aiida.repository import Repository
 
 from .abstract import ArchiveFormatAbstract
-from .common import batch_iter, entity_type_to_orm
+from .common import entity_type_to_orm
 from .exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError
 from .implementations.sqlite_zip import ArchiveFormatSqlZip
 
@@ -48,22 +49,12 @@ DUPLICATE_LABEL_MAX = 100
 DUPLICATE_LABEL_TEMPLATE = '{0} (Imported #{1})'
 
 
-@dataclass
-class QueryParams:
-    """Parameters for executing backend queries."""
-
-    batch_size: int
-    """Batch size for streaming database rows."""
-    filter_size: int
-    """Maximum number of parameters allowed in a single query filter."""
-
-
 def import_archive(
     path: Union[str, Path],
     *,
     archive_format: Optional[ArchiveFormatAbstract] = None,
-    filter_size: int = 999,
-    batch_size: int = 1000,
+    filter_size: int = DEFAULT_FILTER_SIZE,
+    batch_size: int = DEFAULT_BATCH_SIZE,
     import_new_extras: bool = True,
     merge_extras: MergeExtrasType = ('k', 'n', 'l'),
     merge_comments: MergeCommentsType = 'leave',
@@ -77,7 +68,7 @@ def import_archive(
 
     :param path: the path to the archive
     :param archive_format: The class for interacting with the archive
-    :param filter_size: Maximum size of parameters allowed in a single query filter
+    :param filter_size: Batch database query filters to avoid database parameter limits (e.g., psql-psycopg 65535 limit)
     :param batch_size: Batch size for streaming database rows
     :param import_new_extras: Keep extras on new nodes (except private aiida keys), else strip
     :param merge_extras: Rules for merging extras into existing nodes.
@@ -658,7 +649,7 @@ def _merge_node_extras(
             f'Number of Nodes in archive ({input_extras.count()}) and backend ({backend_extras.count()}) do not match'
         )
 
-    def _transform(data: Tuple[Tuple[str, dict], Tuple[str, dict]]) -> dict:
+    def _transform(data: tuple[Any, Any]) -> dict:
         """Transform the new and existing extras into a dict that can be passed to bulk_update."""
         new_uuid, new_extras = data[0]
         old_uuid, old_extras = data[1]

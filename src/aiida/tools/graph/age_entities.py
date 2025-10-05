@@ -47,6 +47,7 @@ class AbstractSetContainer(metaclass=ABCMeta):
         """Initialization method"""
         super().__init__()
         self._keyset: set[Any] = set()
+        self._additional_identifiers = ()
 
     @abstractmethod
     def _check_self_and_other(self, other: Self) -> None:
@@ -97,6 +98,11 @@ class AbstractSetContainer(metaclass=ABCMeta):
             self._keyset = inpset
         else:
             raise ValueError('keyset must be assigned a set or None')
+
+    @property
+    def additional_identifiers(self) -> tuple[Any, ...]:
+        """Additional identifiers for the entities"""
+        return self._additional_identifiers
 
     def __add__(self, other: Self) -> Self:
         """Addition (return = self + other): defined as the set union"""

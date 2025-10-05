@@ -15,7 +15,6 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import TYPE_CHECKING, Literal, cast
 
-from aiida import orm
 from aiida.common.lang import type_check
 from aiida.common.typing import TypeAlias
 from aiida.tools.graph.age_entities import Basket
@@ -23,6 +22,7 @@ from aiida.tools.graph.age_entities import Basket
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from aiida.orm import QueryBuilder
     from aiida.orm.implementation.querybuilder import QueryDictType
 
 
@@ -77,7 +77,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
     found in the last iteration of the query (ReplaceRule).
     """
 
-    def __init__(self, querybuilder: orm.QueryBuilder, max_iterations: int = 1, track_edges: bool = False):
+    def __init__(self, querybuilder: QueryBuilder, max_iterations: int = 1, track_edges: bool = False):
         """Initialization method
 
         :param querybuilder: an instance of the QueryBuilder class from which to take the
@@ -130,7 +130,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
         query_dict = self._qbtemplate.as_dict()
         self._first_tag = query_dict['path'][0]['tag']
         self._last_tag = query_dict['path'][-1]['tag']
-        self._querybuilder: orm.QueryBuilder | None = None
+        self._querybuilder: QueryBuilder | None = None
 
         # All of these are set in _init_run:
         self._edge_label: str | None = None
@@ -313,7 +313,7 @@ class ReplaceRule(QueryRule):
     it was following a cycle, it would run indefinitely).
     """
 
-    def __init__(self, querybuilder: orm.QueryBuilder, max_iterations: int = 1, track_edges: bool = False):
+    def __init__(self, querybuilder: QueryBuilder, max_iterations: int = 1, track_edges: bool = False):
         from numpy import inf
 
         if max_iterations == inf:

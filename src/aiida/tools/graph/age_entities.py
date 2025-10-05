@@ -61,7 +61,7 @@ class AbstractSetContainer(metaclass=ABCMeta):
         """
 
     @abstractmethod
-    def _check_input_for_set(self, input_for_set: orm.Node | orm.Group | Any) -> Any:
+    def _check_input_for_set(self, input_for_set: Any) -> Any:
         """Utility function
 
         When provinding input keys for the internal set, this utility function will
@@ -193,7 +193,7 @@ class AiidaEntitySet(AbstractSetContainer):
         if self._identifier_type != other.identifier_type:
             raise TypeError('The two instances do not have the same identifier type!')
 
-    def _check_input_for_set(self, input_for_set: orm.Node | orm.Group | Any) -> Any:
+    def _check_input_for_set(self, input_for_set: _NodeOrGroupCls | int) -> Any:
         if isinstance(input_for_set, self._aiida_cls):
             return getattr(input_for_set, self._identifier)
 
@@ -276,7 +276,7 @@ class DirectedEdgeSet(AbstractSetContainer):
         if self.edge_namedtuple != other.edge_namedtuple:
             raise ValueError('The two instances do not have the same identifiers!')
 
-    def _check_input_for_set(self, input_for_set: Any) -> Any:
+    def _check_input_for_set(self, input_for_set: tuple[Any, ...]) -> tuple[Any, ...]:
         if not isinstance(input_for_set, tuple):
             raise TypeError(f'value for `input_for_set` {input_for_set} is not a tuple')
         if len(input_for_set) != len(self._edge_identifiers):

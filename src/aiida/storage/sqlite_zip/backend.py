@@ -15,7 +15,7 @@ import shutil
 import tarfile
 import tempfile
 import zipfile
-from collections.abc import Collection, Iterable, Iterator
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from functools import cached_property
@@ -338,7 +338,7 @@ class SqliteZipBackend(StorageBackend):
             filepath.unlink()
             LOGGER.report(f'Deleted archive at `{filepath}`.')
 
-    def delete_nodes_and_connections(self, pks_to_delete: Collection[int]) -> None:
+    def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
         raise ReadOnlyError()
 
     def get_global_variable(self, key: str):

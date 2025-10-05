@@ -6,21 +6,24 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module to define commonly used data structures."""
+"""Module to define commonly used types."""
 
 from __future__ import annotations
 
 import pathlib
-from typing import Union
+import sys
 
-# TypeAlias was added in 3.10
-# Self was added in 3.11
-try:
-    from typing import Self, TypeAlias
-except ImportError:
-    from typing_extensions import Self, TypeAlias
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 __all__ = ('FilePath', 'Self', 'TypeAlias')
 
 
-FilePath = Union[str, pathlib.PurePath]
+FilePath: TypeAlias = 'str | pathlib.PurePath'

@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import abc
-from collections.abc import Collection
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, ContextManager, List, Optional, TypeVar, Union
 
 if TYPE_CHECKING:
@@ -254,12 +254,12 @@ class StorageBackend(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def delete_nodes_and_connections(self, pks_to_delete: Collection[int]) -> None:
+    def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
         """Delete all nodes corresponding to pks in the input and any links to/from them.
 
         This method is intended to be used within a transaction context.
 
-        :param pks_to_delete: a sequence of node pks to delete
+        :param pks_to_delete: an iterable of node pks to delete
 
         :raises: ``AssertionError`` if a transaction is not active
         """

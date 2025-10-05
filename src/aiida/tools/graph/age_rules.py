@@ -16,7 +16,6 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, Literal, cast
 
 from aiida.common.lang import type_check
-from aiida.common.typing import TypeAlias
 from aiida.tools.graph.age_entities import Basket
 
 if TYPE_CHECKING:
@@ -62,9 +61,6 @@ class Operation(metaclass=ABCMeta):
         :type operational_set: :py:class:`aiida.tools.graph.age_entities.Basket`
         :param operational_set: initital set of nodes to be overwritten by the rule.
         """
-
-
-_EdgeKey: TypeAlias = 'str | tuple[str, str]'
 
 
 class QueryRule(Operation, metaclass=ABCMeta):
@@ -134,33 +130,12 @@ class QueryRule(Operation, metaclass=ABCMeta):
 
         # All of these are set in _init_run:
         self._edge_label: str | None = None
-        self._edge_keys: list[_EdgeKey] = []
+        self._edge_keys: list[tuple[str, str]] = []
         self._entity_to_identifier: str | None = None
 
         self._entity_from = get_spec_from_path(query_dict, 0)
         self._entity_to = get_spec_from_path(query_dict, -1)
         self._accumulator_set: Basket | None = None
-
-    def set_edge_keys(self, edge_keys: list[_EdgeKey]) -> None:
-        """Set the edge keys that are use to classify the edges during the run of this query.
-
-        :param edge_keys:
-            a list of projections on the edge itself, or a tuple that specifies
-            (tag, project) if the projection is not on the edge
-
-        Example: For node-to-node graph traversals, it is often convenient to save
-        the information on the links::
-
-            qb  = QueryBuilder().append(Node, tag='n1').append(Node, tag='n2')
-            rule = RuleSequence(qb, track_edges=True)
-            rule.set_edge_keys(['input_id', 'output_id', 'label', 'type'])
-
-            # Now for UUIDS:
-            qb  = QueryBuilder().append(Node, tag='n1').append(Node, tag='n2')
-            rule = RuleSequence(qb, track_edges=True)
-            rule.set_edge_keys([('n1','uuid'), ('n2','uuid'), 'label', 'type'])
-        """
-        self._edge_keys = edge_keys[:]
 
     def _init_run(self, operational_set: Basket) -> None:
         """Initialization Utility method
@@ -269,7 +244,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
                 namedtuple_ = edge_set.edge_namedtuple
 
                 target_set[edge_key].add_entities(
-                    [namedtuple_(*(item[key1][key2] for (key1, key2) in self._edge_keys)) for item in qres]  # type: ignore[misc]
+                    [namedtuple_(*(item[key1][key2] for (key1, key2) in self._edge_keys)) for item in qres]
                 )
 
     def set_accumulator(self, accumulator_set: Basket) -> None:

@@ -12,18 +12,13 @@ from __future__ import annotations
 
 import pathlib
 import sys
-
-if sys.version_info >= (3, 10):
-    from typing import TypeAlias
-else:
-    from typing_extensions import TypeAlias
+from typing import Union
 
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
 
-__all__ = ('FilePath', 'Self', 'TypeAlias')
+__all__ = ('FilePath', 'Self')
 
-
-FilePath: TypeAlias = 'str | pathlib.PurePath'
+FilePath = Union[str, pathlib.PurePath]

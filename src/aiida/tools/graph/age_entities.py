@@ -10,13 +10,19 @@
 
 from __future__ import annotations
 
+import sys
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from typing import Any, Literal, TypedDict, overload
 
 from aiida import orm
-from aiida.common.typing import Self, TypeAlias
+from aiida.common.typing import Self
 from aiida.orm.utils.links import LinkQuadruple
+
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
 
 VALID_ENTITY_CLASSES = (orm.Node, orm.Group)
 

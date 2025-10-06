@@ -105,8 +105,6 @@ repos:
         src/aiida/orm/utils/builders/computer.py|
         src/aiida/orm/utils/calcjob.py|
         src/aiida/orm/utils/node.py|
-        src/aiida/repository/backend/disk_object_store.py|
-        src/aiida/repository/backend/sandbox.py|
         src/aiida/restapi/common/utils.py|
         src/aiida/restapi/resources.py|
         src/aiida/restapi/run_api.py|

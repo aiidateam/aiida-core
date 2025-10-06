@@ -353,9 +353,10 @@ disallow_subclassing_any = true
 disallow_untyped_calls = true
 disallow_untyped_defs = true
 module = [
-  'aiida.tools.graph.*',
-  'aiida.cmdline.params.*',
   'aiida.cmdline.groups.*',
+  'aiida.cmdline.params.*',
+  'aiida.repository.*',
+  'aiida.tools.graph.*',
   'aiida.tools.query.*'
 ]
 warn_return_any = true

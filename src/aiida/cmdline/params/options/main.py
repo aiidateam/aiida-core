@@ -766,7 +766,6 @@ PRINT_TRACEBACK = OverridableOption(
 )
 
 PATH = OverridableOption(
-    '-p',
     '--path',
     type=click.Path(path_type=pathlib.Path),
     show_default=False,

@@ -471,19 +471,6 @@ class StorageBackend(abc.ABC):
         count = QueryBuilder(self).append(Node).count()
         data['Nodes'] = {'count': count}
         if detailed:
-            node_types = sorted(
-                {typ for (typ,) in QueryBuilder(self).append(Node, project=['node_type']).iterall() if typ is not None}
-            )
-            data['Nodes']['node_types'] = node_types
-            process_types = sorted(
-                {
-                    typ
-                    for (typ,) in QueryBuilder(self).append(Node, project=['process_type']).iterall()
-                    if typ is not None
-                }
-            )
-            data['Nodes']['process_types'] = [p for p in process_types if p]
-
             first_time = (
                 QueryBuilder(self)
                 .append(Node, project=['ctime'], tag='node')
@@ -499,6 +486,19 @@ class StorageBackend(abc.ABC):
 
             data['Nodes']['first_created'] = str(first_time) if first_time else None
             data['Nodes']['last_created'] = str(last_time) if last_time else None
+
+            node_types = sorted(
+                {typ for (typ,) in QueryBuilder(self).append(Node, project=['node_type']).iterall() if typ is not None}
+            )
+            data['Nodes']['node_types'] = node_types
+            process_types = sorted(
+                {
+                    typ
+                    for (typ,) in QueryBuilder(self).append(Node, project=['process_type']).iterall()
+                    if typ is not None
+                }
+            )
+            data['Nodes']['process_types'] = [p for p in process_types if p]
 
         query_group = QueryBuilder(self).append(Group, project=['type_string'])
         data['Groups'] = {'count': query_group.count()}

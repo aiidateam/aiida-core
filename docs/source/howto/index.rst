@@ -22,4 +22,5 @@ How-To Guides
    installation
    plugins_develop
    cookbook
+   tricks_real_world_runs
    faq

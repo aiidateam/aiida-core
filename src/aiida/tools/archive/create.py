@@ -400,7 +400,7 @@ def _collect_all_entities(
     include_comments: bool,
     include_logs: bool,
     batch_size: int,
-) -> tuple[list[tuple[int, int]], set[LinkQuadruple]]:
+) -> tuple[list[list[int]], set[LinkQuadruple]]:
     """Collect all entities.
 
     :returns: (group_id_to_node_id, link_data) and updates entity_ids
@@ -444,7 +444,7 @@ def _collect_all_entities(
             .append(orm.Node, with_group='group', project='id')
             .distinct()
         )
-        group_nodes: list[tuple[int, int]] = qbuilder.all(batch_size=batch_size)  # type: ignore[assignment]
+        group_nodes: list[list[int]] = qbuilder.all(batch_size=batch_size)
 
         progress.set_description_str(progress_str('Computers'))
         progress.update()
@@ -516,7 +516,7 @@ def _collect_required_entities(
     include_logs: bool,
     backend: StorageBackend,
     query_params: QueryParams,
-) -> tuple[list[tuple[int, int]], set[LinkQuadruple]]:
+) -> tuple[list[list[int]], set[LinkQuadruple]]:
     """Collect required entities, given a set of starting entities and provenance graph traversal rules.
 
     :returns: (group_id_to_node_id, link_data) and updates entity_ids
@@ -531,7 +531,7 @@ def _collect_required_entities(
     with get_progress_reporter()(desc=progress_str(''), total=7) as progress:
         # get all nodes from groups
         progress.set_description_str(progress_str('Nodes (groups)'))
-        group_nodes: list[tuple[int, int]] = []
+        group_nodes: list[list[int]] = []
         if entity_ids[EntityTypes.GROUP]:
             for _, group_batch_ids in batch_iter(list(entity_ids[EntityTypes.GROUP]), filter_size):
                 qbuilder = querybuilder()
@@ -539,7 +539,7 @@ def _collect_required_entities(
                 qbuilder.append(orm.Node, with_group='group', project='id')
                 qbuilder.distinct()
                 batch_group_nodes = qbuilder.all(batch_size=batch_size)
-                group_nodes.extend(batch_group_nodes)  # type: ignore[arg-type]
+                group_nodes.extend(batch_group_nodes)
                 entity_ids[EntityTypes.NODE].update(nid for _, nid in batch_group_nodes)
 
         # get full set of nodes & links, following traversal rules

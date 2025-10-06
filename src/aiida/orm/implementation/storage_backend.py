@@ -15,6 +15,8 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, ContextManager, List, Optional, TypeVar, Union
 
 if TYPE_CHECKING:
+    from disk_objectstore.backup_utils import BackupManager
+
     from aiida.manage.configuration.profile import Profile
     from aiida.orm.autogroup import AutogroupManager
     from aiida.orm.entities import EntityTypes
@@ -130,7 +132,7 @@ class StorageBackend(abc.ABC):
         return version
 
     @abc.abstractmethod
-    def close(self):
+    def close(self) -> None:
         """Close the storage access."""
 
     @property
@@ -270,7 +272,7 @@ class StorageBackend(abc.ABC):
 
     @abc.abstractmethod
     def set_global_variable(
-        self, key: str, value: Union[None, str, int, float], description: Optional[str] = None, overwrite=True
+        self, key: str, value: Union[None, str, int, float], description: Optional[str] = None, overwrite: bool = True
     ) -> None:
         """Set a global variable in the storage.
 
@@ -292,7 +294,7 @@ class StorageBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs) -> None:
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> None:
         """Perform maintenance tasks on the storage.
 
         If `full == True`, then this method may attempt to block the profile associated with the
@@ -310,10 +312,10 @@ class StorageBackend(abc.ABC):
         self,
         dest: str,
         keep: Optional[int] = None,
-    ):
+    ) -> None:
         raise NotImplementedError
 
-    def _write_backup_config(self, backup_manager):
+    def _write_backup_config(self, backup_manager: BackupManager) -> None:
         import pathlib
         import tempfile
 
@@ -339,7 +341,7 @@ class StorageBackend(abc.ABC):
         except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exc:
             raise exceptions.StorageBackupError('AiiDA config.json not found!') from exc
 
-    def _validate_or_init_backup_folder(self, dest, keep):
+    def _validate_or_init_backup_folder(self, dest: str, keep: int | None) -> BackupManager:
         import json
         import tempfile
 
@@ -397,7 +399,7 @@ class StorageBackend(abc.ABC):
         self,
         dest: str,
         keep: Optional[int] = None,
-    ):
+    ) -> None:
         """Create a backup of the storage contents.
 
         :param dest: The path to the destination folder.
@@ -441,7 +443,7 @@ class StorageBackend(abc.ABC):
         STORAGE_LOGGER.report(f'Overwriting the `{DEFAULT_CONFIG_FILE_NAME} file.')
         self._write_backup_config(backup_manager)
 
-    def get_info(self, detailed: bool = False) -> dict:
+    def get_info(self, detailed: bool = False) -> dict[str, Any]:
         """Return general information on the storage.
 
         :param detailed: flag to request more detailed information about the content of the storage.
@@ -449,7 +451,7 @@ class StorageBackend(abc.ABC):
         """
         return {'entities': self.get_orm_entities(detailed=detailed)}
 
-    def get_orm_entities(self, detailed: bool = False) -> dict:
+    def get_orm_entities(self, detailed: bool = False) -> dict[str, Any]:
         """Return a mapping with an overview of the storage contents regarding ORM entities.
 
         :param detailed: flag to request more detailed information about the content of the storage.

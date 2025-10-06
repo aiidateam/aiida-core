@@ -188,7 +188,6 @@ class DumpChangeDetector:
         :param store_type: Target store (calculations or workflows)
         :return: List of initial nodes with already tracked (dumped) nodes removed
         """
-        # TODO: add logging here too
         if not nodes:
             return nodes
 

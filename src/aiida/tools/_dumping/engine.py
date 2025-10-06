@@ -78,7 +78,7 @@ class DumpEngine:
     def _build_mapping_for_target(self) -> GroupNodeMapping:
         """Build the appropriate group-node mapping based on the target entity and config."""
         if isinstance(self.dump_target_entity, orm.Group):
-            logger.report(f'Building group-node mapping for single group: <{self.dump_target_entity.label}> ...')
+            logger.report(f'Building group-node mapping for single group `{self.dump_target_entity.label}`...')
             return GroupNodeMapping.build_from_db(groups=[self.dump_target_entity])
 
         elif isinstance(self.dump_target_entity, Profile):
@@ -108,7 +108,7 @@ class DumpEngine:
         elif isinstance(self.dump_target_entity, Profile):
             dump_start_report = f'profile `{self.dump_target_entity.name}`'
 
-        msg = f'Starting dump of {dump_start_report} in {self.config.dump_mode.name.lower()} mode.'
+        msg = f'Starting dump of {dump_start_report} in {self.config.dump_mode.name.lower()} mode...'
         if self.config.dump_mode != DumpMode.DRY_RUN:
             logger.report(msg)
 
@@ -232,7 +232,7 @@ class DumpEngine:
         node_changes = self.detector._detect_node_changes()
         msg = (
             f'Detected {len(node_changes.new_or_modified)} new/modified nodes '
-            'and {len(node_changes.deleted)} deleted nodes.'
+            f'and {len(node_changes.deleted)} deleted nodes.'
         )
         logger.report(msg)
 

@@ -16,6 +16,10 @@ from typing import Dict, List, Optional, Set, Union, cast
 from aiida import orm
 from aiida.tools._dumping.utils import GroupChanges, GroupInfo, GroupModificationInfo, NodeMembershipChange
 
+from aiida.common.log import AIIDA_LOGGER
+
+LOGGER = AIIDA_LOGGER.getChild('tools._dumping.mapping')
+
 
 @dataclass
 class GroupNodeMapping:
@@ -70,12 +74,8 @@ class GroupNodeMapping:
 
     @classmethod
     def build_from_db(cls, groups: Optional[Union[List[orm.Group], List[str], List[int]]] = None) -> 'GroupNodeMapping':
-        """Build a mapping from the current database state.
+        """Build a mapping from the current database state."""
 
-        :param groups: If provided, only build mapping for these specific groups.
-            If None, build mapping for all groups.
-        :return: Populated ``GroupNodeMapping`` instance
-        """
         mapping = cls()
 
         # Query all groups and their nodes, or just the specific groups
@@ -89,15 +89,22 @@ class GroupNodeMapping:
             else:
                 group_uuids = [orm.load_group(g).uuid for g in groups]
             qb.append(orm.Group, tag='group', project=['uuid'], filters={'uuid': {'in': group_uuids}})
+            LOGGER.report(f'Querying node memberships for {len(group_uuids)} groups...')
         else:
             # Query all groups
             qb.append(orm.Group, tag='group', project=['uuid'])
+            LOGGER.report('Querying node memberships for all groups in profile...')
 
         qb.append(orm.Node, with_group='group', project=['uuid'])
 
-        for group_uuid, node_uuid in qb.all():
+        LOGGER.report('Retrieving group-node relationships from database...')
+        results = qb.all()
+        LOGGER.report(f'Processing {len(results)} group-node relationships...')
+
+        for group_uuid, node_uuid in results:
             mapping._add_node_to_group(group_uuid, node_uuid)
 
+        LOGGER.report('Group-node mapping completed.')
         return mapping
 
     def diff(self, other: 'GroupNodeMapping') -> GroupChanges:

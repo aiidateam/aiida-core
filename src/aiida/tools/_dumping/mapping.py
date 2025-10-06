@@ -73,7 +73,12 @@ class GroupNodeMapping:
 
     @classmethod
     def build_from_db(cls, groups: Optional[Union[List[orm.Group], List[str], List[int]]] = None) -> 'GroupNodeMapping':
-        """Build a mapping from the current database state."""
+        """Build a mapping from the current database state.
+
+        :param groups: If provided, only build mapping for these specific groups.
+            If None, build mapping for all groups.
+        :return: Populated ``GroupNodeMapping`` instance
+        """
 
         mapping = cls()
 
@@ -103,7 +108,7 @@ class GroupNodeMapping:
         for group_uuid, node_uuid in results:
             mapping._add_node_to_group(group_uuid, node_uuid)
 
-        LOGGER.report('Group-node mapping completed.')
+        LOGGER.report('Completed group-node mapping.')
         return mapping
 
     def diff(self, other: 'GroupNodeMapping') -> GroupChanges:

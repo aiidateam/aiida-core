@@ -16,17 +16,11 @@ import typing as t
 
 import click
 
-if t.TYPE_CHECKING:
-    try:
-        from typing import TypeAlias
-    except ImportError:
-        from typing_extensions import TypeAlias
-
 __all__ = ('AbsolutePathParamType', 'FileOrUrl', 'PathOrUrl')
 
 URL_TIMEOUT_SECONDS = 10
 
-PathType: TypeAlias = 'str | bytes | os.PathLike[str]'
+PathType = t.Union[str, bytes, os.PathLike[str]]
 
 
 def check_timeout_seconds(timeout_seconds: float) -> int:

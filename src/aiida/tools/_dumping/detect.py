@@ -113,7 +113,6 @@ class DumpChangeDetector:
         )
         logger.report(f'Retrieved {len(calc_nodes)} calculation nodes.')
 
-        # TODO: this also takes a while
         if exclude_tracked:
             calc_nodes = self._exclude_tracked_nodes(calc_nodes, 'calculations')
         if apply_filters:
@@ -203,14 +202,16 @@ class DumpChangeDetector:
             return_nodes = []
             set_progress_bar_tqdm()
 
-            with get_progress_reporter()(desc=f'Excluding tracked {store_type}...', total=len(nodes)) as progress:
+            with get_progress_reporter()(
+                desc=f'Excluding already dumped {store_type}...', total=len(nodes)
+            ) as progress:
                 for node in nodes:
                     if node.uuid not in tracked_uuids:
                         return_nodes.append(node)
 
                     progress.update()
 
-            logger.report(f'Applyied exclusion of tracked {store_type}.')
+            logger.report(f'Applied exclusion of previously dumped {store_type}.')
 
             return return_nodes
 
@@ -252,7 +253,7 @@ class DumpChangeDetector:
 
                 progress.update()
 
-        logger.report(f'Applied behavioral filters to {store_type}.')
+        logger.report(f'Applied relevant filters to {store_type}.')
 
         return filtered_nodes
 

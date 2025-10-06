@@ -26,6 +26,7 @@ from aiida.common.datastructures import CalcInfo, FileCopyOperation
 from aiida.common.folders import Folder
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
+from aiida.common.typing import FilePath
 
 from ..exit_code import ExitCode
 from ..ports import PortNamespace
@@ -743,7 +744,7 @@ class CalcJob(Process):
                     return self.parse(retrieved_temporary_folder.abspath)
 
     def parse(
-        self, retrieved_temporary_folder: Optional[str] = None, existing_exit_code: ExitCode | None = None
+        self, retrieved_temporary_folder: FilePath | None = None, existing_exit_code: ExitCode | None = None
     ) -> ExitCode:
         """Parse a retrieved job calculation.
 
@@ -771,7 +772,7 @@ class CalcJob(Process):
 
         # Call the retrieved output parser
         try:
-            exit_code_retrieved = self.parse_retrieved_output(retrieved_temporary_folder)
+            exit_code_retrieved = self.parse_retrieved_output(str(retrieved_temporary_folder))
         finally:
             if retrieved_temporary_folder is not None:
                 shutil.rmtree(retrieved_temporary_folder, ignore_errors=True)
@@ -1122,7 +1123,10 @@ class CalcJob(Process):
             job_tmpl.max_wallclock_seconds = max_wallclock_seconds
 
         submit_script_filename = self.node.get_option('submit_script_filename')
+        assert submit_script_filename is not None
         script_content = scheduler.get_submit_script(job_tmpl)
+        # TODO: mypy error: Argument 2 to "create_file_from_filelike" of "Folder"
+        # has incompatible type "Any | None"; expected "str | PurePath"
         folder.create_file_from_filelike(io.StringIO(script_content), submit_script_filename, 'w', encoding='utf8')
 
         def encoder(obj):

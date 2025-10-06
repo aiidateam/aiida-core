@@ -321,6 +321,7 @@ enable_error_code = [
   'redundant-expr',
   'truthy-bool'
 ]
+fixed_format_cache = true
 plugins = ['sqlalchemy.ext.mypy.plugin']
 scripts_are_modules = true
 show_error_codes = true
@@ -346,6 +347,7 @@ disallow_untyped_calls = true
 disallow_untyped_defs = true
 module = [
   'aiida.cmdline.params.*',
+  'aiida.repository.*',
   'aiida.cmdline.groups.*'
 ]
 warn_return_any = true

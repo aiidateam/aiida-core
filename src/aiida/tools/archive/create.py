@@ -274,7 +274,7 @@ def create_archive(
 
     if test_run:
         EXPORT_LOGGER.report('Test Run: Stopping before archive creation')
-        if node_ids := list(entity_ids[EntityTypes.NODE]):
+        if node_ids := entity_ids[EntityTypes.NODE]:
             # Batch the node IDs to avoid parameter limits in dry run as well
             all_keys = set()
             for _, node_batch_ids in batch_iter(node_ids, filter_size):
@@ -532,8 +532,8 @@ def _collect_required_entities(
         # get all nodes from groups
         progress.set_description_str(progress_str('Nodes (groups)'))
         group_nodes: list[list[int]] = []
-        if entity_ids[EntityTypes.GROUP]:
-            for _, group_batch_ids in batch_iter(list(entity_ids[EntityTypes.GROUP]), filter_size):
+        if ids := entity_ids[EntityTypes.GROUP]:
+            for _, group_batch_ids in batch_iter(ids, filter_size):
                 qbuilder = querybuilder()
                 qbuilder.append(orm.Group, filters={'id': {'in': group_batch_ids}}, project='id', tag='group')
                 qbuilder.append(orm.Node, with_group='group', project='id')
@@ -555,8 +555,8 @@ def _collect_required_entities(
         progress.update()
 
         # get full set of computers
-        if entity_ids[EntityTypes.NODE]:
-            for _, node_batch_ids in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
+        if ids := entity_ids[EntityTypes.NODE]:
+            for _, node_batch_ids in batch_iter(ids, filter_size):
                 entity_ids[EntityTypes.COMPUTER].update(
                     pk
                     for (pk,) in querybuilder()
@@ -569,8 +569,8 @@ def _collect_required_entities(
         # get full set of authinfos
         progress.set_description_str(progress_str('AuthInfos'))
         progress.update()
-        if include_authinfos and entity_ids[EntityTypes.COMPUTER]:
-            for _, computer_batch_ids in batch_iter(list(entity_ids[EntityTypes.COMPUTER]), filter_size):
+        if include_authinfos and (ids := entity_ids[EntityTypes.COMPUTER]):
+            for _, computer_batch_ids in batch_iter(ids, filter_size):
                 entity_ids[EntityTypes.AUTHINFO].update(
                     pk
                     for (pk,) in querybuilder()
@@ -583,8 +583,8 @@ def _collect_required_entities(
         # get full set of logs
         progress.set_description_str(progress_str('Logs'))
         progress.update()
-        if include_logs and entity_ids[EntityTypes.NODE]:
-            for _, node_batch_ids in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
+        if include_logs and (ids := entity_ids[EntityTypes.NODE]):
+            for _, node_batch_ids in batch_iter(ids, filter_size):
                 entity_ids[EntityTypes.LOG].update(
                     pk
                     for (pk,) in querybuilder()
@@ -597,8 +597,8 @@ def _collect_required_entities(
         # get full set of comments
         progress.set_description_str(progress_str('Comments'))
         progress.update()
-        if include_comments and entity_ids[EntityTypes.NODE]:
-            for _, node_batch_ids in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
+        if include_comments and (ids := entity_ids[EntityTypes.NODE]):
+            for _, node_batch_ids in batch_iter(ids, filter_size):
                 entity_ids[EntityTypes.COMMENT].update(
                     pk
                     for (pk,) in querybuilder()
@@ -611,8 +611,8 @@ def _collect_required_entities(
         # get full set of users
         progress.set_description_str(progress_str('Users'))
         progress.update()
-        if entity_ids[EntityTypes.NODE]:
-            for _, node_batch_ids in batch_iter(list(entity_ids[EntityTypes.NODE]), filter_size):
+        if ids := entity_ids[EntityTypes.NODE]:
+            for _, node_batch_ids in batch_iter(ids, filter_size):
                 entity_ids[EntityTypes.USER].update(
                     pk
                     for (pk,) in querybuilder()
@@ -621,8 +621,8 @@ def _collect_required_entities(
                     .distinct()
                     .iterall(batch_size=batch_size)
                 )
-        if entity_ids[EntityTypes.GROUP]:
-            for _, group_batch_ids in batch_iter(list(entity_ids[EntityTypes.GROUP]), filter_size):
+        if ids := entity_ids[EntityTypes.GROUP]:
+            for _, group_batch_ids in batch_iter(ids, filter_size):
                 entity_ids[EntityTypes.USER].update(
                     pk
                     for (pk,) in querybuilder()
@@ -631,8 +631,8 @@ def _collect_required_entities(
                     .distinct()
                     .iterall(batch_size=batch_size)
                 )
-        if entity_ids[EntityTypes.COMMENT]:
-            for _, comment_batch_ids in batch_iter(list(entity_ids[EntityTypes.COMMENT]), filter_size):
+        if ids := entity_ids[EntityTypes.COMMENT]:
+            for _, comment_batch_ids in batch_iter(ids, filter_size):
                 entity_ids[EntityTypes.USER].update(
                     pk
                     for (pk,) in querybuilder()
@@ -641,8 +641,8 @@ def _collect_required_entities(
                     .distinct()
                     .iterall(batch_size=batch_size)
                 )
-        if entity_ids[EntityTypes.AUTHINFO]:
-            for _, authinfo_batch_ids in batch_iter(list(entity_ids[EntityTypes.AUTHINFO]), filter_size):
+        if ids := entity_ids[EntityTypes.AUTHINFO]:
+            for _, authinfo_batch_ids in batch_iter(ids, filter_size):
                 entity_ids[EntityTypes.USER].update(
                     pk
                     for (pk,) in querybuilder()

@@ -166,8 +166,8 @@ Here is the full list of options that can be set in ``builder.metadata``.
     - store_provenance (bool): If False, provenance will not be stored in the database (use with care).
 
 
-Understand the workflow inputs
-==============================
+Understand the builder structure
+================================
 
 When you are running a complex workflow, it is often useful to understand what inputs can be passed to it (or better, to its builder).
 This is particularly useful when you are using a new workflow for the first time, or if you are using a complex workflow with many nested subworkflows.
@@ -192,8 +192,55 @@ Or via tab completion:
   clean_workdir   kpoints            metadata          pw
 
 
-How to go to quickly  inspect a failed calculation
-==================================================
+How to interactively explore the provenance of a node
+=====================================================
+
+If a calculation or workflow node is in the database, it is possible to explore its provenance interactively via the verdi shell (or a jupyter notebook).
+For example, if you want to explore the provenance of a calculation with pk ``<pk>``, you can do the following:
+
+.. code-block:: python
+
+    from aiida import orm
+    pw_calc = orm.load_node(<pk>)
+
+    pw_calc.inputs.<TAB>
+    # -> dict_keys(['code', 'kpoints', 'settings', 'parameters', 'parent_folder', 'pseudos', 'structure'])
+
+    pw_calc.outputs.<TAB>
+    # -> dict_keys(['output_parameters', 'output_structure', 'output_trajectory', 'retrieved', 'remote_folder'])
+
+It is possible to inspect, for example, the creator of a given remote_folder (in this case, the pw_calc itself):
+
+.. code-block:: python
+
+    remote_folder = pw_calc.outputs.remote_folder
+
+    remote_folder.creator
+    # -> <CalcJobNode: uuid: 'a1b2c3d4-e5f6-7g8h-9i0j-k1l2m3n4o5p6' (pk: 123) (aiida.calculations:quantumespresso.pw)>
+
+    remote_folder.creator.pk
+    # -> 123
+
+    remote_folder.creator.process_type
+    # -> 'aiida.calculations:quantumespresso.pw'
+
+from the creator, it is possible to go back to its inputs and outputs, and so on. 
+It is also possible to find the higher-level workflow that called a given calculation via the ``.caller`` attribute:
+
+.. code-block:: python
+
+    pw_calc.caller
+    # -> <WorkChainNode: uuid: 'z1y2x3w4-v5u6-t7s8-r9q0-p1o2n3m4l5k6' (pk: 456) (aiida.workflows:quantumespresso.pw.base)>
+
+    pw_calc.caller.pk
+    # -> 456
+
+    pw_calc.outputs.remote_folder.creator.caller.pk
+    # -> 456
+
+   
+How to go to quickly  inspect a calculation
+===========================================
 
 If a calcjob fails, there are few ways to inspect the raw outputs and understand what happened.
 

@@ -62,6 +62,7 @@ def extract_component(data, p: float = -1):
 @pytest.mark.parametrize('breadth', [1, 2, 4])
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_deep_json(benchmark, depth, breadth):
+    random.seed(depth * 1000 + breadth * 10 + 42)
     lhs = gen_json(depth, breadth)
     rhs = extract_component(lhs, p=1.0 / depth)
     assert 0 == len(QueryBuilder().append(orm.Dict).all())
@@ -89,6 +90,7 @@ def test_deep_json(benchmark, depth, breadth):
 @pytest.mark.parametrize('breadth', [1, 10, 100])
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_wide_json(benchmark, depth, breadth):
+    random.seed(depth * 1000 + breadth * 10 + 42)
     lhs = gen_json(depth, breadth)
     rhs = extract_component(lhs, p=1.0 / depth)
     assert 0 == len(QueryBuilder().append(orm.Dict).all())
@@ -115,6 +117,7 @@ def test_wide_json(benchmark, depth, breadth):
 @pytest.mark.parametrize('num_entries', LARGE_TABLE_SIZE_RANGE)
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_large_table(benchmark, num_entries):
+    random.seed(num_entries + 42)
     data = gen_json(2, 10)
     rhs = extract_component(data)
     assert 0 == len(QueryBuilder().append(orm.Dict).all())

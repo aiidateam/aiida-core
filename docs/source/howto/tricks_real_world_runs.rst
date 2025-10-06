@@ -26,7 +26,7 @@ These options are set on the process builder under ``builder.metadata.options`` 
 
 .. code-block:: python
 
-	builder = PwCalculation.get_builder() 
+	builder = PwCalculation.get_builder()
 
 	# Required scheduler resources (example: 2 nodes x 16 MPI per node)
 	builder.metadata.options.resources = {
@@ -43,7 +43,7 @@ In case you are submitting a ``PwBaseWorkChain``, these options should be set un
 
 .. code-block:: python
 
-    builder = PwBaseWorkChain.get_builder() 
+    builder = PwBaseWorkChain.get_builder()
 
     # Required scheduler resources (example: 2 nodes x 16 MPI per node)
     builder.pw.metadata.options.resources = {
@@ -224,7 +224,7 @@ It is possible to inspect, for example, the creator of a given remote_folder (in
     remote_folder.creator.process_type
     # -> 'aiida.calculations:quantumespresso.pw'
 
-from the creator, it is possible to go back to its inputs and outputs, and so on. 
+from the creator, it is possible to go back to its inputs and outputs, and so on.
 It is also possible to find the higher-level workflow that called a given calculation via the ``.caller`` attribute:
 
 .. code-block:: python
@@ -238,11 +238,11 @@ It is also possible to find the higher-level workflow that called a given calcul
     pw_calc.outputs.remote_folder.creator.caller.pk
     # -> 456
 
-   
-How to go to quickly  inspect a calculation
+
+How to go to quickly inspect a calculation
 ===========================================
 
-If a calcjob fails, there are few ways to inspect the raw outputs and understand what happened.
+There are a few ways to inspect the raw inputs/outputs of a calculation as read/written by the executable.
 
 Go to the remote folder of a calculation
 ----------------------------------------
@@ -263,7 +263,7 @@ If you want to inspect the retrieved files of a calculation, you can use the fol
 
 .. code-block:: console
 
-    verdi process dump <pk> 
+    verdi process dump <pk>
 
 That will create a folder in your current directory, and it will contain all the retrieved files of the calculation (including the inputs).
 This is particularly useful if you want to inspect the retrieved files of a failed calculation, or if you want to re-run the calculation locally or somewhere else for debugging.
@@ -275,12 +275,12 @@ Once you checked that a calculation failed, and you understood what happened, yo
 How to quickly re-submit something: get_builder_restart()
 =========================================================
 
-If you want to re-submit a calculation/workflow (i.e. a process) for whatever reason, i.e. it failed for some wrong input or not enough resources, you can use 
-the ``get_builder_restart()`` method of the process node. This is particularly useful if you want to re-submit a complex workflow with many inputs, and you do not want to 
+If you want to re-submit a calculation/workflow (i.e. a process) for whatever reason, i.e. it failed for some wrong input or not enough resources, you can use
+the ``get_builder_restart()`` method of the process node. This is particularly useful if you want to re-submit a complex workflow with many inputs, and you do not want to
 build the process builder from scratch again.
-The ``get_builder_restart()`` method  will return a process builder with all the inputs of the previous calculation, so that you can modify only what you want to change, 
+The ``get_builder_restart()`` method  will return a process builder with all the inputs of the previous calculation, so that you can modify only what you want to change,
 and then submit it again.
-For example, if you want to re-submit a calculation with pk ``<pk>``, you can use the following:    
+For example, if you want to re-submit a calculation with pk ``<pk>``, you can use the following:
 
 .. code-block:: python
 
@@ -289,7 +289,7 @@ For example, if you want to re-submit a calculation with pk ``<pk>``, you can us
 
     failed_pw_base_workchain = orm.load_node(<pk>)
     builder = failed_pw_base_workchain.get_builder_restart()
-    
+
     # modify the builder if needed
     builder.pw.metadata.options.max_wallclock_seconds = 4 * 60 * 60  # 4 hours
 

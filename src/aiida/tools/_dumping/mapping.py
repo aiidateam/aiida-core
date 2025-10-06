@@ -14,9 +14,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set, Union, cast
 
 from aiida import orm
-from aiida.tools._dumping.utils import GroupChanges, GroupInfo, GroupModificationInfo, NodeMembershipChange
-
 from aiida.common.log import AIIDA_LOGGER
+from aiida.tools._dumping.utils import GroupChanges, GroupInfo, GroupModificationInfo, NodeMembershipChange
 
 LOGGER = AIIDA_LOGGER.getChild('tools._dumping.mapping')
 

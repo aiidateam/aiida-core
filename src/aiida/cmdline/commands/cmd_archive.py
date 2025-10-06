@@ -323,7 +323,6 @@ class ExtrasImportCode(Enum):
     'mirror: import all extras and remove any existing extras that are not present in the archive. ',
 )
 @click.option(
-    '-n',
     '--extras-mode-new',
     type=click.Choice(EXTRAS_MODE_NEW),
     default='import',

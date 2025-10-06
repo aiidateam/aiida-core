@@ -133,16 +133,15 @@ def test_get_info(monkeypatch):
     node1 = orm.Data().store()
     node2 = orm.Data().store()
 
-    storage_info_out = storage_backend.get_info(detailed=True)
-    repository_info_out = storage_info_out['repository']
+    detailed_storage_info_out = storage_backend.get_info(detailed=True)
+    repository_info_out = detailed_storage_info_out['repository']
     assert 'value' in repository_info_out
     assert 'extra_value' in repository_info_out
     assert repository_info_out['value'] == 42
     assert repository_info_out['extra_value'] == 0
 
     # Test first_created and last_created timestamps
-    storage_info_out = storage_backend.get_info(detailed=True)
-    nodes_info = storage_info_out['entities']['Nodes']
+    nodes_info = detailed_storage_info_out['entities']['Nodes']
 
     assert 'first_created' in nodes_info
     assert 'last_created' in nodes_info

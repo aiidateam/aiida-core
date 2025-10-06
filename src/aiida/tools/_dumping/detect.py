@@ -83,15 +83,9 @@ class DumpChangeDetector:
         ignore_time_filters: bool = False,
         exclude_tracked: bool = True,
     ) -> ProcessingQueue:
-        """Unified method to get nodes with various filtering options.
+        """Unified method to get nodes with various filtering options."""
+        from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm
 
-        :param group_scope: Determines the query scope (ANY, IN_GROUP, NO_GROUP)
-        :param group: The specific group to filter by when scope is IN_GROUP
-        :param apply_filters: Whether to apply top-level and caller filters
-        :param ignore_time_filters: Whether to ignore time-based filters
-        :param exclude_tracked: Whether to exclude nodes already in dump tracker
-        :return: ProcessingQueue containing the filtered nodes
-        """
         if group_scope == GroupDumpScope.IN_GROUP and not group:
             msg = 'Scope is IN_GROUP but no group object was provided.'
             raise ValueError(msg)
@@ -104,10 +98,15 @@ class DumpChangeDetector:
         # Get nodes by type
         processing_queue = ProcessingQueue()
 
+        set_progress_bar_tqdm()
+
         # Process calculations
-        calc_nodes = self._query_single_type(
-            orm_type=orm.CalculationNode, group_scope=group_scope, group=group, base_filters=base_filters
-        )
+        with get_progress_reporter()(desc='Querying calculations from database', total=0) as progress:
+            calc_nodes = self._query_single_type(
+                orm_type=orm.CalculationNode, group_scope=group_scope, group=group, base_filters=base_filters
+            )
+            progress.update(1)
+
         if exclude_tracked:
             calc_nodes = self._exclude_tracked_nodes(calc_nodes, 'calculations')
         if apply_filters:
@@ -115,9 +114,12 @@ class DumpChangeDetector:
         processing_queue.calculations = calc_nodes
 
         # Process workflows
-        workflow_nodes = self._query_single_type(
-            orm_type=orm.WorkflowNode, group_scope=group_scope, group=group, base_filters=base_filters
-        )
+        with get_progress_reporter()(desc='Querying workflows from database', total=0) as progress:
+            workflow_nodes = self._query_single_type(
+                orm_type=orm.WorkflowNode, group_scope=group_scope, group=group, base_filters=base_filters
+            )
+            progress.update(1)
+
         if exclude_tracked:
             workflow_nodes = self._exclude_tracked_nodes(workflow_nodes, 'workflows')
         if apply_filters:

@@ -173,7 +173,7 @@ class CalculationQueryBuilder:
 
         if relationships is not None:
             for tag, entity in relationships.items():
-                builder.append(cls=type(entity), filters={'id': entity.pk}, tag='process')
+                builder.append(cls=type(entity), filters={'id': entity.pk}, **{tag: 'process'})  # type: ignore[arg-type]
 
         if order_by is not None:
             builder.order_by({'process': order_by})

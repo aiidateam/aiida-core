@@ -78,10 +78,11 @@ class DumpEngine:
     def _build_mapping_for_target(self) -> GroupNodeMapping:
         """Build the appropriate group-node mapping based on the target entity and config."""
         if isinstance(self.dump_target_entity, orm.Group):
-            logger.report('Building group-node mapping for single group...')
+            logger.report(f'Building group-node mapping for single group: <{self.dump_target_entity.label}> ...')
             return GroupNodeMapping.build_from_db(groups=[self.dump_target_entity])
 
         elif isinstance(self.dump_target_entity, Profile):
+            # Profile dump - depends on config
             assert isinstance(self.config, ProfileDumpConfig)
 
             if self.config.all_entries:
@@ -92,6 +93,9 @@ class DumpEngine:
                 return GroupNodeMapping.build_from_db(groups=self.config.groups)
             else:
                 return GroupNodeMapping()
+
+        else:
+            return GroupNodeMapping()
 
     def _log_dump_start(self) -> None:
         """Log the start of a dump operation."""
@@ -214,12 +218,16 @@ class DumpEngine:
             and not self.config.filters_set
             and not self.config.dump_mode == DumpMode.DRY_RUN
         ):
+            # NOTE: Hack for now, delete empty directory again.
+            # Ideally don't even create in the first place.
+            # Need to check again where it is actually created.
             DumpPaths._safe_delete_directory(path=self.dump_paths.base_output_path)
             return None
 
         self.dump_tracker.set_current_mapping(self.current_mapping)
 
         logger.report('Detecting changes since last dump. This may take a while for large databases...')
+        logger.report('Detecting node changes...')
         node_changes = self.detector._detect_node_changes()
         msg = (
             f'Detected {len(node_changes.new_or_modified)} new/modified nodes '
@@ -227,6 +235,7 @@ class DumpEngine:
         )
         logger.report(msg)
 
+        logger.report('Detecting group changes...')
         group_changes = self.detector._detect_group_changes(
             previous_mapping=self.dump_tracker.previous_mapping, current_mapping=self.current_mapping
         )
@@ -256,4 +265,12 @@ class DumpEngine:
             )
             deletion_manager._handle_deleted_entities()
 
-        logger.report('Processing group changes.')
+        profile_dump_executor = ProfileDumpExecutor(
+            config=self.config,
+            dump_paths=self.dump_paths,
+            dump_tracker=self.dump_tracker,
+            process_dump_executor=self.process_dump_executor,
+            detector=self.detector,
+            current_mapping=self.current_mapping,
+        )
+        profile_dump_executor.dump(changes=all_changes)

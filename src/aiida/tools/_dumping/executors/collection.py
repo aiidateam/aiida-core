@@ -211,7 +211,7 @@ class CollectionDumpExecutor:
 
         :param group_changes: Populated ``GroupChanges`` object
         """
-        logger.report('Processing group changes.')
+        logger.report('Processing group changes...')
 
         # Handle Deleted Groups. Actual directory deletion handled by DeletionExecutor, only logging done here.
         if group_changes.deleted:

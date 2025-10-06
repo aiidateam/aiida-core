@@ -227,6 +227,7 @@ class DumpEngine:
         self.dump_tracker.set_current_mapping(self.current_mapping)
 
         logger.report('Detecting changes since last dump. This may take a while for large databases...')
+
         logger.report('Detecting node changes...')
         node_changes = self.detector._detect_node_changes()
         msg = (

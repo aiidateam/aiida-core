@@ -29,7 +29,7 @@ class Pluginable(VerdiCommandGroup):
         if not self._exclude_external_plugins:
             subcommands.extend(get_entry_point_names(self._entry_point_group))
 
-        return subcommands
+        return sorted(subcommands)
 
     def get_command(self, ctx, name):
         """Try to load a subcommand from entry points, else defer to super."""

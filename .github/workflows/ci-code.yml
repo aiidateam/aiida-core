@@ -113,6 +113,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
         from-lock: 'false'
+        extras: tests
         resolution-strategy: lowest-direct
 
     - name: Setup SSH on localhost

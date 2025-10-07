@@ -663,14 +663,3 @@ DEFAULT_FILTER_SIZE: int = 999
 # balance between memory efficiency and database round-trip overhead. Setting it too low increases
 # the number of database queries needed, while setting it too high increases memory consumption.
 DEFAULT_BATCH_SIZE: int = 1000
-
-
-# @dataclass
-# class QueryParams:
-#     """Parameters for executing backend queries."""
-#
-#     # NOTE: See the default value definitions for additional background on the parameters.
-#     batch_size: int = DEFAULT_BATCH_SIZE
-#     """Batch size for streaming database rows."""
-#     filter_size: int = DEFAULT_FILTER_SIZE
-#     """Maximum number of parameters allowed in a single query filter."""

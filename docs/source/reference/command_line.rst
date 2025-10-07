@@ -80,8 +80,7 @@ Below is a list with all available subcommands.
       list       List the available codes.
       relabel    Relabel a code.
       reveal     Reveal one or more hidden codes in `verdi code list`.
-      setup      Setup a new code (use `verdi code create`). (DEPRECATED: Please use `verdi
-                 code create` instead.)
+      setup      (Deprecated) Setup a new code (use `verdi code create`).
       show       Display detailed information for a code.
       test       Run tests for the given code to check whether it is usable.
 
@@ -402,8 +401,7 @@ Below is a list with all available subcommands.
       dump                Dump all data in an AiiDA profile's storage to disk.
       list                Display a list of all available profiles.
       set-default         Set a profile as the default profile.
-      setdefault          Set a profile as the default profile. (DEPRECATED: Please use `verdi
-                          profile set-default` instead.)
+      setdefault          (Deprecated) Set a profile as the default profile.
       setup               Set up a new profile.
       show                Show details for a profile.
 
@@ -417,9 +415,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS]
 
-      Setup a new profile in a fully automated fashion. (DEPRECATED: This command is
-      deprecated. For a fully automated alternative, use `verdi presto --use-postgres`
-      instead. For full control, use `verdi profile setup core.psql_dos`.)
+      (Deprecated) Setup a new profile in a fully automated fashion.
 
     Options:
       -n, --non-interactive / -I, --interactive
@@ -523,10 +519,10 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS]
 
-      Setup a new profile (use `verdi profile setup`).
+      (Deprecated) Setup a new profile (use `verdi profile setup`).
 
       This method assumes that an empty PSQL database has been created and that the database
-      user has been created. (DEPRECATED: Please use `verdi profile setup` instead.)
+      user has been created.
 
     Options:
       -n, --non-interactive / -I, --interactive

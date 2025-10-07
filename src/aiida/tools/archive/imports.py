@@ -162,7 +162,6 @@ def import_archive(
                     backend_from,
                     backend,
                     batch_size,
-                    filter_size,
                     user_ids_archive_backend,
                     computer_ids_archive_backend,
                 )
@@ -186,17 +185,18 @@ def import_archive(
                 node_ids_archive_backend,
                 merge_comments,
             )
-            _import_links(backend_from, backend, batch_size, filter_size, node_ids_archive_backend)
+            _import_links(backend_from, backend, batch_size, node_ids_archive_backend)
             group_labels = _import_groups(
                 backend_from, backend, batch_size, filter_size, user_ids_archive_backend, node_ids_archive_backend
             )
             import_group_id = None
             if create_group:
-                import_group_id = _make_import_group(
-                    group, group_labels, node_ids_archive_backend, backend, batch_size, filter_size
-                )
+                import_group_id = _make_import_group(group, group_labels, node_ids_archive_backend, backend, batch_size)
             new_repo_keys = _get_new_object_keys(
-                archive_format.key_format, backend_from, backend, batch_size, filter_size
+                archive_format.key_format,
+                backend_from,
+                backend,
+                batch_size,
             )
 
             if test_run:
@@ -392,7 +392,6 @@ def _import_authinfos(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
     batch_size: int,
-    filter_size: int,
     user_ids_archive_backend: Dict[int, int],
     computer_ids_archive_backend: Dict[int, int],
 ) -> None:
@@ -508,7 +507,7 @@ def _import_nodes(
     new_nodes = len(input_id_uuid) - len(backend_uuid_id)
 
     if backend_uuid_id:
-        _merge_node_extras(backend_from, backend_to, batch_size, filter_size, backend_uuid_id, merge_extras)
+        _merge_node_extras(backend_from, backend_to, batch_size, backend_uuid_id, merge_extras)
 
     if new_nodes:
         # add new nodes and update backend_uuid_id with their uuid -> id mapping
@@ -637,7 +636,6 @@ def _merge_node_extras(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
     batch_size: int,
-    filter_size: int,
     backend_uuid_id: Dict[str, int],
     mode: MergeExtrasType,
 ) -> None:
@@ -873,7 +871,6 @@ def _import_links(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
     batch_size: int,
-    filter_size: int,
     node_ids_archive_backend: Dict[int, int],
 ) -> None:
     """Import links from one backend to another."""
@@ -1143,7 +1140,6 @@ def _make_import_group(
     node_ids_archive_backend: Dict[int, int],
     backend_to: StorageBackend,
     batch_size: int,
-    filter_size: int,
 ) -> Optional[int]:
     """Make an import group containing all imported nodes.
 
@@ -1209,7 +1205,10 @@ def _make_import_group(
 
 
 def _get_new_object_keys(
-    key_format: str, backend_from: StorageBackend, backend_to: StorageBackend, batch_size: int, filter_size: int
+    key_format: str,
+    backend_from: StorageBackend,
+    backend_to: StorageBackend,
+    batch_size: int,
 ) -> Set[str]:
     """Return the object keys that need to be added to the backend."""
     archive_hashkeys: Set[str] = set()

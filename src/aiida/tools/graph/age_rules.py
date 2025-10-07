@@ -15,8 +15,8 @@ from copy import deepcopy
 import numpy as np
 
 from aiida import orm
-from aiida.common.datastructures import DEFAULT_FILTER_SIZE
 from aiida.common.lang import type_check
+from aiida.common.utils import DEFAULT_FILTER_SIZE
 from aiida.tools.graph.age_entities import Basket
 
 

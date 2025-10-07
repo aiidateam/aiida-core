@@ -15,8 +15,8 @@ from numpy import inf
 
 from aiida import orm
 from aiida.common import exceptions
-from aiida.common.datastructures import DEFAULT_FILTER_SIZE
 from aiida.common.links import GraphTraversalRules, LinkType
+from aiida.common.utils import DEFAULT_FILTER_SIZE
 from aiida.orm.utils.links import LinkQuadruple
 from aiida.tools.graph.age_entities import Basket
 from aiida.tools.graph.age_rules import RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule

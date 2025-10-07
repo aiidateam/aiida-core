@@ -13,7 +13,12 @@ from __future__ import annotations
 import pathlib
 from typing import Union
 
-__all__ = ('FilePath',)
+try:
+    from typing import Self
+except ImportError:
+    from typing_extensions import Self
+
+__all__ = ('FilePath', 'Self')
 
 
 FilePath = Union[str, pathlib.PurePath]

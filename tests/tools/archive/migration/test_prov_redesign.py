@@ -201,7 +201,7 @@ def test_group_name_and_type_change(tmp_path, aiida_profile):
     groups_label = ['Users', 'UpfData']
     upf_filename = 'Al.test_file.UPF'
     # regular upf file version 2 header
-    upf_contents = '\n'.join(
+    upf_contents = '\n'.join(  # noqa: FLY002
         [
             '<UPF version="2.0.1">',
             'Human readable section is completely irrelevant for parsing!',

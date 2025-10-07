@@ -114,11 +114,11 @@ class SqlaComputerCollection(BackendComputerCollection):
 
     ENTITY_CLASS = SqlaComputer
 
-    def list_names(self):
+    def list_names(self) -> list[tuple[str]]:
         session = self.backend.get_session()
         return session.query(self.ENTITY_CLASS.MODEL_CLASS.label).all()
 
-    def delete(self, pk):
+    def delete(self, pk) -> None:
         try:
             session = self.backend.get_session()
             row = session.get(self.ENTITY_CLASS.MODEL_CLASS, pk)

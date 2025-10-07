@@ -8,9 +8,20 @@
 ###########################################################################
 """Utility module with a factory of standard ``QueryBuilder`` instances for ``CalculationNodes``."""
 
+from __future__ import annotations
+
+import typing as t
+from collections.abc import Iterable
+
 from aiida.common.lang import classproperty
 
-from .mapping import CalculationProjectionMapper
+from .mapping import CalculationProjectionMapper, ProjectionMapper
+
+if t.TYPE_CHECKING:
+    from aiida.orm import Node
+
+
+QuerySetType = Iterable[dict[str, dict[str, t.Any]]]
 
 
 class CalculationQueryBuilder:
@@ -44,34 +55,34 @@ class CalculationQueryBuilder:
         'cached_from',
     )
 
-    def __init__(self, mapper=None):
-        if mapper is None:
-            self._mapper = CalculationProjectionMapper(self._valid_projections)
-        else:
+    def __init__(self, mapper: ProjectionMapper | None = None):
+        if mapper is not None:
             self._mapper = mapper
+        else:
+            self._mapper = CalculationProjectionMapper(self._valid_projections)
 
     @property
-    def mapper(self):
+    def mapper(self) -> ProjectionMapper:
         return self._mapper
 
     @classproperty
-    def default_projections(self):
+    def default_projections(self) -> tuple[str, ...]:
         return self._default_projections
 
     @classproperty
-    def valid_projections(self):
+    def valid_projections(self) -> tuple[str, ...]:
         return self._valid_projections
 
     def get_filters(
         self,
-        all_entries=False,
-        process_state=None,
-        process_label=None,
-        paused=False,
-        exit_status=None,
-        failed=False,
-        node_types=None,
-    ):
+        all_entries: bool = False,
+        process_state: str | None = None,
+        process_label: str | None = None,
+        paused: bool = False,
+        exit_status: str | None = None,
+        failed: bool = False,
+        node_types: list[Node] | None = None,
+    ) -> dict[str, t.Any]:
         """Return a set of QueryBuilder filters based on typical command line options.
 
         :param node_types: A tuple of node classes to filter for (must be sub classes of Calculation).
@@ -90,7 +101,7 @@ class CalculationQueryBuilder:
         process_state_attribute = self.mapper.get_attribute('process_state')
         paused_attribute = self.mapper.get_attribute('paused')
 
-        filters = {}
+        filters: dict[str, t.Any] = {}
 
         if node_types is not None:
             filters['or'] = []
@@ -119,7 +130,14 @@ class CalculationQueryBuilder:
 
         return filters
 
-    def get_query_set(self, relationships=None, filters=None, order_by=None, past_days=None, limit=None):
+    def get_query_set(
+        self,
+        relationships: dict[str, t.Any] | None = None,
+        filters: dict[str, t.Any] | None = None,
+        order_by: dict[str, t.Any] | None = None,
+        past_days: int | None = None,
+        limit: int | None = None,
+    ) -> QuerySetType:
         """Return the query set of calculations for the given filters and query parameters.
 
         :param relationships: A mapping of relationships to join on, e.g. {'with_node': Group} to join on a Group. The
@@ -155,7 +173,7 @@ class CalculationQueryBuilder:
 
         if relationships is not None:
             for tag, entity in relationships.items():
-                builder.append(cls=type(entity), filters={'id': entity.pk}, **{tag: 'process'})
+                builder.append(cls=type(entity), filters={'id': entity.pk}, **{tag: 'process'})  # type: ignore[arg-type]
 
         if order_by is not None:
             builder.order_by({'process': order_by})
@@ -167,7 +185,7 @@ class CalculationQueryBuilder:
 
         return builder.iterdict()
 
-    def get_projected(self, query_set, projections):
+    def get_projected(self, query_set: QuerySetType, projections: list[str]) -> list[t.Any]:
         """Project the query set for the given set of projections."""
         header = [self.mapper.get_label(projection) for projection in projections]
         result = [header]

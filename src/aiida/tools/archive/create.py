@@ -22,12 +22,11 @@ from typing import Any, Callable, Iterable, Optional, Union
 from tabulate import tabulate
 
 from aiida import orm
-from aiida.common.datastructures import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE, QueryParams
 from aiida.common.lang import type_check
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter
-from aiida.common.utils import batch_iter
+from aiida.common.utils import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE, batch_iter
 from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
@@ -218,13 +217,12 @@ def create_archive(
             EntityTypes.LOG,
         ]
     }
-    query_params = QueryParams(batch_size=batch_size, filter_size=filter_size)
 
     # extract ids/uuid from initial entities
     type_check(entities, Iterable, allow_none=True)
     if entities is None:
         group_nodes, link_data = _collect_all_entities(
-            querybuilder, entity_ids, include_authinfos, include_comments, include_logs, query_params.batch_size
+            querybuilder, entity_ids, include_authinfos, include_comments, include_logs, batch_size
         )
     else:
         for entry in entities:
@@ -255,7 +253,8 @@ def create_archive(
             include_comments,
             include_logs,
             backend,
-            query_params,
+            batch_size,
+            filter_size,
         )
 
     # now all the nodes have been retrieved, perform some checks
@@ -515,15 +514,13 @@ def _collect_required_entities(
     include_comments: bool,
     include_logs: bool,
     backend: StorageBackend,
-    query_params: QueryParams,
+    batch_size: int,
+    filter_size: int,
 ) -> tuple[list[list[int]], set[LinkQuadruple]]:
     """Collect required entities, given a set of starting entities and provenance graph traversal rules.
 
     :returns: (group_id_to_node_id, link_data) and updates entity_ids
     """
-
-    filter_size = query_params.filter_size
-    batch_size = query_params.batch_size
 
     def progress_str(name):
         return f'Collecting entities: {name}'

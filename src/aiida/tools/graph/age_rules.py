@@ -89,7 +89,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
             elif query_dict['path'][idx]['entity_type'].startswith(GROUP_ENTITY_TYPE_PREFIX):
                 result = 'groups'
             else:
-                raise RuntimeError(f"not understood entity from ( {query_dict['path'][idx]['entity_type']} )")
+                raise RuntimeError(f'not understood entity from ( {query_dict["path"][idx]["entity_type"]} )')
             return result
 
         query_dict = querybuilder.as_dict()
@@ -226,8 +226,6 @@ class QueryRule(Operation, metaclass=ABCMeta):
         if not primkeys:
             return
 
-        assert self._querybuilder is not None
-
         # Batch the queries for large datasets using batch_iter
         all_results = []
 
@@ -236,13 +234,12 @@ class QueryRule(Operation, metaclass=ABCMeta):
             batch_qb.add_filter(
                 self._first_tag, {operational_set[self._entity_from].identifier: {'in': batch_primkeys}}
             )
-            batch_results = batch_qb.dict()
-            all_results.extend(batch_results)
-
-        qres = all_results
+            all_results.extend(batch_qb.dict())
 
         # These are the new results returned by the query
-        target_set[self._entity_to].add_entities([item[self._last_tag][self._entity_to_identifier] for item in qres])
+        target_set[self._entity_to].add_entities(
+            [item[self._last_tag][self._entity_to_identifier] for item in all_results]
+        )
 
         if self._track_edges:
             # As in _init_run, I need the key for the edge_set
@@ -251,7 +248,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
             namedtuple_ = edge_set.edge_namedtuple
 
             target_set[edge_key].add_entities(
-                [namedtuple_(*(item[key1][key2] for (key1, key2) in self._edge_keys)) for item in qres]
+                [namedtuple_(*(item[key1][key2] for (key1, key2) in self._edge_keys)) for item in all_results]
             )
 
     def set_accumulator(self, accumulator_set):

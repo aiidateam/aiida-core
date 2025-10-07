@@ -71,9 +71,9 @@ def validate_list_of_string_tuples(val: Any, tuple_length: int) -> bool:
     from aiida.common.exceptions import ValidationError
 
     err_msg = (
-        'the value must be a list (or tuple) '
-        'of length-N list (or tuples), whose elements are strings; '
-        'N={}'.format(tuple_length)
+        'the value must be a list (or tuple) of length-N list (or tuples), whose elements are strings; N={}'.format(
+            tuple_length
+        )
     )
 
     if not isinstance(val, (list, tuple)):
@@ -410,7 +410,7 @@ class Prettifier:
         try:
             self._prettifier_f = self.prettifiers[format]
         except KeyError:
-            raise ValueError(f"Unknown prettifier format {format}; valid formats: {', '.join(self.get_prettifiers())}")
+            raise ValueError(f'Unknown prettifier format {format}; valid formats: {", ".join(self.get_prettifiers())}')
 
     def prettify(self, label: str) -> str:
         """Prettify a label using the format passed in the initializer
@@ -643,3 +643,34 @@ def batch_iter(
             length = 0
     if current:
         yield length, current
+
+
+# NOTE: `sqlite` has an `SQLITE_MAX_VARIABLE_NUMBER` compile-time flag.
+# On older `sqlite` versions, this was set to 999 by default,
+# while for newer versions it is generally higher, see:
+# https://www.sqlite.org/limits.html
+# If `DEFAULT_FILTER_SIZE` is set too high, the limit can be hit when large `IN` queries are
+# constructed through AiiDA, leading to SQLAlchemy `OperationalError`s.
+# On modern systems, the limit might be in the hundreds of thousands, however, as it is OS-
+# and/or Python version dependent and we don't know its size, we set the value to 999 for safety.
+# From manual benchmarking, this value for batching also seems to give reasonable performance.
+DEFAULT_FILTER_SIZE: int = 999
+
+# NOTE: `DEFAULT_BATCH_SIZE` controls how many database rows are fetched and processed at once during
+# streaming operations (e.g., `QueryBuilder.iterall()`, `QueryBuilder.iterdict()`). This prevents
+# loading entire large result sets into memory at once, which could cause memory exhaustion when
+# working with datasets containing thousands or millions of records. The value of 1000 provides a
+# balance between memory efficiency and database round-trip overhead. Setting it too low increases
+# the number of database queries needed, while setting it too high increases memory consumption.
+DEFAULT_BATCH_SIZE: int = 1000
+
+
+# @dataclass
+# class QueryParams:
+#     """Parameters for executing backend queries."""
+#
+#     # NOTE: See the default value definitions for additional background on the parameters.
+#     batch_size: int = DEFAULT_BATCH_SIZE
+#     """Batch size for streaming database rows."""
+#     filter_size: int = DEFAULT_FILTER_SIZE
+#     """Maximum number of parameters allowed in a single query filter."""

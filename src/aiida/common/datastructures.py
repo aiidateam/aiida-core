@@ -10,33 +10,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from enum import Enum, IntEnum
 from typing import TYPE_CHECKING
 
 from .extendeddicts import DefaultFieldsAttributeDict
 
 __all__ = ('CalcInfo', 'CalcJobState', 'CodeInfo', 'CodeRunMode', 'StashMode', 'UnstashTargetMode')
-
-# NOTE: `sqlite` has an `SQLITE_MAX_VARIABLE_NUMBER` compile-time flag, see:
-# https://www.slingacademy.com/article/sqlite-error-too-many-sql-variables/
-# On older `sqlite` versions, this was set to 1000, for newer versions it might be higher,
-# while very old versions didn't enforce this (or any other) limits at all, see:
-# https://www.sqlite.org/limits.html
-# If `DEFAULT_FILTER_SIZE` is set too high, the limit can be hit when large `IN` queries are
-# constructed through AiiDA, leading to SQLAlchemy `OperationalError`s.
-# On modern systems, the limit might be in the hundreds of thousands, however, as it is OS-
-# and/or Python version dependent and we don't know its size, we set the value to 999 for safety.
-# From manual benchmarking, this value for batching also seems to give reasonable performance.
-DEFAULT_FILTER_SIZE: int = 999
-
-# NOTE: `DEFAULT_BATCH_SIZE` controls how many database rows are fetched and processed at once during
-# streaming operations (e.g., `QueryBuilder.iterall()`, `QueryBuilder.iterdict()`). This prevents
-# loading entire large result sets into memory at once, which could cause memory exhaustion when
-# working with datasets containing thousands or millions of records. The value of 1000 provides a
-# balance between memory efficiency and database round-trip overhead. Setting it too low increases
-# the number of database queries needed, while setting it too high increases memory consumption.
-DEFAULT_BATCH_SIZE: int = 1000
 
 
 class StashMode(Enum):
@@ -280,14 +259,3 @@ class CodeRunMode(IntEnum):
 
     SERIAL = 0
     PARALLEL = 1
-
-
-@dataclass
-class QueryParams:
-    """Parameters for executing backend queries."""
-
-    # NOTE: See the default value definitions for additional background on the parameters.
-    batch_size: int = DEFAULT_BATCH_SIZE
-    """Batch size for streaming database rows."""
-    filter_size: int = DEFAULT_FILTER_SIZE
-    """Maximum number of parameters allowed in a single query filter."""

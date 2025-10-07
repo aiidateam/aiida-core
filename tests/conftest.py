@@ -21,6 +21,7 @@ import pathlib
 import subprocess
 import types
 import typing as t
+import uuid
 import warnings
 from enum import Enum
 from pathlib import Path
@@ -29,8 +30,10 @@ import click
 import pytest
 
 from aiida import get_profile, orm
+from aiida.common import timezone
 from aiida.common.folders import Folder
 from aiida.common.links import LinkType
+from aiida.manage import get_manager
 from aiida.manage.configuration import Profile, get_config, load_profile
 
 try:
@@ -1202,3 +1205,42 @@ def setup_duplicate_group():
         return dupl_group
 
     return _setup_duplicate_group
+
+
+@pytest.fixture
+def create_int_nodes():
+    """Factory fixture to create a specified number of Int nodes efficiently using bulk_insert."""
+
+    def _create_nodes(num_nodes):
+        """Create count number of Int nodes.
+
+        :param num_nodes: Number of nodes to create
+
+        :returns: List of PKs of orm.Int nodes created in profile storage
+        """
+        backend = get_manager().get_profile_storage()
+        assert backend.default_user is not None
+
+        current_time = timezone.now()
+
+        nodes_data = []
+        for i in range(num_nodes):
+            node_data = {
+                'uuid': str(uuid.uuid4()),
+                'node_type': 'data.core.int.Int.',
+                'process_type': None,
+                'label': f'test_node_{i}',
+                'description': 'Test node for integration testing',
+                'user_id': backend.default_user.pk,
+                'dbcomputer_id': None,
+                'ctime': current_time,
+                'mtime': current_time,
+                'attributes': {'value': i},
+                'extras': {},
+                'repository_metadata': {},
+            }
+            nodes_data.append(node_data)
+
+        return backend.bulk_insert(entity_type=orm.entities.EntityTypes.NODE, rows=nodes_data)
+
+    return _create_nodes

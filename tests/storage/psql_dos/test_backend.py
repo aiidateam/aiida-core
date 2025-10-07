@@ -108,6 +108,8 @@ def test_maintain(caplog, monkeypatch, kwargs, logged_texts):
 
 def test_get_info(monkeypatch):
     """Test the ``get_info`` method."""
+    from aiida import orm
+
     storage_backend = get_manager().get_profile_storage()
 
     def mock_get_info(self, detailed=False, **kwargs):
@@ -128,12 +130,23 @@ def test_get_info(monkeypatch):
     assert 'extra_value' not in repository_info_out
     assert repository_info_out['value'] == 42
 
-    storage_info_out = storage_backend.get_info(detailed=True)
-    repository_info_out = storage_info_out['repository']
+    node1 = orm.Data().store()
+    node2 = orm.Data().store()
+
+    detailed_storage_info_out = storage_backend.get_info(detailed=True)
+    repository_info_out = detailed_storage_info_out['repository']
     assert 'value' in repository_info_out
     assert 'extra_value' in repository_info_out
     assert repository_info_out['value'] == 42
     assert repository_info_out['extra_value'] == 0
+
+    # Test first_created and last_created timestamps
+    nodes_info = detailed_storage_info_out['entities']['Nodes']
+
+    assert 'first_created' in nodes_info
+    assert 'last_created' in nodes_info
+    assert nodes_info['first_created'] == str(node1.ctime)
+    assert nodes_info['last_created'] == str(node2.ctime)
 
 
 def test_unload_profile():

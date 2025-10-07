@@ -471,6 +471,22 @@ class StorageBackend(abc.ABC):
         count = QueryBuilder(self).append(Node).count()
         data['Nodes'] = {'count': count}
         if detailed:
+            first_time = (
+                QueryBuilder(self)
+                .append(Node, project=['ctime'], tag='node')
+                .order_by({'node': {'ctime': 'asc'}})
+                .first(flat=True)
+            )
+            last_time = (
+                QueryBuilder(self)
+                .append(Node, project=['ctime'], tag='node')
+                .order_by({'node': {'ctime': 'desc'}})
+                .first(flat=True)
+            )
+
+            data['Nodes']['first_created'] = str(first_time) if first_time else None
+            data['Nodes']['last_created'] = str(last_time) if last_time else None
+
             node_types = sorted(
                 {typ for (typ,) in QueryBuilder(self).append(Node, project=['node_type']).iterall() if typ is not None}
             )

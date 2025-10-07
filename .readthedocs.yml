@@ -32,3 +32,5 @@ build:
 search:
   ranking:
     reference/apidoc/*: -7
+  ignore:
+  - '*/apidoc/*'

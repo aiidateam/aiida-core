@@ -8,6 +8,10 @@
 ###########################################################################
 """Utility module with mapper objects that map database entities projections on attributes and labels."""
 
+from __future__ import annotations
+
+from typing import Any, Callable
+
 from . import formatting
 
 
@@ -24,9 +28,14 @@ class ProjectionMapper:
     well as formatter functions to format the attribute values into strings, suitable to be printed by the CLI.
     """
 
-    _valid_projections = []
+    _valid_projections: tuple[str, ...] = ()
 
-    def __init__(self, projection_labels=None, projection_attributes=None, projection_formatters=None):
+    def __init__(
+        self,
+        projection_labels: dict[str, str] | None = None,
+        projection_attributes: dict[str, str] | None = None,
+        projection_formatters: dict[str, Callable[[Any], str]] | None = None,
+    ):
         """Construct new instance."""
         if not self._valid_projections:
             raise NotImplementedError('no valid projections were specified by the sub class')
@@ -55,29 +64,35 @@ class ProjectionMapper:
                     self._projection_formatters[projection] = projection_formatters[projection]
                 except KeyError:
                     attribute = self._projection_attributes[projection]
-                    self._projection_formatters[projection] = lambda value, attribute=attribute: value[attribute]
+                    self._projection_formatters[projection] = lambda value, attribute=attribute: value[attribute]  # type: ignore[misc]
 
     @property
-    def valid_projections(self):
+    def valid_projections(self) -> tuple[str, ...]:
         return self._valid_projections
 
-    def get_label(self, projection):
+    def get_label(self, projection: str) -> str:
         return self._projection_labels[projection]
 
-    def get_attribute(self, projection):
+    def get_attribute(self, projection: str) -> str:
         return self._projection_attributes[projection]
 
-    def get_formatter(self, projection):
+    def get_formatter(self, projection: str) -> Callable[[Any], str]:
         return self._projection_formatters[projection]
 
-    def format(self, projection, value):
+    def format(self, projection: str, value: Any) -> str:
         return self.get_formatter(projection)(value)
 
 
 class CalculationProjectionMapper(ProjectionMapper):
     """The CLI projection mapper for Calculation derived entities."""
 
-    def __init__(self, projections, projection_labels=None, projection_attributes=None, projection_formatters=None):
+    def __init__(
+        self,
+        projections: tuple[str, ...],
+        projection_labels: dict[str, str] | None = None,
+        projection_attributes: dict[str, str] | None = None,
+        projection_formatters: dict[str, Callable[[Any], str]] | None = None,
+    ):
         from aiida.orm import ProcessNode
         from aiida.orm.nodes.caching import NodeCaching
         from aiida.orm.utils.mixins import Sealable

@@ -346,7 +346,8 @@ disallow_untyped_calls = true
 disallow_untyped_defs = true
 module = [
   'aiida.cmdline.params.*',
-  'aiida.cmdline.groups.*'
+  'aiida.cmdline.groups.*',
+  'aiida.tools.query.*'
 ]
 warn_return_any = true
 

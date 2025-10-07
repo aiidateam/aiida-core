@@ -765,8 +765,7 @@ def run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, 
     """Run CLI command through ``click.testing.CliRunner``."""
     from click.testing import CliRunner
 
-    from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
-    from aiida.cmdline.groups.verdi import LazyVerdiObjAttributeDict
+    from aiida.cmdline.groups.verdi import LazyVerdiObjAttributeDict, VerdiCommandGroup
 
     if initialize_ctx_obj:
         config = get_config()

@@ -36,7 +36,7 @@ __all__ = ('PortableCode',)
 _LOGGER = logging.getLogger(__name__)
 
 
-def _export_filpath_files_from_repo(portable_code: PortableCode, repository_path: pathlib.Path) -> str:
+def _export_filepath_files_from_repo(portable_code: PortableCode, repository_path: pathlib.Path) -> str:
     for root, _, filenames in portable_code.base.repository.walk():
         for filename in filenames:
             rel_path = str(root / filename)
@@ -72,7 +72,7 @@ class PortableCode(Code):
             short_name='-F',
             is_attribute=False,
             priority=2,
-            orm_to_model=_export_filpath_files_from_repo,  # type: ignore[arg-type]
+            orm_to_model=_export_filepath_files_from_repo,  # type: ignore[arg-type]
         )
 
     def __init__(
@@ -201,7 +201,7 @@ class PortableCode(Code):
         """Export code to a YAML file."""
         result = super()._prepare_yaml(*args, **kwargs)[0]
         target = pathlib.Path().cwd() / f'{self.label}'
-        _export_filpath_files_from_repo(self, target)
+        _export_filepath_files_from_repo(self, target)
         _LOGGER.info(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
         return result, {}
 

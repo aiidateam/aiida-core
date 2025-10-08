@@ -8,6 +8,7 @@ import typing as t
 
 import click
 
+from aiida import orm
 from aiida.common import exceptions
 from aiida.plugins.entry_point import ENTRY_POINT_GROUP_FACTORY_MAPPING, get_entry_point_names
 from aiida.plugins.factories import BaseFactory
@@ -97,8 +98,9 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         if hasattr(cls, 'Model'):
             # The plugin defines a pydantic model: use it to validate the provided arguments
+            Model = cls.Model.as_input_model() if issubclass(cls, orm.Entity) else cls.Model
             try:
-                cls.Model(**kwargs)
+                Model(**kwargs)
             except ValidationError as exception:
                 param_hint = [
                     f'--{loc.replace("_", "-")}'  # type: ignore[union-attr]
@@ -168,19 +170,26 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             options_spec = self.factory(entry_point).get_cli_options()  # type: ignore[union-attr]
             return [self.create_option(*item) for item in options_spec]
 
+        Model = cls.Model.as_input_model() if issubclass(cls, orm.Entity) else cls.Model
+
         options_spec = {}
 
-        for key, field_info in cls.Model.model_fields.items():
+        for key, field_info in Model.model_fields.items():
             if get_metadata(field_info, 'exclude_from_cli'):
                 continue
 
             default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default
 
-            # If the annotation has the ``__args__`` attribute it is an instance of a type from ``typing`` and the real
-            # type can be gotten from the arguments. For example it could be ``typing.Union[str, None]`` calling
-            # ``typing.Union[str, None].__args__`` will return the tuple ``(str, NoneType)``. So to get the real type,
-            # we simply remove all ``NoneType`` and the remaining type should be the type of the option.
-            if hasattr(field_info.annotation, '__args__'):
+            option_type = get_metadata(field_info, 'option_type', None)
+
+            if option_type is not None:
+                field_type = option_type
+            elif hasattr(field_info.annotation, '__args__'):
+                # If the annotation has the ``__args__`` attribute it is an instance of a type from ``typing`` and
+                # the real type can be gotten from the arguments. For example it could be ``typing.Union[str, None]``
+                # calling ``typing.Union[str, None].__args__`` will return the tuple ``(str, NoneType)``. So to get
+                # the real type, we simply remove all ``NoneType`` and the remaining type should be the type of the
+                # option.
                 args = list(filter(lambda e: e is not type(None), field_info.annotation.__args__))
                 # Click parameters only support specifying a single type, so we default to the first one even if the
                 # pydantic model defines multiple.

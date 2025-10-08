@@ -39,14 +39,66 @@ class KpointsData(ArrayData):
     """
 
     class Model(ArrayData.Model):
-        labels: t.List[str] = MetadataField(description='Labels associated with the list of kpoints')
-        label_numbers: t.List[int] = MetadataField(description='Index of the labels in the list of kpoints')
-        mesh: t.List[int] = MetadataField(description='Mesh of kpoints')
-        offset: t.List[float] = MetadataField(description='Offset of kpoints')
-        cell: t.List[t.List[float]] = MetadataField(description='Unit cell of the crystal, in Angstroms')
-        pbc1: bool = MetadataField(description='True if the first lattice vector is periodic')
-        pbc2: bool = MetadataField(description='True if the second lattice vector is periodic')
-        pbc3: bool = MetadataField(description='True if the third lattice vector is periodic')
+        labels: t.Optional[t.List[str]] = MetadataField(
+            None,
+            description='Labels associated with the list of kpoints',
+            orm_to_model=lambda node, _: t.cast('KpointsData', node).base.attributes.get('labels', None),
+        )
+        label_numbers: t.Optional[t.List[int]] = MetadataField(
+            None,
+            description='Index of the labels in the list of kpoints',
+            orm_to_model=lambda node, _: t.cast('KpointsData', node).base.attributes.get('label_numbers', None),
+        )
+        mesh: t.Optional[t.List[int]] = MetadataField(
+            None,
+            description='Mesh of kpoints',
+            orm_to_model=lambda node, _: t.cast('KpointsData', node).base.attributes.get('mesh', None),
+        )
+        offset: t.Optional[t.List[float]] = MetadataField(
+            None,
+            description='Offset of kpoints',
+            orm_to_model=lambda node, _: t.cast('KpointsData', node).base.attributes.get('offset', None),
+        )
+        cell: t.Optional[t.List[t.List[float]]] = MetadataField(
+            None,
+            description='Unit cell of the crystal, in Angstroms',
+        )
+        pbc1: bool = MetadataField(
+            description='True if the first lattice vector is periodic',
+            orm_to_model=lambda node, _: t.cast('KpointsData', node).pbc[0],
+        )
+        pbc2: bool = MetadataField(
+            description='True if the second lattice vector is periodic',
+            orm_to_model=lambda node, _: t.cast('KpointsData', node).pbc[1],
+        )
+        pbc3: bool = MetadataField(
+            description='True if the third lattice vector is periodic',
+            orm_to_model=lambda node, _: t.cast('KpointsData', node).pbc[2],
+        )
+
+    def __init__(
+        self,
+        labels: list[str] | None = None,
+        label_numbers: list[int] | None = None,
+        mesh: list[int] | None = None,
+        offset: list[float] | None = None,
+        cell: list[list[float]] | None = None,
+        pbc1: bool | None = None,
+        pbc2: bool | None = None,
+        pbc3: bool | None = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        if cell is not None:
+            self.cell = cell
+        if any(pbc is not None for pbc in (pbc1, pbc2, pbc3)):
+            self.pbc = (pbc1 or False, pbc2 or False, pbc3 or False)
+        if labels is not None and label_numbers is not None:
+            if len(labels) != len(label_numbers):
+                raise ValueError('Labels and label numbers must have the same length')
+            self.labels = list(zip(label_numbers, labels))
+        if mesh is not None:
+            self.set_kpoints_mesh(mesh, offset=offset)
 
     def get_description(self):
         """Returns a string with infos retrieved from  kpoints node's properties.
@@ -69,7 +121,7 @@ class KpointsData(ArrayData):
         """The crystal unit cell. Rows are the crystal vectors in Angstroms.
         :return: a 3x3 numpy.array
         """
-        return numpy.array(self.base.attributes.get('cell'))
+        return numpy.array(self.base.attributes.get('cell', []))
 
     @cell.setter
     def cell(self, value):
@@ -99,8 +151,11 @@ class KpointsData(ArrayData):
         :return: a tuple of three booleans, each one tells if there are periodic
             boundary conditions for the i-th real-space direction (i=1,2,3)
         """
-        # return copy.deepcopy(self._pbc)
-        return (self.base.attributes.get('pbc1'), self.base.attributes.get('pbc2'), self.base.attributes.get('pbc3'))
+        return (
+            self.base.attributes.get('pbc1', False),
+            self.base.attributes.get('pbc2', False),
+            self.base.attributes.get('pbc3', False),
+        )
 
     @pbc.setter
     def pbc(self, value):

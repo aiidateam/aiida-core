@@ -189,13 +189,35 @@ class ProcessNode(Sealable, Node):
         )
 
     class Model(Node.Model, Sealable.Model):
-        process_label: Optional[str] = MetadataField(description='The process label')
-        process_state: Optional[str] = MetadataField(description='The process state enum')
-        process_status: Optional[str] = MetadataField(description='The process status is a generic status message')
-        exit_status: Optional[int] = MetadataField(description='The process exit status')
-        exit_message: Optional[str] = MetadataField(description='The process exit message')
-        exception: Optional[str] = MetadataField(description='The process exception message')
-        paused: bool = MetadataField(description='Whether the process is paused')
+        process_label: Optional[str] = MetadataField(
+            None,
+            description='The process label',
+        )
+        process_state: Optional[str] = MetadataField(
+            None,
+            description='The process state enum',
+        )
+        process_status: Optional[str] = MetadataField(
+            None,
+            description='The process status is a generic status message',
+        )
+        exit_status: Optional[int] = MetadataField(
+            None,
+            description='The process exit status',
+        )
+        exit_message: Optional[str] = MetadataField(
+            None,
+            description='The process exit message',
+        )
+        exception: Optional[str] = MetadataField(
+            None,
+            description='The process exception message',
+        )
+        paused: Optional[bool] = MetadataField(
+            None,
+            description='Whether the process is paused',
+            exclude_to_orm=True,
+        )
 
     def set_metadata_inputs(self, value: Dict[str, Any]) -> None:
         """Set the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
@@ -462,10 +484,10 @@ class ProcessNode(Sealable, Node):
         """
         return self.base.attributes.get(self.EXIT_STATUS_KEY, None)
 
-    def set_exit_status(self, status: Union[None, enum.Enum, int]) -> None:
+    def set_exit_status(self, status: Optional[Union[enum.Enum, int]] = None) -> None:
         """Set the exit status of the process
 
-        :param state: an integer exit code or None, which will be interpreted as zero
+        :param status: the exit status, an integer exit code, or None
         """
         if status is None:
             status = 0

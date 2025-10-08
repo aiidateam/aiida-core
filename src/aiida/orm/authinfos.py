@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type, cast
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -55,13 +55,13 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
             description='The PK of the computer',
             is_attribute=False,
             orm_class=Computer,
-            orm_to_model=lambda auth_info, _: auth_info.computer.pk,  # type: ignore[attr-defined]
+            orm_to_model=lambda auth_info, _: cast('AuthInfo', auth_info).computer.pk,
         )
         user: int = MetadataField(
             description='The PK of the user',
             is_attribute=False,
             orm_class=User,
-            orm_to_model=lambda auth_info, _: auth_info.user.pk,  # type: ignore[attr-defined]
+            orm_to_model=lambda auth_info, _: cast('AuthInfo', auth_info).user.pk,
         )
         enabled: bool = MetadataField(
             True,
@@ -84,8 +84,8 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         computer: 'Computer',
         user: 'User',
         enabled: bool = True,
-        auth_params: Dict[str, Any] | None = None,
-        metadata: Dict[str, Any] | None = None,
+        auth_params: Optional[Dict[str, Any]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
         backend: Optional['StorageBackend'] = None,
     ) -> None:
         """Create an `AuthInfo` instance for the given computer and user.

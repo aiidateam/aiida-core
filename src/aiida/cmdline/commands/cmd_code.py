@@ -16,6 +16,7 @@ from typing import Any
 
 import click
 
+from aiida import orm
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
@@ -32,10 +33,11 @@ def verdi_code():
     """Setup and manage codes."""
 
 
-def create_code(ctx: click.Context, cls, **kwargs) -> None:
+def create_code(ctx: click.Context, cls: orm.Code, **kwargs) -> None:
     """Create a new `Code` instance."""
     try:
-        instance = cls._from_model(cls.Model(**kwargs))
+        Model = cls.Model.as_input_model()
+        instance = cls.from_model(Model(**kwargs))
     except (TypeError, ValueError) as exception:
         echo.echo_critical(f'Failed to create instance `{cls}`: {exception}')
 

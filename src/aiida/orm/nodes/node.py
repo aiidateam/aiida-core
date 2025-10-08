@@ -13,12 +13,26 @@ from __future__ import annotations
 import base64
 import datetime
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterator, List, NoReturn, Optional, Tuple, Type, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Dict,
+    Generic,
+    Iterator,
+    List,
+    NoReturn,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    cast,
+)
 from uuid import UUID
 
 from typing_extensions import Self
 
-from aiida.common import exceptions
+from aiida.common import exceptions, timezone
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
@@ -196,11 +210,17 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
     class Model(Entity.Model):
-        uuid: Optional[str] = MetadataField(
-            None, description='The UUID of the node', is_attribute=False, exclude_to_orm=True, exclude_from_cli=True
+        uuid: UUID = MetadataField(
+            description='The UUID of the node',
+            is_attribute=False,
+            exclude_to_orm=True,
+            exclude_from_cli=True,
         )
-        node_type: Optional[str] = MetadataField(
-            None, description='The type of the node', is_attribute=False, exclude_to_orm=True, exclude_from_cli=True
+        node_type: str = MetadataField(
+            description='The type of the node',
+            is_attribute=False,
+            exclude_to_orm=True,
+            exclude_from_cli=True,
         )
         process_type: Optional[str] = MetadataField(
             None,
@@ -209,76 +229,81 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             exclude_to_orm=True,
             exclude_from_cli=True,
         )
-        repository_metadata: Optional[Dict[str, Any]] = MetadataField(
-            None,
+        repository_metadata: Dict[str, Any] = MetadataField(
+            default_factory=dict,
             description='Virtual hierarchy of the file repository.',
             is_attribute=False,
             orm_to_model=lambda node, _: node.base.repository.metadata,  # type: ignore[attr-defined]
             exclude_to_orm=True,
             exclude_from_cli=True,
         )
-        ctime: Optional[datetime.datetime] = MetadataField(
-            None,
+        ctime: datetime.datetime = MetadataField(
+            default_factory=timezone.now,
             description='The creation time of the node',
             is_attribute=False,
             exclude_to_orm=True,
             exclude_from_cli=True,
         )
-        mtime: Optional[datetime.datetime] = MetadataField(
-            None,
+        mtime: datetime.datetime = MetadataField(
+            default_factory=timezone.now,
             description='The modification time of the node',
             is_attribute=False,
             exclude_to_orm=True,
             exclude_from_cli=True,
         )
-        label: Optional[str] = MetadataField(
-            None, description='The node label', is_attribute=False, exclude_from_cli=True
+        label: str = MetadataField(
+            '',
+            description='The node label',
+            is_attribute=False,
         )
-        description: Optional[str] = MetadataField(
-            None, description='The node description', is_attribute=False, exclude_from_cli=True
+        description: str = MetadataField(
+            '',
+            description='The node description',
+            is_attribute=False,
         )
-        attributes: Optional[Dict[str, Any]] = MetadataField(
-            None,
+        attributes: Dict[str, Any] = MetadataField(
+            default_factory=dict,
             description='The node attributes',
             is_attribute=False,
-            orm_to_model=lambda node, _: node.base.attributes.all,  # type: ignore[attr-defined]
+            orm_to_model=lambda node, _: cast('Node', node).base.attributes.all,
             is_subscriptable=True,
             exclude_from_cli=True,
             exclude_to_orm=True,
         )
-        extras: Optional[Dict[str, Any]] = MetadataField(
-            None,
+        extras: Dict[str, Any] = MetadataField(
+            default_factory=dict,
             description='The node extras',
             is_attribute=False,
-            orm_to_model=lambda node, _: node.base.extras.all,  # type: ignore[attr-defined]
+            orm_to_model=lambda node, _: cast('Node', node).base.extras.all,
             is_subscriptable=True,
             exclude_from_cli=True,
-            exclude_to_orm=True,
         )
         computer: Optional[int] = MetadataField(
             None,
             description='The PK of the computer',
             is_attribute=False,
-            orm_to_model=lambda node, _: node.computer.pk if node.computer else None,  # type: ignore[attr-defined]
+            orm_to_model=lambda node, _: cast('Node', node).computer.pk if cast('Node', node).computer else None,
             orm_class=Computer,
             exclude_from_cli=True,
+            exclude_to_orm=True,
         )
-        user: Optional[int] = MetadataField(
-            None,
+        user: int = MetadataField(
+            default_factory=lambda: User.collection.get_default().pk,
             description='The PK of the user who owns the node',
             is_attribute=False,
-            orm_to_model=lambda node, _: node.user.pk,  # type: ignore[attr-defined]
+            orm_to_model=lambda node, _: cast('Node', node).user.pk,
             orm_class=User,
+            exclude_to_orm=True,
             exclude_from_cli=True,
         )
-        repository_content: Optional[dict[str, bytes]] = MetadataField(
-            None,
+        repository_content: dict[str, bytes] = MetadataField(
+            default_factory=dict,
             description='Dictionary of file repository content. Keys are relative filepaths and values are binary file '
             'contents encoded as base64.',
             is_attribute=False,
             orm_to_model=lambda node, _: {
                 key: base64.encodebytes(content)
-                for key, content in node.base.repository.serialize_content().items()  # type: ignore[attr-defined]
+                for key, content in cast('Node', node).base.repository.serialize_content().items()
             },
             exclude_from_cli=True,
             exclude_to_orm=True,

@@ -354,6 +354,10 @@ class QbFields:
     def __init__(self, fields: t.Optional[t.Dict[str, QbField]] = None):
         self._fields = fields or {}
 
+    def keys(self) -> list[str]:
+        """Return the field keys, prefixed with 'attribute.' if field is an attribute."""
+        return [field.backend_key for field in self._fields.values()]
+
     def __repr__(self) -> str:
         return pformat({key: str(value) for key, value in self._fields.items()})
 
@@ -464,7 +468,7 @@ class EntityFieldMeta(ABCMeta):
             for key, field in cls.Model.model_fields.items():
                 fields[key] = add_field(
                     key,
-                    alias=get_metadata(field, 'alias', None),
+                    alias=field.alias,
                     dtype=field.annotation,
                     doc=field.description,
                     is_attribute=get_metadata(field, 'is_attribute', False),

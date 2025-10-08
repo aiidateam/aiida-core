@@ -8,7 +8,6 @@ import typing as t
 
 import click
 
-from aiida import orm
 from aiida.common import exceptions
 from aiida.plugins.entry_point import ENTRY_POINT_GROUP_FACTORY_MAPPING, get_entry_point_names
 from aiida.plugins.factories import BaseFactory
@@ -98,7 +97,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         if hasattr(cls, 'Model'):
             # The plugin defines a pydantic model: use it to validate the provided arguments
-            Model = cls.Model.as_input_model() if issubclass(cls, orm.Entity) else cls.Model
+            Model = cls.Model.as_input_model() if hasattr(cls.Model, 'as_input_model') else cls.Model
             try:
                 Model(**kwargs)
             except ValidationError as exception:
@@ -170,7 +169,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             options_spec = self.factory(entry_point).get_cli_options()  # type: ignore[union-attr]
             return [self.create_option(*item) for item in options_spec]
 
-        Model = cls.Model.as_input_model() if issubclass(cls, orm.Entity) else cls.Model
+        Model = cls.Model.as_input_model() if hasattr(cls.Model, 'as_input_model') else cls.Model
 
         options_spec = {}
 

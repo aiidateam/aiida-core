@@ -19,8 +19,6 @@ from __future__ import annotations
 import pathlib
 from typing import cast
 
-from pydantic import field_validator
-
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
@@ -44,13 +42,12 @@ class InstalledCode(Code):
     class Model(AbstractCode.Model):
         """Model describing required information to create an instance."""
 
-        computer: int = MetadataField(
+        computer: str = MetadataField(
             title='Computer',
-            description='The remote computer on which the executable resides.',
+            description='The label of the remote computer on which the executable resides.',
             is_attribute=False,
-            orm_to_model=lambda node, _: cast('InstalledCode', node).computer.pk,
-            orm_class=Computer,
-            option_type=str,
+            orm_to_model=lambda node, _: cast('InstalledCode', node).computer.label,
+            model_to_orm=lambda model: cast('InstalledCode.Model', model).load_computer(),
             short_name='-Y',
             priority=2,
         )
@@ -62,24 +59,16 @@ class InstalledCode(Code):
             priority=1,
         )
 
-        @field_validator('computer', mode='before')
-        @classmethod
-        def validate_computer(cls, value: str | int) -> int:
-            """Validate computer input.
+        def load_computer(self) -> Computer:
+            """Load the computer instance.
 
-            If provided a string (e.g., via CLI computer setup), try to load the computer and return its PK.
-
-            :param value: The input value, either a string or an integer
-            :return: The PK of the computer
-            :raises ValueError: If the computer does not exist
+            :return: The computer instance.
+            :raises ValueError: If the computer does not exist.
             """
             from aiida.orm import load_computer
 
-            if isinstance(value, int):
-                return value
-
             try:
-                return cast(int, load_computer(value).pk)
+                return load_computer(self.computer)
             except exceptions.NotExistent as exception:
                 raise ValueError(exception) from exception
 

@@ -36,7 +36,6 @@ def MetadataField(  # noqa: N802
     option_cls: t.Any | None = None,
     orm_class: type[Entity[t.Any, t.Any]] | str | None = None,
     orm_to_model: t.Callable[[Entity[t.Any, t.Any], Path], t.Any] | None = None,
-    option_type: type | None = None,
     model_to_orm: t.Callable[['BaseModel'], t.Any] | None = None,
     exclude_to_orm: bool = False,
     exclude_from_cli: bool = False,
@@ -66,9 +65,6 @@ def MetadataField(  # noqa: N802
     :param priority: Used to order the list of all fields in the model. Ordering is done from small to large priority.
     :param short_name: Optional short name to use for an option on a command line interface.
     :param option_cls: The :class:`click.Option` class to use to construct the option.
-    :param option_type: The type to use for the option on the command line interface. This is typically a built-in type
-        such as ``str``, ``int``, ``float``, or ``bool``. If not specified, the type will be inferred from the type
-        annotation of the field.
     :param orm_class: The class, or entry point name thereof, to which the field should be converted. If this field is
         defined, the value of this field should accept an integer which will automatically be converted to an instance
         of said ORM class using ``orm_class.collection.get(id={field_value})``. This is useful, for example, where a
@@ -90,7 +86,6 @@ def MetadataField(  # noqa: N802
         ('priority', priority),
         ('short_name', short_name),
         ('option_cls', option_cls),
-        ('option_type', option_type),
         ('orm_class', orm_class),
         ('orm_to_model', orm_to_model),
         ('model_to_orm', model_to_orm),

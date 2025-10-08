@@ -278,17 +278,17 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             is_subscriptable=True,
             exclude_from_cli=True,
         )
-        computer: Optional[int] = MetadataField(
+        computer: Optional[str] = MetadataField(
             None,
-            description='The PK of the computer',
+            description='The label of the computer',
             is_attribute=False,
-            orm_to_model=lambda node, _: cast('Node', node).computer.pk if cast('Node', node).computer else None,
-            orm_class=Computer,
+            orm_to_model=lambda node, _: cast('Node', node).computer.label if cast('Node', node).computer else None,  # type: ignore[union-attr]
+            model_to_orm=lambda model: cast('Node.Model', model).load_computer(),
             exclude_from_cli=True,
             exclude_to_orm=True,
         )
         user: int = MetadataField(
-            default_factory=lambda: User.collection.get_default().pk,
+            default_factory=lambda: User.collection.get_default().pk,  # type: ignore[union-attr]
             description='The PK of the user who owns the node',
             is_attribute=False,
             orm_to_model=lambda node, _: cast('Node', node).user.pk,
@@ -308,6 +308,19 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             exclude_from_cli=True,
             exclude_to_orm=True,
         )
+
+        def load_computer(self) -> Computer:
+            """Load the computer instance.
+
+            :return: The computer instance.
+            :raises ValueError: If the computer does not exist.
+            """
+            from aiida.orm import load_computer
+
+            try:
+                return load_computer(self.computer)
+            except exceptions.NotExistent as exception:
+                raise ValueError(exception) from exception
 
     def __init__(
         self,

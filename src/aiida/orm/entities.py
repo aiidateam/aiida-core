@@ -284,21 +284,34 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         return fields
 
-    def to_model(self, repository_path: Optional[pathlib.Path] = None) -> Model:
-        """Return the entity instance as an instance of its model."""
+    def to_model(self, repository_path: Optional[pathlib.Path] = None, unstored: bool = False) -> Model:
+        """Return the entity instance as an instance of its model.
+
+        :param repository_path: If the orm node has files in the repository, this path is used to read the repository
+            files from. If no path is specified a temporary path is created using the entities pk.
+        :param unstored: If True, the input version of the model is used (via `.as_input_model`), which strips
+            read-only fields, i.e., fields with `exclude_to_orm=True`.
+        :return: An instance of the entity's model class.
+        """
         fields = {}
 
-        for key, field in self.Model.model_fields.items():
+        Model = self.Model.as_input_model() if unstored else self.Model
+
+        for key, field in Model.model_fields.items():
             if orm_to_model := get_metadata(field, 'orm_to_model'):
                 fields[key] = orm_to_model(self, repository_path)
             else:
                 fields[key] = getattr(self, key)
 
-        return self.Model(**fields)
+        return Model(**fields)
 
     @classmethod
     def from_model(cls, model: Model) -> Self:
-        """Return an entity instance from an instance of its model."""
+        """Return an entity instance from an instance of its model.
+
+        :param model: An instance of the entity's model class.
+        :return: An instance of the entity class.
+        """
         fields = cls.model_to_orm_field_values(model)
         return cls(**fields)
 
@@ -306,6 +319,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         self,
         repository_path: Optional[pathlib.Path] = None,
         mode: Literal['json', 'python'] = 'json',
+        unstored: bool = False,
     ) -> dict[str, Any]:
         """Serialize the entity instance to JSON.
 
@@ -314,6 +328,8 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         :param mode: The serialization mode, either 'json' or 'python'. The 'json' mode is the most strict and ensures
             that the output is JSON serializable, whereas the 'python' mode allows for more complex Python types, such
             as `datetime` objects.
+        :param unstored: If True, the input version of the model is used (via `.as_input_model`), which strips
+            read-only fields, i.e., fields with `exclude_to_orm=True`.
         :return: A dictionary that can be serialized to JSON.
         """
         self.logger.warning(
@@ -329,15 +345,21 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
                 raise ValueError(f'The repository_path `{repository_path}` does not exist.')
             if not repository_path.is_dir():
                 raise ValueError(f'The repository_path `{repository_path}` is not a directory.')
-        return self.to_model(repository_path).model_dump(mode=mode)
+        return self.to_model(repository_path, unstored=unstored).model_dump(mode=mode)
 
     @classmethod
-    def from_serialized(cls, **kwargs: dict[str, Any]) -> Self:
-        """Construct an entity instance from JSON serialized data."""
+    def from_serialized(cls, unstored: bool = False, **kwargs: dict[str, Any]) -> Self:
+        """Construct an entity instance from JSON serialized data.
+
+        :param unstored: If True, the input version of the model is used (via `.as_input_model`), which strips
+            read-only fields, i.e., fields with `exclude_to_orm=True`.
+        :return: An instance of the entity class.
+        """
         cls._logger.warning(
             'Serialization through pydantic is still an experimental feature and might break in future releases.'
         )
-        return cls.from_model(cls.Model(**kwargs))
+        Model = cls.Model.as_input_model() if unstored else cls.Model
+        return cls.from_model(Model(**kwargs))
 
     @classproperty
     def objects(cls: EntityType) -> CollectionType:  # noqa: N805

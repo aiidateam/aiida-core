@@ -179,11 +179,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
             default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default
 
-            option_type = get_metadata(field_info, 'option_type', None)
-
-            if option_type is not None:
-                field_type = option_type
-            elif hasattr(field_info.annotation, '__args__'):
+            if hasattr(field_info.annotation, '__args__'):
                 # If the annotation has the ``__args__`` attribute it is an instance of a type from ``typing`` and
                 # the real type can be gotten from the arguments. For example it could be ``typing.Union[str, None]``
                 # calling ``typing.Union[str, None].__args__`` will return the tuple ``(str, NoneType)``. So to get

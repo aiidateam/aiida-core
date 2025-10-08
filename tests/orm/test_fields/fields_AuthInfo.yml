@@ -2,5 +2,5 @@ auth_params: QbDictField('auth_params', dtype=typing.Dict[str, typing.Any], is_a
 computer: QbNumericField('computer', dtype=<class 'int'>, is_attribute=False)
 enabled: QbField('enabled', dtype=<class 'bool'>, is_attribute=False)
 metadata: QbDictField('metadata', dtype=typing.Dict[str, typing.Any], is_attribute=False)
-pk: QbNumericField('pk', dtype=typing.Optional[int], is_attribute=False)
+pk: QbNumericField('pk', dtype=<class 'int'>, is_attribute=False)
 user: QbNumericField('user', dtype=<class 'int'>, is_attribute=False)

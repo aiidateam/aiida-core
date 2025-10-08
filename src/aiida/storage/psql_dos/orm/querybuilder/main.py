@@ -60,6 +60,9 @@ PROJECT_MAP = {
         'computer_pk': 'dbcomputer_id',
         'user_pk': 'user_id',
     },
+    'db_dbuser': {
+        'pk': 'id',
+    },
     'db_dbcomputer': {
         'pk': 'id',
     },

@@ -21,7 +21,7 @@ from aiida.orm import RemoteData
 def remote_data_factory(tmp_path, aiida_computer_local, aiida_computer_ssh):
     """Factory fixture to create RemoteData instances."""
 
-    def _create_remote_data(mode: str, content: str | bytes = b'some content'):
+    def _create_remote_data(mode: str, content: str | bytes = b'some content', store: bool = True):
         if mode == 'local':
             computer = aiida_computer_local(label='localhost')
         elif mode == 'ssh':
@@ -31,8 +31,9 @@ def remote_data_factory(tmp_path, aiida_computer_local, aiida_computer_ssh):
 
         node = RemoteData(computer=computer)
         node.set_remote_path(str(tmp_path))
-        node.store()
         (tmp_path / 'file.txt').write_bytes(content)
+        if store:
+            node.store()
         return node
 
     return _create_remote_data
@@ -49,6 +50,19 @@ def test_clean(remote_data_factory, mode):
     remote_data._clean()
     assert remote_data.is_empty
     assert remote_data.is_cleaned
+
+
+@pytest.mark.parametrize('mode', ('local', 'ssh'))
+def test_is_file(remote_data_factory, mode):
+    """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData.is_file` property."""
+
+    remote_data = remote_data_factory(mode=mode)
+    assert remote_data.is_file is False
+
+    remote_data = remote_data_factory(mode=mode, store=False)
+    remote_path = Path(remote_data.get_remote_path())
+    remote_data.set_remote_path(remote_path / 'file.txt')
+    assert remote_data.is_file is True
 
 
 @pytest.mark.parametrize('mode', ('local', 'ssh'))

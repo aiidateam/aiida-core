@@ -19,7 +19,7 @@ from __future__ import annotations
 import pathlib
 from typing import cast
 
-from pydantic import field_serializer, field_validator
+from pydantic import field_validator
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
@@ -44,16 +44,17 @@ class InstalledCode(Code):
     class Model(AbstractCode.Model):
         """Model describing required information to create an instance."""
 
-        computer: str = MetadataField(  # type: ignore[assignment]
-            ...,
+        computer: int = MetadataField(
             title='Computer',
             description='The remote computer on which the executable resides.',
-            orm_to_model=lambda node, _: cast('InstalledCode', node).computer.label,
+            is_attribute=False,
+            orm_to_model=lambda node, _: cast('InstalledCode', node).computer.pk,
+            orm_class=Computer,
+            option_type=str,
             short_name='-Y',
             priority=2,
         )
         filepath_executable: str = MetadataField(
-            ...,
             title='Filepath executable',
             description='Filepath of the executable on the remote computer.',
             orm_to_model=lambda node, _: str(cast('InstalledCode', node).filepath_executable),
@@ -61,20 +62,26 @@ class InstalledCode(Code):
             priority=1,
         )
 
-        @field_validator('computer')
+        @field_validator('computer', mode='before')
         @classmethod
-        def validate_computer(cls, value: str) -> Computer:
-            """Override the validator for the ``label`` of the base class since uniqueness is defined on full label."""
+        def validate_computer(cls, value: str | int) -> int:
+            """Validate computer input.
+
+            If provided a string (e.g., via CLI computer setup), try to load the computer and return its PK.
+
+            :param value: The input value, either a string or an integer
+            :return: The PK of the computer
+            :raises ValueError: If the computer does not exist
+            """
             from aiida.orm import load_computer
 
+            if isinstance(value, int):
+                return value
+
             try:
-                return load_computer(value)
+                return cast(int, load_computer(value).pk)
             except exceptions.NotExistent as exception:
                 raise ValueError(exception) from exception
-
-        @field_serializer('computer')
-        def serialize_computer(self, computer: Computer, _info):
-            return computer.label
 
     def __init__(self, computer: Computer, filepath_executable: str, **kwargs):
         """Construct a new instance.

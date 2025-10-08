@@ -48,7 +48,11 @@ class Data(Node):
 
     class Model(Node.Model):
         source: Optional[dict] = MetadataField(
-            None, description='Source of the data.', is_subscriptable=True, exclude_from_cli=True
+            None,
+            description='Source of the data.',
+            is_subscriptable=True,
+            exclude_to_orm=True,
+            exclude_from_cli=True,
         )
 
     def __init__(self, *args, source=None, **kwargs):

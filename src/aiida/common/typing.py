@@ -11,11 +11,12 @@
 from __future__ import annotations
 
 import pathlib
+import sys
 from typing import Union
 
-try:
+if sys.version_info >= (3, 11):
     from typing import Self
-except ImportError:
+else:
     from typing_extensions import Self
 
 __all__ = ('FilePath', 'Self')

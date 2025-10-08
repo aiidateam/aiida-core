@@ -16,6 +16,8 @@ import itertools
 import json
 import typing as t
 
+from pydantic import field_validator
+
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
 from aiida.common.pydantic import MetadataField
@@ -689,8 +691,28 @@ class StructureData(Data):
         pbc2: bool = MetadataField(description='Whether periodic in the b direction')
         pbc3: bool = MetadataField(description='Whether periodic in the c direction')
         cell: t.List[t.List[float]] = MetadataField(description='The cell parameters')
-        kinds: t.Optional[t.List[dict]] = MetadataField(description='The kinds of atoms')
-        sites: t.Optional[t.List[dict]] = MetadataField(description='The atomic sites')
+        kinds: t.Optional[t.List[dict]] = MetadataField(
+            None,
+            description='The kinds of atoms',
+        )
+        sites: t.Optional[t.List[dict]] = MetadataField(
+            None,
+            description='The atomic sites',
+        )
+
+        @field_validator('kinds', mode='before')
+        @classmethod
+        def _validate_kinds(cls, value: t.Optional[t.List['Kind']]) -> t.Optional[t.List[t.Dict]]:
+            if value is None:
+                return None
+            return [kind.get_raw() for kind in value]
+
+        @field_validator('sites', mode='before')
+        @classmethod
+        def _validate_sites(cls, value: t.Optional[t.List['Site']]) -> t.Optional[t.List[t.Dict]]:
+            if value is None:
+                return None
+            return [site.get_raw() for site in value]
 
     def __init__(
         self,

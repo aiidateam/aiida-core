@@ -12,11 +12,10 @@ import pathlib
 import warnings
 from collections import defaultdict
 from functools import partial
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 
-from aiida import orm
 from aiida.cmdline.commands.cmd_data.cmd_export import data_export
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
@@ -27,13 +26,16 @@ from aiida.cmdline.utils.common import validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions
 
+if TYPE_CHECKING:
+    from aiida.orm import Code
+
 
 @verdi.group('code')
 def verdi_code():
     """Setup and manage codes."""
 
 
-def create_code(ctx: click.Context, cls: orm.Code, **kwargs) -> None:
+def create_code(ctx: click.Context, cls: 'Code', **kwargs) -> None:
     """Create a new `Code` instance."""
     try:
         Model = cls.Model.as_input_model()

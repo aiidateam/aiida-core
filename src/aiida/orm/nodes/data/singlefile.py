@@ -10,11 +10,14 @@
 
 from __future__ import annotations
 
+import base64
 import contextlib
 import io
 import os
 import pathlib
 import typing as t
+
+from pydantic import field_serializer, field_validator
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -33,9 +36,28 @@ class SinglefileData(Data):
     class Model(Data.Model):
         content: bytes = MetadataField(
             description='The file content.',
-            model_to_orm=lambda model: io.BytesIO(model.content),  # type: ignore[attr-defined]
+            model_to_orm=lambda model: io.BytesIO(t.cast('SinglefileData', model).content),
         )
-        filename: t.Optional[str] = MetadataField(None, description='The filename. Defaults to `file.txt`.')
+        filename: str = MetadataField(
+            'file.txt',
+            description='The name of the stored file.',
+        )
+
+        @field_validator('content')
+        @classmethod
+        def _decode_content(cls, value: str | bytes) -> bytes:
+            """Decode base64 content if needed."""
+            if isinstance(value, str):
+                try:
+                    return base64.b64decode(value, validate=True)
+                except Exception as exc:
+                    raise ValueError('if `content` is a string, it must be valid base64-encoded data') from exc
+            return value
+
+        @field_serializer('content')
+        def _encode_content(self, value: bytes) -> str:
+            """Encode content as base64 string for serialization."""
+            return base64.b64encode(value).decode()
 
     @classmethod
     def from_string(cls, content: str, filename: str | pathlib.Path | None = None, **kwargs: t.Any) -> 'SinglefileData':

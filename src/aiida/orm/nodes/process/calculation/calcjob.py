@@ -106,7 +106,7 @@ class CalcJobNode(CalculationNode):
     _tools = None
 
     @property
-    def tools(self) -> 'CalculationTools':
+    def tools(self) -> Optional['CalculationTools']:
         """Return the calculation tools that are registered for the process type associated with this calculation.
 
         If the entry point name stored in the `process_type` of the CalcJobNode has an accompanying entry point in the

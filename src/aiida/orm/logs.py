@@ -11,6 +11,7 @@
 import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
+from uuid import UUID
 
 from aiida.common import timezone
 from aiida.common.pydantic import MetadataField
@@ -130,13 +131,36 @@ class Log(entities.Entity['BackendLog', LogCollection]):
     _CLS_COLLECTION = LogCollection
 
     class Model(entities.Entity.Model):
-        uuid: str = MetadataField(description='The UUID of the node', is_attribute=False, exclude_to_orm=True)
-        loggername: str = MetadataField(description='The name of the logger', is_attribute=False)
-        levelname: str = MetadataField(description='The name of the log level', is_attribute=False)
-        message: str = MetadataField(description='The message of the log', is_attribute=False)
-        time: datetime = MetadataField(description='The time at which the log was created', is_attribute=False)
-        metadata: Dict[str, Any] = MetadataField(description='The metadata of the log', is_attribute=False)
-        dbnode_id: int = MetadataField(description='Associated node', is_attribute=False)
+        uuid: UUID = MetadataField(
+            description='The UUID of the node',
+            is_attribute=False,
+            exclude_to_orm=True,
+        )
+        loggername: str = MetadataField(
+            description='The name of the logger',
+            is_attribute=False,
+        )
+        levelname: str = MetadataField(
+            description='The name of the log level',
+            is_attribute=False,
+        )
+        message: str = MetadataField(
+            description='The message of the log',
+            is_attribute=False,
+        )
+        time: datetime = MetadataField(
+            description='The time at which the log was created',
+            is_attribute=False,
+        )
+        metadata: Dict[str, Any] = MetadataField(
+            default_factory=dict,
+            description='The metadata of the log',
+            is_attribute=False,
+        )
+        dbnode_id: int = MetadataField(
+            description='Associated node',
+            is_attribute=False,
+        )
 
     def __init__(
         self,

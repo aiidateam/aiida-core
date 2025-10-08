@@ -8,8 +8,11 @@
 ###########################################################################
 """Module for Computer entities"""
 
+from __future__ import annotations
+
 import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from uuid import UUID
 
 from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER, AiidaLoggerType
@@ -74,13 +77,37 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
     _CLS_COLLECTION = ComputerCollection
 
     class Model(entities.Entity.Model):
-        uuid: str = MetadataField(description='The UUID of the computer', is_attribute=False, exclude_to_orm=True)
-        label: str = MetadataField(description='Label for the computer', is_attribute=False)
-        description: str = MetadataField(description='Description of the computer', is_attribute=False)
-        hostname: str = MetadataField(description='Hostname of the computer', is_attribute=False)
-        transport_type: str = MetadataField(description='Transport type of the computer', is_attribute=False)
-        scheduler_type: str = MetadataField(description='Scheduler type of the computer', is_attribute=False)
-        metadata: Dict[str, Any] = MetadataField(description='Metadata of the computer', is_attribute=False)
+        uuid: UUID = MetadataField(
+            description='The UUID of the computer',
+            is_attribute=False,
+            exclude_to_orm=True,
+        )
+        label: str = MetadataField(
+            description='Label for the computer',
+            is_attribute=False,
+        )
+        description: str = MetadataField(
+            '',
+            description='Description of the computer',
+            is_attribute=False,
+        )
+        hostname: str = MetadataField(
+            description='Hostname of the computer',
+            is_attribute=False,
+        )
+        transport_type: str = MetadataField(
+            description='Transport type of the computer',
+            is_attribute=False,
+        )
+        scheduler_type: str = MetadataField(
+            description='Scheduler type of the computer',
+            is_attribute=False,
+        )
+        metadata: Dict[str, Any] = MetadataField(
+            default_factory=dict,
+            description='Metadata of the computer',
+            is_attribute=False,
+        )
 
     def __init__(
         self,

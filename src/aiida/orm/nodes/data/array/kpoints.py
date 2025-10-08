@@ -11,6 +11,8 @@ lists and meshes of k-points (i.e., points in the reciprocal space of a
 periodic crystal structure).
 """
 
+from __future__ import annotations
+
 import typing as t
 
 import numpy

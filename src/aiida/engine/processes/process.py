@@ -39,9 +39,10 @@ import plumpy.exceptions
 import plumpy.futures
 import plumpy.persistence
 import plumpy.processes
-from aio_pika.exceptions import ConnectionClosed
 from kiwipy.communications import UnroutableError
 from plumpy.process_states import Finished, ProcessState
+from plumpy.processes import ConnectionClosed  # type: ignore[attr-defined]
+from plumpy.processes import Process as PlumpyProcess
 from plumpy.utils import AttributesFrozendict
 
 from aiida import orm
@@ -50,7 +51,9 @@ from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.engine.utils import InterruptableFuture
 from aiida.orm.implementation.utils import clean_value
+from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.orm.utils import serialize
 
 from .builder import ProcessBuilder
@@ -66,11 +69,12 @@ __all__ = ('Process', 'ProcessState')
 
 
 @plumpy.persistence.auto_persist('_parent_pid', '_enable_persistence')
-class Process(plumpy.processes.Process):
+class Process(PlumpyProcess):
     """This class represents an AiiDA process which can be executed and will
     have full provenance saved in the database.
     """
 
+    _cancelling_scheduler_job: asyncio.Task | None = None
     _node_class = orm.ProcessNode
     _spec_class = ProcessSpec
 
@@ -79,7 +83,7 @@ class Process(plumpy.processes.Process):
     class SaveKeys(enum.Enum):
         """Keys used to identify things in the saved instance state bundle."""
 
-        CALC_ID: str = 'calc_id'
+        CALC_ID = 'calc_id'
 
     @classmethod
     def spec(cls) -> ProcessSpec:
@@ -334,16 +338,43 @@ class Process(plumpy.processes.Process):
 
         self.node.logger.info(f'Loaded process<{self.node.pk}> from saved state')
 
-    def kill(self, msg: Union[str, None] = None) -> Union[bool, plumpy.futures.Future]:
+    def kill(self, msg_text: str | None = None, force_kill: bool = False) -> Union[bool, plumpy.futures.Future]:
         """Kill the process and all the children calculations it called
 
         :param msg: message
         """
         self.node.logger.info(f'Request to kill Process<{self.node.pk}>')
 
-        had_been_terminated = self.has_terminated()
+        if self.killed():
+            # Already killed
+            return True
 
-        result = super().kill(msg)
+        if self.has_terminated():
+            # Can't kill
+            return False
+
+        # Cancel scheduler job
+        if not force_kill and isinstance(self.node, CalcJobNode):
+            if self._killing:
+                self._killing.cancel()
+
+            if self._cancelling_scheduler_job:
+                self._cancelling_scheduler_job.cancel()
+                self.node.logger.report('Found active scheduler job cancelation that will be rescheduled.')
+
+            from .calcjobs.tasks import task_kill_job
+
+            coro = self._launch_task(task_kill_job, self.node, self.runner.transport)
+            self._cancelling_scheduler_job = asyncio.create_task(coro)
+            try:
+                self.loop.run_until_complete(self._cancelling_scheduler_job)
+            except Exception as exc:
+                self.node.logger.error(f'While cancelling the scheduler job an error was raised: {exc}')
+                return False
+
+        result = super().kill(msg_text, force_kill)
+
+        had_been_terminated = self.has_terminated()
 
         # Only kill children if we could be killed ourselves
         if result is not False and not had_been_terminated:
@@ -353,8 +384,8 @@ class Process(plumpy.processes.Process):
                     self.logger.info('no controller available to kill child<%s>', child.pk)
                     continue
                 try:
-                    result = self.runner.controller.kill_process(child.pk, f'Killed by parent<{self.node.pk}>')
-                    result = asyncio.wrap_future(result)  # type: ignore[arg-type]
+                    result = self.runner.controller.kill_process(child.pk, msg_text=f'Killed by parent<{self.node.pk}>')
+                    result = asyncio.wrap_future(result)
                     if asyncio.isfuture(result):
                         killing.append(result)
                 except ConnectionClosed:
@@ -378,6 +409,22 @@ class Process(plumpy.processes.Process):
                 kill_future.add_done_callback(done)
 
         return result
+
+    async def _launch_task(self, coro, *args, **kwargs):
+        """Launch a coroutine as a task, making sure to make it interruptable."""
+        import functools
+
+        from aiida.engine.utils import interruptable_task
+
+        self._task: Union[InterruptableFuture, None]
+
+        task_fn = functools.partial(coro, *args, **kwargs)
+        try:
+            self._task = interruptable_task(task_fn)
+            result = await self._task
+            return result
+        finally:
+            self._task = None
 
     @override
     def out(self, output_port: str, value: Any = None) -> None:
@@ -424,8 +471,6 @@ class Process(plumpy.processes.Process):
 
         from aiida.engine.utils import set_process_state_change_timestamp
 
-        super().on_entered(from_state)
-
         if self._state.LABEL is ProcessState.EXCEPTED:
             # The process is already excepted so simply update the process state on the node and let the process
             # complete the state transition to the terminal state. If another exception is raised during this exception
@@ -433,9 +478,7 @@ class Process(plumpy.processes.Process):
             self.node.set_process_state(self._state.LABEL)
             return
 
-        # For reasons unknown, it is important to update the outputs first, before doing anything else, otherwise there
-        # is the risk that certain outputs do not get attached before the process reaches a terminal state. Nevertheless
-        # we need to guarantee that the process state gets updated even if the ``update_outputs`` call excepts, for
+        # We need to guarantee that the process state gets updated even if the ``update_outputs`` call excepts, for
         # example if the process implementation attaches an invalid output through ``Process.out``, and so we call the
         # ``ProcessNode.set_process_state`` in the finally-clause. This way the state gets properly set on the node even
         # if the process is transitioning to the terminal excepted state.
@@ -448,6 +491,12 @@ class Process(plumpy.processes.Process):
 
         self._save_checkpoint()
         set_process_state_change_timestamp(self.node)
+
+        # The updating of outputs and state has to be performed before the super is called because the super will
+        # broadcast state changes and parent processes may start running again before the state change is completed. It
+        # is possible that they will read the old process state and outputs that they check may not yet have been
+        # attached.
+        super().on_entered(from_state)
 
     @override
     def on_terminated(self) -> None:
@@ -857,7 +906,7 @@ class Process(plumpy.processes.Process):
         ):
             return [(parent_name, port_value)]
 
-        if port is None and isinstance(port_value, Mapping) or isinstance(port, PortNamespace):
+        if (port is None and isinstance(port_value, Mapping)) or isinstance(port, PortNamespace):
             items = []
             for name, value in port_value.items():
                 prefixed_key = parent_name + separator + name if parent_name else name
@@ -895,10 +944,10 @@ class Process(plumpy.processes.Process):
         :return: flat list of outputs
 
         """
-        if port is None and isinstance(port_value, orm.Node) or isinstance(port, OutputPort):
+        if (port is None and isinstance(port_value, orm.Node)) or isinstance(port, OutputPort):
             return [(parent_name, port_value)]
 
-        if port is None and isinstance(port_value, Mapping) or isinstance(port, PortNamespace):
+        if (port is None and isinstance(port_value, Mapping)) or isinstance(port, PortNamespace):
             items = []
             for name, value in port_value.items():
                 prefixed_key = parent_name + separator + name if parent_name else name

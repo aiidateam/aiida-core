@@ -14,7 +14,7 @@ import abc
 import pathlib
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Generic, List, Literal, NoReturn, Optional, Type, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Generic, List, Literal, NoReturn, Optional, Type, TypeVar, Union
 
 from plumpy.base.utils import call_with_super_check, super_check
 from pydantic import BaseModel, ConfigDict, create_model
@@ -211,7 +211,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
             # Derive the input model from the original model
             new_name = cls.__qualname__.replace('.Model', 'InputModel')
-            InputModel = create_model(
+            InputModel = create_model(  # noqa: N806
                 new_name,
                 __base__=cls,
                 __doc__=f'Input version of {cls.__name__}.',
@@ -223,7 +223,9 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             readonly_fields = [
                 name
                 for name, field in InputModel.model_fields.items()
-                if getattr(field, 'json_schema_extra', {}) and field.json_schema_extra.get('readOnly')
+                if hasattr(field, 'json_schema_extra')
+                and isinstance(field.json_schema_extra, dict)
+                and field.json_schema_extra.get('readOnly')
             ]
 
             # Remove read-only fields
@@ -245,7 +247,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             decorators.field_validators = _prune_field_decorators(decorators.field_validators)
             decorators.field_serializers = _prune_field_decorators(decorators.field_serializers)
 
-            return cast(Type[EntityModelType], InputModel)
+            return InputModel
 
     @classmethod
     def model_to_orm_fields(cls) -> dict[str, FieldInfo]:
@@ -295,7 +297,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         """
         fields = {}
 
-        Model = self.Model.as_input_model() if unstored else self.Model
+        Model = self.Model.as_input_model() if unstored else self.Model  # noqa: N806
 
         for key, field in Model.model_fields.items():
             if orm_to_model := get_metadata(field, 'orm_to_model'):
@@ -358,7 +360,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         cls._logger.warning(
             'Serialization through pydantic is still an experimental feature and might break in future releases.'
         )
-        Model = cls.Model.as_input_model() if unstored else cls.Model
+        Model = cls.Model.as_input_model() if unstored else cls.Model  # noqa: N806
         return cls.from_model(Model(**kwargs))
 
     @classproperty

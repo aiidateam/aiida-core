@@ -11,7 +11,7 @@
 import pytest
 
 from aiida.manage import get_manager
-from aiida.orm import User
+from aiida.orm import User, load_node
 
 
 def test_all_tests_marked_with_requires_psql(request):
@@ -145,8 +145,11 @@ def test_get_info(monkeypatch):
 
     assert 'first_created' in nodes_info
     assert 'last_created' in nodes_info
-    assert nodes_info['first_created'] == str(node1.ctime)
-    assert nodes_info['last_created'] == str(node2.ctime)
+    # Reload nodes to get their ctime as stored in DB
+    first_created = load_node(node1.pk).ctime
+    last_created = load_node(node2.pk).ctime
+    assert nodes_info['first_created'] == str(first_created)
+    assert nodes_info['last_created'] == str(last_created)
 
 
 def test_unload_profile():

@@ -43,7 +43,6 @@ class TrajectoryData(ArrayData):
         )
         symbols: List[str] = MetadataField(description='List of symbols')
 
-
     def __init__(
         self,
         structurelist: list[orm.StructureData] | None = None,
@@ -105,7 +104,7 @@ class TrajectoryData(ArrayData):
         numatoms = len(symbols)
         if positions.shape != (numsteps, numatoms, 3):
             raise ValueError(
-                'TrajectoryData.positions must have shape (s,n,3), ' 'with s=number of steps and n=number of symbols'
+                'TrajectoryData.positions must have shape (s,n,3), with s=number of steps and n=number of symbols'
             )
         if times is not None:
             if times.shape != (numsteps,):
@@ -426,7 +425,7 @@ class TrajectoryData(ArrayData):
             for k in custom_kinds:
                 if not isinstance(k, Kind):
                     raise TypeError(
-                        'Each element of the custom_kinds list must ' 'be a aiida.orm.nodes.data.structure.Kind object'
+                        'Each element of the custom_kinds list must be a aiida.orm.nodes.data.structure.Kind object'
                     )
                 kind_names.append(k.name)
             if len(kind_names) != len(set(kind_names)):

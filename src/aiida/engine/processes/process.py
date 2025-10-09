@@ -120,6 +120,12 @@ class Process(PlumpyProcess):
             help='The label to use for the `CALL` link if the process is called by another process.',
         )
         spec.input(
+            f'{spec.metadata_key}.global_scheduler_info',
+            valid_type=dict,
+            required=False,
+            help='Store job submission information for large allocation.'
+        )
+        spec.input(
             'metadata.disable_cache',
             required=False,
             valid_type=bool,
@@ -779,7 +785,7 @@ class Process(PlumpyProcess):
     def _setup_metadata(self, metadata: dict) -> None:
         """Store the metadata on the ProcessNode."""
         for name, value in metadata.items():
-            if name in ['store_provenance', 'dry_run', 'call_link_label', 'disable_cache']:
+            if name in ['store_provenance', 'dry_run', 'call_link_label', 'disable_cache', 'global_scheduler_info']:
                 continue
 
             if name == 'label':

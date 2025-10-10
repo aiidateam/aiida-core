@@ -197,6 +197,11 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         @classmethod
         def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
+            """Sets the JSON schema title of the model.
+
+            The qualified name of the class is used, with dots removed. For example, `Node.Model` becomes `NodeModel`
+            in the JSON schema.
+            """
             super().__pydantic_init_subclass__(**kwargs)
             cls.model_config['title'] = cls.__qualname__.replace('.', '')
 

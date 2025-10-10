@@ -209,6 +209,15 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
     try:
         logger.info(f'scheduled request to update CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
+
+        if not node.get_last_job_info():
+            # One can pass this value from the scheduler,
+            # so we sleep only for slurm. And only for the first time?
+            # scheduler = node.computer.get_scheduler()
+            # sleeptim e= scheduler._FIRST_FETCH_SLEEP
+            # Some Schedulers take some time to show the job status
+            await asyncio.sleep(5)
+
         job_done = await utils.exponential_backoff_retry(
             do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
         )

@@ -12,10 +12,11 @@ from __future__ import annotations
 
 import base64
 import io
+from collections.abc import Iterable
 from typing import Any, Iterator, Optional
 
 import numpy as np
-from pydantic import ConfigDict
+from pydantic import ConfigDict, field_serializer, field_validator
 
 from aiida.common.pydantic import MetadataField
 
@@ -49,17 +50,27 @@ class ArrayData(Data):
 
     class Model(Data.Model):
         model_config = ConfigDict(arbitrary_types_allowed=True)
-        arrays: Optional[dict[str, bytes]] = MetadataField(
+
+        arrays: Optional[dict[str, np.ndarray]] = MetadataField(
             None,
-            description='The dictionary of numpy arrays.',
-            orm_to_model=lambda node, _: ArrayData.save_arrays(node.arrays),  # type: ignore[attr-defined]
-            model_to_orm=lambda model: ArrayData.load_arrays(model.arrays),  # type: ignore[attr-defined]
+            description='The dictionary of numpy arrays',
         )
+
+        @field_validator('arrays', mode='before')
+        @classmethod
+        def validate_arrays(cls, value: dict[str, Iterable] | None) -> dict[str, np.ndarray] | None:
+            if value is None:
+                return value
+            return {k: np.array(v) for k, v in value.items()}
+
+        @field_serializer('arrays', when_used='json-unless-none')
+        def serialize_arrays(self, value: dict[str, np.ndarray]) -> dict[str, list]:
+            return {k: v.tolist() for k, v in value.items()}
 
     array_prefix = 'array|'
     default_array_name = 'default'
 
-    def __init__(self, arrays: np.ndarray | dict[str, np.ndarray] | list[list[float]] | None = None, **kwargs):
+    def __init__(self, arrays: np.ndarray | dict[str, np.ndarray] | None = None, **kwargs):
         """Construct a new instance and set one or multiple numpy arrays.
 
         :param arrays: An optional single numpy array, or dictionary of numpy arrays to store.
@@ -68,9 +79,6 @@ class ArrayData(Data):
         self._cached_arrays: dict[str, np.ndarray] = {}
 
         arrays = arrays if arrays is not None else {}
-
-        if isinstance(arrays, list):
-            arrays = np.array(arrays)
 
         if isinstance(arrays, np.ndarray):
             arrays = {self.default_array_name: arrays}
@@ -230,8 +238,7 @@ class ArrayData(Data):
         # Check if the name is valid
         if not name or re.sub('[0-9a-zA-Z_]', '', name):
             raise ValueError(
-                'The name assigned to the array ({}) is not valid,'
-                'it can only contain digits, letters and underscores'
+                'The name assigned to the array ({}) is not valid,it can only contain digits, letters and underscores'
             )
 
         # Write the array to a temporary file, and then add it to the repository of the node

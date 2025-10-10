@@ -33,8 +33,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
     """
 
     def __init__(self, container: 'Container'):
-        if not t.TYPE_CHECKING:
-            from disk_objectstore import Container
+        from disk_objectstore import Container
+
         type_check(container, Container)
         self._container = container
 

@@ -39,7 +39,7 @@ def create_code(ctx: click.Context, cls: 'Code', **kwargs) -> None:
     """Create a new `Code` instance."""
     try:
         Model = cls.InputModel  # noqa: N806
-        instance = cls.from_model(Model(**kwargs))
+        instance = cls.from_model(Model(**kwargs))  # type: ignore[arg-type]
     except (TypeError, ValueError) as exception:
         echo.echo_critical(f'Failed to create instance `{cls}`: {exception}')
 

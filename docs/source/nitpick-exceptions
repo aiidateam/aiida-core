@@ -26,6 +26,7 @@ py:class json.encoder.JSONEncoder
 py:class EXPOSED_TYPE
 py:class EVENT_CALLBACK_TYPE
 py:class datetime
+py:class UUID
 py:class types.LambdaType
 py:meth tempfile.TemporaryDirectory
 
@@ -68,6 +69,8 @@ py:class aiida.orm.groups.SelfType
 py:class aiida.orm.implementation.entitites.EntityType
 py:class aiida.engine.processes.functions.FunctionType
 py:class aiida.engine.processes.workchains.workchain.MethodType
+py:class aiida.orm.entities.EntityInputModel
+py:class aiida.orm.entities.EntityModelType
 py:class aiida.orm.entities.EntityType
 py:class aiida.orm.entities.BackendEntityType
 py:class aiida.orm.entities.CollectionType

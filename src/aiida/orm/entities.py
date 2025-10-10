@@ -250,7 +250,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             return InputModel
 
     @classproperty
-    def InputModel(cls) -> Type[Model]:  # noqa: N805
+    def InputModel(cls) -> Type[Model]:  # noqa: N802, N805
         """Return the input version of the model class for this entity.
 
         :return: The input model class, with read-only fields removed.

@@ -10,6 +10,8 @@
 in a Brillouin zone, and how to operate on them.
 """
 
+from __future__ import annotations
+
 import json
 import typing as t
 from string import Template

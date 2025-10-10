@@ -97,7 +97,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         if hasattr(cls, 'Model'):
             # The plugin defines a pydantic model: use it to validate the provided arguments
-            Model = cls.Model.as_input_model() if hasattr(cls.Model, 'as_input_model') else cls.Model  # noqa: N806
+            Model = cls.InputModel if hasattr(cls, 'InputModel') else cls.Model  # noqa: N806
             try:
                 Model(**kwargs)
             except ValidationError as exception:
@@ -169,7 +169,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             options_spec = self.factory(entry_point).get_cli_options()  # type: ignore[union-attr]
             return [self.create_option(*item) for item in options_spec]
 
-        Model = cls.Model.as_input_model() if hasattr(cls.Model, 'as_input_model') else cls.Model  # noqa: N806
+        Model = cls.InputModel if hasattr(cls, 'InputModel') else cls.Model  # noqa: N806
 
         options_spec = {}
 

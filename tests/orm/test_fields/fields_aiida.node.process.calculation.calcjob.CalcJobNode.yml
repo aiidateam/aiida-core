@@ -1,13 +1,15 @@
-attributes: QbDictField('attributes', dtype=typing.Optional[typing.Dict[str, typing.Any]],
+attributes:
+  QbDictField('attributes', dtype=typing.Optional[typing.Dict[str, typing.Any]],
   is_attribute=False, is_subscriptable=True)
-computer: QbNumericField('computer', dtype=typing.Optional[int], is_attribute=False)
+computer: QbNumericField('computer', dtype=typing.Optional[str], is_attribute=False)
 ctime: QbNumericField('ctime', dtype=typing.Optional[datetime.datetime], is_attribute=False)
 description: QbStrField('description', dtype=typing.Optional[str], is_attribute=False)
 detailed_job_info: QbDictField('detailed_job_info', dtype=typing.Optional[dict], is_attribute=True)
 exception: QbStrField('exception', dtype=typing.Optional[str], is_attribute=True)
 exit_message: QbStrField('exit_message', dtype=typing.Optional[str], is_attribute=True)
 exit_status: QbNumericField('exit_status', dtype=typing.Optional[int], is_attribute=True)
-extras: QbDictField('extras', dtype=typing.Optional[typing.Dict[str, typing.Any]],
+extras:
+  QbDictField('extras', dtype=typing.Optional[typing.Dict[str, typing.Any]],
   is_attribute=False, is_subscriptable=True)
 imported: QbField('imported', dtype=typing.Optional[bool], is_attribute=True)
 job_id: QbStrField('job_id', dtype=typing.Optional[str], is_attribute=True)
@@ -22,15 +24,20 @@ process_state: QbStrField('process_state', dtype=typing.Optional[str], is_attrib
 process_status: QbStrField('process_status', dtype=typing.Optional[str], is_attribute=True)
 process_type: QbStrField('process_type', dtype=typing.Optional[str], is_attribute=False)
 remote_workdir: QbStrField('remote_workdir', dtype=typing.Optional[str], is_attribute=True)
-repository_content: QbDictField('repository_content', dtype=typing.Optional[dict[str,
+repository_content:
+  QbDictField('repository_content', dtype=typing.Optional[dict[str,
   bytes]], is_attribute=False)
-repository_metadata: QbDictField('repository_metadata', dtype=typing.Optional[typing.Dict[str,
+repository_metadata:
+  QbDictField('repository_metadata', dtype=typing.Optional[typing.Dict[str,
   typing.Any]], is_attribute=False)
-retrieve_list: QbArrayField('retrieve_list', dtype=typing.Optional[typing.List[str]],
+retrieve_list:
+  QbArrayField('retrieve_list', dtype=typing.Optional[typing.List[str]],
   is_attribute=True)
-retrieve_temporary_list: QbArrayField('retrieve_temporary_list', dtype=typing.Optional[typing.List[str]],
+retrieve_temporary_list:
+  QbArrayField('retrieve_temporary_list', dtype=typing.Optional[typing.List[str]],
   is_attribute=True)
-scheduler_lastchecktime: QbStrField('scheduler_lastchecktime', dtype=typing.Optional[str],
+scheduler_lastchecktime:
+  QbStrField('scheduler_lastchecktime', dtype=typing.Optional[str],
   is_attribute=True)
 scheduler_state: QbStrField('scheduler_state', dtype=typing.Optional[str], is_attribute=True)
 sealed: QbField('sealed', dtype=<class 'bool'>, is_attribute=True)

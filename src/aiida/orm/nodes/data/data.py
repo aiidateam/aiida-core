@@ -74,7 +74,7 @@ class Data(Node):
 
         # We verify here that all attributes of Data plugins are handled in a constructor prior to the root
         # Data class (here), gracefully rejecting them otherwise.
-        node_keys = set(Node.Model.model_fields.keys())
+        node_keys = set(Node.Model.model_fields.keys()) | {'backend'}
         unhandled_keys = {key for key in kwargs if key not in node_keys}
         if unhandled_keys:
             raise UnhandledDataAttributesError(unhandled_keys, self.__class__.__name__)
@@ -140,7 +140,7 @@ class Data(Node):
             raise ValueError('Source must be supplied as a dictionary')
         unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
         if unknown_attrs:
-            raise KeyError(f"Unknown source parameters: {', '.join(unknown_attrs)}")
+            raise KeyError(f'Unknown source parameters: {", ".join(unknown_attrs)}')
 
         self.base.attributes.set('source', source)
 
@@ -188,13 +188,13 @@ class Data(Node):
         except KeyError:
             if exporters.keys():
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'Currently implemented are: {}.'.format(
+                    'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
                         fileformat, self.__class__.__name__, ','.join(exporters.keys())
                     )
                 )
             else:
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'No formats are implemented yet.'.format(
+                    'The format {} is not implemented for {}. No formats are implemented yet.'.format(
                         fileformat, self.__class__.__name__
                     )
                 )
@@ -296,13 +296,13 @@ class Data(Node):
         except KeyError:
             if importers.keys():
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'Currently implemented are: {}.'.format(
+                    'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
                         fileformat, self.__class__.__name__, ','.join(importers.keys())
                     )
                 )
             else:
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'No formats are implemented yet.'.format(
+                    'The format {} is not implemented for {}. No formats are implemented yet.'.format(
                         fileformat, self.__class__.__name__
                     )
                 )
@@ -353,13 +353,13 @@ class Data(Node):
         except KeyError:
             if converters.keys():
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'Currently implemented are: {}.'.format(
+                    'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
                         object_format, self.__class__.__name__, ','.join(converters.keys())
                     )
                 )
             else:
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'No formats are implemented yet.'.format(
+                    'The format {} is not implemented for {}. No formats are implemented yet.'.format(
                         object_format, self.__class__.__name__
                     )
                 )

@@ -249,6 +249,14 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
             return InputModel
 
+    @classproperty
+    def InputModel(cls) -> Type[Model]:  # noqa: N805
+        """Return the input version of the model class for this entity.
+
+        :return: The input model class, with read-only fields removed.
+        """
+        return cls.Model.as_input_model()
+
     @classmethod
     def model_to_orm_fields(cls) -> dict[str, FieldInfo]:
         return {
@@ -291,13 +299,13 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         :param repository_path: If the orm node has files in the repository, this path is used to read the repository
             files from. If no path is specified a temporary path is created using the entities pk.
-        :param unstored: If True, the input version of the model is used (via `.as_input_model`), which strips
-            read-only fields, i.e., fields with `exclude_to_orm=True`.
+        :param unstored: If True, the input version of the model is used, which strips read-only fields, i.e., fields
+            with `exclude_to_orm=True`.
         :return: An instance of the entity's model class.
         """
         fields = {}
 
-        Model = self.Model.as_input_model() if unstored else self.Model  # noqa: N806
+        Model = self.InputModel if unstored else self.Model  # noqa: N806
 
         for key, field in Model.model_fields.items():
             if orm_to_model := get_metadata(field, 'orm_to_model'):
@@ -330,8 +338,8 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         :param mode: The serialization mode, either 'json' or 'python'. The 'json' mode is the most strict and ensures
             that the output is JSON serializable, whereas the 'python' mode allows for more complex Python types, such
             as `datetime` objects.
-        :param unstored: If True, the input version of the model is used (via `.as_input_model`), which strips
-            read-only fields, i.e., fields with `exclude_to_orm=True`.
+        :param unstored: If True, the input version of the model is used, which strips read-only fields, i.e., fields
+            with `exclude_to_orm=True`.
         :return: A dictionary that can be serialized to JSON.
         """
         self.logger.warning(
@@ -353,14 +361,14 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     def from_serialized(cls, unstored: bool = False, **kwargs: dict[str, Any]) -> Self:
         """Construct an entity instance from JSON serialized data.
 
-        :param unstored: If True, the input version of the model is used (via `.as_input_model`), which strips
-            read-only fields, i.e., fields with `exclude_to_orm=True`.
+        :param unstored: If True, the input version of the model is used, which strips read-only fields, i.e., fields
+            with `exclude_to_orm=True`.
         :return: An instance of the entity class.
         """
         cls._logger.warning(
             'Serialization through pydantic is still an experimental feature and might break in future releases.'
         )
-        Model = cls.Model.as_input_model() if unstored else cls.Model  # noqa: N806
+        Model = cls.InputModel if unstored else cls.Model  # noqa: N806
         return cls.from_model(Model(**kwargs))
 
     @classproperty

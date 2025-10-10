@@ -51,6 +51,26 @@ class KpointsData(ArrayData):
             description='Index of the labels in the list of kpoints',
             orm_to_model=lambda node, _: t.cast('KpointsData', node).base.attributes.get('label_numbers', None),
         )
+        cell: t.Optional[t.List[t.List[float]]] = MetadataField(
+            None,
+            description='Unit cell of the crystal, in Angstroms',
+            orm_to_model=lambda node, _: t.cast('KpointsData', node).base.attributes.get('cell', None),
+        )
+        pbc1: t.Optional[bool] = MetadataField(
+            None,
+            description='Periodicity in the first lattice vector direction',
+            orm_to_model=lambda node, _: t.cast('KpointsData', node).pbc[0],
+        )
+        pbc2: t.Optional[bool] = MetadataField(
+            None,
+            description='Periodicity in the second lattice vector direction',
+            orm_to_model=lambda node, _: t.cast('KpointsData', node).pbc[1],
+        )
+        pbc3: t.Optional[bool] = MetadataField(
+            None,
+            description='Periodicity in the third lattice vector direction',
+            orm_to_model=lambda node, _: t.cast('KpointsData', node).pbc[2],
+        )
         mesh: t.Optional[t.List[int]] = MetadataField(
             None,
             description='Mesh of kpoints',
@@ -61,46 +81,59 @@ class KpointsData(ArrayData):
             description='Offset of kpoints',
             orm_to_model=lambda node, _: t.cast('KpointsData', node).base.attributes.get('offset', None),
         )
-        cell: t.Optional[t.List[t.List[float]]] = MetadataField(
-            None,
-            description='Unit cell of the crystal, in Angstroms',
-        )
-        pbc1: bool = MetadataField(
-            description='True if the first lattice vector is periodic',
-            orm_to_model=lambda node, _: t.cast('KpointsData', node).pbc[0],
-        )
-        pbc2: bool = MetadataField(
-            description='True if the second lattice vector is periodic',
-            orm_to_model=lambda node, _: t.cast('KpointsData', node).pbc[1],
-        )
-        pbc3: bool = MetadataField(
-            description='True if the third lattice vector is periodic',
-            orm_to_model=lambda node, _: t.cast('KpointsData', node).pbc[2],
-        )
 
     def __init__(
         self,
+        *,
         labels: list[str] | None = None,
         label_numbers: list[int] | None = None,
-        mesh: list[int] | None = None,
-        offset: list[float] | None = None,
         cell: list[list[float]] | None = None,
         pbc1: bool | None = None,
         pbc2: bool | None = None,
         pbc3: bool | None = None,
+        mesh: list[int] | None = None,
+        offset: list[float] | None = None,
         **kwargs,
     ):
+        arrays = kwargs.pop('arrays', None)
+
         super().__init__(**kwargs)
-        if cell is not None:
-            self.cell = cell
-        if any(pbc is not None for pbc in (pbc1, pbc2, pbc3)):
-            self.pbc = (pbc1 or False, pbc2 or False, pbc3 or False)
-        if labels is not None and label_numbers is not None:
-            if len(labels) != len(label_numbers):
-                raise ValueError('Labels and label numbers must have the same length')
-            self.labels = list(zip(label_numbers, labels))
+
+        if offset is not None and mesh is None:
+            raise ValueError('Cannot set an offset without a kpoints mesh')
+
+        given_list_kwargs = any(kwarg is not None for kwarg in (labels, label_numbers, cell, pbc1, pbc2, pbc3))
+
         if mesh is not None:
+            if arrays is not None or given_list_kwargs:
+                raise ValueError('When providing a kpoints mesh, only mesh and offset are allowed')
             self.set_kpoints_mesh(mesh, offset=offset)
+
+        if arrays is not None:
+            if labels is not None and label_numbers is not None:
+                if len(labels) != len(label_numbers):
+                    raise ValueError('Labels and label numbers must have the same length')
+                label_list = list(zip(label_numbers, labels))
+            else:
+                label_list = None
+
+            pbc = (pbc1 or False, pbc2 or False, pbc3 or False)
+
+            if cell is not None:
+                self.set_cell(cell, pbc)
+            else:
+                self.pbc = pbc
+
+            if isinstance(arrays, dict):
+                kpoints = arrays.get('kpoints', None)
+                if kpoints is None:
+                    raise ValueError("When providing a dict of arrays, it must contain the key 'kpoints'")
+                arrays = kpoints
+
+            self.set_kpoints(arrays, labels=label_list)
+
+        elif given_list_kwargs:
+            raise ValueError('Missing kpoints list')
 
     def get_description(self):
         """Returns a string with infos retrieved from  kpoints node's properties.
@@ -123,7 +156,7 @@ class KpointsData(ArrayData):
         """The crystal unit cell. Rows are the crystal vectors in Angstroms.
         :return: a 3x3 numpy.array
         """
-        return numpy.array(self.base.attributes.get('cell', []))
+        return numpy.array(self.base.attributes.get('cell'))
 
     @cell.setter
     def cell(self, value):
@@ -390,12 +423,8 @@ class KpointsData(ArrayData):
         """Dimensionality of the structure, found from its pbc (i.e. 1 if it's a 1D
         structure, 2 if its 2D, 3 if it's 3D ...).
         :return dimensionality: 0, 1, 2 or 3
-        :note: will return 3 if pbc has not been set beforehand
         """
-        try:
-            return sum(self.pbc)
-        except AttributeError:
-            return 3
+        return sum(self.pbc)
 
     def _validate_kpoints_weights(self, kpoints, weights):
         """Validate the list of kpoints and of weights before storage.

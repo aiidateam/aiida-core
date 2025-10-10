@@ -59,7 +59,7 @@ class ArrayData(Data):
     array_prefix = 'array|'
     default_array_name = 'default'
 
-    def __init__(self, arrays: np.ndarray | dict[str, np.ndarray] | None = None, **kwargs):
+    def __init__(self, arrays: np.ndarray | dict[str, np.ndarray] | list[list[float]] | None = None, **kwargs):
         """Construct a new instance and set one or multiple numpy arrays.
 
         :param arrays: An optional single numpy array, or dictionary of numpy arrays to store.
@@ -68,6 +68,9 @@ class ArrayData(Data):
         self._cached_arrays: dict[str, np.ndarray] = {}
 
         arrays = arrays if arrays is not None else {}
+
+        if isinstance(arrays, list):
+            arrays = np.array(arrays)
 
         if isinstance(arrays, np.ndarray):
             arrays = {self.default_array_name: arrays}

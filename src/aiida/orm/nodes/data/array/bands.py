@@ -214,8 +214,15 @@ class BandsData(KpointsData):
     """Class to handle bands data"""
 
     class Model(KpointsData.Model):
-        array_labels: t.Optional[t.List[str]] = MetadataField(description='Labels associated with the band arrays')
-        units: str = MetadataField(description='Units in which the data in bands were stored')
+        units: t.Optional[str] = MetadataField(
+            None,
+            description='Units in which the data in bands were stored',
+            orm_to_model=lambda node, _: t.cast('BandsData', node).base.attributes.get('units', None),
+        )
+
+    def __init__(self, *, units: str | None = None, **kwargs):
+        super().__init__(**kwargs)
+        self.units = units
 
     def set_kpointsdata(self, kpointsdata):
         """Load the kpoints from a kpoint object.

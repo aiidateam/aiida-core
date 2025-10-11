@@ -140,7 +140,14 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
     if request.param is Str:
         return Str, {'value': 'string'}
     if request.param is StructureData:
-        return StructureData, {'cell': [[1, 0, 0], [0, 1, 0], [0, 0, 1]]}
+        return StructureData, {
+            'cell': [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+            'pbc1': True,
+            'pbc2': True,
+            'pbc3': True,
+            'sites': [{'kind_name': 'H', 'position': (0.0, 0.0, 0.0)}],
+            'kinds': [{'name': 'H', 'mass': 1.0, 'symbols': ('H',), 'weights': (1.0,)}],
+        }
     if request.param is RemoteData:
         return RemoteData, {'remote_path': '/some/path'}
     if request.param is RemoteStashData:

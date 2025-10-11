@@ -17,7 +17,7 @@ from uuid import UUID
 
 from typing_extensions import Self
 
-from aiida.common import exceptions, timezone
+from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
 from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
@@ -123,7 +123,6 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             exclude_to_orm=True,
         )
         user: int = MetadataField(
-            default_factory=lambda: users.User.collection.get_default().pk,  # type: ignore[union-attr]
             description='The PK of the group owner, defaults to the current user',
             is_attribute=False,
             orm_class='core.user',
@@ -131,7 +130,6 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             exclude_to_orm=True,
         )
         time: datetime.datetime = MetadataField(
-            default_factory=timezone.now,
             description='The creation time of the node, defaults to now (timezone-aware)',
             is_attribute=False,
             exclude_to_orm=True,

@@ -10,6 +10,8 @@
 functions to operate on them.
 """
 
+from __future__ import annotations
+
 import copy
 import functools
 import itertools
@@ -691,28 +693,18 @@ class StructureData(Data):
         pbc2: bool = MetadataField(description='Whether periodic in the b direction')
         pbc3: bool = MetadataField(description='Whether periodic in the c direction')
         cell: t.List[t.List[float]] = MetadataField(description='The cell parameters')
-        kinds: t.Optional[t.List[dict]] = MetadataField(
-            None,
-            description='The kinds of atoms',
-        )
-        sites: t.Optional[t.List[dict]] = MetadataField(
-            None,
-            description='The atomic sites',
-        )
+        kinds: t.List[dict] = MetadataField(description='The kinds of atoms')
+        sites: t.List[dict] = MetadataField(description='The atomic sites')
 
         @field_validator('kinds', mode='before')
         @classmethod
-        def _validate_kinds(cls, value: t.Optional[t.List['Kind']]) -> t.Optional[t.List[t.Dict]]:
-            if value is None:
-                return None
-            return [kind.get_raw() for kind in value]
+        def _validate_kinds(cls, value: t.List[Kind | dict[str, t.Any]]) -> t.List[t.Dict]:
+            return [kind.get_raw() if isinstance(kind, Kind) else kind for kind in value]
 
         @field_validator('sites', mode='before')
         @classmethod
-        def _validate_sites(cls, value: t.Optional[t.List['Site']]) -> t.Optional[t.List[t.Dict]]:
-            if value is None:
-                return None
-            return [site.get_raw() for site in value]
+        def _validate_sites(cls, value: t.List[Site | dict[str, t.Any]]) -> t.List[t.Dict]:
+            return [site.get_raw() if isinstance(site, Site) else site for site in value]
 
     def __init__(
         self,

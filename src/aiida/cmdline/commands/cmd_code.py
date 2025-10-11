@@ -12,7 +12,7 @@ import pathlib
 import warnings
 from collections import defaultdict
 from functools import partial
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 
@@ -26,16 +26,20 @@ from aiida.cmdline.utils.common import validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions
 
+if TYPE_CHECKING:
+    from aiida.orm import Code
+
 
 @verdi.group('code')
 def verdi_code():
     """Setup and manage codes."""
 
 
-def create_code(ctx: click.Context, cls, **kwargs) -> None:
+def create_code(ctx: click.Context, cls: 'Code', **kwargs) -> None:
     """Create a new `Code` instance."""
     try:
-        instance = cls._from_model(cls.Model(**kwargs))
+        Model = cls.InputModel  # noqa: N806
+        instance = cls.from_model(Model(**kwargs))  # type: ignore[arg-type]
     except (TypeError, ValueError) as exception:
         echo.echo_critical(f'Failed to create instance `{cls}`: {exception}')
 

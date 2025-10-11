@@ -8,7 +8,10 @@
 ###########################################################################
 """`Data` sub class to represent a string value."""
 
+from aiida.common.pydantic import MetadataField
+
 from .base import BaseType, to_aiida_type
+from .numeric import NumericType
 
 __all__ = ('Str',)
 
@@ -17,6 +20,12 @@ class Str(BaseType):
     """`Data` sub class to represent a string value."""
 
     _type = str
+
+    class Model(NumericType.Model):
+        value: str = MetadataField(
+            title='String value.',
+            description='The value of the string',
+        )
 
 
 @to_aiida_type.register(str)

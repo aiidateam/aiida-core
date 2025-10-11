@@ -97,8 +97,9 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         if hasattr(cls, 'Model'):
             # The plugin defines a pydantic model: use it to validate the provided arguments
+            Model = cls.InputModel if hasattr(cls, 'InputModel') else cls.Model  # noqa: N806
             try:
-                cls.Model(**kwargs)
+                Model(**kwargs)
             except ValidationError as exception:
                 param_hint = [
                     f'--{loc.replace("_", "-")}'  # type: ignore[union-attr]
@@ -168,19 +169,22 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             options_spec = self.factory(entry_point).get_cli_options()  # type: ignore[union-attr]
             return [self.create_option(*item) for item in options_spec]
 
+        Model = cls.InputModel if hasattr(cls, 'InputModel') else cls.Model  # noqa: N806
+
         options_spec = {}
 
-        for key, field_info in cls.Model.model_fields.items():
+        for key, field_info in Model.model_fields.items():
             if get_metadata(field_info, 'exclude_from_cli'):
                 continue
 
             default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default
 
-            # If the annotation has the ``__args__`` attribute it is an instance of a type from ``typing`` and the real
-            # type can be gotten from the arguments. For example it could be ``typing.Union[str, None]`` calling
-            # ``typing.Union[str, None].__args__`` will return the tuple ``(str, NoneType)``. So to get the real type,
-            # we simply remove all ``NoneType`` and the remaining type should be the type of the option.
             if hasattr(field_info.annotation, '__args__'):
+                # If the annotation has the ``__args__`` attribute it is an instance of a type from ``typing`` and
+                # the real type can be gotten from the arguments. For example it could be ``typing.Union[str, None]``
+                # calling ``typing.Union[str, None].__args__`` will return the tuple ``(str, NoneType)``. So to get
+                # the real type, we simply remove all ``NoneType`` and the remaining type should be the type of the
+                # option.
                 args = list(filter(lambda e: e is not type(None), field_info.annotation.__args__))
                 # Click parameters only support specifying a single type, so we default to the first one even if the
                 # pydantic model defines multiple.

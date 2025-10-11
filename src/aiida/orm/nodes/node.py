@@ -16,7 +16,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterator, List, Optional, Tuple, Type, TypeVar, cast
 from uuid import UUID
 
-from aiida.common import exceptions, timezone
+from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
@@ -222,14 +222,12 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             exclude_from_cli=True,
         )
         ctime: datetime.datetime = MetadataField(
-            default_factory=timezone.now,
             description='The creation time of the node',
             is_attribute=False,
             exclude_to_orm=True,
             exclude_from_cli=True,
         )
         mtime: datetime.datetime = MetadataField(
-            default_factory=timezone.now,
             description='The modification time of the node',
             is_attribute=False,
             exclude_to_orm=True,
@@ -272,7 +270,6 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             exclude_to_orm=True,
         )
         user: int = MetadataField(
-            default_factory=lambda: User.collection.get_default().pk,  # type: ignore[union-attr]
             description='The PK of the user who owns the node',
             is_attribute=False,
             orm_to_model=lambda node, _: cast('Node', node).user.pk,

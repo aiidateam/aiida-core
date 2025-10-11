@@ -266,7 +266,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             orm_to_model=lambda node, _: cast('Node', node).base.attributes.all,
             is_subscriptable=True,
             exclude_from_cli=True,
-            exclude_to_orm=True,
         )
         extras: Dict[str, Any] = MetadataField(
             default_factory=dict,
@@ -338,10 +337,16 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if user is None:
             raise ValueError('the user cannot be None')
 
+        attributes = kwargs.pop('attributes', {})
+
         backend_entity = backend.nodes.create(
             node_type=self.class_node_type, user=user.backend_entity, computer=backend_computer, **kwargs
         )
         super().__init__(backend_entity)
+
+        if attributes:
+            self.base.attributes.set_many(attributes)
+
         if extras is not None:
             self.base.extras.set_many(extras)
 

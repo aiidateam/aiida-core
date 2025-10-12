@@ -123,7 +123,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             exclude_to_orm=True,
         )
         user: int = MetadataField(
-            description='The PK of the group owner, defaults to the current user',
+            description='The PK of the group owner',
             is_attribute=False,
             orm_class='core.user',
             orm_to_model=lambda group, _: cast('Group', group).user.pk,

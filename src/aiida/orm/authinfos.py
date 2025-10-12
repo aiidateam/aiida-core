@@ -84,8 +84,8 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         computer: 'Computer',
         user: 'User',
         enabled: bool = True,
-        auth_params: Optional[Dict[str, Any]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        auth_params: Dict[str, Any] | None = None,
+        metadata: Dict[str, Any] | None = None,
         backend: Optional['StorageBackend'] = None,
     ) -> None:
         """Create an `AuthInfo` instance for the given computer and user.

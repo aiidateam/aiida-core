@@ -143,7 +143,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                 lumo = [_[0][_[1] + 1] for _ in zip(bands, homo_indexes)]
             except IndexError:
                 raise ValueError(
-                    'To understand if it is a metal or insulator, need more bands than n_band=number_electrons'
+                    'To understand if it is a metal or insulator, ' 'need more bands than n_band=number_electrons'
                 )
 
         else:
@@ -160,7 +160,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                 lumo = [i[number_electrons // number_electrons_per_band] for i in bands]  # take the n+1th level
             except IndexError:
                 raise ValueError(
-                    'To understand if it is a metal or insulator, need more bands than n_band=number_electrons'
+                    'To understand if it is a metal or insulator, ' 'need more bands than n_band=number_electrons'
                 )
 
         if number_electrons % 2 == 1 and len(stored_bands.shape) == 2:

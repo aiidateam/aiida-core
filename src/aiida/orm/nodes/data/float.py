@@ -25,7 +25,7 @@ class Float(NumericType):
 
     class Model(NumericType.Model):
         value: float = MetadataField(
-            title='Float value.',
+            title='Float value',
             description='The value of the float',
         )
 

@@ -184,10 +184,7 @@ class Sealable:
     SEALED_KEY = 'sealed'
 
     class Model(pydantic.BaseModel, defer_build=True):
-        sealed: bool = MetadataField(
-            description='Whether the node is sealed',
-            exclude_to_orm=True,
-        )
+        sealed: bool = MetadataField(description='Whether the node is sealed')
 
     @classproperty
     def _updatable_attributes(cls) -> tuple[str, ...]:  # noqa: N805

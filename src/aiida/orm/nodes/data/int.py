@@ -25,7 +25,7 @@ class Int(NumericType):
 
     class Model(NumericType.Model):
         value: int = MetadataField(
-            title='Integer value.',
+            title='Integer value',
             description='The value of the integer',
         )
 

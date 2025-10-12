@@ -179,12 +179,11 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
             default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default
 
+            # If the annotation has the ``__args__`` attribute it is an instance of a type from ``typing`` and the real
+            # type can be gotten from the arguments. For example it could be ``typing.Union[str, None]`` calling
+            # ``typing.Union[str, None].__args__`` will return the tuple ``(str, NoneType)``. So to get the real type,
+            # we simply remove all ``NoneType`` and the remaining type should be the type of the option.
             if hasattr(field_info.annotation, '__args__'):
-                # If the annotation has the ``__args__`` attribute it is an instance of a type from ``typing`` and
-                # the real type can be gotten from the arguments. For example it could be ``typing.Union[str, None]``
-                # calling ``typing.Union[str, None].__args__`` will return the tuple ``(str, NoneType)``. So to get
-                # the real type, we simply remove all ``NoneType`` and the remaining type should be the type of the
-                # option.
                 args = list(filter(lambda e: e is not type(None), field_info.annotation.__args__))
                 # Click parameters only support specifying a single type, so we default to the first one even if the
                 # pydantic model defines multiple.

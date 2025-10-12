@@ -23,7 +23,7 @@ class Str(BaseType):
 
     class Model(NumericType.Model):
         value: str = MetadataField(
-            title='String value.',
+            title='String value',
             description='The value of the string',
         )
 

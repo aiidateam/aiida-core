@@ -216,7 +216,6 @@ class ProcessNode(Sealable, Node):
         paused: Optional[bool] = MetadataField(
             None,
             description='Whether the process is paused',
-            exclude_to_orm=True,
         )
 
     def set_metadata_inputs(self, value: Dict[str, Any]) -> None:

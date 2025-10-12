@@ -25,7 +25,7 @@ class Bool(BaseType):
 
     class Model(NumericType.Model):
         value: bool = MetadataField(
-            title='Boolean value.',
+            title='Boolean value',
             description='The value of the boolean',
         )
 

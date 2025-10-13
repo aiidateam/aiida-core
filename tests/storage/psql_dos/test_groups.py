@@ -16,8 +16,10 @@ from aiida import orm
 @pytest.mark.requires_psql
 @pytest.mark.nightly  # takes ~1 min
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_group_bulk_operations(create_int_nodes):
+def test_group_bulk_operations():
     """Regression test for the PostgreSQL parameter limit OperationalError on add_nodes."""
+    from tests.utils.nodes import create_int_nodes
+
     num_nodes = 34_000  # Minimum number to reach exception without the fix
 
     # Create nodes using the efficient bulk_insert method

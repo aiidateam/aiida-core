@@ -113,8 +113,10 @@ def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects)
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.benchmark(group='large-archive')
-def test_large_archive_export_benchmark(tmp_path, benchmark, create_int_nodes):
+def test_large_archive_export_benchmark(tmp_path, benchmark):
     """Benchmark export performance with different filter_size values using 10k nodes."""
+    from tests.utils.nodes import create_int_nodes
+
     num_nodes = 10_000
 
     # Setup: create nodes (not benchmarked)
@@ -132,8 +134,10 @@ def test_large_archive_export_benchmark(tmp_path, benchmark, create_int_nodes):
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.benchmark(group='large-archive')
-def test_large_archive_import_benchmark(tmp_path, benchmark, create_int_nodes, aiida_profile_clean):
+def test_large_archive_import_benchmark(tmp_path, benchmark, aiida_profile_clean):
     """Benchmark import performance with different filter_size values using 10k nodes."""
+    from tests.utils.nodes import create_int_nodes
+
     num_nodes = 10_000
 
     def setup():

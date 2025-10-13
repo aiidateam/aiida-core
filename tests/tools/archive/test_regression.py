@@ -16,8 +16,10 @@ from aiida.tools.archive import create_archive, import_archive
 
 @pytest.mark.timeout(1000)  # Should finish in ~300s
 @pytest.mark.nightly
-def test_large_archive_export_operr_regression(pytestconfig, tmp_path, create_int_nodes, aiida_profile_clean):
+def test_large_archive_export_operr_regression(pytestconfig, tmp_path, aiida_profile_clean):
     """Regression test: ensure OperationalError occurs (not) with too large (sufficiently small) filter_size."""
+
+    from tests.utils.nodes import create_int_nodes
 
     num_nodes = 66_000  # Minimum value that OpErr is raised
 

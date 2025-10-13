@@ -226,23 +226,35 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 def show(code):
     """Display detailed information for a code."""
     from aiida.cmdline import is_verbose
+    from aiida.orm import ContainerizedCode, InstalledCode
 
     table = []
     table.append(['PK', code.pk])
     table.append(['UUID', code.uuid])
     table.append(['Type', code.entry_point.name])
-    # TODO(danielhollas): This code is a bit too clever, make it simpler!
-    # It generates warnings because it accessess deprecated attributes such as
-    # Code.repository_metadata -> Code.base.repository.metadata
-    # Code.attributes -> Code.base.attributes.all
-    # Code.extras -> Code.base.extras.all
-    # Also also, the blanket `except AttributeError` is evil and can hide bugs.
-    for key in code.Model.model_fields.keys():
-        try:
-            with warnings.catch_warnings(record=True):
-                table.append([key.capitalize().replace('_', ' '), getattr(code, key)])
-        except AttributeError:
-            continue
+    table.append(['Label', code.label])
+    table.append(['Description', code.description])
+    table.append(['Default calc job plugin', code.default_calc_job_plugin])
+    table.append(['Use double quotes', code.use_double_quotes])
+    table.append(['With mpi', code.with_mpi])
+    table.append(['Prepend text', code.prepend_text])
+    table.append(['Append text', code.append_text])
+
+    if isinstance(code, ContainerizedCode):
+        computer = code.computer
+        table.append(['Computer', f'{computer.label} ({computer.hostname}), pk: {computer.pk}'])
+        table.append(['Engine command', code.engine_command])
+        table.append(['Image name', code.image_name])
+        table.append(['Wrap cmdline params', code.wrap_cmdline_params])
+        table.append(['Filepath executable', code.filepath_executable])
+    elif isinstance(code, InstalledCode):
+        computer = code.computer
+        table.append(['Computer', f'{computer.label} ({computer.hostname}), pk: {computer.pk}'])
+        table.append(['Filepath executable', code.filepath_executable])
+    else:
+        # PortableCode
+        table.append(['Filepath executable', code.filepath_executable])
+
     if is_verbose():
         table.append(['Calculations', len(code.base.links.get_outgoing().all())])
 

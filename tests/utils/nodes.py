@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Utilities for testing memory leakage."""
+"""Utilities for node-related testing."""
 
 import uuid
 

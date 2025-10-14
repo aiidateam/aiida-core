@@ -89,7 +89,7 @@ class QueryRule(Operation, metaclass=ABCMeta):
             elif query_dict['path'][idx]['entity_type'].startswith(GROUP_ENTITY_TYPE_PREFIX):
                 result = 'groups'
             else:
-                raise RuntimeError(f'not understood entity from ( {query_dict["path"][idx]["entity_type"]} )')
+                raise RuntimeError(f"not understood entity from ( {query_dict['path'][idx]['entity_type']} )")
             return result
 
         query_dict = querybuilder.as_dict()

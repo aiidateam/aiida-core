@@ -215,7 +215,7 @@ def create(
         'overwrite': force,
         'compression': compress,
         'batch_size': batch_size,
-        'filter_size': DEFAULT_FILTER_SIZE,
+        'filter_size': DEFAULT_FILTER_SIZE,  # Implementation detail, not exposed to user via CLI
         'test_run': dry_run,
     }
 

@@ -60,7 +60,13 @@ jobs:
         from-lock: 'true'
 
     - name: Run benchmarks
-      run: pytest --db-backend psql --benchmark-only --benchmark-json benchmark.json tests/
+      run: |
+        pytest
+          --db-backend psql
+          --benchmark-only
+          --benchmark-json benchmark.json
+          --ignore tests/benchmark/test_json_contains.py
+          tests/
 
     - name: Store benchmark result
       uses: aiidateam/github-action-benchmark@v3

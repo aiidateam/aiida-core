@@ -185,10 +185,17 @@ def structure_import():
     help='Set periodic boundary conditions for each lattice direction, where 0 means periodic and 1 means periodic.',
 )
 @click.option('--label', type=click.STRING, show_default=False, help='Set the structure node label (empty by default)')
+@click.option(
+    '--to_atomistic',
+    type=click.BOOL,
+    default=False,
+    show_default=True,
+    help='Set the structure node as atomistic StructureData (default is False)',
+)
 @options.GROUP()
 @options.DRY_RUN()
 @decorators.with_dbenv()
-def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, label, group, dry_run):
+def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, label, to_atomistic, group, dry_run):
     """Import structure in XYZ format using AiiDA's internal importer"""
     from aiida.orm import StructureData
 
@@ -215,6 +222,9 @@ def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, label, group
     if label:
         new_structure.label = label
 
+    if to_atomistic:
+        new_structure = new_structure.to_atomistic()
+
     _store_structure(new_structure, dry_run)
 
     if group:
@@ -224,10 +234,17 @@ def import_aiida_xyz(filename, vacuum_factor, vacuum_addition, pbc, label, group
 @structure_import.command('ase')
 @click.argument('filename', type=click.Path(exists=True, dir_okay=False, resolve_path=True))
 @click.option('--label', type=click.STRING, show_default=False, help='Set the structure node label (empty by default)')
+@click.option(
+    '--to_atomistic',
+    type=click.BOOL,
+    default=False,
+    show_default=True,
+    help='Set the structure node as atomistic StructureData (default is False)',
+)
 @options.GROUP()
 @options.DRY_RUN()
 @decorators.with_dbenv()
-def import_ase(filename, label, group, dry_run):
+def import_ase(filename, label, to_atomistic, group, dry_run):
     """Import structure with the ase library that supports a number of different formats"""
     from aiida.orm import StructureData
 
@@ -244,6 +261,9 @@ def import_ase(filename, label, group, dry_run):
 
     if label:
         new_structure.label = label
+
+    if to_atomistic:
+        new_structure = new_structure.to_atomistic()
 
     _store_structure(new_structure, dry_run)
 

@@ -19,8 +19,6 @@ from __future__ import annotations
 import pathlib
 from typing import cast
 
-from pydantic import field_serializer, field_validator
-
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
@@ -44,16 +42,16 @@ class InstalledCode(Code):
     class Model(AbstractCode.Model):
         """Model describing required information to create an instance."""
 
-        computer: str = MetadataField(  # type: ignore[assignment]
-            ...,
+        computer: str = MetadataField(
             title='Computer',
-            description='The remote computer on which the executable resides.',
+            description='The label of the remote computer on which the executable resides.',
+            is_attribute=False,
             orm_to_model=lambda node, _: cast('InstalledCode', node).computer.label,
+            model_to_orm=lambda model: cast('InstalledCode.Model', model).load_computer(),
             short_name='-Y',
             priority=2,
         )
         filepath_executable: str = MetadataField(
-            ...,
             title='Filepath executable',
             description='Filepath of the executable on the remote computer.',
             orm_to_model=lambda node, _: str(cast('InstalledCode', node).filepath_executable),
@@ -61,20 +59,18 @@ class InstalledCode(Code):
             priority=1,
         )
 
-        @field_validator('computer')
-        @classmethod
-        def validate_computer(cls, value: str) -> Computer:
-            """Override the validator for the ``label`` of the base class since uniqueness is defined on full label."""
+        def load_computer(self) -> Computer:
+            """Load the computer instance.
+
+            :return: The computer instance.
+            :raises ValueError: If the computer does not exist.
+            """
             from aiida.orm import load_computer
 
             try:
-                return load_computer(value)
+                return load_computer(self.computer)
             except exceptions.NotExistent as exception:
                 raise ValueError(exception) from exception
-
-        @field_serializer('computer')
-        def serialize_computer(self, computer: Computer, _info):
-            return computer.label
 
     def __init__(self, computer: Computer, filepath_executable: str, **kwargs):
         """Construct a new instance.

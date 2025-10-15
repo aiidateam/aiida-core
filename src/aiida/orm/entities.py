@@ -14,16 +14,17 @@ import abc
 import pathlib
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Generic, List, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Generic, List, Literal, Optional, Type, TypeVar, Union
 
 from plumpy.base.utils import call_with_super_check, super_check
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, create_model
 from pydantic.fields import FieldInfo
 
 from aiida.common import exceptions, log
 from aiida.common.exceptions import EntryPointError, InvalidOperation, NotExistent
 from aiida.common.lang import classproperty, type_check
 from aiida.common.pydantic import MetadataField, get_metadata
+from aiida.common.typing import Self
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
@@ -39,6 +40,7 @@ __all__ = ('Collection', 'Entity', 'EntityTypes')
 
 CollectionType = TypeVar('CollectionType', bound='Collection')
 EntityType = TypeVar('EntityType', bound='Entity')
+EntityModelType = TypeVar('EntityModelType', bound=BaseModel)
 BackendEntityType = TypeVar('BackendEntityType', bound='BackendEntity')
 
 
@@ -89,11 +91,11 @@ class Collection(abc.ABC, Generic[EntityType]):
         self._backend = backend or get_manager().get_profile_storage()
         self._entity_type = entity_class
 
-    def __call__(self: CollectionType, backend: 'StorageBackend') -> CollectionType:
+    def __call__(self, backend: 'StorageBackend') -> Self:
         """Get or create a cached collection using a new backend."""
         if backend is self._backend:
             return self
-        return self.get_cached(self.entity_type, backend=backend)  # type: ignore[arg-type]
+        return self.get_cached(self.entity_type, backend=backend)
 
     @property
     def entity_type(self) -> Type[EntityType]:
@@ -148,16 +150,18 @@ class Collection(abc.ABC, Generic[EntityType]):
         filters: Optional['FilterType'] = None,
         order_by: Optional['OrderByType'] = None,
         limit: Optional[int] = None,
+        offset: Optional[int] = None,
     ) -> List[EntityType]:
         """Find collection entries matching the filter criteria.
 
         :param filters: the keyword value pair filters to match
         :param order_by: a list of (key, direction) pairs specifying the sort order
         :param limit: the maximum number of results to return
+        :param offset: number of initial results to be skipped
 
         :return: a list of resulting matches
         """
-        query = self.query(filters=filters, order_by=order_by, limit=limit)
+        query = self.query(filters=filters, order_by=order_by, limit=limit, offset=offset)
         return query.all(flat=True)
 
     def all(self) -> List[EntityType]:
@@ -184,13 +188,81 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     _logger: Logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
     class Model(BaseModel, defer_build=True):
-        pk: Optional[int] = MetadataField(
-            None,
-            description='The primary key of the entity. Can be `None` if the entity is not yet stored.',
+        model_config = ConfigDict(extra='forbid')
+
+        pk: int = MetadataField(
+            description='The primary key of the entity',
             is_attribute=False,
             exclude_to_orm=True,
             exclude_from_cli=True,
         )
+
+        @classmethod
+        def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
+            """Sets the JSON schema title of the model.
+
+            The qualified name of the class is used, with dots removed. For example, `Node.Model` becomes `NodeModel`
+            in the JSON schema.
+            """
+            super().__pydantic_init_subclass__(**kwargs)
+            cls.model_config['title'] = cls.__qualname__.replace('.', '')
+
+        @classmethod
+        def as_input_model(cls: Type[EntityModelType]) -> Type[EntityModelType]:
+            """Return a derived model class with read-only fields removed.
+
+            This also removes any serializers/validators defined on those fields.
+
+            :return: The derived input model class.
+            """
+
+            # Derive the input model from the original model
+            new_name = cls.__qualname__.replace('.Model', 'InputModel')
+            InputModel = create_model(  # noqa: N806
+                new_name,
+                __base__=cls,
+                __doc__=f'Input version of {cls.__name__}.',
+            )
+            InputModel.__qualname__ = new_name
+            InputModel.__module__ = cls.__module__
+
+            # Identify read-only fields
+            readonly_fields = [
+                name
+                for name, field in InputModel.model_fields.items()
+                if hasattr(field, 'json_schema_extra')
+                and isinstance(field.json_schema_extra, dict)
+                and field.json_schema_extra.get('readOnly')
+            ]
+
+            # Remove read-only fields
+            for name in readonly_fields:
+                InputModel.model_fields.pop(name, None)
+                if hasattr(InputModel, name):
+                    delattr(InputModel, name)
+
+            # Prune field validators/serializers referring to read-only fields
+            decorators = InputModel.__pydantic_decorators__
+
+            def _prune_field_decorators(field_decorators: dict[str, Any]) -> dict[str, Any]:
+                return {
+                    name: decorator
+                    for name, decorator in field_decorators.items()
+                    if all(field not in readonly_fields for field in decorator.info.fields)
+                }
+
+            decorators.field_validators = _prune_field_decorators(decorators.field_validators)
+            decorators.field_serializers = _prune_field_decorators(decorators.field_serializers)
+
+            return InputModel
+
+    @classproperty
+    def InputModel(cls) -> Type[Model]:  # noqa: N802, N805
+        """Return the input version of the model class for this entity.
+
+        :return: The input model class, with read-only fields removed.
+        """
+        return cls.Model.as_input_model()
 
     @classmethod
     def model_to_orm_fields(cls) -> dict[str, FieldInfo]:
@@ -229,29 +301,53 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         return fields
 
-    def _to_model(self, repository_path: pathlib.Path) -> Model:
-        """Return the entity instance as an instance of its model."""
+    def to_model(self, repository_path: Optional[pathlib.Path] = None, unstored: bool = False) -> Model:
+        """Return the entity instance as an instance of its model.
+
+        :param repository_path: If the orm node has files in the repository, this path is used to read the repository
+            files from. If no path is specified a temporary path is created using the entities pk.
+        :param unstored: If True, the input version of the model is used, which strips read-only fields, i.e., fields
+            with `exclude_to_orm=True`.
+        :return: An instance of the entity's model class.
+        """
         fields = {}
 
-        for key, field in self.Model.model_fields.items():
+        Model = self.InputModel if unstored else self.Model  # noqa: N806
+
+        for key, field in Model.model_fields.items():
             if orm_to_model := get_metadata(field, 'orm_to_model'):
                 fields[key] = orm_to_model(self, repository_path)
             else:
                 fields[key] = getattr(self, key)
 
-        return self.Model(**fields)
+        return Model(**fields)
 
     @classmethod
-    def _from_model(cls, model: Model) -> 'Entity':
-        """Return an entity instance from an instance of its model."""
+    def from_model(cls, model: Model) -> 'Entity':
+        """Return an entity instance from an instance of its model.
+
+        :param model: An instance of the entity's model class.
+        :return: An instance of the entity class.
+        """
         fields = cls.model_to_orm_field_values(model)
         return cls(**fields)
 
-    def serialize(self, repository_path: Union[pathlib.Path, None] = None) -> dict[str, Any]:
+    def serialize(
+        self,
+        repository_path: Optional[pathlib.Path] = None,
+        mode: Literal['json', 'python'] = 'json',
+        unstored: bool = False,
+    ) -> dict[str, Any]:
         """Serialize the entity instance to JSON.
 
-        :param repository_path: If the orm node has files in the repository, this path is used to dump the repostiory
+        :param repository_path: If the orm node has files in the repository, this path is used to dump the repository
             files to. If no path is specified a temporary path is created using the entities pk.
+        :param mode: The serialization mode, either 'json' or 'python'. The 'json' mode is the most strict and ensures
+            that the output is JSON serializable, whereas the 'python' mode allows for more complex Python types, such
+            as `datetime` objects.
+        :param unstored: If True, the input version of the model is used, which strips read-only fields, i.e., fields
+            with `exclude_to_orm=True`.
+        :return: A dictionary that can be serialized to JSON.
         """
         self.logger.warning(
             'Serialization through pydantic is still an experimental feature and might break in future releases.'
@@ -266,15 +362,21 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
                 raise ValueError(f'The repository_path `{repository_path}` does not exist.')
             if not repository_path.is_dir():
                 raise ValueError(f'The repository_path `{repository_path}` is not a directory.')
-        return self._to_model(repository_path).model_dump()
+        return self.to_model(repository_path, unstored=unstored).model_dump(mode=mode)
 
     @classmethod
-    def from_serialized(cls, **kwargs: dict[str, Any]) -> 'Entity':
-        """Construct an entity instance from JSON serialized data."""
+    def from_serialized(cls, unstored: bool = False, **kwargs: dict[str, Any]) -> 'Entity':
+        """Construct an entity instance from JSON serialized data.
+
+        :param unstored: If True, the input version of the model is used, which strips read-only fields, i.e., fields
+            with `exclude_to_orm=True`.
+        :return: An instance of the entity class.
+        """
         cls._logger.warning(
             'Serialization through pydantic is still an experimental feature and might break in future releases.'
         )
-        return cls._from_model(cls.Model(**kwargs))  # type: ignore[arg-type]
+        Model = cls.InputModel if unstored else cls.Model  # noqa: N806
+        return cls.from_model(Model(**kwargs))  # type: ignore[arg-type]
 
     @classproperty
     def objects(cls: EntityType) -> CollectionType:  # noqa: N805

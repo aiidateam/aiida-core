@@ -6,13 +6,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""AiiDA Group entites"""
+"""AiiDA Group entities"""
 
 import datetime
 import warnings
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+from uuid import UUID
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
@@ -111,24 +112,43 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     __type_string: ClassVar[Optional[str]]
 
     class Model(entities.Entity.Model):
-        uuid: str = MetadataField(description='The UUID of the group', is_attribute=False, exclude_to_orm=True)
-        type_string: str = MetadataField(description='The type of the group', is_attribute=False, exclude_to_orm=True)
+        uuid: UUID = MetadataField(
+            description='The UUID of the group',
+            is_attribute=False,
+            exclude_to_orm=True,
+        )
+        type_string: str = MetadataField(
+            description='The type of the group',
+            is_attribute=False,
+            exclude_to_orm=True,
+        )
         user: int = MetadataField(
-            description='The group owner',
+            description='The PK of the group owner',
             is_attribute=False,
             orm_class='core.user',
-            orm_to_model=lambda group, _: group.user.pk,  # type: ignore[attr-defined]
+            orm_to_model=lambda group, _: cast('Group', group).user.pk,
+            exclude_to_orm=True,
         )
-        time: Optional[datetime.datetime] = MetadataField(
-            description='The creation time of the node', is_attribute=False
+        time: datetime.datetime = MetadataField(
+            description='The creation time of the node, defaults to now (timezone-aware)',
+            is_attribute=False,
+            exclude_to_orm=True,
         )
-        label: str = MetadataField(description='The group label', is_attribute=False)
-        description: Optional[str] = MetadataField(description='The group description', is_attribute=False)
-        extras: Optional[Dict[str, Any]] = MetadataField(
+        label: str = MetadataField(
+            description='The group label',
+            is_attribute=False,
+        )
+        description: str = MetadataField(
+            '',
+            description='The group description',
+            is_attribute=False,
+        )
+        extras: Dict[str, Any] = MetadataField(
+            default_factory=dict,
             description='The group extras',
             is_attribute=False,
             is_subscriptable=True,
-            orm_to_model=lambda group, _: group.base.extras.all,  # type: ignore[attr-defined]
+            orm_to_model=lambda group, _: cast('Group', group).base.extras.all,
         )
 
     _CLS_COLLECTION = GroupCollection

@@ -121,6 +121,8 @@ py:class P
 py:class N
 py:class aiida.engine.processes.functions.N
 py:class aiida.engine.processes.functions.R_co
+py:class aiida.common.utils.T
+py:class aiida.common.utils.R
 
 ### third-party packages
 # Note: These exceptions are needed if

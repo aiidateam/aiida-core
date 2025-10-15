@@ -8,9 +8,7 @@ inputs:
     required: false
   extras:
     description: list of optional dependencies
-    # NOTE: The default 'pre-commit' extra recursively contains
-    # other extras needed to run the tests.
-    default: pre-commit
+    default: ''
     required: false
   # NOTE: Hard-learned lesson: we cannot use type=boolean here, apparently :-(
   # https://stackoverflow.com/a/76294014

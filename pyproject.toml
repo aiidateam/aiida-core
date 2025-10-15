@@ -2,6 +2,13 @@
 build-backend = 'flit_core.buildapi'
 requires = ['flit_core >=3.4,<4']
 
+# The "dev" dependency group is automatically synced by uv
+# and should thus contain all necessary deps for local development.
+[dependency-groups]
+dev = [
+  "aiida-core[atomic_tools,rest,tests,pre-commit,tests,docs]"
+]
+
 [project]
 authors = [{name = 'The AiiDA team', email = 'developers@aiida.net'}]
 classifiers = [
@@ -236,7 +243,7 @@ notebook = [
 # the versions of the actual packages see:
 # https://github.com/python/typeshed?tab=readme-ov-file#package-versioning-for-third-party-stubs
 pre-commit = [
-  'aiida-core[atomic_tools,rest,tests,tui]',
+  'aiida-core[tests]',
   'mypy~=1.18.0',
   'packaging~=23.0',
   'pre-commit~=3.5',
@@ -265,6 +272,7 @@ ssh_kerberos = [
   'pyasn1~=0.4.8'
 ]
 tests = [
+  'aiida-core[atomic_tools,rest]',
   'aiida-export-migration-tests==0.9.0',
   'pg8000~=1.13',
   'pgtest~=1.3,>=1.3.1',
@@ -347,7 +355,8 @@ disallow_untyped_defs = true
 module = [
   'aiida.tools.graph.*',
   'aiida.cmdline.params.*',
-  'aiida.cmdline.groups.*'
+  'aiida.cmdline.groups.*',
+  'aiida.tools.query.*'
 ]
 warn_return_any = true
 

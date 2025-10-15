@@ -109,7 +109,7 @@ def import_archive(
     if not (merge_extras[0] in ['k', 'n'] and merge_extras[1] in ['c', 'n'] and merge_extras[2] in ['l', 'u', 'd']):
         raise ValueError('merge_extras contains invalid values')
     if merge_comments not in ('leave', 'newest', 'overwrite'):
-        raise ValueError(f'merge_comments not in {("leave", "newest", "overwrite")!r}')
+        raise ValueError(f"merge_comments not in {('leave', 'newest', 'overwrite')!r}")
     type_check(group, orm.Group, allow_none=True)
     type_check(test_run, bool)
     backend = backend or get_manager().get_profile_storage()

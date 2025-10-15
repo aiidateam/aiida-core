@@ -12,6 +12,7 @@ import logging
 from typing import Callable, Iterable, Set, Tuple, Union
 
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.utils import DEFAULT_FILTER_SIZE, batch_iter
 from aiida.manage import get_manager
 from aiida.orm import Group, Node, QueryBuilder
 from aiida.tools.graph.graph_traversers import get_nodes_delete
@@ -73,16 +74,18 @@ def delete_nodes(
     DELETE_LOGGER.report('%s Node(s) marked for deletion', len(pks_set_to_delete))
 
     if pks_set_to_delete and DELETE_LOGGER.level == logging.DEBUG:
-        builder = QueryBuilder(backend=backend).append(
-            Node, filters={'id': {'in': pks_set_to_delete}}, project=('uuid', 'id', 'node_type', 'label')
-        )
         DELETE_LOGGER.debug('Node(s) to delete:')
-        for uuid, pk, type_string, label in builder.iterall():
-            try:
-                short_type_string = type_string.split('.')[-2]
-            except IndexError:
-                short_type_string = type_string
-            DELETE_LOGGER.debug(f'   {uuid} {pk} {short_type_string} {label}')
+        # Batch the query to avoid database parameter limits
+        for _, pk_batch in batch_iter(pks_set_to_delete, DEFAULT_FILTER_SIZE):
+            builder = QueryBuilder(backend=backend).append(
+                Node, filters={'id': {'in': pk_batch}}, project=('uuid', 'id', 'node_type', 'label')
+            )
+            for uuid, pk, type_string, label in builder.iterall():
+                try:
+                    short_type_string = type_string.split('.')[-2]
+                except IndexError:
+                    short_type_string = type_string
+                DELETE_LOGGER.debug(f'   {uuid} {pk} {short_type_string} {label}')
 
     if dry_run is True:
         DELETE_LOGGER.report('This was a dry run, exiting without deleting anything')
@@ -141,15 +144,18 @@ def delete_group_nodes(
     :returns: (node pks to delete, whether they were deleted)
 
     """
-    group_node_query = (
-        QueryBuilder(backend=backend)
-        .append(
-            Group,
-            filters={'id': {'in': list(pks)}},
-            tag='groups',
+    # Batch the query to avoid database parameter limits
+    node_pks = []
+    for _, pk_batch in batch_iter(list(pks), DEFAULT_FILTER_SIZE):
+        group_node_query = (
+            QueryBuilder(backend=backend)
+            .append(
+                Group,
+                filters={'id': {'in': pk_batch}},
+                tag='groups',
+            )
+            .append(Node, project='id', with_group='groups')
         )
-        .append(Node, project='id', with_group='groups')
-    )
-    group_node_query.distinct()
-    node_pks = group_node_query.all(flat=True)
+        group_node_query.distinct()
+        node_pks.extend(group_node_query.all(flat=True))
     return delete_nodes(node_pks, dry_run=dry_run, backend=backend, **traversal_rules)

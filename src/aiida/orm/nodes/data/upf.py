@@ -13,6 +13,7 @@ import re
 
 from upf_to_json import upf_to_json
 
+from aiida.common.utils import DEFAULT_FILTER_SIZE, batch_iter
 from aiida.common.warnings import warn_deprecation
 
 from .singlefile import SinglefileData
@@ -499,7 +500,17 @@ class UpfData(SinglefileData):
             filter_elements = [filter_elements]
 
         if filter_elements is not None:
-            builder.append(UpfData, filters={'attributes.element': {'in': filter_elements}}, with_group='group')
+            # Batch the query to avoid database parameter limits
+            all_families = []
+            for _, element_batch in batch_iter(filter_elements, DEFAULT_FILTER_SIZE):
+                batch_builder = QueryBuilder(backend=backend)
+                batch_builder.append(UpfFamily, tag='group', project='*')
+                if user:
+                    batch_builder.append(User, filters={'email': {'==': user}}, with_group='group')
+                batch_builder.append(UpfData, filters={'attributes.element': {'in': element_batch}}, with_group='group')
+                batch_builder.order_by({UpfFamily: {'id': 'asc'}})
+                all_families.extend(batch_builder.all(flat=True))
+            return all_families
 
         builder.order_by({UpfFamily: {'id': 'asc'}})
 

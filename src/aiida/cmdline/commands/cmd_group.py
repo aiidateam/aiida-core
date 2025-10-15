@@ -18,6 +18,7 @@ from aiida.cmdline.utils import echo
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import UniquenessError
 from aiida.common.links import GraphTraversalRules
+from aiida.common.utils import DEFAULT_FILTER_SIZE, batch_iter
 
 
 @verdi.group('group')
@@ -57,11 +58,13 @@ def group_remove_nodes(group, nodes, clear, force):
         if nodes:
             node_pks = [node.pk for node in nodes]
 
-            query = QueryBuilder()
-            query.append(Group, filters={'id': group.pk}, tag='group')
-            query.append(Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
-
-            group_node_pks = query.all(flat=True)
+            # Batch the query to avoid database parameter limits
+            group_node_pks = []
+            for _, pk_batch in batch_iter(node_pks, DEFAULT_FILTER_SIZE):
+                query = QueryBuilder()
+                query.append(Group, filters={'id': group.pk}, tag='group')
+                query.append(Node, with_group='group', filters={'id': {'in': pk_batch}}, project='id')
+                group_node_pks.extend(query.all(flat=True))
 
             if not group_node_pks:
                 echo.echo_critical(f'None of the specified nodes are in {group}.')
@@ -110,11 +113,13 @@ def group_move_nodes(source_group, target_group, force, nodes, all_entries):
     node_pks = {node.pk for node in nodes}
 
     if not all_entries:
-        query = QueryBuilder()
-        query.append(Group, filters={'id': source_group.pk}, tag='group')
-        query.append(Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
-
-        source_group_node_pks = query.all(flat=True)
+        # Batch the query to avoid database parameter limits
+        source_group_node_pks = []
+        for _, pk_batch in batch_iter(node_pks, DEFAULT_FILTER_SIZE):
+            query = QueryBuilder()
+            query.append(Group, filters={'id': source_group.pk}, tag='group')
+            query.append(Node, with_group='group', filters={'id': {'in': pk_batch}}, project='id')
+            source_group_node_pks.extend(query.all(flat=True))
 
         if not source_group_node_pks:
             echo.echo_critical(f'None of the specified nodes are in {source_group}.')
@@ -125,11 +130,13 @@ def group_move_nodes(source_group, target_group, force, nodes, all_entries):
             nodes = [node for node in nodes if node.pk in source_group_node_pks]
             node_pks = set(node_pks).difference(absent_node_pks)
 
-    query = QueryBuilder()
-    query.append(Group, filters={'id': target_group.pk}, tag='group')
-    query.append(Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
-
-    target_group_node_pks = query.all(flat=True)
+    # Batch the query to avoid database parameter limits
+    target_group_node_pks = []
+    for _, pk_batch in batch_iter(node_pks, DEFAULT_FILTER_SIZE):
+        query = QueryBuilder()
+        query.append(Group, filters={'id': target_group.pk}, tag='group')
+        query.append(Node, with_group='group', filters={'id': {'in': pk_batch}}, project='id')
+        target_group_node_pks.extend(query.all(flat=True))
 
     if target_group_node_pks:
         echo.echo_warning(

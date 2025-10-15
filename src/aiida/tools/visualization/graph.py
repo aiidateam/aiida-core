@@ -19,6 +19,7 @@ from graphviz import Digraph
 
 from aiida import orm
 from aiida.common import LinkType
+from aiida.common.utils import DEFAULT_FILTER_SIZE, batch_iter
 from aiida.manage import get_manager
 from aiida.orm.utils.links import LinkPair
 from aiida.tools.graph.graph_traversers import traverse_graph
@@ -547,13 +548,16 @@ class Graph:
             links_backward=valid_link_types,
         )
 
-        query = orm.QueryBuilder(backend=self.backend).append(
-            orm.Node,
-            filters={'id': {'in': traversed_graph['nodes']}},
-            project=['id', '*'],
-            tag='node',
-        )
-        traversed_nodes = {query_result[0]: query_result[1] for query_result in query.all()}
+        # Batch the query to avoid database parameter limits
+        traversed_nodes = {}
+        for _, node_batch_ids in batch_iter(traversed_graph['nodes'], DEFAULT_FILTER_SIZE):
+            query = orm.QueryBuilder(backend=self.backend).append(
+                orm.Node,
+                filters={'id': {'in': node_batch_ids}},
+                project=['id', '*'],
+                tag='node',
+            )
+            traversed_nodes.update({query_result[0]: query_result[1] for query_result in query.all()})
 
         for _, traversed_node in traversed_nodes.items():
             self.add_node(traversed_node, style_override=None)
@@ -604,13 +608,16 @@ class Graph:
             links_forward=valid_link_types,
         )
 
-        query = orm.QueryBuilder(backend=self.backend).append(
-            orm.Node,
-            filters={'id': {'in': traversed_graph['nodes']}},
-            project=['id', '*'],
-            tag='node',
-        )
-        traversed_nodes = {query_result[0]: query_result[1] for query_result in query.all()}
+        # Batch the query to avoid database parameter limits
+        traversed_nodes = {}
+        for _, node_batch_ids in batch_iter(traversed_graph['nodes'], DEFAULT_FILTER_SIZE):
+            query = orm.QueryBuilder(backend=self.backend).append(
+                orm.Node,
+                filters={'id': {'in': node_batch_ids}},
+                project=['id', '*'],
+                tag='node',
+            )
+            traversed_nodes.update({query_result[0]: query_result[1] for query_result in query.all()})
 
         for _, traversed_node in traversed_nodes.items():
             self.add_node(traversed_node, style_override=None)
@@ -678,13 +685,16 @@ class Graph:
             traversed_graph['links'] = (traversed_graph['links'] or set()).union(traversed_outputs['links'] or set())
 
         # Do one central query for all nodes in the Graph and generate a {id: Node} dictionary
-        query = orm.QueryBuilder(backend=self.backend).append(
-            orm.Node,
-            filters={'id': {'in': traversed_graph['nodes']}},
-            project=['id', '*'],
-            tag='node',
-        )
-        traversed_nodes = {query_result[0]: query_result[1] for query_result in query.all()}
+        # Batch the query to avoid database parameter limits
+        traversed_nodes = {}
+        for _, node_batch_ids in batch_iter(traversed_graph['nodes'], DEFAULT_FILTER_SIZE):
+            query = orm.QueryBuilder(backend=self.backend).append(
+                orm.Node,
+                filters={'id': {'in': node_batch_ids}},
+                project=['id', '*'],
+                tag='node',
+            )
+            traversed_nodes.update({query_result[0]: query_result[1] for query_result in query.all()})
 
         # Pop the origin node and add it to the graph, applying custom styling
         origin_node = traversed_nodes.pop(origin_pk)
@@ -761,13 +771,16 @@ class Graph:
             traversed_graph['links'] = (traversed_graph['links'] or set()).union(traversed_outputs['links'] or set())
 
         # Do one central query for all nodes in the Graph and generate a {id: Node} dictionary
-        query = orm.QueryBuilder(backend=self.backend).append(
-            orm.Node,
-            filters={'id': {'in': traversed_graph['nodes']}},
-            project=['id', '*'],
-            tag='node',
-        )
-        traversed_nodes = {query_result[0]: query_result[1] for query_result in query.all()}
+        # Batch the query to avoid database parameter limits
+        traversed_nodes = {}
+        for _, node_batch_ids in batch_iter(traversed_graph['nodes'], DEFAULT_FILTER_SIZE):
+            query = orm.QueryBuilder(backend=self.backend).append(
+                orm.Node,
+                filters={'id': {'in': node_batch_ids}},
+                project=['id', '*'],
+                tag='node',
+            )
+            traversed_nodes.update({query_result[0]: query_result[1] for query_result in query.all()})
 
         # Pop the origin node and add it to the graph, applying custom styling
         origin_node = traversed_nodes.pop(origin_pk)

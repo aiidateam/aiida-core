@@ -109,7 +109,7 @@ def import_archive(
     if not (merge_extras[0] in ['k', 'n'] and merge_extras[1] in ['c', 'n'] and merge_extras[2] in ['l', 'u', 'd']):
         raise ValueError('merge_extras contains invalid values')
     if merge_comments not in ('leave', 'newest', 'overwrite'):
-        raise ValueError(f"merge_comments not in {('leave', 'newest', 'overwrite')!r}")
+        raise ValueError(f'merge_comments not in {("leave", "newest", "overwrite")!r}')
     type_check(group, orm.Group, allow_none=True)
     type_check(test_run, bool)
     backend = backend or get_manager().get_profile_storage()
@@ -162,6 +162,7 @@ def import_archive(
                     backend_from,
                     backend,
                     batch_size,
+                    filter_size,
                     user_ids_archive_backend,
                     computer_ids_archive_backend,
                 )
@@ -392,6 +393,7 @@ def _import_authinfos(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
     batch_size: int,
+    filter_size: int,
     user_ids_archive_backend: Dict[int, int],
     computer_ids_archive_backend: Dict[int, int],
 ) -> None:
@@ -418,20 +420,27 @@ def _import_authinfos(
     # retrieve existing user_id / computer_id
     backend_id_user_comp = []
     if to_user_id_comp_id:
-        qbuilder = orm.QueryBuilder(backend=backend_to)
-        qbuilder.append(
-            orm.AuthInfo,
-            filters={
-                'aiidauser_id': {'in': [_user_id for _user_id, _ in to_user_id_comp_id]},
-                'dbcomputer_id': {'in': [_comp_id for _, _comp_id in to_user_id_comp_id]},
-            },
-            project=['id', 'aiidauser_id', 'dbcomputer_id'],
-        )
-        backend_id_user_comp = [
-            (user_id, comp_id)
-            for _, user_id, comp_id in qbuilder.all(batch_size=batch_size)
-            if (user_id, comp_id) in to_user_id_comp_id
-        ]
+        unique_user_ids = list(set(_user_id for _user_id, _ in to_user_id_comp_id))
+        unique_comp_ids = list(set(_comp_id for _, _comp_id in to_user_id_comp_id))
+
+        # Batch queries for user IDs and computer IDs separately
+        for _, user_batch in batch_iter(unique_user_ids, filter_size):
+            for _, comp_batch in batch_iter(unique_comp_ids, filter_size):
+                qbuilder = orm.QueryBuilder(backend=backend_to)
+                qbuilder.append(
+                    orm.AuthInfo,
+                    filters={
+                        'aiidauser_id': {'in': user_batch},
+                        'dbcomputer_id': {'in': comp_batch},
+                    },
+                    project=['id', 'aiidauser_id', 'dbcomputer_id'],
+                )
+                batch_results = [
+                    (user_id, comp_id)
+                    for _, user_id, comp_id in qbuilder.all(batch_size=batch_size)
+                    if (user_id, comp_id) in to_user_id_comp_id
+                ]
+                backend_id_user_comp.extend(batch_results)
 
     new_authinfos = len(input_id_user_comp) - len(backend_id_user_comp)
     existing_authinfos = len(backend_id_user_comp)
@@ -801,21 +810,20 @@ def _import_comments(
     qbuilder = QueryBuilder(backend=backend_from)
     input_id_uuid = dict(qbuilder.append(orm.Comment, project=['id', 'uuid']).all(batch_size=batch_size))
 
-    # get matching uuids from the backend
+    # get matching uuids from the backend - batch to avoid filter_size limits
     backend_uuid_id: Dict[str, int] = {}
     if input_id_uuid:
-        backend_uuid_id = dict(
-            orm.QueryBuilder(backend=backend)
-            .append(orm.Comment, filters={'uuid': {'in': list(input_id_uuid.values())}}, project=['uuid', 'id'])
-            .all(batch_size=batch_size)
-        )
+        uuid_list = list(input_id_uuid.values())
+        for _, uuid_batch in batch_iter(uuid_list, filter_size):
+            batch_results = dict(
+                orm.QueryBuilder(backend=backend)
+                .append(orm.Comment, filters={'uuid': {'in': uuid_batch}}, project=['uuid', 'id'])
+                .all(batch_size=batch_size)
+            )
+            backend_uuid_id.update(batch_results)
 
     new_comments = len(input_id_uuid) - len(backend_uuid_id)
     existing_comments = len(backend_uuid_id)
-
-    archive_comments = QueryBuilder(backend=backend_from).append(
-        orm.Comment, filters={'uuid': {'in': list(backend_uuid_id.keys())}}, project=['uuid', 'mtime', 'content']
-    )
 
     if existing_comments:
         if merge_comments == 'leave':
@@ -827,10 +835,18 @@ def _import_comments(
                 data = {'id': backend_uuid_id[row[0]], 'mtime': row[1], 'content': row[2]}
                 return data
 
-            with get_progress_reporter()(desc='Overwriting comments', total=archive_comments.count()) as progress:
-                for nrows, rows in batch_iter(archive_comments.iterall(batch_size=batch_size), batch_size, _transform):
-                    backend.bulk_update(EntityTypes.COMMENT, rows)
-                    progress.update(nrows)
+            # Batch the UUIDs to avoid filter_size limits
+            uuid_keys = list(backend_uuid_id.keys())
+            with get_progress_reporter()(desc='Overwriting comments', total=existing_comments) as progress:
+                for _, uuid_batch in batch_iter(uuid_keys, filter_size):
+                    archive_comments = QueryBuilder(backend=backend_from).append(
+                        orm.Comment, filters={'uuid': {'in': uuid_batch}}, project=['uuid', 'mtime', 'content']
+                    )
+                    for nrows, rows in batch_iter(
+                        archive_comments.iterall(batch_size=batch_size), batch_size, _transform
+                    ):
+                        backend.bulk_update(EntityTypes.COMMENT, rows)
+                        progress.update(nrows)
 
         elif merge_comments == 'newest':
             IMPORT_LOGGER.report(f'Updating {existing_comments} existing Comment(s)')
@@ -843,9 +859,17 @@ def _import_comments(
                     cmt.set_mtime(new_mtime)
                     cmt.set_content(new_comment)
 
-            with get_progress_reporter()(desc='Updating comments', total=archive_comments.count()) as progress:
-                for nrows, rows in batch_iter(archive_comments.iterall(batch_size=batch_size), batch_size, _transform):
-                    progress.update(nrows)
+            # Batch the UUIDs to avoid filter_size limits
+            uuid_keys = list(backend_uuid_id.keys())
+            with get_progress_reporter()(desc='Updating comments', total=existing_comments) as progress:
+                for _, uuid_batch in batch_iter(uuid_keys, filter_size):
+                    archive_comments = QueryBuilder(backend=backend_from).append(
+                        orm.Comment, filters={'uuid': {'in': uuid_batch}}, project=['uuid', 'mtime', 'content']
+                    )
+                    for nrows, rows in batch_iter(
+                        archive_comments.iterall(batch_size=batch_size), batch_size, _transform
+                    ):
+                        progress.update(nrows)
 
         else:
             raise ImportValidationError(f'Unknown merge_comments value: {merge_comments}.')
@@ -1061,14 +1085,17 @@ def _import_groups(
     qbuilder = QueryBuilder(backend=backend_from)
     input_id_uuid = dict(qbuilder.append(orm.Group, project=['id', 'uuid']).all(batch_size=batch_size))
 
-    # get matching uuids from the backend
+    # get matching uuids from the backend - batch to avoid filter_size limits
     backend_uuid_id: Dict[str, int] = {}
     if input_id_uuid:
-        backend_uuid_id = dict(
-            orm.QueryBuilder(backend=backend_to)
-            .append(orm.Group, filters={'uuid': {'in': list(input_id_uuid.values())}}, project=['uuid', 'id'])
-            .all(batch_size=batch_size)
-        )
+        uuid_list = list(input_id_uuid.values())
+        for _, uuid_batch in batch_iter(uuid_list, filter_size):
+            batch_results = dict(
+                orm.QueryBuilder(backend=backend_to)
+                .append(orm.Group, filters={'uuid': {'in': uuid_batch}}, project=['uuid', 'id'])
+                .all(batch_size=batch_size)
+            )
+            backend_uuid_id.update(batch_results)
 
     # get all labels
     labels = {
@@ -1106,30 +1133,37 @@ def _import_groups(
 
         # generate mapping of input backend id to output backend id
         group_id_archive_backend = {i: backend_uuid_id[uuid] for i, uuid in input_id_uuid.items()}
-        # Add nodes to new groups
-        iterator = (
-            QueryBuilder(backend=backend_from)
-            .append(orm.Group, project='id', filters={'uuid': {'in': new_uuids}}, tag='group')
-            .append(orm.Node, project='id', with_group='group')
-        )
-        total = iterator.count()
-        if total:
-            IMPORT_LOGGER.report(f'Adding {total} Node(s) to new Group(s)')
 
-            def group_node_transform(row):
-                group_id = group_id_archive_backend[row[0]]
-                try:
-                    node_id = node_ids_archive_backend[row[1]]
-                except KeyError as exc:
-                    raise ImportValidationError(f'Archive Group {group_id} has unknown Node: {exc}')
-                return {'dbgroup_id': group_id, 'dbnode_id': node_id}
+        # Add nodes to new groups - batch the UUIDs to avoid filter_size limits
+        if new_uuids:
+            new_uuid_list = list(new_uuids)
+            for _, uuid_batch in batch_iter(new_uuid_list, filter_size):
+                iterator = (
+                    QueryBuilder(backend=backend_from)
+                    .append(orm.Group, project='id', filters={'uuid': {'in': uuid_batch}}, tag='group')
+                    .append(orm.Node, project='id', with_group='group')
+                )
+                total = iterator.count()
+                if total:
+                    if len(new_uuid_list) == len(uuid_batch):  # Only log once
+                        IMPORT_LOGGER.report(f'Adding {total} Node(s) to new Group(s)')
 
-            with get_progress_reporter()(desc=f'Adding new {EntityTypes.GROUP_NODE.value}(s)', total=total) as progress:
-                for nrows, rows in batch_iter(
-                    iterator.iterall(batch_size=batch_size), batch_size, group_node_transform
-                ):
-                    backend_to.bulk_insert(EntityTypes.GROUP_NODE, rows)
-                    progress.update(nrows)
+                    def group_node_transform(row):
+                        group_id = group_id_archive_backend[row[0]]
+                        try:
+                            node_id = node_ids_archive_backend[row[1]]
+                        except KeyError as exc:
+                            raise ImportValidationError(f'Archive Group {group_id} has unknown Node: {exc}')
+                        return {'dbgroup_id': group_id, 'dbnode_id': node_id}
+
+                    with get_progress_reporter()(
+                        desc=f'Adding new {EntityTypes.GROUP_NODE.value}(s)', total=total
+                    ) as progress:
+                        for nrows, rows in batch_iter(
+                            iterator.iterall(batch_size=batch_size), batch_size, group_node_transform
+                        ):
+                            backend_to.bulk_insert(EntityTypes.GROUP_NODE, rows)
+                            progress.update(nrows)
 
     return labels
 

@@ -16,6 +16,7 @@ import numpy as np
 
 from aiida import orm
 from aiida.common.lang import type_check
+from aiida.common.utils import DEFAULT_FILTER_SIZE
 from aiida.tools.graph.age_entities import Basket
 
 
@@ -217,29 +218,38 @@ class QueryRule(Operation, metaclass=ABCMeta):
             There is no returned value for this method.
         :param operational_set: where the results originate from (walkers)
         """
+        from aiida.common.utils import batch_iter
+
         primkeys = operational_set[self._entity_from].keyset
         target_set.empty()
 
-        if primkeys:
-            self._querybuilder.add_filter(
-                self._first_tag, {operational_set[self._entity_from].identifier: {'in': primkeys}}
+        if not primkeys:
+            return
+
+        # Batch the queries for large datasets using batch_iter
+        all_results = []
+
+        for _, batch_primkeys in batch_iter(iterable=primkeys, size=DEFAULT_FILTER_SIZE):
+            batch_qb = deepcopy(self._querybuilder)
+            batch_qb.add_filter(
+                self._first_tag, {operational_set[self._entity_from].identifier: {'in': batch_primkeys}}
             )
-            qres = self._querybuilder.dict()
+            all_results.extend(batch_qb.dict())
 
-            # These are the new results returned by the query
-            target_set[self._entity_to].add_entities(
-                [item[self._last_tag][self._entity_to_identifier] for item in qres]
+        # These are the new results returned by the query
+        target_set[self._entity_to].add_entities(
+            [item[self._last_tag][self._entity_to_identifier] for item in all_results]
+        )
+
+        if self._track_edges:
+            # As in _init_run, I need the key for the edge_set
+            edge_key = '{}_{}'.format(*sorted((self._entity_from, self._entity_to)))
+            edge_set = operational_set.dict[edge_key]
+            namedtuple_ = edge_set.edge_namedtuple
+
+            target_set[edge_key].add_entities(
+                [namedtuple_(*(item[key1][key2] for (key1, key2) in self._edge_keys)) for item in all_results]
             )
-
-            if self._track_edges:
-                # As in _init_run, I need the key for the edge_set
-                edge_key = '{}_{}'.format(*sorted((self._entity_from, self._entity_to)))
-                edge_set = operational_set.dict[edge_key]
-                namedtuple_ = edge_set.edge_namedtuple
-
-                target_set[edge_key].add_entities(
-                    [namedtuple_(*(item[key1][key2] for (key1, key2) in self._edge_keys)) for item in qres]
-                )
 
     def set_accumulator(self, accumulator_set):
         self._accumulator_set = accumulator_set

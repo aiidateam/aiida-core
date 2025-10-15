@@ -18,7 +18,7 @@ import re
 import sys
 from collections.abc import Iterable, Iterator
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
 from uuid import UUID
 
 from aiida.common.typing import Self
@@ -31,6 +31,9 @@ if TYPE_CHECKING:
         from typing import TypeAlias
     except ImportError:
         from typing_extensions import TypeAlias
+
+T = TypeVar('T')
+R = TypeVar('R')
 
 
 def get_new_uuid() -> str:
@@ -608,3 +611,55 @@ def format_directory_size(size_in_bytes: int) -> str:
 
     # Format the size to two decimal places
     return f'{converted_size:.2f} {prefixes[index]}'
+
+
+@overload
+def batch_iter(iterable: Iterable[T], size: int, transform: None = None) -> Iterable[tuple[int, list[T]]]: ...
+
+
+@overload
+def batch_iter(iterable: Iterable[T], size: int, transform: Callable[[T], R]) -> Iterable[tuple[int, list[R]]]: ...
+
+
+def batch_iter(
+    iterable: Iterable[T], size: int, transform: Callable[[T], Any] | None = None
+) -> Iterable[tuple[int, list[Any]]]:
+    """Yield an iterable in batches of a set number of items.
+
+    Note, the final yield may be less than this size.
+
+    :param transform: a transform to apply to each item
+    :returns: (number of items, list of items)
+    """
+    transform = transform or (lambda x: x)
+    current = []
+    length = 0
+    for item in iterable:
+        current.append(transform(item))
+        length += 1
+        if length >= size:
+            yield length, current
+            current = []
+            length = 0
+    if current:
+        yield length, current
+
+
+# NOTE: `sqlite` has an `SQLITE_MAX_VARIABLE_NUMBER` compile-time flag.
+# On older `sqlite` versions, this was set to 999 by default,
+# while for newer versions it is generally higher, see:
+# https://www.sqlite.org/limits.html
+# If `DEFAULT_FILTER_SIZE` is set too high, the limit can be hit when large `IN` queries are
+# constructed through AiiDA, leading to SQLAlchemy `OperationalError`s.
+# On modern systems, the limit might be in the hundreds of thousands, however, as it is OS-
+# and/or Python version dependent and we don't know its size, we set the value to 999 for safety.
+# From manual benchmarking, this value for batching also seems to give reasonable performance.
+DEFAULT_FILTER_SIZE: int = 999
+
+# NOTE: `DEFAULT_BATCH_SIZE` controls how many database rows are fetched and processed at once during
+# streaming operations (e.g., `QueryBuilder.iterall()`, `QueryBuilder.iterdict()`). This prevents
+# loading entire large result sets into memory at once, which could cause memory exhaustion when
+# working with datasets containing thousands or millions of records. The value of 1000 provides a
+# balance between memory efficiency and database round-trip overhead. Setting it too low increases
+# the number of database queries needed, while setting it too high increases memory consumption.
+DEFAULT_BATCH_SIZE: int = 1000

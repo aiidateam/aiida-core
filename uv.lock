@@ -132,7 +132,6 @@ pre-commit = [
     { name = "sphinx" },
     { name = "sqlalchemy", extra = ["mypy"] },
     { name = "tomli" },
-    { name = "trogon" },
     { name = "types-click-spinner" },
     { name = "types-docutils" },
     { name = "types-paramiko" },
@@ -157,11 +156,22 @@ ssh-kerberos = [
 ]
 tests = [
     { name = "aiida-export-migration-tests" },
+    { name = "ase" },
     { name = "coverage" },
     { name = "docutils" },
+    { name = "flask" },
+    { name = "flask-cors" },
+    { name = "flask-restful" },
+    { name = "matplotlib", version = "3.9.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "matplotlib", version = "3.10.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "pg8000" },
     { name = "pgtest" },
+    { name = "pycifrw" },
+    { name = "pymatgen", version = "2024.8.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "pymatgen", version = "2025.6.14", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "pympler" },
+    { name = "pymysql" },
+    { name = "pyparsing" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-benchmark" },
@@ -170,15 +180,24 @@ tests = [
     { name = "pytest-rerunfailures" },
     { name = "pytest-timeout" },
     { name = "pytest-xdist" },
+    { name = "python-memcached" },
+    { name = "seekpath" },
+    { name = "spglib" },
     { name = "sphinx" },
 ]
 tui = [
     { name = "trogon" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "aiida-core", extra = ["atomic-tools", "docs", "pre-commit", "rest", "tests"] },
+]
+
 [package.metadata]
 requires-dist = [
-    { name = "aiida-core", extras = ["atomic-tools", "rest", "tests", "tui"], marker = "extra == 'pre-commit'" },
+    { name = "aiida-core", extras = ["atomic-tools", "rest"], marker = "extra == 'tests'" },
+    { name = "aiida-core", extras = ["tests"], marker = "extra == 'pre-commit'" },
     { name = "aiida-export-migration-tests", marker = "extra == 'tests'", specifier = "==0.9.0" },
     { name = "alembic", specifier = "~=1.8" },
     { name = "archive-path", specifier = "~=0.4.2" },
@@ -271,6 +290,9 @@ requires-dist = [
     { name = "wrapt", specifier = "~=1.11" },
 ]
 provides-extras = ["atomic-tools", "bpython", "docs", "notebook", "pre-commit", "rest", "ssh-kerberos", "tests", "tui"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "aiida-core", extras = ["atomic-tools", "rest", "tests", "pre-commit", "tests", "docs"] }]
 
 [[package]]
 name = "aiida-export-migration-tests"

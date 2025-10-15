@@ -31,6 +31,7 @@ import pytest
 from aiida import get_profile, orm
 from aiida.common.folders import Folder
 from aiida.common.links import LinkType
+from aiida.manage import get_manager
 from aiida.manage.configuration import Profile, get_config, load_profile
 
 try:
@@ -351,7 +352,7 @@ def empty_config(tmp_path) -> Config:
     :return: a new empty config instance.
     """
     from aiida.common.utils import Capturing
-    from aiida.manage import configuration, get_manager
+    from aiida.manage import configuration
     from aiida.manage.configuration.settings import AiiDAConfigDir
 
     manager = get_manager()
@@ -491,7 +492,6 @@ def config_with_profile(config_with_profile_factory):
 @pytest.fixture
 def manager():
     """Get the ``Manager`` instance of the currently loaded profile."""
-    from aiida.manage import get_manager
 
     return get_manager()
 

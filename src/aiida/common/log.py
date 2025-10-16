@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-import collections
+import collections.abc
 import contextlib
 import enum
 import io

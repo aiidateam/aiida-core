@@ -8,10 +8,9 @@
 ###########################################################################
 """Module for functions to traverse AiiDA graphs."""
 
-import sys
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Mapping, Optional, Set, cast
+from __future__ import annotations
 
-from numpy import inf
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, TypedDict, cast
 
 from aiida import orm
 from aiida.common import exceptions
@@ -23,16 +22,13 @@ from aiida.tools.graph.age_rules import RuleSaveWalkers, RuleSequence, RuleSetWa
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
+    from aiida.tools.graph.age_rules import Operation
 
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
 
-    class TraverseGraphOutput(TypedDict, total=False):
-        nodes: Set[int]
-        links: Optional[Set[LinkQuadruple]]
-        rules: Dict[str, bool]
-else:
-    TraverseGraphOutput = Mapping[str, Any]
+class TraverseGraphOutput(TypedDict, total=False):
+    nodes: set[int]
+    links: set[LinkQuadruple] | None
+    rules: dict[str, bool]
 
 
 def get_nodes_delete(
@@ -122,7 +118,7 @@ def get_nodes_export(
 
 def validate_traversal_rules(
     ruleset: GraphTraversalRules = GraphTraversalRules.DEFAULT, **traversal_rules: bool
-) -> dict:
+) -> dict[str, Any]:
     """Validates the keywords with a ruleset template and returns a parsed dictionary
     ready to be used.
 
@@ -210,11 +206,13 @@ def traverse_graph(
 
     :param missing_callback: A callback to handle missing starting_pks or if None raise NotExistent
     """
+    from numpy import inf
+
     from aiida.common.utils import batch_iter
 
     if max_iterations is None:
         max_iterations = cast(int, inf)
-    elif not (isinstance(max_iterations, int) or max_iterations is inf):
+    elif not (isinstance(max_iterations, int) or max_iterations is inf):  # type: ignore[unreachable]
         raise TypeError('Max_iterations has to be an integer or infinity')
 
     linktype_list = []
@@ -258,7 +256,7 @@ def traverse_graph(
     elif missing_pks and missing_callback is not None:
         missing_callback(missing_pks)
 
-    rules = []
+    rules: list[Operation] = []
     basket = Basket(nodes=existing_pks)
 
     # When max_iterations is finite, the order of traversal may affect the result

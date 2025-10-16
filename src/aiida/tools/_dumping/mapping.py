@@ -93,7 +93,7 @@ class GroupNodeMapping:
             else:
                 group_uuids = [orm.load_group(g).uuid for g in groups]
             qb.append(orm.Group, tag='group', project=['uuid'], filters={'uuid': {'in': group_uuids}})
-            LOGGER.report(f'Querying node memberships for {len(group_uuids)} groups...')
+            LOGGER.report(f'Querying node memberships for {len(group_uuids)} group(s)...')
         else:
             # Query all groups
             qb.append(orm.Group, tag='group', project=['uuid'])

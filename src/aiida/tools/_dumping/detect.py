@@ -13,12 +13,15 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, cast
 
+import click
+
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm
 from aiida.tools._dumping.config import GroupDumpConfig, GroupDumpScope, ProfileDumpConfig
 from aiida.tools._dumping.mapping import GroupNodeMapping
 from aiida.tools._dumping.utils import (
+    DUMP_PROGRESS_BAR_FORMAT,
     REGISTRY_TO_ORM_TYPE,
     DumpPaths,
     DumpTimes,
@@ -199,11 +202,10 @@ class DumpChangeDetector:
                 return nodes
 
             return_nodes = []
-            set_progress_bar_tqdm()
+            set_progress_bar_tqdm(bar_format=DUMP_PROGRESS_BAR_FORMAT)
 
-            with get_progress_reporter()(
-                desc=f'Excluding already dumped {store_type}...', total=len(nodes)
-            ) as progress:
+            progress_desc = f"{click.style('Report', fg='blue', bold=True)}: Excluding already dumped {store_type}..."
+            with get_progress_reporter()(desc=progress_desc, total=len(nodes)) as progress:
                 for node in nodes:
                     if node.uuid not in tracked_uuids:
                         return_nodes.append(node)
@@ -240,9 +242,10 @@ class DumpChangeDetector:
 
         # Apply caller filter (keep top-level or explicitly grouped)
         filtered_nodes = []
-        set_progress_bar_tqdm()
+        set_progress_bar_tqdm(bar_format=DUMP_PROGRESS_BAR_FORMAT)
 
-        with get_progress_reporter()(desc=f'Applying filters to {store_type}...', total=len(nodes)) as progress:
+        progress_desc = f"{click.style('Report', fg='blue', bold=True)}: Applying filters to {store_type}..."
+        with get_progress_reporter()(desc=progress_desc, total=len(nodes)) as progress:
             for node in nodes:
                 is_sub_node = bool(getattr(node, 'caller', None))
                 is_explicitly_grouped = node.uuid in self.grouped_node_uuids

@@ -4,17 +4,17 @@
 Real-world calculations: tips and tricks
 ========================================
 
-This how-to page collects useful tips and tricks for running real-world AiiDA simulations.  
+This how-to page collects useful tips and tricks for running real-world AiiDA simulations.
 
-Setting runtime configuration of a calculation job  
+Setting runtime configuration of a calculation job
 ==================================================
 
-When submitting a job, you can provide specific instructions which should be put in the job submission script (e.g. for the Slurm scheduler).  
-They can be provided via the ``metadata.options`` dictionary of the calculation job.  
+When submitting a job, you can provide specific instructions which should be put in the job submission script (e.g. for the Slurm scheduler).
+They can be provided via the ``metadata.options`` dictionary of the calculation job.
 
 In particular, you can provide:
 
-- custom scheduler directives, like additional ``#SBATCH`` commands for the Slurm scheduler  
+- custom scheduler directives, like additional ``#SBATCH`` commands for the Slurm scheduler
 - prepend text to the job script (e.g. if you need to load specific modules or set specific environment variables which are not already specified in the computer/code setup)
 - additional mpirun parameters (e.g. if you need to bind processes to cores, etc.)
 
@@ -77,7 +77,7 @@ Notes:
 - Use this when a directive is not covered by a dedicated option.
 
 
-Prepend/append shell code to the job script  
+Prepend/append shell code to the job script
 -------------------------------------------
 
 Use ``prepend_text`` to add shell commands immediately before launching the code, and ``append_text`` for commands executed right after the code finishes:
@@ -92,7 +92,7 @@ Use ``prepend_text`` to add shell commands immediately before launching the code
 	echo "Run finished on $(hostname) at $(date)"
 	""".strip()
 
-.. tip:: for simple environment variables you can also use ``environment_variables`` (AiiDA will export them for you):  
+.. tip:: for simple environment variables you can also use ``environment_variables`` (AiiDA will export them for you):
 
 .. code-block:: python
 
@@ -204,8 +204,8 @@ We can inspect the inputs of the ``pw`` sub-workflow in the same way:
 
 .. code-block:: text
 
-  code monitors   parent_folder     settings   remote_folder 
-  hubbard_file    parallelization   pseudos    structure 
+  code monitors   parent_folder     settings   remote_folder
+  hubbard_file    parallelization   pseudos    structure
   kpoints         parameters        metadata   vdw_table
 
 please note that the tab completion could change, depending on the installed packages and plugins.
@@ -213,7 +213,7 @@ please note that the tab completion could change, depending on the installed pac
 How to interactively explore the provenance of a node
 =====================================================
 
-If a calculation or workflow node is in the database, it is possible to explore its provenance interactively via the verdi shell or a jupyter notebook.  
+If a calculation or workflow node is in the database, it is possible to explore its provenance interactively via the verdi shell or a jupyter notebook.
 For example, if you want to explore the provenance of a calculation with pk ``<pk>``, you can do the following:
 
 .. code-block:: python
@@ -227,10 +227,10 @@ For example, if you want to explore the provenance of a calculation with pk ``<p
     pw_calc.outputs.<TAB>
     # -> dict_keys(['output_parameters', 'output_structure', 'output_trajectory', 'retrieved', 'remote_folder'])
 
-It is possible to inspect, for example, the creator of a given remote_folder (in this case, the pw_calc itself):  
+It is possible to inspect, for example, the creator of a given remote_folder (in this case, the pw_calc itself):
 
-.. tip::  
-The combination of ``verdi shell`` + tabbing through autocompletion at the various levels and for various entities is an intuitive and powerful way to explore AiiDA's API. It's frequently also used by the devs, when they don't remember details of AiiDA's large API surface. When you don't know how to achieve something, just fire up a ``verdi shell``!  
+.. tip::
+The combination of ``verdi shell`` + tabbing through autocompletion at the various levels and for various entities is an intuitive and powerful way to explore AiiDA's API. It's frequently also used by the devs, when they don't remember details of AiiDA's large API surface. When you don't know how to achieve something, just fire up a ``verdi shell``!
 
 .. code-block:: python
 
@@ -260,7 +260,7 @@ It is also possible to find the higher-level workflow that called a given calcul
     # -> 456
 
 
-How to quickly inspect a calculation  
+How to quickly inspect a calculation
 ====================================
 
 There are a few ways to inspect the raw inputs/outputs of a calculation as read/written by the executable.
@@ -268,7 +268,7 @@ There are a few ways to inspect the raw inputs/outputs of a calculation as read/
 Go to the remote folder of a calculation
 ----------------------------------------
 
-If you want to go to the (remote) execution folder of a given calculation to see what happened (e.g., why it failed) with pk ``<pk>``, you can use the following command:  
+If you want to go to the (remote) execution folder of a given calculation to see what happened (e.g., why it failed) with pk ``<pk>``, you can use the following command:
 
 .. code-block:: console
 
@@ -295,7 +295,7 @@ Once you checked that a calculation failed, and you understood what happened, yo
 How to quickly re-submit something: get_builder_restart()
 =========================================================
 
-If you want to re-submit a calculation/workflow (i.e. a process) for whatever reason, i.e. it failed due to wrong inputs or insufficient resources, you can use  
+If you want to re-submit a calculation/workflow (i.e. a process) for whatever reason, i.e. it failed due to wrong inputs or insufficient resources, you can use
 the ``get_builder_restart()`` method of the process node. This is particularly useful if you want to re-submit a complex workflow with many inputs, and you do not want to
 build the process builder from scratch again.
 The ``get_builder_restart()`` method  will return a process builder with all the inputs of the previous calculation, so that you can modify only what you want to change,
@@ -319,13 +319,11 @@ Skipping already done calculations in a workflow: caching
 --------------------------------------------------------
 
 If you are running a complex workflow with many steps, and you want to skip the already done calculations, you can use the caching feature of AiiDA.
-This is particularly useful if you want to re-run a workflow that failed at some point, or if you want to run a workflow with different parameters for only few steps, 
+This is particularly useful if you want to re-run a workflow that failed at some point, or if you want to run a workflow with different parameters for only few steps,
 but you do not want to re-run the already done previous calculations.
 However, caching should be used with care, as it can lead to unexpected results if not used properly in some cases:
 - if you are re-compiling the code on the remote cluster, caching will not detect that the code has changed, and it will use the previous results (which could be different from the ones you would obtain with the new executable)
-- if your remote folder used as parent 
+- if your remote folder used as parent
 
 Caching is not enabled by default, and you need to explicitly enable it in the workflow definition.
 Please have a look at the `caching documentation <https://aiida.readthedocs.io/projects/aiida-core/en/stable/howto/run_codes.html#how-to-save-compute-time-with-caching>`__ for more details.
-
-

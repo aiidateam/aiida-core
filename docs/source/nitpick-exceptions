@@ -164,6 +164,7 @@ py:class requests.Response
 py:class concurrent.futures._base.TimeoutError
 py:class concurrent.futures._base.Future
 
+py:class BackupManager
 py:class disk_objectstore.utils.LazyOpener
 py:class disk_objectstore.backup_utils.BackupManager
 

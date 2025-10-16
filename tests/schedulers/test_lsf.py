@@ -12,6 +12,7 @@ import logging
 import uuid
 
 import pytest
+
 from aiida.common.exceptions import ConfigurationError
 from aiida.schedulers.datastructures import JobState
 from aiida.schedulers.plugins.lsf import LsfScheduler
@@ -170,7 +171,11 @@ def test_submit_script_rerunnable():
 @pytest.mark.parametrize(
     'kwargs, exception, message',
     (
-        ({'tot_num_mpiprocs': 'Not-a-Number'}, TypeError, ''),
+        (
+            {'tot_num_mpiprocs': 'Not-a-Number'},
+            TypeError,
+            '`tot_num_mpiprocs` must be specified and must be an integer',
+        ),
         ({'parallel_env': 0}, TypeError, 'parallel_env` must be a string'),
         ({'num_machines': 1}, ConfigurationError, '`num_machines` cannot be set unless `use_num_machines` is `True`.'),
         ({'use_num_machines': True}, ConfigurationError, 'must set `num_machines` when `use_num_machines` is `True`.'),

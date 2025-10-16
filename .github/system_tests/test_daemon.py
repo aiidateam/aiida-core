@@ -16,16 +16,6 @@ import sys
 import tempfile
 import time
 
-from aiida.common import StashMode, exceptions
-from aiida.engine import run, submit
-from aiida.engine.daemon.client import get_daemon_client
-from aiida.engine.persistence import ObjectLoader
-from aiida.engine.processes import CalcJob, Process
-from aiida.manage.caching import enable_caching
-from aiida.orm import CalcJobNode, Dict, Int, List, Str, load_code, load_node
-from aiida.orm.nodes.caching import NodeCaching
-from aiida.plugins import CalculationFactory, WorkflowFactory
-from aiida.workflows.arithmetic.add_multiply import add, add_multiply
 from workchains import (
     ArithmeticAddBaseWorkChain,
     CalcFunctionRunnerWorkChain,
@@ -39,6 +29,16 @@ from workchains import (
     WorkFunctionRunnerWorkChain,
 )
 
+from aiida.common import StashMode, exceptions
+from aiida.engine import run, submit
+from aiida.engine.daemon.client import get_daemon_client
+from aiida.engine.persistence import ObjectLoader
+from aiida.engine.processes import CalcJob, Process
+from aiida.manage.caching import enable_caching
+from aiida.orm import CalcJobNode, Dict, Int, List, Str, load_code, load_node
+from aiida.orm.nodes.caching import NodeCaching
+from aiida.plugins import CalculationFactory, WorkflowFactory
+from aiida.workflows.arithmetic.add_multiply import add, add_multiply
 from tests.utils.memory import get_instances
 
 CODENAME_ADD = 'add@localhost'
@@ -437,6 +437,8 @@ def launch_all():
     run_multiply_add_workchain()
 
     # Testing the stashing functionality
+    # To speedup, here we only check with StashMode.COPY.
+    # All stash_modes are tested individually in `test_execmanager.py`
     print('Testing the stashing functionality')
     process, inputs, expected_result = create_calculation_process(code=code_doubler, inputval=1)
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -444,7 +446,11 @@ def launch_all():
         shutil.rmtree(tmpdir, ignore_errors=True)
 
         source_list = ['output.txt', 'triple_value.*']
-        inputs['metadata']['options']['stash'] = {'target_base': tmpdir, 'source_list': source_list}
+        inputs['metadata']['options']['stash'] = {
+            'stash_mode': StashMode.COPY.value,
+            'target_base': tmpdir,
+            'source_list': source_list,
+        }
         _, node = run.get_node(process, **inputs)
         assert node.is_finished_ok
         assert 'remote_stash' in node.outputs

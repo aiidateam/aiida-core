@@ -7,14 +7,18 @@ inputs:
     default: '3.9'              # Lowest supported version
     required: false
   extras:
-    description: aiida-core extras (including brackets)
+    description: list of optional dependencies
     default: ''
     required: false
   # NOTE: Hard-learned lesson: we cannot use type=boolean here, apparently :-(
   # https://stackoverflow.com/a/76294014
-  from-requirements:
-    description: Install aiida-core dependencies from pre-compiled requirements.txt file
+  from-lock:
+    description: Install aiida-core dependencies from uv lock file
     default: 'true'
+    required: false
+  resolution-strategy:
+    description: uv dependency resolution strategy
+    default: highest
     required: false
 
 runs:
@@ -25,26 +29,21 @@ runs:
     with:
       python-version: ${{ inputs.python-version }}
 
-  - name: Install uv installer
-    run: curl --proto '=https' --tlsv1.2 -LsSf https://${{ env.UV_URL }} | sh
-    env:
-      UV_VERSION: 0.2.9
-      UV_URL: github.com/astral-sh/uv/releases/download/$UV_VERSION/uv-installer.sh
-    shell: bash
+  - name: Set up uv
+    uses: astral-sh/setup-uv@v6
+    with:
+      version: 0.7.6
+      python-version: ${{ inputs.python-version }}
+      activate-environment: true
 
-  - name: Install dependencies from requirements-py-*.txt
-    if: ${{ inputs.from-requirements == 'true' }}
-    run: uv pip install --system -r requirements/requirements-py-${{ inputs.python-version }}.txt
+  - name: Install dependencies from uv lock
+    if: ${{ inputs.from-lock == 'true' }}
+    # NOTE: We're asserting that the lockfile is up to date
+    run: uv sync --locked ${{ inputs.extras && format('--extra {0}', inputs.extras) || '' }}
     shell: bash
 
   - name: Install aiida-core
-    run: uv pip install --system ${{ env.NO_DEPS }} -e .${{ inputs.extras }}
-    env:
-        # Don't install dependencies if they were installed through requirements file AND
-        # if no extras are required.
-        #
-        # If this syntax looks weird to you, dear reader, know that this is
-        # GHA's way to do ternary operator. :-/
-        # https://docs.github.com/en/actions/learn-github-actions/expressions#example
-      NO_DEPS: ${{ (inputs.from-requirements == 'true' && inputs.extras == '')  && '--no-deps' || '' }}
+    if: ${{ inputs.from-lock != 'true' }}
+    run: |
+      uv pip install --resolution ${{ inputs.resolution-strategy }} -e .${{ inputs.extras && format('[{0}]', inputs.extras) || '' }}
     shell: bash

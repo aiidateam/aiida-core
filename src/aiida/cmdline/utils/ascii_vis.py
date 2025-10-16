@@ -8,7 +8,12 @@
 ###########################################################################
 """Utility functions to draw ASCII diagrams to the command line."""
 
-from typing import Optional
+from __future__ import annotations
+
+import typing as t
+
+if t.TYPE_CHECKING:
+    from aiida import orm
 
 __all__ = ('format_call_graph',)
 
@@ -17,8 +22,8 @@ TREE_MIDDLE_ENTRY = '\u251c\u2500\u2500 '
 TREE_FIRST_ENTRY = TREE_MIDDLE_ENTRY
 
 
-def calc_info(node, call_link_label: bool = False) -> str:
-    """Return a string with the summary of the state of a CalculationNode.
+def calc_info(node: orm.ProcessNode, call_link_label: bool = False) -> str:
+    """Return a string with the summary of the state of a ProcessNode.
 
     :param calc_node: The calculation node
     :param call_link_label: Include the call link label if other from the default ``CALL``.
@@ -29,7 +34,7 @@ def calc_info(node, call_link_label: bool = False) -> str:
         raise TypeError(f'Unknown type: {type(node)}')
 
     process_label = node.process_label
-    process_state = node.process_state.value.capitalize()
+    process_state = 'None' if node.process_state is None else node.process_state.value.capitalize()
     exit_status = node.exit_status
 
     if call_link_label and (caller := node.caller):
@@ -57,7 +62,12 @@ def calc_info(node, call_link_label: bool = False) -> str:
     return string
 
 
-def format_call_graph(calc_node, max_depth: Optional[int] = None, call_link_label: bool = False, info_fn=calc_info):
+def format_call_graph(
+    calc_node: orm.ProcessNode,
+    max_depth: int | None = None,
+    call_link_label: bool = False,
+    info_fn: t.Callable = calc_info,
+) -> str:
     """Print a tree like the POSIX tree command for the calculation call graph.
 
     :param calc_node: The calculation node
@@ -71,8 +81,11 @@ def format_call_graph(calc_node, max_depth: Optional[int] = None, call_link_labe
 
 
 def build_call_graph(
-    calc_node, max_depth: Optional[int] = None, call_link_label: bool = False, info_fn=calc_info
-) -> str:
+    calc_node: orm.ProcessNode,
+    max_depth: int | None = None,
+    call_link_label: bool = False,
+    info_fn: t.Callable = calc_info,
+) -> str | tuple[str, list]:
     """Build the call graph of a given node.
 
     :param calc_node: The calculation node
@@ -100,7 +113,7 @@ def build_call_graph(
     return info_string
 
 
-def format_tree_descending(tree, prefix='', pos=-1):
+def format_tree_descending(tree: t.Any, prefix: str = '', pos: int = -1) -> str:
     """Format a descending tree."""
     text = []
 

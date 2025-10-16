@@ -9,6 +9,7 @@
 """Tests for the `aiida.workflows.arithmetic.add_multiply` work function."""
 
 import pytest
+
 from aiida.orm import Int
 from aiida.plugins import WorkflowFactory
 from aiida.workflows.arithmetic.add_multiply import add_multiply

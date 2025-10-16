@@ -9,6 +9,7 @@
 """Module that contains the class definitions necessary to offer support for queries to Materials Project."""
 
 import pytest
+
 from aiida.plugins import DbImporterFactory
 
 

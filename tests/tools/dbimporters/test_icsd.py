@@ -11,6 +11,7 @@
 import urllib.request
 
 import pytest
+
 from aiida import get_profile
 from aiida.tools.dbimporters.plugins import icsd
 

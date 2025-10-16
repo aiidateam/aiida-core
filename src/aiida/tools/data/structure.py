@@ -21,7 +21,7 @@ from aiida.common.constants import elements
 from aiida.engine import calcfunction
 from aiida.orm.nodes.data.structure import Kind, Site, StructureData
 
-__all__ = ('structure_to_spglib_tuple', 'spglib_tuple_to_structure')
+__all__ = ('spglib_tuple_to_structure', 'structure_to_spglib_tuple')
 
 
 @calcfunction

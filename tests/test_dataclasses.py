@@ -14,6 +14,7 @@ import tempfile
 
 import numpy as np
 import pytest
+
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.common.utils import Capturing
 from aiida.orm import ArrayData, BandsData, CifData, Dict, KpointsData, StructureData, TrajectoryData, load_node
@@ -211,6 +212,7 @@ class TestCifData:
     @skip_ase
     @skip_pycifrw
     @pytest.mark.requires_rmq
+    @pytest.mark.filterwarnings('ignore:Cannot determine chemical composition from CIF:UserWarning:pymatgen.io')
     def test_get_structure(self):
         """Test `CifData.get_structure`."""
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
@@ -292,6 +294,7 @@ O 0.5 0.5 0.5
     @skip_pycifrw
     @skip_pymatgen
     @pytest.mark.requires_rmq
+    @pytest.mark.filterwarnings('ignore:Cannot determine chemical composition from CIF:UserWarning:pymatgen.io')
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """Checking the number of atoms per primitive/conventional cell
         returned by ASE ase.io.read() method. Test input is
@@ -2057,6 +2060,7 @@ class TestStructureDataFromPymatgen:
     """
 
     @skip_pymatgen
+    @pytest.mark.filterwarnings('ignore:Cannot determine chemical composition from CIF:UserWarning:pymatgen.io')
     def test_1(self):
         """Tests roundtrip pymatgen -> StructureData -> pymatgen
         Test's input is derived from COD entry 9011963, processed with
@@ -2094,7 +2098,7 @@ class TestStructureDataFromPymatgen:
             )
             tmpf.flush()
             pymatgen_parser = CifParser(tmpf.name)
-            pymatgen_struct = pymatgen_parser.get_structures()[0]
+            pymatgen_struct = pymatgen_parser.parse_structures(primitive=True)[0]
 
         structs_to_test = [StructureData(pymatgen=pymatgen_struct), StructureData(pymatgen_structure=pymatgen_struct)]
 

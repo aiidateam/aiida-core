@@ -41,6 +41,10 @@ jobs:
     - name: Set up QEMU
       if: ${{ inputs.platforms != 'linux/amd64' }}
       uses: docker/setup-qemu-action@v3
+      with:
+        # Workaround for https://github.com/tonistiigi/binfmt/issues/215
+        image: tonistiigi/binfmt:qemu-v7.0.0-28
+        cache-image: true
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3

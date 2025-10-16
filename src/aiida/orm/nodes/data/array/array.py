@@ -10,9 +10,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Iterator
+import base64
+import io
+from typing import Any, Iterator, Optional
 
-from numpy import ndarray
+import numpy as np
+from pydantic import ConfigDict
+
+from aiida.common.pydantic import MetadataField
 
 from ..base import to_aiida_type
 from ..data import Data
@@ -20,7 +25,7 @@ from ..data import Data
 __all__ = ('ArrayData',)
 
 
-@to_aiida_type.register(ndarray)
+@to_aiida_type.register(np.ndarray)
 def _(value):
     return ArrayData(value)
 
@@ -42,32 +47,66 @@ class ArrayData(Data):
 
     """
 
+    class Model(Data.Model):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+        arrays: Optional[dict[str, bytes]] = MetadataField(
+            None,
+            description='The dictionary of numpy arrays.',
+            orm_to_model=lambda node, _: ArrayData.save_arrays(node.arrays),  # type: ignore[attr-defined]
+            model_to_orm=lambda model: ArrayData.load_arrays(model.arrays),  # type: ignore[attr-defined]
+        )
+
     array_prefix = 'array|'
     default_array_name = 'default'
 
-    def __init__(self, arrays: ndarray | dict[str, ndarray] | None = None, **kwargs):
+    def __init__(self, arrays: np.ndarray | dict[str, np.ndarray] | None = None, **kwargs):
         """Construct a new instance and set one or multiple numpy arrays.
 
         :param arrays: An optional single numpy array, or dictionary of numpy arrays to store.
         """
-        import numpy
-
         super().__init__(**kwargs)
-        self._cached_arrays: dict[str, ndarray] = {}
+        self._cached_arrays: dict[str, np.ndarray] = {}
 
         arrays = arrays if arrays is not None else {}
 
-        if isinstance(arrays, numpy.ndarray):
+        if isinstance(arrays, np.ndarray):
             arrays = {self.default_array_name: arrays}
 
         if (
             not isinstance(arrays, dict)  # type: ignore[redundant-expr]
-            or any(not isinstance(a, numpy.ndarray) for a in arrays.values())
+            or any(not isinstance(a, np.ndarray) for a in arrays.values())
         ):
             raise TypeError(f'`arrays` should be a single numpy array or dictionary of numpy arrays but got: {arrays}')
 
         for key, value in arrays.items():
             self.set_array(key, value)
+
+    @staticmethod
+    def save_arrays(arrays: dict[str, np.ndarray]) -> dict[str, bytes]:
+        results = {}
+
+        for key, array in arrays.items():
+            stream = io.BytesIO()
+            np.save(stream, array)
+            stream.seek(0)
+            results[key] = base64.encodebytes(stream.read())
+
+        return results
+
+    @staticmethod
+    def load_arrays(arrays: dict[str, bytes]) -> dict[str, np.ndarray]:
+        results = {}
+
+        for key, encoded in arrays.items():
+            stream = io.BytesIO(base64.decodebytes(encoded))
+            stream.seek(0)
+            results[key] = np.load(stream)
+
+        return results
+
+    @property
+    def arrays(self) -> dict[str, np.ndarray]:
+        return {name: self.get_array(name) for name in self.get_arraynames()}
 
     def initialize(self):
         super().initialize()
@@ -115,12 +154,12 @@ class ArrayData(Data):
         """
         return tuple(self.base.attributes.get(f'{self.array_prefix}{name}'))
 
-    def get_iterarrays(self) -> Iterator[tuple[str, ndarray]]:
+    def get_iterarrays(self) -> Iterator[tuple[str, np.ndarray]]:
         """Iterator that returns tuples (name, array) for each array stored in the node."""
         for name in self.get_arraynames():
             yield (name, self.get_array(name))
 
-    def get_array(self, name: str | None = None) -> ndarray:
+    def get_array(self, name: str | None = None) -> np.ndarray:
         """Return an array stored in the node
 
         :param name: The name of the array to return. The name can be omitted in case the node contains only a single
@@ -141,7 +180,7 @@ class ArrayData(Data):
 
             name = names[0]
 
-        def get_array_from_file(self, name: str) -> ndarray:
+        def get_array_from_file(self, name: str) -> np.ndarray:
             """Return the array stored in a .npy file"""
             filename = f'{name}.npy'
 
@@ -170,7 +209,7 @@ class ArrayData(Data):
         """
         self._cached_arrays = {}
 
-    def set_array(self, name: str, array: ndarray) -> None:
+    def set_array(self, name: str, array: np.ndarray) -> None:
         """Store a new numpy array inside the node. Possibly overwrite the array
         if it already existed.
 
@@ -182,9 +221,7 @@ class ArrayData(Data):
         import re
         import tempfile
 
-        import numpy
-
-        if not isinstance(array, numpy.ndarray):
+        if not isinstance(array, np.ndarray):
             raise TypeError('ArrayData can only store numpy arrays. Convert the object to an array first')
 
         # Check if the name is valid
@@ -196,7 +233,7 @@ class ArrayData(Data):
 
         # Write the array to a temporary file, and then add it to the repository of the node
         with tempfile.NamedTemporaryFile() as handle:
-            numpy.save(handle, array, allow_pickle=False)
+            np.save(handle, array, allow_pickle=False)
 
             # Flush and rewind the handle, otherwise the command to store it in the repo will write an empty file
             handle.flush()
@@ -255,7 +292,7 @@ class ArrayData(Data):
         return json.dumps(json_dict).encode('utf-8'), {}
 
 
-def clean_array(array: ndarray) -> list:
+def clean_array(array: np.ndarray) -> list:
     """Replacing np.nan and np.inf/-np.inf for Nones.
 
     The function will also sanitize the array removing ``np.nan`` and ``np.inf``

@@ -38,7 +38,7 @@ class PluginVersionProvider:
     def logger(self) -> Logger:
         return self._logger
 
-    def get_version_info(self, plugin: str | type) -> dict[t.Any, dict[t.Any, t.Any]]:
+    def get_version_info(self, plugin: str | t.Any) -> dict[t.Any, dict[t.Any, t.Any]]:
         """Get the version information for a given plugin.
 
         .. note::

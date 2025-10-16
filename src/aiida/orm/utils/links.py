@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from aiida.orm import Node
     from aiida.orm.implementation.storage_backend import StorageBackend
 
-__all__ = ('LinkPair', 'LinkTriple', 'LinkManager', 'validate_link')
+__all__ = ('LinkManager', 'LinkPair', 'LinkTriple', 'validate_link')
 
 
 class LinkPair(NamedTuple):

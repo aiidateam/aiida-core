@@ -1,14 +1,33 @@
 """Test the pytest fixtures."""
 
+from pathlib import Path
+
+from aiida.manage.configuration import get_config, load_config
+from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
+
+# This is needed when we run this file in isolation using
+# the `--noconftest` pytest option in the 'test-pytest-fixtures' CI job.
+pytest_plugins = ['aiida.tools.pytest_fixtures']
+
 
 def test_aiida_config(tmp_path_factory):
     """Test that ``aiida_config`` fixture is loaded by default and creates a config instance in temp directory."""
-    from aiida.manage.configuration import get_config
-    from aiida.manage.configuration.config import Config
+    from aiida.manage.configuration import CONFIG
 
-    config = get_config()
-    assert isinstance(config, Config)
+    config = get_config(create=False)
+    assert config is CONFIG
     assert config.dirpath.startswith(str(tmp_path_factory.getbasetemp()))
+    assert Path(config.dirpath, DEFAULT_CONFIG_FILE_NAME).is_file()
+    assert config._default_profile
+
+
+def test_aiida_config_file(tmp_path_factory):
+    """Test that ``aiida_config`` fixture stores the configuration in a config file in a temp directory."""
+    # Unlike get_config, load_config always loads the configuration from a file
+    config = load_config(create=False)
+    assert config.dirpath.startswith(str(tmp_path_factory.getbasetemp()))
+    assert Path(config.dirpath, DEFAULT_CONFIG_FILE_NAME).is_file()
+    assert config._default_profile
 
 
 def test_aiida_config_tmp(aiida_config_tmp, tmp_path_factory):

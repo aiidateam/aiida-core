@@ -10,6 +10,7 @@
 
 import click
 import pytest
+
 from aiida import get_version
 from aiida.cmdline.commands import cmd_verdi
 
@@ -28,7 +29,7 @@ def test_verdi_with_empty_profile_list(run_cli_command):
 
     # Run verdi command with updated CONFIG featuring an empty profile list
     CONFIG.dictionary[CONFIG.KEY_PROFILES] = {}
-    run_cli_command(cmd_verdi.verdi, [], use_subprocess=False)
+    run_cli_command(cmd_verdi.verdi, ['-h'], use_subprocess=False)
 
 
 @pytest.mark.usefixtures('config_with_profile')

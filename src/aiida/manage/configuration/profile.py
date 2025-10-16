@@ -14,13 +14,16 @@ import collections
 import os
 import pathlib
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Dict, Mapping, Optional, Type
+from datetime import datetime
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Type, Union
 
 from aiida.common import exceptions
 
 from .options import parse_option
 
 if TYPE_CHECKING:
+    from aiida.orm import Code, Computer, Group, User
     from aiida.orm.implementation import StorageBackend
 
 __all__ = ('Profile',)
@@ -56,7 +59,7 @@ class Profile:
             )
 
         self._name = name
-        self._attributes: Dict[str, Any] = deepcopy(config)
+        self._attributes: Dict[str, Any] = deepcopy(config)  # type: ignore[arg-type]
 
         # Create a default UUID if not specified
         if self._attributes.get(self.KEY_UUID, None) is None:
@@ -211,6 +214,7 @@ class Profile:
         :return: absolute filepath of the profile's file repository
         """
         from urllib.parse import urlparse
+        from urllib.request import url2pathname
 
         from aiida.common.warnings import warn_deprecation
 
@@ -224,10 +228,10 @@ class Profile:
         if parts.scheme != 'file':
             raise exceptions.ConfigurationError('invalid repository protocol, only the local `file://` is supported')
 
-        if not os.path.isabs(parts.path):
+        if not os.path.isabs(url2pathname(parts.path)):
             raise exceptions.ConfigurationError('invalid repository URI: the path has to be absolute')
 
-        return pathlib.Path(os.path.expanduser(parts.path))
+        return pathlib.Path(os.path.expanduser(url2pathname(parts.path)))
 
     @property
     def filepaths(self):
@@ -235,22 +239,151 @@ class Profile:
 
         :return: a dictionary of filepaths
         """
-        from .settings import DAEMON_DIR, DAEMON_LOG_DIR
+        from aiida.common.warnings import warn_deprecation
+        from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+
+        warn_deprecation('This method has been deprecated, use `filepaths` method from `Config` obj instead', version=3)
+
+        daemon_dir = AiiDAConfigPathResolver().daemon_dir
+        daemon_log_dir = AiiDAConfigPathResolver().daemon_log_dir
 
         return {
             'circus': {
-                'log': str(DAEMON_LOG_DIR / f'circus-{self.name}.log'),
-                'pid': str(DAEMON_DIR / f'circus-{self.name}.pid'),
-                'port': str(DAEMON_DIR / f'circus-{self.name}.port'),
+                'log': str(daemon_log_dir / f'circus-{self.name}.log'),
+                'pid': str(daemon_dir / f'circus-{self.name}.pid'),
+                'port': str(daemon_dir / f'circus-{self.name}.port'),
                 'socket': {
-                    'file': str(DAEMON_DIR / f'circus-{self.name}.sockets'),
+                    'file': str(daemon_dir / f'circus-{self.name}.sockets'),
                     'controller': 'circus.c.sock',
                     'pubsub': 'circus.p.sock',
                     'stats': 'circus.s.sock',
                 },
             },
             'daemon': {
-                'log': str(DAEMON_LOG_DIR / f'aiida-{self.name}.log'),
-                'pid': str(DAEMON_DIR / f'aiida-{self.name}.pid'),
+                'log': str(daemon_log_dir / f'aiida-{self.name}.log'),
+                'pid': str(daemon_dir / f'aiida-{self.name}.pid'),
             },
         }
+
+    def dump(
+        self,
+        output_path: Optional[Union[str, Path]] = None,
+        # Dump mode options
+        dry_run: bool = False,
+        overwrite: bool = False,
+        # Scope options
+        all_entries: bool = False,
+        groups: Optional[Union[List[str], List[Group]]] = None,
+        user: Optional[Union[List[str], List[User]]] = None,
+        computers: Optional[Union[List[str], List[Computer]]] = None,
+        codes: Optional[Union[List[str], List[Code]]] = None,
+        # Time filtering options
+        past_days: Optional[int] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        filter_by_last_dump_time: bool = True,
+        # Node collection options
+        only_top_level_calcs: bool = True,
+        only_top_level_workflows: bool = True,
+        # Process dump options
+        include_inputs: bool = True,
+        include_outputs: bool = False,
+        include_attributes: bool = True,
+        include_extras: bool = False,
+        flat: bool = False,
+        dump_unsealed: bool = False,
+        symlink_calcs: bool = False,
+        # Group/Profile options
+        delete_missing: bool = True,
+        organize_by_groups: bool = True,
+        also_ungrouped: bool = False,
+        relabel_groups: bool = True,
+    ) -> Path:
+        """Dump data stored in an AiiDA profile to disk in a human-readable directory tree.
+
+        :param output_path: Target directory for the dump, defaults to None
+        :param dry_run: Show what would be dumped without actually dumping, defaults to False
+        :param overwrite: Overwrite existing dump directories, defaults to False
+        :param all_entries: Dump all entries in the profile, defaults to False
+        :param groups: List of groups to dump (UUIDs, labels, or Group objects), defaults to None
+        :param user: User to filter by (User object or email), defaults to None
+        :param computers: List of computers to filter by, defaults to None
+        :param codes: List of codes to filter by, defaults to None
+        :param past_days: Only include nodes modified in the past N days, defaults to None
+        :param start_date: Only include nodes modified after this date, defaults to None
+        :param end_date: Only include nodes modified before this date, defaults to None
+        :param filter_by_last_dump_time: Filter nodes by last dump time, defaults to True
+        :param only_top_level_calcs: Only dump top-level calculations, defaults to True
+        :param only_top_level_workflows: Only dump top-level workflows, defaults to True
+        :param include_inputs: Include input files in the dump, defaults to True
+        :param include_outputs: Include output files in the dump, defaults to False
+        :param include_attributes: Include node attributes in metadata, defaults to True
+        :param include_extras: Include node extras in metadata, defaults to False
+        :param flat: Use flat directory structure, defaults to False
+        :param dump_unsealed: Allow dumping of unsealed nodes, defaults to False
+        :param symlink_calcs: Create symlinks for calculation nodes, defaults to False
+        :param delete_missing: Delete dump files for nodes no longer in scope, defaults to True
+        :param organize_by_groups: Organize output by groups, defaults to True
+        :param also_ungrouped: Also dump ungrouped nodes, defaults to False
+        :param relabel_groups: Update group directory names when labels change, defaults to True
+        :return: Path where the profile was dumped, or None if nothing was dumped
+        """
+        from aiida.common import AIIDA_LOGGER
+        from aiida.tools._dumping.config import ProfileDumpConfig
+        from aiida.tools._dumping.engine import DumpEngine
+        from aiida.tools._dumping.utils import DumpPaths
+
+        logger = AIIDA_LOGGER.getChild('tools._dumping.profile')
+
+        # Construct ProfileDumpConfig from kwargs
+        config_data = {
+            'all_entries': all_entries,
+            'dry_run': dry_run,
+            'overwrite': overwrite,
+            'groups': groups or [],
+            'user': user,
+            'computers': computers or [],
+            'codes': codes or [],
+            'past_days': past_days,
+            'start_date': start_date,
+            'end_date': end_date,
+            'filter_by_last_dump_time': filter_by_last_dump_time,
+            'only_top_level_calcs': only_top_level_calcs,
+            'only_top_level_workflows': only_top_level_workflows,
+            'include_inputs': include_inputs,
+            'include_outputs': include_outputs,
+            'include_attributes': include_attributes,
+            'include_extras': include_extras,
+            'flat': flat,
+            'dump_unsealed': dump_unsealed,
+            'symlink_calcs': symlink_calcs,
+            'delete_missing': delete_missing,
+            'organize_by_groups': organize_by_groups,
+            'also_ungrouped': also_ungrouped,
+            'relabel_groups': relabel_groups,
+        }
+
+        config = ProfileDumpConfig.model_validate(config_data)
+
+        if output_path:
+            target_path: Path = Path(output_path).resolve()
+        else:
+            target_path = DumpPaths.get_default_dump_path(entity=self)
+
+        # Check final determined scope
+        if not (config.all_entries or config.filters_set) and not dry_run:
+            msg = (
+                'No profile data explicitly selected. No dump will be performed. '
+                'Either select everything via `all_entries=True`, or filter via `groups`, `user`, etc.'
+            )
+            logger.warning(msg)
+            return target_path
+
+        engine = DumpEngine(
+            base_output_path=target_path,
+            config=config,
+            dump_target_entity=self,
+        )
+        engine.dump()
+
+        return target_path

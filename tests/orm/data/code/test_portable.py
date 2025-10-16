@@ -12,6 +12,7 @@ import io
 import pathlib
 
 import pytest
+
 from aiida.common.exceptions import ModificationNotAllowed, ValidationError
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm.nodes.data.code.portable import PortableCode
@@ -22,11 +23,19 @@ def test_constructor_raises(tmp_path, bash_path):
     with pytest.raises(TypeError, match=r'missing .* required positional argument'):
         PortableCode()
 
-    with pytest.raises(TypeError, match=r'Got object of type .*'):
+    with pytest.raises(ValueError, match=r'The `filepath_executable` should not be absolute.'):
         PortableCode(filepath_executable=bash_path, filepath_files=tmp_path)
 
     with pytest.raises(TypeError, match=r'Got object of type .*'):
+        PortableCode(filepath_executable=5, filepath_files=tmp_path)
+
+    with pytest.raises(ValueError, match=r'The filepath `string` does not exist.'):
         PortableCode(filepath_executable='bash', filepath_files='string')
+
+    file = tmp_path / 'string'
+    file.touch()
+    with pytest.raises(ValueError, match=r'The filepath .* is not a directory.'):
+        PortableCode(filepath_executable='bash', filepath_files=file)
 
 
 def test_constructor(tmp_path):
@@ -74,7 +83,7 @@ def test_filepath_executable(tmp_path):
         code.filepath_executable = '/usr/bin/cat'
 
     with pytest.raises(TypeError, match=r'Got object of type .*'):
-        code.filepath_executable = pathlib.Path(filepath_executable)
+        code.filepath_executable = 5
 
     code.filepath_executable = filepath_executable
     code.base.repository.put_object_from_filelike(io.BytesIO(b''), filepath_executable)
@@ -102,15 +111,38 @@ def test_portablecode_extra_files(tmp_path, chdir_tmp_path):
     """Test that the node repository contents of an orm.PortableCode are dumped upon YAML export."""
     filepath_files = tmp_path / 'tmp'
     filepath_files.mkdir()
-    # (filepath_files / 'bash').touch()
     (filepath_files / 'bash').write_text('bash')
     (filepath_files / 'subdir').mkdir()
     (filepath_files / 'subdir/test').write_text('test')
     code = PortableCode(label='some-label', filepath_executable='bash', filepath_files=filepath_files)
     code.store()
-    extra_files = code._prepare_yaml()[1]
+    result, extra_args = code._prepare_yaml()
+    ref_result = f"""label: some-label
+description: ''
+default_calc_job_plugin: null
+use_double_quotes: false
+with_mpi: null
+prepend_text: ''
+append_text: ''
+filepath_executable: bash
+filepath_files: {tmp_path}/some-label
+"""
+
+    assert extra_args == {}
+    assert result.decode() == ref_result
     repo_dump_path = tmp_path / code.label
-    extra_files_keys = sorted([str(repo_dump_path / _) for _ in ('subdir/test', 'bash')])
-    assert sorted(extra_files.keys()) == extra_files_keys
-    assert extra_files[str(repo_dump_path / 'bash')] == 'bash'.encode('utf-8')
-    assert extra_files[str(repo_dump_path / 'subdir/test')] == 'test'.encode('utf-8')
+    # In this case portablecode takes care of the dumping
+    dumped_files = {f.relative_to(repo_dump_path) for f in repo_dump_path.rglob('*')}
+    inserted_files = {f.relative_to(filepath_files) for f in filepath_files.rglob('*')}
+    assert dumped_files == inserted_files
+
+
+def test_serialization(tmp_path, chdir_tmp_path):
+    """Test that the node repository contents of an orm.PortableCode are dumped upon YAML export."""
+    filepath_files = tmp_path / 'tmp'
+    filepath_files.mkdir()
+    (filepath_files / 'bash').write_text('bash')
+    (filepath_files / 'subdir').mkdir()
+    (filepath_files / 'subdir/test').write_text('test')
+    code = PortableCode(label='some-label', filepath_executable='bash', filepath_files=filepath_files)
+    PortableCode.from_serialized(**code.serialize())

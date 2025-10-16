@@ -4,7 +4,6 @@ on:
   pull_request:
     paths:
     - environment.yml
-    - '**/requirements*.txt'
     - pyproject.toml
     - util/dependency_management.py
     - .github/workflows/test-install.yml
@@ -12,9 +11,12 @@ on:
   schedule:
   - cron: 30 02 * * *      # nightly build
 
+env:
+  FORCE_COLOR: 1
+
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
-    # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+  # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
@@ -24,57 +26,34 @@ jobs:
     # Note: The specification is also validated by the pre-commit hook.
 
     if: github.repository == 'aiidateam/aiida-core'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python 3.9
+    - name: Set up Python 3.11
       uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '3.11'
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5.2.1
+      with:
+        version: latest
 
     - name: Install utils/ dependencies
-      run: pip install -r utils/requirements.txt
+      run: uv pip install --system -r utils/requirements.txt
 
-    - name: Validate
-      run: |
-        python ./utils/dependency_management.py check-requirements
-        python ./utils/dependency_management.py validate-all
-
-  resolve-pip-dependencies:
-    # Check whether the environments defined in the requirements/* files are
-    # resolvable.
-
-    needs: [validate-dependency-specification]
-    if: github.repository == 'aiidateam/aiida-core'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12']
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Resolve dependencies from requirements file.
-      run: |
-        pip install --dry-run --ignore-installed -r requirements/requirements-py-${{ matrix.python-version }}.txt
+    - name: Validate conda environment file
+      run: python ./utils/dependency_management.py validate-environment-yml
 
   create-conda-environment:
     # Verify that we can create a valid conda environment from the environment.yml file.
 
     needs: [validate-dependency-specification]
     if: github.repository == 'aiidateam/aiida-core'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
 
     steps:
@@ -94,7 +73,7 @@ jobs:
   install-with-pip:
 
     if: github.repository == 'aiidateam/aiida-core'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     strategy:
@@ -125,14 +104,14 @@ jobs:
     # Verify that we can install AiiDA with conda.
 
     if: github.repository == 'aiidateam/aiida-core'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
 
     strategy:
       fail-fast: false
       matrix:
 
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
 
         # Not being able to install with conda on a specific Python version is
         # not sufficient to fail the run, but something we want to be aware of.
@@ -177,13 +156,13 @@ jobs:
   tests:
 
     needs: [install-with-pip]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
 
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
 
     services:
       postgres:
@@ -216,126 +195,37 @@ jobs:
       run: sudo apt update && sudo apt install postgresql graphviz
 
     - name: Install aiida-core
+      id: install
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: ${{ matrix.python-version }}
-        extras: '[atomic_tools,docs,notebook,rest,tests,tui]'
-        from-requirements: 'false'
+        extras: atomic_tools,docs,notebook,rest,tests,tui
+        from-lock: 'false'
 
     - name: Setup AiiDA environment
       run: .github/workflows/setup.sh
 
     - name: Run test suite
+      id: tests
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
-      run: pytest --verbose tests -m 'not nightly'
-
-    - name: Freeze test environment
-      run: pip freeze | sed '1d' | tee requirements-py-${{ matrix.python-version }}.txt
-
-    # Add python-version specific requirements/ file to the requirements.txt artifact.
-    # This artifact can be used in the next step to automatically create a pull request
-    # updating the requirements (in case they are  inconsistent with the pyproject.toml file).
-    - uses: actions/upload-artifact@v4
-      with:
-        name: requirements-py-${{ matrix.python-version }}.txt
-        path: requirements-py-${{ matrix.python-version }}.txt
-
-# Check whether the requirements/ files are consistent with the dependency specification in the pyproject.toml file.
-# If the check fails, warn the user via a comment and try to automatically create a pull request to update the files
-# (does not work on pull requests from forks).
-
-  check-requirements:
-
-    needs: tests
-
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v5
-      with:
-        python-version: 3.9
-
-    - name: Install utils/ dependencies
-      run: pip install -r utils/requirements.txt
-
-    - name: Check consistency of requirements/ files
-      id: check_reqs
-      continue-on-error: true
-      run: python ./utils/dependency_management.py check-requirements DEFAULT --no-github-annotate
-
-#
-# The following steps are only executed if the consistency check failed.
-#
-    - name: Create commit comment
-      if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
-      uses: peter-evans/commit-comment@v3
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        path: pyproject.toml
-        body: |
-          The requirements/ files are inconsistent!
-
-    # Check out the base branch so that we can prepare the pull request.
-    - name: Checkout base branch
-      if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ github.head_ref }}
-        clean: true
-
-    - name: Download requirements.txt files
-      if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
-      uses: actions/download-artifact@v4
-      with:
-        pattern: requirements-py-*
-        merge-multiple: true
-        path: requirements
-
-    - name: Commit requirements files
-      if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
       run: |
-        git add requirements/*
+        pytest -n auto --db-backend psql -m 'not nightly' tests/
 
-    - name: Create pull request for updated requirements files
-      if: steps.check_reqs.outcome == 'Failure'  # only run if requirements/ are inconsistent
-      id: create_update_requirements_pr
-      continue-on-error: true
-      uses: peter-evans/create-pull-request@v6
+    - name: Slack notification
+      # Always run this step (otherwise it would be skipped if any of the previous steps fail)
+      # but only if the `install` or `tests` steps failed.
+      # Don't run on PRs, the failure is clearly visible in GitHub UI.
+      # Run only when the `secrets.SLACK_WEBHOOK` is available, which is not the case for forks.
+      if: >-
+        always() &&
+        (steps.install.outcome == 'failure' || steps.tests.outcome == 'failure') &&
+        github.event_name != 'pull_request' &&
+        env.SLACK_WEBHOOK != null
+      uses: ./.github/actions/slack-notification
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
       with:
-        branch: update-requirements
-        commit-message: Automated update of requirements/ files.
-        title: Update requirements/ files.
-        body: |
-          Update requirements files to ensure that they are consistent
-          with the dependencies specified in the 'pyproject.toml' file.
-
-          Please note, that this pull request was likely created to
-          resolve the inconsistency for a specific dependency, however
-          other versions that have changed since the last update will
-          be included as part of this commit as well.
-
-          Click [here](https://github.com/aiidateam/aiida-core/wiki/AiiDA-Dependency-Management) for more information.
-
-    - name: Create PR comment on success
-      if: steps.create_update_requirements_pr.outcome == 'Success'
-      uses: peter-evans/create-or-update-comment@v4
-      with:
-        issue-number: ${{ github.event.number }}
-        body: |
-          I automatically created a pull request (#${{ steps.create_update_requirements_pr.outputs.pr_number }}) that adapts the
-          requirements/ files according to the dependencies specified in the 'pyproject.toml' file.
-
-    - name: Create PR comment on failure
-      if: steps.create_update_requirements_pr.outcome == 'Failure'
-      uses: peter-evans/create-or-update-comment@v4
-      with:
-        issue-number: ${{ github.event.number }}
-        body: |
-          Please update the requirements/ files to ensure that they
-          are consistent with the dependencies specified in the 'pyproject.toml' file.
+        title: Install tests of `aiida-core/main` failed
+        message: '`test-install.yml` GHA workflow for Python ${{ matrix.python-version }} failed.'

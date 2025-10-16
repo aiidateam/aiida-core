@@ -16,7 +16,8 @@ from math import isclose
 
 import click
 
-from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
+from aiida.cmdline import VerdiCommandGroup
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo, echo_tabulate
@@ -134,18 +135,16 @@ def _computer_create_temp_file(transport, scheduler, authinfo, computer):
     file_content = f"Test from 'verdi computer test' on {datetime.datetime.now().isoformat()}"
     workdir = authinfo.get_workdir().format(username=transport.whoami())
 
-    try:
-        transport.chdir(workdir)
-    except OSError:
-        transport.makedirs(workdir)
-        transport.chdir(workdir)
+    transport.makedirs(workdir, ignore_existing=True)
 
-    with tempfile.NamedTemporaryFile(mode='w+') as tempf:
+    with tempfile.NamedTemporaryFile(mode='w+', delete=False) as tempf:
         fname = os.path.split(tempf.name)[1]
         remote_file_path = os.path.join(workdir, fname)
         tempf.write(file_content)
         tempf.flush()
+        tempf.close()
         transport.putfile(tempf.name, remote_file_path)
+        os.remove(tempf.name)
 
     if not transport.path_exists(remote_file_path):
         return False, f'failed to create the file `{remote_file_path}` on the remote'
@@ -629,31 +628,36 @@ def computer_delete(computer, dry_run):
     # Sofar, we can only get this info with QueryBuilder
     builder = QueryBuilder()
     builder.append(Computer, filters={'label': label}, tag='computer')
-    builder.append(Node, with_computer='computer', project=Node.fields.pk)
-    node_pks = builder.all(flat=True)
+    builder.append(Node, with_computer='computer', project=Node.fields.pk)  # type: ignore[arg-type]
+    associated_nodes_pk = builder.all(flat=True)
 
-    echo.echo_report(f'This computer has {len(node_pks)} associated nodes')
+    echo.echo_report(f'This computer has {len(associated_nodes_pk)} associated nodes')
 
     def _dry_run_callback(pks):
         if pks:
             echo.echo_report('The nodes with the following pks would be deleted: ' + ' '.join(map(str, pks)))
-            echo.echo_warning(f'YOU ARE ABOUT TO DELETE {len(pks)} NODES! THIS CANNOT BE UNDONE!')
-        confirm = click.prompt('Shall I continue? [yes/N]', type=str) == 'yes'
+            echo.echo_warning(
+                f'YOU ARE ABOUT TO DELETE {len(pks)} NODES AND COMPUTER {label!r}! THIS CANNOT BE UNDONE!'
+            )
+
+        confirm = click.confirm('Shall I continue?', default=False)
         if not confirm:
             raise click.Abort
         return not confirm
 
-    delete_nodes(node_pks, dry_run=dry_run or _dry_run_callback)
+    if associated_nodes_pk:
+        delete_nodes(associated_nodes_pk, dry_run=dry_run or _dry_run_callback)
 
     if dry_run:
         return
 
+    # We delete the computer separately from the associated nodes, since the computer pk is in a different table
     try:
         orm.Computer.collection.delete(computer.pk)
     except InvalidOperation as error:
         echo.echo_critical(str(error))
 
-    echo.echo_success(f'Computer `{label}` {"and all its associated nodes" if node_pks else ""} deleted.')
+    echo.echo_success(f'Computer `{label}` {"and all its associated nodes " if associated_nodes_pk else ""}deleted.')
 
 
 class LazyConfigureGroup(VerdiCommandGroup):
@@ -713,7 +717,7 @@ def computer_config_show(computer, user, defaults, as_option_string):
             if config.get(option.name) or config.get(option.name) is False:
                 if t_opt.get('switch'):
                     option_value = (
-                        option.opts[-1] if config.get(option.name) else f"--no-{option.name.replace('_', '-')}"
+                        option.opts[-1] if config.get(option.name) else f"--no-{option.name.replace('_', '-')}"  # type: ignore[union-attr]
                     )
                 elif t_opt.get('is_flag'):
                     is_default = config.get(option.name) == transport_cli.transport_option_default(

@@ -9,6 +9,7 @@
 """Tests for the CalculationNode and CalcJobNode class."""
 
 import pytest
+
 from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import ModificationNotAllowed
 from aiida.orm import CalcJobNode, CalculationNode

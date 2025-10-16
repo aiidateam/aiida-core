@@ -64,7 +64,7 @@ except AttributeError:
 if TYPE_CHECKING:
     from .exit_code import ExitCode
 
-__all__ = ('calcfunction', 'workfunction', 'FunctionProcess')
+__all__ = ('FunctionProcess', 'calcfunction', 'workfunction')
 
 LOGGER = logging.getLogger(__name__)
 
@@ -222,7 +222,7 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
             if kwargs and not process_class.spec().inputs.dynamic:
                 raise ValueError(f'{function.__name__} does not support these kwargs: {kwargs.keys()}')
 
-            process = process_class(inputs=inputs, runner=runner)
+            process: Process = process_class(inputs=inputs, runner=runner)
 
             # Only add handlers for interrupt signal to kill the process if we are in a local and not a daemon runner.
             # Without this check, running process functions in a daemon worker would be killed if the daemon is shutdown
@@ -235,7 +235,7 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
                 def kill_process(_num, _frame):
                     """Send the kill signal to the process in the current scope."""
                     LOGGER.critical('runner received interrupt, killing process %s', process.pid)
-                    result = process.kill(msg='Process was killed because the runner received an interrupt')
+                    result = process.kill(msg_text='Process was killed because the runner received an interrupt')
                     return result
 
                 # Store the current handler on the signal such that it can be restored after process has terminated
@@ -355,11 +355,11 @@ class FunctionProcess(Process):
         """
         if (
             not issubclass(node_class, ProcessNode)  # type: ignore[redundant-expr]
-            or not issubclass(node_class, FunctionCalculationMixin)  # type: ignore[unreachable]
+            or not issubclass(node_class, FunctionCalculationMixin)
         ):
             raise TypeError('the node_class should be a sub class of `ProcessNode` and `FunctionCalculationMixin`')
 
-        signature = inspect.signature(func)  # type: ignore[unreachable]
+        signature = inspect.signature(func)
 
         args: list[str] = []
         var_positional: str | None = None
@@ -373,17 +373,21 @@ class FunctionProcess(Process):
             LOGGER.warning(f'function `{func.__name__}` has invalid type hints: {exception}')
             annotations = {}
 
-        try:
-            parsed_docstring = docstring_parser.parse(func.__doc__)
-        except Exception as exception:
-            LOGGER.warning(f'function `{func.__name__}` has a docstring that could not be parsed: {exception}')
-            param_help_string = {}
+        if func.__doc__ is None:
+            param_help_string: dict[str, str | None] = {}
             namespace_help_string = None
         else:
-            param_help_string = {param.arg_name: param.description for param in parsed_docstring.params}
-            namespace_help_string = parsed_docstring.short_description if parsed_docstring.short_description else ''
-            if parsed_docstring.long_description is not None:
-                namespace_help_string += f'\n\n{parsed_docstring.long_description}'
+            try:
+                parsed_docstring = docstring_parser.parse(func.__doc__)
+            except Exception as exception:
+                LOGGER.warning(f'function `{func.__name__}` has a docstring that could not be parsed: {exception}')
+                param_help_string = {}
+                namespace_help_string = None
+            else:
+                param_help_string = {param.arg_name: param.description for param in parsed_docstring.params}
+                namespace_help_string = parsed_docstring.short_description if parsed_docstring.short_description else ''
+                if parsed_docstring.long_description is not None:
+                    namespace_help_string += f'\n\n{parsed_docstring.long_description}'
 
         for key, parameter in signature.parameters.items():
             if parameter.kind in [parameter.POSITIONAL_ONLY, parameter.POSITIONAL_OR_KEYWORD, parameter.KEYWORD_ONLY]:
@@ -435,7 +439,7 @@ class FunctionProcess(Process):
                     def indirect_default(value=default):
                         return to_aiida_type(value)
                 else:
-                    indirect_default = default
+                    indirect_default = default  # type: ignore[assignment]
 
                 spec.input(
                     parameter.name,
@@ -567,7 +571,7 @@ class FunctionProcess(Process):
         self.node.store_source_info(self._func)
 
     @override
-    def run(self) -> 'ExitCode' | None:
+    async def run(self) -> 'ExitCode' | None:
         """Run the process."""
         from .exit_code import ExitCode
 

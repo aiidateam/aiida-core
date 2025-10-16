@@ -3,6 +3,7 @@
 import textwrap
 
 import pytest
+
 from aiida.cmdline.commands.cmd_presto import get_default_presto_profile_name, verdi_presto
 from aiida.manage.configuration import profile_context
 from aiida.manage.configuration.config import Config

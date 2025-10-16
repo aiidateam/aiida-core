@@ -9,6 +9,7 @@
 """Tests for the `CalcJob` utils."""
 
 import pytest
+
 from aiida.common.links import LinkType
 from aiida.orm import Dict
 from aiida.orm.utils.calcjob import CalcJobResultManager

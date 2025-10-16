@@ -22,22 +22,40 @@ import subprocess
 import types
 import typing as t
 import warnings
+from enum import Enum
 from pathlib import Path
 
 import click
 import pytest
-from aiida import get_profile
+
+from aiida import get_profile, orm
 from aiida.common.folders import Folder
 from aiida.common.links import LinkType
+from aiida.manage import get_manager
 from aiida.manage.configuration import Profile, get_config, load_profile
+
+try:
+    from typing import ParamSpec
+except ImportError:
+    # Fallback for Python 3.9 and older
+    from typing_extensions import ParamSpec  # type: ignore[assignment]
 
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
 
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
 
+P = ParamSpec('P')
 
-def pytest_collection_modifyitems(items):
+
+class TestDbBackend(Enum):
+    """Options for the '--db-backend' CLI argument when running pytest."""
+
+    SQLITE = 'sqlite'
+    PSQL = 'psql'
+
+
+def pytest_collection_modifyitems(items, config):
     """Automatically generate markers for certain tests.
 
     Most notably, we add the 'presto' marker for all tests that
@@ -46,6 +64,14 @@ def pytest_collection_modifyitems(items):
     filepath_psqldos = Path(__file__).parent / 'storage' / 'psql_dos'
     filepath_django = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'django_branch'
     filepath_sqla = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'sqlalchemy_branch'
+
+    # If the user requested the SQLite backend, automatically skip incompatible tests
+    if config.option.db_backend is TestDbBackend.SQLITE:
+        if config.option.markexpr != '':
+            # Don't overwrite markers that the user already provided via '-m ' cmdline argument
+            config.option.markexpr += ' and (not requires_psql)'
+        else:
+            config.option.markexpr = 'not requires_psql'
 
     for item in items:
         filepath_item = Path(item.fspath)
@@ -68,6 +94,30 @@ def pytest_collection_modifyitems(items):
             item.add_marker('presto')
 
 
+def db_backend_type(string):
+    """Conversion function for the custom '--db-backend' pytest CLI option
+
+    :param string: String provided by the user via CLI
+    :returns: DbBackend enum corresponding to user input string
+    """
+    try:
+        return TestDbBackend(string)
+    except ValueError:
+        msg = f"Invalid --db-backend option '{string}'\nMust be one of: {tuple(db.value for db in TestDbBackend)}"
+        raise pytest.UsageError(msg)
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        '--db-backend',
+        action='store',
+        default=TestDbBackend.SQLITE,
+        required=False,
+        help=f'Database backend to be used for tests {tuple(db.value for db in TestDbBackend)}',
+        type=db_backend_type,
+    )
+
+
 @pytest.fixture(scope='session')
 def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql_dos, config_sqlite_dos):
     """Create and load a profile with ``core.psql_dos`` as a storage backend and RabbitMQ as the broker.
@@ -77,18 +127,22 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
     be run against the main storage backend, which is ``core.sqlite_dos``.
     """
     marker_opts = pytestconfig.getoption('-m')
+    db_backend = pytestconfig.getoption('--db-backend')
 
-    # By default we use RabbitMQ broker and psql_dos storage
+    # We use RabbitMQ broker by default unless 'presto' marker is specified
     broker = 'core.rabbitmq'
     if 'not requires_rmq' in marker_opts or 'presto' in marker_opts:
         broker = None
 
-    if 'not requires_psql' in marker_opts or 'presto' in marker_opts:
+    if db_backend is TestDbBackend.SQLITE:
         storage = 'core.sqlite_dos'
         config = config_sqlite_dos()
-    else:
+    elif db_backend is TestDbBackend.PSQL:
         storage = 'core.psql_dos'
         config = config_psql_dos()
+    else:
+        # This should be unreachable
+        raise ValueError(f'Invalid DB backend {db_backend}')
 
     with aiida_profile_factory(
         aiida_config, storage_backend=storage, storage_config=config, broker_backend=broker
@@ -98,45 +152,15 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
 
 @pytest.fixture()
 def non_interactive_editor(request):
-    """Fixture to patch click's `Editor.edit_file`.
+    """Fixture to patch default editor.
 
-    In `click==7.1` the `Editor.edit_file` command was changed to escape the `os.environ['EDITOR']` command. Our tests
-    are currently abusing this variable to define an automated vim command in order to make an interactive command
-    non-interactive, and escaping it makes bash interpret the command and its arguments as a single command instead.
-    Here we patch the method to remove the escaping of the editor command.
+    We (ab)use the `os.environ['EDITOR']` variable to define an automated
+    vim command in order to make an interactive command non-interactive
 
     :param request: the command to set for the editor that is to be called
     """
-    from unittest.mock import patch
-
-    from click._termui_impl import Editor
-
     os.environ['EDITOR'] = request.param
     os.environ['VISUAL'] = request.param
-
-    def edit_file(self, filename):
-        import subprocess
-
-        editor = self.get_editor()
-        if self.env:
-            environ = os.environ.copy()
-            environ.update(self.env)
-        else:
-            environ = None
-        try:
-            with subprocess.Popen(
-                f'{editor} {filename}',  # This is the line that we change removing `shlex_quote`
-                env=environ,
-                shell=True,
-            ) as process:
-                exit_code = process.wait()
-                if exit_code != 0:
-                    raise click.ClickException(f'{editor}: Editing failed!')
-        except OSError as exception:
-            raise click.ClickException(f'{editor}: Editing failed: {exception}')
-
-    with patch.object(Editor, 'edit_file', edit_file):
-        yield
 
 
 @pytest.fixture(scope='function')
@@ -200,6 +224,36 @@ def generate_work_chain():
         return process
 
     return _generate_work_chain
+
+
+@pytest.fixture
+def generate_calcjob_node():
+    """Generate an instance of a `CalcJobNode`."""
+    from aiida.engine import ProcessState
+
+    def _generate_calcjob_node(
+        process_state: ProcessState = ProcessState.FINISHED,
+        exit_status: int | None = None,
+        entry_point: str | None = None,
+        workdir: pathlib.Path | None = None,
+    ):
+        """Generate an instance of a `CalcJobNode`..
+
+        :param process_state: state to set
+        :param exit_status: optional exit status, will be set to `0` if `process_state` is `ProcessState.FINISHED`
+        :return: a `CalcJobNode` instance.
+        """
+        from aiida.orm import CalcJobNode
+
+        if process_state is ProcessState.FINISHED and exit_status is None:
+            exit_status = 0
+
+        calcjob_node = CalcJobNode(process_type=entry_point)
+        calcjob_node.set_remote_workdir(workdir)
+
+        return calcjob_node
+
+    return _generate_calcjob_node
 
 
 @pytest.fixture
@@ -298,8 +352,8 @@ def empty_config(tmp_path) -> Config:
     :return: a new empty config instance.
     """
     from aiida.common.utils import Capturing
-    from aiida.manage import configuration, get_manager
-    from aiida.manage.configuration import settings
+    from aiida.manage import configuration
+    from aiida.manage.configuration.settings import AiiDAConfigDir
 
     manager = get_manager()
 
@@ -313,7 +367,7 @@ def empty_config(tmp_path) -> Config:
 
     # Set the configuration directory to a temporary directory. This will create the necessary folders for an empty
     # AiiDA configuration and set relevant global variables in :mod:`aiida.manage.configuration.settings`.
-    settings.set_configuration_directory(tmp_path)
+    AiiDAConfigDir.set(tmp_path)
 
     # The constructor of `Config` called by `load_config` will print warning messages about migrating it
     with Capturing():
@@ -331,20 +385,20 @@ def empty_config(tmp_path) -> Config:
         # like the :class:`aiida.engine.daemon.client.DaemonClient` will not function properly after a test that uses
         # this fixture because the paths of the daemon files would still point to the path of the temporary config
         # folder created by this fixture.
-        settings.set_configuration_directory(pathlib.Path(current_config_path))
+        AiiDAConfigDir.set(pathlib.Path(current_config_path))
 
         # Reload the original profile
         manager.load_profile(current_profile_name)
 
 
-@pytest.fixture
-def profile_factory() -> Profile:
+@pytest.fixture  # type: ignore[misc]
+def profile_factory() -> t.Callable[t.Concatenate[str, P], Profile]:
     """Create a new profile instance.
 
     :return: the profile instance.
     """
 
-    def _create_profile(name='test-profile', **kwargs):
+    def _create_profile(name='test-profile', **kwargs) -> Profile:
         repository_dirpath = kwargs.pop('repository_dirpath', get_config().dirpath)
 
         profile_dictionary = {
@@ -438,7 +492,6 @@ def config_with_profile(config_with_profile_factory):
 @pytest.fixture
 def manager():
     """Get the ``Manager`` instance of the currently loaded profile."""
-    from aiida.manage import get_manager
 
     return get_manager()
 
@@ -450,8 +503,10 @@ def runner(manager):
 
 
 @pytest.fixture
-def event_loop(manager):
-    """Get the event loop instance of the currently loaded profile.
+def event_loop(manager, aiida_profile_clean):
+    """Get the event loop instance of a cleaned profile.
+    This works, because ``aiida_profile_clean`` fixture, apart from loading a profile and cleaning it,
+    and also triggers ``manager.reset_profile()`` which clears the event loop.
 
     This is automatically called as a fixture for any test marked with ``@pytest.mark.asyncio``.
     """
@@ -708,9 +763,10 @@ def run_cli_command_subprocess(command, parameters, user_input, profile_name, su
 
 def run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, kwargs):
     """Run CLI command through ``click.testing.CliRunner``."""
+    from click.testing import CliRunner
+
     from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
     from aiida.cmdline.groups.verdi import LazyVerdiObjAttributeDict
-    from click.testing import CliRunner
 
     if initialize_ctx_obj:
         config = get_config()
@@ -726,7 +782,11 @@ def run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, 
     # circumvents this machinery.
     command = VerdiCommandGroup.add_verbosity_option(command)
 
-    runner = CliRunner(mix_stderr=False)
+    try:
+        runner = CliRunner(mix_stderr=False)
+    except TypeError:
+        # click >=8.2.0
+        runner = CliRunner()
     result = runner.invoke(command, parameters, input=user_input, obj=obj, **kwargs)
     return CliResult(
         exc_info=result.exc_info or (None, None, None),
@@ -774,6 +834,144 @@ def generate_calculation_node_add(aiida_localhost):
         return add_node
 
     return _generate_calculation_node_add
+
+
+@pytest.fixture(scope='class')
+def construct_calculation_node_add(tmp_path_factory):
+    def _construct_calculation_node_add(x: int = 1, y: int = 2):
+        import json
+        import textwrap
+
+        from aiida.common import LinkType
+        from aiida.orm import CalcJobNode, Computer, FolderData, InstalledCode, Int
+
+        # Create a minimal computer
+        # Not using any of the `aiida_localhost` or `aiida_computer_local` fixtures as they are function-scoped
+        created, computer = Computer.collection.get_or_create(
+            label='mock_computer', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
+        )
+        if created:
+            computer.store()
+
+        # Create the calculation node
+        calc_node = CalcJobNode(computer=computer)
+
+        # Create input nodes
+        x_node = Int(x)
+        y_node = Int(y)
+        code_node = InstalledCode(computer=computer, filepath_executable='/bin/bash')
+
+        # Store input nodes
+        x_node.store()
+        y_node.store()
+        code_node.store()
+
+        # Input files
+        input_content = f'echo $(({x} + {y}))\n'
+        calc_node.base.repository.put_object_from_bytes(input_content.encode(), 'aiida.in')
+
+        # .aiida folder content
+        calcinfo_dict = {
+            'codes_info': [{'stdin_name': 'aiida.in', 'stdout_name': 'aiida.out', 'code_uuid': code_node.uuid}],
+            'retrieve_list': ['aiida.out', '_scheduler-stdout.txt', '_scheduler-stderr.txt'],
+            'uuid': calc_node.uuid,
+            'file_copy_operation_order': [2, 0, 1],
+        }
+
+        job_tmpl_dict = {
+            'submit_as_hold': False,
+            'rerunnable': False,
+            'job_name': 'aiida-42',
+            'sched_output_path': '_scheduler-stdout.txt',
+            'shebang': '#!/bin/bash',
+            'sched_error_path': '_scheduler-stderr.txt',
+            'sched_join_files': False,
+            'prepend_text': '',
+            'append_text': '',
+            'job_resource': {
+                'num_machines': 1,
+                'num_mpiprocs_per_machine': 1,
+                'num_cores_per_machine': None,
+                'num_cores_per_mpiproc': None,
+                'tot_num_mpiprocs': 1,
+            },
+            'codes_info': [
+                {
+                    'prepend_cmdline_params': [],
+                    'cmdline_params': ['/usr/bin/bash'],
+                    'use_double_quotes': [False, False],
+                    'wrap_cmdline_params': False,
+                    'stdin_name': 'aiida.in',
+                    'stdout_name': 'aiida.out',
+                    'stderr_name': None,
+                    'join_files': False,
+                }
+            ],
+            'codes_run_mode': 0,
+            'import_sys_environment': True,
+            'job_environment': {},
+            'environment_variables_double_quotes': False,
+            'max_memory_kb': None,
+            'max_wallclock_seconds': 3600,
+        }
+
+        calc_node.base.repository.put_object_from_bytes(
+            json.dumps(calcinfo_dict, indent=4).encode(), '.aiida/calcinfo.json'
+        )
+        calc_node.base.repository.put_object_from_bytes(
+            json.dumps(job_tmpl_dict, indent=4).encode(), '.aiida/job_tmpl.json'
+        )
+
+        # Submit script
+        submit_script = textwrap.dedent("""\
+            #!/bin/bash
+            exec > _scheduler-stdout.txt
+            exec 2> _scheduler-stderr.txt
+
+            '/usr/bin/bash' < 'aiida.in' > 'aiida.out'
+        """)
+
+        calc_node.base.repository.put_object_from_bytes(submit_script.encode(), '_aiidasubmit.sh')
+
+        # Store CalcInfo in node attributes
+        calc_node.base.attributes.set('input_filename', 'aiida.in')
+        calc_node.base.attributes.set('output_filename', 'aiida.out')
+
+        # Add input links
+        calc_node.base.links.add_incoming(x_node, link_type=LinkType.INPUT_CALC, link_label='x')
+        calc_node.base.links.add_incoming(y_node, link_type=LinkType.INPUT_CALC, link_label='y')
+        calc_node.base.links.add_incoming(code_node, link_type=LinkType.INPUT_CALC, link_label='code')
+
+        # Must store CalcjobNode before I can add output files
+        calc_node.store()
+
+        # Create FolderData node for retrieved
+        retrieved_folder = FolderData()
+        output_content = f'{x+y}\n'.encode()
+        retrieved_folder.put_object_from_bytes(output_content, 'aiida.out')
+
+        scheduler_stdout = '\n'.encode()
+        scheduler_stderr = '\n'.encode()
+        retrieved_folder.base.repository.put_object_from_bytes(scheduler_stdout, '_scheduler-stdout.txt')
+        retrieved_folder.base.repository.put_object_from_bytes(scheduler_stderr, '_scheduler-stderr.txt')
+        retrieved_folder.store()
+
+        retrieved_folder.base.links.add_incoming(calc_node, link_type=LinkType.CREATE, link_label='retrieved')
+
+        # Create and link output node (sum)
+        output_node = Int(x + y)
+        output_node.store()
+        output_node.base.links.add_incoming(calc_node, link_type=LinkType.CREATE, link_label='sum')
+
+        # Set process properties
+        calc_node.set_process_state('finished')
+        calc_node.set_process_label('ArithmeticAddCalculation')
+        calc_node.set_process_type('aiida.calculations:core.arithmetic.add')
+        calc_node.set_exit_status(0)
+
+        return calc_node
+
+    return _construct_calculation_node_add
 
 
 @pytest.fixture
@@ -875,3 +1073,132 @@ def cat_path() -> Path:
     run_process = subprocess.run(['which', 'cat'], capture_output=True, check=True)
     path = run_process.stdout.decode('utf-8').strip()
     return Path(path)
+
+
+@pytest.fixture
+def generate_calculation_node_io(generate_calculation_node, tmp_path):
+    def _generate_calculation_node_io(entry_point: str | None = None, attach_outputs: bool = True):
+        import io
+
+        import numpy as np
+
+        from aiida.orm import ArrayData, FolderData, SinglefileData
+
+        filename = 'file.txt'
+        filecontent = 'a'
+        singlefiledata_linklabel = 'singlefile'
+        folderdata_linklabel = 'folderdata'
+        folderdata_relpath = Path('relative_path')
+        arraydata_linklabel = 'arraydata'
+
+        singlefiledata_input = SinglefileData.from_string(content=filecontent, filename=filename)
+        # ? Use instance for folderdata
+        folderdata = FolderData()
+        folderdata.put_object_from_filelike(handle=io.StringIO(filecontent), path=str(folderdata_relpath / filename))  # type: ignore[arg-type]
+        arraydata_input = ArrayData(arrays=np.ones(3))
+
+        # Create calculation inputs, outputs
+        calculation_node_inputs = {
+            singlefiledata_linklabel: singlefiledata_input,
+            folderdata_linklabel: folderdata,
+            arraydata_linklabel: arraydata_input,
+        }
+
+        singlefiledata_output = singlefiledata_input.clone()
+        folderdata_output = folderdata.clone()
+
+        if attach_outputs:
+            calculation_outputs = {
+                folderdata_linklabel: folderdata_output,
+                singlefiledata_linklabel: singlefiledata_output,
+            }
+        else:
+            calculation_outputs = None
+
+        # Actually write repository file and then read it in when generating calculation_node
+        (tmp_path / filename).write_text(filecontent)
+
+        calculation_node = generate_calculation_node(
+            repository=tmp_path,
+            inputs=calculation_node_inputs,
+            outputs=calculation_outputs,
+            entry_point=entry_point,
+        )
+        return calculation_node
+
+    return _generate_calculation_node_io
+
+
+@pytest.fixture
+def generate_workchain_node_io():
+    def _generate_workchain_node_io(cj_nodes, store_all: bool = True, seal_all: bool = True):
+        """Generate an instance of a `WorkChain` that contains a sub-`WorkChain` and a `Calculation` with file io."""
+        from aiida.orm import WorkflowNode
+
+        wc_node = WorkflowNode()
+        wc_node_sub = WorkflowNode()
+
+        # Add sub-workchain that calls a calculation
+        wc_node_sub.base.links.add_incoming(wc_node, link_type=LinkType.CALL_WORK, link_label='sub_workflow')
+        for cj_node in cj_nodes:
+            cj_node.base.links.add_incoming(wc_node_sub, link_type=LinkType.CALL_CALC, link_label='calculation')
+
+        # Set process_state so that tests don't throw exception for build_call_graph of README generation
+        [cj_node.set_process_state('finished') for cj_node in cj_nodes]
+        wc_node.set_process_state('finished')
+        wc_node_sub.set_process_state('finished')
+
+        # Need to store/seal (?) so that outputs are being dumped
+        if seal_all:
+            wc_node.seal()
+            wc_node_sub.seal()
+            [cj_node.seal() for cj_node in cj_nodes]
+            [node.seal() for node in wc_node.called_descendants]
+
+        if store_all:
+            wc_node.store()
+            wc_node_sub.store()
+            [cj_node.store() for cj_node in cj_nodes]
+            [node.store() for node in wc_node.called_descendants]
+
+        return wc_node
+
+    return _generate_workchain_node_io
+
+
+@pytest.fixture()
+def setup_no_process_group() -> orm.Group:
+    no_process_group, _ = orm.Group.collection.get_or_create(label='no-process-group')
+    if no_process_group.is_empty:
+        int_node = orm.Int(1).store()
+        no_process_group.add_nodes([int_node])
+    return no_process_group
+
+
+# TODO: Add possibility to parametrize with number of nodes created (make factory?)
+@pytest.fixture()
+def setup_add_group(generate_calculation_node_add) -> orm.Group:
+    add_group, _ = orm.Group.collection.get_or_create(label='add-group')
+    if add_group.is_empty:
+        add_node = generate_calculation_node_add()
+        add_group.add_nodes([add_node])
+    return add_group
+
+
+@pytest.fixture()
+def setup_multiply_add_group(generate_workchain_multiply_add) -> orm.Group:
+    multiply_add_group, _ = orm.Group.collection.get_or_create(label='multiply-add-group')
+    if multiply_add_group.is_empty:
+        multiply_add_node = generate_workchain_multiply_add()
+        multiply_add_group.add_nodes([multiply_add_node])
+    return multiply_add_group
+
+
+@pytest.fixture()
+def setup_duplicate_group():
+    def _setup_duplicate_group(source_group: orm.Group, dest_group_label: str):
+        dupl_group, created = orm.Group.collection.get_or_create(label=dest_group_label)
+        dupl_group.add_nodes(list(source_group.nodes))
+        return dupl_group
+
+    return _setup_duplicate_group

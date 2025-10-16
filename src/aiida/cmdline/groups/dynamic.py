@@ -16,6 +16,9 @@ from ..params import options
 from ..params.options.interactive import InteractiveOption
 from .verdi import VerdiCommandGroup
 
+if t.TYPE_CHECKING:
+    from click.decorators import FC
+
 __all__ = ('DynamicEntryPointCommandGroup',)
 
 
@@ -44,11 +47,11 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
     def __init__(
         self,
-        command: t.Callable,
+        command: click.Command,
         entry_point_group: str,
         entry_point_name_filter: str = r'.*',
-        shared_options: list[click.Option] | None = None,
-        **kwargs,
+        shared_options: list[FC] | None = None,
+        **kwargs: t.Any,
     ):
         super().__init__(**kwargs)
         self._command = command
@@ -88,28 +91,24 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             command = super().get_command(ctx, cmd_name)
         return command
 
-    def call_command(self, ctx, cls, **kwargs):
+    def call_command(self, ctx: click.Context, cls: t.Any, non_interactive: bool, **kwargs: t.Any) -> t.Any:
         """Call the ``command`` after validating the provided inputs."""
         from pydantic import ValidationError
 
         if hasattr(cls, 'Model'):
             # The plugin defines a pydantic model: use it to validate the provided arguments
             try:
-                model = cls.Model(**kwargs)
+                cls.Model(**kwargs)
             except ValidationError as exception:
                 param_hint = [
                     f'--{loc.replace("_", "-")}'  # type: ignore[union-attr]
                     for loc in exception.errors()[0]['loc']
                 ]
-                message = '\n'.join([str(e['ctx']['error']) for e in exception.errors()])
+                message = '\n'.join([str(e['msg']) for e in exception.errors()])
                 raise click.BadParameter(
                     message,
-                    param_hint=param_hint or 'multiple parameters',  # type: ignore[arg-type]
+                    param_hint=param_hint or 'one or more parameters',  # type: ignore[arg-type]
                 ) from exception
-
-            # Update the arguments with the dictionary representation of the model. This will include any type coercions
-            # that may have been applied with validators defined for the model.
-            kwargs.update(**model.model_dump())
 
         return self._command(ctx, cls, **kwargs)
 
@@ -120,13 +119,13 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         command.__doc__ = cls.__doc__
         return click.command(entry_point)(self.create_options(entry_point)(command))
 
-    def create_options(self, entry_point: str) -> t.Callable:
+    def create_options(self, entry_point: str) -> t.Callable[[FC], FC]:
         """Create the option decorators for the command function for the given entry point.
 
         :param entry_point: The entry point.
         """
 
-        def apply_options(func):
+        def apply_options(func: FC) -> FC:
             """Decorate the command function with the appropriate options for the given entry point."""
             func = options.NON_INTERACTIVE()(func)
             func = options.CONFIG_FILE()(func)
@@ -147,12 +146,14 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         return apply_options
 
-    def list_options(self, entry_point: str) -> list:
+    def list_options(self, entry_point: str) -> list[t.Callable[[FC], FC]]:
         """Return the list of options that should be applied to the command for the given entry point.
 
         :param entry_point: The entry point.
         """
         from pydantic_core import PydanticUndefined
+
+        from aiida.common.pydantic import get_metadata
 
         cls = self.factory(entry_point)
 
@@ -170,6 +171,9 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         options_spec = {}
 
         for key, field_info in cls.Model.model_fields.items():
+            if get_metadata(field_info, 'exclude_from_cli'):
+                continue
+
             default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default
 
             # If the annotation has the ``__args__`` attribute it is an instance of a type from ``typing`` and the real
@@ -177,7 +181,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             # ``typing.Union[str, None].__args__`` will return the tuple ``(str, NoneType)``. So to get the real type,
             # we simply remove all ``NoneType`` and the remaining type should be the type of the option.
             if hasattr(field_info.annotation, '__args__'):
-                args = list(filter(lambda e: e != type(None), field_info.annotation.__args__))
+                args = list(filter(lambda e: e is not type(None), field_info.annotation.__args__))
                 # Click parameters only support specifying a single type, so we default to the first one even if the
                 # pydantic model defines multiple.
                 field_type = args[0]
@@ -194,7 +198,8 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             }
             for metadata in field_info.metadata:
                 for metadata_key, metadata_value in metadata.items():
-                    options_spec[key][metadata_key] = metadata_value
+                    if metadata_key in ('priority', 'short_name', 'option_cls'):
+                        options_spec[key][metadata_key] = metadata_value
 
         options_ordered = []
 
@@ -205,7 +210,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         return options_ordered
 
     @staticmethod
-    def create_option(name, spec: dict) -> t.Callable[[t.Any], t.Any]:
+    def create_option(name: str, spec: dict[str, t.Any]) -> t.Callable[[FC], FC]:
         """Create a click option from a name and a specification."""
         is_flag = spec.pop('is_flag', False)
         name_dashed = name.replace('_', '-')

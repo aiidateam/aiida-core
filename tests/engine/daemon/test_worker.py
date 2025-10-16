@@ -9,6 +9,7 @@
 """Unit tests for the :mod:`aiida.engine.daemon.worker` module."""
 
 import pytest
+
 from aiida.engine.daemon.worker import shutdown_worker
 from aiida.orm import Log
 from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain

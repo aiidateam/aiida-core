@@ -6,6 +6,7 @@ import base64
 import difflib
 import gzip
 import typing as t
+from collections.abc import Hashable
 
 import click
 
@@ -51,7 +52,7 @@ class LazyVerdiObjAttributeDict(AttributeDict):
         super().__init__(dictionary)
         self.ctx = ctx
 
-    def __getattr__(self, attr: str) -> t.Any:
+    def __getattr__(self, attr: Hashable) -> t.Any:
         """Override of ``AttributeDict.__getattr__`` to lazily initialize the ``config`` and ``profile`` attributes.
 
         :param attr: The attribute to return.
@@ -74,7 +75,7 @@ class LazyVerdiObjAttributeDict(AttributeDict):
 class VerdiContext(click.Context):
     """Custom context implementation that defines the ``obj`` user object and adds the ``Config`` instance."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: t.Any, **kwargs: t.Any):
         super().__init__(*args, **kwargs)
         if self.obj is None:
             self.obj = LazyVerdiObjAttributeDict(self)
@@ -88,10 +89,11 @@ class VerdiCommand(click.Command):
     is printed after the prompting for parameters, which for interactive commands mean the deprecation warning comes too
     late, when the user has already provided all prompts.
 
-    Here, the :meth:`click.Command.parse_args` method is overridden, which is called before the interactive options
-    start to prompt, such that the deprecation warning can be printed. The :meth:`click.Command.invoke` method is also
-    overridden in order to skip the printing of the deprecation message handled by ``click`` as that would result in
-    the deprecation message being printed twice.
+    Here, the `click.Command.parse_args
+    <https://github.com/pallets/click/blob/f8d811e5d5644aca8d32eebff196bf7c659ebf45/src/click/core.py#L1369>`_ method is
+    overridden, which is called before the interactive options start to prompt, such that the deprecation warning can be
+    printed. The :meth:`click.Command.invoke` method is also overridden in order to skip the printing of the deprecation
+    message handled by ``click`` as that would result in the deprecation message being printed twice.
     """
 
     def parse_args(self, ctx: click.Context, args: t.List[str]) -> t.List[str]:
@@ -99,16 +101,13 @@ class VerdiCommand(click.Command):
 
         Then context is modified as necessary.
 
-        This is automatically invoked by :meth:`click.BaseCommand.make_context`.
+        This is automatically invoked by `click.BaseCommand.make_context
+        <https://github.com/pallets/click/blob/f8d811e5d5644aca8d32eebff196bf7c659ebf45/src/click/core.py#L884>`_.
         """
         if self.deprecated:
             # We are abusing click.Command `deprecated` member variable by using a
             # string instead of a bool to also use it as optional deprecated message
-            echo_deprecated(
-                self.deprecated
-                if isinstance(self.deprecated, str)  # type: ignore[redundant-expr]
-                else 'This command is deprecated.'
-            )
+            echo_deprecated(self.deprecated if isinstance(self.deprecated, str) else 'This command is deprecated.')
 
         return super().parse_args(ctx, args)
 
@@ -188,7 +187,7 @@ class VerdiCommandGroup(click.Group):
 
         return None
 
-    def group(self, *args, **kwargs) -> click.Group:
+    def group(self, *args: t.Any, **kwargs: t.Any) -> click.Group:
         """Ensure that sub command groups use the same class but do not override an explicitly set value."""
         kwargs.setdefault('cls', self.__class__)
-        return super().group(*args, **kwargs)
+        return super().group(*args, **kwargs)  # type: ignore[no-any-return]

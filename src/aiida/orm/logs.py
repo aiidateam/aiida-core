@@ -13,18 +13,18 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
 from aiida.common import timezone
+from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
 
 from . import entities
-from .fields import add_field
 
 if TYPE_CHECKING:
     from aiida.orm import Node
     from aiida.orm.implementation import StorageBackend
-    from aiida.orm.implementation.logs import BackendLog  # noqa: F401
+    from aiida.orm.implementation.logs import BackendLog
     from aiida.orm.querybuilder import FilterType, OrderByType
 
-__all__ = ('Log', 'OrderSpecifier', 'ASCENDING', 'DESCENDING')
+__all__ = ('ASCENDING', 'DESCENDING', 'Log', 'OrderSpecifier')
 
 ASCENDING = 'asc'
 DESCENDING = 'desc'
@@ -129,50 +129,14 @@ class Log(entities.Entity['BackendLog', LogCollection]):
 
     _CLS_COLLECTION = LogCollection
 
-    __qb_fields__ = [
-        add_field(
-            'uuid',
-            dtype=str,
-            is_attribute=False,
-            doc='The UUID of the node',
-        ),
-        add_field(
-            'loggername',
-            dtype=str,
-            is_attribute=False,
-            doc='The name of the logger',
-        ),
-        add_field(
-            'levelname',
-            dtype=str,
-            is_attribute=False,
-            doc='The name of the log level',
-        ),
-        add_field(
-            'message',
-            dtype=str,
-            is_attribute=False,
-            doc='The message of the log',
-        ),
-        add_field(
-            'time',
-            dtype=datetime,
-            is_attribute=False,
-            doc='The time at which the log was created',
-        ),
-        add_field(
-            'metadata',
-            dtype=Dict[str, Any],
-            is_attribute=False,
-            doc='The metadata of the log',
-        ),
-        add_field(
-            'node_pk',
-            dtype=int,
-            is_attribute=False,
-            doc='The PK for the node',
-        ),
-    ]
+    class Model(entities.Entity.Model):
+        uuid: str = MetadataField(description='The UUID of the node', is_attribute=False, exclude_to_orm=True)
+        loggername: str = MetadataField(description='The name of the logger', is_attribute=False)
+        levelname: str = MetadataField(description='The name of the log level', is_attribute=False)
+        message: str = MetadataField(description='The message of the log', is_attribute=False)
+        time: datetime = MetadataField(description='The time at which the log was created', is_attribute=False)
+        metadata: Dict[str, Any] = MetadataField(description='The metadata of the log', is_attribute=False)
+        dbnode_id: int = MetadataField(description='Associated node', is_attribute=False)
 
     def __init__(
         self,

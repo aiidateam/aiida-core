@@ -48,6 +48,7 @@ CONTAINER_DEFAULTS: dict = {
 def get_filepath_container(profile: Profile) -> pathlib.Path:
     """Return the filepath of the disk-object store container."""
     from urllib.parse import urlparse
+    from urllib.request import url2pathname
 
     try:
         parts = urlparse(profile.storage_config['repository_uri'])
@@ -59,7 +60,7 @@ def get_filepath_container(profile: Profile) -> pathlib.Path:
             f'invalid profile {profile.name}: `storage.config.repository_uri` does not start with `file://`.'
         )
 
-    filepath = pathlib.Path(parts.path)
+    filepath = pathlib.Path(url2pathname(parts.path))
 
     if not filepath.is_absolute():
         raise ConfigurationError(f'invalid profile {profile.name}: `storage.config.repository_uri` is not absolute')

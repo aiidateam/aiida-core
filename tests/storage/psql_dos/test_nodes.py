@@ -9,6 +9,7 @@
 """Tests for nodes, attributes and links."""
 
 import pytest
+
 from aiida import orm
 from aiida.orm import Data, load_node
 

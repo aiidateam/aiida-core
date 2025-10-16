@@ -23,6 +23,7 @@ from .process_spec import *
 from .workchains import *
 
 __all__ = (
+    'PORT_NAMESPACE_SEPARATOR',
     'Awaitable',
     'AwaitableAction',
     'AwaitableTarget',
@@ -38,7 +39,6 @@ __all__ = (
     'JobManager',
     'JobsList',
     'OutputPort',
-    'PORT_NAMESPACE_SEPARATOR',
     'PortNamespace',
     'Process',
     'ProcessBuilder',

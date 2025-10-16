@@ -9,11 +9,12 @@
 """Tests for ``verdi devel rabbitmq``."""
 
 import pytest
+from plumpy.process_comms import RemoteProcessThreadController
+
 from aiida.cmdline.commands import cmd_rabbitmq
 from aiida.engine import ProcessState, submit
 from aiida.engine.processes import control
 from aiida.orm import Int
-from plumpy.process_comms import RemoteProcessThreadController
 
 
 @pytest.mark.requires_rmq
@@ -68,7 +69,7 @@ def test_tasks_revive_without_daemon(run_cli_command):
     assert run_cli_command(cmd_rabbitmq.cmd_tasks_revive, raises=True)
 
 
-@pytest.mark.usefixtures('started_daemon_client')
+@pytest.mark.usefixtures('aiida_profile_clean')
 def test_revive(run_cli_command, monkeypatch, aiida_code_installed, submit_and_await):
     """Test ``tasks revive``."""
     code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')

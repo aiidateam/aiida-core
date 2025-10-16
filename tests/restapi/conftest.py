@@ -8,17 +8,27 @@
 ###########################################################################
 """pytest fixtures for use with the aiida.restapi tests"""
 
+from typing import Optional
+
 import pytest
 
 
 @pytest.fixture(scope='function')
 def restapi_server():
     """Make REST API server"""
-    from aiida.restapi.common.config import CLI_DEFAULTS
-    from aiida.restapi.run_api import configure_api
+    import socket
+
     from werkzeug.serving import make_server
 
+    from aiida.restapi.common.config import CLI_DEFAULTS
+    from aiida.restapi.run_api import configure_api
+
     def _restapi_server(restapi=None):
+        # Dynamically find a free port
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.bind(('', 0))  # Bind to a free port provided by the OS
+            _, port = sock.getsockname()  # Get the dynamically assigned port
+
         if restapi is None:
             flask_restapi = configure_api()
         else:
@@ -26,7 +36,7 @@ def restapi_server():
 
         return make_server(
             host=CLI_DEFAULTS['HOST_NAME'],
-            port=int(CLI_DEFAULTS['PORT']),
+            port=port,
             app=flask_restapi.app,
             threaded=True,
             processes=1,
@@ -43,7 +53,10 @@ def restapi_server():
 def server_url():
     from aiida.restapi.common.config import API_CONFIG, CLI_DEFAULTS
 
-    return f"http://{CLI_DEFAULTS['HOST_NAME']}:{CLI_DEFAULTS['PORT']}{API_CONFIG['PREFIX']}"
+    def _server_url(hostname: Optional[str] = None, port: Optional[int] = None):
+        return f"http://{hostname or CLI_DEFAULTS['HOST_NAME']}:{port or CLI_DEFAULTS['PORT']}{API_CONFIG['PREFIX']}"
+
+    return _server_url
 
 
 @pytest.fixture

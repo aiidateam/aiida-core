@@ -12,6 +12,7 @@ import functools
 
 import click
 import pytest
+
 from aiida.cmdline.params.options import NON_INTERACTIVE
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.params.types.plugin import PluginParamType
@@ -150,7 +151,7 @@ def test_special_characters_validation(run_cli_command, user_input, expected):
 @pytest.mark.parametrize(
     ('options', 'user_input', 'expected'),
     (
-        ([], '', 'default-value'),  # Simply entering at the prompt should return the default
+        ([], '\n', 'default-value'),  # Simply entering at the prompt should return the default
         (
             ['--non-interactive'],
             None,

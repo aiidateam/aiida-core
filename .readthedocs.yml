@@ -15,17 +15,19 @@ build:
   jobs:
     # Use uv to speed up the build
     # https://docs.readthedocs.io/en/stable/build-customization.html#install-dependencies-with-uv
-    post_create_environment:
+    pre_create_environment:
     - asdf plugin add uv
-    - asdf install uv 0.2.9
-    - asdf global uv 0.2.9
-    post_install:
-    - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH uv pip install .[docs,tests,rest,atomic_tools]
-
-# Let the build fail if there are any warnings
-sphinx:
-  builder: html
-  fail_on_warning: true
+    - asdf install uv 0.7.6
+    - asdf global uv 0.7.6
+    create_environment:
+    # Create a virtual environment in '.venv/' folder
+    # which is picked up automatically by `uv sync` and `uv run` commands below
+    - uv venv
+    install:
+    - uv sync --extra docs --extra tests --extra rest --extra atomic_tools
+    build:
+      html:
+      - uv run sphinx-build -T -W --keep-going -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html -w sphinx.log || (cat sphinx.log && exit 1)
 
 search:
   ranking:

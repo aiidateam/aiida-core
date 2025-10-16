@@ -67,7 +67,7 @@ def detect_postgres_config(
     """
     import secrets
 
-    from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+    from aiida.manage.configuration.settings import AiiDAConfigDir
     from aiida.manage.external.postgres import Postgres
 
     dbinfo = {
@@ -92,13 +92,15 @@ def detect_postgres_config(
     except Exception as exception:
         raise ConnectionError(f'Unable to automatically create the PostgreSQL user and database: {exception}')
 
+    aiida_config_folder = AiiDAConfigDir.get()
+
     return {
         'database_hostname': postgres_hostname,
         'database_port': postgres_port,
         'database_name': database_name,
         'database_username': database_username,
         'database_password': database_password,
-        'repository_uri': f'file://{AIIDA_CONFIG_FOLDER / "repository" / profile_name}',
+        'repository_uri': pathlib.Path(f'{aiida_config_folder / "repository" / profile_name}').as_uri(),
     }
 
 

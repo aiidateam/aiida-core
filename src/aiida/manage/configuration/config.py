@@ -16,11 +16,11 @@ See https://github.com/pydantic/pydantic/issues/2678 for details).
 from __future__ import annotations
 
 import codecs
-import contextlib
-import io
 import json
 import os
+import shutil
 import uuid
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import (
@@ -267,7 +267,7 @@ class Config:
 
         # Keep generating a new backup filename based on the current time until it does not exist
         while not filepath_backup or os.path.isfile(filepath_backup):
-            filepath_backup = f"{filepath}.{timezone.now().strftime('%Y%m%d-%H%M%S.%f')}"
+            filepath_backup = f'{filepath}.{timezone.now().strftime("%Y%m%d-%H%M%S.%f")}'
 
         shutil.copy(filepath, filepath_backup)
 
@@ -526,8 +526,7 @@ class Config:
 
         LOGGER.report('Initialising the storage backend.')
         try:
-            with contextlib.redirect_stdout(io.StringIO()):
-                profile.storage_cls.initialise(profile)
+            profile.storage_cls.initialise(profile)
         except Exception as exception:
             raise StorageMigrationError(
                 f'Storage backend initialisation failed, probably because the configuration is incorrect:\n{exception}'
@@ -577,12 +576,31 @@ class Config:
 
         profile = self.get_profile(name)
         is_default_profile: bool = profile.name == self.default_profile_name
-
         if delete_storage:
             storage_cls = StorageFactory(profile.storage_backend)
-            storage = storage_cls(profile)
-            storage.delete()
-            LOGGER.report(f'Data storage deleted, configuration was: {profile.storage_config}')
+            if profile.storage_backend == 'core.sqlite_zip':
+                filepath = profile.storage_config.get('filepath')
+                if filepath is None:
+                    LOGGER.warning(
+                        f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but no filepath is configured. '
+                        'Profile deletion will proceed anyway.'
+                    )
+                elif not Path(filepath).exists():
+                    LOGGER.warning(
+                        (
+                            f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but the aiida archive file '
+                            f"at `{filepath}` doesn't exist anymore. "
+                            'Possibly the file was manually removed before? Profile deletion will proceed anyway.'
+                        )
+                    )
+                else:
+                    storage = storage_cls(profile)
+                    storage.delete()
+                    LOGGER.report(f'Data storage deleted, configuration was: {profile.storage_config}')
+            else:
+                storage = storage_cls(profile)
+                storage.delete()
+                LOGGER.report(f'Data storage deleted, configuration was: {profile.storage_config}')
         else:
             LOGGER.report(f'Data storage not deleted, configuration is: {profile.storage_config}')
 
@@ -779,4 +797,34 @@ class Config:
                 os.umask(umask)
 
             handle.flush()
-            os.rename(handle.name, self.filepath)
+            handle.close()
+            shutil.move(handle.name, self.filepath)
+
+    def filepaths(self, profile: Profile):
+        """Return the filepaths used by a profile.
+
+        :return: a dictionary of filepaths
+        """
+        from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+
+        _config_path_resolver: AiiDAConfigPathResolver = AiiDAConfigPathResolver(Path(self.dirpath))
+        daemon_dir = _config_path_resolver.daemon_dir
+        daemon_log_dir = _config_path_resolver.daemon_log_dir
+
+        return {
+            'circus': {
+                'log': str(daemon_log_dir / f'circus-{profile.name}.log'),
+                'pid': str(daemon_dir / f'circus-{profile.name}.pid'),
+                'port': str(daemon_dir / f'circus-{profile.name}.port'),
+                'socket': {
+                    'file': str(daemon_dir / f'circus-{profile.name}.sockets'),
+                    'controller': 'circus.c.sock',
+                    'pubsub': 'circus.p.sock',
+                    'stats': 'circus.s.sock',
+                },
+            },
+            'daemon': {
+                'log': str(daemon_log_dir / f'aiida-{profile.name}.log'),
+                'pid': str(daemon_dir / f'aiida-{profile.name}.pid'),
+            },
+        }

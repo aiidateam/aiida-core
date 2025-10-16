@@ -18,6 +18,9 @@ Provides:
 
 """
 
+from __future__ import annotations
+
+import typing as t
 from contextlib import contextmanager
 
 from click_spinner import spinner
@@ -27,7 +30,7 @@ from . import echo
 
 DAEMON_NOT_RUNNING_DEFAULT_MESSAGE = 'daemon is not running'
 
-__all__ = ('with_dbenv', 'dbenv', 'only_if_daemon_running')
+__all__ = ('dbenv', 'only_if_daemon_running', 'with_dbenv')
 
 
 @decorator
@@ -78,7 +81,7 @@ def load_backend_if_not_loaded():
             manager.get_profile_storage()  # This will load the backend of the loaded profile, if not already loaded
 
 
-def with_dbenv():
+def with_dbenv() -> t.Callable:
     """Function decorator that will load the database environment for the currently loaded profile.
 
     .. note:: if no profile has been loaded yet, the default profile will be loaded first.
@@ -180,7 +183,7 @@ def only_if_daemon_running(echo_function=echo.echo_critical, message=None):
     return wrapper
 
 
-def only_if_daemon_not_running(echo_function=echo.echo_critical, message=None):
+def only_if_daemon_not_running(echo_function=echo.echo_critical, message: str | None = None):
     """Function decorator for CLI command to print critical error and exit automatically when daemon is running.
 
     The error printing and exit behavior can be controlled with the decorator keyword arguments. The default message
@@ -241,7 +244,7 @@ def check_circus_zmq_version(wrapped, _, args, kwargs):
     return wrapped(*args, **kwargs)
 
 
-def deprecated_command(message):
+def deprecated_command(message: str):
     """Function decorator that will mark a click command as deprecated when invoked.
 
     Example::

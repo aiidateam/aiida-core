@@ -12,6 +12,7 @@ import uuid
 
 import click
 import pytest
+
 from aiida.cmdline.params.types import GroupParamType
 from aiida.orm import AutoGroup, Group, ImportGroup
 from aiida.orm.utils.loaders import OrmEntityLoader

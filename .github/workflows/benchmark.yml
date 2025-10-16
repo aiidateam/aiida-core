@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
     paths-ignore: [docs/**]
+  pull_request:
+    branches-ignore: [gh-pages]
+    paths: [.github/workflows/benchmark*]
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
@@ -15,7 +18,7 @@ jobs:
 
   run-and-upload:
 
-    # Only run on pushes and when the job is on the main repository and not on forks
+    # Only run if branch or PR base is pointing to the upstream repo
     if: github.repository == 'aiidateam/aiida-core'
 
     strategy:
@@ -54,9 +57,10 @@ jobs:
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.10'
+        from-lock: 'true'
 
     - name: Run benchmarks
-      run: pytest --benchmark-only --benchmark-json benchmark.json
+      run: pytest --db-backend psql --benchmark-only --benchmark-json benchmark.json tests/
 
     - name: Store benchmark result
       uses: aiidateam/github-action-benchmark@v3
@@ -73,4 +77,5 @@ jobs:
         alert-threshold: 200%
         comment-on-alert: true
         fail-on-alert: false
-        alert-comment-cc-users: '@chrisjsewell,@giovannipizzi'
+        alert-comment-cc-users: '@giovannipizzi,@agoscinski,@GeigerJ2,@khsrali,@unkcpz'
+      if: github.event_name == 'push' && github.ref_name == 'main'

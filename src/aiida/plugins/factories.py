@@ -18,8 +18,8 @@ from aiida.common.exceptions import InvalidEntryPointTypeError
 __all__ = (
     'BaseFactory',
     'BrokerFactory',
-    'CalculationFactory',
     'CalcJobImporterFactory',
+    'CalculationFactory',
     'DataFactory',
     'DbImporterFactory',
     'GroupFactory',
@@ -418,7 +418,7 @@ def TransportFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint:
 
 
 def TransportFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Transport']]:
-    """Return the `Transport` sub class registered under the given entry point.
+    """Return the Transport sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
@@ -435,7 +435,7 @@ def TransportFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoi
     if not load:
         return entry_point
 
-    if isclass(entry_point) and issubclass(entry_point, Transport):
+    if isclass(entry_point) and (issubclass(entry_point, Transport)):
         return entry_point
 
     raise_invalid_type_error(entry_point_name, entry_point_group, valid_classes)

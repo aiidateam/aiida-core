@@ -248,7 +248,7 @@ class Manager:
         """
         from aiida.common.warnings import warn_deprecation
 
-        warn_deprecation('get_backend() is deprecated, use get_profile_storage() instead', version=3)
+        warn_deprecation('get_backend() is deprecated, use get_profile_storage() instead', version=3, stacklevel=3)
         return self.get_profile_storage()
 
     def get_profile_storage(self) -> 'StorageBackend':
@@ -430,7 +430,7 @@ class Manager:
         if with_persistence and 'persister' not in settings:
             settings['persister'] = self.get_persister()
 
-        return runners.Runner(**settings)
+        return runners.Runner(**settings)  # type: ignore[arg-type]
 
     def create_daemon_runner(self, loop: Optional['asyncio.AbstractEventLoop'] = None) -> 'Runner':
         """Create and return a new daemon runner.

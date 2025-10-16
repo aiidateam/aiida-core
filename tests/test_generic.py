@@ -9,6 +9,7 @@
 """Generic tests that need the use of the DB."""
 
 import pytest
+
 from aiida import orm
 
 

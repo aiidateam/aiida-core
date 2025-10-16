@@ -8,6 +8,8 @@
 ###########################################################################
 """Collection of ``pytest`` fixtures that are intended for use in plugin packages.
 
+NOTE: These fixtures are deprecated! Use aiida.tools.pytest_fixtures instead.
+
 To use these fixtures, simply create a ``conftest.py`` in the tests folder and add the following line:
 
     pytest_plugins = ['aiida.manage.tests.pytest_fixtures']
@@ -92,7 +94,7 @@ def postgres_cluster():
 
     def create_database(
         database_name: str | None = None, database_username: str | None = None, database_password: str | None = None
-    ) -> t.Generator[dict[str, str], None, None]:
+    ) -> dict[str, str]:
         from aiida.manage.external.postgres import Postgres
 
         postgres_config = {
@@ -102,7 +104,7 @@ def postgres_cluster():
             'database_password': database_password or 'guest',
         }
 
-        postgres = Postgres(interactive=False, quiet=True, dbinfo=cluster.dsn)
+        postgres = Postgres(interactive=False, quiet=True, dbinfo=cluster.dsn)  # type: ignore[union-attr]
         if not postgres.dbuser_exists(postgres_config['database_username']):
             postgres.create_dbuser(
                 postgres_config['database_username'], postgres_config['database_password'], 'CREATEDB'
@@ -146,7 +148,7 @@ def aiida_manager() -> Manager:
 
 @pytest.fixture(scope='session')
 def aiida_instance(
-    tmp_path_factory: pytest.tmpdir.TempPathFactory,
+    tmp_path_factory: pytest.TempPathFactory,
     aiida_manager: Manager,
     aiida_test_profile: str | None,
 ) -> t.Generator[Config, None, None]:
@@ -162,6 +164,7 @@ def aiida_instance(
     """
     from aiida.manage import configuration
     from aiida.manage.configuration import settings
+    from aiida.manage.configuration.settings import AiiDAConfigDir
 
     if aiida_test_profile:
         yield configuration.get_config()
@@ -172,14 +175,13 @@ def aiida_instance(
         if configuration.CONFIG is not None:
             reset = True
             current_config = configuration.CONFIG
-            current_config_path = current_config.dirpath
+            current_config_path = pathlib.Path(current_config.dirpath)
             current_profile = configuration.get_profile()
             current_path_variable = os.environ.get(settings.DEFAULT_AIIDA_PATH_VARIABLE, None)
 
-        dirpath_config = tmp_path_factory.mktemp('config')
+        dirpath_config = tmp_path_factory.mktemp('config') / settings.DEFAULT_CONFIG_DIR_NAME
         os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = str(dirpath_config)
-        settings.AIIDA_CONFIG_FOLDER = dirpath_config
-        settings.set_configuration_directory()
+        AiiDAConfigDir.set(dirpath_config)
         configuration.CONFIG = configuration.load_config(create=True)
 
         try:
@@ -191,7 +193,7 @@ def aiida_instance(
                 else:
                     os.environ[settings.DEFAULT_AIIDA_PATH_VARIABLE] = current_path_variable
 
-                settings.AIIDA_CONFIG_FOLDER = current_config_path
+                AiiDAConfigDir.set(current_config_path)
                 configuration.CONFIG = current_config
                 if current_profile:
                     aiida_manager.load_profile(current_profile.name, allow_switch=True)
@@ -199,8 +201,8 @@ def aiida_instance(
 
 @pytest.fixture(scope='session')
 def config_psql_dos(
-    tmp_path_factory: pytest.tmpdir.TempPathFactory,
-    postgres_cluster: dict[str, str],
+    tmp_path_factory: pytest.TempPathFactory,
+    postgres_cluster: t.Any,
 ) -> t.Callable[[dict[str, t.Any] | None], dict[str, t.Any]]:
     """Return a profile configuration for the :class:`~aiida.storage.psql_dos.backend.PsqlDosBackend`."""
 
@@ -225,7 +227,7 @@ def config_psql_dos(
             'storage': {
                 'backend': 'core.psql_dos',
                 'config': {
-                    'repository_uri': f'file://{tmp_path_factory.mktemp("repository")}',
+                    'repository_uri': pathlib.Path(f'{tmp_path_factory.mktemp("repository")}').as_uri(),
                 },
             }
         }
@@ -253,7 +255,7 @@ def clear_profile():
     manager.reset_broker()
     manager.reset_runner()
 
-    User(get_manager().get_profile().default_user_email).store()
+    User(get_manager().get_profile().default_user_email).store()  # type: ignore[union-attr,arg-type]
 
 
 @pytest.fixture(scope='session')
@@ -295,7 +297,7 @@ def aiida_profile_factory(
             },
         }
         recursive_merge(configuration, custom_configuration or {})
-        configuration['test_profile'] = True
+        configuration['test_profile'] = True  # type: ignore[assignment]
 
         with contextlib.redirect_stdout(io.StringIO()):
             profile_name = str(uuid.uuid4())
@@ -308,7 +310,7 @@ def aiida_profile_factory(
 
             aiida_manager.load_profile(profile_name, allow_switch=True)
 
-            User(profile.default_user_email).store()
+            User(profile.default_user_email).store()  # type: ignore[arg-type]
 
         # Add the ``clear_profile`` method, such that users can empty the storage through the ``Profile`` instance that
         # is returned by this fixture. This functionality is added for backwards-compatibility as before the fixture
@@ -737,8 +739,8 @@ def submit_and_await(started_daemon_client):
         :param kwargs: If the ``submittable`` is a process class, it is instantiated with the ``kwargs`` as inputs.
         :raises RuntimeError: If the process fails to achieve the specified state before the timeout expires.
         """
-        if inspect.isclass(submittable) and issubclass(submittable, Process):
-            node = submit(submittable, **kwargs)
+        if inspect.isclass(submittable) and issubclass(submittable, Process):  # type: ignore[unreachable]
+            node = submit(submittable, **kwargs)  # type: ignore[unreachable]
         elif isinstance(submittable, ProcessBuilder):
             node = submit(submittable)
         elif isinstance(submittable, ProcessNode):
@@ -760,6 +762,7 @@ def submit_and_await(started_daemon_client):
                     f'Daemon <{started_daemon_client.profile.name}|{daemon_status}> log file content: \n'
                     f'{daemon_log_file}'
                 )
+            time.sleep(0.1)
 
         return node
 
@@ -866,7 +869,7 @@ class EntryPointManager:
 
 
 @pytest.fixture
-def entry_points(monkeypatch) -> EntryPointManager:
+def entry_points(monkeypatch) -> t.Generator[EntryPointManager, None, None]:
     """Return an instance of the ``EntryPointManager`` which allows to temporarily add or remove entry points.
 
     This fixture monkey patches the entry point caches returned by

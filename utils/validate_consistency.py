@@ -7,14 +7,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Validate consistency of versions and dependencies.
-
-Validates consistency of
-
- * pyproject.toml
- * environment.yml
-
-"""
+"""Autogenerate verdi CLI documentation from click."""
 
 import os
 
@@ -98,8 +91,9 @@ def cli():
 @cli.command('verdi-autodocs')
 def validate_verdi_documentation():
     """Auto-generate the documentation for `verdi` through `click`."""
-    from aiida.cmdline.commands.cmd_verdi import verdi
     from click import Context
+
+    from aiida.cmdline.commands.cmd_verdi import verdi
 
     width = 90  # The maximum width of the formatted help strings in characters
 

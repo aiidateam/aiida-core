@@ -14,7 +14,7 @@ jobs:
 
   docs-linkcheck:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
 
     steps:
@@ -24,8 +24,8 @@ jobs:
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.9'
-        extras: '[docs,tests,rest,atomic_tools]'
-        from-requirements: 'false'
+        extras: docs,tests,rest,atomic_tools
+        from-lock: 'false'
 
     - name: Build HTML docs
       id: linkcheck

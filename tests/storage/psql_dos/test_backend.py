@@ -9,8 +9,17 @@
 """Testing the general methods of the psql_dos backend."""
 
 import pytest
+
 from aiida.manage import get_manager
-from aiida.orm import User
+from aiida.orm import User, load_node
+
+
+def test_all_tests_marked_with_requires_psql(request):
+    """Test that all tests in this folder are marked with 'requires_psql'"""
+    own_markers = [marker.name for marker in request.node.own_markers]
+
+    assert len(own_markers) == 1
+    assert own_markers[0] == 'requires_psql'
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -99,6 +108,8 @@ def test_maintain(caplog, monkeypatch, kwargs, logged_texts):
 
 def test_get_info(monkeypatch):
     """Test the ``get_info`` method."""
+    from aiida import orm
+
     storage_backend = get_manager().get_profile_storage()
 
     def mock_get_info(self, detailed=False, **kwargs):
@@ -119,12 +130,26 @@ def test_get_info(monkeypatch):
     assert 'extra_value' not in repository_info_out
     assert repository_info_out['value'] == 42
 
-    storage_info_out = storage_backend.get_info(detailed=True)
-    repository_info_out = storage_info_out['repository']
+    node1 = orm.Data().store()
+    node2 = orm.Data().store()
+
+    detailed_storage_info_out = storage_backend.get_info(detailed=True)
+    repository_info_out = detailed_storage_info_out['repository']
     assert 'value' in repository_info_out
     assert 'extra_value' in repository_info_out
     assert repository_info_out['value'] == 42
     assert repository_info_out['extra_value'] == 0
+
+    # Test first_created and last_created timestamps
+    nodes_info = detailed_storage_info_out['entities']['Nodes']
+
+    assert 'first_created' in nodes_info
+    assert 'last_created' in nodes_info
+    # Reload nodes to get their ctime as stored in DB
+    first_created = load_node(node1.pk).ctime
+    last_created = load_node(node2.pk).ctime
+    assert nodes_info['first_created'] == str(first_created)
+    assert nodes_info['last_created'] == str(last_created)
 
 
 def test_unload_profile():

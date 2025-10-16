@@ -1,6 +1,7 @@
 """Tests for :mod:`aiida.manage.manager`."""
 
 import pytest
+
 from aiida import engine, orm
 
 

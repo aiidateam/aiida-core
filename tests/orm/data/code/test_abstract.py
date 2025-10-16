@@ -11,6 +11,7 @@
 import pathlib
 
 import pytest
+
 from aiida.orm.nodes.data.code.abstract import AbstractCode
 
 
@@ -21,9 +22,9 @@ class MockCode(AbstractCode):
         """Return whether the code can run on a given computer."""
         return True
 
-    def get_executable(self) -> pathlib.PurePosixPath:
+    def get_executable(self) -> pathlib.PurePath:
         """Return the executable that the submission script should execute to run the code."""
-        return pathlib.PurePosixPath('/bin/executable')
+        return pathlib.PurePath('/bin/executable')
 
     @property
     def full_label(self) -> str:
@@ -40,7 +41,7 @@ def test_set_label():
     code.label = 'alternate-label'
     assert code.label == 'alternate-label'
 
-    with pytest.raises(ValueError, match=''):
+    with pytest.raises(ValueError, match='The label contains a `@` symbol, which is not allowed.'):
         code.label = 'illegal@label'
 
 
@@ -65,3 +66,10 @@ def test_constructor_defaults():
     assert code.prepend_text == ''
     assert code.use_double_quotes is False
     assert code.is_hidden is False
+
+
+def test_serialization():
+    label = 'some-label'
+    code = MockCode(label=label)
+
+    MockCode.from_serialized(**code.serialize())

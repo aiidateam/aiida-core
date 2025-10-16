@@ -22,13 +22,13 @@ from aiida.common.links import validate_link_label
 from aiida.orm import Data, Node, to_aiida_type
 
 __all__ = (
-    'PortNamespace',
+    'PORT_NAMESPACE_SEPARATOR',
+    'CalcJobOutputPort',
     'InputPort',
     'OutputPort',
-    'CalcJobOutputPort',
+    'PortNamespace',
     'WithNonDb',
     'WithSerialize',
-    'PORT_NAMESPACE_SEPARATOR',
 )
 
 PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES = 1

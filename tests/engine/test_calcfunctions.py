@@ -9,6 +9,7 @@
 """Tests for the calcfunction decorator and CalcFunctionNode."""
 
 import pytest
+
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.engine import Process, calcfunction

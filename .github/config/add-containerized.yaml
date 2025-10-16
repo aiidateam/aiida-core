@@ -1,0 +1,9 @@
+label: add-singularity
+description: Bash run in Docker image through Singularity
+default_calc_job_plugin: core.arithmetic.add
+computer: localhost
+filepath_executable: /bin/sh
+image_name: alpine:3
+engine_command: docker run --user 1001:100 -v $PWD:$PWD -w $PWD -i {image_name}
+prepend_text: ' '
+append_text: ' '

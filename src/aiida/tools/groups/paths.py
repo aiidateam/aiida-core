@@ -8,16 +8,18 @@
 ###########################################################################
 """Provides functionality for managing large numbers of AiiDA Groups, via label delimitation."""
 
+from __future__ import annotations
+
 import re
 import warnings
 from collections import namedtuple
 from functools import total_ordering
-from typing import Any, Iterator, List, Optional, Tuple
+from typing import Any, Iterator
 
 from aiida import orm
 from aiida.common.exceptions import NotExistent
 
-__all__ = ('GroupPath', 'InvalidPath', 'GroupNotFoundError', 'GroupNotUniqueError', 'NoGroupsInPathError')
+__all__ = ('GroupNotFoundError', 'GroupNotUniqueError', 'GroupPath', 'InvalidPath', 'NoGroupsInPathError')
 
 REGEX_ATTR = re.compile('^[a-zA-Z][\\_a-zA-Z0-9]*$')
 
@@ -60,7 +62,9 @@ class GroupPath:
     See tests for usage examples.
     """
 
-    def __init__(self, path: str = '', cls: orm.groups.Group = orm.Group, warn_invalid_child: bool = True) -> None:
+    def __init__(
+        self, path: str = '', cls: type[orm.groups.Group] = orm.Group, warn_invalid_child: bool = True
+    ) -> None:
         """Instantiate the class.
 
         :param path: The initial path of the group.
@@ -77,7 +81,7 @@ class GroupPath:
         self._path_list = self._path_string.split(self._delimiter) if path else []
         self._warn_invalid_child = warn_invalid_child
 
-    def _validate_path(self, path):
+    def _validate_path(self, path: str) -> str:
         """Validate the supplied path."""
         if path == self._delimiter:
             return ''
@@ -109,12 +113,12 @@ class GroupPath:
         return self._path_string
 
     @property
-    def path_list(self) -> List[str]:
+    def path_list(self) -> list[str]:
         """Return a list of the path components."""
         return self._path_list[:]
 
     @property
-    def key(self) -> Optional[str]:
+    def key(self) -> str | None:
         """Return the final component of the the path."""
         if self._path_list:
             return self._path_list[-1]
@@ -126,12 +130,12 @@ class GroupPath:
         return self._delimiter
 
     @property
-    def cls(self) -> orm.groups.Group:
+    def cls(self) -> type[orm.groups.Group]:
         """Return the cls used to query for and instantiate a ``Group`` with."""
         return self._cls
 
     @property
-    def parent(self) -> Optional['GroupPath']:
+    def parent(self) -> GroupPath | None:
         """Return the parent path."""
         if self.path_list:
             return GroupPath(
@@ -155,7 +159,7 @@ class GroupPath:
         """Return a child ``GroupPath``, with a new path formed by appending ``path`` to the current path."""
         return self.__truediv__(path)
 
-    def get_group(self) -> Optional['GroupPath']:
+    def get_group(self) -> GroupPath | None:
         """Return the concrete group associated with this path."""
         try:
             return orm.QueryBuilder().append(self.cls, subclassing=False, filters={'label': self.path}).one()[0]
@@ -163,7 +167,7 @@ class GroupPath:
             return None
 
     @property
-    def group_ids(self) -> List[int]:
+    def group_ids(self) -> list[int]:
         """Return all the UUID associated with this GroupPath.
 
         :returns: and empty list, if no group associated with this label,
@@ -182,11 +186,11 @@ class GroupPath:
         """Return whether there is one or more concrete groups associated with this path."""
         return len(self.group_ids) == 0
 
-    def get_or_create_group(self) -> Tuple[orm.Group, bool]:
+    def get_or_create_group(self) -> tuple[orm.Group, bool]:
         """Return the concrete group associated with this path or, create it, if it does not already exist."""
         return self.cls.collection.get_or_create(label=self.path)
 
-    def delete_group(self):
+    def delete_group(self) -> None:
         """Delete the concrete group associated with this path.
 
         :raises: GroupNotFoundError, GroupNotUniqueError
@@ -248,7 +252,7 @@ class GroupPath:
                     yield sub_child
 
     def walk_nodes(
-        self, filters: Optional[dict] = None, node_class: Optional[orm.Node] = None, query_batch: Optional[int] = None
+        self, filters: dict | None = None, node_class: type[orm.Node] | None = None, query_batch: int | None = None
     ) -> Iterator[WalkNodeResult]:
         """Recursively iterate through all nodes of this path and its children.
 
@@ -273,7 +277,7 @@ class GroupPath:
             yield WalkNodeResult(GroupPath(label, cls=self.cls), node)
 
     @property
-    def browse(self):
+    def browse(self) -> GroupAttr:
         """Return a ``GroupAttr`` instance, for attribute access to children."""
         return GroupAttr(self)
 
@@ -303,7 +307,7 @@ class GroupAttr:
         """Return the ``GroupPath``."""
         return self._group_path
 
-    def __dir__(self):
+    def __dir__(self) -> list[Any]:
         """Return a list of available attributes."""
         return [c.path_list[-1] for c in self._group_path.children if REGEX_ATTR.match(c.path_list[-1])]
 

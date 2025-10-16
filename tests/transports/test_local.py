@@ -11,6 +11,7 @@
 import getpass
 
 import pytest
+
 from aiida.transports.plugins.local import LocalTransport
 from aiida.transports.transport import TransportInternalError
 
@@ -31,7 +32,7 @@ def test_closed_connection():
     """Test running a command on a closed connection."""
     with pytest.raises(TransportInternalError):
         transport = LocalTransport()
-        transport.listdir()
+        transport.listdir('/home')
 
 
 def test_gotocomputer():

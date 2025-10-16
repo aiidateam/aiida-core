@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Tuple
 
 from aiida.common.exceptions import ConfigurationError
 
-__all__ = ('get_option', 'get_option_names', 'parse_option', 'Option')
+__all__ = ('Option', 'get_option', 'get_option_names', 'parse_option')
 
 
 class Option:

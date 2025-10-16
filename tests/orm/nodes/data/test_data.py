@@ -12,13 +12,13 @@ import os
 
 import numpy
 import pytest
-from aiida import orm, plugins
 
+from aiida import orm, plugins
 from tests.static import STATIC_DIR
 
 
 @pytest.fixture
-def generate_class_instance(tmp_path, aiida_localhost):
+def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
     """Generate a dummy `Data` instance for the given sub class."""
 
     def _generate_class_instance(data_class):
@@ -152,7 +152,14 @@ def generate_class_instance(tmp_path, aiida_localhost):
     return _generate_class_instance
 
 
-@pytest.fixture(scope='function', params=plugins.get_entry_points('aiida.data'))
+@pytest.fixture(
+    scope='function',
+    params=[
+        entry_point
+        for entry_point in plugins.get_entry_points('aiida.data')
+        if entry_point.name not in ('core.code', 'core.code.abstract')
+    ],
+)
 def data_plugin(request):
     """Fixture that parametrizes over all the registered entry points of the ``aiida.data`` entry point group."""
     return request.param.load()

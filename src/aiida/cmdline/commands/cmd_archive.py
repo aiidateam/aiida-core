@@ -8,11 +8,13 @@
 ###########################################################################
 """`verdi archive` command."""
 
+from __future__ import annotations
+
 import logging
 import traceback
 from enum import Enum
 from pathlib import Path
-from typing import List, Tuple
+from typing import NoReturn
 
 import click
 from click_spinner import spinner
@@ -24,6 +26,7 @@ from aiida.cmdline.utils import decorators, echo
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.utils import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE
 
 EXTRAS_MODE_EXISTING = ['keep_existing', 'update_existing', 'mirror', 'none']
 EXTRAS_MODE_NEW = ['import', 'none']
@@ -128,7 +131,11 @@ def inspect(ctx, archive, version, meta_data, database):
 )
 @click.option('--compress', default=6, show_default=True, type=int, help='Level of compression to use (0-9).')
 @click.option(
-    '-b', '--batch-size', default=1000, type=int, help='Stream database rows in batches, to reduce memory usage.'
+    '-b',
+    '--batch-size',
+    default=DEFAULT_BATCH_SIZE,
+    type=int,
+    help='Stream database rows in batches, to reduce memory usage.',
 )
 @click.option(
     '--test-run',
@@ -208,10 +215,11 @@ def create(
         'overwrite': force,
         'compression': compress,
         'batch_size': batch_size,
+        'filter_size': DEFAULT_FILTER_SIZE,  # Implementation detail, not exposed to user via CLI
         'test_run': dry_run,
     }
 
-    if AIIDA_LOGGER.level <= logging.REPORT:
+    if AIIDA_LOGGER.level <= logging.REPORT:  # type: ignore[attr-defined]
         set_progress_bar_tqdm(leave=AIIDA_LOGGER.level <= logging.INFO)
     else:
         set_progress_reporter(None)
@@ -255,7 +263,7 @@ def migrate(input_file, output_file, force, in_place, version):
             'no output file specified. Please add --in-place flag if you would like to migrate in place.'
         )
 
-    if AIIDA_LOGGER.level <= logging.REPORT:
+    if AIIDA_LOGGER.level <= logging.REPORT:  # type: ignore[attr-defined]
         set_progress_bar_tqdm(leave=AIIDA_LOGGER.level <= logging.INFO)
     else:
         set_progress_reporter(None)
@@ -321,7 +329,6 @@ class ExtrasImportCode(Enum):
     'mirror: import all extras and remove any existing extras that are not present in the archive. ',
 )
 @click.option(
-    '-n',
     '--extras-mode-new',
     type=click.Choice(EXTRAS_MODE_NEW),
     default='import',
@@ -384,7 +391,7 @@ def import_archive(
         echo.echo_deprecated('the `--test-run` option is deprecated. Use `-n/--dry-run` option instead')
         dry_run = test_run
 
-    if AIIDA_LOGGER.level <= logging.REPORT:
+    if AIIDA_LOGGER.level <= logging.REPORT:  # type: ignore[attr-defined]
         set_progress_bar_tqdm(leave=AIIDA_LOGGER.level <= logging.INFO)
     else:
         set_progress_reporter(None)
@@ -411,25 +418,20 @@ def import_archive(
         _import_archive_and_migrate(ctx, archive, web_based, import_kwargs, migration)
 
 
-def _echo_exception(msg: str, exception, warn_only: bool = False):
-    """Correctly report and exception.
+def _echo_exception(msg: str, exception: Exception) -> NoReturn:
+    """Report an exception and exit.
 
     :param msg: The message prefix
     :param exception: the exception raised
-    :param warn_only: If True only print a warning, otherwise calls sys.exit with a non-zero exit status
-
     """
     from aiida.tools.archive.imports import IMPORT_LOGGER
 
     message = f'{msg}: {exception.__class__.__name__}: {exception!s}'
-    if warn_only:
-        echo.echo_warning(message)
-    else:
-        IMPORT_LOGGER.info('%s', traceback.format_exc())
-        echo.echo_critical(message)
+    IMPORT_LOGGER.info('%s', traceback.format_exc())
+    echo.echo_critical(message)
 
 
-def _gather_imports(archives, webpages) -> List[Tuple[str, bool]]:
+def _gather_imports(archives: list[str], webpages: list[str] | None) -> list[tuple[str, bool]]:
     """Gather archives to import and sort into local files and URLs.
 
     :returns: list of (archive path, whether it is web based)
@@ -465,7 +467,7 @@ def _gather_imports(archives, webpages) -> List[Tuple[str, bool]]:
 
 def _import_archive_and_migrate(
     ctx: click.Context, archive: str, web_based: bool, import_kwargs: dict, try_migration: bool
-):
+) -> None:
     """Perform the archive import.
 
     :param archive: the path or URL to the archive

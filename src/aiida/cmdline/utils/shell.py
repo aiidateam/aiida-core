@@ -8,6 +8,10 @@
 ###########################################################################
 """Definition of modules that are to be automatically loaded for `verdi shell`."""
 
+from __future__ import annotations
+
+import typing as t
+
 DEFAULT_MODULES_LIST = [
     ('aiida.common.links', 'LinkType', 'LinkType'),
     ('aiida.orm', 'Node', 'Node'),
@@ -41,20 +45,18 @@ DEFAULT_MODULES_LIST = [
 ]
 
 
-def ipython():
-    """Start any version of IPython"""
-    for ipy_version in (_ipython, _ipython_pre_100, _ipython_pre_011):
-        try:
-            ipy_version()
-        except ImportError:
-            pass
-        else:
-            return
+def ipython() -> None:
+    """Start IPython >= 1.0"""
+    from IPython import start_ipython
 
-    raise ImportError('No IPython available')
+    user_ns = get_start_namespace()
+    if user_ns:
+        start_ipython(argv=[], user_ns=user_ns)
+    else:
+        start_ipython(argv=[])
 
 
-def bpython():
+def bpython() -> None:
     """Start a bpython shell."""
     import bpython as bpy_shell
 
@@ -68,7 +70,7 @@ def bpython():
 AVAILABLE_SHELLS = {'ipython': ipython, 'bpython': bpython}
 
 
-def run_shell(interface=None):
+def run_shell(interface: str | None = None) -> None:
     """Start the chosen external shell."""
     available_shells = [AVAILABLE_SHELLS[interface]] if interface else AVAILABLE_SHELLS.values()
 
@@ -85,7 +87,7 @@ def run_shell(interface=None):
     raise ImportError
 
 
-def get_start_namespace():
+def get_start_namespace() -> dict[str, t.Any]:
     """Load all default and custom modules"""
     from aiida.manage import get_config_option
 
@@ -108,38 +110,3 @@ def get_start_namespace():
             pass
 
     return user_ns
-
-
-def _ipython_pre_011():
-    """Start IPython pre-0.11"""
-    from IPython.Shell import IPShell
-
-    user_ns = get_start_namespace()
-    if user_ns:
-        ipy_shell = IPShell(argv=[], user_ns=user_ns)
-    else:
-        ipy_shell = IPShell(argv=[])
-    ipy_shell.mainloop()
-
-
-def _ipython_pre_100():
-    """Start IPython pre-1.0.0"""
-    from IPython.frontend.terminal.ipapp import TerminalIPythonApp
-
-    app = TerminalIPythonApp.instance()
-    app.initialize(argv=[])
-    user_ns = get_start_namespace()
-    if user_ns:
-        app.shell.user_ns.update(user_ns)
-    app.start()
-
-
-def _ipython():
-    """Start IPython >= 1.0"""
-    from IPython import start_ipython
-
-    user_ns = get_start_namespace()
-    if user_ns:
-        start_ipython(argv=[], user_ns=user_ns)
-    else:
-        start_ipython(argv=[])

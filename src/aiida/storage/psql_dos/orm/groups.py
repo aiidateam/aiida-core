@@ -32,7 +32,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
     NODE_CLASS = SqlaNode
     GROUP_NODE_CLASS = DbGroupNode
 
-    def __init__(self, backend, label, user, description='', type_string=''):
+    def __init__(self, backend, label, user, description='', type_string='', time=None):
         """Construct a new SQLA group
 
         :param backend: the backend to use
@@ -44,7 +44,9 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
         type_check(user, self.USER_CLASS)
         super().__init__(backend)
 
-        dbgroup = self.MODEL_CLASS(label=label, description=description, user=user.bare_model, type_string=type_string)
+        dbgroup = self.MODEL_CLASS(
+            label=label, description=description, user=user.bare_model, type_string=type_string, time=time
+        )
         self._model = utils.ModelWrapper(dbgroup, backend)
 
     @property
@@ -100,6 +102,10 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
     @property
     def uuid(self):
         return str(self.model.uuid)
+
+    @property
+    def time(self):
+        return self.model.time
 
     @property
     def is_stored(self):
@@ -167,17 +173,10 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
         :note: all the nodes *and* the group itself have to be stored.
 
         :param nodes: a list of `BackendNode` instance to be added to this group
-
-        :param kwargs:
-            skip_orm: When the flag is on, the SQLA ORM is skipped and SQLA is used
-            to create a direct SQL INSERT statement to the group-node relationship
-            table (to improve speed).
         """
         from sqlalchemy.dialects.postgresql import insert
-        from sqlalchemy.exc import IntegrityError
 
         super().add_nodes(nodes)
-        skip_orm = kwargs.get('skip_orm', False)
 
         def check_node(given_node):
             """Check if given node is of correct type and stored"""
@@ -188,31 +187,16 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
 
         with utils.disable_expire_on_commit(self.backend.get_session()) as session:
-            if not skip_orm:
-                # Get dbnodes here ONCE, otherwise each call to dbnodes will re-read the current value in the database
-                dbnodes = self.model.dbnodes
+            ins_dict = []
+            for node in nodes:
+                check_node(node)
+                ins_dict.append({'dbnode_id': node.id, 'dbgroup_id': self.id})
+            if len(ins_dict) == 0:
+                return
 
-                for node in nodes:
-                    check_node(node)
-
-                    # Use pattern as suggested here:
-                    # http://docs.sqlalchemy.org/en/latest/orm/session_transaction.html#using-savepoint
-                    try:
-                        with session.begin_nested():
-                            dbnodes.append(node.bare_model)
-                            session.flush()
-                    except IntegrityError:
-                        # Duplicate entry, skip
-                        pass
-            else:
-                ins_dict = []
-                for node in nodes:
-                    check_node(node)
-                    ins_dict.append({'dbnode_id': node.id, 'dbgroup_id': self.id})
-
-                table = self.GROUP_NODE_CLASS.__table__
-                ins = insert(table).values(ins_dict)
-                session.execute(ins.on_conflict_do_nothing(index_elements=['dbnode_id', 'dbgroup_id']))
+            table = self.GROUP_NODE_CLASS.__table__
+            ins = insert(table)
+            session.execute(ins.on_conflict_do_nothing(index_elements=['dbnode_id', 'dbgroup_id']), ins_dict)
 
             # Commit everything as up till now we've just flushed
             if not session.in_nested_transaction():
@@ -224,17 +208,10 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
         :note: all the nodes *and* the group itself have to be stored.
 
         :param nodes: a list of `BackendNode` instance to be added to this group
-        :param kwargs:
-            skip_orm: When the flag is set to `True`, the SQLA ORM is skipped and SQLA is used to create a direct SQL
-            DELETE statement to the group-node relationship table in order to improve speed.
         """
         from sqlalchemy import and_
 
         super().remove_nodes(nodes)
-
-        # Get dbnodes here ONCE, otherwise each call to dbnodes will re-read the current value in the database
-        dbnodes = self.model.dbnodes
-        skip_orm = kwargs.get('skip_orm', False)
 
         def check_node(node):
             if not isinstance(node, self.NODE_CLASS):
@@ -243,26 +220,13 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
             if node.id is None:
                 raise ValueError('At least one of the provided nodes is unstored, stopping...')
 
-        list_nodes = []
-
         with utils.disable_expire_on_commit(self.backend.get_session()) as session:
-            if not skip_orm:
-                for node in nodes:
-                    check_node(node)
-
-                    # Check first, if SqlA issues a DELETE statement for an unexisting key it will result in an error
-                    if node.bare_model in dbnodes:
-                        list_nodes.append(node.bare_model)
-
-                for node in list_nodes:
-                    dbnodes.remove(node)
-            else:
-                table = self.GROUP_NODE_CLASS.__table__
-                for node in nodes:
-                    check_node(node)
-                    clause = and_(table.c.dbnode_id == node.id, table.c.dbgroup_id == self.id)
-                    statement = table.delete().where(clause)
-                    session.execute(statement)
+            table = self.GROUP_NODE_CLASS.__table__
+            for node in nodes:
+                check_node(node)
+                clause = and_(table.c.dbnode_id == node.id, table.c.dbgroup_id == self.id)
+                statement = table.delete().where(clause)
+                session.execute(statement)
 
             if not session.in_nested_transaction():
                 session.commit()

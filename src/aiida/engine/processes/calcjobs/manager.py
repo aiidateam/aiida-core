@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from aiida.engine.transports import TransportQueue
     from aiida.schedulers.datastructures import JobInfo
 
-__all__ = ('JobsList', 'JobManager')
+__all__ = ('JobManager', 'JobsList')
 
 
 class JobsList:

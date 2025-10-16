@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import pathlib
 import typing as t
 
@@ -9,6 +10,7 @@ import pytest
 
 if t.TYPE_CHECKING:
     from aiida.engine import Process, ProcessBuilder
+    from aiida.engine.daemon.client import DaemonClient
     from aiida.orm import ProcessNode
 
 
@@ -47,7 +49,7 @@ def daemon_client(aiida_profile):
 
 
 @pytest.fixture
-def started_daemon_client(daemon_client):
+def started_daemon_client(daemon_client: 'DaemonClient'):
     """Ensure that the daemon is running for the test profile and return the associated client.
 
     Usage::
@@ -60,11 +62,14 @@ def started_daemon_client(daemon_client):
         daemon_client.start_daemon()
         assert daemon_client.is_daemon_running
 
+    logger = logging.getLogger('tests.daemon:started_daemon_client')
+    logger.debug(f'Daemon log file is located at: {daemon_client.daemon_log_file}')
+
     yield daemon_client
 
 
 @pytest.fixture
-def stopped_daemon_client(daemon_client):
+def stopped_daemon_client(daemon_client: 'DaemonClient'):
     """Ensure that the daemon is not running for the test profile and return the associated client.
 
     Usage::
@@ -116,7 +121,7 @@ def submit_and_await(started_daemon_client):
     from aiida.engine import ProcessState
 
     def factory(
-        submittable: 'Process' | 'ProcessBuilder' | 'ProcessNode',
+        submittable: type[Process] | ProcessBuilder | ProcessNode,
         state: ProcessState = ProcessState.FINISHED,
         timeout: int = 20,
         **kwargs,
@@ -150,6 +155,7 @@ def submit_and_await(started_daemon_client):
                     f'Daemon <{started_daemon_client.profile.name}|{daemon_status}> log file content: \n'
                     f'{daemon_log_file}'
                 )
+            time.sleep(0.1)
 
         return node
 

@@ -53,13 +53,13 @@ class NodeCaching:
                 self._node.logger.exception('Node hashing failed')
             return None
 
-    def _get_objects_to_hash(self) -> list[t.Any]:
+    def _get_objects_to_hash(self) -> dict[str, t.Any]:
         warn_deprecation(
             '`NodeCaching._get_objects_to_hash` is deprecated, use `NodeCaching.get_objects_to_hash` instead', version=3
         )
         return self.get_objects_to_hash()
 
-    def get_objects_to_hash(self) -> list[t.Any]:
+    def get_objects_to_hash(self) -> dict[str, t.Any]:
         """Return a list of objects which should be included in the hash."""
 
         return {
@@ -158,11 +158,7 @@ class NodeCaching:
         builder = QueryBuilder(backend=self._node.backend)
         builder.append(self._node.__class__, filters={f'extras.{self._HASH_EXTRA_KEY}': node_hash}, subclassing=False)
 
-        return (
-            node
-            for (node,) in builder.iterall()
-            if node.base.caching.is_valid_cache  # type: ignore[misc,union-attr]
-        )
+        return (node for (node,) in builder.iterall() if node.base.caching.is_valid_cache)
 
     @property
     def is_valid_cache(self) -> bool:

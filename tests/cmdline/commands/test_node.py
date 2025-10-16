@@ -13,13 +13,19 @@ import errno
 import gzip
 import io
 import os
+import uuid
 import warnings
+from pathlib import Path
 
 import pytest
+
 from aiida import orm
 from aiida.cmdline.commands import cmd_node
 from aiida.cmdline.utils.echo import ExitCode
 from aiida.common import timezone
+from aiida.common.exceptions import NotExistent
+from aiida.common.links import LinkType
+from aiida.orm import CalcJobNode, RemoteData, WorkflowNode
 
 
 def get_result_lines(result):
@@ -289,7 +295,6 @@ class TestVerdiGraph:
         """Test that an invalid root_node pk (non-numeric, negative, or decimal),
         or non-existent pk will produce an error
         """
-        from aiida.common.exceptions import NotExistent
         from aiida.orm import load_node
 
         # Forbidden pk
@@ -556,39 +561,270 @@ class TestVerdiRehash:
         run_cli_command(cmd_node.rehash, options, raises=True)
 
 
-@pytest.mark.parametrize(
-    'options',
-    (
-        ['--verbosity', 'info'],
-        ['--verbosity', 'info', '--force'],
-        ['--create-forward'],
-        ['--call-calc-forward'],
-        ['--call-work-forward'],
-        ['--force'],
-    ),
-)
-def test_node_delete_basics(run_cli_command, options):
-    """Testing the correct translation for the `--force` and `--verbosity` options.
-    This just checks that the calls do not except and that in all cases with the
-    force flag there is no messages.
-    """
-    from aiida.common.exceptions import NotExistent
+class TestVerdiDelete:
+    """Tests for the ``verdi node delete`` command."""
 
-    node = orm.Data().store()
-    pk = node.pk
+    @pytest.fixture(autouse=True)
+    def init__(self):
+        self.workflow_nodes = []
+        self.calcjob_nodes = []
+        self.remote_nodes = []
+        self.remote_folders = []
+        # We keep track of the PKs to verify deletion
+        self.workflow_pks = []
+        self.calcjob_pks = []
+        self.remote_pks = []
 
-    run_cli_command(cmd_node.node_delete, options + [str(pk), '--dry-run'], use_subprocess=True)
+    @pytest.fixture()
+    def setup_node_hierarchy(self, aiida_localhost, tmp_path):
+        """Set up a WorkflowNode with multiple CalcJobNodes and RemoteData nodes.
 
-    # To delete the created node
-    run_cli_command(cmd_node.node_delete, [str(pk), '--force'], use_subprocess=True)
+        :param aiida_localhost: the localhost computer
+        :param tmp_path: the temporary directory
+        :param n_workflows: the number of WorkflowNodes to create
+        :param n_calcjobs: the number of CalcJobNodes per WorkflowNode to create
+        :param n_remotes: the number of RemoteData nodes per CalcJobNode to create
 
-    with pytest.raises(NotExistent):
-        orm.load_node(pk)
+        the WorkflowNode will have the following structure:
 
+        WorkflowNode
+        ├── CalcJobNode
+        │   ├── RemoteData
+        │   └── RemoteData
+        └── CalcJobNode
+            ├── RemoteData
+            └── RemoteData
 
-def test_node_delete_missing_pk(run_cli_command):
-    """Check that no exception is raised when a non-existent pk is given (just warns)."""
-    run_cli_command(cmd_node.node_delete, ['999'])
+        :return: a tuple of the WorkflowNode, the list of CalcJobNodes, and the list of RemoteData nodes."""
+
+        def _setup(n_workflows=1, n_calcjobs=1, n_remotes=1):
+            for _ in range(n_workflows):
+                workflow_node = WorkflowNode()
+                workflow_node.store()
+                self.workflow_nodes.append(workflow_node)
+                self.workflow_pks.append(workflow_node.pk)
+
+                for i in range(n_calcjobs):
+                    calcjob_node = CalcJobNode(computer=aiida_localhost)
+                    calcjob_node.base.links.add_incoming(workflow_node, link_type=LinkType.CALL_CALC, link_label='call')
+
+                    workdir = tmp_path / f'calcjob_{uuid.uuid4()}'
+                    workdir.mkdir()
+                    Path(workdir / 'fileA.txt').write_text('test stringA')
+                    self.remote_folders.append(workdir)
+
+                    calcjob_node.set_remote_workdir(str(workdir))
+                    calcjob_node.set_option('output_filename', 'fileA.txt')
+                    calcjob_node.store()
+                    self.calcjob_nodes.append(calcjob_node)
+                    self.calcjob_pks.append(calcjob_node.pk)
+
+                    for _ in range(n_remotes):
+                        remote_node = RemoteData(remote_path=str(workdir), computer=aiida_localhost)
+                        remote_node.base.links.add_incoming(calcjob_node, LinkType.CREATE, link_label='remote_folder')
+                        remote_node.store()
+                        self.remote_nodes.append(remote_node)
+                        self.remote_pks.append(remote_node.pk)
+
+            # this is equal to (n_workflows + n_workflows * n_calcjobs + n_workflows * n_calcjobs * n_remotes)
+            self.total_nodes = len(self.workflow_nodes) + len(self.calcjob_nodes) + len(self.remote_nodes)
+
+        return _setup
+
+    def verify_deletion(self, nodes_deleted=True, folders_deleted=True):
+        """Verify that the nodes and remote folders are deleted or not deleted."""
+
+        if nodes_deleted:
+            for workflow_pk in self.workflow_pks:
+                with pytest.raises(NotExistent):
+                    WorkflowNode.collection.get(pk=workflow_pk)
+
+            for calcjob_pk in self.calcjob_pks:
+                with pytest.raises(NotExistent):
+                    CalcJobNode.collection.get(pk=calcjob_pk)
+
+            for remote_pk in self.remote_pks:
+                with pytest.raises(NotExistent):
+                    RemoteData.collection.get(pk=remote_pk)
+        else:
+            for workflow_pk in self.workflow_pks:
+                WorkflowNode.collection.get(pk=workflow_pk)
+            for calcjob_pk in self.calcjob_pks:
+                CalcJobNode.collection.get(pk=calcjob_pk)
+            for remote_pk in self.remote_pks:
+                RemoteData.collection.get(pk=remote_pk)
+
+        for remote_folder in self.remote_folders:
+            if folders_deleted:
+                assert not remote_folder.exists()
+            else:
+                assert remote_folder.exists()
+
+    def test_setup_node_hierarchy(self, setup_node_hierarchy):
+        """Test the `setup_node_hierarchy` and `verify_deletion` fixtures."""
+        # Guard the guardians
+        setup_node_hierarchy()
+        assert len(self.workflow_nodes) == 1
+        assert len(self.calcjob_nodes) == 1
+        assert len(self.remote_nodes) == 1
+        self.verify_deletion(nodes_deleted=False, folders_deleted=False)
+
+    def test_node_delete_dry_run(self, run_cli_command, setup_node_hierarchy):
+        """Test the `--dry-run` option.
+        Nothing should be deleted and the proper message should be printed without prompting y/n.
+
+        Note: To speed up the test, I do all parameters in one tests instead of using `@pytest.mark.parametrize`.
+        This way I can reuse the setup_node_hierarchy fixture. This works because nothing should be deleted!
+        """
+        setup_node_hierarchy(1, 1, 1)
+        all_workflow_pks = [str(workflow_node.pk) for workflow_node in self.workflow_nodes]
+
+        # 1)
+        options = ['--dry-run']
+        result = run_cli_command(cmd_node.node_delete, options + all_workflow_pks)
+        assert f'Report: {self.total_nodes} Node(s) marked for deletion' in str(result.stdout_bytes)
+        assert 'Report: This was a dry run, exiting without deleting anything' in str(result.stdout_bytes)
+        self.verify_deletion(False, False)
+
+        # 2)
+        options = ['--dry-run', '--clean-workdir']
+        result = run_cli_command(cmd_node.node_delete, options + all_workflow_pks)
+        assert (
+            'Report: Remote folders of these node are marked for '
+            f"deletion: {' '.join(str(remote_node.pk) for remote_node in self.remote_nodes)}"
+            in str(result.stdout_bytes)
+        )
+        assert f'Report: {self.total_nodes} Node(s) marked for deletion' in str(result.stdout_bytes)
+        assert 'Report: This was a dry run, exiting without deleting anything' in str(result.stdout_bytes)
+        self.verify_deletion(False, False)
+
+        # 3) This is important! Should not delete!
+        options = ['--dry-run', '--force']
+        result = run_cli_command(cmd_node.node_delete, options + all_workflow_pks)
+        assert f'Report: {self.total_nodes} Node(s) marked for deletion' in str(result.stdout_bytes)
+        assert 'Report: This was a dry run, exiting without deleting anything' in str(result.stdout_bytes)
+        self.verify_deletion(False, False)
+
+        # 4) This is important! Should not delete!
+        options = ['--dry-run', '--force', '--clean-workdir']
+        result = run_cli_command(cmd_node.node_delete, options + all_workflow_pks)
+        assert (
+            'Report: Remote folders of these node are marked for '
+            f"deletion: {' '.join(str(remote_node.pk) for remote_node in self.remote_nodes)}"
+            in str(result.stdout_bytes)
+        )
+        assert f'Report: {self.total_nodes} Node(s) marked for deletion' in str(result.stdout_bytes)
+        assert 'Report: This was a dry run, exiting without deleting anything' in str(result.stdout_bytes)
+        self.verify_deletion(False, False)
+
+    @pytest.mark.parametrize(
+        'options, user_input, nodes_deleted, folders_deleted',
+        [
+            ([], 'n', False, False),
+            ([], 'y', True, False),
+            (['--force'], '', True, False),
+            (['--force', '--clean-workdir'], '', True, True),
+            (['--clean-workdir'], 'y\ny', True, True),
+            (['--clean-workdir'], 'y\nn', False, True),
+        ],
+    )
+    def test_node_delete_prompt_flow(
+        self, run_cli_command, setup_node_hierarchy, options, user_input, nodes_deleted, folders_deleted
+    ):
+        """Test the prompt flow with various options."""
+        setup_node_hierarchy(1, 1, 1)
+        all_workflow_pks = [str(workflow_node.pk) for workflow_node in self.workflow_nodes]
+
+        result = run_cli_command(
+            cmd_node.node_delete,
+            options + all_workflow_pks,
+            user_input=user_input,
+            raises=True if 'n' in user_input.split('\n') else False,
+        )
+        self.verify_deletion(nodes_deleted=nodes_deleted, folders_deleted=folders_deleted)
+
+        if options == [] and user_input == 'y':
+            assert (
+                f'YOU ARE ABOUT TO DELETE {self.total_nodes} NODES! THIS CANNOT BE UNDONE!\\nShall I continue? [y/N]'
+                in str(result.stdout_bytes)
+            )
+        elif options == [] and user_input == 'n':
+            assert 'Aborted!' in str(result.stderr_bytes)
+        elif options == ['--force']:
+            assert 'YOU ARE ABOUT TO DELETE' not in str(result.stdout_bytes)
+            assert '[y/N]' not in str(result.stdout_bytes)
+        elif options == ['--force', '--clean-workdir']:
+            assert 'YOU ARE ABOUT TO DELETE' not in str(result.stdout_bytes)
+            assert '[y/N]' not in str(result.stdout_bytes)
+        elif options == ['--clean-workdir'] and user_input == 'y\ny':
+            assert (
+                f'YOU ARE ABOUT TO CLEAN {len(self.remote_nodes)} REMOTE DIRECTORIES! THIS CANNOT BE UNDONE!'
+                '\\nShall I continue? [y/N]' in str(result.stdout_bytes)
+            )
+            assert (
+                f'YOU ARE ABOUT TO DELETE {self.total_nodes} NODES! THIS CANNOT BE UNDONE!'
+                '\\nShall I continue? [y/N]' in str(result.stdout_bytes)
+            )
+
+        elif options == ['--clean-workdir'] and user_input == 'y\nn':
+            # This is a special case, the user's imagination may invent a "hacky" solution with --clean-workdir
+            # To only delete the folders, but not the nodes.
+            assert 'Aborted!' in str(result.stderr_bytes)
+            # And later if decided to delete the nodes, as well, while the nodes are already deleted,
+            # no error should be raised, and it should proceed with printing a message only
+            result = run_cli_command(cmd_node.node_delete, options + all_workflow_pks, user_input='y\ny')
+            self.verify_deletion(nodes_deleted=True, folders_deleted=True)
+            assert '--clean-workdir ignored. CalcJobNode work directories are already cleaned.' in str(
+                result.stdout_bytes
+            )
+            assert (
+                f'YOU ARE ABOUT TO DELETE {self.total_nodes} NODES! THIS CANNOT BE UNDONE!\\nShall I continue? [y/N]'
+                in str(result.stdout_bytes)
+            )
+
+    @pytest.mark.parametrize(
+        'options',
+        (
+            ['--verbosity', 'info'],
+            ['--verbosity', 'info', '--force'],
+            ['--create-forward'],
+            ['--call-calc-forward'],
+            ['--call-work-forward'],
+            ['--force'],
+        ),
+    )
+    def test_node_delete_basics(self, run_cli_command, options):
+        # Legacy test, this can somehow get merged with the more extensive tests above.
+        """This just checks that the calls do not except and that in all cases with the
+        force flag there is no messages.
+        """
+
+        node = orm.Data().store()
+        pk = node.pk
+
+        run_cli_command(cmd_node.node_delete, options + [str(pk), '--dry-run'], use_subprocess=True)
+
+        # To delete the created node
+        run_cli_command(cmd_node.node_delete, [str(pk), '--force'], use_subprocess=True)
+
+        with pytest.raises(NotExistent):
+            orm.load_node(pk)
+
+    def test_node_delete_missing_pk(self, run_cli_command):
+        """Check that no exception is raised when a non-existent pk is given (just warns)."""
+        run_cli_command(cmd_node.node_delete, ['999'])
+
+    def test_node_delete_no_calcjob_to_cleandir(self, run_cli_command):
+        """Check that no exception is raised when a node is deleted with no calcjob to clean."""
+        node = orm.Data().store()
+        pk = node.pk
+        result = run_cli_command(cmd_node.node_delete, ['--clean-workdir', '--force', str(pk)])
+        assert '--clean-workdir ignored. No CalcJobNode associated with the given node, found.' in str(
+            result.stdout_bytes
+        )
+
+        with pytest.raises(NotExistent):
+            orm.load_node(pk)
 
 
 @pytest.fixture(scope='class')

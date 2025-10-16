@@ -15,6 +15,7 @@ import unittest
 import uuid
 
 import pytest
+
 from aiida.engine import CalcJob
 from aiida.schedulers import JobState, SchedulerError
 from aiida.schedulers.plugins.slurm import SlurmJobResource, SlurmScheduler
@@ -361,6 +362,58 @@ class TestSubmitScript:
             job_tmpl.job_resource = scheduler.create_job_resource(
                 num_machines=1, num_mpiprocs_per_machine=1, num_cores_per_machine=24, num_cores_per_mpiproc=23
             )
+
+    def test_submit_script_with_mem(self):
+        """Test to verify if script can be created with memory specification.
+
+        It should pass this check:
+            if physical_memory_kb < 0:  # 0 is allowed and means no limit (https://slurm.schedmd.com/sbatch.html)
+                raise ValueError
+        and correctly set the memory value in the script with the --mem option.
+        """
+        from aiida.common.datastructures import CodeRunMode
+        from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
+
+        scheduler = SlurmScheduler()
+        job_tmpl = JobTemplate()
+
+        job_tmpl.uuid = str(uuid.uuid4())
+        job_tmpl.max_wallclock_seconds = 24 * 3600
+        tmpl_code_info = JobTemplateCodeInfo()
+        tmpl_code_info.cmdline_params = ['mpirun', '-np', '23', 'pw.x', '-npool', '1']
+        tmpl_code_info.stdin_name = 'aiida.in'
+        job_tmpl.codes_info = [tmpl_code_info]
+        job_tmpl.codes_run_mode = CodeRunMode.SERIAL
+        job_tmpl.job_resource = scheduler.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
+        # Check for a regular (positive) value
+        job_tmpl.max_memory_kb = 316 * 1024
+        submit_script_text = scheduler.get_submit_script(job_tmpl)
+        assert '#SBATCH --mem=316' in submit_script_text
+        # Check for the special zero value
+        job_tmpl.max_memory_kb = 0
+        submit_script_text = scheduler.get_submit_script(job_tmpl)
+        assert '#SBATCH --mem=0' in submit_script_text
+
+    def test_submit_script_with_negative_mem_value(self):
+        """Test to verify if script can be created with an invalid memory value.
+
+        It should fail in check:
+            if physical_memory_kb < 0:  # 0 is allowed and means no limit (https://slurm.schedmd.com/sbatch.html)
+                raise ValueError
+        """
+        import re
+
+        from aiida.schedulers.datastructures import JobTemplate
+
+        scheduler = SlurmScheduler()
+        job_tmpl = JobTemplate()
+
+        with pytest.raises(
+            ValueError, match=re.escape('max_memory_kb must be a non-negative integer (in kB)! It is instead `-9`')
+        ):
+            job_tmpl.job_resource = scheduler.create_job_resource(num_machines=1, num_mpiprocs_per_machine=1)
+            job_tmpl.max_memory_kb = -9
+            scheduler.get_submit_script(job_tmpl)
 
     def test_submit_script_rerunnable(self):
         """Test the creation of a submission script with the `rerunnable` option."""

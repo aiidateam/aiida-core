@@ -1,6 +1,11 @@
 """Tests for :mod:`aiida.orm.nodes.process.process`."""
 
+import tempfile
+from pathlib import Path
+
 import pytest
+
+from aiida import orm
 from aiida.engine import ExitCode, ProcessState, launch
 from aiida.orm import Int
 from aiida.orm.nodes.caching import NodeCaching
@@ -86,3 +91,96 @@ def test_get_builder_restart(aiida_code_installed):
     }
     _, node = launch.run_get_node(ArithmeticAddCalculation, inputs)
     assert node.get_builder_restart()._inputs(prune=True) == inputs
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+class TestProcessNodeDump:
+    """Test the dump method of ProcessNode."""
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_dump_dry_run(self, tmp_path, generate_calculation_node_add):
+        """Test dry run mode doesn't create files."""
+        node = generate_calculation_node_add()
+
+        output_path = tmp_path / 'process_dump'
+        result_path = node.dump(output_path=output_path, dry_run=True)
+
+        # In dry run, the path is returned but no files are created
+        assert result_path == output_path
+        assert not result_path.exists()
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_dump_basic(self, tmp_path, generate_calculation_node_add):
+        """Test basic dumping of a process node."""
+        # Create and run a simple calculation
+        node = generate_calculation_node_add()
+        output_path = tmp_path / 'process_dump'
+        result_path = node.dump(output_path=output_path)
+
+        # Check that dump was created
+        assert result_path.exists()
+        assert result_path.is_dir()
+
+        # Check for expected files
+        assert (result_path / 'aiida_node_metadata.yaml').exists()
+        assert (result_path / '.aiida_dump_safeguard').exists()
+        assert (result_path / 'README.md').exists()
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_dump_include_outputs(self, tmp_path, generate_calculation_node_io):
+        """Test dumping with outputs included."""
+        node = generate_calculation_node_io(attach_outputs=True)
+        node.seal()
+
+        output_path = tmp_path / 'process_dump'
+        result_path = node.dump(output_path=output_path)
+
+        assert result_path.exists()
+
+    def test_dump_flat_structure(self, tmp_path, generate_calculation_node_add):
+        """Test dumping with flat directory structure."""
+        node = generate_calculation_node_add()
+
+        output_path = tmp_path / 'process_dump_flat'
+        result_path = node.dump(output_path=output_path, flat=True)
+
+        assert result_path.exists()
+        assert (result_path / 'aiida_node_metadata.yaml').exists()
+
+    def test_dump_overwrite(self, tmp_path, generate_calculation_node_add):
+        """Test overwrite functionality."""
+        node = generate_calculation_node_add()
+        output_path = tmp_path / 'process_dump'
+
+        # First dump
+        result_path1 = node.dump(output_path=output_path)
+        assert result_path1.exists()
+
+        # Second dump with overwrite should succeed
+        result_path2 = node.dump(output_path=output_path, overwrite=True)
+        assert result_path2.exists()
+        assert result_path1 == result_path2
+
+    def test_dump_unsealed_node_fails(self):
+        """Test that dumping unsealed node fails by default."""
+        node = orm.CalculationNode()
+        node.store()  # Store but don't seal
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_path = Path(tmp_dir) / 'process_dump'
+
+            # Should raise error for unsealed node
+            with pytest.raises(Exception):  # The actual exception type from your implementation
+                node.dump(output_path=output_path)
+
+    def test_dump_unsealed_node_allowed(self):
+        """Test that dumping unsealed node works with dump_unsealed=True."""
+        node = orm.CalculationNode()
+        node.store()  # Store but don't seal
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_path = Path(tmp_dir) / 'process_dump'
+            result_path = node.dump(output_path=output_path, dump_unsealed=True)
+
+            assert result_path.exists()
+            assert (result_path / 'aiida_node_metadata.yaml').exists()

@@ -140,7 +140,7 @@ def transport_options(transport_type):
     """Decorate a command with all options for a computer configure subcommand for transport_type."""
 
     def apply_options(func):
-        """Decorate the command functionn with the appropriate options for the transport type."""
+        """Decorate the command function with the appropriate options for the transport type."""
         options_list = list_transport_options(transport_type)
         options_list.reverse()
         func = arguments.COMPUTER(callback=partial(match_comp_transport, transport_type=transport_type))(func)

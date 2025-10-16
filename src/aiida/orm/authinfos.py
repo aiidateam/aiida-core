@@ -8,19 +8,22 @@
 ###########################################################################
 """Module for the `AuthInfo` ORM class."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from aiida.common import exceptions
+from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
 from aiida.plugins import TransportFactory
 
 from . import entities, users
-from .fields import add_field
+from .computers import Computer
+from .users import User
 
 if TYPE_CHECKING:
-    from aiida.orm import Computer, User
     from aiida.orm.implementation import StorageBackend
-    from aiida.orm.implementation.authinfos import BackendAuthInfo  # noqa: F401
+    from aiida.orm.implementation.authinfos import BackendAuthInfo
     from aiida.transports import Transport
 
 __all__ = ('AuthInfo',)
@@ -45,43 +48,46 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
     """ORM class that models the authorization information that allows a `User` to connect to a `Computer`."""
 
     _CLS_COLLECTION = AuthInfoCollection
-
-    __qb_fields__ = [
-        add_field(
-            'enabled',
-            dtype=bool,
-            is_attribute=False,
-            doc='Whether the instance is enabled',
-        ),
-        add_field(
-            'auth_params',
-            dtype=Dict[str, Any],
-            is_attribute=False,
-            doc='Dictionary of authentication parameters',
-        ),
-        add_field(
-            'metadata',
-            dtype=Dict[str, Any],
-            is_attribute=False,
-            doc='Dictionary of metadata',
-        ),
-        add_field(
-            'computer_pk',
-            dtype=int,
-            is_attribute=False,
-            doc='The PK of the computer',
-        ),
-        add_field(
-            'user_pk',
-            dtype=int,
-            is_attribute=False,
-            doc='The PK of the user',
-        ),
-    ]
-
     PROPERTY_WORKDIR = 'workdir'
 
-    def __init__(self, computer: 'Computer', user: 'User', backend: Optional['StorageBackend'] = None) -> None:
+    class Model(entities.Entity.Model):
+        computer: int = MetadataField(
+            description='The PK of the computer',
+            is_attribute=False,
+            orm_class=Computer,
+            orm_to_model=lambda auth_info, _: auth_info.computer.pk,  # type: ignore[attr-defined]
+        )
+        user: int = MetadataField(
+            description='The PK of the user',
+            is_attribute=False,
+            orm_class=User,
+            orm_to_model=lambda auth_info, _: auth_info.user.pk,  # type: ignore[attr-defined]
+        )
+        enabled: bool = MetadataField(
+            True,
+            description='Whether the instance is enabled',
+            is_attribute=False,
+        )
+        auth_params: Dict[str, Any] = MetadataField(
+            default_factory=dict,
+            description='Dictionary of authentication parameters',
+            is_attribute=False,
+        )
+        metadata: Dict[str, Any] = MetadataField(
+            default_factory=dict,
+            description='Dictionary of metadata',
+            is_attribute=False,
+        )
+
+    def __init__(
+        self,
+        computer: 'Computer',
+        user: 'User',
+        enabled: bool = True,
+        auth_params: Dict[str, Any] | None = None,
+        metadata: Dict[str, Any] | None = None,
+        backend: Optional['StorageBackend'] = None,
+    ) -> None:
         """Create an `AuthInfo` instance for the given computer and user.
 
         :param computer: a `Computer` instance
@@ -89,7 +95,13 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         :param backend: the backend to use for the instance, or use the default backend if None
         """
         backend = backend or get_manager().get_profile_storage()
-        model = backend.authinfos.create(computer=computer.backend_entity, user=user.backend_entity)
+        model = backend.authinfos.create(
+            computer=computer.backend_entity,
+            user=user.backend_entity,
+            enabled=enabled,
+            auth_params=auth_params or {},
+            metadata=metadata or {},
+        )
         super().__init__(model)
 
     def __str__(self) -> str:
@@ -97,6 +109,18 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
             return f'AuthInfo for {self.user.email} on {self.computer.label}'
 
         return f'AuthInfo for {self.user.email} on {self.computer.label} [DISABLED]'
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, AuthInfo):
+            return False
+
+        return (
+            self.user.pk == other.user.pk
+            and self.computer.pk == other.computer.pk
+            and self.enabled == other.enabled
+            and self.auth_params == other.auth_params
+            and self.metadata == other.metadata
+        )
 
     @property
     def enabled(self) -> bool:
@@ -125,6 +149,14 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
     def user(self) -> 'User':
         """Return the user associated with this instance."""
         return entities.from_backend_entity(users.User, self._backend_entity.user)
+
+    @property
+    def auth_params(self) -> Dict[str, Any]:
+        return self._backend_entity.get_auth_params()
+
+    @property
+    def metadata(self) -> Dict[str, Any]:
+        return self._backend_entity.get_metadata()
 
     def get_auth_params(self) -> Dict[str, Any]:
         """Return the dictionary of authentication parameters

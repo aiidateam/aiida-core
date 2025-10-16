@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from .processes import Process, ProcessBuilder
     from .runners import Runner
 
-__all__ = ('interruptable_task', 'InterruptableFuture', 'is_process_function')
+__all__ = ('InterruptableFuture', 'interruptable_task', 'is_process_function')
 
 LOGGER = logging.getLogger(__name__)
 PROCESS_STATE_CHANGE_KEY = 'process|state_change|{}'

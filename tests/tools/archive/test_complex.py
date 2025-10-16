@@ -13,6 +13,7 @@ import string
 from datetime import datetime
 
 import numpy as np
+
 from aiida import orm
 from aiida.common.exceptions import NotExistent
 from aiida.common.hashing import make_hash
@@ -195,3 +196,57 @@ def get_hash_from_db_content(grouplabel):
         ]
     )
     return hash_
+
+
+def test_complex_export_filter_size(tmp_path, aiida_profile_clean):
+    """Test export with various entity types when filter_size limits are exceeded."""
+    # Create multiple entity types to test different code paths
+    nb_entities = 10
+
+    # Create users (will need nodes attached to be exported)
+    users = []
+    for i in range(nb_entities):
+        user = orm.User(email=f'user{i}@example.com').store()
+        users.append(user)
+
+    # Create nodes with different users
+    nodes = []
+    for i, user in enumerate(users):
+        node = orm.Int(i, user=user)
+        node.label = f'node_{i}'
+        node.store()
+        nodes.append(node)
+
+    # Create some links between nodes
+    calc_nodes = []
+    for i in range(min(3, nb_entities)):
+        calc = orm.CalculationNode()
+        calc.base.links.add_incoming(nodes[i], LinkType.INPUT_CALC, f'input_{i}')
+        calc.store()
+        calc.seal()
+        calc_nodes.append(calc)
+        nodes.append(calc)
+
+    # Export with small filter_size to force batching in multiple functions
+    export_file = tmp_path / 'large_export.aiida'
+    create_archive(nodes, filename=export_file, filter_size=3)
+
+    # Verify by importing
+    aiida_profile_clean.reset_storage()
+    import_archive(export_file)
+
+    # Check all entities were properly exported/imported
+    assert orm.QueryBuilder().append(orm.Node).count() == len(nodes)
+    assert orm.QueryBuilder().append(orm.User).count() == nb_entities + 1  # +1 for default user
+
+    # Assert for calculation nodes specifically
+    calc_node_count = orm.QueryBuilder().append(orm.CalculationNode).count()
+    assert calc_node_count == len(calc_nodes)
+
+    # Assert for data nodes specifically
+    data_node_count = orm.QueryBuilder().append(orm.Int).count()
+    assert data_node_count == nb_entities
+
+    # Verify links were preserved
+    link_count = orm.QueryBuilder().append(entity_type='link').count()
+    assert link_count >= 3  # At least the links we created

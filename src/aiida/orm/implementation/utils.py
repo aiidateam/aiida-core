@@ -20,7 +20,7 @@ from aiida.common.constants import AIIDA_FLOAT_PRECISION
 # therefore is not allowed in individual attribute or extra keys.
 FIELD_SEPARATOR = '.'
 
-__all__ = ('validate_attribute_extra_key', 'clean_value')
+__all__ = ('clean_value', 'validate_attribute_extra_key')
 
 
 def validate_attribute_extra_key(key):

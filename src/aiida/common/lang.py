@@ -23,7 +23,10 @@ def isidentifier(identifier):
     return identifier.isidentifier() and not keyword.iskeyword(identifier)
 
 
-def type_check(what, of_type, msg=None, allow_none=False):
+T = TypeVar('T')
+
+
+def type_check(what: T, of_type: Any, msg: 'str | None' = None, allow_none: bool = False) -> 'T | None':
     """Verify that object 'what' is of type 'of_type' and if not the case, raise a TypeError.
 
     :param what: the object to check
@@ -96,4 +99,4 @@ class classproperty(Generic[ReturnType]):  # noqa: N801
         self.getter = getter
 
     def __get__(self, instance: Any, owner: SelfType) -> ReturnType:
-        return self.getter(owner)
+        return self.getter(owner)  # type: ignore[arg-type]

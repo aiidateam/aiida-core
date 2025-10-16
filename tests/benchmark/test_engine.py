@@ -13,6 +13,7 @@ which are executed *via* both a local runner and the daemon.
 """
 
 import pytest
+
 from aiida.engine import WorkChain, run_get_node, while_
 from aiida.orm import InstalledCode, Int
 from aiida.plugins.factories import CalculationFactory

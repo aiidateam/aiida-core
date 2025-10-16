@@ -26,11 +26,12 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration.profile import Profile
-from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+from aiida.manage.configuration.settings import AiiDAConfigDir
 from aiida.orm.implementation import BackendEntity
 from aiida.storage.log import MIGRATE_LOGGER
 from aiida.storage.psql_dos.models.settings import DbSetting
 from aiida.storage.sqlite_zip import models, orm
+from aiida.storage.sqlite_zip.backend import validate_sqlite_version
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
 
 from ..migrations import TEMPLATE_INVALID_SCHEMA_VERSION
@@ -203,7 +204,7 @@ class SqliteDosStorage(PsqlDosBackend):
         filepath: str = Field(
             title='Directory of the backend',
             description='Filepath of the directory in which to store data for this backend.',
-            default_factory=lambda: str(AIIDA_CONFIG_FOLDER / 'repository' / f'sqlite_dos_{uuid4().hex}'),
+            default_factory=lambda: str(AiiDAConfigDir.get() / 'repository' / f'sqlite_dos_{uuid4().hex}'),
         )
 
         @field_validator('filepath')
@@ -226,6 +227,7 @@ class SqliteDosStorage(PsqlDosBackend):
 
     @classmethod
     def initialise(cls, profile: Profile, reset: bool = False) -> bool:
+        validate_sqlite_version()
         filepath = Path(profile.storage_config['filepath'])
 
         try:
@@ -241,6 +243,10 @@ class SqliteDosStorage(PsqlDosBackend):
             )
 
         return super().initialise(profile, reset)
+
+    def __init__(self, profile: Profile) -> None:
+        validate_sqlite_version()
+        super().__init__(profile)
 
     def __str__(self) -> str:
         state = 'closed' if self.is_closed else 'open'

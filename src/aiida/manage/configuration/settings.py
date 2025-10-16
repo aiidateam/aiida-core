@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import os
 import pathlib
+import sys
 import warnings
+from typing import final
 
 DEFAULT_UMASK = 0o0077
 DEFAULT_AIIDA_PATH_VARIABLE = 'AIIDA_PATH'
@@ -25,38 +27,86 @@ DEFAULT_DAEMON_DIR_NAME = 'daemon'
 DEFAULT_DAEMON_LOG_DIR_NAME = 'log'
 DEFAULT_ACCESS_CONTROL_DIR_NAME = 'access'
 
-# Assign defaults which may be overriden in set_configuration_directory() below
-AIIDA_CONFIG_FOLDER: pathlib.Path = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
-DAEMON_DIR: pathlib.Path = AIIDA_CONFIG_FOLDER / DEFAULT_DAEMON_DIR_NAME
-DAEMON_LOG_DIR: pathlib.Path = DAEMON_DIR / DEFAULT_DAEMON_LOG_DIR_NAME
-ACCESS_CONTROL_DIR: pathlib.Path = AIIDA_CONFIG_FOLDER / DEFAULT_ACCESS_CONTROL_DIR_NAME
+__all__ = ('AiiDAConfigDir', 'AiiDAConfigPathResolver')
 
 
-def create_instance_directories() -> None:
+@final
+class AiiDAConfigDir:
+    """Singleton for setting and getting the path to configuration directory."""
+
+    _glb_aiida_config_folder: pathlib.Path = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
+
+    @classmethod
+    def get(cls) -> pathlib.Path:
+        """Return the path of the configuration directory."""
+        return cls._glb_aiida_config_folder
+
+    @classmethod
+    def set(cls, aiida_config_folder: pathlib.Path | None = None) -> None:
+        """Set the configuration directory, related global variables and create instance directories.
+
+        The location of the configuration directory is defined by ``aiida_config_folder`` or if not defined,
+        the path that is returned by ``_get_configuration_directory_from_envvar``.
+        Or if the environment_variable not set, use the default.
+        If the directory does not exist yet, it is created, together with all its subdirectories.
+        """
+        _default_dirpath_config = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
+
+        aiida_config_folder = aiida_config_folder or _get_configuration_directory_from_envvar()
+        cls._glb_aiida_config_folder = aiida_config_folder or _default_dirpath_config
+
+        _create_instance_directories(cls._glb_aiida_config_folder)
+
+
+@final
+class AiiDAConfigPathResolver:
+    """For resolving configuration directory, daemon dir, daemon log dir and access control dir.
+    The locations are all trivially derived from the config directory.
+    """
+
+    def __init__(self, config_folder: pathlib.Path | None = None) -> None:
+        self._aiida_path = config_folder or AiiDAConfigDir.get()
+
+    @property
+    def aiida_path(self) -> pathlib.Path:
+        return self._aiida_path
+
+    @property
+    def daemon_dir(self) -> pathlib.Path:
+        return self._aiida_path / DEFAULT_DAEMON_DIR_NAME
+
+    @property
+    def daemon_log_dir(self) -> pathlib.Path:
+        return self._aiida_path / DEFAULT_DAEMON_DIR_NAME / DEFAULT_DAEMON_LOG_DIR_NAME
+
+    @property
+    def access_control_dir(self) -> pathlib.Path:
+        return self._aiida_path / DEFAULT_ACCESS_CONTROL_DIR_NAME
+
+
+def _create_instance_directories(aiida_config_folder: pathlib.Path | None) -> None:
     """Create the base directories required for a new AiiDA instance.
 
-    This will create the base AiiDA directory defined by the AIIDA_CONFIG_FOLDER variable, unless it already exists.
-    Subsequently, it will create the daemon directory within it and the daemon log directory.
+    This will create the base AiiDA directory in ``aiida_config_folder``.
+    If it not provided, the directory returned from ``AiiDAConfigDir.get()`` will be the default config folder,
+    unless it already exists. Subsequently, it will create the daemon directory within it and the daemon log directory.
     """
     from aiida.common import ConfigurationError
 
-    directory_base = AIIDA_CONFIG_FOLDER.expanduser()
-    directory_daemon = directory_base / DAEMON_DIR
-    directory_daemon_log = directory_base / DAEMON_LOG_DIR
-    directory_access = directory_base / ACCESS_CONTROL_DIR
+    path_resolver = AiiDAConfigPathResolver(aiida_config_folder)
 
     list_of_paths = [
-        directory_base,
-        directory_daemon,
-        directory_daemon_log,
-        directory_access,
+        path_resolver.aiida_path,
+        path_resolver.daemon_dir,
+        path_resolver.daemon_log_dir,
+        path_resolver.access_control_dir,
     ]
 
     umask = os.umask(DEFAULT_UMASK)
 
     try:
         for path in list_of_paths:
-            if path is directory_base and not path.exists():
+            if path is path_resolver.aiida_path and not path.exists():
                 warnings.warn(f'Creating AiiDA configuration folder `{path}`.')
 
             try:
@@ -64,31 +114,10 @@ def create_instance_directories() -> None:
             except OSError as exc:
                 raise ConfigurationError(f'could not create the `{path}` configuration directory: {exc}') from exc
     finally:
-        os.umask(umask)
+        _ = os.umask(umask)
 
 
-def get_configuration_directory():
-    """Return the path of the configuration directory.
-
-    The location of the configuration directory is defined following these heuristics in order:
-
-        * If the ``AIIDA_PATH`` variable is set, all the paths will be checked to see if they contain a
-          configuration folder. The first one to be encountered will be set as ``AIIDA_CONFIG_FOLDER``. If none of them
-          contain one, the last path defined in the environment variable considered is used.
-        * If an existing directory is still not found, the ``DEFAULT_AIIDA_PATH`` is used.
-
-    :returns: The path of the configuration directory.
-    """
-    dirpath_config = get_configuration_directory_from_envvar()
-
-    # If no existing configuration directory is found, fall back to the default
-    if dirpath_config is None:
-        dirpath_config = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
-
-    return dirpath_config
-
-
-def get_configuration_directory_from_envvar() -> pathlib.Path | None:
+def _get_configuration_directory_from_envvar() -> pathlib.Path | None:
     """Return the path of a config directory from the ``AIIDA_PATH`` environment variable.
 
     The environment variable should be a colon separated string of filepaths that either point directly to a config
@@ -99,11 +128,20 @@ def get_configuration_directory_from_envvar() -> pathlib.Path | None:
     """
     environment_variable = os.environ.get(DEFAULT_AIIDA_PATH_VARIABLE)
 
+    default_dirpath_config = pathlib.Path(DEFAULT_AIIDA_PATH).expanduser() / DEFAULT_CONFIG_DIR_NAME
+
     if environment_variable is None:
         return None
 
+    # Determine seperator to split paths in environment variables like PATH
+    if sys.platform == 'win32':
+        seperator = ';'
+    else:
+        seperator = ':'
+
     # Loop over all the paths in the ``AIIDA_PATH`` variable to see if any of them contain a configuration folder
-    for base_dir_path in [path for path in environment_variable.split(':') if path]:
+    dirpath_config = None
+    for base_dir_path in [path for path in environment_variable.split(seperator) if path]:
         dirpath_config = pathlib.Path(base_dir_path).expanduser()
 
         # Only add the base config directory name to the base path if it does not already do so
@@ -115,28 +153,8 @@ def get_configuration_directory_from_envvar() -> pathlib.Path | None:
         if dirpath_config.is_dir():
             break
 
-    return dirpath_config
-
-
-def set_configuration_directory(aiida_config_folder: pathlib.Path | None = None) -> None:
-    """Set the configuration directory, related global variables and create instance directories.
-
-    The location of the configuration directory is defined by ``aiida_config_folder`` or if not defined, the path that
-    is returned by ``get_configuration_directory``. If the directory does not exist yet, it is created, together with
-    all its subdirectories.
-    """
-    global AIIDA_CONFIG_FOLDER  # noqa: PLW0603
-    global DAEMON_DIR  # noqa: PLW0603
-    global DAEMON_LOG_DIR  # noqa: PLW0603
-    global ACCESS_CONTROL_DIR  # noqa: PLW0603
-
-    AIIDA_CONFIG_FOLDER = aiida_config_folder or get_configuration_directory()
-    DAEMON_DIR = AIIDA_CONFIG_FOLDER / DEFAULT_DAEMON_DIR_NAME
-    DAEMON_LOG_DIR = DAEMON_DIR / DEFAULT_DAEMON_LOG_DIR_NAME
-    ACCESS_CONTROL_DIR = AIIDA_CONFIG_FOLDER / DEFAULT_ACCESS_CONTROL_DIR_NAME
-
-    create_instance_directories()
+    return dirpath_config or default_dirpath_config
 
 
 # Initialize the configuration directory settings
-set_configuration_directory()
+AiiDAConfigDir.set()

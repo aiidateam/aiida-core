@@ -9,6 +9,7 @@
 """Unit tests for the Comment ORM class."""
 
 import pytest
+
 from aiida import orm
 from aiida.common import exceptions
 from aiida.orm.comments import Comment
@@ -57,6 +58,15 @@ def test_comment_user(node, default_user):
     """Test getting the user of a Comment."""
     comment = Comment(node, default_user, 'comment').store()
     assert comment.user.uuid == default_user.uuid
+
+
+@pytest.mark.xfail
+def test_comment_set_user(node, default_user):
+    new_user = orm.User(email='meeseeks.look@me').store()
+    comment = Comment(node, default_user, 'Look at me!').store()
+    assert comment.user.uuid == default_user.uuid
+    comment.set_user(new_user)
+    assert comment.user.uuid == new_user.uuid
 
 
 def test_comment_collection_get(create_comment):

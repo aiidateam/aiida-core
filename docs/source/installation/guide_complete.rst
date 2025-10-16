@@ -157,7 +157,7 @@ Although it is possible to run AiiDA without a daemon it does provide significan
 
     .. tab-item:: MacOS X
 
-        #. Install `Homebrew <https://docs.brew.sh/Installation>`.
+        #. Install `Homebrew <https://docs.brew.sh/Installation>`__.
 
         #. Install RabbitMQ:
 
@@ -315,7 +315,7 @@ The options specific to the ``core.sqlite_dos`` storage plugin are:
 This storage plugin uses `PostgreSQL <https://www.postgresql.org/>`_ and the `disk-objectstore <https://disk-objectstore.readthedocs.io/en/latest/>`_ to store data.
 The ``disk-objectstore`` is a Python package that is automatically installed as a dependency when installing ``aiida-core``, which was covered in the :ref:`Python package installation section <installation:guide-complete:python-package>`.
 The storage plugin can connect to a PostgreSQL instance running on the localhost or on a server that can be reached over the internet.
-Instructions for installing PostgreSQL is beyond the scope of this guide.
+Instructions for installing PostgreSQL is beyond the scope of this guide. You can find the installation instructions for your system on the `PostgreSQL website <https://www.postgresql.org/docs/current/tutorial-install.html>`__.
 
 Before creating a profile, a database (and optionally a custom database user) has to be created.
 First, connect to PostgreSQL using ``psql``, the `native command line client for PostgreSQL <https://www.postgresql.org/docs/current/app-psql.html>`_:

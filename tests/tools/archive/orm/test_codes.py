@@ -13,7 +13,6 @@ import uuid
 from aiida import orm
 from aiida.common.links import LinkType
 from aiida.tools.archive import create_archive, import_archive
-
 from tests.tools.archive.utils import get_all_node_links
 
 
@@ -36,7 +35,7 @@ def test_that_solo_code_is_exported_correctly(aiida_profile, tmp_path, aiida_loc
     assert orm.load_node(code_uuid).label == code_label
 
 
-def test_input_code(aiida_profile, tmp_path, aiida_localhost):
+def test_input_code(aiida_profile_clean, tmp_path, aiida_localhost):
     """This test checks that when a calculation is exported then the
     corresponding code is also exported. It also checks that the links
     are also in place after the import.
@@ -60,7 +59,7 @@ def test_input_code(aiida_profile, tmp_path, aiida_localhost):
     export_file = tmp_path / 'export.aiida'
     create_archive([calc], filename=export_file)
 
-    aiida_profile.reset_storage()
+    aiida_profile_clean.reset_storage()
 
     import_archive(export_file)
 

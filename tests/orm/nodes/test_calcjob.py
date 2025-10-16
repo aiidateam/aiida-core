@@ -11,6 +11,7 @@
 import io
 
 import pytest
+
 from aiida.common import CalcJobState, LinkType
 from aiida.orm import CalcJobNode, FolderData
 

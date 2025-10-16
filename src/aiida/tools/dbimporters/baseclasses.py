@@ -96,6 +96,9 @@ class DbSearchResults:
             self._position = 0
             self._increment = increment
 
+        def __iter__(self):
+            return self
+
         def __next__(self):
             """Return the next entry in the iterator."""
             pos = self._position

@@ -11,6 +11,8 @@
 import io
 
 import pytest
+from click.testing import CliRunner
+
 from aiida import orm
 from aiida.cmdline.commands import cmd_calcjob as command
 from aiida.common.datastructures import CalcJobState
@@ -19,8 +21,6 @@ from aiida.engine import ProcessState
 from aiida.orm.nodes.data.remote.base import RemoteData
 from aiida.plugins import CalculationFactory
 from aiida.plugins.entry_point import get_entry_point_string_from_class
-from click.testing import CliRunner
-
 from tests.utils.archives import import_test_archive
 
 
@@ -241,9 +241,6 @@ class TestVerdiCalculation:
         retrieved.base.repository._repository.put_object_from_filelike(io.BytesIO(b'5\n'), 'aiida.out')
         retrieved.base.repository._update_repository_metadata()
 
-    # This currently fails with sqlite backend since the filtering relies on the `has_key` filter which is not
-    # implemented in SQLite, see https://github.com/aiidateam/aiida-core/pull/6497
-    @pytest.mark.requires_psql
     def test_calcjob_cleanworkdir_basic(self):
         """Test verdi calcjob cleanworkdir"""
         # Specifying no filtering options and no explicit calcjobs should exit with non-zero status
@@ -269,7 +266,6 @@ class TestVerdiCalculation:
         result = self.cli_runner.invoke(command.calcjob_cleanworkdir, options)
         assert result.exception is not None, result.output
 
-    @pytest.mark.requires_psql
     def test_calcjob_cleanworkdir_advanced(self):
         # Check applying both p and o filters
         for flag_p in ['-p', '--past-days']:

@@ -48,7 +48,6 @@ PROJECT_MAP = {
     },
     'db_dbnode': {
         'pk': 'id',
-        'dict': 'attributes',
         'computer_pk': 'dbcomputer_id',
         'user_pk': 'user_id',
     },
@@ -625,7 +624,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             elif isinstance(value, dict) or value is None:
                 type_filter = jsonb_typeof(path_in_json) == 'object'
                 casted_entity = path_in_json.astext.cast(JSONB)  # BOOLEANS?
-            elif isinstance(value, dict):
+            elif isinstance(value, list):
                 type_filter = jsonb_typeof(path_in_json) == 'array'
                 casted_entity = path_in_json.astext.cast(JSONB)  # BOOLEANS?
             elif isinstance(value, str):
@@ -661,10 +660,19 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         elif operator == 'of_type':
             # http://www.postgresql.org/docs/9.5/static/functions-json.html
             #  Possible types are object, array, string, number, boolean, and null.
-            valid_types = ('object', 'array', 'string', 'number', 'boolean', 'null')
+            value_types = ('object', 'array', 'string', 'number', 'boolean')
+            null_types = ('null',)
+            valid_types = value_types + null_types
             if value not in valid_types:
                 raise ValueError(f'value {value} for of_type is not among valid types\n{valid_types}')
-            expr = jsonb_typeof(database_entity) == value
+            if value in value_types:
+                expr = jsonb_typeof(database_entity) == value
+            elif value in null_types:
+                # https://www.postgresql.org/docs/current/functions-json.html
+                # json_typeof('null'::json) → null
+                # json_typeof(NULL::json) IS NULL → t
+                tp = jsonb_typeof(database_entity)
+                expr = or_(tp == 'null', tp.is_(None))
         elif operator == 'like':
             type_filter, casted_entity = cast_according_to_type(database_entity, value)
             expr = case((type_filter, casted_entity.like(value)), else_=False)
@@ -789,8 +797,27 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         total_query = session.query(self.Node)
         types_query = session.query(self.Node.node_type.label('typestring'), sa_func.count(self.Node.id))
+
+        dialect = session.bind.dialect.name
+        date_format = '%Y-%m-%d'
+
+        if dialect == 'sqlite':
+            cday = sa_func.strftime(date_format, sa_func.datetime(self.Node.ctime, 'localtime'))
+
+            def date_to_str(d):
+                return d
+
+        elif dialect == 'postgresql':
+            cday = sa_func.date_trunc('day', self.Node.ctime)
+
+            def date_to_str(d):
+                return d.strftime(date_format)
+
+        else:
+            raise NotImplementedError(f'unsupported dialect: {dialect}')
+
         stat_query = session.query(
-            sa_func.date_trunc('day', self.Node.ctime).label('cday'),
+            cday.label('cday'),
             sa_func.count(self.Node.id),
         )
 
@@ -808,7 +835,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         # Nodes created per day
         stat = stat_query.group_by('cday').order_by('cday').all()
 
-        ctime_by_day = {_[0].strftime('%Y-%m-%d'): _[1] for _ in stat}
+        ctime_by_day = {date_to_str(entry[0]): entry[1] for entry in stat}
         retdict['ctime_by_day'] = ctime_by_day
 
         return retdict

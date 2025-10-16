@@ -3,6 +3,7 @@
 import enum
 
 import pytest
+
 from aiida.common import links
 from aiida.orm import load_node
 from aiida.orm.nodes.data.enum import EnumData

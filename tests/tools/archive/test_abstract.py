@@ -14,6 +14,7 @@ The tests highlight the features of the archive abstraction.
 from io import BytesIO
 
 import pytest
+
 from aiida import orm
 from aiida.common.exceptions import IntegrityError
 from aiida.orm.entities import EntityTypes

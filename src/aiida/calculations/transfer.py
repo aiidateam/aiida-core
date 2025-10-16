@@ -185,7 +185,7 @@ class TransferCalculation(CalcJob):
             help='All the nodes that contain files referenced in the instructions.',
         )
 
-        # The transfer just needs a computer, the code are resources are set here
+        # The transfer just needs a computer, the code and resources are set here
         spec.inputs.pop('code', None)
         spec.inputs['metadata']['computer'].required = True
         spec.inputs['metadata']['options']['resources'].default = {

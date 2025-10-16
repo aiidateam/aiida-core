@@ -27,6 +27,7 @@ from .utils import *
 
 __all__ = (
     'ASCENDING',
+    'DESCENDING',
     'AbstractCode',
     'AbstractNodeMeta',
     'ArrayData',
@@ -49,7 +50,6 @@ __all__ = (
     'Computer',
     'ComputerEntityLoader',
     'ContainerizedCode',
-    'DESCENDING',
     'Data',
     'Dict',
     'Entity',
@@ -88,6 +88,8 @@ __all__ = (
     'QbFields',
     'QueryBuilder',
     'RemoteData',
+    'RemoteStashCompressedData',
+    'RemoteStashCustomData',
     'RemoteStashData',
     'RemoteStashFolderData',
     'SinglefileData',

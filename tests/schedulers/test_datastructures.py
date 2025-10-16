@@ -9,6 +9,7 @@
 """Tests for the :mod:`aiida.schedulers.test_datastructures` module."""
 
 import pytest
+
 from aiida.schedulers.datastructures import NodeNumberJobResource, ParEnvJobResource
 
 

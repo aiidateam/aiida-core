@@ -11,6 +11,7 @@
 import io
 
 import pytest
+
 from aiida import orm
 from aiida.common import datastructures
 

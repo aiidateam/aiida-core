@@ -8,11 +8,16 @@
 ###########################################################################
 """Various dictionary types with extended functionality."""
 
-from collections.abc import Mapping
+from __future__ import annotations
+
+from collections.abc import Hashable, KeysView, Mapping
+from typing import Any
+
+from aiida.common.typing import Self
 
 from . import exceptions
 
-__all__ = ('AttributeDict', 'FixedFieldsAttributeDict', 'DefaultFieldsAttributeDict')
+__all__ = ('AttributeDict', 'DefaultFieldsAttributeDict', 'FixedFieldsAttributeDict')
 
 
 class AttributeDict(dict):
@@ -25,7 +30,7 @@ class AttributeDict(dict):
     used.
     """
 
-    def __init__(self, dictionary=None):
+    def __init__(self, dictionary: Mapping | None = None):
         """Recursively turn the `dict` and all its nested dictionaries into `AttributeDict` instance."""
         super().__init__()
         if dictionary is None:
@@ -37,11 +42,11 @@ class AttributeDict(dict):
             else:
                 self[key] = value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Representation of the object."""
         return f'{self.__class__.__name__}({dict.__repr__(self)})'
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: Hashable) -> Any:
         """Read a key as an attribute.
 
         :raises AttributeError: if the attribute does not correspond to an existing key.
@@ -52,7 +57,7 @@ class AttributeDict(dict):
             errmsg = f"'{self.__class__.__name__}' object has no attribute '{attr}'"
             raise AttributeError(errmsg)
 
-    def __setattr__(self, attr, value):
+    def __setattr__(self, attr: str, value: Any) -> None:
         """Set a key as an attribute."""
         try:
             self[attr] = value
@@ -61,7 +66,7 @@ class AttributeDict(dict):
                 f"AttributeError: '{attr}' is not a valid attribute of the object '{self.__class__.__name__}'"
             )
 
-    def __delattr__(self, attr):
+    def __delattr__(self, attr: Hashable) -> None:
         """Delete a key as an attribute.
 
         :raises AttributeError: if the attribute does not correspond to an existing key.
@@ -72,7 +77,7 @@ class AttributeDict(dict):
             errmsg = f"'{self.__class__.__name__}' object has no attribute '{attr}'"
             raise AttributeError(errmsg)
 
-    def __deepcopy__(self, memo=None):
+    def __deepcopy__(self, memo: Mapping | None = None) -> Self:
         """Deep copy."""
         from copy import deepcopy
 
@@ -81,15 +86,15 @@ class AttributeDict(dict):
         retval = deepcopy(dict(self))
         return self.__class__(retval)
 
-    def __getstate__(self):
+    def __getstate__(self) -> dict[str, Any]:
         """Needed for pickling this class."""
         return self.__dict__.copy()
 
-    def __setstate__(self, dictionary):
+    def __setstate__(self, dictionary: Mapping) -> None:
         """Needed for pickling this class."""
         self.__dict__.update(dictionary)
 
-    def __dir__(self):
+    def __dir__(self) -> KeysView[Any]:
         return self.keys()
 
 
@@ -104,9 +109,9 @@ class FixedFieldsAttributeDict(AttributeDict):
             _valid_fields = ('a','b','c')
     """
 
-    _valid_fields = tuple()
+    _valid_fields: tuple[Any, ...] = tuple()
 
-    def __init__(self, init=None):
+    def __init__(self, init: Mapping | None = None):
         if init is None:
             init = {}
 
@@ -116,14 +121,14 @@ class FixedFieldsAttributeDict(AttributeDict):
                 raise KeyError(errmsg)
         super().__init__(init)
 
-    def __setitem__(self, item, value):
+    def __setitem__(self, item: Hashable, value: Any) -> None:
         """Set a key as an attribute."""
         if item not in self._valid_fields:
             errmsg = f"'{item}' is not a valid key for object '{self.__class__.__name__}'"
             raise KeyError(errmsg)
         super().__setitem__(item, value)
 
-    def __setattr__(self, attr, value):
+    def __setattr__(self, attr: str, value: Any) -> None:
         """Overridden to allow direct access to fields with underscore."""
         if attr.startswith('_'):
             object.__setattr__(self, attr, value)
@@ -131,11 +136,13 @@ class FixedFieldsAttributeDict(AttributeDict):
             super().__setattr__(attr, value)
 
     @classmethod
-    def get_valid_fields(cls):
+    def get_valid_fields(cls) -> tuple:
         """Return the list of valid fields."""
         return cls._valid_fields
 
-    def __dir__(self):
+    # TODO: We're in violation of the `dict` interface here,
+    # we should be returning collections.abc.KeysView[Any]
+    def __dir__(self) -> list[Any]:  # type: ignore[override]
         return list(self._valid_fields)
 
 
@@ -192,9 +199,9 @@ class DefaultFieldsAttributeDict(AttributeDict):
         See if we want that setting a default field to None means deleting it.
     """
 
-    _default_fields = tuple()
+    _default_fields: tuple = tuple()
 
-    def validate(self):
+    def validate(self) -> None:
         """Validate the keys, if any ``validate_*`` method is available."""
         for key in self.get_default_fields():
             # I get the attribute starting with validate_ and containing the name of the key
@@ -206,14 +213,14 @@ class DefaultFieldsAttributeDict(AttributeDict):
                 except Exception as exc:
                     raise exceptions.ValidationError(f"Invalid value for key '{key}' [{exc.__class__.__name__}]: {exc}")
 
-    def __setattr__(self, attr, value):
+    def __setattr__(self, attr: str, value: Any) -> None:
         """Overridden to allow direct access to fields with underscore."""
         if attr.startswith('_'):
             object.__setattr__(self, attr, value)
         else:
             super().__setattr__(attr, value)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: Hashable) -> Any | None:
         """Return None instead of raising an exception if the key does not exist
         but is in the list of default fields.
         """
@@ -225,14 +232,14 @@ class DefaultFieldsAttributeDict(AttributeDict):
             raise
 
     @classmethod
-    def get_default_fields(cls):
+    def get_default_fields(cls) -> list:
         """Return the list of default fields, either defined in the instance or not."""
         return list(cls._default_fields)
 
-    def defaultkeys(self):
+    def defaultkeys(self) -> list:
         """Return the default keys defined in the instance."""
         return [_ for _ in self.keys() if _ in self._default_fields]
 
-    def extrakeys(self):
+    def extrakeys(self) -> list:
         """Return the extra keys defined in the instance."""
         return [_ for _ in self.keys() if _ not in self._default_fields]

@@ -96,15 +96,6 @@ This section gives an overview of these storage plugins with suggestions of when
       - Storage is deleted once session is closed
       - Some ``QueryBuilder`` functionality is not supported :fa:`asterisk`
 
-.. note::
-
-    :fa:`asterisk;mr-1` The following features of the ``QueryBuilder`` are known to not be supported for SQLite-based storages:
-
-    * Use of ``contains`` in ``filters``
-    * The ``get_creation_statistics`` method
-
-
-
 .. _topics:storage:psql_dos:
 
 ``core.psql_dos``

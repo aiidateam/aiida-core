@@ -9,16 +9,18 @@
 """Comment objects and functions"""
 
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional, Type
+from typing import TYPE_CHECKING, List, Optional, Type, cast
 
+from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
 
-from . import entities, users
-from .fields import add_field
+from . import entities
 
 if TYPE_CHECKING:
-    from aiida.orm import Node, User
-    from aiida.orm.implementation import StorageBackend
+    from aiida.orm.implementation import BackendComment, BackendNode, StorageBackend
+
+    from .nodes.node import Node
+    from .users import User
 
 __all__ = ('Comment',)
 
@@ -65,44 +67,29 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
 
     _CLS_COLLECTION = CommentCollection
 
-    __qb_fields__ = [
-        add_field(
-            'uuid',
-            dtype=str,
+    class Model(entities.Entity.Model):
+        uuid: Optional[str] = MetadataField(
+            description='The UUID of the comment', is_attribute=False, exclude_to_orm=True
+        )
+        ctime: Optional[datetime] = MetadataField(
+            description='Creation time of the comment', is_attribute=False, exclude_to_orm=True
+        )
+        mtime: Optional[datetime] = MetadataField(
+            description='Modified time of the comment', is_attribute=False, exclude_to_orm=True
+        )
+        node: int = MetadataField(
+            description='Node PK that the comment is attached to',
             is_attribute=False,
-            doc='The UUID of the comment',
-        ),
-        add_field(
-            'ctime',
-            dtype=datetime,
+            orm_class='core.node',
+            orm_to_model=lambda comment, _: cast('Comment', comment).node.pk,
+        )
+        user: int = MetadataField(
+            description='User PK that created the comment',
             is_attribute=False,
-            doc='Creation time of the comment',
-        ),
-        add_field(
-            'mtime',
-            dtype=datetime,
-            is_attribute=False,
-            doc='Modified time of the comment',
-        ),
-        add_field(
-            'content',
-            dtype=str,
-            is_attribute=False,
-            doc='Content of the comment',
-        ),
-        add_field(
-            'user_pk',
-            dtype=int,
-            is_attribute=False,
-            doc='User PK that created the comment',
-        ),
-        add_field(
-            'node_pk',
-            dtype=int,
-            is_attribute=False,
-            doc='Node PK that the comment is attached to',
-        ),
-    ]
+            orm_class='core.user',
+            orm_to_model=lambda comment, _: cast('Comment', comment).user.pk,
+        )
+        content: str = MetadataField(description='Content of the comment', is_attribute=False)
 
     def __init__(
         self, node: 'Node', user: 'User', content: Optional[str] = None, backend: Optional['StorageBackend'] = None
@@ -123,6 +110,12 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
     def __str__(self) -> str:
         arguments = [self.uuid, self.node.pk, self.user.email, self.content]
         return 'Comment<{}> for node<{}> and user<{}>: {}'.format(*arguments)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Comment):
+            return False
+
+        return self.uuid == other.uuid
 
     @property
     def uuid(self) -> str:
@@ -146,15 +139,18 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         return self._backend_entity.set_mtime(value)
 
     @property
-    def node(self) -> 'Node':
+    def node(self) -> 'BackendNode':
         return self._backend_entity.node
 
     @property
     def user(self) -> 'User':
-        return entities.from_backend_entity(users.User, self._backend_entity.user)
+        from aiida.orm.users import User
+
+        return entities.from_backend_entity(User, self._backend_entity.user)
 
     def set_user(self, value: 'User') -> None:
-        self._backend_entity.user = value.backend_entity
+        # mypy error: Property "user" defined in "BackendComment" is read-only
+        self._backend_entity.user = value.backend_entity  # type: ignore[misc]
 
     @property
     def content(self) -> str:

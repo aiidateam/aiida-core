@@ -8,8 +8,9 @@
 ###########################################################################
 """Test utility functions."""
 
-from aiida.storage.sqlite_zip.migrations.utils import copy_tar_to_zip, copy_zip_to_zip
 from archive_path import TarPath, ZipPath
+
+from aiida.storage.sqlite_zip.migrations.utils import copy_tar_to_zip, copy_zip_to_zip
 
 
 def test_copy_zip_to_zip(tmp_path):

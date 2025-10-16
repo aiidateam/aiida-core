@@ -26,7 +26,7 @@ jobs:
   build-and-test:
     if: ${{ github.event.pull_request.head.repo.fork }}
     name: build and test amd64 images
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     defaults:
       run:

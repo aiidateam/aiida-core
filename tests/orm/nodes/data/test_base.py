@@ -11,6 +11,7 @@
 import operator
 
 import pytest
+
 from aiida.orm import Bool, Float, Int, NumericType, Str, load_node
 
 
@@ -214,7 +215,7 @@ def test_operator(opera):
     for node_x, node_y in [(node_a, node_b), (node_b, node_a)]:
         res = opera(node_x, node_y)
         c_val = opera(node_x.value, node_y.value)
-        assert res._type == type(c_val)
+        assert res._type is type(c_val)
         assert res == opera(node_x.value, node_y.value)
 
 

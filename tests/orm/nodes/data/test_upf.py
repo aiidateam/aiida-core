@@ -6,6 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+# ruff: noqa: FLY002
 """This module contains tests for UpfData and UpfData related functions."""
 
 import json
@@ -14,11 +15,11 @@ import uuid
 
 import numpy
 import pytest
+from numpy import array, isclose
+
 from aiida import orm
 from aiida.common.exceptions import ParsingError
 from aiida.orm.nodes.data.upf import parse_upf
-from numpy import array, isclose
-
 from tests.static import STATIC_DIR
 
 

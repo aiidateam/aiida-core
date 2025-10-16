@@ -12,6 +12,7 @@ import os
 import shutil
 
 import pytest
+
 from aiida import orm
 from aiida.common import exceptions
 from aiida.engine import CalcJob, Process, WorkChain, calcfunction, launch

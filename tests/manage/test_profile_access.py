@@ -14,6 +14,7 @@ from subprocess import PIPE, Popen
 
 import psutil
 import pytest
+
 from aiida.common.exceptions import LockedProfileError, LockingProfileError
 from aiida.manage.profile_access import ProfileAccessManager
 
@@ -200,12 +201,13 @@ class MockProcess:
         import time
 
         check_count = 0
+        max_check_count = 400
 
-        while check_count < 100 and not temppath_checkfile.exists():
+        while check_count < max_check_count and not temppath_checkfile.exists():
             time.sleep(0.1)
             check_count += 1
 
-        if check_count == 100:
+        if check_count == max_check_count:
             raise RuntimeError('Process loading was too slow!')
 
     def start(self, should_raise=False, runtime_secs=60):

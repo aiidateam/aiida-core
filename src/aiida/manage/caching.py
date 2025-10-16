@@ -21,7 +21,7 @@ from aiida.common.lang import type_check
 from aiida.manage.configuration import get_config_option
 from aiida.plugins.entry_point import ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP, ENTRY_POINT_STRING_SEPARATOR
 
-__all__ = ('get_use_cache', 'enable_caching', 'disable_caching')
+__all__ = ('disable_caching', 'enable_caching', 'get_use_cache')
 
 
 class ConfigKeys(Enum):

@@ -17,6 +17,7 @@ from decimal import Decimal
 
 import numpy as np
 import pytest
+
 from aiida.common.exceptions import HashingError
 from aiida.common.folders import SandboxFolder
 from aiida.common.hashing import chunked_file_hash, float_to_text, make_hash

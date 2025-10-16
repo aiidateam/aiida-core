@@ -2,7 +2,7 @@
 
 from . import defaults
 
-__all__ = ('get_rmq_url', 'get_launch_queue_name', 'get_message_exchange_name', 'get_task_exchange_name')
+__all__ = ('get_launch_queue_name', 'get_message_exchange_name', 'get_rmq_url', 'get_task_exchange_name')
 
 
 def get_rmq_url(protocol=None, username=None, password=None, host=None, port=None, virtual_host=None, **kwargs):

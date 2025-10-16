@@ -12,6 +12,8 @@ import threading
 
 import plumpy
 import pytest
+from plumpy.utils import AttributesFrozendict
+
 from aiida import orm
 from aiida.common.lang import override
 from aiida.engine import ExitCode, ExitCodesNamespace, Process, run, run_get_node, run_get_pk
@@ -20,8 +22,6 @@ from aiida.manage.caching import disable_caching, enable_caching
 from aiida.orm import to_aiida_type
 from aiida.orm.nodes.caching import NodeCaching
 from aiida.plugins import CalculationFactory
-from plumpy.utils import AttributesFrozendict
-
 from tests.utils import processes as test_processes
 
 
@@ -77,7 +77,7 @@ class ProcessStackTest(Process):
     _node_class = orm.WorkflowNode
 
     @override
-    def run(self):
+    async def run(self):
         pass
 
     @override
@@ -323,7 +323,7 @@ class TestProcess:
                 spec.input_namespace('namespace', valid_type=orm.Int, dynamic=True)
                 spec.output_namespace('namespace', valid_type=orm.Int, dynamic=True)
 
-            def run(self):
+            async def run(self):
                 self.out('namespace', self.inputs.namespace)
 
         results, node = run_get_node(TestProcess1, namespace={'alpha': orm.Int(1), 'beta': orm.Int(2)})
@@ -347,7 +347,7 @@ class TestProcess:
                 spec.output_namespace('integer.namespace', valid_type=orm.Int, dynamic=True)
                 spec.output('required_string', valid_type=orm.Str, required=True)
 
-            def run(self):
+            async def run(self):
                 if self.inputs.add_outputs:
                     self.out('required_string', orm.Str('testing').store())
                     self.out('integer.namespace.two', orm.Int(2).store())

@@ -11,9 +11,9 @@
 import asyncio
 
 import pytest
+
 from aiida.engine import processes, run
 from aiida.manage import get_manager
-
 from tests.utils import processes as test_processes
 
 

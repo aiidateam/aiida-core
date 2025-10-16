@@ -9,9 +9,12 @@
 """Test for entity fields"""
 
 import pytest
-from aiida import orm
-from aiida.orm.fields import add_field
 from importlib_metadata import entry_points
+
+from aiida import orm
+from aiida.common.pydantic import MetadataField
+from aiida.orm.fields import add_field
+from aiida.plugins import load_entry_point
 
 EPS = entry_points()
 
@@ -27,37 +30,34 @@ def test_all_entity_fields(entity_cls, data_regression):
     )
 
 
-@pytest.mark.parametrize(
-    'group,name',
-    (
-        (group, name)
-        for group in (
-            'aiida.node',
-            'aiida.data',
-        )
-        for name in EPS.select(group=group).names
-    ),
-)
-def test_all_node_fields(group, name, data_regression):
+@pytest.fixture
+def node_and_data_entry_points() -> list[tuple[str, str]]:
+    """Return a list of available entry points."""
+    _eps: list[tuple[str, str]] = []
+    eps = entry_points()
+    for group in ['aiida.node', 'aiida.data']:
+        _eps.extend((group, ep.name) for ep in eps.select(group=group) if ep.name.startswith('core.'))
+    return _eps
+
+
+def test_all_node_fields(node_and_data_entry_points: list[tuple[str, str]], data_regression):
     """Test that all the node fields are correctly registered."""
-    node_cls = next(iter(tuple(EPS.select(group=group, name=name)))).load()
-    data_regression.check(
-        {key: repr(value) for key, value in node_cls.fields._dict.items()},
-        basename=f'fields_{group}.{name}.{node_cls.__name__}',
-    )
+    for group, name in node_and_data_entry_points:
+        node_cls = load_entry_point(group, name)
+        data_regression.check(
+            {key: repr(value) for key, value in node_cls.fields._dict.items()},
+            basename=f'fields_{group}.{name}.{node_cls.__name__}',
+        )
 
 
 def test_add_field():
     """Test the `add_field` API."""
 
     class NewNode(orm.Data):
-        __qb_fields__ = (
-            add_field(
-                'key1',
-                dtype=str,
+        class Model(orm.Data.Model):
+            key1: str = MetadataField(  # type: ignore[annotation-unchecked]
                 is_subscriptable=False,
-            ),
-        )
+            )
 
     node = NewNode()
 
@@ -102,10 +102,9 @@ def test_query_new_class(monkeypatch):
     )
 
     class NewNode(orm.Data):
-        __qb_fields__ = [
-            add_field('some_label', dtype=str),
-            add_field('some_value', dtype=int),
-        ]
+        class Model(orm.Data.Model):
+            some_label: str = MetadataField()  # type: ignore[annotation-unchecked]
+            some_value: int = MetadataField()  # type: ignore[annotation-unchecked]
 
     node = NewNode()
     node.base.attributes.set_many({'some_label': 'A', 'some_value': 1})
@@ -208,14 +207,14 @@ def test_query_filters():
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_query_subscriptable():
     """Test using subscriptable fields in a query."""
-    node = orm.Dict(dict={'a': 1}).store()
+    node = orm.Dict({'a': 1}).store()
     node.base.extras.set('b', 2)
     result = (
         orm.QueryBuilder()
         .append(
             orm.Dict,
             project=[
-                orm.Dict.fields.dict['a'],
+                orm.Dict.fields.attributes['a'],
                 orm.Dict.fields.extras['b'],
             ],
         )

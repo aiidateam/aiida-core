@@ -16,17 +16,22 @@ and indeed a valid implementation is::
 
 """
 
+from __future__ import annotations
+
 from functools import partial
 from types import TracebackType
-from typing import Any, Callable, Optional, Type
+from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Type
+
+if TYPE_CHECKING:
+    from tqdm import tqdm
 
 __all__ = (
-    'get_progress_reporter',
-    'set_progress_reporter',
-    'set_progress_bar_tqdm',
-    'ProgressReporterAbstract',
     'TQDM_BAR_FORMAT',
+    'ProgressReporterAbstract',
     'create_callback',
+    'get_progress_reporter',
+    'set_progress_bar_tqdm',
+    'set_progress_reporter',
 )
 
 TQDM_BAR_FORMAT = '{desc:40.40}{percentage:6.1f}%|{bar}| {n_fmt}/{total_fmt}'
@@ -79,11 +84,11 @@ class ProgressReporterAbstract:
 
     def __exit__(
         self, exctype: Optional[Type[BaseException]], excinst: Optional[BaseException], exctb: Optional[TracebackType]
-    ):
+    ) -> Literal[False]:
         """Exit the contextmanager."""
         return False
 
-    def set_description_str(self, text: Optional[str] = None, refresh: bool = True):
+    def set_description_str(self, text: Optional[str] = None, refresh: bool = True) -> None:
         """Set the text shown by the progress reporter.
 
         :param text: The text to show
@@ -92,7 +97,7 @@ class ProgressReporterAbstract:
         """
         self._desc = text
 
-    def update(self, n: int = 1):
+    def update(self, n: int = 1) -> None:
         """Update the progress counter.
 
         :param n: Increment to add to the internal counter of iterations
@@ -100,7 +105,7 @@ class ProgressReporterAbstract:
         """
         self._increment += n
 
-    def reset(self, total: Optional[int] = None):
+    def reset(self, total: Optional[int] = None) -> None:
         """Resets current iterations to 0.
 
         :param total: If not None, update number of expected iterations.
@@ -118,10 +123,10 @@ class ProgressReporterNull(ProgressReporterAbstract):
     """
 
 
-PROGRESS_REPORTER: Type[ProgressReporterAbstract] = ProgressReporterNull
+PROGRESS_REPORTER: type[ProgressReporterAbstract] | type[tqdm[Any]] = ProgressReporterNull
 
 
-def get_progress_reporter() -> Type[ProgressReporterAbstract]:
+def get_progress_reporter() -> type[ProgressReporterAbstract] | type[tqdm[Any]]:
     """Return the progress reporter
 
     Example Usage::
@@ -136,7 +141,9 @@ def get_progress_reporter() -> Type[ProgressReporterAbstract]:
     return PROGRESS_REPORTER
 
 
-def set_progress_reporter(reporter: Optional[Type[ProgressReporterAbstract]] = None, **kwargs: Any):
+def set_progress_reporter(
+    reporter: type[ProgressReporterAbstract] | type[tqdm[Any]] | None = None, **kwargs: Any
+) -> None:
     """Set the progress reporter implementation
 
     :param reporter: A progress reporter for a process.  If None, reset to ``ProgressReporterNull``.
@@ -164,7 +171,9 @@ def set_progress_reporter(reporter: Optional[Type[ProgressReporterAbstract]] = N
         PROGRESS_REPORTER = reporter
 
 
-def set_progress_bar_tqdm(bar_format: Optional[str] = TQDM_BAR_FORMAT, leave: Optional[bool] = False, **kwargs: Any):
+def set_progress_bar_tqdm(
+    bar_format: Optional[str] = TQDM_BAR_FORMAT, leave: Optional[bool] = False, **kwargs: Any
+) -> None:
     """Set a `tqdm <https://github.com/tqdm/tqdm>`__ implementation of the progress reporter interface.
 
     See :func:`~aiida.common.progress_reporter.set_progress_reporter` for details.
@@ -180,7 +189,7 @@ def set_progress_bar_tqdm(bar_format: Optional[str] = TQDM_BAR_FORMAT, leave: Op
     set_progress_reporter(tqdm, bar_format=bar_format, leave=leave, **kwargs)
 
 
-def create_callback(progress_reporter: ProgressReporterAbstract) -> Callable[[str, Any], None]:
+def create_callback(progress_reporter: ProgressReporterAbstract | tqdm) -> Callable[[str, Any], None]:
     """Create a callback function to update the progress reporter.
 
     :returns: a callback to report on the process, ``callback(action, value)``,
@@ -193,7 +202,7 @@ def create_callback(progress_reporter: ProgressReporterAbstract) -> Callable[[st
 
     """
 
-    def _callback(action: str, value: Any):
+    def _callback(action: str, value: Any) -> None:
         if action == 'init':
             progress_reporter.reset(value['total'])
             progress_reporter.set_description_str(value['description'])

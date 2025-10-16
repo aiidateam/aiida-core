@@ -15,7 +15,7 @@ from plumpy.utils import AttributesDict
 
 from aiida.orm import ProcessNode
 
-__all__ = ('Awaitable', 'AwaitableTarget', 'AwaitableAction', 'construct_awaitable')
+__all__ = ('Awaitable', 'AwaitableAction', 'AwaitableTarget', 'construct_awaitable')
 
 
 class Awaitable(AttributesDict):

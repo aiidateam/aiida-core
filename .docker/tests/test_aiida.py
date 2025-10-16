@@ -6,7 +6,7 @@ from packaging.version import parse
 
 
 def test_correct_python_version_installed(aiida_exec, python_version):
-    info = json.loads(aiida_exec('mamba list --json --full-name python').decode())[0]
+    info = json.loads(aiida_exec('mamba list --json --full-name python', ignore_stderr=True).decode())[0]
     assert info['name'] == 'python'
     assert parse(info['version']) == parse(python_version)
 
@@ -15,7 +15,7 @@ def test_correct_pgsql_version_installed(aiida_exec, pgsql_version, variant):
     if variant == 'aiida-core-base':
         pytest.skip('PostgreSQL is not installed in the base image')
 
-    info = json.loads(aiida_exec('mamba list --json --full-name postgresql').decode())[0]
+    info = json.loads(aiida_exec('mamba list --json --full-name postgresql', ignore_stderr=True).decode())[0]
     assert info['name'] == 'postgresql'
     assert parse(info['version']).major == parse(pgsql_version).major
 

@@ -11,6 +11,7 @@
 from pathlib import Path
 
 import pytest
+
 from aiida.cmdline.utils import common
 from aiida.cmdline.utils.common import validate_output_filename
 from aiida.common import LinkType

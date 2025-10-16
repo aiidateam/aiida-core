@@ -19,21 +19,33 @@ and workflow engine for the automation of complex sequences of simulations.
 More information at http://www.aiida.net
 """
 
-from aiida.common.log import configure_logging  # noqa: F401
-from aiida.manage.configuration import get_config_option, get_profile, load_profile, profile_context  # noqa: F401
+from aiida.common.log import configure_logging
+from aiida.manage.configuration import get_config_option, get_profile, load_profile, profile_context
 
 __copyright__ = (
     'Copyright (c), This file is part of the AiiDA platform. '
     'For further information please visit http://www.aiida.net/. All rights reserved.'
 )
 __license__ = 'MIT license, see LICENSE.txt file.'
-__version__ = '2.6.2.post0'
+__version__ = '2.7.1.post0'
 __authors__ = 'The AiiDA team.'
 __paper__ = (
     'S. P. Huber et al., "AiiDA 1.0, a scalable computational infrastructure for automated reproducible workflows and '
     'data provenance", Scientific Data 7, 300 (2020); https://doi.org/10.1038/s41597-020-00638-4'
 )
 __paper_short__ = 'S. P. Huber et al., Scientific Data 7, 300 (2020).'
+
+__all__ = [
+    'configure_logging',
+    'get_config_option',
+    'get_file_header',
+    'get_profile',
+    'get_strict_version',
+    'get_version',
+    'load_ipython_extension',
+    'load_profile',
+    'profile_context',
+]
 
 
 def get_strict_version():
@@ -94,7 +106,10 @@ def get_file_header(comment_char: str = '# ') -> str:
 
 
 def load_ipython_extension(ipython):
-    """Load the AiiDA IPython extension, using ``%load_ext aiida``."""
-    from .tools.ipython.ipython_magics import AiiDALoaderMagics
+    """Load the AiiDA IPython extension, using ``%load_ext aiida``.
 
-    ipython.register_magics(AiiDALoaderMagics)
+    :param ipython: InteractiveShell instance. If ``None``, the global InteractiveShell is used.
+    """
+    from aiida.tools.ipython.ipython_magics import load_ipython_extension
+
+    load_ipython_extension(ipython)

@@ -12,6 +12,7 @@ import logging
 
 import paramiko
 import pytest
+
 from aiida.transports.plugins.ssh import SshTransport
 from aiida.transports.transport import TransportInternalError
 
@@ -27,7 +28,7 @@ def test_closed_connection_sftp():
     """Test calling sftp command on a closed connection."""
     with pytest.raises(TransportInternalError):
         transport = SshTransport(machine='localhost')
-        transport.listdir()
+        transport.listdir('/home')
 
 
 def test_auto_add_policy():

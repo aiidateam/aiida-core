@@ -14,6 +14,7 @@ from decimal import Decimal
 from io import BytesIO
 
 import pytest
+
 from aiida.common import LinkType, exceptions, timezone
 from aiida.manage import get_manager
 from aiida.orm import CalculationNode, Computer, Data, Int, Log, Node, User, WorkflowNode, load_node

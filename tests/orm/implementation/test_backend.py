@@ -15,6 +15,7 @@ import pathlib
 import uuid
 
 import pytest
+
 from aiida import orm
 from aiida.common import exceptions
 from aiida.common.links import LinkType

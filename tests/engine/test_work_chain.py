@@ -14,6 +14,7 @@ import inspect
 
 import plumpy
 import pytest
+
 from aiida import orm
 from aiida.common import exceptions
 from aiida.common.links import LinkType
@@ -1658,5 +1659,5 @@ def test_illegal_override_run():
                 super().define(spec)
                 spec.outline(cls.run)
 
-            def run(self):
+            async def run(self):
                 pass

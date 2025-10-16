@@ -12,7 +12,7 @@ from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
 
 
-def test_critical_log_msg_and_metadata(tmp_path, aiida_profile):
+def test_critical_log_msg_and_metadata(tmp_path, aiida_profile_clean):
     """Testing logging of critical message"""
     message = 'Testing logging of critical failure'
     calc = orm.CalculationNode()
@@ -33,7 +33,7 @@ def test_critical_log_msg_and_metadata(tmp_path, aiida_profile):
     export_file = tmp_path.joinpath('export.aiida')
     create_archive([calc], filename=export_file)
 
-    aiida_profile.reset_storage()
+    aiida_profile_clean.reset_storage()
 
     import_archive(export_file)
 
@@ -45,7 +45,7 @@ def test_critical_log_msg_and_metadata(tmp_path, aiida_profile):
     assert logs[0].metadata == log_metadata
 
 
-def test_exclude_logs_flag(tmp_path, aiida_profile):
+def test_exclude_logs_flag(tmp_path, aiida_profile_clean):
     """Test that the `include_logs` argument for `export` works."""
     log_msg = 'Testing logging of critical failure'
 
@@ -65,7 +65,7 @@ def test_exclude_logs_flag(tmp_path, aiida_profile):
     create_archive([calc], filename=export_file, include_logs=False)
 
     # Clean database and reimport exported data
-    aiida_profile.reset_storage()
+    aiida_profile_clean.reset_storage()
     import_archive(export_file)
 
     # Finding all the log messages
@@ -80,7 +80,7 @@ def test_exclude_logs_flag(tmp_path, aiida_profile):
     assert str(import_calcs[0][0]) == calc_uuid
 
 
-def test_export_of_imported_logs(tmp_path, aiida_profile):
+def test_export_of_imported_logs(tmp_path, aiida_profile_clean):
     """Test export of imported Log"""
     log_msg = 'Testing export of imported log'
 
@@ -102,7 +102,7 @@ def test_export_of_imported_logs(tmp_path, aiida_profile):
     create_archive([calc], filename=export_file)
 
     # Clean database and reimport exported data
-    aiida_profile.reset_storage()
+    aiida_profile_clean.reset_storage()
     import_archive(export_file)
 
     # Finding all the log messages
@@ -123,7 +123,7 @@ def test_export_of_imported_logs(tmp_path, aiida_profile):
     create_archive([calc], filename=re_export_file)
 
     # Clean database and reimport exported data
-    aiida_profile.reset_storage()
+    aiida_profile_clean.reset_storage()
     import_archive(re_export_file)
 
     # Finding all the log messages
@@ -378,3 +378,28 @@ def test_reimport_of_logs_for_single_node(tmp_path, aiida_profile_clean):
         log_message = str(log[1])
         assert log_uuid in total_log_uuids
         assert log_message in log_msgs
+
+
+def test_filter_size(tmp_path, aiida_profile_clean):
+    """Tests if the query still works when the number of logs is beyond the `filter_size limit."""
+    node = orm.CalculationNode().store()
+    node.seal()
+
+    nb_nodes = 5
+    for _ in range(nb_nodes):
+        node.logger.critical('some')
+
+    # Export DB
+    export_file_existing = tmp_path.joinpath('export.aiida')
+    create_archive([node], filename=export_file_existing)
+
+    # Clean database and reimport DB
+    aiida_profile_clean.reset_storage()
+    import_archive(export_file_existing, filter_size=2)
+
+    # Check correct import
+    builder = orm.QueryBuilder().append(orm.Node, tag='node', project=['uuid'])
+    builder.append(orm.Log, with_node='node', project=['uuid'])
+    builder = builder.all()
+
+    assert len(builder) == nb_nodes

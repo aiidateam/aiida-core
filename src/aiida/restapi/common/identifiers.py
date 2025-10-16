@@ -135,7 +135,6 @@ def load_entry_point_from_full_type(full_type):
     :raises `~aiida.common.exceptions.EntryPointError`: if the corresponding entry point cannot be loaded
     """
     from aiida.common import EntryPointError
-    from aiida.common.utils import strip_prefix
     from aiida.plugins.entry_point import is_valid_entry_point_string, load_entry_point, load_entry_point_from_string
 
     data_prefix = 'data.'
@@ -151,7 +150,7 @@ def load_entry_point_from_full_type(full_type):
             raise EntryPointError(f'could not load entry point `{process_type}`')
 
     elif node_type.startswith(data_prefix):
-        base_name = strip_prefix(node_type, data_prefix)
+        base_name = node_type.removeprefix(data_prefix)
         entry_point_name = base_name.rsplit('.', 2)[0]
 
         try:
@@ -229,20 +228,19 @@ class Namespace(MutableMapping):
 
     def _infer_full_type(self, full_type):
         """Infer the full type based on the current namespace path and the given full type of the leaf."""
-        from aiida.common.utils import strip_prefix
 
         if full_type or self._path is None:
             return full_type
 
-        full_type = strip_prefix(self._path, 'node.')
+        full_type = self._path.removeprefix('node.')
 
         if full_type.startswith('process.'):
             for basepath, full_type_template in self.process_full_type_mapping.items():
                 if full_type.startswith(basepath):
-                    plugin_name = strip_prefix(full_type, basepath)
+                    plugin_name = full_type.removeprefix(basepath)
                     if plugin_name.startswith(DEFAULT_NAMESPACE_LABEL):
                         temp_type_template = self.process_full_type_mapping_unplugged[basepath]
-                        plugin_name = strip_prefix(plugin_name, DEFAULT_NAMESPACE_LABEL + '.')
+                        plugin_name = plugin_name.removeprefix(DEFAULT_NAMESPACE_LABEL + '.')
                         full_type = temp_type_template.format(plugin_name=plugin_name)
                     else:
                         full_type = full_type_template.format(plugin_name=plugin_name)

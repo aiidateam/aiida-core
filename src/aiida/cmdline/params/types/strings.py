@@ -8,11 +8,15 @@
 ###########################################################################
 """Module for various text-based string validation."""
 
-import re
+from __future__ import annotations
 
+import re
+import typing as t
+
+import click
 from click.types import StringParamType
 
-__all__ = ('EmailType', 'EntryPointType', 'HostnameType', 'NonEmptyStringParamType', 'LabelStringType')
+__all__ = ('EmailType', 'EntryPointType', 'HostnameType', 'LabelStringType', 'NonEmptyStringParamType')
 
 
 class NonEmptyStringParamType(StringParamType):
@@ -20,19 +24,17 @@ class NonEmptyStringParamType(StringParamType):
 
     name = 'nonemptystring'
 
-    def convert(self, value, param, ctx):
-        newval = super().convert(value, param, ctx)
-
-        # Note: Valid :py:class:`click.ParamType`s need to pass through None unchanged
-        if newval is None:
-            return None
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> str:
+        # NOTE: The return value of click.StringParamType.convert is typed as t.Any,
+        # but from its implementation its clear that it returns a string.
+        newval = t.cast(str, super().convert(value, param, ctx))
 
         if not newval:  # empty string
             self.fail('Empty string is not valid!')
 
         return newval
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'NONEMPTYSTRING'
 
 
@@ -48,7 +50,7 @@ class LabelStringType(NonEmptyStringParamType):
 
     ALPHABET = r'\w\.\-'
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> str:
         newval = super().convert(value, param, ctx)
 
         if not re.match(f'^[{self.ALPHABET}]*$', newval):
@@ -56,7 +58,7 @@ class LabelStringType(NonEmptyStringParamType):
 
         return newval
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'LABELSTRING'
 
 
@@ -74,15 +76,15 @@ class HostnameType(StringParamType):
 
     name = 'hostname'
 
-    def convert(self, value, param, ctx):
-        newval = super().convert(value, param, ctx)
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> str:
+        newval = t.cast(str, super().convert(value, param, ctx))
 
         if newval and not HOSTNAME_REGEX.match(newval):
             self.fail('Please enter a valid hostname.')
 
         return newval
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'HOSTNAME'
 
 
@@ -94,15 +96,15 @@ class EmailType(StringParamType):
 
     name = 'email'
 
-    def convert(self, value, param, ctx):
-        newval = super().convert(value, param, ctx)
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> str:
+        newval = t.cast(str, super().convert(value, param, ctx))
 
         if not re.match(r'[^@]+@[^@]+(\.[^@]+){0,1}', newval):
             self.fail('Please enter a valid email.')
 
         return newval
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'EMAIL'
 
 
@@ -114,7 +116,7 @@ class EntryPointType(NonEmptyStringParamType):
 
     name = 'entrypoint'
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> str:
         newval = super().convert(value, param, ctx)
 
         if not re.match(r'[\w.-]', newval):
@@ -124,5 +126,5 @@ class EntryPointType(NonEmptyStringParamType):
 
         return newval
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'ENTRYPOINT'

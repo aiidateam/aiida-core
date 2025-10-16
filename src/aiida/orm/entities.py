@@ -11,24 +11,31 @@
 from __future__ import annotations
 
 import abc
+import pathlib
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Generic, List, Optional, Sequence, Type, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Generic, List, Optional, Type, TypeVar, Union
 
 from plumpy.base.utils import call_with_super_check, super_check
+from pydantic import BaseModel
+from pydantic.fields import FieldInfo
 
-from aiida.common.exceptions import InvalidOperation
+from aiida.common import exceptions, log
+from aiida.common.exceptions import EntryPointError, InvalidOperation, NotExistent
 from aiida.common.lang import classproperty, type_check
+from aiida.common.pydantic import MetadataField, get_metadata
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
-from .fields import EntityFieldMeta, QbField, QbFields, add_field
+from .fields import EntityFieldMeta
 
 if TYPE_CHECKING:
+    from logging import Logger
+
     from aiida.orm.implementation import BackendEntity, StorageBackend
     from aiida.orm.querybuilder import FilterType, OrderByType, QueryBuilder
 
-__all__ = ('Entity', 'Collection', 'EntityTypes')
+__all__ = ('Collection', 'Entity', 'EntityTypes')
 
 CollectionType = TypeVar('CollectionType', bound='Collection')
 EntityType = TypeVar('EntityType', bound='Entity')
@@ -151,14 +158,14 @@ class Collection(abc.ABC, Generic[EntityType]):
         :return: a list of resulting matches
         """
         query = self.query(filters=filters, order_by=order_by, limit=limit)
-        return cast(List[EntityType], query.all(flat=True))
+        return query.all(flat=True)
 
     def all(self) -> List[EntityType]:
         """Get all entities in this collection.
 
         :return: A list of all entities
         """
-        return cast(List[EntityType], self.query().all(flat=True))
+        return self.query().all(flat=True)
 
     def count(self, filters: Optional['FilterType'] = None) -> int:
         """Count entities in this collection according to criteria.
@@ -174,17 +181,100 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     """An AiiDA entity"""
 
     _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
+    _logger: Logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
-    fields: QbFields = QbFields()
-
-    __qb_fields__: Sequence[QbField] = [
-        add_field(
-            'pk',
-            dtype=int,
+    class Model(BaseModel, defer_build=True):
+        pk: Optional[int] = MetadataField(
+            None,
+            description='The primary key of the entity. Can be `None` if the entity is not yet stored.',
             is_attribute=False,
-            doc='The primary key of the entity',
-        ),
-    ]
+            exclude_to_orm=True,
+            exclude_from_cli=True,
+        )
+
+    @classmethod
+    def model_to_orm_fields(cls) -> dict[str, FieldInfo]:
+        return {
+            key: field for key, field in cls.Model.model_fields.items() if not get_metadata(field, 'exclude_to_orm')
+        }
+
+    @classmethod
+    def model_to_orm_field_values(cls, model: Model) -> dict[str, Any]:
+        from aiida.plugins.factories import BaseFactory
+
+        fields = {}
+
+        for key, field in cls.model_to_orm_fields().items():
+            field_value = getattr(model, key)
+
+            if field_value is None:
+                continue
+
+            if orm_class := get_metadata(field, 'orm_class'):
+                if isinstance(orm_class, str):
+                    try:
+                        orm_class = BaseFactory('aiida.orm', orm_class)
+                    except EntryPointError as exception:
+                        raise EntryPointError(
+                            f'The `orm_class` of `{cls.__name__}.Model.{key} is invalid: {exception}'
+                        ) from exception
+                try:
+                    fields[key] = orm_class.collection.get(id=field_value)
+                except NotExistent as exception:
+                    raise NotExistent(f'No `{orm_class}` found with pk={field_value}') from exception
+            elif model_to_orm := get_metadata(field, 'model_to_orm'):
+                fields[key] = model_to_orm(model)
+            else:
+                fields[key] = field_value
+
+        return fields
+
+    def _to_model(self, repository_path: pathlib.Path) -> Model:
+        """Return the entity instance as an instance of its model."""
+        fields = {}
+
+        for key, field in self.Model.model_fields.items():
+            if orm_to_model := get_metadata(field, 'orm_to_model'):
+                fields[key] = orm_to_model(self, repository_path)
+            else:
+                fields[key] = getattr(self, key)
+
+        return self.Model(**fields)
+
+    @classmethod
+    def _from_model(cls, model: Model) -> 'Entity':
+        """Return an entity instance from an instance of its model."""
+        fields = cls.model_to_orm_field_values(model)
+        return cls(**fields)
+
+    def serialize(self, repository_path: Union[pathlib.Path, None] = None) -> dict[str, Any]:
+        """Serialize the entity instance to JSON.
+
+        :param repository_path: If the orm node has files in the repository, this path is used to dump the repostiory
+            files to. If no path is specified a temporary path is created using the entities pk.
+        """
+        self.logger.warning(
+            'Serialization through pydantic is still an experimental feature and might break in future releases.'
+        )
+        if repository_path is None:
+            import tempfile
+
+            repository_path = pathlib.Path(tempfile.mkdtemp()) / f'./aiida_serialization/{self.pk}/'
+            repository_path.mkdir(parents=True)
+        else:
+            if not repository_path.exists():
+                raise ValueError(f'The repository_path `{repository_path}` does not exist.')
+            if not repository_path.is_dir():
+                raise ValueError(f'The repository_path `{repository_path}` is not a directory.')
+        return self._to_model(repository_path).model_dump()
+
+    @classmethod
+    def from_serialized(cls, **kwargs: dict[str, Any]) -> 'Entity':
+        """Construct an entity instance from JSON serialized data."""
+        cls._logger.warning(
+            'Serialization through pydantic is still an experimental feature and might break in future releases.'
+        )
+        return cls._from_model(cls.Model(**kwargs))  # type: ignore[arg-type]
 
     @classproperty
     def objects(cls: EntityType) -> CollectionType:  # noqa: N805
@@ -236,6 +326,15 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         self._backend_entity = backend_entity
         call_with_super_check(self.initialize)
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, self.__class__):
+            return False
+
+        if hasattr(self, 'uuid'):
+            return self.uuid == other.uuid  # type: ignore[attr-defined]
+
+        return super().__eq__(other)
+
     def __getstate__(self):
         """Prevent an ORM entity instance from being pickled."""
         raise InvalidOperation('pickling of AiiDA ORM instances is not supported.')
@@ -246,6 +345,14 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         This will be called after the constructor is called or an entity is created from an existing backend entity.
         """
+
+    @property
+    def logger(self):
+        """Return the internal logger."""
+        try:
+            return self._logger
+        except AttributeError:
+            raise exceptions.InternalError('No self._logger configured for {}!')
 
     @property
     def id(self) -> int | None:

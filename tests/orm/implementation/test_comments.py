@@ -12,6 +12,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 import pytest
+
 from aiida import orm
 from aiida.common import exceptions, timezone
 

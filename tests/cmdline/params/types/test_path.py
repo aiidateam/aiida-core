@@ -10,6 +10,7 @@
 
 import click
 import pytest
+
 from aiida.cmdline.params.types.path import PathOrUrl, check_timeout_seconds
 
 
@@ -64,6 +65,7 @@ def test_fail_non_readable_path(tmp_path):
 
 def test_fail_unreachable_url():
     """Test the parameter in case of a valid URL that cannot be reached."""
+    # TODO: Mock the request to make this faster
     with pytest.raises(click.BadParameter, match=r'.* could not be reached.'):
         PathOrUrl(exists=True).convert('http://domain/some/path', None, None)
 

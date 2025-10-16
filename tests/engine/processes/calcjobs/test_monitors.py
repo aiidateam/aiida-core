@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 
 import pytest
+
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.calculations.monitors import base
 from aiida.common.exceptions import EntryPointError

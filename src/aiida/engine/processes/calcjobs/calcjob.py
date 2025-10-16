@@ -51,10 +51,9 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:
     :return: string with error message in case the inputs are invalid
     """
     try:
-        ctx.get_port('code')
         ctx.get_port('metadata.computer')
     except ValueError:
-        # If the namespace no longer contains the `code` or `metadata.computer` ports we skip validation
+        # If the namespace no longer contains `metadata.computer` port we skip validation
         return None
 
     remote_folder = inputs.get('remote_folder', None)
@@ -66,6 +65,10 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:
         return None
 
     code = inputs.get('code', None)
+    if not code:
+        # If the namespace no longer contains `code` port we skip validation
+        return None
+
     computer_from_code = code.computer
     computer_from_metadata = inputs.get('metadata', {}).get('computer', None)
 
@@ -110,13 +113,37 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:
     return None
 
 
+def validate_unstash_options(unstash_options: Any, _: Any) -> Optional[str]:
+    """Validate the ``unstash`` options."""
+    from aiida.common.datastructures import UnstashTargetMode
+
+    source_list = unstash_options.get('source_list', None)
+    unstash_target_mode = unstash_options.get('unstash_target_mode', None)
+
+    if not isinstance(source_list, (list, tuple)) or any(
+        not isinstance(src, str) or os.path.isabs(src) for src in source_list
+    ):
+        port = 'metadata.options.unstash.source_list'
+        return f'`{port}` should be a list or tuple of relative filepaths, got: {source_list}'
+
+    try:
+        UnstashTargetMode(unstash_target_mode)
+    except ValueError:
+        port = 'metadata.options.unstash.unstash_target_mode'
+        return (
+            f'`{port}` should be a member of aiida.common.datastructures.UnstashTargetMode, got: {unstash_target_mode}'
+        )
+
+    return None
+
+
 def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
     """Validate the ``stash`` options."""
     from aiida.common.datastructures import StashMode
 
     target_base = stash_options.get('target_base', None)
     source_list = stash_options.get('source_list', None)
-    stash_mode = stash_options.get('mode', StashMode.COPY.value)
+    stash_mode = stash_options.get('stash_mode', None)
 
     if not isinstance(target_base, str) or not os.path.isabs(target_base):
         return f'`metadata.options.stash.target_base` should be an absolute filepath, got: {target_base}'
@@ -130,8 +157,22 @@ def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
     try:
         StashMode(stash_mode)
     except ValueError:
-        port = 'metadata.options.stash.mode'
+        port = 'metadata.options.stash.stash_mode'
         return f'`{port}` should be a member of aiida.common.datastructures.StashMode, got: {stash_mode}'
+
+    dereference = stash_options.get('dereference', None)
+
+    if stash_mode in [
+        StashMode.COMPRESS_TAR.value,
+        StashMode.COMPRESS_TARBZ2.value,
+        StashMode.COMPRESS_TARGZ.value,
+        StashMode.COMPRESS_TARXZ.value,
+    ]:
+        if not isinstance(dereference, bool):
+            return f'`metadata.options.stash.dereference` should be a boolean, got: {dereference}'
+
+    elif dereference is not None:
+        return '`metadata.options.stash.dereference` is only valid for compression stashing modes'
 
     return None
 
@@ -390,6 +431,26 @@ class CalcJob(Process):
             help='List of relative file paths that should be retrieved in addition to what the plugin specifies.',
         )
         spec.input_namespace(
+            'metadata.options.unstash',
+            required=False,
+            populate_defaults=False,
+            validator=validate_unstash_options,
+            help='Optional directives to unstash files after upload.',
+        )
+        spec.input(
+            'metadata.options.unstash.source_list',
+            valid_type=(tuple, list),
+            required=False,
+            help='Sequence of relative filepaths representing files in the remote directory that should be unstashed.',
+        )
+        spec.input(
+            'metadata.options.unstash.unstash_target_mode',
+            valid_type=str,
+            required=False,
+            help='Mode with which to perform the unstashing, should be value of '
+            '`aiida.common.datastructures.UnstashTargetMode`.',
+        )
+        spec.input_namespace(
             'metadata.options.stash',
             required=False,
             populate_defaults=False,
@@ -415,7 +476,12 @@ class CalcJob(Process):
             required=False,
             help='Mode with which to perform the stashing, should be value of `aiida.common.datastructures.StashMode`.',
         )
-
+        spec.input(
+            'metadata.options.stash.dereference',
+            valid_type=bool,
+            required=False,
+            help='Whether to follow symlinks while stashing or not, specific to StashMode.COMPRESS_* enums',
+        )
         spec.output(
             'remote_folder',
             valid_type=orm.RemoteData,
@@ -434,7 +500,6 @@ class CalcJob(Process):
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
             'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.',
         )
-
         spec.exit_code(
             100,
             'ERROR_NO_RETRIEVED_FOLDER',
@@ -524,7 +589,7 @@ class CalcJob(Process):
         super().on_terminated()
 
     @override
-    def run(self) -> Union[plumpy.process_states.Stop, int, plumpy.process_states.Wait]:
+    async def run(self) -> Union[plumpy.process_states.Stop, int, plumpy.process_states.Wait]:
         """Run the calculation job.
 
         This means invoking the `presubmit` and storing the temporary folder in the node's repository. Then we move the
@@ -535,11 +600,11 @@ class CalcJob(Process):
 
         """
         if self.inputs.metadata.dry_run:
-            self._perform_dry_run()
+            await self._perform_dry_run()
             return plumpy.process_states.Stop(None, True)
 
         if 'remote_folder' in self.inputs:
-            exit_code = self._perform_import()
+            exit_code = await self._perform_import()
             return exit_code
 
         # The following conditional is required for the caching to properly work. Even if the source node has a process
@@ -627,7 +692,7 @@ class CalcJob(Process):
         if not self.node.computer:
             self.node.computer = self.inputs.code.computer
 
-    def _perform_dry_run(self):
+    async def _perform_dry_run(self):
         """Perform a dry run.
 
         Instead of performing the normal sequence of steps, just the `presubmit` is called, which will call the method
@@ -643,14 +708,13 @@ class CalcJob(Process):
         with LocalTransport() as transport:
             with SubmitTestFolder() as folder:
                 calc_info = self.presubmit(folder)
-                transport.chdir(folder.abspath)
-                upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
+                await upload_calculation(self.node, transport, calc_info, folder, inputs=self.inputs, dry_run=True)
                 self.node.dry_run_info = {  # type: ignore[attr-defined]
                     'folder': folder.abspath,
                     'script_filename': self.node.get_option('submit_script_filename'),
                 }
 
-    def _perform_import(self):
+    async def _perform_import(self):
         """Perform the import of an already completed calculation.
 
         The inputs contained a `RemoteData` under the key `remote_folder` signalling that this is not supposed to be run
@@ -670,7 +734,7 @@ class CalcJob(Process):
                 with SandboxFolder(filepath_sandbox) as retrieved_temporary_folder:
                     self.presubmit(folder)
                     self.node.set_remote_workdir(self.inputs.remote_folder.get_remote_path())
-                    retrieved = retrieve_calculation(self.node, transport, retrieved_temporary_folder.abspath)
+                    retrieved = await retrieve_calculation(self.node, transport, retrieved_temporary_folder.abspath)
                     if retrieved is not None:
                         self.out(self.node.link_label_retrieved, retrieved)
                         self.update_outputs()
@@ -1063,7 +1127,7 @@ class CalcJob(Process):
 
         def encoder(obj):
             if dataclasses.is_dataclass(obj):
-                return dataclasses.asdict(obj)
+                return dataclasses.asdict(obj)  # type: ignore[arg-type]
             raise TypeError(f' {obj!r} is not JSON serializable')
 
         subfolder = folder.get_subfolder('.aiida', create=True)

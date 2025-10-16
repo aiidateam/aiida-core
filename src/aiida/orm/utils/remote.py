@@ -13,12 +13,13 @@ from __future__ import annotations
 import os
 import typing as t
 
+from aiida import orm
+from aiida.cmdline.utils import echo
 from aiida.orm.nodes.data.remote.base import RemoteData
 
 if t.TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from aiida import orm
     from aiida.orm.implementation import StorageBackend
     from aiida.transports import Transport
 
@@ -39,13 +40,38 @@ def clean_remote(transport: Transport, path: str) -> None:
     if not transport.is_open:
         raise ValueError('the transport should already be open')
 
-    basedir, relative_path = os.path.split(path)
-
     try:
-        transport.chdir(basedir)
-        transport.rmtree(relative_path)
+        transport.rmtree(path)
     except OSError:
         pass
+
+
+def clean_mapping_remote_paths(path_mapping, silent=False):
+    """Clean the remote folders for a given mapping of computer UUIDs to a list of remote folders.
+
+    :param path_mapping: a dictionary where the keys are the computer UUIDs and the values are lists of remote folders
+        It's designed to accept the output of `get_calcjob_remote_paths`
+    :param transport: the transport to use to clean the remote folders
+    :param silent: if True, the `echo` output will be suppressed
+    """
+
+    user = orm.User.collection.get_default()
+
+    if not user:
+        raise ValueError('No default user found')
+
+    for computer_uuid, paths in path_mapping.items():
+        counter = 0
+        computer = orm.load_computer(uuid=computer_uuid)
+        transport = orm.AuthInfo.collection.get(dbcomputer_id=computer.pk, aiidauser_id=user.pk).get_transport()
+
+        with transport:
+            for remote_folder in paths:
+                remote_folder._clean(transport=transport)
+                counter += 1
+
+        if not silent:
+            echo.echo_success(f'{counter} remote folders cleaned on {computer.label}')
 
 
 def get_calcjob_remote_paths(
@@ -73,7 +99,6 @@ def get_calcjob_remote_paths(
     """
     from datetime import timedelta
 
-    from aiida import orm
     from aiida.common import timezone
     from aiida.orm import CalcJobNode
 

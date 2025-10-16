@@ -8,12 +8,16 @@
 ###########################################################################
 """Tests for ``verdi profile``."""
 
+from unittest.mock import patch
+
 import pytest
+from pgtest.pgtest import PGTest
+
+from aiida import orm
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
 from aiida.manage import configuration
 from aiida.plugins import StorageFactory
 from aiida.tools.archive.create import create_archive
-from pgtest.pgtest import PGTest
 
 # NOTE: Most of these tests would work with sqlite_dos,
 # but would require generalizing a bunch of fixtures ('profile_factory' et al) in tests/conftest.py
@@ -163,6 +167,32 @@ def test_delete_force(run_cli_command, mock_profiles, pg_test_cluster):
 
 
 @pytest.mark.parametrize('entry_point', ('core.sqlite_dos', 'core.sqlite_zip'))
+def test_setup_with_validating_sqlite_version(run_cli_command, isolated_config, tmp_path, entry_point, monkeypatch):
+    """Test the ``verdi profile setup`` command.
+    Same as `test_setup`, here we test the functionality to check sqlite versions, before setting up profiles.
+    """
+
+    if entry_point == 'core.sqlite_zip':
+        tmp_path = tmp_path / 'archive.aiida'
+        create_archive([], filename=tmp_path)
+
+    profile_name = 'temp-profile'
+    options = [entry_point, '-n', '--profile-name', profile_name, '--email', 'email@host', '--filepath', str(tmp_path)]
+
+    # Should raise if installed version is lower than the supported one.
+    monkeypatch.setattr('aiida.storage.sqlite_zip.backend.SUPPORTED_VERSION', '100.0.0')
+    result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False, raises=True)
+    assert 'Storage backend requires sqlite 100.0.0 or higher. But you have' in result.stderr
+    assert profile_name not in isolated_config.profile_names
+
+    # Should not raise if installed version is higher than the supported one.
+    monkeypatch.setattr('aiida.storage.sqlite_zip.backend.SUPPORTED_VERSION', '0.0.0')
+    result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    assert profile_name in isolated_config.profile_names
+    assert f'Created new profile `{profile_name}`.' in result.output
+
+
+@pytest.mark.parametrize('entry_point', ('core.sqlite_dos', 'core.sqlite_zip'))
 def test_delete_storage(run_cli_command, isolated_config, tmp_path, entry_point):
     """Test the ``verdi profile delete`` command with the ``--delete-storage`` option."""
     profile_name = 'temp-profile'
@@ -307,3 +337,188 @@ def test_configure_rabbitmq(run_cli_command, isolated_config):
     cli_result = run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
     assert 'Connected to RabbitMQ with the provided connection parameters' in cli_result.stdout
     assert profile.process_control_config['broker_port'] == 5672
+
+
+class TestVerdiProfileDumpCLI:
+    """CLI-focused tests for `verdi profile dump` command."""
+
+    def test_dump_help(self, run_cli_command):
+        """Test help text for verdi profile dump."""
+        result = run_cli_command(cmd_profile.profile_dump, ['--help'])
+        assert 'Usage' in result.output
+        assert 'Dump all data in an AiiDA profile' in result.output
+
+    def test_dump_warning_message_displayed(self, run_cli_command, tmp_path):
+        """Test that warning message about new feature is displayed."""
+        test_path = tmp_path / 'warning-message'
+        options = ['--all', '--path', str(test_path)]
+
+        result = run_cli_command(cmd_profile.profile_dump, options)
+        assert 'Warning: This is a new feature which is still in its testing phase' in result.output
+
+    def test_dump_no_scope_handling(self, tmp_path, run_cli_command):
+        """Test CLI behavior when no scope is specified."""
+        test_path = tmp_path / 'specified-path'
+        options = ['--path', str(test_path)]
+        result = run_cli_command(cmd_profile.profile_dump, options)
+        # Should handle gracefully without error
+        assert result.exception is None, result.output
+        # No entities selected, returns before directory creation
+        assert not test_path.exists()
+
+    def test_dump_path_message(self, run_cli_command, tmp_path):
+        """Test path-related CLI messages."""
+
+        # Test specified path message
+        test_path = tmp_path / 'specified-path'
+        options = ['--path', str(test_path), '--all']
+        result = run_cli_command(cmd_profile.profile_dump, options)
+        assert f'Using specified output path: `{test_path}`' in result.output
+
+    def test_dump_conflicting_options_warnings(self, tmp_path, run_cli_command):
+        """Test CLI warnings for conflicting options."""
+
+        # Test dry-run + overwrite conflict
+        test_path = tmp_path / 'conflicting-options'
+        options = ['--all', '--dry-run', '--overwrite', '--path', str(test_path)]
+        result = run_cli_command(cmd_profile.profile_dump, options)
+        assert 'Overwrite operation will NOT be performed' in result.output
+
+        # Test relabel without organize conflict
+        options = ['--all', '--relabel-groups', '--no-organize-by-groups', '--path', str(test_path)]
+        result = run_cli_command(cmd_profile.profile_dump, options)
+        assert '`relabel_groups` is True, but `organize_by_groups` is False' in result.output
+
+    def test_dump_success_and_dry_run_messages(self, run_cli_command, tmp_path):
+        """Test CLI success and dry run message formats."""
+
+        # Test success message
+        test_path = tmp_path / 'success-test'
+        options = ['--path', str(test_path), '--all']
+        result = run_cli_command(cmd_profile.profile_dump, options)
+
+        from aiida.manage.configuration import get_config
+
+        profile_name = get_config().get_profile().name
+        expected_msg = f'Raw files for profile `{profile_name}` dumped into folder `{test_path.name}`'
+        assert expected_msg in result.output
+
+        # Test dry run message
+        options = ['--all', '--dry-run']
+        result = run_cli_command(cmd_profile.profile_dump, options)
+        assert 'Dry run completed' in result.output
+
+    @patch('aiida.manage.configuration.profile.Profile.dump')
+    def test_dump_cli_to_api_mapping(self, mock_dump, run_cli_command, tmp_path):
+        """Test that CLI arguments are correctly passed to the Python API."""
+        group = orm.Group(label='test_args_group').store()
+        test_path = tmp_path / 'test-args'
+
+        options = [
+            '--path',
+            str(test_path),
+            '--all',
+            '--groups',
+            group.label,
+            '--past-days',
+            '7',
+            '--include-inputs',
+            '--include-outputs',
+            '--organize-by-groups',
+            '--also-ungrouped',
+            '--flat',
+        ]
+        run_cli_command(cmd_profile.profile_dump, options)
+
+        # Verify the dump method was called with expected arguments
+        args, kwargs = mock_dump.call_args
+        assert kwargs['output_path'] == test_path.resolve()
+        assert kwargs['all_entries'] is True
+        assert kwargs['groups'] == [group]  # Converted to `orm.Group`
+        assert kwargs['past_days'] == 7
+        assert kwargs['include_inputs'] is True
+        assert kwargs['include_outputs'] is True
+        assert kwargs['organize_by_groups'] is True
+        assert kwargs['also_ungrouped'] is True
+        assert kwargs['flat'] is True
+
+    def test_dump_multiple_groups_parsing(self, run_cli_command, tmp_path):
+        """Test that multiple groups are parsed correctly."""
+        group1 = orm.Group(label='test_multi_group1').store()
+        group2 = orm.Group(label='test_multi_group2').store()
+        test_path = tmp_path / 'multi-groups-test'
+
+        options = ['--path', str(test_path), '--groups', group1.label, group2.label]
+        result = run_cli_command(cmd_profile.profile_dump, options)
+        assert result.exception is None, result.output
+
+    def test_dump_boolean_flag_parsing(self, run_cli_command, tmp_path):
+        """Test that boolean flags (positive and negative) are parsed correctly."""
+        test_path = tmp_path / 'boolean-test'
+
+        # Test mix of positive and negative flags
+        options = [
+            '--path',
+            str(test_path),
+            '--all',
+            '--exclude-inputs',
+            '--include-outputs',
+            '--organize-by-groups',
+            '--no-also-ungrouped',
+        ]
+        result = run_cli_command(cmd_profile.profile_dump, options)
+        assert result.exception is None, result.output
+
+    @patch('aiida.manage.configuration.profile.Profile.dump')
+    def test_dump_error_handling(self, mock_dump, run_cli_command, tmp_path):
+        """Test CLI error handling and message formatting."""
+        test_path = tmp_path / 'error-test'
+
+        # Mock dump to raise an exception
+        mock_dump.side_effect = RuntimeError('Test error')
+
+        options = ['--path', str(test_path), '--all']
+        result = run_cli_command(cmd_profile.profile_dump, options, raises=True)
+
+        from aiida.manage.configuration import get_config
+
+        profile_name = get_config().get_profile().name
+
+        assert f'Unexpected error during dump of {profile_name}:' in result.output
+        assert 'RuntimeError: Test error' in result.output
+        assert 'Traceback' in result.output
+
+    def test_dump_date_parsing(self, run_cli_command, tmp_path):
+        """Test that date arguments are parsed correctly."""
+        group = orm.Group(label='test_date_group').store()
+        node = orm.CalculationNode().store()
+        group.add_nodes([node])
+        test_path = tmp_path / 'date-test'
+
+        options = [
+            '--path',
+            str(test_path),
+            '--all',
+            '--start-date',
+            '2024-01-01',
+            '--end-date',
+            '2024-12-31',
+        ]
+        result = run_cli_command(cmd_profile.profile_dump, options)
+        assert result.exception is None, result.output
+
+    def test_dump_user_parsing(self, run_cli_command, tmp_path):
+        """Test that user argument is parsed correctly."""
+        from typing import cast
+
+        group = orm.Group(label='test_user_group').store()
+        node = orm.CalculationNode().store()
+        group.add_nodes([node])
+        test_path = tmp_path / 'user-test'
+
+        default_user = orm.User.collection.get_default()
+        cast(orm.User, default_user)
+
+        options = ['--path', str(test_path), '--user', default_user.email]
+        result = run_cli_command(cmd_profile.profile_dump, options)
+        assert result.exception is None, result.output

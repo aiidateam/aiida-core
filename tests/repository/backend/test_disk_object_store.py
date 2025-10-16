@@ -4,6 +4,7 @@ import io
 import pathlib
 
 import pytest
+
 from aiida.repository.backend.disk_object_store import DiskObjectStoreRepositoryBackend
 
 

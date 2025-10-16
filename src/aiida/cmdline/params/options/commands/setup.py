@@ -8,20 +8,23 @@
 ###########################################################################
 """Reusable command line interface options for the setup commands."""
 
+from __future__ import annotations
+
 import functools
 import getpass
+import typing as t
 
 import click
 
 from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS
 from aiida.cmdline.params import options, types
 from aiida.manage.configuration import Profile, get_config, get_config_option
-from aiida.manage.external.postgres import DEFAULT_DBINFO
+from aiida.manage.external.postgres import DEFAULT_DBINFO  # type: ignore[attr-defined]
 
 PASSWORD_UNCHANGED = '***'
 
 
-def validate_profile_parameter(ctx):
+def validate_profile_parameter(ctx: click.Context) -> None:
     """Validate that the context contains the option `profile` and it contains a `Profile` instance.
 
     :param ctx: click context which should contain the selected profile
@@ -32,10 +35,10 @@ def validate_profile_parameter(ctx):
         raise click.BadParameter('specifying the name of the profile is required', param_hint=f'"--{option}"')
 
 
-def get_profile_attribute_default(attribute_tuple, ctx):
+def get_profile_attribute_default(attribute_tuple: tuple[str, t.Any], ctx: click.Context) -> t.Any:
     """Return the default value for the given attribute of the profile passed in the context.
 
-    :param attribute: attribute for which to get the current value
+    :param attribute_tuple: attribute for which to get the current value, and its default
     :param ctx: click context which should contain the selected profile
     :return: profile attribute default value if set, or None
     """
@@ -58,7 +61,7 @@ def get_profile_attribute_default(attribute_tuple, ctx):
         return default
 
 
-def get_repository_uri_default(ctx):
+def get_repository_uri_default(ctx: click.Context) -> str:
     """Return the default value for the repository URI for the current profile in the click context.
 
     :param ctx: click context which should contain the selected profile
@@ -66,14 +69,15 @@ def get_repository_uri_default(ctx):
     """
     import os
 
-    from aiida.manage.configuration.settings import AIIDA_CONFIG_FOLDER
+    from aiida.manage.configuration.settings import AiiDAConfigDir
 
     validate_profile_parameter(ctx)
+    configure_directory = AiiDAConfigDir.get()
 
-    return os.path.join(AIIDA_CONFIG_FOLDER, 'repository', ctx.params['profile'].name)
+    return os.path.join(configure_directory, 'repository', ctx.params['profile'].name)
 
 
-def get_quicksetup_repository_uri(ctx, param, value):
+def get_quicksetup_repository_uri(ctx: click.Context, _param: click.Parameter, _value: t.Any) -> str:
     """Return the repository URI to be used as default in `verdi quicksetup`
 
     :param ctx: click context which should contain the contextual parameters
@@ -82,7 +86,7 @@ def get_quicksetup_repository_uri(ctx, param, value):
     return get_repository_uri_default(ctx)
 
 
-def get_quicksetup_database_name(ctx, param, value):
+def get_quicksetup_database_name(ctx: click.Context, _param: click.Parameter, value: str | None) -> str:
     """Determine the database name to be used as default for the Postgres connection in `verdi quicksetup`
 
     If a value is explicitly passed, that value is returned unchanged.
@@ -108,7 +112,7 @@ def get_quicksetup_database_name(ctx, param, value):
     return database_name
 
 
-def get_quicksetup_username(ctx, param, value):
+def get_quicksetup_username(ctx: click.Context, param: click.Parameter, value: str | None) -> str:
     """Determine the username to be used as default for the Postgres connection in `verdi quicksetup`
 
     If a value is explicitly passed, that value is returned. If there is no value, the name will be based on the
@@ -129,7 +133,7 @@ def get_quicksetup_username(ctx, param, value):
     return username
 
 
-def get_quicksetup_password(ctx, param, value):
+def get_quicksetup_password(ctx: click.Context, param: click.Parameter, value: str | None) -> str:
     """Determine the password to be used as default for the Postgres connection in `verdi quicksetup`
 
     If a value is explicitly passed, that value is returned. If there is no value, the current username in the context

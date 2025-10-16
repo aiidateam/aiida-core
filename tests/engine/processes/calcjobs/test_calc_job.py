@@ -19,6 +19,7 @@ from functools import partial
 from unittest.mock import patch
 
 import pytest
+
 from aiida import orm
 from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.common.datastructures import FileCopyOperation
@@ -1095,11 +1096,60 @@ def test_additional_retrieve_list(generate_process, fixture_sandbox):
         ({'target_base': '/path'}, '`metadata.options.stash.source_list` should be'),
         ({'target_base': '/path', 'source_list': ['/abspath']}, '`metadata.options.stash.source_list` should be'),
         (
-            {'target_base': '/path', 'source_list': ['rel/path'], 'mode': 'test'},
-            '`metadata.options.stash.mode` should be',
+            {'target_base': '/path', 'source_list': ['rel/path'], 'stash_mode': 'test'},
+            '`metadata.options.stash.stash_mode` should be',
         ),
-        ({'target_base': '/path', 'source_list': ['rel/path']}, None),
-        ({'target_base': '/path', 'source_list': ['rel/path'], 'mode': StashMode.COPY.value}, None),
+        ({'target_base': '/path', 'source_list': ['rel/path']}, '`metadata.options.stash.stash_mode` should be'),
+        ({'target_base': '/path', 'source_list': ['rel/path'], 'stash_mode': StashMode.COPY.value}, None),
+        (
+            {'target_base': '/path', 'source_list': ['rel/path'], 'stash_mode': StashMode.COMPRESS_TAR.value},
+            '`metadata.options.stash.dereference` should be',
+        ),
+        (
+            {
+                'target_base': '/path',
+                'source_list': ['rel/path'],
+                'stash_mode': StashMode.COMPRESS_TAR.value,
+                'dereference': 'True',
+            },
+            '`metadata.options.stash.dereference` should be',
+        ),
+        (
+            {
+                'target_base': '/path',
+                'source_list': ['rel/path'],
+                'stash_mode': StashMode.COMPRESS_TARBZ2.value,
+                'dereference': True,
+            },
+            None,
+        ),
+        (
+            {
+                'target_base': '/path',
+                'source_list': ['rel/path'],
+                'stash_mode': StashMode.COMPRESS_TARGZ.value,
+                'dereference': True,
+            },
+            None,
+        ),
+        (
+            {
+                'target_base': '/path',
+                'source_list': ['rel/path'],
+                'stash_mode': StashMode.COMPRESS_TARXZ.value,
+                'dereference': True,
+            },
+            None,
+        ),
+        (
+            {
+                'target_base': '/path',
+                'source_list': ['rel/path'],
+                'stash_mode': StashMode.COPY.value,
+                'dereference': True,
+            },
+            '`metadata.options.stash.dereference` is only valid for compression stashing modes',
+        ),
     ),
 )
 def test_validate_stash_options(stash_options, expected):

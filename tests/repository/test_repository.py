@@ -6,6 +6,7 @@ import pathlib
 import typing as t
 
 import pytest
+
 from aiida.repository import File, FileType, Repository
 from aiida.repository.backend import DiskObjectStoreRepositoryBackend, SandboxRepositoryBackend
 
@@ -97,7 +98,7 @@ def test_initialise(repository_uninitialised):
 
 def test_pre_process_path():
     """Test the ``Repository.pre_process_path`` classmethod."""
-    with pytest.raises(TypeError, match=r'path is not of type `str` nor `pathlib.PurePosixPath`.'):
+    with pytest.raises(TypeError, match=r'path is not of type `str` nor `pathlib.PurePath`.'):
         Repository._pre_process_path(path=1)
 
     with pytest.raises(TypeError, match=r'path `.*` is not a relative path.'):
@@ -376,7 +377,7 @@ def test_put_object_from_filelike(repository, generate_directory):
 
 def test_put_object_from_tree_raises(repository):
     """Test the ``Repository.put_object_from_tree`` method when it should raise."""
-    with pytest.raises(TypeError, match=r'filepath `.*` is not of type `str` nor `pathlib.PurePosixPath`.'):
+    with pytest.raises(TypeError, match=r'filepath `.*` is not of type `str` nor `pathlib.PurePath`.'):
         repository.put_object_from_tree(None)
 
     with pytest.raises(TypeError, match=r'filepath `.*` is not an absolute path.'):

@@ -8,7 +8,10 @@
 ###########################################################################
 """Tests for the `verdi group` command."""
 
+from unittest.mock import patch
+
 import pytest
+
 from aiida import orm
 from aiida.cmdline.commands import cmd_group
 from aiida.cmdline.utils.echo import ExitCode
@@ -334,6 +337,7 @@ class TestVerdiGroup:
         ]:
             assert grpline in result.output
 
+    @pytest.mark.usefixtures('aiida_profile_clean')
     def test_show_limit(self, run_cli_command):
         """Test `--limit` option of the `verdi group show` command."""
         label = 'test_group_limit'
@@ -594,3 +598,197 @@ class TestVerdiGroup:
         assert dest_group.count() == 2
         nodes_dest_group = {str(node.uuid) for node in dest_group.nodes}
         assert nodes_source_group == nodes_dest_group
+
+    def test_dump_dry_run_with_overwrite_warning(self, run_cli_command):
+        """Test that dry_run + overwrite shows warning and returns early"""
+        group = orm.Group(label='test_warning_group').store()
+        node = orm.CalculationNode().store().seal()
+        group.add_nodes([node])
+
+        options = [group.label, '--dry-run', '--overwrite']
+        result = run_cli_command(cmd_group.group_dump, options)
+        assert result.exception is None, result.output
+        assert '`--dry-run` and `--overwrite` selected' in result.output
+        assert 'Overwrite operation will NOT be performed' in result.output
+
+    def test_dump_specified_path_message(self, run_cli_command, tmp_path):
+        """Test that specified path is reported correctly"""
+        group = orm.Group(label='test_path_group').store()
+        node = orm.CalculationNode().store().seal()
+        group.add_nodes([node])
+
+        test_path = tmp_path / 'specified-path'
+
+        options = [group.label, '--path', str(test_path)]
+        result = run_cli_command(cmd_group.group_dump, options)
+        assert result.exception is None, result.output
+        assert f'Report: Using specified output path: `{test_path}`' in result.output
+
+    @patch('aiida.orm.groups.Group.dump')
+    def test_dump_calls_group_dump_with_correct_args(self, mock_dump, run_cli_command, tmp_path):
+        """Test that group.dump is called with correct arguments"""
+        group = orm.Group(label='test_args_group').store()
+        node = orm.CalculationNode().store().seal()
+        group.add_nodes([node])
+        test_path = tmp_path / 'test-args'
+
+        options = [
+            group.label,
+            '--path',
+            str(test_path),
+            '--past-days',
+            '7',
+            '--only-top-level-calcs',
+            '--only-top-level-workflows',
+            '--include-inputs',
+            '--include-outputs',
+            '--include-attributes',
+            '--include-extras',
+            '--flat',
+            '--dump-unsealed',
+            '--symlink-calcs',
+        ]
+        _ = run_cli_command(cmd_group.group_dump, options)
+
+        # Verify the dump method was called with expected arguments
+        group.dump.assert_called_once_with(
+            output_path=test_path.resolve(),
+            dry_run=False,
+            overwrite=False,
+            past_days=7,
+            start_date=None,
+            end_date=None,
+            filter_by_last_dump_time=True,
+            only_top_level_calcs=True,
+            only_top_level_workflows=True,
+            include_inputs=True,
+            include_outputs=True,
+            include_attributes=True,
+            include_extras=True,
+            flat=True,
+            dump_unsealed=True,
+            symlink_calcs=True,
+        )
+
+    def test_dump_time_filtering_options(self, run_cli_command, tmp_path):
+        """Test time-based filtering options"""
+        group = orm.Group(label='test_time_filtering_group').store()
+        node = orm.CalculationNode().store().seal()
+        group.add_nodes([node])
+        test_path = tmp_path / 'time-filtering'
+
+        # Test past-days option
+        options = [group.label, '--path', str(test_path), '--past-days', '30']
+        result = run_cli_command(cmd_group.group_dump, options)
+        assert result.exception is None, result.output
+
+        # Test start-date and end-date options
+        options = [
+            group.label,
+            '--path',
+            str(test_path / 'dates'),
+            '--start-date',
+            '2024-01-01',
+            '--end-date',
+            '2024-12-31',
+            '--overwrite',
+        ]
+        result = run_cli_command(cmd_group.group_dump, options)
+        assert result.exception is None, result.output
+
+    def test_dump_node_collection_options(self, run_cli_command, tmp_path):
+        """Test node collection filtering options"""
+        group = orm.Group(label='test_collection_group').store()
+        calc_node = orm.CalculationNode().store().seal()
+        workflow_node = orm.WorkflowNode().store().seal()
+        group.add_nodes([calc_node, workflow_node])
+        test_path = tmp_path / 'collection-test'
+
+        # Test with only calculations
+        options = [group.label, '--path', str(test_path), '--only-top-level-calcs', '--no-only-top-level-workflows']
+        result = run_cli_command(cmd_group.group_dump, options)
+        assert result.exception is None, result.output
+
+    # NOTE: Possibly remove
+    def test_dump_metadata_inclusion_options(self, run_cli_command, tmp_path):
+        """Test metadata inclusion options"""
+        group = orm.Group(label='test_metadata_group').store()
+        node = orm.CalculationNode()
+        node.base.attributes.set('test_attr', 'value')
+        node.base.extras.set('test_extra', 'value')
+        node.store().seal()
+        group.add_nodes([node])
+        test_path = tmp_path / 'metadata-test'
+
+        options = [
+            group.label,
+            '--path',
+            str(test_path),
+            '--exclude-inputs',
+            '--include-outputs',
+            '--include-attributes',
+            '--exclude-extras',
+        ]
+        result = run_cli_command(cmd_group.group_dump, options)
+        assert result.exception is None, result.output
+
+    @patch('aiida.orm.groups.Group.dump')
+    def test_dump_unexpected_error_handling(self, mock_dump, run_cli_command, tmp_path):
+        """Test handling of unexpected exceptions"""
+        group = orm.Group(label='test_error_group').store()
+        node = orm.CalculationNode().store().seal()
+        group.add_nodes([node])
+        test_path = tmp_path / 'unexpected-error'
+
+        # Mock dump to raise generic exception
+        mock_dump.side_effect = RuntimeError('Unexpected error')
+
+        options = [group.label, '--path', str(test_path)]
+        result = run_cli_command(cmd_group.group_dump, options, raises=True)
+
+        assert f'Unexpected error during dump of group {group.label}:' in result.output
+        assert 'RuntimeError: Unexpected error' in result.output
+        # Should include traceback
+        assert 'Traceback' in result.output
+
+    def test_dump_success_message_format(self, run_cli_command, tmp_path):
+        """Test success message format"""
+        group = orm.Group(label='test_success_group').store()
+        node = orm.CalculationNode().store().seal()
+        group.add_nodes([node])
+        test_path = tmp_path / 'success-test'
+
+        options = [group.label, '--path', str(test_path)]
+        result = run_cli_command(cmd_group.group_dump, options)
+        assert result.exception is None, result.output
+
+        expected_msg = f'Raw files for group `{group.label}` dumped into folder `{test_path.name}`'
+        assert expected_msg in result.output
+
+    def test_dump_filter_by_last_dump_time_option(self, run_cli_command, tmp_path):
+        """Test filter-by-last-dump-time option"""
+        group = orm.Group(label='test_filter_time_group').store()
+        node = orm.CalculationNode().store().seal()
+        group.add_nodes([node])
+        test_path = tmp_path / 'filter-time-test'
+
+        options = [group.label, '--path', str(test_path), '--no-filter-by-last-dump-time']
+        result = run_cli_command(cmd_group.group_dump, options)
+        assert result.exception is None, result.output
+
+    def test_dump_empty_group_handling(self, run_cli_command, tmp_path):
+        """Test dumping an empty group"""
+        group = orm.Group(label='empty_test_group').store()
+        # Don't add any nodes
+        test_path = tmp_path / 'empty-group-test'
+
+        options = [group.label, '--path', str(test_path)]
+        result = run_cli_command(cmd_group.group_dump, options)
+        assert result.exception is None, result.output
+        assert 'Success:' in result.output
+
+    def test_dump_nonexistent_group(self, run_cli_command):
+        """Test error handling for non-existent group"""
+        options = ['nonexistent_group_label']
+        result = run_cli_command(cmd_group.group_dump, options, raises=True)
+        assert 'no Group found with LABEL<nonexistent_group_label>' in result.stderr

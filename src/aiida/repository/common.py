@@ -11,7 +11,7 @@
 import enum
 import typing
 
-__all__ = ('FileType', 'File')
+__all__ = ('File', 'FileType')
 
 
 class FileType(enum.Enum):

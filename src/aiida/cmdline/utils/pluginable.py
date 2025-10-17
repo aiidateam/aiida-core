@@ -8,6 +8,12 @@
 ###########################################################################
 """Plugin aware click command Group."""
 
+from __future__ import annotations
+
+import typing as t
+
+import click
+
 from aiida.cmdline.groups import VerdiCommandGroup
 from aiida.common import exceptions
 from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
@@ -16,13 +22,13 @@ from aiida.plugins.entry_point import get_entry_point_names, load_entry_point
 class Pluginable(VerdiCommandGroup):
     """A click command group that finds and loads plugin commands lazily."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: t.Any, **kwargs: t.Any):
         """Initialize with entry point group."""
         self._exclude_external_plugins = False  # Default behavior is of course to include external plugins
         self._entry_point_group = kwargs.pop('entry_point_group', None)
         super().__init__(*args, **kwargs)
 
-    def list_commands(self, ctx):
+    def list_commands(self, ctx: click.Context) -> list[str]:
         """Add entry point names of available plugins to the command list."""
         subcommands = super().list_commands(ctx)
 
@@ -31,19 +37,17 @@ class Pluginable(VerdiCommandGroup):
 
         return subcommands
 
-    def get_command(self, ctx, name):
+    def get_command(self, ctx: click.Context, name: str) -> click.Command | None:
         """Try to load a subcommand from entry points, else defer to super."""
-        command = None
-        if not self._exclude_external_plugins:
-            try:
-                command = load_entry_point(self._entry_point_group, name)
-            except exceptions.EntryPointError:
-                command = super().get_command(ctx, name)
+        if self._exclude_external_plugins:
+            return super().get_command(ctx, name)
         else:
-            command = super().get_command(ctx, name)
-        return command
+            try:
+                return load_entry_point(self._entry_point_group, name)
+            except exceptions.EntryPointError:
+                return super().get_command(ctx, name)
 
-    def set_exclude_external_plugins(self, exclude_external_plugins):
+    def set_exclude_external_plugins(self, exclude_external_plugins: bool) -> None:
         """Set whether external plugins should be excluded.
 
         If `exclude_external_plugins` is set to `True`, the plugins that belong to the `entry_point_group` defined

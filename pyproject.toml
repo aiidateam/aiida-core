@@ -329,7 +329,10 @@ enable_error_code = [
   'redundant-expr',
   'truthy-bool'
 ]
-plugins = ['sqlalchemy.ext.mypy.plugin']
+plugins = [
+  'pydantic.mypy',
+  'sqlalchemy.ext.mypy.plugin'
+]
 scripts_are_modules = true
 show_error_codes = true
 show_traceback = true

@@ -6,9 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-import inspect
 import os
-import sys
 
 import aiida
 
@@ -52,6 +50,7 @@ exclude_patterns = [
     'developer_guide/**',
     'import_export/**',
     'internals/global_design.rst',
+    'reference/apidoc/**',
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -64,8 +63,8 @@ numfig = True
 
 extensions = [
     'myst_nb',
-    'sphinx.ext.intersphinx',
     'sphinx.ext.autodoc',
+    'sphinx.ext.intersphinx',
     'sphinx.ext.doctest',
     'sphinx.ext.viewcode',
     'sphinx.ext.coverage',
@@ -189,64 +188,17 @@ linkcheck_ignore = [
     r'https://github.com/aiidateam/aiida-core/pull/\d+',
 ]
 
-# -- API documentation ---------------------------------------------------
-
-
-def run_apidoc(_):
-    """Runs sphinx-apidoc when building the documentation.
-
-    Needs to be done in conf.py in order to include the APIdoc in the
-    build on readthedocs.
-
-    See also https://github.com/rtfd/readthedocs.org/issues/1139
-    """
-    source_dir = os.path.abspath(os.path.dirname(__file__))
-    apidoc_dir = os.path.join(source_dir, 'reference', 'apidoc')
-    package_dir = os.path.join(source_dir, os.pardir, os.pardir, 'src', 'aiida')
-    exclude_api_patterns = [
-        os.path.join(package_dir, 'storage', 'psql_dos', 'migrations', 'versions'),
-    ]
-
-    # In #1139, they suggest the route below, but for me this ended up
-    # calling sphinx-build, not sphinx-apidoc
-    # from sphinx.apidoc import main
-    # main([None, '-e', '-o', apidoc_dir, package_dir, '--force'])
-
-    import subprocess
-
-    cmd_path = 'sphinx-apidoc'
-    if hasattr(sys, 'real_prefix'):  # Check to see if we are in a virtualenv
-        # If we are, assemble the path manually
-        cmd_path = os.path.abspath(os.path.join(sys.prefix, 'bin', 'sphinx-apidoc'))
-
-    cli_options = [
-        package_dir,
-        *exclude_api_patterns,
-        '-o',
-        apidoc_dir,
-        '--private',
-        '--force',
-        '--no-headings',
-        '--module-first',
-        '--no-toc',
-        '--maxdepth',
-        '4',
-    ]
-
-    # See https://stackoverflow.com/a/30144019
-    env = os.environ.copy()
-    env['SPHINX_APIDOC_OPTIONS'] = (
-        'members,special-members,private-members,undoc-members,show-inheritance,ignore-module-all'
-    )
-    subprocess.check_call([cmd_path] + cli_options, env=env)
-
-
 # Warnings to ignore when using the -n (nitpicky) option
 nitpicky = True
 with open('nitpick-exceptions', 'r') as handle:
     nitpick_ignore = [
         tuple(line.strip().split(None, 1)) for line in handle.readlines() if line.strip() and not line.startswith('#')
     ]
+
+# Regex patterns to ignore for references that are not documented (e.g., autodoc is deactivated)
+nitpick_ignore_regex = [
+    (r'py:.*', r'aiida.*'),
+]
 
 # -- Non-html output formats options ---------------------------------------------------
 
@@ -274,88 +226,3 @@ epub_title = 'AiiDA'
 epub_author = author
 epub_publisher = author
 epub_copyright = copyright
-
-# -- Local extension --------------------------------------------------
-from sphinx.addnodes import pending_xref  # noqa: E402
-from sphinx.application import Sphinx  # noqa: E402
-from sphinx.domains.python import PythonDomain  # noqa: E402
-from sphinx.environment import BuildEnvironment  # noqa: E402
-from sphinx.transforms import SphinxTransform  # noqa: E402
-
-
-def setup(app: Sphinx):
-    if os.environ.get('RUN_APIDOC', None) != 'False':
-        app.connect('builder-inited', run_apidoc)
-    app.add_transform(AutodocAliases)
-    app.connect('env-updated', add_python_aliases)
-
-
-# these are mainly required, because sphinx finds multiple references,
-# in `aiida.orm`` and `aiida.restapi.translator`
-autodoc_aliases_typing = {
-    'Code': 'aiida.orm.nodes.data.code.legacy.Code',
-    'Computer': 'aiida.orm.computers.Computer',
-    'Data': 'aiida.orm.nodes.data.data.Data',
-    'Group': 'aiida.orm.groups.Group',
-    'Node': 'aiida.orm.nodes.node.Node',
-    'User': 'aiida.orm.users.User',
-    'ExitCode': 'aiida.engine.processes.exit_code.ExitCode',
-    'QueryBuilder': 'aiida.orm.querybuilder.QueryBuilder',
-    'WorkChainNode': 'aiida.orm.nodes.process.workflow.workchain.WorkChainNode',
-    'orm.ProcessNode': 'aiida.orm.nodes.process.process.ProcessNode',
-    'ProcessNode': 'aiida.orm.nodes.process.process.ProcessNode',
-    'CalcJobNode': 'aiida.orm.nodes.process.calculation.calcjob.CalcJobNode',
-    'BackendAuthInfo': 'aiida.orm.implementation.authinfos.BackendAuthInfo',
-    'BackendComment': 'aiida.orm.implementation.comments.BackendComment',
-    'BackendComputer': 'aiida.orm.implementation.computers.BackendComputer',
-    'BackendGroup': 'aiida.orm.implementation.groups.BackendGroup',
-    'BackendLog': 'aiida.orm.implementation.logs.BackendLog',
-    'BackendNode': 'aiida.orm.implementation.nodes.BackendNode',
-    'BackendUser': 'aiida.orm.implementation.users.BackendUser',
-}
-
-
-def add_python_aliases(app: Sphinx, env: BuildEnvironment) -> None:
-    """Add aliases to the python domain.
-
-    These will also be added to the objects.inv inventory file,
-    for other projects to reference.
-    """
-    py: PythonDomain = env.get_domain('py')
-
-    shorthands = {}
-    for modname, module in inspect.getmembers(aiida, inspect.ismodule):
-        for name in getattr(module, '__all__', []):
-            obj = getattr(module, name)
-            if hasattr(obj, '__module__'):
-                shorthands[f'{obj.__module__}.{name}'] = f'aiida.{modname}.{name}'
-
-    updates = {}
-    for name, obj in py.objects.items():
-        if name in shorthands:
-            updates[shorthands[name]] = obj._replace(aliased=True)
-            continue
-        for original, new in shorthands.items():
-            if name.startswith(original + '.'):
-                updates[name.replace(original, new)] = obj._replace(aliased=True)
-                break
-    py.objects.update(updates)
-
-
-class AutodocAliases(SphinxTransform):
-    """Replace autodoc aliases.
-
-    This converts references to objects in top-level modules to the actual object module,
-    for example, ``aiida.orm.Group`` to ``aiida.orm.groups.Group``.
-    """
-
-    default_priority = 999
-
-    def apply(self, **kwargs) -> None:
-        for node in self.document.traverse(pending_xref):
-            if node.get('refdomain') != 'py':
-                continue
-            if node.get('reftarget').startswith('t.'):
-                node['reftarget'] = 'typing.' + node.get('reftarget')[2:]
-            elif node.get('reftarget') in autodoc_aliases_typing:
-                node['reftarget'] = autodoc_aliases_typing[node.get('reftarget')]

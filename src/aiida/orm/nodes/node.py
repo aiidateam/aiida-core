@@ -409,7 +409,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         return get_entry_point_from_class(cls.__module__, cls.__name__)[1]
 
     @property
-    def logger(self) -> Optional[AiidaLoggerType]:
+    def logger(self) -> AiidaLoggerType:
         """Return the logger configured for this Node.
 
         :return: Logger object

@@ -274,7 +274,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         cls._logger.warning(
             'Serialization through pydantic is still an experimental feature and might break in future releases.'
         )
-        return cls._from_model(cls.Model(**kwargs))  # type: ignore[arg-type]
+        return cls._from_model(cls.Model(**kwargs))
 
     @classproperty
     def objects(cls: EntityType) -> CollectionType:  # noqa: N805

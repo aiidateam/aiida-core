@@ -236,7 +236,6 @@ py:class sqlalchemy.sql.compiler.TypeCompiler
 py:class sqlalchemy.sql.elements.BooleanClauseList
 py:meth sqlalchemy.orm.unitofwork.UOWTransaction.register_object
 
-py:class sphinx.ext.autodoc.ClassDocumenter
 py:class sphinx.util.docutils.SphinxDirective
 py:class ModuleAnalyzer
 py:class BuildEnvironment

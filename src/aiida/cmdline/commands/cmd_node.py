@@ -24,6 +24,7 @@ from aiida.cmdline.utils import decorators, echo, echo_tabulate, multi_line_inpu
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions, timezone
 from aiida.common.links import GraphTraversalRules
+from aiida.common.utils import DEFAULT_FILTER_SIZE, batch_iter
 
 if TYPE_CHECKING:
     from aiida.orm import Node
@@ -384,9 +385,12 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
             pks, get_links=False, missing_callback=lambda missing_pks: None, backend=backend, **traversal_rules
         )['nodes']
 
-        qb = QueryBuilder()
-        qb.append(CalcJobNode, filters={'id': {'in': pks_set_to_delete}}, project='id')
-        calcjobs_pks = [result[0] for result in qb.all()]
+        # Batch the query to avoid database parameter limits
+        calcjobs_pks = []
+        for _, pk_batch in batch_iter(pks_set_to_delete, DEFAULT_FILTER_SIZE):
+            qb = QueryBuilder()
+            qb.append(CalcJobNode, filters={'id': {'in': pk_batch}}, project='id')
+            calcjobs_pks.extend([result[0] for result in qb.all()])
 
         if not calcjobs_pks:
             echo.echo_report('--clean-workdir ignored. No CalcJobNode associated with the given node, found.')

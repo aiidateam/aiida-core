@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union,
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
+from aiida.common.utils import DEFAULT_FILTER_SIZE, batch_iter
 from aiida.tools._dumping.config import GroupDumpConfig, GroupDumpScope, ProfileDumpConfig
 from aiida.tools._dumping.mapping import GroupNodeMapping
 from aiida.tools._dumping.utils import (
@@ -472,14 +473,22 @@ class DumpChangeDetector:
         if self.config.computers:
             computer_pks = [comp.pk for comp in self.config.computers if comp.pk is not None]
             if computer_pks:
-                qb.append(orm.Computer, filters={'id': {'in': computer_pks}}, tag=self.COMPUTER_TAG)
+                # Batch the filter to avoid database parameter limits
+                filter_clauses = [
+                    {'id': {'in': pk_batch}} for _, pk_batch in batch_iter(computer_pks, DEFAULT_FILTER_SIZE)
+                ]
+                computer_filter = {'or': filter_clauses} if len(filter_clauses) > 1 else filter_clauses[0]
+                qb.append(orm.Computer, filters=computer_filter, tag=self.COMPUTER_TAG)
                 relationships_to_add['with_computer'] = self.COMPUTER_TAG
 
         # Code filter
         elif self.config.codes:
             code_pks = [code.pk for code in self.config.codes if code.pk is not None]
             if code_pks:
-                qb.append(orm.Code, filters={'id': {'in': code_pks}}, tag=self.CODE_TAG)
+                # Batch the filter to avoid database parameter limits
+                filter_clauses = [{'id': {'in': pk_batch}} for _, pk_batch in batch_iter(code_pks, DEFAULT_FILTER_SIZE)]
+                code_filter = {'or': filter_clauses} if len(filter_clauses) > 1 else filter_clauses[0]
+                qb.append(orm.Code, filters=code_filter, tag=self.CODE_TAG)
                 relationships_to_add['with_incoming'] = self.CODE_TAG
             elif self.config.codes:
                 logger.warning('Code filter provided, but no valid/loaded Code objects found. Skipping.')

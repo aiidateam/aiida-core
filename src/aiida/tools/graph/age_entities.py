@@ -321,8 +321,11 @@ class DirectedEdgeSet(AbstractSetContainer):
         return self._edge_identifiers
 
 
-# NOTE: Lot of the remaining type-ignores in the Basket class are due to
-# https://github.com/python/mypy/issues/7981
+# NOTE: Lot of the remaining type-ignores in the Basket class
+# will be removed once we can mark this TypedDict as "closed" per PEP728:
+# https://peps.python.org/pep-0728/#the-closed-class-parameter
+# https://github.com/python/mypy/issues/18176
+# https://github.com/python/mypy/issues/7981#issuecomment-2080161813
 class _BasketDict(TypedDict):
     nodes: AiidaEntitySet
     groups: AiidaEntitySet

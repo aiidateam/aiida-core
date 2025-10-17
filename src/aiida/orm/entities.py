@@ -179,7 +179,7 @@ class Collection(abc.ABC, Generic[EntityType]):
 class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=EntityFieldMeta):
     """An AiiDA entity"""
 
-    _CLS_COLLECTION: type[CollectionType] = Collection  # type: ignore[assignment]
+    _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
     _logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
     class Model(BaseModel, defer_build=True):
@@ -376,7 +376,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         """
         return self._backend_entity.id
 
-    def store(self: EntityType) -> EntityType:
+    def store(self) -> Self:
         """Store the entity."""
         self._backend_entity.store()
         return self

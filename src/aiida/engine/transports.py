@@ -45,7 +45,14 @@ class TransportQueue:
 
     def __init__(self, loop: Optional[asyncio.AbstractEventLoop] = None):
         """:param loop: An asyncio event, will use `asyncio.get_event_loop()` if not supplied"""
-        self._loop = loop if loop is not None else asyncio.get_event_loop()
+
+        if loop is not None:
+            self._loop = loop
+        else:
+            try:
+                self._loop = asyncio.get_event_loop()
+            except RuntimeError:
+                self._loop = asyncio.new_event_loop()
         self._transport_requests: Dict[Hashable, TransportRequest] = {}
 
     @property

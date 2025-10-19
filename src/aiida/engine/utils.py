@@ -128,7 +128,11 @@ def interruptable_task(
     :param loop: the event loop in which to run the coroutine, by default uses asyncio.get_event_loop()
     :return: an InterruptableFuture
     """
-    loop = loop or asyncio.get_event_loop()
+    try:
+        loop = loop or asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+
     future = InterruptableFuture()
 
     async def execute_coroutine():
@@ -151,7 +155,9 @@ def interruptable_task(
             if not future.done():
                 future.set_result(result)
 
-    loop.create_task(execute_coroutine())
+    # TODO: Store the task somewhere?
+    # See `ruff rule RUF006`
+    loop.create_task(execute_coroutine())  # noqa: RUF006
 
     return future
 
@@ -164,7 +170,7 @@ def ensure_coroutine(fct: Callable[..., Any]) -> Callable[..., Awaitable[Any]]:
     :param fct: the function
     :returns: the coroutine
     """
-    if asyncio.iscoroutinefunction(fct):
+    if inspect.iscoroutinefunction(fct):
         return fct
 
     async def wrapper(*args, **kwargs):
@@ -252,7 +258,10 @@ def loop_scope(loop) -> Iterator[None]:
 
     :param loop: The event loop to make current for the duration of the scope
     """
-    current = asyncio.get_event_loop()
+    try:
+        current = asyncio.get_event_loop()
+    except RuntimeError:
+        current = None
 
     try:
         asyncio.set_event_loop(loop)

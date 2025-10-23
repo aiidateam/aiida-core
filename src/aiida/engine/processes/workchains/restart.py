@@ -163,6 +163,20 @@ class BaseRestartWorkChain(WorkChain):
             'can define the ``enabled`` and ``priority`` key, which can be used to toggle the values set on '
             'the original process handler declaration.',
         )
+        spec.input(
+            'pause_for_unknown_errors',
+            valid_type=orm.Bool,
+            default=lambda: orm.Bool(False),
+            help='If `True`, the work chain will pause if the sub process failed for an unknown reason, i.e. no handler '
+            'was able to deal with the failure, allowing the user to inspect the failure before deciding to restart or abort.',
+        )
+        spec.input(
+            'restart_once_for_unknown_errors',
+            valid_type=orm.Bool,
+            default=lambda: orm.Bool(True),
+            help='If `True`, the work chain will restart once more if the sub process failed for an unknown reason, i.e. no '
+            'handler was able to deal with the failure.',
+        )
         spec.exit_code(301, 'ERROR_SUB_PROCESS_EXCEPTED', message='The sub process excepted.')
         spec.exit_code(302, 'ERROR_SUB_PROCESS_KILLED', message='The sub process was killed.')
         spec.exit_code(
@@ -173,6 +187,13 @@ class BaseRestartWorkChain(WorkChain):
             'ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE',
             message='The process failed for an unknown reason, twice in a row.',
         )
+        spec.exit_code(403, 'ERROR_UNHANDLED_FAILURE', message='The process failed for an unknown reason.')
+        
+    def on_paused(self, msg: Optional[str] = None) -> None:
+        """If the process was paused by a handler, change the process status to provide information to user."""
+        super().on_paused(msg)
+        if self.ctx.paused_by_handler:
+            self.node.set_process_status('Need user inspection, see verdi process report.')
 
     def setup(self) -> None:
         """Initialize context variables that are used during the logical flow of the `BaseRestartWorkChain`."""
@@ -184,6 +205,7 @@ class BaseRestartWorkChain(WorkChain):
         self.ctx.unhandled_failure = False
         self.ctx.is_finished = False
         self.ctx.iteration = 0
+        self.ctx.paused_by_handler = False
 
     def should_run_process(self) -> bool:
         """Return whether a new process should be run.
@@ -191,6 +213,8 @@ class BaseRestartWorkChain(WorkChain):
         This is the case as long as the last process has not finished successfully and the maximum number of restarts
         has not yet been exceeded.
         """
+        # This should be the first step to be run after a pause by a handler
+        self.ctx.paused_by_handler = False
         max_iterations = self.inputs.max_iterations.value
         return not self.ctx.is_finished and self.ctx.iteration < max_iterations
 
@@ -273,14 +297,35 @@ class BaseRestartWorkChain(WorkChain):
         report_args = (self.ctx.process_name, node.pk)
 
         # If the process failed and no handler returned a report we consider it an unhandled failure
+        #string_pausing = ''
         if node.is_failed and not last_report:
-            if self.ctx.unhandled_failure:
-                template = '{}<{}> failed and error was not handled for the second consecutive time, aborting'
-                self.report(template.format(*report_args))
-                return self.exit_codes.ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE
-
-            self.ctx.unhandled_failure = True
-            self.report('{}<{}> failed and error was not handled, restarting once more'.format(*report_args))
+            if self.inputs.restart_once_for_unknown_errors.value:
+                if self.ctx.unhandled_failure:                    
+                    if self.inputs.pause_for_unknown_errors.value:
+                        self.report('{}<{}> failed for an unknown reason, pausing for inspection'.format(*report_args))
+                        # mark that the work chain was paused by a handler
+                        self.ctx.paused_by_handler = True
+                        # reset the unhandled failure flag, so that after replaying it will try again twice for future errors
+                        self.ctx.unhandled_failure = False
+                        self.pause()
+                        return None
+                    else:
+                        template = '{}<{}> failed and error was not handled for the second consecutive time, aborting'
+                        self.report(template.format(*report_args))
+                        return self.exit_codes.ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE
+                self.ctx.unhandled_failure = True
+                self.report('{}<{}> failed and error was not handled, restarting once more'.format(*report_args))
+            else:
+                # we do not want to try restarting once upon error
+                if self.inputs.pause_for_unknown_errors.value:
+                    self.report('{}<{}> failed for an unknown reason, pausing for inspection'.format(*report_args))
+                    # mark that the work chain was paused by a handler
+                    self.ctx.paused_by_handler = True
+                    self.pause()
+                else:
+                    template = '{}<{}> failed and error was not handled, aborting'
+                    self.report(template.format(*report_args))
+                    return self.exit_codes.ERROR_UNHANDLED_FAILURE
             return None
 
         # Here either the process finished successful or at least one handler returned a report so it can no longer be

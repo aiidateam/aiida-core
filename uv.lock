@@ -49,6 +49,7 @@ dependencies = [
     { name = "jedi" },
     { name = "jinja2" },
     { name = "kiwipy", extra = ["rmq"] },
+    { name = "nest-asyncio" },
     { name = "numpy", version = "2.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
     { name = "numpy", version = "2.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -203,7 +204,7 @@ requires-dist = [
     { name = "alembic", specifier = "~=1.8" },
     { name = "archive-path", specifier = "~=0.4.2" },
     { name = "ase", marker = "extra == 'atomic-tools'", specifier = "~=3.21" },
-    { name = "asyncssh", specifier = "~=2.19.0" },
+    { name = "asyncssh", specifier = "~=2.21.0" },
     { name = "bpython", marker = "extra == 'bpython'", specifier = "~=0.20" },
     { name = "chardet", marker = "sys_platform == 'win32'", specifier = "~=5.2.0" },
     { name = "circus", specifier = "~=0.19.0" },
@@ -224,10 +225,11 @@ requires-dist = [
     { name = "jinja2", specifier = "~=3.0" },
     { name = "jupyter", marker = "extra == 'notebook'", specifier = "~=1.0" },
     { name = "jupyter-client", marker = "extra == 'notebook'", specifier = "~=8.0" },
-    { name = "kiwipy", extras = ["rmq"], specifier = "~=0.8.4" },
+    { name = "kiwipy", extras = ["rmq"], specifier = ">=0.8.4" },
     { name = "matplotlib", marker = "extra == 'atomic-tools'", specifier = "~=3.3,>=3.3.4" },
     { name = "mypy", marker = "extra == 'pre-commit'", specifier = "~=1.19.0" },
     { name = "myst-nb", marker = "extra == 'docs'", specifier = "~=1.0.0" },
+    { name = "nest-asyncio", git = "https://github.com/danielhollas/nest_asyncio?branch=python-3.14" },
     { name = "notebook", marker = "extra == 'notebook'", specifier = "~=6.1,>=6.1.5" },
     { name = "numpy", specifier = ">=1.21,<3" },
     { name = "packaging", marker = "extra == 'pre-commit'", specifier = "~=23.0" },
@@ -235,7 +237,7 @@ requires-dist = [
     { name = "pg8000", marker = "extra == 'tests'", specifier = "~=1.13" },
     { name = "pgsu", specifier = "~=0.3.0" },
     { name = "pgtest", marker = "extra == 'tests'", specifier = "~=1.3,>=1.3.1" },
-    { name = "plumpy", specifier = "~=0.25.0" },
+    { name = "plumpy", git = "https://github.com/danielhollas/plumpy?rev=06d6f3c32ee4e7f7dafcba0bd507401f349184c6" },
     { name = "pre-commit", marker = "extra == 'pre-commit'", specifier = "~=3.5" },
     { name = "psutil", specifier = "~=7.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.0.2,<4" },
@@ -302,15 +304,44 @@ sdist = { url = "https://files.pythonhosted.org/packages/ea/90/1c9c13f2fdfa96602
 
 [[package]]
 name = "aio-pika"
-version = "9.4.3"
+version = "9.5.6"
 source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "aiormq" },
-    { name = "yarl" },
+resolution-markers = [
+    "python_full_version < '3.10'",
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c9/69/8649bdb97fa1521af3dafe23dbc5debadd4b01abb2850a4d193dae9b0451/aio_pika-9.4.3.tar.gz", hash = "sha256:fd2b1fce25f6ed5203ef1dd554dc03b90c9a46a64aaf758d032d78dc31e5295d", size = 47693, upload-time = "2024-08-13T06:49:09.619Z" }
+dependencies = [
+    { name = "aiormq", marker = "python_full_version < '3.10'" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.10'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.10'" },
+    { name = "yarl", marker = "python_full_version < '3.10'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/59/52/fe35c898bce5cc8af839ba786b38f7db8932aac48a67ba8ca7de3b074e07/aio_pika-9.5.6.tar.gz", hash = "sha256:5013f429e1235e1ce8df054a821e0eea140ea9afc94a09725b96590ea2dad001", size = 47308, upload-time = "2025-08-05T14:18:35.949Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/85/66/cad391d83b7266a667c85c826bb6c0d7f68519a0eed7634098c12fb39a4b/aio_pika-9.4.3-py3-none-any.whl", hash = "sha256:f1423d2d5a8b7315d144efe1773763bf687ac17aa1535385982687e9e5ed49bb", size = 53240, upload-time = "2024-08-13T06:49:07.276Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/fb/c1cfb7cb98ccd2abdc91e170e7ba0e1e3088b6a9d051e4f2899d3249a231/aio_pika-9.5.6-py3-none-any.whl", hash = "sha256:47b532419185cf1105ae18daa45a5052ff98064915c5e080b2433431fe808193", size = 54303, upload-time = "2025-08-05T14:18:34.62Z" },
+]
+
+[[package]]
+name = "aio-pika"
+version = "9.5.8"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14' and sys_platform == 'win32'",
+    "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
+    "python_full_version == '3.11.*' and sys_platform == 'win32'",
+    "python_full_version >= '3.14' and sys_platform != 'win32'",
+    "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'win32'",
+    "python_full_version == '3.11.*' and sys_platform != 'win32'",
+    "python_full_version == '3.10.*' and sys_platform == 'win32'",
+    "python_full_version == '3.10.*' and sys_platform != 'win32'",
+]
+dependencies = [
+    { name = "aiormq", marker = "python_full_version >= '3.10'" },
+    { name = "exceptiongroup", marker = "python_full_version == '3.10.*'" },
+    { name = "yarl", marker = "python_full_version >= '3.10'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c5/73/8d1020683970de5532b3b01732d75c8bf922a6505fcdad1a9c7c6405242a/aio_pika-9.5.8.tar.gz", hash = "sha256:7c36874115f522bbe7486c46d8dd711a4dbedd67c4e8a8c47efe593d01862c62", size = 47408, upload-time = "2025-11-12T10:37:10.215Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7c/91/513971861d845d28160ecb205ae2cfaf618b16918a9cd4e0b832b5360ce7/aio_pika-9.5.8-py3-none-any.whl", hash = "sha256:f4c6cb8a6c5176d00f39fd7431e9702e638449bc6e86d1769ad7548b2a506a8d", size = 54397, upload-time = "2025-11-12T10:37:08.374Z" },
 ]
 
 [[package]]
@@ -550,15 +581,15 @@ wheels = [
 
 [[package]]
 name = "asyncssh"
-version = "2.19.0"
+version = "2.21.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/75/85/c723aa7dd69570a31b6638c1405e659712f18f569f280da2da27989445d3/asyncssh-2.19.0.tar.gz", hash = "sha256:723dead4d068b558708dc66a4ca7e7a93a813aa9416036eccb9af4c03ae2cf30", size = 533702, upload-time = "2024-12-13T00:52:01.966Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6b/b8/065c20bb5c9b8991648c0f25b13e445b4f51556cc3fdd0ad13ce4787c156/asyncssh-2.21.1.tar.gz", hash = "sha256:9943802955e2131536c2b1e71aacc68f56973a399937ed0b725086d7461c990c", size = 540515, upload-time = "2025-09-28T16:36:19.468Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/8f/f0749af566fa39204f6380473e6f9632b804daeb0ecb24cc7de1fc9f2717/asyncssh-2.19.0-py3-none-any.whl", hash = "sha256:bb82ac30ff0cb4393fbaf1114e606ad7a4f13d6c4bdaed423c033ee26b455228", size = 372704, upload-time = "2024-12-13T00:51:58.555Z" },
+    { url = "https://files.pythonhosted.org/packages/0e/89/4a9a61bc120ca68bce92b0ea176ddc0e550e58c60ab820603bd5246e7261/asyncssh-2.21.1-py3-none-any.whl", hash = "sha256:f218f9f303c78df6627d0646835e04039a156d15e174ad63c058d62de61e1968", size = 375529, upload-time = "2025-09-28T16:36:17.68Z" },
 ]
 
 [[package]]
@@ -2923,21 +2954,22 @@ wheels = [
 
 [[package]]
 name = "kiwipy"
-version = "0.8.5"
+version = "0.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "deprecation" },
     { name = "pyyaml" },
     { name = "shortuuid" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f7/c9/60f4597b2f7ce9f1ce9f202c1ddc70b857716597d828fc5baa123a2fa17e/kiwipy-0.8.5.tar.gz", hash = "sha256:23b746f60577120764d662673335cea40cf34083d15f1ee8ab4fa6155b50d60f", size = 41087, upload-time = "2024-12-02T08:19:59.85Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/41/d1/a56aea1ee27c9aa73c7c6c785f4eb0539799392566b758fc920397afea91/kiwipy-0.9.0.tar.gz", hash = "sha256:3dc5a2cbe4bf7127da2c8a6c20476ddad30849b32fa12b495c622059c633db4f", size = 242121, upload-time = "2025-10-21T05:58:10.836Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/68/50/2d180b54272d467a3e5eb4d7e64df80a8bb11d483e908404d71905a2801b/kiwipy-0.8.5-py3-none-any.whl", hash = "sha256:b6acf17ba69fdfc9ce246673efd35e1db06a27b2c624ba1735d2159f8e665a1b", size = 41820, upload-time = "2024-12-02T08:19:58.573Z" },
+    { url = "https://files.pythonhosted.org/packages/c0/c0/2ed83a3b88048db2504ddd67a419148e23a1cf2bc64ee0bbaacb46c80bbb/kiwipy-0.9.0-py3-none-any.whl", hash = "sha256:8d861310d64dc15de50667c1c7b7295f2dba50a5561284e8a889e3a6c2b197f9", size = 41865, upload-time = "2025-10-21T05:58:09.033Z" },
 ]
 
 [package.optional-dependencies]
 rmq = [
-    { name = "aio-pika" },
+    { name = "aio-pika", version = "9.5.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
+    { name = "aio-pika", version = "9.5.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "pamqp" },
     { name = "pytray" },
 ]
@@ -4019,12 +4051,8 @@ wheels = [
 
 [[package]]
 name = "nest-asyncio"
-version = "1.6.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/83/f8/51569ac65d696c8ecbee95938f89d4abf00f47d58d48f6fbabfe8f0baefe/nest_asyncio-1.6.0.tar.gz", hash = "sha256:6f172d5449aca15afd6c646851f4e31e02c598d553a667e38cafa997cfec55fe", size = 7418, upload-time = "2024-01-21T14:25:19.227Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a0/c4/c2971a3ba4c6103a3d10c4b0f24f461ddc027f0f09763220cf35ca1401b3/nest_asyncio-1.6.0-py3-none-any.whl", hash = "sha256:87af6efd6b5e897c81050477ef65c62e2b2f35d51703cae01aff2905b1852e1c", size = 5195, upload-time = "2024-01-21T14:25:17.223Z" },
-]
+version = "1.6.0.dev0"
+source = { git = "https://github.com/danielhollas/nest_asyncio?branch=python-3.14#71d8eba682b8f91c82f1a95d4fada56470a30779" }
 
 [[package]]
 name = "networkx"
@@ -4899,16 +4927,12 @@ wheels = [
 
 [[package]]
 name = "plumpy"
-version = "0.25.0"
-source = { registry = "https://pypi.org/simple" }
+version = "0.25.1"
+source = { git = "https://github.com/danielhollas/plumpy?rev=06d6f3c32ee4e7f7dafcba0bd507401f349184c6#06d6f3c32ee4e7f7dafcba0bd507401f349184c6" }
 dependencies = [
     { name = "kiwipy", extra = ["rmq"] },
     { name = "nest-asyncio" },
     { name = "pyyaml" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ea/b1/7c8141f04fb9060e9de7fd4fafed7ce429a16c1a903675a093d390f14b16/plumpy-0.25.0.tar.gz", hash = "sha256:5eccca0f11757db652b15bfb0bb95dc010a9a5fa000df5f9db51cf6a4d1e682f", size = 198187, upload-time = "2025-05-01T07:48:10.931Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/97/9a/e939c60e6376bdcc84ed9ae92ed96312c13781044c08b1b96be036d4b11b/plumpy-0.25.0-py3-none-any.whl", hash = "sha256:f15e7b471185265e6bbd0cfd37b9cd4b5bf51a9019fdd74247d9cfe28c5da617", size = 75249, upload-time = "2025-05-01T07:48:09.428Z" },
 ]
 
 [[package]]

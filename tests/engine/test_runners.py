@@ -25,7 +25,11 @@ from aiida.orm import Int, Str, WorkflowNode
 def runner():
     """Construct and return a `Runner`."""
     loop = asyncio.new_event_loop()
-    return get_manager().create_runner(poll_interval=0.5, loop=loop)
+    runner = get_manager().create_runner(poll_interval=0.5, loop=loop)
+    yield runner
+    if not runner.is_closed():
+        runner.close()
+    loop.close()
 
 
 class Proc(Process):
@@ -46,7 +50,6 @@ def the_hans_klok_comeback(loop):
     loop.stop()
 
 
-@pytest.mark.requires_rmq
 def test_call_on_process_finish(runner):
     """Test call on calculation finish."""
     loop = runner.loop

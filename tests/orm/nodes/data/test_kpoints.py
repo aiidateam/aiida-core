@@ -11,15 +11,27 @@
 import numpy as np
 import pytest
 
-from aiida.orm import KpointsData, StructureData, load_node
+from aiida.orm import KpointsData, load_node
+from aiida.orm import StructureData as LegacyStructureData
+from aiida.orm.nodes.data.structure import has_atomistic
+
+skip_atomistic = pytest.mark.skipif(not has_atomistic(), reason='aiida-atomistic not installed')
+
+if not has_atomistic():
+    structures_classes = [LegacyStructureData, pytest.param('StructureData', marks=skip_atomistic)]
+else:
+    from aiida_atomistic import StructureData  # type: ignore[import-untyped]
+
+    structures_classes = [LegacyStructureData, StructureData]
 
 
+@pytest.mark.parametrize('structure_class', structures_classes)
 class TestKpoints:
     """Test for the `Kpointsdata` class."""
 
     @pytest.fixture(autouse=True)
-    def init_profile(self):
-        """Initialize the profile."""
+    def generate_structure(self, structure_class):
+        """Generate the StructureData."""
         alat = 5.430  # angstrom
         cell = [
             [
@@ -35,10 +47,13 @@ class TestKpoints:
             [0.5 * alat, 0.0, 0.5 * alat],
         ]
         self.alat = alat
-        structure = StructureData(cell=cell)
+        structure = LegacyStructureData(cell=cell)
         structure.append_atom(position=(0.000 * alat, 0.000 * alat, 0.000 * alat), symbols=['Si'])
         structure.append_atom(position=(0.250 * alat, 0.250 * alat, 0.250 * alat), symbols=['Si'])
-        self.structure = structure
+        if structure_class == LegacyStructureData:
+            self.structure = structure
+        else:
+            self.structure = LegacyStructureData.to_atomistic(structure)
         # Define the expected reciprocal cell
         val = 2.0 * np.pi / alat
         self.expected_reciprocal_cell = np.array([[val, val, -val], [-val, val, val], [val, -val, val]])

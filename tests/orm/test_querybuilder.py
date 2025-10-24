@@ -125,7 +125,6 @@ class TestBasic:
 
     # Tracked in issue #4281
     @pytest.mark.flaky(reruns=2)
-    @pytest.mark.requires_rmq
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_process_query(self):
         """Test querying for a process class."""

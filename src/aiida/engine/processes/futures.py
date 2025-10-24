@@ -43,7 +43,12 @@ class ProcessFuture(asyncio.Future):
         from .process import ProcessState
 
         # create future in specified event loop
-        loop = loop if loop is not None else asyncio.get_event_loop()
+        if not loop:
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+
         super().__init__(loop=loop)
 
         assert not (poll_interval is None and communicator is None), 'Must poll or have a communicator to use'
@@ -70,7 +75,10 @@ class ProcessFuture(asyncio.Future):
 
             # Start polling
             if poll_interval is not None:
-                loop.create_task(self._poll_process(node, poll_interval))
+                # TODO: Write a test with gc.collect to see if the assignment is needed?
+                # (per RUF006)
+                # self._task = loop.create_task(self._poll_process(node, poll_interval))
+                loop.create_task(self._poll_process(node, poll_interval))  # noqa: RUF006
 
     def cleanup(self) -> None:
         """Clean up the future by removing broadcast subscribers from the communicator if it still exists."""

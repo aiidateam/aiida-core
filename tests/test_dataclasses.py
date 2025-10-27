@@ -25,7 +25,6 @@ from aiida.orm.nodes.data.structure import (
     _atomic_masses,
     ase_refine_cell,
     get_formula,
-    get_pymatgen_version,
     has_ase,
     has_pymatgen,
     has_spglib,
@@ -68,11 +67,6 @@ skip_ase = pytest.mark.skipif(not has_ase(), reason='Unable to import ase')
 skip_spglib = pytest.mark.skipif(not has_spglib(), reason='Unable to import spglib')
 skip_pycifrw = pytest.mark.skipif(not has_pycifrw(), reason='Unable to import PyCifRW')
 skip_pymatgen = pytest.mark.skipif(not has_pymatgen(), reason='Unable to import pymatgen')
-
-
-@skip_pymatgen
-def test_get_pymatgen_version():
-    assert isinstance(get_pymatgen_version(), str)
 
 
 class TestCifData:

@@ -302,7 +302,7 @@ class BaseRestartWorkChain(WorkChain):
             if self.inputs.restart_once_for_unknown_errors.value:
                 if self.ctx.unhandled_failure:                    
                     if self.inputs.pause_for_unknown_errors.value:
-                        self.report('{}<{}> failed for an unknown reason, pausing for inspection'.format(*report_args))
+                        self.report('{}<{}> failed and error was not handled, pausing for inspection'.format(*report_args))
                         # mark that the work chain was paused by a handler
                         self.ctx.paused_by_handler = True
                         # reset the unhandled failure flag, so that after replaying it will try again twice for future errors
@@ -318,7 +318,7 @@ class BaseRestartWorkChain(WorkChain):
             else:
                 # we do not want to try restarting once upon error
                 if self.inputs.pause_for_unknown_errors.value:
-                    self.report('{}<{}> failed for an unknown reason, pausing for inspection'.format(*report_args))
+                    self.report('{}<{}> failed and error was not handled, pausing for inspection'.format(*report_args))
                     # mark that the work chain was paused by a handler
                     self.ctx.paused_by_handler = True
                     self.pause()

@@ -167,14 +167,14 @@ class BaseRestartWorkChain(WorkChain):
             'pause_for_unknown_errors',
             valid_type=orm.Bool,
             default=lambda: orm.Bool(False),
-            help='If `True`, the work chain will pause if the sub process failed for an unknown reason, i.e. no handler '
+            help='If set to True, the work chain will pause if the sub process failed for an unknown reason, i.e. no handler '
             'was able to deal with the failure, allowing the user to inspect the failure before deciding to restart or abort.',
         )
         spec.input(
             'restart_once_for_unknown_errors',
             valid_type=orm.Bool,
             default=lambda: orm.Bool(True),
-            help='If `True`, the work chain will restart once more if the sub process failed for an unknown reason, i.e. no '
+            help='If set to True, the work chain will restart once more if the sub process failed for an unknown reason, i.e. no '
             'handler was able to deal with the failure.',
         )
         spec.exit_code(301, 'ERROR_SUB_PROCESS_EXCEPTED', message='The sub process excepted.')
@@ -193,7 +193,7 @@ class BaseRestartWorkChain(WorkChain):
         """If the process was paused by a handler, change the process status to provide information to user."""
         super().on_paused(msg)
         if self.ctx.paused_by_handler:
-            self.node.set_process_status('Need user inspection, see verdi process report.')
+            self.node.set_process_status('Need user inspection, see: verdi process report.')
 
     def setup(self) -> None:
         """Initialize context variables that are used during the logical flow of the `BaseRestartWorkChain`."""

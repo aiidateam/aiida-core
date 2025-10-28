@@ -193,7 +193,7 @@ class BaseRestartWorkChain(WorkChain):
         """If the process was paused by a handler, change the process status to provide information to user."""
         super().on_paused(msg)
         if self.ctx.paused_by_handler:
-            self.node.set_process_status('Need user inspection, see: verdi process report.')
+            self.node.set_process_status(f"Need user inspection, see: 'verdi process report {self.node.pk}'")
 
     def setup(self) -> None:
         """Initialize context variables that are used during the logical flow of the `BaseRestartWorkChain`."""

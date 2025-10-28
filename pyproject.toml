@@ -303,6 +303,7 @@ Home = 'http://www.aiida.net/'
 Source = 'https://github.com/aiidateam/aiida-core'
 
 [tool.coverage.run]
+branch = true
 core = 'sysmon'
 omit = [
   "src/aiida/tools/_dumping/**/*"

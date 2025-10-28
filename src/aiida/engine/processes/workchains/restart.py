@@ -297,7 +297,6 @@ class BaseRestartWorkChain(WorkChain):
         report_args = (self.ctx.process_name, node.pk)
 
         # If the process failed and no handler returned a report we consider it an unhandled failure
-        #string_pausing = ''
         if node.is_failed and not last_report:
             if self.inputs.restart_once_for_unknown_errors.value:
                 if self.ctx.unhandled_failure:                    

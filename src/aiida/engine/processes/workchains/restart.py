@@ -298,8 +298,10 @@ class BaseRestartWorkChain(WorkChain):
 
         # If the process failed and no handler returned a report we consider it an unhandled failure
         if node.is_failed and not last_report:
+            # Case 1: restart logic enabled
             if self.inputs.restart_once_for_unknown_errors.value:
-                if self.ctx.unhandled_failure:                    
+                if self.ctx.unhandled_failure:
+                    # Pause enabled                    
                     if self.inputs.pause_for_unknown_errors.value:
                         self.report('{}<{}> failed and error was not handled, pausing for inspection'.format(*report_args))
                         # mark that the work chain was paused by a handler
@@ -308,19 +310,22 @@ class BaseRestartWorkChain(WorkChain):
                         self.ctx.unhandled_failure = False
                         self.pause()
                         return None
+                    # Pause disabled
                     else:
                         template = '{}<{}> failed and error was not handled for the second consecutive time, aborting'
                         self.report(template.format(*report_args))
                         return self.exit_codes.ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE
                 self.ctx.unhandled_failure = True
                 self.report('{}<{}> failed and error was not handled, restarting once more'.format(*report_args))
+            # Case 2: restart logic disabled we do not want to try restarting once upon error
             else:
-                # we do not want to try restarting once upon error
+                # Pause enabled
                 if self.inputs.pause_for_unknown_errors.value:
                     self.report('{}<{}> failed and error was not handled, pausing for inspection'.format(*report_args))
                     # mark that the work chain was paused by a handler
                     self.ctx.paused_by_handler = True
                     self.pause()
+                # Pause disabled
                 else:
                     template = '{}<{}> failed and error was not handled, aborting'
                     self.report(template.format(*report_args))

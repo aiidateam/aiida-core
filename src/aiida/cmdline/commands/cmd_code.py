@@ -226,34 +226,41 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 def show(code):
     """Display detailed information for a code."""
     from aiida.cmdline import is_verbose
-    from aiida.orm import ContainerizedCode, InstalledCode
+    from aiida.common.pydantic import get_metadata
+
+    # Fields to always exclude from display
+    always_exclude = {'pk', 'uuid'}  # These are shown separately with custom formatting
 
     table = []
+    # Always show PK, UUID, and Type first
     table.append(['PK', code.pk])
     table.append(['UUID', code.uuid])
     table.append(['Type', code.entry_point.name])
-    table.append(['Label', code.label])
-    table.append(['Description', code.description])
-    table.append(['Default calc job plugin', code.default_calc_job_plugin])
-    table.append(['Use double quotes', code.use_double_quotes])
-    table.append(['With mpi', code.with_mpi])
-    table.append(['Prepend text', code.prepend_text])
-    table.append(['Append text', code.append_text])
 
-    if isinstance(code, ContainerizedCode):
-        computer = code.computer
-        table.append(['Computer', f'{computer.label} ({computer.hostname}), pk: {computer.pk}'])
-        table.append(['Engine command', code.engine_command])
-        table.append(['Image name', code.image_name])
-        table.append(['Wrap cmdline params', code.wrap_cmdline_params])
-        table.append(['Filepath executable', code.filepath_executable])
-    elif isinstance(code, InstalledCode):
-        computer = code.computer
-        table.append(['Computer', f'{computer.label} ({computer.hostname}), pk: {computer.pk}'])
-        table.append(['Filepath executable', code.filepath_executable])
-    else:
-        # PortableCode
-        table.append(['Filepath executable', code.filepath_executable])
+    # Iterate over model fields and display them
+    for field_name, field_info in code.Model.model_fields.items():
+        # Skip fields that are always excluded
+        if field_name in always_exclude:
+            continue
+
+        # Skip fields marked as excluded from CLI (these are internal/technical fields)
+        if get_metadata(field_info, key='exclude_from_cli', default=False):
+            continue
+
+        try:
+            value = getattr(code, field_name)
+        except AttributeError:
+            continue
+
+        # Get the display name from the field's metadata title
+        display_name = get_metadata(field_info, key='title', default=field_name.capitalize().replace('_', ' '))
+
+        # Special handling for computer field to show additional info
+        if field_name == 'computer':
+            computer = value
+            value = f'{computer.label} ({computer.hostname}), pk: {computer.pk}'
+
+        table.append([display_name, value])
 
     if is_verbose():
         table.append(['Calculations', len(code.base.links.get_outgoing().all())])

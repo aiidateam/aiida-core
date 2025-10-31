@@ -21,7 +21,7 @@ import pytest
 from aiida.cmdline.commands import cmd_code
 from aiida.cmdline.params.options.commands.code import validate_label_uniqueness
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
-from aiida.orm import Code, Computer, InstalledCode, PortableCode, QueryBuilder, load_code
+from aiida.orm import Code, Computer, ContainerizedCode, InstalledCode, PortableCode, QueryBuilder, load_code
 from aiida.plugins import DataFactory
 
 
@@ -143,9 +143,106 @@ def test_code_delete_one_force(run_cli_command, code):
         load_code('code')
 
 
-def test_code_show(run_cli_command, code):
+@pytest.mark.parametrize(
+    'code_type,extra_fields',
+    [
+        ('installed', ['Computer', 'Filepath executable']),
+        ('portable', ['Filepath executable']),
+        ('containerized', ['Computer', 'Engine command', 'Image name', 'Wrap cmdline params', 'Filepath executable']),
+    ],
+)
+def test_code_show(run_cli_command, aiida_localhost, tmp_path, bash_path, code_type, extra_fields):
+    """Test ``verdi code show`` for different code types."""
+    # Create code based on type
+    code = None
+    if code_type == 'installed':
+        code = InstalledCode(
+            default_calc_job_plugin='core.arithmetic.add',
+            computer=aiida_localhost,
+            filepath_executable='/remote/abs/path',
+        )
+        code.label = 'test_installed_code'
+        code.description = 'Test installed code'
+        code.prepend_text = 'text to prepend'
+        code.append_text = 'text to append'
+        code.store()
+    elif code_type == 'portable':
+        filepath_executable = 'bash'
+        (tmp_path / filepath_executable).touch()
+        code = PortableCode(filepath_executable=filepath_executable, filepath_files=tmp_path)
+        code.label = 'test_portable_code'
+        code.description = 'Test portable code'
+        code.default_calc_job_plugin = 'core.arithmetic.add'
+        code.prepend_text = 'text to prepend'
+        code.append_text = 'text to append'
+        code.store()
+    elif code_type == 'containerized':
+        code = ContainerizedCode(
+            default_calc_job_plugin='core.arithmetic.add',
+            computer=aiida_localhost,
+            filepath_executable=str(bash_path.absolute()),
+            engine_command='singularity exec --bind $PWD:$PWD {image_name}',
+            image_name='ubuntu',
+        )
+        code.label = 'test_containerized_code'
+        code.description = 'Test containerized code'
+        code.prepend_text = 'text to prepend'
+        code.append_text = 'text to append'
+        code.store()
+
+    assert code is not None  # should never happen as it is parametrized
     result = run_cli_command(cmd_code.show, [str(code.pk)])
+
+    # Check common fields present in all code types
     assert str(code.pk) in result.output
+    assert code.uuid in result.output
+    assert code.label in result.output
+    assert code.description in result.output
+    assert 'core.arithmetic.add' in result.output
+    assert 'text to prepend' in result.output
+    assert 'text to append' in result.output
+
+    # Check type-specific fields
+    for field in extra_fields:
+        assert field in result.output
+
+    # Verify type-specific values
+    if code_type == 'installed':
+        assert aiida_localhost.label in result.output
+        assert '/remote/abs/path' in result.output
+    elif code_type == 'portable':
+        assert 'bash' in result.output
+    elif code_type == 'containerized':
+        assert aiida_localhost.label in result.output
+        assert 'singularity exec --bind $PWD:$PWD {image_name}' in result.output
+        assert 'ubuntu' in result.output
+
+    # Regression test: Check that there are no duplicate field labels in the output
+    # This was a bug in v2.7.0 where fields like "PK"/"Pk" and "UUID"/"Uuid" appeared twice
+    output_lines = result.output.strip().split('\n')
+    field_labels = []
+    for line in output_lines:
+        # Skip table separator lines (those with dashes)
+        if line.strip() and not line.strip().startswith('-'):
+            parts = line.split(None, 1)  # Split on first whitespace
+            if parts:
+                field_labels.append(parts[0].lower())
+
+    # Check for duplicates (case-insensitive)
+    seen = set()
+    duplicates = set()
+    for label in field_labels:
+        if label in seen:
+            duplicates.add(label)
+        seen.add(label)
+
+    assert not duplicates, f'Found duplicate field labels in output: {duplicates}'
+
+    # Regression test: Ensure internal fields are not displayed
+    # These were incorrectly shown in v2.7.0 and should remain excluded
+    unwanted_fields = ['Repository metadata', 'Attributes', 'Extras', 'Node type', 'Ctime', 'Mtime', 'User', 'Source']
+    for unwanted in unwanted_fields:
+        assert unwanted not in result.output, f'Internal field "{unwanted}" should not be displayed'
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)

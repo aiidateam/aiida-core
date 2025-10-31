@@ -228,8 +228,8 @@ def show(code):
     from aiida.cmdline import is_verbose
     from aiida.common.pydantic import get_metadata
 
-    # Fields to always exclude from display
-    manually_included = {'pk', 'uuid'}  # These are shown separately with custom formatting
+    # These are shown separately with custom formatting
+    manually_included = {'pk', 'uuid'}
 
     table = []
     table.append(['PK', code.pk])
@@ -238,6 +238,7 @@ def show(code):
 
     # Iterate over model fields and display them
     for field_name, field_info in code.Model.model_fields.items():
+        breakpoint()
         # Skip manually included fields, fields marked as excluded from CLI, and fields that are not stored as
         # attributes (e.g., filepath_files for PortableCode)
         if (

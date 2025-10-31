@@ -229,36 +229,32 @@ def show(code):
     from aiida.common.pydantic import get_metadata
 
     # Fields to always exclude from display
-    always_exclude = {'pk', 'uuid'}  # These are shown separately with custom formatting
+    manually_included = {'pk', 'uuid'}  # These are shown separately with custom formatting
 
     table = []
-    # Always show PK, UUID, and Type first
     table.append(['PK', code.pk])
     table.append(['UUID', code.uuid])
     table.append(['Type', code.entry_point.name])
 
     # Iterate over model fields and display them
     for field_name, field_info in code.Model.model_fields.items():
-        # Skip fields that are always excluded
-        if field_name in always_exclude:
+        # Skip manually included fields, fields marked as excluded from CLI, and fields that are not stored as
+        # attributes (e.g., filepath_files for PortableCode)
+        if (
+            field_name in manually_included
+            or get_metadata(field_info, key='exclude_from_cli', default=False)
+            or not get_metadata(field_info, key='is_attribute', default=True)
+        ):
             continue
 
-        # Skip fields marked as excluded from CLI (these are internal/technical fields)
-        if get_metadata(field_info, key='exclude_from_cli', default=False):
-            continue
-
-        try:
-            value = getattr(code, field_name)
-        except AttributeError:
-            continue
+        value = getattr(code, field_name)
 
         # Get the display name from the field's metadata title
         display_name = get_metadata(field_info, key='title', default=field_name.capitalize().replace('_', ' '))
 
         # Special handling for computer field to show additional info
         if field_name == 'computer':
-            computer = value
-            value = f'{computer.label} ({computer.hostname}), pk: {computer.pk}'
+            value = f'{value.label} ({value.hostname}), pk: {value.pk}'
 
         table.append([display_name, value])
 

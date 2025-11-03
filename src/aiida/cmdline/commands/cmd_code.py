@@ -228,34 +228,43 @@ def show(code):
     from aiida.cmdline import is_verbose
     from aiida.common.pydantic import get_metadata
 
-    # These are shown separately with custom formatting
-    manually_included = {'pk', 'uuid'}
-
     table = []
+
+    # These are excluded from the CLI, so we add them manually
     table.append(['PK', code.pk])
     table.append(['UUID', code.uuid])
     table.append(['Type', code.entry_point.name])
 
-    # Iterate over model fields and display them
     for field_name, field_info in code.Model.model_fields.items():
-        breakpoint()
-        # Skip manually included fields, fields marked as excluded from CLI, and fields that are not stored as
-        # attributes (e.g., filepath_files for PortableCode)
-        if (
-            field_name in manually_included
-            or get_metadata(field_info, key='exclude_from_cli', default=False)
-            or not get_metadata(field_info, key='is_attribute', default=True)
+        # Skip fields excluded from CLI
+        if get_metadata(
+            field_info,
+            key='exclude_from_cli',
+            default=False,
+        ):
+            continue
+
+        # Skip fields that are not stored in the attributes column
+        # NOTE: this also catches e.g., filepath_files for PortableCode, which is actually a "misuse"
+        # of the is_attribute metadata flag, as there it is flagging that the field is not stored at all!
+        # TODO (edan-bainglass) consider improving this by introducing a new metadata flag or reworking PortableCode
+        # TODO see also Dict and InstalledCode for other potential misuses of is_attribute
+        if not get_metadata(
+            field_info,
+            key='is_attribute',
+            default=True,
         ):
             continue
 
         value = getattr(code, field_name)
 
-        # Get the display name from the field's metadata title
-        display_name = get_metadata(field_info, key='title', default=field_name.capitalize().replace('_', ' '))
-
         # Special handling for computer field to show additional info
         if field_name == 'computer':
             value = f'{value.label} ({value.hostname}), pk: {value.pk}'
+
+        # Use the field's title as display name.
+        # This allows for custom titles (class-cased by default from Pydantic).
+        display_name = field_info.title
 
         table.append([display_name, value])
 

@@ -206,7 +206,7 @@ requires-dist = [
     { name = "circus", specifier = "~=0.19.0" },
     { name = "click", specifier = ">=8.1.0,<8.3" },
     { name = "click-spinner", specifier = "~=0.1.8" },
-    { name = "disk-objectstore", specifier = "~=1.4.0" },
+    { name = "disk-objectstore", git = "https://github.com/GeigerJ2/disk-objectstore?rev=4871edea58dd20fd62ec9f10fce0d53f63797aa4" },
     { name = "docstring-parser" },
     { name = "docutils", marker = "extra == 'tests'", specifier = "~=0.20" },
     { name = "flask", marker = "extra == 'rest'", specifier = "~=2.3.3" },
@@ -1501,15 +1501,11 @@ wheels = [
 [[package]]
 name = "disk-objectstore"
 version = "1.4.0"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/GeigerJ2/disk-objectstore?rev=4871edea58dd20fd62ec9f10fce0d53f63797aa4#4871edea58dd20fd62ec9f10fce0d53f63797aa4" }
 dependencies = [
     { name = "click", version = "8.1.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "click", version = "8.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "sqlalchemy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a6/06/2f76aef59917d47e372158580db988bae1d09f73f5a22721cf88cb5b1dd1/disk_objectstore-1.4.0.tar.gz", hash = "sha256:4d9ea7617dd2de1c817255d7c8123f69e106f6daa0d4c0bdd09ab919ddbc49c8", size = 7390473, upload-time = "2025-10-06T08:35:53.392Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fe/95/fc379912f1c2b336de2af95331da764b6f09e3f8fabc6050cd7b71a6b895/disk_objectstore-1.4.0-py3-none-any.whl", hash = "sha256:e29d33e51a1196468062f30a79126b3d82ef9fcca6a505f7984cdfc8bed72f5e", size = 70636, upload-time = "2025-10-06T08:35:51.915Z" },
 ]
 
 [[package]]

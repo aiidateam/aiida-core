@@ -12,7 +12,7 @@ dependencies:
 - circus~=0.19.0
 - click-spinner~=0.1.8
 - click<8.3,>=8.1.0
-- disk-objectstore~=1.4.0
+- disk-objectstore@ git+https://github.com/GeigerJ2/disk-objectstore@4871edea58dd20fd62ec9f10fce0d53f63797aa4
 - docstring_parser
 - get-annotations~=0.1
 - python-graphviz~=0.19

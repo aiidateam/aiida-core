@@ -279,13 +279,12 @@ tests = [
   'pytest~=7.0',
   'pytest-asyncio~=0.12,<0.17',
   'pytest-timeout~=2.0',
-  'pytest-cov~=4.1',
+  'pytest-cov~=7.0',
   'pytest-rerunfailures~=12.0',
   'pytest-benchmark~=4.0',
   'pytest-regressions~=2.2',
   'pytest-xdist~=3.6',
   'pympler~=1.0',
-  'coverage~=7.0',
   'sphinx~=7.2.0',
   'docutils~=0.20'
 ]
@@ -304,6 +303,7 @@ Home = 'http://www.aiida.net/'
 Source = 'https://github.com/aiidateam/aiida-core'
 
 [tool.coverage.run]
+core = 'sysmon'
 omit = [
   "src/aiida/tools/_dumping/**/*"
 ]
@@ -329,7 +329,10 @@ enable_error_code = [
   'redundant-expr',
   'truthy-bool'
 ]
-plugins = ['sqlalchemy.ext.mypy.plugin']
+plugins = [
+  'pydantic.mypy',
+  'sqlalchemy.ext.mypy.plugin'
+]
 scripts_are_modules = true
 show_error_codes = true
 show_traceback = true
@@ -353,6 +356,7 @@ disallow_subclassing_any = true
 disallow_untyped_calls = true
 disallow_untyped_defs = true
 module = [
+  'aiida.tools.graph.*',
   'aiida.cmdline.params.*',
   'aiida.cmdline.groups.*',
   'aiida.tools.query.*'

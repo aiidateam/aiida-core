@@ -129,7 +129,8 @@ repos:
         src/aiida/storage/psql_dos/migrations/versions/1de112340b16_django_parity_1.py|
         src/aiida/storage/psql_dos/migrator.py|
         src/aiida/storage/psql_dos/models/.*|
-        src/aiida/storage/psql_dos/orm/.*|
+        src/aiida/storage/psql_dos/orm/.*.py|
+        src/aiida/storage/psql_dos/orm/querybuilder/joiner.py|
         src/aiida/storage/sqlite_temp/backend.py|
         src/aiida/storage/sqlite_zip/backend.py|
         src/aiida/storage/sqlite_zip/migrations/legacy_to_main.py|
@@ -141,10 +142,6 @@ repos:
         src/aiida/tools/data/orbital/orbital.py|
         src/aiida/tools/data/orbital/realhydrogen.py|
         src/aiida/tools/dbimporters/plugins/.*|
-        src/aiida/tools/graph/age_entities.py|
-        src/aiida/tools/graph/age_rules.py|
-        src/aiida/tools/graph/deletions.py|
-        src/aiida/tools/graph/graph_traversers.py|
         src/aiida/transports/cli.py|
         src/aiida/transports/plugins/local.py|
         src/aiida/transports/plugins/ssh.py|

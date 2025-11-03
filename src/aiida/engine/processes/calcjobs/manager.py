@@ -61,6 +61,7 @@ class JobsList:
         self._job_update_requests: Dict[Hashable, asyncio.Future] = {}  # Mapping: {job_id: Future}
         self._last_updated = last_updated
         self._update_handle: Optional[asyncio.TimerHandle] = None
+        self._inspecting_jobs: List[str] = []
 
     @property
     def logger(self) -> logging.Logger:
@@ -101,10 +102,11 @@ class JobsList:
             scheduler.set_transport(transport)
 
             kwargs: Dict[str, Any] = {'as_dict': True}
+            self._inspecting_jobs = self._get_jobs_with_scheduler()
             if scheduler.get_feature('can_query_by_user'):
                 kwargs['user'] = '$USER'
             else:
-                kwargs['jobs'] = self._get_jobs_with_scheduler()
+                kwargs['jobs'] = self._inspecting_jobs
 
             scheduler_response = scheduler.get_jobs(**kwargs)
 
@@ -124,6 +126,7 @@ class JobsList:
         This will set the futures for all pending update requests where the corresponding job has a new status compared
         to the last update.
         """
+        racing_requests = {}
         try:
             if not self._update_requests_outstanding():
                 return
@@ -146,9 +149,12 @@ class JobsList:
         else:
             for job_id, future in self._job_update_requests.items():
                 if not future.done():
-                    future.set_result(self._jobs_cache.get(job_id, None))
+                    if str(job_id) in self._inspecting_jobs:
+                        future.set_result(self._jobs_cache.get(job_id, None))
+                    else:
+                        racing_requests[job_id] = future
         finally:
-            self._job_update_requests = {}
+            self._job_update_requests = racing_requests
 
     @contextlib.contextmanager
     def request_job_info_update(self, authinfo: AuthInfo, job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:

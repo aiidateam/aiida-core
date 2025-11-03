@@ -1,0 +1,13 @@
+-----------------------  ------------------------------------
+PK                       <PK>
+UUID                     <UUID>
+Type                     core.code.portable
+Label                    test_portable_code
+Description              Test portable code
+Default calc job plugin  core.arithmetic.add
+Use double quotes        False
+With mpi
+Prepend text             text to prepend
+Append text              text to append
+Filepath executable      bash
+-----------------------  ------------------------------------

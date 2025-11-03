@@ -152,9 +152,15 @@ def storage_info(detailed):
 @click.option(
     '--compress', is_flag=True, default=False, help='Use compression if possible when carrying out maintenance tasks.'
 )
+@click.option(
+    '--clean-loose-per-pack',
+    is_flag=True,
+    default=True,
+    help='Delete corresponding loose files immediately after each pack creation when running a `full maintenance`.',
+)
 @decorators.with_dbenv()
 @click.pass_context
-def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
+def storage_maintain(ctx, full, no_repack, force, dry_run, compress, clean_loose_per_pack):
     """Performs maintenance tasks on the repository."""
     from aiida.common.exceptions import LockingProfileError
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
@@ -198,9 +204,15 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
 
     try:
         if full and no_repack:
-            storage.maintain(full=full, dry_run=dry_run, do_repack=False, compress=compress)
+            storage.maintain(
+                full=full,
+                dry_run=dry_run,
+                do_repack=False,
+                compress=compress,
+                clean_loose_per_pack=clean_loose_per_pack,
+            )
         else:
-            storage.maintain(full=full, dry_run=dry_run, compress=compress)
+            storage.maintain(full=full, dry_run=dry_run, compress=compress, clean_loose_per_pack=clean_loose_per_pack)
     except LockingProfileError as exception:
         echo.echo_critical(str(exception))
     echo.echo_success('Requested maintenance procedures finished.')

@@ -154,6 +154,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         clean_storage: t.Optional[bool] = None,
         do_vacuum: t.Optional[bool] = None,
         compress: bool = False,
+        clean_loose_per_pack: bool = True,
     ) -> dict:
         """Performs maintenance operations.
 
@@ -163,6 +164,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         :param clean_storage: flag for forcing the cleaning of soft-deleted files from the repository.
         :param do_vacuum: flag for forcing the vacuuming of the internal database when cleaning the repository.
         :param compress: flag for compressing the data when packing loose files. Set to ``Compress.AUTO`` if ``True``.
+        :param clean_loose_per_pack: if True, the loose files that went into a `pack` are deleted immediately after this
+            `pack` is created.
         :return: a dictionary with information on the operations performed.
         """
         from disk_objectstore import CompressMode
@@ -196,7 +199,9 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 if not dry_run:
                     with get_progress_reporter()(total=1) as progress:
                         callback = create_callback(progress)
-                        container.pack_all_loose(compress=compress, callback=callback)
+                        container.pack_all_loose(
+                            compress=compress, callback=callback, clean_loose_per_pack=clean_loose_per_pack
+                        )
 
             if do_repack:
                 files_numb = container.count_objects().packed

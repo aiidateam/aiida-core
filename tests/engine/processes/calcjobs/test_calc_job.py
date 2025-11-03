@@ -1225,7 +1225,7 @@ def test_monitor_result_parse(get_calcjob_builder, entry_points):
     entry_points.add(monitor_skip_parse, group='aiida.calculations.monitors', name='core.skip_parse')
 
     builder = get_calcjob_builder()
-    builder.metadata.options.sleep = 8
+    builder.metadata.options.sleep = 3
     builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.skip_parse'})}
     _, node = launch.run_get_node(builder)
     assert sorted(node.outputs) == ['remote_folder', 'retrieved']
@@ -1245,7 +1245,7 @@ def test_monitor_result_retrieve(get_calcjob_builder, entry_points):
     entry_points.add(monitor_skip_retrieve, group='aiida.calculations.monitors', name='core.skip_retrieval')
 
     builder = get_calcjob_builder()
-    builder.metadata.options.sleep = 8
+    builder.metadata.options.sleep = 3
     builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.skip_retrieval'})}
     _, node = launch.run_get_node(builder)
     assert 'retrieved' not in node.outputs
@@ -1265,7 +1265,7 @@ def test_monitor_result_override_exit_code(get_calcjob_builder, entry_points):
     entry_points.add(monitor_override_exit_code, group='aiida.calculations.monitors', name='core.override_exit_code')
 
     builder = get_calcjob_builder()
-    builder.metadata.options.sleep = 8
+    builder.metadata.options.sleep = 3
     builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.override_exit_code'})}
     _, node = launch.run_get_node(builder)
     assert sorted(node.outputs) == ['remote_folder', 'retrieved']
@@ -1315,7 +1315,7 @@ def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, c
     entry_points.add(monitor_disable_self, group='aiida.calculations.monitors', name='core.disable_self')
 
     builder = get_calcjob_builder()
-    builder.metadata.options.sleep = 6
+    builder.metadata.options.sleep = 1
     builder.monitors = {'disable_self': orm.Dict({'entry_point': 'core.disable_self'})}
     _, node = launch.run_get_node(builder)
     assert node.is_finished_ok

@@ -198,7 +198,7 @@ def test_calc_job_monitors_process_poll_interval_integrated(entry_points, aiida_
     builder.x = Int(1)
     builder.y = Int(1)
     builder.monitors = {'always_kill': Dict({'entry_point': 'core.emit_warning', 'minimum_poll_interval': 5})}
-    builder.metadata = {'options': {'sleep': 6, 'resources': {'num_machines': 1}}}
+    builder.metadata = {'options': {'sleep': 1, 'resources': {'num_machines': 1}}}
 
     _, node = run_get_node(builder)
     assert node.is_finished_ok
@@ -218,7 +218,7 @@ def test_calc_job_monitors_outputs(entry_points, aiida_code_installed):
     builder.x = Int(1)
     builder.y = Int(1)
     builder.monitors = {'store_message': Dict({'entry_point': 'core.store_message', 'minimum_poll_interval': 1})}
-    builder.metadata = {'options': {'sleep': 8, 'resources': {'num_machines': 1}}}
+    builder.metadata = {'options': {'sleep': 3, 'resources': {'num_machines': 1}}}
 
     _, node = run_get_node(builder)
     assert node.is_finished_ok

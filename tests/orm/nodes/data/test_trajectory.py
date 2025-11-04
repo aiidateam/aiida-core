@@ -126,7 +126,8 @@ class TestTrajectory:
         assert np.array_equal(symbols, trajectory_data['symbols'])
         assert np.array_equal(positions, trajectory_data['positions'][3, :, :])
         assert velocities is None
-        assert np.array_equal(trajectory.pbc, trajectory_data['pbc'])
+        # In case the cell is not defined, there should be no periodic boundary conditions
+        assert np.array_equal(trajectory.pbc, [False, False, False])
 
     def test_trajectory_get_step_structure(self, trajectory_data):
         """Test the `get_step_structure` method."""

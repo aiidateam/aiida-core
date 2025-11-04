@@ -145,7 +145,8 @@ class TrajectoryData(ArrayData):
         """
         import numpy
 
-        pbc = pbc or [True, True, True]
+        pbc_default = [True, True, True] if cells is not None else [False, False, False]
+        pbc = pbc or pbc_default
 
         self._internal_validate(stepids, cells, symbols, positions, times, velocities, pbc)
         # set symbols/pbc as attributes for easier querying

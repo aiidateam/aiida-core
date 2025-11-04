@@ -6,7 +6,6 @@ import base64
 import difflib
 import gzip
 import typing as t
-from collections.abc import Hashable
 
 import click
 
@@ -52,7 +51,7 @@ class LazyVerdiObjAttributeDict(AttributeDict):
         super().__init__(dictionary)
         self.ctx = ctx
 
-    def __getattr__(self, attr: Hashable) -> t.Any:
+    def __getattr__(self, attr: str) -> t.Any:
         """Override of ``AttributeDict.__getattr__`` to lazily initialize the ``config`` and ``profile`` attributes.
 
         :param attr: The attribute to return.

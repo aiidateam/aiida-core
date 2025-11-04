@@ -67,7 +67,7 @@ def override_decorator(check: bool = False) -> Callable[[MethodType], MethodType
             return func
 
         @functools.wraps(func)
-        def wrapped_fn(self, *args, **kwargs):
+        def wrapped_fn(self: Any, *args: Any, **kwargs: Any) -> Any:
             try:
                 getattr(super(), func.__name__)
             except AttributeError:

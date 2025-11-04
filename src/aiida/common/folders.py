@@ -82,7 +82,7 @@ class Folder:
 
         return 0o600
 
-    def get_subfolder(self, subfolder: FilePath, create=False, reset_limit=False) -> Folder:
+    def get_subfolder(self, subfolder: FilePath, create: bool = False, reset_limit: bool = False) -> Folder:
         """Return a Folder object pointing to a subfolder.
 
         :param subfolder: a string with the relative path of the subfolder,
@@ -113,7 +113,13 @@ class Folder:
 
         return new_folder
 
-    def get_content_list(self, pattern: str = '*', only_paths: bool = True) -> list:
+    @t.overload
+    def get_content_list(self, pattern: str = '*', only_paths: t.Literal[True] = True) -> list[str]: ...
+
+    @t.overload
+    def get_content_list(self, pattern: str = '*', only_paths: t.Literal[False] = False) -> list[tuple[str, bool]]: ...
+
+    def get_content_list(self, pattern: str = '*', only_paths: bool = True) -> list[str] | list[tuple[str, bool]]:
         """Return a list of files (and subfolders) in the folder, matching a given pattern.
 
         Example: If you want to exclude files starting with a dot, you can
@@ -410,7 +416,7 @@ class SandboxFolder(Folder):
         """Enter a context and return self."""
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
+    def __exit__(self, exc_type: t.Any, exc_value: t.Any, traceback: t.Any) -> None:
         """Erase the temporary directory created in the constructor."""
         self.erase()
 
@@ -460,5 +466,5 @@ class SubmitTestFolder(Folder):
         """Return the sub folder that should be Called when entering in the with statement."""
         return self._sub_folder
 
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
+    def __exit__(self, exc_type: t.Any, exc_value: t.Any, traceback: t.Any) -> None:
         """When context manager is exited, do not delete the folder."""

@@ -19,6 +19,8 @@ from __future__ import annotations
 import pathlib
 from typing import cast
 
+from pydantic import field_validator
+
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
@@ -47,7 +49,7 @@ class InstalledCode(Code):
             description='The label of the remote computer on which the executable resides.',
             is_attribute=False,
             orm_to_model=lambda node: cast(InstalledCode, node).computer.label,
-            model_to_orm=lambda model: cast(InstalledCode.Model, model).load_computer(),
+            model_to_orm=lambda model: cast(InstalledCode.Model, model).load_computer(model.computer),
             short_name='-Y',
             priority=2,
         )
@@ -59,7 +61,21 @@ class InstalledCode(Code):
             priority=1,
         )
 
-        def load_computer(self) -> Computer:
+        @field_validator('computer', mode='before')
+        @classmethod
+        def validate_computer(cls, value: str | int) -> str:
+            """Validate the ``computer`` field.
+
+            :param value: The value to validate.
+            :return: The validated value.
+            :raises ValueError: If the value is not a string or integer.
+            """
+            if isinstance(value, int):
+                return cls.load_computer(value).label
+            return value
+
+        @classmethod
+        def load_computer(cls, comp_id: str | int) -> Computer:
             """Load the computer instance.
 
             :return: The computer instance.
@@ -68,7 +84,7 @@ class InstalledCode(Code):
             from aiida.orm import load_computer
 
             try:
-                return load_computer(self.computer)
+                return load_computer(comp_id)
             except exceptions.NotExistent as exception:
                 raise ValueError(exception) from exception
 

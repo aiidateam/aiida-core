@@ -74,7 +74,7 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
     """The collection of nodes."""
 
     @staticmethod
-    def _entity_base_cls() -> Type['Node']:  # type: ignore[override]
+    def _entity_base_cls() -> Type[Node]:  # type: ignore[override]
         return Node
 
     def delete(self, pk: int) -> None:
@@ -119,39 +119,39 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
 class NodeBase:
     """A namespace for node related functionality, that is not directly related to its user-facing properties."""
 
-    def __init__(self, node: 'Node') -> None:
+    def __init__(self, node: Node) -> None:
         """Construct a new instance of the base namespace."""
         self._node = node
 
     @cached_property
-    def repository(self) -> 'NodeRepository':
+    def repository(self) -> NodeRepository:
         """Return the repository for this node."""
         from .repository import NodeRepository
 
         return NodeRepository(self._node)
 
     @cached_property
-    def caching(self) -> 'NodeCaching':
+    def caching(self) -> NodeCaching:
         """Return an interface to interact with the caching of this node."""
         return self._node._CLS_NODE_CACHING(self._node)
 
     @cached_property
-    def comments(self) -> 'NodeComments':
+    def comments(self) -> NodeComments:
         """Return an interface to interact with the comments of this node."""
         return NodeComments(self._node)
 
     @cached_property
-    def attributes(self) -> 'NodeAttributes':
+    def attributes(self) -> NodeAttributes:
         """Return an interface to interact with the attributes of this node."""
         return NodeAttributes(self._node)
 
     @cached_property
-    def extras(self) -> 'EntityExtras':
+    def extras(self) -> EntityExtras:
         """Return an interface to interact with the extras of this node."""
         return EntityExtras(self._node)
 
     @cached_property
-    def links(self) -> 'NodeLinks':
+    def links(self) -> NodeLinks:
         """Return an interface to interact with the links of this node."""
         return self._node._CLS_NODE_LINKS(self._node)
 
@@ -233,7 +233,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             default_factory=dict,
             description='Virtual hierarchy of the file repository.',
             is_attribute=False,
-            orm_to_model=lambda node, _: cast('Node', node).base.repository.metadata,
+            orm_to_model=lambda node: cast(Node, node).base.repository.metadata,
             exclude_to_orm=True,
             exclude_from_cli=True,
         )
@@ -263,7 +263,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             default_factory=dict,
             description='The node attributes',
             is_attribute=False,
-            orm_to_model=lambda node, _: cast('Node', node).base.attributes.all,
+            orm_to_model=lambda node: cast(Node, node).base.attributes.all,
             is_subscriptable=True,
             exclude_from_cli=True,
         )
@@ -271,7 +271,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             default_factory=dict,
             description='The node extras',
             is_attribute=False,
-            orm_to_model=lambda node, _: cast('Node', node).base.extras.all,
+            orm_to_model=lambda node: cast(Node, node).base.extras.all,
             is_subscriptable=True,
             exclude_from_cli=True,
         )
@@ -279,15 +279,15 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             None,
             description='The label of the computer',
             is_attribute=False,
-            orm_to_model=lambda node, _: cast('Node', node).computer.label if cast('Node', node).computer else None,  # type: ignore[union-attr]
-            model_to_orm=lambda model: cast('Node.Model', model).load_computer(),
+            orm_to_model=lambda node: cast(Node, node).computer.label if cast(Node, node).computer else None,  # type: ignore[union-attr]
+            model_to_orm=lambda model: cast(Node.Model, model).load_computer(),
             exclude_from_cli=True,
             exclude_to_orm=True,
         )
         user: int = MetadataField(
             description='The PK of the user who owns the node',
             is_attribute=False,
-            orm_to_model=lambda node, _: cast('Node', node).user.pk,
+            orm_to_model=lambda node: cast(Node, node).user.pk,
             orm_class=User,
             exclude_to_orm=True,
             exclude_from_cli=True,
@@ -657,7 +657,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                     f'Cannot store because source node of link triple {link_triple} is not stored'
                 )
 
-    def _store_from_cache(self, cache_node: 'Node') -> None:
+    def _store_from_cache(self, cache_node: Node) -> None:
         """Store this node from an existing cache node.
 
         .. note::
@@ -690,7 +690,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         self._add_outputs_from_cache(cache_node)
         self.base.extras.set(self.base.caching.CACHED_FROM_KEY, cache_node.uuid)
 
-    def _add_outputs_from_cache(self, cache_node: 'Node') -> None:
+    def _add_outputs_from_cache(self, cache_node: Node) -> None:
         """Replicate the output links and nodes from the cached node onto this node."""
         for entry in cache_node.base.links.get_outgoing(link_type=LinkType.CREATE):
             new_node = entry.node.clone()

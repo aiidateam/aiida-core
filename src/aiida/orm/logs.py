@@ -8,6 +8,8 @@
 ###########################################################################
 """Module for orm logging abstract classes"""
 
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
@@ -41,10 +43,10 @@ class LogCollection(entities.Collection['Log']):
     """
 
     @staticmethod
-    def _entity_base_cls() -> Type['Log']:
+    def _entity_base_cls() -> Type[Log]:
         return Log
 
-    def create_entry_from_record(self, record: logging.LogRecord) -> Optional['Log']:
+    def create_entry_from_record(self, record: logging.LogRecord) -> Optional[Log]:
         """Helper function to create a log entry from a record created as by the python logging library
 
         :param record: The record created by the logging module
@@ -82,7 +84,7 @@ class LogCollection(entities.Collection['Log']):
             backend=self.backend,
         )
 
-    def get_logs_for(self, entity: 'Node', order_by: Optional['OrderByType'] = None) -> List['Log']:
+    def get_logs_for(self, entity: 'Node', order_by: Optional['OrderByType'] = None) -> List[Log]:
         """Get all the log messages for a given node and optionally sort
 
         :param entity: the entity to get logs for

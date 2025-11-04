@@ -49,7 +49,7 @@ class InstalledCode(Code):
             description='The label of the remote computer on which the executable resides.',
             is_attribute=False,
             orm_to_model=lambda node: cast(InstalledCode, node).computer.label,
-            model_to_orm=lambda model: cast(InstalledCode.Model, model).load_computer(model.computer),
+            model_to_orm=lambda model: cast(InstalledCode.Model, model).load_computer(),
             short_name='-Y',
             priority=2,
         )
@@ -70,23 +70,14 @@ class InstalledCode(Code):
             :return: The validated value.
             :raises ValueError: If the value is not a string or integer.
             """
-            if isinstance(value, int):
-                return cls.load_computer(value).label
-            return value
-
-        @classmethod
-        def load_computer(cls, comp_id: str | int) -> Computer:
-            """Load the computer instance.
-
-            :return: The computer instance.
-            :raises ValueError: If the computer does not exist.
-            """
             from aiida.orm import load_computer
 
-            try:
-                return load_computer(comp_id)
-            except exceptions.NotExistent as exception:
-                raise ValueError(exception) from exception
+            if isinstance(value, int):
+                try:
+                    return load_computer(value).label
+                except exceptions.NotExistent as exception:
+                    raise ValueError(f'No computer found for the given id: {value}') from exception
+            return value
 
     def __init__(self, computer: Computer, filepath_executable: str, **kwargs):
         """Construct a new instance.

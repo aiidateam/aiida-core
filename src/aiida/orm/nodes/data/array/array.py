@@ -12,11 +12,9 @@ from __future__ import annotations
 
 import base64
 import io
-from collections.abc import Iterable
-from typing import Any, Iterator, Optional
+from typing import Any, Iterator, Optional, cast
 
 import numpy as np
-from pydantic import ConfigDict, field_serializer, field_validator
 
 from aiida.common.pydantic import MetadataField
 
@@ -49,23 +47,14 @@ class ArrayData(Data):
     """
 
     class Model(Data.Model):
-        model_config = ConfigDict(arbitrary_types_allowed=True)
+        # model_config = ConfigDict(arbitrary_types_allowed=True)
 
-        arrays: Optional[dict[str, np.ndarray]] = MetadataField(
+        arrays: Optional[dict[str, bytes]] = MetadataField(
             None,
-            description='The dictionary of numpy arrays',
+            description='The dictionary of numpy arrays.',
+            orm_to_model=lambda node: ArrayData.save_arrays(cast(ArrayData, node).arrays),
+            model_to_orm=lambda model: ArrayData.load_arrays(cast(ArrayData.Model, model).arrays),
         )
-
-        @field_validator('arrays', mode='before')
-        @classmethod
-        def validate_arrays(cls, value: dict[str, Iterable] | None) -> dict[str, np.ndarray] | None:
-            if value is None:
-                return value
-            return {k: np.array(v) for k, v in value.items()}
-
-        @field_serializer('arrays', when_used='json-unless-none')
-        def serialize_arrays(self, value: dict[str, np.ndarray]) -> dict[str, list]:
-            return {k: v.tolist() for k, v in value.items()}
 
     array_prefix = 'array|'
     default_array_name = 'default'

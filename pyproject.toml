@@ -358,6 +358,7 @@ disallow_untyped_defs = true
 module = [
   'aiida.cmdline.groups.*',
   'aiida.cmdline.params.*',
+  'aiida.common.*',
   'aiida.repository.*',
   'aiida.tools.graph.*',
   'aiida.tools.query.*'

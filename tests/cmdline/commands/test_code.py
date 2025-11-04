@@ -184,7 +184,7 @@ def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, hostnam
     return normalized
 
 
-# @pytest.mark.usefixtures("aiida_profile_clean")  # Clean profile for this test to ensure number of digits for PKs
+@pytest.mark.usefixtures('aiida_profile_clean')  # Clean profile for this test to ensure number of digits for PKs
 @pytest.mark.parametrize(
     'code_type',
     ['installed', 'portable', 'containerized'],

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import logging
 import pathlib
+from typing import cast
 
 from aiida.common import exceptions
 from aiida.common.folders import Folder
@@ -63,7 +64,7 @@ class PortableCode(Code):
             description='Relative filepath of executable with directory of code files.',
             short_name='-X',
             priority=1,
-            orm_to_model=lambda node: str(node.filepath_executable),  # type: ignore[attr-defined]
+            orm_to_model=lambda node: str(cast(PortableCode, node).filepath_executable),
         )
         filepath_files: str = MetadataField(
             ...,

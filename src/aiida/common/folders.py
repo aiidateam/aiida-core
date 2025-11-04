@@ -17,9 +17,12 @@ import os
 import pathlib
 import shutil
 import tempfile
+import typing as t
+from collections.abc import Iterator
 
 from . import timezone
 from .lang import type_check
+from .typing import FilePath, Self
 
 # If True, tries to make everything (dirs, files) group-writable.
 # Otherwise, tries to make everything only readable and writable by the user.
@@ -45,7 +48,7 @@ class Folder:
         to os.path.abspath or normpath are quite slow).
     """
 
-    def __init__(self, abspath, folder_limit=None):
+    def __init__(self, abspath: FilePath, folder_limit: FilePath | None = None):
         """Construct a new instance."""
         abspath = os.path.abspath(abspath)
         if folder_limit is None:
@@ -64,7 +67,7 @@ class Folder:
         self._folder_limit = folder_limit
 
     @property
-    def mode_dir(self):
+    def mode_dir(self) -> int:
         """Return the mode with which the folders should be created"""
         if GROUP_WRITABLE:
             return 0o770
@@ -72,14 +75,14 @@ class Folder:
         return 0o700
 
     @property
-    def mode_file(self):
+    def mode_file(self) -> int:
         """Return the mode with which the files should be created"""
         if GROUP_WRITABLE:
             return 0o660
 
         return 0o600
 
-    def get_subfolder(self, subfolder, create=False, reset_limit=False):
+    def get_subfolder(self, subfolder: FilePath, create=False, reset_limit=False) -> Folder:
         """Return a Folder object pointing to a subfolder.
 
         :param subfolder: a string with the relative path of the subfolder,
@@ -110,7 +113,7 @@ class Folder:
 
         return new_folder
 
-    def get_content_list(self, pattern='*', only_paths=True):
+    def get_content_list(self, pattern: str = '*', only_paths: bool = True) -> list:
         """Return a list of files (and subfolders) in the folder, matching a given pattern.
 
         Example: If you want to exclude files starting with a dot, you can
@@ -134,7 +137,7 @@ class Folder:
 
         return [(fname, not os.path.isdir(os.path.join(self.abspath, fname))) for fname in file_list]
 
-    def create_symlink(self, src, name):
+    def create_symlink(self, src: FilePath, name: FilePath) -> None:
         """Create a symlink inside the folder to the location 'src'.
 
         :param src: the location to which the symlink must point. Can be
@@ -148,7 +151,7 @@ class Folder:
 
         # For symlinks, permissions should not be set
 
-    def insert_path(self, src, dest_name=None, overwrite=True):
+    def insert_path(self, src: FilePath, dest_name: FilePath | None = None, overwrite: bool = True) -> FilePath:
         """Copy a file to the folder.
 
         :param src: the source filename to copy
@@ -205,7 +208,9 @@ class Folder:
 
         return dest_abs_path
 
-    def create_file_from_filelike(self, filelike, filename, mode='wb', encoding=None):
+    def create_file_from_filelike(
+        self, filelike: t.IO[t.AnyStr], filename: FilePath, mode: str = 'wb', encoding: str | None = None
+    ) -> FilePath:
         """Create a file with the given filename from a filelike object.
 
         :param filelike: a filelike object whose contents to copy
@@ -227,7 +232,7 @@ class Folder:
 
         return filepath
 
-    def remove_path(self, filename):
+    def remove_path(self, filename: FilePath) -> None:
         """Remove a file or folder from the folder.
 
         :param filename: the relative path name to remove
@@ -241,7 +246,7 @@ class Folder:
         else:
             os.remove(dest_abs_path)
 
-    def get_abs_path(self, relpath, check_existence=False):
+    def get_abs_path(self, relpath: FilePath, check_existence: bool = False) -> FilePath:
         """Return an absolute path for a file or folder in this folder.
 
         The advantage of using this method is that it checks that filename
@@ -268,7 +273,9 @@ class Folder:
         return dest_abs_path
 
     @contextlib.contextmanager
-    def open(self, name, mode='r', encoding='utf8', check_existence=False):
+    def open(
+        self, name: FilePath, mode: str = 'r', encoding: str | None = 'utf8', check_existence: bool = False
+    ) -> Iterator[t.Any]:
         """Open a file in the current folder and return the corresponding file object.
 
         :param check_existence: if False, just return the file path.
@@ -282,32 +289,32 @@ class Folder:
             yield handle
 
     @property
-    def abspath(self):
+    def abspath(self) -> FilePath:
         """The absolute path of the folder."""
         return self._abspath
 
     @property
-    def folder_limit(self):
+    def folder_limit(self) -> FilePath:
         """The folder limit that cannot be crossed when creating files and folders."""
         return self._folder_limit
 
-    def exists(self):
+    def exists(self) -> bool:
         """Return True if the folder exists, False otherwise."""
         return os.path.exists(self.abspath)
 
-    def isfile(self, relpath):
+    def isfile(self, relpath: FilePath) -> bool:
         """Return True if 'relpath' exists inside the folder and is a file,
         False otherwise.
         """
         return os.path.isfile(os.path.join(self.abspath, relpath))
 
-    def isdir(self, relpath):
+    def isdir(self, relpath: FilePath) -> bool:
         """Return True if 'relpath' exists inside the folder and is a directory,
         False otherwise.
         """
         return os.path.isdir(os.path.join(self.abspath, relpath))
 
-    def erase(self, create_empty_folder=False):
+    def erase(self, create_empty_folder: bool = False) -> None:
         """Erases the folder. Should be called only in very specific cases,
         in general folder should not be erased!
 
@@ -321,7 +328,7 @@ class Folder:
         if create_empty_folder:
             self.create()
 
-    def create(self):
+    def create(self) -> None:
         """Creates the folder, if it does not exist on the disk yet.
 
         It will also create top directories, if absent.
@@ -331,7 +338,7 @@ class Folder:
         """
         os.makedirs(self.abspath, mode=self.mode_dir, exist_ok=True)
 
-    def replace_with_folder(self, srcdir, move=False, overwrite=False):
+    def replace_with_folder(self, srcdir: FilePath, move: bool = False, overwrite: bool = False) -> None:
         """This routine copies or moves the source folder 'srcdir' to the local folder pointed to by this Folder.
 
         :param srcdir: the source folder on the disk; this must be an absolute path
@@ -399,11 +406,11 @@ class SandboxFolder(Folder):
 
         super().__init__(abspath=tempfile.mkdtemp(dir=filepath))
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         """Enter a context and return self."""
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
         """Erase the temporary directory created in the constructor."""
         self.erase()
 
@@ -416,9 +423,7 @@ class SubmitTestFolder(Folder):
     not overwrite already existing created test folders.
     """
 
-    _sub_folder = None
-
-    def __init__(self, basepath=CALC_JOB_DRY_RUN_BASE_PATH):
+    def __init__(self, basepath: FilePath = CALC_JOB_DRY_RUN_BASE_PATH):
         """Construct and create the sandbox folder.
 
         The directory will be created in the current working directory with the name given by `basepath`.
@@ -451,9 +456,9 @@ class SubmitTestFolder(Folder):
 
         self._sub_folder = self.get_subfolder(os.path.relpath(subfolder_path, self.abspath), reset_limit=True)
 
-    def __enter__(self):
+    def __enter__(self) -> Folder:
         """Return the sub folder that should be Called when entering in the with statement."""
         return self._sub_folder
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
         """When context manager is exited, do not delete the folder."""

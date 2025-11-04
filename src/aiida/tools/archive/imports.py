@@ -1244,7 +1244,7 @@ def _add_files_to_repo(backend_from: StorageBackend, backend_to: StorageBackend,
     repository_to = backend_to.get_repository()
     repository_from = backend_from.get_repository()
     with get_progress_reporter()(desc='Adding archive files to repository', total=len(new_keys)) as progress:
-        for key, handle in repository_from.iter_object_streams(new_keys):  # type: ignore[arg-type]
+        for key, handle in repository_from.iter_object_streams(new_keys):
             backend_key = repository_to.put_object_from_filelike(handle)
             if backend_key != key:
                 raise ImportValidationError(

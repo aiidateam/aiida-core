@@ -46,15 +46,15 @@ class InstalledCode(Code):
             title='Computer',
             description='The label of the remote computer on which the executable resides.',
             is_attribute=False,
-            orm_to_model=lambda node, _: cast('InstalledCode', node).computer.label,
-            model_to_orm=lambda model: cast('InstalledCode.Model', model).load_computer(),
+            orm_to_model=lambda node: cast(InstalledCode, node).computer.label,
+            model_to_orm=lambda model: cast(InstalledCode.Model, model).load_computer(),
             short_name='-Y',
             priority=2,
         )
         filepath_executable: str = MetadataField(
             title='Filepath executable',
             description='Filepath of the executable on the remote computer.',
-            orm_to_model=lambda node, _: str(cast('InstalledCode', node).filepath_executable),
+            orm_to_model=lambda node: str(cast(InstalledCode, node).filepath_executable),
             short_name='-X',
             priority=1,
         )

@@ -8,6 +8,8 @@
 ###########################################################################
 """Module for the ORM user class."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Optional, Tuple, Type
 
 from aiida.common import exceptions
@@ -27,10 +29,10 @@ class UserCollection(entities.Collection['User']):
     """The collection of users stored in a backend."""
 
     @staticmethod
-    def _entity_base_cls() -> Type['User']:
+    def _entity_base_cls() -> Type[User]:
         return User
 
-    def get_or_create(self, email: str, **kwargs) -> Tuple[bool, 'User']:
+    def get_or_create(self, email: str, **kwargs) -> Tuple[bool, User]:
         """Get the existing user with a given email address or create an unstored one
 
         :param kwargs: The properties of the user to get or create
@@ -43,7 +45,7 @@ class UserCollection(entities.Collection['User']):
         except exceptions.NotExistent:
             return True, User(backend=self.backend, email=email, **kwargs)
 
-    def get_default(self) -> Optional['User']:
+    def get_default(self) -> Optional[User]:
         """Get the current default user"""
         return self.backend.default_user
 

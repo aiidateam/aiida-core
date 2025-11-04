@@ -8,6 +8,8 @@
 ###########################################################################
 """AiiDA Group entities"""
 
+from __future__ import annotations
+
 import datetime
 import warnings
 from functools import cached_property
@@ -35,7 +37,7 @@ if TYPE_CHECKING:
 __all__ = ('AutoGroup', 'Group', 'ImportGroup', 'UpfFamily')
 
 
-def load_group_class(type_string: str) -> Type['Group']:
+def load_group_class(type_string: str) -> Type[Group]:
     """Load the sub class of `Group` that corresponds to the given `type_string`.
 
     .. note:: will fall back on `aiida.orm.groups.Group` if `type_string` cannot be resolved to loadable entry point.
@@ -60,10 +62,10 @@ class GroupCollection(entities.Collection['Group']):
     """Collection of Groups"""
 
     @staticmethod
-    def _entity_base_cls() -> Type['Group']:
+    def _entity_base_cls() -> Type[Group]:
         return Group
 
-    def get_or_create(self, label: Optional[str] = None, **kwargs) -> Tuple['Group', bool]:
+    def get_or_create(self, label: Optional[str] = None, **kwargs) -> Tuple[Group, bool]:
         """Try to retrieve a group from the DB with the given arguments;
         create (and store) a new group if such a group was not present yet.
 
@@ -96,9 +98,9 @@ class GroupCollection(entities.Collection['Group']):
 class GroupBase:
     """A namespace for group related functionality, that is not directly related to its user-facing properties."""
 
-    def __init__(self, group: 'Group') -> None:
+    def __init__(self, group: Group) -> None:
         """Construct a new instance of the base namespace."""
-        self._group: 'Group' = group
+        self._group: Group = group
 
     @cached_property
     def extras(self) -> extras.EntityExtras:
@@ -126,7 +128,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             description='The PK of the group owner',
             is_attribute=False,
             orm_class='core.user',
-            orm_to_model=lambda group, _: cast('Group', group).user.pk,
+            orm_to_model=lambda group: cast(Group, group).user.pk,
             exclude_to_orm=True,
         )
         time: datetime.datetime = MetadataField(
@@ -148,7 +150,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             description='The group extras',
             is_attribute=False,
             is_subscriptable=True,
-            orm_to_model=lambda group, _: cast('Group', group).base.extras.all,
+            orm_to_model=lambda group: cast(Group, group).base.extras.all,
         )
 
     _CLS_COLLECTION = GroupCollection

@@ -35,10 +35,10 @@ class ComputerCollection(entities.Collection['Computer']):
     """The collection of Computer entries."""
 
     @staticmethod
-    def _entity_base_cls() -> Type['Computer']:
+    def _entity_base_cls() -> Type[Computer]:
         return Computer
 
-    def get_or_create(self, label: str, **kwargs: Any) -> Tuple[bool, 'Computer']:
+    def get_or_create(self, label: str, **kwargs: Any) -> Tuple[bool, Computer]:
         """Try to retrieve a Computer from the DB with the given arguments;
         create (and store) a new Computer if such a Computer was not present yet.
 
@@ -288,11 +288,11 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
                 f'Invalid value for def_memory_per_machine, must be a positive int, got: {def_memory_per_machine}'
             )
 
-    def copy(self) -> 'Computer':
+    def copy(self) -> Computer:
         """Return a copy of the current object to work with, not stored yet."""
         return entities.from_backend_entity(Computer, self._backend_entity.copy())
 
-    def store(self) -> 'Computer':
+    def store(self) -> Computer:
         """Store the computer in the DB.
 
         Differently from Nodes, a computer can be re-stored if its properties

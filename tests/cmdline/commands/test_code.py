@@ -156,9 +156,19 @@ def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, hostnam
     Returns:
         Normalized output string with placeholders
     """
+    import re
+
+    # Remove the first and last lines (separator lines with hyphens)
+    lines = output.strip().split('\n')
+    if lines and lines[0].strip().startswith('-'):
+        lines = lines[1:]
+    if lines and lines[-1].strip().startswith('-'):
+        lines = lines[:-1]
+
+    normalized = '\n'.join(lines)
 
     # Replace UUID first (before PK, as PK digits might appear in UUID)
-    normalized = output.replace(code_uuid, '<UUID>')
+    normalized = normalized.replace(code_uuid, '<UUID>')
 
     # Replace hostname if provided
     if hostname:
@@ -169,14 +179,12 @@ def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, hostnam
         normalized = normalized.replace(f'pk: {computer_pk}', 'pk: <COMPUTER_PK>')
 
     # Replace code PK (as whole word to avoid replacing parts of other numbers)
-    # Match PK in the table format
-    import re
-
     normalized = re.sub(rf'\b{code_pk}\b', '<PK>', normalized)
 
     return normalized
 
 
+# @pytest.mark.usefixtures("aiida_profile_clean")  # Clean profile for this test to ensure number of digits for PKs
 @pytest.mark.parametrize(
     'code_type',
     ['installed', 'portable', 'containerized'],

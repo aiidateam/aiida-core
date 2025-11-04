@@ -1,14 +1,12 @@
------------------------  ------------------------------------
-PK                       <PK>
-UUID                     <UUID>
-Type                     core.code.installed
-Label                    test_installed_code
-Description              Test installed code
-Computer                 <hostname> (<hostname>), pk: <COMPUTER_PK>
-Default calc job plugin  core.arithmetic.add
-Use double quotes        False
-With mpi
-Prepend text             text to prepend
-Append text              text to append
-Filepath executable      /remote/abs/path
------------------------  ------------------------------------
+PK                          <PK>
+UUID                        <UUID>
+Type                        core.code.installed
+Label                       test_installed_code
+Description                 Test installed code
+Computer                    <hostname> (<hostname>), pk: <COMPUTER_PK>
+Default `CalcJob` plugin    core.arithmetic.add
+Escape using double quotes  False
+Run with MPI
+Prepend script              text to prepend
+Append script               text to append
+Filepath executable         /remote/abs/path

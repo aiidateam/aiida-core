@@ -1,17 +1,15 @@
------------------------  ----------------------------------------------
-PK                       <PK>
-UUID                     <UUID>
-Type                     core.code.containerized
-Label                    test_containerized_code
-Description              Test containerized code
-Computer                 <hostname> (<hostname>), pk: <COMPUTER_PK>
-Default calc job plugin  core.arithmetic.add
-Use double quotes        False
-With mpi
-Prepend text             text to prepend
-Append text              text to append
-Filepath executable      /usr/bin/bash
-Engine command           singularity exec --bind $PWD:$PWD {image_name}
-Image name               ubuntu
-Wrap cmdline params      False
------------------------  ----------------------------------------------
+PK                            <PK>
+UUID                          <UUID>
+Type                          core.code.containerized
+Label                         test_containerized_code
+Description                   Test containerized code
+Computer                      <hostname> (<hostname>), pk: <COMPUTER_PK>
+Default `CalcJob` plugin      core.arithmetic.add
+Escape using double quotes    False
+Run with MPI
+Prepend script                text to prepend
+Append script                 text to append
+Filepath executable           /usr/bin/bash
+Engine command                singularity exec --bind $PWD:$PWD {image_name}
+Image name                    ubuntu
+Wrap command line parameters  False

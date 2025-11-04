@@ -299,11 +299,19 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         return fields
 
-    def to_model(self, repository_path: Optional[pathlib.Path] = None, unstored: bool = False) -> Model:
+    def to_model(
+        self,
+        *,
+        repository_path: Optional[pathlib.Path] = None,
+        include_repository_content: bool = False,
+        unstored: bool = False,
+    ) -> Model:
         """Return the entity instance as an instance of its model.
 
         :param repository_path: If the orm node has files in the repository, this path is used to read the repository
             files from. If no path is specified a temporary path is created using the entities pk.
+        :param include_repository_content: If True, repository file content is serialized in the model.
+            This field can be very large, so it is excluded by default.
         :param unstored: If True, the input version of the model is used, which strips read-only fields, i.e., fields
             with `exclude_to_orm=True`.
         :return: An instance of the entity's model class.
@@ -314,7 +322,12 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         for key, field in Model.model_fields.items():
             if orm_to_model := get_metadata(field, 'orm_to_model'):
-                fields[key] = orm_to_model(self, repository_path)
+                if key == 'filepath_files':
+                    fields[key] = orm_to_model(self, repository_path)
+                elif key == 'repository_content':
+                    fields[key] = orm_to_model(self, include_repository_content)
+                else:
+                    fields[key] = orm_to_model(self)
             else:
                 fields[key] = getattr(self, key)
 
@@ -332,19 +345,23 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
     def serialize(
         self,
+        *,
         repository_path: Optional[pathlib.Path] = None,
-        mode: Literal['json', 'python'] = 'json',
+        include_repository_content: bool = False,
         unstored: bool = False,
+        mode: Literal['json', 'python'] = 'json',
     ) -> dict[str, Any]:
         """Serialize the entity instance to JSON.
 
         :param repository_path: If the orm node has files in the repository, this path is used to dump the repository
             files to. If no path is specified a temporary path is created using the entities pk.
+        :param include_repository_content: If True, repository file content is serialized in the model.
+            This field can be very large, so it is excluded by default.
+        :param unstored: If True, the input version of the model is used, which strips read-only fields, i.e., fields
+            with `exclude_to_orm=True`.
         :param mode: The serialization mode, either 'json' or 'python'. The 'json' mode is the most strict and ensures
             that the output is JSON serializable, whereas the 'python' mode allows for more complex Python types, such
             as `datetime` objects.
-        :param unstored: If True, the input version of the model is used, which strips read-only fields, i.e., fields
-            with `exclude_to_orm=True`.
         :return: A dictionary that can be serialized to JSON.
         """
         self.logger.warning(
@@ -360,7 +377,11 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
                 raise ValueError(f'The repository_path `{repository_path}` does not exist.')
             if not repository_path.is_dir():
                 raise ValueError(f'The repository_path `{repository_path}` is not a directory.')
-        return self.to_model(repository_path, unstored=unstored).model_dump(mode=mode)
+        return self.to_model(
+            repository_path=repository_path,
+            include_repository_content=include_repository_content,
+            unstored=unstored,
+        ).model_dump(mode=mode)
 
     @classmethod
     def from_serialized(cls, unstored: bool = False, **kwargs: dict[str, Any]) -> Self:

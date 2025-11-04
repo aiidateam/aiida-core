@@ -75,7 +75,7 @@ def MetadataField(  # noqa: N802
     :param model_to_orm: Optional callable to convert the value of a field from a model instance to an ORM instance.
     :param exclude_to_orm: When set to ``True``, this field value will not be passed to the ORM entity constructor
         through ``Entity.from_model``.
-    :param exclude_to_orm: When set to ``True``, this field value will not be exposed on the CLI command that is
+    :param exclude_from_cli: When set to ``True``, this field value will not be exposed on the CLI command that is
         dynamically generated to create a new instance.
     :param is_attribute: Whether the field is stored as an attribute.
     :param is_subscriptable: Whether the field can be indexed like a list or dictionary.

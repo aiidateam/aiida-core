@@ -83,7 +83,7 @@ class ArrayData(Data):
 
     @staticmethod
     def save_arrays(arrays: dict[str, np.ndarray]) -> dict[str, bytes]:
-        results = {}
+        results: dict[str, bytes] = {}
 
         for key, array in arrays.items():
             stream = io.BytesIO()
@@ -94,8 +94,11 @@ class ArrayData(Data):
         return results
 
     @staticmethod
-    def load_arrays(arrays: dict[str, bytes]) -> dict[str, np.ndarray]:
-        results = {}
+    def load_arrays(arrays: dict[str, bytes] | None) -> dict[str, np.ndarray]:
+        results: dict[str, np.ndarray] = {}
+
+        if arrays is None:
+            return results
 
         for key, encoded in arrays.items():
             stream = io.BytesIO(base64.decodebytes(encoded))
@@ -227,8 +230,7 @@ class ArrayData(Data):
         # Check if the name is valid
         if not name or re.sub('[0-9a-zA-Z_]', '', name):
             raise ValueError(
-                'The name assigned to the array ({}) is not valid,'
-                'it can only contain digits, letters and underscores'
+                'The name assigned to the array ({}) is not valid,it can only contain digits, letters and underscores'
             )
 
         # Write the array to a temporary file, and then add it to the repository of the node

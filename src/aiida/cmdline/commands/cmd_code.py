@@ -440,15 +440,15 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
 
     query = orm.QueryBuilder()
     query.append(orm.Code, tag='code', project=projections.get('code', None), filters=filters.get('code', None))
-    # I am appending a join on the computer, to project its label. However, this implicitly requires a computer
+    # Above, a join on the computer is appended to project its label. However, this implicitly requires a computer
     # to be set. If no computer is set for a code node (i.e. for PortableCode), the code would be excluded from the
-    # results. Therefore, we will later run a second query to get all codes without a computer.
+    # results. Therefore, later a second query will be run to get all codes without a computer.
     query.append(
         orm.Computer,
         tag='computer',
         with_node='code',
         project=projections.get('computer', None),
-        filters=filters.get('computer', None),  # I possibly filter on computers, if required on the command line
+        filters=filters.get('computer', None),  # Possibly filter on computers, if required on the command line
     )
     query.append(
         orm.User, tag='user', with_node='code', project=projections.get('user', None), filters=filters.get('user', None)
@@ -457,10 +457,8 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
     tot_num_results = query.count()
 
     if computer is None:
-        # As mentioned earlier, the query above is not returning any code that does not have a computer associated.
-        # Therefore, we need to run a second query to get those. But we need to do it only if no computer filter
-        # was specified on the command line (otherwise, it means we only want codes for that computer, so this
-        # additional query is not needed).
+        # Run a second query to get codes without a computer.
+        # This needs to be done only if no explicit filter on a computer is set.
         query_nocomp = orm.QueryBuilder()
         code_filters = {'dbcomputer_id': {'==': None}}  # Filter all those without a computer
         code_filters.update(filters.get('code', {}))
@@ -494,7 +492,7 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
                 row.append('@'.join(str(result[entity][projection]) for entity, projection in VALID_PROJECTIONS[key]))
         table.append(row)
 
-    # If there is no computer filter, I need to also add the results from the second query
+    # If there is no computer filter, add also the results from the second query
     if computer is None:
         valid_projections_no_computer = {}
         for k, v in VALID_PROJECTIONS.items():
@@ -516,21 +514,20 @@ def code_list(computer, default_calc_job_plugin, all_entries, all_users, raw, sh
                     )
             table.append(row)
 
-    # At this point, I have collected all results, both from the query with computer and the one without.
-    # However, the order might not be correct anymore, so I sort the table based on ascending code label
-    # (this is already done in each sub-query, but now that they are merged, I need to sort again).
-    # I do it, however, only if the 'full_label' projection is requested; as a fallback, on PK;
-    # otherwise I do not sort.
+    # The `table` list now contains all results, both from the query with computer and the one without.
+    # However, the order might not be correct anymore. Therefore, sort the table based on ascending `full_label`.
+    # If 'full_label' projection is not requested, fallback, on PK, and if that is also not requested,
+    # do not sort.
     try:
         index_full_label = headers.index('Full label')  # Note new capitalization after string replacement earlier
         table.sort(key=lambda x: x[index_full_label])
     except ValueError:
-        # No 'full_label' in projections, let's fall back on PK
+        # No 'full_label' in projections: fall back on PK
         try:
             index_pk = headers.index('Pk')  # Note capitalization after string replacement earlier
             table.sort(key=lambda x: x[index_pk])
         except ValueError:
-            # No 'full_label' nor 'pk' in projections, do not sort
+            # No 'full_label' nor 'pk' in projections: do not sort
             pass
 
     echo_tabulate(table, headers=headers, tablefmt=table_format)

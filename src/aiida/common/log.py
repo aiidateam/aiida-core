@@ -31,13 +31,13 @@ LOG_LEVEL_REPORT = 23
 logging.addLevelName(LOG_LEVEL_REPORT, 'REPORT')
 
 
-def report(self: logging.Logger, msg, *args, **kwargs):
+def report(self: logging.Logger, msg: str, *args: t.Any, **kwargs: t.Any) -> None:
     """Log a message at the ``REPORT`` level."""
     self.log(LOG_LEVEL_REPORT, msg, *args, **kwargs)
 
 
 class AiidaLoggerType(logging.Logger):
-    def report(self, msg: str, *args, **kwargs) -> None:
+    def report(self, msg: str, *args: t.Any, **kwargs: t.Any) -> None:
         """Log a message at the ``REPORT`` level."""
 
 
@@ -146,7 +146,7 @@ def get_logging_config() -> dict[str, t.Any]:
     }
 
 
-def evaluate_logging_configuration(dictionary: collections.abc.Mapping) -> dict:
+def evaluate_logging_configuration(dictionary: collections.abc.Mapping[t.Any, t.Any]) -> dict[t.Any, t.Any]:
     """Recursively evaluate the logging configuration, calling lambdas when encountered.
 
     This allows the configuration options that are dependent on the active profile to be loaded lazily.
@@ -245,7 +245,7 @@ def configure_logging(with_orm: bool = False, daemon: bool = False, daemon_log_f
 
 
 @contextlib.contextmanager
-def override_log_level(level=logging.CRITICAL):
+def override_log_level(level: int = logging.CRITICAL) -> collections.abc.Iterator[None]:
     """Temporarily adjust the log-level of logger."""
     logging.disable(level=level)
     try:

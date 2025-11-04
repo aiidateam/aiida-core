@@ -39,7 +39,7 @@ class RemoteData(Data):
             None,
             title='Remote path',
             description='Filepath on the remote computer.',
-            orm_to_model=lambda node, _: node.get_remote_path(),
+            orm_to_model=lambda node: node.get_remote_path(),
         )
 
     def __init__(self, remote_path: Optional[str] = None, **kwargs):

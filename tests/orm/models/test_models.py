@@ -176,7 +176,7 @@ def test_roundtrip(required_arguments, tmp_path):
     assert isinstance(entity, cls)
 
     # Get the model instance from the entity instance
-    model = entity.to_model(tmp_path, unstored=True)
+    model = entity.to_model(repository_path=tmp_path, unstored=True)
     assert isinstance(model, BaseModel)
 
     # Reconstruct the entity instance from the model instance
@@ -187,7 +187,7 @@ def test_roundtrip(required_arguments, tmp_path):
     # ORM entity constructor are identical of the original model. The ``model_to_orm_field_values`` excludes values of
     # fields that define ``exclude_to_orm=True`` because these can change during roundtrips. This because these
     # typically correspond to entity fields that have defaults set on the database level, e.g., UUIDs.
-    roundtrip_model = roundtrip.to_model(tmp_path, unstored=True)
+    roundtrip_model = roundtrip.to_model(repository_path=tmp_path, unstored=True)
     original_field_values = cls.model_to_orm_field_values(model)
 
     for key, value in cls.model_to_orm_field_values(roundtrip_model).items():
@@ -213,5 +213,5 @@ def test_roundtrip_serialization(required_arguments, tmp_path):
     assert isinstance(entity, cls)
 
     # Get the model instance from the entity instance
-    serialized_entity = entity.serialize(tmp_path, unstored=True, mode='python')
+    serialized_entity = entity.serialize(repository_path=tmp_path, unstored=True, mode='python')
     entity.from_serialized(unstored=True, **serialized_entity)

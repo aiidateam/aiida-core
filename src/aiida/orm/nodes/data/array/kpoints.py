@@ -44,42 +44,42 @@ class KpointsData(ArrayData):
         labels: t.Optional[t.List[str]] = MetadataField(
             None,
             description='Labels associated with the list of kpoints',
-            orm_to_model=lambda node, _: t.cast('KpointsData', node).base.attributes.get('labels', None),
+            orm_to_model=lambda node: t.cast(KpointsData, node).base.attributes.get('labels', None),
         )
         label_numbers: t.Optional[t.List[int]] = MetadataField(
             None,
             description='Index of the labels in the list of kpoints',
-            orm_to_model=lambda node, _: t.cast('KpointsData', node).base.attributes.get('label_numbers', None),
+            orm_to_model=lambda node: t.cast(KpointsData, node).base.attributes.get('label_numbers', None),
         )
         cell: t.Optional[t.List[t.List[float]]] = MetadataField(
             None,
             description='Unit cell of the crystal, in Angstroms',
-            orm_to_model=lambda node, _: t.cast('KpointsData', node).base.attributes.get('cell', None),
+            orm_to_model=lambda node: t.cast(KpointsData, node).base.attributes.get('cell', None),
         )
         pbc1: t.Optional[bool] = MetadataField(
             None,
             description='Periodicity in the first lattice vector direction',
-            orm_to_model=lambda node, _: t.cast('KpointsData', node).pbc[0],
+            orm_to_model=lambda node: t.cast(KpointsData, node).pbc[0],
         )
         pbc2: t.Optional[bool] = MetadataField(
             None,
             description='Periodicity in the second lattice vector direction',
-            orm_to_model=lambda node, _: t.cast('KpointsData', node).pbc[1],
+            orm_to_model=lambda node: t.cast(KpointsData, node).pbc[1],
         )
         pbc3: t.Optional[bool] = MetadataField(
             None,
             description='Periodicity in the third lattice vector direction',
-            orm_to_model=lambda node, _: t.cast('KpointsData', node).pbc[2],
+            orm_to_model=lambda node: t.cast(KpointsData, node).pbc[2],
         )
         mesh: t.Optional[t.List[int]] = MetadataField(
             None,
             description='Mesh of kpoints',
-            orm_to_model=lambda node, _: t.cast('KpointsData', node).base.attributes.get('mesh', None),
+            orm_to_model=lambda node: t.cast(KpointsData, node).base.attributes.get('mesh', None),
         )
         offset: t.Optional[t.List[float]] = MetadataField(
             None,
             description='Offset of kpoints',
-            orm_to_model=lambda node, _: t.cast('KpointsData', node).base.attributes.get('offset', None),
+            orm_to_model=lambda node: t.cast(KpointsData, node).base.attributes.get('offset', None),
         )
 
     def __init__(

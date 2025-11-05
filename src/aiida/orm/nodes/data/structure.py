@@ -1895,21 +1895,21 @@ class StructureData(Data):
                 please install it to have full support for atomistic structures'
             )
         else:
-            from aiida_atomistic import StructureData, StructureDataMutable
+            from aiida_atomistic import StructureData, StructureBuilder
 
-        atomistic = StructureDataMutable()
+        atomistic = StructureBuilder()
         atomistic.set_pbc(self.pbc)
         atomistic.set_cell(self.cell)
 
         for site in self.sites:
-            atomistic.add_atom(
-                symbols=self.get_kind(site.kind_name).symbol,
-                masses=self.get_kind(site.kind_name).mass,
-                positions=site.position,
-                kinds=site.kind_name,
-            )
+            atomistic.append_atom({
+                'symbol': self.get_kind(site.kind_name).symbol,
+                'mass': self.get_kind(site.kind_name).mass,
+                'position': site.position,
+                'kind_name': site.kind_name,
+            })
 
-        return StructureData.from_mutable(atomistic)
+        return StructureData.from_builder(atomistic)
 
 
 class Kind:

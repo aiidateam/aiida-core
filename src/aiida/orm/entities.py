@@ -316,21 +316,12 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             with `exclude_to_orm=True`.
         :return: An instance of the entity's model class.
         """
-        fields = {}
-
         Model = self.InputModel if unstored else self.Model  # noqa: N806
-
-        for key, field in Model.model_fields.items():
-            if orm_to_model := get_metadata(field, 'orm_to_model'):
-                if key == 'filepath_files':
-                    fields[key] = orm_to_model(self, repository_path)
-                elif key == 'repository_content':
-                    fields[key] = orm_to_model(self, include_repository_content)
-                else:
-                    fields[key] = orm_to_model(self)
-            else:
-                fields[key] = getattr(self, key)
-
+        fields = self._collect_model_field_values(
+            repository_path=repository_path,
+            include_repository_content=include_repository_content,
+            skip_cli_excluded=False,
+        )
         return Model(**fields)
 
     @classmethod
@@ -517,6 +508,42 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     def backend_entity(self) -> BackendEntityType:
         """Get the implementing class for this object"""
         return self._backend_entity
+
+    def _collect_model_field_values(
+        self,
+        *,
+        repository_path: Optional[pathlib.Path] = None,
+        include_repository_content: bool = False,
+        skip_cli_excluded: bool = False,
+    ) -> dict[str, Any]:
+        """Collect values for the ``Model``'s fields from this entity.
+
+        Centralizes mapping of ORM -> Model values, including handling of ``orm_to_model`` functions
+        and optional filtering based on field metadata (e.g., excluding CLI-only fields).
+
+        :param repository_path: Optional path to use for repository-based fields.
+        :param include_repository_content: Whether to include repository file content.
+        :param skip_cli_excluded: When True, fields marked with ``exclude_from_cli`` metadata are skipped.
+        :return: Mapping of field name to value.
+        """
+        fields: dict[str, Any] = {}
+
+        for key, field in self.Model.model_fields.items():
+            if skip_cli_excluded and get_metadata(field, 'exclude_from_cli'):
+                continue
+
+            orm_to_model = get_metadata(field, 'orm_to_model')
+            if orm_to_model:
+                if key == 'filepath_files':
+                    fields[key] = orm_to_model(self, repository_path)
+                elif key == 'repository_content':
+                    fields[key] = orm_to_model(self, include_repository_content)
+                else:
+                    fields[key] = orm_to_model(self)
+            else:
+                fields[key] = getattr(self, key)
+
+        return fields
 
 
 def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntityType) -> EntityType:

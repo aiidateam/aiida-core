@@ -1,4 +1,4 @@
-arrays: QbDictField('arrays', dtype=typing.Optional[dict[str, numpy.ndarray]], is_attribute=True)
+arrays: QbDictField('arrays', dtype=typing.Optional[dict[str, bytes]], is_attribute=True)
 attributes: QbDictField('attributes', dtype=typing.Dict[str, typing.Any], is_attribute=False,
   is_subscriptable=True)
 cell: QbArrayField('cell', dtype=typing.Optional[typing.List[typing.List[float]]],

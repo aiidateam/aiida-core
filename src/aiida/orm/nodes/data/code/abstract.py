@@ -377,8 +377,10 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 continue
             elif (orm_to_model := get_metadata(field, 'orm_to_model')) is None:
                 value = getattr(self, key)
-            else:
+            elif key == 'filepath_files':
                 value = orm_to_model(self, pathlib.Path.cwd() / f'{self.label}')
+            else:
+                value = orm_to_model(self)
 
             # If the attribute is not set, for example ``with_mpi`` do not export it
             # so that there are no null-values in the resulting YAML file

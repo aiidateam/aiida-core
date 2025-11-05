@@ -279,7 +279,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             None,
             description='The label of the computer',
             is_attribute=False,
-            orm_to_model=lambda node: cast(Node, node).computer.label if cast(Node, node).computer else None,  # type: ignore[union-attr]
+            orm_to_model=lambda node: cast(Node, node).get_computer_label(),
             model_to_orm=lambda model: cast(Node.Model, model).load_computer(),
             exclude_from_cli=True,
             exclude_to_orm=True,
@@ -703,6 +703,15 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         :return: a description string
         """
         return ''
+
+    def get_computer_label(self) -> Optional[str]:
+        """Get the label of the computer of this node.
+
+        :return: The computer label or None if no computer is set.
+        """
+        if self.computer is None:
+            return None
+        return self.computer.label
 
     @property
     def is_valid_cache(self) -> bool:

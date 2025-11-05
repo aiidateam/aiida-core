@@ -61,7 +61,7 @@ class JobsList:
         self._job_update_requests: Dict[Hashable, asyncio.Future] = {}  # Mapping: {job_id: Future}
         self._last_updated = last_updated
         self._update_handle: Optional[asyncio.TimerHandle] = None
-        self._inspecting_jobs: List[str] = []
+        self._polling_jobs: List[str] = []
 
     @property
     def logger(self) -> logging.Logger:
@@ -102,11 +102,11 @@ class JobsList:
             scheduler.set_transport(transport)
 
             kwargs: Dict[str, Any] = {'as_dict': True}
-            self._inspecting_jobs = self._get_jobs_with_scheduler()
+            self._polling_jobs = self._get_jobs_with_scheduler()
             if scheduler.get_feature('can_query_by_user'):
                 kwargs['user'] = '$USER'
             else:
-                kwargs['jobs'] = self._inspecting_jobs
+                kwargs['jobs'] = self._polling_jobs
 
             scheduler_response = scheduler.get_jobs(**kwargs)
 
@@ -121,12 +121,14 @@ class JobsList:
             return jobs_cache
 
     async def _update_job_info(self) -> None:
-        """Update all of the job information objects.
+        """Update job information and resolve pending requests.
 
         This will set the futures for all pending update requests where the corresponding job has a new status compared
         to the last update.
+        Note, _job_update_requests is dynamic, and might get new entries while polling from scheduler.
+        Therefore we only update the jobs actually polled, and the new entries will be handled in the next update.
         """
-        racing_requests = {}
+
         try:
             if not self._update_requests_outstanding():
                 return
@@ -135,9 +137,11 @@ class JobsList:
             self._jobs_cache = await self._get_jobs_from_scheduler()
         except Exception as exception:
             # Set the exception on all the update futures
-            for future in self._job_update_requests.values():
-                if not future.done():
-                    future.set_exception(exception)
+            for job_id in self._polling_jobs:
+                future = self._job_update_requests.pop(job_id)
+                if future.done():
+                    continue
+                future.set_exception(exception)
 
             # Reset the `_update_handle` manually. Normally this is done in the `updating` coroutine, but since we
             # reraise this exception, that code path is never hit. If the next time a request comes in, the method
@@ -147,14 +151,11 @@ class JobsList:
 
             raise
         else:
-            for job_id, future in self._job_update_requests.items():
-                if not future.done():
-                    if str(job_id) in self._inspecting_jobs:
-                        future.set_result(self._jobs_cache.get(job_id, None))
-                    else:
-                        racing_requests[job_id] = future
-        finally:
-            self._job_update_requests = racing_requests
+            for job_id in self._polling_jobs:
+                future = self._job_update_requests.pop(job_id)
+                if future.done():
+                    continue
+                future.set_result(self._jobs_cache.get(job_id, None))
 
     @contextlib.contextmanager
     def request_job_info_update(self, authinfo: AuthInfo, job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:

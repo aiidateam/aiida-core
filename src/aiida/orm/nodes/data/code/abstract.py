@@ -19,7 +19,7 @@ from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
-from aiida.common.pydantic import MetadataField, get_metadata
+from aiida.common.pydantic import MetadataField
 from aiida.orm import Computer
 from aiida.plugins import CalculationFactory
 
@@ -369,23 +369,14 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """Export code to a YAML file."""
         import yaml
 
-        code_data = {}
-        sort = kwargs.get('sort', False)
+        code_data = self._collect_model_field_values(
+            repository_path=pathlib.Path.cwd() / f'{self.label}',
+            skip_cli_excluded=True,
+        )
 
-        for key, field in self.Model.model_fields.items():
-            if get_metadata(field, 'exclude_from_cli'):
-                continue
-            elif (orm_to_model := get_metadata(field, 'orm_to_model')) is None:
-                value = getattr(self, key)
-            elif key == 'filepath_files':
-                value = orm_to_model(self, pathlib.Path.cwd() / f'{self.label}')
-            else:
-                value = orm_to_model(self)
-
-            # If the attribute is not set, for example ``with_mpi`` do not export it
-            # so that there are no null-values in the resulting YAML file
-            code_data[key] = value
-        return yaml.dump(code_data, sort_keys=sort, encoding='utf-8'), {}
+        # If the attribute is not set, for example ``with_mpi`` do not export it
+        # so that there are no null-values in the resulting YAML file
+        return yaml.dump(code_data, sort_keys=kwargs.get('sort', False), encoding='utf-8'), {}
 
     def _prepare_yml(self, *args, **kwargs):
         """Also allow for export as .yml"""

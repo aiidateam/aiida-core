@@ -168,7 +168,7 @@ class AsyncSshTransport(AsyncTransport):
             raise InvalidOperation('Cannot open the transport twice')
 
         if self.auth_script != 'None':
-            result = subprocess.run(self.auth_script, shell=True, capture_output=True, text=True, check=False)
+            result = subprocess.run(self.auth_script, shell=True, capture_output=True, text=True, check=False)  # noqa: ASYNC221
             if result.returncode != 0:
                 self.async_backend.logger.error(
                     f'Authentication script {self.auth_script} failed with exit code {result.returncode}\n'

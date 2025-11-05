@@ -18,7 +18,7 @@ from tests.utils import processes as test_processes
 
 
 async def reach_waiting_state(process):
-    while process.state != ProcessState.WAITING:
+    while process.state != ProcessState.WAITING:  # noqa: ASYNC110
         await asyncio.sleep(0.1)
 
 

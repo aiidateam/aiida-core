@@ -150,7 +150,7 @@ class CollectionDumpExecutor:
                 current_dump_root_for_nodes = self.dump_paths.get_path_for_ungrouped_nodes()
             logger.warning(f'current_dump_root_for_nodes was None, derived as: {current_dump_root_for_nodes}')
 
-        progress_desc = f'{click.style("Report", fg="blue", bold=True)}: {desc}'
+        progress_desc = f"{click.style('Report', fg='blue', bold=True)}: {desc}"
         with get_progress_reporter()(desc=progress_desc, total=len(nodes_to_dump)) as progress:
             for node in nodes_to_dump:
                 # Determine the specific, absolute path for this node's dump directory

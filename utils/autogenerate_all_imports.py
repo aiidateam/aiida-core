@@ -66,6 +66,10 @@ def parse_all(folder_path: Path) -> tuple[dict, dict]:
         if all_token is None:
             continue
 
+        # Warn if private module contains __all__
+        if path.name.startswith('_'):
+            bad_all.setdefault('__all__ in private module', []).append(str(path.relative_to(folder_path)))
+
         if not isinstance(all_token.value, (ast.List, ast.Tuple)):
             bad_all.setdefault('__all__ is not list/tuple', []).append(str(path.relative_to(folder_path)))
             continue
@@ -80,6 +84,9 @@ def parse_all(folder_path: Path) -> tuple[dict, dict]:
 
         path_dict = all_dict
         for part in path.parent.relative_to(folder_path).parts:
+            if part.startswith('_'):
+                bad_all.setdefault('__all__ in private package', []).append(str(path.relative_to(folder_path)))
+                continue
             path_dict = path_dict.setdefault(part, {})
         path_dict.setdefault(path.name[:-3], {})['__all__'] = names
 

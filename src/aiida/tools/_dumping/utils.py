@@ -45,20 +45,6 @@ ORM_TYPE_TO_REGISTRY = {
     orm.Group: 'groups',
 }
 
-__all__ = (
-    'DUMP_PROGRESS_BAR_FORMAT',
-    'ORM_TYPE_TO_REGISTRY',
-    'REGISTRY_TO_ORM_TYPE',
-    'DumpPaths',
-    'DumpTimes',
-    'GroupChanges',
-    'GroupInfo',
-    'GroupRenameInfo',
-    'NodeChanges',
-    'NodeMembershipChange',
-    'ProcessingQueue',
-    'RegistryNameType',
-)
 
 logger = AIIDA_LOGGER.getChild('tools._dumping.utils')
 

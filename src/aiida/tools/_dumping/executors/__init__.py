@@ -1,9 +1,7 @@
-# AUTO-GENERATED
-# fmt: off
-from .deletion import *
-from .group import *
-from .process import *
-from .profile import *
+from .deletion import DeletionExecutor
+from .group import GroupDumpExecutor
+from .process import ProcessDumpExecutor
+from .profile import ProfileDumpExecutor
 
 __all__ = (
     'DeletionExecutor',
@@ -15,4 +13,3 @@ __all__ = (
     'ReadmeGenerator',
     'WorkflowWalker',
 )
-# fmt: on

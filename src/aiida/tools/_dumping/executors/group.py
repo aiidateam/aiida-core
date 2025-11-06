@@ -27,9 +27,6 @@ if TYPE_CHECKING:
     from aiida.tools._dumping.tracking import DumpTracker
 
 
-__all__ = ('GroupDumpExecutor',)
-
-
 class GroupDumpExecutor(CollectionDumpExecutor):
     def __init__(
         self,

@@ -9,9 +9,10 @@ from pathlib import Path
 from pprint import pprint
 from typing import Optional
 
-AUTO_GENERATED = "AUTO-GENERATED"
+AUTO_GENERATED = 'AUTO-GENERATED'
 # Four-space indentation level (must be compatible with the formatter!)
 INDENT = '    '
+
 
 def isort_alls(alls: set[str]) -> list[str]:
     """Sort module according to 'isort style' as used by RUF022 rule
@@ -30,6 +31,7 @@ def isort_alls(alls: set[str]) -> list[str]:
     classes = set(mod for mod in alls.difference(constants) if re.match(r'^[A-Z].*', mod))
     others = alls.difference(classes, constants)
     return sorted(constants) + sorted(classes) + sorted(others)
+
 
 def parse_all(folder_path: Path) -> tuple[dict, dict]:
     """Walk through all files in folder, and parse the ``__all__`` variable.
@@ -123,7 +125,7 @@ def write_inits(folder_path: Path, all_dict: dict, skip_children: dict[str, list
         if '*' in skip_children.get(rel_path, []):
             path_all_dict = {}
             alls = []
-            auto_content = ['', f'# {AUTO_GENERATED}', '', '__all__ = ()', '']
+            auto_content = [f'# {AUTO_GENERATED}', '', '__all__ = ()', '']
         else:
             path_all_dict = {
                 key: val for key, val in path_all_dict.items() if key not in skip_children.get(rel_path, [])
@@ -157,8 +159,8 @@ def write_inits(folder_path: Path, all_dict: dict, skip_children: dict[str, list
             # We also need to retain any empty lines, since ruff formatter automatically
             # injects empty line between a module docstring and __future__ import
             if not (
-                line == '' or
-                (line.startswith('#') and not line == f'# {AUTO_GENERATED}')
+                line == ''
+                or (line.startswith('#') and not line == f'# {AUTO_GENERATED}')
                 or line.startswith('"""')
                 or line.startswith('from __future__ import')
                 or in_docstring

@@ -311,11 +311,11 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             description='Dictionary of file repository content. Keys are relative filepaths and values are binary file '
             'contents encoded as base64.',
             is_attribute=False,
-            orm_to_model=lambda node, serialize_content: {
+            orm_to_model=lambda node, kwargs: {
                 key: base64.encodebytes(content)
                 for key, content in cast(Node, node).base.repository.serialize_content().items()
             }
-            if serialize_content
+            if kwargs.get('serialize_repository_content')
             else {},
             exclude_from_cli=True,
             exclude_to_orm=True,

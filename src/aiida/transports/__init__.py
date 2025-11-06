@@ -21,7 +21,6 @@ __all__ = (
     'Transport',
     'TransportPath',
     'convert_to_bool',
-    'has_magic',
     'parse_sshconfig',
 )
 # fmt: on

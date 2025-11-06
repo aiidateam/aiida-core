@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import collections.abc
 from typing import List
+from warnings import warn
 
 from aiida.common.pydantic import MetadataField
+from aiida.common.warnings import AiidaDeprecationWarning
 
 from .array import ArrayData
 
@@ -86,6 +88,8 @@ class TrajectoryData(ArrayData):
                 )
         if not (isinstance(pbc, (list, tuple)) and len(pbc) == 3 and all(isinstance(val, bool) for val in pbc)):
             raise ValueError('`pbc` must be a list/tuple of length three with boolean values.')
+        if cells is None and list(pbc) != [False, False, False]:
+            raise ValueError('Periodic boundary conditions are only possible when a cell is defined.')
 
     def set_trajectory(
         self, symbols, positions, stepids=None, cells=None, times=None, velocities=None, pbc: None | list | tuple = None
@@ -145,8 +149,15 @@ class TrajectoryData(ArrayData):
         """
         import numpy
 
-        pbc_default = [True, True, True] if cells is not None else [False, False, False]
-        pbc = pbc or pbc_default
+        if cells is None:
+            pbc = pbc or [False, False, False]
+        elif pbc is None:
+            warn(
+                "When 'cells' is not None, the periodic boundary conditions should be explicitly specified via the "
+                "'pbc' keyword argument. Defaulting to '[True, True, True]', but this will raise in v3.0.0.",
+                AiidaDeprecationWarning,
+            )
+            pbc = [True, True, True]
 
         self._internal_validate(stepids, cells, symbols, positions, times, velocities, pbc)
         # set symbols/pbc as attributes for easier querying

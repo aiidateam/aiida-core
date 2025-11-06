@@ -49,7 +49,6 @@ __all__ = (
     'DUMP_PROGRESS_BAR_FORMAT',
     'ORM_TYPE_TO_REGISTRY',
     'REGISTRY_TO_ORM_TYPE',
-    'DumpMode',
     'DumpPaths',
     'DumpTimes',
     'GroupChanges',

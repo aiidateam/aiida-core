@@ -75,7 +75,7 @@ class PortableCode(Code):
             priority=2,
             orm_to_model=lambda node, kwargs: _export_filepath_files_from_repo(
                 cast(PortableCode, node),
-                kwargs.get('repository_path', pathlib.Path.cwd() / f'code_{node.pk}'),
+                kwargs.get('repository_path', pathlib.Path.cwd() / f'{cast(PortableCode, node).label}'),
             ),
         )
 

@@ -10,15 +10,12 @@
 
 # AUTO-GENERATED
 # fmt: off
-from .async_backend import *
 from .ssh import *
 from .ssh_async import *
 
 __all__ = (
     'AsyncSshTransport',
     'SshTransport',
-    '_AsyncSSH',
-    '_OpenSSH',
     'convert_to_bool',
     'parse_sshconfig',
 )

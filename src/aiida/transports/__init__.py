@@ -20,8 +20,6 @@ __all__ = (
     'SshTransport',
     'Transport',
     'TransportPath',
-    '_AsyncSSH',
-    '_OpenSSH',
     'convert_to_bool',
     'has_magic',
     'parse_sshconfig',

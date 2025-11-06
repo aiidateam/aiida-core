@@ -30,9 +30,6 @@ if TYPE_CHECKING:
     from aiida.tools._dumping.tracking import DumpTracker
 
 
-__all__ = ('ProfileDumpExecutor',)
-
-
 class ProfileDumpExecutor(CollectionDumpExecutor):
     """Strategy for dumping an entire profile."""
 

@@ -24,9 +24,6 @@ if TYPE_CHECKING:
     from aiida.tools._dumping.utils import GroupInfo
 
 
-__all__ = ('DeletionExecutor',)
-
-
 class DeletionExecutor:
     """Executes deletion of dumped artifacts for entities deleted from the DB."""
 

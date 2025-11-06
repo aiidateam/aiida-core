@@ -303,14 +303,14 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         self,
         *,
         repository_path: Optional[pathlib.Path] = None,
-        include_repository_content: bool = False,
+        serialize_repository_content: bool = False,
         unstored: bool = False,
     ) -> Model:
         """Return the entity instance as an instance of its model.
 
         :param repository_path: If the orm node has files in the repository, this path is used to read the repository
             files from. If no path is specified a temporary path is created using the entities pk.
-        :param include_repository_content: If True, repository file content is serialized in the model.
+        :param serialize_repository_content: If True, repository file content is serialized in the model.
             This field can be very large, so it is excluded by default.
         :param unstored: If True, the input version of the model is used, which strips read-only fields, i.e., fields
             with `exclude_to_orm=True`.
@@ -319,7 +319,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         Model = self.InputModel if unstored else self.Model  # noqa: N806
         fields = self._collect_model_field_values(
             repository_path=repository_path,
-            include_repository_content=include_repository_content,
+            serialize_repository_content=serialize_repository_content,
             skip_cli_excluded=False,
             unstored=unstored,
         )
@@ -339,7 +339,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         self,
         *,
         repository_path: Optional[pathlib.Path] = None,
-        include_repository_content: bool = False,
+        serialize_repository_content: bool = False,
         unstored: bool = False,
         mode: Literal['json', 'python'] = 'json',
     ) -> dict[str, Any]:
@@ -347,7 +347,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         :param repository_path: If the orm node has files in the repository, this path is used to dump the repository
             files to. If no path is specified a temporary path is created using the entities pk.
-        :param include_repository_content: If True, repository file content is serialized in the model.
+        :param serialize_repository_content: If True, repository file content is serialized in the model.
             This field can be very large, so it is excluded by default.
         :param unstored: If True, the input version of the model is used, which strips read-only fields, i.e., fields
             with `exclude_to_orm=True`.
@@ -371,7 +371,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
                 raise ValueError(f'The repository_path `{repository_path}` is not a directory.')
         return self.to_model(
             repository_path=repository_path,
-            include_repository_content=include_repository_content,
+            serialize_repository_content=serialize_repository_content,
             unstored=unstored,
         ).model_dump(mode=mode)
 
@@ -514,7 +514,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         self,
         *,
         repository_path: Optional[pathlib.Path] = None,
-        include_repository_content: bool = False,
+        serialize_repository_content: bool = False,
         skip_cli_excluded: bool = False,
         unstored: bool = False,
     ) -> dict[str, Any]:
@@ -524,7 +524,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         and optional filtering based on field metadata (e.g., excluding CLI-only fields).
 
         :param repository_path: Optional path to use for repository-based fields.
-        :param include_repository_content: Whether to include repository file content.
+        :param serialize_repository_content: Whether to include repository file content.
         :param skip_cli_excluded: When True, fields marked with ``exclude_from_cli`` metadata are skipped.
         :param unstored: If True, the input version of the model is used, which strips read-only fields, i.e., fields
             with `exclude_to_orm=True`.
@@ -541,9 +541,9 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             orm_to_model = get_metadata(field, 'orm_to_model')
             if orm_to_model:
                 if key == 'filepath_files':
-                    fields[key] = orm_to_model(self, repository_path)
+                    fields[key] = orm_to_model(self, {'repository_path': repository_path})
                 elif key == 'repository_content':
-                    fields[key] = orm_to_model(self, include_repository_content)
+                    fields[key] = orm_to_model(self, {'serialize_repository_content': serialize_repository_content})
                 else:
                     fields[key] = orm_to_model(self)
             else:

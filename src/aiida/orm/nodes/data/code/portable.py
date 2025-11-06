@@ -73,7 +73,10 @@ class PortableCode(Code):
             short_name='-F',
             is_attribute=False,
             priority=2,
-            orm_to_model=_export_filepath_files_from_repo,  # type: ignore[arg-type]
+            orm_to_model=lambda node, kwargs: _export_filepath_files_from_repo(
+                cast(PortableCode, node),
+                kwargs.get('repository_path', pathlib.Path.cwd() / f'code_{node.pk}'),
+            ),
         )
 
     def __init__(

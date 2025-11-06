@@ -9,9 +9,7 @@
 """Provides all parameter types."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .calculation import *
 from .choice import *
 from .code import *
@@ -57,5 +55,4 @@ __all__ = (
     'UserParamType',
     'WorkflowParamType',
 )
-
 # fmt: on

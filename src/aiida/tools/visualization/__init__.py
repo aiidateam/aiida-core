@@ -9,9 +9,7 @@
 """Provides tools for visualization of the provenance graph."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .graph import *
 
 __all__ = (
@@ -21,5 +19,4 @@ __all__ = (
     'default_node_sublabels',
     'pstate_node_styles',
 )
-
 # fmt: on

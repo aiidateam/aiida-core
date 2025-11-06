@@ -9,9 +9,7 @@
 """Module with `Node` sub classes for data and processes."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .attributes import *
 from .data import *
 from .node import *
@@ -70,5 +68,4 @@ __all__ = (
     'pycifrw_from_cif',
     'to_aiida_type',
 )
-
 # fmt: on

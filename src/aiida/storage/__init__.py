@@ -9,15 +9,11 @@
 """Module for implementations of database backends."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .sqlite_dos import *
 
 __all__ = (
     'SqliteDosStorage',
 )
-
 # fmt: on
-
 # END AUTO-GENERATED

@@ -11,14 +11,11 @@
 """
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .main import *
 
 __all__ = (
     'get_explicit_kpoints_path',
     'get_kpoints_path',
 )
-
 # fmt: on

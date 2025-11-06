@@ -9,9 +9,7 @@
 """Module for classes and utilities to interact with cluster schedulers."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .datastructures import *
 from .plugins import *
 from .scheduler import *
@@ -29,5 +27,4 @@ __all__ = (
     'SchedulerError',
     'SchedulerParsingError',
 )
-
 # fmt: on

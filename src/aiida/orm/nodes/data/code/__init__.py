@@ -1,9 +1,7 @@
 """Data plugins that represent an executable code."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .abstract import *
 from .containerized import *
 from .installed import *
@@ -17,5 +15,4 @@ __all__ = (
     'InstalledCode',
     'PortableCode',
 )
-
 # fmt: on

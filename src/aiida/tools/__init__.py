@@ -19,9 +19,8 @@ What functionality should go directly in the ORM class in `aiida.orm` and what i
 """
 
 # AUTO-GENERATED
-
 # fmt: off
-
+from ._dumping import *
 from .calculations import *
 from .data import *
 from .graph import *
@@ -30,15 +29,41 @@ from .visualization import *
 
 __all__ = (
     'DELETE_LOGGER',
+    'DUMP_PROGRESS_BAR_FORMAT',
+    'ORM_TYPE_TO_REGISTRY',
+    'REGISTRY_TO_ORM_TYPE',
     'CalculationTools',
+    'DeletionExecutor',
+    'DumpChangeDetector',
+    'DumpMode',
+    'DumpPaths',
+    'DumpTimes',
     'Graph',
+    'GroupChanges',
+    'GroupDumpConfig',
+    'GroupDumpExecutor',
+    'GroupDumpScope',
+    'GroupInfo',
     'GroupNotFoundError',
     'GroupNotUniqueError',
     'GroupPath',
+    'GroupRenameInfo',
     'InvalidPath',
     'NoGroupsInPathError',
+    'NodeChanges',
+    'NodeMembershipChange',
+    'NodeMetadataWriter',
+    'NodeRepoIoDumper',
     'Orbital',
+    'ProcessDumpConfig',
+    'ProcessDumpExecutor',
+    'ProcessingQueue',
+    'ProfileDumpConfig',
+    'ProfileDumpExecutor',
+    'ReadmeGenerator',
     'RealhydrogenOrbital',
+    'RegistryNameType',
+    'WorkflowWalker',
     'default_link_styles',
     'default_node_styles',
     'default_node_sublabels',
@@ -50,5 +75,4 @@ __all__ = (
     'spglib_tuple_to_structure',
     'structure_to_spglib_tuple',
 )
-
 # fmt: on

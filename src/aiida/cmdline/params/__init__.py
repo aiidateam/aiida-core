@@ -9,9 +9,7 @@
 """Commandline parameters."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .types import *
 
 __all__ = (
@@ -41,5 +39,4 @@ __all__ = (
     'UserParamType',
     'WorkflowParamType',
 )
-
 # fmt: on

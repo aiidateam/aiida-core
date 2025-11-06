@@ -13,15 +13,14 @@
 """
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .datastructures import *
 from .exceptions import *
 from .extendeddicts import *
 from .links import *
 from .log import *
 from .progress_reporter import *
+from .typing import *
 
 __all__ = (
     'AIIDA_LOGGER',
@@ -43,6 +42,7 @@ __all__ = (
     'FailedError',
     'FeatureDisabled',
     'FeatureNotAvailable',
+    'FilePath',
     'FixedFieldsAttributeDict',
     'GraphTraversalRule',
     'GraphTraversalRules',
@@ -72,7 +72,9 @@ __all__ = (
     'ProfileConfigurationError',
     'ProgressReporterAbstract',
     'RemoteOperationError',
+    'Self',
     'StashMode',
+    'StorageBackupError',
     'StorageMigrationError',
     'StoringNotAllowed',
     'TestsNotAllowedError',
@@ -88,5 +90,4 @@ __all__ = (
     'set_progress_reporter',
     'validate_link_label',
 )
-
 # fmt: on

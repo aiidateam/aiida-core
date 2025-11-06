@@ -32,13 +32,10 @@ and these revisions are handled by the `version_profile` and `migrate` backend m
 """
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .backend import *
 
 __all__ = (
     'SqliteZipBackend',
 )
-
 # fmt: on

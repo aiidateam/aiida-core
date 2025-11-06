@@ -9,9 +9,7 @@
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .callable import *
 from .config import *
 from .main import *
@@ -22,6 +20,7 @@ __all__ = (
     'ALL',
     'ALL_STATES',
     'ALL_USERS',
+    'ALSO_UNGROUPED',
     'APPEND_TEXT',
     'ARCHIVE_FORMAT',
     'BROKER_HOST',
@@ -48,13 +47,18 @@ __all__ = (
     'DB_PORT',
     'DB_USERNAME',
     'DEBUG',
+    'DELETE_MISSING',
     'DESCRIPTION',
     'DICT_FORMAT',
     'DICT_KEYS',
     'DRY_RUN',
+    'DUMP_UNSEALED',
+    'END_DATE',
     'EXIT_STATUS',
     'EXPORT_FORMAT',
     'FAILED',
+    'FILTER_BY_LAST_DUMP_TIME',
+    'FLAT',
     'FORCE',
     'FORMULA_MODE',
     'FREQUENCY',
@@ -63,17 +67,27 @@ __all__ = (
     'GROUP_CLEAR',
     'HOSTNAME',
     'IDENTIFIER',
+    'INCLUDE_ATTRIBUTES',
+    'INCLUDE_EXTRAS',
+    'INCLUDE_INPUTS',
+    'INCLUDE_OUTPUTS',
     'INPUT_FORMAT',
     'INPUT_PLUGIN',
     'LABEL',
     'LIMIT',
+    'MOST_RECENT_NODE',
     'NODE',
     'NODES',
     'NON_INTERACTIVE',
     'OLDER_THAN',
+    'ONLY_TOP_LEVEL_CALCS',
+    'ONLY_TOP_LEVEL_WORKFLOWS',
     'ORDER_BY',
     'ORDER_DIRECTION',
+    'ORGANIZE_BY_GROUPS',
+    'OVERWRITE',
     'PAST_DAYS',
+    'PATH',
     'PAUSED',
     'PORT',
     'PREPEND_TEXT',
@@ -85,10 +99,13 @@ __all__ = (
     'PROFILE_SET_DEFAULT',
     'PROJECT',
     'RAW',
+    'RELABEL_GROUPS',
     'REPOSITORY_PATH',
     'SCHEDULER',
     'SILENT',
     'SORT',
+    'START_DATE',
+    'SYMLINK_CALCS',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
     'TRANSPORT',
@@ -101,7 +118,6 @@ __all__ = (
     'USER_LAST_NAME',
     'VERBOSITY',
     'VISUALIZATION_FORMAT',
-    'WAIT',
     'WITH_ELEMENTS',
     'WITH_ELEMENTS_EXCLUSIVE',
     'CallableDefaultOption',
@@ -113,5 +129,4 @@ __all__ = (
     'valid_calc_job_states',
     'valid_process_states',
 )
-
 # fmt: on

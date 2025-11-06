@@ -20,7 +20,6 @@ from .extendeddicts import *
 from .links import *
 from .log import *
 from .progress_reporter import *
-from .typing import *
 
 __all__ = (
     'AIIDA_LOGGER',
@@ -42,7 +41,6 @@ __all__ = (
     'FailedError',
     'FeatureDisabled',
     'FeatureNotAvailable',
-    'FilePath',
     'FixedFieldsAttributeDict',
     'GraphTraversalRule',
     'GraphTraversalRules',
@@ -72,7 +70,6 @@ __all__ = (
     'ProfileConfigurationError',
     'ProgressReporterAbstract',
     'RemoteOperationError',
-    'Self',
     'StashMode',
     'StorageBackupError',
     'StorageMigrationError',

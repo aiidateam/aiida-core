@@ -49,11 +49,8 @@ except AttributeError:
     # This type is not available for Python 3.9 and older
     UnionType = None  # type: ignore[assignment,misc]
 
-try:
-    from typing import ParamSpec
-except ImportError:
-    # Fallback for Python 3.9 and older
-    from typing_extensions import ParamSpec  # type: ignore[assignment]
+# Fallback for Python 3.9 and older
+from typing_extensions import ParamSpec
 
 try:
     get_annotations = inspect.get_annotations

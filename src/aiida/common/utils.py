@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from typing import Any, Callable, TypeVar, overload
 from uuid import UUID
 
-from aiida.common.typing import Self
+from typing_extensions import Self
 
 from .lang import classproperty
 

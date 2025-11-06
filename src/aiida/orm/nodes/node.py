@@ -340,6 +340,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         user: Optional[User] = None,
         computer: Optional[Computer] = None,
         extras: Optional[Dict[str, Any]] = None,
+        attributes: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> None:
         # We verify here that all attributes are handled in a constructor prior to the root
@@ -359,8 +360,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
         if user is None:
             raise ValueError('the user cannot be None')
-
-        attributes = kwargs.pop('attributes', {})
 
         backend_entity = backend.nodes.create(
             node_type=self.class_node_type, user=user.backend_entity, computer=backend_computer, **kwargs

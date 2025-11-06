@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import base64
 import datetime
+from collections.abc import Iterable
 from functools import cached_property
 from typing import (
     TYPE_CHECKING,
@@ -68,6 +69,19 @@ if TYPE_CHECKING:
 __all__ = ('Node',)
 
 NodeType = TypeVar('NodeType', bound='Node')
+
+
+class UnhandledNodeAttributesError(Exception):
+    """Exception raised when any node attributes are not handled prior to the Node constructor."""
+
+    def __init__(self, attributes: Iterable[str], class_name: str) -> None:
+        bullet_list = '\n'.join(f'  • {attr}' for attr in attributes)
+        message = (
+            f'\nThe following attributes must be handled in a constructor prior to the Node class:\n'
+            f'{bullet_list}\n\n'
+            f'Consider implementing a constructor in {class_name} to handle the listed attributes.'
+        )
+        super().__init__(message)
 
 
 class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
@@ -328,6 +342,13 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         extras: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> None:
+        # We verify here that all attributes are handled in a constructor prior to the root
+        # Node class (here), gracefully rejecting them otherwise.
+        node_keys = set(Node.Model.model_fields.keys())
+        unhandled_keys = {key for key in kwargs if key not in node_keys}
+        if unhandled_keys:
+            raise UnhandledNodeAttributesError(unhandled_keys, self.__class__.__name__)
+
         backend = backend or get_manager().get_profile_storage()
 
         if computer and not computer.is_stored:

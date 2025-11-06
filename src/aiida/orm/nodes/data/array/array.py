@@ -12,9 +12,11 @@ from __future__ import annotations
 
 import base64
 import io
+from collections.abc import Iterable
 from typing import Any, Iterator, Optional, cast
 
 import numpy as np
+from pydantic import field_validator
 
 from aiida.common.pydantic import MetadataField
 
@@ -55,6 +57,19 @@ class ArrayData(Data):
             orm_to_model=lambda node: ArrayData.save_arrays(cast(ArrayData, node).arrays),
             model_to_orm=lambda model: ArrayData.load_arrays(cast(ArrayData.Model, model).arrays),
         )
+
+        @field_validator('arrays', mode='before')
+        @classmethod
+        def validate_arrays(cls, value: Any) -> Any:
+            if value is None:
+                return value
+            if not isinstance(value, dict):
+                raise TypeError(f'`arrays` should be a dictionary but got: {value}')
+            arrays: dict[str, bytes] = {}
+            for key, array in value.items():
+                if isinstance(array, Iterable):
+                    arrays |= ArrayData.save_arrays({key: array})
+            return arrays
 
     array_prefix = 'array|'
     default_array_name = 'default'

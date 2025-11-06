@@ -2,6 +2,7 @@
 """Pre-commit hook to add ``__all__`` imports to ``__init__`` files."""
 
 import ast
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -9,16 +10,36 @@ from pprint import pprint
 from typing import Optional
 
 AUTO_GENERATED = "AUTO-GENERATED"
+# Four-space indentation level (must be compatible with the formatter!)
+INDENT = '    '
+
+def isort_alls(alls: set[str]) -> list[str]:
+    """Sort module according to 'isort style' as used by RUF022 rule
+
+    An isort-style sort orders items first according to their casing:
+    SCREAMING_SNAKE_CASE names (conventionally used for global constants)
+    come first, followed by CamelCase names (conventionally used for
+    classes), followed by anything else. Within each category,
+    a [natural sort](https://en.wikipedia.org/wiki/Natural_sort_order)
+    is used to order the elements.
+    """
+
+    constants = set(mod for mod in alls if re.match(r'^[A-Z][A-Z_]*$', mod))
+    # TODO: This doesn't represent cammel-case, only things that start with capital letters
+    # and are not screaming case.
+    classes = set(mod for mod in alls.difference(constants) if re.match(r'^[A-Z].*', mod))
+    others = alls.difference(classes, constants)
+    return sorted(constants) + sorted(classes) + sorted(others)
 
 def parse_all(folder_path: Path) -> tuple[dict, dict]:
     """Walk through all files in folder, and parse the ``__all__`` variable.
 
     :return: (all dict, dict of unparsable)
     """
-    all_dict = {}
-    bad_all = {}
+    all_dict: dict = {}
+    bad_all: dict[str, list] = {}
 
-    def is_ast_str(el) -> bool:
+    def is_ast_str(el: ast.AST) -> bool:
         """Replacement for deprecated ast.Str"""
         return isinstance(el, ast.Constant) and isinstance(el.value, str)
 
@@ -51,7 +72,7 @@ def parse_all(folder_path: Path) -> tuple[dict, dict]:
             bad_all.setdefault('__all__ contains non-string elements', []).append(str(path.relative_to(folder_path)))
             continue
 
-        names = [n.value for n in all_token.value.elts]
+        names = [n.value for n in all_token.value.elts]  # type: ignore[attr-defined]
         if not names:
             continue
 
@@ -118,7 +139,7 @@ def write_inits(folder_path: Path, all_dict: dict, skip_children: dict[str, list
                 + ['# fmt: off']
                 + [f'from .{mod} import *' for mod in sorted(path_all_dict.keys())]
                 + ['', '__all__ = (']
-                + [f'    {a!r},' for a in sorted(set(alls))]
+                + [f'{INDENT}{a!r},' for a in isort_alls(set(alls))]
                 + [')', '# fmt: on']
             )
 

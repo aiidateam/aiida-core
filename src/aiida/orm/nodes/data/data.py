@@ -8,7 +8,6 @@
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
 
-from collections.abc import Iterable
 from typing import Dict, Optional
 
 from aiida.common import exceptions
@@ -20,19 +19,6 @@ from aiida.orm.entities import from_backend_entity
 from ..node import Node
 
 __all__ = ('Data',)
-
-
-class UnhandledDataAttributesError(Exception):
-    """Exception raised when any data attributes are not handled prior to the Data constructor."""
-
-    def __init__(self, attributes: Iterable[str], class_name: str) -> None:
-        bullet_list = '\n'.join(f'  • {attr}' for attr in attributes)
-        message = (
-            f'\nThe following attributes must be handled in a constructor prior to the Data class:\n'
-            f'{bullet_list}\n\n'
-            f'Consider implementing a constructor in {class_name} to handle the listed attributes.'
-        )
-        super().__init__(message)
 
 
 class Data(Node):
@@ -71,13 +57,6 @@ class Data(Node):
 
     def __init__(self, *args, source=None, **kwargs):
         """Construct a new instance, setting the ``source`` attribute if provided as a keyword argument."""
-
-        # We verify here that all attributes of Data plugins are handled in a constructor prior to the root
-        # Data class (here), gracefully rejecting them otherwise.
-        node_keys = set(Node.Model.model_fields.keys()) | {'backend'}
-        unhandled_keys = {key for key in kwargs if key not in node_keys}
-        if unhandled_keys:
-            raise UnhandledDataAttributesError(unhandled_keys, self.__class__.__name__)
 
         super().__init__(*args, **kwargs)
 

@@ -321,6 +321,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             repository_path=repository_path,
             include_repository_content=include_repository_content,
             skip_cli_excluded=False,
+            unstored=unstored,
         )
         return Model(**fields)
 
@@ -515,6 +516,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         repository_path: Optional[pathlib.Path] = None,
         include_repository_content: bool = False,
         skip_cli_excluded: bool = False,
+        unstored: bool = False,
     ) -> dict[str, Any]:
         """Collect values for the ``Model``'s fields from this entity.
 
@@ -524,11 +526,15 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         :param repository_path: Optional path to use for repository-based fields.
         :param include_repository_content: Whether to include repository file content.
         :param skip_cli_excluded: When True, fields marked with ``exclude_from_cli`` metadata are skipped.
+        :param unstored: If True, the input version of the model is used, which strips read-only fields, i.e., fields
+            with `exclude_to_orm=True`.
         :return: Mapping of field name to value.
         """
         fields: dict[str, Any] = {}
 
-        for key, field in self.Model.model_fields.items():
+        Model = self.InputModel if unstored else self.Model  # noqa: N806
+
+        for key, field in Model.model_fields.items():
             if skip_cli_excluded and get_metadata(field, 'exclude_from_cli'):
                 continue
 

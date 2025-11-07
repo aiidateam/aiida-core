@@ -13,7 +13,7 @@ from __future__ import annotations
 import base64
 import io
 from collections.abc import Iterable
-from typing import Any, Iterator, Optional, cast
+from typing import Any, Iterator, Optional, Union, cast
 
 import numpy as np
 from pydantic import field_validator
@@ -60,15 +60,19 @@ class ArrayData(Data):
 
         @field_validator('arrays', mode='before')
         @classmethod
-        def validate_arrays(cls, value: Any) -> Any:
+        def validate_arrays(cls, value: Optional[dict[str, Union[bytes, Any]]]) -> Any:
             if value is None:
                 return value
             if not isinstance(value, dict):
                 raise TypeError(f'`arrays` should be a dictionary but got: {value}')
             arrays: dict[str, bytes] = {}
             for key, array in value.items():
-                if isinstance(array, Iterable):
-                    arrays |= ArrayData.save_arrays({key: array})
+                if isinstance(array, bytes):
+                    arrays[key] = array
+                elif isinstance(array, Iterable):
+                    arrays |= ArrayData.save_arrays({key: np.array(array)})
+                else:
+                    arrays[key] = array
             return arrays
 
     array_prefix = 'array|'
@@ -245,8 +249,7 @@ class ArrayData(Data):
         # Check if the name is valid
         if not name or re.sub('[0-9a-zA-Z_]', '', name):
             raise ValueError(
-                'The name assigned to the array ({}) is not valid,'
-                'it can only contain digits, letters and underscores'
+                'The name assigned to the array ({}) is not valid,it can only contain digits, letters and underscores'
             )
 
         # Write the array to a temporary file, and then add it to the repository of the node

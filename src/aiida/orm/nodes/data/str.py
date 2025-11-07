@@ -11,7 +11,6 @@
 from aiida.common.pydantic import MetadataField
 
 from .base import BaseType, to_aiida_type
-from .numeric import NumericType
 
 __all__ = ('Str',)
 
@@ -21,7 +20,7 @@ class Str(BaseType):
 
     _type = str
 
-    class Model(NumericType.Model):
+    class Model(BaseType.Model):
         value: str = MetadataField(
             title='String value',
             description='The value of the string',

@@ -6,7 +6,7 @@ import pytest
 
 from aiida.orm import Computer
 from aiida.transports import AsyncTransport, BlockingTransport
-from aiida.transports.plugins import _AsyncSSH, _OpenSSH
+from aiida.transports.plugins.async_backend import _AsyncSSH, _OpenSSH
 
 # This is needed when we run this file in isolation using
 # the `--noconftest` pytest option in the 'test-pytest-fixtures' CI job.

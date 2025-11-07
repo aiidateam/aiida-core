@@ -123,10 +123,14 @@ py:class FC
 py:class P
 py:class N
 py:class T
+py:class _ContainerTypes
+py:class _NodeOrGroupCls
 py:class aiida.cmdline.params.types.choice.T
 py:class aiida.common.lang.T
 py:class aiida.engine.processes.functions.N
 py:class aiida.engine.processes.functions.R_co
+py:class aiida.common.utils.T
+py:class aiida.common.utils.R
 
 ### third-party packages
 # Note: These exceptions are needed if
@@ -160,6 +164,7 @@ py:class requests.Response
 py:class concurrent.futures._base.TimeoutError
 py:class concurrent.futures._base.Future
 
+py:class BackupManager
 py:class disk_objectstore.utils.LazyOpener
 py:class disk_objectstore.backup_utils.BackupManager
 
@@ -231,7 +236,6 @@ py:class sqlalchemy.sql.compiler.TypeCompiler
 py:class sqlalchemy.sql.elements.BooleanClauseList
 py:meth sqlalchemy.orm.unitofwork.UOWTransaction.register_object
 
-py:class sphinx.ext.autodoc.ClassDocumenter
 py:class sphinx.util.docutils.SphinxDirective
 py:class ModuleAnalyzer
 py:class BuildEnvironment

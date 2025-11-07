@@ -2,6 +2,13 @@
 build-backend = 'flit_core.buildapi'
 requires = ['flit_core >=3.4,<4']
 
+# The "dev" dependency group is automatically synced by uv
+# and should thus contain all necessary deps for local development.
+[dependency-groups]
+dev = [
+  "aiida-core[atomic_tools,rest,tests,pre-commit,tests,docs]"
+]
+
 [project]
 authors = [{name = 'The AiiDA team', email = 'developers@aiida.net'}]
 classifiers = [
@@ -28,7 +35,7 @@ dependencies = [
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
   'click>=8.1.0,<8.3',
-  'disk-objectstore~=1.3.0',
+  'disk-objectstore~=1.4.0',
   'docstring-parser',
   'get-annotations~=0.1;python_version<"3.10"',
   'graphviz~=0.19',
@@ -236,7 +243,7 @@ notebook = [
 # the versions of the actual packages see:
 # https://github.com/python/typeshed?tab=readme-ov-file#package-versioning-for-third-party-stubs
 pre-commit = [
-  'aiida-core[atomic_tools,rest,tests,tui]',
+  'aiida-core[tests]',
   'mypy~=1.18.0',
   'packaging~=23.0',
   'pre-commit~=3.5',
@@ -265,19 +272,19 @@ ssh_kerberos = [
   'pyasn1~=0.4.8'
 ]
 tests = [
+  'aiida-core[atomic_tools,rest]',
   'aiida-export-migration-tests==0.9.0',
   'pg8000~=1.13',
   'pgtest~=1.3,>=1.3.1',
   'pytest~=7.0',
   'pytest-asyncio~=0.12,<0.17',
   'pytest-timeout~=2.0',
-  'pytest-cov~=4.1',
+  'pytest-cov~=7.0',
   'pytest-rerunfailures~=12.0',
   'pytest-benchmark~=4.0',
   'pytest-regressions~=2.2',
   'pytest-xdist~=3.6',
   'pympler~=1.0',
-  'coverage~=7.0',
   'sphinx~=7.2.0',
   'docutils~=0.20'
 ]
@@ -296,6 +303,7 @@ Home = 'http://www.aiida.net/'
 Source = 'https://github.com/aiidateam/aiida-core'
 
 [tool.coverage.run]
+core = 'sysmon'
 omit = [
   "src/aiida/tools/_dumping/**/*"
 ]
@@ -321,7 +329,10 @@ enable_error_code = [
   'redundant-expr',
   'truthy-bool'
 ]
-plugins = ['sqlalchemy.ext.mypy.plugin']
+plugins = [
+  'pydantic.mypy',
+  'sqlalchemy.ext.mypy.plugin'
+]
 scripts_are_modules = true
 show_error_codes = true
 show_traceback = true
@@ -345,8 +356,12 @@ disallow_subclassing_any = true
 disallow_untyped_calls = true
 disallow_untyped_defs = true
 module = [
+  'aiida.cmdline.groups.*',
   'aiida.cmdline.params.*',
-  'aiida.cmdline.groups.*'
+  'aiida.common.*',
+  'aiida.repository.*',
+  'aiida.tools.graph.*',
+  'aiida.tools.query.*'
 ]
 warn_return_any = true
 

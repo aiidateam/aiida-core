@@ -13,7 +13,7 @@ import keyword
 from typing import Any, Callable, Generic, TypeVar
 
 
-def isidentifier(identifier):
+def isidentifier(identifier: str) -> bool:
     """Return whether the given string is a valid python identifier.
 
     :return: boolean, True if identifier is valid, False otherwise
@@ -26,7 +26,7 @@ def isidentifier(identifier):
 T = TypeVar('T')
 
 
-def type_check(what: T, of_type: Any, msg: 'str | None' = None, allow_none: bool = False) -> 'T | None':
+def type_check(what: T, of_type: Any, msg: 'str | None' = None, allow_none: bool = False) -> T:
     """Verify that object 'what' is of type 'of_type' and if not the case, raise a TypeError.
 
     :param what: the object to check
@@ -37,7 +37,7 @@ def type_check(what: T, of_type: Any, msg: 'str | None' = None, allow_none: bool
     :return: `what` or `None`
     """
     if allow_none and what is None:
-        return None
+        return what
 
     if not isinstance(what, of_type):
         if msg is None:
@@ -50,7 +50,7 @@ def type_check(what: T, of_type: Any, msg: 'str | None' = None, allow_none: bool
 MethodType = TypeVar('MethodType', bound=Callable[..., Any])
 
 
-def override_decorator(check=False) -> Callable[[MethodType], MethodType]:
+def override_decorator(check: bool = False) -> Callable[[MethodType], MethodType]:
     """Decorator to signal that a method from a base class is being overridden completely."""
 
     def wrap(func: MethodType) -> MethodType:
@@ -63,18 +63,17 @@ def override_decorator(check=False) -> Callable[[MethodType], MethodType]:
         if not args:
             raise RuntimeError('Can only use the override decorator on member functions')
 
-        if check:
+        if not check:
+            return func
 
-            @functools.wraps(func)
-            def wrapped_fn(self, *args, **kwargs):
-                try:
-                    getattr(super(), func.__name__)
-                except AttributeError:
-                    raise RuntimeError(f'Function {func} does not override a superclass method')
+        @functools.wraps(func)
+        def wrapped_fn(self: Any, *args: Any, **kwargs: Any) -> Any:
+            try:
+                getattr(super(), func.__name__)
+            except AttributeError:
+                raise RuntimeError(f'Function {func} does not override a superclass method')
 
-                return func(self, *args, **kwargs)
-        else:
-            wrapped_fn = func  # type: ignore[assignment]
+            return func(self, *args, **kwargs)
 
         return wrapped_fn  # type: ignore[return-value]
 
@@ -84,7 +83,6 @@ def override_decorator(check=False) -> Callable[[MethodType], MethodType]:
 override = override_decorator(check=False)
 
 ReturnType = TypeVar('ReturnType')
-SelfType = TypeVar('SelfType')
 
 
 class classproperty(Generic[ReturnType]):  # noqa: N801
@@ -95,8 +93,8 @@ class classproperty(Generic[ReturnType]):  # noqa: N801
     instance as its first argument).
     """
 
-    def __init__(self, getter: Callable[[SelfType], ReturnType]) -> None:
+    def __init__(self, getter: Callable[[Any], ReturnType]) -> None:
         self.getter = getter
 
-    def __get__(self, instance: Any, owner: SelfType) -> ReturnType:
-        return self.getter(owner)  # type: ignore[arg-type]
+    def __get__(self, instance: Any, owner: type) -> ReturnType:
+        return self.getter(owner)

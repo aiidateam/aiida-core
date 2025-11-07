@@ -11,9 +11,12 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Any, ContextManager, List, Optional, Sequence, TypeVar, Union
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, ContextManager, List, Optional, TypeVar, Union
 
 if TYPE_CHECKING:
+    from disk_objectstore.backup_utils import BackupManager
+
     from aiida.manage.configuration.profile import Profile
     from aiida.orm.autogroup import AutogroupManager
     from aiida.orm.entities import EntityTypes
@@ -129,7 +132,7 @@ class StorageBackend(abc.ABC):
         return version
 
     @abc.abstractmethod
-    def close(self):
+    def close(self) -> None:
         """Close the storage access."""
 
     @property
@@ -253,12 +256,12 @@ class StorageBackend(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]):
+    def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
         """Delete all nodes corresponding to pks in the input and any links to/from them.
 
         This method is intended to be used within a transaction context.
 
-        :param pks_to_delete: a sequence of node pks to delete
+        :param pks_to_delete: an iterable of node pks to delete
 
         :raises: ``AssertionError`` if a transaction is not active
         """
@@ -269,7 +272,7 @@ class StorageBackend(abc.ABC):
 
     @abc.abstractmethod
     def set_global_variable(
-        self, key: str, value: Union[None, str, int, float], description: Optional[str] = None, overwrite=True
+        self, key: str, value: Union[None, str, int, float], description: Optional[str] = None, overwrite: bool = True
     ) -> None:
         """Set a global variable in the storage.
 
@@ -291,7 +294,7 @@ class StorageBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs) -> None:
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> None:
         """Perform maintenance tasks on the storage.
 
         If `full == True`, then this method may attempt to block the profile associated with the
@@ -309,10 +312,10 @@ class StorageBackend(abc.ABC):
         self,
         dest: str,
         keep: Optional[int] = None,
-    ):
+    ) -> None:
         raise NotImplementedError
 
-    def _write_backup_config(self, backup_manager):
+    def _write_backup_config(self, backup_manager: BackupManager) -> None:
         import pathlib
         import tempfile
 
@@ -338,7 +341,7 @@ class StorageBackend(abc.ABC):
         except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exc:
             raise exceptions.StorageBackupError('AiiDA config.json not found!') from exc
 
-    def _validate_or_init_backup_folder(self, dest, keep):
+    def _validate_or_init_backup_folder(self, dest: str, keep: int | None) -> BackupManager:
         import json
         import tempfile
 
@@ -396,7 +399,7 @@ class StorageBackend(abc.ABC):
         self,
         dest: str,
         keep: Optional[int] = None,
-    ):
+    ) -> None:
         """Create a backup of the storage contents.
 
         :param dest: The path to the destination folder.
@@ -440,7 +443,7 @@ class StorageBackend(abc.ABC):
         STORAGE_LOGGER.report(f'Overwriting the `{DEFAULT_CONFIG_FILE_NAME} file.')
         self._write_backup_config(backup_manager)
 
-    def get_info(self, detailed: bool = False) -> dict:
+    def get_info(self, detailed: bool = False) -> dict[str, Any]:
         """Return general information on the storage.
 
         :param detailed: flag to request more detailed information about the content of the storage.
@@ -448,7 +451,7 @@ class StorageBackend(abc.ABC):
         """
         return {'entities': self.get_orm_entities(detailed=detailed)}
 
-    def get_orm_entities(self, detailed: bool = False) -> dict:
+    def get_orm_entities(self, detailed: bool = False) -> dict[str, Any]:
         """Return a mapping with an overview of the storage contents regarding ORM entities.
 
         :param detailed: flag to request more detailed information about the content of the storage.
@@ -471,6 +474,22 @@ class StorageBackend(abc.ABC):
         count = QueryBuilder(self).append(Node).count()
         data['Nodes'] = {'count': count}
         if detailed:
+            first_time = (
+                QueryBuilder(self)
+                .append(Node, project=['ctime'], tag='node')
+                .order_by({'node': {'ctime': 'asc'}})
+                .first(flat=True)
+            )
+            last_time = (
+                QueryBuilder(self)
+                .append(Node, project=['ctime'], tag='node')
+                .order_by({'node': {'ctime': 'desc'}})
+                .first(flat=True)
+            )
+
+            data['Nodes']['first_created'] = str(first_time) if first_time else None
+            data['Nodes']['last_created'] = str(last_time) if last_time else None
+
             node_types = sorted(
                 {typ for (typ,) in QueryBuilder(self).append(Node, project=['node_type']).iterall() if typ is not None}
             )

@@ -13,7 +13,6 @@ import numpy
 from aiida.common.pydantic import MetadataField
 
 from .base import BaseType, to_aiida_type
-from .numeric import NumericType
 
 __all__ = ('Bool',)
 
@@ -23,7 +22,7 @@ class Bool(BaseType):
 
     _type = bool
 
-    class Model(NumericType.Model):
+    class Model(BaseType.Model):
         value: bool = MetadataField(
             title='Boolean value',
             description='The value of the boolean',

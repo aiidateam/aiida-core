@@ -206,28 +206,28 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             cls.model_config['title'] = cls.__qualname__.replace('.', '')
 
         @classmethod
-        def as_input_model(cls: Type[EntityModelType]) -> Type[EntityModelType]:
-            """Return a derived model class with read-only fields removed.
+        def as_create_model(cls: Type[EntityModelType]) -> Type[EntityModelType]:
+            """Return a derived creation model class with read-only fields removed.
 
             This also removes any serializers/validators defined on those fields.
 
-            :return: The derived input model class.
+            :return: The derived creation model class.
             """
 
-            # Derive the input model from the original model
-            new_name = cls.__qualname__.replace('.Model', 'InputModel')
-            InputModel = create_model(  # noqa: N806
+            # Derive the creation model from the original model
+            new_name = cls.__qualname__.replace('.Model', 'CreateModel')
+            CreateModel = create_model(  # noqa: N806
                 new_name,
                 __base__=cls,
-                __doc__=f'Input version of {cls.__name__}.',
+                __doc__=f'Creation version of {cls.__name__}.',
             )
-            InputModel.__qualname__ = new_name
-            InputModel.__module__ = cls.__module__
+            CreateModel.__qualname__ = new_name
+            CreateModel.__module__ = cls.__module__
 
             # Identify read-only fields
             readonly_fields = [
                 name
-                for name, field in InputModel.model_fields.items()
+                for name, field in CreateModel.model_fields.items()
                 if hasattr(field, 'json_schema_extra')
                 and isinstance(field.json_schema_extra, dict)
                 and field.json_schema_extra.get('readOnly')
@@ -235,12 +235,12 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
             # Remove read-only fields
             for name in readonly_fields:
-                InputModel.model_fields.pop(name, None)
-                if hasattr(InputModel, name):
-                    delattr(InputModel, name)
+                CreateModel.model_fields.pop(name, None)
+                if hasattr(CreateModel, name):
+                    delattr(CreateModel, name)
 
             # Prune field validators/serializers referring to read-only fields
-            decorators = InputModel.__pydantic_decorators__
+            decorators = CreateModel.__pydantic_decorators__
 
             def _prune_field_decorators(field_decorators: dict[str, Any]) -> dict[str, Any]:
                 return {
@@ -252,15 +252,15 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             decorators.field_validators = _prune_field_decorators(decorators.field_validators)
             decorators.field_serializers = _prune_field_decorators(decorators.field_serializers)
 
-            return InputModel
+            return CreateModel
 
     @classproperty
-    def InputModel(cls) -> Type[Model]:  # noqa: N802, N805
-        """Return the input version of the model class for this entity.
+    def CreateModel(cls) -> Type[Model]:  # noqa: N802, N805
+        """Return the creation version of the model class for this entity.
 
-        :return: The input model class, with read-only fields removed.
+        :return: The creation model class, with read-only fields removed.
         """
-        return cls.Model.as_input_model()
+        return cls.Model.as_create_model()
 
     @classmethod
     def model_to_orm_fields(cls) -> dict[str, FieldInfo]:
@@ -316,7 +316,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             with `exclude_to_orm=True`.
         :return: An instance of the entity's model class.
         """
-        Model = self.InputModel if unstored else self.Model  # noqa: N806
+        Model = self.CreateModel if unstored else self.Model  # noqa: N806
         fields = self._collect_model_field_values(
             repository_path=repository_path,
             serialize_repository_content=serialize_repository_content,
@@ -387,7 +387,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         cls._logger.warning(
             'Serialization through pydantic is still an experimental feature and might break in future releases.'
         )
-        Model = cls.InputModel if unstored else cls.Model  # noqa: N806
+        Model = cls.CreateModel if unstored else cls.Model  # noqa: N806
         return cls.from_model(Model(**serialized))
 
     @classproperty
@@ -533,7 +533,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         """
         fields: dict[str, Any] = {}
 
-        Model = self.InputModel if unstored else self.Model  # noqa: N806
+        Model = self.CreateModel if unstored else self.Model  # noqa: N806
 
         for key, field in Model.model_fields.items():
             if skip_cli_excluded and get_metadata(field, 'exclude_from_cli'):

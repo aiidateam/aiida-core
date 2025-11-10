@@ -156,7 +156,7 @@ class AiidaProcessDirective(SphinxDirective):
 
     def build_port_content(self, name, port):
         """Build the content that describes a single port."""
-        res = []
+        res: list = []
         res.append(addnodes.literal_strong(text=name))
         res.append(nodes.Text(', '))
         res.append(nodes.emphasis(text=self.format_valid_types(port.valid_type)))

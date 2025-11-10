@@ -8,8 +8,6 @@
 ###########################################################################
 """Tests for the `aiida.workflows.arithmetic.add_multiply` work function."""
 
-import pytest
-
 from aiida.orm import Int
 from aiida.plugins import WorkflowFactory
 from aiida.workflows.arithmetic.add_multiply import add_multiply
@@ -21,7 +19,6 @@ def test_factory():
     assert loaded.is_process_function
 
 
-@pytest.mark.requires_rmq
 def test_run():
     """Test running the work function."""
     x = Int(1)

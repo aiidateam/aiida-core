@@ -9,11 +9,14 @@
 # ruff: noqa: N802
 """Sqla query builder implementation"""
 
+from __future__ import annotations
+
 import uuid
 import warnings
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from sqlalchemy import and_, not_, or_, select
 from sqlalchemy import func as sa_func
@@ -26,7 +29,7 @@ from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.sql.compiler import SQLCompiler
-from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList, Cast, ColumnClause, ColumnElement, Label
+from sqlalchemy.sql.elements import BinaryExpression, Cast, ColumnClause, ColumnElement, Label
 from sqlalchemy.sql.expression import case, text
 from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 
@@ -174,7 +177,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
     def get_session(self) -> Session:
         """Get the connection to the database"""
-        return self._backend.get_session()
+        return self._backend.get_session()  # type: ignore[attr-defined]
 
     def count(self, data: QueryDictType) -> int:
         with self.query_session(data) as build:
@@ -204,8 +207,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             # Open a session transaction unless already inside one. This prevents the `ModelWrapper` from calling commit
             # on the session when a yielded row is mutated. This would reset the cursor invalidating it and causing an
             # exception to be raised in the next batch of rows in the iteration.
-            # See https://github.com/python/mypy/issues/10109 for the reason of the type warning.
-            with nullcontext() if session.in_nested_transaction() else self._backend.transaction():  # type: ignore[attr-defined]
+            with nullcontext() if session.in_nested_transaction() else self._backend.transaction():
                 for resultrow in session.execute(stmt):
                     yield [self.to_backend(rowitem) for rowitem in resultrow]
 
@@ -218,8 +220,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             # Open a session transaction unless already inside one. This prevents the `ModelWrapper` from calling commit
             # on the session when a yielded row is mutated. This would reset the cursor invalidating it and causing an
             # exception to be raised in the next batch of rows in the iteration.
-            # See https://github.com/python/mypy/issues/10109 for the reason of the type warning.
-            with nullcontext() if session.in_nested_transaction() else self._backend.transaction():  # type: ignore[attr-defined]
+            with nullcontext() if session.in_nested_transaction() else self._backend.transaction():
                 for row in self.get_session().execute(stmt):
                     # build the yield result
                     yield_result: Dict[str, Dict[str, Any]] = {}
@@ -399,7 +400,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             raise ValueError(f'Unknown casting key {cast}')
         return entity
 
-    def build_filters(self, alias: AliasedClass, filter_spec: Dict[str, Any]) -> Optional[BooleanClauseList]:
+    def build_filters(self, alias: AliasedClass, filter_spec: dict[str, Any]) -> ColumnElement[bool] | None:
         """Recurse through the filter specification and apply filter operations.
 
         :param alias: The alias of the ORM class the filter will be applied on
@@ -453,17 +454,16 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                     )
         return and_(*expressions) if expressions else None
 
-
     def get_filter_expr(
         self,
         operator: str,
         value: Any,
         attr_key: List[str],
         is_jsonb: bool,
-        alias=None,
-        column=None,
-        column_name=None,
-    ):
+        alias: AliasedClass | None = None,
+        column: InstrumentedAttribute | None = None,
+        column_name: str | None = None,
+    ) -> Any:
         """Applies a filter on the alias given.
 
         Expects the alias of the ORM-class on which to filter, and filter_spec.
@@ -594,7 +594,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 )
             else:
                 if column is None:
-                    if (alias is None) and (column_name is None):
+                    if alias is None or column_name is None:
                         raise RuntimeError('I need to get the column but do not know the alias and the column name')
                     column = get_column(column_name, alias)
                 expr = self.get_filter_expr_from_column(operator, value, column)
@@ -606,12 +606,12 @@ class SqlaQueryBuilder(BackendQueryBuilder):
     def get_filter_expr_from_jsonb(
         self,
         operator: str,
-        value,
+        value: Any,
         attr_key: List[str],
-        column=None,
-        column_name=None,
-        alias=None,
-    ):
+        column: InstrumentedAttribute | None = None,
+        column_name: str | None = None,
+        alias: AliasedClass | None = None,
+    ) -> Any:
         """Return a filter expression"""
 
         def cast_according_to_type(path_in_json, value):
@@ -639,6 +639,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             return type_filter, casted_entity
 
         if column is None:
+            if alias is None or column_name is None:
+                raise RuntimeError('I need to get the column but do not know the alias and the column name')
             column = get_column(column_name, alias)
 
         database_entity = column[tuple(attr_key)]
@@ -790,7 +792,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             return str(res)
 
         try:
-            return self._backend.get_backend_entity(res)
+            return self._backend.get_backend_entity(res)  # type: ignore[attr-defined]
         except TypeError:
             return res
 
@@ -820,7 +822,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         total_query = session.query(self.Node)
         types_query = session.query(self.Node.node_type.label('typestring'), sa_func.count(self.Node.id))
 
-        dialect = session.bind.dialect.name
+        dialect = session.bind.dialect.name  # type: ignore[union-attr]
         date_format = '%Y-%m-%d'
 
         if dialect == 'sqlite':
@@ -1015,7 +1017,7 @@ def generate_joins(
         join = join_func(
             join_tag,
             join_to,
-            isouterjoin=verticespec.get('outerjoin'),  # type: ignore
+            isouterjoin=verticespec.get('outerjoin'),  # type: ignore[call-arg]
             filter_dict=filter_dict,
             expand_path=expand_path,
         )

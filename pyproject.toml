@@ -2,6 +2,13 @@
 build-backend = 'flit_core.buildapi'
 requires = ['flit_core >=3.4,<4']
 
+# The "dev" dependency group is automatically synced by uv
+# and should thus contain all necessary deps for local development.
+[dependency-groups]
+dev = [
+  "aiida-core[atomic_tools,rest,tests,pre-commit,tests,docs]"
+]
+
 [project]
 authors = [{name = 'The AiiDA team', email = 'developers@aiida.net'}]
 classifiers = [
@@ -18,14 +25,17 @@ classifiers = [
   'Programming Language :: Python :: 3.13',
   'Topic :: Scientific/Engineering'
 ]
+# NOTE: When updating versions of some packages, such as requests or paramiko,
+# you need to also update the versions of corresponding stub packages
+# in the 'pre-commit' group e.g. 'types-requests'
 dependencies = [
   'alembic~=1.8',
   'archive-path~=0.4.2',
   "asyncssh~=2.19.0",
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
-  'click~=8.1.0',
-  'disk-objectstore~=1.3.0',
+  'click>=8.1.0,<8.3',
+  'disk-objectstore~=1.4.0',
   'docstring-parser',
   'get-annotations~=0.1;python_version<"3.10"',
   'graphviz~=0.19',
@@ -38,7 +48,7 @@ dependencies = [
   'numpy>=1.21,<3',
   'paramiko~=3.0',
   'pgsu~=0.3.0',
-  'psutil~=5.6',
+  'psutil~=7.0',
   'psycopg[binary]>=3.0.2,<4',
   'pydantic~=2.6',
   'pytz~=2021.1',
@@ -229,14 +239,25 @@ notebook = [
   'jupyter~=1.0',
   'notebook~=6.1,>=6.1.5'
 ]
+# NOTE: THe versions of the `types-*` stubs packages should match
+# the versions of the actual packages see:
+# https://github.com/python/typeshed?tab=readme-ov-file#package-versioning-for-third-party-stubs
 pre-commit = [
-  'aiida-core[atomic_tools,rest,tests,tui]',
-  'mypy~=1.17.0',
+  'aiida-core[tests]',
+  'mypy~=1.18.0',
   'packaging~=23.0',
   'pre-commit~=3.5',
   'sqlalchemy[mypy]~=2.0',
   'tomli',
-  'types-PyYAML'
+  'types-click-spinner~=0.1.8',
+  'types-docutils~=0.20',
+  'types-PyYAML~=6.0',
+  'types-paramiko~=3.0',
+  'types-psutil~=5.6',
+  'types-pytz~=2021.1',
+  'types-tabulate>=0.9.0,<0.10.0',
+  'types-tqdm~=4.45',
+  'types-requests~=2.0'
 ]
 rest = [
   'flask-cors~=3.0',
@@ -251,19 +272,19 @@ ssh_kerberos = [
   'pyasn1~=0.4.8'
 ]
 tests = [
+  'aiida-core[atomic_tools,rest]',
   'aiida-export-migration-tests==0.9.0',
   'pg8000~=1.13',
   'pgtest~=1.3,>=1.3.1',
   'pytest~=7.0',
   'pytest-asyncio~=0.12,<0.17',
   'pytest-timeout~=2.0',
-  'pytest-cov~=4.1',
+  'pytest-cov~=7.0',
   'pytest-rerunfailures~=12.0',
   'pytest-benchmark~=4.0',
   'pytest-regressions~=2.2',
   'pytest-xdist~=3.6',
   'pympler~=1.0',
-  'coverage~=7.0',
   'sphinx~=7.2.0',
   'docutils~=0.20'
 ]
@@ -282,6 +303,7 @@ Home = 'http://www.aiida.net/'
 Source = 'https://github.com/aiidateam/aiida-core'
 
 [tool.coverage.run]
+core = 'sysmon'
 omit = [
   "src/aiida/tools/_dumping/**/*"
 ]
@@ -307,7 +329,10 @@ enable_error_code = [
   'redundant-expr',
   'truthy-bool'
 ]
-plugins = ['sqlalchemy.ext.mypy.plugin']
+plugins = [
+  'pydantic.mypy',
+  'sqlalchemy.ext.mypy.plugin'
+]
 scripts_are_modules = true
 show_error_codes = true
 show_traceback = true
@@ -325,58 +350,41 @@ disallow_untyped_decorators = false
 module = 'aiida.cmdline.commands.*'
 
 [[tool.mypy.overrides]]
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+module = [
+  'aiida.cmdline.groups.*',
+  'aiida.cmdline.params.*',
+  'aiida.common.*',
+  'aiida.repository.*',
+  'aiida.tools.graph.*',
+  'aiida.tools.query.*'
+]
+warn_return_any = true
+
+[[tool.mypy.overrides]]
 check_untyped_defs = false
 module = 'tests.*'
 
 [[tool.mypy.overrides]]
 ignore_missing_imports = true
 module = [
-  'ase.*',
-  'asyncssh.*',
   'bpython.*',
   'bs4.*',
-  'CifFile.*',
   'circus.*',
-  'click_spinner.*',
-  'docutils.*',
-  'flask_cors.*',
   'flask_restful.*',
   'get_annotations.*',
   'graphviz.*',
-  'importlib._bootstrap.*',
-  'IPython.*',
   'kiwipy.*',
-  'matplotlib.*',
   'mayavi.*',
-  'MySQLdb.*',
-  'numpy.*',
-  'paramiko.*',
   'pgsu.*',
   'pgtest.*',
-  'phonopy.*',
-  'psutil.*',
-  'psycopg.*',
-  'pymatgen.*',
-  'pymysql.*',
-  'pyparsing.*',
-  'pympler.*',
-  'pytz.*',
-  'requests.*',
-  'ruamel.*',
-  'scipy.*',
-  'seekpath.*',
-  'spglib.*',
-  'sphinxcontrib.details.*',
-  'tabulate.*',
-  'tqdm.*',
   'trogon.*',
-  'wrapt.*',
-  'upf_to_json.*'
+  'wrapt.*'
 ]
-
-[[tool.mypy.overrides]]
-ignore_errors = true
-module = 'plumpy'
 
 [tool.pytest.ini_options]
 addopts = '--benchmark-skip --durations=5 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append '
@@ -391,6 +399,7 @@ filterwarnings = [
   'ignore::DeprecationWarning:pymatgen:',
   'ignore::DeprecationWarning:jsonbackend:',
   'ignore::DeprecationWarning:pkg_resources:',
+  "ignore:'BaseCommand' is deprecated and will be removed in Click 9.0.:DeprecationWarning:trogon:",
   'ignore:ast.* is deprecated.*:DeprecationWarning:docstring_parser:',
   'ignore::SyntaxWarning:CifFile',
   'ignore::pytest.PytestCollectionWarning',
@@ -463,8 +472,14 @@ select = [
   'PLR',  # pylint-refactor
   'PLW',  # pylint-warning
   'RUF',  # ruff
+  'FLY',  # flynt
   'NPY201'  # numpy compatibility
 ]
+
+# Mark some classes as generic, per https://docs.astral.sh/ruff/settings/#lint_pyflakes_extend-generics
+# Needed due to https://github.com/astral-sh/ruff/issues/9298
+[tool.ruff.lint.pyflakes]
+extend-generics = ["aiida.orm.entities.Entity", "aiida.orm.entities.Collection"]
 
 [tool.tox]
 legacy_tox_ini = """

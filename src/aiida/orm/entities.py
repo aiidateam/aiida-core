@@ -14,7 +14,7 @@ import abc
 import pathlib
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Generic, List, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Generic, List, NoReturn, Optional, Type, TypeVar, Union
 
 from plumpy.base.utils import call_with_super_check, super_check
 from pydantic import BaseModel
@@ -24,6 +24,7 @@ from aiida.common import exceptions, log
 from aiida.common.exceptions import EntryPointError, InvalidOperation, NotExistent
 from aiida.common.lang import classproperty, type_check
 from aiida.common.pydantic import MetadataField, get_metadata
+from aiida.common.typing import Self
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
@@ -35,8 +36,8 @@ if TYPE_CHECKING:
 
 __all__ = ('Collection', 'Entity', 'EntityTypes')
 
-CollectionType = TypeVar('CollectionType', bound='Collection')
-EntityType = TypeVar('EntityType', bound='Entity')
+CollectionType = TypeVar('CollectionType', bound='Collection[Any]')
+EntityType = TypeVar('EntityType', bound='Entity[Any,Any]')
 BackendEntityType = TypeVar('BackendEntityType', bound='BackendEntity')
 
 
@@ -64,7 +65,7 @@ class Collection(abc.ABC, Generic[EntityType]):
 
     @classmethod
     @lru_cache(maxsize=100)
-    def get_cached(cls, entity_class: Type[EntityType], backend: 'StorageBackend'):
+    def get_cached(cls, entity_class: Type[EntityType], backend: 'StorageBackend') -> Self:
         """Get the cached collection instance for the given entity class and backend.
 
         :param backend: the backend instance to get the collection for
@@ -87,11 +88,11 @@ class Collection(abc.ABC, Generic[EntityType]):
         self._backend = backend or get_manager().get_profile_storage()
         self._entity_type = entity_class
 
-    def __call__(self: CollectionType, backend: 'StorageBackend') -> CollectionType:
+    def __call__(self, backend: StorageBackend) -> Self:
         """Get or create a cached collection using a new backend."""
         if backend is self._backend:
             return self
-        return self.get_cached(self.entity_type, backend=backend)  # type: ignore[arg-type]
+        return self.get_cached(self.entity_type, backend=backend)
 
     @property
     def entity_type(self) -> Type[EntityType]:
@@ -240,7 +241,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return self.Model(**fields)
 
     @classmethod
-    def _from_model(cls, model: Model) -> 'Entity':
+    def _from_model(cls, model: Model) -> Self:
         """Return an entity instance from an instance of its model."""
         fields = cls.model_to_orm_field_values(model)
         return cls(**fields)
@@ -267,12 +268,12 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return self._to_model(repository_path).model_dump()
 
     @classmethod
-    def from_serialized(cls, **kwargs: dict[str, Any]) -> 'Entity':
+    def from_serialized(cls, **kwargs: dict[str, Any]) -> Self:
         """Construct an entity instance from JSON serialized data."""
         cls._logger.warning(
             'Serialization through pydantic is still an experimental feature and might break in future releases.'
         )
-        return cls._from_model(cls.Model(**kwargs))  # type: ignore[arg-type]
+        return cls._from_model(cls.Model(**kwargs))
 
     @classproperty
     def objects(cls: EntityType) -> CollectionType:  # noqa: N805
@@ -294,7 +295,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return cls._CLS_COLLECTION.get_cached(cls, get_manager().get_profile_storage())
 
     @classmethod
-    def get_collection(cls, backend: 'StorageBackend'):
+    def get_collection(cls, backend: 'StorageBackend') -> CollectionType:
         """Get a collection for objects of this type for a given backend.
 
         .. note:: Use the ``collection`` class property instead if the currently loaded backend or backend of the
@@ -306,7 +307,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return cls._CLS_COLLECTION.get_cached(cls, backend)
 
     @classmethod
-    def get(cls, **kwargs):
+    def get(cls, **kwargs: Any) -> Self:
         """Get an entity of the collection matching the given filters.
 
         .. deprecated: Will be removed in v3, use `Entity.collection.get` instead.
@@ -324,7 +325,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         self._backend_entity = backend_entity
         call_with_super_check(self.initialize)
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, self.__class__):
             return False
 
@@ -333,7 +334,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         return super().__eq__(other)
 
-    def __getstate__(self):
+    def __getstate__(self) -> NoReturn:
         """Prevent an ORM entity instance from being pickled."""
         raise InvalidOperation('pickling of AiiDA ORM instances is not supported.')
 
@@ -345,7 +346,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         """
 
     @property
-    def logger(self):
+    def logger(self) -> log.AiidaLoggerType:
         """Return the internal logger."""
         try:
             return self._logger
@@ -375,7 +376,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         """
         return self._backend_entity.id
 
-    def store(self: EntityType) -> EntityType:
+    def store(self) -> Self:
         """Store the entity."""
         self._backend_entity.store()
         return self

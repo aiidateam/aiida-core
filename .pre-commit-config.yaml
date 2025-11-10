@@ -3,6 +3,7 @@ repos:
   rev: v5.0.0
   hooks:
   - id: check-merge-conflict
+  - id: check-added-large-files
   - id: check-yaml
   - id: double-quote-string-fixer
   - id: end-of-file-fixer
@@ -23,12 +24,6 @@ repos:
   rev: 0.30.0
   hooks:
   - id: check-github-workflows
-
-- repo: https://github.com/ikamensh/flynt/
-  rev: 1.0.1
-  hooks:
-  - id: flynt
-    args: [--line-length=120, --fail-on-change]
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.8.6
@@ -90,19 +85,6 @@ repos:
         src/aiida/calculations/diff_tutorial/calculations.py|
         src/aiida/calculations/templatereplacer.py|
         src/aiida/calculations/transfer.py|
-        src/aiida/cmdline/commands/cmd_archive.py|
-        src/aiida/cmdline/commands/cmd_calcjob.py|
-        src/aiida/cmdline/commands/cmd_code.py|
-        src/aiida/cmdline/commands/cmd_computer.py|
-        src/aiida/cmdline/commands/cmd_data/cmd_list.py|
-        src/aiida/cmdline/commands/cmd_data/cmd_upf.py|
-        src/aiida/cmdline/commands/cmd_devel.py|
-        src/aiida/cmdline/commands/cmd_group.py|
-        src/aiida/cmdline/commands/cmd_node.py|
-        src/aiida/cmdline/commands/cmd_shell.py|
-        src/aiida/cmdline/commands/cmd_storage.py|
-        src/aiida/common/extendeddicts.py|
-        src/aiida/common/utils.py|
         src/aiida/engine/daemon/execmanager.py|
         src/aiida/engine/processes/calcjobs/manager.py|
         src/aiida/engine/processes/calcjobs/monitors.py|
@@ -112,11 +94,6 @@ repos:
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
         src/aiida/manage/external/rmq/launcher.py|
-        src/aiida/orm/comments.py|
-        src/aiida/orm/computers.py|
-        src/aiida/orm/implementation/storage_backend.py|
-        src/aiida/orm/nodes/comments.py|
-        src/aiida/orm/nodes/data/array/bands.py|
         src/aiida/orm/nodes/data/array/trajectory.py|
         src/aiida/orm/nodes/data/cif.py|
         src/aiida/orm/nodes/data/remote/base.py|
@@ -128,8 +105,6 @@ repos:
         src/aiida/orm/utils/builders/computer.py|
         src/aiida/orm/utils/calcjob.py|
         src/aiida/orm/utils/node.py|
-        src/aiida/repository/backend/disk_object_store.py|
-        src/aiida/repository/backend/sandbox.py|
         src/aiida/restapi/common/utils.py|
         src/aiida/restapi/resources.py|
         src/aiida/restapi/run_api.py|
@@ -152,7 +127,8 @@ repos:
         src/aiida/storage/psql_dos/migrations/versions/1de112340b16_django_parity_1.py|
         src/aiida/storage/psql_dos/migrator.py|
         src/aiida/storage/psql_dos/models/.*|
-        src/aiida/storage/psql_dos/orm/.*|
+        src/aiida/storage/psql_dos/orm/.*.py|
+        src/aiida/storage/psql_dos/orm/querybuilder/joiner.py|
         src/aiida/storage/sqlite_temp/backend.py|
         src/aiida/storage/sqlite_zip/backend.py|
         src/aiida/storage/sqlite_zip/migrations/legacy_to_main.py|
@@ -164,13 +140,6 @@ repos:
         src/aiida/tools/data/orbital/orbital.py|
         src/aiida/tools/data/orbital/realhydrogen.py|
         src/aiida/tools/dbimporters/plugins/.*|
-        src/aiida/tools/graph/age_entities.py|
-        src/aiida/tools/graph/age_rules.py|
-        src/aiida/tools/graph/deletions.py|
-        src/aiida/tools/graph/graph_traversers.py|
-        src/aiida/tools/groups/paths.py|
-        src/aiida/tools/query/calculation.py|
-        src/aiida/tools/query/mapping.py|
         src/aiida/transports/cli.py|
         src/aiida/transports/plugins/local.py|
         src/aiida/transports/plugins/ssh.py|

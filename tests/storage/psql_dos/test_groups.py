@@ -8,25 +8,26 @@
 ###########################################################################
 """Regression test for bulk group operations with PSQL backend."""
 
-from pathlib import Path
-
 import pytest
 
 from aiida import orm
-from aiida.tools.archive import import_archive
 
 
 @pytest.mark.requires_psql
+@pytest.mark.nightly  # takes ~1 min
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_group_bulk_operations():
-    """Regression test for PostgreSQL parameter limit issue (6545) using pre-created archive."""
-    num_nodes = 50_000
-    archive_path = Path(__file__).parent / 'data' / f'{int(num_nodes/1000)}k-int-nodes-2.7.1.post0.aiida'
-    import_archive(archive_path)
+    """Regression test for the PostgreSQL parameter limit OperationalError on add_nodes."""
+    from tests.utils.nodes import create_int_nodes
 
-    qb = orm.QueryBuilder()
-    qb.append(orm.Int)
-    nodes = qb.all(flat=True)
+    num_nodes = 34_000  # Minimum number to reach exception without the fix
+
+    # Create nodes using the efficient bulk_insert method
+    node_pks = create_int_nodes(num_nodes)
+    assert len(node_pks) == num_nodes
+
+    # Get the actual node objects for group operations
+    nodes = orm.QueryBuilder().append(orm.Int).all(flat=True)
     assert len(nodes) == num_nodes
 
     # Test the group operations that were failing

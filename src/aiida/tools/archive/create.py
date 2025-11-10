@@ -683,7 +683,7 @@ def _stream_repo_files(
             f'Backend repository key format incompatible: {repository.key_format!r} != {key_format!r}'
         )
     with get_progress_reporter()(desc='Archiving files: ', total=len(all_keys)) as progress:
-        for key, stream in repository.iter_object_streams(all_keys):  # type: ignore[arg-type]
+        for key, stream in repository.iter_object_streams(all_keys):
             # to-do should we use assume the key here is correct, or always re-compute and check?
             writer.put_object(stream, key=key)
             progress.update()

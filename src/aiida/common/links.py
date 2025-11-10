@@ -91,7 +91,7 @@ class GraphTraversalRules(Enum):
     }
 
 
-def validate_link_label(link_label):
+def validate_link_label(link_label: str) -> None:
     """Validate the given link label.
 
     Valid link labels adhere to the following restrictions:

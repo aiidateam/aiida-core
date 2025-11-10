@@ -16,7 +16,6 @@ from aiida.manage.caching import enable_caching
 from aiida.orm import CalcFunctionNode, Int, WorkFunctionNode
 
 
-@pytest.mark.requires_rmq
 class TestWorkFunction:
     """Tests for workfunctions.
 

@@ -8,13 +8,16 @@
 ###########################################################################
 """Functions to delete entities from the database, preserving provenance integrity."""
 
+from __future__ import annotations
+
 import logging
-from typing import Callable, Iterable, Set, Tuple, Union
+from typing import Callable, Iterable
 
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.utils import DEFAULT_FILTER_SIZE, batch_iter
 from aiida.manage import get_manager
 from aiida.orm import Group, Node, QueryBuilder
+from aiida.orm.implementation import StorageBackend
 from aiida.tools.graph.graph_traversers import get_nodes_delete
 
 __all__ = ('DELETE_LOGGER', 'delete_group_nodes', 'delete_nodes')
@@ -23,8 +26,11 @@ DELETE_LOGGER = AIIDA_LOGGER.getChild('delete')
 
 
 def delete_nodes(
-    pks: Iterable[int], dry_run: Union[bool, Callable[[Set[int]], bool]] = True, backend=None, **traversal_rules: bool
-) -> Tuple[Set[int], bool]:
+    pks: Iterable[int],
+    dry_run: bool | Callable[[set[int]], bool] = True,
+    backend: StorageBackend | None = None,
+    **traversal_rules: bool,
+) -> tuple[set[int], bool]:
     """Delete nodes given a list of "starting" PKs.
 
     This command will delete not only the specified nodes, but also the ones that are
@@ -63,7 +69,7 @@ def delete_nodes(
     """
     backend = backend or get_manager().get_profile_storage()
 
-    def _missing_callback(_pks: Iterable[int]):
+    def _missing_callback(_pks: Iterable[int]) -> None:
         for _pk in _pks:
             DELETE_LOGGER.warning(f'warning: node with pk<{_pk}> does not exist, skipping')
 
@@ -108,8 +114,11 @@ def delete_nodes(
 
 
 def delete_group_nodes(
-    pks: Iterable[int], dry_run: Union[bool, Callable[[Set[int]], bool]] = True, backend=None, **traversal_rules: bool
-) -> Tuple[Set[int], bool]:
+    pks: Iterable[int],
+    dry_run: bool | Callable[[set[int]], bool] = True,
+    backend: StorageBackend | None = None,
+    **traversal_rules: bool,
+) -> tuple[set[int], bool]:
     """Delete nodes contained in a list of groups (not the groups themselves!).
 
     This command will delete not only the nodes, but also the ones that are

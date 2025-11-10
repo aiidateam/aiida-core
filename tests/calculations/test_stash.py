@@ -23,7 +23,6 @@ from aiida.common.datastructures import StashMode, UnstashTargetMode
 from aiida.plugins import CalculationFactory
 
 
-@pytest.mark.requires_rmq
 @pytest.mark.parametrize(
     'operation_type,entry_point_name',
     [
@@ -215,7 +214,6 @@ def test_code_vs_stash_mode_conflict(stash_mode, fixture_sandbox, aiida_localhos
             generate_calc_job(fixture_sandbox, 'core.unstash', unstash_input)
 
 
-@pytest.mark.requires_rmq
 @pytest.mark.parametrize('unstash_target_mode', [UnstashTargetMode.NewRemoteData, UnstashTargetMode.OriginalPlace])
 def test_submit_custom_code(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path, unstash_target_mode):
     """Test the full functionality of the `StashCalculation` and `UnstashCalculation` with a custom code submission."""
@@ -369,7 +367,6 @@ done
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.requires_rmq
 @pytest.mark.parametrize(
     'unstash_target_mode', [UnstashTargetMode.OriginalPlace.value, UnstashTargetMode.NewRemoteData.value]
 )

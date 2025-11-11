@@ -192,7 +192,6 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             description='The primary key of the entity',
             is_attribute=False,
             exclude_to_orm=True,
-            exclude_from_cli=True,
         )
 
         @classmethod
@@ -299,6 +298,47 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         return fields
 
+    def orm_to_model_field_values(
+        self,
+        *,
+        repository_path: Optional[pathlib.Path] = None,
+        serialize_repository_content: bool = False,
+        skip_read_only: bool = False,
+        unstored: bool = False,
+    ) -> dict[str, Any]:
+        """Collect values for the ``Model``'s fields from this entity.
+
+        Centralizes mapping of ORM -> Model values, including handling of ``orm_to_model`` functions
+        and optional filtering based on field metadata (e.g., excluding CLI-only fields).
+
+        :param repository_path: Optional path to use for repository-based fields.
+        :param serialize_repository_content: Whether to include repository file content.
+        :param skip_read_only: When True, fields marked with ``exclude_to_orm`` metadata are skipped.
+        :param unstored: If True, the input version of the model is used, which strips read-only fields, i.e., fields
+            with `exclude_to_orm=True`.
+        :return: Mapping of field name to value.
+        """
+        fields: dict[str, Any] = {}
+
+        Model = self.CreateModel if unstored else self.Model  # noqa: N806
+
+        for key, field in Model.model_fields.items():
+            if (skip_read_only and get_metadata(field, 'exclude_to_orm')) or key == 'extras':
+                continue
+
+            orm_to_model = get_metadata(field, 'orm_to_model')
+            if orm_to_model:
+                if key == 'filepath_files':
+                    fields[key] = orm_to_model(self, {'repository_path': repository_path})
+                elif key == 'repository_content':
+                    fields[key] = orm_to_model(self, {'serialize_repository_content': serialize_repository_content})
+                else:
+                    fields[key] = orm_to_model(self)
+            else:
+                fields[key] = getattr(self, key)
+
+        return fields
+
     def to_model(
         self,
         *,
@@ -317,10 +357,10 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         :return: An instance of the entity's model class.
         """
         Model = self.CreateModel if unstored else self.Model  # noqa: N806
-        fields = self._collect_model_field_values(
+        fields = self.orm_to_model_field_values(
             repository_path=repository_path,
             serialize_repository_content=serialize_repository_content,
-            skip_cli_excluded=False,
+            skip_read_only=False,
             unstored=unstored,
         )
         return Model(**fields)
@@ -510,47 +550,6 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     def backend_entity(self) -> BackendEntityType:
         """Get the implementing class for this object"""
         return self._backend_entity
-
-    def _collect_model_field_values(
-        self,
-        *,
-        repository_path: Optional[pathlib.Path] = None,
-        serialize_repository_content: bool = False,
-        skip_cli_excluded: bool = False,
-        unstored: bool = False,
-    ) -> dict[str, Any]:
-        """Collect values for the ``Model``'s fields from this entity.
-
-        Centralizes mapping of ORM -> Model values, including handling of ``orm_to_model`` functions
-        and optional filtering based on field metadata (e.g., excluding CLI-only fields).
-
-        :param repository_path: Optional path to use for repository-based fields.
-        :param serialize_repository_content: Whether to include repository file content.
-        :param skip_cli_excluded: When True, fields marked with ``exclude_from_cli`` metadata are skipped.
-        :param unstored: If True, the input version of the model is used, which strips read-only fields, i.e., fields
-            with `exclude_to_orm=True`.
-        :return: Mapping of field name to value.
-        """
-        fields: dict[str, Any] = {}
-
-        Model = self.CreateModel if unstored else self.Model  # noqa: N806
-
-        for key, field in Model.model_fields.items():
-            if skip_cli_excluded and get_metadata(field, 'exclude_from_cli'):
-                continue
-
-            orm_to_model = get_metadata(field, 'orm_to_model')
-            if orm_to_model:
-                if key == 'filepath_files':
-                    fields[key] = orm_to_model(self, {'repository_path': repository_path})
-                elif key == 'repository_content':
-                    fields[key] = orm_to_model(self, {'serialize_repository_content': serialize_repository_content})
-                else:
-                    fields[key] = orm_to_model(self)
-            else:
-                fields[key] = getattr(self, key)
-
-        return fields
 
 
 def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntityType) -> EntityType:

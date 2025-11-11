@@ -39,7 +39,6 @@ def MetadataField(  # noqa: N802
     | None = None,
     model_to_orm: t.Callable[[BaseModel], t.Any] | None = None,
     exclude_to_orm: bool = False,
-    exclude_from_cli: bool = False,
     is_attribute: bool = True,
     is_subscriptable: bool = False,
     **kwargs: t.Any,
@@ -76,8 +75,6 @@ def MetadataField(  # noqa: N802
     :param model_to_orm: Optional callable to convert the value of a field from a model instance to an ORM instance.
     :param exclude_to_orm: When set to ``True``, this field value will not be passed to the ORM entity constructor
         through ``Entity.from_model``.
-    :param exclude_from_cli: When set to ``True``, this field value will not be exposed on the CLI command that is
-        dynamically generated to create a new instance.
     :param is_attribute: Whether the field is stored as an attribute. Used by `QbFields`.
     :param is_subscriptable: Whether the field can be indexed like a list or dictionary. Used by `QbFields`.
     """
@@ -91,7 +88,6 @@ def MetadataField(  # noqa: N802
         ('orm_to_model', orm_to_model),
         ('model_to_orm', model_to_orm),
         ('exclude_to_orm', exclude_to_orm),
-        ('exclude_from_cli', exclude_from_cli),
         ('is_attribute', is_attribute),
         ('is_subscriptable', is_subscriptable),
     ):

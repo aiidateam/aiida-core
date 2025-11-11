@@ -369,9 +369,9 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """Export code to a YAML file."""
         import yaml
 
-        code_data = self._collect_model_field_values(
+        code_data = self.orm_to_model_field_values(
             repository_path=pathlib.Path.cwd() / f'{self.label}',
-            skip_cli_excluded=True,
+            skip_read_only=True,
         )
 
         # If the attribute is not set, for example ``with_mpi`` do not export it

@@ -174,7 +174,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         options_spec = {}
 
         for key, field_info in Model.model_fields.items():
-            if get_metadata(field_info, 'exclude_from_cli'):
+            if get_metadata(field_info, 'exclude_to_orm') or key == 'extras':
                 continue
 
             default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default

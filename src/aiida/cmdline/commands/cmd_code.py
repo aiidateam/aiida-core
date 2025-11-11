@@ -242,7 +242,7 @@ def show(code):
     table.append(['Type', code.entry_point.name])
 
     for field_name, field_info in code.Model.model_fields.items():
-        if get_metadata(field_info, key='exclude_from_cli'):
+        if get_metadata(field_info, key='exclude_to_orm') or field_name == 'extras':
             continue
 
         # FIXME resolve this hardcoded special case properly

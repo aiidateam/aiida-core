@@ -230,7 +230,8 @@ For example, if you want to explore the provenance of a calculation with pk ``<p
 It is possible to inspect, for example, the creator of a given remote_folder (in this case, the pw_calc itself):
 
 .. tip::
-The combination of ``verdi shell`` + tabbing through autocompletion at the various levels and for various entities is an intuitive and powerful way to explore AiiDA's API. It's frequently also used by the devs, when they don't remember details of AiiDA's large API surface. When you don't know how to achieve something, just fire up a ``verdi shell``!
+
+    The combination of ``verdi shell`` + tabbing through autocompletion at the various levels and for various entities is an intuitive and powerful way to explore AiiDA's API. It's frequently also used by the devs, when they don't remember details of AiiDA's large API surface. When you don't know how to achieve something, just fire up a ``verdi shell``!
 
 .. code-block:: python
 
@@ -292,8 +293,8 @@ Once you checked that a calculation failed, and you understood what happened, yo
 
 .. _how-to:quick-restart:
 
-How to quickly re-submit something: get_builder_restart()
-=========================================================
+How to quickly re-submit something: ``get_builder_restart()``
+=============================================================
 
 If you want to re-submit a calculation/workflow (i.e. a process) for whatever reason, i.e. it failed due to wrong inputs or insufficient resources, you can use
 the ``get_builder_restart()`` method of the process node. This is particularly useful if you want to re-submit a complex workflow with many inputs, and you do not want to
@@ -316,7 +317,7 @@ For example, if you want to re-submit a calculation with pk ``<pk>``, you can us
     new_calc = submit(builder)
 
 Skipping already done calculations in a workflow: caching
---------------------------------------------------------
+---------------------------------------------------------
 
 If you are running a complex workflow with many steps, and you want to skip the already done calculations, you can use the caching feature of AiiDA.
 This is particularly useful if you want to re-run a workflow that failed at some point, or if you want to run a workflow with different parameters for only few steps,

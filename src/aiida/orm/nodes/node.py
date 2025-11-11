@@ -228,20 +228,17 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             description='The UUID of the node',
             is_attribute=False,
             exclude_to_orm=True,
-            exclude_from_cli=True,
         )
         node_type: str = MetadataField(
             description='The type of the node',
             is_attribute=False,
             exclude_to_orm=True,
-            exclude_from_cli=True,
         )
         process_type: Optional[str] = MetadataField(
             None,
             description='The process type of the node',
             is_attribute=False,
             exclude_to_orm=True,
-            exclude_from_cli=True,
         )
         repository_metadata: Dict[str, Any] = MetadataField(
             default_factory=dict,
@@ -249,19 +246,16 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             is_attribute=False,
             orm_to_model=lambda node: cast(Node, node).base.repository.metadata,
             exclude_to_orm=True,
-            exclude_from_cli=True,
         )
         ctime: datetime.datetime = MetadataField(
             description='The creation time of the node',
             is_attribute=False,
             exclude_to_orm=True,
-            exclude_from_cli=True,
         )
         mtime: datetime.datetime = MetadataField(
             description='The modification time of the node',
             is_attribute=False,
             exclude_to_orm=True,
-            exclude_from_cli=True,
         )
         label: str = MetadataField(
             '',
@@ -287,7 +281,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             is_attribute=False,
             orm_to_model=lambda node: cast(Node, node).base.extras.all,
             is_subscriptable=True,
-            exclude_from_cli=True,
         )
         computer: Optional[str] = MetadataField(
             None,
@@ -295,7 +288,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             is_attribute=False,
             orm_to_model=lambda node: cast(Node, node).get_computer_label(),
             model_to_orm=lambda model: cast(Node.Model, model).load_computer(),
-            exclude_from_cli=True,
             exclude_to_orm=True,
         )
         user: int = MetadataField(
@@ -304,7 +296,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             orm_to_model=lambda node: cast(Node, node).user.pk,
             orm_class=User,
             exclude_to_orm=True,
-            exclude_from_cli=True,
         )
         repository_content: dict[str, bytes] = MetadataField(
             default_factory=dict,
@@ -317,7 +308,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             }
             if kwargs.get('serialize_repository_content')
             else {},
-            exclude_from_cli=True,
             exclude_to_orm=True,
         )
 

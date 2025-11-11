@@ -751,31 +751,61 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         elif operator == 'ilike':
             expr = database_entity.ilike(value)
         elif operator == 'in':
-            # Use VALUES table for large lists to avoid parameter limits
-            if len(value) > 32000:  # Conservative threshold well below 65535
-                expr = self._create_values_table_join(column, value)
-            else:
-                expr = database_entity.in_(value)
+            # For large lists, use unnest() to avoid parameter limits
+            # PostgreSQL has a parameter limit (default 65535), and each value in a regular IN clause
+            # uses one parameter. Using unnest() with an array uses only 1 parameter.
+            expr = self._create_unnest_in_clause(column, value)
         else:
             raise ValueError(f'Unknown operator {operator} for filters on columns')
         return expr
 
-    def _create_values_table_join(self, column, values_list):
-        """Return an IN condition using a VALUES table to avoid parameter limits."""
-        from sqlalchemy import column as sa_column
-        from sqlalchemy import values as sa_values
+    def _create_unnest_in_clause(self, column, values_list):
+        """Return an IN condition using database-specific functions to avoid parameter limits.
 
-        # Get the SQLAlchemy type from the column
-        coltype = column.type
+        This method uses different approaches depending on the database backend:
+        - PostgreSQL: Uses unnest() with an array (1 parameter)
+        - SQLite: Uses json_each() with a JSON array (1 parameter)
 
-        # Create a values table - use lowercase 'val' to avoid conflicts
-        val_column = sa_column('val', coltype)
-        vtable = sa_values(val_column, name='value_list').data([(v,) for v in values_list])
+        For example, instead of:
+            column.in_([val1, val2, ..., valN])  # Uses N parameters
+        We generate:
+            PostgreSQL: column.in_(SELECT unnest(:array_param))  # Uses 1 parameter
+            SQLite: column.in_(SELECT CAST(value AS type) FROM json_each(:json_param))  # Uses 1 parameter
+        """
+        import json
 
-        # Build a subquery selecting from the values table
-        subq = select(vtable.c.val)
+        from sqlalchemy import cast as sql_cast
+        from sqlalchemy import func, type_coerce
 
-        # Return IN condition against that subquery
+        # Detect the database dialect from the backend
+        session = self.get_session()
+        dialect_name = session.bind.dialect.name
+
+        if dialect_name == 'postgresql':
+            # PostgreSQL: Use unnest() with array
+            from sqlalchemy.dialects.postgresql import ARRAY
+
+            coltype = column.type
+            unnest_expr = func.unnest(type_coerce(values_list, ARRAY(coltype)))
+            subq = select(unnest_expr).scalar_subquery()
+
+        elif dialect_name == 'sqlite':
+            # SQLite: Use json_each() with JSON array
+            coltype = column.type
+            json_array = json.dumps(list(values_list))
+
+            # Create table-valued function: json_each(json_array)
+            json_each_table = func.json_each(json_array).table_valued('value')
+
+            # Select and cast the value column
+            value_col = json_each_table.c.value
+            subq = select(sql_cast(value_col, coltype)).select_from(json_each_table).scalar_subquery()
+
+        else:
+            # Fallback for other databases: use regular IN (might hit parameter limits)
+            # This should not happen in practice as AiiDA only supports PostgreSQL and SQLite
+            return column.in_(values_list)
+
         return column.in_(subq)
 
     def to_backend(self, res) -> Any:

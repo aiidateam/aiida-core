@@ -4,6 +4,7 @@ repos:
   hooks:
   - id: check-merge-conflict
   - id: check-added-large-files
+    exclude: uv.lock
   - id: check-yaml
   - id: double-quote-string-fixer
   - id: end-of-file-fixer
@@ -46,7 +47,7 @@ repos:
       )$
 
 - repo: https://github.com/astral-sh/uv-pre-commit
-  rev: 0.7.6
+  rev: 0.9.8
   hooks:
     # Check and update the uv lockfile
   - id: uv-lock

@@ -273,7 +273,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             is_attribute=False,
             orm_to_model=lambda node: cast(Node, node).base.attributes.all,
             is_subscriptable=True,
-            exclude_from_cli=True,
+            exclude_to_orm=True,
         )
         extras: Dict[str, Any] = MetadataField(
             default_factory=dict,
@@ -330,7 +330,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         user: Optional[User] = None,
         computer: Optional[Computer] = None,
         extras: Optional[Dict[str, Any]] = None,
-        attributes: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> None:
         # We verify here that all attributes are handled in a constructor prior to the root
@@ -355,9 +354,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             node_type=self.class_node_type, user=user.backend_entity, computer=backend_computer, **kwargs
         )
         super().__init__(backend_entity)
-
-        if attributes:
-            self.base.attributes.set_many(attributes)
 
         if extras is not None:
             self.base.extras.set_many(extras)

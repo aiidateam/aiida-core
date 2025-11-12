@@ -53,7 +53,7 @@ class EnumData(Data):
     class Model(Data.Model):
         member: Enum = MetadataField(
             description='The member name.',
-            orm_to_model=lambda node: t.cast(EnumData, node).get_member(),
+            orm_to_model=lambda node, _: t.cast(EnumData, node).get_member(),
         )
 
     def __init__(self, member: Enum, *args, **kwargs):

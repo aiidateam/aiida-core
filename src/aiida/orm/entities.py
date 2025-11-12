@@ -324,14 +324,12 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             if (skip_read_only and get_metadata(field, 'exclude_to_orm')) or key == 'extras':
                 continue
 
-            orm_to_model = get_metadata(field, 'orm_to_model')
-            if orm_to_model:
-                if key == 'filepath_files':
-                    fields[key] = orm_to_model(self, {'repository_path': repository_path})
-                elif key == 'repository_content':
-                    fields[key] = orm_to_model(self, {'serialize_repository_content': serialize_repository_content})
-                else:
-                    fields[key] = orm_to_model(self)
+            if orm_to_model := get_metadata(field, 'orm_to_model'):
+                kwargs = {
+                    'serialize_repository_content': serialize_repository_content,  # see `Node` model
+                    'repository_path': repository_path,  # see `PortableCode` model
+                }
+                fields[key] = orm_to_model(self, kwargs)
             else:
                 fields[key] = getattr(self, key)
 
@@ -354,7 +352,6 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         fields = self.orm_to_model_field_values(
             repository_path=repository_path,
             serialize_repository_content=serialize_repository_content,
-            skip_read_only=False,
         )
         Model = self.Model if self.pk else self.CreateModel  # noqa: N806
         return Model(**fields)

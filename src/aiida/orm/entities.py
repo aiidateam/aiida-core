@@ -416,19 +416,16 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         ).model_dump(mode=mode)
 
     @classmethod
-    def from_serialized(cls, serialized: dict[str, Any], unstored: bool = False) -> Self:
+    def from_serialized(cls, serialized: dict[str, Any]) -> Self:
         """Construct an entity instance from JSON serialized data.
 
         :param serialized: A dictionary representing the serialized entity.
-        :param unstored: If True, the input version of the model is used, which strips read-only fields, i.e., fields
-            with `exclude_to_orm=True`.
         :return: An instance of the entity class.
         """
         cls._logger.warning(
             'Serialization through pydantic is still an experimental feature and might break in future releases.'
         )
-        Model = cls.CreateModel if unstored else cls.Model  # noqa: N806
-        return cls.from_model(Model(**serialized))
+        return cls.from_model(cls.CreateModel(**serialized))
 
     @classproperty
     def objects(cls: EntityType) -> CollectionType:  # noqa: N805

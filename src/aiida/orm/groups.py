@@ -14,10 +14,11 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, Union, cast
 
+from typing_extensions import Self
+
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
 from aiida.common.pydantic import MetadataField
-from aiida.common.typing import Self
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 

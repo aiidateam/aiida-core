@@ -20,9 +20,11 @@ import tempfile
 import typing as t
 from collections.abc import Iterator
 
+from typing_extensions import Self
+
 from . import timezone
 from .lang import type_check
-from .typing import FilePath, Self
+from .typing import FilePath
 
 # If True, tries to make everything (dirs, files) group-writable.
 # Otherwise, tries to make everything only readable and writable by the user.

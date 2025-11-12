@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections.abc import KeysView, Mapping
 from typing import Any
 
-from aiida.common.typing import Self
+from typing_extensions import Self
 
 from . import exceptions
 

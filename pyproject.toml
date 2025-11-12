@@ -307,6 +307,7 @@ core = 'sysmon'
 omit = [
   "src/aiida/tools/_dumping/**/*"
 ]
+patch = ['subprocess']
 
 [tool.flit.module]
 name = 'aiida'

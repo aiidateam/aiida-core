@@ -8,6 +8,8 @@
 ###########################################################################
 """Base implementation of `WorkChain` class that implements a simple automated restart mechanism for sub processes."""
 
+from __future__ import annotations
+
 import functools
 from inspect import getmembers
 from types import FunctionType
@@ -26,6 +28,21 @@ if TYPE_CHECKING:
     from aiida.engine.processes import ExitCode, PortNamespace, Process, ProcessSpec
 
 __all__ = ('BaseRestartWorkChain',)
+
+
+def validate_on_unhandled_failure(value: None | orm.Str | orm.EnumData, _) -> None | str:
+    """Validator for the `on_unhandled_failure` input port.
+
+    :param value: the input `Str` or `EnumData` node
+    """
+    if value is None:
+        return None
+
+    valid_options = ('abort', 'pause', 'restart_once', 'restart_and_pause')
+    if value.value not in valid_options:
+        return f"Invalid value '{value.value}'. Must be one of: {', '.join(valid_options)}"
+
+    return None
 
 
 def validate_handler_overrides(
@@ -163,6 +180,15 @@ class BaseRestartWorkChain(WorkChain):
             'can define the ``enabled`` and ``priority`` key, which can be used to toggle the values set on '
             'the original process handler declaration.',
         )
+        spec.input(
+            'on_unhandled_failure',
+            valid_type=(orm.Str, orm.EnumData),
+            required=False,
+            validator=validate_on_unhandled_failure,
+            help='Action to take when an unhandled failure occurs. Options: "abort" (default, fail immediately), '
+            '"pause" (pause the workchain for inspection), "restart_once" (restart once then abort), '
+            '"restart_and_pause" (restart once then pause if still failing).',
+        )
         spec.exit_code(301, 'ERROR_SUB_PROCESS_EXCEPTED', message='The sub process excepted.')
         spec.exit_code(302, 'ERROR_SUB_PROCESS_KILLED', message='The sub process was killed.')
         spec.exit_code(
@@ -170,8 +196,8 @@ class BaseRestartWorkChain(WorkChain):
         )
         spec.exit_code(
             402,
-            'ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE',
-            message='The process failed for an unknown reason, twice in a row.',
+            'ERROR_UNHANDLED_FAILURE',
+            message='The process failed with an unhandled failure.',
         )
 
     def setup(self) -> None:
@@ -225,9 +251,16 @@ class BaseRestartWorkChain(WorkChain):
 
         If the process is excepted or killed, the work chain will abort. Otherwise any attached handlers will be called
         in order of their specified priority. If the process was failed and no handler returns a report indicating that
-        the error was handled, it is considered an unhandled process failure and the process is relaunched. If this
-        happens twice in a row, the work chain is aborted. In the case that at least one handler returned a report the
-        following matrix determines the logic that is followed:
+        the error was handled, it is considered an unhandled process failure. The behavior depends on the
+        `on_unhandled_failure` input:
+
+        - `abort` (default): Abort immediately with ERROR_UNHANDLED_FAILURE
+        - `pause`: Pause the workchain for user inspection
+        - `restart_once`: Restart once, then abort if it fails again
+        - `restart_and_pause`: Restart once, then pause if it fails again
+
+        In the case that at least one handler returned a report the following matrix determines the logic that is
+        followed:
 
             Process  Handler    Handler     Action
             result   report?    exit code
@@ -274,14 +307,43 @@ class BaseRestartWorkChain(WorkChain):
 
         # If the process failed and no handler returned a report we consider it an unhandled failure
         if node.is_failed and not last_report:
-            if self.ctx.unhandled_failure:
-                template = '{}<{}> failed and error was not handled for the second consecutive time, aborting'
-                self.report(template.format(*report_args))
-                return self.exit_codes.ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE
+            action = self.inputs.get('on_unhandled_failure', None)
+            action = action.value if action is not None else 'abort'
 
-            self.ctx.unhandled_failure = True
-            self.report('{}<{}> failed and error was not handled, restarting once more'.format(*report_args))
-            return None
+            if action == 'abort':
+                self.report(f'{self.ctx.process_name}<{node.pk}> failed with an unhandled failure, aborting')
+                return self.exit_codes.ERROR_UNHANDLED_FAILURE
+            elif action == 'pause':
+                self.report(
+                    f'{self.ctx.process_name}<{node.pk}> failed with an unhandled failure, pausing for inspection'
+                )
+                self.pause()
+                return None
+            elif action == 'restart_once':
+                if self.ctx.unhandled_failure:
+                    self.report(
+                        f'{self.ctx.process_name}<{node.pk}> failed with an unhandled failure for the second '
+                        'consecutive time, aborting'
+                    )
+                    return self.exit_codes.ERROR_UNHANDLED_FAILURE
+                self.ctx.unhandled_failure = True
+                self.report(
+                    f'{self.ctx.process_name}<{node.pk}> failed with an unhandled failure, restarting once more'
+                )
+                return None
+            elif action == 'restart_and_pause':
+                if self.ctx.unhandled_failure:
+                    self.report(
+                        f'{self.ctx.process_name}<{node.pk}> failed with an unhandled failure for the second '
+                        'consecutive time, pausing for inspection'
+                    )
+                    self.pause()
+                    return None
+                self.ctx.unhandled_failure = True
+                self.report(
+                    f'{self.ctx.process_name}<{node.pk}> failed with an unhandled failure, restarting once more'
+                )
+                return None
 
         # Here either the process finished successful or at least one handler returned a report so it can no longer be
         # considered to be an unhandled failed process and therefore we reset the flag

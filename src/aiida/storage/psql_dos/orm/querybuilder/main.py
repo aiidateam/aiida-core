@@ -751,15 +751,15 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         elif operator == 'ilike':
             expr = database_entity.ilike(value)
         elif operator == 'in':
-            # For large lists, use unnest() to avoid parameter limits
-            # PostgreSQL has a parameter limit (default 65535), and each value in a regular IN clause
-            # uses one parameter. Using unnest() with an array uses only 1 parameter.
-            expr = self._create_unnest_in_clause(column, value)
+            # Instead of plain `in` use `unnest()` (PSQL) or `json_each` (SQLite) to avoid parameter limits
+            # For a regular `IN` clause, each value in the clause uses one parameter.
+            # Instead using unnest() with an array uses only 1 parameter.
+            expr = self._create_smarter_in_clause(column, value)
         else:
             raise ValueError(f'Unknown operator {operator} for filters on columns')
         return expr
 
-    def _create_unnest_in_clause(self, column, values_list):
+    def _create_smarter_in_clause(self, column, values_list):
         """Return an IN condition using database-specific functions to avoid parameter limits.
 
         This method uses different approaches depending on the database backend:
@@ -802,9 +802,10 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             subq = select(sql_cast(value_col, coltype)).select_from(json_each_table).scalar_subquery()
 
         else:
-            # Fallback for other databases: use regular IN (might hit parameter limits)
-            # This should not happen in practice as AiiDA only supports PostgreSQL and SQLite
-            return column.in_(values_list)
+            # AiiDA only supports PostgreSQL and SQLite
+            raise NotImplementedError(
+                f'Unsupported database backend: {dialect_name}. ' 'AiiDA only supports PostgreSQL and SQLite.'
+            )
 
         return column.in_(subq)
 

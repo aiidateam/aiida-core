@@ -647,7 +647,7 @@ class CalcJob(Process):
             entry_point = monitor.base.attributes.get('entry_point')
             entry_point_string = format_entry_point_string('aiida.calculations.monitors', entry_point)
             monitor_version_info = self.runner.plugin_version_provider.get_version_info(entry_point_string)
-            version_info['version'].setdefault('monitors', {})[key] = monitor_version_info['version']['plugin']
+            version_info['version'].setdefault('monitors', {})[key] = monitor_version_info['version'].get('plugin')
 
         cache_version_info = {}
 

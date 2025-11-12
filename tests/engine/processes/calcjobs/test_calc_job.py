@@ -1195,6 +1195,31 @@ def test_monitor_version(get_calcjob_builder):
     assert node.base.attributes.get('version')['monitors'] == {'monitor': __version__}
 
 
+def empty_monitor(node, transport):
+    """Empty monitor that returns None and has no __version__ in its module."""
+    return None
+
+
+def test_monitor_without_version(get_calcjob_builder, entry_points):
+    """Test that monitors without version information don't cause a KeyError.
+
+    This test ensures that monitors from packages without a __version__ attribute
+    can be used without raising a KeyError when setting up version info.
+    """
+    entry_points.add(empty_monitor, group='aiida.calculations.monitors', name='core.empty_monitor')
+
+    builder = get_calcjob_builder()
+    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.empty_monitor'})}
+    _, node = launch.run_get_node(builder)
+
+    # The monitor should be in the version info, but with None as the version
+    # since the module doesn't have __version__
+    assert 'monitors' in node.base.attributes.get('version')
+    assert 'monitor' in node.base.attributes.get('version')['monitors']
+    # The value should be None since the module doesn't have __version__
+    assert node.base.attributes.get('version')['monitors']['monitor'] is None
+
+
 def monitor_skip_parse(node, transport, **kwargs):
     """Kill the job and skip the parsing of retrieved output files."""
     return CalcJobMonitorResult(message='skip parsing', parse=False)

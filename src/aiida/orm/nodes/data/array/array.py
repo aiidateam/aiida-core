@@ -54,7 +54,7 @@ class ArrayData(Data):
         arrays: Optional[dict[str, bytes]] = MetadataField(
             None,
             description='The dictionary of numpy arrays.',
-            orm_to_model=lambda node: ArrayData.save_arrays(cast(ArrayData, node).arrays),
+            orm_to_model=lambda node, _: ArrayData.save_arrays(cast(ArrayData, node).arrays),
             model_to_orm=lambda model: ArrayData.load_arrays(cast(ArrayData.Model, model).arrays),
         )
 

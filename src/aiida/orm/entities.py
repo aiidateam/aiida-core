@@ -311,7 +311,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         """
         fields: dict[str, Any] = {}
 
-        Model = self.Model if self.pk else self.CreateModel  # noqa: N806
+        Model = self.Model if self.is_stored else self.CreateModel  # noqa: N806
 
         for key, field in Model.model_fields.items():
             if (skip_read_only and get_metadata(field, 'exclude_to_orm')) or key == 'extras':
@@ -346,7 +346,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             repository_path=repository_path,
             serialize_repository_content=serialize_repository_content,
         )
-        Model = self.Model if self.pk else self.CreateModel  # noqa: N806
+        Model = self.Model if self.is_stored else self.CreateModel  # noqa: N806
         return Model(**fields)
 
     @classmethod

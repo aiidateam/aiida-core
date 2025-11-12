@@ -244,7 +244,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             default_factory=dict,
             description='Virtual hierarchy of the file repository.',
             is_attribute=False,
-            orm_to_model=lambda node: cast(Node, node).base.repository.metadata,
+            orm_to_model=lambda node, _: cast(Node, node).base.repository.metadata,
             exclude_to_orm=True,
         )
         ctime: datetime.datetime = MetadataField(
@@ -271,7 +271,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             default_factory=dict,
             description='The node attributes',
             is_attribute=False,
-            orm_to_model=lambda node: cast(Node, node).base.attributes.all,
+            orm_to_model=lambda node, _: cast(Node, node).base.attributes.all,
             is_subscriptable=True,
             exclude_to_orm=True,
         )
@@ -279,21 +279,21 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             default_factory=dict,
             description='The node extras',
             is_attribute=False,
-            orm_to_model=lambda node: cast(Node, node).base.extras.all,
+            orm_to_model=lambda node, _: cast(Node, node).base.extras.all,
             is_subscriptable=True,
         )
         computer: Optional[str] = MetadataField(
             None,
             description='The label of the computer',
             is_attribute=False,
-            orm_to_model=lambda node: cast(Node, node).get_computer_label(),
+            orm_to_model=lambda node, _: cast(Node, node).get_computer_label(),
             model_to_orm=lambda model: cast(Node.Model, model).load_computer(),
             exclude_to_orm=True,
         )
         user: int = MetadataField(
             description='The PK of the user who owns the node',
             is_attribute=False,
-            orm_to_model=lambda node: cast(Node, node).user.pk,
+            orm_to_model=lambda node, _: cast(Node, node).user.pk,
             orm_class=User,
             exclude_to_orm=True,
         )

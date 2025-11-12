@@ -14,7 +14,7 @@ from typing import List, Optional
 from aiida.common.pydantic import MetadataField
 from aiida.common.utils import Capturing
 
-from .singlefile import SinglefileData
+from . import singlefile
 
 __all__ = ('CifData', 'cif_from_ase', 'has_pycifrw', 'pycifrw_from_cif')
 
@@ -232,7 +232,25 @@ def parse_formula(formula):
 
 
 # Note:  Method 'query' is abstract in class 'Node' but is not overridden
-class CifData(SinglefileData):
+class CifDataModel(singlefile.SinglefileDataModel):
+    formulae: Optional[List[str]] = MetadataField(
+        None,
+        description='List of formulae contained in the CIF file.',
+        exclude_to_orm=True,
+    )
+    spacegroup_numbers: Optional[List[str]] = MetadataField(
+        None,
+        description='List of space group numbers of the structure.',
+        exclude_to_orm=True,
+    )
+    md5: Optional[str] = MetadataField(
+        None,
+        description='MD5 checksum of the file contents.',
+        exclude_to_orm=True,
+    )
+
+
+class CifData(singlefile.SinglefileData):
     """Wrapper for Crystallographic Interchange File (CIF)
 
     .. note:: the file (physical) is held as the authoritative source of
@@ -240,6 +258,8 @@ class CifData(SinglefileData):
         when setting ``ase`` or ``values``, a physical CIF file is generated
         first, the values are updated from the physical CIF file.
     """
+
+    Model = CifDataModel
 
     _SET_INCOMPATIBILITIES = [('ase', 'file'), ('ase', 'values'), ('file', 'values')]
     _SCAN_TYPES = ('standard', 'flex')
@@ -249,23 +269,6 @@ class CifData(SinglefileData):
 
     _values = None
     _ase = None
-
-    class Model(SinglefileData.Model):
-        formulae: Optional[List[str]] = MetadataField(
-            None,
-            description='List of formulae contained in the CIF file.',
-            exclude_to_orm=True,
-        )
-        spacegroup_numbers: Optional[List[str]] = MetadataField(
-            None,
-            description='List of space group numbers of the structure.',
-            exclude_to_orm=True,
-        )
-        md5: Optional[str] = MetadataField(
-            None,
-            description='MD5 checksum of the file contents.',
-            exclude_to_orm=True,
-        )
 
     def __init__(self, ase=None, file=None, filename=None, values=None, scan_type=None, parse_policy=None, **kwargs):
         """Construct a new instance and set the contents to that of the file.
@@ -378,7 +381,7 @@ class CifData(SinglefileData):
                 return (cifs[0], False)
 
             raise ValueError(
-                'More than one copy of a CIF file ' 'with the same MD5 has been found in ' 'the DB. pks={}'.format(
+                'More than one copy of a CIF file with the same MD5 has been found in the DB. pks={}'.format(
                     ','.join([str(i.pk) for i in cifs])
                 )
             )

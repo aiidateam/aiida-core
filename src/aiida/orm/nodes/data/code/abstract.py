@@ -23,7 +23,7 @@ from aiida.common.pydantic import MetadataField
 from aiida.orm import Computer
 from aiida.plugins import CalculationFactory
 
-from ..data import Data
+from ..data import Data, DataModel
 
 if t.TYPE_CHECKING:
     from aiida.engine import ProcessBuilder
@@ -31,8 +31,70 @@ if t.TYPE_CHECKING:
 __all__ = ('AbstractCode',)
 
 
+class AbstractCodeModel(DataModel, defer_build=True):
+    """Model describing required information to create an instance."""
+
+    label: str = MetadataField(
+        ...,
+        title='Label',
+        description='A unique label to identify the code by.',
+        short_name='-L',
+    )
+    description: str = MetadataField(
+        '',
+        title='Description',
+        description='Human-readable description, ideally including version and compilation environment.',
+        short_name='-D',
+    )
+    default_calc_job_plugin: t.Optional[str] = MetadataField(
+        None,
+        title='Default `CalcJob` plugin',
+        description='Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`).',
+        short_name='-P',
+    )
+    use_double_quotes: bool = MetadataField(
+        False,
+        title='Escape using double quotes',
+        description='Whether the executable and arguments of the code in the submission script should be escaped '
+        'with single or double quotes.',
+    )
+    with_mpi: t.Optional[bool] = MetadataField(
+        None,
+        title='Run with MPI',
+        description='Whether the executable should be run as an MPI program. This option can be left unspecified '
+        'in which case `None` will be set and it is left up to the calculation job plugin or inputs '
+        'whether to run with MPI.',
+    )
+    prepend_text: str = MetadataField(
+        '',
+        title='Prepend script',
+        description='Bash commands that should be prepended to the run line in all submit scripts for this code.',
+        option_cls=functools.partial(
+            TemplateInteractiveOption,
+            extension='.bash',
+            header='PREPEND_TEXT: if there is any bash commands that should be prepended to the executable call '
+            'in all submit scripts for this code, type that between the equal signs below and save the file.',
+            footer='All lines that start with `#=`: will be ignored.',
+        ),
+    )
+    append_text: str = MetadataField(
+        '',
+        title='Append script',
+        description='Bash commands that should be appended to the run line in all submit scripts for this code.',
+        option_cls=functools.partial(
+            TemplateInteractiveOption,
+            extension='.bash',
+            header='APPEND_TEXT: if there is any bash commands that should be appended to the executable call '
+            'in all submit scripts for this code, type that between the equal signs below and save the file.',
+            footer='All lines that start with `#=`: will be ignored.',
+        ),
+    )
+
+
 class AbstractCode(Data, metaclass=abc.ABCMeta):
     """Abstract data plugin representing an executable code."""
+
+    Model = AbstractCodeModel
 
     # Should become ``default_calc_job_plugin`` once ``Code`` is dropped in ``aiida-core==3.0``
     _KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN: str = 'input_plugin'
@@ -42,65 +104,6 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     _KEY_ATTRIBUTE_WITH_MPI: str = 'with_mpi'
     _KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS: str = 'wrap_cmdline_params'
     _KEY_EXTRA_IS_HIDDEN: str = 'hidden'  # Should become ``is_hidden`` once ``Code`` is dropped
-
-    class Model(Data.Model, defer_build=True):
-        """Model describing required information to create an instance."""
-
-        label: str = MetadataField(
-            ...,
-            title='Label',
-            description='A unique label to identify the code by.',
-            short_name='-L',
-        )
-        description: str = MetadataField(
-            '',
-            title='Description',
-            description='Human-readable description, ideally including version and compilation environment.',
-            short_name='-D',
-        )
-        default_calc_job_plugin: t.Optional[str] = MetadataField(
-            None,
-            title='Default `CalcJob` plugin',
-            description='Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`).',
-            short_name='-P',
-        )
-        use_double_quotes: bool = MetadataField(
-            False,
-            title='Escape using double quotes',
-            description='Whether the executable and arguments of the code in the submission script should be escaped '
-            'with single or double quotes.',
-        )
-        with_mpi: t.Optional[bool] = MetadataField(
-            None,
-            title='Run with MPI',
-            description='Whether the executable should be run as an MPI program. This option can be left unspecified '
-            'in which case `None` will be set and it is left up to the calculation job plugin or inputs '
-            'whether to run with MPI.',
-        )
-        prepend_text: str = MetadataField(
-            '',
-            title='Prepend script',
-            description='Bash commands that should be prepended to the run line in all submit scripts for this code.',
-            option_cls=functools.partial(
-                TemplateInteractiveOption,
-                extension='.bash',
-                header='PREPEND_TEXT: if there is any bash commands that should be prepended to the executable call '
-                'in all submit scripts for this code, type that between the equal signs below and save the file.',
-                footer='All lines that start with `#=`: will be ignored.',
-            ),
-        )
-        append_text: str = MetadataField(
-            '',
-            title='Append script',
-            description='Bash commands that should be appended to the run line in all submit scripts for this code.',
-            option_cls=functools.partial(
-                TemplateInteractiveOption,
-                extension='.bash',
-                header='APPEND_TEXT: if there is any bash commands that should be appended to the executable call '
-                'in all submit scripts for this code, type that between the equal signs below and save the file.',
-                footer='All lines that start with `#=`: will be ignored.',
-            ),
-        )
 
     def __init__(
         self,

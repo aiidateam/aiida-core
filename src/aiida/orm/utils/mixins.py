@@ -178,13 +178,16 @@ class FunctionCalculationMixin:
         return '\n'.join(content_list[start_line - 1 : end_line])
 
 
+class SealableModel(pydantic.BaseModel, defer_build=True):
+    sealed: bool = MetadataField(description='Whether the node is sealed')
+
+
 class Sealable:
     """Mixin to mark a Node as `sealable`."""
 
-    SEALED_KEY = 'sealed'
+    Model = SealableModel
 
-    class Model(pydantic.BaseModel, defer_build=True):
-        sealed: bool = MetadataField(description='Whether the node is sealed')
+    SEALED_KEY = 'sealed'
 
     @classproperty
     def _updatable_attributes(cls) -> tuple[str, ...]:  # noqa: N805

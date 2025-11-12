@@ -12,22 +12,25 @@ import numbers
 
 from aiida.common.pydantic import MetadataField
 
+from . import numeric
 from .base import to_aiida_type
-from .numeric import NumericType
 
 __all__ = ('Float',)
 
 
-class Float(NumericType):
+class FloatModel(numeric.NumericTypeModel):
+    value: float = MetadataField(
+        title='Float value',
+        description='The value of the float',
+    )
+
+
+class Float(numeric.NumericType):
     """`Data` sub class to represent a float value."""
 
-    _type = float
+    Model = FloatModel
 
-    class Model(NumericType.Model):
-        value: float = MetadataField(
-            title='Float value',
-            description='The value of the float',
-        )
+    _type = float
 
 
 @to_aiida_type.register(numbers.Real)

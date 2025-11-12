@@ -14,22 +14,25 @@ from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
 from aiida.common.pydantic import MetadataField
 
-from .base import RemoteStashData
+from . import base
 
 __all__ = ('RemoteStashFolderData',)
 
 
-class RemoteStashFolderData(RemoteStashData):
+class RemoteStashFolderDataModel(base.RemoteStashDataModel):
+    target_basepath: str = MetadataField(description='The the target basepath')
+    source_list: List[str] = MetadataField(description='The list of source files that were stashed')
+
+
+class RemoteStashFolderData(base.RemoteStashData):
     """Data plugin that models a folder with files of a completed calculation job that has been stashed through a copy.
 
     This data plugin can and should be used to stash files if and only if the stash mode is `StashMode.COPY`.
     """
 
-    _storable = True
+    Model = RemoteStashFolderDataModel
 
-    class Model(RemoteStashData.Model):
-        target_basepath: str = MetadataField(description='The the target basepath')
-        source_list: List[str] = MetadataField(description='The list of source files that were stashed')
+    _storable = True
 
     def __init__(self, stash_mode: StashMode, target_basepath: str, source_list: List, **kwargs):
         """Construct a new instance

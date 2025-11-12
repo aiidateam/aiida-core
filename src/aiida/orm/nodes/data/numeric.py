@@ -8,7 +8,8 @@
 ###########################################################################
 """Module for defintion of base `Data` sub class for numeric based data types."""
 
-from .base import BaseType, to_aiida_type
+from . import base
+from .base import to_aiida_type
 
 __all__ = ('NumericType',)
 
@@ -39,8 +40,14 @@ def _right_operator(func):
     return inner
 
 
-class NumericType(BaseType):
+class NumericTypeModel(base.BaseTypeModel):
+    """Placeholder model"""
+
+
+class NumericType(base.BaseType):
     """Sub class of Data to store numbers, overloading common operators (``+``, ``*``, ...)."""
+
+    Model = NumericTypeModel
 
     @_left_operator
     def __add__(self, other):

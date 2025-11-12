@@ -58,7 +58,7 @@ def load_group_class(type_string: str) -> Type[Group]:
     return group_class
 
 
-class GroupCollection(entities.Collection['Group']):
+class GroupCollection(entities.EntityCollection['Group']):
     """Collection of Groups"""
 
     @staticmethod
@@ -108,50 +108,53 @@ class GroupBase:
         return extras.EntityExtras(self._group)
 
 
-class Group(entities.Entity['BackendGroup', GroupCollection]):
+class GroupModel(entities.EntityModel):
+    uuid: UUID = MetadataField(
+        description='The UUID of the group',
+        is_attribute=False,
+        exclude_to_orm=True,
+    )
+    type_string: str = MetadataField(
+        description='The type of the group',
+        is_attribute=False,
+        exclude_to_orm=True,
+    )
+    user: int = MetadataField(
+        description='The PK of the group owner',
+        is_attribute=False,
+        orm_class='core.user',
+        orm_to_model=lambda group, _: cast(Group, group).user.pk,
+        exclude_to_orm=True,
+    )
+    time: datetime.datetime = MetadataField(
+        description='The creation time of the node, defaults to now (timezone-aware)',
+        is_attribute=False,
+        exclude_to_orm=True,
+    )
+    label: str = MetadataField(
+        description='The group label',
+        is_attribute=False,
+    )
+    description: str = MetadataField(
+        '',
+        description='The group description',
+        is_attribute=False,
+    )
+    extras: Dict[str, Any] = MetadataField(
+        default_factory=dict,
+        description='The group extras',
+        is_attribute=False,
+        is_subscriptable=True,
+        orm_to_model=lambda group, _: cast(Group, group).base.extras.all,
+    )
+
+
+class Group(entities.Entity['BackendGroup', GroupCollection, GroupModel]):
     """An AiiDA ORM implementation of group of nodes."""
 
-    __type_string: ClassVar[Optional[str]]
+    Model = GroupModel
 
-    class Model(entities.Entity.Model):
-        uuid: UUID = MetadataField(
-            description='The UUID of the group',
-            is_attribute=False,
-            exclude_to_orm=True,
-        )
-        type_string: str = MetadataField(
-            description='The type of the group',
-            is_attribute=False,
-            exclude_to_orm=True,
-        )
-        user: int = MetadataField(
-            description='The PK of the group owner',
-            is_attribute=False,
-            orm_class='core.user',
-            orm_to_model=lambda group, _: cast(Group, group).user.pk,
-            exclude_to_orm=True,
-        )
-        time: datetime.datetime = MetadataField(
-            description='The creation time of the node, defaults to now (timezone-aware)',
-            is_attribute=False,
-            exclude_to_orm=True,
-        )
-        label: str = MetadataField(
-            description='The group label',
-            is_attribute=False,
-        )
-        description: str = MetadataField(
-            '',
-            description='The group description',
-            is_attribute=False,
-        )
-        extras: Dict[str, Any] = MetadataField(
-            default_factory=dict,
-            description='The group extras',
-            is_attribute=False,
-            is_subscriptable=True,
-            orm_to_model=lambda group, _: cast(Group, group).base.extras.all,
-        )
+    __type_string: ClassVar[Optional[str]]
 
     _CLS_COLLECTION = GroupCollection
 

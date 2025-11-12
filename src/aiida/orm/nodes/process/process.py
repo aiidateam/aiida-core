@@ -20,10 +20,10 @@ from aiida.common import exceptions
 from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
 from aiida.common.pydantic import MetadataField
-from aiida.orm.utils.mixins import Sealable
+from aiida.orm.utils.mixins import Sealable, SealableModel
 
+from .. import node
 from ..caching import NodeCaching
-from ..node import Node, NodeLinks
 
 if TYPE_CHECKING:
     from aiida.engine.processes import ExitCode, Process
@@ -101,10 +101,10 @@ class ProcessNodeCaching(NodeCaching):
         return res
 
 
-class ProcessNodeLinks(NodeLinks):
+class ProcessNodeLinks(node.NodeLinks):
     """Interface for links of a node instance."""
 
-    def validate_incoming(self, source: Node, link_type: LinkType, link_label: str) -> None:
+    def validate_incoming(self, source: node.Node, link_type: LinkType, link_label: str) -> None:
         """Validate adding a link of the given type from a given node to ourself.
 
         Adding an input link to a `ProcessNode` once it is stored is illegal because this should be taken care of
@@ -141,7 +141,38 @@ class ProcessNodeLinks(NodeLinks):
         super().validate_outgoing(target, link_type=link_type, link_label=link_label)
 
 
-class ProcessNode(Sealable, Node):
+class ProcessNodeModel(node.NodeModel, SealableModel):
+    process_label: Optional[str] = MetadataField(
+        None,
+        description='The process label',
+    )
+    process_state: Optional[str] = MetadataField(
+        None,
+        description='The process state enum',
+    )
+    process_status: Optional[str] = MetadataField(
+        None,
+        description='The process status is a generic status message',
+    )
+    exit_status: Optional[int] = MetadataField(
+        None,
+        description='The process exit status',
+    )
+    exit_message: Optional[str] = MetadataField(
+        None,
+        description='The process exit message',
+    )
+    exception: Optional[str] = MetadataField(
+        None,
+        description='The process exception message',
+    )
+    paused: Optional[bool] = MetadataField(
+        None,
+        description='Whether the process is paused',
+    )
+
+
+class ProcessNode(Sealable, node.Node):
     """Base class for all nodes representing the execution of a process
 
     This class and its subclasses serve as proxies in the database, for actual `Process` instances being run. The
@@ -150,6 +181,8 @@ class ProcessNode(Sealable, Node):
     inspect the state of the `Process` during its execution as well as a permanent record of its execution in the
     provenance graph, after the execution has terminated.
     """
+
+    Model = ProcessNodeModel
 
     _CLS_NODE_LINKS = ProcessNodeLinks
     _CLS_NODE_CACHING = ProcessNodeCaching
@@ -188,36 +221,6 @@ class ProcessNode(Sealable, Node):
             cls.PROCESS_LABEL_KEY,
             cls.PROCESS_STATE_KEY,
             cls.PROCESS_STATUS_KEY,
-        )
-
-    class Model(Node.Model, Sealable.Model):
-        process_label: Optional[str] = MetadataField(
-            None,
-            description='The process label',
-        )
-        process_state: Optional[str] = MetadataField(
-            None,
-            description='The process state enum',
-        )
-        process_status: Optional[str] = MetadataField(
-            None,
-            description='The process status is a generic status message',
-        )
-        exit_status: Optional[int] = MetadataField(
-            None,
-            description='The process exit status',
-        )
-        exit_message: Optional[str] = MetadataField(
-            None,
-            description='The process exit message',
-        )
-        exception: Optional[str] = MetadataField(
-            None,
-            description='The process exception message',
-        )
-        paused: Optional[bool] = MetadataField(
-            None,
-            description='Whether the process is paused',
         )
 
     def set_metadata_inputs(self, value: Dict[str, Any]) -> None:

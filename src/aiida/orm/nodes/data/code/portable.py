@@ -30,7 +30,7 @@ from aiida.common.pydantic import MetadataField
 from aiida.common.typing import FilePath
 from aiida.orm import Computer
 
-from .abstract import AbstractCode
+from .abstract import AbstractCodeModel
 from .legacy import Code
 
 __all__ = ('PortableCode',)
@@ -48,36 +48,39 @@ def _export_filepath_files_from_repo(portable_code: PortableCode, repository_pat
     return str(repository_path)
 
 
+class PortableCodeModel(AbstractCodeModel):
+    """Model describing required information to create an instance."""
+
+    filepath_executable: str = MetadataField(
+        ...,
+        title='Filepath executable',
+        description='Relative filepath of executable with directory of code files.',
+        short_name='-X',
+        priority=1,
+        orm_to_model=lambda node, _: str(cast(PortableCode, node).filepath_executable),
+    )
+    filepath_files: str = MetadataField(
+        ...,
+        title='Code directory',
+        description='Filepath to directory containing code files.',
+        short_name='-F',
+        is_attribute=False,
+        priority=2,
+        orm_to_model=lambda node, kwargs: _export_filepath_files_from_repo(
+            cast(PortableCode, node),
+            kwargs.get('repository_path', pathlib.Path.cwd() / f'{cast(PortableCode, node).label}'),
+        ),
+    )
+
+
 class PortableCode(Code):
     """Data plugin representing an executable code stored in AiiDA's storage."""
+
+    Model = PortableCodeModel
 
     _EMIT_CODE_DEPRECATION_WARNING: bool = False
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
     _SKIP_MODEL_INHERITANCE_CHECK: bool = True
-
-    class Model(AbstractCode.Model):
-        """Model describing required information to create an instance."""
-
-        filepath_executable: str = MetadataField(
-            ...,
-            title='Filepath executable',
-            description='Relative filepath of executable with directory of code files.',
-            short_name='-X',
-            priority=1,
-            orm_to_model=lambda node, _: str(cast(PortableCode, node).filepath_executable),
-        )
-        filepath_files: str = MetadataField(
-            ...,
-            title='Code directory',
-            description='Filepath to directory containing code files.',
-            short_name='-F',
-            is_attribute=False,
-            priority=2,
-            orm_to_model=lambda node, kwargs: _export_filepath_files_from_repo(
-                cast(PortableCode, node),
-                kwargs.get('repository_path', pathlib.Path.cwd() / f'{cast(PortableCode, node).label}'),
-            ),
-        )
 
     def __init__(
         self,

@@ -47,8 +47,7 @@ from aiida.orm.utils.node import (
 )
 
 from ..computers import Computer
-from ..entities import Collection as EntityCollection
-from ..entities import Entity, from_backend_entity
+from ..entities import Entity, EntityCollection, EntityModel, from_backend_entity
 from ..extras import EntityExtras
 from ..querybuilder import QueryBuilder
 from ..users import User
@@ -66,7 +65,7 @@ if TYPE_CHECKING:
     from ..implementation.nodes import BackendNode
     from .repository import NodeRepository
 
-__all__ = ('Node',)
+__all__ = ('Node', 'NodeType')
 
 NodeType = TypeVar('NodeType', bound='Node')
 
@@ -170,7 +169,109 @@ class NodeBase:
         return self._node._CLS_NODE_LINKS(self._node)
 
 
-class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNodeMeta):
+class NodeModel(EntityModel):
+    uuid: UUID = MetadataField(
+        description='The UUID of the node',
+        is_attribute=False,
+        exclude_to_orm=True,
+    )
+    node_type: str = MetadataField(
+        description='The type of the node',
+        is_attribute=False,
+        exclude_to_orm=True,
+    )
+    process_type: Optional[str] = MetadataField(
+        None,
+        description='The process type of the node',
+        is_attribute=False,
+        exclude_to_orm=True,
+    )
+    repository_metadata: Dict[str, Any] = MetadataField(
+        default_factory=dict,
+        description='Virtual hierarchy of the file repository.',
+        is_attribute=False,
+        orm_to_model=lambda node, _: cast(Node, node).base.repository.metadata,
+        exclude_to_orm=True,
+    )
+    ctime: datetime.datetime = MetadataField(
+        description='The creation time of the node',
+        is_attribute=False,
+        exclude_to_orm=True,
+    )
+    mtime: datetime.datetime = MetadataField(
+        description='The modification time of the node',
+        is_attribute=False,
+        exclude_to_orm=True,
+    )
+    label: str = MetadataField(
+        '',
+        description='The node label',
+        is_attribute=False,
+    )
+    description: str = MetadataField(
+        '',
+        description='The node description',
+        is_attribute=False,
+    )
+    attributes: Dict[str, Any] = MetadataField(
+        default_factory=dict,
+        description='The node attributes',
+        is_attribute=False,
+        orm_to_model=lambda node, _: cast(Node, node).base.attributes.all,
+        is_subscriptable=True,
+        exclude_to_orm=True,
+    )
+    extras: Dict[str, Any] = MetadataField(
+        default_factory=dict,
+        description='The node extras',
+        is_attribute=False,
+        orm_to_model=lambda node, _: cast(Node, node).base.extras.all,
+        is_subscriptable=True,
+    )
+    computer: Optional[str] = MetadataField(
+        None,
+        description='The label of the computer',
+        is_attribute=False,
+        orm_to_model=lambda node, _: cast(Node, node).get_computer_label(),
+        model_to_orm=lambda model: cast(NodeModel, model).load_computer(),
+        exclude_to_orm=True,
+    )
+    user: int = MetadataField(
+        description='The PK of the user who owns the node',
+        is_attribute=False,
+        orm_to_model=lambda node, _: cast(Node, node).user.pk,
+        orm_class=User,
+        exclude_to_orm=True,
+    )
+    repository_content: dict[str, bytes] = MetadataField(
+        default_factory=dict,
+        description='Dictionary of file repository content. Keys are relative filepaths and values are binary file '
+        'contents encoded as base64.',
+        is_attribute=False,
+        orm_to_model=lambda node, kwargs: {
+            key: base64.encodebytes(content)
+            for key, content in cast(Node, node).base.repository.serialize_content().items()
+        }
+        if kwargs.get('serialize_repository_content')
+        else {},
+        exclude_to_orm=True,
+    )
+
+    def load_computer(self) -> Computer:
+        """Load the computer instance.
+
+        :return: The computer instance.
+        :raises ValueError: If the computer does not exist.
+        """
+        from aiida.orm import load_computer
+
+        try:
+            return load_computer(self.computer)
+        except exceptions.NotExistent as exception:
+            raise ValueError(exception) from exception
+
+
+class Node(Entity['BackendNode', NodeCollection['Node'], NodeModel], metaclass=AbstractNodeMeta):
     """Base class for all nodes in AiiDA.
 
     Stores attributes starting with an underscore.
@@ -184,6 +285,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     In the plugin, also set the _plugin_type_string, to be set in the DB in
     the 'type' field.
     """
+
+    Model = NodeModel
 
     _CLS_COLLECTION = NodeCollection['Node']
     _CLS_NODE_LINKS = NodeLinks
@@ -223,107 +326,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     _storable = False
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
-    class Model(Entity.Model):
-        uuid: UUID = MetadataField(
-            description='The UUID of the node',
-            is_attribute=False,
-            exclude_to_orm=True,
-        )
-        node_type: str = MetadataField(
-            description='The type of the node',
-            is_attribute=False,
-            exclude_to_orm=True,
-        )
-        process_type: Optional[str] = MetadataField(
-            None,
-            description='The process type of the node',
-            is_attribute=False,
-            exclude_to_orm=True,
-        )
-        repository_metadata: Dict[str, Any] = MetadataField(
-            default_factory=dict,
-            description='Virtual hierarchy of the file repository.',
-            is_attribute=False,
-            orm_to_model=lambda node, _: cast(Node, node).base.repository.metadata,
-            exclude_to_orm=True,
-        )
-        ctime: datetime.datetime = MetadataField(
-            description='The creation time of the node',
-            is_attribute=False,
-            exclude_to_orm=True,
-        )
-        mtime: datetime.datetime = MetadataField(
-            description='The modification time of the node',
-            is_attribute=False,
-            exclude_to_orm=True,
-        )
-        label: str = MetadataField(
-            '',
-            description='The node label',
-            is_attribute=False,
-        )
-        description: str = MetadataField(
-            '',
-            description='The node description',
-            is_attribute=False,
-        )
-        attributes: Dict[str, Any] = MetadataField(
-            default_factory=dict,
-            description='The node attributes',
-            is_attribute=False,
-            orm_to_model=lambda node, _: cast(Node, node).base.attributes.all,
-            is_subscriptable=True,
-            exclude_to_orm=True,
-        )
-        extras: Dict[str, Any] = MetadataField(
-            default_factory=dict,
-            description='The node extras',
-            is_attribute=False,
-            orm_to_model=lambda node, _: cast(Node, node).base.extras.all,
-            is_subscriptable=True,
-        )
-        computer: Optional[str] = MetadataField(
-            None,
-            description='The label of the computer',
-            is_attribute=False,
-            orm_to_model=lambda node, _: cast(Node, node).get_computer_label(),
-            model_to_orm=lambda model: cast(Node.Model, model).load_computer(),
-            exclude_to_orm=True,
-        )
-        user: int = MetadataField(
-            description='The PK of the user who owns the node',
-            is_attribute=False,
-            orm_to_model=lambda node, _: cast(Node, node).user.pk,
-            orm_class=User,
-            exclude_to_orm=True,
-        )
-        repository_content: dict[str, bytes] = MetadataField(
-            default_factory=dict,
-            description='Dictionary of file repository content. Keys are relative filepaths and values are binary file '
-            'contents encoded as base64.',
-            is_attribute=False,
-            orm_to_model=lambda node, kwargs: {
-                key: base64.encodebytes(content)
-                for key, content in cast(Node, node).base.repository.serialize_content().items()
-            }
-            if kwargs.get('serialize_repository_content')
-            else {},
-            exclude_to_orm=True,
-        )
-
-        def load_computer(self) -> Computer:
-            """Load the computer instance.
-
-            :return: The computer instance.
-            :raises ValueError: If the computer does not exist.
-            """
-            from aiida.orm import load_computer
-
-            try:
-                return load_computer(self.computer)
-            except exceptions.NotExistent as exception:
-                raise ValueError(exception) from exception
-
     def __init__(
         self,
         backend: Optional['StorageBackend'] = None,
@@ -334,7 +336,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     ) -> None:
         # We verify here that all attributes are handled in a constructor prior to the root
         # Node class (here), gracefully rejecting them otherwise.
-        node_keys = set(Node.Model.model_fields.keys())
+        node_keys = set(NodeModel.model_fields.keys())
         unhandled_keys = {key for key in kwargs if key not in node_keys}
         if unhandled_keys:
             raise UnhandledNodeAttributesError(unhandled_keys, self.__class__.__name__)
@@ -359,7 +361,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             self.base.extras.set_many(extras)
 
     @classmethod
-    def from_model(cls, model: Model) -> Self:  # type: ignore[override]
+    def from_model(cls, model: NodeModel) -> Self:  # type: ignore[override]
         """Return an entity instance from an instance of its model."""
         fields = cls.model_to_orm_field_values(model)
 

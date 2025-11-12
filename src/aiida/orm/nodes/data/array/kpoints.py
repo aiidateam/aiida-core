@@ -19,7 +19,7 @@ import numpy
 
 from aiida.common.pydantic import MetadataField
 
-from .array import ArrayData
+from . import array
 
 __all__ = ('KpointsData',)
 
@@ -27,7 +27,50 @@ _DEFAULT_EPSILON_LENGTH = 1e-5
 _DEFAULT_EPSILON_ANGLE = 1e-5
 
 
-class KpointsData(ArrayData):
+class KpointsDataModel(array.ArrayDataModel):
+    labels: t.Optional[t.List[str]] = MetadataField(
+        None,
+        description='Labels associated with the list of kpoints',
+        orm_to_model=lambda node, _: t.cast(KpointsData, node).base.attributes.get('labels', None),
+    )
+    label_numbers: t.Optional[t.List[int]] = MetadataField(
+        None,
+        description='Index of the labels in the list of kpoints',
+        orm_to_model=lambda node, _: t.cast(KpointsData, node).base.attributes.get('label_numbers', None),
+    )
+    cell: t.Optional[t.List[t.List[float]]] = MetadataField(
+        None,
+        description='Unit cell of the crystal, in Angstroms',
+        orm_to_model=lambda node, _: t.cast(KpointsData, node).base.attributes.get('cell', None),
+    )
+    pbc1: t.Optional[bool] = MetadataField(
+        None,
+        description='Periodicity in the first lattice vector direction',
+        orm_to_model=lambda node, _: t.cast(KpointsData, node).pbc[0],
+    )
+    pbc2: t.Optional[bool] = MetadataField(
+        None,
+        description='Periodicity in the second lattice vector direction',
+        orm_to_model=lambda node, _: t.cast(KpointsData, node).pbc[1],
+    )
+    pbc3: t.Optional[bool] = MetadataField(
+        None,
+        description='Periodicity in the third lattice vector direction',
+        orm_to_model=lambda node, _: t.cast(KpointsData, node).pbc[2],
+    )
+    mesh: t.Optional[t.List[int]] = MetadataField(
+        None,
+        description='Mesh of kpoints',
+        orm_to_model=lambda node, _: t.cast(KpointsData, node).base.attributes.get('mesh', None),
+    )
+    offset: t.Optional[t.List[float]] = MetadataField(
+        None,
+        description='Offset of kpoints',
+        orm_to_model=lambda node, _: t.cast(KpointsData, node).base.attributes.get('offset', None),
+    )
+
+
+class KpointsData(array.ArrayData):
     """Class to handle array of kpoints in the Brillouin zone. Provide methods to
     generate either user-defined k-points or path of k-points along symmetry
     lines.
@@ -40,47 +83,7 @@ class KpointsData(ArrayData):
     set_cell_from_structure methods.
     """
 
-    class Model(ArrayData.Model):
-        labels: t.Optional[t.List[str]] = MetadataField(
-            None,
-            description='Labels associated with the list of kpoints',
-            orm_to_model=lambda node, _: t.cast(KpointsData, node).base.attributes.get('labels', None),
-        )
-        label_numbers: t.Optional[t.List[int]] = MetadataField(
-            None,
-            description='Index of the labels in the list of kpoints',
-            orm_to_model=lambda node, _: t.cast(KpointsData, node).base.attributes.get('label_numbers', None),
-        )
-        cell: t.Optional[t.List[t.List[float]]] = MetadataField(
-            None,
-            description='Unit cell of the crystal, in Angstroms',
-            orm_to_model=lambda node, _: t.cast(KpointsData, node).base.attributes.get('cell', None),
-        )
-        pbc1: t.Optional[bool] = MetadataField(
-            None,
-            description='Periodicity in the first lattice vector direction',
-            orm_to_model=lambda node, _: t.cast(KpointsData, node).pbc[0],
-        )
-        pbc2: t.Optional[bool] = MetadataField(
-            None,
-            description='Periodicity in the second lattice vector direction',
-            orm_to_model=lambda node, _: t.cast(KpointsData, node).pbc[1],
-        )
-        pbc3: t.Optional[bool] = MetadataField(
-            None,
-            description='Periodicity in the third lattice vector direction',
-            orm_to_model=lambda node, _: t.cast(KpointsData, node).pbc[2],
-        )
-        mesh: t.Optional[t.List[int]] = MetadataField(
-            None,
-            description='Mesh of kpoints',
-            orm_to_model=lambda node, _: t.cast(KpointsData, node).base.attributes.get('mesh', None),
-        )
-        offset: t.Optional[t.List[float]] = MetadataField(
-            None,
-            description='Offset of kpoints',
-            orm_to_model=lambda node, _: t.cast(KpointsData, node).base.attributes.get('offset', None),
-        )
+    Model = KpointsDataModel
 
     def __init__(
         self,
@@ -459,7 +462,7 @@ class KpointsData(ArrayData):
 
         if kpoints.shape[1] < self._dimension:
             raise ValueError(
-                'In a system which has {0} dimensions, kpoint needmore than {0} coordinates (found instead {1})'.format(
+                'In a system with {0} dimensions, kpoints need more than {0} coordinates (found instead {1})'.format(
                     self._dimension, kpoints.shape[1]
                 )
             )

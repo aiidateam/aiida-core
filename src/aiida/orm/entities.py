@@ -19,12 +19,12 @@ from typing import TYPE_CHECKING, Any, Generic, List, NoReturn, Optional, Type, 
 from plumpy.base.utils import call_with_super_check, super_check
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
+from typing_extensions import Self
 
 from aiida.common import exceptions, log
 from aiida.common.exceptions import EntryPointError, InvalidOperation, NotExistent
 from aiida.common.lang import classproperty, type_check
 from aiida.common.pydantic import MetadataField, get_metadata
-from aiida.common.typing import Self
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 

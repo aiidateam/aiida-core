@@ -23,11 +23,8 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 from typing import Mapping as MappingType
 
-try:
-    # typing.assert_never available since 3.11
-    from typing import assert_never
-except ImportError:
-    from typing_extensions import assert_never
+# typing.assert_never available since 3.11
+from typing_extensions import assert_never
 
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo, FileCopyOperation

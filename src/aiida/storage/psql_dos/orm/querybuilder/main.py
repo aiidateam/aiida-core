@@ -762,22 +762,47 @@ class SqlaQueryBuilder(BackendQueryBuilder):
     def _create_smarter_in_clause(self, column, values_list):
         """Return an IN condition using database-specific functions to avoid parameter limits.
 
-        This method uses different approaches depending on the database backend:
-        - PostgreSQL: Uses unnest() with an array (1 parameter)
-        - SQLite: Uses json_each() with a JSON array (1 parameter)
+        This method uses different approaches depending on the database backend and list size:
+        - For small lists (<1000 items): Uses regular IN clause (fastest)
+        - For medium lists (1000-100k items): Uses unnest() (PostgreSQL) or json_each() (SQLite)
+        - For large lists (>100k items): Automatically batches into multiple OR'd conditions
 
-        For example, instead of:
-            column.in_([val1, val2, ..., valN])  # Uses N parameters
-        We generate:
-            PostgreSQL: column.in_(SELECT unnest(:array_param))  # Uses 1 parameter
-            SQLite: column.in_(SELECT CAST(value AS type) FROM json_each(:json_param))  # Uses 1 parameter
+        The batching threshold balances query performance with memory usage and database load.
+        Even though modern databases can handle larger IN clauses, batching at 100k provides
+        a safety valve for extreme cases while maintaining good performance for typical queries.
+
+        For example, with 250k items:
+            WHERE (
+                column IN (SELECT unnest(:array_1))  -- First 100k
+                OR column IN (SELECT unnest(:array_2))  -- Second 100k
+                OR column IN (SELECT unnest(:array_3))  -- Remaining 50k
+            )
         """
         import json
 
         from sqlalchemy import cast as sql_cast
         from sqlalchemy import func, type_coerce
 
-        # Detect the database dialect from the backend
+        # Thresholds for optimization strategy
+        small_list_threshold = 999
+        batch_threshold = 100_000
+
+        list_size = len(values_list)
+
+        # For small lists, regular IN is fastest (no subquery overhead)
+        if list_size < small_list_threshold:
+            return column.in_(values_list)
+
+        # For very large lists, batch internally to avoid memory/performance issues
+        if list_size > batch_threshold:
+            batches = []
+            for i in range(0, list_size, batch_threshold):
+                batch = values_list[i : i + batch_threshold]
+                # Recursively call with smaller batch (will use unnest/json_each)
+                batches.append(self._create_smarter_in_clause(column, batch))
+            return or_(*batches)
+
+        # Medium-sized lists: use database-specific optimized approach
         session = self.get_session()
         dialect_name = session.bind.dialect.name
 

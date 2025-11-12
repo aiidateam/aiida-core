@@ -18,7 +18,6 @@ from typing import TYPE_CHECKING, Any, Generic, List, Literal, NoReturn, Optiona
 
 from plumpy.base.utils import call_with_super_check, super_check
 from pydantic import BaseModel, ConfigDict, create_model
-from pydantic.fields import FieldInfo
 from typing_extensions import Self
 
 from aiida.common import exceptions, log
@@ -263,18 +262,12 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return cls.Model.as_create_model()
 
     @classmethod
-    def model_to_orm_fields(cls) -> dict[str, FieldInfo]:
-        return {
-            key: field for key, field in cls.Model.model_fields.items() if not get_metadata(field, 'exclude_to_orm')
-        }
-
-    @classmethod
     def model_to_orm_field_values(cls, model: Model) -> dict[str, Any]:
         from aiida.plugins.factories import BaseFactory
 
         fields = {}
 
-        for key, field in cls.model_to_orm_fields().items():
+        for key, field in cls.CreateModel.model_fields.items():
             field_value = getattr(model, key)
 
             if field_value is None:

@@ -214,4 +214,4 @@ def test_roundtrip_serialization(required_arguments, tmp_path):
 
     # Get the model instance from the entity instance
     serialized_entity = entity.serialize(repository_path=tmp_path, unstored=True, mode='python')
-    entity.from_serialized(serialized_entity, unstored=True)
+    entity.from_serialized(serialized_entity)

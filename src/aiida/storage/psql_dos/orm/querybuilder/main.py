@@ -754,7 +754,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         elif operator == 'in':
             # Instead of plain `in` use `unnest()` (PSQL) or `json_each` (SQLite) to avoid parameter limits
             # For a regular `IN` clause, each value in the clause uses one parameter.
-            # Instead using unnest() with an array uses only 1 parameter.
+            # Instead using `unnest()` or `json_each()` with an array uses only 1 parameter.
             expr = self._create_smarter_in_clause(column, value)
         else:
             raise ValueError(f'Unknown operator {operator} for filters on columns')

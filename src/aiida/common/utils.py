@@ -645,7 +645,7 @@ def batch_iter(
 # However, the QueryBuilder now uses unnest() (PostgreSQL) or json_each() (SQLite) for large IN clauses,
 # which use only 1 parameter instead of N parameters, effectively bypassing these limits.
 # Set to a high value to effectively bypass batching and test the QueryBuilder fix.
-DEFAULT_FILTER_SIZE: int = 100_000
+DEFAULT_FILTER_SIZE: int = 999
 
 # NOTE: `DEFAULT_BATCH_SIZE` controls how many database rows are fetched and processed at once during
 # streaming operations (e.g., `QueryBuilder.iterall()`, `QueryBuilder.iterdict()`). This prevents

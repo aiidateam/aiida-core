@@ -34,6 +34,7 @@ from sqlalchemy.sql.expression import case, text
 from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 
 from aiida.common.exceptions import NotExistent
+from aiida.common.utils import batch_iter
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import QUERYBUILD_LOGGER, BackendQueryBuilder, QueryDictType
 
@@ -789,8 +790,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         # For very large lists, batch internally to avoid memory/performance issues
         if len(values_list) > batch_threshold:
             batches = []
-            for i in range(0, len(values_list), batch_threshold):
-                batch = values_list[i : i + batch_threshold]
+            for _, batch in batch_iter(values_list, batch_threshold):
                 # Recursively call with smaller batch (will use unnest/json_each)
                 batches.append(self._create_smarter_in_clause(column, batch))
             return or_(*batches)

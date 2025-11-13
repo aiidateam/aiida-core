@@ -153,7 +153,7 @@ def storage_info(detailed):
     '--compress', is_flag=True, default=False, help='Use compression if possible when carrying out maintenance tasks.'
 )
 @click.option(
-    '--clean-loose-per-pack',
+    '--clean-loose-per-pack/--no-clean-loose-per-pack',
     is_flag=True,
     default=True,
     help='Delete corresponding loose files immediately after each pack creation when running a `full maintenance`.',

@@ -131,15 +131,6 @@ jobs:
       with:
         channels: conda-forge
 
-    # Use mamba because conda is running out of memory
-    # see https://github.com/conda-incubator/setup-miniconda/issues/274
-    - run: |
-        conda install -n base conda-libmamba-solver
-        conda config --set solver libmamba
-
-    # Temporary workaround: https://github.com/mamba-org/mamba/issues/488
-    - run: rm /usr/share/miniconda/pkgs/cache/*.json
-
     - name: Test installation
       id: test_installation
       continue-on-error: ${{ matrix.optional }}

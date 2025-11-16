@@ -110,9 +110,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Currently supported RMQ versions per:
+        # Oldest and newest supported RMQ versions per:
         # https://www.rabbitmq.com/docs/which-erlang#compatibility-matrix
-        rabbitmq-version: ['3.11', '3.12', '3.13', '4.0']
+        rabbitmq-version: ['3.11', '4.2']
 
     services:
       rabbitmq:

@@ -131,6 +131,7 @@ def test_await_processes(aiida_code_installed, caplog):
     assert 'out of 1 processes terminated.' in caplog.records[0].message
 
 
+@pytest.mark.requires_rmq
 class TestLaunchers:
     """Class to test process launchers."""
 
@@ -209,6 +210,7 @@ class TestLaunchers:
             launch.submit(AddWorkChain, term_a=self.term_a, term_b=self.term_b, metadata={'store_provenance': False})
 
 
+@pytest.mark.requires_rmq
 class TestLaunchersDryRun:
     """Test the launchers when performing a dry-run."""
 
@@ -231,7 +233,6 @@ class TestLaunchersDryRun:
         except Exception:
             pass
 
-    @pytest.mark.requires_rmq
     def test_launchers_dry_run(self):
         """All launchers should work with `dry_run=True`, even `submit` which forwards to `run`."""
         inputs = {
@@ -258,7 +259,6 @@ class TestLaunchersDryRun:
         node = launch.submit(ArithmeticAddCalculation, **inputs)
         assert isinstance(node, orm.CalcJobNode)
 
-    @pytest.mark.requires_rmq
     def test_launchers_dry_run_no_provenance(self):
         """Test the launchers in `dry_run` mode with `store_provenance=False`."""
         inputs = {

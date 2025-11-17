@@ -156,6 +156,7 @@ jobs:
     - name: Slack notification
       if: >-
         failure() &&
+        github.event_name != 'pull_request' &&
         env.SLACK_WEBHOOK != null
       uses: ./.github/actions/slack-notification
       env:

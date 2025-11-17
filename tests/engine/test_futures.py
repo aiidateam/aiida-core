@@ -17,12 +17,12 @@ from aiida.manage import get_manager
 from tests.utils import processes as test_processes
 
 
+@pytest.mark.requires_rmq
 class TestWf:
     """Test process futures."""
 
     TIMEOUT = 5.0  # seconds
 
-    @pytest.mark.requires_rmq
     def test_calculation_future_broadcasts(self):
         """Test calculation future broadcasts."""
         manager = get_manager()

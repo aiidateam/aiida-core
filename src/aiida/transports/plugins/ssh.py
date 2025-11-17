@@ -8,6 +8,10 @@
 ###########################################################################
 """Plugin for transport over SSH (and SFTP for file transfer)."""
 
+from __future__ import annotations
+
+import enum
+import getpass
 import glob
 import io
 import os
@@ -15,15 +19,23 @@ import re
 from stat import S_ISDIR, S_ISREG
 
 import click
+from pydantic import ConfigDict
 
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
 from aiida.common.escaping import escape_for_bash
+from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
 
 from ..transport import BlockingTransport, TransportInternalError, TransportPath, has_magic
 
 __all__ = ('SshTransport', 'convert_to_bool', 'parse_sshconfig')
+
+
+class KeyPolicy(str, enum.Enum):
+    REJECT = 'RejectPolicy'
+    WARNING = 'WarningPolicy'
+    AUTOADD = 'AutoAddPolicy'
 
 
 def parse_sshconfig(computername):
@@ -64,6 +76,75 @@ def convert_to_bool(string):
 
 class SshTransport(BlockingTransport):
     """Support connection, command execution and data transfer to remote computers via SSH+SFTP."""
+
+    class Model(BlockingTransport.Model):
+        """Model describing required information to create an instance."""
+
+        model_config = ConfigDict(use_enum_values=True)
+
+        safe_interval: float = MetadataField(
+            30.0,
+            title='Connection cooldown time (s)',
+            description='Minimum time interval in seconds between opening new connections.',
+        )
+        username: str = MetadataField(
+            getpass.getuser(), title='User name', description='Login user name on the remote machine.'
+        )
+        port: int = MetadataField(22, title='Port number', description='Port number.', short_name='-P')
+        look_for_keys: bool = MetadataField(
+            True, title='Look for keys', description='Automatically look for private keys in the ~/.ssh folder.'
+        )
+        key_filename: str = MetadataField(
+            '',
+            title='SSH key file',
+            description='Absolute path to your private SSH key. Leave empty to use the path set in the SSH config.',
+        )
+        timeout: int = MetadataField(
+            60,
+            title='Connection timeout (s)',
+            description='Time in seconds to wait for connection before giving up. Leave empty to use default value.',
+        )
+        allow_agent: bool = MetadataField(
+            False, title='Allow ssh agent', description='Switch to allow or disallow using an SSH agent.'
+        )
+        proxy_jump: str = MetadataField(
+            '',
+            title='SSH proxy jump',
+            description='SSH proxy jump for tunneling through other SSH hosts. Use a comma-separated list of hosts of '
+            'the form [user@]host[:port]. If user or port are not specified for a host, the user & port values from '
+            'the target host are used. This option must be provided explicitly and is not parsed from the SSH config '
+            'file when left empty.',
+        )
+        proxy_command: str = MetadataField(
+            '',
+            title='SSH proxy command',
+            description='SSH proxy command for tunneling through a proxy server. For tunneling through another SSH '
+            'host, consider using the "SSH proxy jump" option instead! Leave empty to parse the proxy command from the '
+            'SSH config file.',
+        )
+        compress: bool = MetadataField(
+            True, title='Compress file transfers', description='Turn file transfer compression on or off.'
+        )
+        gss_auth: bool = MetadataField(
+            False, title='GSS auth', description='Enable when using GSS kerberos token to connect.'
+        )
+        gss_kex: bool = MetadataField(
+            False, title='GSS kex', description='GSS kex for kerberos, if not configured in SSH config file.'
+        )
+        gss_deleg_creds: bool = MetadataField(
+            False,
+            title='GSS deleg_creds',
+            description='GSS deleg_creds for kerberos, if not configured in SSH config file.',
+        )
+        gss_host: str = MetadataField(
+            '', title='GSS host', description='GSS host for kerberos, if not configured in SSH config file.'
+        )
+        load_system_host_keys: bool = MetadataField(
+            True, title='Load system host keys', description='Load system host keys from default SSH location.'
+        )
+        key_policy: KeyPolicy = MetadataField(
+            KeyPolicy.REJECT, title='Key policy', description='SSH key policy if host is not known.'
+        )
 
     # Valid keywords accepted by the connect method of paramiko.SSHClient
     # I disable 'password' and 'pkey' to avoid these data to get logged in the
@@ -236,8 +317,8 @@ class SshTransport(BlockingTransport):
         """Return a suggestion for the specific field."""
         import getpass
 
-        config = parse_sshconfig(computer.hostname)
         # Either the configured user in the .ssh/config, or the current username
+        config = parse_sshconfig(computer.hostname)
         return str(config.get('user', getpass.getuser()))
 
     @classmethod
@@ -399,7 +480,7 @@ class SshTransport(BlockingTransport):
             self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         else:
             raise ValueError(
-                'Unknown value of the key policy, allowed values ' 'are: RejectPolicy, WarningPolicy, AutoAddPolicy'
+                'Unknown value of the key policy, allowed values are: RejectPolicy, WarningPolicy, AutoAddPolicy'
             )
 
         self._connect_args = {}
@@ -569,17 +650,17 @@ class SshTransport(BlockingTransport):
         """Return a useful string."""
         conn_info = self._machine
         try:
-            conn_info = f"{self._connect_args['username']}@{conn_info}"
+            conn_info = f'{self._connect_args["username"]}@{conn_info}'
         except KeyError:
             # No username explicitly defined: ignore
             pass
         try:
-            conn_info += f":{self._connect_args['port']}"
+            conn_info += f':{self._connect_args["port"]}'
         except KeyError:
             # No port explicitly defined: ignore
             pass
 
-        return f"{'OPEN' if self._is_open else 'CLOSED'} [{conn_info}]"
+        return f'{"OPEN" if self._is_open else "CLOSED"} [{conn_info}]'
 
     def chdir(self, path: TransportPath):
         """
@@ -1297,7 +1378,7 @@ class SshTransport(BlockingTransport):
                 self.logger.warning(f'There was nonempty stderr in the cp command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing cp. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
+                "Problem executing cp. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
                     retval, stdout, stderr, command
                 )
             )
@@ -1305,7 +1386,7 @@ class SshTransport(BlockingTransport):
                 raise FileNotFoundError(f'Error while executing cp: {stderr}')
 
             raise OSError(
-                'Error while executing cp. Exit code: {}, ' "stdout: '{}', stderr: '{}', " "command: '{}'".format(
+                "Error while executing cp. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
                     retval, stdout, stderr, command
                 )
             )
@@ -1434,7 +1515,7 @@ class SshTransport(BlockingTransport):
         else:
             command_to_execute = command
 
-        self.logger.debug(f'Command to be executed: {command_to_execute[:self._MAX_EXEC_COMMAND_LOG_SIZE]}')
+        self.logger.debug(f'Command to be executed: {command_to_execute[: self._MAX_EXEC_COMMAND_LOG_SIZE]}')
 
         # Note: The default shell will eat one level of escaping, while
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.
@@ -1573,19 +1654,19 @@ class SshTransport(BlockingTransport):
 
         further_params = []
         if 'username' in self._connect_args:
-            further_params.append(f"-l {escape_for_bash(self._connect_args['username'])}")
+            further_params.append(f'-l {escape_for_bash(self._connect_args["username"])}')
 
         if self._connect_args.get('port'):
-            further_params.append(f"-p {self._connect_args['port']}")
+            further_params.append(f'-p {self._connect_args["port"]}')
 
         if self._connect_args.get('key_filename'):
-            further_params.append(f"-i {escape_for_bash(self._connect_args['key_filename'])}")
+            further_params.append(f'-i {escape_for_bash(self._connect_args["key_filename"])}')
 
         if self._connect_args.get('proxy_jump'):
-            further_params.append(f"-o ProxyJump={escape_for_bash(self._connect_args['proxy_jump'])}")
+            further_params.append(f'-o ProxyJump={escape_for_bash(self._connect_args["proxy_jump"])}')
 
         if self._connect_args.get('proxy_command'):
-            further_params.append(f"-o ProxyCommand={escape_for_bash(self._connect_args['proxy_command'])}")
+            further_params.append(f'-o ProxyCommand={escape_for_bash(self._connect_args["proxy_command"])}')
 
         further_params_str = ' '.join(further_params)
 

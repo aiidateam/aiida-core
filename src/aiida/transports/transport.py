@@ -17,8 +17,11 @@ from collections import OrderedDict
 from pathlib import Path, PurePosixPath
 from typing import Optional, Union
 
+from pydantic import BaseModel
+
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
+from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
 
 __all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath', 'has_magic')
@@ -105,6 +108,21 @@ class Transport(abc.ABC):
             },
         ),
     ]
+
+    class Model(BaseModel):
+        """Model describing required information to create an instance."""
+
+        use_login_shell: bool = MetadataField(
+            True,
+            title='Use login shell when executing command',
+            description='Not using a login shell can help suppress potential spurious text output that can prevent '
+            'AiiDA from parsing the output of commands, but may result in some startup files not being sourced.',
+        )
+        safe_interval: float = MetadataField(
+            0.0,
+            title='Connection cooldown time (s)',
+            description='Minimum time interval in seconds between opening new connections.',
+        )
 
     def __init__(self, *args, **kwargs):
         """__init__ method of the Transport base class.
@@ -1605,7 +1623,7 @@ class BlockingTransport(Transport):
         copy_items = ' '.join([str(Path(item).relative_to(root_dir)) for item in copy_list])
         # note: order of the flags is important
         tar_command = (
-            f"tar -c{compression_flag!s}{'h' if dereference else ''}f {remotedestination!s} -C {root_dir!s} "
+            f'tar -c{compression_flag!s}{"h" if dereference else ""}f {remotedestination!s} -C {root_dir!s} '
             + copy_items
         )
 
@@ -1616,7 +1634,7 @@ class BlockingTransport(Transport):
                 self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing tar. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
+                "Problem executing tar. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
                     retval, stdout, stderr, tar_command
                 )
             )
@@ -1662,7 +1680,7 @@ class BlockingTransport(Transport):
                 self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing tar. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
+                "Problem executing tar. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
                     retval, stdout, stderr, tar_command
                 )
             )

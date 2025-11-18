@@ -766,18 +766,30 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         This method uses unnest() (PostgreSQL) or json_each() (SQLite) to pass large lists
         as a single parameter instead of N parameters, avoiding database parameter limits.
 
-        For very large lists (>100k items), automatically batches into multiple OR'd conditions
+        For very large lists (>500k items), automatically batches into multiple OR'd conditions
         to balance query performance with memory usage and database load.
+
+        .. note::
+            The 500k batch threshold is chosen to balance several factors:
+
+            - **Parameter limits**: Each batch uses 1 parameter. With SQLite's minimum limit of 999
+              parameters, this allows up to ~500M items (999 x 500k). PostgreSQL's limit of ~65k
+              parameters allows up to ~33B items (65,535 x 500k).
+            - **Memory constraints**: In practice, Python memory becomes the bottleneck before
+              database limits. A list of 500M items would require 4-20GB RAM before even reaching
+              the database.
+            - **Database performance**: Modern databases handle 500k-item arrays/JSON easily on
+              typical workstations and servers.
 
         For example:
             Small list (50k items):
                 WHERE column IN (SELECT unnest(:array))  -- 1 parameter
 
-            Large list (250k items):
+            Large list (1.5M items):
                 WHERE (
-                    column IN (SELECT unnest(:array_1))  -- First 100k
-                    OR column IN (SELECT unnest(:array_2))  -- Second 100k
-                    OR column IN (SELECT unnest(:array_3))  -- Remaining 50k
+                    column IN (SELECT unnest(:array_1))  -- First 500k
+                    OR column IN (SELECT unnest(:array_2))  -- Second 500k
+                    OR column IN (SELECT unnest(:array_3))  -- Remaining 500k
                 )
         """
         import json
@@ -785,7 +797,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         from sqlalchemy import cast as sql_cast
         from sqlalchemy import func, type_coerce
 
-        batch_threshold = 100_000
+        batch_threshold = 500_000
 
         # For very large lists, batch internally to avoid memory/performance issues
         if len(values_list) > batch_threshold:

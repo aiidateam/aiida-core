@@ -206,11 +206,17 @@ def import_archive(
 
             # now the transaction has been successfully populated, but not committed, we add the repository files
             # if the commit fails, this is not so much an issue, since the files can be removed on repo maintenance
+            import time
+
+            begin = time.time()
             if packed:
                 IMPORT_LOGGER.report('Adding repository files to `packed`')
+                _add_files_to_repo_packed(backend_from, backend, new_repo_keys)
             else:
                 IMPORT_LOGGER.report('Adding repository files to `loose`')
-            _add_files_to_repo(backend_from, backend, new_repo_keys, packed)
+                _add_files_to_repo(backend_from, backend, new_repo_keys)
+            end = time.time()
+            IMPORT_LOGGER.report(f'Added repository files in {(end - begin)*1e3:.1f} milliseconds')
 
             IMPORT_LOGGER.report('Committing transaction to database...')
 
@@ -1241,9 +1247,7 @@ def _get_new_object_keys(
     return new_hashkeys
 
 
-def _add_files_to_repo(
-    backend_from: StorageBackend, backend_to: StorageBackend, new_keys: Set[str], packed: bool = False
-) -> None:
+def _add_files_to_repo(backend_from: StorageBackend, backend_to: StorageBackend, new_keys: Set[str]) -> None:
     """Add the new files to the repository."""
     if not new_keys:
         return None
@@ -1251,14 +1255,8 @@ def _add_files_to_repo(
     repository_to = backend_to.get_repository()
     repository_from = backend_from.get_repository()
     with get_progress_reporter()(desc='Adding archive files to repository', total=len(new_keys)) as progress:
-        for key, handle in repository_from.iter_object_streams(new_keys):  # type: ignore[arg-type]
-            if packed:
-                backend_keys = repository_to.put_objects_from_filelike_packed([handle])
-                if len(backend_keys) != 1:
-                    raise ImportValidationError()
-                backend_key = backend_keys[0]
-            else:
-                backend_key = repository_to.put_object_from_filelike(handle)
+        for key, handle in repository_from.iter_object_streams(list(new_keys)):
+            backend_key = repository_to.put_object_from_filelike(handle)
             if backend_key != key:
                 raise ImportValidationError(
                     f'Archive repository key is different to backend key: {key!r} != {backend_key!r}'
@@ -1266,22 +1264,17 @@ def _add_files_to_repo(
             progress.update()
 
 
-# This is probably not having any effect here, instead, I defined _put_object_from_filelike_packed in
-# AbstractRepositoryBackend
-# def _add_files_to_repo_packed(backend_from: StorageBackend, backend_to: StorageBackend, new_keys: Set[str]) -> None:
-#     """Add the new files to the repository."""
-#     if not new_keys:
-#         return None
+def _add_files_to_repo_packed(backend_from: StorageBackend, backend_to: StorageBackend, new_keys: Set[str]) -> None:
+    """Add the new files to the repository."""
+    if not new_keys:
+        return None
 
-#     repository_to = backend_to.get_repository()
-#     repository_from = backend_from.get_repository()
+    repository_to = backend_to.get_repository()
+    repository_from = backend_from.get_repository()
 
-#     for key, handle in repository_from.iter_object_streams(new_keys):
-#         repository_to.put
-#     backend_keys = repository_to.put_objects_from_filelike_packed(from_stream_list)
-#     if backend_keys != from_hashes:
-#         extra = set(backend_keys) - set(from_hashes)
-#         missing = set(from_hashes) - set(backend_keys)
-#         raise ImportValidationError(
-#             f'Archive repository key is different to backend key: missing {missing!r}, extra {extra!r}'
-#         )
+    with get_progress_reporter()(desc='Adding archive files to repository', total=len(new_keys)) as progress:
+
+        def _cb(_: str, __: int, ___: int) -> None:
+            progress.update()
+
+        repository_to._import_from_other_repository(repository_from, new_keys, step_cb=_cb)

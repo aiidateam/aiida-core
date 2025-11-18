@@ -475,7 +475,7 @@ def _gather_imports(archives: list[str], webpages: list[str] | None) -> list[tup
 
 
 def _import_archive_and_migrate(
-    ctx: click.Context, archive: str, web_based: bool, import_kwargs: dict, try_migration: bool, packed: bool = False
+    ctx: click.Context, archive: str, web_based: bool, import_kwargs: dict, try_migration: bool
 ) -> None:
     """Perform the archive import.
 

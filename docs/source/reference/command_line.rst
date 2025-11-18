@@ -400,6 +400,7 @@ Below is a list with all available subcommands.
       configure-rabbitmq  Configure RabbitMQ for a profile.
       delete              Delete one or more profiles.
       dump                Dump all data in an AiiDA profile's storage to disk.
+      flush               Delete data of one or more profiles.
       list                Display a list of all available profiles.
       set-default         Set a profile as the default profile.
       setdefault          Set a profile as the default profile. (DEPRECATED: Please use `verdi

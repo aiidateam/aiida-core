@@ -90,10 +90,33 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         with self._container as container:
             return container.add_streamed_object(handle)
 
-    def _put_objects_from_filelike_packed(self, handle_list) -> list[str]:
-        """Store the byte contents of a list of files in the repository."""
+    def _import_from_other_repository(
+        self,
+        src: AbstractRepositoryBackend,
+        keys: set[str],
+        step_cb: t.Optional[t.Callable[[str, int, int], None]] = None,
+    ) -> list[str]:
+        """Import objects from another repository backend.
+
+        :param rhs: the other repository backend from which to import the objects.
+        :param keys: list of fully qualified identifiers for the objects within the other repository.
+        :return: list of fully qualified identifiers for the objects within this repository.
+        """
+        imported_keys: list[str] = []
         with self._container as container:
-            return container.add_streamed_objects_to_pack(stream_list=handle_list)
+            for index, (key, stream) in enumerate(src.iter_object_streams(keys)):
+                # skip commit here for performance, will commit at the end.
+                # fsync is kept because:
+                #   1. during the import, multiple packed file are touched, and we can't fsync them all at the end
+                #   2. in case of a crash during the import, we want to keep the packed files consistent
+                #   3. fsync is not that expensive compared to commit
+                container.add_streamed_object_to_pack(stream, do_commit=False)
+                imported_keys.append(key)
+                if step_cb:
+                    step_cb(key, len(imported_keys), len(keys))
+            # TODO: is there a public method or better way to commit to the database?
+            container._get_container_session().commit()
+        return imported_keys
 
     def has_objects(self, keys: t.List[str]) -> t.List[bool]:
         with self._container as container:
@@ -117,10 +140,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             with container.get_object_stream(key) as handle:
                 yield handle  # type: ignore[misc]
 
-    def iter_object_streams(
-        self, keys: t.List[str]
-    ) -> t.Iterator[t.Tuple[str, t.BinaryIO | t.ContextManager[t.BinaryIO]]]:
-        with self._container.get_objects_stream_and_meta(keys) as triplets:
+    def iter_object_streams(self, keys: t.Iterable[str]) -> t.Iterator[t.Tuple[str, t.BinaryIO]]:
+        with self._container.get_objects_stream_and_meta(list(keys)) as triplets:
             for key, stream, _ in triplets:
                 assert stream is not None
                 yield key, stream  # type: ignore[misc]

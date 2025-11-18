@@ -11,7 +11,7 @@ import hashlib
 import io
 import pathlib
 from collections.abc import Iterable, Iterator
-from typing import Any, BinaryIO, List, Optional, Tuple, Union
+from typing import Any, BinaryIO, Callable, List, Optional, Tuple, Union
 
 from aiida.common.hashing import chunked_file_hash
 
@@ -86,23 +86,11 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
     def _put_object_from_filelike(self, handle: BinaryIO) -> str:
         pass
 
-    def put_objects_from_filelike_packed(self, streams: list[BinaryIO]) -> list[str]:
-        """Store the byte contents of a file in the repository.
-
-        :param handle: filelike object with the byte content to be stored.
-        :return: the generated fully qualified identifier for the object within the repository.
-        :raises TypeError: if the handle is not a byte stream.
-        """
-        # if (
-        #     not isinstance(handle, io.BufferedIOBase)  # type: ignore[redundant-expr,unreachable]
-        #     and not self.is_readable_byte_stream(handle)
-        # ):
-        #     raise TypeError(f'handle does not seem to be a byte stream: {type(handle)}.')
-        return self._put_objects_from_filelike_packed(streams)
-
-    # @abc.abstractmethod
-    # def _put_objects_from_filelike_packed(self, streams: list[BinaryIO]) -> list[str]:
-    #     pass
+    @abc.abstractmethod
+    def _import_from_other_repository(
+        self, src: 'AbstractRepositoryBackend', keys: set[str], step_cb: Optional[Callable[[str, int, int], None]]
+    ) -> list[str]:
+        pass
 
     def put_object_from_file(self, filepath: Union[str, pathlib.Path]) -> str:
         """Store a new object with contents of the file located at `filepath` on this file system.

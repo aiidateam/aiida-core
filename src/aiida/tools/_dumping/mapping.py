@@ -15,6 +15,7 @@ from typing import Dict, List, Optional, Set, Union, cast
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.utils import DEFAULT_FILTER_SIZE, batch_iter
 from aiida.tools._dumping.utils import GroupChanges, GroupInfo, GroupModificationInfo, NodeMembershipChange
 
 LOGGER = AIIDA_LOGGER.getChild('tools._dumping.mapping')
@@ -82,9 +83,6 @@ class GroupNodeMapping:
 
         mapping = cls()
 
-        # Query all groups and their nodes, or just the specific groups
-        qb = orm.QueryBuilder()
-
         if groups is not None:
             # Only query the specified groups
             if all(isinstance(g, orm.Group) for g in groups):
@@ -92,16 +90,22 @@ class GroupNodeMapping:
                 group_uuids = [g.uuid for g in orm_groups]
             else:
                 group_uuids = [orm.load_group(g).uuid for g in groups]
-            qb.append(orm.Group, tag='group', project=['uuid'], filters={'uuid': {'in': group_uuids}})
+
+            # Batch the query to avoid database parameter limits
+            for _, uuid_batch in batch_iter(group_uuids, DEFAULT_FILTER_SIZE):
+                qb = orm.QueryBuilder()
+                qb.append(orm.Group, tag='group', project=['uuid'], filters={'uuid': {'in': uuid_batch}})
+                qb.append(orm.Node, with_group='group', project=['uuid'])
+                for group_uuid, node_uuid in qb.all():
+                    mapping._add_node_to_group(group_uuid, node_uuid)
             LOGGER.report(f'Querying node memberships for {len(group_uuids)} group(s)...')
         else:
             # Query all groups
+            qb = orm.QueryBuilder()
             qb.append(orm.Group, tag='group', project=['uuid'])
             LOGGER.report('Querying node memberships for all groups in profile...')
-
-        qb.append(orm.Node, with_group='group', project=['uuid'])
-
-        LOGGER.report('Retrieving group-node relationships from database...')
+            qb.append(orm.Node, with_group='group', project=['uuid'])
+            LOGGER.report('Retrieving group-node relationships from database...')
         results = qb.all()
         LOGGER.report(f'Processing {len(results)} group-node relationships...')
 

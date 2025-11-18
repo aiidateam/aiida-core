@@ -15,6 +15,7 @@ import typing as t
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -27,6 +28,7 @@ from aiida.engine import Process, ProcessState
 from aiida.engine.processes import control as process_control
 from aiida.engine.utils import exponential_backoff_retry
 from aiida.orm import CalcJobNode, Group, Int, WorkChainNode, WorkflowNode, WorkFunctionNode
+from aiida.tools.archive.exceptions import ExportValidationError
 from tests.utils.processes import WaitProcess
 
 FuncArgs = tuple[t.Any, ...]
@@ -93,14 +95,11 @@ class MockFunctions:
 
 
 @pytest.fixture(scope='function')
-@pytest.mark.usefixtures('started_daemon_client')
-def fork_worker_context(aiida_profile):
+def fork_worker_context(aiida_profile, started_daemon_client):
     """Runs daemon worker on a new process with redirected stdout and stderr streams."""
     import multiprocessing
 
-    from aiida.engine.daemon.client import get_daemon_client
-
-    client = get_daemon_client(aiida_profile)
+    client = started_daemon_client
     nb_workers = client.get_number_of_workers()
     # The workers are decreased to zero to ensure that the worker that is
     # subsequently started through this fixture is the one that receives all
@@ -173,7 +172,7 @@ def test_process_kill_failing_transport(
         assert 'exponential_backoff_retry' in result
 
         # force kill the process
-        run_cli_command(cmd_process.process_kill, [str(node.pk), '-F', '--wait'])
+        run_cli_command(cmd_process.process_kill, [str(node.pk), '-F'])
         await_condition(lambda: node.is_killed, timeout=kill_timeout)
         assert node.is_killed
         assert node.process_status == 'Force killed through `verdi process kill`'
@@ -214,11 +213,11 @@ def test_process_kill_failing_transport_failed_kill(
         assert 'exponential_backoff_retry' in result
 
         # practice a normal kill, which should fail
-        result = run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait', '--timeout', '1.0'])
-        assert f'Error: call to kill Process<{node.pk}> timed out' in result.stdout
+        result = run_cli_command(cmd_process.process_kill, [str(node.pk), '--timeout', '1.0'])
+        assert f'Error: Call to kill Process<{node.pk}> timed out' in result.stdout
 
         # force kill the process
-        result = run_cli_command(cmd_process.process_kill, [str(node.pk), '-F', '--wait'])
+        result = run_cli_command(cmd_process.process_kill, [str(node.pk), '-F'])
         await_condition(lambda: node.is_killed, timeout=kill_timeout)
         assert node.process_status == 'Force killed through `verdi process kill`'
 
@@ -257,7 +256,7 @@ def test_process_kill_failing_ebm_transport(
         )
 
         # kill should start EBM and should successfully kill
-        run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
+        run_cli_command(cmd_process.process_kill, [str(node.pk)])
         await_condition(lambda: node.is_killed, timeout=kill_timeout)
 
 
@@ -296,12 +295,12 @@ def test_process_kill_failing_ebm_kill(
         )
 
         # kill should start EBM and be not successful in EBM
-        run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
+        run_cli_command(cmd_process.process_kill, [str(node.pk)])
         await_condition(lambda: not node.is_killed, timeout=kill_timeout)
 
         # kill should restart EBM and be not successful in EBM
         # this tests if the old task is cancelled and restarted successfully
-        run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
+        run_cli_command(cmd_process.process_kill, [str(node.pk)])
         await_condition(
             lambda: 'Found active scheduler job cancelation that will be rescheduled.'
             in get_process_function_report(node),
@@ -309,7 +308,7 @@ def test_process_kill_failing_ebm_kill(
         )
 
         # force kill should skip EBM and successfully kill the process
-        run_cli_command(cmd_process.process_kill, [str(node.pk), '-F', '--wait'])
+        run_cli_command(cmd_process.process_kill, [str(node.pk), '-F'])
         await_condition(lambda: node.is_killed, timeout=kill_timeout)
 
 
@@ -629,36 +628,153 @@ class TestVerdiProcess:
             assert len(result.output_lines) == 1, result.output_lines
             assert result.output_lines[0] == 'No log messages recorded for this entry'
 
-    def test_process_dump(self, run_cli_command, tmp_path, generate_workchain_multiply_add):
-        """Test verdi process dump"""
-
-        # Only test CLI interface here, the actual functionalities of the Python API are tested in `test_processes.py`
+    def test_dump_basic(self, run_cli_command, tmp_path, generate_calculation_node_add):
+        """Test basic dump functionality"""
         test_path = tmp_path / 'cli-dump'
-        node = generate_workchain_multiply_add()
+        node = generate_calculation_node_add()
 
-        # Giving a single identifier should print a non empty string message
-        options = [str(node.pk), '-p', str(test_path)]
+        options = [str(node.pk), '--path', str(test_path)]
+        result = run_cli_command(cmd_process.process_dump, options)
+        assert result.exception is None, result.output
+        assert 'Success:' in result.output
+        assert test_path.exists()
+
+    def test_dump_dry_run(self, run_cli_command, tmp_path, generate_calculation_node_add):
+        """Test dry run behavior"""
+        test_path = tmp_path / 'cli-dump'
+        node = generate_calculation_node_add()
+
+        options = [str(node.pk), '--path', str(test_path / 'dry'), '--dry-run']
+        result = run_cli_command(cmd_process.process_dump, options)
+        assert result.exception is None, result.output
+        assert 'Dry run completed' in result.output
+        assert not test_path.exists()
+
+    def test_dump_overwrite(self, run_cli_command, tmp_path, generate_calculation_node_add):
+        """Test overwrite functionality"""
+        test_path = tmp_path / 'cli-dump'
+        node = generate_calculation_node_add()
+
+        # First dump
+        options = [str(node.pk), '--path', str(test_path)]
+        result = run_cli_command(cmd_process.process_dump, options)
+        assert result.exception is None, result.output
+        assert test_path.exists()
+
+        # Test overwrite
+        options = [str(node.pk), '--path', str(test_path), '--overwrite']
         result = run_cli_command(cmd_process.process_dump, options)
         assert result.exception is None, result.output
         assert 'Success:' in result.output
 
-        # Trying to run the dumping again in the same path but with overwrite=False should raise exception
-        options = [str(node.pk), '-p', str(test_path), '--no-incremental']
-        result = run_cli_command(cmd_process.process_dump, options, raises=True)
-        assert result.exit_code is ExitCode.CRITICAL
+    def test_dump_dry_run_with_overwrite_warning(self, run_cli_command, generate_calculation_node_add):
+        """Test that dry_run + overwrite shows warning and returns early"""
+        node = generate_calculation_node_add()
 
-        # Works fine when using overwrite=True
-        options = [str(node.pk), '-p', str(test_path), '-o', '--no-incremental']
+        options = [str(node.pk), '--dry-run', '--overwrite']
         result = run_cli_command(cmd_process.process_dump, options)
         assert result.exception is None, result.output
-        assert 'Success:' in result.output
+        assert 'Both `dry_run` and `overwrite` set to true' in result.output
+        assert 'Operation will NOT be performed' in result.output
 
-        # Set overwrite=True but provide bad directory, i.e. missing metadata file
-        (test_path / '.aiida_node_metadata.yaml').unlink()
+    def test_dump_specified_path_message(self, run_cli_command, tmp_path, generate_calculation_node_add):
+        """Test that specified path is reported correctly"""
+        test_path = tmp_path / 'specified-path'
+        node = generate_calculation_node_add()
 
-        options = [str(node.pk), '-p', str(test_path), '-o']
+        options = [str(node.pk), '--path', str(test_path)]
+        result = run_cli_command(cmd_process.process_dump, options)
+        assert result.exception is None, result.output
+        assert f'Using specified output path: `{test_path}`' in result.output
+
+    def test_dump_warning_message_displayed(self, run_cli_command, generate_calculation_node_add):
+        """Test that warning message about new feature is displayed"""
+        node = generate_calculation_node_add()
+
+        options = [str(node.pk)]
+        result = run_cli_command(cmd_process.process_dump, options)
+        assert result.exception is None, result.output
+        assert 'This is a new feature which is still in its testing phase' in result.output
+        assert 'If you encounter unexpected behavior or bugs' in result.output
+
+    @patch('aiida.orm.nodes.process.process.ProcessNode.dump')
+    def test_dump_calls_process_dump_with_correct_args(
+        self, mock_dump, run_cli_command, tmp_path, generate_calculation_node_add
+    ):
+        """Test that process.dump is called with correct arguments"""
+        test_path = tmp_path / 'test-args'
+        node = generate_calculation_node_add()
+
+        options = [
+            str(node.pk),
+            '--path',
+            str(test_path),
+            '--include-inputs',
+            '--include-outputs',
+            '--include-attributes',
+            '--include-extras',
+            '--flat',
+            '--dump-unsealed',
+        ]
+        _ = run_cli_command(cmd_process.process_dump, options)
+
+        # Verify the dump method was called with expected arguments
+        node.dump.assert_called_once_with(
+            output_path=test_path.resolve(),
+            dry_run=False,
+            overwrite=False,
+            include_inputs=True,
+            include_outputs=True,
+            include_attributes=True,
+            include_extras=True,
+            flat=True,
+            dump_unsealed=True,
+        )
+
+    @patch('aiida.orm.nodes.process.process.ProcessNode.dump')
+    def test_dump_export_validation_error_handling(
+        self, mock_dump, run_cli_command, tmp_path, generate_calculation_node_io
+    ):
+        """Test handling of ExportValidationError"""
+        test_path = tmp_path / 'validation-error'
+        node = generate_calculation_node_io()
+
+        # Mock dump to raise ExportValidationError
+        mock_dump.side_effect = ExportValidationError('Test validation error')
+
+        options = [str(node.pk), '--path', str(test_path)]
         result = run_cli_command(cmd_process.process_dump, options, raises=True)
-        assert result.exit_code is ExitCode.CRITICAL
+
+        assert 'Data validation error during dump: Test validation error' in result.output
+
+    @patch('aiida.orm.nodes.process.process.ProcessNode.dump')
+    def test_dump_unexpected_error_handling(self, mock_dump, run_cli_command, tmp_path, generate_calculation_node_add):
+        """Test handling of unexpected exceptions"""
+        test_path = tmp_path / 'unexpected-error'
+        node = generate_calculation_node_add()
+
+        # Mock dump to raise generic exception
+        mock_dump.side_effect = RuntimeError('Unexpected error')
+
+        options = [str(node.pk), '--path', str(test_path)]
+        result = run_cli_command(cmd_process.process_dump, options, raises=True)
+
+        assert f'Unexpected error during dump of process {node.pk}:' in result.output
+        assert 'RuntimeError: Unexpected error' in result.output
+        # Should include traceback
+        assert 'Traceback' in result.output
+
+    def test_dump_success_message_format(self, run_cli_command, tmp_path, generate_calculation_node_add):
+        """Test success message format"""
+        test_path = tmp_path / 'success-test'
+        node = generate_calculation_node_add()
+
+        options = [str(node.pk), '--path', str(test_path)]
+        result = run_cli_command(cmd_process.process_dump, options)
+        assert result.exception is None, result.output
+
+        expected_msg = f'Raw files for process `{node.pk}` dumped into folder `{test_path.name}`'
+        assert expected_msg in result.output
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -767,7 +883,7 @@ def test_process_pause(submit_and_await, run_cli_command):
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
-    run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
+    run_cli_command(cmd_process.process_pause, [str(node.pk)])
     await_condition(lambda: node.paused)
 
     # Running without identifiers should except and print something
@@ -783,10 +899,10 @@ def test_process_play(submit_and_await, run_cli_command):
     """Test the ``verdi process play`` command."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
 
-    run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
+    run_cli_command(cmd_process.process_pause, [str(node.pk)])
     await_condition(lambda: node.paused)
 
-    run_cli_command(cmd_process.process_play, [str(node.pk), '--wait'])
+    run_cli_command(cmd_process.process_play, [str(node.pk)])
     await_condition(lambda: not node.paused)
 
     # Running without identifiers should except and print something
@@ -803,11 +919,11 @@ def test_process_play_all(submit_and_await, run_cli_command):
     node_one = submit_and_await(WaitProcess, ProcessState.WAITING)
     node_two = submit_and_await(WaitProcess, ProcessState.WAITING)
 
-    run_cli_command(cmd_process.process_pause, ['--all', '--wait'])
+    run_cli_command(cmd_process.process_pause, ['--all'])
     await_condition(lambda: node_one.paused)
     await_condition(lambda: node_two.paused)
 
-    run_cli_command(cmd_process.process_play, ['--all', '--wait'])
+    run_cli_command(cmd_process.process_play, ['--all'])
     await_condition(lambda: not node_one.paused)
     await_condition(lambda: not node_two.paused)
 
@@ -835,32 +951,32 @@ def test_process_kill(submit_and_await, run_cli_command, aiida_code_installed):
     # Kill a paused process
     node = submit_and_await(builder, ProcessState.WAITING)
 
-    run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
+    run_cli_command(cmd_process.process_pause, [str(node.pk)])
     await_condition(lambda: node.paused)
     assert node.process_status == 'Paused through `verdi process pause`'
 
-    run_cli_command(cmd_process.process_kill, [str(node.pk), '--wait'])
+    run_cli_command(cmd_process.process_kill, [str(node.pk)])
     await_condition(lambda: node.is_killed)
     assert node.process_status == 'Killed through `verdi process kill`'
 
     # Force kill a paused process
     node = submit_and_await(builder, ProcessState.WAITING)
 
-    run_cli_command(cmd_process.process_pause, [str(node.pk), '--wait'])
+    run_cli_command(cmd_process.process_pause, [str(node.pk)])
     await_condition(lambda: node.paused)
     assert node.process_status == 'Paused through `verdi process pause`'
 
-    run_cli_command(cmd_process.process_kill, [str(node.pk), '-F', '--wait'])
+    run_cli_command(cmd_process.process_kill, [str(node.pk), '-F'])
     await_condition(lambda: node.is_killed)
     assert node.process_status == 'Force killed through `verdi process kill`'
 
     # `verdi process kill --all` should kill all processes
     node_1 = submit_and_await(builder, ProcessState.WAITING)
-    run_cli_command(cmd_process.process_pause, [str(node_1.pk), '--wait'])
+    run_cli_command(cmd_process.process_pause, [str(node_1.pk)])
     await_condition(lambda: node_1.paused)
     node_2 = submit_and_await(builder, ProcessState.WAITING)
 
-    run_cli_command(cmd_process.process_kill, ['--all', '--wait'], user_input='y')
+    run_cli_command(cmd_process.process_kill, ['--all'], user_input='y')
     await_condition(lambda: node_1.is_killed, timeout=kill_timeout)
     await_condition(lambda: node_2.is_killed, timeout=kill_timeout)
     assert node_1.process_status == 'Killed through `verdi process kill`'
@@ -868,11 +984,11 @@ def test_process_kill(submit_and_await, run_cli_command, aiida_code_installed):
 
     # `verdi process kill --all -F` should Force kill all processes (running / not running)
     node_1 = submit_and_await(builder, ProcessState.WAITING)
-    run_cli_command(cmd_process.process_pause, [str(node_1.pk), '--wait'])
+    run_cli_command(cmd_process.process_pause, [str(node_1.pk)])
     await_condition(lambda: node_1.paused)
     node_2 = submit_and_await(builder, ProcessState.WAITING)
 
-    run_cli_command(cmd_process.process_kill, ['--all', '--wait', '-F'], user_input='y')
+    run_cli_command(cmd_process.process_kill, ['--all', '-F'], user_input='y')
     await_condition(lambda: node_1.is_killed, timeout=kill_timeout)
     await_condition(lambda: node_2.is_killed, timeout=kill_timeout)
     assert node_1.process_status == 'Force killed through `verdi process kill`'
@@ -885,7 +1001,7 @@ def test_process_kill_all(submit_and_await, run_cli_command):
     """Test the ``verdi process kill --all`` command."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
 
-    run_cli_command(cmd_process.process_kill, ['--all', '--wait'], user_input='y')
+    run_cli_command(cmd_process.process_kill, ['--all'], user_input='y')
     await_condition(lambda: node.is_killed)
     assert node.process_status == 'Killed through `verdi process kill`'
 

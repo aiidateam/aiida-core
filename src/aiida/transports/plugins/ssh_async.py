@@ -16,17 +16,14 @@ import os
 from pathlib import Path, PurePath
 from typing import Optional, Union
 
-import asyncssh
 import click
-from asyncssh import SFTPFileAlreadyExists
 
-from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import InvalidOperation
 from aiida.transports.transport import (
     AsyncTransport,
     Transport,
-    TransportInternalError,
     TransportPath,
+    has_magic,
     validate_positive_number,
 )
 
@@ -45,19 +42,9 @@ def validate_script(ctx, param, value: str):
     return value
 
 
-def validate_machine(ctx, param, value: str):
-    async def attempt_connection():
-        try:
-            await asyncssh.connect(value)
-        except Exception:
-            return False
-        return True
-
-    if not asyncio.run(attempt_connection()):
-        raise click.BadParameter("Couldn't connect! " 'Please make sure `ssh {value}` would work without password')
-    else:
-        click.echo(f'`ssh {value}` successful!')
-
+def validate_backend(ctx, param, value: str):
+    if value not in ['asyncssh', 'openssh']:
+        raise click.BadParameter(f'{value} is not a valid backend, choose either `asyncssh` or `openssh`')
     return value
 
 
@@ -71,15 +58,16 @@ class AsyncSshTransport(AsyncTransport):
         (
             # the underscore is added to avoid conflict with the machine property
             # which is passed to __init__ as parameter `machine=computer.hostname`
-            'machine_or_host',
+            'host',
             {
                 'type': str,
-                'prompt': 'Machine(or host) name as in `ssh <your-host-name>` command.'
-                ' (It should be a password-less setup)',
-                'help': 'Password-less host-setup to connect, as in command `ssh <your-host-name>`. '
-                "You'll need to have a `Host <your-host-name>` entry defined in your `~/.ssh/config` file.",
+                'prompt': "Host as in 'ssh <HOST>' (needs to be a password-less setup in your ssh config)",
+                'help': (
+                    'Password-less host-setup to connect, as in command `ssh <HOST>`.'
+                    ' You need to have a `Host <HOST>` entry defined in your `~/.ssh/config` file.'
+                    " Note, if not provided, we will use the 'hostname' that was set by you during setup."
+                ),
                 'non_interactive_default': True,
-                'callback': validate_machine,
             },
         ),
         (
@@ -87,7 +75,7 @@ class AsyncSshTransport(AsyncTransport):
             {
                 'type': int,
                 'default': _DEFAULT_max_io_allowed,
-                'prompt': 'Maximum number of concurrent I/O operations.',
+                'prompt': 'Maximum number of concurrent I/O operations',
                 'help': 'Depends on various factors, such as your network bandwidth, the server load, etc.'
                 ' (An experimental number)',
                 'non_interactive_default': True,
@@ -106,11 +94,28 @@ class AsyncSshTransport(AsyncTransport):
                 'callback': validate_script,
             },
         ),
+        (
+            'backend',
+            {
+                'type': str,
+                'default': 'asyncssh',
+                'prompt': 'Type of async backend to use, `asyncssh` or `openssh`',
+                'help': '`openssh` uses the `ssh` command line tool to connect to the remote machine,'
+                'e.g. it is useful in case of multiplexing. '
+                'The `asyncssh` backend is the default and is recommended for most use cases.',
+                'non_interactive_default': True,
+                'callback': validate_backend,
+            },
+        ),
     ]
 
     @classmethod
-    def _get_machine_suggestion_string(cls, computer):
-        """Return a suggestion for the parameter machine."""
+    def _get_host_suggestion_string(cls, computer):
+        """Return a suggestion for the parameter 'host'.
+        Note: the name of this methood is not arbitrary! In order to be picked up during
+        `verdi computer configure` command, it has to be in the following format:
+        `_get_<PARAMETER_NAME>_suggestion_string`
+        """
         # Originally set as 'Hostname' during `verdi computer setup`
         # and is passed as `machine=computer.hostname` in the codebase
         # unfortunately, name of hostname and machine are used interchangeably in the aiida-core codebase
@@ -121,14 +126,24 @@ class AsyncSshTransport(AsyncTransport):
         super().__init__(*args, **kwargs)
         # the machine is passed as `machine=computer.hostname` in the codebase
         # 'machine' is immutable.
-        # 'machine_or_host' is mutable, so it can be changed via command:
+        # 'host' is mutable, so it can be changed via command:
         # 'verdi computer configure core.ssh_async <LABEL>'.
-        # by default, 'machine_or_host' is set to 'machine' in the __init__ method, if not provided.
+        # by default, 'host' is set to 'machine' in the __init__ method, if not provided.
         # NOTE: to guarantee a connection,
         # a computer with core.ssh_async transport plugin should be configured before any instantiation.
-        self.machine = kwargs.pop('machine_or_host', kwargs.pop('machine'))
+        self.machine = kwargs.pop('host', kwargs.pop('machine'))
         self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
         self.script_before = kwargs.pop('script_before', 'None')
+
+        if kwargs.get('backend') == 'openssh':
+            from .async_backend import _OpenSSH
+
+            self.async_backend = _OpenSSH(self.machine, self.logger, self._bash_command_str)
+        else:
+            # default backend is asyncssh
+            from .async_backend import _AsyncSSH
+
+            self.async_backend = _AsyncSSH(self.machine, self.logger, self._bash_command_str)  # type: ignore[assignment]
 
         self._concurrent_io = 0
 
@@ -157,8 +172,10 @@ class AsyncSshTransport(AsyncTransport):
         if self.script_before != 'None':
             os.system(f'{self.script_before}')
 
-        self._conn = await asyncssh.connect(self.machine)
-        self._sftp = await self._conn.start_sftp_client()
+        try:
+            await self.async_backend.open()
+        except OSError as exc:
+            raise OSError(f'Error while opening the transport: {exc}')
 
         self._is_open = True
 
@@ -172,8 +189,7 @@ class AsyncSshTransport(AsyncTransport):
         if not self._is_open:
             raise InvalidOperation('Cannot close the transport: it is already closed')
 
-        self._conn.close()
-        await self._conn.wait_closed()
+        await self.async_backend.close()
         self._is_open = False
 
     def __str__(self):
@@ -220,8 +236,8 @@ class AsyncSshTransport(AsyncTransport):
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
 
-        if self.has_magic(remotepath):
-            if self.has_magic(localpath):
+        if has_magic(remotepath):
+            if has_magic(localpath):
                 raise ValueError('Pathname patterns are not allowed in the destination')
             # use the self glob to analyze the path remotely
             to_copy_list = await self.glob_async(remotepath)
@@ -302,16 +318,12 @@ class AsyncSshTransport(AsyncTransport):
 
         try:
             await self._lock()
-            await self._sftp.get(
-                remotepaths=remotepath,
-                localpath=localpath,
-                preserve=preserve,
-                recurse=False,
-                follow_symlinks=dereference,
+            await self.async_backend.get(
+                remotepath=remotepath, localpath=localpath, dereference=dereference, preserve=preserve, recursive=False
             )
             await self._unlock()
-        except (OSError, asyncssh.Error) as exc:
-            raise OSError(f'Error while uploading file {localpath}: {exc}')
+        except OSError as exc:
+            raise OSError(f'Error while downloading file {remotepath}: {exc}')
 
     async def gettree_async(
         self,
@@ -373,16 +385,17 @@ class AsyncSshTransport(AsyncTransport):
         for content_ in content_list:
             try:
                 await self._lock()
-                await self._sftp.get(
-                    remotepaths=PurePath(remotepath) / content_,
+                parentpath = str(PurePath(remotepath) / content_)
+                await self.async_backend.get(
+                    remotepath=parentpath,
                     localpath=localpath,
+                    dereference=dereference,
                     preserve=preserve,
-                    recurse=True,
-                    follow_symlinks=dereference,
+                    recursive=True,
                 )
                 await self._unlock()
-            except (OSError, asyncssh.Error) as exc:
-                raise OSError(f'Error while uploading file {localpath}: {exc}')
+            except OSError as exc:
+                raise OSError(f'Error while downloading file {parentpath}: {exc}')
 
     async def put_async(
         self,
@@ -425,8 +438,12 @@ class AsyncSshTransport(AsyncTransport):
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
 
-        if self.has_magic(localpath):
-            if self.has_magic(remotepath):
+        if not os.path.isabs(remotepath):
+            # Historically remotepath could be a relative path, but it is not supported anymore.
+            raise OSError('The remotepath must be an absolute path')
+
+        if has_magic(localpath):
+            if has_magic(remotepath):
                 raise ValueError('Pathname patterns are not allowed in the destination')
 
             # use the imported glob to analyze the path locally
@@ -504,20 +521,20 @@ class AsyncSshTransport(AsyncTransport):
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
 
+        if not os.path.isabs(remotepath):
+            # Historically remotepath could be a relative path, but it is not supported anymore.
+            raise OSError('The remotepath must be an absolute path')
+
         if await self.isfile_async(remotepath) and not overwrite:
             raise OSError('Destination already exists: not overwriting it')
 
         try:
             await self._lock()
-            await self._sftp.put(
-                localpaths=localpath,
-                remotepath=remotepath,
-                preserve=preserve,
-                recurse=False,
-                follow_symlinks=dereference,
+            await self.async_backend.put(
+                localpath=localpath, remotepath=remotepath, dereference=dereference, preserve=preserve, recursive=False
             )
             await self._unlock()
-        except (OSError, asyncssh.Error) as exc:
+        except OSError as exc:
             raise OSError(f'Error while uploading file {localpath}: {exc}')
 
     async def puttree_async(
@@ -583,16 +600,17 @@ class AsyncSshTransport(AsyncTransport):
         for content_ in content_list:
             try:
                 await self._lock()
-                await self._sftp.put(
-                    localpaths=PurePath(localpath) / content_,
+                parentpath = str(PurePath(localpath) / content_)
+                await self.async_backend.put(
+                    localpath=parentpath,
                     remotepath=remotepath,
+                    dereference=dereference,
                     preserve=preserve,
-                    recurse=True,
-                    follow_symlinks=dereference,
+                    recursive=True,
                 )
                 await self._unlock()
-            except (OSError, asyncssh.Error) as exc:
-                raise OSError(f'Error while uploading file {PurePath(localpath)/content_}: {exc}')
+            except OSError as exc:
+                raise OSError(f'Error while uploading file {parentpath}: {exc}')
 
     async def copy_async(
         self,
@@ -624,7 +642,7 @@ class AsyncSshTransport(AsyncTransport):
 
         remotesource = str(remotesource)
         remotedestination = str(remotedestination)
-        if self.has_magic(remotedestination):
+        if has_magic(remotedestination):
             raise ValueError('Pathname patterns are not allowed in the destination')
 
         if not remotedestination:
@@ -632,99 +650,13 @@ class AsyncSshTransport(AsyncTransport):
         if not remotesource:
             raise ValueError('remotesource must be a non empty string')
 
-        # SFTP.copy() supports remote copy only in very recent version OpenSSH 9.0 and later.
-        # For the older versions, it downloads the file and uploads it again!
-        # For performance reasons, we should check if the remote copy is supported, if so use
-        # self._sftp.mcopy() & self._sftp.copy() otherwise send a `cp` command to the remote machine.
-        # See here: https://github.com/ronf/asyncssh/issues/724
-        if self._sftp.supports_remote_copy:
-            try:
-                if self.has_magic(remotesource):
-                    await self._sftp.mcopy(
-                        remotesource,
-                        remotedestination,
-                        preserve=preserve,
-                        recurse=recursive,
-                        follow_symlinks=dereference,
-                        remote_only=True,
-                    )
-                else:
-                    if not await self.path_exists_async(remotesource):
-                        raise FileNotFoundError(f'The remote path {remotesource} does not exist')
-
-                    await self._sftp.copy(
-                        remotesource,
-                        remotedestination,
-                        preserve=preserve,
-                        recurse=recursive,
-                        follow_symlinks=dereference,
-                        remote_only=True,
-                    )
-            except asyncssh.sftp.SFTPNoSuchFile as exc:
-                # note: one could just create directories, but aiida engine expects this behavior
-                # see `execmanager.py`::_copy_remote_files for more details
-                raise FileNotFoundError(
-                    f'The remote path {remotedestination} is not reachable,'
-                    f'perhaps the parent folder does not exists: {exc}'
-                )
-            except asyncssh.sftp.SFTPFailure as exc:
-                raise OSError(f'Error while copying {remotesource} to {remotedestination}: {exc}')
-        else:
-            self.logger.warning('The remote copy is not supported, using the `cp` command to copy the file/folder')
-            # I copy pasted the whole logic below from SshTransport class:
-
-            async def _exec_cp(cp_exe: str, cp_flags: str, src: str, dst: str):
-                """Execute the ``cp`` command on the remote machine."""
-                # to simplify writing the above copy function
-                command = f'{cp_exe} {cp_flags} {escape_for_bash(src)} {escape_for_bash(dst)}'
-
-                retval, stdout, stderr = await self.exec_command_wait_async(command)
-
-                if retval == 0:
-                    if stderr.strip():
-                        self.logger.warning(f'There was nonempty stderr in the cp command: {stderr}')
-                else:
-                    self.logger.error(
-                        "Problem executing cp. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
-                            retval, stdout, stderr, command
-                        )
-                    )
-                    if 'No such file or directory' in str(stderr):
-                        raise FileNotFoundError(f'Error while executing cp: {stderr}')
-
-                    raise OSError(
-                        'Error while executing cp. Exit code: {}, '
-                        "stdout: '{}', stderr: '{}', "
-                        "command: '{}'".format(retval, stdout, stderr, command)
-                    )
-
-            cp_exe = 'cp'
-            cp_flags = '-f'
-
-            if recursive:
-                cp_flags += ' -r'
-
-            if preserve:
-                cp_flags += ' -p'
-
-            if dereference:
-                # use -L; --dereference is not supported on mac
-                cp_flags += ' -L'
-
-            if self.has_magic(remotesource):
-                to_copy_list = await self.glob_async(remotesource)
-
-                if len(to_copy_list) > 1:
-                    if not await self.path_exists_async(remotedestination) or await self.isfile_async(
-                        remotedestination
-                    ):
-                        raise OSError("Can't copy more than one file in the same destination file")
-
-                for file in to_copy_list:
-                    await _exec_cp(cp_exe, cp_flags, file, remotedestination)
-
-            else:
-                await _exec_cp(cp_exe, cp_flags, remotesource, remotedestination)
+        await self.async_backend.copy(
+            remotesource=remotesource,
+            remotedestination=remotedestination,
+            dereference=dereference,
+            recursive=recursive,
+            preserve=preserve,
+        )
 
     async def copyfile_async(
         self,
@@ -813,6 +745,8 @@ class AsyncSshTransport(AsyncTransport):
         if format not in ['tar', 'tar.gz', 'tar.bz2', 'tar.xz']:
             raise ValueError(f'Unsupported compression format: {format}')
 
+        await self.makedirs_async(Path(remotedestination).parent, ignore_existing=True)
+
         compression_flag = {
             'tar': '',
             'tar.gz': 'z',
@@ -826,13 +760,8 @@ class AsyncSshTransport(AsyncTransport):
         copy_list = []
 
         for source in remotesources:
-            if self.has_magic(source):
-                try:
-                    copy_list += await self.glob_async(source)
-                except asyncssh.sftp.SFTPNoSuchFile:
-                    raise OSError(
-                        f'Either the remote path {source} does not exist, or a matching file/folder not found.'
-                    )
+            if has_magic(source):
+                copy_list += await self.glob_async(source, ignore_nonexisting=False)
             else:
                 if not await self.path_exists_async(source):
                     raise OSError(f'The remote path {source} does not exist')
@@ -860,7 +789,11 @@ class AsyncSshTransport(AsyncTransport):
             raise OSError(f'Error while creating the tar archive. Exit code: {retval}')
 
     async def extract_async(
-        self, remotesource: TransportPath, remotedestination: TransportPath, overwrite: bool = True
+        self,
+        remotesource: TransportPath,
+        remotedestination: TransportPath,
+        overwrite: bool = True,
+        strip_components: int = 0,
     ):
         """Extract a remote archive.
 
@@ -870,6 +803,7 @@ class AsyncSshTransport(AsyncTransport):
         :param remotedestination: path to the remote destination directory
         :param overwrite: if True, overwrite the file at remotedestination if it already exists
             (we don't have a usecase for False, sofar. The parameter is kept for clarity.)
+        :param strip_components: strip NUMBER leading components from file names on extraction
 
         :raises OSError: if the remotesource does not exist.
         :raises OSError: if the extraction fails.
@@ -882,7 +816,7 @@ class AsyncSshTransport(AsyncTransport):
 
         await self.makedirs_async(remotedestination, ignore_existing=True)
 
-        tar_command = f'tar -xf {remotesource!s} -C {remotedestination!s} '
+        tar_command = f'tar --strip-components {strip_components} -xf {remotesource!s} -C {remotedestination!s} '
 
         retval, stdout, stderr = await self.exec_command_wait_async(tar_command)
 
@@ -932,13 +866,11 @@ class AsyncSshTransport(AsyncTransport):
             workdir = str(workdir)
             command = f'cd {workdir} && ( {command} )'
 
-        bash_commmand = self._bash_command_str + '-c '
-
-        result = await self._conn.run(
-            bash_commmand + escape_for_bash(command), input=stdin, check=False, timeout=timeout
+        return await self.async_backend.run(
+            command=command,
+            stdin=stdin,
+            timeout=timeout,
         )
-        # Since the command is str, both stdout and stderr are strings
-        return (result.returncode, ''.join(str(result.stdout)), ''.join(str(result.stderr)))
 
     async def get_attribute_async(self, path: TransportPath):
         """Return an object FixedFieldsAttributeDict for file in a given path,
@@ -966,22 +898,21 @@ class AsyncSshTransport(AsyncTransport):
         path = str(path)
         from aiida.transports.util import FileAttribute
 
-        asyncssh_attr = await self._sftp.lstat(path)
+        obj_stat = await self.async_backend.lstat(path)
         aiida_attr = FileAttribute()
-        # map the asyncssh class into the aiida one
         for key in aiida_attr._valid_fields:
             if key == 'st_size':
-                aiida_attr[key] = asyncssh_attr.size
+                aiida_attr[key] = obj_stat.size
             elif key == 'st_uid':
-                aiida_attr[key] = asyncssh_attr.uid
+                aiida_attr[key] = obj_stat.uid
             elif key == 'st_gid':
-                aiida_attr[key] = asyncssh_attr.gid
+                aiida_attr[key] = obj_stat.gid
             elif key == 'st_mode':
-                aiida_attr[key] = asyncssh_attr.permissions
+                aiida_attr[key] = obj_stat.permissions
             elif key == 'st_atime':
-                aiida_attr[key] = asyncssh_attr.atime
+                aiida_attr[key] = obj_stat.atime
             elif key == 'st_mtime':
-                aiida_attr[key] = asyncssh_attr.mtime
+                aiida_attr[key] = obj_stat.mtime
             else:
                 raise NotImplementedError(f'Mapping the {key} attribute is not implemented')
         return aiida_attr
@@ -1002,7 +933,7 @@ class AsyncSshTransport(AsyncTransport):
 
         path = str(path)
 
-        return await self._sftp.isdir(path)
+        return await self.async_backend.isdir(path)
 
     async def isfile_async(self, path: TransportPath):
         """Return True if the given path is a file, False otherwise.
@@ -1020,7 +951,7 @@ class AsyncSshTransport(AsyncTransport):
 
         path = str(path)
 
-        return await self._sftp.isfile(path)
+        return await self.async_backend.isfile(path)
 
     async def listdir_async(self, path: TransportPath, pattern=None):
         """Return a list of the names of the entries in the given path.
@@ -1037,12 +968,12 @@ class AsyncSshTransport(AsyncTransport):
         """
         path = str(path)
         if not pattern:
-            list_ = list(await self._sftp.listdir(path))
+            list_ = await self.async_backend.listdir(path)
         else:
             patterned_path = pattern if pattern.startswith('/') else Path(path).joinpath(pattern)
             # I put the type ignore here because the asyncssh.sftp.glob()
-            # method alwyas returns a sequence of str, if input is str
-            list_ = list(await self._sftp.glob(patterned_path))  # type: ignore[arg-type]
+            # method always returns a sequence of str, if input is str
+            list_ = list(await self.glob_async(patterned_path))
 
         for item in ['..', '.']:
             if item in list_:
@@ -1092,52 +1023,34 @@ class AsyncSshTransport(AsyncTransport):
 
         :param path: absolute path to directory to create
         :param bool ignore_existing: if set to true, it doesn't give any error
-                if the leaf directory does already exist
+                if the directory already exists
 
         :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raises: OSError, if directory at path already exists
         """
         path = str(path)
-
         try:
-            await self._sftp.makedirs(path, exist_ok=ignore_existing)
-        except SFTPFileAlreadyExists as exc:
+            await self.async_backend.mkdir(path=path, exist_ok=ignore_existing, parents=True)
+        except FileExistsError as exc:
             raise OSError(f'Error while creating directory {path}: {exc}, directory already exists')
-        except asyncssh.sftp.SFTPFailure as exc:
-            if (self._sftp.version < 6) and not ignore_existing:
-                raise OSError(f'Error while creating directory {path}: {exc}, probably it already exists')
-            else:
-                raise TransportInternalError(f'Error while creating directory {path}: {exc}')
 
     async def mkdir_async(self, path: TransportPath, ignore_existing=False):
         """Create a directory.
 
         :param path: absolute path to directory to create
         :param bool ignore_existing: if set to true, it doesn't give any error
-                if the leaf directory does already exist
+                if the directory already exists
 
         :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :raises: OSError, if directory at path already exists
         """
         path = str(path)
-
         try:
-            await self._sftp.mkdir(path)
-        except SFTPFileAlreadyExists as exc:
-            # note: mkdir() in asyncssh does not support the exist_ok parameter
-            if ignore_existing:
-                return
+            await self.async_backend.mkdir(path=path, exist_ok=ignore_existing, parents=False)
+        except FileExistsError as exc:
             raise OSError(f'Error while creating directory {path}: {exc}, directory already exists')
-        except asyncssh.sftp.SFTPFailure as exc:
-            if self._sftp.version < 6:
-                if ignore_existing:
-                    return
-                else:
-                    raise OSError(f'Error while creating directory {path}: {exc}, probably it already exists')
-            else:
-                raise TransportInternalError(f'Error while creating directory {path}: {exc}')
 
     async def normalize_async(self, path: TransportPath):
         raise NotImplementedError('Not implemented, waiting for a use case.')
@@ -1153,13 +1066,7 @@ class AsyncSshTransport(AsyncTransport):
         :raise OSError: if the path is a directory
         """
         path = str(path)
-        # TODO: check if asyncssh does return SFTPFileIsADirectory in this case
-        # if that's the case, we can get rid of the isfile check
-        # https://github.com/aiidateam/aiida-core/issues/6719
-        if await self.isdir_async(path):
-            raise OSError(f'The path {path} is a directory')
-        else:
-            await self._sftp.remove(path)
+        await self.async_backend.remove(path)
 
     async def rename_async(self, oldpath: TransportPath, newpath: TransportPath):
         """
@@ -1179,10 +1086,10 @@ class AsyncSshTransport(AsyncTransport):
         if not oldpath or not newpath:
             raise ValueError('oldpath and newpath must be non-empty strings')
 
-        if await self._sftp.exists(newpath):
+        if await self.path_exists_async(newpath):
             raise OSError(f'Cannot rename {oldpath} to {newpath}: destination exists')
 
-        await self._sftp.rename(oldpath, newpath)
+        await self.async_backend.rename(oldpath, newpath)
 
     async def rmdir_async(self, path: TransportPath):
         """Remove the folder named path.
@@ -1193,10 +1100,7 @@ class AsyncSshTransport(AsyncTransport):
         :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
         path = str(path)
-        try:
-            await self._sftp.rmdir(path)
-        except asyncssh.sftp.SFTPFailure:
-            raise OSError(f'Error while removing directory {path}: probably directory is not empty')
+        await self.async_backend.rmdir(path)
 
     async def rmtree_async(self, path: TransportPath):
         """Remove the folder named path, and all its contents.
@@ -1208,10 +1112,7 @@ class AsyncSshTransport(AsyncTransport):
         :raises OSError: if the operation fails
         """
         path = str(path)
-        try:
-            await self._sftp.rmtree(path, ignore_errors=False)
-        except asyncssh.Error as exc:
-            raise OSError(f'Error while removing directory tree {path}: {exc}')
+        await self.async_backend.rmtree(path)
 
     async def path_exists_async(self, path: TransportPath):
         """Returns True if path exists, False otherwise.
@@ -1221,7 +1122,7 @@ class AsyncSshTransport(AsyncTransport):
         :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
         path = str(path)
-        return await self._sftp.exists(path)
+        return await self.async_backend.path_exists(path)
 
     async def whoami_async(self):
         """Get the remote username
@@ -1257,40 +1158,42 @@ class AsyncSshTransport(AsyncTransport):
         remotesource = str(remotesource)
         remotedestination = str(remotedestination)
 
-        if self.has_magic(remotesource):
-            if self.has_magic(remotedestination):
+        if has_magic(remotesource):
+            if has_magic(remotedestination):
                 raise ValueError('`remotedestination` cannot have patterns')
 
             # find all files matching pattern
-            for this_source in await self._sftp.glob(remotesource):
+            for this_source in await self.glob_async(remotesource):
                 # create the name of the link: take the last part of the path
-                this_dest = os.path.join(remotedestination, os.path.split(this_source)[-1])  # type: ignore [arg-type]
+                this_dest = os.path.join(remotedestination, os.path.split(this_source)[-1])
                 # in the line above I am sure that this_source is a string,
                 # since asyncssh.sftp.glob() returns only str if argument remotesource is a str
-                await self._sftp.symlink(this_source, this_dest)
+                await self.async_backend.symlink(this_source, this_dest)
         else:
-            await self._sftp.symlink(remotesource, remotedestination)
+            await self.async_backend.symlink(remotesource, remotedestination)
 
-    async def glob_async(self, pathname: TransportPath):
+    async def glob_async(self, pathname: TransportPath, ignore_nonexisting: bool = True):
         """Return a list of paths matching a pathname pattern.
 
         The pattern may contain simple shell-style wildcards a la fnmatch.
 
         :param pathname: the pathname pattern to match.
             It should only be absolute path.
+        :param ignore_nonexisting: if True, it will not raise and returns an empty list.
 
         :type pathname:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: a list of paths matching the pattern.
         """
         pathname = str(pathname)
-        return await self._sftp.glob(pathname)
+        return await self.async_backend.glob(pathname, ignore_nonexisting=ignore_nonexisting)
 
     async def chmod_async(self, path: TransportPath, mode: int, follow_symlinks: bool = True):
-        """Change the permissions of a file.
+        """Change permissions of a path.
 
-        :param path: path to the file
-        :param mode: the new permissions
+        :param path: Path to the file or directory.
+        :param mode: New permissions as an integer, for example 0o700 (octal) or 448 (decimal) results in `-rwx------`
+            for a file.
         :param bool follow_symlinks: if True, follow symbolic links
 
         :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
@@ -1302,10 +1205,10 @@ class AsyncSshTransport(AsyncTransport):
         path = str(path)
         if not path:
             raise OSError('Input path is an empty argument.')
-        try:
-            await self._sftp.chmod(path, mode, follow_symlinks=follow_symlinks)
-        except asyncssh.sftp.SFTPNoSuchFile as exc:
-            raise OSError(f'Error {exc}, directory does not exists')
+        if await self.path_exists_async(path):
+            await self.async_backend.chmod(path, mode, follow_symlinks=follow_symlinks)
+        else:
+            raise OSError(f'Error, path {path} does not exist')
 
     async def chown_async(self, path: TransportPath, uid: int, gid: int):
         """Change the owner and group id of a file.
@@ -1323,10 +1226,11 @@ class AsyncSshTransport(AsyncTransport):
         path = str(path)
         if not path:
             raise OSError('Input path is an empty argument.')
-        try:
-            await self._sftp.chown(path, uid, gid, follow_symlinks=True)
-        except asyncssh.sftp.SFTPNoSuchFile as exc:
-            raise OSError(f'Error {exc}, directory does not exists')
+
+        if await self.path_exists_async(path):
+            await self.async_backend.chown(path, uid, gid)
+        else:
+            raise OSError(f'Error, path {path} does not exist')
 
     async def copy_from_remote_to_remote_async(
         self,
@@ -1378,7 +1282,7 @@ class AsyncSshTransport(AsyncTransport):
             self.logger.error('Unknown parameters passed to copy_from_remote_to_remote')
 
         with SandboxFolder() as sandbox:
-            await self.get_async(remotesource, sandbox.abspath, **kwargs_get)
+            await self.get_async(remotesource, sandbox.abspath, **kwargs_get)  # type: ignore[arg-type]
             # Then we scan the full sandbox directory with get_content_list,
             # because copying directly from sandbox.abspath would not work
             # to copy a single file into another single file, and copying

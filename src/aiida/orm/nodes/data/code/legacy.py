@@ -220,7 +220,7 @@ class Code(AbstractCode):
         elif query.count() > 1:
             codes = query.all(flat=True)
             retstr = f"There are multiple codes with label '{label}', having IDs: "
-            retstr += f"{', '.join(sorted([str(c.pk) for c in codes]))}.\n"  # type: ignore[union-attr]
+            retstr += f"{', '.join(sorted([str(c.pk) for c in codes]))}.\n"
             retstr += 'Relabel them (using their ID), or refer to them with their ID.'
             raise MultipleObjectsError(retstr)
         else:
@@ -231,7 +231,7 @@ class Code(AbstractCode):
             return result[0]
 
     @classmethod
-    def get(cls, pk=None, label=None, machinename=None):
+    def get(cls, pk=None, label=None, machinename=None):  # type: ignore[override]
         """Get a Computer object with given identifier string, that can either be
         the numeric ID (pk), or the label (and computername) (if unique).
 
@@ -320,9 +320,9 @@ class Code(AbstractCode):
         valid_codes = query.all(flat=True)
 
         if labels:
-            return [c.label for c in valid_codes]  # type: ignore[union-attr]
+            return [c.label for c in valid_codes]
 
-        return [c.pk for c in valid_codes]  # type: ignore[union-attr]
+        return [c.pk for c in valid_codes]
 
     def _validate(self):
         super()._validate()

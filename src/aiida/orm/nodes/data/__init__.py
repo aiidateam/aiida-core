@@ -59,6 +59,7 @@ __all__ = (
     'ProjectionData',
     'RemoteData',
     'RemoteStashCompressedData',
+    'RemoteStashCustomData',
     'RemoteStashData',
     'RemoteStashFolderData',
     'SinglefileData',

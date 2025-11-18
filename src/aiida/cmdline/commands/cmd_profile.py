@@ -17,6 +17,7 @@ from aiida.cmdline.groups import DynamicEntryPointCommandGroup
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import setup
 from aiida.cmdline.utils import defaults, echo
+from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions
 from aiida.manage.configuration import Profile, create_profile, get_config
 
@@ -58,7 +59,10 @@ def command_create_profile(
     from aiida.plugins.entry_point import get_entry_point_from_class
 
     if not storage_cls.read_only and email is None:
-        raise click.BadParameter('The option is required for storages that are not read-only.', param_hint='--email')
+        raise click.BadParameter(
+            'The option is required for storages that are not read-only.',
+            param_hint='--email',
+        )
 
     _, storage_entry_point = get_entry_point_from_class(storage_cls.__module__, storage_cls.__name__)
     assert storage_entry_point is not None
@@ -94,7 +98,12 @@ def command_create_profile(
             broker_backend=broker_backend,
             broker_config=broker_config,
         )
-    except (ValueError, TypeError, exceptions.EntryPointError, exceptions.StorageMigrationError) as exception:
+    except (
+        ValueError,
+        TypeError,
+        exceptions.EntryPointError,
+        exceptions.StorageMigrationError,
+    ) as exception:
         echo.echo_critical(str(exception))
 
     echo.echo_success(f'Created new profile `{profile.name}`.')
@@ -122,7 +131,7 @@ def profile_setup():
     """Set up a new profile."""
 
 
-@verdi_profile.command('configure-rabbitmq')  # type: ignore[arg-type]
+@verdi_profile.command('configure-rabbitmq')
 @arguments.PROFILE(default=defaults.get_default_profile)
 @options.FORCE()
 @setup.SETUP_BROKER_PROTOCOL()
@@ -133,7 +142,7 @@ def profile_setup():
 @setup.SETUP_BROKER_VIRTUAL_HOST()
 @options.NON_INTERACTIVE(default=True, show_default='--non-interactive')
 @click.pass_context
-def profile_configure_rabbitmq(ctx, profile, non_interactive, force, **kwargs):
+def profile_configure_rabbitmq(ctx, /, profile, non_interactive, force, **kwargs):
     """Configure RabbitMQ for a profile.
 
     Enable RabbitMQ for a profile that was created without a broker, or reconfigure existing connection details.
@@ -164,7 +173,10 @@ def profile_list():
     """Display a list of all available profiles."""
     try:
         config = get_config()
-    except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exception:
+    except (
+        exceptions.MissingConfigurationError,
+        exceptions.ConfigurationError,
+    ) as exception:
         # This can happen for a fresh install and the `verdi setup` has not yet been run. In this case it is still nice
         # to be able to see the configuration directory, for instance for those who have set `AIIDA_PATH`. This way
         # they can at least verify that it is correctly set.
@@ -224,7 +236,10 @@ def profile_set_default(profile):
 def _profile_set_default(profile):
     try:
         config = get_config()
-    except (exceptions.MissingConfigurationError, exceptions.ConfigurationError) as exception:
+    except (
+        exceptions.MissingConfigurationError,
+        exceptions.ConfigurationError,
+    ) as exception:
         echo.echo_critical(str(exception))
 
     config.set_default_profile(profile.name, overwrite=True).store()
@@ -260,7 +275,10 @@ def profile_delete(force, delete_data, profiles):
         echo.echo_warning(f'Deleting profile `{profile.name}`, {suffix} all data.')
 
         if not force:
-            echo.echo_warning('This operation cannot be undone, are you sure you want to continue?', nl=False)
+            echo.echo_warning(
+                'This operation cannot be undone, are you sure you want to continue?',
+                nl=False,
+            )
 
         if not force and not click.confirm(''):
             echo.echo_report(f'Deleting of `{profile.name}` cancelled.')
@@ -309,3 +327,137 @@ def profile_flush(force, profile):
         storage.maintain(full=True, dry_run=False)
 
         # Users and Computers?
+
+
+@verdi_profile.command('dump')
+@options.PATH()
+@options.DRY_RUN()
+@options.OVERWRITE()
+@options.ALL()
+@options.CODES()
+@options.COMPUTERS()
+@options.GROUPS()
+@options.USER()
+@options.PAST_DAYS()
+@options.START_DATE()
+@options.END_DATE()
+@options.FILTER_BY_LAST_DUMP_TIME()
+@options.ONLY_TOP_LEVEL_CALCS()
+@options.ONLY_TOP_LEVEL_WORKFLOWS()
+@options.DELETE_MISSING()
+@options.SYMLINK_CALCS()
+@options.ORGANIZE_BY_GROUPS()
+@options.ALSO_UNGROUPED()
+@options.RELABEL_GROUPS()
+@options.INCLUDE_INPUTS()
+@options.INCLUDE_OUTPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.FLAT()
+@options.DUMP_UNSEALED()
+@click.pass_context
+@with_dbenv()
+def profile_dump(
+    ctx,
+    path,
+    dry_run,
+    overwrite,
+    all_entries,
+    codes,
+    computers,
+    groups,
+    user,
+    past_days,
+    start_date,
+    end_date,
+    filter_by_last_dump_time,
+    only_top_level_calcs,
+    only_top_level_workflows,
+    delete_missing,
+    symlink_calcs,
+    organize_by_groups,
+    also_ungrouped,
+    relabel_groups,
+    include_inputs,
+    include_outputs,
+    include_attributes,
+    include_extras,
+    flat,
+    dump_unsealed,
+):
+    """Dump all data in an AiiDA profile's storage to disk."""
+
+    import traceback
+    from pathlib import Path
+
+    from aiida.cmdline.utils import echo
+    from aiida.tools._dumping.utils import DumpPaths
+
+    warning_msg = (
+        'This is a new feature which is still in its testing phase. '
+        'If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.'
+    )
+    echo.echo_warning(warning_msg)
+
+    # --- Initial Setup ---
+    profile = ctx.obj['profile']
+    try:
+        if path is None:
+            profile_path = DumpPaths.get_default_dump_path(entity=profile)
+            dump_base_output_path = Path.cwd() / profile_path
+            echo.echo_report(f"No output path specified. Using default: '{dump_base_output_path}'")
+        else:
+            dump_base_output_path = Path(path).resolve()
+            echo.echo_report(f'Using specified output path: `{dump_base_output_path}`')
+
+        # Logical checks
+        if not organize_by_groups and relabel_groups:
+            echo.echo_warning('`relabel_groups` is True, but `organize_by_groups` is False.')
+            return
+        if dry_run and overwrite:
+            msg = (
+                '`--dry-run` and `--overwrite` selected (or set in config). Overwrite operation will NOT be performed.'
+            )
+            echo.echo_warning(msg)
+            return
+
+        # Run the dumping
+        _ = profile.dump(
+            output_path=dump_base_output_path,
+            dry_run=dry_run,
+            overwrite=overwrite,
+            all_entries=all_entries,
+            groups=list(groups) if groups else None,
+            user=user,
+            computers=computers,
+            codes=codes,
+            past_days=past_days,
+            start_date=start_date,
+            end_date=end_date,
+            filter_by_last_dump_time=filter_by_last_dump_time,
+            only_top_level_calcs=only_top_level_calcs,
+            only_top_level_workflows=only_top_level_workflows,
+            delete_missing=delete_missing,
+            symlink_calcs=symlink_calcs,
+            organize_by_groups=organize_by_groups,
+            also_ungrouped=also_ungrouped,
+            relabel_groups=relabel_groups,
+            include_inputs=include_inputs,
+            include_outputs=include_outputs,
+            include_attributes=include_attributes,
+            include_extras=include_extras,
+            flat=flat,
+            dump_unsealed=dump_unsealed,
+        )
+
+        if not dry_run and (
+            all_entries or bool(codes or computers or groups or past_days or start_date or end_date or user)
+        ):
+            msg = f'Raw files for profile `{profile.name}` dumped into folder `{dump_base_output_path.name}`.'
+            echo.echo_success(msg)
+        elif dry_run:
+            echo.echo_success('Dry run completed.')
+
+    except Exception as e:
+        msg = f'Unexpected error during dump of {profile.name}:\n ({e!s}).\n'
+        echo.echo_critical(msg + traceback.format_exc())

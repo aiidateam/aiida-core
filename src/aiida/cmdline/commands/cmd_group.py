@@ -8,6 +8,8 @@
 ###########################################################################
 """`verdi group` commands"""
 
+from typing import Any
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -65,8 +67,8 @@ def group_remove_nodes(group, nodes, clear, force):
                 echo.echo_critical(f'None of the specified nodes are in {group}.')
 
             if len(node_pks) > len(group_node_pks):
-                node_pks = set(node_pks).difference(set(group_node_pks))
-                echo.echo_warning(f'{len(node_pks)} nodes with PK {node_pks} are not in {group}.')
+                nodes_not_in_group = set(node_pks).difference(set(group_node_pks))
+                echo.echo_warning(f'{len(nodes_not_in_group)} nodes with PK {nodes_not_in_group} are not in {group}.')
 
             message = f'Are you sure you want to remove {len(group_node_pks)} nodes from {group}?'
 
@@ -105,7 +107,7 @@ def group_move_nodes(source_group, target_group, force, nodes, all_entries):
         else:
             echo.echo_critical('Neither NODES or the `-a, --all` option was specified.')
 
-    node_pks = [node.pk for node in nodes]
+    node_pks = {node.pk for node in nodes}
 
     if not all_entries:
         query = QueryBuilder()
@@ -137,7 +139,7 @@ def group_move_nodes(source_group, target_group, force, nodes, all_entries):
 
     if not force:
         click.confirm(
-            f'Are you sure you want to move {len(nodes)} nodes from {source_group} ' f'to {target_group}?', abort=True
+            f'Are you sure you want to move {len(nodes)} nodes from {source_group} to {target_group}?', abort=True
         )
 
     source_group.remove_nodes(nodes)
@@ -214,7 +216,7 @@ def group_delete(
         from aiida.common.escaping import escape_for_sql_like
 
         builder = orm.QueryBuilder()
-        filters = {}
+        filters: dict[str, Any] = {}
 
         # Note: we could have set 'core' as a default value for type_string,
         # but for the sake of uniform interface, we decided to keep the default value of None.
@@ -248,7 +250,9 @@ def group_delete(
             user_email = user.email
         else:
             # By default: only groups of this user
-            user_email = orm.User.collection.get_default().email
+            if not (default_user := orm.User.collection.get_default()):
+                echo.echo_critical('Could not get default user')
+            user_email = default_user.email
 
         # Query groups that belong to all users
         if not all_users:
@@ -460,7 +464,7 @@ def group_list(
     from aiida.common.escaping import escape_for_sql_like
 
     builder = orm.QueryBuilder()
-    filters = {}
+    filters: dict[str, Any] = {}
 
     if not all_entries:
         if '%' in type_string or '_' in type_string:
@@ -488,7 +492,9 @@ def group_list(
         user_email = user.email
     else:
         # By default: only groups of this user
-        user_email = orm.User.collection.get_default().email
+        if not (default_user := orm.User.collection.get_default()):
+            echo.echo_critical('Could not get default user')
+        user_email = default_user.email
 
     # Query groups that belong to all users
     if not all_users:
@@ -632,3 +638,106 @@ def group_path_ls(path, type_string, recursive, as_table, no_virtual, with_descr
             if no_virtual and child.is_virtual:
                 continue
             echo.echo(child.path, bold=not child.is_virtual)
+
+
+@verdi_group.command('dump')
+@arguments.GROUP()
+@options.PATH()
+@options.DRY_RUN()
+@options.OVERWRITE()
+@options.PAST_DAYS()
+@options.START_DATE()
+@options.END_DATE()
+@options.FILTER_BY_LAST_DUMP_TIME()
+@options.ONLY_TOP_LEVEL_CALCS()
+@options.ONLY_TOP_LEVEL_WORKFLOWS()
+@options.DELETE_MISSING()
+@options.SYMLINK_CALCS()
+@options.INCLUDE_INPUTS()
+@options.INCLUDE_OUTPUTS()
+@options.INCLUDE_ATTRIBUTES()
+@options.INCLUDE_EXTRAS()
+@options.FLAT()
+@options.DUMP_UNSEALED()
+@click.pass_context
+@with_dbenv()
+def group_dump(
+    ctx,
+    group,
+    path,
+    dry_run,
+    overwrite,
+    past_days,
+    start_date,
+    end_date,
+    filter_by_last_dump_time,
+    delete_missing,
+    only_top_level_calcs,
+    only_top_level_workflows,
+    symlink_calcs,
+    include_inputs,
+    include_outputs,
+    include_attributes,
+    include_extras,
+    flat,
+    dump_unsealed,
+):
+    """Dump data of an AiiDA group to disk."""
+
+    import traceback
+    from pathlib import Path
+
+    from aiida.cmdline.utils import echo
+    from aiida.tools._dumping.utils import DumpPaths
+
+    warning_msg = (
+        'This is a new feature which is still in its testing phase. '
+        'If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.'
+    )
+    echo.echo_warning(warning_msg)
+
+    try:
+        if path is None:
+            group_path = DumpPaths.get_default_dump_path(group)
+            dump_base_output_path = Path.cwd() / group_path
+            echo.echo_report(f'No output path specified. Using default: `{dump_base_output_path}`')
+        else:
+            dump_base_output_path = Path(path).resolve()
+            echo.echo_report(f'Using specified output path: `{dump_base_output_path}`')
+
+        # --- Logical Checks ---
+        if dry_run and overwrite:
+            msg = (
+                '`--dry-run` and `--overwrite` selected (or set in config). Overwrite operation will NOT be performed.'
+            )
+            echo.echo_warning(msg)
+
+        # Run the dumping
+        group.dump(
+            output_path=dump_base_output_path,
+            dry_run=dry_run,
+            overwrite=overwrite,
+            past_days=past_days,
+            start_date=start_date,
+            end_date=end_date,
+            filter_by_last_dump_time=filter_by_last_dump_time,
+            only_top_level_calcs=only_top_level_calcs,
+            only_top_level_workflows=only_top_level_workflows,
+            symlink_calcs=symlink_calcs,
+            include_inputs=include_inputs,
+            include_outputs=include_outputs,
+            include_attributes=include_attributes,
+            include_extras=include_extras,
+            flat=flat,
+            dump_unsealed=dump_unsealed,
+        )
+
+        if not dry_run:
+            msg = f'Raw files for group `{group.label}` dumped into folder `{dump_base_output_path.name}`.'
+            echo.echo_success(msg)
+        else:
+            echo.echo_success('Dry run completed.')
+
+    except Exception as e:
+        msg = f'Unexpected error during dump of group {group.label}:\n ({e!s}).\n'
+        echo.echo_critical(msg + traceback.format_exc())

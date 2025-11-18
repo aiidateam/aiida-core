@@ -8,11 +8,14 @@
 ###########################################################################
 """Tests for the `run` functions."""
 
+import pytest
+
 from aiida.engine import run, run_get_node
 from aiida.orm import Int, ProcessNode, Str
 from tests.utils.processes import DummyProcess
 
 
+@pytest.mark.requires_rmq
 class TestRun:
     """Tests for the `run` functions."""
 

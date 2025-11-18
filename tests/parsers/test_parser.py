@@ -111,6 +111,7 @@ class TestParser:
         assert 'output' in outputs_for_parsing
         assert outputs_for_parsing['output'].uuid == output.uuid
 
+    @pytest.mark.requires_rmq
     def test_parse_from_node(self):
         """Test that the `parse_from_node` returns a tuple of the parsed output nodes and a calculation node.
 
@@ -143,6 +144,7 @@ class TestParser:
         # Verify that the `retrieved_temporary_folder` keyword can be passed, there is no validation though
         result, calcfunction = ArithmeticAddParser.parse_from_node(node, retrieved_temporary_folder='/some/path')
 
+    @pytest.mark.requires_rmq
     def test_parse_from_node_output_validation(self):
         """Test that the ``parse_from_node`` properly validates attached outputs.
 

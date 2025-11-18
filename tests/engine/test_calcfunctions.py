@@ -37,6 +37,7 @@ def execution_counter_calcfunction(data):
     return Int(data.value + 1)
 
 
+@pytest.mark.requires_rmq
 class TestCalcFunction:
     """Tests for calcfunctions.
 

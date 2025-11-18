@@ -174,8 +174,7 @@ class Manager:
             try:
                 self._broker.close()
             except futures.TimeoutError as exception:
-                self.logger.warning(f'Call to close the broker timed out: {exception}')
-            self._broker.close()
+                raise TimeoutError("Closing the broker timed out") from exception
 
         self._broker = None
         self._process_controller = None

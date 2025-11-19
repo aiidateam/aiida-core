@@ -314,7 +314,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         Model = self.Model if self.is_stored else self.CreateModel  # noqa: N806
 
         for key, field in Model.model_fields.items():
-            if (skip_read_only and get_metadata(field, 'exclude_to_orm')) or key == 'extras':
+            if skip_read_only and get_metadata(field, 'exclude_to_orm'):
                 continue
 
             if orm_to_model := get_metadata(field, 'orm_to_model'):

@@ -232,7 +232,6 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 def show(code):
     """Display detailed information for a code."""
     from aiida.cmdline import is_verbose
-    from aiida.common.pydantic import get_metadata
 
     table = []
 
@@ -241,8 +240,9 @@ def show(code):
     table.append(['UUID', code.uuid])
     table.append(['Type', code.entry_point.name])
 
-    for field_name, field_info in code.Model.model_fields.items():
-        if get_metadata(field_info, key='exclude_to_orm') or field_name == 'extras':
+    for field_name, field_info in code.CreateModel.model_fields.items():
+        # We don't show extras for codes
+        if field_name == 'extras':
             continue
 
         # FIXME resolve this hardcoded special case properly

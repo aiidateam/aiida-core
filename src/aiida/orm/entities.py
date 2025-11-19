@@ -225,11 +225,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
             # Identify read-only fields
             readonly_fields = [
-                name
-                for name, field in CreateModel.model_fields.items()
-                if hasattr(field, 'json_schema_extra')
-                and isinstance(field.json_schema_extra, dict)
-                and field.json_schema_extra.get('readOnly')
+                name for name, field in CreateModel.model_fields.items() if get_metadata(field, 'exclude_to_orm')
             ]
 
             # Remove read-only fields

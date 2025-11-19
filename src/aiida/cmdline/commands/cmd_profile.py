@@ -288,47 +288,6 @@ def profile_delete(force, delete_data, profiles):
         echo.echo_success(f'Profile `{profile.name}` was deleted.')
 
 
-@verdi_profile.command('flush')
-@arguments.PROFILE(required=True)
-@options.FORCE(help='Skip any prompts for confirmation.')
-def profile_flush(force, profile):
-    """Delete data of one or more profiles.
-
-    The PROFILES argument takes one or multiple profile names of which the storage will be deleted.
-    """
-
-    from aiida.manage.manager import get_manager
-    from aiida.orm import Group, Node, QueryBuilder
-    from aiida.tools import delete_nodes
-
-    manager = get_manager()
-    storage = manager.get_profile_storage()
-
-    if not force:
-        echo.echo_warning('This operation cannot be undone, are you sure you want to continue?', nl=False)
-
-    if not force and not click.confirm(''):
-        echo.echo_report(f'Deleting of `{profile.name}` cancelled.')
-
-    else:
-        # Delete nodes
-        qb = QueryBuilder()
-        qb.append(Node)
-        nodes = qb.all()
-        node_ids = [node[0].pk for node in nodes]
-        delete_nodes(node_ids, dry_run=False)
-
-        # Delete groups
-        groups = Group.collection.all()
-        for group in groups:
-            Group.collection.delete(group.pk)
-
-        # Possibly further cleanup
-        storage.maintain(full=True, dry_run=False)
-
-        # Users and Computers?
-
-
 @verdi_profile.command('dump')
 @options.PATH()
 @options.DRY_RUN()

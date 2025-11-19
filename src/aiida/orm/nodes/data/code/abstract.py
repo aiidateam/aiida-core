@@ -374,6 +374,9 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             skip_read_only=True,
         )
 
+        # Extras are not read-only, but we do not want to export them
+        code_data.pop('extras', None)
+
         # If the attribute is not set, for example ``with_mpi`` do not export it
         # so that there are no null-values in the resulting YAML file
         return yaml.dump(code_data, sort_keys=kwargs.get('sort', False), encoding='utf-8'), {}

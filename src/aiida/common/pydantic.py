@@ -76,6 +76,11 @@ def MetadataField(  # noqa: N802
     :param is_attribute: Whether the field is stored as an attribute. Used by `QbFields`.
     :param is_subscriptable: Whether the field can be indexed like a list or dictionary. Used by `QbFields`.
     """
+    if exclude_to_orm:
+        extra = kwargs.pop('json_schema_extra', {})
+        extra.update({'readOnly': True})
+        kwargs['json_schema_extra'] = extra
+
     field_info = Field(default, **kwargs)
 
     for key, value in (
@@ -91,10 +96,5 @@ def MetadataField(  # noqa: N802
     ):
         if value is not None:
             field_info.metadata.append({key: value})
-
-    if exclude_to_orm:
-        extra = getattr(field_info, 'json_schema_extra', None) or {}
-        extra.update({'readOnly': True})
-        field_info.json_schema_extra = extra
 
     return field_info

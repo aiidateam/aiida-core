@@ -39,3 +39,5 @@ async def test_locking_problem(tmp_path_factory):
 
         with pytest.raises(OSError, match='Error while downloading file'):
             await transport.getfile_async('non_existing', local_dir)
+
+    assert transport._semaphore._value == 1

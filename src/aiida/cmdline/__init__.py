@@ -9,9 +9,7 @@
 """The command line interface of AiiDA."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .groups import *
 from .params import *
 from .utils import *
@@ -58,5 +56,4 @@ __all__ = (
     'only_if_daemon_running',
     'with_dbenv',
 )
-
 # fmt: on

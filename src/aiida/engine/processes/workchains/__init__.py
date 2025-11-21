@@ -9,9 +9,7 @@
 """Module for the `WorkChain` process and related utilities."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .awaitable import *
 from .context import *
 from .restart import *
@@ -34,5 +32,4 @@ __all__ = (
     'return_',
     'while_',
 )
-
 # fmt: on

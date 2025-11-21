@@ -9,9 +9,7 @@
 """Module for classes and methods that represents molecular orbitals."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .orbital import *
 from .realhydrogen import *
 
@@ -19,5 +17,4 @@ __all__ = (
     'Orbital',
     'RealhydrogenOrbital',
 )
-
 # fmt: on

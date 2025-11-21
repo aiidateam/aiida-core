@@ -9,13 +9,12 @@
 """Module for classes and utilities to define transports to other machines."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .plugins import *
 from .transport import *
 
 __all__ = (
+    'AsyncSshTransport',
     'AsyncTransport',
     'BlockingTransport',
     'SshTransport',
@@ -24,5 +23,4 @@ __all__ = (
     'convert_to_bool',
     'parse_sshconfig',
 )
-
 # fmt: on

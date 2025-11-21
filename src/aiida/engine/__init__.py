@@ -9,9 +9,7 @@
 """Module with all the internals that make up the engine of `aiida-core`."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .daemon import *
 from .exceptions import *
 from .launch import *
@@ -74,5 +72,4 @@ __all__ = (
     'while_',
     'workfunction',
 )
-
 # fmt: on

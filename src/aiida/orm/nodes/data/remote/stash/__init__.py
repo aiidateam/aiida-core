@@ -1,9 +1,7 @@
 """Module with data plugins that represent files of completed calculations jobs that have been stashed."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .base import *
 from .compress import *
 from .custom import *
@@ -13,7 +11,6 @@ __all__ = (
     'RemoteStashCompressedData',
     'RemoteStashCustomData',
     'RemoteStashData',
-    'RemoteStashFolderData'
+    'RemoteStashFolderData',
 )
-
 # fmt: on

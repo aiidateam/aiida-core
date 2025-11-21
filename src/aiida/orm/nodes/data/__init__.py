@@ -9,9 +9,7 @@
 """Module with `Node` sub classes for data structures."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .array import *
 from .base import *
 from .bool import *
@@ -75,5 +73,4 @@ __all__ = (
     'pycifrw_from_cif',
     'to_aiida_type',
 )
-
 # fmt: on

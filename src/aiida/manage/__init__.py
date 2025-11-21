@@ -19,18 +19,17 @@
 """
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .caching import *
 from .configuration import *
-from .external import *
 from .manager import *
 
 __all__ = (
     'CURRENT_CONFIG_VERSION',
     'MIGRATIONS',
     'OLDEST_COMPATIBLE_CONFIG_VERSION',
+    'AiiDAConfigDir',
+    'AiiDAConfigPathResolver',
     'Option',
     'Profile',
     'check_and_migrate_config',
@@ -46,5 +45,4 @@ __all__ = (
     'parse_option',
     'upgrade_config',
 )
-
 # fmt: on

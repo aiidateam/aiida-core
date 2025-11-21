@@ -97,8 +97,9 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         if hasattr(cls, 'Model'):
             # The plugin defines a pydantic model: use it to validate the provided arguments
+            Model = cls.CreateModel if hasattr(cls, 'CreateModel') else cls.Model  # noqa: N806
             try:
-                cls.Model(**kwargs)
+                Model(**kwargs)
             except ValidationError as exception:
                 param_hint = [
                     f'--{loc.replace("_", "-")}'  # type: ignore[union-attr]
@@ -168,10 +169,12 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             options_spec = self.factory(entry_point).get_cli_options()  # type: ignore[union-attr]
             return [self.create_option(*item) for item in options_spec]
 
+        Model = cls.CreateModel if hasattr(cls, 'CreateModel') else cls.Model  # noqa: N806
+
         options_spec = {}
 
-        for key, field_info in cls.Model.model_fields.items():
-            if get_metadata(field_info, 'exclude_from_cli'):
+        for key, field_info in Model.model_fields.items():
+            if get_metadata(field_info, 'exclude_to_orm') or key == 'extras':
                 continue
 
             default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default

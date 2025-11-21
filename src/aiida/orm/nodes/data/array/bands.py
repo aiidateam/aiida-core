@@ -10,6 +10,8 @@
 in a Brillouin zone, and how to operate on them.
 """
 
+from __future__ import annotations
+
 import json
 import typing as t
 from string import Template
@@ -20,7 +22,7 @@ from aiida.common.exceptions import ValidationError
 from aiida.common.pydantic import MetadataField
 from aiida.common.utils import join_labels, prettify_labels
 
-from .kpoints import KpointsData
+from . import kpoints
 
 __all__ = ('BandsData', 'find_bandgap')
 
@@ -141,7 +143,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                 lumo = [_[0][_[1] + 1] for _ in zip(bands, homo_indexes)]
             except IndexError:
                 raise ValueError(
-                    'To understand if it is a metal or insulator, ' 'need more bands than n_band=number_electrons'
+                    'To understand if it is a metal or insulator, need more bands than n_band=number_electrons'
                 )
 
         else:
@@ -158,7 +160,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                 lumo = [i[number_electrons // number_electrons_per_band] for i in bands]  # take the n+1th level
             except IndexError:
                 raise ValueError(
-                    'To understand if it is a metal or insulator, ' 'need more bands than n_band=number_electrons'
+                    'To understand if it is a metal or insulator, need more bands than n_band=number_electrons'
                 )
 
         if number_electrons % 2 == 1 and len(stored_bands.shape) == 2:
@@ -210,18 +212,38 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
         return True, gap
 
 
-class BandsData(KpointsData):
+class BandsDataModel(kpoints.KpointsDataModel):
+    array_labels: t.Optional[t.List[str]] = MetadataField(
+        None,
+        description='Labels associated with the band arrays',
+    )
+    units: t.Optional[str] = MetadataField(
+        None,
+        description='Units in which the data in bands were stored',
+        orm_to_model=lambda node, _: t.cast(BandsData, node).base.attributes.get('units', None),
+    )
+
+
+class BandsData(kpoints.KpointsData):
     """Class to handle bands data"""
 
-    class Model(KpointsData.Model):
-        array_labels: t.Optional[t.List[str]] = MetadataField(description='Labels associated with the band arrays')
-        units: str = MetadataField(description='Units in which the data in bands were stored')
+    Model = BandsDataModel
+
+    def __init__(
+        self,
+        *,
+        array_labels: list[str] | None = None,
+        units: str | None = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.units = units
 
     def set_kpointsdata(self, kpointsdata):
         """Load the kpoints from a kpoint object.
         :param kpointsdata: an instance of KpointsData class
         """
-        if not isinstance(kpointsdata, KpointsData):
+        if not isinstance(kpointsdata, kpoints.KpointsData):
             raise ValueError('kpointsdata must be of the KpointsData class')
         try:
             self.cell = kpointsdata.cell
@@ -304,7 +326,7 @@ class BandsData(KpointsData):
                 the_labels = [str(_) for _ in labels]
             else:
                 raise ValidationError(
-                    'Band labels have an unrecognized type ({})' 'but should be a string or a list of strings'.format(
+                    'Band labels have an unrecognized type ({}) but should be a string or a list of strings'.format(
                         labels.__class__
                     )
                 )

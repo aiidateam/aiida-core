@@ -10,13 +10,25 @@
 
 import numpy
 
-from .base import BaseType, to_aiida_type
+from aiida.common.pydantic import MetadataField
+
+from . import base
+from .base import to_aiida_type
 
 __all__ = ('Bool',)
 
 
-class Bool(BaseType):
+class BoolModel(base.BaseTypeModel):
+    value: bool = MetadataField(
+        title='Boolean value',
+        description='The value of the boolean',
+    )
+
+
+class Bool(base.BaseType):
     """`Data` sub class to represent a boolean value."""
+
+    Model = BoolModel
 
     _type = bool
 

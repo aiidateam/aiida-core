@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import logging
 import pathlib
+from typing import cast
 
 from aiida.common import exceptions
 from aiida.common.folders import Folder
@@ -29,14 +30,14 @@ from aiida.common.pydantic import MetadataField
 from aiida.common.typing import FilePath
 from aiida.orm import Computer
 
-from .abstract import AbstractCode
+from .abstract import AbstractCodeModel
 from .legacy import Code
 
 __all__ = ('PortableCode',)
 _LOGGER = logging.getLogger(__name__)
 
 
-def _export_filpath_files_from_repo(portable_code: PortableCode, repository_path: pathlib.Path) -> str:
+def _export_filepath_files_from_repo(portable_code: PortableCode, repository_path: pathlib.Path) -> str:
     for root, _, filenames in portable_code.base.repository.walk():
         for filename in filenames:
             rel_path = str(root / filename)
@@ -47,33 +48,39 @@ def _export_filpath_files_from_repo(portable_code: PortableCode, repository_path
     return str(repository_path)
 
 
+class PortableCodeModel(AbstractCodeModel):
+    """Model describing required information to create an instance."""
+
+    filepath_executable: str = MetadataField(
+        ...,
+        title='Filepath executable',
+        description='Relative filepath of executable with directory of code files.',
+        short_name='-X',
+        priority=1,
+        orm_to_model=lambda node, _: str(cast(PortableCode, node).filepath_executable),
+    )
+    filepath_files: str = MetadataField(
+        ...,
+        title='Code directory',
+        description='Filepath to directory containing code files.',
+        short_name='-F',
+        is_attribute=False,
+        priority=2,
+        orm_to_model=lambda node, kwargs: _export_filepath_files_from_repo(
+            cast(PortableCode, node),
+            kwargs.get('repository_path', pathlib.Path.cwd() / f'{cast(PortableCode, node).label}'),
+        ),
+    )
+
+
 class PortableCode(Code):
     """Data plugin representing an executable code stored in AiiDA's storage."""
+
+    Model = PortableCodeModel
 
     _EMIT_CODE_DEPRECATION_WARNING: bool = False
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
     _SKIP_MODEL_INHERITANCE_CHECK: bool = True
-
-    class Model(AbstractCode.Model):
-        """Model describing required information to create an instance."""
-
-        filepath_executable: str = MetadataField(
-            ...,
-            title='Filepath executable',
-            description='Relative filepath of executable with directory of code files.',
-            short_name='-X',
-            priority=1,
-            orm_to_model=lambda node, _: str(node.filepath_executable),  # type: ignore[attr-defined]
-        )
-        filepath_files: str = MetadataField(
-            ...,
-            title='Code directory',
-            description='Filepath to directory containing code files.',
-            short_name='-F',
-            is_attribute=False,
-            priority=2,
-            orm_to_model=_export_filpath_files_from_repo,  # type: ignore[arg-type]
-        )
 
     def __init__(
         self,
@@ -201,7 +208,7 @@ class PortableCode(Code):
         """Export code to a YAML file."""
         result = super()._prepare_yaml(*args, **kwargs)[0]
         target = pathlib.Path().cwd() / f'{self.label}'
-        _export_filpath_files_from_repo(self, target)
+        _export_filepath_files_from_repo(self, target)
         _LOGGER.info(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
         return result, {}
 

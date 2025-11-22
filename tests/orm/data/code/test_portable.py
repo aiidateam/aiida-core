@@ -176,4 +176,4 @@ def test_serialization(tmp_path, chdir_tmp_path):
     (filepath_files / 'subdir').mkdir()
     (filepath_files / 'subdir/test').write_text('test')
     code = PortableCode(label='some-label', filepath_executable='bash', filepath_files=filepath_files)
-    PortableCode.from_serialized(**code.serialize())
+    PortableCode.from_serialized(code.serialize())

@@ -32,7 +32,7 @@ runs:
   - name: Set up uv
     uses: astral-sh/setup-uv@v6
     with:
-      version: 0.7.6
+      version: 0.9.8
       python-version: ${{ inputs.python-version }}
       activate-environment: true
 

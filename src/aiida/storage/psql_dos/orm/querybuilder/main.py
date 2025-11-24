@@ -841,7 +841,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             # - sql_cast: Generate SQL CAST() to convert TEXT to target column type
             # Result: column IN (SELECT CAST(value AS coltype) FROM json_each(:json_param))
             coltype: Any = column.type
-            json_array: str = json.dumps(qbj=list(values_list))
+            json_array: str = json.dumps(obj=list(values_list))
 
             # Create table-valued function: json_each(json_array) returns virtual table
             json_each_table: TableValuedAlias = func.json_each(json_array).table_valued('value')

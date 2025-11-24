@@ -131,15 +131,6 @@ jobs:
       with:
         channels: conda-forge
 
-    # Use mamba because conda is running out of memory
-    # see https://github.com/conda-incubator/setup-miniconda/issues/274
-    - run: |
-        conda install -n base conda-libmamba-solver
-        conda config --set solver libmamba
-
-    # Temporary workaround: https://github.com/mamba-org/mamba/issues/488
-    - run: rm /usr/share/miniconda/pkgs/cache/*.json
-
     - name: Test installation
       id: test_installation
       continue-on-error: ${{ matrix.optional }}
@@ -152,6 +143,18 @@ jobs:
       run: >
         echo "::warning ::Failed conda installation for
         Python ${{ matrix.python-version }}."
+
+    - name: Slack notification
+      if: >-
+        failure() &&
+        github.event_name != 'pull_request' &&
+        env.SLACK_WEBHOOK != null
+      uses: ./.github/actions/slack-notification
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+      with:
+        title: Installation via Conda failed on `aiida-core/main`
+        message: '`test-install.yml:install-with-conda` GHA workflow for Python ${{ matrix.python-version }} failed.'
 
   tests:
 
@@ -214,13 +217,11 @@ jobs:
         pytest -n auto --db-backend psql -m 'not nightly' tests/
 
     - name: Slack notification
-      # Always run this step (otherwise it would be skipped if any of the previous steps fail)
-      # but only if the `install` or `tests` steps failed.
+      # Run this step if any of the previous steps fail.
       # Don't run on PRs, the failure is clearly visible in GitHub UI.
       # Run only when the `secrets.SLACK_WEBHOOK` is available, which is not the case for forks.
       if: >-
-        always() &&
-        (steps.install.outcome == 'failure' || steps.tests.outcome == 'failure') &&
+        failure() &&
         github.event_name != 'pull_request' &&
         env.SLACK_WEBHOOK != null
       uses: ./.github/actions/slack-notification

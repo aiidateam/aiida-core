@@ -6,19 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module to define commonly used data structures."""
+"""Module to define commonly used types."""
 
 from __future__ import annotations
 
 import pathlib
 from typing import Union
-
-try:
-    from typing import Self
-except ImportError:
-    from typing_extensions import Self
-
-__all__ = ('FilePath', 'Self')
-
 
 FilePath = Union[str, pathlib.PurePath]

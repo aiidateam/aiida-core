@@ -189,7 +189,7 @@ def set_progress_bar_tqdm(
     set_progress_reporter(tqdm, bar_format=bar_format, leave=leave, **kwargs)
 
 
-def create_callback(progress_reporter: ProgressReporterAbstract | tqdm) -> Callable[[str, Any], None]:
+def create_callback(progress_reporter: ProgressReporterAbstract | tqdm[Any]) -> Callable[[str, Any], None]:
     """Create a callback function to update the progress reporter.
 
     :returns: a callback to report on the process, ``callback(action, value)``,

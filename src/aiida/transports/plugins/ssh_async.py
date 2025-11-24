@@ -133,6 +133,7 @@ class AsyncSshTransport(AsyncTransport):
         # a computer with core.ssh_async transport plugin should be configured before any instantiation.
         self.machine = kwargs.pop('host', kwargs.pop('machine'))
         self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
+        self._semaphore = asyncio.Semaphore(self._max_io_allowed)
         self.script_before = kwargs.pop('script_before', 'None')
 
         if kwargs.get('backend') == 'openssh':
@@ -145,19 +146,9 @@ class AsyncSshTransport(AsyncTransport):
 
             self.async_backend = _AsyncSSH(self.machine, self.logger, self._bash_command_str)  # type: ignore[assignment]
 
-        self._concurrent_io = 0
-
     @property
     def max_io_allowed(self):
         return self._max_io_allowed
-
-    async def _lock(self, sleep_time=0.5):
-        while self._concurrent_io >= self.max_io_allowed:
-            await asyncio.sleep(sleep_time)
-        self._concurrent_io += 1
-
-    async def _unlock(self):
-        self._concurrent_io -= 1
 
     async def open_async(self):
         """Open the transport.
@@ -316,14 +307,17 @@ class AsyncSshTransport(AsyncTransport):
         if os.path.isfile(localpath) and not overwrite:
             raise OSError('Destination already exists: not overwriting it')
 
-        try:
-            await self._lock()
-            await self.async_backend.get(
-                remotepath=remotepath, localpath=localpath, dereference=dereference, preserve=preserve, recursive=False
-            )
-            await self._unlock()
-        except OSError as exc:
-            raise OSError(f'Error while downloading file {remotepath}: {exc}')
+        async with self._semaphore:
+            try:
+                await self.async_backend.get(
+                    remotepath=remotepath,
+                    localpath=localpath,
+                    dereference=dereference,
+                    preserve=preserve,
+                    recursive=False,
+                )
+            except OSError as exc:
+                raise OSError(f'Error while downloading file {remotepath}: {exc}')
 
     async def gettree_async(
         self,
@@ -383,19 +377,18 @@ class AsyncSshTransport(AsyncTransport):
 
         content_list = await self.listdir_async(remotepath)
         for content_ in content_list:
-            try:
-                await self._lock()
-                parentpath = str(PurePath(remotepath) / content_)
-                await self.async_backend.get(
-                    remotepath=parentpath,
-                    localpath=localpath,
-                    dereference=dereference,
-                    preserve=preserve,
-                    recursive=True,
-                )
-                await self._unlock()
-            except OSError as exc:
-                raise OSError(f'Error while downloading file {parentpath}: {exc}')
+            parentpath = str(PurePath(remotepath) / content_)
+            async with self._semaphore:
+                try:
+                    await self.async_backend.get(
+                        remotepath=parentpath,
+                        localpath=localpath,
+                        dereference=dereference,
+                        preserve=preserve,
+                        recursive=True,
+                    )
+                except OSError as exc:
+                    raise OSError(f'Error while downloading file {parentpath}: {exc}')
 
     async def put_async(
         self,
@@ -528,14 +521,17 @@ class AsyncSshTransport(AsyncTransport):
         if await self.isfile_async(remotepath) and not overwrite:
             raise OSError('Destination already exists: not overwriting it')
 
-        try:
-            await self._lock()
-            await self.async_backend.put(
-                localpath=localpath, remotepath=remotepath, dereference=dereference, preserve=preserve, recursive=False
-            )
-            await self._unlock()
-        except OSError as exc:
-            raise OSError(f'Error while uploading file {localpath}: {exc}')
+        async with self._semaphore:
+            try:
+                await self.async_backend.put(
+                    localpath=localpath,
+                    remotepath=remotepath,
+                    dereference=dereference,
+                    preserve=preserve,
+                    recursive=False,
+                )
+            except OSError as exc:
+                raise OSError(f'Error while uploading file {localpath}: {exc}')
 
     async def puttree_async(
         self,
@@ -598,19 +594,18 @@ class AsyncSshTransport(AsyncTransport):
         # Or to put and rename the parent folder at the same time
         content_list = os.listdir(localpath)
         for content_ in content_list:
-            try:
-                await self._lock()
-                parentpath = str(PurePath(localpath) / content_)
-                await self.async_backend.put(
-                    localpath=parentpath,
-                    remotepath=remotepath,
-                    dereference=dereference,
-                    preserve=preserve,
-                    recursive=True,
-                )
-                await self._unlock()
-            except OSError as exc:
-                raise OSError(f'Error while uploading file {parentpath}: {exc}')
+            parentpath = str(PurePath(localpath) / content_)
+            async with self._semaphore:
+                try:
+                    await self.async_backend.put(
+                        localpath=parentpath,
+                        remotepath=remotepath,
+                        dereference=dereference,
+                        preserve=preserve,
+                        recursive=True,
+                    )
+                except OSError as exc:
+                    raise OSError(f'Error while uploading file {parentpath}: {exc}')
 
     async def copy_async(
         self,
@@ -1282,7 +1277,7 @@ class AsyncSshTransport(AsyncTransport):
             self.logger.error('Unknown parameters passed to copy_from_remote_to_remote')
 
         with SandboxFolder() as sandbox:
-            await self.get_async(remotesource, sandbox.abspath, **kwargs_get)
+            await self.get_async(remotesource, sandbox.abspath, **kwargs_get)  # type: ignore[arg-type]
             # Then we scan the full sandbox directory with get_content_list,
             # because copying directly from sandbox.abspath would not work
             # to copy a single file into another single file, and copying

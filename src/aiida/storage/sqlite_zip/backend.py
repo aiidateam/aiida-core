@@ -15,11 +15,12 @@ import shutil
 import tarfile
 import tempfile
 import zipfile
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import BinaryIO, Iterable, Iterator, Optional, Sequence, Tuple, Union, cast
+from typing import BinaryIO, Optional, Tuple, Union, cast
 from zipfile import ZipFile, is_zipfile
 
 from pydantic import BaseModel, Field, field_validator
@@ -337,7 +338,7 @@ class SqliteZipBackend(StorageBackend):
             filepath.unlink()
             LOGGER.report(f'Deleted archive at `{filepath}`.')
 
-    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]):
+    def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
         raise ReadOnlyError()
 
     def get_global_variable(self, key: str):
@@ -352,6 +353,25 @@ class SqliteZipBackend(StorageBackend):
     def get_info(self, detailed: bool = False) -> dict:
         # since extracting the database file is expensive, we only do it if detailed is True
         results = {'metadata': extract_metadata(self._path)}
+
+        # Truncate entities_starting_set in metadata if not detailed
+        if not detailed:
+            creation_params = results['metadata'].get('creation_parameters')
+            if creation_params and creation_params.get('entities_starting_set') is not None:
+                entities_starting_set = creation_params['entities_starting_set']
+                truncated_entities = {}
+                max_display = 5
+
+                for entity_type, uuid_list in entities_starting_set.items():
+                    if isinstance(uuid_list, list) and len(uuid_list) > max_display:
+                        truncated_entities[entity_type] = uuid_list[:max_display] + [
+                            f'... and {len(uuid_list) - max_display} more (use --detailed to show all)'
+                        ]
+                    else:
+                        truncated_entities[entity_type] = uuid_list
+
+                results['metadata']['creation_parameters']['entities_starting_set'] = truncated_entities
+
         if detailed:
             results.update(super().get_info(detailed=detailed))
             results['repository'] = self.get_repository().get_info(detailed)

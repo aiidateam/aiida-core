@@ -79,12 +79,61 @@ def test_code_list(run_cli_command, code):
     code2.label = 'code2'
     code2.store()
 
-    options = ['-A', '-a', '-o', '-d', 'core.arithmetic.add', f'--computer={code.computer.label}']
+    options = [
+        '-A',
+        '-a',
+        '-d',
+        'core.arithmetic.add',
+        f'--computer={code.computer.label}',
+        '-P',
+        'full_label',
+        'pk',
+        'entry_point',
+        'user',
+    ]
     result = run_cli_command(cmd_code.code_list, options)
     assert str(code.pk) in result.output
     assert code2.label not in result.output
     assert code.computer.label in result.output
     assert 'No codes found matching the specified criteria.' not in result.output
+
+
+def test_code_list_also_no_computer(run_cli_command, code, tmp_path):
+    """Test ``verdi code list``."""
+    code2 = InstalledCode(
+        default_calc_job_plugin='core.templatereplacer',
+        computer=code.computer,
+        filepath_executable='/remote/abs/path',
+    )
+    code2.label = 'code2'
+    code2.store()
+
+    filepath = tmp_path / 'script.sh'
+    filepath.write_text('fake script')
+
+    code_portable = PortableCode(filepath_executable='script.sh', filepath_files=tmp_path)
+    code_portable.label = 'code_portable'
+    code_portable.store()
+
+    # I filter on computer, so the PortableCode should not appear in the results
+    options = ['-A', '-a', f'--computer={code.computer.label}', '-P', 'full_label', 'pk', 'entry_point', 'user']
+    result = run_cli_command(cmd_code.code_list, options)
+    # Both code and code2 in results output
+    assert str(code.pk) in result.output
+    assert str(code2.pk) in result.output
+    assert code2.label in result.output
+    # PortableCode should not appear in the results
+    assert code_portable.label not in result.output
+
+    # No filter on computer, so the PortableCode should appear in the results
+    options = ['-A', '-a', '-P', 'full_label', 'pk', 'entry_point', 'user']
+    result = run_cli_command(cmd_code.code_list, options)
+    # Both code and code2 in results output
+    assert str(code.pk) in result.output
+    assert str(code2.pk) in result.output
+    assert code2.label in result.output
+    # Also PortableCode should appear in the results
+    assert code_portable.label in result.output
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -143,9 +192,109 @@ def test_code_delete_one_force(run_cli_command, code):
         load_code('code')
 
 
-def test_code_show(run_cli_command, code):
+def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, hostname) -> str:
+    """Normalize dynamic values in CLI output for stable regression testing.
+
+    Args:
+        output: The raw CLI output string
+        code_pk: The actual PK to be replaced with placeholder
+        code_uuid: The actual UUID to be replaced with placeholder
+        computer_pk: Optional computer PK to be replaced with placeholder
+        hostname: Optional hostname to be replaced with placeholder
+
+    Returns:
+        Normalized output string with placeholders
+    """
+    import re
+
+    # Remove the first and last lines (separator lines with hyphens)
+    lines = output.strip().split('\n')
+    if lines and lines[0].strip().startswith('-'):
+        lines = lines[1:]
+    if lines and lines[-1].strip().startswith('-'):
+        lines = lines[:-1]
+
+    normalized = '\n'.join(lines)
+
+    # Replace UUID first (before PK, as PK digits might appear in UUID)
+    normalized = normalized.replace(code_uuid, '<UUID>')
+
+    # Replace hostname if provided
+    if hostname:
+        normalized = normalized.replace(hostname, '<hostname>')
+
+    # Replace computer PK if provided
+    if computer_pk is not None:
+        normalized = normalized.replace(f'pk: {computer_pk}', 'pk: <COMPUTER_PK>')
+
+    # Replace code PK (as whole word to avoid replacing parts of other numbers)
+    normalized = re.sub(rf'\b{code_pk}\b', '<PK>', normalized)
+
+    return normalized
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')  # Clean profile for this test to ensure number of digits for PKs
+@pytest.mark.parametrize(
+    'code_type',
+    ['installed', 'portable', 'containerized'],
+)
+def test_code_show(run_cli_command, aiida_localhost, tmp_path, bash_path, aiida_code, code_type, file_regression):
+    """Test ``verdi code show`` for different code types."""
+    # Create code based on type
+    if code_type == 'installed':
+        code = aiida_code(
+            f'core.code.{code_type}',
+            label='test_installed_code',
+            description='Test installed code',
+            default_calc_job_plugin='core.arithmetic.add',
+            computer=aiida_localhost,
+            filepath_executable='/remote/abs/path',
+            prepend_text='text to prepend',
+            append_text='text to append',
+        )
+        computer = aiida_localhost
+    elif code_type == 'portable':
+        filepath_executable = 'bash'
+        (tmp_path / filepath_executable).touch()
+        code = aiida_code(
+            f'core.code.{code_type}',
+            label='test_portable_code',
+            description='Test portable code',
+            default_calc_job_plugin='core.arithmetic.add',
+            filepath_executable=filepath_executable,
+            filepath_files=tmp_path,
+            prepend_text='text to prepend',
+            append_text='text to append',
+        )
+        computer = None
+    elif code_type == 'containerized':
+        code = aiida_code(
+            f'core.code.{code_type}',
+            label='test_containerized_code',
+            description='Test containerized code',
+            default_calc_job_plugin='core.arithmetic.add',
+            computer=aiida_localhost,
+            filepath_executable=str(bash_path.absolute()),
+            engine_command='singularity exec --bind $PWD:$PWD {image_name}',
+            image_name='ubuntu',
+            prepend_text='text to prepend',
+            append_text='text to append',
+        )
+        computer = aiida_localhost
+
     result = run_cli_command(cmd_code.show, [str(code.pk)])
-    assert str(code.pk) in result.output
+
+    # Normalize dynamic values for regression testing
+    normalized_output = _normalize_code_show_output(
+        result.output,
+        code_pk=code.pk,
+        code_uuid=code.uuid,
+        computer_pk=computer.pk if computer else None,
+        hostname=computer.hostname if computer else None,
+    )
+
+    # Check against regression fixture
+    file_regression.check(normalized_output, basename=f'test_code_show_{code_type}', extension='.txt')
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)

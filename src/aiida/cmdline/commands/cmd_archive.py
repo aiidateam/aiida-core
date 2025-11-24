@@ -26,6 +26,8 @@ from aiida.cmdline.utils import decorators, echo
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.typing import FilePath
+from aiida.common.utils import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE
 
 EXTRAS_MODE_EXISTING = ['keep_existing', 'update_existing', 'mirror', 'none']
 EXTRAS_MODE_NEW = ['import', 'none']
@@ -130,7 +132,11 @@ def inspect(ctx, archive, version, meta_data, database):
 )
 @click.option('--compress', default=6, show_default=True, type=int, help='Level of compression to use (0-9).')
 @click.option(
-    '-b', '--batch-size', default=1000, type=int, help='Stream database rows in batches, to reduce memory usage.'
+    '-b',
+    '--batch-size',
+    default=DEFAULT_BATCH_SIZE,
+    type=int,
+    help='Stream database rows in batches, to reduce memory usage.',
 )
 @click.option(
     '--test-run',
@@ -210,6 +216,7 @@ def create(
         'overwrite': force,
         'compression': compress,
         'batch_size': batch_size,
+        'filter_size': DEFAULT_FILTER_SIZE,  # Implementation detail, not exposed to user via CLI
         'test_run': dry_run,
     }
 
@@ -482,7 +489,7 @@ def _import_archive_and_migrate(
     dry_run_success = f'import dry-run of archive {archive} completed. Profile storage unmodified.'
 
     with SandboxFolder(filepath=filepath) as temp_folder:
-        archive_path = archive
+        archive_path: FilePath = archive
 
         if web_based:
             echo.echo_report(f'downloading archive: {archive}')
@@ -495,6 +502,7 @@ def _import_archive_and_migrate(
             archive_path = temp_folder.get_abs_path('downloaded_archive.zip')
             echo.echo_success('archive downloaded, proceeding with import')
 
+        archive_path = str(archive_path)
         echo.echo_report(f'starting import: {archive}')
         try:
             _import_archive(archive_path, archive_format=archive_format, **import_kwargs)
@@ -502,7 +510,7 @@ def _import_archive_and_migrate(
             if try_migration:
                 echo.echo_report(f'incompatible version detected for {archive}, trying migration')
                 try:
-                    new_path = temp_folder.get_abs_path('migrated_archive.aiida')
+                    new_path = str(temp_folder.get_abs_path('migrated_archive.aiida'))
                     archive_format.migrate(archive_path, new_path, archive_format.latest_version, compression=0)
                     archive_path = new_path
                 except Exception as sub_exception:

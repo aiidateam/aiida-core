@@ -23,16 +23,14 @@ from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 from typing import Mapping as MappingType
 
-try:
-    # typing.assert_never available since 3.11
-    from typing import assert_never
-except ImportError:
-    from typing_extensions import assert_never
+# typing.assert_never available since 3.11
+from typing_extensions import assert_never
 
 from aiida.common import AIIDA_LOGGER, exceptions
 from aiida.common.datastructures import CalcInfo, FileCopyOperation
 from aiida.common.folders import Folder, SandboxFolder
 from aiida.common.links import LinkType
+from aiida.common.typing import FilePath
 from aiida.engine.processes.exit_code import ExitCode
 from aiida.manage.configuration import get_config_option
 from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteData, load_node
@@ -694,7 +692,7 @@ async def unstash_calculation(calculation: CalcJobNode, transport: Transport) ->
 
 
 async def retrieve_calculation(
-    calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: str
+    calculation: CalcJobNode, transport: Transport, retrieved_temporary_folder: FilePath
 ) -> FolderData | None:
     """Retrieve all the files of a completed job calculation using the given transport.
 

@@ -12,7 +12,9 @@ import datetime
 import warnings
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, Union, cast
+
+from typing_extensions import Self
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
@@ -30,8 +32,6 @@ if TYPE_CHECKING:
     from aiida.orm.implementation.groups import BackendGroup
 
 __all__ = ('AutoGroup', 'Group', 'ImportGroup', 'UpfFamily')
-
-SelfType = TypeVar('SelfType', bound='Group')
 
 
 def load_group_class(type_string: str) -> Type['Group']:
@@ -203,7 +203,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     def __str__(self) -> str:
         return f'{self.__class__.__name__}<{self.label}>'
 
-    def store(self: SelfType) -> SelfType:
+    def store(self) -> Self:
         """Verify that the group is allowed to be stored, which is the case along as `type_string` is set."""
         if self._type_string is None:
             raise exceptions.StoringNotAllowed('`type_string` is `None` so the group cannot be stored.')

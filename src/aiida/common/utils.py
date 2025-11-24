@@ -16,14 +16,16 @@ import io
 import os
 import re
 import sys
-from collections.abc import Iterable, Iterator
 from datetime import datetime, timedelta
-from typing import Any, Callable, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
 from uuid import UUID
 
 from typing_extensions import Self
 
 from .lang import classproperty
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
 
 T = TypeVar('T')
 R = TypeVar('R')
@@ -639,12 +641,15 @@ def batch_iter(
 
 
 # NOTE: This parameter is largely obsolete after implementing unnest()/json_each() for large IN clauses.
-# It is kept for backward compatibility and as a fallback if needed.
-# SQLite has an `SQLITE_MAX_VARIABLE_NUMBER` compile-time flag (default 999 on older versions).
-# PostgreSQL has a parameter limit (default 65535).
-# However, the QueryBuilder now uses unnest() (PostgreSQL) or json_each() (SQLite) for large IN clauses,
-# which use only 1 parameter instead of N parameters, effectively bypassing these limits.
-# Set to a high value to effectively bypass batching and test the QueryBuilder fix.
+# `sqlite` has an `SQLITE_MAX_VARIABLE_NUMBER` compile-time flag.
+# On older `sqlite` versions, this was set to 999 by default,
+# while for newer versions it is generally higher, see:
+# https://www.sqlite.org/limits.html
+# If `DEFAULT_FILTER_SIZE` is set too high, the limit can be hit when large `IN` queries are
+# constructed through AiiDA, leading to SQLAlchemy `OperationalError`s.
+# On modern systems, the limit might be in the hundreds of thousands, however, as it is OS-
+# and/or Python version dependent and we don't know its size, we set the value to 999 for safety.
+# From manual benchmarking, this value for batching also seems to give reasonable performance.
 DEFAULT_FILTER_SIZE: int = 999
 
 # NOTE: `DEFAULT_BATCH_SIZE` controls how many database rows are fetched and processed at once during

@@ -15,12 +15,12 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional,
 from aiida import orm
 from aiida.common import exceptions
 from aiida.common.links import GraphTraversalRules, LinkType
-from aiida.orm.utils.links import LinkQuadruple
 from aiida.tools.graph.age_entities import Basket
 from aiida.tools.graph.age_rules import RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
+    from aiida.orm.utils.links import LinkQuadruple
     from aiida.tools.graph.age_rules import Operation
 
 
@@ -208,7 +208,7 @@ def traverse_graph(
     from numpy import inf
 
     if max_iterations is None:
-        max_iterations = cast(int, inf)
+        max_iterations = cast('int', inf)
     elif not (isinstance(max_iterations, int) or max_iterations is inf):  # type: ignore[unreachable]
         raise TypeError('Max_iterations has to be an integer or infinity')
 

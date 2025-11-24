@@ -132,7 +132,6 @@ def test_large_archive_export_benchmark(tmp_path, benchmark):
     assert export_file.exists()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.benchmark(group='large-archive')
 def test_large_archive_import_benchmark(tmp_path, benchmark, aiida_profile_clean):
     """Benchmark import performance."""

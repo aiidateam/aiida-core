@@ -43,6 +43,14 @@ window.CONFIGURATION_DATA = {
             "xAxis": "id",
             "backgroundFill": false,
             "yAxisFormat": "logarithmic"
+        },
+        "large-archive": {
+            "header": "large-archive",
+            "description": "Comparison of import/export of large archives.",
+            "single_chart": true,
+            "xAxis": "id",
+            "backgroundFill": false,
+            "yAxisFormat": "logarithmic"
         }
     }
 }

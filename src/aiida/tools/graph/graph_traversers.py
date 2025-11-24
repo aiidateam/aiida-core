@@ -16,13 +16,12 @@ from numpy import inf
 from aiida import orm
 from aiida.common import exceptions
 from aiida.common.links import GraphTraversalRules, LinkType
-from aiida.common.utils import DEFAULT_FILTER_SIZE
-from aiida.orm.utils.links import LinkQuadruple
 from aiida.tools.graph.age_entities import Basket
 from aiida.tools.graph.age_rules import RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
+    from aiida.orm.utils.links import LinkQuadruple
 
 if sys.version_info >= (3, 8):
     from typing import TypedDict
@@ -210,11 +209,10 @@ def traverse_graph(
 
     :param missing_callback: A callback to handle missing starting_pks or if None raise NotExistent
     """
-    from aiida.common.utils import batch_iter
 
     if max_iterations is None:
-        max_iterations = cast(int, inf)
-    elif not (isinstance(max_iterations, int) or max_iterations is inf):
+        max_iterations = cast('int', inf)
+    elif not (isinstance(max_iterations, int) or max_iterations is inf):  # type: ignore[unreachable]
         raise TypeError('Max_iterations has to be an integer or infinity')
 
     linktype_list = []
@@ -243,12 +241,9 @@ def traverse_graph(
             return {'nodes': set(), 'links': set()}
         return {'nodes': set(), 'links': None}
 
-    existing_pks = set()
-
-    for _, batch_ids in batch_iter(operational_set, DEFAULT_FILTER_SIZE):
-        query_nodes = orm.QueryBuilder(backend=backend)
-        query_nodes.append(orm.Node, project=['id'], filters={'id': {'in': batch_ids}})
-        existing_pks.update(query_nodes.all(flat=True))
+    query_nodes = orm.QueryBuilder(backend=backend)
+    query_nodes.append(orm.Node, project=['id'], filters={'id': {'in': operational_set}})
+    existing_pks = set(query_nodes.all(flat=True))
 
     missing_pks = operational_set.difference(existing_pks)
     if missing_pks and missing_callback is None:

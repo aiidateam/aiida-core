@@ -15,9 +15,7 @@
 """Provides tools for interacting with AiiDA Groups."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .paths import *
 
 __all__ = (
@@ -27,5 +25,4 @@ __all__ = (
     'InvalidPath',
     'NoGroupsInPathError',
 )
-
 # fmt: on

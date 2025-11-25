@@ -9,9 +9,7 @@
 """Module with `Node` sub classes for processes."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .calculation import *
 from .process import *
 from .workflow import *
@@ -25,5 +23,4 @@ __all__ = (
     'WorkFunctionNode',
     'WorkflowNode',
 )
-
 # fmt: on

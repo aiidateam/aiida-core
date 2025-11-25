@@ -9,9 +9,7 @@
 """Module with resources dealing with the file repository."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .backend import *
 from .common import *
 from .repository import *
@@ -24,5 +22,4 @@ __all__ = (
     'Repository',
     'SandboxRepositoryBackend',
 )
-
 # fmt: on

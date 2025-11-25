@@ -9,9 +9,7 @@
 """Utilities related to the ORM."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .calcjob import *
 from .links import *
 from .loaders import *
@@ -43,5 +41,4 @@ __all__ = (
     'load_node_class',
     'validate_link',
 )
-
 # fmt: on

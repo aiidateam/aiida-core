@@ -37,7 +37,7 @@ from aiida.orm import CalcJobNode, Code, FolderData, Node, PortableCode, RemoteD
 from aiida.orm.utils.log import get_dblogger_extra
 from aiida.repository.common import FileType
 from aiida.schedulers.datastructures import JobState
-from aiida.transports import has_magic
+from aiida.transports.transport import has_magic
 
 if TYPE_CHECKING:
     from aiida.transports import Transport

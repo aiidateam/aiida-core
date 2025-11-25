@@ -19,9 +19,7 @@ What functionality should go directly in the ORM class in `aiida.orm` and what i
 """
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .calculations import *
 from .data import *
 from .graph import *
@@ -50,5 +48,4 @@ __all__ = (
     'spglib_tuple_to_structure',
     'structure_to_spglib_tuple',
 )
-
 # fmt: on

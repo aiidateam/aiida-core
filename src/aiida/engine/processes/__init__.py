@@ -9,9 +9,7 @@
 """Module for processes and related utilities."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .builder import *
 from .calcjobs import *
 from .exit_code import *
@@ -61,5 +59,4 @@ __all__ = (
     'while_',
     'workfunction',
 )
-
 # fmt: on

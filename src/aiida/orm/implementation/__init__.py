@@ -9,9 +9,7 @@
 """Module containing the backend entity abstracts for storage backends."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .authinfos import *
 from .comments import *
 from .computers import *
@@ -48,5 +46,4 @@ __all__ = (
     'clean_value',
     'validate_attribute_extra_key',
 )
-
 # fmt: on

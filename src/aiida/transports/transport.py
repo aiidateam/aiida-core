@@ -21,7 +21,7 @@ from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 from aiida.common.warnings import warn_deprecation
 
-__all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath', 'has_magic')
+__all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath')
 
 TransportPath = Union[str, Path, PurePosixPath]
 

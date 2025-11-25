@@ -16,11 +16,14 @@ from __future__ import annotations
 from .migrations import *
 from .options import *
 from .profile import *
+from .settings import *
 
 __all__ = (
     'CURRENT_CONFIG_VERSION',
     'MIGRATIONS',
     'OLDEST_COMPATIBLE_CONFIG_VERSION',
+    'AiiDAConfigDir',
+    'AiiDAConfigPathResolver',
     'Option',
     'Profile',
     'check_and_migrate_config',
@@ -32,9 +35,7 @@ __all__ = (
     'parse_option',
     'upgrade_config',
 )
-
 # fmt: on
-
 # END AUTO-GENERATED
 
 

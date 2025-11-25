@@ -38,8 +38,6 @@ if TYPE_CHECKING:
     from aiida.tools._dumping.tracking import DumpTracker
 
 
-__all__ = ('DumpChangeDetector',)
-
 logger = AIIDA_LOGGER.getChild('tools._dumping.detect')
 
 

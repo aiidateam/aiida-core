@@ -9,9 +9,7 @@
 """Tool for handling data."""
 
 # AUTO-GENERATED
-
 # fmt: off
-
 from .array import *
 from .orbital import *
 from .structure import *
@@ -24,5 +22,4 @@ __all__ = (
     'spglib_tuple_to_structure',
     'structure_to_spglib_tuple',
 )
-
 # fmt: on

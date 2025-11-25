@@ -497,8 +497,8 @@ However, it is perfectly possible to use the same builder in scripts where you s
 
 .. _topics:processes:usage:monitoring:
 
-Monitoring processes
-====================
+Inspect processes
+=================
 When you have launched a process, you may want to investigate its status, progression and the results.
 The :ref:`verdi<reference:command-line>` command line tool provides various commands to do just this.
 
@@ -728,10 +728,12 @@ If the runner has successfully received the request and scheduled the callback, 
 The 'scheduled' indicates that the actual killing might not necessarily have happened just yet.
 This means that even after having called ``verdi process kill`` and getting the success message, the corresponding process may still be listed as active in the output of ``verdi process list``.
 
-By default, the ``pause``, ``play`` and ``kill`` commands will only ask for the confirmation of the runner that the request has been scheduled and not actually wait for the command to have been executed.
-To change this behavior, you can use the ``--wait`` flag to actually wait for the action to be completed.
-If workers are under heavy load, it may take some time for them to respond to the request and for the command to finish.
-If you know that your daemon runners may be experiencing a heavy load, you can also increase the time that the command waits before timing out, with the ``-t/--timeout`` flag.
+To change this behavior, you can use the ``-t / --timeout <FLOAT>`` option to specify a timeout after which the command will stop the action.
+If you set the timeout to ``0```, the command returns immediately without waiting for a response.
+A process is only gracefully killed if AiiDA is able to cancel the associated scheduler job.
+By default, the ``pause``, ``play`` and ``kill`` commands wait until the action has been executed, either failed or succeeded.
+If you want to kill the process regardless of whether the scheduler job is successfully cancelled, you can use the ``-F / --force`` option.
+In this case, a cancellation request is still sent to the scheduler, but the command does not wait for a response and proceeds to kill the AiiDA process.
 
 
 .. rubric:: Footnotes

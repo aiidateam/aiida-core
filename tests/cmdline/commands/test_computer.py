@@ -31,6 +31,7 @@ from aiida.cmdline.commands.cmd_computer import (
     computer_test,
 )
 from aiida.cmdline.utils.echo import ExitCode
+from aiida.common.warnings import AiidaDeprecationWarning
 
 
 def generate_setup_options_dict(replace_args=None, non_interactive=True):
@@ -215,7 +216,8 @@ def test_noninteractive_optional_default_mpiprocs_2(run_cli_command):
     options_dict = generate_setup_options_dict({'label': 'computer_default_mpiprocs_2'})
     options_dict['mpiprocs-per-machine'] = 0
     options = generate_setup_options(options_dict)
-    run_cli_command(computer_setup, options)
+    with pytest.warns(AiidaDeprecationWarning, match='Specifying `0` to not set `default_mpiprocs_per_machine`'):
+        run_cli_command(computer_setup, options)
 
     new_computer = orm.Computer.collection.get(label=options_dict['label'])
     assert isinstance(new_computer, orm.Computer)
@@ -773,40 +775,30 @@ class TestVerdiComputerCommands:
         # The new label should be available
         orm.Computer.collection.get(label='comp_cli_test_computer')
 
-    def test_computer_delete_with_nodes(self):
-        """check if 'verdi computer delete' works when there are associated nodes"""
+    # Ensures that 'yes' works for backwards compatibility, see issue #6422
+    @pytest.mark.parametrize('user_input', ['y', 'yes'])
+    def test_computer_delete_existing_computer_successful(self, user_input):
+        """Test if `verdi computer delete` successfully deletes when applied on an existing computer."""
         from aiida.common.exceptions import NotExistent
 
-        label = 'computer_69'
-        compute_temp = orm.Computer(
+        label = 'computer_temp'
+        computer_temp = orm.Computer(
             label=label,
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
             workdir='/tmp/aiida',
         )
-        compute_temp.store()
-        compute_temp.configure(safe_interval=0)
+        computer_temp.store()
+        computer_temp.configure(safe_interval=0)
 
-        c_label = 'code_69'
+        code_label = 'code_temp'
         orm.InstalledCode(
-            label=c_label,
+            label=code_label,
             default_calc_job_plugin='core.arithmetic.add',
-            computer=compute_temp,
+            computer=computer_temp,
             filepath_executable='/remote/abs/path',
         ).store()
-
-        false_user_input = 'y'  # most common mistake
-        user_input = 'yes'
-
-        # Abort in case of wrong input
-        self.cli_runner(computer_delete, [label], user_input=false_user_input, raises=True)
-        orm.load_code(c_label)
-
-        # Safety check in case of --dry-run
-        options = [label, '--dry-run']
-        self.cli_runner(computer_delete, options)
-        orm.load_code(c_label)
 
         # A successul delete, including all associated nodes
         self.cli_runner(computer_delete, [label], user_input=user_input)
@@ -815,34 +807,80 @@ class TestVerdiComputerCommands:
             orm.Computer.collection.get(label=label)
 
         with pytest.raises(NotExistent):
-            orm.load_code(c_label)
+            orm.load_computer(label)
 
-    def test_computer_delete(self):
-        """Test if 'verdi computer delete' command works"""
+        with pytest.raises(NotExistent):
+            orm.load_code(code_label)
+
+    # Ensures that 'yes' works for backwards compatibility, see issue #6422
+    @pytest.mark.parametrize('user_input', ['y', 'yes'])
+    def test_computer_delete_existing_computer_successful_no_assciated_nodes(self, user_input):
+        """Test if `verdi computer delete` successfully deletes when applied on a computer without associated nodes.
+
+        In this case no prompt should appear."""
         from aiida.common.exceptions import NotExistent
 
-        # Setup a computer to delete during the test
-        label = 'computer_for_test_label'
-        orm.Computer(
+        label = 'computer_temp'
+        computer_temp = orm.Computer(
             label=label,
             hostname='localhost',
             transport_type='core.local',
             scheduler_type='core.direct',
             workdir='/tmp/aiida',
-        ).store()
-        # and configure it
-        options = ['core.local', label, '--non-interactive', '--safe-interval', '0']
-        self.cli_runner(computer_configure, options)
+        )
+        computer_temp.store()
 
-        # See if the command complains about not getting an invalid computer
-        user_input = 'yes'
-        self.cli_runner(computer_delete, ['computer_that_does_not_exist'], raises=True, user_input=user_input)
+        # A successul delete, including all associated nodes
+        self.cli_runner(computer_delete, [label])
 
-        # Delete a computer name successully.
-        self.cli_runner(computer_delete, [label], user_input=user_input)
-        # Check that the computer really was deleted
         with pytest.raises(NotExistent):
             orm.Computer.collection.get(label=label)
+
+        with pytest.raises(NotExistent):
+            orm.load_computer(label)
+
+    def test_computer_delete_existing_computer_not_deleted(self):
+        """Test if `verdi computer delete` behaves correctly when applied on an existing computer without deletion.
+
+        This case includes when the user enters a wrong input on the prompt and the usage of the dry-run option."""
+        label = 'computer_temp'
+        computer_temp = orm.Computer(
+            label=label,
+            hostname='localhost',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+            workdir='/tmp/aiida',
+        )
+        computer_temp.store()
+        computer_temp.configure(safe_interval=0)
+
+        code_label = 'code_temp'
+        orm.InstalledCode(
+            label=code_label,
+            default_calc_job_plugin='core.arithmetic.add',
+            computer=computer_temp,
+            filepath_executable='/remote/abs/path',
+        ).store()
+
+        # Tests that Abort in case of wrong input
+        false_user_input = ''  # most common input that could happen by accident
+        self.cli_runner(computer_delete, [label], user_input=false_user_input, raises=True)
+        # raises an error if not existing
+        assert orm.load_code(code_label).label == code_label
+        assert orm.Computer.collection.get(label=label).label == label
+
+        # Safety check in case of --dry-run
+        options = [label, '--dry-run']
+        self.cli_runner(computer_delete, options, user_input='y')
+        # raises an error if not existing
+        assert orm.load_code(code_label).label == code_label
+        assert orm.Computer.collection.get(label=label).label == label
+
+    def test_computer_delete_nonexisting_computer(self):
+        """Test if `verdi computer delete` command behaves correctly when deleting a nonexisting computer"""
+        # See if the command complains about not getting an existing computer
+        result = self.cli_runner(computer_delete, ['computer_that_does_not_exist'], user_input='y', raises=True)
+        assert 'no Computer found with LABEL<computer_that_does_not_exist>' in result.stderr
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
@@ -977,13 +1015,9 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
 # comment on 'core.ssh_async':
 # It is important that 'ssh localhost' is functional in your test environment.
 # It should connect without asking for a password.
-# comment on 'core.ssh_auto':
-# It is important that no other options (except for `--safe-interval`) have to be specified for this transport type.
-@pytest.mark.parametrize(
-    'transport_type, config', [('core.ssh_auto', []), ('core.ssh_async', ['--machine-or-host', 'localhost'])]
-)
+@pytest.mark.parametrize('transport_type, config', [('core.ssh_async', ['--host', 'localhost', '-n'])])
 def test_computer_setup_with_various_transport(run_cli_command, aiida_computer, transport_type, config):
-    """Test setup of computer with ``core.ssh_auto`` and ``core.ssh_async`` entry points.
+    """Test setup of computer with ``core.ssh_async`` entry points.
 
     pass any config option the setup needs in the parameter section``.
     """

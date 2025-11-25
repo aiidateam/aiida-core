@@ -18,7 +18,7 @@ from tests.static import STATIC_DIR
 
 
 @pytest.fixture
-def generate_class_instance(tmp_path, aiida_localhost):
+def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
     """Generate a dummy `Data` instance for the given sub class."""
 
     def _generate_class_instance(data_class):
@@ -154,7 +154,11 @@ def generate_class_instance(tmp_path, aiida_localhost):
 
 @pytest.fixture(
     scope='function',
-    params=[entry_point for entry_point in plugins.get_entry_points('aiida.data') if entry_point.name != 'core.code'],
+    params=[
+        entry_point
+        for entry_point in plugins.get_entry_points('aiida.data')
+        if entry_point.name not in ('core.code', 'core.code.abstract')
+    ],
 )
 def data_plugin(request):
     """Fixture that parametrizes over all the registered entry points of the ``aiida.data`` entry point group."""

@@ -1,0 +1,23 @@
+name: Slack notification
+description: Send message to aiida-core-dev channel
+
+inputs:
+  title:
+    description: Message title
+    required: true
+  message:
+    description: Text of the message
+    required: true
+
+runs:
+  using: composite
+  steps:
+
+  - name: Slack notification
+    uses: rtCamp/action-slack-notify@v2
+    env:
+      SLACK_ICON: https://www.materialscloud.org/discover/images/0ba0a17d.aiida-logo-128.png
+      SLACK_CHANNEL: dev-aiida-core
+      SLACK_COLOR: b60205
+      SLACK_TITLE: ${{ inputs.title }}
+      SLACK_MESSAGE: ${{ inputs.message }}

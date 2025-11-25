@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 from .extendeddicts import DefaultFieldsAttributeDict
 
-__all__ = ('CalcInfo', 'CalcJobState', 'CodeInfo', 'CodeRunMode', 'StashMode')
+__all__ = ('CalcInfo', 'CalcJobState', 'CodeInfo', 'CodeRunMode', 'StashMode', 'UnstashTargetMode')
 
 
 class StashMode(Enum):
@@ -26,6 +26,14 @@ class StashMode(Enum):
     COMPRESS_TARBZ2 = 'tar.bz2'
     COMPRESS_TARGZ = 'tar.gz'
     COMPRESS_TARXZ = 'tar.xz'
+    SUBMIT_CUSTOM_CODE = 'submit_custom_code'
+
+
+class UnstashTargetMode(Enum):
+    """Mode to use when unstashing files."""
+
+    OriginalPlace = 'OriginalPlace'
+    NewRemoteData = 'NewRemoteData'
 
 
 class CalcJobState(Enum):
@@ -35,6 +43,7 @@ class CalcJobState(Enum):
     SUBMITTING = 'submitting'
     WITHSCHEDULER = 'withscheduler'
     STASHING = 'stashing'
+    UNSTASHING = 'unstashing'
     RETRIEVING = 'retrieving'
     PARSING = 'parsing'
 

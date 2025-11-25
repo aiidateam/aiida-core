@@ -12,7 +12,7 @@ from typing import List, Tuple, Union
 
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
-from aiida.orm.fields import add_field
+from aiida.common.pydantic import MetadataField
 
 from .base import RemoteStashData
 
@@ -24,23 +24,16 @@ class RemoteStashCompressedData(RemoteStashData):
 
     _storable = True
 
-    __qb_fields__ = [
-        add_field(
-            'target_basepath',
-            dtype=str,
-            doc='The the target basepath',
-        ),
-        add_field(
-            'source_list',
-            dtype=List[str],
-            doc='The list of source files that were stashed',
-        ),
-        add_field(
-            'dereference',
-            dtype=bool,
-            doc='The format of the compression used when stashed',
-        ),
-    ]
+    class Model(RemoteStashData.Model):
+        target_basepath: str = MetadataField(
+            description='The the target basepath',
+        )
+        source_list: List[str] = MetadataField(
+            description='The list of source files that were stashed',
+        )
+        dereference: bool = MetadataField(
+            description='The format of the compression used when stashed',
+        )
 
     def __init__(
         self,

@@ -9,6 +9,7 @@
 """Module with `Node` sub class for processes."""
 
 import enum
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from plumpy.process_states import ProcessState
@@ -603,3 +604,58 @@ class ProcessNode(Sealable, Node):
         except ValueError:
             return None
         return caller
+
+    def dump(
+        self,
+        output_path: Optional[Union[str, Path]] = None,
+        # Dump mode options
+        dry_run: bool = False,
+        overwrite: bool = False,
+        # Process dump options
+        include_inputs: bool = True,
+        include_outputs: bool = False,
+        include_attributes: bool = True,
+        include_extras: bool = False,
+        flat: bool = False,
+        dump_unsealed: bool = False,
+    ) -> Path:
+        """Dump the process node and its data to disk.
+
+        :param output_path: Target directory for the dump, defaults to None
+        :param dry_run: Show what would be dumped without actually dumping, defaults to False
+        :param overwrite: Overwrite existing dump directories, defaults to False
+        :param include_inputs: Include input files in the dump, defaults to True
+        :param include_outputs: Include output files in the dump, defaults to False
+        :param include_attributes: Include node attributes in metadata, defaults to True
+        :param include_extras: Include node extras in metadata, defaults to False
+        :param flat: Use flat directory structure, defaults to False
+        :param dump_unsealed: Allow dumping of unsealed nodes, defaults to False
+        :return: Path where the process was dumped
+        """
+        from aiida.tools._dumping.config import ProcessDumpConfig
+        from aiida.tools._dumping.engine import DumpEngine
+        from aiida.tools._dumping.utils import DumpPaths
+
+        # Construct ProcessDumpConfig from kwargs
+        config_data = {
+            'dry_run': dry_run,
+            'overwrite': overwrite,
+            'include_inputs': include_inputs,
+            'include_outputs': include_outputs,
+            'include_attributes': include_attributes,
+            'include_extras': include_extras,
+            'flat': flat,
+            'dump_unsealed': dump_unsealed,
+        }
+
+        config = ProcessDumpConfig.model_validate(config_data)
+
+        if output_path:
+            target_path: Path = Path(output_path).resolve()
+        else:
+            target_path = DumpPaths.get_default_dump_path(entity=self)
+
+        engine = DumpEngine(base_output_path=target_path, config=config, dump_target_entity=self)
+        engine.dump()
+
+        return target_path

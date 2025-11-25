@@ -54,7 +54,7 @@ def devel_check_load_time():
                 f'potential `verdi` speed problem: `{loaded}` module is imported which is not in: {allowed}'
             )
 
-    echo.echo_success('no issues detected')
+    echo.echo_success('no load time issues detected')
 
 
 @verdi_devel.command('check-undesired-imports')
@@ -65,7 +65,7 @@ def devel_check_undesired_imports():
     """
     loaded_modules = 0
 
-    unwanted_modules = [
+    undesired_modules = [
         'requests',
         'plumpy',
         'disk_objectstore',
@@ -81,15 +81,15 @@ def devel_check_undesired_imports():
     # trogon powers the optional TUI and uses asyncio.
     # Check for asyncio only when the optional tui extras are not installed.
     if 'trogon' not in sys.modules:
-        unwanted_modules += 'asyncio'
-    for modulename in unwanted_modules:
+        undesired_modules += 'asyncio'
+    for modulename in undesired_modules:
         if modulename in sys.modules:
             echo.echo_warning(f'Detected loaded module "{modulename}"')
             loaded_modules += 1
 
     if loaded_modules > 0:
-        echo.echo_critical(f'Detected {loaded_modules} unwanted modules')
-    echo.echo_success('no issues detected')
+        echo.echo_critical(f'Detected {loaded_modules} undesired modules')
+    echo.echo_success('no undesired modules detected')
 
 
 @verdi_devel.command('validate-plugins')
@@ -115,8 +115,11 @@ def devel_run_sql(sql):
 
     from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
 
-    assert get_profile().storage_backend == 'core.psql_dos'
-    with create_sqlalchemy_engine(get_profile().storage_config).connect() as connection:
+    profile = get_profile()
+    if profile is None:
+        echo.echo_critical('Could not load default profile')
+    assert profile.storage_backend == 'core.psql_dos'
+    with create_sqlalchemy_engine(profile.storage_config).connect() as connection:  # type: ignore[arg-type]
         result = connection.execute(text(sql)).fetchall()
 
     if isinstance(result, (list, tuple)):
@@ -147,7 +150,7 @@ def devel_launch_arithmetic_add(code, daemon, sleep):
     """
     from shutil import which
 
-    from aiida.engine import run, submit
+    from aiida.engine import run_get_node, submit
     from aiida.orm import InstalledCode, Int, load_code
 
     default_calc_job_plugin = 'core.arithmetic.add'
@@ -157,10 +160,12 @@ def devel_launch_arithmetic_add(code, daemon, sleep):
             code = load_code('bash@localhost')
         except exceptions.NotExistent:
             localhost = prepare_localhost()
+            if not (bash_path := which('bash')):
+                echo.echo_critical('Could not find bash executable')
             code = InstalledCode(
                 label='bash',
                 computer=localhost,
-                filepath_executable=which('bash'),
+                filepath_executable=bash_path,
                 default_calc_job_plugin=default_calc_job_plugin,
             ).store()
         else:
@@ -177,7 +182,7 @@ def devel_launch_arithmetic_add(code, daemon, sleep):
         node = submit(builder)
         echo.echo_success(f'Submitted calculation `{node}`')
     else:
-        _, node = run.get_node(builder)
+        _, node = run_get_node(builder)
         if node.is_finished_ok:
             echo.echo_success(f'ArithmeticAddCalculation<{node.pk}> finished successfully.')
         else:
@@ -198,7 +203,7 @@ def devel_launch_multiply_add(code, daemon):
 
     from aiida.engine import run_get_node, submit
     from aiida.orm import InstalledCode, Int, load_code
-    from aiida.plugins.factories import WorkflowFactory
+    from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
     default_calc_job_plugin = 'core.arithmetic.add'
 
@@ -206,17 +211,18 @@ def devel_launch_multiply_add(code, daemon):
         try:
             code = load_code('bash@localhost')
         except exceptions.NotExistent:
+            if not (bash_path := which('bash')):
+                echo.echo_critical('Could not find bash executable')
             localhost = prepare_localhost()
             code = InstalledCode(
                 label='bash',
                 computer=localhost,
-                filepath_executable=which('bash'),
+                filepath_executable=bash_path,
                 default_calc_job_plugin=default_calc_job_plugin,
             ).store()
         else:
             assert code.default_calc_job_plugin == default_calc_job_plugin
 
-    multiply_add = WorkflowFactory('core.arithmetic.multiply_add')
     inputs = {
         'x': Int(1),
         'y': Int(1),
@@ -225,10 +231,10 @@ def devel_launch_multiply_add(code, daemon):
     }
 
     if daemon:
-        node = submit(multiply_add, inputs=inputs)
+        node = submit(MultiplyAddWorkChain, inputs=inputs)
         echo.echo_success(f'Submitted workflow `{node}`')
     else:
-        _, node = run_get_node(multiply_add, inputs)
+        _, node = run_get_node(MultiplyAddWorkChain, inputs)
         if node.is_finished_ok:
             echo.echo_success(f'MultiplyAddWorkChain<{node.pk}> finished successfully.')
         else:

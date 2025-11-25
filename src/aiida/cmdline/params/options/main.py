@@ -8,13 +8,16 @@
 ###########################################################################
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
 
+from __future__ import annotations
+
 import pathlib
+import typing as t
 
 import click
 
 from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS
 from aiida.common.log import LOG_LEVELS, configure_logging
-from aiida.manage.external.postgres import DEFAULT_DBINFO
+from aiida.manage.external.postgres import DEFAULT_DBINFO  # type: ignore[attr-defined]
 
 from ...utils import defaults, echo
 from .. import types
@@ -23,10 +26,14 @@ from .config import ConfigFileOption
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
 
+if t.TYPE_CHECKING:
+    from click.decorators import FC
+
 __all__ = (
     'ALL',
     'ALL_STATES',
     'ALL_USERS',
+    'ALSO_UNGROUPED',
     'APPEND_TEXT',
     'ARCHIVE_FORMAT',
     'BROKER_HOST',
@@ -53,13 +60,18 @@ __all__ = (
     'DB_PORT',
     'DB_USERNAME',
     'DEBUG',
+    'DELETE_MISSING',
     'DESCRIPTION',
     'DICT_FORMAT',
     'DICT_KEYS',
     'DRY_RUN',
+    'DUMP_UNSEALED',
+    'END_DATE',
     'EXIT_STATUS',
     'EXPORT_FORMAT',
     'FAILED',
+    'FILTER_BY_LAST_DUMP_TIME',
+    'FLAT',
     'FORCE',
     'FORMULA_MODE',
     'FREQUENCY',
@@ -68,7 +80,10 @@ __all__ = (
     'GROUP_CLEAR',
     'HOSTNAME',
     'IDENTIFIER',
-    'INCREMENTAL',
+    'INCLUDE_ATTRIBUTES',
+    'INCLUDE_EXTRAS',
+    'INCLUDE_INPUTS',
+    'INCLUDE_OUTPUTS',
     'INPUT_FORMAT',
     'INPUT_PLUGIN',
     'LABEL',
@@ -78,8 +93,11 @@ __all__ = (
     'NODES',
     'NON_INTERACTIVE',
     'OLDER_THAN',
+    'ONLY_TOP_LEVEL_CALCS',
+    'ONLY_TOP_LEVEL_WORKFLOWS',
     'ORDER_BY',
     'ORDER_DIRECTION',
+    'ORGANIZE_BY_GROUPS',
     'OVERWRITE',
     'PAST_DAYS',
     'PATH',
@@ -94,10 +112,13 @@ __all__ = (
     'PROFILE_SET_DEFAULT',
     'PROJECT',
     'RAW',
+    'RELABEL_GROUPS',
     'REPOSITORY_PATH',
     'SCHEDULER',
     'SILENT',
     'SORT',
+    'START_DATE',
+    'SYMLINK_CALCS',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
     'TRANSPORT',
@@ -110,7 +131,6 @@ __all__ = (
     'USER_LAST_NAME',
     'VERBOSITY',
     'VISUALIZATION_FORMAT',
-    'WAIT',
     'WITH_ELEMENTS',
     'WITH_ELEMENTS_EXCLUSIVE',
     'active_process_states',
@@ -135,21 +155,21 @@ TRAVERSAL_RULE_HELP_STRING = {
 }
 
 
-def valid_process_states():
+def valid_process_states() -> tuple[str, ...]:
     """Return a list of valid values for the ProcessState enum."""
     from plumpy import ProcessState
 
     return tuple(state.value for state in ProcessState)
 
 
-def valid_calc_job_states():
+def valid_calc_job_states() -> tuple[str, ...]:
     """Return a list of valid values for the CalcState enum."""
     from aiida.common.datastructures import CalcJobState
 
     return tuple(state.value for state in CalcJobState)
 
 
-def active_process_states():
+def active_process_states() -> list[str]:
     """Return a list of process states that are considered active."""
     from plumpy import ProcessState
 
@@ -160,10 +180,10 @@ def active_process_states():
     ]
 
 
-def graph_traversal_rules(rules):
+def graph_traversal_rules(rules: dict[t.Any, t.Any]) -> t.Callable[[FC], FC]:
     """Apply the graph traversal rule options to the command."""
 
-    def decorator(command):
+    def decorator(command: FC) -> FC:
         """Only apply to traversal rules if they are toggleable."""
         for name, traversal_rule in sorted(rules.items(), reverse=True):
             if traversal_rule.toggleable:
@@ -177,7 +197,7 @@ def graph_traversal_rules(rules):
     return decorator
 
 
-def set_log_level(ctx, _param, value):
+def set_log_level(ctx: click.Context, _param: click.Parameter, value: t.Any) -> t.Any:
     """Configure the logging for the CLI command being executed.
 
     Note that we cannot use the most obvious approach of directly setting the level on the various loggers. The reason
@@ -382,10 +402,10 @@ USER_INSTITUTION = OverridableOption(
 
 DB_ENGINE = OverridableOption(
     '--db-engine',
-    required=True,
-    help='Engine to use to connect to the database.',
+    required=False,
+    help='Engine to use to connect to the database. (deprecated)',
     default='postgresql_psycopg',
-    type=click.Choice(['postgresql_psycopg']),
+    type=click.Choice(['postgresql_psycopg', 'postgresql_psycopg2']),
 )
 
 DB_BACKEND = OverridableOption(
@@ -675,12 +695,6 @@ TIMEOUT = OverridableOption(
     help='Time in seconds to wait for a response before timing out.',
 )
 
-WAIT = OverridableOption(
-    '--wait/--no-wait',
-    default=False,
-    help='Wait for the action to be completed otherwise return as soon as it is scheduled.',
-)
-
 FORMULA_MODE = OverridableOption(
     '-f',
     '--formula-mode',
@@ -758,11 +772,10 @@ PRINT_TRACEBACK = OverridableOption(
 )
 
 PATH = OverridableOption(
-    '-p',
     '--path',
     type=click.Path(path_type=pathlib.Path),
     show_default=False,
-    help='Base path for operations that write to disk.',
+    help='Base path for dump operations that write to disk.',
 )
 
 OVERWRITE = OverridableOption(
@@ -783,10 +796,122 @@ SORT = OverridableOption(
     show_default=True,
 )
 
-INCREMENTAL = OverridableOption(
-    '--incremental/--no-incremental',
+ORGANIZE_BY_GROUPS = OverridableOption(
+    '--organize-by-groups/--no-organize-by-groups',
+    default=True,
+    is_flag=True,
+    type=bool,
+    show_default=True,
+    help='If the collection of nodes to be dumped is organized in groups, reproduce its hierarchy.',
+)
+
+INCLUDE_INPUTS = OverridableOption(
+    '--include-inputs/--exclude-inputs',
+    default=True,
+    show_default=True,
+    help='Include linked input nodes of `CalculationNode`(s).',
+)
+
+INCLUDE_OUTPUTS = OverridableOption(
+    '--include-outputs/--exclude-outputs',
+    default=False,
+    show_default=True,
+    help='Include linked output nodes of `CalculationNode`(s).',
+)
+
+INCLUDE_ATTRIBUTES = OverridableOption(
+    '--include-attributes/--exclude-attributes',
+    default=True,
+    show_default=True,
+    help='Include attributes in the `aiida_node_metadata.yaml` written for every `ProcessNode`.',
+)
+
+INCLUDE_EXTRAS = OverridableOption(
+    '--include-extras/--exclude-extras',
+    default=False,
+    show_default=True,
+    help='Include extras in the `aiida_node_metadata.yaml` written for every `ProcessNode`.',
+)
+
+FLAT = OverridableOption(
+    '-f',
+    '--flat',
+    is_flag=True,
+    default=False,
+    help='Dump files in a flat directory for every step of a workflow.',
+)
+
+SYMLINK_CALCS = OverridableOption(
+    '--symlink-calcs/--no-symlink-calcs',
+    default=False,
+    show_default=True,
+    help='Symlink workflow sub-calculations to their own dedicated directories.',
+    #   (must be used in conjunction with no-only-top-level-calcs)
+)
+
+DELETE_MISSING = OverridableOption(
+    '--delete-missing/--no-delete-missing',
+    default=True,
+    show_default=True,
+    help='If a previously dumped group or node is deleted from the DB, delete the corresponding dump directory.',
+)
+
+ALSO_UNGROUPED = OverridableOption(
+    '--also-ungrouped/--no-also-ungrouped',
+    default=False,
+    show_default=True,
+    help='Dump also data of nodes that are not part of any group.',
+)
+
+ONLY_TOP_LEVEL_CALCS = OverridableOption(
+    '--only-top-level-calcs/--no-only-top-level-calcs',
+    default=True,
+    show_default=True,
+    help='Dump calculations in their own dedicated directories, not just as part of the dumped workflow.',
+)
+
+ONLY_TOP_LEVEL_WORKFLOWS = OverridableOption(
+    '--only-top-level-workflows/--no-only-top-level-workflows',
+    default=True,
+    show_default=True,
+    help='If a top-level workflow calls sub-workflows, create a designated directory only for the top-level workflow.',
+)
+
+RELABEL_GROUPS = OverridableOption(
+    '--relabel-groups/--no-relabel-groups',
+    default=True,
+    show_default=True,
+    help='Update directories and log entries for the dumping if groups have been relabeled since the last dump.',
+)
+
+DUMP_UNSEALED = OverridableOption(
+    '--dump-unsealed/--no-dump-unsealed',
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help='Also allow the dumping of unsealed process nodes.',
+)
+
+FILTER_BY_LAST_DUMP_TIME = OverridableOption(
+    '--filter-by-last-dump-time/--no-filter-by-last-dump-time',
     is_flag=True,
     default=True,
     show_default=True,
-    help="Incremental dumping of data to disk. Doesn't require using overwrite to clean previous directories.",
+    help='Only select nodes whose `mtime` is after the last dump time.',
+)
+
+START_DATE = OverridableOption(
+    '--start-date',
+    is_flag=False,
+    default=None,
+    show_default=True,
+    help='Start date for node mtime range selection for node collection dumping.',
+)
+
+END_DATE = OverridableOption(
+    '--end-date',
+    is_flag=False,
+    default=None,
+    show_default=True,
+    help='End date for node mtime range selection for node collection dumping.',
 )

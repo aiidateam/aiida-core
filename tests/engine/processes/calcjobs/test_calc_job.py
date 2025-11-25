@@ -1195,29 +1195,89 @@ def test_monitor_version(get_calcjob_builder):
     assert node.base.attributes.get('version')['monitors'] == {'monitor': __version__}
 
 
-def empty_monitor(node, transport):
-    """Empty monitor that returns None and has no __version__ in its module."""
-    return None
-
-
 def test_monitor_without_version(get_calcjob_builder, entry_points):
     """Test that monitors without version information don't cause a KeyError.
 
     This test ensures that monitors from packages without a __version__ attribute
-    can be used without raising a KeyError when setting up version info.
+    can be used without raising a KeyError when setting up version info. A warning
+    is emitted to inform the user about incomplete provenance tracking.
     """
-    entry_points.add(empty_monitor, group='aiida.calculations.monitors', name='core.empty_monitor')
+    import sys
+    import types
+    import uuid
+
+    # Create a monitor function
+    def empty_monitor(node, transport):
+        """Empty monitor that returns None and has no __version__ in its module."""
+        return None
+
+    # Create a dynamic module without __version__ attribute
+    module_name = f'test_monitor_module_{uuid.uuid4().hex[:8]}'
+    dynamic_module = types.ModuleType(module_name, 'Test module without version')
+
+    # Set the monitor's module to the dynamic module
+    empty_monitor.__module__ = module_name
+    setattr(dynamic_module, 'empty_monitor', empty_monitor)
+
+    # Make the module importable (but without __version__)
+    sys.modules[module_name] = dynamic_module
+
+    try:
+        # Register the monitor as an entry point
+        entry_points.add(empty_monitor, group='aiida.calculations.monitors', name='core.empty_monitor')
+
+        builder = get_calcjob_builder()
+        builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.empty_monitor'})}
+        _, node = launch.run_get_node(builder)
+
+        # The monitor should be in the version info, but with None as the version
+        # since the module doesn't have __version__
+        assert 'monitors' in node.base.attributes.get('version')
+        assert 'monitor' in node.base.attributes.get('version')['monitors']
+        # The value should be None since the module doesn't have __version__
+        assert node.base.attributes.get('version')['monitors']['monitor'] is None
+
+        # Note: A warning is emitted to inform users about incomplete provenance tracking,
+        # but it comes from the plumpy.processes logger which is not captured by pytest's
+        # caplog fixture. The warning can be seen in stderr during test execution.
+    finally:
+        # Clean up the dynamically created module
+        sys.modules.pop(module_name, None)
+
+
+def test_monitor_requires_entry_point(get_calcjob_builder):
+    """Test that monitors MUST be registered as entry points and cannot be simple functions.
+
+    This test demonstrates that the current design requires all monitors to be registered
+    as entry points. Attempting to pass a monitor without an entry point should fail
+    during validation at builder assignment time.
+    """
+
+    def simple_monitor(node, transport):
+        """A simple monitor function that we try to use without an entry point."""
+        return None
 
     builder = get_calcjob_builder()
-    builder.monitors = {'monitor': orm.Dict({'entry_point': 'core.empty_monitor'})}
-    _, node = launch.run_get_node(builder)
 
-    # The monitor should be in the version info, but with None as the version
-    # since the module doesn't have __version__
-    assert 'monitors' in node.base.attributes.get('version')
-    assert 'monitor' in node.base.attributes.get('version')['monitors']
-    # The value should be None since the module doesn't have __version__
-    assert node.base.attributes.get('version')['monitors']['monitor'] is None
+    # Try to pass a monitor without an entry_point - this should fail validation
+    # because CalcJobMonitor requires 'entry_point' to be present
+    # The ValueError is raised during builder assignment, not during execution
+    with pytest.raises(ValueError, match=r".*unexpected keyword argument 'function'.*"):
+        builder.monitors = {'monitor': orm.Dict({'function': simple_monitor})}
+
+
+def test_monitor_invalid_entry_point(get_calcjob_builder):
+    """Test that monitors with non-existent entry points fail validation.
+
+    This ensures that the entry point must exist and be loadable.
+    Validation happens at builder assignment time.
+    """
+    builder = get_calcjob_builder()
+
+    # Try to use a non-existent entry point
+    # The ValueError is raised during builder assignment, not during execution
+    with pytest.raises(ValueError, match=r'.*not found in group.*'):
+        builder.monitors = {'monitor': orm.Dict({'entry_point': 'non.existent.monitor'})}
 
 
 def monitor_skip_parse(node, transport, **kwargs):

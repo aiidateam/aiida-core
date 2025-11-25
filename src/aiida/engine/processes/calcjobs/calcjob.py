@@ -647,7 +647,14 @@ class CalcJob(Process):
             entry_point = monitor.base.attributes.get('entry_point')
             entry_point_string = format_entry_point_string('aiida.calculations.monitors', entry_point)
             monitor_version_info = self.runner.plugin_version_provider.get_version_info(entry_point_string)
-            version_info['version'].setdefault('monitors', {})[key] = monitor_version_info['version'].get('plugin')
+            plugin_version = monitor_version_info['version'].get('plugin')
+            if plugin_version is None:
+                self.logger.warning(
+                    f"Monitor '{key}' (entry point '{entry_point}') does not have version information. "
+                    f'The package does not define __version__. Provenance tracking will be incomplete. '
+                    f'Consider adding __version__ to ensure reproducibility.'
+                )
+            version_info['version'].setdefault('monitors', {})[key] = plugin_version
 
         cache_version_info = {}
 

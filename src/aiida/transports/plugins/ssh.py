@@ -513,7 +513,7 @@ class SshTransport(BlockingTransport):
             self._close_proxies()
             raise InvalidOperation(
                 'Error in ssh transport plugin. This may be due to the remote computer not supporting SFTP. '
-                'Try setting it up with the aiida.transports:ssh_only transport from the aiida-sshonly plugin instead.'
+                'Try setting it up with the core.ssh_async transport plugin with openssh backend, instead.'
             )
 
         self._is_open = True

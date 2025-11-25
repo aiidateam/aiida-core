@@ -140,7 +140,14 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
     if request.param is Str:
         return Str, {'value': 'string'}
     if request.param is StructureData:
-        return StructureData, {'cell': [[1, 0, 0], [0, 1, 0], [0, 0, 1]]}
+        return StructureData, {
+            'cell': [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+            'pbc1': True,
+            'pbc2': True,
+            'pbc3': True,
+            'sites': [{'kind_name': 'H', 'position': (0.0, 0.0, 0.0)}],
+            'kinds': [{'name': 'H', 'mass': 1.0, 'symbols': ('H',), 'weights': (1.0,)}],
+        }
     if request.param is RemoteData:
         return RemoteData, {'remote_path': '/some/path'}
     if request.param is RemoteStashData:
@@ -169,18 +176,18 @@ def test_roundtrip(required_arguments, tmp_path):
     assert isinstance(entity, cls)
 
     # Get the model instance from the entity instance
-    model = entity._to_model(tmp_path)
+    model = entity.to_model(repository_path=tmp_path)
     assert isinstance(model, BaseModel)
 
     # Reconstruct the entity instance from the model instance
-    roundtrip = cls._from_model(model)
+    roundtrip = cls.from_model(model)
     assert isinstance(roundtrip, cls)
 
     # Get the model instance again from the reconstructed entity and check that the fields that would be passed to the
     # ORM entity constructor are identical of the original model. The ``model_to_orm_field_values`` excludes values of
     # fields that define ``exclude_to_orm=True`` because these can change during roundtrips. This because these
     # typically correspond to entity fields that have defaults set on the database level, e.g., UUIDs.
-    roundtrip_model = roundtrip._to_model(tmp_path)
+    roundtrip_model = roundtrip.to_model(repository_path=tmp_path)
     original_field_values = cls.model_to_orm_field_values(model)
 
     for key, value in cls.model_to_orm_field_values(roundtrip_model).items():
@@ -206,5 +213,5 @@ def test_roundtrip_serialization(required_arguments, tmp_path):
     assert isinstance(entity, cls)
 
     # Get the model instance from the entity instance
-    serialized_entity = entity.serialize(tmp_path)
-    entity.from_serialized(**serialized_entity)
+    serialized_entity = entity.serialize(repository_path=tmp_path, mode='python')
+    entity.from_serialized(serialized_entity)

@@ -13,35 +13,39 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Union
+from typing import Optional, cast
 
 from aiida.common.pydantic import MetadataField
 from aiida.orm import AuthInfo
 from aiida.transports import Transport
 
-from ..data import Data
+from .. import data
 
 _logger = logging.getLogger(__name__)
 
 __all__ = ('RemoteData',)
 
 
-class RemoteData(Data):
+class RemoteDataModel(data.DataModel):
+    remote_path: Optional[str] = MetadataField(
+        None,
+        title='Remote path',
+        description='Filepath on the remote computer.',
+        orm_to_model=lambda node, _: cast(RemoteData, node).get_remote_path(),
+    )
+
+
+class RemoteData(data.Data):
     """Store a link to a file or folder on a remote machine.
 
     Remember to pass a computer!
     """
 
+    Model = RemoteDataModel
+
     KEY_EXTRA_CLEANED = 'cleaned'
 
-    class Model(Data.Model):
-        remote_path: Union[str, None] = MetadataField(
-            title='Remote path',
-            description='Filepath on the remote computer.',
-            orm_to_model=lambda node, _: node.get_remote_path(),
-        )
-
-    def __init__(self, remote_path: Union[str, None] = None, **kwargs):
+    def __init__(self, remote_path: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
         if remote_path is not None:
             self.set_remote_path(remote_path)

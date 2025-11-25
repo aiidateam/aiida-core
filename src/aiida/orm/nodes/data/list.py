@@ -14,21 +14,24 @@ from typing import Any
 
 from aiida.common.pydantic import MetadataField
 
+from . import data
 from .base import to_aiida_type
-from .data import Data
 
 __all__ = ('List',)
 
 
-class List(Data, MutableSequence):
+class ListModel(data.DataModel):
+    value: t.List[t.Any] = MetadataField(
+        description='Content of the data',
+    )
+
+
+class List(data.Data, MutableSequence):
     """`Data` sub class to represent a list."""
 
-    _LIST_KEY = 'list'
+    Model = ListModel
 
-    class Model(Data.Model):
-        value: t.List[t.Any] = MetadataField(
-            description='Content of the data',
-        )
+    _LIST_KEY = 'list'
 
     def __init__(self, value=None, **kwargs):
         """Initialise a ``List`` node instance.

@@ -12,15 +12,16 @@ from __future__ import annotations
 
 import base64
 import io
-from typing import Any, Iterator, Optional
+from collections.abc import Iterable
+from typing import Any, Iterator, Optional, Union, cast
 
 import numpy as np
-from pydantic import ConfigDict
+from pydantic import field_validator
 
 from aiida.common.pydantic import MetadataField
 
+from .. import data
 from ..base import to_aiida_type
-from ..data import Data
 
 __all__ = ('ArrayData',)
 
@@ -30,7 +31,33 @@ def _(value):
     return ArrayData(value)
 
 
-class ArrayData(Data):
+class ArrayDataModel(data.DataModel):
+    arrays: Optional[dict[str, bytes]] = MetadataField(
+        None,
+        description='The dictionary of numpy arrays.',
+        orm_to_model=lambda node, _: ArrayData.save_arrays(cast(ArrayData, node).arrays),
+        model_to_orm=lambda model: ArrayData.load_arrays(cast(ArrayDataModel, model).arrays),
+    )
+
+    @field_validator('arrays', mode='before')
+    @classmethod
+    def validate_arrays(cls, value: Optional[dict[str, Union[bytes, Any]]]) -> Any:
+        if value is None:
+            return value
+        if not isinstance(value, dict):
+            raise TypeError(f'`arrays` should be a dictionary but got: {value}')
+        arrays: dict[str, bytes] = {}
+        for key, array in value.items():
+            if isinstance(array, bytes):
+                arrays[key] = array
+            elif isinstance(array, Iterable):
+                arrays |= ArrayData.save_arrays({key: np.array(array)})
+            else:
+                arrays[key] = array
+        return arrays
+
+
+class ArrayData(data.Data):
     """Store a set of arrays on disk (rather than on the database) in an efficient way
 
     Arrays are stored using numpy and therefore this class requires numpy to be installed.
@@ -47,14 +74,7 @@ class ArrayData(Data):
 
     """
 
-    class Model(Data.Model):
-        model_config = ConfigDict(arbitrary_types_allowed=True)
-        arrays: Optional[dict[str, bytes]] = MetadataField(
-            None,
-            description='The dictionary of numpy arrays.',
-            orm_to_model=lambda node, _: ArrayData.save_arrays(node.arrays),  # type: ignore[attr-defined]
-            model_to_orm=lambda model: ArrayData.load_arrays(model.arrays),  # type: ignore[attr-defined]
-        )
+    Model = ArrayDataModel
 
     array_prefix = 'array|'
     default_array_name = 'default'
@@ -83,7 +103,7 @@ class ArrayData(Data):
 
     @staticmethod
     def save_arrays(arrays: dict[str, np.ndarray]) -> dict[str, bytes]:
-        results = {}
+        results: dict[str, bytes] = {}
 
         for key, array in arrays.items():
             stream = io.BytesIO()
@@ -94,8 +114,11 @@ class ArrayData(Data):
         return results
 
     @staticmethod
-    def load_arrays(arrays: dict[str, bytes]) -> dict[str, np.ndarray]:
-        results = {}
+    def load_arrays(arrays: dict[str, bytes] | None) -> dict[str, np.ndarray]:
+        results: dict[str, np.ndarray] = {}
+
+        if arrays is None:
+            return results
 
         for key, encoded in arrays.items():
             stream = io.BytesIO(base64.decodebytes(encoded))
@@ -227,8 +250,7 @@ class ArrayData(Data):
         # Check if the name is valid
         if not name or re.sub('[0-9a-zA-Z_]', '', name):
             raise ValueError(
-                'The name assigned to the array ({}) is not valid,'
-                'it can only contain digits, letters and underscores'
+                'The name assigned to the array ({}) is not valid,it can only contain digits, letters and underscores'
             )
 
         # Write the array to a temporary file, and then add it to the repository of the node

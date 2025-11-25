@@ -12,12 +12,16 @@ from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
 from aiida.common.pydantic import MetadataField
 
-from ...data import Data
+from ... import data
 
 __all__ = ('RemoteStashData',)
 
 
-class RemoteStashData(Data):
+class RemoteStashDataModel(data.DataModel):
+    stash_mode: StashMode = MetadataField(description='The mode with which the data was stashed')
+
+
+class RemoteStashData(data.Data):
     """Data plugin that models an archived folder on a remote computer.
 
     A stashed folder is essentially an instance of ``RemoteData`` that has been archived. Archiving in this context can
@@ -34,10 +38,9 @@ class RemoteStashData(Data):
     methods of the class will only be available or function properly based on the ``stash_mode``.
     """
 
-    _storable = False
+    Model = RemoteStashDataModel
 
-    class Model(Data.Model):
-        stash_mode: StashMode = MetadataField(description='The mode with which the data was stashed')
+    _storable = False
 
     def __init__(self, stash_mode: StashMode, **kwargs):
         """Construct a new instance

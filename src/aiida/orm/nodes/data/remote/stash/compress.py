@@ -14,26 +14,29 @@ from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
 from aiida.common.pydantic import MetadataField
 
-from .base import RemoteStashData
+from . import base
 
 __all__ = ('RemoteStashCompressedData',)
 
 
-class RemoteStashCompressedData(RemoteStashData):
+class RemoteStashCompressedDataModel(base.RemoteStashDataModel):
+    target_basepath: str = MetadataField(
+        description='The the target basepath',
+    )
+    source_list: List[str] = MetadataField(
+        description='The list of source files that were stashed',
+    )
+    dereference: bool = MetadataField(
+        description='The format of the compression used when stashed',
+    )
+
+
+class RemoteStashCompressedData(base.RemoteStashData):
     """Data plugin that models a compressed stashed file on a remote computer."""
 
-    _storable = True
+    Model = RemoteStashCompressedDataModel
 
-    class Model(RemoteStashData.Model):
-        target_basepath: str = MetadataField(
-            description='The the target basepath',
-        )
-        source_list: List[str] = MetadataField(
-            description='The list of source files that were stashed',
-        )
-        dereference: bool = MetadataField(
-            description='The format of the compression used when stashed',
-        )
+    _storable = True
 
     def __init__(
         self,

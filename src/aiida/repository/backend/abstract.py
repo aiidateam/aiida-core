@@ -11,7 +11,7 @@ import hashlib
 import io
 import pathlib
 from collections.abc import Iterable, Iterator
-from typing import Any, BinaryIO, List, Optional, Tuple, Union
+from typing import Any, BinaryIO, Callable, List, Optional, Tuple, Union
 
 from aiida.common.hashing import chunked_file_hash
 
@@ -84,6 +84,12 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def _put_object_from_filelike(self, handle: BinaryIO) -> str:
+        pass
+
+    @abc.abstractmethod
+    def _import_from_other_repository(
+        self, src: 'AbstractRepositoryBackend', keys: set[str], step_cb: Optional[Callable[[str, int, int], None]]
+    ) -> list[str]:
         pass
 
     def put_object_from_file(self, filepath: Union[str, pathlib.Path]) -> str:

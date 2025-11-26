@@ -307,6 +307,7 @@ core = 'sysmon'
 omit = [
   "src/aiida/tools/_dumping/**/*"
 ]
+patch = ['subprocess']
 
 [tool.flit.module]
 name = 'aiida'
@@ -568,8 +569,12 @@ commands = molecule {posargs:test}
 """
 
 [tool.uv]
-# NOTE: When you bump the minimum uv version, you also need to change it in:
+# We specify a minimum uv version so that the format of uv.lock file
+# does not change depending on uv version that a particular developer has installed.
+# The uv.lock format is versioned, using the "version" and "revision" fields in uv.lock,
+# and the minimum version here should be the first one that introduced a given version/revision.
+# NOTE: When you bump the minimum uv version, you might also need to change it in:
 # .pre-commit-config.yaml
 # .github/actions/install-aiida-core/action.yml
 # .readthedocs.yml
-required-version = ">=0.7.0"
+required-version = ">=0.8.4"

@@ -16,6 +16,7 @@ from aiida.engine.persistence import AiiDAPersister
 from tests.utils.processes import DummyProcess
 
 
+@pytest.mark.requires_rmq
 class TestProcess:
     """Test the basic saving and loading of process states."""
 
@@ -38,6 +39,7 @@ class TestProcess:
         assert loaded_process.state == plumpy.ProcessState.FINISHED
 
 
+@pytest.mark.requires_rmq
 class TestAiiDAPersister:
     """Test AiiDAPersister."""
 

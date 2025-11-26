@@ -57,8 +57,8 @@ class JobsList:
         self._loop = transport_queue.loop
         self._logger = logging.getLogger(__name__)
 
-        self._jobs_cache: Dict[Hashable, 'JobInfo'] = {}
-        self._job_update_requests: Dict[Hashable, asyncio.Future] = {}  # Mapping: {job_id: Future}
+        self._jobs_cache: Dict[str, 'JobInfo'] = {}
+        self._job_update_requests: Dict[str, asyncio.Future] = {}  # Mapping: {job_id: Future}
         self._last_updated = last_updated
         self._update_handle: Optional[asyncio.TimerHandle] = None
         self._polling_jobs: List[str] = []
@@ -88,7 +88,7 @@ class JobsList:
         """
         return self._last_updated
 
-    async def _get_jobs_from_scheduler(self) -> Dict[Hashable, 'JobInfo']:
+    async def _get_jobs_from_scheduler(self) -> Dict[str, 'JobInfo']:
         """Get the current jobs list from the scheduler.
 
         :return: a mapping of job ids to :py:class:`~aiida.schedulers.datastructures.JobInfo` instances
@@ -168,7 +168,7 @@ class JobsList:
         """
         self._authinfo = authinfo
         # Get or create the future
-        request = self._job_update_requests.setdefault(job_id, asyncio.Future())
+        request = self._job_update_requests.setdefault(str(job_id), asyncio.Future())
         assert not request.done(), 'Expected pending job info future, found in done state.'
 
         try:

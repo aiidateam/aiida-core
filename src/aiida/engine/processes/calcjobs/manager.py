@@ -101,8 +101,9 @@ class JobsList:
             scheduler = self._authinfo.computer.get_scheduler()
             scheduler.set_transport(transport)
 
+            self._polling_jobs = [str(job_id) for job_id, _ in self._job_update_requests.items()]
+
             kwargs: Dict[str, Any] = {'as_dict': True}
-            self._polling_jobs = self._get_jobs_with_scheduler()
             if scheduler.get_feature('can_query_by_user'):
                 kwargs['user'] = '$USER'
             else:
@@ -137,17 +138,16 @@ class JobsList:
             self._jobs_cache = await self._get_jobs_from_scheduler()
         except Exception as exception:
             # Set the exception on all the update futures
-            for job_id in self._polling_jobs:
-                future = self._job_update_requests.pop(job_id)
-                if future.done():
-                    continue
-                future.set_exception(exception)
+            for future in self._job_update_requests.values():
+                if not future.done():
+                    future.set_exception(exception)
 
             # Reset the `_update_handle` manually. Normally this is done in the `updating` coroutine, but since we
             # reraise this exception, that code path is never hit. If the next time a request comes in, the method
             # `_ensure_updating` will falsely conclude we are still updating, since the handle is not `None` and so it
             # will not schedule the next update, causing the job update futures to never be resolved.
             self._update_handle = None
+            self._job_update_requests = {}
 
             raise
         else:
@@ -241,14 +241,6 @@ class JobsList:
 
     def _update_requests_outstanding(self) -> bool:
         return any(not request.done() for request in self._job_update_requests.values())
-
-    def _get_jobs_with_scheduler(self) -> List[str]:
-        """Get all the jobs that are currently with scheduler.
-
-        :return: the list of jobs with the scheduler
-        :rtype: list
-        """
-        return [str(job_id) for job_id, _ in self._job_update_requests.items()]
 
 
 class JobManager:

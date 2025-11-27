@@ -132,7 +132,7 @@ class CalcJobMonitor:
         if unsupported_kwargs:
             raise ValueError(f'The monitor `{self.entry_point}` does not accept the keywords: {unsupported_kwargs}.')
 
-    def load_entry_point(self) -> type:
+    def load_entry_point(self):
         """Return the function associated with the entry point of this monitor.
 
         :raises EntryPointError: If the entry point does not exist or cannot be loaded.
@@ -160,8 +160,8 @@ class CalcJobMonitors:
         if any(not isinstance(monitor, Dict) for monitor in monitors.values()):
             raise TypeError('at least one value of `monitors` is not a `Dict` node.')
 
-        monitors = {key: CalcJobMonitor(**node.get_dict()) for key, node in monitors.items()}
-        self._monitors = collections.OrderedDict(sorted(monitors.items(), key=lambda x: (-x[1].priority, x[0])))
+        calcjob_monitors = {key: CalcJobMonitor(**node.get_dict()) for key, node in monitors.items()}
+        self._monitors = collections.OrderedDict(sorted(calcjob_monitors.items(), key=lambda x: (-x[1].priority, x[0])))
 
     @property
     def monitors(self) -> collections.OrderedDict:
@@ -212,3 +212,4 @@ class CalcJobMonitors:
             if monitor_result:
                 LOGGER.info(f'Monitor `{key}` returned: {monitor_result}')
                 return monitor_result
+        return None

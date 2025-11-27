@@ -8,6 +8,8 @@
 ###########################################################################
 """Module containing utilities and classes relating to job calculations running on systems that require transport."""
 
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import contextvars
@@ -187,7 +189,7 @@ class JobsList:
         This will automatically stop if there are no outstanding requests.
         """
 
-        async def updating():
+        async def updating() -> None:
             """Do the actual update, stop if not requests left."""
             await self._update_job_info()
             # Any outstanding requests?
@@ -196,7 +198,7 @@ class JobsList:
                     self._get_next_update_delay(),
                     asyncio.ensure_future,
                     updating(),
-                    context=contextvars.Context(),  #  type: ignore[call-arg]
+                    context=contextvars.Context(),
                 )
             else:
                 self._update_handle = None
@@ -207,7 +209,7 @@ class JobsList:
                 self._get_next_update_delay(),
                 asyncio.ensure_future,
                 updating(),
-                context=contextvars.Context(),  #  type: ignore[call-arg]
+                context=contextvars.Context(),
             )
 
     @staticmethod
@@ -264,7 +266,7 @@ class JobManager:
 
     def __init__(self, transport_queue: 'TransportQueue') -> None:
         self._transport_queue = transport_queue
-        self._job_lists: Dict[Hashable, 'JobInfo'] = {}
+        self._job_lists: dict[int | None, JobsList] = {}
 
     def get_jobs_list(self, authinfo: AuthInfo) -> JobsList:
         """Get or create a new `JobLists` instance for the given authinfo.

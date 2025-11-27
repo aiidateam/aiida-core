@@ -87,11 +87,6 @@ repos:
         src/aiida/calculations/templatereplacer.py|
         src/aiida/calculations/transfer.py|
         src/aiida/engine/daemon/execmanager.py|
-        src/aiida/engine/processes/calcjobs/manager.py|
-        src/aiida/engine/processes/calcjobs/monitors.py|
-        src/aiida/engine/processes/calcjobs/tasks.py|
-        src/aiida/engine/processes/control.py|
-        src/aiida/engine/processes/ports.py|
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
         src/aiida/manage/external/rmq/launcher.py|

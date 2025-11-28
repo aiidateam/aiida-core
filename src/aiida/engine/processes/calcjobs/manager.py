@@ -101,7 +101,7 @@ class JobsList:
             scheduler = self._authinfo.computer.get_scheduler()
             scheduler.set_transport(transport)
 
-            self._polling_jobs = [str(job_id) for job_id, _ in self._job_update_requests.items()]
+            self._polling_jobs = [str(job_id) for job_id in self._job_update_requests.keys()]
 
             kwargs: Dict[str, Any] = {'as_dict': True}
             if scheduler.get_feature('can_query_by_user'):
@@ -152,10 +152,14 @@ class JobsList:
             raise
         else:
             for job_id in self._polling_jobs:
-                future = self._job_update_requests.pop(job_id)
-                if future.done():
-                    continue
-                future.set_result(self._jobs_cache.get(job_id, None))
+                future = self._job_update_requests.pop(job_id, None)
+                if future is None:
+                    self.logger.info(
+                        f'This should not happen: polled job_id {job_id} '
+                        f'not in _job_update_requests {self._job_update_requests}'
+                    )
+                elif not future.done():
+                    future.set_result(self._jobs_cache.get(job_id, None))
 
     @contextlib.contextmanager
     def request_job_info_update(self, authinfo: AuthInfo, job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:

@@ -217,10 +217,9 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             CreateModel = create_model(  # noqa: N806
                 new_name,
                 __base__=cls,
-                __doc__=f'Creation version of {cls.__name__}.',
+                __module__=cls.__module__,
             )
             CreateModel.__qualname__ = new_name
-            CreateModel.__module__ = cls.__module__
             CreateModel.model_config['extra'] = 'ignore'
 
             # Identify read-only fields

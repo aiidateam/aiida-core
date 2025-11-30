@@ -37,7 +37,7 @@ def OrderSpecifier(field, direction):  # noqa: N802
     return {field: direction}
 
 
-class LogCollection(entities.Collection['Log']):
+class LogCollection(entities.EntityCollection['Log']):
     """This class represents the collection of logs and can be used to create
     and retrieve logs.
     """
@@ -127,42 +127,45 @@ class LogCollection(entities.Collection['Log']):
         return self._backend.logs.delete_many(filters)
 
 
-class Log(entities.Entity['BackendLog', LogCollection]):
+class LogModel(entities.EntityModel):
+    uuid: UUID = MetadataField(
+        description='The UUID of the node',
+        is_attribute=False,
+        exclude_to_orm=True,
+    )
+    loggername: str = MetadataField(
+        description='The name of the logger',
+        is_attribute=False,
+    )
+    levelname: str = MetadataField(
+        description='The name of the log level',
+        is_attribute=False,
+    )
+    message: str = MetadataField(
+        description='The message of the log',
+        is_attribute=False,
+    )
+    time: datetime = MetadataField(
+        description='The time at which the log was created',
+        is_attribute=False,
+    )
+    metadata: Dict[str, Any] = MetadataField(
+        default_factory=dict,
+        description='The metadata of the log',
+        is_attribute=False,
+    )
+    dbnode_id: int = MetadataField(
+        description='Associated node',
+        is_attribute=False,
+    )
+
+
+class Log(entities.Entity['BackendLog', LogCollection, LogModel]):
     """An AiiDA Log entity.  Corresponds to a logged message against a particular AiiDA node."""
 
-    _CLS_COLLECTION = LogCollection
+    Model = LogModel
 
-    class Model(entities.Entity.Model):
-        uuid: UUID = MetadataField(
-            description='The UUID of the node',
-            is_attribute=False,
-            exclude_to_orm=True,
-        )
-        loggername: str = MetadataField(
-            description='The name of the logger',
-            is_attribute=False,
-        )
-        levelname: str = MetadataField(
-            description='The name of the log level',
-            is_attribute=False,
-        )
-        message: str = MetadataField(
-            description='The message of the log',
-            is_attribute=False,
-        )
-        time: datetime = MetadataField(
-            description='The time at which the log was created',
-            is_attribute=False,
-        )
-        metadata: Dict[str, Any] = MetadataField(
-            default_factory=dict,
-            description='The metadata of the log',
-            is_attribute=False,
-        )
-        dbnode_id: int = MetadataField(
-            description='Associated node',
-            is_attribute=False,
-        )
+    _CLS_COLLECTION = LogCollection
 
     def __init__(
         self,

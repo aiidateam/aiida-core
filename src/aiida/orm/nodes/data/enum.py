@@ -23,8 +23,8 @@ from plumpy.loaders import get_object_loader
 from aiida.common.lang import type_check
 from aiida.common.pydantic import MetadataField
 
+from . import data
 from .base import to_aiida_type
-from .data import Data
 
 __all__ = ('EnumData',)
 
@@ -36,7 +36,14 @@ def _(value):
     return EnumData(member=value)
 
 
-class EnumData(Data):
+class EnumDataModel(data.DataModel):
+    member: Enum = MetadataField(
+        description='The member name.',
+        orm_to_model=lambda node, _: t.cast(EnumData, node).get_member(),
+    )
+
+
+class EnumData(data.Data):
     """Data plugin that allows to easily wrap an :class:`enum.Enum` member.
 
     The enum member is stored in the database by storing the value, name and the identifier (string that represents the
@@ -46,15 +53,11 @@ class EnumData(Data):
     the ``name`` and ``value`` properties which return the name and value of the enum member, respectively.
     """
 
+    Model = EnumDataModel
+
     KEY_NAME = 'name'
     KEY_VALUE = 'value'
     KEY_IDENTIFIER = 'identifier'
-
-    class Model(Data.Model):
-        member: Enum = MetadataField(
-            description='The member name.',
-            orm_to_model=lambda node, _: t.cast(EnumData, node).get_member(),
-        )
 
     def __init__(self, member: Enum, *args, **kwargs):
         """Construct the node for the to enum member that is to be wrapped."""

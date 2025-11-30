@@ -14,19 +14,22 @@ from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
 from aiida.common.pydantic import MetadataField
 
-from .base import RemoteStashData
+from . import base
 
 __all__ = ('RemoteStashCustomData',)
 
 
-class RemoteStashCustomData(RemoteStashData):
+class RemoteStashCustomDataModel(base.RemoteStashDataModel):
+    target_basepath: str = MetadataField(description='The the target basepath')
+    source_list: List[str] = MetadataField(description='The list of source files that were stashed')
+
+
+class RemoteStashCustomData(base.RemoteStashData):
     """Data plugin that models stashed data on a remote computer, which was done via a custom script."""
 
-    _storable = True
+    Model = RemoteStashCustomDataModel
 
-    class Model(RemoteStashData.Model):
-        target_basepath: str = MetadataField(description='The the target basepath')
-        source_list: List[str] = MetadataField(description='The list of source files that were stashed')
+    _storable = True
 
     def __init__(
         self,

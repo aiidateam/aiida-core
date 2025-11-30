@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any, Generic, List, Literal, NoReturn, Optiona
 
 from plumpy.base.utils import call_with_super_check, super_check
 from pydantic import BaseModel, ConfigDict, create_model
-from typing_extensions import Self
+from typing_extensions import Self, overload
 
 from aiida.common import exceptions, log
 from aiida.common.exceptions import EntryPointError, InvalidOperation, NotExistent
@@ -33,12 +33,12 @@ if TYPE_CHECKING:
     from aiida.orm.implementation import BackendEntity, StorageBackend
     from aiida.orm.querybuilder import FilterType, OrderByType, QueryBuilder
 
-__all__ = ('Collection', 'Entity', 'EntityTypes')
+__all__ = ('Entity', 'EntityCollection', 'EntityTypes')
 
-CollectionType = TypeVar('CollectionType', bound='Collection[Any]')
-EntityType = TypeVar('EntityType', bound='Entity[Any,Any]')
-EntityModelType = TypeVar('EntityModelType', bound=BaseModel)
 BackendEntityType = TypeVar('BackendEntityType', bound='BackendEntity')
+EntityCollectionType = TypeVar('EntityCollectionType', bound='EntityCollection[Any]')
+EntityModelType = TypeVar('EntityModelType', bound='EntityModel')
+EntityType = TypeVar('EntityType', bound='Entity[Any,Any,Any]')
 
 
 class EntityTypes(Enum):
@@ -55,7 +55,7 @@ class EntityTypes(Enum):
     GROUP_NODE = 'group_node'
 
 
-class Collection(abc.ABC, Generic[EntityType]):
+class EntityCollection(abc.ABC, Generic[EntityType]):
     """Container class that represents the collection of objects of a particular entity type."""
 
     @staticmethod
@@ -178,78 +178,71 @@ class Collection(abc.ABC, Generic[EntityType]):
         return self.query(filters=filters).count()
 
 
-class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=EntityFieldMeta):
+class EntityModel(BaseModel, defer_build=True):
+    model_config = ConfigDict(extra='forbid')
+
+    pk: int = MetadataField(
+        description='The primary key of the entity',
+        is_attribute=False,
+        exclude_to_orm=True,
+    )
+
+    @classmethod
+    def as_create_model(cls: type[EntityModel]) -> type[BaseModel]:
+        """Return a derived creation model class with read-only fields removed.
+
+        This also removes any serializers/validators defined on those fields.
+
+        :return: The derived creation model class.
+        """
+
+        # Derive the creation model from the original model
+        new_name = cls.__qualname__.replace('.Model', 'CreateModel')
+        CreateModel = create_model(  # noqa: N806
+            new_name,
+            __base__=cls,
+            __module__=cls.__module__,
+        )
+        CreateModel.__qualname__ = new_name
+        CreateModel.model_config['extra'] = 'ignore'
+
+        # Identify read-only fields
+        readonly_fields = [
+            name for name, field in CreateModel.model_fields.items() if get_metadata(field, 'exclude_to_orm')
+        ]
+
+        # Remove read-only fields
+        for name in readonly_fields:
+            CreateModel.model_fields.pop(name, None)
+            if hasattr(CreateModel, name):
+                delattr(CreateModel, name)
+
+        # Prune field validators/serializers referring to read-only fields
+        decorators = CreateModel.__pydantic_decorators__
+
+        def _prune_field_decorators(field_decorators: dict[str, Any]) -> dict[str, Any]:
+            return {
+                name: decorator
+                for name, decorator in field_decorators.items()
+                if all(field not in readonly_fields for field in decorator.info.fields)
+            }
+
+        decorators.field_validators = _prune_field_decorators(decorators.field_validators)
+        decorators.field_serializers = _prune_field_decorators(decorators.field_serializers)
+
+        return CreateModel
+
+
+class Entity(abc.ABC, Generic[BackendEntityType, EntityCollectionType, EntityModelType], metaclass=EntityFieldMeta):
     """An AiiDA entity"""
 
-    _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
+    Model: type[EntityModelType] = EntityModel  # type: ignore[assignment]
+
+    _CLS_COLLECTION: type[EntityCollectionType] = EntityCollection  # type: ignore[assignment]
     _logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
-    class Model(BaseModel, defer_build=True):
-        model_config = ConfigDict(extra='forbid')
-
-        pk: int = MetadataField(
-            description='The primary key of the entity',
-            is_attribute=False,
-            exclude_to_orm=True,
-        )
-
-        @classmethod
-        def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
-            """Sets the JSON schema title of the model.
-
-            The qualified name of the class is used, with dots removed. For example, `Node.Model` becomes `NodeModel`
-            in the JSON schema.
-            """
-            super().__pydantic_init_subclass__(**kwargs)
-            cls.model_config['title'] = cls.__qualname__.replace('.', '')
-
-        @classmethod
-        def as_create_model(cls: Type[EntityModelType]) -> Type[EntityModelType]:
-            """Return a derived creation model class with read-only fields removed.
-
-            This also removes any serializers/validators defined on those fields.
-
-            :return: The derived creation model class.
-            """
-
-            # Derive the creation model from the original model
-            new_name = cls.__qualname__.replace('.Model', 'CreateModel')
-            CreateModel = create_model(  # noqa: N806
-                new_name,
-                __base__=cls,
-                __module__=cls.__module__,
-            )
-            CreateModel.__qualname__ = new_name
-            CreateModel.model_config['extra'] = 'ignore'
-
-            # Identify read-only fields
-            readonly_fields = [
-                name for name, field in CreateModel.model_fields.items() if get_metadata(field, 'exclude_to_orm')
-            ]
-
-            # Remove read-only fields
-            for name in readonly_fields:
-                CreateModel.model_fields.pop(name, None)
-                if hasattr(CreateModel, name):
-                    delattr(CreateModel, name)
-
-            # Prune field validators/serializers referring to read-only fields
-            decorators = CreateModel.__pydantic_decorators__
-
-            def _prune_field_decorators(field_decorators: dict[str, Any]) -> dict[str, Any]:
-                return {
-                    name: decorator
-                    for name, decorator in field_decorators.items()
-                    if all(field not in readonly_fields for field in decorator.info.fields)
-                }
-
-            decorators.field_validators = _prune_field_decorators(decorators.field_validators)
-            decorators.field_serializers = _prune_field_decorators(decorators.field_serializers)
-
-            return CreateModel
-
     @classproperty
-    def CreateModel(cls) -> Type[Model]:  # noqa: N802, N805
+    def CreateModel(cls) -> type[BaseModel]:  # noqa: N802, N805
         """Return the creation version of the model class for this entity.
 
         :return: The creation model class, with read-only fields removed.
@@ -257,7 +250,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return cls.Model.as_create_model()
 
     @classmethod
-    def model_to_orm_field_values(cls, model: Model) -> dict[str, Any]:
+    def model_to_orm_field_values(cls, model: BaseModel) -> dict[str, Any]:
         from aiida.plugins.factories import BaseFactory
 
         fields = {}
@@ -323,12 +316,36 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         return fields
 
+    @overload
     def to_model(
         self,
         *,
         repository_path: Optional[pathlib.Path] = None,
         serialize_repository_content: bool = False,
-    ) -> Model:
+    ) -> EntityModelType: ...
+
+    @overload
+    def to_model(
+        self,
+        *,
+        repository_path: Optional[pathlib.Path] = None,
+        serialize_repository_content: bool = False,
+    ) -> BaseModel: ...
+
+    @overload
+    def to_model(
+        self,
+        *,
+        repository_path: Optional[pathlib.Path] = None,
+        serialize_repository_content: bool = False,
+    ) -> BaseModel: ...
+
+    def to_model(
+        self,
+        *,
+        repository_path: Optional[pathlib.Path] = None,
+        serialize_repository_content: bool = False,
+    ) -> BaseModel:
         """Return the entity instance as an instance of its model.
 
         :param repository_path: If the orm node has files in the repository, this path is used to read the repository
@@ -345,7 +362,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return Model(**fields)
 
     @classmethod
-    def from_model(cls, model: Model) -> Self:
+    def from_model(cls, model: BaseModel) -> Self:
         """Return an entity instance from an instance of its model.
 
         :param model: An instance of the entity's model class.
@@ -403,7 +420,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return cls.from_model(cls.CreateModel(**serialized))
 
     @classproperty
-    def objects(cls: EntityType) -> CollectionType:  # noqa: N805
+    def objects(cls: EntityType) -> EntityCollectionType:  # noqa: N805
         """Get a collection for objects of this type, with the default backend.
 
         .. deprecated:: This will be removed in v3, use ``collection`` instead.
@@ -414,7 +431,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return cls.collection
 
     @classproperty
-    def collection(cls) -> CollectionType:  # noqa: N805
+    def collection(cls) -> EntityCollectionType:  # noqa: N805
         """Get a collection for objects of this type, with the default backend.
 
         :return: an object that can be used to access entities of this type
@@ -422,7 +439,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return cls._CLS_COLLECTION.get_cached(cls, get_manager().get_profile_storage())
 
     @classmethod
-    def get_collection(cls, backend: 'StorageBackend') -> CollectionType:
+    def get_collection(cls, backend: 'StorageBackend') -> EntityCollectionType:
         """Get a collection for objects of this type for a given backend.
 
         .. note:: Use the ``collection`` class property instead if the currently loaded backend or backend of the

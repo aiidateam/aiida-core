@@ -44,6 +44,7 @@ __all__ = (
     'Node',
     'NodeAttributes',
     'NodeRepository',
+    'NodeType',
     'NumericType',
     'OrbitalData',
     'PortableCode',

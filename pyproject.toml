@@ -331,7 +331,7 @@ enable_error_code = [
   'truthy-bool'
 ]
 plugins = [
-  'pydantic.mypy',
+  # 'pydantic.mypy',
   'sqlalchemy.ext.mypy.plugin'
 ]
 scripts_are_modules = true
@@ -480,7 +480,7 @@ select = [
 # Mark some classes as generic, per https://docs.astral.sh/ruff/settings/#lint_pyflakes_extend-generics
 # Needed due to https://github.com/astral-sh/ruff/issues/9298
 [tool.ruff.lint.pyflakes]
-extend-generics = ["aiida.orm.entities.Entity", "aiida.orm.entities.Collection"]
+extend-generics = ["aiida.orm.entities.Entity", "aiida.orm.entities.EntityCollection", "aiida.orm.entities.EntityModel"]
 
 [tool.tox]
 legacy_tox_ini = """

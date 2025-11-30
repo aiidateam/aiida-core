@@ -13,7 +13,7 @@ from functools import singledispatch
 
 from aiida.common.pydantic import MetadataField
 
-from .data import Data
+from . import data
 
 __all__ = ('BaseType', 'to_aiida_type')
 
@@ -24,15 +24,18 @@ def to_aiida_type(value):
     raise TypeError(f'Cannot convert value of type {type(value)} to AiiDA type.')
 
 
-class BaseType(Data):
+class BaseTypeModel(data.DataModel):
+    value: t.Any = MetadataField(
+        ...,
+        title='Data value',
+        description='The value of the data',
+    )
+
+
+class BaseType(data.Data):
     """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
-    class Model(Data.Model):
-        value: t.Any = MetadataField(
-            ...,
-            title='Data value',
-            description='The value of the data',
-        )
+    Model = BaseTypeModel
 
     def __init__(self, value=None, **kwargs):
         try:

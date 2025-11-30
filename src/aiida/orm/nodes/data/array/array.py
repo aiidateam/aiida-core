@@ -20,8 +20,8 @@ from pydantic import field_validator
 
 from aiida.common.pydantic import MetadataField
 
+from .. import data
 from ..base import to_aiida_type
-from ..data import Data
 
 __all__ = ('ArrayData',)
 
@@ -31,7 +31,33 @@ def _(value):
     return ArrayData(value)
 
 
-class ArrayData(Data):
+class ArrayDataModel(data.DataModel):
+    arrays: Optional[dict[str, bytes]] = MetadataField(
+        None,
+        description='The dictionary of numpy arrays.',
+        orm_to_model=lambda node, _: ArrayData.save_arrays(cast(ArrayData, node).arrays),
+        model_to_orm=lambda model: ArrayData.load_arrays(cast(ArrayDataModel, model).arrays),
+    )
+
+    @field_validator('arrays', mode='before')
+    @classmethod
+    def validate_arrays(cls, value: Optional[dict[str, Union[bytes, Any]]]) -> Any:
+        if value is None:
+            return value
+        if not isinstance(value, dict):
+            raise TypeError(f'`arrays` should be a dictionary but got: {value}')
+        arrays: dict[str, bytes] = {}
+        for key, array in value.items():
+            if isinstance(array, bytes):
+                arrays[key] = array
+            elif isinstance(array, Iterable):
+                arrays |= ArrayData.save_arrays({key: np.array(array)})
+            else:
+                arrays[key] = array
+        return arrays
+
+
+class ArrayData(data.Data):
     """Store a set of arrays on disk (rather than on the database) in an efficient way
 
     Arrays are stored using numpy and therefore this class requires numpy to be installed.
@@ -48,32 +74,7 @@ class ArrayData(Data):
 
     """
 
-    class Model(Data.Model):
-        # model_config = ConfigDict(arbitrary_types_allowed=True)
-
-        arrays: Optional[dict[str, bytes]] = MetadataField(
-            None,
-            description='The dictionary of numpy arrays.',
-            orm_to_model=lambda node, _: ArrayData.save_arrays(cast(ArrayData, node).arrays),
-            model_to_orm=lambda model: ArrayData.load_arrays(cast(ArrayData.Model, model).arrays),
-        )
-
-        @field_validator('arrays', mode='before')
-        @classmethod
-        def validate_arrays(cls, value: Optional[dict[str, Union[bytes, Any]]]) -> Any:
-            if value is None:
-                return value
-            if not isinstance(value, dict):
-                raise TypeError(f'`arrays` should be a dictionary but got: {value}')
-            arrays: dict[str, bytes] = {}
-            for key, array in value.items():
-                if isinstance(array, bytes):
-                    arrays[key] = array
-                elif isinstance(array, Iterable):
-                    arrays |= ArrayData.save_arrays({key: np.array(array)})
-                else:
-                    arrays[key] = array
-            return arrays
+    Model = ArrayDataModel
 
     array_prefix = 'array|'
     default_array_name = 'default'

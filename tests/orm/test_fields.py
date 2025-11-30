@@ -53,11 +53,13 @@ def test_all_node_fields(node_and_data_entry_points: list[tuple[str, str]], data
 def test_add_field():
     """Test the `add_field` API."""
 
+    class NewNodeModel(orm.nodes.data.data.DataModel):
+        key1: str = MetadataField(  # type: ignore[annotation-unchecked]
+            is_subscriptable=False,
+        )
+
     class NewNode(orm.Data):
-        class Model(orm.Data.Model):
-            key1: str = MetadataField(  # type: ignore[annotation-unchecked]
-                is_subscriptable=False,
-            )
+        Model = NewNodeModel
 
     node = NewNode()
 
@@ -101,10 +103,12 @@ def test_query_new_class(monkeypatch):
         _dummy,
     )
 
+    class NewNodeModel(orm.nodes.data.data.DataModel):
+        some_label: str = MetadataField()  # type: ignore[annotation-unchecked]
+        some_value: int = MetadataField()  # type: ignore[annotation-unchecked]
+
     class NewNode(orm.Data):
-        class Model(orm.Data.Model):
-            some_label: str = MetadataField()  # type: ignore[annotation-unchecked]
-            some_value: int = MetadataField()  # type: ignore[annotation-unchecked]
+        Model = NewNodeModel
 
     node = NewNode()
     node.base.attributes.set_many({'some_label': 'A', 'some_value': 1})

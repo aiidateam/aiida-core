@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 __all__ = ('User',)
 
 
-class UserCollection(entities.Collection['User']):
+class UserCollection(entities.EntityCollection['User']):
     """The collection of users stored in a backend."""
 
     @staticmethod
@@ -50,31 +50,34 @@ class UserCollection(entities.Collection['User']):
         return self.backend.default_user
 
 
-class User(entities.Entity['BackendUser', UserCollection]):
+class UserModel(entities.EntityModel):
+    email: str = MetadataField(
+        description='The user email',
+        is_attribute=False,
+    )
+    first_name: str = MetadataField(
+        '',
+        description='The user first name',
+        is_attribute=False,
+    )
+    last_name: str = MetadataField(
+        '',
+        description='The user last name',
+        is_attribute=False,
+    )
+    institution: str = MetadataField(
+        '',
+        description='The user institution',
+        is_attribute=False,
+    )
+
+
+class User(entities.Entity['BackendUser', UserCollection, UserModel]):
     """AiiDA User"""
 
-    _CLS_COLLECTION = UserCollection
+    Model = UserModel
 
-    class Model(entities.Entity.Model):
-        email: str = MetadataField(
-            description='The user email',
-            is_attribute=False,
-        )
-        first_name: str = MetadataField(
-            '',
-            description='The user first name',
-            is_attribute=False,
-        )
-        last_name: str = MetadataField(
-            '',
-            description='The user last name',
-            is_attribute=False,
-        )
-        institution: str = MetadataField(
-            '',
-            description='The user institution',
-            is_attribute=False,
-        )
+    _CLS_COLLECTION = UserCollection
 
     def __init__(
         self,

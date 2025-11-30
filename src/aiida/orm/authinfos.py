@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 __all__ = ('AuthInfo',)
 
 
-class AuthInfoCollection(entities.Collection['AuthInfo']):
+class AuthInfoCollection(entities.EntityCollection['AuthInfo']):
     """The collection of `AuthInfo` entries."""
 
     @staticmethod
@@ -44,40 +44,44 @@ class AuthInfoCollection(entities.Collection['AuthInfo']):
         self._backend.authinfos.delete(pk)
 
 
-class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
+class AuthInfoModel(entities.EntityModel):
+    computer: int = MetadataField(
+        description='The PK of the computer',
+        is_attribute=False,
+        orm_class=Computer,
+        orm_to_model=lambda auth_info, _: cast(AuthInfo, auth_info).computer.pk,
+    )
+    user: int = MetadataField(
+        description='The PK of the user',
+        is_attribute=False,
+        orm_class=User,
+        orm_to_model=lambda auth_info, _: cast(AuthInfo, auth_info).user.pk,
+    )
+    enabled: bool = MetadataField(
+        True,
+        description='Whether the instance is enabled',
+        is_attribute=False,
+    )
+    auth_params: Dict[str, Any] = MetadataField(
+        default_factory=dict,
+        description='Dictionary of authentication parameters',
+        is_attribute=False,
+    )
+    metadata: Dict[str, Any] = MetadataField(
+        default_factory=dict,
+        description='Dictionary of metadata',
+        is_attribute=False,
+    )
+
+
+class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection, AuthInfoModel]):
     """ORM class that models the authorization information that allows a `User` to connect to a `Computer`."""
 
-    _CLS_COLLECTION = AuthInfoCollection
-    PROPERTY_WORKDIR = 'workdir'
+    Model = AuthInfoModel
 
-    class Model(entities.Entity.Model):
-        computer: int = MetadataField(
-            description='The PK of the computer',
-            is_attribute=False,
-            orm_class=Computer,
-            orm_to_model=lambda auth_info, _: cast(AuthInfo, auth_info).computer.pk,
-        )
-        user: int = MetadataField(
-            description='The PK of the user',
-            is_attribute=False,
-            orm_class=User,
-            orm_to_model=lambda auth_info, _: cast(AuthInfo, auth_info).user.pk,
-        )
-        enabled: bool = MetadataField(
-            True,
-            description='Whether the instance is enabled',
-            is_attribute=False,
-        )
-        auth_params: Dict[str, Any] = MetadataField(
-            default_factory=dict,
-            description='Dictionary of authentication parameters',
-            is_attribute=False,
-        )
-        metadata: Dict[str, Any] = MetadataField(
-            default_factory=dict,
-            description='Dictionary of metadata',
-            is_attribute=False,
-        )
+    _CLS_COLLECTION = AuthInfoCollection
+
+    PROPERTY_WORKDIR = 'workdir'
 
     def __init__(
         self,

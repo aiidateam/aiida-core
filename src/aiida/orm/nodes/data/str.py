@@ -10,21 +10,25 @@
 
 from aiida.common.pydantic import MetadataField
 
-from .base import BaseType, to_aiida_type
+from . import base
+from .base import to_aiida_type
 
 __all__ = ('Str',)
 
 
-class Str(BaseType):
+class StrModel(base.BaseTypeModel):
+    value: str = MetadataField(
+        title='String value',
+        description='The value of the string',
+    )
+
+
+class Str(base.BaseType):
     """`Data` sub class to represent a string value."""
 
-    _type = str
+    Model = StrModel
 
-    class Model(BaseType.Model):
-        value: str = MetadataField(
-            title='String value',
-            description='The value of the string',
-        )
+    _type = str
 
 
 @to_aiida_type.register(str)

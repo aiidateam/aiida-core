@@ -22,7 +22,7 @@ from aiida.common.exceptions import ValidationError
 from aiida.common.pydantic import MetadataField
 from aiida.common.utils import join_labels, prettify_labels
 
-from .kpoints import KpointsData
+from . import kpoints
 
 __all__ = ('BandsData', 'find_bandgap')
 
@@ -212,19 +212,22 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
         return True, gap
 
 
-class BandsData(KpointsData):
+class BandsDataModel(kpoints.KpointsDataModel):
+    array_labels: t.Optional[t.List[str]] = MetadataField(
+        None,
+        description='Labels associated with the band arrays',
+    )
+    units: t.Optional[str] = MetadataField(
+        None,
+        description='Units in which the data in bands were stored',
+        orm_to_model=lambda node, _: t.cast(BandsData, node).base.attributes.get('units', None),
+    )
+
+
+class BandsData(kpoints.KpointsData):
     """Class to handle bands data"""
 
-    class Model(KpointsData.Model):
-        array_labels: t.Optional[t.List[str]] = MetadataField(
-            None,
-            description='Labels associated with the band arrays',
-        )
-        units: t.Optional[str] = MetadataField(
-            None,
-            description='Units in which the data in bands were stored',
-            orm_to_model=lambda node, _: t.cast(BandsData, node).base.attributes.get('units', None),
-        )
+    Model = BandsDataModel
 
     def __init__(
         self,
@@ -240,7 +243,7 @@ class BandsData(KpointsData):
         """Load the kpoints from a kpoint object.
         :param kpointsdata: an instance of KpointsData class
         """
-        if not isinstance(kpointsdata, KpointsData):
+        if not isinstance(kpointsdata, kpoints.KpointsData):
             raise ValueError('kpointsdata must be of the KpointsData class')
         try:
             self.cell = kpointsdata.cell
@@ -323,7 +326,7 @@ class BandsData(KpointsData):
                 the_labels = [str(_) for _ in labels]
             else:
                 raise ValidationError(
-                    'Band labels have an unrecognized type ({})but should be a string or a list of strings'.format(
+                    'Band labels have an unrecognized type ({}) but should be a string or a list of strings'.format(
                         labels.__class__
                     )
                 )

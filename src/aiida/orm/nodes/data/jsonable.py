@@ -4,7 +4,7 @@ import importlib
 import json
 import typing
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, WithJsonSchema
 
 from aiida.common.pydantic import MetadataField
 
@@ -52,7 +52,16 @@ class JsonableData(Data):
 
     class Model(Data.Model):
         model_config = ConfigDict(arbitrary_types_allowed=True)
-        obj: JsonSerializableProtocol = MetadataField(description='The JSON-serializable object.')
+        obj: typing.Annotated[
+            JsonSerializableProtocol,
+            WithJsonSchema(
+                {
+                    'type': 'object',
+                    'title': 'JSON-serializable object',
+                    'description': 'The JSON-serializable object.',
+                }
+            ),
+        ] = MetadataField(description='The JSON-serializable object.')
 
     def __init__(self, obj: JsonSerializableProtocol, *args, **kwargs):
         """Construct the node for the to be wrapped object."""

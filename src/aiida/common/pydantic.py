@@ -22,7 +22,7 @@ def get_metadata(field_info: t.Any, key: str, default: t.Any | None = None) -> t
     :returns: The metadata if defined, otherwise the default.
     """
     for element in field_info.metadata:
-        if key in element:
+        if isinstance(element, dict) and key in element:
             return element[key]
     return default
 

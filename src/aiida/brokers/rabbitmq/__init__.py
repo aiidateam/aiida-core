@@ -1,4 +1,4 @@
-# AUTO-GENERATED
+"""RabbitMQ implementation of the broker interface"""
 
 # AUTO-GENERATED
 

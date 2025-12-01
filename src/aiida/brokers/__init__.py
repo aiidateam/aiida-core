@@ -1,4 +1,4 @@
-# AUTO-GENERATED
+"""Generic broker interface module"""
 
 # AUTO-GENERATED
 

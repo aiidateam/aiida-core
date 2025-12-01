@@ -166,7 +166,11 @@ def write_inits(folder_path: Path, all_dict: dict, skip_children: dict[str, list
             # TODO: Support __future__ imports, for which we will also
             # need to retain any empty lines since ruff formatter automatically
             # injects empty line between a module docstring and __future__ import
-            if not (line.startswith('#') or line.startswith('"""') or in_docstring):
+            if not (
+                (line.startswith('#') and not line.startswith(f'# {AUTO_GENERATED}'))
+                or line.startswith('"""')
+                or in_docstring
+            ):
                 in_start_content = False
                 continue
             if line.startswith('"""'):

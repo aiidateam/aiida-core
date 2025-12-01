@@ -190,6 +190,8 @@ def write_inits(folder_path: Path, all_dict: dict, skip_children: dict[str, list
 
 if __name__ == '__main__':
     _folder = Path(__file__).parent.parent.joinpath('src', 'aiida')
+    if not _folder.is_dir():
+        sys.exit(f"Did not find aiida source in '{_folder}'")
     _skip = {
         # skipped since some arguments and options share the same name
         'cmdline/params': ['arguments', 'options'],
@@ -204,7 +206,7 @@ if __name__ == '__main__':
         'tools': ['archive'],
     }
     _all_dict, _bad_all = parse_all(_folder)
-    assert _all_dict, 'Did not find aiida source folder!'
+    assert _all_dict, 'Did not find any aiida modules!'
     _non_unique = write_inits(_folder, _all_dict, _skip)
     if _bad_all:
         print('ERROR: found unparsable __all__:')

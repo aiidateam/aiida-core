@@ -30,6 +30,7 @@ from aiida.engine.processes.exit_code import ExitCode
 from aiida.engine.transports import TransportQueue
 from aiida.engine.utils import InterruptableFuture, interruptable_task
 from aiida.manage.configuration import get_config_option
+from aiida.orm import load_node
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.schedulers.datastructures import JobState
 
@@ -549,6 +550,18 @@ class Waiting(plumpy.process_states.Waiting):
         process_status = f'Waiting for transport task: {self._command}'
         node.set_process_status(process_status)
 
+        if self.process.awaitables:
+            if any(
+                load_node(awaitable).process_state
+                not in [
+                    ProcessState.FINISHED,
+                    ProcessState.KILLED,
+                    ProcessState.EXCEPTED,
+                ]
+                for awaitable in self.process.awaitables
+            ):
+                logger.info(f'CalcJob<{node.pk}> waiting for awaitables to finish')
+                await asyncio.sleep(5)
         try:
             if self._command == UPLOAD_COMMAND:
                 skip_submit = await self._launch_task(task_upload_job, self.process, transport_queue)

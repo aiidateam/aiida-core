@@ -10,10 +10,11 @@
 
 import json
 
-from aiida import orm
 from aiida.common import AIIDA_LOGGER
 from aiida.common.datastructures import CalcInfo, CodeInfo, StashMode
+from aiida.common.lang import override
 from aiida.engine import CalcJob
+from aiida.orm import RemoteData
 
 EXEC_LOGGER = AIIDA_LOGGER.getChild('StashCalculation')
 
@@ -72,13 +73,21 @@ class StashCalculation(CalcJob):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    @override
+    async def run(self):
+        parent_calcjob = (self.inputs.source_node).creator
+        if parent_calcjob:
+            self.awaitables.append(parent_calcjob.pk)
+
+        return await super().run()
+
     @classmethod
     def define(cls, spec):
         super().define(spec)
 
         spec.input(
             'source_node',
-            valid_type=orm.RemoteData,
+            valid_type=RemoteData,
             required=True,
             help='',
         )

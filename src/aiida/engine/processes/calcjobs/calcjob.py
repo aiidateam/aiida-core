@@ -233,6 +233,9 @@ class CalcJob(Process):
         if self.__class__ == CalcJob:
             raise exceptions.InvalidOperation('cannot construct or launch a base `CalcJob` class.')
 
+        # A list of PKs of CalcJobs that this CalcJob is waiting for
+        self.awaitables: list[int] = []
+
         super().__init__(*args, **kwargs)
 
     @classmethod

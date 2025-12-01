@@ -19,7 +19,9 @@
 """
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .caching import *
 from .configuration import *
 from .manager import *
@@ -45,4 +47,5 @@ __all__ = (
     'parse_option',
     'upgrade_config',
 )
+
 # fmt: on

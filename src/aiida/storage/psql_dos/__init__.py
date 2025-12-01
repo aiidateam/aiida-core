@@ -9,10 +9,13 @@
 """Module with implementation of the storage backend using PostGreSQL and the disk-objectstore."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .backend import *
 
 __all__ = (
     'PsqlDosBackend',
 )
+
 # fmt: on

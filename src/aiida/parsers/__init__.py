@@ -9,10 +9,13 @@
 """Module for classes and utilities to write parsers for calculation jobs."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .parser import *
 
 __all__ = (
     'Parser',
 )
+
 # fmt: on

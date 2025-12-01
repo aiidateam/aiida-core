@@ -9,7 +9,9 @@
 """Module for the `CalcJob` process and related utilities."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .calcjob import *
 from .importer import *
 from .manager import *
@@ -20,4 +22,5 @@ __all__ = (
     'JobManager',
     'JobsList',
 )
+
 # fmt: on

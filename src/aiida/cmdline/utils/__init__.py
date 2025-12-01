@@ -9,7 +9,9 @@
 """Commandline utility functions."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .ascii_vis import *
 from .common import *
 from .decorators import *
@@ -30,4 +32,5 @@ __all__ = (
     'only_if_daemon_running',
     'with_dbenv',
 )
+
 # fmt: on

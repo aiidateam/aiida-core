@@ -9,7 +9,9 @@
 """Classes and functions to load and interact with plugin classes accessible through defined entry points."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .entry_point import *
 from .factories import *
 from .utils import *
@@ -34,4 +36,5 @@ __all__ = (
     'load_entry_point_from_string',
     'parse_entry_point',
 )
+
 # fmt: on

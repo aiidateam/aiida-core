@@ -9,7 +9,9 @@
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .callable import *
 from .config import *
 from .main import *
@@ -129,4 +131,5 @@ __all__ = (
     'valid_calc_job_states',
     'valid_process_states',
 )
+
 # fmt: on

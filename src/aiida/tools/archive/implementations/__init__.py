@@ -9,10 +9,13 @@
 """Concrete implementations of an archive file format."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .sqlite_zip import *
 
 __all__ = (
     'ArchiveFormatSqlZip',
 )
+
 # fmt: on

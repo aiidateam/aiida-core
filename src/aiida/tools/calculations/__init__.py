@@ -9,10 +9,13 @@
 """Calculation tool plugins for Calculation classes."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .base import *
 
 __all__ = (
     'CalculationTools',
 )
+
 # fmt: on

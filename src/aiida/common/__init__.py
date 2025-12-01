@@ -13,7 +13,9 @@
 """
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .datastructures import *
 from .exceptions import *
 from .extendeddicts import *
@@ -87,4 +89,5 @@ __all__ = (
     'set_progress_reporter',
     'validate_link_label',
 )
+
 # fmt: on

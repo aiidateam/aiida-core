@@ -9,10 +9,13 @@
 """SQLite implementations of an archive file format."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .main import *
 
 __all__ = (
     'ArchiveFormatSqlZip',
 )
+
 # fmt: on

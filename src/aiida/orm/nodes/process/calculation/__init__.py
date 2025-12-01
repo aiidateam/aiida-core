@@ -9,7 +9,9 @@
 """Module with `Node` sub classes for calculation processes."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .calcfunction import *
 from .calcjob import *
 from .calculation import *
@@ -19,4 +21,5 @@ __all__ = (
     'CalcJobNode',
     'CalculationNode',
 )
+
 # fmt: on

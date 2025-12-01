@@ -9,7 +9,9 @@
 """Main module to expose all orm classes and methods"""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .authinfos import *
 from .comments import *
 from .computers import *
@@ -118,4 +120,5 @@ __all__ = (
     'to_aiida_type',
     'validate_link',
 )
+
 # fmt: on

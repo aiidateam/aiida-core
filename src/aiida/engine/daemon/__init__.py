@@ -9,11 +9,14 @@
 """Module with resources for the daemon."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .client import *
 
 __all__ = (
     'DaemonClient',
     'get_daemon_client',
 )
+
 # fmt: on

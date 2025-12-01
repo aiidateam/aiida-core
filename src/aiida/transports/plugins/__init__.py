@@ -9,7 +9,9 @@
 """Plugins for the transport."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .ssh import *
 from .ssh_async import *
 
@@ -19,4 +21,5 @@ __all__ = (
     'convert_to_bool',
     'parse_sshconfig',
 )
+
 # fmt: on

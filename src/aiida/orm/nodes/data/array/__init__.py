@@ -9,7 +9,9 @@
 """Module with `Node` sub classes for array based data structures."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .array import *
 from .bands import *
 from .kpoints import *
@@ -26,4 +28,5 @@ __all__ = (
     'XyData',
     'find_bandgap',
 )
+
 # fmt: on

@@ -9,11 +9,14 @@
 """Tools for manipulating array data classes."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .kpoints import *
 
 __all__ = (
     'get_explicit_kpoints_path',
     'get_kpoints_path',
 )
+
 # fmt: on

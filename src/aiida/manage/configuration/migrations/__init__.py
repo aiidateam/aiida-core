@@ -9,7 +9,9 @@
 """Methods and definitions of migrations for the configuration file of an AiiDA instance."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .migrations import *
 
 __all__ = (
@@ -22,4 +24,5 @@ __all__ = (
     'get_current_version',
     'upgrade_config',
 )
+
 # fmt: on

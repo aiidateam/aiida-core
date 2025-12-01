@@ -6,11 +6,15 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
+
 # AUTO-GENERATED
+
 # fmt: off
+
 from .bash import *
 
 __all__ = (
     'BashCliScheduler',
 )
+
 # fmt: on

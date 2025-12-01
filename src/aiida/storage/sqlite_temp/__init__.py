@@ -14,10 +14,13 @@ and destroys it when it is garbage collected.
 """
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .backend import *
 
 __all__ = (
     'SqliteTempBackend',
 )
+
 # fmt: on

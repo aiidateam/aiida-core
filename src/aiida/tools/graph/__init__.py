@@ -9,7 +9,9 @@
 """Provides tools for traversing the provenance graph."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .deletions import *
 
 __all__ = (
@@ -17,4 +19,5 @@ __all__ = (
     'delete_group_nodes',
     'delete_nodes',
 )
+
 # fmt: on

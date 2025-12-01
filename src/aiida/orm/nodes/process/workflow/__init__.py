@@ -9,7 +9,9 @@
 """Module with `Node` sub classes for workflow processes."""
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .workchain import *
 from .workflow import *
 from .workfunction import *
@@ -19,4 +21,5 @@ __all__ = (
     'WorkFunctionNode',
     'WorkflowNode',
 )
+
 # fmt: on

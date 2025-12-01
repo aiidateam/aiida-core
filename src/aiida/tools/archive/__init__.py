@@ -11,7 +11,9 @@ of subsets of the provenance graph, to a single file
 """
 
 # AUTO-GENERATED
+
 # fmt: off
+
 from .abstract import *
 from .create import *
 from .exceptions import *
@@ -36,4 +38,5 @@ __all__ = (
     'get_format',
     'import_archive',
 )
+
 # fmt: on

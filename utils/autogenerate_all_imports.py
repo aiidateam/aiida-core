@@ -132,7 +132,7 @@ def write_inits(folder_path: Path, all_dict: dict, skip_children: dict[str, list
         if '*' in skip_children.get(rel_path, []):
             path_all_dict = {}
             alls = []
-            auto_content = [f'# {AUTO_GENERATED}', '', '__all__ = ()', '']
+            auto_content = ['', f'# {AUTO_GENERATED}', '', '__all__ = ()', '']
         else:
             path_all_dict = {
                 key: val for key, val in path_all_dict.items() if key not in skip_children.get(rel_path, [])
@@ -144,12 +144,12 @@ def write_inits(folder_path: Path, all_dict: dict, skip_children: dict[str, list
                 non_unique[rel_path] = [k for k, v in Counter(alls + list(path_all_dict)).items() if v > 1]
 
             auto_content = (
-                [f'# {AUTO_GENERATED}']
-                + ['# fmt: off']
+                ['', f'# {AUTO_GENERATED}']
+                + ['', '# fmt: off', '']
                 + [f'from .{mod} import *' for mod in sorted(path_all_dict.keys())]
                 + ['', '__all__ = (']
                 + [f'{INDENT}{a!r},' for a in isort_alls(set(alls))]
-                + [')', '# fmt: on']
+                + [')', '', '# fmt: on', '']
             )
 
         start_content = []
@@ -162,16 +162,11 @@ def write_inits(folder_path: Path, all_dict: dict, skip_children: dict[str, list
             if in_end_content:
                 end_content.append(line)
                 continue
-            # only use initial comments and docstring and __future__ imports
-            # We also need to retain any empty lines, since ruff formatter automatically
+            # Only keep initial comments and docstring
+            # TODO: Support __future__ imports, for which we will also
+            # need to retain any empty lines since ruff formatter automatically
             # injects empty line between a module docstring and __future__ import
-            if not (
-                line == ''
-                or (line.startswith('#') and not line == f'# {AUTO_GENERATED}')
-                or line.startswith('"""')
-                or line.startswith('from __future__ import')
-                or in_docstring
-            ):
+            if not (line.startswith('#') or line.startswith('"""') or in_docstring):
                 in_start_content = False
                 continue
             if line.startswith('"""'):

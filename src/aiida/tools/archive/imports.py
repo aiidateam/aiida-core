@@ -232,7 +232,8 @@ def _add_new_entities(
     for (ufield,) in query.distinct().iterall(batch_size=batch_size):
         if ufield not in backend_unique_id:
             ufields.append(ufield)
-
+    
+    breakpoint()
     with get_progress_reporter()(desc=f'Adding new {etype.value}(s)', total=total) as progress:
         rows = [
             transform(row)

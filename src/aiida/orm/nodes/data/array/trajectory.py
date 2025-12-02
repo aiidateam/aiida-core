@@ -12,10 +12,9 @@ from __future__ import annotations
 
 import collections.abc
 from typing import List
-from warnings import warn
 
 from aiida.common.pydantic import MetadataField
-from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.common.warnings import warn_deprecation
 
 from .array import ArrayData
 
@@ -152,17 +151,17 @@ class TrajectoryData(ArrayData):
         if cells is None:
             pbc = pbc or [False, False, False]
         elif pbc is None:
-            warn(
-                "When 'cells' is not None, the periodic boundary conditions should be explicitly specified via the "
-                "'pbc' keyword argument. Defaulting to '[True, True, True]', but this will raise in v3.0.0.",
-                AiidaDeprecationWarning,
+            warn_deprecation(
+                "When 'cells' is not None, the periodic boundary conditions should be explicitly specified via"
+                "the 'pbc' keyword argument. Defaulting to '[True, True, True]', but this will raise in v3.0.0.",
+                version=3,
             )
             pbc = [True, True, True]
 
         self._internal_validate(stepids, cells, symbols, positions, times, velocities, pbc)
         # set symbols/pbc as attributes for easier querying
         self.base.attributes.set('symbols', list(symbols))
-        self.base.attributes.set('pbc', list(pbc))
+        self.base.attributes.set('pbc', tuple(pbc))
         self.set_array('positions', positions)
         if stepids is not None:  # use input stepids
             self.set_array('steps', stepids)
@@ -295,8 +294,12 @@ class TrajectoryData(ArrayData):
         return self.base.attributes.get('symbols')
 
     @property
-    def pbc(self) -> list[bool]:
-        """Return the list of periodic boundary conditions."""
+    def pbc(self) -> tuple[bool]:
+        """Return the tuple of periodic boundary conditions.
+
+        Returns a tuple of length three with booleans indicating if the structure is
+        periodic in that direction.
+        """
         return self.base.attributes.get('pbc')
 
     def get_positions(self):

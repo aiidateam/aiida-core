@@ -154,9 +154,9 @@ class JobsList:
             raise
         else:
             for job_id in self._polling_jobs:
-                future = self._job_update_requests.pop(job_id, None)
+                future = self._job_update_requests.pop(job_id, None)  # type: ignore[arg-type]
                 if future is None:
-                    self.logger.debug(
+                    self.logger.debug(  # type: ignore[unreachable]
                         f'This should not happen: polled job_id {job_id} '
                         f'not in _job_update_requests {self._job_update_requests}'
                     )

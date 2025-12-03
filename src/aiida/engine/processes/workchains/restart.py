@@ -333,6 +333,12 @@ class BaseRestartWorkChain(WorkChain):
                 self.report(
                     f'{self.ctx.process_name}<{node.pk}> failed with an unhandled failure, pausing for inspection'
                 )
+                self.report(
+                    'If you believe that the issue can be resolved by just retrying the same execution '
+                    '(e.g., in case of a node failure), you can just replay this work chain using '
+                    f'`verdi process play {self.node.pk}`. Otherwise, you can kill the work chain using '
+                    f'`verdi process kill {self.node.pk}`.'
+                )
                 # Set the flag to indicate that the process was paused by a handler (and not by user request),
                 # so that the message shown in `verdi process list` is adapted accordingly
                 self.ctx.paused_by_handler = True
@@ -355,6 +361,12 @@ class BaseRestartWorkChain(WorkChain):
                     self.report(
                         f'{self.ctx.process_name}<{node.pk}> failed with an unhandled failure for the second '
                         'consecutive time, pausing for inspection'
+                    )
+                    self.report(
+                        'If you believe that the issue can be resolved by just retrying the same execution '
+                        '(e.g., in case of a node failure), you can just replay this work chain using '
+                        f'`verdi process play {self.node.pk}`. Otherwise, you can kill the work chain using '
+                        f'`verdi process kill {self.node.pk}`.'
                     )
                     # Set the flag to indicate that the process was paused by a handler (and not by user request),
                     # so that the message shown in `verdi process list` is adapted accordingly

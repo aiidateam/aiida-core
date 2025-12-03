@@ -135,16 +135,14 @@ class Scheduler(metaclass=abc.ABCMeta):
         """
 
     @t.overload
-    @abc.abstractmethod
     def get_jobs(
         self,
         jobs: list[str] | None = None,
         user: str | None = None,
         as_dict: t.Literal[False] = False,
-    ) -> list[JobInfo] | dict[str, JobInfo]: ...
+    ) -> list[JobInfo]: ...
 
     @t.overload
-    @abc.abstractmethod
     def get_jobs(
         self,
         jobs: list[str] | None = None,

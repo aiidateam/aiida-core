@@ -132,7 +132,7 @@ class CalcJobMonitor:
         if unsupported_kwargs:
             raise ValueError(f'The monitor `{self.entry_point}` does not accept the keywords: {unsupported_kwargs}.')
 
-    def load_entry_point(self):
+    def load_entry_point(self) -> t.Any:
         """Return the function associated with the entry point of this monitor.
 
         :raises EntryPointError: If the entry point does not exist or cannot be loaded.

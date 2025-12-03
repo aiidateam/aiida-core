@@ -15,7 +15,7 @@ import contextlib
 import contextvars
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Dict, Hashable, Iterator, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Hashable, Iterator, List, Optional, cast
 
 from aiida.common import lang
 from aiida.orm import AuthInfo
@@ -266,7 +266,7 @@ class JobManager:
 
     def __init__(self, transport_queue: 'TransportQueue') -> None:
         self._transport_queue = transport_queue
-        self._job_lists: dict[int | None, JobsList] = {}
+        self._job_lists: dict[int, JobsList] = {}
 
     def get_jobs_list(self, authinfo: AuthInfo) -> JobsList:
         """Get or create a new `JobLists` instance for the given authinfo.
@@ -274,10 +274,16 @@ class JobManager:
         :param authinfo: the `AuthInfo`
         :return: a `JobsList` instance
         """
-        if authinfo.pk not in self._job_lists:
-            self._job_lists[authinfo.pk] = JobsList(authinfo, self._transport_queue)
+        # TODO: Mypy infers type of `authinfo.pk` as `int | None`
+        # It's not clear if it can actually by None at runtime,
+        # or is just a limitation of the current typing.
+        # Instead of using `cast` Perhaps we should do:
+        # assert authinfo.pk is not None
+        pk = cast(int, authinfo.pk)
+        if pk not in self._job_lists:
+            self._job_lists[pk] = JobsList(authinfo, self._transport_queue)
 
-        return self._job_lists[authinfo.pk]
+        return self._job_lists[pk]
 
     @contextlib.contextmanager
     def request_job_info_update(self, authinfo: AuthInfo, job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:

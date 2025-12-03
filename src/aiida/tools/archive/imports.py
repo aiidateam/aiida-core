@@ -233,7 +233,7 @@ def _add_new_entities(
         if ufield not in backend_unique_id:
             ufields.append(ufield)
 
-    with get_progress_reporter()(desc=f'Importing new {etype.value}(s)', total=total) as progress:
+    with get_progress_reporter()(desc=f'Adding new {etype.value}(s)', total=total) as progress:
         # For UX: batch large ID lists so queries start returning results faster
         # Even though the improved IN clause handles any size, query planning for 500k+ IDs can be slow
         query_batch_size = 50_000

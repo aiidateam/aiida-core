@@ -20,7 +20,7 @@ from aiida.common.lang import type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter
-from aiida.common.utils import DEFAULT_BATCH_SIZE, batch_iter
+from aiida.common.utils import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE, batch_iter
 from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
@@ -60,6 +60,7 @@ def import_archive(
     group: Optional[orm.Group] = None,
     test_run: bool = False,
     backend: Optional[StorageBackend] = None,
+    filter_size: int = DEFAULT_FILTER_SIZE,
     batch_size: int = DEFAULT_BATCH_SIZE,
 ) -> Optional[int]:
     """Import an archive into the AiiDA backend.
@@ -154,8 +155,8 @@ def import_archive(
         # To ensure we do not corrupt the backend database on a faulty import,
         # Every addition/update is made in a single transaction, which is commited on exit
         with backend.transaction():
-            user_ids_archive_backend = _import_users(backend_from, backend, batch_size)
-            computer_ids_archive_backend = _import_computers(backend_from, backend, batch_size)
+            user_ids_archive_backend = _import_users(backend_from, backend, batch_size, filter_size)
+            computer_ids_archive_backend = _import_computers(backend_from, backend, batch_size, filter_size)
             if include_authinfos:
                 _import_authinfos(
                     backend_from,
@@ -168,23 +169,25 @@ def import_archive(
                 backend_from,
                 backend,
                 batch_size,
+                filter_size,
                 user_ids_archive_backend,
                 computer_ids_archive_backend,
                 import_new_extras,
                 merge_extras,
             )
-            _import_logs(backend_from, backend, batch_size, node_ids_archive_backend)
+            _import_logs(backend_from, backend, batch_size, filter_size, node_ids_archive_backend)
             _import_comments(
                 backend_from,
                 backend,
                 batch_size,
+                filter_size,
                 user_ids_archive_backend,
                 node_ids_archive_backend,
                 merge_comments,
             )
             _import_links(backend_from, backend, batch_size, node_ids_archive_backend)
             group_labels = _import_groups(
-                backend_from, backend, batch_size, user_ids_archive_backend, node_ids_archive_backend
+                backend_from, backend, batch_size, filter_size, user_ids_archive_backend, node_ids_archive_backend
             )
             import_group_id = None
             if create_group:
@@ -217,6 +220,7 @@ def _add_new_entities(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
     batch_size: int,
+    filter_size: int,
     transform: Callable[[dict], dict],
 ) -> None:
     """Add new entities to the output backend and update the mapping of unique field -> id."""
@@ -251,9 +255,7 @@ def _add_new_entities(
 
 
 def _import_users(
-    backend_from: StorageBackend,
-    backend_to: StorageBackend,
-    batch_size: int,
+    backend_from: StorageBackend, backend_to: StorageBackend, batch_size: int, filter_size: int
 ) -> Dict[int, int]:
     """Import users from one backend to another.
 
@@ -290,6 +292,7 @@ def _import_users(
             backend_from,
             backend_to,
             batch_size,
+            filter_size,
             transform,
         )
 
@@ -298,9 +301,7 @@ def _import_users(
 
 
 def _import_computers(
-    backend_from: StorageBackend,
-    backend_to: StorageBackend,
-    batch_size: int,
+    backend_from: StorageBackend, backend_to: StorageBackend, batch_size: int, filter_size: int
 ) -> Dict[int, int]:
     """Import computers from one backend to another.
 
@@ -363,6 +364,7 @@ def _import_computers(
             backend_from,
             backend_to,
             batch_size,
+            filter_size,
             transform,
         )
 
@@ -457,6 +459,7 @@ def _import_nodes(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
     batch_size: int,
+    filter_size: int,
     user_ids_archive_backend: Dict[int, int],
     computer_ids_archive_backend: Dict[int, int],
     import_new_extras: bool,
@@ -497,6 +500,7 @@ def _import_nodes(
             backend_from,
             backend_to,
             batch_size,
+            filter_size,
             transform,
         )
 
@@ -548,6 +552,7 @@ def _import_logs(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
     batch_size: int,
+    filter_size: int,
     node_ids_archive_backend: Dict[int, int],
 ) -> Dict[int, int]:
     """Import logs from one backend to another.
@@ -592,6 +597,7 @@ def _import_logs(
             backend_from,
             backend_to,
             batch_size,
+            filter_size,
             transform,
         )
 
@@ -755,6 +761,7 @@ def _import_comments(
     backend_from: StorageBackend,
     backend: StorageBackend,
     batch_size: int,
+    filter_size: int,
     user_ids_archive_backend: Dict[int, int],
     node_ids_archive_backend: Dict[int, int],
     merge_comments: MergeCommentsType,
@@ -825,6 +832,7 @@ def _import_comments(
             backend_from,
             backend,
             batch_size,
+            filter_size,
             CommentTransform(user_ids_archive_backend, node_ids_archive_backend),
         )
 
@@ -1014,6 +1022,7 @@ def _import_groups(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
     batch_size: int,
+    filter_size: int,
     user_ids_archive_backend: Dict[int, int],
     node_ids_archive_backend: Dict[int, int],
 ) -> Set[str]:
@@ -1061,6 +1070,7 @@ def _import_groups(
             backend_from,
             backend_to,
             batch_size,
+            filter_size,
             transform,
         )
 

@@ -48,11 +48,15 @@ def test_set_label():
 def test_with_mpi():
     """Test the :meth:`aiida.orm.nodes.data.code.abstract.AbstractCode.with_mpi` property setter."""
     code = MockCode()
-    assert code.with_mpi is None
+    assert code.with_mpi is False
 
-    for value in (True, False, None):
+    for value in (True, False):
         code.with_mpi = value
         assert code.with_mpi is value
+        
+    # None is no longer allowed
+    with pytest.raises(TypeError):
+        code.with_mpi = None
 
     with pytest.raises(TypeError):
         code.with_mpi = 'False'

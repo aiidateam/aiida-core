@@ -48,5 +48,10 @@ def warn_deprecation(message: str, version: int, stacklevel: int = 2) -> None:
     from_environment = os.environ.get(f'AIIDA_WARN_v{version}')
 
     if from_config or from_environment:
-        message = f'{message} (this will be removed in v{version})'
+        message = (
+            f'{message} (this will be removed in v{version})\n\n'
+            'If you encounter unexpected behavior or bugs, please report them via:\n'
+            '  - Discourse: https://aiida.discourse.group\n'
+            '  - GitHub: https://github.com/aiidateam/aiida-core/issues'
+        )
         warnings.warn(message, AiidaDeprecationWarning, stacklevel=stacklevel)

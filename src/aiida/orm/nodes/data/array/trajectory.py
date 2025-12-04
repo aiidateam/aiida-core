@@ -8,30 +8,70 @@
 ###########################################################################
 """AiiDA class to deal with crystal structure trajectories."""
 
+from __future__ import annotations
+
 import collections.abc
-from typing import List
+from typing import TYPE_CHECKING, List, Optional
+
+import numpy as np
 
 from aiida.common.pydantic import MetadataField
 
-from .array import ArrayData
+from . import array
+
+if TYPE_CHECKING:
+    from aiida import orm
+
+if TYPE_CHECKING:
+    from aiida import orm
 
 __all__ = ('TrajectoryData',)
 
 
-class TrajectoryData(ArrayData):
+class TrajectoryDataModel(array.ArrayDataModel):
+    units_positions: Optional[str] = MetadataField(
+        None,
+        serialization_alias='units|positions',
+        description='Unit of positions',
+    )
+    units_times: Optional[str] = MetadataField(
+        None,
+        serialization_alias='units|times',
+        description='Unit of time',
+    )
+    symbols: List[str] = MetadataField(description='List of symbols')
+
+
+class TrajectoryData(array.ArrayData):
     """Stores a trajectory (a sequence of crystal structures with timestamps, and
     possibly with velocities).
     """
 
-    class Model(ArrayData.Model):
-        units_positions: str = MetadataField(alias='units|positions', description='Unit of positions')
-        units_times: str = MetadataField(alias='units|times', description='Unit of time')
-        symbols: List[str] = MetadataField(description='List of symbols')
+    Model = TrajectoryDataModel
 
-    def __init__(self, structurelist=None, **kwargs):
+    def __init__(
+        self,
+        structurelist: list[orm.StructureData] | None = None,
+        units_positions: str | None = None,
+        units_times: str | None = None,
+        symbols: list[str] | None = None,
+        arrays: np.ndarray | dict[str, np.ndarray] | None = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
+        self.unit_positions = units_positions
+        self.unit_times = units_times
         if structurelist is not None:
             self.set_structurelist(structurelist)
+        elif arrays is not None:
+            self.set_trajectory(
+                symbols=symbols,
+                positions=arrays['positions'],
+                stepids=arrays.get('steps'),
+                cells=arrays.get('cells'),
+                times=arrays.get('times'),
+                velocities=arrays.get('velocities'),
+            )
 
     def _internal_validate(self, stepids, cells, symbols, positions, times, velocities):
         """Internal function to validate the type and shape of the arrays. See
@@ -70,7 +110,7 @@ class TrajectoryData(ArrayData):
         numatoms = len(symbols)
         if positions.shape != (numsteps, numatoms, 3):
             raise ValueError(
-                'TrajectoryData.positions must have shape (s,n,3), ' 'with s=number of steps and n=number of symbols'
+                'TrajectoryData.positions must have shape (s,n,3), with s=number of steps and n=number of symbols'
             )
         if times is not None:
             if times.shape != (numsteps,):
@@ -257,6 +297,26 @@ class TrajectoryData(ArrayData):
             return None
 
     @property
+    def units_positions(self) -> str | None:
+        """Units for the positions array."""
+        return self.base.attributes.get('units|positions', None)
+
+    @units_positions.setter
+    def units_positions(self, units: str) -> None:
+        """Set units for the positions array."""
+        self.base.attributes.set('units|positions', units)
+
+    @property
+    def units_times(self) -> str | None:
+        """Units for the times array."""
+        return self.base.attributes.get('units|times', None)
+
+    @units_times.setter
+    def units_times(self, units: str) -> None:
+        """Set units for the times array."""
+        self.base.attributes.set('units|times', units)
+
+    @property
     def symbols(self) -> List[str]:
         """Return the array of symbols, if it has already been set.
 
@@ -371,7 +431,7 @@ class TrajectoryData(ArrayData):
             for k in custom_kinds:
                 if not isinstance(k, Kind):
                     raise TypeError(
-                        'Each element of the custom_kinds list must ' 'be a aiida.orm.nodes.data.structure.Kind object'
+                        'Each element of the custom_kinds list must be a aiida.orm.nodes.data.structure.Kind object'
                     )
                 kind_names.append(k.name)
             if len(kind_names) != len(set(kind_names)):

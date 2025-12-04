@@ -4,11 +4,11 @@ import importlib
 import json
 import typing
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, WithJsonSchema
 
 from aiida.common.pydantic import MetadataField
 
-from .data import Data
+from . import data
 
 __all__ = ('JsonableData',)
 
@@ -18,7 +18,22 @@ class JsonSerializableProtocol(typing.Protocol):
     def as_dict(self) -> typing.MutableMapping[typing.Any, typing.Any]: ...
 
 
-class JsonableData(Data):
+class JsonableDataModel(data.DataModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    obj: typing.Annotated[
+        JsonSerializableProtocol,
+        WithJsonSchema(
+            {
+                'type': 'object',
+                'title': 'JSON-serializable object',
+                'description': 'The JSON-serializable object.',
+            }
+        ),
+    ] = MetadataField(description='The JSON-serializable object.')
+
+
+class JsonableData(data.Data):
     """Data plugin that allows to easily wrap objects that are JSON-able.
 
     Any class that implements the ``as_dict`` method, returning a dictionary that is a JSON serializable representation
@@ -50,9 +65,7 @@ class JsonableData(Data):
     environment, or an ``ImportError`` will be raised.
     """
 
-    class Model(Data.Model):
-        model_config = ConfigDict(arbitrary_types_allowed=True)
-        obj: JsonSerializableProtocol = MetadataField(description='The JSON-serializable object.')
+    Model = JsonableDataModel
 
     def __init__(self, obj: JsonSerializableProtocol, *args, **kwargs):
         """Construct the node for the to be wrapped object."""

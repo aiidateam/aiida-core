@@ -8,9 +8,12 @@
 ###########################################################################
 """Module for orm logging abstract classes"""
 
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
+from uuid import UUID
 
 from aiida.common import timezone
 from aiida.common.pydantic import MetadataField
@@ -34,16 +37,16 @@ def OrderSpecifier(field, direction):  # noqa: N802
     return {field: direction}
 
 
-class LogCollection(entities.Collection['Log']):
+class LogCollection(entities.EntityCollection['Log']):
     """This class represents the collection of logs and can be used to create
     and retrieve logs.
     """
 
     @staticmethod
-    def _entity_base_cls() -> Type['Log']:
+    def _entity_base_cls() -> Type[Log]:
         return Log
 
-    def create_entry_from_record(self, record: logging.LogRecord) -> Optional['Log']:
+    def create_entry_from_record(self, record: logging.LogRecord) -> Optional[Log]:
         """Helper function to create a log entry from a record created as by the python logging library
 
         :param record: The record created by the logging module
@@ -81,7 +84,7 @@ class LogCollection(entities.Collection['Log']):
             backend=self.backend,
         )
 
-    def get_logs_for(self, entity: 'Node', order_by: Optional['OrderByType'] = None) -> List['Log']:
+    def get_logs_for(self, entity: 'Node', order_by: Optional['OrderByType'] = None) -> List[Log]:
         """Get all the log messages for a given node and optionally sort
 
         :param entity: the entity to get logs for
@@ -124,19 +127,45 @@ class LogCollection(entities.Collection['Log']):
         return self._backend.logs.delete_many(filters)
 
 
-class Log(entities.Entity['BackendLog', LogCollection]):
+class LogModel(entities.EntityModel):
+    uuid: UUID = MetadataField(
+        description='The UUID of the node',
+        is_attribute=False,
+        exclude_to_orm=True,
+    )
+    loggername: str = MetadataField(
+        description='The name of the logger',
+        is_attribute=False,
+    )
+    levelname: str = MetadataField(
+        description='The name of the log level',
+        is_attribute=False,
+    )
+    message: str = MetadataField(
+        description='The message of the log',
+        is_attribute=False,
+    )
+    time: datetime = MetadataField(
+        description='The time at which the log was created',
+        is_attribute=False,
+    )
+    metadata: Dict[str, Any] = MetadataField(
+        default_factory=dict,
+        description='The metadata of the log',
+        is_attribute=False,
+    )
+    dbnode_id: int = MetadataField(
+        description='Associated node',
+        is_attribute=False,
+    )
+
+
+class Log(entities.Entity['BackendLog', LogCollection, LogModel]):
     """An AiiDA Log entity.  Corresponds to a logged message against a particular AiiDA node."""
 
-    _CLS_COLLECTION = LogCollection
+    Model = LogModel
 
-    class Model(entities.Entity.Model):
-        uuid: str = MetadataField(description='The UUID of the node', is_attribute=False, exclude_to_orm=True)
-        loggername: str = MetadataField(description='The name of the logger', is_attribute=False)
-        levelname: str = MetadataField(description='The name of the log level', is_attribute=False)
-        message: str = MetadataField(description='The message of the log', is_attribute=False)
-        time: datetime = MetadataField(description='The time at which the log was created', is_attribute=False)
-        metadata: Dict[str, Any] = MetadataField(description='The metadata of the log', is_attribute=False)
-        dbnode_id: int = MetadataField(description='Associated node', is_attribute=False)
+    _CLS_COLLECTION = LogCollection
 
     def __init__(
         self,

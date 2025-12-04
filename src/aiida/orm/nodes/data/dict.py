@@ -16,13 +16,21 @@ import typing as t
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
 
+from . import data
 from .base import to_aiida_type
-from .data import Data
 
 __all__ = ('Dict',)
 
 
-class Dict(Data):
+class DictModel(data.DataModel):
+    value: t.Dict[str, t.Any] = MetadataField(
+        description='Dictionary content.',
+        is_attribute=False,
+        is_subscriptable=True,
+    )
+
+
+class Dict(data.Data):
     """`Data` sub class to represent a dictionary.
 
     The dictionary contents of a `Dict` node are stored in the database as attributes. The dictionary
@@ -50,12 +58,7 @@ class Dict(Data):
     Finally, all dictionary mutations will be forbidden once the node is stored.
     """
 
-    class Model(Data.Model):
-        value: t.Dict[str, t.Any] = MetadataField(
-            description='Dictionary content.',
-            is_attribute=False,
-            is_subscriptable=True,
-        )
+    Model = DictModel
 
     def __init__(self, value=None, **kwargs):
         """Initialise a ``Dict`` node instance.

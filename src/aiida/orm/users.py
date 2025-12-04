@@ -8,6 +8,8 @@
 ###########################################################################
 """Module for the ORM user class."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Optional, Tuple, Type
 
 from aiida.common import exceptions
@@ -23,14 +25,14 @@ if TYPE_CHECKING:
 __all__ = ('User',)
 
 
-class UserCollection(entities.Collection['User']):
+class UserCollection(entities.EntityCollection['User']):
     """The collection of users stored in a backend."""
 
     @staticmethod
-    def _entity_base_cls() -> Type['User']:
+    def _entity_base_cls() -> Type[User]:
         return User
 
-    def get_or_create(self, email: str, **kwargs) -> Tuple[bool, 'User']:
+    def get_or_create(self, email: str, **kwargs) -> Tuple[bool, User]:
         """Get the existing user with a given email address or create an unstored one
 
         :param kwargs: The properties of the user to get or create
@@ -43,21 +45,39 @@ class UserCollection(entities.Collection['User']):
         except exceptions.NotExistent:
             return True, User(backend=self.backend, email=email, **kwargs)
 
-    def get_default(self) -> Optional['User']:
+    def get_default(self) -> Optional[User]:
         """Get the current default user"""
         return self.backend.default_user
 
 
-class User(entities.Entity['BackendUser', UserCollection]):
+class UserModel(entities.EntityModel):
+    email: str = MetadataField(
+        description='The user email',
+        is_attribute=False,
+    )
+    first_name: str = MetadataField(
+        '',
+        description='The user first name',
+        is_attribute=False,
+    )
+    last_name: str = MetadataField(
+        '',
+        description='The user last name',
+        is_attribute=False,
+    )
+    institution: str = MetadataField(
+        '',
+        description='The user institution',
+        is_attribute=False,
+    )
+
+
+class User(entities.Entity['BackendUser', UserCollection, UserModel]):
     """AiiDA User"""
 
-    _CLS_COLLECTION = UserCollection
+    Model = UserModel
 
-    class Model(entities.Entity.Model):
-        email: str = MetadataField(description='The user email', is_attribute=False)
-        first_name: str = MetadataField(description='The user first name', is_attribute=False)
-        last_name: str = MetadataField(description='The user last name', is_attribute=False)
-        institution: str = MetadataField(description='The user institution', is_attribute=False)
+    _CLS_COLLECTION = UserCollection
 
     def __init__(
         self,

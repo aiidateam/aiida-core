@@ -354,6 +354,10 @@ class QbFields:
     def __init__(self, fields: t.Optional[t.Dict[str, QbField]] = None):
         self._fields = fields or {}
 
+    def keys(self) -> list[str]:
+        """Return the field keys, prefixed with 'attribute.' if field is an attribute."""
+        return [field.backend_key for field in self._fields.values()]
+
     def __repr__(self) -> str:
         return pformat({key: str(value) for key, value in self._fields.items()})
 
@@ -457,14 +461,14 @@ class EntityFieldMeta(ABCMeta):
                 if model_bases != cls_model_bases and not getattr(cls, '_SKIP_MODEL_INHERITANCE_CHECK', False):
                     bases = [f'{e.__module__}.{e.__name__}.Model' for e in cls_bases_with_model_leaves]
                     raise RuntimeError(
-                        f'`{cls.__name__}.Model` does not subclass all necessary base classes. It should be: '
-                        f'`class Model({", ".join(sorted(bases))}):`'
+                        f'`{cls.__name__}Model` does not subclass all necessary base classes. It should be: '
+                        f'`class {cls.__name__}Model({", ".join(sorted(bases))}):`'
                     )
 
             for key, field in cls.Model.model_fields.items():
                 fields[key] = add_field(
                     key,
-                    alias=get_metadata(field, 'alias', None),
+                    alias=field.alias,
                     dtype=field.annotation,
                     doc=field.description,
                     is_attribute=get_metadata(field, 'is_attribute', False),

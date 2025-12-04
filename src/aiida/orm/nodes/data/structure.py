@@ -10,17 +10,21 @@
 functions to operate on them.
 """
 
+from __future__ import annotations
+
 import copy
 import functools
 import itertools
 import json
 import typing as t
 
+from pydantic import field_validator
+
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
 from aiida.common.pydantic import MetadataField
 
-from .data import Data
+from . import data
 
 __all__ = ('Kind', 'Site', 'StructureData')
 
@@ -503,7 +507,7 @@ def get_symbols_string(symbols, weights):
         pieces.append(f'{symbol}{weight:4.2f}')
     if has_vacancies(weights):
         pieces.append(f'X{1.0 - sum(weights):4.2f}')
-    return f"{{{''.join(sorted(pieces))}}}"
+    return f'{{{"".join(sorted(pieces))}}}'
 
 
 def has_vacancies(weights):
@@ -657,12 +661,33 @@ def atom_kinds_to_html(atom_kind):
     return html_formula
 
 
-class StructureData(Data):
+class StructureDataModel(data.DataModel):
+    pbc1: bool = MetadataField(description='Whether periodic in the a direction')
+    pbc2: bool = MetadataField(description='Whether periodic in the b direction')
+    pbc3: bool = MetadataField(description='Whether periodic in the c direction')
+    cell: t.List[t.List[float]] = MetadataField(description='The cell parameters')
+    kinds: t.List[dict] = MetadataField(description='The kinds of atoms')
+    sites: t.List[dict] = MetadataField(description='The atomic sites')
+
+    @field_validator('kinds', mode='before')
+    @classmethod
+    def _validate_kinds(cls, value: t.List[Kind | dict[str, t.Any]]) -> t.List[t.Dict]:
+        return [kind.get_raw() if isinstance(kind, Kind) else kind for kind in value]
+
+    @field_validator('sites', mode='before')
+    @classmethod
+    def _validate_sites(cls, value: t.List[Site | dict[str, t.Any]]) -> t.List[t.Dict]:
+        return [site.get_raw() if isinstance(site, Site) else site for site in value]
+
+
+class StructureData(data.Data):
     """Data class that represents an atomic structure.
 
     The data is organized as a collection of sites together with a cell, the boundary conditions (whether they are
     periodic or not) and other related useful information.
     """
+
+    Model = StructureDataModel
 
     _set_incompatibilities = [
         ('ase', 'cell'),
@@ -683,14 +708,6 @@ class StructureData(Data):
 
     _dimensionality_label = {0: '', 1: 'length', 2: 'surface', 3: 'volume'}
     _internal_kind_tags = None
-
-    class Model(Data.Model):
-        pbc1: bool = MetadataField(description='Whether periodic in the a direction')
-        pbc2: bool = MetadataField(description='Whether periodic in the b direction')
-        pbc3: bool = MetadataField(description='Whether periodic in the c direction')
-        cell: t.List[t.List[float]] = MetadataField(description='The cell parameters')
-        kinds: t.Optional[t.List[dict]] = MetadataField(description='The kinds of atoms')
-        sites: t.Optional[t.List[dict]] = MetadataField(description='The atomic sites')
 
     def __init__(
         self,
@@ -1371,7 +1388,7 @@ class StructureData(Data):
         if aseatom is not None:
             if kwargs:
                 raise ValueError(
-                    "If you pass 'ase' as a parameter to " 'append_atom, you cannot pass any further' 'parameter'
+                    "If you pass 'ase' as a parameter to append_atom, you cannot pass any further parameter"
                 )
             position = aseatom.position
             kind = Kind(ase=aseatom)
@@ -2127,9 +2144,7 @@ class Kind:
         weights_tuple = _create_weights_tuple(value)
 
         if len(weights_tuple) != len(self._symbols):
-            raise ValueError(
-                'Cannot change the number of weights. Use the ' 'set_symbols_and_weights function instead.'
-            )
+            raise ValueError('Cannot change the number of weights. Use the set_symbols_and_weights function instead.')
         validate_weights_tuple(weights_tuple, _SUM_THRESHOLD)
 
         self._weights = weights_tuple
@@ -2182,9 +2197,7 @@ class Kind:
         symbols_tuple = _create_symbols_tuple(value)
 
         if len(symbols_tuple) != len(self._weights):
-            raise ValueError(
-                'Cannot change the number of symbols. Use the ' 'set_symbols_and_weights function instead.'
-            )
+            raise ValueError('Cannot change the number of symbols. Use the set_symbols_and_weights function instead.')
         validate_symbols_tuple(symbols_tuple)
 
         self._symbols = symbols_tuple

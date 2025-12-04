@@ -11,13 +11,19 @@
 from aiida.common.links import LinkType
 from aiida.orm.utils.managers import NodeLinksManager
 
-from ..process import ProcessNode
+from .. import process
 
 __all__ = ('CalculationNode',)
 
 
-class CalculationNode(ProcessNode):
+class CalculationNodeModel(process.ProcessNodeModel):
+    """Placeholder model."""
+
+
+class CalculationNode(process.ProcessNode):
     """Base class for all nodes representing the execution of a calculation process."""
+
+    Model = CalculationNodeModel
 
     _storable = True  # Calculation nodes are storable
     _cachable = True  # Calculation nodes can be cached from

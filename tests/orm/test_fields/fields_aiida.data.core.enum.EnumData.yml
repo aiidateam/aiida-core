@@ -1,20 +1,19 @@
-attributes: QbDictField('attributes', dtype=typing.Optional[typing.Dict[str, typing.Any]],
-  is_attribute=False, is_subscriptable=True)
-computer: QbNumericField('computer', dtype=typing.Optional[int], is_attribute=False)
-ctime: QbNumericField('ctime', dtype=typing.Optional[datetime.datetime], is_attribute=False)
-description: QbStrField('description', dtype=typing.Optional[str], is_attribute=False)
-extras: QbDictField('extras', dtype=typing.Optional[typing.Dict[str, typing.Any]],
-  is_attribute=False, is_subscriptable=True)
-label: QbStrField('label', dtype=typing.Optional[str], is_attribute=False)
+attributes: QbDictField('attributes', dtype=typing.Dict[str, typing.Any], is_attribute=False,
+  is_subscriptable=True)
+computer: QbStrField('computer', dtype=typing.Optional[str], is_attribute=False)
+ctime: QbNumericField('ctime', dtype=<class 'datetime.datetime'>, is_attribute=False)
+description: QbStrField('description', dtype=<class 'str'>, is_attribute=False)
+extras: QbDictField('extras', dtype=typing.Dict[str, typing.Any], is_attribute=False,
+  is_subscriptable=True)
+label: QbStrField('label', dtype=<class 'str'>, is_attribute=False)
 member: QbField('member', dtype=<enum 'Enum'>, is_attribute=True)
-mtime: QbNumericField('mtime', dtype=typing.Optional[datetime.datetime], is_attribute=False)
-node_type: QbStrField('node_type', dtype=typing.Optional[str], is_attribute=False)
-pk: QbNumericField('pk', dtype=typing.Optional[int], is_attribute=False)
+mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, is_attribute=False)
+node_type: QbStrField('node_type', dtype=<class 'str'>, is_attribute=False)
+pk: QbNumericField('pk', dtype=<class 'int'>, is_attribute=False)
 process_type: QbStrField('process_type', dtype=typing.Optional[str], is_attribute=False)
-repository_content: QbDictField('repository_content', dtype=typing.Optional[dict[str,
-  bytes]], is_attribute=False)
-repository_metadata: QbDictField('repository_metadata', dtype=typing.Optional[typing.Dict[str,
-  typing.Any]], is_attribute=False)
+repository_content: QbDictField('repository_content', dtype=dict[str, bytes], is_attribute=False)
+repository_metadata: QbDictField('repository_metadata', dtype=typing.Dict[str, typing.Any],
+  is_attribute=False)
 source: QbDictField('source', dtype=typing.Optional[dict], is_attribute=True, is_subscriptable=True)
-user: QbNumericField('user', dtype=typing.Optional[int], is_attribute=False)
-uuid: QbStrField('uuid', dtype=typing.Optional[str], is_attribute=False)
+user: QbNumericField('user', dtype=<class 'int'>, is_attribute=False)
+uuid: QbField('uuid', dtype=<class 'uuid.UUID'>, is_attribute=False)

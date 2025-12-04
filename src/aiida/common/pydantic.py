@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import typing as t
-from pathlib import Path
 
 from pydantic import Field
 from pydantic_core import PydanticUndefined
@@ -34,11 +33,10 @@ def MetadataField(  # noqa: N802
     priority: int = 0,
     short_name: str | None = None,
     option_cls: t.Any | None = None,
-    orm_class: type[Entity[t.Any, t.Any]] | str | None = None,
-    orm_to_model: t.Callable[[Entity[t.Any, t.Any], Path], t.Any] | None = None,
-    model_to_orm: t.Callable[['BaseModel'], t.Any] | None = None,
+    orm_class: type[Entity[t.Any, t.Any, t.Any]] | str | None = None,
+    orm_to_model: t.Callable[[Entity[t.Any, t.Any, t.Any], dict[str, t.Any]], t.Any] | None = None,
+    model_to_orm: t.Callable[[BaseModel], t.Any] | None = None,
     exclude_to_orm: bool = False,
-    exclude_from_cli: bool = False,
     is_attribute: bool = True,
     is_subscriptable: bool = False,
     **kwargs: t.Any,
@@ -66,7 +64,7 @@ def MetadataField(  # noqa: N802
     :param short_name: Optional short name to use for an option on a command line interface.
     :param option_cls: The :class:`click.Option` class to use to construct the option.
     :param orm_class: The class, or entry point name thereof, to which the field should be converted. If this field is
-        defined, the value of this field should acccept an integer which will automatically be converted to an instance
+        defined, the value of this field should accept an integer which will automatically be converted to an instance
         of said ORM class using ``orm_class.collection.get(id={field_value})``. This is useful, for example, where a
         field represents an instance of a different entity, such as an instance of ``User``. The serialized data would
         store the ``pk`` of the user, but the ORM entity instance would receive the actual ``User`` instance with that
@@ -75,11 +73,14 @@ def MetadataField(  # noqa: N802
     :param model_to_orm: Optional callable to convert the value of a field from a model instance to an ORM instance.
     :param exclude_to_orm: When set to ``True``, this field value will not be passed to the ORM entity constructor
         through ``Entity.from_model``.
-    :param exclude_from_cli: When set to ``True``, this field value will not be exposed on the CLI command that is
-        dynamically generated to create a new instance.
-    :param is_attribute: Whether the field is stored as an attribute.
-    :param is_subscriptable: Whether the field can be indexed like a list or dictionary.
+    :param is_attribute: Whether the field is stored as an attribute. Used by `QbFields`.
+    :param is_subscriptable: Whether the field can be indexed like a list or dictionary. Used by `QbFields`.
     """
+    if exclude_to_orm:
+        extra = kwargs.pop('json_schema_extra', {})
+        extra.update({'readOnly': True})
+        kwargs['json_schema_extra'] = extra
+
     field_info = Field(default, **kwargs)
 
     for key, value in (
@@ -90,7 +91,6 @@ def MetadataField(  # noqa: N802
         ('orm_to_model', orm_to_model),
         ('model_to_orm', model_to_orm),
         ('exclude_to_orm', exclude_to_orm),
-        ('exclude_from_cli', exclude_from_cli),
         ('is_attribute', is_attribute),
         ('is_subscriptable', is_subscriptable),
     ):

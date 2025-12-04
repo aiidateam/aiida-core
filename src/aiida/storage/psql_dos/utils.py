@@ -68,7 +68,9 @@ $$;
 
 
 def register_jsonb_patch_function(dbapi_connection, _):
+    dbapi_connection.autocommit = True
     dbapi_connection.execute(JSONB_PATCH_FUNCTION)
+    dbapi_connection.autocommit = False
 
 
 def create_sqlalchemy_engine(config: PsqlConfig):

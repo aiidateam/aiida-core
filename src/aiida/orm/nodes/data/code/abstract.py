@@ -70,12 +70,10 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             description='Whether the executable and arguments of the code in the submission script should be escaped '
             'with single or double quotes.',
         )
-        with_mpi: t.Optional[bool] = MetadataField(
-            None,
+        with_mpi: bool = MetadataField(
+            False,
             title='Run with MPI',
-            description='Whether the executable should be run as an MPI program. This option can be left unspecified '
-            'in which case `None` will be set and it is left up to the calculation job plugin or inputs '
-            'whether to run with MPI.',
+            description='Whether the executable should be run as an MPI program.',
         )
         prepend_text: str = MetadataField(
             '',
@@ -108,11 +106,12 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         append_text: str = '',
         prepend_text: str = '',
         use_double_quotes: bool = False,
-        with_mpi: bool | None = None,
+        with_mpi: bool = False,
         is_hidden: bool = False,
         wrap_cmdline_params: bool = False,
         **kwargs,
     ):
+
         """Construct a new instance.
 
         :param default_calc_job_plugin: The entry point name of the default ``CalcJob`` plugin to use.
@@ -286,22 +285,23 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         self.base.attributes.set(self._KEY_ATTRIBUTE_USE_DOUBLE_QUOTES, value)
 
     @property
-    def with_mpi(self) -> bool | None:
+    def with_mpi(self) -> bool:
         """Return whether the command should be run as an MPI program.
 
-        :return: ``True`` if the code should be run as an MPI program, ``False`` if it shouldn't, ``None`` if unknown.
+        :return: ``True`` if the code should be run as an MPI program, ``False`` otherwise.
         """
-        return self.base.attributes.get(self._KEY_ATTRIBUTE_WITH_MPI, None)
+        return self.base.attributes.get(self._KEY_ATTRIBUTE_WITH_MPI, False)
+
 
     @with_mpi.setter
-    def with_mpi(self, value: bool | None) -> None:
+    def with_mpi(self, value: bool) -> None:
         """Set whether the command should be run as an MPI program.
 
-        :param value: ``True`` if the code should be run as an MPI program, ``False`` if it shouldn't, ``None`` if
-            unknown.
+        :param value: ``True`` if the code should be run as an MPI program, ``False`` otherwise.
         """
-        type_check(value, bool, allow_none=True)
+        type_check(value, bool)
         self.base.attributes.set(self._KEY_ATTRIBUTE_WITH_MPI, value)
+
 
     @property
     def wrap_cmdline_params(self) -> bool:

@@ -1885,32 +1885,6 @@ class StructureData(Data):
         positions = [list(site.position) for site in self.sites]
         return Molecule(species, positions)
 
-    def to_atomistic(self):
-        """
-        Returns the atomistic StructureData version of the orm.StructureData one.
-        """
-        if not has_atomistic():
-            raise ImportError(
-                'aiida-atomistic plugin is not installed, \
-                please install it to have full support for atomistic structures'
-            )
-        else:
-            from aiida_atomistic import StructureData, StructureBuilder
-
-        atomistic = StructureBuilder()
-        atomistic.set_pbc(self.pbc)
-        atomistic.set_cell(self.cell)
-
-        for site in self.sites:
-            atomistic.append_atom({
-                'symbol': self.get_kind(site.kind_name).symbol,
-                'mass': self.get_kind(site.kind_name).mass,
-                'position': site.position,
-                'kind_name': site.kind_name,
-            })
-
-        return StructureData.from_builder(atomistic)
-
 
 class Kind:
     """This class contains the information about the species (kinds) of the system.

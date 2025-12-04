@@ -200,17 +200,6 @@ class BaseRestartWorkChain(WorkChain):
             message='The process failed with an unhandled failure.',
         )
 
-    def on_paused(self, msg: Optional[str] = None) -> None:
-        """Adapt the message shown by `verdi process list` to make the request for user action explicit.
-
-        In particular, if the process was paused by a handler, change the process status to hint that
-        user inspection is needed."""
-        super().on_paused(msg)
-        if self.ctx.paused_by_handler:
-            # Only show the message if the process was paused by a handler, not if the process was paused
-            # by other means (e.g. user request).
-            self.node.set_process_status(f"Need user inspection, see: 'verdi process report {self.node.pk}'")
-
     def setup(self) -> None:
         """Initialize context variables that are used during the logical flow of the `BaseRestartWorkChain`."""
         overrides = (
@@ -221,7 +210,6 @@ class BaseRestartWorkChain(WorkChain):
         self.ctx.unhandled_failure = False
         self.ctx.is_finished = False
         self.ctx.iteration = 0
-        self.ctx.paused_by_handler = False
 
     def should_run_process(self) -> bool:
         """Return whether a new process should be run.
@@ -229,10 +217,6 @@ class BaseRestartWorkChain(WorkChain):
         This is the case as long as the last process has not finished successfully and the maximum number of restarts
         has not yet been exceeded.
         """
-        # This should be the first step to be run after a process was paused by the handler, and is
-        # then replayed. I reset the flag here.
-        self.ctx.paused_by_handler = False
-
         max_iterations = self.inputs.max_iterations.value
         return not self.ctx.is_finished and self.ctx.iteration < max_iterations
 
@@ -339,10 +323,7 @@ class BaseRestartWorkChain(WorkChain):
                     f'`verdi process play {self.node.pk}`. Otherwise, you can kill the work chain using '
                     f'`verdi process kill {self.node.pk}`.'
                 )
-                # Set the flag to indicate that the process was paused by a handler (and not by user request),
-                # so that the message shown in `verdi process list` is adapted accordingly
-                self.ctx.paused_by_handler = True
-                self.pause()
+                self.pause(f"Paused for user inspection, see: 'verdi process report {self.node.pk}'")
                 return None
             elif action == 'restart_once':
                 if self.ctx.unhandled_failure:
@@ -368,13 +349,10 @@ class BaseRestartWorkChain(WorkChain):
                         f'`verdi process play {self.node.pk}`. Otherwise, you can kill the work chain using '
                         f'`verdi process kill {self.node.pk}`.'
                     )
-                    # Set the flag to indicate that the process was paused by a handler (and not by user request),
-                    # so that the message shown in `verdi process list` is adapted accordingly
-                    self.ctx.paused_by_handler = True
                     # reset the unhandled failure flag, so that after replaying, it will
                     # try again twice for future errors
                     self.ctx.unhandled_failure = False
-                    self.pause()
+                    self.pause(f"Paused for user inspection, see: 'verdi process report {self.node.pk}'")
                     return None
                 self.ctx.unhandled_failure = True
                 self.report(

@@ -807,10 +807,10 @@ class Config:
         """
         from aiida.manage.configuration.settings import AiiDAConfigPathResolver
 
+        # TODO remove circus and adapt to <config>/daemon/<profile>/...
         _config_path_resolver: AiiDAConfigPathResolver = AiiDAConfigPathResolver(Path(self.dirpath))
         daemon_dir = _config_path_resolver.daemon_dir
         daemon_log_dir = _config_path_resolver.daemon_log_dir
-
         return {
             'circus': {
                 'log': str(daemon_log_dir / f'circus-{profile.name}.log'),
@@ -828,3 +828,9 @@ class Config:
                 'pid': str(daemon_dir / f'aiida-{profile.name}.pid'),
             },
         }
+
+    def get_new_daemon_dir(self, profile: Profile):
+        from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+        _config_path_resolver: AiiDAConfigPathResolver = AiiDAConfigPathResolver(Path(self.dirpath))
+        daemon_dir = _config_path_resolver.daemon_dir
+        return daemon_dir / f"profile-{profile.name}"

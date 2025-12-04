@@ -27,7 +27,7 @@ from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, U
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.typing import FilePath
-from aiida.common.utils import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE
+from aiida.common.utils import DEFAULT_BATCH_SIZE
 
 EXTRAS_MODE_EXISTING = ['keep_existing', 'update_existing', 'mirror', 'none']
 EXTRAS_MODE_NEW = ['import', 'none']
@@ -216,7 +216,6 @@ def create(
         'overwrite': force,
         'compression': compress,
         'batch_size': batch_size,
-        'filter_size': DEFAULT_FILTER_SIZE,  # Implementation detail, not exposed to user via CLI
         'test_run': dry_run,
     }
 

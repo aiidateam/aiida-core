@@ -245,23 +245,20 @@ def _add_new_entities(
             ufields.append(ufield)
 
     with get_progress_reporter()(desc=f'Adding new {etype.value}(s)', total=total) as progress:
-        # batch the filtering of rows by filter size, to limit the number of query variables used in any one query,
-        # since certain backends have a limit on the number of variables in a query (such as SQLITE_MAX_VARIABLE_NUMBER)
-        for nrows, ufields_batch in batch_iter(ufields, filter_size):
-            rows = [
-                transform(row)
-                for row in QueryBuilder(backend=backend_from)
-                .append(
-                    entity_type_to_orm[etype],
-                    filters={unique_field: {'in': ufields_batch}},
-                    project=['**'],
-                    tag='entity',
-                )
-                .dict(batch_size=batch_size)
-            ]
-            new_ids = backend_to.bulk_insert(etype, rows)
-            backend_unique_id.update({row[unique_field]: pk for pk, row in zip(new_ids, rows)})
-            progress.update(nrows)
+        rows = [
+            transform(row)
+            for row in QueryBuilder(backend=backend_from)
+            .append(
+                entity_type_to_orm[etype],
+                filters={unique_field: {'in': ufields}},
+                project=['**'],
+                tag='entity',
+            )
+            .dict(batch_size=batch_size)
+        ]
+        new_ids = backend_to.bulk_insert(etype, rows)
+        backend_unique_id.update({row[unique_field]: pk for pk, row in zip(new_ids, rows)})
+        progress.update(len(rows))
 
 
 def _import_users(
@@ -278,18 +275,11 @@ def _import_users(
     # get matching emails from the backend
     output_email_id: Dict[str, int] = {}
     if input_id_email:
-        output_email_id = {
-            key: value
-            for query_results in [
-                dict(
-                    orm.QueryBuilder(backend=backend_to)
-                    .append(orm.User, filters={'email': {'in': chunk}}, project=['email', 'id'])
-                    .all(batch_size=batch_size)
-                )
-                for _, chunk in batch_iter(set(input_id_email.values()), filter_size)
-            ]
-            for key, value in query_results.items()
-        }
+        output_email_id = dict(
+            orm.QueryBuilder(backend=backend_to)
+            .append(orm.User, filters={'email': {'in': list(set(input_id_email.values()))}}, project=['email', 'id'])
+            .all(batch_size=batch_size)
+        )
 
     new_users = len(input_id_email) - len(output_email_id)
     existing_users = len(output_email_id)
@@ -331,18 +321,11 @@ def _import_computers(
     # get matching uuids from the backend
     backend_uuid_id: Dict[str, int] = {}
     if input_id_uuid:
-        backend_uuid_id = {
-            key: value
-            for query_results in [
-                dict(
-                    orm.QueryBuilder(backend=backend_to)
-                    .append(orm.Computer, filters={'uuid': {'in': chunk}}, project=['uuid', 'id'])
-                    .all(batch_size=batch_size)
-                )
-                for _, chunk in batch_iter(set(input_id_uuid.values()), filter_size)
-            ]
-            for key, value in query_results.items()
-        }
+        backend_uuid_id = dict(
+            orm.QueryBuilder(backend=backend_to)
+            .append(orm.Computer, filters={'uuid': {'in': list(set(input_id_uuid.values()))}}, project=['uuid', 'id'])
+            .all(batch_size=batch_size)
+        )
 
     new_computers = len(input_id_uuid) - len(backend_uuid_id)
     existing_computers = len(backend_uuid_id)
@@ -502,18 +485,11 @@ def _import_nodes(
     backend_uuid_id: Dict[str, int] = {}
 
     if input_id_uuid:
-        backend_uuid_id = {
-            key: value
-            for query_results in [
-                dict(
-                    orm.QueryBuilder(backend=backend_to)
-                    .append(orm.Node, filters={'uuid': {'in': chunk}}, project=['uuid', 'id'])
-                    .all(batch_size=batch_size)
-                )
-                for _, chunk in batch_iter(set(input_id_uuid.values()), filter_size)
-            ]
-            for key, value in query_results.items()
-        }
+        backend_uuid_id = dict(
+            orm.QueryBuilder(backend=backend_to)
+            .append(orm.Node, filters={'uuid': {'in': list(set(input_id_uuid.values()))}}, project=['uuid', 'id'])
+            .all(batch_size=batch_size)
+        )
 
     new_nodes = len(input_id_uuid) - len(backend_uuid_id)
 
@@ -598,18 +574,11 @@ def _import_logs(
     backend_uuid_id: Dict[str, int] = {}
 
     if input_id_uuid:
-        backend_uuid_id = {
-            key: value
-            for query_results in [
-                dict(
-                    orm.QueryBuilder(backend=backend_to)
-                    .append(orm.Log, filters={'uuid': {'in': chunk}}, project=['uuid', 'id'])
-                    .all(batch_size=batch_size)
-                )
-                for _, chunk in batch_iter(set(input_id_uuid.values()), filter_size)
-            ]
-            for key, value in query_results.items()
-        }
+        backend_uuid_id = dict(
+            orm.QueryBuilder(backend=backend_to)
+            .append(orm.Log, filters={'uuid': {'in': list(set(input_id_uuid.values()))}}, project=['uuid', 'id'])
+            .all(batch_size=batch_size)
+        )
 
     new_logs = len(input_id_uuid) - len(backend_uuid_id)
     existing_logs = len(backend_uuid_id)

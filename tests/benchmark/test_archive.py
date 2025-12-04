@@ -137,35 +137,24 @@ def test_large_archive_export_benchmark(tmp_path, benchmark):
     assert export_file.exists()
 
 
-@pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.benchmark(group='large-archive')
 def test_large_archive_import_benchmark(tmp_path, benchmark, aiida_profile_clean):
-    """Benchmark import performance with different filter_size values using 10k nodes."""
+    """Benchmark import performance."""
     from tests.utils.nodes import create_int_nodes
 
     num_nodes = 10_000
 
-    def setup():
-        """Create archive for import benchmarking (setup phase, not timed)."""
-        # Create nodes and export to archive
-        export_file = tmp_path / 'import_benchmark.aiida'
-        # archive is being created in the multiple runs of the benchmark
-        # archive creation is not timed, so we can re-use if it already exists
-        if export_file.exists():
-            return (export_file,), {}
-        else:
-            _ = create_int_nodes(num_nodes)
-            _ = create_archive(entities=None, filename=export_file, overwrite=False)
-        return (export_file,), {}
+    # Create archive once, outside benchmark (not timed at all)
+    _ = create_int_nodes(num_nodes)
+    export_file = tmp_path / 'import_benchmark.aiida'
+    _ = create_archive(entities=None, filename=export_file)
 
-    def import_operation(export_file):
-        """The actual import operation to benchmark."""
+    def import_operation():
         aiida_profile_clean.reset_storage()
         import_archive(export_file)
 
-    # Use benchmark.pedantic with setup function
-    benchmark.pedantic(import_operation, setup=setup, rounds=3, iterations=1)
+    benchmark.pedantic(import_operation, rounds=5, iterations=1)
 
-    # Verify correctness after benchmark
+    # Verify correctness
     all_nodes = QueryBuilder().append(Node).all(flat=True)
     assert len(all_nodes) == num_nodes

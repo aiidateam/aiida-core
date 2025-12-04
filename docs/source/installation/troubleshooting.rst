@@ -80,31 +80,6 @@ There are two possible solutions:
 Further details are maintained on `this wiki page <https://github.com/aiidateam/aiida-core/wiki/RabbitMQ-version-to-use>`_ of the repository.
 
 
-numpy dependency
-.................
-
-On a clean Ubuntu 16.04 install the pip install command ``pip install -e aiida-core`` may fail due to a problem with dependencies on the ``numpy`` package.
-In this case you may be presented with a message like the following:
-
-.. code-block:: python
-
-   from numpy.distutils.misc_util import get_numpy_include_dirs
-   ImportError: No module named numpy.distutils.misc_util
-
-To fix this, simply install ``numpy`` individually through pip in your virtual env, i.e.:
-
-.. code-block:: console
-
-   $ pip install numpy
-
-followed by executing the original install command once more:
-
-.. code-block:: console
-
-   $ pip install -e aiida-core
-
-This should fix the dependency error.
-
 Database installation and location
 ..................................
 

@@ -49,8 +49,7 @@ class NodeCaching:
         except exceptions.HashingError:
             if not ignore_errors:
                 raise
-            if self._node.logger:
-                self._node.logger.exception('Node hashing failed')
+            self._node.logger.exception('Node hashing failed')
             return None
 
     def _get_objects_to_hash(self) -> dict[str, t.Any]:

@@ -21,7 +21,7 @@ from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
 from aiida.common.escaping import escape_for_bash
 from aiida.common.warnings import warn_deprecation
 
-from ..transport import BlockingTransport, TransportInternalError, TransportPath
+from ..transport import BlockingTransport, TransportInternalError, TransportPath, has_magic
 
 __all__ = ('SshTransport', 'convert_to_bool', 'parse_sshconfig')
 
@@ -672,7 +672,7 @@ class SshTransport(BlockingTransport):
         so this should never happen within this class.
         """
         warn_deprecation(
-            '`chdir()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
+            '`getcwd()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
             version=3,
         )
         return self.sftp.getcwd()
@@ -805,10 +805,11 @@ class SshTransport(BlockingTransport):
             raise  # Typically if I don't have permissions (errno=13)
 
     def chmod(self, path: TransportPath, mode):
-        """Change permissions to path
+        """Change permissions of a path.
 
-        :param path: path to file
-        :param mode: new permission bits (integer)
+        :param path: Path to the file or directory.
+        :param mode: New permissions as an integer, for example 0o700 (octal) or 448 (decimal) results in `-rwx------`
+            for a file.
         """
         path = str(path)
 
@@ -866,8 +867,8 @@ class SshTransport(BlockingTransport):
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
 
-        if self.has_magic(localpath):
-            if self.has_magic(remotepath):
+        if has_magic(localpath):
+            if has_magic(remotepath):
                 raise ValueError('Pathname patterns are not allowed in the destination')
 
             # use the imported glob to analyze the path locally
@@ -1049,8 +1050,8 @@ class SshTransport(BlockingTransport):
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
 
-        if self.has_magic(remotepath):
-            if self.has_magic(localpath):
+        if has_magic(remotepath):
+            if has_magic(localpath):
                 raise ValueError('Pathname patterns are not allowed in the destination')
             # use the self glob to analyze the path remotely
             to_copy_list = self.glob(remotepath)
@@ -1268,10 +1269,10 @@ class SshTransport(BlockingTransport):
                 + f'Found instead {remotedestination} as remotedestination'
             )
 
-        if self.has_magic(remotedestination):
+        if has_magic(remotedestination):
             raise ValueError('Pathname patterns are not allowed in the destination')
 
-        if self.has_magic(remotesource):
+        if has_magic(remotesource):
             to_copy_list = self.glob(remotesource)
 
             if len(to_copy_list) > 1:
@@ -1615,8 +1616,8 @@ class SshTransport(BlockingTransport):
         source = os.path.normpath(remotesource)
         dest = os.path.normpath(remotedestination)
 
-        if self.has_magic(source):
-            if self.has_magic(dest):
+        if has_magic(source):
+            if has_magic(dest):
                 # if there are patterns in dest, I don't know which name to assign
                 raise ValueError('`remotedestination` cannot have patterns')
 

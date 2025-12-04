@@ -13,8 +13,9 @@ import gc
 import json
 import pathlib
 from collections import defaultdict
+from collections.abc import Iterator, Iterable
 from contextlib import contextmanager, nullcontext
-from typing import TYPE_CHECKING, Any, Iterator, Optional, Sequence, Set, Union
+from typing import TYPE_CHECKING, Any, Optional, Set, Union
 
 from disk_objectstore import Container, backup_utils
 from pydantic import BaseModel, Field
@@ -412,24 +413,24 @@ class PsqlDosBackend(StorageBackend):
             postgres.drop_dbuser(config['database_username'])
             LOGGER.report(f'Deleted database user `{config["database_username"]}`.')
 
-    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:
+    def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
         from aiida.storage.psql_dos.models.group import DbGroupNode
         from aiida.storage.psql_dos.models.node import DbLink, DbNode
 
         if not self.in_transaction:
             raise AssertionError('Cannot delete nodes and links outside a transaction')
 
+        pks = list(pks_to_delete)
+
         session = self.get_session()
         # Delete the membership of these nodes to groups.
-        session.query(DbGroupNode).filter(DbGroupNode.dbnode_id.in_(list(pks_to_delete))).delete(
-            synchronize_session='fetch'
-        )
+        session.query(DbGroupNode).filter(DbGroupNode.dbnode_id.in_(pks)).delete(synchronize_session='fetch')
         # Delete the links coming out of the nodes marked for deletion.
-        session.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        session.query(DbLink).filter(DbLink.input_id.in_(pks)).delete(synchronize_session='fetch')
         # Delete the links pointing to the nodes marked for deletion.
-        session.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        session.query(DbLink).filter(DbLink.output_id.in_(pks)).delete(synchronize_session='fetch')
         # Delete the actual nodes
-        session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        session.query(DbNode).filter(DbNode.id.in_(pks)).delete(synchronize_session='fetch')
 
     def get_backend_entity(self, model: base.Base) -> BackendEntity:
         """Return the backend entity that corresponds to the given Model instance

@@ -606,7 +606,7 @@ class TestVerdiDelete:
 
                 for i in range(n_calcjobs):
                     calcjob_node = CalcJobNode(computer=aiida_localhost)
-                    calcjob_node.add_incoming(workflow_node, link_type=LinkType.CALL_CALC, link_label='call')
+                    calcjob_node.base.links.add_incoming(workflow_node, link_type=LinkType.CALL_CALC, link_label='call')
 
                     workdir = tmp_path / f'calcjob_{uuid.uuid4()}'
                     workdir.mkdir()
@@ -637,22 +637,22 @@ class TestVerdiDelete:
         if nodes_deleted:
             for workflow_pk in self.workflow_pks:
                 with pytest.raises(NotExistent):
-                    WorkflowNode.objects.get(pk=workflow_pk)
+                    WorkflowNode.collection.get(pk=workflow_pk)
 
             for calcjob_pk in self.calcjob_pks:
                 with pytest.raises(NotExistent):
-                    CalcJobNode.objects.get(pk=calcjob_pk)
+                    CalcJobNode.collection.get(pk=calcjob_pk)
 
             for remote_pk in self.remote_pks:
                 with pytest.raises(NotExistent):
-                    RemoteData.objects.get(pk=remote_pk)
+                    RemoteData.collection.get(pk=remote_pk)
         else:
             for workflow_pk in self.workflow_pks:
-                WorkflowNode.objects.get(pk=workflow_pk)
+                WorkflowNode.collection.get(pk=workflow_pk)
             for calcjob_pk in self.calcjob_pks:
-                CalcJobNode.objects.get(pk=calcjob_pk)
+                CalcJobNode.collection.get(pk=calcjob_pk)
             for remote_pk in self.remote_pks:
-                RemoteData.objects.get(pk=remote_pk)
+                RemoteData.collection.get(pk=remote_pk)
 
         for remote_folder in self.remote_folders:
             if folders_deleted:

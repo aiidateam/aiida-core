@@ -16,7 +16,8 @@ from math import isclose
 
 import click
 
-from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
+from aiida.cmdline import VerdiCommandGroup
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo, echo_tabulate
@@ -627,7 +628,7 @@ def computer_delete(computer, dry_run):
     # Sofar, we can only get this info with QueryBuilder
     builder = QueryBuilder()
     builder.append(Computer, filters={'label': label}, tag='computer')
-    builder.append(Node, with_computer='computer', project=Node.fields.pk)
+    builder.append(Node, with_computer='computer', project=Node.fields.pk)  # type: ignore[arg-type]
     associated_nodes_pk = builder.all(flat=True)
 
     echo.echo_report(f'This computer has {len(associated_nodes_pk)} associated nodes')
@@ -716,7 +717,7 @@ def computer_config_show(computer, user, defaults, as_option_string):
             if config.get(option.name) or config.get(option.name) is False:
                 if t_opt.get('switch'):
                     option_value = (
-                        option.opts[-1] if config.get(option.name) else f"--no-{option.name.replace('_', '-')}"
+                        option.opts[-1] if config.get(option.name) else f"--no-{option.name.replace('_', '-')}"  # type: ignore[union-attr]
                     )
                 elif t_opt.get('is_flag'):
                     is_default = config.get(option.name) == transport_cli.transport_option_default(

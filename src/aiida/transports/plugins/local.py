@@ -20,7 +20,7 @@ from typing import Optional
 
 from aiida.common.warnings import warn_deprecation
 from aiida.transports import cli as transport_cli
-from aiida.transports.transport import BlockingTransport, TransportInternalError, TransportPath
+from aiida.transports.transport import BlockingTransport, TransportInternalError, TransportPath, has_magic
 
 
 # refactor or raise the limit: issue #1784
@@ -213,9 +213,11 @@ class LocalTransport(BlockingTransport):
         return os.path.isdir(os.path.join(self.curdir, path))
 
     def chmod(self, path: TransportPath, mode):
-        """Changes permission bits of object at path
-        :param path: path to modify
-        :param mode: permission bits
+        """Change permissions of a path.
+
+        :param path: Path to the file or directory.
+        :param mode: New permissions as an integer, for example 0o700 (octal) or 448 (decimal) results in `-rwx------`
+            for a file.
 
         :raise OSError: if path does not exist.
         """
@@ -266,8 +268,8 @@ class LocalTransport(BlockingTransport):
         if not os.path.isabs(localpath):
             raise ValueError('Source must be an absolute path')
 
-        if self.has_magic(localpath):
-            if self.has_magic(remotepath):
+        if has_magic(localpath):
+            if has_magic(remotepath):
                 raise ValueError('Pathname patterns are not allowed in the remotepath')
 
             to_copy_list = glob.glob(localpath)  # using local glob here
@@ -435,8 +437,8 @@ class LocalTransport(BlockingTransport):
         if not os.path.isabs(localpath):
             raise ValueError('Destination must be an absolute path')
 
-        if self.has_magic(remotepath):
-            if self.has_magic(localpath):
+        if has_magic(remotepath):
+            if has_magic(localpath):
                 raise ValueError('Pathname patterns are not allowed in the localpath')
             to_copy_list = self.glob(remotepath)
 
@@ -569,7 +571,7 @@ class LocalTransport(BlockingTransport):
             raise ValueError('Input remotesource to copy must be a non empty object')
         if not remotedestination:
             raise ValueError('Input remotedestination to copy must be a non empty object')
-        if not self.has_magic(remotesource):
+        if not has_magic(remotesource):
             if not os.path.exists(os.path.join(self.curdir, remotesource)):
                 raise FileNotFoundError('Source not found')
         if self.normalize(remotesource) == self.normalize(remotedestination):
@@ -582,8 +584,8 @@ class LocalTransport(BlockingTransport):
 
         the_destination = os.path.join(self.curdir, remotedestination)
 
-        if self.has_magic(remotesource):
-            if self.has_magic(remotedestination):
+        if has_magic(remotesource):
+            if has_magic(remotedestination):
                 raise ValueError('Pathname patterns are not allowed in the remotedestination')
 
             to_copy_list = self.glob(remotesource)
@@ -898,8 +900,8 @@ class LocalTransport(BlockingTransport):
         remotesource = os.path.normpath(str(remotesource))
         remotedestination = os.path.normpath(str(remotedestination))
 
-        if self.has_magic(remotesource):
-            if self.has_magic(remotedestination):
+        if has_magic(remotesource):
+            if has_magic(remotedestination):
                 # if there are patterns in dest, I don't know which name to assign
                 raise ValueError('Remotedestination cannot have patterns')
 

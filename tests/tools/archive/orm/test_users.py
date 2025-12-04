@@ -161,3 +161,30 @@ def test_non_default_user_nodes(aiida_profile_clean, tmp_path, aiida_localhost_f
         assert orm.load_node(uuid).user.email == new_email
     for uuid in uuids2:
         assert orm.load_node(uuid).user.email == manager.get_profile().default_user_email
+
+
+def test_filter_size(tmp_path, aiida_profile_clean):
+    """Tests if the query still works when the number of users is beyond the `filter_size limit."""
+    nb_nodes = 5
+    nodes = []
+    # We need to attach a node to the user otherwise it is not exported
+    for i in range(nb_nodes):
+        node = orm.Int(5, user=orm.User(email=f'{i}').store())
+        node.store()
+        nodes.append(node)
+
+    # Export DB
+    export_file_existing = tmp_path.joinpath('export.aiida')
+    create_archive(nodes, filename=export_file_existing)
+
+    # Clean database and reimport DB
+    aiida_profile_clean.reset_storage()
+    import_archive(export_file_existing, filter_size=2)
+
+    # Check correct import
+    builder = orm.QueryBuilder().append(orm.User, project=['id'])
+    builder = builder.all()
+
+    # We need to add one because default profile is added by reset_storage
+    # automatically
+    assert len(builder) == nb_nodes + 1

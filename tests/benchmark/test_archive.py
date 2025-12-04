@@ -18,8 +18,10 @@ import pytest
 
 from aiida.common.links import LinkType
 from aiida.engine import ProcessState
-from aiida.orm import CalcFunctionNode, Dict, load_node
+from aiida.orm import CalcFunctionNode, Dict, Node, QueryBuilder, load_node
 from aiida.tools.archive import create_archive, import_archive
+
+GROUP_NAME = 'import-export'
 
 
 def recursive_provenance(in_node, depth, breadth, num_objects=0):
@@ -68,7 +70,7 @@ TREE = {'no-objects': (4, 3, 0), 'with-objects': (4, 3, 2)}
 
 
 @pytest.mark.parametrize('depth,breadth,num_objects', TREE.values(), ids=TREE.keys())
-@pytest.mark.benchmark(group='import-export')
+@pytest.mark.benchmark(group=GROUP_NAME)
 def test_export(benchmark, tmp_path, depth, breadth, num_objects):
     """Benchmark exporting a provenance graph."""
     root_node = Dict()
@@ -88,7 +90,7 @@ def test_export(benchmark, tmp_path, depth, breadth, num_objects):
 
 
 @pytest.mark.parametrize('depth,breadth,num_objects', TREE.values(), ids=TREE.keys())
-@pytest.mark.benchmark(group='import-export')
+@pytest.mark.benchmark(group=GROUP_NAME)
 def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects):
     """Benchmark importing a provenance graph."""
     aiida_profile.reset_storage()
@@ -107,3 +109,47 @@ def test_import(aiida_profile, benchmark, tmp_path, depth, breadth, num_objects)
 
     benchmark.pedantic(_run, setup=_setup, iterations=1, rounds=12, warmup_rounds=1)
     load_node(root_uuid)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.benchmark(group='large-archive')
+def test_large_archive_export_benchmark(tmp_path, benchmark):
+    """Benchmark export performance with different filter_size values using 10k nodes."""
+    from tests.utils.nodes import create_int_nodes
+
+    num_nodes = 10_000
+
+    # Setup: create nodes (not benchmarked)
+    _ = create_int_nodes(num_nodes)
+    export_file = tmp_path / 'export_benchmark.aiida'
+
+    def export_operation():
+        create_archive(entities=None, filename=export_file, overwrite=True)
+
+    benchmark.pedantic(export_operation, rounds=3, iterations=1)
+
+    # Verify export succeeded
+    assert export_file.exists()
+
+
+@pytest.mark.benchmark(group='large-archive')
+def test_large_archive_import_benchmark(tmp_path, benchmark, aiida_profile_clean):
+    """Benchmark import performance."""
+    from tests.utils.nodes import create_int_nodes
+
+    num_nodes = 10_000
+
+    # Create archive once, outside benchmark (not timed at all)
+    _ = create_int_nodes(num_nodes)
+    export_file = tmp_path / 'import_benchmark.aiida'
+    _ = create_archive(entities=None, filename=export_file)
+
+    def import_operation():
+        aiida_profile_clean.reset_storage()
+        import_archive(export_file)
+
+    benchmark.pedantic(import_operation, rounds=5, iterations=1)
+
+    # Verify correctness
+    all_nodes = QueryBuilder().append(Node).all(flat=True)
+    assert len(all_nodes) == num_nodes

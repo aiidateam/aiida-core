@@ -16,10 +16,11 @@ import json
 import os
 import shutil
 from collections import defaultdict
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Any, BinaryIO, Iterator, Sequence
+from typing import Any, BinaryIO
 
 from pydantic import BaseModel, Field
 from sqlalchemy import column, func, insert, update
@@ -306,7 +307,7 @@ class SqliteTempBackend(StorageBackend):
         """Delete the storage and all the data."""
         self._repo.erase()
 
-    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]):
+    def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
         raise NotImplementedError
 
 

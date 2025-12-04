@@ -28,9 +28,6 @@ jobs:
       matrix:
         python-version: ['3.9', '3.13']
         database-backend: [psql]
-        include:
-        - python-version: '3.9'
-          database-backend: sqlite
 
     services:
       postgres:
@@ -74,19 +71,57 @@ jobs:
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
-      # NOTE1: Python 3.12 has a performance regression when running with code coverage
-      # so run code coverage only for python 3.9.
       run: |
-        pytest -n auto --db-backend ${{ matrix.database-backend }} -m 'not nightly' tests/ ${{ matrix.python-version == '3.9' && '--cov aiida' || '' }}
+        pytest -n auto --db-backend ${{ matrix.database-backend }} -m 'not nightly' tests/ ${{ matrix.python-version == '3.13' && '--cov aiida' || '' }}
 
     - name: Upload coverage report
-      if: matrix.python-version == 3.9 && github.repository == 'aiidateam/aiida-core'
+      if: matrix.python-version == 3.13 && github.repository == 'aiidateam/aiida-core'
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        name: aiida-pytests-py3.9
+        name: aiida-pytests-py3.13
         files: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
+
+  tests-minimum-requirements:
+    name: test minimum reqs (${{ matrix.python-version }}, ${{ matrix.database-backend }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9']
+        database-backend: [sqlite]
+
+    services:
+      rabbitmq:
+        image: rabbitmq:3.8.14-management
+        ports:
+        - 5672:5672
+        - 15672:15672
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install graphviz
+      run: sudo apt update && sudo apt install graphviz
+
+    - name: Install aiida-core
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: ${{ matrix.python-version }}
+        from-lock: 'false'
+        extras: tests
+        resolution-strategy: lowest-direct
+
+    - name: Setup SSH on localhost
+      run: .github/workflows/setup_ssh.sh
+
+    - name: Run test suite
+      env:
+        AIIDA_WARN_v3: 0
+      run: pytest --disable-warnings -n auto --db-backend ${{ matrix.database-backend }} -m 'not nightly' tests/
+
 
   tests-presto:
 
@@ -110,7 +145,7 @@ jobs:
     - name: Run test suite
       env:
         AIIDA_WARN_v3: 0
-      run: uv run pytest -n auto -m 'presto' tests/
+      run: pytest -n auto -m 'presto' tests/
 
 
   verdi:
@@ -129,7 +164,62 @@ jobs:
         extras: ''
 
     - name: Run verdi tests
-      run: |
-        verdi devel check-load-time
-        verdi devel check-undesired-imports
-        .github/workflows/verdi.sh
+      run: .github/workflows/verdi.sh
+
+
+  test-pytest-fixtures:
+    # Who watches the watchmen?
+    # Here we test the pytest fixtures in isolation from the rest of aiida-core test suite,
+    # since they can be used outside of aiida core context, e.g. in plugins.
+    # Unlike in other workflows in this file, we purposefully don't setup a test profile.
+
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:10
+        env:
+          POSTGRES_DB: test_aiida
+          POSTGRES_PASSWORD: ''
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+        - 5432:5432
+      rabbitmq:
+        image: rabbitmq:3.8.14-management
+        ports:
+        - 5672:5672
+        - 15672:15672
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install aiida-core
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: '3.9'
+        from-lock: 'true'
+        extras: tests
+
+    - name: Setup SSH
+      run: .github/workflows/setup_ssh.sh
+
+    - name: Test new pytest fixtures
+      run: pytest -v --cov aiida --noconftest tests/tools/pytest_fixtures/
+
+    - name: Test legacy pytest fixtures
+      run: pytest --cov aiida --noconftest .github/test_legacy_pytest_fixtures.py
+
+    - name: Upload coverage report
+      if: github.repository == 'aiidateam/aiida-core'
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        name: test-pytest-fixtures
+        files: ./coverage.xml
+        fail_ci_if_error: false  # don't fail job, if coverage upload fails

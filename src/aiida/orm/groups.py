@@ -11,7 +11,10 @@
 import datetime
 import warnings
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, Union, cast
+
+from typing_extensions import Self
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
@@ -26,11 +29,9 @@ if TYPE_CHECKING:
 
     from aiida.orm import Node, User
     from aiida.orm.implementation import StorageBackend
-    from aiida.orm.implementation.groups import BackendGroup  # noqa: F401
+    from aiida.orm.implementation.groups import BackendGroup
 
 __all__ = ('AutoGroup', 'Group', 'ImportGroup', 'UpfFamily')
-
-SelfType = TypeVar('SelfType', bound='Group')
 
 
 def load_group_class(type_string: str) -> Type['Group']:
@@ -202,7 +203,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     def __str__(self) -> str:
         return f'{self.__class__.__name__}<{self.label}>'
 
-    def store(self: SelfType) -> SelfType:
+    def store(self) -> Self:
         """Verify that the group is allowed to be stored, which is the case along as `type_string` is set."""
         if self._type_string is None:
             raise exceptions.StoringNotAllowed('`type_string` is `None` so the group cannot be stored.')
@@ -357,6 +358,85 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     def is_user_defined(self) -> bool:
         """:return: True if the group is user defined, False otherwise"""
         return not self.type_string
+
+    def dump(
+        self,
+        output_path: Optional[Union[str, Path]] = None,
+        # Dump mode options
+        dry_run: bool = False,
+        overwrite: bool = False,
+        # Time filtering options
+        past_days: Optional[int] = None,
+        start_date: Optional[datetime.datetime] = None,
+        end_date: Optional[datetime.datetime] = None,
+        filter_by_last_dump_time: bool = True,
+        # Node collection options
+        only_top_level_calcs: bool = True,
+        only_top_level_workflows: bool = True,
+        # Process dump options
+        include_inputs: bool = True,
+        include_outputs: bool = False,
+        include_attributes: bool = True,
+        include_extras: bool = False,
+        flat: bool = False,
+        dump_unsealed: bool = False,
+        symlink_calcs: bool = False,
+    ) -> Path:
+        """Dump the group and its associated nodes to disk.
+
+        :param output_path: Target directory for the dump, defaults to None
+        :param dry_run: Show what would be dumped without actually dumping, defaults to False
+        :param overwrite: Overwrite existing dump directories, defaults to False
+        :param past_days: Only include nodes modified in the past N days, defaults to None
+        :param start_date: Only include nodes modified after this date, defaults to None
+        :param end_date: Only include nodes modified before this date, defaults to None
+        :param filter_by_last_dump_time: Filter nodes by last dump time, defaults to True
+        :param only_top_level_calcs: Only dump top-level calculations, defaults to True
+        :param only_top_level_workflows: Only dump top-level workflows, defaults to True
+        :param include_inputs: Include input files in the dump, defaults to True
+        :param include_outputs: Include output files in the dump, defaults to False
+        :param include_attributes: Include node attributes in metadata, defaults to True
+        :param include_extras: Include node extras in metadata, defaults to False
+        :param flat: Use flat directory structure, defaults to False
+        :param dump_unsealed: Allow dumping of unsealed nodes, defaults to False
+        :param symlink_calcs: Create symlinks for calculation nodes, defaults to False
+        :return: Path where the group was dumped
+        """
+        from aiida.tools._dumping.config import GroupDumpConfig
+        from aiida.tools._dumping.engine import DumpEngine
+        from aiida.tools._dumping.utils import DumpPaths
+
+        # Construct GroupDumpConfig from kwargs
+        config_data = {
+            'groups': [self],  # Set this specific group
+            'dry_run': dry_run,
+            'overwrite': overwrite,
+            'past_days': past_days,
+            'start_date': start_date,
+            'end_date': end_date,
+            'filter_by_last_dump_time': filter_by_last_dump_time,
+            'only_top_level_calcs': only_top_level_calcs,
+            'only_top_level_workflows': only_top_level_workflows,
+            'include_inputs': include_inputs,
+            'include_outputs': include_outputs,
+            'include_attributes': include_attributes,
+            'include_extras': include_extras,
+            'flat': flat,
+            'dump_unsealed': dump_unsealed,
+            'symlink_calcs': symlink_calcs,
+        }
+
+        config = GroupDumpConfig.model_validate(config_data)
+
+        if output_path:
+            target_path: Path = Path(output_path).resolve()
+        else:
+            target_path = DumpPaths.get_default_dump_path(entity=self)
+
+        engine = DumpEngine(base_output_path=target_path, config=config, dump_target_entity=self)
+        engine.dump()
+
+        return target_path
 
     _deprecated_extra_methods = {
         'extras': 'all',

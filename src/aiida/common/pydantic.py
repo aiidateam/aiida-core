@@ -14,7 +14,7 @@ if t.TYPE_CHECKING:
     from aiida.orm import Entity
 
 
-def get_metadata(field_info, key: str, default: t.Any | None = None):
+def get_metadata(field_info: t.Any, key: str, default: t.Any | None = None) -> t.Any:
     """Return a the metadata of the given field for a particular key.
 
     :param field_info: The field from which to retrieve the metadata.
@@ -34,15 +34,15 @@ def MetadataField(  # noqa: N802
     priority: int = 0,
     short_name: str | None = None,
     option_cls: t.Any | None = None,
-    orm_class: type['Entity'] | str | None = None,
-    orm_to_model: t.Callable[['Entity', Path], t.Any] | None = None,
+    orm_class: type[Entity[t.Any, t.Any]] | str | None = None,
+    orm_to_model: t.Callable[[Entity[t.Any, t.Any], Path], t.Any] | None = None,
     model_to_orm: t.Callable[['BaseModel'], t.Any] | None = None,
     exclude_to_orm: bool = False,
     exclude_from_cli: bool = False,
     is_attribute: bool = True,
     is_subscriptable: bool = False,
-    **kwargs,
-):
+    **kwargs: t.Any,
+) -> t.Any:
     """Return a :class:`pydantic.fields.Field` instance with additional metadata.
 
     .. code-block:: python
@@ -75,7 +75,7 @@ def MetadataField(  # noqa: N802
     :param model_to_orm: Optional callable to convert the value of a field from a model instance to an ORM instance.
     :param exclude_to_orm: When set to ``True``, this field value will not be passed to the ORM entity constructor
         through ``Entity.from_model``.
-    :param exclude_to_orm: When set to ``True``, this field value will not be exposed on the CLI command that is
+    :param exclude_from_cli: When set to ``True``, this field value will not be exposed on the CLI command that is
         dynamically generated to create a new instance.
     :param is_attribute: Whether the field is stored as an attribute.
     :param is_subscriptable: Whether the field can be indexed like a list or dictionary.

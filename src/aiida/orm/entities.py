@@ -147,16 +147,18 @@ class Collection(abc.ABC, Generic[EntityType]):
         filters: Optional['FilterType'] = None,
         order_by: Optional['OrderByType'] = None,
         limit: Optional[int] = None,
+        offset: Optional[int] = None,
     ) -> List[EntityType]:
         """Find collection entries matching the filter criteria.
 
         :param filters: the keyword value pair filters to match
         :param order_by: a list of (key, direction) pairs specifying the sort order
         :param limit: the maximum number of results to return
+        :param offset: number of initial results to be skipped
 
         :return: a list of resulting matches
         """
-        query = self.query(filters=filters, order_by=order_by, limit=limit)
+        query = self.query(filters=filters, order_by=order_by, limit=limit, offset=offset)
         return query.all(flat=True)
 
     def all(self) -> List[EntityType]:

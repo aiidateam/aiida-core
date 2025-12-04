@@ -13,7 +13,7 @@ import gc
 import json
 import pathlib
 from collections import defaultdict
-from collections.abc import Iterator, Iterable
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from typing import TYPE_CHECKING, Any, Optional, Set, Union
 

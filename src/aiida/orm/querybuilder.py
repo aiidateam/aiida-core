@@ -1033,12 +1033,12 @@ class QueryBuilder:
             return value
 
     @overload
-    def first(self, flat: Literal[False] = False) -> Optional[list[Any]]: ...
+    def first(self, flat: Literal[False] = False) -> list[Any] | None: ...
 
     @overload
-    def first(self, flat: Literal[True]) -> Optional[Any]: ...
+    def first(self, flat: Literal[True]) -> Any | None: ...
 
-    def first(self, flat: bool = False) -> Optional[list[Any] | Any]:
+    def first(self, flat: bool = False) -> list[Any] | Any | None:
         """Return the first result of the query.
 
         Calling ``first`` results in an execution of the underlying query.
@@ -1105,7 +1105,13 @@ class QueryBuilder:
 
             yield item
 
-    def all(self, batch_size: Optional[int] = None, flat: bool = False) -> Union[List[List[Any]], List[Any]]:
+    @overload
+    def all(self, batch_size: int | None = None, flat: Literal[False] = False) -> list[list[Any]]: ...
+
+    @overload
+    def all(self, batch_size: int | None = None, flat: Literal[True] = True) -> list[Any]: ...
+
+    def all(self, batch_size: int | None = None, flat: bool = False) -> list[list[Any]] | list[Any]:
         """Executes the full query with the order of the rows as returned by the backend.
 
         The order inside each row is given by the order of the vertices in the path and the order of the projections for

@@ -10,6 +10,7 @@ from .stash import *
 __all__ = (
     'RemoteData',
     'RemoteStashCompressedData',
+    'RemoteStashCustomData',
     'RemoteStashData',
     'RemoteStashFolderData'
 )

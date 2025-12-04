@@ -104,7 +104,7 @@ class PortableCode(Code):
         if not filepath_files_path.is_dir():
             raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
 
-        self.filepath_executable = filepath_executable  # type: ignore[assignment] # should be fixed in mypy 1.15 see mypy/commit/1eb9d4c
+        self.filepath_executable = filepath_executable
         self.base.repository.put_object_from_tree(str(filepath_files))
 
     def _validate(self):
@@ -119,11 +119,15 @@ class PortableCode(Code):
         except TypeError as exception:
             raise exceptions.ValidationError('The `filepath_executable` is not set.') from exception
 
-        objects = self.base.repository.list_object_names()
-
-        if str(filepath_executable) not in objects:
+        try:
+            with self.base.repository.open(filepath_executable, 'r'):
+                # Try opening the file to see if it's in the repository.
+                # Note: we don't just check `self.base.repository.list_object_names()`
+                # since the file could be in a subdirectory
+                pass
+        except FileNotFoundError:
             raise exceptions.ValidationError(
-                f'The executable `{filepath_executable}` is not one of the uploaded files: {objects}'
+                f'The executable `{filepath_executable}` is not one of the uploaded files in the node repository.'
             )
 
     def can_run_on_computer(self, computer: Computer) -> bool:
@@ -200,3 +204,20 @@ class PortableCode(Code):
         _export_filpath_files_from_repo(self, target)
         _LOGGER.info(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
         return result, {}
+
+    def get_executable_cmdline_params(self, cmdline_params: list[str] | None = None) -> list:
+        """Return the list of executable with its command line parameters.
+
+        :param cmdline_params: List of command line parameters provided by the ``CalcJob`` plugin.
+        :return: List of the executable followed by its command line parameters.
+        """
+        executable = self.get_executable()
+
+        # Add './' if the executable is in the top folder (and not in a subfolder)
+        # otherwise a bash shell will not execute it (but default, `./` is not in the PATH)
+        if str(executable.parent) == '.':
+            str_executable = f'./{executable}'
+        else:
+            str_executable = str(executable)
+
+        return [str_executable] + (cmdline_params or [])

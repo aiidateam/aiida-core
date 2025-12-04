@@ -8,7 +8,15 @@
 ###########################################################################
 """Module to define the custom click type for code."""
 
+from __future__ import annotations
+
+import typing as t
+
+if t.TYPE_CHECKING:
+    from aiida.orm.utils.loaders import CodeEntityLoader
+
 import click
+from click.shell_completion import CompletionItem
 
 from aiida.cmdline.utils import decorators
 
@@ -22,7 +30,7 @@ class CodeParamType(IdentifierParamType):
 
     name = 'Code'
 
-    def __init__(self, sub_classes=None, entry_point=None):
+    def __init__(self, sub_classes: tuple[str, ...] | None = None, entry_point: str | None = None):
         """Construct the param type
 
         :param sub_classes: specify a tuple of Code sub classes to narrow the query set
@@ -32,7 +40,7 @@ class CodeParamType(IdentifierParamType):
         self._entry_point = entry_point
 
     @property
-    def orm_class_loader(self):
+    def orm_class_loader(self) -> type[CodeEntityLoader]:
         """Return the orm entity loader class, which should be a subclass of OrmEntityLoader. This class is supposed
         to be used to load the entity for a given identifier
 
@@ -43,17 +51,14 @@ class CodeParamType(IdentifierParamType):
         return CodeEntityLoader
 
     @decorators.with_dbenv()
-    def shell_complete(self, ctx, param, incomplete):
+    def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: bool) -> list[CompletionItem]:
         """Return possible completions based on an incomplete value.
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """
-        return [
-            click.shell_completion.CompletionItem(option)
-            for (option,) in self.orm_class_loader.get_options(incomplete, project='label')
-        ]
+        return [CompletionItem(option) for (option,) in self.orm_class_loader.get_options(incomplete, project='label')]  # type: ignore[no-untyped-call]
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
         code = super().convert(value, param, ctx)
 
         if code and self._entry_point is not None:

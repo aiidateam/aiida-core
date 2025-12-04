@@ -1,5 +1,6 @@
 """Tests for the :mod:`aiida.orm.nodes.repository` module."""
 
+import io
 import pathlib
 
 import pytest
@@ -260,3 +261,18 @@ def test_as_path():
     with node.base.repository.as_path('relative/path.dat') as filepath:
         assert filepath.read_bytes() == b'content_relative'
     assert not filepath.exists()
+
+
+def test_open_text():
+    """Test the ``NodeRepository.open`` method in text mode."""
+    node = Data()
+    node.base.repository.put_object_from_bytes(b'content', 'file')
+
+    # The 'r' case
+    with node.base.repository.open('file', 'r') as handle:
+        assert isinstance(handle, io.TextIOWrapper)
+        assert handle.read() == 'content'
+
+    # The 'rb' case
+    with node.base.repository.open('file', 'rb') as handle:
+        assert handle.read() == b'content'

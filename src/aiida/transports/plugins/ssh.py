@@ -672,7 +672,7 @@ class SshTransport(BlockingTransport):
         so this should never happen within this class.
         """
         warn_deprecation(
-            '`chdir()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
+            '`getcwd()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
             version=3,
         )
         return self.sftp.getcwd()
@@ -805,10 +805,11 @@ class SshTransport(BlockingTransport):
             raise  # Typically if I don't have permissions (errno=13)
 
     def chmod(self, path: TransportPath, mode):
-        """Change permissions to path
+        """Change permissions of a path.
 
-        :param path: path to file
-        :param mode: new permission bits (integer)
+        :param path: Path to the file or directory.
+        :param mode: New permissions as an integer, for example 0o700 (octal) or 448 (decimal) results in `-rwx------`
+            for a file.
         """
         path = str(path)
 

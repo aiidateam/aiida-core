@@ -95,14 +95,11 @@ class MockFunctions:
 
 
 @pytest.fixture(scope='function')
-@pytest.mark.usefixtures('started_daemon_client')
-def fork_worker_context(aiida_profile):
+def fork_worker_context(aiida_profile, started_daemon_client):
     """Runs daemon worker on a new process with redirected stdout and stderr streams."""
     import multiprocessing
 
-    from aiida.engine.daemon.client import get_daemon_client
-
-    client = get_daemon_client(aiida_profile)
+    client = started_daemon_client
     nb_workers = client.get_number_of_workers()
     # The workers are decreased to zero to ensure that the worker that is
     # subsequently started through this fixture is the one that receives all

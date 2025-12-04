@@ -61,7 +61,7 @@ class WorkChainNode(WorkflowNode):
         return self._tools
 
     @classproperty
-    def _updatable_attributes(cls) -> Tuple[str, ...]:  # type: ignore[override]  # noqa: N805
+    def _updatable_attributes(cls) -> Tuple[str, ...]:  # noqa: N805
         return super()._updatable_attributes + (cls.STEPPER_STATE_INFO_KEY,)
 
     @property

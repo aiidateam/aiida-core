@@ -8,13 +8,19 @@
 ###########################################################################
 """Tools and an option class for interactive parameter entry with additional features such as help lookup."""
 
+from __future__ import annotations
+
 import typing as t
 
 import click
+from click.shell_completion import CompletionItem
 
 from aiida.cmdline.utils import echo
 
 from .conditional import ConditionalOption
+
+if t.TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class InteractiveOption(ConditionalOption):
@@ -47,7 +53,13 @@ class InteractiveOption(ConditionalOption):
     CHARACTER_PROMPT_HELP = '?'
     CHARACTER_IGNORE_DEFAULT = '!'
 
-    def __init__(self, param_decls=None, prompt_fn=None, contextual_default=None, **kwargs):
+    def __init__(
+        self,
+        param_decls: Sequence[str] | None = None,
+        prompt_fn: t.Callable[[click.Context], bool] | None = None,
+        contextual_default: t.Any | None = None,
+        **kwargs: t.Any,
+    ):
         """Construct a new instance.
 
         :param param_decls: relayed to :class:`click.Option`
@@ -59,12 +71,12 @@ class InteractiveOption(ConditionalOption):
         self._contextual_default = contextual_default
 
     @property
-    def prompt(self):
+    def prompt(self) -> str | None:
         """Return a colorized version of the prompt text."""
         return click.style(self._prompt, fg=self.PROMPT_COLOR)
 
     @prompt.setter
-    def prompt(self, value):
+    def prompt(self, value: str | None) -> None:
         """Set the prompt text."""
         self._prompt = value
 
@@ -86,7 +98,7 @@ class InteractiveOption(ConditionalOption):
         if not hasattr(ctx, 'prompt_loop_info_printed'):
             echo.echo_report(f'enter {self.CHARACTER_PROMPT_HELP} for help.')
             echo.echo_report(f'enter {self.CHARACTER_IGNORE_DEFAULT} to ignore the default and set no value.')
-            ctx.prompt_loop_info_printed = True
+            ctx.prompt_loop_info_printed = True  # type: ignore[attr-defined]
 
         return super().prompt_for_value(ctx)
 
@@ -101,6 +113,9 @@ class InteractiveOption(ConditionalOption):
         specified the ``click.Context.get_parameter_source`` method is used. The ``click.Parameter.handle_parse_result``
         method will set this after ``Parameter.consume_value``` is called but before ``Parameter.process_value`` is.
         """
+        if self.name is None:
+            return value
+
         source = ctx.get_parameter_source(self.name)
 
         if source is None:
@@ -127,11 +142,14 @@ class InteractiveOption(ConditionalOption):
                 return self.prompt_for_value(ctx)
             raise
 
-    def get_help_message(self):
+    def get_help_message(self) -> str:
         """Return a message to be displayed for in-prompt help."""
         message = self.help or f'Expecting {self.type.name}'
 
-        choices = getattr(self.type, 'shell_complete', lambda x, y, z: [])(self.type, None, '')
+        shell_complete: t.Callable[[click.ParamType, click.Context | None, str], list[CompletionItem]] = getattr(
+            self.type, 'shell_complete', lambda x, y, z: []
+        )
+        choices = shell_complete(self.type, None, '')
         choices_string = []
 
         for choice in choices:
@@ -146,7 +164,7 @@ class InteractiveOption(ConditionalOption):
 
         return message
 
-    def get_default(self, ctx: click.Context, call: bool = True) -> t.Optional[t.Union[t.Any, t.Callable[[], t.Any]]]:
+    def get_default(self, ctx: click.Context, call: bool = True) -> t.Any | None:
         """Provides the functionality of :meth:`click.Option.get_default`"""
         if ctx.resilient_parsing:
             return None
@@ -157,7 +175,7 @@ class InteractiveOption(ConditionalOption):
             default = super().get_default(ctx, call=call)
 
         try:
-            default = self.type.deconvert_default(default)
+            default = self.type.deconvert_default(default)  # type: ignore[attr-defined]
         except AttributeError:
             pass
 
@@ -180,7 +198,7 @@ class TemplateInteractiveOption(InteractiveOption):
     This is useful for options that need to be able to specify multiline string values.
     """
 
-    def __init__(self, param_decls=None, **kwargs):
+    def __init__(self, param_decls: Sequence[str] | None = None, **kwargs: t.Any):
         """Define the configuration for the multiline template in the keyword arguments.
 
         :param template: name of the template to use from the ``aiida.cmdline.templates`` directory.

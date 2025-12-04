@@ -65,11 +65,11 @@ class Transport(abc.ABC):
     """
 
     # This will be used for ``Computer.get_minimum_job_poll_interval``
-    DEFAULT_MINIMUM_JOB_POLL_INTERVAL = 10
+    DEFAULT_MINIMUM_JOB_POLL_INTERVAL = 10.0
 
     # This is used as a global default in case subclasses don't redefine this,
     # but this should  be redefined in plugins where appropriate
-    _DEFAULT_SAFE_OPEN_INTERVAL = 30.0
+    _DEFAULT_SAFE_OPEN_INTERVAL = 15.0
 
     # To be defined in the subclass
     # See the ssh or local plugin to see the format
@@ -100,6 +100,8 @@ class Transport(abc.ABC):
                 'prompt': 'Connection cooldown time (s)',
                 'help': 'Minimum time interval in seconds between opening new connections.',
                 'callback': validate_positive_number,
+                'default': _DEFAULT_SAFE_OPEN_INTERVAL,
+                'non_interactive_default': True,
             },
         ),
     ]
@@ -419,7 +421,10 @@ class Transport(abc.ABC):
             self.logger.error('Unknown parameters passed to copy_from_remote_to_remote')
 
         with SandboxFolder() as sandbox:
-            self.get(remotesource, sandbox.abspath, **kwargs_get)
+            # TODO: mypy error: Argument 2 to "get" of "Transport"
+            # has incompatible type "str | PurePath";
+            # expected "str | Path | PurePosixPath"
+            self.get(remotesource, sandbox.abspath, **kwargs_get)  # type: ignore[arg-type]
             # Then we scan the full sandbox directory with get_content_list,
             # because copying directly from sandbox.abspath would not work
             # to copy a single file into another single file, and copying
@@ -998,7 +1003,13 @@ class Transport(abc.ABC):
         """
 
     @abc.abstractmethod
-    def extract(self, remotesource: TransportPath, remotedestination: TransportPath, overwrite: bool = True):
+    def extract(
+        self,
+        remotesource: TransportPath,
+        remotedestination: TransportPath,
+        overwrite: bool = True,
+        strip_components: int = 0,
+    ):
         """Extract a remote archive.
 
         Does not accept glob patterns, as it doesn't make much sense and we don't have a usecase for it.
@@ -1007,6 +1018,7 @@ class Transport(abc.ABC):
         :param remotedestination: path to the remote destination directory
         :param overwrite: if True, overwrite the file at remotedestination if it already exists
             (we don't have a usecase for False, sofar. The parameter is kept for clarity.)
+        :param strip_components: strip NUMBER leading components from file names on extraction
 
         :raises OSError: if the remotesource does not exist.
         :raises OSError: if the extraction fails.
@@ -1494,7 +1506,11 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     async def extract_async(
-        self, remotesource: TransportPath, remotedestination: TransportPath, overwrite: bool = True
+        self,
+        remotesource: TransportPath,
+        remotedestination: TransportPath,
+        overwrite: bool = True,
+        strip_components: int = 0,
     ):
         """Extract a remote archive.
 
@@ -1504,6 +1520,7 @@ class Transport(abc.ABC):
         :param remotedestination: path to the remote destination directory
         :param overwrite: if True, overwrite the file at remotedestination if it already exists
             (we don't have a usecase for False, sofar. The parameter is kept for clarity.)
+        :param strip_components: strip NUMBER leading components from file names on extraction
 
         :raises OSError: if the remotesource does not exist.
         :raises OSError: if the extraction fails.
@@ -1558,6 +1575,8 @@ class BlockingTransport(Transport):
         if format not in ['tar', 'tar.gz', 'tar.bz2', 'tar.xz']:
             raise ValueError(f'Unsupported compression format: {type}')
 
+        self.makedirs(Path(remotedestination).parent, ignore_existing=True)
+
         compression_flag = {
             'tar': '',
             'tar.gz': 'z',
@@ -1603,7 +1622,15 @@ class BlockingTransport(Transport):
             )
             raise OSError(f'Error while creating the tar archive. Exit code: {retval}')
 
-    def extract(self, remotesource, remotedestination, overwrite=True, *args, **kwargs):
+    def extract(
+        self,
+        remotesource: TransportPath,
+        remotedestination: TransportPath,
+        overwrite: bool = True,
+        strip_components: int = 0,
+        *args,
+        **kwargs,
+    ):
         # The following implementation works for all blocking transoprt plugins
         """Extract a remote archive.
 
@@ -1613,6 +1640,7 @@ class BlockingTransport(Transport):
         :param remotedestination: path to the remote destination directory
         :param overwrite: if True, overwrite the file at remotedestination if it already exists
             (we don't have a usecase for False, sofar. The parameter is kept for clarity.)
+        :param strip_components: strip NUMBER leading components from file names on extraction
 
         :raises OSError: if the remotesource does not exist.
         :raises OSError: if the extraction fails.
@@ -1625,7 +1653,7 @@ class BlockingTransport(Transport):
 
         self.makedirs(remotedestination, ignore_existing=True)
 
-        tar_command = f'tar -xf {remotesource!s} -C {remotedestination!s} '
+        tar_command = f'tar --strip-components {strip_components} -xf {remotesource!s} -C {remotedestination!s} '
 
         retval, stdout, stderr = self.exec_command_wait(tar_command)
 
@@ -1782,9 +1810,9 @@ class BlockingTransport(Transport):
         """Counterpart to compress() that is async."""
         return self.compress(format, remotesources, remotedestination, root_dir, overwrite, dereference)
 
-    async def extract_async(self, remotesource, remotedestination, overwrite=True):
+    async def extract_async(self, remotesource, remotedestination, overwrite=True, strip_components=0):
         """Counterpart to extract() that is async."""
-        return self.extract(remotesource, remotedestination, overwrite)
+        return self.extract(remotesource, remotedestination, overwrite, strip_components)
 
 
 class AsyncTransport(Transport):

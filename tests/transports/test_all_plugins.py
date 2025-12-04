@@ -13,6 +13,7 @@ Plugin specific tests will be written in the corresponding test file.
 
 import io
 import os
+import re
 import shutil
 import signal
 import tempfile
@@ -23,6 +24,7 @@ from pathlib import Path
 import psutil
 import pytest
 
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.plugins import SchedulerFactory, TransportFactory
 from aiida.transports import Transport
 
@@ -30,6 +32,8 @@ from aiida.transports import Transport
 # TODO : test for copy with/without patterns, overwriting folder
 # TODO : test for exotic cases of copy with source = destination
 # TODO : silly cases of copy/put/get from self to self
+
+CHDIR_WARNING = re.escape('`chdir()` is deprecated and will be removed')
 
 
 @pytest.fixture(scope='function')
@@ -63,7 +67,7 @@ def tmp_path_local(tmp_path_factory):
     ],
 )
 def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
-    """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
+    """Fixture that parametrizes over all the registered implementations of the transport plugins."""
     plugin = TransportFactory(request.param[0])
 
     if request.param[0] == 'core.ssh':
@@ -321,10 +325,11 @@ def test_chdir_to_empty_string(custom_transport):
         return
 
     with custom_transport as transport:
-        new_dir = transport.normalize(os.path.join('/', 'tmp'))
-        transport.chdir(new_dir)
-        transport.chdir('')
-        assert new_dir == transport.getcwd()
+        with pytest.warns(AiidaDeprecationWarning, match=CHDIR_WARNING):
+            new_dir = transport.normalize(os.path.join('/', 'tmp'))
+            transport.chdir(new_dir)
+            transport.chdir('')
+            assert new_dir == transport.getcwd()
 
 
 def test_put_and_get(custom_transport, tmp_path_remote, tmp_path_local):
@@ -985,14 +990,16 @@ def test_exec_pwd(custom_transport, tmp_path_remote):
         subfolder = """_'s f"#"""  # A folder with characters to escape
         subfolder_fullpath = os.path.join(location, subfolder)
 
-        transport.chdir(location)
+        with pytest.warns(AiidaDeprecationWarning, match=CHDIR_WARNING):
+            transport.chdir(location)
         if not transport.isdir(subfolder):
             # Since I created the folder, I will remember to
             # delete it at the end of this test
             transport.mkdir(subfolder)
 
             assert transport.isdir(subfolder)
-            transport.chdir(subfolder)
+            with pytest.warns(AiidaDeprecationWarning, match=CHDIR_WARNING):
+                transport.chdir(subfolder)
 
             assert subfolder_fullpath == transport.getcwd()
             retcode, stdout, stderr = transport.exec_command_wait('pwd')
@@ -1352,7 +1359,7 @@ def test_compress_basic(
 
         transport.get(tmp_path_remote / archive_name, tmp_path_local / archive_name)
 
-        shutil.unpack_archive(tmp_path_local / archive_name, tmp_path_local / 'extracted')
+        shutil.unpack_archive(tmp_path_local / archive_name, tmp_path_local / 'extracted', filter='tar')
 
         extracted = [
             str(path.relative_to(tmp_path_local / 'extracted')) for path in (tmp_path_local / 'extracted').rglob('*')
@@ -1413,7 +1420,7 @@ def test_compress_glob(
 
         transport.get(tmp_path_remote / archive_name, tmp_path_local / archive_name)
 
-        shutil.unpack_archive(tmp_path_local / archive_name, tmp_path_local / 'extracted_glob')
+        shutil.unpack_archive(tmp_path_local / archive_name, tmp_path_local / 'extracted_glob', filter='data')
 
         extracted = [
             str(path.relative_to(tmp_path_local / 'extracted_glob'))
@@ -1501,6 +1508,10 @@ def test_glob(custom_transport, tmp_path_local):
         tmp_path_local.joinpath(subpath).write_text('touch')
 
     with custom_transport as transport:
+        # do not raise an error if the path does not exist
+        g_list = transport.glob(str(tmp_path_local) + '/non_existing/*.txt')
+        assert g_list == []
+
         g_list = transport.glob(str(tmp_path_local) + '/*.txt')
         paths = [str(tmp_path_local.joinpath(item)) for item in ['i.txt', 'j.txt']]
         assert sorted(paths) == sorted(g_list)

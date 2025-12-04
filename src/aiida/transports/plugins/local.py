@@ -213,9 +213,11 @@ class LocalTransport(BlockingTransport):
         return os.path.isdir(os.path.join(self.curdir, path))
 
     def chmod(self, path: TransportPath, mode):
-        """Changes permission bits of object at path
-        :param path: path to modify
-        :param mode: permission bits
+        """Change permissions of a path.
+
+        :param path: Path to the file or directory.
+        :param mode: New permissions as an integer, for example 0o700 (octal) or 448 (decimal) results in `-rwx------`
+            for a file.
 
         :raise OSError: if path does not exist.
         """

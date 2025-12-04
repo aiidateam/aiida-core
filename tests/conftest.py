@@ -31,12 +31,21 @@ import pytest
 from aiida import get_profile, orm
 from aiida.common.folders import Folder
 from aiida.common.links import LinkType
+from aiida.manage import get_manager
 from aiida.manage.configuration import Profile, get_config, load_profile
+
+try:
+    from typing import ParamSpec
+except ImportError:
+    # Fallback for Python 3.9 and older
+    from typing_extensions import ParamSpec  # type: ignore[assignment]
 
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.config import Config
 
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
+
+P = ParamSpec('P')
 
 
 class TestDbBackend(Enum):
@@ -143,45 +152,15 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
 
 @pytest.fixture()
 def non_interactive_editor(request):
-    """Fixture to patch click's `Editor.edit_file`.
+    """Fixture to patch default editor.
 
-    In `click==7.1` the `Editor.edit_file` command was changed to escape the `os.environ['EDITOR']` command. Our tests
-    are currently abusing this variable to define an automated vim command in order to make an interactive command
-    non-interactive, and escaping it makes bash interpret the command and its arguments as a single command instead.
-    Here we patch the method to remove the escaping of the editor command.
+    We (ab)use the `os.environ['EDITOR']` variable to define an automated
+    vim command in order to make an interactive command non-interactive
 
     :param request: the command to set for the editor that is to be called
     """
-    from unittest.mock import patch
-
-    from click._termui_impl import Editor
-
     os.environ['EDITOR'] = request.param
     os.environ['VISUAL'] = request.param
-
-    def edit_file(self, filename):
-        import subprocess
-
-        editor = self.get_editor()
-        if self.env:
-            environ = os.environ.copy()
-            environ.update(self.env)
-        else:
-            environ = None
-        try:
-            with subprocess.Popen(
-                f'{editor} {filename}',  # This is the line that we change removing `shlex_quote`
-                env=environ,
-                shell=True,
-            ) as process:
-                exit_code = process.wait()
-                if exit_code != 0:
-                    raise click.ClickException(f'{editor}: Editing failed!')
-        except OSError as exception:
-            raise click.ClickException(f'{editor}: Editing failed: {exception}')
-
-    with patch.object(Editor, 'edit_file', edit_file):
-        yield
 
 
 @pytest.fixture(scope='function')
@@ -373,7 +352,7 @@ def empty_config(tmp_path) -> Config:
     :return: a new empty config instance.
     """
     from aiida.common.utils import Capturing
-    from aiida.manage import configuration, get_manager
+    from aiida.manage import configuration
     from aiida.manage.configuration.settings import AiiDAConfigDir
 
     manager = get_manager()
@@ -412,14 +391,14 @@ def empty_config(tmp_path) -> Config:
         manager.load_profile(current_profile_name)
 
 
-@pytest.fixture
-def profile_factory() -> Profile:
+@pytest.fixture  # type: ignore[misc]
+def profile_factory() -> t.Callable[t.Concatenate[str, P], Profile]:
     """Create a new profile instance.
 
     :return: the profile instance.
     """
 
-    def _create_profile(name='test-profile', **kwargs):
+    def _create_profile(name='test-profile', **kwargs) -> Profile:
         repository_dirpath = kwargs.pop('repository_dirpath', get_config().dirpath)
 
         profile_dictionary = {
@@ -513,7 +492,6 @@ def config_with_profile(config_with_profile_factory):
 @pytest.fixture
 def manager():
     """Get the ``Manager`` instance of the currently loaded profile."""
-    from aiida.manage import get_manager
 
     return get_manager()
 
@@ -804,7 +782,11 @@ def run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, 
     # circumvents this machinery.
     command = VerdiCommandGroup.add_verbosity_option(command)
 
-    runner = CliRunner(mix_stderr=False)
+    try:
+        runner = CliRunner(mix_stderr=False)
+    except TypeError:
+        # click >=8.2.0
+        runner = CliRunner()
     result = runner.invoke(command, parameters, input=user_input, obj=obj, **kwargs)
     return CliResult(
         exc_info=result.exc_info or (None, None, None),

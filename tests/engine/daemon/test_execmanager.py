@@ -683,7 +683,8 @@ async def test_stashing(
     monkeypatch,
     caplog,
 ):
-    """Test the stashing of files."""
+    """Test `stash_calculation`"""
+
     import logging
 
     computer_wdir = tmp_path / 'aiida'
@@ -698,15 +699,25 @@ async def test_stashing(
     node.set_remote_workdir(str(node_workdir))
     create_file_hierarchy(file_hierarchy, node_workdir)
 
-    node.set_option(
-        'stash',
-        {
-            'source_list': ['*'],
-            'target_base': str(dest_path),
-            'stash_mode': stash_mode,
-            'dereference': True,  # ignored in case of COPY
-        },
-    )
+    if stash_mode == StashMode.COPY.value:
+        node.set_option(
+            'stash',
+            {
+                'source_list': ['*'],
+                'target_base': str(dest_path),
+                'stash_mode': stash_mode,
+            },
+        )
+    else:
+        node.set_option(
+            'stash',
+            {
+                'source_list': ['*'],
+                'target_base': str(dest_path),
+                'stash_mode': stash_mode,
+                'dereference': True,  # ignored in case of COPY
+            },
+        )
 
     def mock_get_authinfo(*args, **kwargs):
         class MockAuthInfo:
@@ -742,15 +753,26 @@ async def test_stashing(
     ## 2) test Error handling
     dest_path_error = tmp_path / 'stash_path_error'
     dest_path_error.mkdir()
-    node.set_option(
-        'stash',
-        {
-            'source_list': ['*'],
-            'target_base': str(dest_path_error),
-            'stash_mode': stash_mode,
-            'dereference': True,  # ignored in case of COPY
-        },
-    )
+
+    if stash_mode == StashMode.COPY.value:
+        node.set_option(
+            'stash',
+            {
+                'source_list': ['*'],
+                'target_base': str(dest_path_error),
+                'stash_mode': stash_mode,
+            },
+        )
+    else:
+        node.set_option(
+            'stash',
+            {
+                'source_list': ['*'],
+                'target_base': str(dest_path_error),
+                'stash_mode': stash_mode,
+                'dereference': True,  # ignored in case of COPY
+            },
+        )
 
     with LocalTransport() as transport:
         if stash_mode == StashMode.COPY.value:
@@ -770,7 +792,7 @@ async def test_stashing(
         # the error should only be logged to EXEC_LOGGER.warning and exit with 0
         with caplog.at_level(logging.WARNING):
             await execmanager.stash_calculation(node, transport)
-            assert any('failed to stash' in message for message in caplog.messages)
+            assert any('Failed to stash' in message for message in caplog.messages)
 
     # Ensure no files were created in the destination path after the error
     assert not any(dest_path_error.iterdir())

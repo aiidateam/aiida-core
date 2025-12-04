@@ -164,13 +164,16 @@ class _AsynchronousSSHBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    async def glob(self, path: str):
+    async def glob(self, path: str, ignore_nonexisting: bool = True):
         """Return a list of files and directories matching the glob pattern.
         :param path: A path potentially containing the glob pattern
+        :param ignore_nonexisting: If `True` (default),
+        return an empty list when path does not exist or no matching files/folders are found.
 
         :return: A list of matching files and directories
 
-        :raises OSError: If the path does not exist or no matching files/folders are found.
+        :raises OSError: If the path does not exist or no matching files/folders are found,
+            and only if `ignore_nonexisting` is `False`.
         """
 
     @abc.abstractmethod
@@ -326,10 +329,13 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         """
         await self._sftp.symlink(source, destination)
 
-    async def glob(self, path: str):
+    async def glob(self, path: str, ignore_nonexisting: bool = True):
         try:
             return await self._sftp.glob(path)
         except asyncssh.sftp.SFTPNoSuchFile:
+            if ignore_nonexisting:
+                self.logger.debug(f'Glob pattern {path} did not match any files or directories. Ignoring.')
+                return []
             raise OSError(f'Either the remote path {path} does not exist, or a matching file/folder not found.')
 
     async def chmod(self, path: str, mode: int, follow_symlinks: bool = True):
@@ -383,7 +389,10 @@ class _AsyncSSH(_AsynchronousSSHBackend):
             except asyncssh.sftp.SFTPFailure as exc:
                 raise OSError(f'Error while copying {remotesource} to {remotedestination}: {exc}')
         else:
-            self.logger.warning('The remote copy is not supported, using the `cp` command to copy the file/folder')
+            self.logger.debug(
+                'The SSH server does not support SFTP remote copy (SFTP >= v9.0), '
+                'falling back on the `cp` command to copy the file/folder.'
+            )
             # I copy pasted the whole logic below from SshTransport class:
 
             async def _exec_cp(cp_exe: str, cp_flags: str, src: str, dst: str):
@@ -518,11 +527,14 @@ class _OpenSSH(_AsynchronousSSHBackend):
         if returncode != 0:
             raise OSError(f'Failed to change permissions: {path}')
 
-    async def glob(self, path: str):
+    async def glob(self, path: str, ignore_nonexisting: bool = True):
         commands = self.ssh_command_generator(f'find {path} -maxdepth 0')
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
+            if ignore_nonexisting:
+                self.logger.debug(f'Glob pattern {path} did not match any files or directories. Ignoring.')
+                return []
             raise OSError(f'Either the path {path} does not exist, or a matching file/folder not found.')
 
         return list(stdout.strip().split())

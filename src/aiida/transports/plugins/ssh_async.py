@@ -133,6 +133,7 @@ class AsyncSshTransport(AsyncTransport):
         # a computer with core.ssh_async transport plugin should be configured before any instantiation.
         self.machine = kwargs.pop('host', kwargs.pop('machine'))
         self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
+        self._semaphore = asyncio.Semaphore(self._max_io_allowed)
         self.script_before = kwargs.pop('script_before', 'None')
 
         if kwargs.get('backend') == 'openssh':
@@ -145,19 +146,9 @@ class AsyncSshTransport(AsyncTransport):
 
             self.async_backend = _AsyncSSH(self.machine, self.logger, self._bash_command_str)  # type: ignore[assignment]
 
-        self._concurrent_io = 0
-
     @property
     def max_io_allowed(self):
         return self._max_io_allowed
-
-    async def _lock(self, sleep_time=0.5):
-        while self._concurrent_io >= self.max_io_allowed:
-            await asyncio.sleep(sleep_time)
-        self._concurrent_io += 1
-
-    async def _unlock(self):
-        self._concurrent_io -= 1
 
     async def open_async(self):
         """Open the transport.
@@ -172,7 +163,11 @@ class AsyncSshTransport(AsyncTransport):
         if self.script_before != 'None':
             os.system(f'{self.script_before}')
 
-        await self.async_backend.open()
+        try:
+            await self.async_backend.open()
+        except OSError as exc:
+            raise OSError(f'Error while opening the transport: {exc}')
+
         self._is_open = True
 
         return self
@@ -312,14 +307,17 @@ class AsyncSshTransport(AsyncTransport):
         if os.path.isfile(localpath) and not overwrite:
             raise OSError('Destination already exists: not overwriting it')
 
-        try:
-            await self._lock()
-            await self.async_backend.get(
-                remotepath=remotepath, localpath=localpath, dereference=dereference, preserve=preserve, recursive=False
-            )
-            await self._unlock()
-        except OSError as exc:
-            raise OSError(f'Error while downloading file {remotepath}: {exc}')
+        async with self._semaphore:
+            try:
+                await self.async_backend.get(
+                    remotepath=remotepath,
+                    localpath=localpath,
+                    dereference=dereference,
+                    preserve=preserve,
+                    recursive=False,
+                )
+            except OSError as exc:
+                raise OSError(f'Error while downloading file {remotepath}: {exc}')
 
     async def gettree_async(
         self,
@@ -379,19 +377,18 @@ class AsyncSshTransport(AsyncTransport):
 
         content_list = await self.listdir_async(remotepath)
         for content_ in content_list:
-            try:
-                await self._lock()
-                parentpath = str(PurePath(remotepath) / content_)
-                await self.async_backend.get(
-                    remotepath=parentpath,
-                    localpath=localpath,
-                    dereference=dereference,
-                    preserve=preserve,
-                    recursive=True,
-                )
-                await self._unlock()
-            except OSError as exc:
-                raise OSError(f'Error while downloading file {parentpath}: {exc}')
+            parentpath = str(PurePath(remotepath) / content_)
+            async with self._semaphore:
+                try:
+                    await self.async_backend.get(
+                        remotepath=parentpath,
+                        localpath=localpath,
+                        dereference=dereference,
+                        preserve=preserve,
+                        recursive=True,
+                    )
+                except OSError as exc:
+                    raise OSError(f'Error while downloading file {parentpath}: {exc}')
 
     async def put_async(
         self,
@@ -524,14 +521,17 @@ class AsyncSshTransport(AsyncTransport):
         if await self.isfile_async(remotepath) and not overwrite:
             raise OSError('Destination already exists: not overwriting it')
 
-        try:
-            await self._lock()
-            await self.async_backend.put(
-                localpath=localpath, remotepath=remotepath, dereference=dereference, preserve=preserve, recursive=False
-            )
-            await self._unlock()
-        except OSError as exc:
-            raise OSError(f'Error while uploading file {localpath}: {exc}')
+        async with self._semaphore:
+            try:
+                await self.async_backend.put(
+                    localpath=localpath,
+                    remotepath=remotepath,
+                    dereference=dereference,
+                    preserve=preserve,
+                    recursive=False,
+                )
+            except OSError as exc:
+                raise OSError(f'Error while uploading file {localpath}: {exc}')
 
     async def puttree_async(
         self,
@@ -594,19 +594,18 @@ class AsyncSshTransport(AsyncTransport):
         # Or to put and rename the parent folder at the same time
         content_list = os.listdir(localpath)
         for content_ in content_list:
-            try:
-                await self._lock()
-                parentpath = str(PurePath(localpath) / content_)
-                await self.async_backend.put(
-                    localpath=parentpath,
-                    remotepath=remotepath,
-                    dereference=dereference,
-                    preserve=preserve,
-                    recursive=True,
-                )
-                await self._unlock()
-            except OSError as exc:
-                raise OSError(f'Error while uploading file {parentpath}: {exc}')
+            parentpath = str(PurePath(localpath) / content_)
+            async with self._semaphore:
+                try:
+                    await self.async_backend.put(
+                        localpath=parentpath,
+                        remotepath=remotepath,
+                        dereference=dereference,
+                        preserve=preserve,
+                        recursive=True,
+                    )
+                except OSError as exc:
+                    raise OSError(f'Error while uploading file {parentpath}: {exc}')
 
     async def copy_async(
         self,
@@ -741,6 +740,8 @@ class AsyncSshTransport(AsyncTransport):
         if format not in ['tar', 'tar.gz', 'tar.bz2', 'tar.xz']:
             raise ValueError(f'Unsupported compression format: {format}')
 
+        await self.makedirs_async(Path(remotedestination).parent, ignore_existing=True)
+
         compression_flag = {
             'tar': '',
             'tar.gz': 'z',
@@ -755,7 +756,7 @@ class AsyncSshTransport(AsyncTransport):
 
         for source in remotesources:
             if has_magic(source):
-                copy_list += await self.glob_async(source)
+                copy_list += await self.glob_async(source, ignore_nonexisting=False)
             else:
                 if not await self.path_exists_async(source):
                     raise OSError(f'The remote path {source} does not exist')
@@ -783,7 +784,11 @@ class AsyncSshTransport(AsyncTransport):
             raise OSError(f'Error while creating the tar archive. Exit code: {retval}')
 
     async def extract_async(
-        self, remotesource: TransportPath, remotedestination: TransportPath, overwrite: bool = True
+        self,
+        remotesource: TransportPath,
+        remotedestination: TransportPath,
+        overwrite: bool = True,
+        strip_components: int = 0,
     ):
         """Extract a remote archive.
 
@@ -793,6 +798,7 @@ class AsyncSshTransport(AsyncTransport):
         :param remotedestination: path to the remote destination directory
         :param overwrite: if True, overwrite the file at remotedestination if it already exists
             (we don't have a usecase for False, sofar. The parameter is kept for clarity.)
+        :param strip_components: strip NUMBER leading components from file names on extraction
 
         :raises OSError: if the remotesource does not exist.
         :raises OSError: if the extraction fails.
@@ -805,7 +811,7 @@ class AsyncSshTransport(AsyncTransport):
 
         await self.makedirs_async(remotedestination, ignore_existing=True)
 
-        tar_command = f'tar -xf {remotesource!s} -C {remotedestination!s} '
+        tar_command = f'tar --strip-components {strip_components} -xf {remotesource!s} -C {remotedestination!s} '
 
         retval, stdout, stderr = await self.exec_command_wait_async(tar_command)
 
@@ -1161,26 +1167,28 @@ class AsyncSshTransport(AsyncTransport):
         else:
             await self.async_backend.symlink(remotesource, remotedestination)
 
-    async def glob_async(self, pathname: TransportPath):
+    async def glob_async(self, pathname: TransportPath, ignore_nonexisting: bool = True):
         """Return a list of paths matching a pathname pattern.
 
         The pattern may contain simple shell-style wildcards a la fnmatch.
 
         :param pathname: the pathname pattern to match.
             It should only be absolute path.
+        :param ignore_nonexisting: if True, it will not raise and returns an empty list.
 
         :type pathname:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
         :return: a list of paths matching the pattern.
         """
         pathname = str(pathname)
-        return await self.async_backend.glob(pathname)
+        return await self.async_backend.glob(pathname, ignore_nonexisting=ignore_nonexisting)
 
     async def chmod_async(self, path: TransportPath, mode: int, follow_symlinks: bool = True):
-        """Change the permissions of a file.
+        """Change permissions of a path.
 
-        :param path: path to the file
-        :param mode: the new permissions
+        :param path: Path to the file or directory.
+        :param mode: New permissions as an integer, for example 0o700 (octal) or 448 (decimal) results in `-rwx------`
+            for a file.
         :param bool follow_symlinks: if True, follow symbolic links
 
         :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
@@ -1269,7 +1277,7 @@ class AsyncSshTransport(AsyncTransport):
             self.logger.error('Unknown parameters passed to copy_from_remote_to_remote')
 
         with SandboxFolder() as sandbox:
-            await self.get_async(remotesource, sandbox.abspath, **kwargs_get)
+            await self.get_async(remotesource, sandbox.abspath, **kwargs_get)  # type: ignore[arg-type]
             # Then we scan the full sandbox directory with get_content_list,
             # because copying directly from sandbox.abspath would not work
             # to copy a single file into another single file, and copying

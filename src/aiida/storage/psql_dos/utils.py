@@ -11,8 +11,6 @@
 import json
 from typing import TypedDict
 
-from sqlalchemy import event
-
 
 class PsqlConfig(TypedDict, total=False):
     """Configuration to connect to a PostgreSQL database."""
@@ -67,12 +65,6 @@ $$;
 """.strip()
 
 
-def register_jsonb_patch_function(dbapi_connection, _):
-    dbapi_connection.autocommit = True
-    dbapi_connection.execute(JSONB_PATCH_FUNCTION)
-    dbapi_connection.autocommit = False
-
-
 def create_sqlalchemy_engine(config: PsqlConfig):
     """Create SQLAlchemy engine (to be used for QueryBuilder queries)
 
@@ -98,14 +90,12 @@ def create_sqlalchemy_engine(config: PsqlConfig):
         port=config['database_port'],
         name=config['database_name'],
     )
-    engine = create_engine(
+    return create_engine(
         engine_url,
         json_serializer=json.dumps,
         json_deserializer=json.loads,
         **config.get('engine_kwargs', {}),
     )
-    event.listen(engine, 'connect', register_jsonb_patch_function)
-    return engine
 
 
 def create_scoped_session_factory(engine, **kwargs):

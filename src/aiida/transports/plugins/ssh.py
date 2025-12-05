@@ -742,7 +742,7 @@ class SshTransport(BlockingTransport):
                 raise OSError(
                     "Error during mkdir of '{}' from folder '{}', "
                     "maybe you don't have the permissions to do it, "
-                    'or the directory already exists? ({})'.format(path, self.getcwd(), exc)
+                    'or the directory already exists? ({})'.format(path, self.sftp.getcwd(), exc)
                 )
 
     def rmtree(self, path: TransportPath):
@@ -1337,7 +1337,7 @@ class SshTransport(BlockingTransport):
         if path.startswith('/'):
             abs_dir = path
         else:
-            abs_dir = os.path.join(self.getcwd(), path)
+            abs_dir = os.path.join(self.sftp.getcwd(), path)
 
         if not pattern:
             return self.sftp.listdir(abs_dir)
@@ -1416,7 +1416,7 @@ class SshTransport(BlockingTransport):
         :param workdir: (optional, default=None) if set, the command will be executed
                 in the specified working directory.
                 if None, the command will be executed in the current working directory,
-                from DEPRECATED `self.getcwd()`, if that has a value.
+                from `self.sftp.getcwd()`, if that has a value.
 
         :return: a tuple with (stdin, stdout, stderr, channel),
             where stdin, stdout and stderr behave as file-like objects,
@@ -1428,7 +1428,7 @@ class SshTransport(BlockingTransport):
 
         if workdir is not None:
             command_to_execute = f'cd {workdir} &&  ( {command} )'
-        elif (cwd := self.getcwd()) is not None:
+        elif (cwd := self.sftp.getcwd()) is not None:
             escaped_folder = escape_for_bash(cwd)
             command_to_execute = f'cd {escaped_folder} && ( {command} )'
         else:

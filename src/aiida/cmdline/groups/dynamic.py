@@ -16,6 +16,9 @@ from ..params import options
 from ..params.options.interactive import InteractiveOption
 from .verdi import VerdiCommandGroup
 
+if t.TYPE_CHECKING:
+    from click.decorators import FC
+
 __all__ = ('DynamicEntryPointCommandGroup',)
 
 
@@ -44,11 +47,11 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
     def __init__(
         self,
-        command: t.Callable,
+        command: click.Command,
         entry_point_group: str,
         entry_point_name_filter: str = r'.*',
-        shared_options: list[click.Option] | None = None,
-        **kwargs,
+        shared_options: list[FC] | None = None,
+        **kwargs: t.Any,
     ):
         super().__init__(**kwargs)
         self._command = command
@@ -88,7 +91,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             command = super().get_command(ctx, cmd_name)
         return command
 
-    def call_command(self, ctx, cls, non_interactive, **kwargs):
+    def call_command(self, ctx: click.Context, cls: t.Any, non_interactive: bool, **kwargs: t.Any) -> t.Any:
         """Call the ``command`` after validating the provided inputs."""
         from pydantic import ValidationError
 
@@ -116,13 +119,13 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         command.__doc__ = cls.__doc__
         return click.command(entry_point)(self.create_options(entry_point)(command))
 
-    def create_options(self, entry_point: str) -> t.Callable:
+    def create_options(self, entry_point: str) -> t.Callable[[FC], FC]:
         """Create the option decorators for the command function for the given entry point.
 
         :param entry_point: The entry point.
         """
 
-        def apply_options(func):
+        def apply_options(func: FC) -> FC:
             """Decorate the command function with the appropriate options for the given entry point."""
             func = options.NON_INTERACTIVE()(func)
             func = options.CONFIG_FILE()(func)
@@ -143,7 +146,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         return apply_options
 
-    def list_options(self, entry_point: str) -> list:
+    def list_options(self, entry_point: str) -> list[t.Callable[[FC], FC]]:
         """Return the list of options that should be applied to the command for the given entry point.
 
         :param entry_point: The entry point.
@@ -207,7 +210,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         return options_ordered
 
     @staticmethod
-    def create_option(name, spec: dict) -> t.Callable[[t.Any], t.Any]:
+    def create_option(name: str, spec: dict[str, t.Any]) -> t.Callable[[FC], FC]:
         """Create a click option from a name and a specification."""
         is_flag = spec.pop('is_flag', False)
         name_dashed = name.replace('_', '-')

@@ -79,8 +79,8 @@ def upf_listfamilies(elements, with_description):
     query.distinct()
     if query.count() > 0:
         for res in query.dict():
-            group_label = res.get('group').get('label')
-            group_desc = res.get('group').get('description')
+            group_label = res.get('group', {}).get('label')
+            group_desc = res.get('group', {}).get('description')
             query = orm.QueryBuilder()
             query.append(orm.Group, tag='thisgroup', filters={'label': {'like': group_label}})
             query.append(UpfData, project=['id'], with_group='thisgroup')

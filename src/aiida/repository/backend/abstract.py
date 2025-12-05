@@ -10,11 +10,14 @@ import contextlib
 import hashlib
 import io
 import pathlib
-from typing import BinaryIO, Iterable, Iterator, List, Optional, Tuple, Union
+from collections.abc import Iterable, Iterator
+from typing import Any, BinaryIO, List, Optional, Tuple, Union
 
 from aiida.common.hashing import chunked_file_hash
 
 __all__ = ('AbstractRepositoryBackend',)
+
+InfoDictType = dict[str, Union[int, str, dict[str, int], dict[str, float]]]
 
 
 class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
@@ -44,7 +47,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def initialise(self, **kwargs) -> None:
+    def initialise(self, **kwargs: Any) -> None:
         """Initialise the repository if it hasn't already been initialised.
 
         :param kwargs: parameters for the initialisation.
@@ -65,7 +68,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
 
     @staticmethod
-    def is_readable_byte_stream(handle) -> bool:
+    def is_readable_byte_stream(handle: Any) -> bool:
         return hasattr(handle, 'read') and hasattr(handle, 'mode') and 'b' in handle.mode
 
     def put_object_from_filelike(self, handle: BinaryIO) -> str:
@@ -75,10 +78,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :return: the generated fully qualified identifier for the object within the repository.
         :raises TypeError: if the handle is not a byte stream.
         """
-        if (
-            not isinstance(handle, io.BufferedIOBase)  # type: ignore[redundant-expr,unreachable]
-            and not self.is_readable_byte_stream(handle)
-        ):
+        if not isinstance(handle, io.BufferedIOBase) and not self.is_readable_byte_stream(handle):
             raise TypeError(f'handle does not seem to be a byte stream: {type(handle)}.')
         return self._put_object_from_filelike(handle)
 
@@ -123,26 +123,13 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def get_info(self, detailed: bool = False, **kwargs) -> dict:
+    def get_info(self, detailed: bool = False) -> InfoDictType:
         """Returns relevant information about the content of the repository.
 
         :param detailed:
             flag to enable extra information (detailed=False by default, only returns basic information).
 
         :return: a dictionary with the information.
-        """
-
-    @abc.abstractmethod
-    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
-        """Performs maintenance operations.
-
-        :param dry_run:
-            flag to only print the actions that would be taken without actually executing them.
-
-        :param live:
-            flag to indicate to the backend whether AiiDA is live or not (i.e. if the profile of the
-            backend is currently being used/accessed). The backend is expected then to only allow (and
-            thus set by default) the operations that are safe to perform in this state.
         """
 
     @contextlib.contextmanager
@@ -171,7 +158,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
             return handle.read()
 
     @abc.abstractmethod
-    def iter_object_streams(self, keys: List[str]) -> Iterator[Tuple[str, BinaryIO]]:
+    def iter_object_streams(self, keys: Iterable[str]) -> Iterator[Tuple[str, BinaryIO]]:
         """Return an iterator over the (read-only) byte streams of objects identified by key.
 
         .. note:: handles should only be read within the context of this iterator.

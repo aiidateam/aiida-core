@@ -26,6 +26,7 @@ class NodeComments:
         :return: the newly created comment
         """
         user = user or User.get_collection(self._node.backend).get_default()
+        assert user is not None
         return Comment(backend=self._node.backend, node=self._node, user=user, content=content).store()
 
     def get(self, identifier: int) -> Comment:

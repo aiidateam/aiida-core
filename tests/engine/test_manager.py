@@ -44,6 +44,9 @@ class TestJobManager:
         with self.manager.request_job_info_update(self.auth_info, job_id=1) as request:
             assert isinstance(request, asyncio.Future)
 
+            # Check if the job_id is properly converted to str in JobsList
+            self.manager._job_lists[self.auth_info.pk]._job_update_requests[str(1)] == request
+
 
 class TestJobsList:
     """Test the `aiida.engine.processes.calcjobs.manager.JobsList` class."""
@@ -71,3 +74,64 @@ class TestJobsList:
         last_updated = time.time()
         jobs_list = JobsList(self.auth_info, self.transport_queue, last_updated=last_updated)
         assert jobs_list.last_updated == last_updated
+
+    def test_prevent_racing_condition(self):
+        """Test that the `JobsList` prevents racing condition when updating job info.
+
+        This test simulates a race condition where:
+        1. Job job_id_a requests an update
+        2. During the scheduler query, a new job job_id_b also requests an update
+        3. JobList must only update about job_id_a
+        4. job_id_b future should be kept pending for the next update cycle
+        5. In the next update cycle, job_id_b should be resolved correctly
+        """
+        from unittest.mock import patch
+
+        from aiida.schedulers.datastructures import JobInfo, JobState
+
+        jobs_list = self.jobs_list
+
+        mock_job_info_a = JobInfo()
+        job_id_a = 'A'
+        mock_job_info_a.job_id = job_id_a
+        mock_job_info_a.job_state = JobState.RUNNING
+
+        mock_job_info_b = JobInfo()
+        job_id_b = 'B'
+        mock_job_info_b.job_id = job_id_b
+
+        def mock_get_jobs(**kwargs):
+            # Simulate the race: job_id_b is added to _job_update_requests while we're querying the scheduler
+            jobs_list._job_update_requests.setdefault(job_id_b, asyncio.Future())
+
+            # Return only job_id_a (scheduler was queried with only job_id_a)
+            return {job_id_a: mock_job_info_a}
+
+        # Request update for job_id_a
+        future1 = jobs_list._job_update_requests.setdefault(str(job_id_a), asyncio.Future())
+
+        # Patch the scheduler's get_jobs
+        scheduler = self.auth_info.computer.get_scheduler()
+        with patch.object(scheduler.__class__, 'get_jobs', side_effect=mock_get_jobs):
+            self.loop.run_until_complete(jobs_list._update_job_info())
+
+        # Verify job_id_a was resolved correctly
+        assert future1.done(), 'job_id_a future should be resolved'
+        assert future1.result() == mock_job_info_a, 'job_id_a should have the correct JobInfo'
+
+        # Verify job_id_b was NOT resolved and it has remained in _job_update_requests for the next cycle
+        assert job_id_b in jobs_list._job_update_requests, 'job_id_b should still be in update requests'
+        future2 = jobs_list._job_update_requests[job_id_b]
+        assert not future2.done(), 'job_id_b future should NOT be resolved yet (prevented racing bug)'
+        assert len(jobs_list._job_update_requests) == 1, 'Only job_id_b should remain in update requests'
+
+        # Verify that in the next update cycle, job_id_b is now resolved correctly
+        def mock_get_jobs(**kwargs):
+            # Intentionally return empty dict to simulate job_id_b as finished
+            # but not being in the scheduler anymore.
+            return {}
+
+        with patch.object(scheduler.__class__, 'get_jobs', side_effect=mock_get_jobs):
+            self.loop.run_until_complete(jobs_list._update_job_info())
+
+        assert future2.done(), 'job_id_b future should be resolved'

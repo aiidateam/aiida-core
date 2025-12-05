@@ -93,16 +93,16 @@ class JobResource(DefaultFieldsAttributeDict, metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    def accepts_default_mpiprocs_per_machine(cls):
+    def accepts_default_mpiprocs_per_machine(cls) -> bool:
         """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
 
     @classmethod
-    def accepts_default_memory_per_machine(cls):
+    def accepts_default_memory_per_machine(cls) -> bool:
         """Return True if this subclass accepts a `default_memory_per_machine` key, False otherwise."""
         return True
 
     @abc.abstractmethod
-    def get_tot_num_mpiprocs(self):
+    def get_tot_num_mpiprocs(self) -> int:
         """Return the total number of cpus of this job resource."""
 
 

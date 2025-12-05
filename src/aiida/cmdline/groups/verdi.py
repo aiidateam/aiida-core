@@ -74,7 +74,7 @@ class LazyVerdiObjAttributeDict(AttributeDict):
 class VerdiContext(click.Context):
     """Custom context implementation that defines the ``obj`` user object and adds the ``Config`` instance."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: t.Any, **kwargs: t.Any):
         super().__init__(*args, **kwargs)
         if self.obj is None:
             self.obj = LazyVerdiObjAttributeDict(self)
@@ -190,7 +190,7 @@ class VerdiCommandGroup(click.Group):
 
         return None
 
-    def group(self, *args, **kwargs) -> click.Group:
+    def group(self, *args: t.Any, **kwargs: t.Any) -> click.Group:
         """Ensure that sub command groups use the same class but do not override an explicitly set value."""
         kwargs.setdefault('cls', self.__class__)
-        return super().group(*args, **kwargs)
+        return super().group(*args, **kwargs)  # type: ignore[no-any-return]

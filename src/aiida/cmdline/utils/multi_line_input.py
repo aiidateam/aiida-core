@@ -13,7 +13,7 @@ import re
 import click
 
 
-def edit_multiline_template(template_name, comment_marker='#=', extension=None, **kwargs):
+def edit_multiline_template(template_name: str, comment_marker: str = '#=', extension: str = '', **kwargs: dict) -> str:
     """Open a template file for editing in a text editor.
 
     :param template: name of the template to use from the ``aiida.cmdline.templates`` directory.

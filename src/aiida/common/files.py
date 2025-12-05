@@ -9,9 +9,12 @@
 """Utility functions to operate on filesystem files."""
 
 import hashlib
+from typing import BinaryIO
+
+from .typing import FilePath
 
 
-def md5_from_filelike(filelike, block_size_factor=128):
+def md5_from_filelike(filelike: BinaryIO, block_size_factor: int = 128) -> str:
     """Create the hexdigested md5 checksum of the contents from a filelike object.
 
     :param filelike: the filelike object for whose contents to generate the md5 checksum
@@ -29,7 +32,7 @@ def md5_from_filelike(filelike, block_size_factor=128):
     return md5.hexdigest()
 
 
-def md5_file(filepath, block_size_factor=128):
+def md5_file(filepath: FilePath, block_size_factor: int = 128) -> str:
     """Create the hexdigested md5 checksum of the contents from
 
     :param filepath: the filepath of the file for which we want the md5sum
@@ -43,7 +46,7 @@ def md5_file(filepath, block_size_factor=128):
         return md5_from_filelike(handle, block_size_factor=block_size_factor)
 
 
-def sha1_file(filename, block_size_factor=128):
+def sha1_file(filename: FilePath, block_size_factor: int = 128) -> str:
     """Open a file and return its sha1sum (hexdigested).
 
     :param filename: the filename of the file for which we want the sha1sum

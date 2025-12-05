@@ -76,7 +76,7 @@ def test_can_run_on_computer(aiida_localhost, tmp_path):
 
 def test_filepath_executable(tmp_path):
     """Test the :meth:`aiida.orm.nodes.data.code.portable.PortableCode.filepath_executable` property."""
-    filepath_executable = 'bash'
+    filepath_executable = 'mycode.py'
     code = PortableCode(filepath_executable=filepath_executable, filepath_files=tmp_path)
 
     with pytest.raises(ValueError, match=r'The `filepath_executable` should not be absolute.'):
@@ -91,6 +91,37 @@ def test_filepath_executable(tmp_path):
 
     with pytest.raises(ModificationNotAllowed):
         code.filepath_executable = filepath_executable
+
+
+def test_filepath_executable_dotslash(tmp_path):
+    """Test that the executable filepath is correctly prefixed with './' if in the top folder."""
+    filepath_executable = 'mycode.py'
+    code = PortableCode(filepath_executable=filepath_executable, filepath_files=tmp_path)
+    code.base.repository.put_object_from_filelike(io.BytesIO(b''), filepath_executable)
+    code.store()
+    # ./ is prepended
+    assert code.get_executable_cmdline_params() == ['./mycode.py']
+
+
+def test_filepath_executable_dotslash_alreadythere(tmp_path):
+    """Test that the executable filepath is not duplicated with './' if already there."""
+    filepath_executable = './mycode.py'
+    code = PortableCode(filepath_executable=filepath_executable, filepath_files=tmp_path)
+    code.base.repository.put_object_from_filelike(io.BytesIO(b''), filepath_executable)
+    code.store()
+    # ./ is not duplicated if already there
+    assert code.get_executable_cmdline_params() == ['./mycode.py']
+
+
+def test_filepath_executable_dotslash_subfolder(tmp_path):
+    """Test that the executable filepath is not prefixed with './' if in a subfolder."""
+    filepath_executable = 'a/mycode.py'
+    code = PortableCode(filepath_executable=filepath_executable, filepath_files=tmp_path)
+    code.base.repository.put_object_from_filelike(io.BytesIO(b''), filepath_executable)
+    code.store()
+
+    # No ./ needed for a subfolder
+    assert code.get_executable_cmdline_params() == ['a/mycode.py']
 
 
 def test_full_label(tmp_path):

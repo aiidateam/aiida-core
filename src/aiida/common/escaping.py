@@ -8,10 +8,12 @@
 ###########################################################################
 """Miscellaneous functions for escaping strings."""
 
+from __future__ import annotations
+
 import re
 
 
-def escape_for_bash(str_to_escape, use_double_quotes=False):
+def escape_for_bash(str_to_escape: str | None, use_double_quotes: bool | None = False) -> str:
     """This function takes any string and escapes it in a way that
     bash will interpret it as a single string.
 
@@ -62,7 +64,7 @@ SQL_TO_REGEX_TOKENS = [  # Remember in the strings below we have to escape backs
 ]
 
 
-def escape_for_sql_like(string):
+def escape_for_sql_like(string: str) -> str:
     """Function that escapes % or _ symbols provided by user
 
     SQL LIKE syntax summary:
@@ -74,7 +76,7 @@ def escape_for_sql_like(string):
     return string.replace('%', '\\%').replace('_', '\\_')
 
 
-def get_regex_pattern_from_sql(sql_pattern):
+def get_regex_pattern_from_sql(sql_pattern: str) -> str:
     r"""Convert a string providing a pattern to match in SQL
     syntax into a string performing the same match as a regex.
 
@@ -96,7 +98,7 @@ def get_regex_pattern_from_sql(sql_pattern):
     :return: a string with the pattern in regex syntax
     """
 
-    def tokenizer(string, tokens_to_apply):
+    def tokenizer(string: str, tokens_to_apply: list[str]) -> str:
         """Recursive function that tokenizes a string using the provided tokens
 
         :param string: the string to tokenize
@@ -137,7 +139,7 @@ def get_regex_pattern_from_sql(sql_pattern):
     return f'^{tokenizer(sql_pattern, tokens_to_apply=[token_pair[0] for token_pair in SQL_TO_REGEX_TOKENS])}$'
 
 
-def sql_string_match(string, pattern):
+def sql_string_match(string: str, pattern: str) -> bool:
     """Check if the string matches the provided pattern,
     specified using SQL syntax.
 

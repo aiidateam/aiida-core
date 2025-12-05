@@ -453,7 +453,9 @@ select = [
   'PLE',  # pylint-error
   'PLR',  # pylint-refactor
   'PLW',  # pylint-warning
-  'RUF'  # ruff
+  'RUF',  # ruff
+  'FLY',  # flynt
+  'NPY201'  # numpy compatibility
 ]
 
 [tool.tox]

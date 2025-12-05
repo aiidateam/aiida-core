@@ -93,7 +93,7 @@ class User(entities.Entity['BackendUser', UserCollection]):
         except ValueError:
             pass
         else:
-            email = '@'.join([email_name, domain_part.lower()])
+            email = f'{email_name}@{domain_part.lower()}'
         return email
 
     @property

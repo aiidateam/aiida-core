@@ -8,12 +8,14 @@
 ###########################################################################
 """Module containing utilities and classes relating to job calculations running on systems that require transport."""
 
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import contextvars
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Dict, Hashable, Iterator, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Hashable, Iterator, List, Optional, cast
 
 from aiida.common import lang
 from aiida.orm import AuthInfo
@@ -152,9 +154,9 @@ class JobsList:
             raise
         else:
             for job_id in self._polling_jobs:
-                future = self._job_update_requests.pop(job_id, None)
+                future = self._job_update_requests.pop(job_id, None)  # type: ignore[arg-type]
                 if future is None:
-                    self.logger.debug(
+                    self.logger.warning(  # type: ignore[unreachable]
                         f'This should not happen: polled job_id {job_id} '
                         f'not in _job_update_requests {self._job_update_requests}'
                     )
@@ -187,7 +189,7 @@ class JobsList:
         This will automatically stop if there are no outstanding requests.
         """
 
-        async def updating():
+        async def updating() -> None:
             """Do the actual update, stop if not requests left."""
             await self._update_job_info()
             # Any outstanding requests?
@@ -196,7 +198,7 @@ class JobsList:
                     self._get_next_update_delay(),
                     asyncio.ensure_future,
                     updating(),
-                    context=contextvars.Context(),  #  type: ignore[call-arg]
+                    context=contextvars.Context(),
                 )
             else:
                 self._update_handle = None
@@ -207,7 +209,7 @@ class JobsList:
                 self._get_next_update_delay(),
                 asyncio.ensure_future,
                 updating(),
-                context=contextvars.Context(),  #  type: ignore[call-arg]
+                context=contextvars.Context(),
             )
 
     @staticmethod
@@ -264,7 +266,7 @@ class JobManager:
 
     def __init__(self, transport_queue: 'TransportQueue') -> None:
         self._transport_queue = transport_queue
-        self._job_lists: Dict[Hashable, 'JobInfo'] = {}
+        self._job_lists: dict[int, JobsList] = {}
 
     def get_jobs_list(self, authinfo: AuthInfo) -> JobsList:
         """Get or create a new `JobLists` instance for the given authinfo.
@@ -272,10 +274,16 @@ class JobManager:
         :param authinfo: the `AuthInfo`
         :return: a `JobsList` instance
         """
-        if authinfo.pk not in self._job_lists:
-            self._job_lists[authinfo.pk] = JobsList(authinfo, self._transport_queue)
+        # TODO: Mypy infers type of `authinfo.pk` as `int | None`
+        # It's not clear if it can actually by None at runtime,
+        # or is just a limitation of the current typing.
+        # Instead of using `cast` Perhaps we should do:
+        # assert authinfo.pk is not None
+        pk = cast(int, authinfo.pk)
+        if pk not in self._job_lists:
+            self._job_lists[pk] = JobsList(authinfo, self._transport_queue)
 
-        return self._job_lists[authinfo.pk]
+        return self._job_lists[pk]
 
     @contextlib.contextmanager
     def request_job_info_update(self, authinfo: AuthInfo, job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:

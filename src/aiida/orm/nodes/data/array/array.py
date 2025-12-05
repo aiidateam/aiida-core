@@ -10,10 +10,8 @@
 
 from __future__ import annotations
 
-import base64
 import io
-from collections.abc import Iterable
-from typing import Any, Iterator, Optional, Union, cast
+from typing import Any, Iterator, Optional, cast
 
 import numpy as np
 from pydantic import field_validator
@@ -60,20 +58,24 @@ class ArrayData(Data):
 
         @field_validator('arrays', mode='before')
         @classmethod
-        def validate_arrays(cls, value: Optional[dict[str, Union[bytes, Any]]]) -> Any:
+        def validate_arrays(cls, value: dict[str, bytes | str | list | np.ndarray] | list | np.ndarray | None) -> Any:
             if value is None:
                 return value
-            if not isinstance(value, dict):
-                raise TypeError(f'`arrays` should be a dictionary but got: {value}')
-            arrays: dict[str, bytes] = {}
-            for key, array in value.items():
-                if isinstance(array, bytes):
-                    arrays[key] = array
-                elif isinstance(array, Iterable):
-                    arrays |= ArrayData.save_arrays({key: np.array(array)})
-                else:
-                    arrays[key] = array
-            return arrays
+
+            if isinstance(value, (list, np.ndarray)):
+                return ArrayData.save_arrays({ArrayData.default_array_name: np.array(value)})
+            elif isinstance(value, dict):
+                arrays: dict[str, bytes] = {}
+                for key, array in value.items():
+                    if isinstance(array, bytes):
+                        arrays[key] = array
+                    elif isinstance(array, str):  # handles serialized base64-encoded strings
+                        arrays[key] = array
+                    else:
+                        arrays |= ArrayData.save_arrays({key: np.array(array)})
+                return arrays
+            else:
+                raise TypeError(f'`arrays` should be an iterable or dictionary of iterables but got: {value}')
 
     array_prefix = 'array|'
     default_array_name = 'default'
@@ -108,7 +110,7 @@ class ArrayData(Data):
             stream = io.BytesIO()
             np.save(stream, array)
             stream.seek(0)
-            results[key] = base64.encodebytes(stream.read())
+            results[key] = stream.read()
 
         return results
 
@@ -119,8 +121,8 @@ class ArrayData(Data):
         if arrays is None:
             return results
 
-        for key, encoded in arrays.items():
-            stream = io.BytesIO(base64.decodebytes(encoded))
+        for key, bytes_ in arrays.items():
+            stream = io.BytesIO(bytes_)
             stream.seek(0)
             results[key] = np.load(stream)
 

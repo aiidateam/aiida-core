@@ -91,7 +91,9 @@ def start(foreground, number, timeout):
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
     echo.echo(f'Starting the daemon with {number} workers... ', nl=False)
-    execute_client_command('start_daemon', number_workers=number, foreground=foreground, timeout=timeout)
+    from aiida.engine.daemon.daemon import AiidaDaemon
+    # TODO foreground, timeout param
+    AiidaDaemon().start(number, foreground)
 
 
 @verdi_daemon.command()
@@ -105,6 +107,10 @@ def status(ctx, all_profiles, timeout):
 
     Returns exit code 0 if all requested daemons are running, else exit code 3.
     """
+    from aiida.engine.daemon.daemon import AiidaDaemon
+    # TODO foreground, timeout param
+    AiidaDaemon().status()
+    return
     from tabulate import tabulate
 
     from aiida.cmdline.utils.common import format_local_time
@@ -206,6 +212,9 @@ def stop(ctx, no_wait, all_profiles, timeout):
 
     Returns exit code 0 if the daemon was shut down successfully (or was not running), non-zero if there was an error.
     """
+    from aiida.engine.daemon.daemon import AiidaDaemon
+    # TODO no-wait, timeout
+
     if all_profiles is True:
         profiles = [profile for profile in ctx.obj.config.profiles if not profile.is_test_profile]
     else:
@@ -215,6 +224,7 @@ def stop(ctx, no_wait, all_profiles, timeout):
         echo.echo('Profile: ', fg=echo.COLORS['report'], bold=True, nl=False)
         echo.echo(f'{profile.name}', bold=True)
         echo.echo('Stopping the daemon... ', nl=False)
+        AiidaDaemon(profile).stop()
         execute_client_command('stop_daemon', daemon_not_running_ok=True, wait=not no_wait, timeout=timeout)
 
 

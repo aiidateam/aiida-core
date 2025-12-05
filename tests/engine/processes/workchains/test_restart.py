@@ -113,28 +113,38 @@ def test_killed_process(generate_work_chain, generate_calculation_node):
 
 
 @pytest.mark.requires_rmq
-def test_unhandled_failure(generate_work_chain, generate_calculation_node):
-    """Test the unhandled failure mechanism.
-
-    The workchain should be aborted if there are two consecutive failed sub processes that went unhandled. We simulate
-    it by setting `ctx.unhandled_failure` to True and append two failed process nodes in `ctx.children`.
-    """
-    process = generate_work_chain(SomeWorkChain, {})
+@pytest.mark.parametrize('on_unhandled_failure', (None, 'abort', 'pause', 'restart_once', 'restart_and_pause'))
+def test_unhandled_failure(generate_work_chain, generate_calculation_node, on_unhandled_failure):
+    """Test the `on_unhandled_failure` input and behavior."""
+    process = generate_work_chain(SomeWorkChain, {'on_unhandled_failure': on_unhandled_failure})
     process.setup()
     process.ctx.children = [generate_calculation_node(exit_status=100)]
-    assert process.inspect_process() is None
-    assert process.ctx.unhandled_failure is True
+    result = process.inspect_process()
+    if on_unhandled_failure in (None, 'abort'):
+        assert result == engine.BaseRestartWorkChain.exit_codes.ERROR_UNHANDLED_FAILURE
+        return
+    elif on_unhandled_failure == 'pause':
+        assert result is None
+        assert process.paused
+        return
 
+    assert result is None
+    assert process.ctx.unhandled_failure is True
     process.ctx.children.append(generate_calculation_node(exit_status=100))
-    assert (
-        process.inspect_process() == engine.BaseRestartWorkChain.exit_codes.ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE
-    )
+    result = process.inspect_process()
+
+    if on_unhandled_failure == 'restart_once':
+        assert result == engine.BaseRestartWorkChain.exit_codes.ERROR_UNHANDLED_FAILURE
+        return
+    elif on_unhandled_failure == 'pause':
+        assert result is None
+        assert process.paused
 
 
 @pytest.mark.requires_rmq
 def test_unhandled_reset_after_success(generate_work_chain, generate_calculation_node):
     """Test `ctx.unhandled_failure` is reset to `False` in `inspect_process` after a successful process."""
-    process = generate_work_chain(SomeWorkChain, {})
+    process = generate_work_chain(SomeWorkChain, {'on_unhandled_failure': orm.Str('restart_once')})
     process.setup()
     process.ctx.children = [generate_calculation_node(exit_status=100)]
     assert process.inspect_process() is None
@@ -148,7 +158,7 @@ def test_unhandled_reset_after_success(generate_work_chain, generate_calculation
 @pytest.mark.requires_rmq
 def test_unhandled_reset_after_handled(generate_work_chain, generate_calculation_node):
     """Test `ctx.unhandled_failure` is reset to `False` in `inspect_process` after a handled failed process."""
-    process = generate_work_chain(SomeWorkChain, {})
+    process = generate_work_chain(SomeWorkChain, {'on_unhandled_failure': orm.Str('restart_once')})
     process.setup()
     process.ctx.children = [generate_calculation_node(exit_status=300)]
     assert process.inspect_process() is None

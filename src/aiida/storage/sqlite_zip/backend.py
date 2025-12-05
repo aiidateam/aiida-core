@@ -513,13 +513,15 @@ class ZipfileBackendRepository(_RoBackendRepository):
 
     @contextmanager
     def open(self, key: str) -> Iterator[BinaryIO]:
+        handle = None
         try:
             handle = self._zipfile.open(f'{self._folder}/{key}')
             yield cast(BinaryIO, handle)
         except KeyError:
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
         finally:
-            handle.close()
+            if handle is not None:
+                handle.close()
 
 
 class FolderBackendRepository(_RoBackendRepository):

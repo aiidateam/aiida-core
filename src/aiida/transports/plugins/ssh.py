@@ -671,10 +671,6 @@ class SshTransport(BlockingTransport):
         this method will return None. But in __enter__ this is set explicitly,
         so this should never happen within this class.
         """
-        warn_deprecation(
-            '`getcwd()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
-            version=3,
-        )
         return self.sftp.getcwd()
 
     def makedirs(self, path: TransportPath, ignore_existing: bool = False):

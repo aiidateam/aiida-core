@@ -12,10 +12,8 @@ from __future__ import annotations
 
 import functools
 import hashlib
-import json
 import os
 import shutil
-from collections import defaultdict
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from pathlib import Path
@@ -23,9 +21,8 @@ from tempfile import mkdtemp
 from typing import Any, BinaryIO
 
 from pydantic import BaseModel, Field
-from sqlalchemy import column, func, insert, update
+from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session
-from sqlalchemy.sql.expression import case
 
 from aiida.common.exceptions import ClosedStorage, IntegrityError
 from aiida.manage.configuration import Profile
@@ -277,27 +274,44 @@ class SqliteTempBackend(StorageBackend):
         if not rows:
             return None
 
+        # Validate rows
+        for row in rows:
+            if 'id' not in row:
+                raise IntegrityError(f"'id' field not given for {entity_type}: {set(row)}")
+            if not keys.issuperset(row):
+                raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
+
+        session = self.get_session()
+
+        # Fast path: use simple executemany when extend_json is False
+        if not extend_json:
+            with nullcontext() if self.in_transaction else self.transaction():
+                session.execute(update(mapper), rows)
+            return
+
+        # Slow path: use CASE statements for JSON merging when extend_json is True
+        # Lazy imports to avoid overhead on every aiida import
+        import json
+        from collections import defaultdict
+
+        from sqlalchemy import func
+        from sqlalchemy.sql.expression import case
+
         cases = defaultdict(list)
         id_list = []
         for row in rows:
-            if not keys.issuperset(row):
-                raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
-            if 'id' in row:
-                when = mapper.c.id == row['id']
-                id_list.append(row['id'])
-            else:
-                raise IntegrityError(f"neither 'id' nor 'uuid' field given for {entity_type}: {set(row)}")
+            when = mapper.c.id == row['id']
+            id_list.append(row['id'])
 
             for key, value in row.items():
                 if key == 'id':
                     continue
 
                 update_value = value
-                if extend_json and key in ['extra', 'attributes']:
+                if key in ['extra', 'attributes']:
                     update_value = func.json_patch(mapper.c[key], json.dumps(value))
                 cases[key].append((when, update_value))
 
-        session = self.get_session()
         with nullcontext() if self.in_transaction else self.transaction():
             values = {k: case(*v, else_=mapper.c[key]) for k, v in cases.items()}
             stmt = update(mapper).where(mapper.c.id.in_(id_list)).values(**values)

@@ -10,17 +10,14 @@
 
 import functools
 import gc
-import json
 import pathlib
-from collections import defaultdict
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from typing import TYPE_CHECKING, Any, Optional, Set, Union
 
 from disk_objectstore import Container, backup_utils
 from pydantic import BaseModel, Field
-from sqlalchemy import case, cast, column, func, insert, update
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from aiida.common import exceptions
@@ -347,7 +344,28 @@ class PsqlDosBackend(StorageBackend):
         if not rows:
             return None
 
+        # Validate rows
+        for row in rows:
+            if 'id' not in row:
+                raise IntegrityError(f"'id' field not given for {entity_type}: {set(row)}")
+            if not keys.issuperset(row):
+                raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
+
         session = self.get_session()
+
+        # Fast path: use simple executemany when extend_json is False
+        if not extend_json:
+            with nullcontext() if self.in_transaction else self.transaction():
+                session.execute(update(mapper), rows)
+            return
+
+        # Slow path: use CASE statements for JSON merging when extend_json is True
+        # Lazy imports to avoid ~700ms overhead on every aiida import
+        import json
+        from collections import defaultdict
+
+        from sqlalchemy import case, cast, func
+        from sqlalchemy.dialects.postgresql import JSONB
 
         def to_json(x: dict[str, Any]):
             return cast(x, JSONB)
@@ -362,13 +380,8 @@ class PsqlDosBackend(StorageBackend):
         cases = defaultdict(list)
         id_list = []
         for row in rows:
-            if not keys.issuperset(row):
-                raise IntegrityError(f'Incorrect fields given for {entity_type}: {set(row)} not subset of {keys}')
-            if 'id' in row:
-                when = mapper.c.id == row['id']
-                id_list.append(row['id'])
-            else:
-                raise IntegrityError(f"'id' field not given for {entity_type}: {set(row)}")
+            when = mapper.c.id == row['id']
+            id_list.append(row['id'])
 
             for key, value in row.items():
                 if key == 'id':
@@ -377,8 +390,7 @@ class PsqlDosBackend(StorageBackend):
                 update_value = value
                 if key in ['extras', 'attributes']:
                     update_value = to_json(update_value)
-                    if extend_json:
-                        update_value = func.json_patch(mapper.c[key], update_value)
+                    update_value = func.json_patch(mapper.c[key], update_value)
                 cases[key].append((when, update_value))
 
         with nullcontext() if self.in_transaction else self.transaction():

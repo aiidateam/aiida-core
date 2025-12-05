@@ -1,27 +1,6 @@
 """
 Service Daemon - Generic process manager for services with health monitoring.
 
-Architecture:
-- ServiceInterface (ABC): Base interface for all services
-- ServiceConfig (ABC): Manages collection of ServiceInterface instances and configuration
-- ServiceDaemon: Generic daemon implementation (service-agnostic)
-
-The hierarchy allows:
-TODO update
-
-Process Hierarchy:
-```
-Daemon Process (foreground or background)
-│
-├── Health Monitor Thread
-│   └── Monitors child processes every 5s
-│
-└── Child Processes (subprocess.Popen)
-    ├── service1 (child of daemon)
-    ├── service2 (child of daemon)
-    └── service3 (child of daemon)
-```
-
 Directory Structure:
 ```
 daemon/
@@ -78,17 +57,13 @@ import logging
 
 # TODO public API
 
-# TODO logger
+# TODO logger as in aiida
 logger = logging.getLogger()
 
 class ServiceState(enum.Enum):
     ALIVE = "ALIVE"
     DEAD = "DEAD"
 
-#class HasServiceName(Protocol)
-# or WorkerIdentifier owns ServiceIdentifier
-
- 
 class FolderIdentifier(ABC):
 
     def __init__(self, identifier: str):
@@ -141,85 +116,9 @@ class FolderIdentifier(ABC):
 
         return bool(re.match(pattern, name))
 
-# TODO needed?
+# TODO needed? kind of it checks if it is a folder identifier 
 class ServiceIdentifier(FolderIdentifier):
     pass
-
-
-# TODO Not needed
-class WorkerIdentifier(FolderIdentifier):
-    """
-    Identifier for worker service instances.
-
-    Worker instances use format "service_base:worker_num" (e.g., "worker:1", "worker:2").
-    The ':' character separates the base service identifier from the worker instance number.
-    """
-
-    def __init__(self, service_identifier: str, worker_num: int):
-        """
-        Initialize a worker service identifier.
-
-        Args:
-            base_identifier: Base service identifier (must not contain ':')
-            worker_num: Worker instance number
-
-        Raises:
-            ValueError: If base_identifier contains ':'
-        """
-        if not self.is_valid_identifier(service_identifier):
-            #TODO polish error msg
-            raise ValueError(
-                f"Invalid service identifier {service_identifier}. May only contain alphanumeric characters, underscores, hyphens"
-                  "Must start with a letter or number"
-                  "Length: 1-255 characters"
-            )
-        self._service_identifier = service_identifier
-        self._worker_num = worker_num
-        # Don't call super().__init__ as we construct the full identifier differently
-        self._identifier = f"{service_identifier}:{worker_num}"
-
-    @classmethod
-    def from_full_identifier(cls, full_identifier: str) -> 'WorkerIdentifier':
-        """
-        Parse a worker identifier string into base and worker number.
-
-        Args:
-            full_identifier: Full identifier string (e.g., "worker:1")
-
-        Returns:
-            WorkerIdentifier instance
-
-        Raises:
-            ValueError: If format is invalid
-        """
-        if ':' not in full_identifier:
-            raise ValueError(
-                f"Worker identifier '{full_identifier}' must contain ':'. "
-                f"Expected format: 'service_identifier:worker_identifier'"
-            )
-
-        parts = full_identifier.split(':', 1)
-        if len(parts) != 2:
-            raise ValueError(
-                f"Invalid worker identifier '{full_identifier}'. "
-                f"Expected format: 'service_identifier:worker_identifier'"
-            )
-
-        service_identifier, worker_identifier = parts
-        return cls(service_identifier, int(worker_identifier))
-
-    @property
-    def service_identifier(self) -> str:
-        """Get the service identifier (without worker number)."""
-        return self._service_identifier
-
-    @property
-    def worker_num(self) -> int:
-        return self._worker_num
-
-    def __repr__(self) -> str:
-        """Developer-friendly representation."""
-        return f"WorkerIdentifier('{self._service_identifier}', worker={self._worker_num})"
 
 @dataclass
 class JsonSerialization:
@@ -254,6 +153,7 @@ SERVICE_CONFIG_REGISTRY: Dict[str, Type["ServiceConfig"]] = {}
 
 @dataclass
 class ServiceConfig(ABC):
+    # TODO rename to service_identifier?
     service_name: ClassVar[str] 
     command: ClassVar[str]
 
@@ -937,12 +837,6 @@ class ServiceSupervisorController:
 
     @staticmethod
     def _start_service(session_dir: Path, config: ServiceConfig):
-        """
-        Start a single service as a child process.
-
-        Args:
-            service_identifier: ServiceIdentifier or WorkerIdentifier instance
-        """
         if session_dir is None:
             # TODO error message, should not happen so dev error
             raise RuntimeError()

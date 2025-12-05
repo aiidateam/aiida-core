@@ -30,10 +30,10 @@ if TYPE_CHECKING:
 __all__ = ('BaseRestartWorkChain',)
 
 
-def validate_on_unhandled_failure(value: None | orm.Str | orm.EnumData, _) -> None | str:
+def validate_on_unhandled_failure(value: None | orm.Str, _) -> None | str:
     """Validator for the `on_unhandled_failure` input port.
 
-    :param value: the input `Str` or `EnumData` node
+    :param value: the input `Str` node
     """
     if value is None:
         return None
@@ -182,7 +182,7 @@ class BaseRestartWorkChain(WorkChain):
         )
         spec.input(
             'on_unhandled_failure',
-            valid_type=(orm.Str, orm.EnumData),
+            valid_type=orm.Str,
             required=False,
             validator=validate_on_unhandled_failure,
             help='Action to take when an unhandled failure occurs. Options: "abort" (default, fail immediately), '

@@ -566,6 +566,7 @@ class Transport(abc.ABC):
         Get working directory
         :return: a string identifying the current working directory
         """
+
         warn_deprecation(
             '`getcwd()` is deprecated and will be removed in the next major version.',
             version=3,

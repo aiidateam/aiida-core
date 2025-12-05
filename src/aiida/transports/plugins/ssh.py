@@ -9,6 +9,7 @@
 """Plugin for transport over SSH (and SFTP for file transfer)."""
 
 import glob
+import inspect
 import io
 import os
 import re
@@ -671,10 +672,17 @@ class SshTransport(BlockingTransport):
         this method will return None. But in __enter__ this is set explicitly,
         so this should never happen within this class.
         """
-        warn_deprecation(
-            '`getcwd()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
-            version=3,
-        )
+
+        # Only raise deprecation warning if called from outside the class
+        caller_frame = inspect.stack()[1].frame
+        caller_self = caller_frame.f_locals.get('self')
+
+        if not isinstance(caller_self, type(self)):
+            warn_deprecation(
+                '`getcwd()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
+                version=3,
+            )
+
         return self.sftp.getcwd()
 
     def makedirs(self, path: TransportPath, ignore_existing: bool = False):

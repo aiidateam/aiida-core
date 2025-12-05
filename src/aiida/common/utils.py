@@ -18,19 +18,12 @@ import re
 import sys
 from collections.abc import Iterable, Iterator
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
+from typing import Any, Callable, TypeVar, overload
 from uuid import UUID
 
 from aiida.common.typing import Self
 
 from .lang import classproperty
-
-if TYPE_CHECKING:
-    # TypeAlias added in Python 3.10
-    try:
-        from typing import TypeAlias
-    except ImportError:
-        from typing_extensions import TypeAlias
 
 T = TypeVar('T')
 R = TypeVar('R')
@@ -421,7 +414,7 @@ class Prettifier:
         return self._prettifier_f(label)
 
 
-_Labels: TypeAlias = list[tuple[float, str]]
+_Labels = list[tuple[float, str]]
 
 
 def prettify_labels(labels: _Labels, format: str | None = None) -> _Labels:

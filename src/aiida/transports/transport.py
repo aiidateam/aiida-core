@@ -566,7 +566,10 @@ class Transport(abc.ABC):
         Get working directory
         :return: a string identifying the current working directory
         """
-        raise DeprecationWarning('`getcwd()` is deprecated and will be removed in the next major version.')
+        warn_deprecation(
+            '`getcwd()` is deprecated and will be removed in the next major version.',
+            version=3,
+        )
 
     @abc.abstractmethod
     def get_attribute(self, path: TransportPath):

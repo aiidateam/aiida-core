@@ -79,12 +79,61 @@ def test_code_list(run_cli_command, code):
     code2.label = 'code2'
     code2.store()
 
-    options = ['-A', '-a', '-o', '-d', 'core.arithmetic.add', f'--computer={code.computer.label}']
+    options = [
+        '-A',
+        '-a',
+        '-d',
+        'core.arithmetic.add',
+        f'--computer={code.computer.label}',
+        '-P',
+        'full_label',
+        'pk',
+        'entry_point',
+        'user',
+    ]
     result = run_cli_command(cmd_code.code_list, options)
     assert str(code.pk) in result.output
     assert code2.label not in result.output
     assert code.computer.label in result.output
     assert 'No codes found matching the specified criteria.' not in result.output
+
+
+def test_code_list_also_no_computer(run_cli_command, code, tmp_path):
+    """Test ``verdi code list``."""
+    code2 = InstalledCode(
+        default_calc_job_plugin='core.templatereplacer',
+        computer=code.computer,
+        filepath_executable='/remote/abs/path',
+    )
+    code2.label = 'code2'
+    code2.store()
+
+    filepath = tmp_path / 'script.sh'
+    filepath.write_text('fake script')
+
+    code_portable = PortableCode(filepath_executable='script.sh', filepath_files=tmp_path)
+    code_portable.label = 'code_portable'
+    code_portable.store()
+
+    # I filter on computer, so the PortableCode should not appear in the results
+    options = ['-A', '-a', f'--computer={code.computer.label}', '-P', 'full_label', 'pk', 'entry_point', 'user']
+    result = run_cli_command(cmd_code.code_list, options)
+    # Both code and code2 in results output
+    assert str(code.pk) in result.output
+    assert str(code2.pk) in result.output
+    assert code2.label in result.output
+    # PortableCode should not appear in the results
+    assert code_portable.label not in result.output
+
+    # No filter on computer, so the PortableCode should appear in the results
+    options = ['-A', '-a', '-P', 'full_label', 'pk', 'entry_point', 'user']
+    result = run_cli_command(cmd_code.code_list, options)
+    # Both code and code2 in results output
+    assert str(code.pk) in result.output
+    assert str(code2.pk) in result.output
+    assert code2.label in result.output
+    # Also PortableCode should appear in the results
+    assert code_portable.label in result.output
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

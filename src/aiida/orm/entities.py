@@ -375,6 +375,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         self.logger.warning(
             'Serialization through pydantic is still an experimental feature and might break in future releases.'
         )
+
         if repository_path is None:
             import tempfile
 
@@ -385,6 +386,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
                 raise ValueError(f'The repository_path `{repository_path}` does not exist.')
             if not repository_path.is_dir():
                 raise ValueError(f'The repository_path `{repository_path}` is not a directory.')
+
         return self.to_model(
             repository_path=repository_path,
             serialize_repository_content=serialize_repository_content,

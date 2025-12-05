@@ -518,7 +518,7 @@ class Waiting(plumpy.process_states.Waiting):
         self._task = None
         self._killing = None
 
-    async def execute(self) -> plumpy.process_states.State:  # type: ignore[override]
+    async def execute(self) -> plumpy.process_states.State | plumpy.base.state_machine.State:  # type: ignore[override]
         """Override the execute coroutine of the base `Waiting` state.
         Using the plumpy state machine the waiting state is repeatedly re-entered with different commands.
         The waiting state is not always the same instance, it could be re-instantiated when re-entering this method,
@@ -568,7 +568,7 @@ class Waiting(plumpy.process_states.Waiting):
                 if isinstance(task_result, ExitCode):
                     # The scheduler plugin returned an exit code from ``Scheduler.submit_job`` indicating the
                     # job submission failed due to a non-transient problem and the job should be terminated.
-                    return self.create_state(ProcessState.RUNNING, self.process.terminate, task_result)  # type: ignore[return-value]
+                    return self.create_state(ProcessState.RUNNING, self.process.terminate, task_result)
 
                 result = self.update()
 
@@ -589,7 +589,7 @@ class Waiting(plumpy.process_states.Waiting):
 
                     if monitor_result and not monitor_result.retrieve:
                         exit_code = self.process.exit_codes.STOPPED_BY_MONITOR.format(message=monitor_result.message)
-                        return self.create_state(ProcessState.RUNNING, self.process.terminate, exit_code)  # type: ignore[return-value]
+                        return self.create_state(ProcessState.RUNNING, self.process.terminate, exit_code)
 
                 result = self.stash(monitor_result=monitor_result)
 

@@ -329,11 +329,6 @@ def group_relabel(group, label):
         echo.echo_critical(str(exception))
     else:
         echo.echo_success(f"Label changed to '{label}'")
-        msg = (
-            'Note that if you are dumping your profile data to disk, to reflect the relabeling of the group, '
-            'run your `verdi profile dump` command again.'
-        )
-        echo.echo_report(msg)
 
 
 @verdi_group.command('description')

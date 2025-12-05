@@ -5,6 +5,10 @@ from pathlib import Path
 from aiida.manage.configuration import get_config, load_config
 from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
 
+# This is needed when we run this file in isolation using
+# the `--noconftest` pytest option in the 'test-pytest-fixtures' CI job.
+pytest_plugins = ['aiida.tools.pytest_fixtures']
+
 
 def test_aiida_config(tmp_path_factory):
     """Test that ``aiida_config`` fixture is loaded by default and creates a config instance in temp directory."""

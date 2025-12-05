@@ -65,7 +65,7 @@ class Transport(abc.ABC):
     """
 
     # This will be used for ``Computer.get_minimum_job_poll_interval``
-    DEFAULT_MINIMUM_JOB_POLL_INTERVAL = 10
+    DEFAULT_MINIMUM_JOB_POLL_INTERVAL = 10.0
 
     # This is used as a global default in case subclasses don't redefine this,
     # but this should  be redefined in plugins where appropriate
@@ -421,7 +421,10 @@ class Transport(abc.ABC):
             self.logger.error('Unknown parameters passed to copy_from_remote_to_remote')
 
         with SandboxFolder() as sandbox:
-            self.get(remotesource, sandbox.abspath, **kwargs_get)
+            # TODO: mypy error: Argument 2 to "get" of "Transport"
+            # has incompatible type "str | PurePath";
+            # expected "str | Path | PurePosixPath"
+            self.get(remotesource, sandbox.abspath, **kwargs_get)  # type: ignore[arg-type]
             # Then we scan the full sandbox directory with get_content_list,
             # because copying directly from sandbox.abspath would not work
             # to copy a single file into another single file, and copying

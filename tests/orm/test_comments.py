@@ -60,6 +60,15 @@ def test_comment_user(node, default_user):
     assert comment.user.uuid == default_user.uuid
 
 
+@pytest.mark.xfail
+def test_comment_set_user(node, default_user):
+    new_user = orm.User(email='meeseeks.look@me').store()
+    comment = Comment(node, default_user, 'Look at me!').store()
+    assert comment.user.uuid == default_user.uuid
+    comment.set_user(new_user)
+    assert comment.user.uuid == new_user.uuid
+
+
 def test_comment_collection_get(create_comment):
     """Test retrieving a Comment through the collection."""
     comment = create_comment()

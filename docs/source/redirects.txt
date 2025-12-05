@@ -32,8 +32,6 @@ datatypes/kpoints.rst topics/data_types.rst
 datatypes/bands.rst topics/data_types.rst
 backup/index.rst howto/installation.rst
 
-# fix https://www.materialscloud.org/dmp
-apidoc/aiida.orm.rst reference/apidoc/aiida.orm.rst
 querying/querybuilder/usage.rst howto/data.rst
 # datatypes/index.rst TO BE ADDED IN #4469
 

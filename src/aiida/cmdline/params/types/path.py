@@ -8,8 +8,11 @@
 ###########################################################################
 """Click parameter types for paths."""
 
+from __future__ import annotations
+
 import os
 import pathlib
+import typing as t
 
 import click
 
@@ -17,8 +20,10 @@ __all__ = ('AbsolutePathParamType', 'FileOrUrl', 'PathOrUrl')
 
 URL_TIMEOUT_SECONDS = 10
 
+PathType = t.Union[str, bytes, os.PathLike[str]]
 
-def check_timeout_seconds(timeout_seconds):
+
+def check_timeout_seconds(timeout_seconds: float) -> int:
     """Raise if timeout is not within range [0;60]"""
     try:
         timeout_seconds = int(timeout_seconds)
@@ -36,14 +41,14 @@ class AbsolutePathParamType(click.Path):
 
     name = 'AbsolutePath'
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> PathType:
         value = os.path.expanduser(value)
         newval = super().convert(value, param, ctx)
         if not os.path.isabs(newval):
             raise click.BadParameter('path must be absolute')
         return newval
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'ABSOLUTEPATH'
 
 
@@ -52,16 +57,16 @@ class AbsolutePathOrEmptyParamType(AbsolutePathParamType):
 
     name = 'AbsolutePathEmpty'
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> PathType:
         if not value:
-            return value
+            return value  # type: ignore[no-any-return]
         return super().convert(value, param, ctx)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'ABSOLUTEPATHEMPTY'
 
 
-def convert_possible_url(value: str, timeout: int):
+def convert_possible_url(value: str, timeout: int) -> t.Any:
     """If ``value`` does not correspond to a path on disk, try to open it as a URL.
 
     :param value: Potential path to file on disk or URL.
@@ -101,12 +106,12 @@ class PathOrUrl(click.Path):
 
     name = 'PathOrUrl'
 
-    def __init__(self, timeout_seconds=URL_TIMEOUT_SECONDS, **kwargs):
+    def __init__(self, timeout_seconds: float = URL_TIMEOUT_SECONDS, **kwargs: t.Any):
         super().__init__(**kwargs)
 
         self.timeout_seconds = check_timeout_seconds(timeout_seconds)
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
         try:
             return super().convert(value, param, ctx)
         except click.exceptions.BadParameter:
@@ -123,12 +128,12 @@ class FileOrUrl(click.File):
 
     name = 'FileOrUrl'
 
-    def __init__(self, timeout_seconds=URL_TIMEOUT_SECONDS, **kwargs):
+    def __init__(self, timeout_seconds: float = URL_TIMEOUT_SECONDS, **kwargs: t.Any):
         super().__init__(**kwargs)
 
         self.timeout_seconds = check_timeout_seconds(timeout_seconds)
 
-    def convert(self, value, param, ctx):
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> t.Any:
         try:
             return super().convert(value, param, ctx)
         except click.exceptions.BadParameter:

@@ -74,7 +74,7 @@ class LazyVerdiObjAttributeDict(AttributeDict):
 class VerdiContext(click.Context):
     """Custom context implementation that defines the ``obj`` user object and adds the ``Config`` instance."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: t.Any, **kwargs: t.Any):
         super().__init__(*args, **kwargs)
         if self.obj is None:
             self.obj = LazyVerdiObjAttributeDict(self)
@@ -106,11 +106,7 @@ class VerdiCommand(click.Command):
         if self.deprecated:
             # We are abusing click.Command `deprecated` member variable by using a
             # string instead of a bool to also use it as optional deprecated message
-            echo_deprecated(
-                self.deprecated
-                if isinstance(self.deprecated, str)  # type: ignore[redundant-expr]
-                else 'This command is deprecated.'
-            )
+            echo_deprecated(self.deprecated if isinstance(self.deprecated, str) else 'This command is deprecated.')
 
         return super().parse_args(ctx, args)
 
@@ -190,7 +186,7 @@ class VerdiCommandGroup(click.Group):
 
         return None
 
-    def group(self, *args, **kwargs) -> click.Group:
+    def group(self, *args: t.Any, **kwargs: t.Any) -> click.Group:
         """Ensure that sub command groups use the same class but do not override an explicitly set value."""
         kwargs.setdefault('cls', self.__class__)
-        return super().group(*args, **kwargs)
+        return super().group(*args, **kwargs)  # type: ignore[no-any-return]

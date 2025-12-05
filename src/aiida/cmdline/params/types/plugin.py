@@ -28,6 +28,7 @@ from aiida.plugins.entry_point import (
     get_entry_points,
 )
 
+from .._shims import shim_add_ctx
 from .strings import EntryPointType
 
 if t.TYPE_CHECKING:
@@ -67,7 +68,7 @@ class PluginParamType(EntryPointType):
         'aiida.workflows': factories.WorkflowFactory,
     }
 
-    def __init__(self, group: str | tuple[str, ...] | None = None, load: bool = False, *args, **kwargs):
+    def __init__(self, group: str | tuple[str, ...] | None = None, load: bool = False, *args: t.Any, **kwargs: t.Any):
         """Group should be either a string or a tuple of valid entry point groups.
         If it is not specified we use the tuple of all recognized entry point groups.
         """
@@ -163,7 +164,8 @@ class PluginParamType(EntryPointType):
         """
         return [click.shell_completion.CompletionItem(p) for p in self.get_possibilities(incomplete=incomplete)]
 
-    def get_missing_message(self, param: click.Parameter) -> str:
+    @shim_add_ctx
+    def get_missing_message(self, param: click.Parameter, ctx: click.Context | None) -> str:
         return 'Possible arguments are:\n\n' + '\n'.join(self.get_valid_arguments())
 
     def get_entry_point_from_string(self, entry_point_string: str) -> EntryPoint:
@@ -216,7 +218,7 @@ class PluginParamType(EntryPointType):
         if group not in self.groups:
             raise ValueError(f'entry point group `{group}` is not supported by this parameter.')
 
-    def convert(
+    def convert(  # type: ignore[override]
         self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None
     ) -> t.Union[EntryPoint, t.Any]:
         """Convert the string value to an entry point instance, if the value can be successfully parsed
@@ -243,7 +245,7 @@ class PluginParamType(EntryPointType):
 
         if self.load:
             try:
-                return entry_point.load()
+                return entry_point.load()  # type: ignore[no-untyped-call]
             except exceptions.LoadingEntryPointError as exception:
                 raise click.BadParameter(str(exception))
         else:

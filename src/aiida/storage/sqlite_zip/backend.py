@@ -12,19 +12,27 @@ from __future__ import annotations
 
 import json
 import shutil
+import tarfile
 import tempfile
+import zipfile
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import BinaryIO, Iterable, Iterator, Optional, Sequence, Tuple, cast
+from typing import BinaryIO, Optional, Tuple, Union, cast
 from zipfile import ZipFile, is_zipfile
 
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from aiida import __version__
-from aiida.common.exceptions import ClosedStorage, CorruptStorage, IncompatibleExternalDependencies
+from aiida.common.exceptions import (
+    ClosedStorage,
+    CorruptStorage,
+    IncompatibleExternalDependencies,
+    StorageMigrationError,
+)
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
@@ -134,12 +142,24 @@ class SqliteZipBackend(StorageBackend):
         if filepath_archive.exists() and not reset:
             from .migrator import migrate
 
+            # Check if migration is needed. If we are already at the desired version, then no migration is required
+            target_version = cls.version_head()
+            current_version = cls.get_current_archive_version(inpath=filepath_archive)
+            cls.validate_archive_versions(current_version=current_version, target_version=target_version)
+            if current_version == target_version:
+                LOGGER.report(
+                    f'Existing {cls.__name__} is already at target version {target_version}. No migration needed.'
+                )
+                return False
+
             # The archive exists but ``reset == False``, so we try to migrate to the latest schema version. If the
             # migration works, we replace the original archive with the migrated one.
             with tempfile.TemporaryDirectory() as dirpath:
                 filepath_migrated = Path(dirpath) / 'migrated.zip'
-                LOGGER.report(f'Migrating existing {cls.__name__}')
-                migrate(filepath_archive, filepath_migrated, cls.version_head())
+                LOGGER.report(
+                    f'Migrating existing {cls.__name__} from version {current_version} to version {target_version}'
+                )
+                migrate(filepath_archive, filepath_migrated, target_version)
                 shutil.move(filepath_migrated, filepath_archive)  # type: ignore[arg-type]
                 return False
 
@@ -318,7 +338,7 @@ class SqliteZipBackend(StorageBackend):
             filepath.unlink()
             LOGGER.report(f'Deleted archive at `{filepath}`.')
 
-    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]):
+    def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
         raise ReadOnlyError()
 
     def get_global_variable(self, key: str):
@@ -333,10 +353,62 @@ class SqliteZipBackend(StorageBackend):
     def get_info(self, detailed: bool = False) -> dict:
         # since extracting the database file is expensive, we only do it if detailed is True
         results = {'metadata': extract_metadata(self._path)}
+
+        # Truncate entities_starting_set in metadata if not detailed
+        if not detailed:
+            creation_params = results['metadata'].get('creation_parameters')
+            if creation_params and creation_params.get('entities_starting_set') is not None:
+                entities_starting_set = creation_params['entities_starting_set']
+                truncated_entities = {}
+                max_display = 5
+
+                for entity_type, uuid_list in entities_starting_set.items():
+                    if isinstance(uuid_list, list) and len(uuid_list) > max_display:
+                        truncated_entities[entity_type] = uuid_list[:max_display] + [
+                            f'... and {len(uuid_list) - max_display} more (use --detailed to show all)'
+                        ]
+                    else:
+                        truncated_entities[entity_type] = uuid_list
+
+                results['metadata']['creation_parameters']['entities_starting_set'] = truncated_entities
+
         if detailed:
             results.update(super().get_info(detailed=detailed))
             results['repository'] = self.get_repository().get_info(detailed)
         return results
+
+    @staticmethod
+    def get_current_archive_version(inpath: Union[str, Path]) -> str:
+        """Return the current version from metadata, raising if invalid/corrupt."""
+
+        inpath = Path(inpath)
+        if not (tarfile.is_tarfile(str(inpath)) or zipfile.is_zipfile(str(inpath))):
+            raise CorruptStorage(f'The input file is neither a tar nor a zip file: {inpath}')
+
+        metadata = extract_metadata(inpath, search_limit=None)
+
+        if 'export_version' not in metadata:
+            raise CorruptStorage('No export_version found in metadata')
+
+        return metadata['export_version']
+
+    @staticmethod
+    def validate_archive_versions(current_version: str, target_version: str) -> None:
+        """Check if migration is needed, raising if legacy/unsupported/invalid."""
+        from .migrator import list_versions
+
+        if current_version in ('0.1', '0.2', '0.3') or target_version in ('0.1', '0.2', '0.3'):
+            raise StorageMigrationError(
+                f"Legacy migration from '{current_version}' -> '{target_version}' "
+                'is not supported in aiida-core v2. First migrate them to the latest '
+                'version in aiida-core v1.'
+            )
+
+        all_versions = list_versions()
+        if target_version not in all_versions:
+            raise StorageMigrationError(f"Unknown target version '{target_version}'")
+        if current_version not in all_versions:
+            raise StorageMigrationError(f"Unknown current version '{current_version}'")
 
 
 class _RoBackendRepository(AbstractRepositoryBackend):
@@ -441,13 +513,15 @@ class ZipfileBackendRepository(_RoBackendRepository):
 
     @contextmanager
     def open(self, key: str) -> Iterator[BinaryIO]:
+        handle = None
         try:
             handle = self._zipfile.open(f'{self._folder}/{key}')
             yield cast(BinaryIO, handle)
         except KeyError:
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
         finally:
-            handle.close()
+            if handle is not None:
+                handle.close()
 
 
 class FolderBackendRepository(_RoBackendRepository):

@@ -9,6 +9,7 @@ import pathlib
 import shutil
 import tempfile
 import typing as t
+import zipfile
 
 from aiida.common import exceptions
 from aiida.manage import get_config_option
@@ -199,7 +200,8 @@ class NodeRepository:
             ``put_object_from_filelike`` instead.
 
         :param path: the relative path of the object within the repository.
-        :return: yield a byte stream object.
+        :param mode: (str) the type of stream object to be returned, 'r' for text handler, 'rb' for byte handler.
+        :return: yield a stream object, (byte or text)
         :raises TypeError: if the path is not a string and relative path.
         :raises FileNotFoundError: if the file does not exist.
         :raises IsADirectoryError: if the object is a directory and not a file.
@@ -210,7 +212,7 @@ class NodeRepository:
 
         with self._repository.open(path) as handle:
             if 'b' not in mode:
-                yield io.StringIO(handle.read().decode('utf-8'))
+                yield io.TextIOWrapper(handle, encoding='utf-8')
             else:
                 yield handle
 
@@ -271,6 +273,39 @@ class NodeRepository:
             return self._repository.get_object_content(path).decode('utf-8')
 
         return self._repository.get_object_content(path)
+
+    def get_object_size(self, path: str) -> int:
+        """Return the size of the object located at the given path.
+
+        :param path: the relative path of the object within the repository.
+        :return: the size of the object in bytes.
+        :raises TypeError: if the path is not a string and relative path.
+        :raises FileNotFoundError: if the file does not exist.
+        :raises IsADirectoryError: if the object is a directory and not a file.
+        :raises OSError: if the file could not be opened.
+        """
+        with self.open(path, mode='rb') as handle:
+            handle.seek(0, io.SEEK_END)
+            size = handle.tell()
+        return size
+
+    def get_zipped_objects(self, compression: int = zipfile.ZIP_DEFLATED) -> bytes:
+        """Return the zipped content of the repository or a sub path within it.
+
+        :param compression: the compression method to use. Defaults to `zipfile.ZIP_DEFLATED` (8).
+        :return: the zipped content as bytes.
+        """
+
+        zip_bytes_io = io.BytesIO()
+
+        with zipfile.ZipFile(zip_bytes_io, mode='w', compression=compression) as zip_file:
+            for dirpath, _, filenames in self.walk():
+                for filename in filenames:
+                    filepath = dirpath / filename
+                    file_content = self.get_object_content(str(filepath), mode='rb')
+                    zip_file.writestr(str(filepath), file_content)
+
+        return zip_bytes_io.getvalue()
 
     def put_object_from_bytes(self, content: bytes, path: str) -> None:
         """Store the given content in the repository at the given path.

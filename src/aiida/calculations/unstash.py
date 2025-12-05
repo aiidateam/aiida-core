@@ -109,7 +109,7 @@ class UnstashCalculation(CalcJob):
             else:  # UnstashTargetMode.NewRemoteData.value
                 computer = self.inputs.metadata.get('computer')
                 with computer.get_transport() as transport:
-                    remote_user = transport.whoami_async()
+                    remote_user = transport.whoami()
                 remote_working_directory = computer.get_workdir().format(username=remote_user)
 
                 # The following line is set at calcjob::presubmit, but we need it here

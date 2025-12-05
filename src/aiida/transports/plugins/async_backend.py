@@ -389,7 +389,10 @@ class _AsyncSSH(_AsynchronousSSHBackend):
             except asyncssh.sftp.SFTPFailure as exc:
                 raise OSError(f'Error while copying {remotesource} to {remotedestination}: {exc}')
         else:
-            self.logger.warning('The remote copy is not supported, using the `cp` command to copy the file/folder')
+            self.logger.debug(
+                'The SSH server does not support SFTP remote copy (SFTP >= v9.0), '
+                'falling back on the `cp` command to copy the file/folder.'
+            )
             # I copy pasted the whole logic below from SshTransport class:
 
             async def _exec_cp(cp_exe: str, cp_flags: str, src: str, dst: str):

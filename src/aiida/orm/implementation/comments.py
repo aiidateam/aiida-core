@@ -10,7 +10,7 @@
 
 import abc
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from .entities import BackendCollection, BackendEntity
 
@@ -66,7 +66,7 @@ class BackendComment(BackendEntity):
         """Return the comment content."""
 
     @abc.abstractmethod
-    def set_content(self, value: str):
+    def set_content(self, value: str) -> None:
         """Set the comment content."""
 
 
@@ -77,8 +77,8 @@ class BackendCommentCollection(BackendCollection[BackendComment]):
 
     @abc.abstractmethod
     def create(  # type: ignore[override]
-        self, node: 'BackendNode', user: 'BackendUser', content: Optional[str] = None, **kwargs
-    ):
+        self, node: 'BackendNode', user: 'BackendUser', content: Optional[str] = None, **kwargs: Any
+    ) -> BackendComment:
         """Create a Comment for a given node and user
 
         :param node: a Node instance

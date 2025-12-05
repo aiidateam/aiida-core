@@ -233,7 +233,31 @@ class CalcJob(Process):
         if self.__class__ == CalcJob:
             raise exceptions.InvalidOperation('cannot construct or launch a base `CalcJob` class.')
 
+        # A list of PKs of CalcJobs that this CalcJob is waiting for
+        self.awaitables: list[int] = []
+
         super().__init__(*args, **kwargs)
+
+    @override
+    def save_instance_state(self, out_state, save_context):
+        """Save instance state including the awaitables list.
+
+        :param out_state: state to save in
+        :param save_context: the save context
+        """
+        super().save_instance_state(out_state, save_context)
+        out_state['awaitables'] = self.awaitables
+
+    @override
+    def load_instance_state(self, saved_state, load_context):
+        """Load instance state including the awaitables list.
+
+        :param saved_state: saved instance state
+        :param load_context: the load context
+        """
+        super().load_instance_state(saved_state, load_context)
+        # Load awaitables, defaulting to empty list for backward compatibility
+        self.awaitables = saved_state.get('awaitables', [])
 
     @classmethod
     def define(cls, spec: CalcJobProcessSpec) -> None:  # type: ignore[override]

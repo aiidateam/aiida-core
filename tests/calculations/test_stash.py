@@ -100,8 +100,6 @@ def test_calculation_basic(
 def test_code_vs_stash_mode_conflict(stash_mode, fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
     """Test that the `StashCalculation` raises an error if the `code` input is not compatible with the `stash_mode`."""
 
-    from aiida import orm
-
     target_base = tmp_path / 'target'
     source = tmp_path / 'source'
     source.mkdir()
@@ -491,3 +489,91 @@ def test_all_modes(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path
         unstashed_file = Path(expected_target_base) / filename
         assert unstashed_file.exists()
         assert unstashed_file.read_text() == expected_content
+
+
+@pytest.mark.requires_rmq
+def test_stash_awaits_creator(fixture_sandbox, aiida_computer_local, generate_calc_job, tmp_path, caplog):
+    """Test if stash calculation awaits when the creator calcjob of RemoteData node is still not finished."""
+
+    import asyncio
+    import threading
+    import time
+
+    from plumpy import ProcessState
+
+    from aiida.common.links import LinkType
+    from aiida.engine import run_get_node
+    from aiida.engine.utils import instantiate_process
+    from aiida.manage import get_manager
+
+    target_base = tmp_path / 'target'
+    source = tmp_path / 'source'
+    source.mkdir()
+
+    a_computer = aiida_computer_local()
+
+    creator_calcjob = orm.CalcJobNode()
+    creator_calcjob.computer = a_computer
+    creator_calcjob.set_process_state(ProcessState.RUNNING)
+    creator_calcjob.store()
+
+    source_node = orm.RemoteData(computer=a_computer, remote_path=str(source))
+    source_node.base.links.add_incoming(creator_calcjob, link_type=LinkType.CREATE, link_label='remote_folder')
+    source_node.store()
+
+    assert source_node.creator == creator_calcjob
+
+    stash_inputs = {
+        'metadata': {
+            'computer': a_computer,
+            'options': {
+                'resources': {'num_machines': 1},
+                'stash': {
+                    'stash_mode': StashMode.COPY.value,
+                    'target_base': str(target_base),
+                    'source_list': ['*'],
+                },
+            },
+        },
+        'source_node': source_node,
+    }
+
+    # First test: verify awaitables list is populated correctly
+    manager = get_manager()
+    runner = manager.get_runner()
+    process_class = CalculationFactory('core.stash')
+
+    check_process = instantiate_process(runner, process_class, **stash_inputs)
+
+    assert check_process.inputs.source_node.creator == creator_calcjob
+    assert check_process.inputs.source_node.creator.process_state == ProcessState.RUNNING
+
+    async def verify_awaitables():
+        await check_process.run()
+        assert check_process.awaitables == [creator_calcjob.pk], (
+            f'Expected awaitables to contain [{creator_calcjob.pk}], ' f'but got {check_process.awaitables}'
+        )
+        return True
+
+    asyncio.run(verify_awaitables())
+
+    # Second test: verify that async sleep is triggered when creator is RUNNING
+    def mark_creator_finished_after_delay(creator_pk):
+        time.sleep(7)
+        creator = orm.load_node(creator_pk)
+        creator.set_process_state(ProcessState.FINISHED)
+
+    creator_calcjob.set_process_state(ProcessState.RUNNING)
+
+    finish_thread = threading.Thread(target=mark_creator_finished_after_delay, args=(creator_calcjob.pk,), daemon=True)
+    finish_thread.start()
+
+    with caplog.at_level(logging.INFO, logger='aiida.engine.processes.calcjobs.tasks'):
+        # The background thread will mark it FINISHED after 7 seconds
+        stash_result, stash_node = run_get_node(CalculationFactory('core.stash'), **stash_inputs)
+
+        assert any(
+            'waiting for awaitables to finish' in msg.lower() for msg in caplog.messages
+        ), f'Expected "waiting for awaitables to finish" in logs, but got: {caplog.messages}'
+
+        assert stash_node.is_finished_ok

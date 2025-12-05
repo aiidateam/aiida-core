@@ -17,8 +17,8 @@ build:
     # https://docs.readthedocs.io/en/stable/build-customization.html#install-dependencies-with-uv
     pre_create_environment:
     - asdf plugin add uv
-    - asdf install uv 0.7.6
-    - asdf global uv 0.7.6
+    - asdf install uv 0.9.8
+    - asdf global uv 0.9.8
     create_environment:
     # Create a virtual environment in '.venv/' folder
     # which is picked up automatically by `uv sync` and `uv run` commands below

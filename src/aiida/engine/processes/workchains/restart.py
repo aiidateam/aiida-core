@@ -40,7 +40,7 @@ def validate_on_unhandled_failure(value: None | orm.Str | orm.EnumData, _) -> No
 
     valid_options = ('abort', 'pause', 'restart_once', 'restart_and_pause')
     if value.value not in valid_options:
-        return f"Invalid value '{value.value}'. Must be one of: {', '.join(valid_options)}"
+        return f"`on_unhandled_failure`: '{value.value}'. Must be one of: {', '.join(valid_options)}"
 
     return None
 

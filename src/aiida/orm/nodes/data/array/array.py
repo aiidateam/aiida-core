@@ -65,11 +65,14 @@ class ArrayData(Data):
             if isinstance(value, (list, np.ndarray)):
                 return ArrayData.save_arrays({ArrayData.default_array_name: np.array(value)})
             elif isinstance(value, dict):
-                arrays: dict[str, bytes] = {}
+                arrays: dict[str, bytes | str] = {}
                 for key, array in value.items():
                     if isinstance(array, bytes):
                         arrays[key] = array
-                    elif isinstance(array, str):  # handles serialized base64-encoded strings
+                    elif isinstance(array, str):
+                        # Node.Model configures bytes serialization via base64 encoding.
+                        # Pydantic will thus convert base64-encoded strings to bytes internally.
+                        # No need to manually decode here.
                         arrays[key] = array
                     else:
                         arrays |= ArrayData.save_arrays({key: np.array(array)})

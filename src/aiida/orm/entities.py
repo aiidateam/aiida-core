@@ -292,6 +292,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         *,
         repository_path: Optional[pathlib.Path] = None,
         serialize_repository_content: bool = False,
+        exclude: Optional[set[str]] = None,
         skip_read_only: bool = False,
     ) -> dict[str, Any]:
         """Collect values for the ``Model``'s fields from this entity.
@@ -301,6 +302,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         :param repository_path: Optional path to use for repository-based fields.
         :param serialize_repository_content: Whether to include repository file content.
+        :param exclude: Optional set of field names to exclude.
         :param skip_read_only: When True, fields marked with ``exclude_to_orm`` are skipped.
         :return: Mapping of field name to value.
         """
@@ -309,6 +311,9 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         Model = self.Model if self.is_stored else self.CreateModel  # noqa: N806
 
         for key, field in Model.model_fields.items():
+            if key in (exclude or {}):
+                continue
+
             if skip_read_only and get_metadata(field, 'exclude_to_orm'):
                 continue
 
@@ -328,6 +333,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         *,
         repository_path: Optional[pathlib.Path] = None,
         serialize_repository_content: bool = False,
+        exclude: Optional[set[str]] = None,
     ) -> Model:
         """Return the entity instance as an instance of its model.
 
@@ -335,11 +341,13 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             files from. If no path is specified a temporary path is created using the entities pk.
         :param serialize_repository_content: If True, repository file content is serialized in the model.
             This field can be very large, so it is excluded by default.
+        :param exclude: Optional set of fields to exclude from the model.
         :return: An instance of the entity's model class.
         """
         fields = self.orm_to_model_field_values(
             repository_path=repository_path,
             serialize_repository_content=serialize_repository_content,
+            exclude=exclude,
         )
         Model = self.Model if self.is_stored else self.CreateModel  # noqa: N806
         return Model(**fields)
@@ -359,6 +367,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         *,
         repository_path: Optional[pathlib.Path] = None,
         serialize_repository_content: bool = False,
+        exclude: Optional[set[str]] = None,
         mode: Literal['json', 'python'] = 'json',
     ) -> dict[str, Any]:
         """Serialize the entity instance to JSON.
@@ -367,6 +376,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             files to. If no path is specified a temporary path is created using the entities pk.
         :param serialize_repository_content: If True, repository file content is serialized in the model.
             This field can be very large, so it is excluded by default.
+        :param exclude: Optional set of fields to exclude from the model.
         :param mode: The serialization mode, either 'json' or 'python'. The 'json' mode is the most strict and ensures
             that the output is JSON serializable, whereas the 'python' mode allows for more complex Python types, such
             as `datetime` objects.
@@ -390,6 +400,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return self.to_model(
             repository_path=repository_path,
             serialize_repository_content=serialize_repository_content,
+            exclude=exclude,
         ).model_dump(mode=mode)
 
     @classmethod

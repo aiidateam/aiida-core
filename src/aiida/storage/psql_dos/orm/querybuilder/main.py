@@ -1021,7 +1021,7 @@ def get_column(colname: str, alias: AliasedClass) -> InstrumentedAttribute:
         keys = []
         for key in alias._sa_class_manager.mapper.c.keys():
             if colalias := ALIAS_MAP.get(key):
-                keys.append(f'{key} (alias: {colalias})')
+                keys.append(f'{colalias} (alias for {key})')
             else:
                 keys.append(key)
         raise ValueError(

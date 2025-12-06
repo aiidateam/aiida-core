@@ -10,6 +10,8 @@
 This has been tested on PBSPro v. 12.
 """
 
+from __future__ import annotations
+
 import logging
 
 from .pbsbaseclasses import PbsBaseClass

@@ -10,6 +10,8 @@
 This has been tested on Torque v.2.4.16 (from Ubuntu).
 """
 
+from __future__ import annotations
+
 import logging
 
 from .pbsbaseclasses import PbsBaseClass

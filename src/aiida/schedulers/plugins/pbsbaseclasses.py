@@ -8,6 +8,8 @@
 ###########################################################################
 """Base classes for PBSPro and PBS/Torque plugins."""
 
+from __future__ import annotations
+
 import logging
 
 from aiida.common.escaping import escape_for_bash

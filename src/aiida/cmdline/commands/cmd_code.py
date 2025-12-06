@@ -8,11 +8,13 @@
 ###########################################################################
 """`verdi code` command."""
 
+from __future__ import annotations
+
 import pathlib
 import warnings
 from collections import defaultdict
 from functools import partial
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 
@@ -26,16 +28,20 @@ from aiida.cmdline.utils.common import validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions
 
+if TYPE_CHECKING:
+    from aiida.orm import Code
+
 
 @verdi.group('code')
 def verdi_code():
     """Setup and manage codes."""
 
 
-def create_code(ctx: click.Context, cls, **kwargs) -> None:
+def create_code(ctx: click.Context, cls: Code, **kwargs) -> None:
     """Create a new `Code` instance."""
     try:
-        instance = cls._from_model(cls.Model(**kwargs))
+        model = cls.CreateModel(**kwargs)
+        instance = cls.from_model(model)  # type: ignore[arg-type]
     except (TypeError, ValueError) as exception:
         echo.echo_critical(f'Failed to create instance `{cls}`: {exception}')
 
@@ -226,7 +232,6 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 def show(code):
     """Display detailed information for a code."""
     from aiida.cmdline import is_verbose
-    from aiida.common.pydantic import get_metadata
 
     table = []
 
@@ -235,38 +240,21 @@ def show(code):
     table.append(['UUID', code.uuid])
     table.append(['Type', code.entry_point.name])
 
-    for field_name, field_info in code.Model.model_fields.items():
-        # Skip fields excluded from CLI
-        if get_metadata(
-            field_info,
-            key='exclude_from_cli',
-            default=False,
-        ):
+    for field_name, field_info in code.CreateModel.model_fields.items():
+        # We don't show extras for codes
+        if field_name == 'extras':
             continue
 
-        # Skip fields that are not stored in the attributes column
-        # NOTE: this also catches e.g., filepath_files for PortableCode, which is actually a "misuse"
-        # of the is_attribute metadata flag, as there it is flagging that the field is not stored at all!
-        # TODO (edan-bainglass) consider improving this by introducing a new metadata flag or reworking PortableCode
-        # TODO see also Dict and InstalledCode for other potential misuses of is_attribute
-        if not get_metadata(
-            field_info,
-            key='is_attribute',
-            default=True,
-        ):
+        # FIXME resolve this hardcoded special case properly
+        if field_name == 'filepath_files':
             continue
 
         value = getattr(code, field_name)
 
-        # Special handling for computer field to show additional info
         if field_name == 'computer':
             value = f'{value.label} ({value.hostname}), pk: {value.pk}'
 
-        # Use the field's title as display name.
-        # This allows for custom titles (class-cased by default from Pydantic).
-        display_name = field_info.title
-
-        table.append([display_name, value])
+        table.append([field_info.title, value])
 
     if is_verbose():
         table.append(['Calculations', len(code.base.links.get_outgoing().all())])

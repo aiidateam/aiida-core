@@ -30,7 +30,7 @@ class BaseType(Data):
     class Model(Data.Model):
         value: t.Any = MetadataField(
             ...,
-            title='Data value.',
+            title='Data value',
             description='The value of the data',
         )
 

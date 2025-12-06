@@ -10,12 +10,11 @@
 
 from __future__ import annotations
 
-import base64
 import io
-from typing import Any, Iterator, Optional
+from typing import Any, Iterator, Optional, cast
 
 import numpy as np
-from pydantic import ConfigDict
+from pydantic import field_validator
 
 from aiida.common.pydantic import MetadataField
 
@@ -48,13 +47,38 @@ class ArrayData(Data):
     """
 
     class Model(Data.Model):
-        model_config = ConfigDict(arbitrary_types_allowed=True)
+        # model_config = ConfigDict(arbitrary_types_allowed=True)
+
         arrays: Optional[dict[str, bytes]] = MetadataField(
             None,
             description='The dictionary of numpy arrays.',
-            orm_to_model=lambda node, _: ArrayData.save_arrays(node.arrays),  # type: ignore[attr-defined]
-            model_to_orm=lambda model: ArrayData.load_arrays(model.arrays),  # type: ignore[attr-defined]
+            orm_to_model=lambda node, _: ArrayData.save_arrays(cast(ArrayData, node).arrays),
+            model_to_orm=lambda model: ArrayData.load_arrays(cast(ArrayData.Model, model).arrays),
         )
+
+        @field_validator('arrays', mode='before')
+        @classmethod
+        def validate_arrays(cls, value: dict[str, bytes | str | list | np.ndarray] | list | np.ndarray | None) -> Any:
+            if value is None:
+                return value
+
+            if isinstance(value, (list, np.ndarray)):
+                return ArrayData.save_arrays({ArrayData.default_array_name: np.array(value)})
+            elif isinstance(value, dict):
+                arrays: dict[str, bytes | str] = {}
+                for key, array in value.items():
+                    if isinstance(array, bytes):
+                        arrays[key] = array
+                    elif isinstance(array, str):
+                        # Node.Model configures bytes serialization via base64 encoding.
+                        # Pydantic will thus convert base64-encoded strings to bytes internally.
+                        # No need to manually decode here.
+                        arrays[key] = array
+                    else:
+                        arrays |= ArrayData.save_arrays({key: np.array(array)})
+                return arrays
+            else:
+                raise TypeError(f'`arrays` should be an iterable or dictionary of iterables but got: {value}')
 
     array_prefix = 'array|'
     default_array_name = 'default'
@@ -83,22 +107,25 @@ class ArrayData(Data):
 
     @staticmethod
     def save_arrays(arrays: dict[str, np.ndarray]) -> dict[str, bytes]:
-        results = {}
+        results: dict[str, bytes] = {}
 
         for key, array in arrays.items():
             stream = io.BytesIO()
             np.save(stream, array)
             stream.seek(0)
-            results[key] = base64.encodebytes(stream.read())
+            results[key] = stream.read()
 
         return results
 
     @staticmethod
-    def load_arrays(arrays: dict[str, bytes]) -> dict[str, np.ndarray]:
-        results = {}
+    def load_arrays(arrays: dict[str, bytes] | None) -> dict[str, np.ndarray]:
+        results: dict[str, np.ndarray] = {}
 
-        for key, encoded in arrays.items():
-            stream = io.BytesIO(base64.decodebytes(encoded))
+        if arrays is None:
+            return results
+
+        for key, bytes_ in arrays.items():
+            stream = io.BytesIO(bytes_)
             stream.seek(0)
             results[key] = np.load(stream)
 
@@ -227,8 +254,7 @@ class ArrayData(Data):
         # Check if the name is valid
         if not name or re.sub('[0-9a-zA-Z_]', '', name):
             raise ValueError(
-                'The name assigned to the array ({}) is not valid,'
-                'it can only contain digits, letters and underscores'
+                'The name assigned to the array ({}) is not valid,it can only contain digits, letters and underscores'
             )
 
         # Write the array to a temporary file, and then add it to the repository of the node

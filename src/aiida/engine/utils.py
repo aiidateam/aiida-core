@@ -301,6 +301,7 @@ def set_process_state_change_timestamp(node: 'ProcessNode') -> None:
             'plugin being used is `core.sqlite_dos` this is to be expected and can be safely ignored.'
         )
 
+
 def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Optional[datetime]:
     """Get the global setting that reflects the last time a process of the given process type changed its state.
     The returned value will be the corresponding timestamp or None if the setting does not exist.

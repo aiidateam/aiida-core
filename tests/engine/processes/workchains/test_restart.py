@@ -136,7 +136,7 @@ def test_unhandled_failure(generate_work_chain, generate_calculation_node, on_un
     if on_unhandled_failure == 'restart_once':
         assert result == engine.BaseRestartWorkChain.exit_codes.ERROR_UNHANDLED_FAILURE
         return
-    elif on_unhandled_failure == 'pause':
+    elif on_unhandled_failure == 'restart_and_pause':
         assert result is None
         assert process.paused
 

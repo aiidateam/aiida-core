@@ -123,7 +123,7 @@ Configuring unhandled failure behavior
 
     Before v2.8, a ``BaseRestartWorkChain`` would always restart once for an unhandled failure.
 
-There may be cases where a process experience a failure that has no corresponding error handler, but you still want to restart the process.
+There may be cases where a process experiences a failure that has no corresponding error handler, but you still want to restart the process.
 A typical example here is a node failure, where you simply want to restart the process without any changes to the input.
 By default, a ``BaseRestartWorkChain`` will abort when it encounters a failure it cannot handle, but this behaviour can be changed through the ``on_unhandled_failure`` input.
 The options are:

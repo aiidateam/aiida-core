@@ -515,8 +515,6 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                     await transport.copy_async(source_filepath, target_filepath)
                 except (OSError, ValueError) as exception:
                     EXEC_LOGGER.warning(f'Failed to stash {source_filepath} to {target_filepath}: {exception}')
-                    # try to clean up in case of a failure
-                    await transport.rmtree_async(target_base / uuid[:2])
                 else:
                     EXEC_LOGGER.debug(f'stashed from {source_filepath} to {target_filepath}')
 

@@ -296,12 +296,10 @@ def set_process_state_change_timestamp(node: 'ProcessNode') -> None:
         # This typically happens for SQLite-based storage plugins like ``core.sqlite_dos``. Since this is merely an
         # update of a timestamp that is likely to be updated soon again, just ignoring the failed update is not a
         # problem.
-        LOGGER.warning(
+        LOGGER.info(
             f'Failed to write global variable `{key}` to `{value}` because the database was locked. If the storage '
             'plugin being used is `core.sqlite_dos` this is to be expected and can be safely ignored.'
         )
-
-        LOGGER.info(message)
 
 def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Optional[datetime]:
     """Get the global setting that reflects the last time a process of the given process type changed its state.

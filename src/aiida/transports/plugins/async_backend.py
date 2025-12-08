@@ -30,8 +30,6 @@ from aiida.transports.transport import (
     has_magic,
 )
 
-__all__ = ('_AsyncSSH', '_OpenSSH')
-
 
 class _AsynchronousSSHBackend(abc.ABC):
     """

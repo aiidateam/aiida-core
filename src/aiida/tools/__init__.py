@@ -22,6 +22,7 @@ What functionality should go directly in the ORM class in `aiida.orm` and what i
 
 # fmt: off
 
+from .archive import *
 from .calculations import *
 from .data import *
 from .graph import *
@@ -30,22 +31,38 @@ from .visualization import *
 
 __all__ = (
     'DELETE_LOGGER',
+    'EXPORT_LOGGER',
+    'IMPORT_LOGGER',
+    'ArchiveExportError',
+    'ArchiveFormatAbstract',
+    'ArchiveFormatSqlZip',
+    'ArchiveImportError',
+    'ArchiveReaderAbstract',
+    'ArchiveWriterAbstract',
     'CalculationTools',
+    'ExportImportException',
+    'ExportValidationError',
     'Graph',
     'GroupNotFoundError',
     'GroupNotUniqueError',
     'GroupPath',
+    'ImportTestRun',
+    'ImportUniquenessError',
+    'ImportValidationError',
     'InvalidPath',
     'NoGroupsInPathError',
     'Orbital',
     'RealhydrogenOrbital',
+    'create_archive',
     'default_link_styles',
     'default_node_styles',
     'default_node_sublabels',
     'delete_group_nodes',
     'delete_nodes',
     'get_explicit_kpoints_path',
+    'get_format',
     'get_kpoints_path',
+    'import_archive',
     'pstate_node_styles',
     'spglib_tuple_to_structure',
     'structure_to_spglib_tuple',

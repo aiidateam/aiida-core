@@ -73,6 +73,7 @@ __all__ = (
     'ProgressReporterAbstract',
     'RemoteOperationError',
     'StashMode',
+    'StorageBackupError',
     'StorageMigrationError',
     'StoringNotAllowed',
     'TestsNotAllowedError',

@@ -9,8 +9,6 @@ from aiida.common.exceptions import AiidaException
 if t.TYPE_CHECKING:
     import requests
 
-__all__ = ('ManagementApiConnectionError', 'RabbitmqManagementClient')
-
 
 class ManagementApiConnectionError(AiidaException):
     """Raised when no connection can be made to the management HTTP API."""

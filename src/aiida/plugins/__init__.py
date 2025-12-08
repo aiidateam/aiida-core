@@ -18,6 +18,7 @@ from .utils import *
 
 __all__ = (
     'BaseFactory',
+    'BrokerFactory',
     'CalcJobImporterFactory',
     'CalculationFactory',
     'DataFactory',

@@ -1,3 +1,15 @@
-from .broker import Broker
+"""Generic broker interface module"""
 
-__all__ = ('Broker',)
+# AUTO-GENERATED
+
+# fmt: off
+
+from .broker import *
+from .rabbitmq import *
+
+__all__ = (
+    'Broker',
+    'RabbitmqBroker',
+)
+
+# fmt: on

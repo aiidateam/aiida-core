@@ -258,6 +258,7 @@ class CalcJob(Process):
             'monitors',
             valid_type=orm.Dict,
             required=False,
+            populate_defaults=False,
             validator=validate_monitors,
             help='Add monitoring functions that can inspect output files while the job is running and decide to '
             'prematurely terminate the job.',

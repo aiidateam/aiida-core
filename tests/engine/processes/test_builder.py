@@ -51,6 +51,16 @@ class LazyProcessNamespace(Process):
         spec.input('namespace.c', non_db=True)
 
 
+class PopulateDefaultsProcess(Process):
+    """Process with namespaces using populate_defaults=False to test lazy namespace creation."""
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.input_namespace('optional_ns', non_db=True, required=False, populate_defaults=False)
+        spec.input('optional_ns.value', valid_type=str, non_db=True, required=False)
+
+
 class SimpleProcessNamespace(Process):
     """Process with basic nested namespaces to test "pruning" of empty nested namespaces from the builder."""
 
@@ -140,6 +150,43 @@ def test_builder_inputs():
     builder.namespace.nested.bird = []
     assert builder._inputs(prune=False) == {'namespace': {'nested': {'bird': []}}, 'metadata': {}}
     assert builder._inputs(prune=True) == {'namespace': {'nested': {'bird': []}}}
+
+
+def test_builder_populate_defaults_false():
+    """Test that namespaces with populate_defaults=False are not added to builder until accessed."""
+    # An empty builder should not have the namespace with populate_defaults=False
+    builder = PopulateDefaultsProcess.get_builder()
+    assert 'optional_ns' not in dict(builder)
+    assert builder._inputs(prune=False) == {'metadata': {}}
+
+    # Accessing the namespace should create it (lazy creation)
+    _ = builder.optional_ns
+    assert 'optional_ns' in dict(builder)
+    # But with prune=True, it should be removed since it's empty
+    assert builder._inputs(prune=True) == {}
+
+    # Setting a value in the namespace should keep it
+    builder = PopulateDefaultsProcess.get_builder()
+    builder.optional_ns.value = 'test'
+    assert builder._inputs(prune=True) == {'optional_ns': {'value': 'test'}}
+
+
+def test_calcjob_builder_no_stash_unstash_monitors():
+    """Test that CalcJob builders don't include stash, unstash, and monitors in empty builder."""
+    ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
+    builder = ArithmeticAddCalculation.get_builder()
+
+    # Verify that stash, unstash, and monitors are not in the builder
+    assert 'stash' not in dict(builder.metadata.options)
+    assert 'unstash' not in dict(builder.metadata.options)
+    assert 'monitors' not in dict(builder)
+
+    # But they should be accessible and settable
+    builder.metadata.options.stash.target_base = '/tmp/test'
+    builder.metadata.options.stash.source_list = ['file1']
+    builder.metadata.options.stash.stash_mode = 'copy'
+    assert 'stash' in dict(builder.metadata.options)
+    assert builder.metadata.options.stash.target_base == '/tmp/test'
 
 
 @pytest.mark.parametrize(

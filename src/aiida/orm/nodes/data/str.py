@@ -20,7 +20,7 @@ class Str(BaseType):
 
     _type = str
 
-    class Model(BaseType.Model):
+    class AttributesModel(BaseType.AttributesModel):
         value: str = MetadataField(
             title='String value',
             description='The value of the string',

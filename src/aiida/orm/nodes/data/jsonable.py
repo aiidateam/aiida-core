@@ -50,7 +50,7 @@ class JsonableData(Data):
     environment, or an ``ImportError`` will be raised.
     """
 
-    class Model(Data.Model):
+    class AttributesModel(Data.AttributesModel):
         model_config = ConfigDict(arbitrary_types_allowed=True)
         obj: typing.Annotated[
             JsonSerializableProtocol,

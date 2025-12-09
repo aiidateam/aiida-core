@@ -30,7 +30,7 @@ class ContainerizedCode(InstalledCode):
     _KEY_ATTRIBUTE_ENGINE_COMMAND: str = 'engine_command'
     _KEY_ATTRIBUTE_IMAGE_NAME: str = 'image_name'
 
-    class Model(InstalledCode.Model):
+    class AttributesModel(InstalledCode.AttributesModel):
         """Model describing required information to create an instance."""
 
         engine_command: str = MetadataField(

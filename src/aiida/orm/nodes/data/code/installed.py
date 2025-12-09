@@ -41,9 +41,16 @@ class InstalledCode(Code):
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
     _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
-    class Model(AbstractCode.Model):
-        """Model describing required information to create an instance."""
+    class AttributesModel(AbstractCode.AttributesModel):
+        filepath_executable: str = MetadataField(
+            title='Filepath executable',
+            description='Filepath of the executable on the remote computer.',
+            orm_to_model=lambda node, _: str(cast(InstalledCode, node).filepath_executable),
+            short_name='-X',
+            priority=1,
+        )
 
+    class Model(AbstractCode.Model):
         computer: str = MetadataField(
             title='Computer',
             description='The label of the remote computer on which the executable resides.',
@@ -52,13 +59,6 @@ class InstalledCode(Code):
             model_to_orm=lambda model: cast(InstalledCode.Model, model).load_computer(),
             short_name='-Y',
             priority=2,
-        )
-        filepath_executable: str = MetadataField(
-            title='Filepath executable',
-            description='Filepath of the executable on the remote computer.',
-            orm_to_model=lambda node, _: str(cast(InstalledCode, node).filepath_executable),
-            short_name='-X',
-            priority=1,
         )
 
         @field_validator('computer', mode='before')

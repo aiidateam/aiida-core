@@ -46,7 +46,7 @@ class ArrayData(Data):
 
     """
 
-    class Model(Data.Model):
+    class AttributesModel(Data.AttributesModel):
         # model_config = ConfigDict(arbitrary_types_allowed=True)
 
         arrays: Optional[dict[str, bytes]] = MetadataField(

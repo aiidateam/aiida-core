@@ -66,7 +66,7 @@ class CalcJobNode(CalculationNode):
     SCHEDULER_LAST_JOB_INFO_KEY = 'last_job_info'
     SCHEDULER_DETAILED_JOB_INFO_KEY = 'detailed_job_info'
 
-    class Model(CalculationNode.Model):
+    class AttributesModel(CalculationNode.AttributesModel):
         scheduler_state: Optional[str] = MetadataField(
             None,
             description='The state of the scheduler',

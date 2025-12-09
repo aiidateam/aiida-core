@@ -215,7 +215,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
 class BandsData(KpointsData):
     """Class to handle bands data"""
 
-    class Model(KpointsData.Model):
+    class AttributesModel(KpointsData.AttributesModel):
         array_labels: t.Optional[t.List[str]] = MetadataField(
             None,
             description='Labels associated with the band arrays',

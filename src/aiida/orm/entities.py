@@ -213,7 +213,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             """
 
             # Derive the creation model from the original model
-            new_name = cls.__qualname__.replace('.Model', 'CreateModel')
+            new_name = cls.__qualname__.replace('Model', 'CreateModel')
             CreateModel = create_model(  # noqa: N806
                 new_name,
                 __base__=cls,

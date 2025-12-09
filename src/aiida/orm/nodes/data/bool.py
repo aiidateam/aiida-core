@@ -22,7 +22,7 @@ class Bool(BaseType):
 
     _type = bool
 
-    class Model(BaseType.Model):
+    class AttributesModel(BaseType.AttributesModel):
         value: bool = MetadataField(
             title='Boolean value',
             description='The value of the boolean',

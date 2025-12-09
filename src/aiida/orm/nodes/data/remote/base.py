@@ -34,7 +34,7 @@ class RemoteData(Data):
 
     KEY_EXTRA_CLEANED = 'cleaned'
 
-    class Model(Data.Model):
+    class AttributesModel(Data.AttributesModel):
         remote_path: Optional[str] = MetadataField(
             None,
             title='Remote path',

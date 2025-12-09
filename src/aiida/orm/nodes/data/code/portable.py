@@ -55,7 +55,7 @@ class PortableCode(Code):
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
     _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
-    class Model(AbstractCode.Model):
+    class AttributesModel(AbstractCode.AttributesModel):
         """Model describing required information to create an instance."""
 
         filepath_executable: str = MetadataField(

@@ -50,12 +50,12 @@ class Dict(Data):
     Finally, all dictionary mutations will be forbidden once the node is stored.
     """
 
-    class Model(Data.Model):
-        value: t.Dict[str, t.Any] = MetadataField(
-            description='Dictionary content.',
-            is_attribute=False,
-            is_subscriptable=True,
-        )
+    # class AttributesModel(Data.AttributesModel):
+    #     value: t.Dict[str, t.Any] = MetadataField(
+    #         description='Dictionary content.',
+    #         is_attribute=False,
+    #         is_subscriptable=True,
+    #     )
 
     def __init__(self, value=None, **kwargs):
         """Initialise a ``Dict`` node instance.

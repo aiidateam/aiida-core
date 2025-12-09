@@ -190,7 +190,7 @@ class ProcessNode(Sealable, Node):
             cls.PROCESS_STATUS_KEY,
         )
 
-    class Model(Node.Model, Sealable.Model):
+    class AttributesModel(Node.AttributesModel, Sealable.AttributesModel):
         process_label: Optional[str] = MetadataField(
             None,
             description='The process label',

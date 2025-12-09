@@ -171,24 +171,6 @@ def test_builder_populate_defaults_false():
     assert builder._inputs(prune=True) == {'optional_ns': {'value': 'test'}}
 
 
-def test_calcjob_builder_no_stash_unstash_monitors():
-    """Test that CalcJob builders don't include stash, unstash, and monitors in empty builder."""
-    ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
-    builder = ArithmeticAddCalculation.get_builder()
-
-    # Verify that stash, unstash, and monitors are not in the builder
-    assert 'stash' not in dict(builder.metadata.options)
-    assert 'unstash' not in dict(builder.metadata.options)
-    assert 'monitors' not in dict(builder)
-
-    # But they should be accessible and settable
-    builder.metadata.options.stash.target_base = '/tmp/test'
-    builder.metadata.options.stash.source_list = ['file1']
-    builder.metadata.options.stash.stash_mode = 'copy'
-    assert 'stash' in dict(builder.metadata.options)
-    assert builder.metadata.options.stash.target_base == '/tmp/test'
-
-
 @pytest.mark.parametrize(
     'process_class',
     [

@@ -9,6 +9,7 @@
 """Module to test transport."""
 
 import asyncio
+import time
 
 import pytest
 
@@ -110,8 +111,6 @@ class TestTransportQueue:
         try:
             transport_class._DEFAULT_SAFE_OPEN_INTERVAL = 0.25
 
-            import time
-
             queue = TransportQueue()
             loop = queue.loop
 
@@ -140,8 +139,6 @@ class TestTransportQueue:
 
         try:
             transport_class._DEFAULT_SAFE_OPEN_INTERVAL = 0.5
-
-            import time
 
             queue = TransportQueue()
             loop = queue.loop

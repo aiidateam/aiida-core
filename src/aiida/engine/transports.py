@@ -42,6 +42,12 @@ class TransportQueue:
     it will open the transport and give it to all the clients that asked for it
     up to that point.  This way opening of transports (a costly operation) can
     be minimised.
+
+    The wait time is dynamically calculated based on when the transport was last
+    closed. If the transport has never been opened before, or if enough time has
+    passed since it was last closed (greater than or equal to the safe_open_interval),
+    the transport will be opened immediately. Otherwise, the queue will wait only
+    for the remaining time needed to satisfy the safe_open_interval.
     """
 
     def __init__(self, loop: Optional[asyncio.AbstractEventLoop] = None):
@@ -83,7 +89,7 @@ class TransportQueue:
             # Calculate the actual wait time based on when the transport was last closed
             last_close_time = self._last_close_times.get(authinfo.pk, None)
             current_time = time.time()
-            
+
             if last_close_time is None:
                 # Never opened before, open immediately
                 wait_interval = 0

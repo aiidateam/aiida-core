@@ -8,6 +8,8 @@
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
 
+from __future__ import annotations
+
 from typing import Dict, Optional
 
 from aiida.common import exceptions
@@ -46,7 +48,7 @@ class Data(Node):
     _storable = True
     _unstorable_message = 'storing for this node has been disabled'
 
-    class Model(Node.Model):
+    class AttributesModel(Node.AttributesModel):
         source: Optional[dict] = MetadataField(
             None,
             description='Source of the data.',

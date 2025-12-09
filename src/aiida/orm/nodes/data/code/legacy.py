@@ -39,7 +39,7 @@ class Code(AbstractCode):
     for the code to be run).
     """
 
-    class Model(AbstractCode.Model):
+    class AttributesModel(AbstractCode.AttributesModel):
         prepend_text: str = MetadataField(
             '',
             description='The code that will be put in the scheduler script before the execution of the code',
@@ -220,7 +220,7 @@ class Code(AbstractCode):
         elif query.count() > 1:
             codes = query.all(flat=True)
             retstr = f"There are multiple codes with label '{label}', having IDs: "
-            retstr += f"{', '.join(sorted([str(c.pk) for c in codes]))}.\n"
+            retstr += f'{", ".join(sorted([str(c.pk) for c in codes]))}.\n'
             retstr += 'Relabel them (using their ID), or refer to them with their ID.'
             raise MultipleObjectsError(retstr)
         else:
@@ -333,7 +333,7 @@ class Code(AbstractCode):
         if self.is_local():
             if not self.get_local_executable():
                 raise exceptions.ValidationError(
-                    'You have to set which file is the local executable ' 'using the set_exec_filename() method'
+                    'You have to set which file is the local executable using the set_exec_filename() method'
                 )
             if self.get_local_executable() not in self.base.repository.list_object_names():
                 raise exceptions.ValidationError(

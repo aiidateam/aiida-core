@@ -50,7 +50,7 @@ class EnumData(Data):
     KEY_VALUE = 'value'
     KEY_IDENTIFIER = 'identifier'
 
-    class Model(Data.Model):
+    class AttributesModel(Data.AttributesModel):
         member: Enum = MetadataField(
             description='The member name.',
             orm_to_model=lambda node, _: t.cast(EnumData, node).get_member(),

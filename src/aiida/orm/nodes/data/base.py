@@ -8,6 +8,8 @@
 ###########################################################################
 """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
+from __future__ import annotations
+
 import typing as t
 from functools import singledispatch
 
@@ -27,7 +29,7 @@ def to_aiida_type(value):
 class BaseType(Data):
     """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
-    class Model(Data.Model):
+    class AttributesModel(Data.AttributesModel):
         value: t.Any = MetadataField(
             ...,
             title='Data value',

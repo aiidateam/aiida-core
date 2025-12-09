@@ -131,3 +131,59 @@ class TestTransportQueue:
 
         finally:
             transport_class._DEFAULT_SAFE_OPEN_INTERVAL = original_interval
+
+    def test_dynamic_safe_interval(self):
+        """Verify that the transport queue opens immediately when enough time has passed since last close."""
+        # Temporarily set the safe open interval for the default transport to a finite value
+        transport_class = self.authinfo.get_transport().__class__
+        original_interval = transport_class._DEFAULT_SAFE_OPEN_INTERVAL
+
+        try:
+            transport_class._DEFAULT_SAFE_OPEN_INTERVAL = 0.5
+
+            import time
+
+            queue = TransportQueue()
+            loop = queue.loop
+
+            # First transport request - should open immediately (no previous close time)
+            async def test_first():
+                time_start = time.time()
+                with queue.request_transport(self.authinfo) as request:
+                    trans = await request
+                    time_elapsed = time.time() - time_start
+                    # Should open immediately or very quickly
+                    assert time_elapsed < 0.1, f'First transport took too long to open: {time_elapsed}s'
+                    assert trans.is_open
+
+            loop.run_until_complete(test_first())
+
+            # Second transport request immediately after - should wait for remaining safe interval
+            async def test_second_immediate():
+                time_start = time.time()
+                with queue.request_transport(self.authinfo) as request:
+                    trans = await request
+                    time_elapsed = time.time() - time_start
+                    # Should wait approximately the safe interval since not enough time has passed
+                    assert time_elapsed >= 0.4, f'Second transport opened too quickly: {time_elapsed}s'
+                    assert trans.is_open
+
+            loop.run_until_complete(test_second_immediate())
+
+            # Wait for safe interval to pass
+            time.sleep(0.6)
+
+            # Third transport request after safe interval - should open immediately
+            async def test_third_after_interval():
+                time_start = time.time()
+                with queue.request_transport(self.authinfo) as request:
+                    trans = await request
+                    time_elapsed = time.time() - time_start
+                    # Should open immediately since safe interval has passed
+                    assert time_elapsed < 0.1, f'Third transport took too long to open: {time_elapsed}s'
+                    assert trans.is_open
+
+            loop.run_until_complete(test_third_after_interval())
+
+        finally:
+            transport_class._DEFAULT_SAFE_OPEN_INTERVAL = original_interval

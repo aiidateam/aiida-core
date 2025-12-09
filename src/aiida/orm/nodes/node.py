@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import datetime
 from collections.abc import Iterable
+from copy import deepcopy
 from functools import cached_property
 from typing import (
     TYPE_CHECKING,
@@ -30,7 +31,7 @@ from typing import (
 )
 from uuid import UUID
 
-from pydantic import ConfigDict
+from pydantic import BaseModel, ConfigDict
 from typing_extensions import Self
 
 from aiida.common import exceptions
@@ -223,6 +224,9 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     _storable = False
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
+    class AttributesModel(BaseModel):
+        """The node attributes."""
+
     class Model(Entity.Model):
         model_config = ConfigDict(
             ser_json_bytes='base64',
@@ -272,13 +276,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             description='The node description',
             is_attribute=False,
         )
-        attributes: Dict[str, Any] = MetadataField(
-            default_factory=dict,
+        attributes: Node.AttributesModel = MetadataField(
+            default_factory=lambda: Node.AttributesModel(),
             description='The node attributes',
             is_attribute=False,
             orm_to_model=lambda node, _: cast(Node, node).base.attributes.all,
             is_subscriptable=True,
-            exclude_to_orm=True,
         )
         extras: Dict[str, Any] = MetadataField(
             default_factory=dict,
@@ -327,12 +330,39 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             except exceptions.NotExistent as exception:
                 raise ValueError(exception) from exception
 
+    def __init_subclass__(cls, **kwargs) -> None:
+        super().__init_subclass__(**kwargs)
+
+        Model = cast(Node.Model, getattr(cls, 'Model'))
+        Attrs = cast(Node.AttributesModel, getattr(cls, 'AttributesModel'))
+
+        if 'Model' not in cls.__dict__:
+            parent_model = Model
+            Model = cast(
+                Node.Model,
+                type(
+                    'Model',
+                    (parent_model,),
+                    {
+                        '__module__': cls.__module__,
+                    },
+                ),
+            )
+            cls.Model = Model
+
+        base_field = Model.model_fields['attributes']
+        new_field = deepcopy(base_field)
+        new_field.annotation = Attrs
+        Model.model_fields['attributes'] = new_field
+        Model.model_rebuild(force=True)
+
     def __init__(
         self,
         backend: Optional['StorageBackend'] = None,
         user: Optional[User] = None,
         computer: Optional[Computer] = None,
         extras: Optional[Dict[str, Any]] = None,
+        attributes: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> None:
         # We verify here that all attributes are handled in a constructor prior to the root
@@ -357,6 +387,9 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             node_type=self.class_node_type, user=user.backend_entity, computer=backend_computer, **kwargs
         )
         super().__init__(backend_entity)
+
+        if attributes is not None:
+            self.base.attributes.set_many(attributes)
 
         if extras is not None:
             self.base.extras.set_many(extras)

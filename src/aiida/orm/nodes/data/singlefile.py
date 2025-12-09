@@ -30,7 +30,7 @@ class SinglefileData(Data):
 
     DEFAULT_FILENAME = 'file.txt'
 
-    class Model(Data.Model):
+    class AttributesModel(Data.AttributesModel):
         content: bytes = MetadataField(
             description='The file content.',
             model_to_orm=lambda model: io.BytesIO(t.cast(SinglefileData, model).content),

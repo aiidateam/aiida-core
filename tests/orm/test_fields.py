@@ -65,7 +65,7 @@ def test_add_field():
     assert node.fields.key1.dtype is str
     assert isinstance(node.fields.key1, orm.fields.QbStrField)
     assert node.fields.key1.backend_key == 'attributes.key1'
-    assert not node.fields.key1.is_subscriptable
+    assert not node.fields.key1._is_subscriptable
 
 
 @pytest.mark.parametrize('key', ('|', 'some.field', '1key'))

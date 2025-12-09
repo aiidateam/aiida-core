@@ -43,7 +43,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     _KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS: str = 'wrap_cmdline_params'
     _KEY_EXTRA_IS_HIDDEN: str = 'hidden'  # Should become ``is_hidden`` once ``Code`` is dropped
 
-    class Model(Data.Model, defer_build=True):
+    class AttributesModel(Data.AttributesModel, defer_build=True):
         """Model describing required information to create an instance."""
 
         label: str = MetadataField(

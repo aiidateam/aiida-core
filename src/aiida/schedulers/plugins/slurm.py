@@ -10,13 +10,25 @@
 This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 """
 
+import datetime
 import re
+import string
+import time
+import typing as t
 
+from typing_extensions import override
+
+from aiida.common import AttributeDict
+from aiida.common.exceptions import FeatureNotAvailable
 from aiida.common.lang import type_check
 from aiida.schedulers import Scheduler, SchedulerError
-from aiida.schedulers.datastructures import JobInfo, JobState, NodeNumberJobResource
+from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, NodeNumberJobResource
 
 from .bash import BashCliScheduler
+
+if t.TYPE_CHECKING:
+    from aiida.engine.processes.exit_code import ExitCode
+
 
 # This maps SLURM state codes to our own status list
 
@@ -107,8 +119,9 @@ _FIELD_SEPARATOR = '^^^'
 class SlurmJobResource(NodeNumberJobResource):
     """Class for SLURM job resources."""
 
+    @override
     @classmethod
-    def validate_resources(cls, **kwargs):
+    def validate_resources(cls, **kwargs: t.Any) -> AttributeDict:
         """Validate the resources against the job resource class of this scheduler.
 
         This extends the base class validator to check that the `num_cores_per_machine` are a multiple of
@@ -177,13 +190,12 @@ class SlurmScheduler(BashCliScheduler):
         # 14.03.7 and later
     ]
 
-    def _get_joblist_command(self, jobs=None, user=None):
+    def _get_joblist_command(self, jobs: list[str] | None = None, user: str | None = None) -> str:
         """The command to report full information on existing jobs.
 
         Separate the fields with the _field_separator string order:
         jobnum, state, walltime, queue[=partition], user, numnodes, numcores, title
         """
-        from aiida.common.exceptions import FeatureNotAvailable
 
         # I add the environment variable SLURM_TIME_FORMAT in front to be
         # sure to get the times in 'standard' format
@@ -201,8 +213,8 @@ class SlurmScheduler(BashCliScheduler):
             command.append(f'-u{user}')
 
         if jobs:
-            joblist = []
-            if isinstance(jobs, str):
+            if isinstance(jobs, str):  # type: ignore[unreachable]
+                joblist = [jobs]  # type: ignore[unreachable]
                 joblist.append(jobs)
             else:
                 if not isinstance(jobs, (tuple, list)):
@@ -231,7 +243,7 @@ class SlurmScheduler(BashCliScheduler):
         self.logger.debug(f'squeue command: {comm}')
         return comm
 
-    def _get_detailed_job_info_command(self, job_id):
+    def _get_detailed_job_info_command(self, job_id: str) -> str:
         """Return the command to run to get the detailed information on a job,
         even after the job has finished.
 
@@ -241,7 +253,7 @@ class SlurmScheduler(BashCliScheduler):
         """
         return f"sacct --format=$(sacct --helpformat | tr -s '\n' ' ' | tr ' ' ',') --parsable --jobs={job_id}"
 
-    def _get_submit_script_header(self, job_tmpl):
+    def _get_submit_script_header(self, job_tmpl: JobTemplate) -> str:
         """Return the submit script header, using the parameters from the
         job_tmpl.
 
@@ -251,7 +263,6 @@ class SlurmScheduler(BashCliScheduler):
 
         TODO: truncate the title if too long
         """
-        import string
 
         lines = []
         if job_tmpl.submit_as_hold:
@@ -385,7 +396,7 @@ class SlurmScheduler(BashCliScheduler):
 
         return '\n'.join(lines)
 
-    def _get_submit_command(self, submit_script):
+    def _get_submit_command(self, submit_script: str) -> str:
         """Return the string to execute to submit a given script.
 
         Args:
@@ -400,7 +411,7 @@ class SlurmScheduler(BashCliScheduler):
 
         return submit_command
 
-    def _parse_submit_output(self, retval, stdout, stderr):
+    def _parse_submit_output(self, retval: int, stdout: str, stderr: str) -> str | ExitCode:
         """Parse the output of the submit command, as returned by executing the
         command returned by _get_submit_command command.
 
@@ -414,7 +425,7 @@ class SlurmScheduler(BashCliScheduler):
             self.logger.error(f'Error in _parse_submit_output: retval={retval}; stdout={stdout}; stderr={stderr}')
 
             if 'Invalid account' in stderr:
-                return CalcJob.exit_codes.ERROR_SCHEDULER_INVALID_ACCOUNT
+                return CalcJob.exit_codes.ERROR_SCHEDULER_INVALID_ACCOUNT  # type: ignore[no-any-return]
 
             raise SchedulerError(f'Error during submission, retval={retval}\nstdout={stdout}\nstderr={stderr}')
 
@@ -439,7 +450,7 @@ class SlurmScheduler(BashCliScheduler):
             'Error during submission, could not retrieve the jobID from ' 'sbatch output; see log for more info.'
         )
 
-    def _parse_joblist_output(self, retval, stdout, stderr):
+    def _parse_joblist_output(self, retval: int, stdout: str, stderr: str) -> list[JobInfo]:
         """Parse the queue output string, as returned by executing the
         command returned by _get_joblist_command command,
         that is here implemented as a list of lines, one for each
@@ -577,7 +588,8 @@ stderr='{stderr.strip()}'"""
 
             try:
                 walltime = self._convert_time(thisjob_dict['time_limit'])
-                this_job.requested_wallclock_time_seconds = walltime
+                # TODO: Fix this type ignore, _convert_time can return None
+                this_job.requested_wallclock_time_seconds = walltime  # type: ignore[assignment]
             except ValueError:
                 self.logger.warning(f'Error parsing the time limit for job id {this_job.job_id}')
 
@@ -585,7 +597,10 @@ stderr='{stderr.strip()}'"""
             # and may be not set (in my test, it is set to zero)
             if this_job.job_state == JobState.RUNNING:
                 try:
-                    this_job.wallclock_time_seconds = self._convert_time(thisjob_dict['time_used'])
+                    wallclock_time_seconds = self._convert_time(thisjob_dict['time_used'])
+                    if wallclock_time_seconds is None:
+                        raise ValueError('SLURM wallclock time not set on a running job')
+                    this_job.wallclock_time_seconds = wallclock_time_seconds
                 except ValueError:
                     self.logger.warning(f'Error parsing time_used for job id {this_job.job_id}')
 
@@ -607,7 +622,7 @@ stderr='{stderr.strip()}'"""
             # Double check of redundant info
             # Not really useful now, allocated_machines in this
             # version of the plugin is never set
-            if this_job.allocated_machines is not None and this_job.num_machines is not None:
+            if this_job.allocated_machines is not None and this_job.num_machines is not None:  # type: ignore[redundant-expr]
                 if len(this_job.allocated_machines) != this_job.num_machines:
                     self.logger.error(
                         'The length of the list of allocated '
@@ -620,7 +635,7 @@ stderr='{stderr.strip()}'"""
 
         return job_list
 
-    def _convert_time(self, string):
+    def _convert_time(self, string: str) -> int | None:
         """Convert a string in the format DD-HH:MM:SS to a number of seconds."""
         if string == 'UNLIMITED':
             return 2147483647  # == 2**31 - 1, largest 32-bit signed integer (68 years)
@@ -642,12 +657,10 @@ stderr='{stderr.strip()}'"""
 
         return days * 86400 + hours * 3600 + mins * 60 + secs
 
-    def _parse_time_string(self, string, fmt='%Y-%m-%dT%H:%M:%S'):
+    def _parse_time_string(self, string: str, fmt: str = '%Y-%m-%dT%H:%M:%S') -> datetime.datetime:
         """Parse a time string in the format returned from qstat -f and
         returns a datetime object.
         """
-        import datetime
-        import time
 
         try:
             time_struct = time.strptime(string, fmt)
@@ -660,7 +673,7 @@ stderr='{stderr.strip()}'"""
         # http://stackoverflow.com/questions/1697815
         return datetime.datetime.fromtimestamp(time.mktime(time_struct))
 
-    def _get_kill_command(self, jobid):
+    def _get_kill_command(self, jobid: str) -> str:
         """Return the command to kill the job with specified jobid."""
         submit_command = f'scancel {jobid}'
 
@@ -668,7 +681,7 @@ stderr='{stderr.strip()}'"""
 
         return submit_command
 
-    def _parse_kill_output(self, retval, stdout, stderr):
+    def _parse_kill_output(self, retval: int, stdout: str, stderr: str) -> bool:
         """Parse the output of the kill command.
 
         To be implemented by the plugin.
@@ -692,7 +705,12 @@ stderr='{stderr.strip()}'"""
 
         return True
 
-    def parse_output(self, detailed_job_info=None, stdout=None, stderr=None):
+    def parse_output(
+        self,
+        detailed_job_info: dict[str, str | int] | None = None,
+        stdout: str | None = None,
+        stderr: str | None = None,
+    ) -> ExitCode | None:
         """Parse the output of the scheduler.
 
         :param detailed_job_info: dictionary with the output returned by the `Scheduler.get_detailed_job_info` command.
@@ -718,7 +736,7 @@ stderr='{stderr.strip()}'"""
             # The format of the detailed job info should be a multiline string, where the first line is the header, with
             # the labels of the projected attributes. The following line should be the values of those attributes for
             # the entire job. Any additional lines correspond to those values for any additional tasks that were run.
-            lines = detailed_stdout.splitlines()
+            lines = detailed_stdout.splitlines()  # type: ignore[union-attr]
 
             if len(lines) < 2:
                 raise ValueError('the `detailed_job_info.stdout` contained less than two lines.')
@@ -735,13 +753,13 @@ stderr='{stderr.strip()}'"""
             data = dict(zip(fields, attributes))
 
             if data['State'] == 'OUT_OF_MEMORY':
-                return CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_MEMORY
+                return CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_MEMORY  # type: ignore[no-any-return]
 
             if data['State'] == 'TIMEOUT':
-                return CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_WALLTIME
+                return CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_WALLTIME  # type: ignore[no-any-return]
 
             if data['State'] == 'NODE_FAIL':
-                return CalcJob.exit_codes.ERROR_SCHEDULER_NODE_FAILURE
+                return CalcJob.exit_codes.ERROR_SCHEDULER_NODE_FAILURE  # type: ignore[no-any-return]
 
         # Alternatively, if the ``detailed_job_info`` is not defined or hasn't already determined an error, try to match
         # known error messages from the output written to the ``stderr`` descriptor.
@@ -750,9 +768,9 @@ stderr='{stderr.strip()}'"""
             stderr_lower = stderr.lower()
 
             if re.match(r'.*exceeded.*memory limit.*', stderr_lower):
-                return CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_MEMORY
+                return CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_MEMORY  # type: ignore[no-any-return]
 
             if re.match(r'.*cancelled at.*due to time limit.*', stderr_lower):
-                return CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_WALLTIME
+                return CalcJob.exit_codes.ERROR_SCHEDULER_OUT_OF_WALLTIME  # type: ignore[no-any-return]
 
         return None

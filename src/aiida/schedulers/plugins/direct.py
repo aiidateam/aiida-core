@@ -13,13 +13,16 @@ from __future__ import annotations
 import re
 import typing as t
 
-import aiida.schedulers
+from typing_extensions import override
+
 from aiida.common.escaping import escape_for_bash
-from aiida.engine.processes.exit_code import ExitCode
-from aiida.schedulers import SchedulerError
+from aiida.schedulers import Scheduler, SchedulerError
 from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, NodeNumberJobResource
 
 from .bash import BashCliScheduler
+
+if t.TYPE_CHECKING:
+    from aiida.engine.processes.exit_code import ExitCode
 
 ## From the ps man page on Mac OS X 10.12
 #     state     The state is given by a sequence of characters, for example,
@@ -85,7 +88,7 @@ class DirectJobResource(NodeNumberJobResource):
 class DirectScheduler(BashCliScheduler):
     """Support for the direct execution bypassing schedulers."""
 
-    _logger = aiida.schedulers.Scheduler._logger.getChild('direct')
+    _logger = Scheduler._logger.getChild('direct')
 
     # Query only by list of jobs and not by user
     _features = {
@@ -282,6 +285,7 @@ class DirectScheduler(BashCliScheduler):
         as_dict: t.Literal[True] = True,
     ) -> dict[str, JobInfo]: ...
 
+    @override
     def get_jobs(
         self,
         jobs: list[str] | None = None,

@@ -13,6 +13,10 @@ Plugin originally written by Marco Dorigo.
 Email: marco(DOT)dorigo(AT)rub(DOT)de
 """
 
+import datetime
+import re
+import string
+import time
 import xml.dom.minidom
 import xml.parsers.expat
 
@@ -131,9 +135,8 @@ class SgeScheduler(BashCliScheduler):
         return command
         # raise NotImplementedError
 
-    def _get_detailed_job_info_command(self, job_id):
-        command = f'qacct -j {escape_for_bash(job_id)}'
-        return command
+    def _get_detailed_job_info_command(self, job_id: str) -> str:
+        return f'qacct -j {escape_for_bash(job_id)}'
 
     def _get_submit_script_header(self, job_tmpl):
         """Return the submit script header, using the parameters from the
@@ -145,8 +148,6 @@ class SgeScheduler(BashCliScheduler):
 
         TODO: truncate the title if too long
         """
-        import re
-        import string
 
         lines = []
 
@@ -442,8 +443,6 @@ class SgeScheduler(BashCliScheduler):
         returns a datetime object.
         Example format: 2013-06-13T11:53:11
         """
-        import datetime
-        import time
 
         try:
             time_struct = time.strptime(string, fmt)

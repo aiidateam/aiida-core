@@ -19,14 +19,24 @@ def always_kill(node: CalcJobNode, transport: Transport) -> str | None:
     :param transport: The transport that can be used to retrieve files from remote working directory.
     :returns: A string if the job should be killed, `None` otherwise.
     """
-    with tempfile.NamedTemporaryFile('w+') as handle:
-        cwd = node.get_remote_workdir()
-        if cwd is None:
-            raise ValueError('The remote work directory cannot be None')
+    import os
 
-        transport.getfile(str(Path(cwd).joinpath('_aiidasubmit.sh')), handle.name)
-        handle.seek(0)
-        output = handle.read()
+    cwd = node.get_remote_workdir()
+    if cwd is None:
+        raise ValueError('The remote work directory cannot be None')
+
+    with tempfile.NamedTemporaryFile('w+', delete=False) as handle:
+        temp_path = handle.name
+
+    try:
+        transport.getfile(str(Path(cwd).joinpath('_aiidasubmit.sh')), temp_path)
+        with open(temp_path, 'r') as handle:
+            output = handle.read()
+    finally:
+        try:
+            os.remove(temp_path)
+        except OSError:
+            pass
 
     if output:
         return 'Detected a non-empty submission script'

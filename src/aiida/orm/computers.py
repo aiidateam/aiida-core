@@ -80,7 +80,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         uuid: UUID = MetadataField(
             description='The UUID of the computer',
             is_attribute=False,
-            exclude_to_orm=True,
+            read_only=True,
         )
         label: str = MetadataField(
             description='Label for the computer',
@@ -107,6 +107,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             default_factory=dict,
             description='Metadata of the computer',
             is_attribute=False,
+            exclude=True,
         )
 
     def __init__(

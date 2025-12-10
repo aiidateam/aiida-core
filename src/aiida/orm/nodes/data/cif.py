@@ -254,17 +254,17 @@ class CifData(SinglefileData):
         formulae: Optional[List[str]] = MetadataField(
             None,
             description='List of formulae contained in the CIF file.',
-            exclude_to_orm=True,
+            read_only=True,
         )
         spacegroup_numbers: Optional[List[str]] = MetadataField(
             None,
             description='List of space group numbers of the structure.',
-            exclude_to_orm=True,
+            read_only=True,
         )
         md5: Optional[str] = MetadataField(
             None,
             description='MD5 checksum of the file contents.',
-            exclude_to_orm=True,
+            read_only=True,
         )
 
     def __init__(self, ase=None, file=None, filename=None, values=None, scan_type=None, parse_policy=None, **kwargs):
@@ -378,7 +378,7 @@ class CifData(SinglefileData):
                 return (cifs[0], False)
 
             raise ValueError(
-                'More than one copy of a CIF file ' 'with the same MD5 has been found in ' 'the DB. pks={}'.format(
+                'More than one copy of a CIF file with the same MD5 has been found in the DB. pks={}'.format(
                     ','.join([str(i.pk) for i in cifs])
                 )
             )

@@ -36,7 +36,8 @@ def MetadataField(  # noqa: N802
     orm_class: type[Entity[t.Any, t.Any]] | str | None = None,
     orm_to_model: t.Callable[[Entity[t.Any, t.Any], dict[str, t.Any]], t.Any] | None = None,
     model_to_orm: t.Callable[[BaseModel], t.Any] | None = None,
-    exclude_to_orm: bool = False,
+    read_only: bool = False,
+    write_only: bool = False,
     is_attribute: bool = True,
     is_subscriptable: bool = False,
     **kwargs: t.Any,
@@ -71,15 +72,26 @@ def MetadataField(  # noqa: N802
         primary key.
     :param orm_to_model: Optional callable to convert the value of a field from an ORM instance to a model instance.
     :param model_to_orm: Optional callable to convert the value of a field from a model instance to an ORM instance.
-    :param exclude_to_orm: When set to ``True``, this field value will not be passed to the ORM entity constructor
+    :param read_only: When set to ``True``, this field value will not be passed to the ORM entity constructor
         through ``Entity.from_model``.
+    :param write_only: When set to ``True``, this field value will not be populated when constructing the model from an
+        ORM entity through ``Entity.to_model``.
     :param is_attribute: Whether the field is stored as an attribute. Used by `QbFields`.
     :param is_subscriptable: Whether the field can be indexed like a list or dictionary. Used by `QbFields`.
     """
-    if exclude_to_orm:
-        extra = kwargs.pop('json_schema_extra', {})
+
+    extra = kwargs.pop('json_schema_extra', {})
+
+    if read_only and write_only:
+        raise ValueError('A field cannot be both read-only and write-only.')
+
+    if read_only:
         extra.update({'readOnly': True})
-        kwargs['json_schema_extra'] = extra
+
+    if write_only:
+        extra.update({'writeOnly': True})
+
+    kwargs['json_schema_extra'] = extra
 
     field_info = Field(default, **kwargs)
 
@@ -90,7 +102,8 @@ def MetadataField(  # noqa: N802
         ('orm_class', orm_class),
         ('orm_to_model', orm_to_model),
         ('model_to_orm', model_to_orm),
-        ('exclude_to_orm', exclude_to_orm),
+        ('read_only', read_only),
+        ('write_only', write_only),
         ('is_attribute', is_attribute),
         ('is_subscriptable', is_subscriptable),
     ):

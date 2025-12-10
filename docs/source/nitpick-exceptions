@@ -119,6 +119,8 @@ py:obj aiida.engine.processes.functions.N
 py:obj aiida.engine.processes.functions.R_co
 py:class P
 py:class N
+py:class R
+py:class T
 py:class aiida.engine.processes.functions.N
 py:class aiida.engine.processes.functions.R_co
 py:class aiida.common.utils.T
@@ -258,9 +260,12 @@ py:class importlib_metadata.EntryPoints
 py:class Command
 
 py:class BooleanClauseList
+py:class ColumnElement
 py:class SQLCompiler
 py:class sqlalchemy.orm.decl_api.Model
 py:class sqlalchemy.sql.elements.ColumnElement
+py:class sqlalchemy.orm.attributes.InstrumentedAttribute
+py:class InstrumentedAttribute
 
 py:class packaging.version.Version
 py:exc seekpath.hpkot.EdgeCaseWarning

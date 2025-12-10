@@ -8,6 +8,8 @@
 ###########################################################################
 """Module for functions to traverse AiiDA graphs."""
 
+from __future__ import annotations
+
 import sys
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Mapping, Optional, Set, cast
 

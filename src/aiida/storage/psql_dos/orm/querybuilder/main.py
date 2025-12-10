@@ -9,6 +9,8 @@
 # ruff: noqa: N802
 """Sqla query builder implementation"""
 
+from __future__ import annotations
+
 import uuid
 import warnings
 from contextlib import contextmanager, nullcontext
@@ -49,7 +51,6 @@ if TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
     from sqlalchemy.orm.util import AliasedClass
     from sqlalchemy.sql.compiler import SQLCompiler
-    from sqlalchemy.sql.elements import KeyedColumnElement
 
 jsonb_typeof = sa_func.jsonb_typeof
 jsonb_array_length = sa_func.jsonb_array_length

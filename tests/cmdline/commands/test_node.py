@@ -826,6 +826,160 @@ class TestVerdiDelete:
         with pytest.raises(NotExistent):
             orm.load_node(pk)
 
+    def test_node_delete_with_stashed_folder(self, run_cli_command, aiida_localhost, tmp_path):
+        """Test deleting nodes with stashed folders."""
+        from aiida.common.datastructures import StashMode
+        from aiida.orm.nodes.data.remote.stash import RemoteStashFolderData
+
+        # Create a workflow node
+        workflow_node = WorkflowNode()
+        workflow_node.store()
+
+        # Create a calcjob node
+        calcjob_node = CalcJobNode(computer=aiida_localhost)
+        calcjob_node.base.links.add_incoming(workflow_node, link_type=LinkType.CALL_CALC, link_label='call')
+
+        # Create remote workdir
+        workdir = tmp_path / f'calcjob_{uuid.uuid4()}'
+        workdir.mkdir()
+        Path(workdir / 'fileA.txt').write_text('test stringA')
+
+        calcjob_node.set_remote_workdir(str(workdir))
+        calcjob_node.set_option('output_filename', 'fileA.txt')
+        calcjob_node.store()
+
+        # Create remote_folder
+        remote_node = RemoteData(remote_path=str(workdir), computer=aiida_localhost)
+        remote_node.base.links.add_incoming(calcjob_node, LinkType.CREATE, link_label='remote_folder')
+        remote_node.store()
+
+        # Create stashed folder
+        stash_dir = tmp_path / f'stash_{uuid.uuid4()}'
+        stash_dir.mkdir()
+        Path(stash_dir / 'fileB.txt').write_text('test stringB')
+
+        stash_node = RemoteStashFolderData(
+            stash_mode=StashMode.COPY,
+            target_basepath=str(stash_dir),
+            source_list=['fileB.txt'],
+            computer=aiida_localhost,
+        )
+        stash_node.base.links.add_incoming(calcjob_node, LinkType.CREATE, link_label='remote_stash')
+        stash_node.store()
+
+        # Delete with clean-workdir
+        run_cli_command(cmd_node.node_delete, ['--clean-workdir', '--force', str(workflow_node.pk)])
+
+        # Verify nodes are deleted
+        with pytest.raises(NotExistent):
+            orm.load_node(workflow_node.pk)
+        with pytest.raises(NotExistent):
+            orm.load_node(calcjob_node.pk)
+        with pytest.raises(NotExistent):
+            orm.load_node(remote_node.pk)
+        with pytest.raises(NotExistent):
+            orm.load_node(stash_node.pk)
+
+        # Verify directories are cleaned
+        assert not workdir.exists()
+        assert not stash_dir.exists()
+
+    def test_node_delete_with_stashed_compressed(self, run_cli_command, aiida_localhost, tmp_path):
+        """Test deleting nodes with stashed compressed files."""
+        from aiida.common.datastructures import StashMode
+        from aiida.orm.nodes.data.remote.stash import RemoteStashCompressedData
+
+        # Create a workflow node
+        workflow_node = WorkflowNode()
+        workflow_node.store()
+
+        # Create a calcjob node
+        calcjob_node = CalcJobNode(computer=aiida_localhost)
+        calcjob_node.base.links.add_incoming(workflow_node, link_type=LinkType.CALL_CALC, link_label='call')
+
+        # Create remote workdir
+        workdir = tmp_path / f'calcjob_{uuid.uuid4()}'
+        workdir.mkdir()
+        Path(workdir / 'fileA.txt').write_text('test stringA')
+
+        calcjob_node.set_remote_workdir(str(workdir))
+        calcjob_node.set_option('output_filename', 'fileA.txt')
+        calcjob_node.store()
+
+        # Create remote_folder
+        remote_node = RemoteData(remote_path=str(workdir), computer=aiida_localhost)
+        remote_node.base.links.add_incoming(calcjob_node, LinkType.CREATE, link_label='remote_folder')
+        remote_node.store()
+
+        # Create stashed compressed file
+        stash_file = tmp_path / f'stash_{uuid.uuid4()}.tar.gz'
+        stash_file.write_text('compressed data')
+
+        stash_node = RemoteStashCompressedData(
+            stash_mode=StashMode.COMPRESS_TARGZ,
+            target_basepath=str(stash_file),
+            source_list=['fileB.txt'],
+            dereference=False,
+            computer=aiida_localhost,
+        )
+        stash_node.base.links.add_incoming(calcjob_node, LinkType.CREATE, link_label='remote_stash')
+        stash_node.store()
+
+        # Delete with clean-workdir
+        run_cli_command(cmd_node.node_delete, ['--clean-workdir', '--force', str(workflow_node.pk)])
+
+        # Verify nodes are deleted
+        with pytest.raises(NotExistent):
+            orm.load_node(workflow_node.pk)
+        with pytest.raises(NotExistent):
+            orm.load_node(calcjob_node.pk)
+        with pytest.raises(NotExistent):
+            orm.load_node(remote_node.pk)
+        with pytest.raises(NotExistent):
+            orm.load_node(stash_node.pk)
+
+        # Verify directories and files are cleaned
+        assert not workdir.exists()
+        assert not stash_file.exists()
+
+    def test_node_delete_with_stashed_custom(self, run_cli_command, aiida_localhost, tmp_path):
+        """Test that deleting nodes with RemoteStashCustomData raises an informative error."""
+        from aiida.common.datastructures import StashMode
+        from aiida.orm.nodes.data.remote.stash import RemoteStashCustomData
+
+        # Create a workflow node
+        workflow_node = WorkflowNode()
+        workflow_node.store()
+
+        # Create a calcjob node
+        calcjob_node = CalcJobNode(computer=aiida_localhost)
+        calcjob_node.base.links.add_incoming(workflow_node, link_type=LinkType.CALL_CALC, link_label='call')
+
+        # Create remote workdir
+        workdir = tmp_path / f'calcjob_{uuid.uuid4()}'
+        workdir.mkdir()
+        Path(workdir / 'fileA.txt').write_text('test stringA')
+
+        calcjob_node.set_remote_workdir(str(workdir))
+        calcjob_node.set_option('output_filename', 'fileA.txt')
+        calcjob_node.store()
+
+        # Create stashed custom data
+        stash_node = RemoteStashCustomData(
+            stash_mode=StashMode.SUBMIT_CUSTOM_CODE,
+            target_basepath='/some/custom/path',
+            source_list=['fileB.txt'],
+            computer=aiida_localhost,
+        )
+        stash_node.base.links.add_incoming(calcjob_node, LinkType.CREATE, link_label='remote_stash')
+        stash_node.store()
+
+        # Try to delete with clean-workdir and expect it to fail with the custom error message
+        result = run_cli_command(cmd_node.node_delete, ['--clean-workdir', '--force', str(workflow_node.pk)])
+
+        # Check for the error message
+        assert "I don't know how to delete remote files of RemoteStashCustomData" in str(result.stderr_bytes)
+
 
 @pytest.fixture(scope='class')
 def create_nodes_verdi_node_list(aiida_profile_clean_class):

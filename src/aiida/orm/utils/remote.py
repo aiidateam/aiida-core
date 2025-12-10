@@ -99,7 +99,7 @@ def clean_mapping_stashed_paths(path_mapping, silent=False):
                 if isinstance(stashed_folder, RemoteStashCustomData):
                     raise NotImplementedError(
                         "I don't know how to delete remote files of RemoteStashCustomData. "
-                        f"Please manually clean the stashed data for node {stashed_folder.pk}."
+                        f'Please manually clean the stashed data for node {stashed_folder.pk}.'
                     )
                 stashed_folder._clean(transport=transport)
                 counter += 1

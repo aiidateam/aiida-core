@@ -46,18 +46,6 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     class AttributesModel(Data.AttributesModel, defer_build=True):
         """Model describing required information to create an instance."""
 
-        label: str = MetadataField(
-            ...,
-            title='Label',
-            description='A unique label to identify the code by.',
-            short_name='-L',
-        )
-        description: str = MetadataField(
-            '',
-            title='Description',
-            description='Human-readable description, ideally including version and compilation environment.',
-            short_name='-D',
-        )
         default_calc_job_plugin: t.Optional[str] = MetadataField(
             None,
             title='Default `CalcJob` plugin',
@@ -100,6 +88,22 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 'in all submit scripts for this code, type that between the equal signs below and save the file.',
                 footer='All lines that start with `#=`: will be ignored.',
             ),
+        )
+
+    class Model(Data.Model):
+        label: str = MetadataField(
+            ...,
+            title='Label',
+            description='A unique label to identify the code by.',
+            short_name='-L',
+            is_attribute=False,
+        )
+        description: str = MetadataField(
+            '',
+            title='Description',
+            description='Human-readable description, ideally including version and compilation environment.',
+            short_name='-D',
+            is_attribute=False,
         )
 
     def __init__(

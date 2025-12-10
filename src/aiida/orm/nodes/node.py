@@ -31,7 +31,7 @@ from typing import (
 )
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from typing_extensions import Self
 
 from aiida.common import exceptions
@@ -228,43 +228,39 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """The node attributes."""
 
     class Model(Entity.Model):
-        model_config = ConfigDict(
-            ser_json_bytes='base64',
-            val_json_bytes='base64',
-        )
-
         uuid: UUID = MetadataField(
             description='The UUID of the node',
             is_attribute=False,
-            exclude_to_orm=True,
+            read_only=True,
         )
         node_type: str = MetadataField(
             description='The type of the node',
             is_attribute=False,
-            exclude_to_orm=True,
+            read_only=True,
         )
         process_type: Optional[str] = MetadataField(
             None,
             description='The process type of the node',
             is_attribute=False,
-            exclude_to_orm=True,
+            read_only=True,
         )
         repository_metadata: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='Virtual hierarchy of the file repository.',
             is_attribute=False,
             orm_to_model=lambda node, _: cast(Node, node).base.repository.metadata,
-            exclude_to_orm=True,
+            read_only=True,
+            exclude=True,
         )
         ctime: datetime.datetime = MetadataField(
             description='The creation time of the node',
             is_attribute=False,
-            exclude_to_orm=True,
+            read_only=True,
         )
         mtime: datetime.datetime = MetadataField(
             description='The modification time of the node',
             is_attribute=False,
-            exclude_to_orm=True,
+            read_only=True,
         )
         label: str = MetadataField(
             '',
@@ -282,6 +278,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             is_attribute=False,
             orm_to_model=lambda node, _: cast(Node, node).base.attributes.all,
             is_subscriptable=True,
+            exclude=True,
         )
         extras: Dict[str, Any] = MetadataField(
             default_factory=dict,
@@ -289,6 +286,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             is_attribute=False,
             orm_to_model=lambda node, _: cast(Node, node).base.extras.all,
             is_subscriptable=True,
+            exclude=True,
         )
         computer: Optional[str] = MetadataField(
             None,
@@ -296,25 +294,14 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             is_attribute=False,
             orm_to_model=lambda node, _: cast(Node, node).get_computer_label(),
             model_to_orm=lambda model: cast(Node.Model, model).load_computer(),
-            exclude_to_orm=True,
+            read_only=True,
         )
         user: int = MetadataField(
             description='The PK of the user who owns the node',
             is_attribute=False,
             orm_to_model=lambda node, _: cast(Node, node).user.pk,
             orm_class=User,
-            exclude_to_orm=True,
-        )
-        repository_content: dict[str, bytes] = MetadataField(
-            default_factory=dict,
-            description='Mapping of relative filepaths to binary file contents',
-            is_attribute=False,
-            orm_to_model=lambda node, kwargs: {
-                key: content for key, content in cast(Node, node).base.repository.serialize_content().items()
-            }
-            if kwargs.get('serialize_repository_content')
-            else {},
-            exclude_to_orm=True,
+            read_only=True,
         )
 
         def load_computer(self) -> Computer:
@@ -362,7 +349,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         user: Optional[User] = None,
         computer: Optional[Computer] = None,
         extras: Optional[Dict[str, Any]] = None,
-        attributes: Optional[Dict[str, Any]] = None,
+        attributes: Optional[Dict[str, Any] | Node.AttributesModel] = None,
         **kwargs: Any,
     ) -> None:
         # We verify here that all attributes are handled in a constructor prior to the root
@@ -393,19 +380,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
         if extras is not None:
             self.base.extras.set_many(extras)
-
-    @classmethod
-    def from_model(cls, model: Model) -> Self:  # type: ignore[override]
-        """Return an entity instance from an instance of its model."""
-        fields = cls.model_to_orm_field_values(model)
-
-        repository_content = fields.pop('repository_content', {})
-        node = cls(**fields)
-
-        for filepath, content in repository_content.items():
-            node.base.repository.put_object_from_bytes(content, filepath)
-
-        return node
 
     @cached_property
     def base(self) -> NodeBase:

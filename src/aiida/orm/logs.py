@@ -136,7 +136,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
         uuid: UUID = MetadataField(
             description='The UUID of the node',
             is_attribute=False,
-            exclude_to_orm=True,
+            read_only=True,
         )
         loggername: str = MetadataField(
             description='The name of the logger',

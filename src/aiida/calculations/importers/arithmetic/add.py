@@ -21,7 +21,7 @@ class ArithmeticAddCalculationImporter(CalcJobImporter):
         :param kwargs: additional keyword arguments to control the parsing process.
         :returns: a dictionary with the parsed inputs nodes that match the input spec of the associated ``CalcJob``.
         """
-        handle, temp_path = tempfile.mkstemp()
+        handle, temp_path = tempfile.mkstemp(suffix='.in')
         os.close(handle)
 
         try:

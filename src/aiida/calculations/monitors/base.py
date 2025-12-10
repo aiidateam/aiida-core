@@ -24,7 +24,7 @@ def always_kill(node: CalcJobNode, transport: Transport) -> str | None:
     if cwd is None:
         raise ValueError('The remote work directory cannot be None')
 
-    handle, temp_path = tempfile.mkstemp()
+    handle, temp_path = tempfile.mkstemp(suffix='.sh')
     os.close(handle)
 
     try:

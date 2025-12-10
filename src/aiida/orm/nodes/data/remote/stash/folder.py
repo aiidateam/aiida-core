@@ -78,3 +78,30 @@ class RemoteStashFolderData(RemoteStashData):
         """
         type_check(value, (list, tuple))
         self.base.attributes.set('source_list', value)
+
+    def _clean(self, transport=None):
+        """Remove stashed content on the remote computer.
+
+        When the cleaning operation is successful, the extra with the key ``RemoteStashData.KEY_EXTRA_CLEANED`` is set.
+
+        :param transport: Provide an optional transport that is already open. If not provided, a transport will be
+            automatically opened, based on the current default user and the computer of this data node.
+        :raises ValueError: If the hostname of the provided transport does not match that of the node's computer.
+        """
+        from aiida.orm import AuthInfo
+        from aiida.orm.utils.remote import clean_remote
+
+        target_basepath = self.target_basepath
+
+        if transport is None:
+            authinfo = AuthInfo.get_collection(self.backend).get(dbcomputer=self.computer, aiidauser=self.user)
+            with authinfo.get_transport() as _transport:
+                clean_remote(_transport, target_basepath)
+        else:
+            if transport.hostname != self.computer.hostname:
+                raise ValueError(
+                    f'Transport hostname `{transport.hostname}` does not equal `{self.computer.hostname}` of {self}.'
+                )
+            clean_remote(transport, target_basepath)
+
+        self.base.extras.set(self.KEY_EXTRA_CLEANED, True)

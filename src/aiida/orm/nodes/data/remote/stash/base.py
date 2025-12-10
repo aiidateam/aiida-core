@@ -35,6 +35,7 @@ class RemoteStashData(Data):
     """
 
     _storable = False
+    KEY_EXTRA_CLEANED = 'cleaned'
 
     class Model(Data.Model):
         stash_mode: StashMode = MetadataField(description='The mode with which the data was stashed')
@@ -63,3 +64,13 @@ class RemoteStashData(Data):
         """
         type_check(value, StashMode)
         self.base.attributes.set('stash_mode', value.value)
+
+    def _clean(self, transport=None):
+        """Remove stashed content on the remote computer.
+
+        This method should be overridden by subclasses to implement the specific cleaning logic.
+
+        :param transport: Provide an optional transport that is already open.
+        :raises NotImplementedError: This base class does not implement cleaning logic.
+        """
+        raise NotImplementedError('Subclasses must implement the `_clean` method.')

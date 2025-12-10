@@ -375,7 +375,12 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
     if clean_workdir:
         from aiida.manage import get_manager
         from aiida.orm import CalcJobNode, QueryBuilder
-        from aiida.orm.utils.remote import clean_mapping_remote_paths, get_calcjob_remote_paths
+        from aiida.orm.utils.remote import (
+            clean_mapping_remote_paths,
+            clean_mapping_stashed_paths,
+            get_calcjob_remote_paths,
+            get_calcjob_stashed_paths,
+        )
         from aiida.tools.graph.graph_traversers import get_nodes_delete
 
         backend = get_manager().get_profile_storage()
@@ -398,12 +403,21 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
             only_not_cleaned=True,
         )
 
-        if not path_mapping:
+        stash_mapping = get_calcjob_stashed_paths(
+            calcjobs_pks,
+            only_not_cleaned=True,
+        )
+
+        if not path_mapping and not stash_mapping:
             echo.echo_report('--clean-workdir ignored. CalcJobNode work directories are already cleaned.')
             _perform_delete()
             return
 
-        descendant_pks = [remote_folder.pk for paths in path_mapping.values() for remote_folder in paths]
+        descendant_pks = []
+        if path_mapping:
+            descendant_pks.extend([remote_folder.pk for paths in path_mapping.values() for remote_folder in paths])
+        if stash_mapping:
+            descendant_pks.extend([stash_folder.pk for paths in stash_mapping.values() for stash_folder in paths])
 
         if not force and not dry_run:
             echo.echo_warning(
@@ -420,7 +434,13 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
                 'Remote folders of these node are marked for deletion: ' + ' '.join(map(str, descendant_pks))
             )
         else:
-            clean_mapping_remote_paths(path_mapping)
+            if path_mapping:
+                clean_mapping_remote_paths(path_mapping)
+            if stash_mapping:
+                try:
+                    clean_mapping_stashed_paths(stash_mapping)
+                except NotImplementedError as exc:
+                    echo.echo_critical(str(exc))
 
     _perform_delete()
 

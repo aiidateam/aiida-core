@@ -66,6 +66,8 @@ class PortableCode(Code):
             priority=1,
             orm_to_model=lambda node, _: str(cast(PortableCode, node).filepath_executable),
         )
+
+    class Model(AbstractCode.Model):
         filepath_files: str = MetadataField(
             ...,
             title='Code directory',
@@ -73,9 +75,10 @@ class PortableCode(Code):
             short_name='-F',
             is_attribute=False,
             priority=2,
+            write_only=True,
             orm_to_model=lambda node, kwargs: _export_filepath_files_from_repo(
                 cast(PortableCode, node),
-                kwargs.get('repository_path', pathlib.Path.cwd() / f'{cast(PortableCode, node).label}'),
+                kwargs.get('repository_path') or pathlib.Path.cwd() / f'{cast(PortableCode, node).label}',
             ),
         )
 

@@ -47,13 +47,13 @@ class ArrayData(Data):
     """
 
     class AttributesModel(Data.AttributesModel):
-        # model_config = ConfigDict(arbitrary_types_allowed=True)
-
         arrays: Optional[dict[str, bytes]] = MetadataField(
             None,
             description='The dictionary of numpy arrays.',
             orm_to_model=lambda node, _: ArrayData.save_arrays(cast(ArrayData, node).arrays),
-            model_to_orm=lambda model: ArrayData.load_arrays(cast(ArrayData.Model, model).arrays),
+            model_to_orm=lambda model: ArrayData.load_arrays(cast(ArrayData.AttributesModel, model).arrays),
+            write_only=True,
+            exclude=True,
         )
 
         @field_validator('arrays', mode='before')

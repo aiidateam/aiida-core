@@ -49,11 +49,15 @@ class Scheduler(metaclass=abc.ABCMeta):
     # The class to be used for the job resource.
     _job_resource_class: t.Type[JobResource] | None = None
 
-    def __str__(self):
+    def __init__(self) -> None:
+        assert self._job_resource_class is not None and issubclass(self._job_resource_class, JobResource)
+        self._transport: Transport | None = None
+
+    def __str__(self) -> str:
         return self.__class__.__name__
 
     @classmethod
-    def preprocess_resources(cls, resources: dict[str, t.Any], default_mpiprocs_per_machine: int | None = None):
+    def preprocess_resources(cls, resources: dict[str, t.Any], default_mpiprocs_per_machine: int | None = None) -> None:
         """Pre process the resources.
 
         Add the `num_mpiprocs_per_machine` key to the `resources` if it is not already defined and it cannot be deduced
@@ -73,7 +77,7 @@ class Scheduler(metaclass=abc.ABCMeta):
             resources['num_mpiprocs_per_machine'] = default_mpiprocs_per_machine
 
     @classmethod
-    def validate_resources(cls, **resources):
+    def validate_resources(cls, **resources: t.Any) -> None:
         """Validate the resources against the job resource class of this scheduler.
 
         :param resources: keyword arguments to define the job resources
@@ -82,12 +86,8 @@ class Scheduler(metaclass=abc.ABCMeta):
         assert cls._job_resource_class is not None and issubclass(cls._job_resource_class, JobResource)
         cls._job_resource_class.validate_resources(**resources)
 
-    def __init__(self):
-        assert self._job_resource_class is not None and issubclass(self._job_resource_class, JobResource)
-        self._transport = None
-
     @classmethod
-    def get_short_doc(cls):
+    def get_short_doc(cls) -> str:
         """Return the first non-empty line of the class docstring, if available."""
         # Remove empty lines
         docstring = cls.__doc__
@@ -107,7 +107,7 @@ class Scheduler(metaclass=abc.ABCMeta):
             raise NotImplementedError(f'Feature {feature_name} not implemented for this scheduler')
 
     @property
-    def logger(self):
+    def logger(self) -> log.AiidaLoggerType:
         """Return the internal logger."""
         try:
             return self._logger
@@ -120,7 +120,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         return cls._job_resource_class
 
     @classmethod
-    def create_job_resource(cls, **kwargs):
+    def create_job_resource(cls, **kwargs: t.Any) -> JobResource:
         """Create a suitable job resource from the kwargs specified."""
         assert cls._job_resource_class is not None and issubclass(cls._job_resource_class, JobResource)
         return cls._job_resource_class(**kwargs)
@@ -374,14 +374,14 @@ class Scheduler(metaclass=abc.ABCMeta):
         return detailed_job_info
 
     @property
-    def transport(self):
+    def transport(self) -> Transport:
         """Return the transport set for this scheduler."""
         if self._transport is None:
             raise SchedulerError('Use the set_transport function to set the transport for the scheduler first.')
 
         return self._transport
 
-    def set_transport(self, transport: Transport):
+    def set_transport(self, transport: Transport) -> None:
         """Set the transport to be used to query the machine or to submit scripts.
 
         This class assumes that the transport is open and active.

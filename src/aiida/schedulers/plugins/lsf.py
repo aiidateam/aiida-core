@@ -11,6 +11,7 @@ This has been tested on the CERN lxplus cluster (LSF 9.1.3)
 """
 
 import datetime
+import typing as t
 
 import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
@@ -19,6 +20,9 @@ from aiida.schedulers import SchedulerError, SchedulerParsingError
 from aiida.schedulers.datastructures import JobInfo, JobResource, JobState
 
 from .bash import BashCliScheduler
+
+if t.TYPE_CHECKING:
+    from aiida.engine.processes.exit_code import ExitCode
 
 # This maps LSF status codes to our own state list
 #
@@ -260,7 +264,7 @@ class LsfScheduler(BashCliScheduler):
         'name',  # job name
     ]
 
-    def _get_joblist_command(self, jobs=None, user=None):
+    def _get_joblist_command(self, jobs: list[str] | None = None, user: str | None = None) -> str:
         """The command to report full information on existing jobs.
 
         Separates the fields with the _field_separator string order:
@@ -471,7 +475,7 @@ then
 fi
 """
 
-    def _get_submit_command(self, submit_script):
+    def _get_submit_command(self, submit_script: str) -> str:
         """Return the string to execute to submit a given script.
 
         :param submit_script: the path of the submit script relative to the working
@@ -484,7 +488,7 @@ fi
 
         return submit_command
 
-    def _parse_joblist_output(self, retval, stdout, stderr):
+    def _parse_joblist_output(self, retval: int, stdout: str, stderr: str) -> list[JobInfo]:
         """Parse the queue output string, as returned by executing the
         command returned by _get_joblist_command command,
         that is here implemented as a list of lines, one for each
@@ -656,7 +660,7 @@ fi
 
         return job_list
 
-    def _parse_submit_output(self, retval, stdout, stderr):
+    def _parse_submit_output(self, retval: int, stdout: str, stderr: str) -> str | ExitCode:
         """Parse the output of the submit command, as returned by executing the
         command returned by _get_submit_command command.
 
@@ -706,13 +710,13 @@ fi
 
         return thetime
 
-    def _get_kill_command(self, jobid):
+    def _get_kill_command(self, jobid: str) -> str:
         """Return the command to kill the job with specified jobid."""
         submit_command = f'bkill {jobid}'
         self.logger.info(f'killing job {jobid}')
         return submit_command
 
-    def _parse_kill_output(self, retval, stdout, stderr):
+    def _parse_kill_output(self, retval: int, stdout: str, stderr: str) -> bool:
         """Parse the output of the kill command.
 
         :return: True if everything seems ok, False otherwise.

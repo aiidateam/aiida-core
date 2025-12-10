@@ -10,7 +10,10 @@
 
 from __future__ import annotations
 
+import datetime
 import logging
+import time
+import typing as t
 
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import SchedulerError, SchedulerParsingError
@@ -19,6 +22,9 @@ from aiida.schedulers.datastructures import JobInfo, JobState, MachineInfo, Node
 from .bash import BashCliScheduler
 
 _LOGGER = logging.getLogger(__name__)
+
+if t.TYPE_CHECKING:
+    from aiida.engine.processes.exit_code import ExitCode
 
 # This maps PbsPro status letters to our own status list
 
@@ -141,7 +147,7 @@ class PbsBaseClass(BashCliScheduler):
         """
         raise NotImplementedError('Implement the _get_resource_lines in each subclass!')
 
-    def _get_joblist_command(self, jobs=None, user=None):
+    def _get_joblist_command(self, jobs: list[str] | None = None, user: str | None = None) -> str:
         """The command to report full information on existing jobs.
 
         TODO: in the case of job arrays, decide what to do (i.e., if we want
@@ -306,7 +312,7 @@ class PbsBaseClass(BashCliScheduler):
 
         return '\n'.join(lines)
 
-    def _get_submit_command(self, submit_script):
+    def _get_submit_command(self, submit_script: str) -> str:
         """Return the string to execute to submit a given script.
 
         Args:
@@ -321,7 +327,7 @@ class PbsBaseClass(BashCliScheduler):
 
         return submit_command
 
-    def _parse_joblist_output(self, retval, stdout, stderr):
+    def _parse_joblist_output(self, retval: int, stdout: str, stderr: str) -> list[JobInfo]:
         """Parse the queue output string, as returned by executing the
         command returned by _get_joblist_command command (qstat -f).
 
@@ -655,8 +661,6 @@ class PbsBaseClass(BashCliScheduler):
         """Parse a time string in the format returned from qstat -f and
         returns a datetime object.
         """
-        import datetime
-        import time
 
         try:
             time_struct = time.strptime(string, fmt)
@@ -669,7 +673,7 @@ class PbsBaseClass(BashCliScheduler):
         # http://stackoverflow.com/questions/1697815
         return datetime.datetime.fromtimestamp(time.mktime(time_struct))
 
-    def _parse_submit_output(self, retval, stdout, stderr):
+    def _parse_submit_output(self, retval: int, stdout: str, stderr: str) -> str | ExitCode:
         """Parse the output of the submit command, as returned by executing the
         command returned by _get_submit_command command.
 
@@ -686,7 +690,7 @@ class PbsBaseClass(BashCliScheduler):
 
         return stdout.strip()
 
-    def _get_kill_command(self, jobid):
+    def _get_kill_command(self, jobid: str) -> str:
         """Return the command to kill the job with specified jobid."""
         submit_command = f'qdel {jobid}'
 
@@ -694,7 +698,7 @@ class PbsBaseClass(BashCliScheduler):
 
         return submit_command
 
-    def _parse_kill_output(self, retval, stdout, stderr):
+    def _parse_kill_output(self, retval: int, stdout: str, stderr: str) -> bool:
         """Parse the output of the kill command.
 
         To be implemented by the plugin.

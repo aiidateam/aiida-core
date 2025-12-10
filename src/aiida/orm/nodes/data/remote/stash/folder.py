@@ -88,14 +88,12 @@ class RemoteStashFolderData(RemoteStashData):
             automatically opened, based on the current default user and the computer of this data node.
         :raises ValueError: If the hostname of the provided transport does not match that of the node's computer.
         """
-        from aiida.orm import AuthInfo
         from aiida.orm.utils.remote import clean_remote
 
         target_basepath = self.target_basepath
 
         if transport is None:
-            authinfo = AuthInfo.get_collection(self.backend).get(dbcomputer=self.computer, aiidauser=self.user)
-            with authinfo.get_transport() as _transport:
+            with self.get_authinfo().get_transport() as _transport:
                 clean_remote(_transport, target_basepath)
         else:
             if transport.hostname != self.computer.hostname:

@@ -74,3 +74,9 @@ class RemoteStashData(Data):
         :raises NotImplementedError: This base class does not implement cleaning logic.
         """
         raise NotImplementedError('Subclasses must implement the `_clean` method.')
+
+    def get_authinfo(self):
+        """Return the AuthInfo for this node's computer and user."""
+        from aiida.orm import AuthInfo
+
+        return AuthInfo.get_collection(self.backend).get(dbcomputer=self.computer, aiidauser=self.user)

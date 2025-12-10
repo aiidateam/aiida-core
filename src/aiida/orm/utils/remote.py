@@ -251,8 +251,8 @@ def get_calcjob_stashed_paths(
 
     if only_not_cleaned is True:
         filters_stash['or'] = [
-            {f'extras.{RemoteData.KEY_EXTRA_CLEANED}': {'!==': True}},
-            {'extras': {'!has_key': RemoteData.KEY_EXTRA_CLEANED}},
+            {f'extras.{RemoteStashData.KEY_EXTRA_CLEANED}': {'!==': True}},
+            {'extras': {'!has_key': RemoteStashData.KEY_EXTRA_CLEANED}},
         ]
 
     query = orm.QueryBuilder(backend=backend)

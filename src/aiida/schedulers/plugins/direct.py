@@ -8,12 +8,16 @@
 ###########################################################################
 """Plugin for direct execution."""
 
-from typing import Union
+from __future__ import annotations
+
+import re
+import typing as t
 
 import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
+from aiida.engine.processes.exit_code import ExitCode
 from aiida.schedulers import SchedulerError
-from aiida.schedulers.datastructures import JobInfo, JobState, NodeNumberJobResource
+from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, NodeNumberJobResource
 
 from .bash import BashCliScheduler
 
@@ -73,7 +77,7 @@ class DirectJobResource(NodeNumberJobResource):
     """An implementation of JobResource for the direct excution bypassing schedulers."""
 
     @classmethod
-    def accepts_default_memory_per_machine(cls):
+    def accepts_default_memory_per_machine(cls) -> t.Literal[False]:
         """Return True if this subclass accepts a `default_memory_per_machine` key, False otherwise."""
         return False
 
@@ -91,7 +95,7 @@ class DirectScheduler(BashCliScheduler):
     # The class to be used for the job resource.
     _job_resource_class = DirectJobResource
 
-    def _get_joblist_command(self, jobs=None, user=None):
+    def _get_joblist_command(self, jobs: list[str] | None = None, user: str | None = None) -> str:
         """The command to report full information on existing jobs.
 
         TODO: in the case of job arrays, decide what to do (i.e., if we want
@@ -104,8 +108,8 @@ class DirectScheduler(BashCliScheduler):
         command = 'ps -xo pid,stat,user,time'
 
         if jobs:
-            if isinstance(jobs, str):
-                command += f' {escape_for_bash(jobs)}'
+            if isinstance(jobs, str):  # type: ignore[unreachable]
+                command += f' {escape_for_bash(jobs)}'  # type: ignore[unreachable]
             else:
                 try:
                     command += f" {' '.join(escape_for_bash(job) for job in jobs if job)}"
@@ -116,7 +120,7 @@ class DirectScheduler(BashCliScheduler):
 
         return command
 
-    def _get_submit_script_header(self, job_tmpl):
+    def _get_submit_script_header(self, job_tmpl: JobTemplate) -> str:
         """Return the submit script header, using the parameters from the
         job_tmpl.
 
@@ -182,7 +186,7 @@ class DirectScheduler(BashCliScheduler):
 
         return '\n'.join(lines)
 
-    def _get_submit_command(self, submit_script):
+    def _get_submit_command(self, submit_script: str) -> str:
         """Return the string to execute to submit a given script.
 
         .. note:: One needs to redirect stdout and stderr to /dev/null
@@ -198,7 +202,7 @@ class DirectScheduler(BashCliScheduler):
 
         return submit_command
 
-    def _parse_joblist_output(self, retval, stdout, stderr):
+    def _parse_joblist_output(self, retval: int, stdout: str, stderr: str) -> list[JobInfo]:
         """Parse the queue output string, as returned by executing the
         command returned by _get_joblist_command command (qstat -f).
 
@@ -211,8 +215,6 @@ class DirectScheduler(BashCliScheduler):
             in the qstat output; missing jobs (for whatever reason) simply
             will not appear here.
         """
-        import re
-
         filtered_stderr = '\n'.join(line for line in stderr.split('\n'))
         if filtered_stderr.strip():
             self.logger.warning(f"Warning in _parse_joblist_output, non-empty (filtered) stderr='{filtered_stderr}'")
@@ -264,18 +266,35 @@ class DirectScheduler(BashCliScheduler):
 
         return job_list
 
-    def get_jobs(self, jobs=None, user=None, as_dict=False):
-        """Overrides original method from DirectScheduler in order to list
+    @t.overload
+    def get_jobs(
+        self,
+        jobs: list[str] | None = None,
+        user: str | None = None,
+        as_dict: t.Literal[False] = False,
+    ) -> list[JobInfo]: ...
+
+    @t.overload
+    def get_jobs(
+        self,
+        jobs: list[str] | None = None,
+        user: str | None = None,
+        as_dict: t.Literal[True] = True,
+    ) -> dict[str, JobInfo]: ...
+
+    def get_jobs(
+        self,
+        jobs: list[str] | None = None,
+        user: str | None = None,
+        as_dict: bool = False,
+    ) -> list[JobInfo] | dict[str, JobInfo]:
+        """Overrides original method from BashScheduler in order to list
         missing processes as DONE.
         """
-        job_stats = super().get_jobs(jobs=jobs, user=user, as_dict=as_dict)
+        job_stats = super().get_jobs(jobs=jobs, user=user, as_dict=True)
 
-        found_jobs = []
         # Get the list of known jobs
-        if as_dict:
-            found_jobs = job_stats.keys()
-        else:
-            found_jobs = [j.job_id for j in job_stats]
+        found_jobs = job_stats.keys()
         # Now check if there are any the user requested but were not found
         not_found_jobs = list(set(jobs) - set(found_jobs)) if jobs else []
 
@@ -284,16 +303,14 @@ class DirectScheduler(BashCliScheduler):
             job.job_id = job_id
             job.job_state = JobState.DONE
             # Owner and wallclock time is unknown
-            if as_dict:
-                job_stats[job_id] = job
-            else:
-                job_stats.append(job)
+            job_stats[job_id] = job
 
+        if not as_dict:
+            return list(job_stats.values())
         return job_stats
 
-    def _convert_time(self, string):
+    def _convert_time(self, string: str) -> int:
         """Convert a string in the format HH:MM:SS to a number of seconds."""
-        import re
 
         pieces = re.split('[:.]', string)
         if len(pieces) != 3:
@@ -304,8 +321,8 @@ class DirectScheduler(BashCliScheduler):
         pieces_first = pieces[0].split('-')
 
         if len(pieces_first) == 2:
-            days, pieces[0] = pieces_first
-            days = int(days)
+            days = int(pieces_first[0])
+            pieces[0] = pieces_first[1]
 
         try:
             hours = int(pieces[0])
@@ -333,7 +350,7 @@ class DirectScheduler(BashCliScheduler):
 
         return days * 86400 + hours * 3600 + mins * 60 + secs
 
-    def _parse_submit_output(self, retval, stdout, stderr):
+    def _parse_submit_output(self, retval: int, stdout: str, stderr: str) -> str | ExitCode:
         """Parse the output of the submit command, as returned by executing the
         command returned by _get_submit_command command.
 
@@ -356,7 +373,7 @@ class DirectScheduler(BashCliScheduler):
 
         return stdout.strip()
 
-    def _get_kill_command(self, jobid: Union[int, str]) -> str:
+    def _get_kill_command(self, jobid: int | str) -> str:
         """Return the command to kill the process with specified id and all its descendants.
 
         :param jobid: The job id is in the case of the
@@ -379,7 +396,7 @@ class DirectScheduler(BashCliScheduler):
 
         return kill_command
 
-    def _parse_kill_output(self, retval, stdout, stderr):
+    def _parse_kill_output(self, retval: int, stdout: str, stderr: str) -> bool:
         """Parse the output of the kill command.
 
         To be implemented by the plugin.

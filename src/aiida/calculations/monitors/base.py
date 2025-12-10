@@ -29,7 +29,7 @@ def always_kill(node: CalcJobNode, transport: Transport) -> str | None:
 
     try:
         transport.getfile(str(Path(cwd).joinpath('_aiidasubmit.sh')), temp_path)
-        with open(temp_path, 'r') as f:
+        with open(temp_path, 'r', encoding='utf-8') as f:
             output = f.read()
     finally:
         try:

@@ -24,13 +24,13 @@ def always_kill(node: CalcJobNode, transport: Transport) -> str | None:
     if cwd is None:
         raise ValueError('The remote work directory cannot be None')
 
-    with tempfile.NamedTemporaryFile('w+', delete=False) as handle:
-        temp_path = handle.name
+    handle, temp_path = tempfile.mkstemp()
+    os.close(handle)
 
     try:
         transport.getfile(str(Path(cwd).joinpath('_aiidasubmit.sh')), temp_path)
-        with open(temp_path, 'r') as handle:
-            output = handle.read()
+        with open(temp_path, 'r') as f:
+            output = f.read()
     finally:
         try:
             os.remove(temp_path)

@@ -1,9 +1,9 @@
 """Importer for the :class:`aiida.calculations.arithmetic.add.ArithmeticAddCalculation` plugin."""
 
 import os
+import tempfile
 from pathlib import Path
 from re import match
-from tempfile import NamedTemporaryFile
 from typing import Dict, Union
 
 from aiida.engine import CalcJobImporter
@@ -21,16 +21,16 @@ class ArithmeticAddCalculationImporter(CalcJobImporter):
         :param kwargs: additional keyword arguments to control the parsing process.
         :returns: a dictionary with the parsed inputs nodes that match the input spec of the associated ``CalcJob``.
         """
-        with NamedTemporaryFile('w+', delete=False) as handle:
-            temp_path = handle.name
+        handle, temp_path = tempfile.mkstemp()
+        os.close(handle)
 
         try:
             with remote_data.get_authinfo().get_transport() as transport:
                 filepath = Path(remote_data.get_remote_path()) / 'aiida.in'
                 transport.getfile(filepath, temp_path)
 
-            with open(temp_path, 'r') as handle:
-                data = handle.read()
+            with open(temp_path, 'r') as f:
+                data = f.read()
 
             matches = match(r'echo \$\(\(([0-9]+) \+ ([0-9]+)\)\).*', data.strip())
 

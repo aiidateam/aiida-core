@@ -778,24 +778,25 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             The 500k batch threshold is chosen to balance several factors:
 
             - **Parameter limits**: Each batch uses 1 parameter. With SQLite's minimum limit of 999
-            parameters, this allows up to ~500M items (999 x 500k). PostgreSQL's limit of ~65k
-            parameters allows up to ~33B items (65,535 x 500k).
+              parameters, this allows up to ~500M items (999 x 500k). PostgreSQL's limit of ~65k
+              parameters allows up to ~33B items (65,535 x 500k).
             - **Memory constraints**: In practice, Python memory becomes the bottleneck before
-            database limits. A list of 500M items would require 4-20GB RAM before even reaching
-            the database.
+              database limits. A list of 500M items would require 4-20GB RAM before even reaching
+              the database.
             - **Database performance**: Modern databases handle 500k-item arrays/JSON easily on
-            typical workstations and servers.
+              typical workstations and servers.
 
-        For example:
-            Small list (50k items):
-                WHERE column IN (SELECT unnest(:array))  -- 1 parameter
+        For example, small list (50k items)::
 
-            Large list (1.5M items):
-                WHERE (
-                    column IN (SELECT unnest(:array_1))  -- First 500k
-                    OR column IN (SELECT unnest(:array_2))  -- Second 500k
-                    OR column IN (SELECT unnest(:array_3))  -- Remaining 500k
-                )
+            WHERE column IN (SELECT unnest(:array))  -- 1 parameter
+
+        Large list (1.5M items)::
+
+            WHERE (
+                column IN (SELECT unnest(:array_1))  -- First 500k
+                OR column IN (SELECT unnest(:array_2))  -- Second 500k
+                OR column IN (SELECT unnest(:array_3))  -- Remaining 500k
+            )
         """
         import json
 

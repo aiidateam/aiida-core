@@ -109,7 +109,6 @@ repos:
         src/aiida/restapi/translator/group.py|
         src/aiida/restapi/translator/nodes/.*|
         src/aiida/restapi/translator/user.py|
-        src/aiida/schedulers/plugins/direct.py|
         src/aiida/schedulers/plugins/lsf.py|
         src/aiida/schedulers/plugins/pbsbaseclasses.py|
         src/aiida/schedulers/plugins/sge.py|

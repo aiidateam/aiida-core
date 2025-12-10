@@ -10,6 +10,8 @@
 This has been tested on the CERN lxplus cluster (LSF 9.1.3)
 """
 
+import datetime
+
 import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
 from aiida.common.extendeddicts import AttributeDict
@@ -290,7 +292,7 @@ class LsfScheduler(BashCliScheduler):
         self.logger.debug(f'bjobs command: {comm}')
         return comm
 
-    def _get_detailed_job_info_command(self, job_id):
+    def _get_detailed_job_info_command(self, job_id: str) -> str:
         """Return the command to run to get the detailed information on a job,
         even after the job has finished.
 
@@ -683,7 +685,6 @@ fi
         """Parse a time string and returns a datetime object.
         Example format: 'Feb  2 07:39' or 'Feb  2 07:39 L'
         """
-        import datetime
 
         if string == '-':
             return None

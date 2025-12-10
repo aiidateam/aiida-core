@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import os
+import tempfile
 import time
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -227,3 +230,45 @@ def test_calc_job_monitors_outputs(entry_points, aiida_code_installed):
     for message in node.outputs.messages.values():
         assert isinstance(message, Str)
         assert len(message.value) == 30, message.value
+
+
+def test_always_kill_tempfile_cleanup(tmp_path, monkeypatch):
+    """Test that the ``always_kill`` monitor properly cleans up temporary files."""
+    # Create a mock node with a remote workdir
+    mock_node = MagicMock()
+    mock_node.get_remote_workdir.return_value = str(tmp_path)
+
+    # Create a test submission script
+    submit_script = tmp_path / '_aiidasubmit.sh'
+    submit_script.write_text('#!/bin/bash\necho "test"')
+
+    # Create a mock transport
+    mock_transport = MagicMock()
+
+    # Track created temp files
+    created_files = []
+    original_mkstemp = tempfile.mkstemp
+
+    def tracking_mkstemp(*args, **kwargs):
+        handle, path = original_mkstemp(*args, **kwargs)
+        created_files.append(path)
+        return handle, path
+
+    monkeypatch.setattr(tempfile, 'mkstemp', tracking_mkstemp)
+
+    # Mock getfile to copy the submit script to the temp file
+    def mock_getfile(remote_path, local_path):
+        with open(local_path, 'w', encoding='utf-8') as f:
+            f.write(submit_script.read_text())
+
+    mock_transport.getfile = mock_getfile
+
+    # Call the monitor function
+    result = base.always_kill(mock_node, mock_transport)
+
+    # Verify the result
+    assert result == 'Detected a non-empty submission script'
+
+    # Verify that all temporary files were cleaned up
+    for temp_file in created_files:
+        assert not os.path.exists(temp_file), f'Temporary file {temp_file} was not cleaned up'

@@ -8,9 +8,8 @@
 ###########################################################################
 """Import an archive."""
 
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, Literal, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, Literal, Optional, Set, Tuple, Union
 
 from tabulate import tabulate
 
@@ -21,6 +20,7 @@ from aiida.common.lang import type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.progress_reporter import get_progress_reporter
+from aiida.common.utils import DEFAULT_BATCH_SIZE, DEFAULT_FILTER_SIZE, batch_iter
 from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
@@ -28,7 +28,7 @@ from aiida.orm.querybuilder import QueryBuilder
 from aiida.repository import Repository
 
 from .abstract import ArchiveFormatAbstract
-from .common import batch_iter, entity_type_to_orm
+from .common import entity_type_to_orm
 from .exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError
 from .implementations.sqlite_zip import ArchiveFormatSqlZip
 
@@ -48,22 +48,10 @@ DUPLICATE_LABEL_MAX = 100
 DUPLICATE_LABEL_TEMPLATE = '{0} (Imported #{1})'
 
 
-@dataclass
-class QueryParams:
-    """Parameters for executing backend queries."""
-
-    batch_size: int
-    """Batch size for streaming database rows."""
-    filter_size: int
-    """Maximum number of parameters allowed in a single query filter."""
-
-
 def import_archive(
     path: Union[str, Path],
     *,
     archive_format: Optional[ArchiveFormatAbstract] = None,
-    filter_size: int = 999,
-    batch_size: int = 1000,
     import_new_extras: bool = True,
     merge_extras: MergeExtrasType = ('k', 'n', 'l'),
     merge_comments: MergeCommentsType = 'leave',
@@ -72,13 +60,13 @@ def import_archive(
     group: Optional[orm.Group] = None,
     test_run: bool = False,
     backend: Optional[StorageBackend] = None,
+    filter_size: int = DEFAULT_FILTER_SIZE,
+    batch_size: int = DEFAULT_BATCH_SIZE,
 ) -> Optional[int]:
     """Import an archive into the AiiDA backend.
 
     :param path: the path to the archive
     :param archive_format: The class for interacting with the archive
-    :param filter_size: Maximum size of parameters allowed in a single query filter
-    :param batch_size: Batch size for streaming database rows
     :param import_new_extras: Keep extras on new nodes (except private aiida keys), else strip
     :param merge_extras: Rules for merging extras into existing nodes.
         The first letter acts on extras that are present in the original node and not present in the imported node.
@@ -99,6 +87,9 @@ def import_archive(
         If None, one will be auto-generated.
     :param test_run: if True, do not write to file
     :param backend: the backend to import to. If not specified, the default backend is used.
+    :param filter_size: query filters are batched by this number to avoid database parameter limits. Try reducing
+        this value in case you run into related errors.
+    :param batch_size: Batch size for streaming database rows
 
     :returns: Primary Key of the import Group
 
@@ -118,12 +109,11 @@ def import_archive(
     if not (merge_extras[0] in ['k', 'n'] and merge_extras[1] in ['c', 'n'] and merge_extras[2] in ['l', 'u', 'd']):
         raise ValueError('merge_extras contains invalid values')
     if merge_comments not in ('leave', 'newest', 'overwrite'):
-        raise ValueError(f"merge_comments not in {('leave', 'newest', 'overwrite')!r}")
+        raise ValueError(f'merge_comments not in {("leave", "newest", "overwrite")!r}')
     type_check(group, orm.Group, allow_none=True)
     type_check(test_run, bool)
     backend = backend or get_manager().get_profile_storage()
     type_check(backend, StorageBackend)
-    query_params = QueryParams(batch_size=batch_size, filter_size=filter_size)
 
     if group and not group.is_stored:
         group.store()
@@ -165,35 +155,49 @@ def import_archive(
         # To ensure we do not corrupt the backend database on a faulty import,
         # Every addition/update is made in a single transaction, which is commited on exit
         with backend.transaction():
-            user_ids_archive_backend = _import_users(backend_from, backend, query_params)
-            computer_ids_archive_backend = _import_computers(backend_from, backend, query_params)
+            user_ids_archive_backend = _import_users(backend_from, backend, batch_size, filter_size)
+            computer_ids_archive_backend = _import_computers(backend_from, backend, batch_size, filter_size)
             if include_authinfos:
                 _import_authinfos(
-                    backend_from, backend, query_params, user_ids_archive_backend, computer_ids_archive_backend
+                    backend_from,
+                    backend,
+                    batch_size,
+                    user_ids_archive_backend,
+                    computer_ids_archive_backend,
                 )
             node_ids_archive_backend = _import_nodes(
                 backend_from,
                 backend,
-                query_params,
+                batch_size,
+                filter_size,
                 user_ids_archive_backend,
                 computer_ids_archive_backend,
                 import_new_extras,
                 merge_extras,
             )
-            _import_logs(backend_from, backend, query_params, node_ids_archive_backend)
+            _import_logs(backend_from, backend, batch_size, filter_size, node_ids_archive_backend)
             _import_comments(
-                backend_from, backend, query_params, user_ids_archive_backend, node_ids_archive_backend, merge_comments
+                backend_from,
+                backend,
+                batch_size,
+                filter_size,
+                user_ids_archive_backend,
+                node_ids_archive_backend,
+                merge_comments,
             )
-            _import_links(backend_from, backend, query_params, node_ids_archive_backend)
+            _import_links(backend_from, backend, batch_size, node_ids_archive_backend)
             group_labels = _import_groups(
-                backend_from, backend, query_params, user_ids_archive_backend, node_ids_archive_backend
+                backend_from, backend, batch_size, filter_size, user_ids_archive_backend, node_ids_archive_backend
             )
             import_group_id = None
             if create_group:
-                import_group_id = _make_import_group(
-                    group, group_labels, node_ids_archive_backend, backend, query_params
-                )
-            new_repo_keys = _get_new_object_keys(archive_format.key_format, backend_from, backend, query_params)
+                import_group_id = _make_import_group(group, group_labels, node_ids_archive_backend, backend, batch_size)
+            new_repo_keys = _get_new_object_keys(
+                archive_format.key_format,
+                backend_from,
+                backend,
+                batch_size,
+            )
 
             if test_run:
                 # exit before we write anything to the database or repository
@@ -215,7 +219,8 @@ def _add_new_entities(
     backend_unique_id: dict,
     backend_from: StorageBackend,
     backend_to: StorageBackend,
-    query_params: QueryParams,
+    batch_size: int,
+    filter_size: int,
     transform: Callable[[dict], dict],
 ) -> None:
     """Add new entities to the output backend and update the mapping of unique field -> id."""
@@ -224,32 +229,33 @@ def _add_new_entities(
     # collect the unique entities from the input backend to be added to the output backend
     ufields = []
     query = QueryBuilder(backend=backend_from).append(entity_type_to_orm[etype], project=unique_field)
-    for (ufield,) in query.distinct().iterall(batch_size=query_params.batch_size):
+    for (ufield,) in query.distinct().iterall(batch_size=batch_size):
         if ufield not in backend_unique_id:
             ufields.append(ufield)
 
     with get_progress_reporter()(desc=f'Adding new {etype.value}(s)', total=total) as progress:
-        # batch the filtering of rows by filter size, to limit the number of query variables used in any one query,
-        # since certain backends have a limit on the number of variables in a query (such as SQLITE_MAX_VARIABLE_NUMBER)
-        for nrows, ufields_batch in batch_iter(ufields, query_params.filter_size):
-            rows = [
-                transform(row)
-                for row in QueryBuilder(backend=backend_from)
-                .append(
-                    entity_type_to_orm[etype],
-                    filters={unique_field: {'in': ufields_batch}},
-                    project=['**'],
-                    tag='entity',
-                )
-                .dict(batch_size=query_params.batch_size)
-            ]
-            new_ids = backend_to.bulk_insert(etype, rows)
-            backend_unique_id.update({row[unique_field]: pk for pk, row in zip(new_ids, rows)})
-            progress.update(nrows)
+        # For UX: batch large ID lists so queries start returning results faster
+        # Even though the improved IN clause handles any size, query planning for 500k+ IDs can be slow
+        query_batch_size = 50_000
+
+        # Batch the IDs for querying (UX optimization, not a technical requirement)
+        for _, ufields_batch in batch_iter(ufields, query_batch_size):
+            query = QueryBuilder(backend=backend_from).append(
+                entity_type_to_orm[etype],
+                filters={unique_field: {'in': ufields_batch}},
+                project=['**'],
+                tag='entity',
+            )
+
+            # Batch the results processing for progress updates and memory efficiency
+            for nrows, rows_batch in batch_iter(query.dict(batch_size=batch_size), batch_size, transform):
+                new_ids = backend_to.bulk_insert(etype, rows_batch)
+                backend_unique_id.update({row[unique_field]: pk for pk, row in zip(new_ids, rows_batch)})
+                progress.update(nrows)
 
 
 def _import_users(
-    backend_from: StorageBackend, backend_to: StorageBackend, query_params: QueryParams
+    backend_from: StorageBackend, backend_to: StorageBackend, batch_size: int, filter_size: int
 ) -> Dict[int, int]:
     """Import users from one backend to another.
 
@@ -257,23 +263,16 @@ def _import_users(
     """
     # get the records from the input backend
     qbuilder = QueryBuilder(backend=backend_from)
-    input_id_email = dict(qbuilder.append(orm.User, project=['id', 'email']).all(batch_size=query_params.batch_size))
+    input_id_email = dict(qbuilder.append(orm.User, project=['id', 'email']).all(batch_size=batch_size))
 
     # get matching emails from the backend
     output_email_id: Dict[str, int] = {}
     if input_id_email:
-        output_email_id = {
-            key: value
-            for query_results in [
-                dict(
-                    orm.QueryBuilder(backend=backend_to)
-                    .append(orm.User, filters={'email': {'in': chunk}}, project=['email', 'id'])
-                    .all(batch_size=query_params.batch_size)
-                )
-                for _, chunk in batch_iter(set(input_id_email.values()), query_params.filter_size)
-            ]
-            for key, value in query_results.items()
-        }
+        output_email_id = dict(
+            orm.QueryBuilder(backend=backend_to)
+            .append(orm.User, filters={'email': {'in': list(set(input_id_email.values()))}}, project=['email', 'id'])
+            .all(batch_size=batch_size)
+        )
 
     new_users = len(input_id_email) - len(output_email_id)
     existing_users = len(output_email_id)
@@ -286,7 +285,15 @@ def _import_users(
             return {k: v for k, v in row['entity'].items() if k != 'id'}
 
         _add_new_entities(
-            EntityTypes.USER, new_users, 'email', output_email_id, backend_from, backend_to, query_params, transform
+            EntityTypes.USER,
+            new_users,
+            'email',
+            output_email_id,
+            backend_from,
+            backend_to,
+            batch_size,
+            filter_size,
+            transform,
         )
 
     # generate mapping of input backend id to output backend id
@@ -294,7 +301,7 @@ def _import_users(
 
 
 def _import_computers(
-    backend_from: StorageBackend, backend_to: StorageBackend, query_params: QueryParams
+    backend_from: StorageBackend, backend_to: StorageBackend, batch_size: int, filter_size: int
 ) -> Dict[int, int]:
     """Import computers from one backend to another.
 
@@ -302,23 +309,16 @@ def _import_computers(
     """
     # get the records from the input backend
     qbuilder = QueryBuilder(backend=backend_from)
-    input_id_uuid = dict(qbuilder.append(orm.Computer, project=['id', 'uuid']).all(batch_size=query_params.batch_size))
+    input_id_uuid = dict(qbuilder.append(orm.Computer, project=['id', 'uuid']).all(batch_size=batch_size))
 
     # get matching uuids from the backend
     backend_uuid_id: Dict[str, int] = {}
     if input_id_uuid:
-        backend_uuid_id = {
-            key: value
-            for query_results in [
-                dict(
-                    orm.QueryBuilder(backend=backend_to)
-                    .append(orm.Computer, filters={'uuid': {'in': chunk}}, project=['uuid', 'id'])
-                    .all(batch_size=query_params.batch_size)
-                )
-                for _, chunk in batch_iter(set(input_id_uuid.values()), query_params.filter_size)
-            ]
-            for key, value in query_results.items()
-        }
+        backend_uuid_id = dict(
+            orm.QueryBuilder(backend=backend_to)
+            .append(orm.Computer, filters={'uuid': {'in': list(set(input_id_uuid.values()))}}, project=['uuid', 'id'])
+            .all(batch_size=batch_size)
+        )
 
     new_computers = len(input_id_uuid) - len(backend_uuid_id)
     existing_computers = len(backend_uuid_id)
@@ -333,7 +333,7 @@ def _import_computers(
             label
             for (label,) in orm.QueryBuilder(backend=backend_to)
             .append(orm.Computer, project='label')
-            .iterall(batch_size=query_params.batch_size)
+            .iterall(batch_size=batch_size)
         }
         relabelled = 0
 
@@ -363,7 +363,8 @@ def _import_computers(
             backend_uuid_id,
             backend_from,
             backend_to,
-            query_params,
+            batch_size,
+            filter_size,
             transform,
         )
 
@@ -377,7 +378,7 @@ def _import_computers(
 def _import_authinfos(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
-    query_params: QueryParams,
+    batch_size: int,
     user_ids_archive_backend: Dict[int, int],
     computer_ids_archive_backend: Dict[int, int],
 ) -> None:
@@ -390,7 +391,7 @@ def _import_authinfos(
     input_id_user_comp = qbuilder.append(
         orm.AuthInfo,
         project=['id', 'aiidauser_id', 'dbcomputer_id'],
-    ).all(batch_size=query_params.batch_size)
+    ).all(batch_size=batch_size)
 
     # translate user_id / computer_id, from -> to
     try:
@@ -415,7 +416,7 @@ def _import_authinfos(
         )
         backend_id_user_comp = [
             (user_id, comp_id)
-            for _, user_id, comp_id in qbuilder.all(batch_size=query_params.batch_size)
+            for _, user_id, comp_id in qbuilder.all(batch_size=batch_size)
             if (user_id, comp_id) in to_user_id_comp_id
         ]
 
@@ -449,7 +450,7 @@ def _import_authinfos(
     with get_progress_reporter()(
         desc=f'Adding new {EntityTypes.AUTHINFO.value}(s)', total=qbuilder.count()
     ) as progress:
-        for nrows, rows in batch_iter(iterator, query_params.batch_size, transform):
+        for nrows, rows in batch_iter(iterator, batch_size, transform):
             backend_to.bulk_insert(EntityTypes.AUTHINFO, rows)
             progress.update(nrows)
 
@@ -457,7 +458,8 @@ def _import_authinfos(
 def _import_nodes(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
-    query_params: QueryParams,
+    batch_size: int,
+    filter_size: int,
     user_ids_archive_backend: Dict[int, int],
     computer_ids_archive_backend: Dict[int, int],
     import_new_extras: bool,
@@ -470,35 +472,36 @@ def _import_nodes(
     IMPORT_LOGGER.report('Collecting Node(s) ...')
     # get the records from the input backend
     qbuilder = QueryBuilder(backend=backend_from)
-    input_id_uuid = dict(qbuilder.append(orm.Node, project=['id', 'uuid']).all(batch_size=query_params.batch_size))
+    input_id_uuid = dict(qbuilder.append(orm.Node, project=['id', 'uuid']).all(batch_size=batch_size))
 
     # get matching uuids from the backend
     backend_uuid_id: Dict[str, int] = {}
 
     if input_id_uuid:
-        backend_uuid_id = {
-            key: value
-            for query_results in [
-                dict(
-                    orm.QueryBuilder(backend=backend_to)
-                    .append(orm.Node, filters={'uuid': {'in': chunk}}, project=['uuid', 'id'])
-                    .all(batch_size=query_params.batch_size)
-                )
-                for _, chunk in batch_iter(set(input_id_uuid.values()), query_params.filter_size)
-            ]
-            for key, value in query_results.items()
-        }
+        backend_uuid_id = dict(
+            orm.QueryBuilder(backend=backend_to)
+            .append(orm.Node, filters={'uuid': {'in': list(set(input_id_uuid.values()))}}, project=['uuid', 'id'])
+            .all(batch_size=batch_size)
+        )
 
     new_nodes = len(input_id_uuid) - len(backend_uuid_id)
 
     if backend_uuid_id:
-        _merge_node_extras(backend_from, backend_to, query_params, backend_uuid_id, merge_extras)
+        _merge_node_extras(backend_from, backend_to, batch_size, backend_uuid_id, merge_extras)
 
     if new_nodes:
         # add new nodes and update backend_uuid_id with their uuid -> id mapping
         transform = NodeTransform(user_ids_archive_backend, computer_ids_archive_backend, import_new_extras)
         _add_new_entities(
-            EntityTypes.NODE, new_nodes, 'uuid', backend_uuid_id, backend_from, backend_to, query_params, transform
+            EntityTypes.NODE,
+            new_nodes,
+            'uuid',
+            backend_uuid_id,
+            backend_from,
+            backend_to,
+            batch_size,
+            filter_size,
+            transform,
         )
 
     # generate mapping of input backend id to output backend id
@@ -548,7 +551,8 @@ class NodeTransform:
 def _import_logs(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
-    query_params: QueryParams,
+    batch_size: int,
+    filter_size: int,
     node_ids_archive_backend: Dict[int, int],
 ) -> Dict[int, int]:
     """Import logs from one backend to another.
@@ -557,24 +561,17 @@ def _import_logs(
     """
     # get the records from the input backend
     qbuilder = QueryBuilder(backend=backend_from)
-    input_id_uuid = dict(qbuilder.append(orm.Log, project=['id', 'uuid']).all(batch_size=query_params.batch_size))
+    input_id_uuid = dict(qbuilder.append(orm.Log, project=['id', 'uuid']).all(batch_size=batch_size))
 
     # get matching uuids from the backend
     backend_uuid_id: Dict[str, int] = {}
 
     if input_id_uuid:
-        backend_uuid_id = {
-            key: value
-            for query_results in [
-                dict(
-                    orm.QueryBuilder(backend=backend_to)
-                    .append(orm.Log, filters={'uuid': {'in': chunk}}, project=['uuid', 'id'])
-                    .all(batch_size=query_params.batch_size)
-                )
-                for _, chunk in batch_iter(set(input_id_uuid.values()), query_params.filter_size)
-            ]
-            for key, value in query_results.items()
-        }
+        backend_uuid_id = dict(
+            orm.QueryBuilder(backend=backend_to)
+            .append(orm.Log, filters={'uuid': {'in': list(set(input_id_uuid.values()))}}, project=['uuid', 'id'])
+            .all(batch_size=batch_size)
+        )
 
     new_logs = len(input_id_uuid) - len(backend_uuid_id)
     existing_logs = len(backend_uuid_id)
@@ -593,7 +590,15 @@ def _import_logs(
             return data
 
         _add_new_entities(
-            EntityTypes.LOG, new_logs, 'uuid', backend_uuid_id, backend_from, backend_to, query_params, transform
+            EntityTypes.LOG,
+            new_logs,
+            'uuid',
+            backend_uuid_id,
+            backend_from,
+            backend_to,
+            batch_size,
+            filter_size,
+            transform,
         )
 
     # generate mapping of input backend id to output backend id
@@ -603,7 +608,7 @@ def _import_logs(
 def _merge_node_extras(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
-    query_params: QueryParams,
+    batch_size: int,
     backend_uuid_id: Dict[str, int],
     mode: MergeExtrasType,
 ) -> None:
@@ -635,9 +640,7 @@ def _merge_node_extras(
             return {'id': backend_uuid_id[row[0]], 'extras': row[1]}
 
         with get_progress_reporter()(desc='Replacing extras', total=input_extras.count()) as progress:
-            for nrows, rows in batch_iter(
-                input_extras.iterall(batch_size=query_params.batch_size), query_params.batch_size, transform
-            ):
+            for nrows, rows in batch_iter(input_extras.iterall(batch_size=batch_size), batch_size, transform):
                 backend_to.bulk_update(EntityTypes.NODE, rows)
                 progress.update(nrows)
         return
@@ -658,7 +661,7 @@ def _merge_node_extras(
             f'Number of Nodes in archive ({input_extras.count()}) and backend ({backend_extras.count()}) do not match'
         )
 
-    def _transform(data: Tuple[Tuple[str, dict], Tuple[str, dict]]) -> dict:
+    def _transform(data: tuple[Any, Any]) -> dict:
         """Transform the new and existing extras into a dict that can be passed to bulk_update."""
         new_uuid, new_extras = data[0]
         old_uuid, old_extras = data[1]
@@ -717,10 +720,10 @@ def _merge_node_extras(
     with get_progress_reporter()(desc='Merging extras', total=input_extras.count()) as progress:
         for nrows, rows in batch_iter(
             zip(
-                input_extras.iterall(batch_size=query_params.batch_size),
-                backend_extras.iterall(batch_size=query_params.batch_size),
+                input_extras.iterall(batch_size=batch_size),
+                backend_extras.iterall(batch_size=batch_size),
             ),
-            query_params.batch_size,
+            batch_size,
             _transform,
         ):
             backend_to.bulk_update(EntityTypes.NODE, rows)
@@ -757,7 +760,8 @@ class CommentTransform:
 def _import_comments(
     backend_from: StorageBackend,
     backend: StorageBackend,
-    query_params: QueryParams,
+    batch_size: int,
+    filter_size: int,
     user_ids_archive_backend: Dict[int, int],
     node_ids_archive_backend: Dict[int, int],
     merge_comments: MergeCommentsType,
@@ -768,7 +772,7 @@ def _import_comments(
     """
     # get the records from the input backend
     qbuilder = QueryBuilder(backend=backend_from)
-    input_id_uuid = dict(qbuilder.append(orm.Comment, project=['id', 'uuid']).all(batch_size=query_params.batch_size))
+    input_id_uuid = dict(qbuilder.append(orm.Comment, project=['id', 'uuid']).all(batch_size=batch_size))
 
     # get matching uuids from the backend
     backend_uuid_id: Dict[str, int] = {}
@@ -776,7 +780,7 @@ def _import_comments(
         backend_uuid_id = dict(
             orm.QueryBuilder(backend=backend)
             .append(orm.Comment, filters={'uuid': {'in': list(input_id_uuid.values())}}, project=['uuid', 'id'])
-            .all(batch_size=query_params.batch_size)
+            .all(batch_size=batch_size)
         )
 
     new_comments = len(input_id_uuid) - len(backend_uuid_id)
@@ -797,9 +801,7 @@ def _import_comments(
                 return data
 
             with get_progress_reporter()(desc='Overwriting comments', total=archive_comments.count()) as progress:
-                for nrows, rows in batch_iter(
-                    archive_comments.iterall(batch_size=query_params.batch_size), query_params.batch_size, _transform
-                ):
+                for nrows, rows in batch_iter(archive_comments.iterall(batch_size=batch_size), batch_size, _transform):
                     backend.bulk_update(EntityTypes.COMMENT, rows)
                     progress.update(nrows)
 
@@ -815,9 +817,7 @@ def _import_comments(
                     cmt.set_content(new_comment)
 
             with get_progress_reporter()(desc='Updating comments', total=archive_comments.count()) as progress:
-                for nrows, rows in batch_iter(
-                    archive_comments.iterall(batch_size=query_params.batch_size), query_params.batch_size, _transform
-                ):
+                for nrows, rows in batch_iter(archive_comments.iterall(batch_size=batch_size), batch_size, _transform):
                     progress.update(nrows)
 
         else:
@@ -831,7 +831,8 @@ def _import_comments(
             backend_uuid_id,
             backend_from,
             backend,
-            query_params,
+            batch_size,
+            filter_size,
             CommentTransform(user_ids_archive_backend, node_ids_archive_backend),
         )
 
@@ -842,7 +843,7 @@ def _import_comments(
 def _import_links(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
-    query_params: QueryParams,
+    batch_size: int,
     node_ids_archive_backend: Dict[int, int],
 ) -> None:
     """Import links from one backend to another."""
@@ -900,7 +901,7 @@ def _import_links(
             tuple(link)
             for link in orm.QueryBuilder(backend=backend_to)
             .append(entity_type='link', filters={'type': link_type.value}, project=['input_id', 'output_id', 'label'])
-            .iterall(batch_size=query_params.batch_size)
+            .iterall(batch_size=batch_size)
         }
         # create additional validators
         # note, we only populate them when required, to reduce memory usage
@@ -916,9 +917,7 @@ def _import_links(
         new_count = existing_count = 0
         insert_rows = []
         with get_progress_reporter()(desc=f'Processing {link_type.value!r} Link(s)', total=total) as progress:
-            for in_id, in_type, out_id, out_type, link_id, link_label in archive_query.iterall(
-                batch_size=query_params.batch_size
-            ):
+            for in_id, in_type, out_id, out_type, link_id, link_label in archive_query.iterall(batch_size=batch_size):
                 progress.update()
 
                 # convert ids: archive -> profile
@@ -972,7 +971,7 @@ def _import_links(
                 existing_out_id_label.add((out_id, link_label))
 
                 # flush new rows, once batch size is reached
-                if (new_count % query_params.batch_size) == 0:
+                if (new_count % batch_size) == 0:
                     backend_to.bulk_insert(EntityTypes.LINK, insert_rows)
                     insert_rows = []
 
@@ -1022,7 +1021,8 @@ class GroupTransform:
 def _import_groups(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
-    query_params: QueryParams,
+    batch_size: int,
+    filter_size: int,
     user_ids_archive_backend: Dict[int, int],
     node_ids_archive_backend: Dict[int, int],
 ) -> Set[str]:
@@ -1032,7 +1032,7 @@ def _import_groups(
     """
     # get the records from the input backend
     qbuilder = QueryBuilder(backend=backend_from)
-    input_id_uuid = dict(qbuilder.append(orm.Group, project=['id', 'uuid']).all(batch_size=query_params.batch_size))
+    input_id_uuid = dict(qbuilder.append(orm.Group, project=['id', 'uuid']).all(batch_size=batch_size))
 
     # get matching uuids from the backend
     backend_uuid_id: Dict[str, int] = {}
@@ -1040,7 +1040,7 @@ def _import_groups(
         backend_uuid_id = dict(
             orm.QueryBuilder(backend=backend_to)
             .append(orm.Group, filters={'uuid': {'in': list(input_id_uuid.values())}}, project=['uuid', 'id'])
-            .all(batch_size=query_params.batch_size)
+            .all(batch_size=batch_size)
         )
 
     # get all labels
@@ -1048,7 +1048,7 @@ def _import_groups(
         label
         for (label,) in orm.QueryBuilder(backend=backend_to)
         .append(orm.Group, project='label')
-        .iterall(batch_size=query_params.batch_size)
+        .iterall(batch_size=batch_size)
     }
 
     new_groups = len(input_id_uuid) - len(backend_uuid_id)
@@ -1063,7 +1063,15 @@ def _import_groups(
         transform = GroupTransform(user_ids_archive_backend, labels)
 
         _add_new_entities(
-            EntityTypes.GROUP, new_groups, 'uuid', backend_uuid_id, backend_from, backend_to, query_params, transform
+            EntityTypes.GROUP,
+            new_groups,
+            'uuid',
+            backend_uuid_id,
+            backend_from,
+            backend_to,
+            batch_size,
+            filter_size,
+            transform,
         )
 
         if transform.relabelled:
@@ -1091,7 +1099,7 @@ def _import_groups(
 
             with get_progress_reporter()(desc=f'Adding new {EntityTypes.GROUP_NODE.value}(s)', total=total) as progress:
                 for nrows, rows in batch_iter(
-                    iterator.iterall(batch_size=query_params.batch_size), query_params.batch_size, group_node_transform
+                    iterator.iterall(batch_size=batch_size), batch_size, group_node_transform
                 ):
                     backend_to.bulk_insert(EntityTypes.GROUP_NODE, rows)
                     progress.update(nrows)
@@ -1104,7 +1112,7 @@ def _make_import_group(
     labels: Set[str],
     node_ids_archive_backend: Dict[int, int],
     backend_to: StorageBackend,
-    query_params: QueryParams,
+    batch_size: int,
 ) -> Optional[int]:
     """Make an import group containing all imported nodes.
 
@@ -1150,7 +1158,7 @@ def _make_import_group(
             for (pk,) in orm.QueryBuilder(backend=backend_to)
             .append(orm.Group, filters={'id': group_id}, tag='group')
             .append(orm.Node, with_group='group', project='id')
-            .iterall(batch_size=query_params.batch_size)
+            .iterall(batch_size=batch_size)
         }
 
     # Add all the nodes to the Group
@@ -1162,7 +1170,7 @@ def _make_import_group(
             for node_id in node_ids_archive_backend.values()
             if node_id not in group_node_ids
         )
-        for nrows, rows in batch_iter(iterator, query_params.batch_size):
+        for nrows, rows in batch_iter(iterator, batch_size):
             backend_to.bulk_insert(EntityTypes.GROUP_NODE, rows)
             progress.update(nrows)
 
@@ -1170,13 +1178,16 @@ def _make_import_group(
 
 
 def _get_new_object_keys(
-    key_format: str, backend_from: StorageBackend, backend_to: StorageBackend, query_params: QueryParams
+    key_format: str,
+    backend_from: StorageBackend,
+    backend_to: StorageBackend,
+    batch_size: int,
 ) -> Set[str]:
     """Return the object keys that need to be added to the backend."""
     archive_hashkeys: Set[str] = set()
     query = QueryBuilder(backend=backend_from).append(orm.Node, project='repository_metadata')
     with get_progress_reporter()(desc='Collecting archive Node file keys', total=query.count()) as progress:
-        for (repository_metadata,) in query.iterall(batch_size=query_params.batch_size):
+        for (repository_metadata,) in query.iterall(batch_size=batch_size):
             archive_hashkeys.update(key for key in Repository.flatten(repository_metadata).values() if key is not None)
             progress.update()
 

@@ -11,6 +11,7 @@
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
+from typing import Literal, cast
 
 import numpy as np
 
@@ -221,6 +222,8 @@ class QueryRule(Operation, metaclass=ABCMeta):
         target_set.empty()
 
         if primkeys:
+            assert self._querybuilder is not None
+            assert self._entity_to_identifier is not None
             self._querybuilder.add_filter(
                 self._first_tag, {operational_set[self._entity_from].identifier: {'in': primkeys}}
             )
@@ -232,8 +235,12 @@ class QueryRule(Operation, metaclass=ABCMeta):
             )
 
             if self._track_edges:
+                assert self._edge_keys is not None
                 # As in _init_run, I need the key for the edge_set
-                edge_key = '{}_{}'.format(*sorted((self._entity_from, self._entity_to)))
+                edge_key = cast(
+                    "Literal['nodes_nodes', 'groups_nodes']",
+                    '{}_{}'.format(*sorted((self._entity_from, self._entity_to))),
+                )
                 edge_set = operational_set.dict[edge_key]
                 namedtuple_ = edge_set.edge_namedtuple
 

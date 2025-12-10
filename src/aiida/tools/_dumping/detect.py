@@ -13,11 +13,15 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, Union, cast
 
+import click
+
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
+from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm
 from aiida.tools._dumping.config import GroupDumpConfig, GroupDumpScope, ProfileDumpConfig
 from aiida.tools._dumping.mapping import GroupNodeMapping
 from aiida.tools._dumping.utils import (
+    DUMP_PROGRESS_BAR_FORMAT,
     REGISTRY_TO_ORM_TYPE,
     DumpPaths,
     DumpTimes,
@@ -92,6 +96,7 @@ class DumpChangeDetector:
         :param exclude_tracked: Whether to exclude nodes already in dump tracker
         :return: ProcessingQueue containing the filtered nodes
         """
+
         if group_scope == GroupDumpScope.IN_GROUP and not group:
             msg = 'Scope is IN_GROUP but no group object was provided.'
             raise ValueError(msg)
@@ -105,9 +110,12 @@ class DumpChangeDetector:
         processing_queue = ProcessingQueue()
 
         # Process calculations
+        logger.report('Querying calculation nodes from database...')
         calc_nodes = self._query_single_type(
             orm_type=orm.CalculationNode, group_scope=group_scope, group=group, base_filters=base_filters
         )
+        logger.report(f'Retrieved {len(calc_nodes)} calculation nodes.')
+
         if exclude_tracked:
             calc_nodes = self._exclude_tracked_nodes(calc_nodes, 'calculations')
         if apply_filters:
@@ -115,9 +123,12 @@ class DumpChangeDetector:
         processing_queue.calculations = calc_nodes
 
         # Process workflows
+        logger.report('Querying workflow nodes from database...')
         workflow_nodes = self._query_single_type(
             orm_type=orm.WorkflowNode, group_scope=group_scope, group=group, base_filters=base_filters
         )
+        logger.report(f'Retrieved {len(workflow_nodes)} workflow nodes.')
+
         if exclude_tracked:
             workflow_nodes = self._exclude_tracked_nodes(workflow_nodes, 'workflows')
         if apply_filters:
@@ -190,7 +201,20 @@ class DumpChangeDetector:
             if not tracked_uuids:
                 return nodes
 
-            return [node for node in nodes if node.uuid not in tracked_uuids]
+            return_nodes = []
+            set_progress_bar_tqdm(bar_format=DUMP_PROGRESS_BAR_FORMAT)
+
+            progress_desc = f"{click.style('Report', fg='blue', bold=True)}: Excluding already dumped {store_type}..."
+            with get_progress_reporter()(desc=progress_desc, total=len(nodes)) as progress:
+                for node in nodes:
+                    if node.uuid not in tracked_uuids:
+                        return_nodes.append(node)
+
+                    progress.update()
+
+            logger.report(f'Applied exclusion of previously dumped {store_type}.')
+
+            return return_nodes
 
         except ValueError as e:
             logger.error(f"Error getting registry for '{store_type}': {e}")
@@ -203,6 +227,7 @@ class DumpChangeDetector:
         :param store_type: Target store (calculations or workflows)
         :return: Filtered list of nodes, with top-level and group membership filters applied
         """
+
         if not nodes:
             return nodes
 
@@ -217,12 +242,20 @@ class DumpChangeDetector:
 
         # Apply caller filter (keep top-level or explicitly grouped)
         filtered_nodes = []
-        for node in nodes:
-            is_sub_node = bool(getattr(node, 'caller', None))
-            is_explicitly_grouped = node.uuid in self.grouped_node_uuids
+        set_progress_bar_tqdm(bar_format=DUMP_PROGRESS_BAR_FORMAT)
 
-            if not is_sub_node or is_explicitly_grouped:
-                filtered_nodes.append(node)
+        progress_desc = f"{click.style('Report', fg='blue', bold=True)}: Applying filters to {store_type}..."
+        with get_progress_reporter()(desc=progress_desc, total=len(nodes)) as progress:
+            for node in nodes:
+                is_sub_node = bool(getattr(node, 'caller', None))
+                is_explicitly_grouped = node.uuid in self.grouped_node_uuids
+
+                if not is_sub_node or is_explicitly_grouped:
+                    filtered_nodes.append(node)
+
+                progress.update()
+
+        logger.report(f'Applied relevant filters to {store_type}.')
 
         return filtered_nodes
 

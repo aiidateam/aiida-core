@@ -11,10 +11,17 @@
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Set, Type, Union
+
+if sys.version_info >= (3, 11):
+    # typing.assert_never available since 3.11
+    from typing import assert_never
+else:
+    from typing_extensions import assert_never
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER, assert_never, timezone
@@ -23,6 +30,8 @@ from aiida.tools._dumping.config import DumpMode, GroupDumpConfig, ProcessDumpCo
 
 RegistryNameType = Literal['calculations', 'workflows', 'groups']
 
+# Progress bar format for dump operations - wider description field to avoid truncation
+DUMP_PROGRESS_BAR_FORMAT = '{desc:60.60}{percentage:6.1f}%|{bar}| {n_fmt}/{total_fmt}'
 
 REGISTRY_TO_ORM_TYPE: dict[str, Type[Union[orm.CalculationNode, orm.WorkflowNode, orm.Group]]] = {
     'calculations': orm.CalculationNode,
@@ -41,6 +50,7 @@ ORM_TYPE_TO_REGISTRY = {
 }
 
 __all__ = (
+    'DUMP_PROGRESS_BAR_FORMAT',
     'ORM_TYPE_TO_REGISTRY',
     'REGISTRY_TO_ORM_TYPE',
     'DumpMode',

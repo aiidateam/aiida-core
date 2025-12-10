@@ -170,7 +170,7 @@ class PbsBaseClass(BashCliScheduler):
         _LOGGER.debug(f'qstat command: {comm}')
         return comm
 
-    def _get_detailed_job_info_command(self, job_id):
+    def _get_detailed_job_info_command(self, job_id: str) -> str:
         """Return the command to run to get the detailed information on a job,
         even after the job has finished.
 

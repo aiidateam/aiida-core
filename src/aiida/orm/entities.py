@@ -190,7 +190,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         pk: int = MetadataField(
             description='The primary key of the entity',
             is_attribute=False,
-            exclude_to_orm=True,
+            read_only=True,
         )
 
         @classmethod
@@ -212,41 +212,47 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             :return: The derived creation model class.
             """
 
-            # Derive the creation model from the original model
-            new_name = cls.__qualname__.replace('Model', 'CreateModel')
-            CreateModel = create_model(  # noqa: N806
-                new_name,
-                __base__=cls,
-                __module__=cls.__module__,
-            )
-            CreateModel.__qualname__ = new_name
-            CreateModel.model_config['extra'] = 'ignore'
+            def _prune_read_only_fields(model: Type[EntityModelType]) -> Type[EntityModelType]:
+                new_name = model.__qualname__.replace('Model', 'CreateModel')
+                CreateModel = create_model(  # noqa: N806
+                    new_name,
+                    __base__=model,
+                    __module__=model.__module__,
+                )
+                CreateModel.__qualname__ = new_name
+                CreateModel.model_config['extra'] = 'ignore'
 
-            # Identify read-only fields
-            readonly_fields = [
-                name for name, field in CreateModel.model_fields.items() if get_metadata(field, 'exclude_to_orm')
-            ]
+                readonly_fields: List[str] = []
+                for key, field in CreateModel.model_fields.items():
+                    annotation = field.annotation
+                    if get_metadata(field, 'read_only'):
+                        readonly_fields.append(key)
+                    elif isinstance(annotation, type) and issubclass(annotation, BaseModel):
+                        field.annotation = _prune_read_only_fields(annotation)
 
-            # Remove read-only fields
-            for name in readonly_fields:
-                CreateModel.model_fields.pop(name, None)
-                if hasattr(CreateModel, name):
-                    delattr(CreateModel, name)
+                # Remove read-only fields
+                for key in readonly_fields:
+                    CreateModel.model_fields.pop(key, None)
+                    if hasattr(CreateModel, key):
+                        delattr(CreateModel, key)
 
-            # Prune field validators/serializers referring to read-only fields
-            decorators = CreateModel.__pydantic_decorators__
+                # Prune field validators/serializers referring to read-only fields
+                decorators = CreateModel.__pydantic_decorators__
 
-            def _prune_field_decorators(field_decorators: dict[str, Any]) -> dict[str, Any]:
-                return {
-                    name: decorator
-                    for name, decorator in field_decorators.items()
-                    if all(field not in readonly_fields for field in decorator.info.fields)
-                }
+                def _prune_field_decorators(field_decorators: dict[str, Any]) -> dict[str, Any]:
+                    return {
+                        key: decorator
+                        for key, decorator in field_decorators.items()
+                        if all(field not in readonly_fields for field in decorator.info.fields)
+                    }
 
-            decorators.field_validators = _prune_field_decorators(decorators.field_validators)
-            decorators.field_serializers = _prune_field_decorators(decorators.field_serializers)
+                decorators.field_validators = _prune_field_decorators(decorators.field_validators)
+                decorators.field_serializers = _prune_field_decorators(decorators.field_serializers)
 
-            return CreateModel
+                CreateModel.model_rebuild(force=True)
+                return CreateModel
+
+            return _prune_read_only_fields(cls)
 
     @classproperty
     def CreateModel(cls) -> Type[Model]:  # noqa: N802, N805
@@ -257,98 +263,114 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return cls.Model.as_create_model()
 
     @classmethod
-    def model_to_orm_field_values(cls, model: Model) -> dict[str, Any]:
+    def model_to_orm_field_values(cls, valid_model: Model) -> dict[str, Any]:
+        """Collect values for the ORM entity's fields from the given model instance.
+
+        This method centralizes the mapping of Model -> ORM values, including handling of
+        `orm_class` metadata and nested models. The process is recursive, applying metadata
+        field rules to nested models as well.
+
+        :param valid_model: An validated instance of the entity's model class.
+        :return: Mapping of model field name to validated value.
+        :raises EntryPointError: if an `orm_class` entry point could not be loaded.
+        :raises NotExistent: if a referenced ORM entity could not be found.
+        """
         from aiida.plugins.factories import BaseFactory
 
-        fields = {}
+        def _model_to_orm_field_values(model: Entity.Model, schema: Entity.Model = cls.CreateModel) -> dict[str, Any]:
+            """Recursive helper function to collect field values from a model instance.
 
-        for key, field in cls.CreateModel.model_fields.items():
-            field_value = getattr(model, key)
+            :param model: The model instance to extract field values from.
+            :param schema: The model class.
+            :return: Mapping of model field name to validated value.
+            """
 
-            if field_value is None:
-                continue
+            fields: dict[str, Any] = {}
+            for key, field in schema.model_fields.items():
+                field_value = getattr(model, key)
 
-            if orm_class := get_metadata(field, 'orm_class'):
-                if isinstance(orm_class, str):
+                if field_value is None:
+                    continue
+
+                annotation = field.annotation
+                if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+                    fields[key] = _model_to_orm_field_values(field_value, annotation)
+                elif orm_class := get_metadata(field, 'orm_class'):
+                    if isinstance(orm_class, str):
+                        try:
+                            orm_class = BaseFactory('aiida.orm', orm_class)
+                        except EntryPointError as exception:
+                            raise EntryPointError(
+                                f'The `orm_class` of `{cls.__name__}.Model.{key} is invalid: {exception}'
+                            ) from exception
                     try:
-                        orm_class = BaseFactory('aiida.orm', orm_class)
-                    except EntryPointError as exception:
-                        raise EntryPointError(
-                            f'The `orm_class` of `{cls.__name__}.Model.{key} is invalid: {exception}'
-                        ) from exception
-                try:
-                    fields[key] = orm_class.collection.get(id=field_value)
-                except NotExistent as exception:
-                    raise NotExistent(f'No `{orm_class}` found with pk={field_value}') from exception
-            elif model_to_orm := get_metadata(field, 'model_to_orm'):
-                fields[key] = model_to_orm(model)
-            else:
-                fields[key] = field_value
+                        fields[key] = orm_class.collection.get(id=field_value)
+                    except NotExistent as exception:
+                        raise NotExistent(f'No `{orm_class}` found with pk={field_value}') from exception
+                elif model_to_orm := get_metadata(field, 'model_to_orm'):
+                    fields[key] = model_to_orm(model)
+                else:
+                    fields[key] = field_value
 
-        return fields
+            return fields
+
+        return _model_to_orm_field_values(valid_model)
 
     def orm_to_model_field_values(
         self,
         *,
         repository_path: Optional[pathlib.Path] = None,
-        serialize_repository_content: bool = False,
-        exclude: Optional[set[str]] = None,
         skip_read_only: bool = False,
     ) -> dict[str, Any]:
         """Collect values for the ``Model``'s fields from this entity.
 
-        Centralizes mapping of ORM -> Model values, including handling of ``orm_to_model`` functions
-        and optional filtering based on field metadata (e.g., excluding CLI-only fields).
+        Centralizes mapping of ORM -> Model values, including handling of ``orm_to_model``
+        functions and optional filtering based on field metadata (e.g., excluding CLI-only fields).
+        The process is recursive, applying metadata field rules to nested models as well.
 
         :param repository_path: Optional path to use for repository-based fields.
-        :param serialize_repository_content: Whether to include repository file content.
-        :param exclude: Optional set of field names to exclude.
-        :param skip_read_only: When True, fields marked with ``exclude_to_orm`` are skipped.
-        :return: Mapping of field name to value.
+        :param skip_read_only: When True, fields marked with ``read_only`` are skipped.
+        :return: Mapping of ORM field name to value.
         """
-        fields: dict[str, Any] = {}
 
-        Model = self.Model if self.is_stored else self.CreateModel  # noqa: N806
+        def _orm_to_model_field_values(model: Type[BaseModel]) -> dict[str, Any]:
+            """Recursive helper function to collect field values for a model class.
 
-        for key, field in Model.model_fields.items():
-            if key in (exclude or {}):
-                continue
+            :param model: The model class to extract field values for.
+            :return: Mapping of ORM field name to value.
+            """
+            fields: dict[str, Any] = {}
 
-            if skip_read_only and get_metadata(field, 'exclude_to_orm'):
-                continue
+            for key, field in model.model_fields.items():
+                annotation = field.annotation
+                if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+                    fields[key] = _orm_to_model_field_values(annotation)
+                    continue
 
-            if orm_to_model := get_metadata(field, 'orm_to_model'):
-                kwargs = {
-                    'serialize_repository_content': serialize_repository_content,  # see `Node` model
-                    'repository_path': repository_path,  # see `PortableCode` model
-                }
-                fields[key] = orm_to_model(self, kwargs)
-            else:
-                fields[key] = getattr(self, key)
+                if skip_read_only and get_metadata(field, 'read_only'):
+                    continue
 
-        return fields
+                if orm_to_model := get_metadata(field, 'orm_to_model'):
+                    kwargs = {
+                        'repository_path': repository_path,
+                    }
+                    fields[key] = orm_to_model(self, kwargs)
+                else:
+                    fields[key] = getattr(self, key)
 
-    def to_model(
-        self,
-        *,
-        repository_path: Optional[pathlib.Path] = None,
-        serialize_repository_content: bool = False,
-        exclude: Optional[set[str]] = None,
-    ) -> Model:
+            return fields
+
+        return _orm_to_model_field_values(self.Model)
+
+    def to_model(self, *, repository_path: Optional[pathlib.Path] = None) -> Model:
         """Return the entity instance as an instance of its model.
 
         :param repository_path: If the orm node has files in the repository, this path is used to read the repository
             files from. If no path is specified a temporary path is created using the entities pk.
-        :param serialize_repository_content: If True, repository file content is serialized in the model.
             This field can be very large, so it is excluded by default.
-        :param exclude: Optional set of fields to exclude from the model.
         :return: An instance of the entity's model class.
         """
-        fields = self.orm_to_model_field_values(
-            repository_path=repository_path,
-            serialize_repository_content=serialize_repository_content,
-            exclude=exclude,
-        )
+        fields = self.orm_to_model_field_values(repository_path=repository_path)
         Model = self.Model if self.is_stored else self.CreateModel  # noqa: N806
         return Model(**fields)
 
@@ -366,17 +388,12 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         self,
         *,
         repository_path: Optional[pathlib.Path] = None,
-        serialize_repository_content: bool = False,
-        exclude: Optional[set[str]] = None,
         mode: Literal['json', 'python'] = 'json',
     ) -> dict[str, Any]:
         """Serialize the entity instance to JSON.
 
         :param repository_path: If the orm node has files in the repository, this path is used to dump the repository
             files to. If no path is specified a temporary path is created using the entities pk.
-        :param serialize_repository_content: If True, repository file content is serialized in the model.
-            This field can be very large, so it is excluded by default.
-        :param exclude: Optional set of fields to exclude from the model.
         :param mode: The serialization mode, either 'json' or 'python'. The 'json' mode is the most strict and ensures
             that the output is JSON serializable, whereas the 'python' mode allows for more complex Python types, such
             as `datetime` objects.
@@ -397,11 +414,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             if not repository_path.is_dir():
                 raise ValueError(f'The repository_path `{repository_path}` is not a directory.')
 
-        return self.to_model(
-            repository_path=repository_path,
-            serialize_repository_content=serialize_repository_content,
-            exclude=exclude,
-        ).model_dump(mode=mode)
+        return self.to_model(repository_path=repository_path).model_dump(mode=mode)
 
     @classmethod
     def from_serialized(cls, serialized: dict[str, Any]) -> Self:
@@ -416,7 +429,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return cls.from_model(cls.CreateModel(**serialized))
 
     @classproperty
-    def objects(cls: EntityType) -> CollectionType:  # noqa: N805
+    def objects(cls) -> CollectionType:  # noqa: N805
         """Get a collection for objects of this type, with the default backend.
 
         .. deprecated:: This will be removed in v3, use ``collection`` instead.
@@ -537,7 +550,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return self._backend_entity
 
 
-def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntityType) -> EntityType:
+def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntity) -> EntityType:
     """Construct an entity from a backend entity instance
 
     :param backend_entity: the backend entity

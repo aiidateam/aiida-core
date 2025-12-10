@@ -185,7 +185,7 @@ def test_roundtrip(required_arguments, tmp_path):
 
     # Get the model instance again from the reconstructed entity and check that the fields that would be passed to the
     # ORM entity constructor are identical of the original model. The ``model_to_orm_field_values`` excludes values of
-    # fields that define ``exclude_to_orm=True`` because these can change during roundtrips. This because these
+    # fields that define ``read_only=True`` because these can change during roundtrips. This because these
     # typically correspond to entity fields that have defaults set on the database level, e.g., UUIDs.
     roundtrip_model = roundtrip.to_model(repository_path=tmp_path)
     original_field_values = cls.model_to_orm_field_values(model)

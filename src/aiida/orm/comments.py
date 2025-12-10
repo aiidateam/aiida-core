@@ -74,17 +74,17 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         uuid: UUID = MetadataField(
             description='The UUID of the comment',
             is_attribute=False,
-            exclude_to_orm=True,
+            read_only=True,
         )
         ctime: datetime = MetadataField(
             description='Creation time of the comment',
             is_attribute=False,
-            exclude_to_orm=True,
+            read_only=True,
         )
         mtime: datetime = MetadataField(
             description='Modified time of the comment',
             is_attribute=False,
-            exclude_to_orm=True,
+            read_only=True,
         )
         node: int = MetadataField(
             description='Node PK that the comment is attached to',

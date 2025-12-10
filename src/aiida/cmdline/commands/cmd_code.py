@@ -249,6 +249,13 @@ def show(code):
         if field_name == 'filepath_files':
             continue
 
+        if field_name == 'attributes':
+            for attr_key, attr_info in field_info.annotation.model_fields.items():
+                print(attr_key)
+                value = getattr(code, attr_key)
+                table.append([attr_info.title, value])
+            continue
+
         value = getattr(code, field_name)
 
         if field_name == 'computer':

@@ -53,7 +53,7 @@ class Data(Node):
             None,
             description='Source of the data.',
             is_subscriptable=True,
-            exclude_to_orm=True,
+            read_only=True,
         )
 
     def __init__(self, *args, source=None, **kwargs):

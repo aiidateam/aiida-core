@@ -44,7 +44,11 @@ class BaseType(Data):
 
         super().__init__(**kwargs)
 
-        self.value = value or self._type()
+        if value:
+            self.value = value
+
+        if not self.value:
+            self.value = self._type()
 
     @property
     def value(self):

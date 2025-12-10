@@ -8,6 +8,8 @@
 ###########################################################################
 """Miscellaneous generic utility functions and classes."""
 
+from __future__ import annotations
+
 import filecmp
 import inspect
 import io

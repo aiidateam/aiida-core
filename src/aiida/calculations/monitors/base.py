@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
 
@@ -19,8 +20,6 @@ def always_kill(node: CalcJobNode, transport: Transport) -> str | None:
     :param transport: The transport that can be used to retrieve files from remote working directory.
     :returns: A string if the job should be killed, `None` otherwise.
     """
-    import os
-
     cwd = node.get_remote_workdir()
     if cwd is None:
         raise ValueError('The remote work directory cannot be None')

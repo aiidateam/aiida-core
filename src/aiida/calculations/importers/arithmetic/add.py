@@ -29,7 +29,7 @@ class ArithmeticAddCalculationImporter(CalcJobImporter):
                 filepath = Path(remote_data.get_remote_path()) / 'aiida.in'
                 transport.getfile(filepath, temp_path)
 
-            with open(temp_path, 'r') as f:
+            with open(temp_path, 'r', encoding='utf-8') as f:
                 data = f.read()
 
             matches = match(r'echo \$\(\(([0-9]+) \+ ([0-9]+)\)\).*', data.strip())

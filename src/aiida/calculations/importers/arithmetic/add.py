@@ -1,5 +1,6 @@
 """Importer for the :class:`aiida.calculations.arithmetic.add.ArithmeticAddCalculation` plugin."""
 
+import os
 from pathlib import Path
 from re import match
 from tempfile import NamedTemporaryFile
@@ -20,8 +21,6 @@ class ArithmeticAddCalculationImporter(CalcJobImporter):
         :param kwargs: additional keyword arguments to control the parsing process.
         :returns: a dictionary with the parsed inputs nodes that match the input spec of the associated ``CalcJob``.
         """
-        import os
-
         with NamedTemporaryFile('w+', delete=False) as handle:
             temp_path = handle.name
 

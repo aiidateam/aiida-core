@@ -11,10 +11,10 @@
 from __future__ import annotations
 
 import io
-from typing import Any, Iterator, Optional, cast
+from typing import Any, Iterator, Optional, Union, cast
 
 import numpy as np
-from pydantic import field_validator
+from pydantic import ConfigDict, field_validator
 
 from aiida.common.pydantic import MetadataField
 
@@ -47,10 +47,12 @@ class ArrayData(Data):
     """
 
     class AttributesModel(Data.AttributesModel):
-        arrays: Optional[dict[str, bytes]] = MetadataField(
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+
+        arrays: Optional[Union[np.ndarray, dict[str, np.ndarray]]] = MetadataField(
             None,
-            description='The dictionary of numpy arrays.',
-            orm_to_model=lambda node, _: ArrayData.save_arrays(cast(ArrayData, node).arrays),
+            description='An optional single numpy array, or dictionary of numpy arrays to store.',
+            orm_to_model=lambda node, _: cast(ArrayData, node).arrays,
             model_to_orm=lambda model: ArrayData.load_arrays(cast(ArrayData.AttributesModel, model).arrays),
             write_only=True,
             exclude=True,
@@ -58,24 +60,18 @@ class ArrayData(Data):
 
         @field_validator('arrays', mode='before')
         @classmethod
-        def validate_arrays(cls, value: dict[str, bytes | str | list | np.ndarray] | list | np.ndarray | None) -> Any:
+        def validate_arrays(cls, value: list | np.ndarray | dict[str, list | np.ndarray] | None) -> Any:
             if value is None:
                 return value
-
             if isinstance(value, (list, np.ndarray)):
-                return ArrayData.save_arrays({ArrayData.default_array_name: np.array(value)})
+                return np.array(value)
             elif isinstance(value, dict):
-                arrays: dict[str, bytes | str] = {}
+                arrays: dict[str, np.ndarray] = {}
                 for key, array in value.items():
-                    if isinstance(array, bytes):
-                        arrays[key] = array
-                    elif isinstance(array, str):
-                        # Node.Model configures bytes serialization via base64 encoding.
-                        # Pydantic will thus convert base64-encoded strings to bytes internally.
-                        # No need to manually decode here.
-                        arrays[key] = array
+                    if isinstance(array, (list, np.ndarray)):
+                        arrays[key] = np.array(array)
                     else:
-                        arrays |= ArrayData.save_arrays({key: np.array(array)})
+                        raise TypeError(f'`arrays` should be an iterable or dictionary of iterables but got: {value}')
                 return arrays
             else:
                 raise TypeError(f'`arrays` should be an iterable or dictionary of iterables but got: {value}')

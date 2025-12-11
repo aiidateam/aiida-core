@@ -2,6 +2,10 @@
 
 ## v2.7.2 - 2025-12-10
 
+This patch release comes with a number of important bug fixes to the CLI, storage, archive, and transport modules.
+Most notably, SQLAlchemy operational errors (affecting archive operations and the QB) and various race conditions (affecting mainly the transport plugins) have been resolved.
+We strongly recommend upgrading from prior 2.7.x versions.
+
 ### Fixes
 
 #### CLI

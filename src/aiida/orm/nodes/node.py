@@ -277,7 +277,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             description='The node attributes',
             is_attribute=False,
             orm_to_model=lambda node, _: cast(Node, node).base.attributes.all,
-            is_subscriptable=True,
             exclude=True,
         )
         extras: Dict[str, Any] = MetadataField(
@@ -285,7 +284,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             description='The node extras',
             is_attribute=False,
             orm_to_model=lambda node, _: cast(Node, node).base.extras.all,
-            is_subscriptable=True,
             exclude=True,
         )
         computer: Optional[str] = MetadataField(

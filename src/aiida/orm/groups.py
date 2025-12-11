@@ -116,39 +116,32 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     class Model(entities.Entity.Model):
         uuid: UUID = MetadataField(
             description='The UUID of the group',
-            is_attribute=False,
             read_only=True,
         )
         type_string: str = MetadataField(
             description='The type of the group',
-            is_attribute=False,
             read_only=True,
         )
         user: int = MetadataField(
             description='The PK of the group owner',
-            is_attribute=False,
             orm_class='core.user',
             orm_to_model=lambda group, _: cast(Group, group).user.pk,
             read_only=True,
         )
         time: datetime.datetime = MetadataField(
             description='The creation time of the node, defaults to now (timezone-aware)',
-            is_attribute=False,
             read_only=True,
         )
         label: str = MetadataField(
             description='The group label',
-            is_attribute=False,
         )
         description: str = MetadataField(
             '',
             description='The group description',
-            is_attribute=False,
         )
         extras: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='The group extras',
-            is_attribute=False,
             orm_to_model=lambda group, _: cast(Group, group).base.extras.all,
         )
 

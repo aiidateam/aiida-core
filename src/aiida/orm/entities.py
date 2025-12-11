@@ -189,7 +189,6 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         pk: int = MetadataField(
             description='The primary key of the entity',
-            is_attribute=False,
             read_only=True,
         )
 
@@ -347,7 +346,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
                     fields[key] = _orm_to_model_field_values(annotation)
                     continue
 
-                if skip_read_only and get_metadata(field, 'read_only'):
+                if get_metadata(field, 'write_only'):
                     continue
 
                 if orm_to_model := get_metadata(field, 'orm_to_model'):

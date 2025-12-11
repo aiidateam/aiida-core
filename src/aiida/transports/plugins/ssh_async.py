@@ -158,6 +158,7 @@ class AsyncSshTransport(AsyncTransport):
         :raises InvalidOperation: if the transport is already open
         """
         if self._is_open:
+            # That means the transport is already open, while it should not
             raise InvalidOperation('Cannot open the transport twice')
 
         if self.script_before != 'None':
@@ -176,7 +177,11 @@ class AsyncSshTransport(AsyncTransport):
         if not self._is_open:
             raise InvalidOperation('Cannot close the transport: it is already closed')
 
-        await self.async_backend.close()
+        try:
+            await self.async_backend.close()
+        except Exception as exc:
+            raise OSError(f'Error while closing the transport: {exc}')
+
         self._is_open = False
 
     def __str__(self):

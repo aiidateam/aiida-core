@@ -135,33 +135,26 @@ class Log(entities.Entity['BackendLog', LogCollection]):
     class Model(entities.Entity.Model):
         uuid: UUID = MetadataField(
             description='The UUID of the node',
-            is_attribute=False,
             read_only=True,
         )
         loggername: str = MetadataField(
             description='The name of the logger',
-            is_attribute=False,
         )
         levelname: str = MetadataField(
             description='The name of the log level',
-            is_attribute=False,
         )
         message: str = MetadataField(
             description='The message of the log',
-            is_attribute=False,
         )
         time: datetime = MetadataField(
             description='The time at which the log was created',
-            is_attribute=False,
         )
         metadata: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='The metadata of the log',
-            is_attribute=False,
         )
         dbnode_id: int = MetadataField(
             description='Associated node',
-            is_attribute=False,
         )
 
     def __init__(

@@ -58,22 +58,18 @@ class User(entities.Entity['BackendUser', UserCollection]):
     class Model(entities.Entity.Model):
         email: str = MetadataField(
             description='The user email',
-            is_attribute=False,
         )
         first_name: str = MetadataField(
             '',
             description='The user first name',
-            is_attribute=False,
         )
         last_name: str = MetadataField(
             '',
             description='The user last name',
-            is_attribute=False,
         )
         institution: str = MetadataField(
             '',
             description='The user institution',
-            is_attribute=False,
         )
 
     def __init__(

@@ -230,73 +230,63 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     class Model(Entity.Model):
         uuid: UUID = MetadataField(
             description='The UUID of the node',
-            is_attribute=False,
             read_only=True,
         )
         node_type: str = MetadataField(
             description='The type of the node',
-            is_attribute=False,
             read_only=True,
         )
         process_type: Optional[str] = MetadataField(
             None,
             description='The process type of the node',
-            is_attribute=False,
             read_only=True,
         )
         repository_metadata: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='Virtual hierarchy of the file repository.',
-            is_attribute=False,
             orm_to_model=lambda node, _: cast(Node, node).base.repository.metadata,
             read_only=True,
             exclude=True,
         )
         ctime: datetime.datetime = MetadataField(
             description='The creation time of the node',
-            is_attribute=False,
             read_only=True,
         )
         mtime: datetime.datetime = MetadataField(
             description='The modification time of the node',
-            is_attribute=False,
             read_only=True,
         )
         label: str = MetadataField(
             '',
             description='The node label',
-            is_attribute=False,
         )
         description: str = MetadataField(
             '',
             description='The node description',
-            is_attribute=False,
         )
         attributes: Node.AttributesModel = MetadataField(
             default_factory=lambda: Node.AttributesModel(),
             description='The node attributes',
-            is_attribute=False,
             orm_to_model=lambda node, _: cast(Node, node).base.attributes.all,
+            write_only=True,
             exclude=True,
         )
         extras: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='The node extras',
-            is_attribute=False,
             orm_to_model=lambda node, _: cast(Node, node).base.extras.all,
+            write_only=True,
             exclude=True,
         )
         computer: Optional[str] = MetadataField(
             None,
             description='The label of the computer',
-            is_attribute=False,
             orm_to_model=lambda node, _: cast(Node, node).get_computer_label(),
             model_to_orm=lambda model: cast(Node.Model, model).load_computer(),
             read_only=True,
         )
         user: int = MetadataField(
             description='The PK of the user who owns the node',
-            is_attribute=False,
             orm_to_model=lambda node, _: cast(Node, node).user.pk,
             orm_class=User,
             read_only=True,

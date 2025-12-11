@@ -52,7 +52,6 @@ class Data(Node):
         source: Optional[dict] = MetadataField(
             None,
             description='Source of the data.',
-            is_subscriptable=True,
             read_only=True,
         )
 

@@ -51,7 +51,6 @@ class QbField:
         '_doc',
         '_dtype',
         '_is_attribute',
-        '_is_subscriptable',
         '_key',
     )
 
@@ -63,7 +62,6 @@ class QbField:
         dtype: t.Optional[t.Any] = None,
         doc: str = '',
         is_attribute: bool = True,
-        is_subscriptable: bool = False,
     ) -> None:
         """Initialise a ORM entity field, accessible via the ``QueryBuilder``
 
@@ -72,14 +70,12 @@ class QbField:
         :param dtype: The data type of the field. If None, the field is of variable type.
         :param doc: A docstring for the field
         :param is_attribute: If True, the ``backend_key`` property will prepend "attributes." to field name
-        :param is_subscriptable: If True, a new field can be created by ``field["subkey"]``
         """
         self._key = key
         self._backend_key = alias if alias is not None else key
         self._doc = doc
         self._dtype = dtype
         self._is_attribute = is_attribute
-        self._is_subscriptable = is_subscriptable
 
     @property
     def key(self) -> str:
@@ -114,9 +110,7 @@ class QbField:
         )
 
     def __str__(self) -> str:
-        class_name = self.__class__.__name__
-        field_name = f'{self.backend_key}{"[...]" if self._is_subscriptable else ""}'
-        return f'{class_name}({field_name}) -> {self._dtype}'
+        return f'{self.__class__.__name__}({self.backend_key}) -> {self._dtype}'
 
     def __hash__(self):
         return hash((self.key, self.backend_key))
@@ -211,14 +205,15 @@ class QbDictField(QbField):
 
     def __getitem__(self, key: str) -> 'QbAnyField':
         """Return a new `QbField` with a nested key."""
-        if not self._is_subscriptable:
-            raise IndexError('This field is not subscriptable')
         return QbAnyField(
             key=f'{self.key}.{key}',
             alias=f'{self._backend_key}.{key}' if self._is_attribute else None,
             dtype=t.Any,
             is_attribute=self._is_attribute,
         )
+
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}({self.backend_key}[...]) -> {self._dtype}'
 
 
 class QbAttributesField(QbDictField):
@@ -441,7 +436,6 @@ class EntityFieldMeta(ABCMeta):
                     dtype=field.annotation,
                     doc=field.description,
                     is_attribute=get_metadata(field, 'is_attribute', False),
-                    is_subscriptable=get_metadata(field, 'is_subscriptable', False),
                 )
 
         if cls._has_model('AttributesModel'):
@@ -459,7 +453,6 @@ class EntityFieldMeta(ABCMeta):
                     dtype=field.annotation,
                     doc=field.description,
                     is_attribute=get_metadata(field, 'is_attribute', True),
-                    is_subscriptable=get_metadata(field, 'is_subscriptable', False),
                 )
                 container_field._typed_children[key] = typed_field  # type: ignore[attr-defined]
                 fields[key] = typed_field  # BACKWARDS COMPATIBILITY
@@ -508,7 +501,6 @@ class QbFieldArguments(t.TypedDict):
     dtype: t.Optional[t.Any]
     doc: str
     is_attribute: bool
-    is_subscriptable: bool
 
 
 def add_field(
@@ -518,7 +510,6 @@ def add_field(
     dtype: t.Optional[t.Any] = None,
     doc: str = '',
     is_attribute: bool = True,
-    is_subscriptable: bool = False,
 ) -> QbField:
     """Add a `dtype`-dependent `QbField` representation of a field.
 
@@ -527,7 +518,6 @@ def add_field(
     :param dtype: The data type of the field. If None, the field is of variable type.
     :param doc: A docstring for the field
     :param is_attribute: If True, the ``backend_key`` property will prepend "attributes." to field name
-    :param is_subscriptable: If True, a new field can be created by ``field["subkey"]``
     """
     kwargs: QbFieldArguments = {
         'key': key,
@@ -535,7 +525,6 @@ def add_field(
         'dtype': dtype,
         'doc': doc,
         'is_attribute': is_attribute,
-        'is_subscriptable': is_subscriptable,
     }
     if not isidentifier(key):
         raise ValueError(f'{key} is not a valid python identifier')

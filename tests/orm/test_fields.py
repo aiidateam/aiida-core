@@ -55,9 +55,7 @@ def test_add_field():
 
     class NewNode(orm.Data):
         class Model(orm.Data.Model):
-            key1: str = MetadataField(  # type: ignore[annotation-unchecked]
-                is_subscriptable=False,
-            )
+            key1: str = MetadataField()
 
     node = NewNode()
 

@@ -435,9 +435,9 @@ class EntityFieldMeta(ABCMeta):
                     alias=field.alias,
                     dtype=field.annotation,
                     doc=field.description,
-                    is_attribute=get_metadata(field, 'is_attribute', False),
                 )
 
+        # TODO should this be done more generally/recursively for all nested models?
         if cls._has_model('AttributesModel'):
             if 'AttributesModel' in cls.__dict__:
                 cls._validate_model_inheritance('AttributesModel')
@@ -452,7 +452,7 @@ class EntityFieldMeta(ABCMeta):
                     alias=field.alias,
                     dtype=field.annotation,
                     doc=field.description,
-                    is_attribute=get_metadata(field, 'is_attribute', True),
+                    is_attribute=True,
                 )
                 container_field._typed_children[key] = typed_field  # type: ignore[attr-defined]
                 fields[key] = typed_field  # BACKWARDS COMPATIBILITY
@@ -509,7 +509,7 @@ def add_field(
     *,
     dtype: t.Optional[t.Any] = None,
     doc: str = '',
-    is_attribute: bool = True,
+    is_attribute: bool = False,
 ) -> QbField:
     """Add a `dtype`-dependent `QbField` representation of a field.
 

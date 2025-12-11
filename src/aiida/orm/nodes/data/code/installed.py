@@ -54,7 +54,6 @@ class InstalledCode(Code):
         computer: str = MetadataField(
             title='Computer',
             description='The label of the remote computer on which the executable resides.',
-            is_attribute=False,
             orm_to_model=lambda node, _: cast(InstalledCode, node).computer.label,
             model_to_orm=lambda model: cast(InstalledCode.Model, model).load_computer(),
             short_name='-Y',

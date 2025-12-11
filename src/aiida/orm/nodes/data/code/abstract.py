@@ -96,14 +96,12 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             title='Label',
             description='A unique label to identify the code by.',
             short_name='-L',
-            is_attribute=False,
         )
         description: str = MetadataField(
             '',
             title='Description',
             description='Human-readable description, ideally including version and compilation environment.',
             short_name='-D',
-            is_attribute=False,
         )
 
     def __init__(
@@ -373,13 +371,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """Export code to a YAML file."""
         import yaml
 
-        code_data = self.orm_to_model_field_values(
-            repository_path=pathlib.Path.cwd() / f'{self.label}',
-            skip_read_only=True,
-        )
-
-        # Extras are not read-only, but we do not want to export them
-        code_data.pop('extras', None)
+        code_data = self.orm_to_model_field_values(repository_path=pathlib.Path.cwd() / f'{self.label}')
 
         # If the attribute is not set, for example ``with_mpi`` do not export it
         # so that there are no null-values in the resulting YAML file

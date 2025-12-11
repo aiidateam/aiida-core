@@ -73,34 +73,28 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
     class Model(entities.Entity.Model):
         uuid: UUID = MetadataField(
             description='The UUID of the comment',
-            is_attribute=False,
             read_only=True,
         )
         ctime: datetime = MetadataField(
             description='Creation time of the comment',
-            is_attribute=False,
             read_only=True,
         )
         mtime: datetime = MetadataField(
             description='Modified time of the comment',
-            is_attribute=False,
             read_only=True,
         )
         node: int = MetadataField(
             description='Node PK that the comment is attached to',
-            is_attribute=False,
             orm_class='core.node',
             orm_to_model=lambda comment, _: cast(Comment, comment).node.pk,
         )
         user: int = MetadataField(
             description='User PK that created the comment',
-            is_attribute=False,
             orm_class='core.user',
             orm_to_model=lambda comment, _: cast(Comment, comment).user.pk,
         )
         content: str = MetadataField(
             description='Content of the comment',
-            is_attribute=False,
         )
 
     def __init__(

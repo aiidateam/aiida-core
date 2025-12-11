@@ -53,30 +53,25 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
     class Model(entities.Entity.Model):
         computer: int = MetadataField(
             description='The PK of the computer',
-            is_attribute=False,
             orm_class=Computer,
             orm_to_model=lambda auth_info, _: cast(AuthInfo, auth_info).computer.pk,
         )
         user: int = MetadataField(
             description='The PK of the user',
-            is_attribute=False,
             orm_class=User,
             orm_to_model=lambda auth_info, _: cast(AuthInfo, auth_info).user.pk,
         )
         enabled: bool = MetadataField(
             True,
             description='Whether the instance is enabled',
-            is_attribute=False,
         )
         auth_params: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='Dictionary of authentication parameters',
-            is_attribute=False,
         )
         metadata: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='Dictionary of metadata',
-            is_attribute=False,
         )
 
     def __init__(

@@ -38,7 +38,6 @@ def MetadataField(  # noqa: N802
     model_to_orm: t.Callable[[BaseModel], t.Any] | None = None,
     read_only: bool = False,
     write_only: bool = False,
-    is_attribute: bool = True,
     **kwargs: t.Any,
 ) -> t.Any:
     """Return a :class:`pydantic.fields.Field` instance with additional metadata.
@@ -75,7 +74,6 @@ def MetadataField(  # noqa: N802
         through ``Entity.from_model``.
     :param write_only: When set to ``True``, this field value will not be populated when constructing the model from an
         ORM entity through ``Entity.to_model``.
-    :param is_attribute: Whether the field is stored as an attribute. Used by `QbFields`.
     """
 
     extra = kwargs.pop('json_schema_extra', {})
@@ -102,7 +100,6 @@ def MetadataField(  # noqa: N802
         ('model_to_orm', model_to_orm),
         ('read_only', read_only),
         ('write_only', write_only),
-        ('is_attribute', is_attribute),
     ):
         if value is not None:
             field_info.metadata.append({key: value})

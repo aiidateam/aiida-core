@@ -27,6 +27,7 @@ from aiida.cmdline.utils import echo, echo_tabulate
 from aiida.cmdline.utils.common import validate_output_filename
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions
+from aiida.common.pydantic import get_metadata
 
 if TYPE_CHECKING:
     from aiida.orm import Code
@@ -240,28 +241,25 @@ def show(code):
     table.append(['UUID', code.uuid])
     table.append(['Type', code.entry_point.name])
 
-    for field_name, field_info in code.CreateModel.model_fields.items():
+    for key, field in code.CreateModel.model_fields.items():
         # We don't show extras for codes
-        if field_name == 'extras':
+        if key == 'extras':
             continue
 
-        # FIXME resolve this hardcoded special case properly
-        if field_name == 'filepath_files':
-            continue
-
-        if field_name == 'attributes':
-            for attr_key, attr_info in field_info.annotation.model_fields.items():
-                print(attr_key)
+        if key == 'attributes':
+            for attr_key, attr_info in field.annotation.model_fields.items():
+                if get_metadata(attr_info, 'write_only', False):
+                    continue
                 value = getattr(code, attr_key)
                 table.append([attr_info.title, value])
             continue
 
-        value = getattr(code, field_name)
+        value = getattr(code, key)
 
-        if field_name == 'computer':
+        if key == 'computer':
             value = f'{value.label} ({value.hostname}), pk: {value.pk}'
 
-        table.append([field_info.title, value])
+        table.append([field.title, value])
 
     if is_verbose():
         table.append(['Calculations', len(code.base.links.get_outgoing().all())])

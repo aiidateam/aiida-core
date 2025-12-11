@@ -54,7 +54,7 @@ def test_add_field():
     """Test the `add_field` API."""
 
     class NewNode(orm.Data):
-        class Model(orm.Data.Model):
+        class AttributesModel(orm.Data.AttributesModel):
             key1: str = MetadataField()
 
     node = NewNode()
@@ -63,7 +63,7 @@ def test_add_field():
     assert node.fields.key1.dtype is str
     assert isinstance(node.fields.key1, orm.fields.QbStrField)
     assert node.fields.key1.backend_key == 'attributes.key1'
-    assert not node.fields.key1._is_subscriptable
+    assert node.fields.key1 == node.fields.attributes.key1
 
 
 @pytest.mark.parametrize('key', ('|', 'some.field', '1key'))
@@ -76,11 +76,7 @@ def test_invalid_field_keys(key):
 def test_disallowed_alias_for_db_field():
     """Test for disallowed alias argument for database fields."""
     with pytest.raises(ValueError):
-        _ = add_field(
-            'some_key',
-            'alias_not_allowed_for_db_fields',
-            is_attribute=False,
-        )
+        _ = add_field('some_key', 'alias_not_allowed_for_db_fields')
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

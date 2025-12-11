@@ -79,34 +79,27 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
     class Model(entities.Entity.Model):
         uuid: UUID = MetadataField(
             description='The UUID of the computer',
-            is_attribute=False,
             read_only=True,
         )
         label: str = MetadataField(
             description='Label for the computer',
-            is_attribute=False,
         )
         description: str = MetadataField(
             '',
             description='Description of the computer',
-            is_attribute=False,
         )
         hostname: str = MetadataField(
             description='Hostname of the computer',
-            is_attribute=False,
         )
         transport_type: str = MetadataField(
             description='Transport type of the computer',
-            is_attribute=False,
         )
         scheduler_type: str = MetadataField(
             description='Scheduler type of the computer',
-            is_attribute=False,
         )
         metadata: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='Metadata of the computer',
-            is_attribute=False,
             exclude=True,
         )
 

@@ -117,10 +117,19 @@ class TransportQueue:
             assert transport_request.count >= 0, 'Transport request count dropped below 0!'
             # Check if there are no longer any users that want the transport
             if transport_request.count == 0:
+                # IMPORTANT: Pop from _transport_requests BEFORE closing the transport.
+                # This prevents a race condition with async transports where:
+                # 1. close() is called, which for AsyncTransport uses run_until_complete(close_async)
+                # 2. With nest_asyncio (used by plumpy), this call yields back to the event loop
+                # 3. The event loop schedules close_async, then continues running another tasks
+                #   - for example one that requests the transport which is scheduled to be closed
+                # 4. The task now using the transport to do some operation awaits,
+                #   next the close_async task closes the transport while still in use -> error
+                # By poping first, new tasks will create a fresh transport request.
+                self._transport_requests.pop(authinfo.pk, None)
+
                 if transport_request.future.done():
                     _LOGGER.debug('Transport request closing transport for %s', authinfo)
                     transport_request.future.result().close()
                 elif open_callback_handle is not None:
                     open_callback_handle.cancel()
-
-                self._transport_requests.pop(authinfo.pk, None)

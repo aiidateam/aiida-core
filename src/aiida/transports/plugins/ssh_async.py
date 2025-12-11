@@ -850,11 +850,18 @@ class AsyncSshTransport(AsyncTransport):
             workdir = str(workdir)
             command = f'cd {workdir} && ( {command} )'
 
-        return await self.async_backend.run(
-            command=command,
-            stdin=stdin,
-            timeout=timeout,
-        )
+        async with self._semaphore:
+            try:
+                result = await self.async_backend.run(
+                    command=command,
+                    stdin=stdin,
+                    timeout=timeout,
+                )
+            except Exception as exc:
+                self.logger.warning(f'Failed to execute command on remote connection: {exc}')
+                raise
+
+        return result
 
     async def get_attribute_async(self, path: TransportPath):
         """Return an object FixedFieldsAttributeDict for file in a given path,

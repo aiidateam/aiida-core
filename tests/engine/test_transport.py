@@ -131,3 +131,92 @@ class TestTransportQueue:
 
         finally:
             transport_class._DEFAULT_SAFE_OPEN_INTERVAL = original_interval
+
+    def test_request_removed_before_close(self):
+        """Test that transport_request is removed from dict before close() is called.
+
+        This is a regression test for a race condition with async transports where:
+        1. close() is called, which for AsyncTransport uses run_until_complete()
+        2. With nest_asyncio (used by plumpy), this can yield to the event loop
+        3. Another task might enter and get the same transport_request
+        4. That task tries to use the transport that's being closed -> error
+
+        The fix ensures transport_request is removed BEFORE close(), so new tasks
+        create fresh transport requests.
+        """
+        queue = TransportQueue()
+        loop = queue.loop
+
+        events = []  # Track order of operations
+
+        async def test():
+            with queue.request_transport(self.authinfo) as request:
+                trans = await request
+                # Patch close to track when it's called
+                original_close = trans.close
+
+                def mock_close():
+                    # Check if request was already removed from dict
+                    if self.authinfo.pk not in queue._transport_requests:
+                        events.append('pop_before_close')
+                    events.append('close')
+                    return original_close()
+
+                trans.close = mock_close
+
+        loop.run_until_complete(test())
+
+        assert 'close' in events, 'Transport close() should have been called'
+        assert 'pop_before_close' in events, 'Transport request should be removed before close() is called'
+        assert events.index('pop_before_close') < events.index('close'), 'pop should happen before close'
+
+    def test_new_request_during_close_gets_fresh_transport(self):
+        """Test that a new request made while transport is closing gets a fresh transport.
+
+        This verifies that after the race condition fix, new tasks don't get
+        a reference to a transport that's in the process of being closed.
+        We verify this by checking that each sequential request creates a new
+        transport request (i.e., no request is reused from the queue).
+        """
+        queue = TransportQueue()
+        loop = queue.loop
+        transport_class = self.authinfo.get_transport().__class__
+
+        # Use very short safe interval for this test
+        original_interval = transport_class._DEFAULT_SAFE_OPEN_INTERVAL
+        transport_class._DEFAULT_SAFE_OPEN_INTERVAL = 0.01
+
+        try:
+            transport_states = []
+
+            async def use_transport(task_id):
+                # Before requesting, check if there's an existing request in the queue
+                had_existing_request = self.authinfo.pk in queue._transport_requests
+                with queue.request_transport(self.authinfo) as request:
+                    trans = await request
+                    transport_states.append(
+                        {
+                            'task_id': task_id,
+                            'had_existing_request': had_existing_request,
+                            'is_open': trans.is_open,
+                        }
+                    )
+                    # Small delay to allow interleaving
+                    await asyncio.sleep(0.05)
+                # After context exit, transport should be closed and removed from queue
+                assert self.authinfo.pk not in queue._transport_requests
+
+            # Run multiple tasks sequentially - each should get a fresh transport
+            # because the previous one should be closed after each context exit
+            for i in range(3):
+                loop.run_until_complete(use_transport(i))
+
+            # Verify each task got a fresh transport (no existing request in queue)
+            for state in transport_states:
+                assert not state[
+                    'had_existing_request'
+                ], f"Task {state['task_id']} should not have found an existing request"
+                assert state['is_open'], f"Task {state['task_id']} transport should be open"
+
+        finally:
+            transport_class._DEFAULT_SAFE_OPEN_INTERVAL = original_interval

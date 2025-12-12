@@ -1,3 +1,11 @@
-from .broker import RabbitmqBroker
+# AUTO-GENERATED
 
-__all__ = ('RabbitmqBroker',)
+# fmt: off
+
+from .broker import *
+
+__all__ = (
+    'RabbitmqBroker',
+)
+
+# fmt: on

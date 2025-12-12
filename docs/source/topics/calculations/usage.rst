@@ -696,7 +696,13 @@ This approach lets you stash files **only after a successful calculation**. This
 
 **Typical use case:** You want to avoid keeping files from failed calculations, or need to run custom post-processing scripts.
 
-This method requires specifying the ``remote_folder`` of the original calculation as ``source_node``. Example:
+This method requires specifying the ``remote_folder`` of the original calculation as ``source_node``.
+
+.. note::
+
+   If the ``source_node`` was created by a calculation, that calculation must be sealed (finished). AiiDA will reject a ``RemoteData`` node whose creator is still running, to prevent stashing incomplete files.
+
+Example:
 
 .. code-block:: python
 

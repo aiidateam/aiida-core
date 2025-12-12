@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import logging
 import pathlib
+from typing import cast
 
 from aiida.common import exceptions
 from aiida.common.folders import Folder
@@ -36,7 +37,7 @@ __all__ = ('PortableCode',)
 _LOGGER = logging.getLogger(__name__)
 
 
-def _export_filpath_files_from_repo(portable_code: PortableCode, repository_path: pathlib.Path) -> str:
+def _export_filepath_files_from_repo(portable_code: PortableCode, repository_path: pathlib.Path) -> str:
     for root, _, filenames in portable_code.base.repository.walk():
         for filename in filenames:
             rel_path = str(root / filename)
@@ -63,7 +64,7 @@ class PortableCode(Code):
             description='Relative filepath of executable with directory of code files.',
             short_name='-X',
             priority=1,
-            orm_to_model=lambda node, _: str(node.filepath_executable),  # type: ignore[attr-defined]
+            orm_to_model=lambda node, _: str(cast(PortableCode, node).filepath_executable),
         )
         filepath_files: str = MetadataField(
             ...,
@@ -72,7 +73,10 @@ class PortableCode(Code):
             short_name='-F',
             is_attribute=False,
             priority=2,
-            orm_to_model=_export_filpath_files_from_repo,  # type: ignore[arg-type]
+            orm_to_model=lambda node, kwargs: _export_filepath_files_from_repo(
+                cast(PortableCode, node),
+                kwargs.get('repository_path', pathlib.Path.cwd() / f'{cast(PortableCode, node).label}'),
+            ),
         )
 
     def __init__(
@@ -201,7 +205,7 @@ class PortableCode(Code):
         """Export code to a YAML file."""
         result = super()._prepare_yaml(*args, **kwargs)[0]
         target = pathlib.Path().cwd() / f'{self.label}'
-        _export_filpath_files_from_repo(self, target)
+        _export_filepath_files_from_repo(self, target)
         _LOGGER.info(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
         return result, {}
 

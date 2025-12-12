@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type, cast
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -33,7 +33,7 @@ class AuthInfoCollection(entities.Collection['AuthInfo']):
     """The collection of `AuthInfo` entries."""
 
     @staticmethod
-    def _entity_base_cls() -> Type['AuthInfo']:
+    def _entity_base_cls() -> Type[AuthInfo]:
         return AuthInfo
 
     def delete(self, pk: int) -> None:
@@ -55,13 +55,13 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
             description='The PK of the computer',
             is_attribute=False,
             orm_class=Computer,
-            orm_to_model=lambda auth_info, _: auth_info.computer.pk,  # type: ignore[attr-defined]
+            orm_to_model=lambda auth_info, _: cast(AuthInfo, auth_info).computer.pk,
         )
         user: int = MetadataField(
             description='The PK of the user',
             is_attribute=False,
             orm_class=User,
-            orm_to_model=lambda auth_info, _: auth_info.user.pk,  # type: ignore[attr-defined]
+            orm_to_model=lambda auth_info, _: cast(AuthInfo, auth_info).user.pk,
         )
         enabled: bool = MetadataField(
             True,

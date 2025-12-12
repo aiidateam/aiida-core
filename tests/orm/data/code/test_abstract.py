@@ -72,4 +72,4 @@ def test_serialization():
     label = 'some-label'
     code = MockCode(label=label)
 
-    MockCode.from_serialized(**code.serialize())
+    MockCode.from_serialized(code.serialize())

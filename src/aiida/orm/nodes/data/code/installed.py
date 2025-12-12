@@ -44,7 +44,7 @@ class InstalledCode(Code):
     class AttributesModel(AbstractCode.AttributesModel):
         filepath_executable: str = MetadataField(
             title='Filepath executable',
-            description='Filepath of the executable on the remote computer.',
+            description='Filepath of the executable on the remote computer',
             orm_to_model=lambda node, _: str(cast(InstalledCode, node).filepath_executable),
             short_name='-X',
             priority=1,
@@ -53,7 +53,7 @@ class InstalledCode(Code):
     class Model(AbstractCode.Model):
         computer: str = MetadataField(
             title='Computer',
-            description='The label of the remote computer on which the executable resides.',
+            description='The label of the remote computer on which the executable resides',
             orm_to_model=lambda node, _: cast(InstalledCode, node).computer.label,
             model_to_orm=lambda model: cast(InstalledCode.Model, model).load_computer(),
             short_name='-Y',

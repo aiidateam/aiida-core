@@ -51,7 +51,7 @@ class Data(Node):
     class AttributesModel(Node.AttributesModel):
         source: Optional[dict] = MetadataField(
             None,
-            description='Source of the data.',
+            description='Source of the data',
             read_only=True,
         )
 

@@ -243,7 +243,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         )
         repository_metadata: Dict[str, Any] = MetadataField(
             default_factory=dict,
-            description='Virtual hierarchy of the file repository.',
+            description='Virtual hierarchy of the file repository',
             orm_to_model=lambda node, _: cast(Node, node).base.repository.metadata,
             read_only=True,
             exclude=True,

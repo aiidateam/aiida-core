@@ -33,7 +33,7 @@ class SinglefileData(Data):
     class AttributesModel(Data.AttributesModel):
         filename: str = MetadataField(
             'file.txt',
-            description='The name of the stored file.',
+            description='The name of the stored file',
         )
 
     @classmethod

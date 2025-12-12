@@ -38,7 +38,7 @@ class RemoteData(Data):
         remote_path: Optional[str] = MetadataField(
             None,
             title='Remote path',
-            description='Filepath on the remote computer.',
+            description='Filepath on the remote computer',
             orm_to_model=lambda node, _: node.get_remote_path(),
         )
 

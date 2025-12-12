@@ -52,7 +52,7 @@ class Dict(Data):
 
     class Model(Data.Model):
         value: t.Dict[str, t.Any] = MetadataField(
-            description='Dictionary content.',
+            description='The dictionary content',
             write_only=True,
             exclude=True,
         )

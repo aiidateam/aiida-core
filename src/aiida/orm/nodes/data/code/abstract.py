@@ -49,26 +49,26 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         default_calc_job_plugin: t.Optional[str] = MetadataField(
             None,
             title='Default `CalcJob` plugin',
-            description='Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`).',
+            description='Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`)',
             short_name='-P',
         )
         use_double_quotes: bool = MetadataField(
             False,
             title='Escape using double quotes',
             description='Whether the executable and arguments of the code in the submission script should be escaped '
-            'with single or double quotes.',
+            'with single or double quotes',
         )
         with_mpi: t.Optional[bool] = MetadataField(
             None,
             title='Run with MPI',
             description='Whether the executable should be run as an MPI program. This option can be left unspecified '
             'in which case `None` will be set and it is left up to the calculation job plugin or inputs '
-            'whether to run with MPI.',
+            'whether to run with MPI',
         )
         prepend_text: str = MetadataField(
             '',
             title='Prepend script',
-            description='Bash commands that should be prepended to the run line in all submit scripts for this code.',
+            description='Bash commands that should be prepended to the run line in all submit scripts for this code',
             option_cls=functools.partial(
                 TemplateInteractiveOption,
                 extension='.bash',
@@ -80,7 +80,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         append_text: str = MetadataField(
             '',
             title='Append script',
-            description='Bash commands that should be appended to the run line in all submit scripts for this code.',
+            description='Bash commands that should be appended to the run line in all submit scripts for this code',
             option_cls=functools.partial(
                 TemplateInteractiveOption,
                 extension='.bash',
@@ -94,13 +94,13 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         label: str = MetadataField(
             ...,
             title='Label',
-            description='A unique label to identify the code by.',
+            description='A unique label to identify the code by',
             short_name='-L',
         )
         description: str = MetadataField(
             '',
             title='Description',
-            description='Human-readable description, ideally including version and compilation environment.',
+            description='Human-readable description, ideally including version and compilation environment',
             short_name='-D',
         )
 

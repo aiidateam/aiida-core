@@ -37,7 +37,9 @@ class RemoteStashData(Data):
     _storable = False
 
     class AttributesModel(Data.AttributesModel):
-        stash_mode: StashMode = MetadataField(description='The mode with which the data was stashed')
+        stash_mode: StashMode = MetadataField(
+            description='The mode with which the data was stashed',
+        )
 
     def __init__(self, stash_mode: StashMode, **kwargs):
         """Construct a new instance

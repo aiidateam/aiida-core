@@ -253,17 +253,17 @@ class CifData(SinglefileData):
     class Model(SinglefileData.Model):
         formulae: Optional[List[str]] = MetadataField(
             None,
-            description='List of formulae contained in the CIF file.',
+            description='List of formulae contained in the CIF file',
             read_only=True,
         )
         spacegroup_numbers: Optional[List[str]] = MetadataField(
             None,
-            description='List of space group numbers of the structure.',
+            description='List of space group numbers of the structure',
             read_only=True,
         )
         md5: Optional[str] = MetadataField(
             None,
-            description='MD5 checksum of the file contents.',
+            description='MD5 checksum of the file contents',
             read_only=True,
         )
 

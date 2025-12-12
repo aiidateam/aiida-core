@@ -371,6 +371,13 @@ class BaseRestartWorkChain(WorkChain):
         self.ctx.unhandled_failure = False
 
         if last_report:
+            # In some cases, a developer might want to indicate that a process hasn't finished with exit code 0, but
+            # is completed and attach the outputs. To do this, a process handler can set the process to `is_finished`
+            # and call the `results()` method to still attach the outputs. This is slightly hacky, but a valid use case.
+            # Until we support this use case in a more elegant manner, we check for this here and return the exit code.
+            if self.ctx.is_finished:
+                return last_report.exit_code
+
             pause_on_max_iterations = (
                 self.inputs.pause_on_max_iterations.value
                 if self.inputs.get('pause_on_max_iterations', None) is not None

@@ -321,6 +321,57 @@ def test_validate_handler_overrides_max_iterations(generate_work_chain, generate
     assert result == engine.BaseRestartWorkChain.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
 
 
+class WorkChainWithFinishHandler(engine.BaseRestartWorkChain):
+    """WorkChain with a handler that sets is_finished."""
+
+    _process_class = engine.CalcJob
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.expose_outputs(engine.CalcJob)
+
+    def setup(self):
+        super().setup()
+        self.ctx.inputs = {}
+
+    @engine.process_handler(priority=100, max_iterations=1)
+    def handler_that_finishes(self, node):
+        """Handler that marks work as finished even with non-zero exit."""
+        if node.exit_status == 1:
+            self.ctx.is_finished = True
+            self.results()
+            return engine.ProcessHandlerReport(do_break=False, exit_code=engine.ExitCode(42, 'CUSTOM_FINISH'))
+
+
+@pytest.mark.requires_rmq
+def test_handler_sets_is_finished(generate_work_chain, generate_calculation_node, aiida_localhost):
+    """Test the case when a handler sets ctx.is_finished=True."""
+
+    # Test with max_iterations=1 to make sure the corresponding logic isn't triggered
+    process = generate_work_chain(WorkChainWithFinishHandler, {'max_iterations': orm.Int(1)})
+    process.setup()
+
+    # First trigger - handler sets is_finished and has max_iterations=1
+    process.ctx.children = [
+        # Add outputs to the `CalcJob` to check if they are attached when the workflow is finished
+        generate_calculation_node(
+            exit_status=1,
+            outputs={
+                'retrieved': orm.FolderData(),
+                'remote_folder': orm.RemoteData(computer=aiida_localhost, remote_path='/tmp'),
+            },
+        )
+    ]
+    process.ctx.iteration = 1
+    result = process.inspect_process()
+
+    assert result.status == 42
+    assert process.ctx.is_finished is True
+    assert 'retrieved' in process.outputs
+    assert 'remote_folder' in process.outputs
+
+
 class OutputNamespaceWorkChain(engine.WorkChain):
     """A WorkChain has namespaced output"""
 

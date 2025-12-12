@@ -11,13 +11,16 @@ This has been tested on the CERN lxplus cluster (LSF 9.1.3)
 """
 
 import datetime
+import re
+import string
 import typing as t
 
 import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
+from aiida.common.exceptions import ConfigurationError, FeatureNotAvailable
 from aiida.common.extendeddicts import AttributeDict
 from aiida.schedulers import SchedulerError, SchedulerParsingError
-from aiida.schedulers.datastructures import JobInfo, JobResource, JobState
+from aiida.schedulers.datastructures import JobInfo, JobResource, JobState, JobTemplate
 
 from .bash import BashCliScheduler
 
@@ -108,15 +111,13 @@ class LsfJobResource(JobResource):
     _default_fields = ('parallel_env', 'tot_num_mpiprocs', 'default_mpiprocs_per_machine', 'num_machines')
 
     @classmethod
-    def validate_resources(cls, **kwargs):
+    def validate_resources(cls, **kwargs: t.Any) -> AttributeDict:
         """Validate the resources against the job resource class of this scheduler.
 
         :param kwargs: dictionary of values to define the job resources
         :return: attribute dictionary with the parsed parameters populated
         :raises ValueError: if the resources are invalid or incomplete
         """
-        from aiida.common.exceptions import ConfigurationError
-
         resources = AttributeDict()
         resources.parallel_env = kwargs.pop('parallel_env', '')
         resources.use_num_machines = kwargs.pop('use_num_machines', False)
@@ -151,7 +152,7 @@ class LsfJobResource(JobResource):
 
         return resources
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: t.Any):
         """Initialize the job resources from the passed arguments (the valid keys can be
         obtained with the function self.get_valid_keys()).
 
@@ -163,12 +164,12 @@ class LsfJobResource(JobResource):
         resources = self.validate_resources(**kwargs)
         super().__init__(resources)
 
-    def get_tot_num_mpiprocs(self):
+    def get_tot_num_mpiprocs(self) -> int:
         """Return the total number of cpus of this job resource."""
-        return self.tot_num_mpiprocs
+        return self.tot_num_mpiprocs  # type: ignore[no-any-return]
 
     @classmethod
-    def accepts_default_mpiprocs_per_machine(cls):
+    def accepts_default_mpiprocs_per_machine(cls) -> t.Literal[False]:
         """Return True if this JobResource accepts a 'default_mpiprocs_per_machine'
         key, False otherwise.
         """
@@ -270,7 +271,6 @@ class LsfScheduler(BashCliScheduler):
         Separates the fields with the _field_separator string order:
         jobnum, state, walltime, queue[=partition], user, numnodes, numcores, title
         """
-        from aiida.common.exceptions import FeatureNotAvailable
 
         # I add the environment variable SLURM_TIME_FORMAT in front to be
         # sure to get the times in 'standard' format
@@ -283,14 +283,10 @@ class LsfScheduler(BashCliScheduler):
             command.append(f'-u{user}')
 
         if jobs:
-            joblist = []
-            if isinstance(jobs, str):
-                joblist.append(jobs)
+            if isinstance(jobs, str):  # type: ignore[unreachable]
+                command.append(jobs)  # type: ignore[unreachable]
             else:
-                if not isinstance(jobs, (tuple, list)):
-                    raise TypeError("If provided, the 'jobs' variable must be a string or a list of strings")
-                joblist = jobs
-            command.append(' '.join(joblist))
+                command.append(' '.join(jobs))
 
         comm = ' '.join(command)
         self.logger.debug(f'bjobs command: {comm}')
@@ -304,7 +300,7 @@ class LsfScheduler(BashCliScheduler):
         """
         return f'bjobs -l {escape_for_bash(job_id)}'
 
-    def _get_submit_script_header(self, job_tmpl):
+    def _get_submit_script_header(self, job_tmpl: JobTemplate) -> str:
         """Return the submit script header, using the parameters from the
         job_tmpl. See the following manual
         https://www-01.ibm.com/support/knowledgecenter/SSETD4_9.1.2/lsf_command_ref/bsub.1.dita?lang=en
@@ -313,8 +309,6 @@ class LsfScheduler(BashCliScheduler):
 
         :param job_tmpl: an JobTemplate instance with relevant parameters set.
         """
-        import re
-        import string
 
         lines = []
         if job_tmpl.submit_as_hold:
@@ -457,7 +451,7 @@ fi
 
         return '\n'.join(lines)
 
-    def _get_submit_script_footer(self, job_tmpl):
+    def _get_submit_script_footer(self, job_tmpl: JobTemplate) -> str:
         """Return the submit script final part, using the parameters from the
         job_tmpl.
 
@@ -599,7 +593,6 @@ fi
 
             psd_finish_time = self._parse_time_string(finish_time, fmt='%b %d %H:%M')
             psd_start_time = self._parse_time_string(start_time, fmt='%b %d %H:%M')
-            psd_submission_time = self._parse_time_string(submission_time, fmt='%b %d %H:%M')
 
             # Now get the time in seconds which has been used
             # Only if it is RUNNING; otherwise it is not meaningful,
@@ -611,8 +604,6 @@ fi
                     # to always be 1900. Therefore, job submitted
                     # in december and finishing in january would produce negative time differences
                     if requested_walltime.total_seconds() < 0:
-                        import datetime
-
                         old_month = psd_finish_time.month
                         old_day = psd_finish_time.day
                         old_hour = psd_finish_time.hour
@@ -624,18 +615,20 @@ fi
                         )
                         requested_walltime = psd_finish_time - psd_start_time
 
-                    this_job.requested_wallclock_time_seconds = requested_walltime.total_seconds()
+                    this_job.requested_wallclock_time_seconds = int(requested_walltime.total_seconds())
                 except (TypeError, ValueError):
                     self.logger.warning(f'Error parsing the time limit for job id {this_job.job_id}')
 
                 try:
                     psd_percent_complete = float(percent_complete.strip(' L').strip('%'))
-                    this_job.wallclock_time_seconds = requested_walltime.total_seconds() * psd_percent_complete / 100.0
+                    this_job.wallclock_time_seconds = int(
+                        requested_walltime.total_seconds() * psd_percent_complete / 100.0
+                    )
                 except ValueError:
                     self.logger.warning(f'Error parsing the time used for job id {this_job.job_id}')
 
             try:
-                this_job.submission_time = psd_submission_time
+                this_job.submission_time = self._parse_time_string(submission_time, fmt='%b %d %H:%M')
             except ValueError:
                 self.logger.warning(f'Error parsing submission time for job id {this_job.job_id}')
 
@@ -647,7 +640,7 @@ fi
             # Double check of redundant info
             # Not really useful now, allocated_machines in this
             # version of the plugin is never set
-            if this_job.allocated_machines is not None and this_job.num_machines is not None:
+            if this_job.allocated_machines is not None and this_job.num_machines is not None:  # type: ignore[redundant-expr]
                 if len(this_job.allocated_machines) != this_job.num_machines:
                     self.logger.error(
                         'The length of the list of allocated '
@@ -685,13 +678,13 @@ fi
         except IndexError as exc:
             raise SchedulerParsingError(f'Cannot parse submission output: `{stdout}`') from exc
 
-    def _parse_time_string(self, string, fmt='%b %d %H:%M'):
+    def _parse_time_string(self, string: str, fmt: str = '%b %d %H:%M') -> datetime.datetime:
         """Parse a time string and returns a datetime object.
         Example format: 'Feb  2 07:39' or 'Feb  2 07:39 L'
         """
 
         if string == '-':
-            return None
+            raise ValueError(f'Invalid time string {string}')
 
         # The year is not specified. I have to add it, and I set it to the
         # current year. This is actually not correct, if we are close

@@ -109,7 +109,6 @@ repos:
         src/aiida/restapi/translator/group.py|
         src/aiida/restapi/translator/nodes/.*|
         src/aiida/restapi/translator/user.py|
-        src/aiida/schedulers/plugins/lsf.py|
         src/aiida/storage/psql_dos/migrations/utils/integrity.py|
         src/aiida/storage/psql_dos/migrations/utils/legacy_workflows.py|
         src/aiida/storage/psql_dos/migrations/utils/migrate_repository.py|

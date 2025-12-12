@@ -20,7 +20,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import BinaryIO, Optional, Tuple, Union, cast
+from typing import BinaryIO, NoReturn, Optional, Tuple, Union, cast
 from zipfile import ZipFile, is_zipfile
 
 from pydantic import BaseModel, Field, field_validator
@@ -54,6 +54,9 @@ __all__ = ('SqliteZipBackend',)
 
 LOGGER = AIIDA_LOGGER.getChild(__file__)
 SUPPORTED_VERSION = '3.35.0'  # minimum supported version of sqlite
+
+# Hardcoded zip compression level
+COMPRESSION_LEVEL = 6
 
 
 def validate_sqlite_version():
@@ -160,7 +163,7 @@ class SqliteZipBackend(StorageBackend):
                     f'Migrating existing {cls.__name__} from version {current_version} to version {target_version}'
                 )
                 migrate(filepath_archive, filepath_migrated, target_version)
-                shutil.move(filepath_migrated, filepath_archive)  # type: ignore[arg-type]
+                shutil.move(filepath_migrated, filepath_archive)
                 return False
 
         # Here the original archive either doesn't exist or ``reset == True`` so we simply create an empty base archive
@@ -180,7 +183,7 @@ class SqliteZipBackend(StorageBackend):
                 'export_version': cls.version_head(),
                 'aiida_version': __version__,
                 'key_format': 'sha256',
-                'compression': 6,
+                'compression': COMPRESSION_LEVEL,
                 'ctime': datetime.now().isoformat(),
             }
 
@@ -188,12 +191,12 @@ class SqliteZipBackend(StorageBackend):
             SqliteBase.metadata.create_all(create_sqla_engine(filepath_database))
 
             with ZipPath(
-                filepath_zip, mode='w', compresslevel=metadata['compression'], info_order=(META_FILENAME, DB_FILENAME)
+                filepath_zip, mode='w', compresslevel=COMPRESSION_LEVEL, info_order=(META_FILENAME, DB_FILENAME)
             ) as zip_handle:
                 (zip_handle / META_FILENAME).write_text(json.dumps(metadata))
                 (zip_handle / DB_FILENAME).putfile(filepath_database)
 
-            shutil.move(filepath_zip, filepath_archive)  # type: ignore[arg-type]
+            shutil.move(filepath_zip, filepath_archive)
 
         return True
 
@@ -347,7 +350,7 @@ class SqliteZipBackend(StorageBackend):
     def set_global_variable(self, key: str, value, description: Optional[str] = None, overwrite=True) -> None:
         raise ReadOnlyError()
 
-    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs) -> NoReturn:
         raise NotImplementedError
 
     def get_info(self, detailed: bool = False) -> dict:
@@ -450,7 +453,7 @@ class _RoBackendRepository(AbstractRepositoryBackend):
     def has_objects(self, keys: list[str]) -> list[bool]:
         return [self.has_object(key) for key in keys]
 
-    def iter_object_streams(self, keys: list[str]) -> Iterator[Tuple[str, BinaryIO]]:
+    def iter_object_streams(self, keys: Iterable[str]) -> Iterator[Tuple[str, BinaryIO]]:
         for key in keys:
             with self.open(key) as handle:
                 yield key, handle
@@ -481,8 +484,7 @@ class ZipfileBackendRepository(_RoBackendRepository):
         self.__zipfile: None | ZipFile = None
 
     def close(self) -> None:
-        if self._zipfile:
-            self._zipfile.close()
+        self._zipfile.close()
         super().close()
 
     @property
@@ -543,4 +545,4 @@ class FolderBackendRepository(_RoBackendRepository):
         if not self._path.joinpath(key).is_file():
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
         with self._path.joinpath(key).open('rb', encoding='utf-8') as handle:
-            yield handle
+            yield cast(BinaryIO, handle)

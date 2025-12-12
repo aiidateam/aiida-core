@@ -157,6 +157,8 @@ def test_builder_populate_defaults_false():
     # An empty builder should not have the namespace with populate_defaults=False
     builder = PopulateDefaultsProcess.get_builder()
     assert 'optional_ns' not in dict(builder)
+    # Note that the 'metadata' dict does not contain 'options' here, as that is added in the
+    # CalcJob interface, while here we are testing on a `Process` only
     assert builder._inputs(prune=False) == {'metadata': {}}
 
     # Accessing the namespace should create it (lazy creation)

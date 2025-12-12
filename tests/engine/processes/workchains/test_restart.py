@@ -198,6 +198,129 @@ def test_run_process(generate_work_chain, generate_calculation_node, monkeypatch
     assert process.node.base.extras.get(SomeWorkChain._considered_handlers_extra) == [[]]
 
 
+class BaseMaxIterWorkChain(engine.BaseRestartWorkChain):
+    """`BaseRestartWorkChain` with a `process_handler` that sets `max_iterations`."""
+
+    _process_class = engine.CalcJob
+
+    def setup(self):
+        super().setup()
+        self.ctx.inputs = {}
+
+    @engine.process_handler()
+    def handler_without_max_iter(self, node):
+        if node.exit_status == 1:
+            return engine.ProcessHandlerReport()
+
+    @engine.process_handler(
+        max_iterations=2,
+    )
+    def handler_with_max_iter(self, node):
+        if node.exit_status == 2:
+            return engine.ProcessHandlerReport()
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.parametrize('max_iterations', (1, 2, 3))
+@pytest.mark.parametrize('pause_on_max_iterations', (False, True))
+def test_global_max_iterations(generate_work_chain, generate_calculation_node, max_iterations, pause_on_max_iterations):
+    """Test the global `max_iterations` input."""
+    process = generate_work_chain(
+        BaseMaxIterWorkChain, {'pause_on_max_iterations': pause_on_max_iterations, 'max_iterations': max_iterations}
+    )
+    process.setup()
+    process.ctx.children = []
+
+    if max_iterations > 1:
+        # Trigger `handler_without_max_iter` max_iterations - 1 times
+        while process.ctx.iteration < max_iterations - 1:
+            process.ctx.children.append(generate_calculation_node(exit_status=1))
+            process.ctx.iteration += 1
+            result = process.inspect_process()
+            assert result is None  # No exit code
+
+    # One more trigger - `max_iterations` is reached
+    process.ctx.children.append(generate_calculation_node(exit_status=1))
+    process.ctx.iteration += 1
+    result = process.inspect_process()
+
+    if pause_on_max_iterations:
+        assert process.ctx.iteration == 0  # Counter should be reset
+        assert result is None  # No exit code
+        assert process.paused
+    else:
+        assert process.ctx.iteration == max_iterations
+        assert result == engine.BaseRestartWorkChain.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.parametrize('pause_on_max_iterations', (False, True))
+def test_handler_max_iterations(generate_work_chain, generate_calculation_node, pause_on_max_iterations):
+    """Test the behaviour of the handler `max_iterations` input."""
+    process = generate_work_chain(BaseMaxIterWorkChain, {'pause_on_max_iterations': pause_on_max_iterations})
+    process.setup()
+
+    # First handler_with_max_iter trigger
+    process.ctx.children = [generate_calculation_node(exit_status=2)]
+    process.ctx.iteration = 1
+    result = process.inspect_process()
+    assert process.ctx.handler_iteration_counts['handler_with_max_iter'] == 1
+    assert result is None
+
+    # Second handler_with_max_iter trigger - reaches max_iterations (2)
+    process.ctx.children.append(generate_calculation_node(exit_status=2))
+    process.ctx.iteration = 2
+    result = process.inspect_process()
+    if pause_on_max_iterations:
+        assert process.ctx.handler_iteration_counts['handler_with_max_iter'] == 0  # Counter should be reset
+        assert result is None  # No exit code
+        assert process.paused
+    else:
+        assert process.ctx.handler_iteration_counts['handler_with_max_iter'] == 2
+        assert result == engine.BaseRestartWorkChain.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
+
+
+@pytest.mark.requires_rmq
+def test_handler_max_iterations_only_counts_when_triggered(generate_work_chain, generate_calculation_node):
+    """Test that handler iteration count only increments when the handler actually returns a report."""
+    process = generate_work_chain(BaseMaxIterWorkChain, {})
+    process.setup()
+
+    # handler_with_max_iter is called but doesn't return a report (exit_status doesn't match)
+    process.ctx.children = [generate_calculation_node(exit_status=123)]
+    process.ctx.iteration = 1
+    # No handler triggered, so no iteration count
+    assert 'handler_with_max_iter' not in process.ctx.handler_iteration_counts
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.parametrize('max_iterations', (1, 2, 3))
+def test_validate_handler_overrides_max_iterations(generate_work_chain, generate_calculation_node, max_iterations):
+    """Test the `handler_overrides` input with the `max_iterations` key."""
+    process = generate_work_chain(
+        BaseMaxIterWorkChain, {'handler_overrides': {'handler_with_max_iter': {'max_iterations': max_iterations}}}
+    )
+    process.setup()
+    process.ctx.children = []
+
+    assert process.ctx.handler_overrides['handler_with_max_iter']['max_iterations'] == max_iterations
+
+    if max_iterations > 1:
+        # Trigger `handler_with_max_iter` max_iterations - 1 times
+        while process.ctx.iteration < max_iterations - 1:
+            process.ctx.children.append(generate_calculation_node(exit_status=2))
+            process.ctx.iteration += 1
+            result = process.inspect_process()
+            assert result is None  # No exit code
+
+    # One more trigger - `max_iterations` is reached
+    process.ctx.children.append(generate_calculation_node(exit_status=2))
+    process.ctx.iteration += 1
+    result = process.inspect_process()
+    assert process.ctx.iteration == max_iterations
+    assert result == engine.BaseRestartWorkChain.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
+
+
 class OutputNamespaceWorkChain(engine.WorkChain):
     """A WorkChain has namespaced output"""
 

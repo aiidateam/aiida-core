@@ -125,8 +125,6 @@ repos:
         src/aiida/storage/psql_dos/models/.*|
         src/aiida/storage/psql_dos/orm/.*.py|
         src/aiida/storage/psql_dos/orm/querybuilder/joiner.py|
-        src/aiida/storage/sqlite_temp/backend.py|
-        src/aiida/storage/sqlite_zip/backend.py|
         src/aiida/storage/sqlite_zip/migrations/legacy_to_main.py|
         src/aiida/storage/sqlite_zip/models.py|
         src/aiida/storage/sqlite_zip/orm.py|

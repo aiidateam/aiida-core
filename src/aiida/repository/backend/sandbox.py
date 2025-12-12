@@ -125,5 +125,5 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
     def list_objects(self) -> t.Iterable[str]:
         return self.sandbox.get_content_list()
 
-    def get_info(self, detailed: bool = False) -> t.NoReturn:
+    def get_info(self, detailed: bool = False, **kwargs: t.Any) -> dict[str, t.Any]:
         raise NotImplementedError

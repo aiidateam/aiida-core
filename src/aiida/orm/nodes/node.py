@@ -268,14 +268,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             default_factory=lambda: Node.AttributesModel(),
             description='The node attributes',
             orm_to_model=lambda node, _: cast(Node, node).base.attributes.all,
-            write_only=True,
             exclude=True,
         )
         extras: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='The node extras',
             orm_to_model=lambda node, _: cast(Node, node).base.extras.all,
-            write_only=True,
             exclude=True,
         )
         computer: Optional[str] = MetadataField(

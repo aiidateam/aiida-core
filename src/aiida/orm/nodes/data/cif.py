@@ -250,7 +250,7 @@ class CifData(SinglefileData):
     _values = None
     _ase = None
 
-    class Model(SinglefileData.Model):
+    class AttributesModel(SinglefileData.AttributesModel):
         formulae: Optional[List[str]] = MetadataField(
             None,
             description='List of formulae contained in the CIF file',

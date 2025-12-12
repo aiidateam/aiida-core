@@ -315,12 +315,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         return _model_to_orm_field_values(valid_model)
 
-    def orm_to_model_field_values(
-        self,
-        *,
-        repository_path: Optional[pathlib.Path] = None,
-        skip_read_only: bool = False,
-    ) -> dict[str, Any]:
+    def orm_to_model_field_values(self, *, repository_path: Optional[pathlib.Path] = None) -> dict[str, Any]:
         """Collect values for the ``Model``'s fields from this entity.
 
         Centralizes mapping of ORM -> Model values, including handling of ``orm_to_model``
@@ -328,7 +323,6 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         The process is recursive, applying metadata field rules to nested models as well.
 
         :param repository_path: Optional path to use for repository-based fields.
-        :param skip_read_only: When True, fields marked with ``read_only`` are skipped.
         :return: Mapping of ORM field name to value.
         """
 

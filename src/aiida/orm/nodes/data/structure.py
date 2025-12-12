@@ -689,12 +689,24 @@ class StructureData(Data):
     _internal_kind_tags = None
 
     class AttributesModel(Data.AttributesModel):
-        pbc1: bool = MetadataField(description='Whether periodic in the a direction')
-        pbc2: bool = MetadataField(description='Whether periodic in the b direction')
-        pbc3: bool = MetadataField(description='Whether periodic in the c direction')
-        cell: t.List[t.List[float]] = MetadataField(description='The cell parameters')
-        kinds: t.List[dict] = MetadataField(description='The kinds of atoms')
-        sites: t.List[dict] = MetadataField(description='The atomic sites')
+        pbc1: bool = MetadataField(
+            description='Whether periodic in the a direction',
+        )
+        pbc2: bool = MetadataField(
+            description='Whether periodic in the b direction',
+        )
+        pbc3: bool = MetadataField(
+            description='Whether periodic in the c direction',
+        )
+        cell: t.List[t.List[float]] = MetadataField(
+            description='The cell parameters',
+        )
+        kinds: t.List[dict] = MetadataField(
+            description='The kinds of atoms',
+        )
+        sites: t.List[dict] = MetadataField(
+            description='The atomic sites',
+        )
 
         @field_validator('kinds', mode='before')
         @classmethod

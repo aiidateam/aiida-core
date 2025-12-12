@@ -61,7 +61,7 @@ class PortableCode(Code):
         filepath_executable: str = MetadataField(
             ...,
             title='Filepath executable',
-            description='Relative filepath of executable with directory of code files.',
+            description='Relative filepath of executable with directory of code files',
             short_name='-X',
             priority=1,
             orm_to_model=lambda node, _: str(cast(PortableCode, node).filepath_executable),
@@ -69,7 +69,7 @@ class PortableCode(Code):
         filepath_files: str = MetadataField(
             ...,
             title='Code directory',
-            description='Filepath to directory containing code files.',
+            description='Filepath to directory containing code files',
             short_name='-F',
             priority=2,
             write_only=True,

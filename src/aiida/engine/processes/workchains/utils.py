@@ -48,6 +48,7 @@ def process_handler(
     priority: int = 0,
     exit_codes: Union[None, ExitCode, List[ExitCode]] = None,
     enabled: bool = True,
+    max_iterations: Optional[int] = None,
 ) -> FunctionType:
     """Decorator to register a :class:`~aiida.engine.BaseRestartWorkChain` instance method as a process handler.
 
@@ -77,9 +78,15 @@ def process_handler(
     :param enabled: boolean, by default True, which will cause the handler to be called during `inspect_process`. When
         set to `False`, the handler will be skipped. This static value can be overridden on a per work chain instance
         basis through the input `handler_overrides`.
+    :param max_iterations: optional integer specifying the maximum number of times this specific handler can be
+        triggered. If not specified, the handler can be triggered indefinitely (subject to the global `max_iterations`
+        of the work chain). When the limit is reached and `pause_on_max_iterations` is enabled, the work chain will
+        pause for inspection.
     """
     if wrapped is None:
-        return partial(process_handler, priority=priority, exit_codes=exit_codes, enabled=enabled)  # type: ignore[return-value]
+        return partial(
+            process_handler, priority=priority, exit_codes=exit_codes, enabled=enabled, max_iterations=max_iterations
+        )  # type: ignore[return-value]
 
     if not isinstance(wrapped, FunctionType):
         raise TypeError('first argument can only be an instance method, use keywords for decorator arguments.')
@@ -96,6 +103,9 @@ def process_handler(
     if not isinstance(enabled, bool):
         raise TypeError('the `enabled` keyword should be a boolean.')
 
+    if max_iterations is not None and (not isinstance(max_iterations, int) or max_iterations < 1):  # type: ignore[redundant-expr]
+        raise TypeError('the `max_iterations` keyword should be a positive integer.')
+
     handler_args = getfullargspec(wrapped)[0]
 
     if len(handler_args) != 2:
@@ -104,6 +114,7 @@ def process_handler(
     wrapped.decorator = process_handler  # type: ignore[attr-defined]
     wrapped.priority = priority  # type: ignore[attr-defined]
     wrapped.enabled = enabled  # type: ignore[attr-defined]
+    wrapped.max_iterations = max_iterations  # type: ignore[attr-defined]
 
     @decorator
     def wrapper(wrapped, instance, args, kwargs):

@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import typing as t
 
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field, create_model
 from pydantic_core import PydanticUndefined
 
 if t.TYPE_CHECKING:
-    from pydantic import BaseModel
-
     from aiida.orm import Entity
+    from aiida.orm.entities import EntityModelType
 
 
 def get_metadata(field_info: t.Any, key: str, default: t.Any | None = None) -> t.Any:
@@ -25,6 +24,70 @@ def get_metadata(field_info: t.Any, key: str, default: t.Any | None = None) -> t
         if isinstance(element, dict) and key in element:
             return element[key]
     return default
+
+
+class OrmModel(BaseModel, defer_build=True):
+    """Base class for all ORM entity models."""
+
+    model_config = ConfigDict(extra='forbid')
+
+    @classmethod
+    def __pydantic_init_subclass__(cls, **kwargs: t.Any) -> None:
+        """Sets the JSON schema title of the model.
+
+        The qualified name of the class is used, with dots removed. For example, `Node.Model` becomes `NodeModel`
+        in the JSON schema.
+        """
+        super().__pydantic_init_subclass__(**kwargs)
+        cls.model_config['title'] = cls.__qualname__.replace('.', '')
+
+    @classmethod
+    def as_create_model(cls: t.Type[EntityModelType]) -> t.Type[EntityModelType]:
+        """Return a derived creation model class with read-only fields removed.
+
+        This also removes any serializers/validators defined on those fields.
+
+        :return: The derived creation model class.
+        """
+
+        new_name = cls.__qualname__.replace('Model', 'CreateModel')
+        CreateModel = create_model(  # noqa: N806
+            new_name,
+            __base__=cls,
+            __module__=cls.__module__,
+        )
+        CreateModel.__qualname__ = new_name
+        CreateModel.model_config['extra'] = 'ignore'
+
+        readonly_fields: t.List[str] = []
+        for key, field in CreateModel.model_fields.items():
+            annotation = field.annotation
+            if get_metadata(field, 'read_only'):
+                readonly_fields.append(key)
+            elif isinstance(annotation, type) and issubclass(annotation, OrmModel):
+                field.annotation = annotation.as_create_model()
+
+        # Remove read-only fields
+        for key in readonly_fields:
+            CreateModel.model_fields.pop(key, None)
+            if hasattr(CreateModel, key):
+                delattr(CreateModel, key)
+
+        # Prune field validators/serializers referring to read-only fields
+        decorators = CreateModel.__pydantic_decorators__
+
+        def _prune_field_decorators(field_decorators: dict[str, t.Any]) -> dict[str, t.Any]:
+            return {
+                key: decorator
+                for key, decorator in field_decorators.items()
+                if all(field not in readonly_fields for field in decorator.info.fields)
+            }
+
+        decorators.field_validators = _prune_field_decorators(decorators.field_validators)
+        decorators.field_serializers = _prune_field_decorators(decorators.field_serializers)
+
+        CreateModel.model_rebuild(force=True)
+        return CreateModel
 
 
 def MetadataField(  # noqa: N802

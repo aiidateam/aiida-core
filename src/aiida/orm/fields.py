@@ -15,10 +15,8 @@ from copy import deepcopy
 from functools import singledispatchmethod
 from pprint import pformat
 
-from pydantic import BaseModel
-
 from aiida.common.lang import isidentifier
-from aiida.common.pydantic import get_metadata
+from aiida.common.pydantic import OrmModel, get_metadata
 
 __all__ = (
     'QbField',
@@ -428,7 +426,7 @@ class EntityFieldMeta(ABCMeta):
             if 'Model' in cls.__dict__:
                 cls._validate_model_inheritance('Model')
 
-            Model: BaseModel = cls.Model
+            Model: OrmModel = cls.Model
             for key, field in Model.model_fields.items():
                 fields[key] = add_field(
                     key,
@@ -445,7 +443,7 @@ class EntityFieldMeta(ABCMeta):
             container_field = fields.get('attributes')
             container_field._typed_children = {}
 
-            Model: BaseModel = cls.AttributesModel
+            Model: OrmModel = cls.AttributesModel
             for key, field in Model.model_fields.items():
                 typed_field = add_field(
                     key,
@@ -462,7 +460,7 @@ class EntityFieldMeta(ABCMeta):
 
     def _has_model(cls, model_name: str = 'Model') -> bool:
         """Return whether the class has a model defined."""
-        return hasattr(cls, model_name) and issubclass(getattr(cls, model_name), BaseModel)
+        return hasattr(cls, model_name) and issubclass(getattr(cls, model_name), OrmModel)
 
     def _validate_model_inheritance(cls, model_name: str = 'Model') -> None:
         """Validate that model class inherits from all necessary base classes."""
@@ -470,7 +468,7 @@ class EntityFieldMeta(ABCMeta):
         cls_bases_with_model = [
             base
             for base in cls.__mro__
-            if base is not cls and model_name in base.__dict__ and issubclass(getattr(base, model_name), BaseModel)  # type: ignore[attr-defined]
+            if base is not cls and model_name in base.__dict__ and issubclass(getattr(base, model_name), OrmModel)  # type: ignore[attr-defined]
         ]
 
         cls_bases_with_model_leaves = {
@@ -483,9 +481,9 @@ class EntityFieldMeta(ABCMeta):
             )
         }
 
-        cls_model_bases = {getattr(base, model_name) for base in cls_bases_with_model_leaves} or {BaseModel}  # type: ignore[attr-defined]
+        cls_model_bases = {getattr(base, model_name) for base in cls_bases_with_model_leaves} or {OrmModel}  # type: ignore[attr-defined]
 
-        model_bases = {base for base in getattr(cls, model_name).__bases__ if issubclass(base, BaseModel)}
+        model_bases = {base for base in getattr(cls, model_name).__bases__ if issubclass(base, OrmModel)}
 
         if model_bases != cls_model_bases and not getattr(cls, '_SKIP_MODEL_INHERITANCE_CHECK', False):
             bases = [f'{e.__module__}.{e.__name__}.{model_name}' for e in cls_bases_with_model_leaves]

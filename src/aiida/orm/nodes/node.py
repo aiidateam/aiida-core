@@ -31,14 +31,13 @@ from typing import (
 )
 from uuid import UUID
 
-from pydantic import BaseModel
 from typing_extensions import Self
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.pydantic import MetadataField
+from aiida.common.pydantic import MetadataField, OrmModel
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 from aiida.orm.utils.node import (
@@ -224,7 +223,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     _storable = False
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
-    class AttributesModel(BaseModel):
+    class AttributesModel(OrmModel):
         """The node attributes."""
 
     class Model(Entity.Model):

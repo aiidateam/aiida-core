@@ -17,13 +17,12 @@ from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Generic, List, Literal, NoReturn, Optional, Type, TypeVar, Union
 
 from plumpy.base.utils import call_with_super_check, super_check
-from pydantic import BaseModel, ConfigDict, create_model
 from typing_extensions import Self
 
 from aiida.common import exceptions, log
 from aiida.common.exceptions import EntryPointError, InvalidOperation, NotExistent
 from aiida.common.lang import classproperty, type_check
-from aiida.common.pydantic import MetadataField, get_metadata
+from aiida.common.pydantic import MetadataField, OrmModel, get_metadata
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
@@ -37,7 +36,7 @@ __all__ = ('Collection', 'Entity', 'EntityTypes')
 
 CollectionType = TypeVar('CollectionType', bound='Collection[Any]')
 EntityType = TypeVar('EntityType', bound='Entity[Any,Any]')
-EntityModelType = TypeVar('EntityModelType', bound=BaseModel)
+EntityModelType = TypeVar('EntityModelType', bound=OrmModel)
 BackendEntityType = TypeVar('BackendEntityType', bound='BackendEntity')
 
 
@@ -184,74 +183,11 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
     _logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
-    class Model(BaseModel, defer_build=True):
-        model_config = ConfigDict(extra='forbid')
-
+    class Model(OrmModel, defer_build=True):
         pk: int = MetadataField(
             description='The primary key of the entity',
             read_only=True,
         )
-
-        @classmethod
-        def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
-            """Sets the JSON schema title of the model.
-
-            The qualified name of the class is used, with dots removed. For example, `Node.Model` becomes `NodeModel`
-            in the JSON schema.
-            """
-            super().__pydantic_init_subclass__(**kwargs)
-            cls.model_config['title'] = cls.__qualname__.replace('.', '')
-
-        @classmethod
-        def as_create_model(cls: Type[EntityModelType]) -> Type[EntityModelType]:
-            """Return a derived creation model class with read-only fields removed.
-
-            This also removes any serializers/validators defined on those fields.
-
-            :return: The derived creation model class.
-            """
-
-            def _prune_read_only_fields(model: Type[EntityModelType]) -> Type[EntityModelType]:
-                new_name = model.__qualname__.replace('Model', 'CreateModel')
-                CreateModel = create_model(  # noqa: N806
-                    new_name,
-                    __base__=model,
-                    __module__=model.__module__,
-                )
-                CreateModel.__qualname__ = new_name
-                CreateModel.model_config['extra'] = 'ignore'
-
-                readonly_fields: List[str] = []
-                for key, field in CreateModel.model_fields.items():
-                    annotation = field.annotation
-                    if get_metadata(field, 'read_only'):
-                        readonly_fields.append(key)
-                    elif isinstance(annotation, type) and issubclass(annotation, BaseModel):
-                        field.annotation = _prune_read_only_fields(annotation)
-
-                # Remove read-only fields
-                for key in readonly_fields:
-                    CreateModel.model_fields.pop(key, None)
-                    if hasattr(CreateModel, key):
-                        delattr(CreateModel, key)
-
-                # Prune field validators/serializers referring to read-only fields
-                decorators = CreateModel.__pydantic_decorators__
-
-                def _prune_field_decorators(field_decorators: dict[str, Any]) -> dict[str, Any]:
-                    return {
-                        key: decorator
-                        for key, decorator in field_decorators.items()
-                        if all(field not in readonly_fields for field in decorator.info.fields)
-                    }
-
-                decorators.field_validators = _prune_field_decorators(decorators.field_validators)
-                decorators.field_serializers = _prune_field_decorators(decorators.field_serializers)
-
-                CreateModel.model_rebuild(force=True)
-                return CreateModel
-
-            return _prune_read_only_fields(cls)
 
     @classproperty
     def CreateModel(cls) -> Type[Model]:  # noqa: N802, N805
@@ -292,7 +228,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
                     continue
 
                 annotation = field.annotation
-                if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+                if isinstance(annotation, type) and issubclass(annotation, OrmModel):
                     fields[key] = _model_to_orm_field_values(field_value, annotation)
                 elif orm_class := get_metadata(field, 'orm_class'):
                     if isinstance(orm_class, str):
@@ -326,7 +262,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         :return: Mapping of ORM field name to value.
         """
 
-        def _orm_to_model_field_values(model: Type[BaseModel]) -> dict[str, Any]:
+        def _orm_to_model_field_values(model: Type[OrmModel]) -> dict[str, Any]:
             """Recursive helper function to collect field values for a model class.
 
             :param model: The model class to extract field values for.
@@ -336,7 +272,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
             for key, field in model.model_fields.items():
                 annotation = field.annotation
-                if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+                if isinstance(annotation, type) and issubclass(annotation, OrmModel):
                     fields[key] = _orm_to_model_field_values(annotation)
                     continue
 

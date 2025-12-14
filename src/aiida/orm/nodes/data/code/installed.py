@@ -78,15 +78,23 @@ class InstalledCode(Code):
                     raise ValueError(f'No computer found for the given id: {value}') from exception
             return value
 
-    def __init__(self, computer: Computer, filepath_executable: str, **kwargs):
+    def __init__(self, computer: Computer, filepath_executable: str | None = None, **kwargs):
         """Construct a new instance.
 
         :param computer: The remote computer on which the executable is located.
         :param filepath_executable: The absolute filepath of the executable on the remote computer.
         """
+        filepath = filepath_executable or kwargs.get('attributes', {}).pop(
+            self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, None
+        )
+
+        if filepath is None:
+            raise ValueError('The `filepath_executable` parameter must be provided.')
+
         super().__init__(**kwargs)
+
         self.computer = computer
-        self.filepath_executable = filepath_executable
+        self.filepath_executable = filepath
 
     def _validate(self):
         """Validate the instance by checking that a computer has been defined.

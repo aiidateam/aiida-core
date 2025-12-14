@@ -8,7 +8,7 @@
 ###########################################################################
 """Data plugin that models a stashed folder on a remote computer."""
 
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
@@ -34,15 +34,27 @@ class RemoteStashCustomData(RemoteStashData):
 
     def __init__(
         self,
-        stash_mode: StashMode,
-        target_basepath: str,
-        source_list: List,
+        stash_mode: Optional[StashMode] = None,
+        target_basepath: Optional[str] = None,
+        source_list: Optional[List] = None,
         **kwargs,
     ):
         """Construct a new instance
 
         :param stash_mode: the stashing mode with which the data was stashed on the remote.
+        :param target_basepath: the target basepath.
+        :param source_list: the list of source files.
         """
+
+        attributes = kwargs.get('attributes', {})
+        stash_mode = stash_mode or attributes.pop('stash_mode', None)
+        target_basepath = target_basepath or attributes.pop('target_basepath', None)
+        source_list = source_list or attributes.pop('source_list', None)
+
+        for param in (stash_mode, target_basepath, source_list):
+            if param is None:
+                raise ValueError(f'the `{param}` parameter must be specified.')
+
         super().__init__(stash_mode, **kwargs)
 
         self.target_basepath = target_basepath

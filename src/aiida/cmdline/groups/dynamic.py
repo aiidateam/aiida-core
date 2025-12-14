@@ -9,6 +9,7 @@ import typing as t
 import click
 
 from aiida.common import exceptions
+from aiida.common.pydantic import OrmModel
 from aiida.plugins.entry_point import ENTRY_POINT_GROUP_FACTORY_MAPPING, get_entry_point_names
 from aiida.plugins.factories import BaseFactory
 
@@ -18,6 +19,8 @@ from .verdi import VerdiCommandGroup
 
 if t.TYPE_CHECKING:
     from click.decorators import FC
+
+    from aiida import orm
 
 __all__ = ('DynamicEntryPointCommandGroup',)
 
@@ -91,15 +94,19 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             command = super().get_command(ctx, cmd_name)
         return command
 
-    def call_command(self, ctx: click.Context, cls: t.Any, non_interactive: bool, **kwargs: t.Any) -> t.Any:
+    def call_command(self, ctx: click.Context, cls: orm.Code, non_interactive: bool, **kwargs: t.Any) -> t.Any:
         """Call the ``command`` after validating the provided inputs."""
         from pydantic import ValidationError
 
         if hasattr(cls, 'Model'):
-            # The plugin defines a pydantic model: use it to validate the provided arguments
-            Model = getattr(cls, 'CreateModel', cls.Model)  # noqa: N806
             try:
-                Model(**kwargs)
+                if 'attributes' in cls.CreateModel.model_fields:
+                    attr_field = cls.CreateModel.model_fields['attributes']
+                    AttributesModel = t.cast(OrmModel, attr_field.annotation)  # noqa: N806
+                    kwargs['attributes'] = {
+                        key: kwargs.pop(key) for key in AttributesModel.model_fields.keys() if key in kwargs
+                    }
+                cls.CreateModel(**kwargs)
             except ValidationError as exception:
                 param_hint = [
                     f'--{loc.replace("_", "-")}'  # type: ignore[union-attr]
@@ -154,7 +161,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         """
         from pydantic_core import PydanticUndefined
 
-        cls = self.factory(entry_point)
+        cls: orm.Code = self.factory(entry_point)
 
         if not hasattr(cls, 'Model'):
             from aiida.common.warnings import warn_deprecation
@@ -167,13 +174,16 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             options_spec = self.factory(entry_point).get_cli_options()  # type: ignore[union-attr]
             return [self.create_option(*item) for item in options_spec]
 
-        Model = getattr(cls, 'CreateModel', cls.Model)  # noqa: N806
-
         options_spec = {}
 
-        for key, field_info in Model.model_fields.items():
-            # We do not prompt for extras
-            if key == 'extras':
+        fields = dict(cls.CreateModel.model_fields)
+        attr_field = fields.get('attributes')
+        if attr_field is not None:
+            AttributesModel = t.cast(OrmModel, attr_field.annotation)  # noqa: N806
+            fields |= AttributesModel.model_fields
+
+        for key, field_info in fields.items():
+            if key in ('extras', 'attributes'):
                 continue
 
             default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default

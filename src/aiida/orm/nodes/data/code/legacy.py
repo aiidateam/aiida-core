@@ -61,7 +61,14 @@ class Code(AbstractCode):
             description='Whether the code is local or remote',
         )
 
-    def __init__(self, remote_computer_exec=None, local_executable=None, input_plugin_name=None, files=None, **kwargs):
+    def __init__(
+        self,
+        remote_computer_exec: t.Optional[str] = None,
+        local_executable: t.Optional[str] = None,
+        input_plugin_name: t.Optional[str] = None,
+        files: t.Optional[t.List[str]] = None,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
 
         # The ``_EMIT_CODE_DEPRECATION_WARNING`` attribute is set in subclasses to avoid the deprecation message below

@@ -22,6 +22,7 @@ from plumpy.loaders import get_object_loader
 
 from aiida.common.lang import type_check
 from aiida.common.pydantic import MetadataField
+from pydantic import computed_field
 
 from .base import to_aiida_type
 from .data import Data
@@ -51,14 +52,41 @@ class EnumData(Data):
     KEY_IDENTIFIER = 'identifier'
 
     class AttributesModel(Data.AttributesModel):
-        member: Enum = MetadataField(
+        member: t.Optional[Enum] = MetadataField(
+            None,
             description='The member name',
             orm_to_model=lambda node, _: t.cast(EnumData, node).get_member(),
+            write_only=True,
         )
 
-    def __init__(self, member: Enum, *args, **kwargs):
+        @computed_field
+        @property
+        def name(self) -> str:
+            """Return the member name."""
+            return self.member.name
+
+        @computed_field
+        @property
+        def value(self) -> t.Any:
+            """Return the member value."""
+            return self.member.value
+
+        @computed_field
+        @property
+        def identifier(self) -> str:
+            """Return the member identifier."""
+            return get_object_loader().identify_object(self.member.__class__)
+
+    def __init__(self, member: Enum | None = None, *args, **kwargs):
         """Construct the node for the to enum member that is to be wrapped."""
+
+        attributes = kwargs.get('attributes', {})
+        member = member or attributes.pop('member', None)
+        attributes.pop(self.KEY_NAME, None)
+        attributes.pop(self.KEY_VALUE, None)
+
         type_check(member, Enum)
+
         super().__init__(*args, **kwargs)
 
         data = {

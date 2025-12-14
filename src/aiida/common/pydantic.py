@@ -58,6 +58,10 @@ class OrmModel(BaseModel, defer_build=True):
         )
         CreateModel.__qualname__ = new_name
         CreateModel.model_config['extra'] = 'ignore'
+        CreateModel.model_config['json_schema_extra'] = {
+            **CreateModel.model_config.get('json_schema_extra', {}),
+            'additionalProperties': False,
+        }
 
         readonly_fields: t.List[str] = []
         for key, field in CreateModel.model_fields.items():

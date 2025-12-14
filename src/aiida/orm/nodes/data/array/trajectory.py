@@ -31,41 +31,13 @@ class TrajectoryData(ArrayData):
     """
 
     class AttributesModel(ArrayData.AttributesModel):
-        units_positions: Optional[str] = MetadataField(
-            None,
-            serialization_alias='units|positions',
-            description='Unit of positions',
-        )
-        units_times: Optional[str] = MetadataField(
-            None,
-            serialization_alias='units|times',
-            description='Unit of time',
-        )
         symbols: List[str] = MetadataField(description='List of symbols')
 
-    def __init__(
-        self,
-        structurelist: list[orm.StructureData] | None = None,
-        units_positions: str | None = None,
-        units_times: str | None = None,
-        symbols: list[str] | None = None,
-        arrays: np.ndarray | dict[str, np.ndarray] | None = None,
-        **kwargs,
-    ):
+    def __init__(self, structurelist=None, **kwargs):
         super().__init__(**kwargs)
-        self.unit_positions = units_positions
-        self.unit_times = units_times
+
         if structurelist is not None:
             self.set_structurelist(structurelist)
-        elif arrays is not None:
-            self.set_trajectory(
-                symbols=symbols,
-                positions=arrays['positions'],
-                stepids=arrays.get('steps'),
-                cells=arrays.get('cells'),
-                times=arrays.get('times'),
-                velocities=arrays.get('velocities'),
-            )
 
     def _internal_validate(self, stepids, cells, symbols, positions, times, velocities):
         """Internal function to validate the type and shape of the arrays. See
@@ -289,26 +261,6 @@ class TrajectoryData(ArrayData):
             return self.get_array('cells')
         except (AttributeError, KeyError):
             return None
-
-    @property
-    def units_positions(self) -> str | None:
-        """Units for the positions array."""
-        return self.base.attributes.get('units|positions', None)
-
-    @units_positions.setter
-    def units_positions(self, units: str) -> None:
-        """Set units for the positions array."""
-        self.base.attributes.set('units|positions', units)
-
-    @property
-    def units_times(self) -> str | None:
-        """Units for the times array."""
-        return self.base.attributes.get('units|times', None)
-
-    @units_times.setter
-    def units_times(self, units: str) -> None:
-        """Set units for the times array."""
-        self.base.attributes.set('units|times', units)
 
     @property
     def symbols(self) -> List[str]:

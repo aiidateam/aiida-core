@@ -4,7 +4,7 @@ import importlib
 import json
 import typing
 
-from pydantic import ConfigDict, WithJsonSchema
+from pydantic import ConfigDict, WithJsonSchema, computed_field
 
 from aiida.common.pydantic import MetadataField
 
@@ -51,7 +51,13 @@ class JsonableData(Data):
     """
 
     class AttributesModel(Data.AttributesModel):
-        model_config = ConfigDict(arbitrary_types_allowed=True)
+        model_config = ConfigDict(
+            arbitrary_types_allowed=True,
+            json_schema_extra={
+                'additionalProperties': True,
+            },
+        )
+
         obj: typing.Annotated[
             JsonSerializableProtocol,
             WithJsonSchema(
@@ -61,11 +67,35 @@ class JsonableData(Data):
                     'description': 'The JSON-serializable object',
                 }
             ),
-            MetadataField(description='The JSON-serializable object'),
+            MetadataField(
+                description='The JSON-serializable object',
+                orm_to_model=lambda node, _: typing.cast(JsonableData, node).obj,
+                write_only=True,
+            ),
         ]
 
-    def __init__(self, obj: JsonSerializableProtocol, *args, **kwargs):
+        @computed_field(
+            title='Class name',
+            alias='@class',
+            description='The class name of the wrapped object',
+        )
+        @property
+        def the_class(self) -> str:
+            return self.obj.__class__.__name__
+
+        @computed_field(
+            title='Module name',
+            alias='@module',
+            description='The module name of the wrapped object',
+        )
+        @property
+        def the_module(self) -> str:
+            return self.obj.__class__.__module__
+
+    def __init__(self, obj: JsonSerializableProtocol | None = None, *args, **kwargs):
         """Construct the node for the to be wrapped object."""
+        obj = obj or kwargs.get('attributes', {}).pop('obj', None)
+
         if obj is None:
             raise TypeError('the `obj` argument cannot be `None`.')
 

@@ -95,6 +95,16 @@ class KpointsData(ArrayData):
         offset: list[float] | None = None,
         **kwargs,
     ):
+        attributes = kwargs.get('attributes', {})
+        labels = labels or attributes.pop('labels', None)
+        label_numbers = label_numbers or attributes.pop('label_numbers', None)
+        cell = cell or attributes.pop('cell', None)
+        pbc1 = pbc1 if pbc1 is not None else attributes.pop('pbc1', None)
+        pbc2 = pbc2 if pbc2 is not None else attributes.pop('pbc2', None)
+        pbc3 = pbc3 if pbc3 is not None else attributes.pop('pbc3', None)
+        mesh = mesh or attributes.pop('mesh', None)
+        offset = offset or attributes.pop('offset', None)
+
         arrays = kwargs.pop('arrays', None)
 
         super().__init__(**kwargs)

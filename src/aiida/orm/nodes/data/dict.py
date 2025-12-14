@@ -50,11 +50,17 @@ class Dict(Data):
     Finally, all dictionary mutations will be forbidden once the node is stored.
     """
 
-    class Model(Data.Model):
+    class AttributesModel(Data.AttributesModel):
+        model_config = {
+            'arbitrary_types_allowed': True,
+            'json_schema_extra': {
+                'additionalProperties': True,
+            },
+        }
+
         value: t.Dict[str, t.Any] = MetadataField(
             description='The dictionary content',
             write_only=True,
-            exclude=True,
         )
 
     def __init__(self, value=None, **kwargs):
@@ -67,8 +73,10 @@ class Dict(Data):
 
         :param value: dictionary to initialise the ``Dict`` node from
         """
-        dictionary = value or kwargs.pop('dict', None)
+        dictionary = value or kwargs.pop('dict', None) or kwargs.get('attributes', {}).pop('value', None)
+
         super().__init__(**kwargs)
+
         if dictionary:
             self.set_dict(dictionary)
 

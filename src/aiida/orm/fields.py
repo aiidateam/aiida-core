@@ -445,6 +445,9 @@ class EntityFieldMeta(ABCMeta):
 
             Model: OrmModel = cls.AttributesModel
             for key, field in Model.model_fields.items():
+                if get_metadata(field, 'write_only', False):
+                    continue
+
                 typed_field = add_field(
                     key,
                     alias=field.alias,
@@ -452,6 +455,7 @@ class EntityFieldMeta(ABCMeta):
                     doc=field.description,
                     is_attribute=True,
                 )
+
                 container_field._typed_children[key] = typed_field  # type: ignore[attr-defined]
                 fields[key] = typed_field  # BACKWARDS COMPATIBILITY
 
@@ -526,8 +530,6 @@ def add_field(
     }
     if not isidentifier(key):
         raise ValueError(f'{key} is not a valid python identifier')
-    if not is_attribute and alias:
-        raise ValueError('only attribute fields may be aliased')
     if key == 'attributes':
         return QbAttributesField(**kwargs)
     root_type = extract_root_type(dtype) if dtype else None

@@ -256,6 +256,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             description='Virtual hierarchy of the file repository',
             orm_to_model=lambda node, _: cast(Node, node).base.repository.metadata,
             read_only=True,
+            may_be_large=True,
         )
         ctime: datetime.datetime = MetadataField(
             description='The creation time of the node',
@@ -277,11 +278,13 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             default_factory=lambda: Node.AttributesModel(),
             description='The node attributes',
             orm_to_model=lambda node, _: cast(Node, node).base.attributes.all,
+            may_be_large=True,
         )
         extras: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='The node extras',
             orm_to_model=lambda node, _: cast(Node, node).base.extras.all,
+            may_be_large=True,
         )
         computer: Optional[str] = MetadataField(
             None,

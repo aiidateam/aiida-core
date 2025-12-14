@@ -100,7 +100,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         metadata: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='Metadata of the computer',
-            exclude=True,
+            may_be_large=True,
         )
 
     def __init__(

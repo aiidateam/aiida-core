@@ -251,7 +251,12 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         return _model_to_orm_field_values(valid_model)
 
-    def orm_to_model_field_values(self, *, repository_path: Optional[pathlib.Path] = None) -> dict[str, Any]:
+    def orm_to_model_field_values(
+        self,
+        *,
+        repository_path: Optional[pathlib.Path] = None,
+        minimal: bool = False,
+    ) -> dict[str, Any]:
         """Collect values for the ``Model``'s fields from this entity.
 
         Centralizes mapping of ORM -> Model values, including handling of ``orm_to_model``
@@ -259,6 +264,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         The process is recursive, applying metadata field rules to nested models as well.
 
         :param repository_path: Optional path to use for repository-based fields.
+        :param minimal: Whether to exclude potentially large value fields.
         :return: Mapping of ORM field name to value.
         """
 
@@ -271,6 +277,9 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             fields: dict[str, Any] = {}
 
             for key, field in model.model_fields.items():
+                if get_metadata(field, 'may_be_large') and minimal:
+                    continue
+
                 annotation = field.annotation
                 if isinstance(annotation, type) and issubclass(annotation, OrmModel):
                     fields[key] = _orm_to_model_field_values(annotation)
@@ -286,15 +295,16 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         return _orm_to_model_field_values(self.Model)
 
-    def to_model(self, *, repository_path: Optional[pathlib.Path] = None) -> Model:
+    def to_model(self, *, repository_path: Optional[pathlib.Path] = None, minimal: bool = False) -> Model:
         """Return the entity instance as an instance of its model.
 
         :param repository_path: If the orm node has files in the repository, this path is used to read the repository
             files from. If no path is specified a temporary path is created using the entities pk.
             This field can be very large, so it is excluded by default.
+        :param minimal: Whether to exclude potentially large value fields.
         :return: An instance of the entity's model class.
         """
-        fields = self.orm_to_model_field_values(repository_path=repository_path)
+        fields = self.orm_to_model_field_values(repository_path=repository_path, minimal=minimal)
         Model = self.Model if self.is_stored else self.CreateModel  # noqa: N806
         return Model(**fields)
 
@@ -312,12 +322,14 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         self,
         *,
         repository_path: Optional[pathlib.Path] = None,
+        minimal: bool = False,
         mode: Literal['json', 'python'] = 'json',
     ) -> dict[str, Any]:
         """Serialize the entity instance to JSON.
 
         :param repository_path: If the orm node has files in the repository, this path is used to dump the repository
             files to. If no path is specified a temporary path is created using the entities pk.
+        :param minimal: Whether to exclude potentially large value fields.
         :param mode: The serialization mode, either 'json' or 'python'. The 'json' mode is the most strict and ensures
             that the output is JSON serializable, whereas the 'python' mode allows for more complex Python types, such
             as `datetime` objects.
@@ -338,7 +350,13 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             if not repository_path.is_dir():
                 raise ValueError(f'The repository_path `{repository_path}` is not a directory.')
 
-        return self.to_model(repository_path=repository_path).model_dump(mode=mode)
+        return self.to_model(
+            repository_path=repository_path,
+            minimal=minimal,
+        ).model_dump(
+            mode=mode,
+            exclude_unset=minimal,
+        )
 
     @classmethod
     def from_serialized(cls, serialized: dict[str, Any]) -> Self:

@@ -8,7 +8,7 @@
 ###########################################################################
 """Data plugin that models a stashed folder on a remote computer."""
 
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
@@ -37,10 +37,10 @@ class RemoteStashCompressedData(RemoteStashData):
 
     def __init__(
         self,
-        stash_mode: StashMode,
-        target_basepath: str,
-        source_list: List,
-        dereference: bool,
+        stash_mode: Optional[StashMode] = None,
+        target_basepath: Optional[str] = None,
+        source_list: Optional[List] = None,
+        dereference: Optional[bool] = None,
         **kwargs,
     ):
         """Construct a new instance
@@ -48,8 +48,21 @@ class RemoteStashCompressedData(RemoteStashData):
         :param stash_mode: the stashing mode with which the data was stashed on the remote.
         :param target_basepath: absolute path to place the compressed file (path+filename).
         :param source_list: the list of source files.
+        :param dereference: whether to dereference symlinks when compressing.
         """
+
+        attributes = kwargs.get('attributes', {})
+        stash_mode = stash_mode or attributes.pop('stash_mode', None)
+        target_basepath = target_basepath or attributes.pop('target_basepath', None)
+        source_list = source_list or attributes.pop('source_list', None)
+        dereference = dereference or attributes.pop('dereference', None)
+
+        for param in (stash_mode, target_basepath, source_list, dereference):
+            if param is None:
+                raise ValueError(f'the `{param}` parameter must be specified.')
+
         super().__init__(stash_mode, **kwargs)
+
         self.target_basepath = target_basepath
         self.source_list = source_list
         self.dereference = dereference

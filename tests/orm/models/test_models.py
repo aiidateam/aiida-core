@@ -110,19 +110,19 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
     if request.param is User:
         return User, {'email': 'test@localhost'}
     if request.param is ArrayData:
-        return ArrayData, {'arrays': np.array([1, 0, 0])}
+        return ArrayData, {'attributes': {'arrays': np.array([1, 0, 0])}}
     if request.param is Bool:
-        return Bool, {'value': True}
+        return Bool, {'attributes': {'value': True}}
     if request.param is CifData:
         return CifData, {'content': io.BytesIO(b'some-content')}
     if request.param is Data:
-        return Data, {'source': {'uri': 'http://127.0.0.1'}}
+        return Data, {'attributes': {'source': {'uri': 'http://127.0.0.1'}}}
     if request.param is Dict:
         return Dict, {'value': {'a': 1}}
     if request.param is EnumData:
-        return EnumData, {'member': DummyEnum.OPTION_A}
+        return EnumData, {'attributes': {'member': DummyEnum.OPTION_A}}
     if request.param is Float:
-        return Float, {'value': 1.0}
+        return Float, {'attributes': {'value': 1.0}}
     if request.param is FolderData:
         dirpath = tmp_path / 'folder_data'
         dirpath.mkdir()
@@ -130,36 +130,39 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
         (dirpath / 'text_file').write_text('text content')
         return FolderData, {'tree': dirpath}
     if request.param is Int:
-        return Int, {'value': 1}
+        return Int, {'attributes': {'value': 1}}
     if request.param is JsonableData:
-        return JsonableData, {'obj': JsonableClass({'a': 1})}
+        return JsonableData, {'attributes': {'obj': JsonableClass({'a': 1})}}
     if request.param is List:
-        return List, {'value': [1.0]}
+        return List, {'attributes': {'value': [1.0]}}
     if request.param is SinglefileData:
-        return SinglefileData, {'content': io.BytesIO(b'some-content')}
+        return SinglefileData, {'attributes': {'content': io.BytesIO(b'some-content')}}
     if request.param is Str:
-        return Str, {'value': 'string'}
+        return Str, {'attributes': {'value': 'string'}}
     if request.param is StructureData:
         return StructureData, {
-            'cell': [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
-            'pbc1': True,
-            'pbc2': True,
-            'pbc3': True,
-            'sites': [{'kind_name': 'H', 'position': (0.0, 0.0, 0.0)}],
-            'kinds': [{'name': 'H', 'mass': 1.0, 'symbols': ('H',), 'weights': (1.0,)}],
+            'attributes': {
+                'cell': [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+                'pbc1': True,
+                'pbc2': True,
+                'pbc3': True,
+                'sites': [{'kind_name': 'H', 'position': (0.0, 0.0, 0.0)}],
+                'kinds': [{'name': 'H', 'mass': 1.0, 'symbols': ('H',), 'weights': (1.0,)}],
+            }
         }
     if request.param is RemoteData:
-        return RemoteData, {'remote_path': '/some/path'}
+        return RemoteData, {'attributes': {'remote_path': '/some/path'}}
     if request.param is RemoteStashData:
-        return RemoteStashData, {'stash_mode': StashMode.COMPRESS_TAR}
+        return RemoteStashData, {'attributes': {'stash_mode': StashMode.COMPRESS_TAR}}
     if request.param is RemoteStashCompressedData:
         return RemoteStashCompressedData, {
-            'stash_mode': StashMode.COMPRESS_TAR,
-            'target_basepath': '/some/path',
-            'source_list': ['/some/file'],
-            'dereference': True,
+            'attributes': {
+                'stash_mode': StashMode.COMPRESS_TAR,
+                'target_basepath': '/some/path',
+                'source_list': ['/some/file'],
+                'dereference': True,
+            }
         }
-
     raise NotImplementedError()
 
 

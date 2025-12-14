@@ -126,7 +126,21 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             form a single string. This is required to enable support for Docker with the ``ContainerizedCode``.
         :param is_hidden: Whether the code is hidden.
         """
+
+        attributes = kwargs.get('attributes', {})
+        default_calc_job_plugin = default_calc_job_plugin or attributes.get(
+            self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, None
+        )
+        append_text = append_text or attributes.pop(self._KEY_ATTRIBUTE_APPEND_TEXT, '')
+        prepend_text = prepend_text or attributes.pop(self._KEY_ATTRIBUTE_PREPEND_TEXT, '')
+        use_double_quotes = use_double_quotes or attributes.pop(self._KEY_ATTRIBUTE_USE_DOUBLE_QUOTES, False)
+        with_mpi = with_mpi if with_mpi is not None else attributes.pop(self._KEY_ATTRIBUTE_WITH_MPI, None)
+        wrap_cmdline_params = wrap_cmdline_params or attributes.pop(self._KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS, False)
+        is_hidden = is_hidden or kwargs.get('extras', {}).pop(self._KEY_EXTRA_IS_HIDDEN, False)
+        wrap_cmdline_params = wrap_cmdline_params or attributes.pop(self._KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS, False)
+
         super().__init__(**kwargs)
+
         self.default_calc_job_plugin = default_calc_job_plugin
         self.append_text = append_text
         self.prepend_text = prepend_text

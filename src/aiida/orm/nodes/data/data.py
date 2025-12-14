@@ -58,6 +58,8 @@ class Data(Node):
     def __init__(self, *args, source=None, **kwargs):
         """Construct a new instance, setting the ``source`` attribute if provided as a keyword argument."""
 
+        source = kwargs.get('attributes', {}).pop('source', source)
+
         super().__init__(*args, **kwargs)
 
         if source is not None:

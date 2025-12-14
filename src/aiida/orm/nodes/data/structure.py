@@ -710,12 +710,12 @@ class StructureData(Data):
 
         @field_validator('kinds', mode='before')
         @classmethod
-        def _validate_kinds(cls, value: t.List[Kind | dict[str, t.Any]]) -> t.List[t.Dict]:
+        def _validate_kinds(cls, value: list[Kind | dict[str, t.Any]]) -> list[t.Dict]:
             return [kind.get_raw() if isinstance(kind, Kind) else kind for kind in value]
 
         @field_validator('sites', mode='before')
         @classmethod
-        def _validate_sites(cls, value: t.List[Site | dict[str, t.Any]]) -> t.List[t.Dict]:
+        def _validate_sites(cls, value: list[Site | dict[str, t.Any]]) -> list[t.Dict]:
             return [site.get_raw() if isinstance(site, Site) else site for site in value]
 
     def __init__(
@@ -726,15 +726,23 @@ class StructureData(Data):
         pymatgen=None,
         pymatgen_structure=None,
         pymatgen_molecule=None,
-        pbc1=None,
-        pbc2=None,
-        pbc3=None,
-        kinds=None,
-        sites=None,
+        pbc1: bool | None = None,
+        pbc2: bool | None = None,
+        pbc3: bool | None = None,
+        kinds: list[Kind | dict[str, t.Any]] | None = None,
+        sites: list[Site | dict[str, t.Any]] | None = None,
         **kwargs,
     ):
-        if pbc1 is not None and pbc2 is not None and pbc3 is not None:
-            pbc = [pbc1, pbc2, pbc3]
+        attributes = kwargs.get('attributes', {})
+        pbc1 = pbc1 or attributes.pop('pbc1', None)
+        pbc2 = pbc2 or attributes.pop('pbc2', None)
+        pbc3 = pbc3 or attributes.pop('pbc3', None)
+        cell = cell or attributes.pop('cell', None)
+        kinds = kinds or attributes.pop('kinds', None)
+        sites = sites or attributes.pop('sites', None)
+
+        if pbc1 is not None or pbc2 is not None or pbc3 is not None:
+            pbc = [pbc1 or False, pbc2 or False, pbc3 or False]
 
         args = {
             'cell': cell,

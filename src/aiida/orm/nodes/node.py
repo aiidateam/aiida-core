@@ -45,6 +45,7 @@ from aiida.orm.utils.node import (
     get_query_type_from_type_string,
     get_type_string_from_class,
 )
+from pydantic import ConfigDict
 
 from ..computers import Computer
 from ..entities import Collection as EntityCollection
@@ -226,7 +227,17 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     class AttributesModel(OrmModel):
         """The node attributes."""
 
+        model_config = ConfigDict(
+            ser_json_bytes='base64',
+            val_json_bytes='base64',
+        )
+
     class Model(Entity.Model):
+        model_config = ConfigDict(
+            ser_json_bytes='base64',
+            val_json_bytes='base64',
+        )
+
         uuid: UUID = MetadataField(
             description='The UUID of the node',
             read_only=True,
@@ -245,7 +256,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             description='Virtual hierarchy of the file repository',
             orm_to_model=lambda node, _: cast(Node, node).base.repository.metadata,
             read_only=True,
-            exclude=True,
         )
         ctime: datetime.datetime = MetadataField(
             description='The creation time of the node',
@@ -267,18 +277,16 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             default_factory=lambda: Node.AttributesModel(),
             description='The node attributes',
             orm_to_model=lambda node, _: cast(Node, node).base.attributes.all,
-            exclude=True,
         )
         extras: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='The node extras',
             orm_to_model=lambda node, _: cast(Node, node).base.extras.all,
-            exclude=True,
         )
         computer: Optional[str] = MetadataField(
             None,
             description='The label of the computer',
-            orm_to_model=lambda node, _: cast(Node, node).get_computer_label(),
+            orm_to_model=lambda node, _: cast(Node, node).get_computer_label_if_exists(),
             model_to_orm=lambda model: cast(Node.Model, model).load_computer(),
             read_only=True,
         )
@@ -705,7 +713,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
         return ''
 
-    def get_computer_label(self) -> Optional[str]:
+    def get_computer_label_if_exists(self) -> Optional[str]:
         """Get the label of the computer of this node.
 
         :return: The computer label or None if no computer is set.

@@ -43,6 +43,7 @@ class RemoteData(Data):
         )
 
     def __init__(self, remote_path: Optional[str] = None, **kwargs):
+        remote_path = remote_path or kwargs.get('attributes', {}).pop('remote_path', None)
         super().__init__(**kwargs)
         if remote_path is not None:
             self.set_remote_path(remote_path)

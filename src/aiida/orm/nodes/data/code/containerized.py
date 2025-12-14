@@ -56,8 +56,21 @@ class ContainerizedCode(InstalledCode):
             priority=1,
         )
 
-    def __init__(self, engine_command: str, image_name: str, **kwargs):
+    def __init__(
+        self,
+        engine_command: str | None = None,
+        image_name: str | None = None,
+        **kwargs,
+    ):
+        attributes = kwargs.get('attributes', {})
+        engine_command = engine_command or attributes.pop(self._KEY_ATTRIBUTE_ENGINE_COMMAND, None)
+        image_name = image_name or attributes.pop(self._KEY_ATTRIBUTE_IMAGE_NAME, None)
+
+        if engine_command is None or image_name is None:
+            raise ValueError('Both `engine_command` and `image_name` must be provided.')
+
         super().__init__(**kwargs)
+
         self.engine_command = engine_command
         self.image_name = image_name
 

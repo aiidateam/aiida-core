@@ -67,22 +67,17 @@ class PortableCode(Code):
             orm_to_model=lambda node, _: str(cast(PortableCode, node).filepath_executable),
         )
         filepath_files: str = MetadataField(
-            ...,
             title='Code directory',
             description='Filepath to directory containing code files',
             short_name='-F',
             priority=2,
             write_only=True,
-            orm_to_model=lambda node, kwargs: _export_filepath_files_from_repo(
-                cast(PortableCode, node),
-                kwargs.get('repository_path') or pathlib.Path.cwd() / f'{cast(PortableCode, node).label}',
-            ),
         )
 
     def __init__(
         self,
-        filepath_executable: FilePath,
-        filepath_files: FilePath,
+        filepath_executable: FilePath | None = None,
+        filepath_files: FilePath | None = None,
         **kwargs,
     ):
         """Construct a new instance.
@@ -100,11 +95,21 @@ class PortableCode(Code):
         :param filepath_executable: The relative filepath of the executable within the directory of uploaded files.
         :param filepath_files: The filepath to the directory containing all the files of the code.
         """
+        attributes = kwargs.get('attributes', {})
+        filepath_executable = filepath_executable or attributes.pop(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, None)
+        filepath_files = filepath_files or attributes.pop(self._KEY_ATTRIBUTE_FILEPATH_FILES, None)
+
+        if filepath_files is None or filepath_executable is None:
+            raise ValueError('Both `filepath_files` and `filepath_executable` must be provided.')
+
         super().__init__(**kwargs)
+
         type_check(filepath_files, (pathlib.PurePath, str))
+
         filepath_files_path = pathlib.Path(filepath_files)
         if not filepath_files_path.exists():
             raise ValueError(f'The filepath `{filepath_files}` does not exist.')
+
         if not filepath_files_path.is_dir():
             raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
 

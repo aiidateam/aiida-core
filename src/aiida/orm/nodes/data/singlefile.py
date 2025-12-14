@@ -35,6 +35,11 @@ class SinglefileData(Data):
             'file.txt',
             description='The name of the stored file',
         )
+        content: bytes = MetadataField(
+            description='The file content.',
+            model_to_orm=lambda model: io.BytesIO(t.cast(SinglefileData.AttributesModel, model).content),
+            write_only=True,
+        )
 
     @classmethod
     def from_string(cls, content: str, filename: str | pathlib.Path | None = None, **kwargs: t.Any) -> SinglefileData:
@@ -67,7 +72,14 @@ class SinglefileData(Data):
             Hint: Pass io.BytesIO(b"my string") to construct the SinglefileData directly from a string.
         :param filename: specify filename to use (defaults to name of provided file).
         """
+
+        filename = filename or kwargs.get('attributes', {}).pop('filename', None)
+        content = content or kwargs.pop('content', None)
+
         super().__init__(**kwargs)
+
+        if file is None and content is None:
+            raise ValueError('must specify either `file` or `content`.')
 
         if file is not None and content is not None:
             raise ValueError('cannot specify both `file` and `content`.')

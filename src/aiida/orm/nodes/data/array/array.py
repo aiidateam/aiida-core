@@ -11,7 +11,8 @@
 from __future__ import annotations
 
 import io
-from typing import Any, Iterator, Optional, Union, cast
+from collections.abc import Iterable, Iterator, Sequence
+from typing import Any, Union, cast
 
 import numpy as np
 from pydantic import ConfigDict, field_validator
@@ -47,29 +48,43 @@ class ArrayData(Data):
     """
 
     class AttributesModel(Data.AttributesModel):
-        model_config = ConfigDict(arbitrary_types_allowed=True)
+        model_config = ConfigDict(
+            arbitrary_types_allowed=True,
+            json_schema_extra={
+                'patternProperties': {
+                    r'^array\|[A-Za-z0-9_]+$': {
+                        'type': 'array',
+                        'items': {'type': 'integer'},
+                        'minItems': 1,
+                        'description': 'Shape of an array stored in the repository',
+                        'readOnly': True,
+                    }
+                }
+            },
+        )
 
-        arrays: Optional[Union[np.ndarray, dict[str, np.ndarray]]] = MetadataField(
-            None,
-            description='An optional single numpy array, or dictionary of numpy arrays to store.',
+        arrays: Union[Sequence, dict[str, Sequence]] = MetadataField(
+            description='A single (or dictionary of) numpy array(s) to store',
             orm_to_model=lambda node, _: cast(ArrayData, node).arrays,
-            model_to_orm=lambda model: ArrayData.load_arrays(cast(ArrayData.AttributesModel, model).arrays),
             write_only=True,
-            exclude=True,
         )
 
         @field_validator('arrays', mode='before')
         @classmethod
-        def validate_arrays(cls, value: list | np.ndarray | dict[str, list | np.ndarray] | None) -> Any:
+        def normalize_arrays(cls, value: Sequence | np.ndarray | dict[str, Sequence | np.ndarray] | None) -> Any:
             if value is None:
                 return value
-            if isinstance(value, (list, np.ndarray)):
-                return np.array(value)
+            if isinstance(value, Sequence):
+                return value
+            if isinstance(value, np.ndarray):
+                return value.tolist()
             elif isinstance(value, dict):
                 arrays: dict[str, np.ndarray] = {}
                 for key, array in value.items():
-                    if isinstance(array, (list, np.ndarray)):
-                        arrays[key] = np.array(array)
+                    if isinstance(array, Sequence):
+                        arrays[key] = array
+                    elif isinstance(array, np.ndarray):
+                        arrays[key] = array.tolist()
                     else:
                         raise TypeError(f'`arrays` should be an iterable or dictionary of iterables but got: {value}')
                 return arrays
@@ -79,39 +94,24 @@ class ArrayData(Data):
     array_prefix = 'array|'
     default_array_name = 'default'
 
-    def __init__(self, arrays: np.ndarray | dict[str, np.ndarray] | None = None, **kwargs):
+    def __init__(self, arrays: Iterable | dict[str, Iterable] | None = None, **kwargs):
         """Construct a new instance and set one or multiple numpy arrays.
 
         :param arrays: An optional single numpy array, or dictionary of numpy arrays to store.
         """
+        arrays = arrays if arrays is not None else kwargs.get('attributes', {}).pop('arrays', {})
+
         super().__init__(**kwargs)
         self._cached_arrays: dict[str, np.ndarray] = {}
 
-        arrays = arrays if arrays is not None else {}
-
-        if isinstance(arrays, np.ndarray):
+        if isinstance(arrays, (Sequence, np.ndarray)):
             arrays = {self.default_array_name: arrays}
 
-        if (
-            not isinstance(arrays, dict)  # type: ignore[redundant-expr]
-            or any(not isinstance(a, np.ndarray) for a in arrays.values())
-        ):
-            raise TypeError(f'`arrays` should be a single numpy array or dictionary of numpy arrays but got: {arrays}')
+        if not isinstance(arrays, dict) or any(not isinstance(a, (Sequence, np.ndarray)) for a in arrays.values()):
+            raise TypeError(f'`arrays` should be a single sequence or dictionary of sequences but got: {arrays}')
 
         for key, value in arrays.items():
-            self.set_array(key, value)
-
-    @staticmethod
-    def save_arrays(arrays: dict[str, np.ndarray]) -> dict[str, bytes]:
-        results: dict[str, bytes] = {}
-
-        for key, array in arrays.items():
-            stream = io.BytesIO()
-            np.save(stream, array)
-            stream.seek(0)
-            results[key] = stream.read()
-
-        return results
+            self.set_array(key, np.array(value))
 
     @staticmethod
     def load_arrays(arrays: dict[str, bytes] | None) -> dict[str, np.ndarray]:

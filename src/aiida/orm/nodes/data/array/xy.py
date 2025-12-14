@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, Sequence
 import numpy as np
 
 from aiida.common.exceptions import NotExistent
+from aiida.common.pydantic import MetadataField
 
 from .array import ArrayData
 
@@ -47,6 +48,20 @@ class XyData(ArrayData):
     Y arrays, which can be considered functions of X.
     """
 
+    class AttributesModel(ArrayData.AttributesModel):
+        x_name: str = MetadataField(
+            description='The name of the x array',
+        )
+        x_units: str = MetadataField(
+            description='The units of the x array',
+        )
+        y_names: Sequence[str] = MetadataField(
+            description='The names of the y arrays',
+        )
+        y_units: Sequence[str] = MetadataField(
+            description='The units of the y arrays',
+        )
+
     def __init__(
         self,
         x_array: 'ndarray' | None = None,
@@ -69,6 +84,12 @@ class XyData(ArrayData):
         :param y_names: The names of the y arrays.
         :param y_units: The units of the y arrays.
         """
+        attributes = kwargs.get('attributes', {})
+        x_name = x_name or attributes.pop('x_name')
+        x_units = x_units or attributes.pop('x_units')
+        y_names = y_names or attributes.pop('y_names')
+        y_units = y_units or attributes.pop('y_units')
+
         super().__init__(**kwargs)
 
         if x_array is not None:

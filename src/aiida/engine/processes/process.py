@@ -459,6 +459,11 @@ class Process(PlumpyProcess):
         self._pid = self._create_and_setup_db_record()
 
     @override
+    def on_entering(self, to_state: plumpy.process_states.State) -> None:
+        """Before entering a new state, save a checkpoint."""
+        super().on_entering(to_state)
+
+    @override
     def on_entered(self, from_state: Optional[plumpy.process_states.State]) -> None:
         """After entering a new state, save a checkpoint and update the latest process state change timestamp."""
         from plumpy import ProcessState
@@ -470,6 +475,7 @@ class Process(PlumpyProcess):
             # complete the state transition to the terminal state. If another exception is raised during this exception
             # handling, the process transitioning is cut short and never makes it to the terminal state.
             self.node.set_process_state(self._state.LABEL)
+            super().on_entered(from_state)
             return
 
         # We need to guarantee that the process state gets updated even if the ``update_outputs`` call excepts, for

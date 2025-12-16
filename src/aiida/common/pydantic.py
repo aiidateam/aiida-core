@@ -80,15 +80,15 @@ class OrmModel(BaseModel, defer_build=True):
         # Prune field validators/serializers referring to read-only fields
         decorators = CreateModel.__pydantic_decorators__
 
-        def _prune_field_decorators(field_decorators: dict[str, t.Any]) -> dict[str, t.Any]:
+        def prune_field_decorators(field_decorators: dict[str, t.Any]) -> dict[str, t.Any]:
             return {
                 key: decorator
                 for key, decorator in field_decorators.items()
                 if all(field not in readonly_fields for field in decorator.info.fields)
             }
 
-        decorators.field_validators = _prune_field_decorators(decorators.field_validators)
-        decorators.field_serializers = _prune_field_decorators(decorators.field_serializers)
+        decorators.field_validators = prune_field_decorators(decorators.field_validators)
+        decorators.field_serializers = prune_field_decorators(decorators.field_serializers)
 
         CreateModel.model_rebuild(force=True)
         return CreateModel

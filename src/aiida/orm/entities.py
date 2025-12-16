@@ -212,7 +212,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         """
         from aiida.plugins.factories import BaseFactory
 
-        def _model_to_orm_field_values(model: Entity.Model, schema: Entity.Model = cls.CreateModel) -> dict[str, Any]:
+        def get_orm_field_values(model: Entity.Model, schema: Entity.Model = cls.CreateModel) -> dict[str, Any]:
             """Recursive helper function to collect field values from a model instance.
 
             :param model: The model instance to extract field values from.
@@ -229,7 +229,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
                 annotation = field.annotation
                 if isinstance(annotation, type) and issubclass(annotation, OrmModel):
-                    fields[key] = _model_to_orm_field_values(field_value, annotation)
+                    fields[key] = get_orm_field_values(field_value, annotation)
                 elif orm_class := get_metadata(field, 'orm_class'):
                     if isinstance(orm_class, str):
                         try:
@@ -249,7 +249,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
             return fields
 
-        return _model_to_orm_field_values(valid_model)
+        return get_orm_field_values(valid_model)
 
     def orm_to_model_field_values(
         self,
@@ -268,7 +268,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         :return: Mapping of ORM field name to value.
         """
 
-        def _orm_to_model_field_values(model: Type[OrmModel]) -> dict[str, Any]:
+        def get_model_field_values(model: Type[OrmModel]) -> dict[str, Any]:
             """Recursive helper function to collect field values for a model class.
 
             :param model: The model class to extract field values for.
@@ -282,7 +282,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
                 annotation = field.annotation
                 if isinstance(annotation, type) and issubclass(annotation, OrmModel):
-                    fields[key] = _orm_to_model_field_values(annotation)
+                    fields[key] = get_model_field_values(annotation)
                     continue
 
                 if orm_to_model := get_metadata(field, 'orm_to_model'):
@@ -293,7 +293,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
             return fields
 
-        return _orm_to_model_field_values(self.Model)
+        return get_model_field_values(self.Model)
 
     def to_model(self, *, repository_path: Optional[pathlib.Path] = None, minimal: bool = False) -> Model:
         """Return the entity instance as an instance of its model.

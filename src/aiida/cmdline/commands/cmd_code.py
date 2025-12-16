@@ -248,7 +248,7 @@ def show(code):
 
         if key == 'attributes':
             for attr_key, attr_info in field.annotation.model_fields.items():
-                if get_metadata(attr_info, 'write_only', False):
+                if get_metadata(attr_info, 'write_only'):
                     continue
                 value = getattr(code, attr_key)
                 table.append([attr_info.title, value])

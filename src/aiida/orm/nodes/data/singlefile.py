@@ -73,8 +73,9 @@ class SinglefileData(Data):
         :param filename: specify filename to use (defaults to name of provided file).
         """
 
-        filename = filename or kwargs.get('attributes', {}).pop('filename', None)
-        content = content or kwargs.pop('content', None)
+        attributes = kwargs.get('attributes', {})
+        filename = filename or attributes.pop('filename', None)
+        content = content or attributes.pop('content', None)
 
         super().__init__(**kwargs)
 

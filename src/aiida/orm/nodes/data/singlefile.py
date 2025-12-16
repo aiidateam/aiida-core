@@ -35,8 +35,9 @@ class SinglefileData(Data):
             'file.txt',
             description='The name of the stored file',
         )
-        content: bytes = MetadataField(
-            description='The file content.',
+        content: t.Optional[bytes] = MetadataField(
+            None,
+            description='The file content',
             model_to_orm=lambda model: io.BytesIO(t.cast(SinglefileData.AttributesModel, model).content),
             write_only=True,
         )
@@ -78,9 +79,6 @@ class SinglefileData(Data):
         content = content or attributes.pop('content', None)
 
         super().__init__(**kwargs)
-
-        if file is None and content is None:
-            raise ValueError('must specify either `file` or `content`.')
 
         if file is not None and content is not None:
             raise ValueError('cannot specify both `file` and `content`.')

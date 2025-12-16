@@ -187,20 +187,20 @@ def test_roundtrip(required_arguments, tmp_path):
     assert isinstance(roundtrip, cls)
 
     # Get the model instance again from the reconstructed entity and check that the fields that would be passed to the
-    # ORM entity constructor are identical of the original model. The ``model_to_orm_field_values`` excludes values of
-    # fields that define ``read_only=True`` because these can change during roundtrips. This because these
-    # typically correspond to entity fields that have defaults set on the database level, e.g., UUIDs.
+    # ORM entity constructor are identical of the original model.
     roundtrip_model = roundtrip.to_model(repository_path=tmp_path)
     original_field_values = cls.model_to_orm_field_values(model)
 
-    for key, value in cls.model_to_orm_field_values(roundtrip_model).items():
+    def _validate_value(value):
+        if isinstance(value, dict):
+            return {k: _validate_value(v) for k, v in value.items()}
         if isinstance(value, io.BytesIO):
-            assert value.read() == original_field_values[key].read()
-        elif cls is ArrayData and key == 'arrays':
-            for array_name, array in value.items():
-                assert np.array_equal(array, original_field_values[key][array_name])
-        else:
-            assert value == original_field_values[key]
+            value.seek(0)
+            return value.read()
+        return value
+
+    for key, value in cls.model_to_orm_field_values(roundtrip_model).items():
+        assert _validate_value(value) == _validate_value(original_field_values[key])
 
 
 @pytest.mark.parametrize(

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import io
 from collections.abc import Iterable, Iterator, Sequence
-from typing import Any, Union, cast
+from typing import Any, Optional, Union, cast
 
 import numpy as np
 from pydantic import ConfigDict, field_validator
@@ -63,7 +63,8 @@ class ArrayData(Data):
             },
         )
 
-        arrays: Union[Sequence, dict[str, Sequence]] = MetadataField(
+        arrays: Optional[Union[Sequence, dict[str, Sequence]]] = MetadataField(
+            None,
             description='A single (or dictionary of) numpy array(s) to store',
             orm_to_model=lambda node, _: cast(ArrayData, node).arrays,
             write_only=True,

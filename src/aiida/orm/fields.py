@@ -445,7 +445,7 @@ class EntityFieldMeta(ABCMeta):
 
             Model: OrmModel = cls.AttributesModel
             for key, field in Model.model_fields.items():
-                if get_metadata(field, 'write_only', False):
+                if get_metadata(field, 'write_only'):
                     continue
 
                 typed_field = add_field(

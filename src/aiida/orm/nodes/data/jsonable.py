@@ -92,7 +92,7 @@ class JsonableData(Data):
         def the_module(self) -> str:
             return self.obj.__class__.__module__
 
-    def __init__(self, obj: JsonSerializableProtocol | None = None, *args, **kwargs):
+    def __init__(self, obj: typing.Optional[JsonSerializableProtocol] = None, *args, **kwargs):
         """Construct the node for the to be wrapped object."""
         obj = obj or kwargs.get('attributes', {}).pop('obj', None)
 

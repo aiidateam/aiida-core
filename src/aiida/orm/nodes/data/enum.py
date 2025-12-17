@@ -67,7 +67,7 @@ class EnumData(Data):
 
         @computed_field  # type: ignore[prop-decorator]
         @property
-        def value(self) -> t.Any | None:
+        def value(self) -> t.Optional[t.Any]:
             """Return the member value."""
             return self.member.value if self.member is not None else None
 
@@ -77,7 +77,7 @@ class EnumData(Data):
             """Return the member identifier."""
             return get_object_loader().identify_object(self.member.__class__)
 
-    def __init__(self, member: Enum | None = None, *args, **kwargs):
+    def __init__(self, member: t.Optional[Enum] = None, *args, **kwargs):
         """Construct the node for the to enum member that is to be wrapped."""
 
         attributes: dict = kwargs.get('attributes', {})

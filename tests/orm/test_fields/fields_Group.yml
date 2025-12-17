@@ -1,9 +1,9 @@
-description: QbStrField('description', dtype=<class 'str'>, is_attribute=False)
-extras: QbDictField('extras', dtype=typing.Dict[str, typing.Any], is_attribute=False,
-  is_subscriptable=True)
-label: QbStrField('label', dtype=<class 'str'>, is_attribute=False)
-pk: QbNumericField('pk', dtype=<class 'int'>, is_attribute=False)
-time: QbNumericField('time', dtype=<class 'datetime.datetime'>, is_attribute=False)
-type_string: QbStrField('type_string', dtype=<class 'str'>, is_attribute=False)
-user: QbNumericField('user', dtype=<class 'int'>, is_attribute=False)
-uuid: QbField('uuid', dtype=<class 'uuid.UUID'>, is_attribute=False)
+description: QbStrField('description', dtype=<class 'str'>, doc='The group description')
+extras: QbDictField('extras', dtype=typing.Dict[str, typing.Any], doc='The group extras')
+label: QbStrField('label', dtype=<class 'str'>, doc='The group label')
+pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
+time: QbNumericField('time', dtype=<class 'datetime.datetime'>, doc='The creation
+  time of the node, defaults to now (timezone-aware)')
+type_string: QbStrField('type_string', dtype=<class 'str'>, doc='The type of the group')
+user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the group owner')
+uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the group')

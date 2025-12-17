@@ -114,20 +114,6 @@ class ArrayData(Data):
         for key, value in arrays.items():
             self.set_array(key, np.array(value))
 
-    @staticmethod
-    def load_arrays(arrays: dict[str, bytes] | None) -> dict[str, np.ndarray]:
-        results: dict[str, np.ndarray] = {}
-
-        if arrays is None:
-            return results
-
-        for key, bytes_ in arrays.items():
-            stream = io.BytesIO(bytes_)
-            stream.seek(0)
-            results[key] = np.load(stream)
-
-        return results
-
     @property
     def arrays(self) -> dict[str, np.ndarray]:
         return {name: self.get_array(name) for name in self.get_arraynames()}
@@ -242,17 +228,13 @@ class ArrayData(Data):
         :param name: The name of the array.
         :param array: The numpy array to store.
         """
-        import re
         import tempfile
 
         if not isinstance(array, np.ndarray):
             raise TypeError('ArrayData can only store numpy arrays. Convert the object to an array first')
 
         # Check if the name is valid
-        if not name or re.sub('[0-9a-zA-Z_]', '', name):
-            raise ValueError(
-                'The name assigned to the array ({}) is not valid,it can only contain digits, letters and underscores'
-            )
+        self._validate_array_name(name)
 
         # Write the array to a temporary file, and then add it to the repository of the node
         with tempfile.NamedTemporaryFile() as handle:
@@ -268,11 +250,29 @@ class ArrayData(Data):
         # Store the array name and shape for querying purposes
         self.base.attributes.set(f'{self.array_prefix}{name}', list(array.shape))
 
+    def _validate_array_name(self, name: str) -> None:
+        """Validate the array name.
+
+        :param name: The name of the array.
+        :raises ValueError: if the name is not valid.
+        """
+        import re
+
+        if not name or re.sub('[0-9a-zA-Z_]', '', name):
+            raise ValueError(
+                f'The name assigned to the array ({name}) is not valid. '
+                'It can only contain digits, letters and underscores'
+            )
+
     def _validate(self) -> bool:
         """Check if the list of .npy files stored inside the node and the
         list of properties match. Just a name check, no check on the size
         since this would require to reload all arrays and this may take time
         and memory.
+
+        In case of mismatch, try to fix it by loading the arrays from files
+        and updating the properties accordingly. If no files are found,
+        raise a ValidationError.
         """
         from aiida.common.exceptions import ValidationError
 
@@ -280,9 +280,21 @@ class ArrayData(Data):
         properties = self._arraynames_from_properties()
 
         if set(files) != set(properties):
-            raise ValidationError(
-                f'Mismatch of files and properties for ArrayData node (pk= {self.pk}): {files} vs. {properties}'
-            )
+            if not files:
+                raise ValidationError(
+                    f'Mismatch of files and properties for ArrayData node (pk= {self.pk}): {files} vs. {properties}'
+                )
+            for file in files:
+                self._validate_array_name(file)
+                try:
+                    content = self.base.repository.get_object_content(f'{file}.npy', 'rb')
+                    array = np.load(io.BytesIO(content))
+                    self.base.attributes.set(f'{self.array_prefix}{file}', list(array.shape))
+                except Exception as exc:
+                    raise ValidationError(
+                        f'ArrayData node (pk= {self.pk}): could not load array `{file}` from file to fix mismatch.'
+                    ) from exc
+
         return super()._validate()
 
     def _get_array_entries(self) -> dict[str, Any]:

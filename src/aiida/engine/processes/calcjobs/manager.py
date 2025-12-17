@@ -64,6 +64,7 @@ class JobsList:
         self._last_updated = last_updated
         self._update_handle: Optional[asyncio.TimerHandle] = None
         self._polling_jobs: List[str] = []
+        self._update_lock = asyncio.Lock()
 
     @property
     def logger(self) -> logging.Logger:
@@ -109,7 +110,8 @@ class JobsList:
             if scheduler.get_feature('can_query_by_user'):
                 kwargs['user'] = '$USER'
             else:
-                kwargs['jobs'] = self._polling_jobs
+                # A shallow copy is fine here, since the objects are immutable strings
+                kwargs['jobs'] = list(self._polling_jobs)
 
             scheduler_response = scheduler.get_jobs(**kwargs)
 
@@ -131,37 +133,38 @@ class JobsList:
         Note, _job_update_requests is dynamic, and might get new entries while polling from scheduler.
         Therefore we only update the jobs actually polled, and the new entries will be handled in the next update.
         """
+        async with self._update_lock:
+            try:
+                if not self._update_requests_outstanding():
+                    return
 
-        try:
-            if not self._update_requests_outstanding():
-                return
+                # Update our cache of the job states
+                self._jobs_cache = await self._get_jobs_from_scheduler()
+            except Exception as exception:
+                # Set the exception on all the update futures
+                for future in self._job_update_requests.values():
+                    if not future.done():
+                        future.set_exception(exception)
 
-            # Update our cache of the job states
-            self._jobs_cache = await self._get_jobs_from_scheduler()
-        except Exception as exception:
-            # Set the exception on all the update futures
-            for future in self._job_update_requests.values():
-                if not future.done():
-                    future.set_exception(exception)
-
-            # Reset the `_update_handle` manually. Normally this is done in the `updating` coroutine, but since we
-            # reraise this exception, that code path is never hit. If the next time a request comes in, the method
-            # `_ensure_updating` will falsely conclude we are still updating, since the handle is not `None` and so it
-            # will not schedule the next update, causing the job update futures to never be resolved.
-            self._update_handle = None
-            self._job_update_requests = {}
-
-            raise
-        else:
-            for job_id in self._polling_jobs:
-                future = self._job_update_requests.pop(job_id, None)  # type: ignore[arg-type]
-                if future is None:
-                    self.logger.warning(  # type: ignore[unreachable]
-                        f'This should not happen: polled job_id {job_id} '
-                        f'not in _job_update_requests {self._job_update_requests}'
-                    )
-                elif not future.done():
-                    future.set_result(self._jobs_cache.get(job_id, None))
+                # Reset the `_update_handle` manually. Normally this is done in the `updating` coroutine, but since we
+                # reraise this exception, that code path is never hit. If the next time a request comes in, the method
+                # `_ensure_updating` will falsely conclude we are still updating, since the handle is not `None` and
+                # so it will not schedule the next update, causing the job update futures to never be resolved.
+                self._update_handle = None
+                self._job_update_requests = {}
+                self._polling_jobs = []
+                raise
+            else:
+                for job_id in self._polling_jobs:
+                    future = self._job_update_requests.pop(job_id, None)  # type: ignore[arg-type]
+                    if future is None:
+                        self.logger.warning(  # type: ignore[unreachable]
+                            f'This should not happen: polled job_id {job_id} '
+                            f'not in _job_update_requests {self._job_update_requests} '
+                            f'_polling_jobs {self._polling_jobs}'
+                        )
+                    elif not future.done():
+                        future.set_result(self._jobs_cache.get(job_id, None))
 
     @contextlib.contextmanager
     def request_job_info_update(self, authinfo: AuthInfo, job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:

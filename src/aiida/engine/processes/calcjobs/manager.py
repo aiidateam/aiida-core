@@ -109,7 +109,8 @@ class JobsList:
             if scheduler.get_feature('can_query_by_user'):
                 kwargs['user'] = '$USER'
             else:
-                kwargs['jobs'] = self._polling_jobs
+                # A shallow copy is fine here, since the strings objects are immutable
+                kwargs['jobs'] = list(self._polling_jobs)
 
             scheduler_response = scheduler.get_jobs(**kwargs)
 

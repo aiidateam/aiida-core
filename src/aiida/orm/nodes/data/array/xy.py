@@ -118,7 +118,7 @@ class XyData(ArrayData):
         super().__init__(**kwargs)
 
         if x_array is not None:
-            self.set_x(x_array, x_name, x_units)  # type: ignore[arg-type]
+            self.set_x(x_array, x_name, x_units)
             self.set_y(y_arrays, y_names, y_units)  # type: ignore[arg-type]
 
     @staticmethod

@@ -20,8 +20,6 @@ from .verdi import VerdiCommandGroup
 if t.TYPE_CHECKING:
     from click.decorators import FC
 
-    from aiida import orm
-
 __all__ = ('DynamicEntryPointCommandGroup',)
 
 
@@ -94,7 +92,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             command = super().get_command(ctx, cmd_name)
         return command
 
-    def call_command(self, ctx: click.Context, cls: orm.Code, non_interactive: bool, **kwargs: t.Any) -> t.Any:
+    def call_command(self, ctx: click.Context, cls: t.Any, non_interactive: bool, **kwargs: t.Any) -> t.Any:
         """Call the ``command`` after validating the provided inputs."""
         from pydantic import ValidationError
 
@@ -161,7 +159,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         """
         from pydantic_core import PydanticUndefined
 
-        cls: orm.Code = self.factory(entry_point)
+        cls = self.factory(entry_point)
 
         if not hasattr(cls, 'Model'):
             from aiida.common.warnings import warn_deprecation
@@ -176,7 +174,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         options_spec = {}
 
-        fields = dict(cls.CreateModel.model_fields)
+        fields = dict(cls.CreateModel.model_fields)  # type: ignore[union-attr]
         attr_field = fields.get('attributes')
         if attr_field is not None:
             AttributesModel = t.cast(OrmModel, attr_field.annotation)  # noqa: N806

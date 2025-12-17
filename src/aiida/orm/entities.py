@@ -198,7 +198,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return cls.Model._as_create_model()
 
     @classmethod
-    def model_to_orm_field_values(cls, valid_model: Model) -> dict[str, Any]:
+    def model_to_orm_field_values(cls, valid_model: OrmModel) -> dict[str, Any]:
         """Collect values for the ORM entity's fields from the given model instance.
 
         This method centralizes the mapping of Model -> ORM values, including handling of
@@ -212,7 +212,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         """
         from aiida.plugins.factories import BaseFactory
 
-        def get_orm_field_values(model: Entity.Model, schema: Entity.Model = cls.CreateModel) -> dict[str, Any]:
+        def get_orm_field_values(model: OrmModel, schema: type[OrmModel] = cls.CreateModel) -> dict[str, Any]:
             """Recursive helper function to collect field values from a model instance.
 
             :param model: The model instance to extract field values from.
@@ -295,7 +295,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         return get_model_field_values(self.Model)
 
-    def to_model(self, *, repository_path: Optional[pathlib.Path] = None, minimal: bool = False) -> Model:
+    def to_model(self, *, repository_path: Optional[pathlib.Path] = None, minimal: bool = False) -> OrmModel:
         """Return the entity instance as an instance of its model.
 
         :param repository_path: If the orm node has files in the repository, this path is used to read the repository
@@ -309,7 +309,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         return Model(**fields)
 
     @classmethod
-    def from_model(cls, model: Model) -> Self:
+    def from_model(cls, model: OrmModel) -> Self:
         """Return an entity instance from an instance of its model.
 
         :param model: An instance of the entity's model class.

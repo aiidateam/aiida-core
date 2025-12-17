@@ -426,7 +426,7 @@ class EntityFieldMeta(ABCMeta):
             if 'Model' in cls.__dict__:
                 cls._validate_model_inheritance('Model')
 
-            Model: OrmModel = cls.Model
+            Model = cls.Model  # type: ignore[attr-defined] # noqa N806
             for key, field in Model.model_fields.items():
                 fields[key] = add_field(
                     key,
@@ -440,10 +440,14 @@ class EntityFieldMeta(ABCMeta):
             if 'AttributesModel' in cls.__dict__:
                 cls._validate_model_inheritance('AttributesModel')
 
-            container_field = fields.get('attributes')
+            try:
+                container_field = fields['attributes']
+            except KeyError:
+                raise KeyError(f"class '{cls}' was expected to have a `Model` with an 'attributes' field")
+
             container_field._typed_children = {}
 
-            Model: OrmModel = cls.AttributesModel
+            Model = cls.AttributesModel  # type: ignore[attr-defined] # noqa N806
             for key, field in Model.model_fields.items():
                 if get_metadata(field, 'write_only'):
                     continue
@@ -456,7 +460,7 @@ class EntityFieldMeta(ABCMeta):
                     is_attribute=True,
                 )
 
-                container_field._typed_children[key] = typed_field  # type: ignore[attr-defined]
+                container_field._typed_children[key] = typed_field
                 fields[key] = typed_field  # BACKWARDS COMPATIBILITY
 
         # Finalize
@@ -472,20 +476,20 @@ class EntityFieldMeta(ABCMeta):
         cls_bases_with_model = [
             base
             for base in cls.__mro__
-            if base is not cls and model_name in base.__dict__ and issubclass(getattr(base, model_name), OrmModel)  # type: ignore[attr-defined]
+            if base is not cls and model_name in base.__dict__ and issubclass(getattr(base, model_name), OrmModel)
         ]
 
         cls_bases_with_model_leaves = {
             base
             for base in cls_bases_with_model
             if all(
-                not issubclass(getattr(b, model_name), getattr(base, model_name))  # type: ignore[attr-defined]
+                not issubclass(getattr(b, model_name), getattr(base, model_name))
                 for b in cls_bases_with_model
                 if b is not base
             )
         }
 
-        cls_model_bases = {getattr(base, model_name) for base in cls_bases_with_model_leaves} or {OrmModel}  # type: ignore[attr-defined]
+        cls_model_bases = {getattr(base, model_name) for base in cls_bases_with_model_leaves} or {OrmModel}
 
         model_bases = {base for base in getattr(cls, model_name).__bases__ if issubclass(base, OrmModel)}
 

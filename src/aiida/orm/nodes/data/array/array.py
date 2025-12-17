@@ -72,7 +72,10 @@ class ArrayData(Data):
 
         @field_validator('arrays', mode='before')
         @classmethod
-        def normalize_arrays(cls, value: Sequence | np.ndarray | dict[str, Sequence | np.ndarray] | None) -> Any:
+        def normalize_arrays(
+            cls,
+            value: Sequence | np.ndarray | dict[str, Sequence | np.ndarray] | None,
+        ) -> Sequence | dict[str, Sequence] | None:
             if value is None:
                 return value
             if isinstance(value, Sequence):
@@ -80,7 +83,7 @@ class ArrayData(Data):
             if isinstance(value, np.ndarray):
                 return value.tolist()
             elif isinstance(value, dict):
-                arrays: dict[str, np.ndarray] = {}
+                arrays: dict[str, Sequence] = {}
                 for key, array in value.items():
                     if isinstance(array, Sequence):
                         arrays[key] = array

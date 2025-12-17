@@ -110,10 +110,10 @@ class XyData(ArrayData):
         :param y_units: The units of the y arrays.
         """
         attributes = kwargs.get('attributes', {})
-        x_name = x_name or attributes.pop('x_name')
-        x_units = x_units or attributes.pop('x_units')
-        y_names = y_names or attributes.pop('y_names')
-        y_units = y_units or attributes.pop('y_units')
+        x_name = x_name or attributes.pop('x_name', None)
+        x_units = x_units or attributes.pop('x_units', None)
+        y_names = y_names or attributes.pop('y_names', None)
+        y_units = y_units or attributes.pop('y_units', None)
 
         super().__init__(**kwargs)
 

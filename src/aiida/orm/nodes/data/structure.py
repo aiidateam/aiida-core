@@ -734,10 +734,10 @@ class StructureData(Data):
         **kwargs,
     ):
         attributes = kwargs.get('attributes', {})
-        pbc1 = pbc1 or attributes.pop('pbc1', None)
-        pbc2 = pbc2 or attributes.pop('pbc2', None)
-        pbc3 = pbc3 or attributes.pop('pbc3', None)
-        cell = cell or attributes.pop('cell', None)
+        pbc1 = pbc1 if pbc1 is not None else attributes.pop('pbc1', None)
+        pbc2 = pbc2 if pbc2 is not None else attributes.pop('pbc2', None)
+        pbc3 = pbc3 if pbc3 is not None else attributes.pop('pbc3', None)
+        cell = cell if cell is not None else attributes.pop('cell', None)
         kinds = kinds or attributes.pop('kinds', None)
         sites = sites or attributes.pop('sites', None)
 

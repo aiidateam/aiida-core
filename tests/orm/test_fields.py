@@ -73,12 +73,6 @@ def test_invalid_field_keys(key):
         _ = add_field(key)
 
 
-def test_disallowed_alias_for_db_field():
-    """Test for disallowed alias argument for database fields."""
-    with pytest.raises(ValueError):
-        _ = add_field('some_key', 'alias_not_allowed_for_db_fields')
-
-
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_query_new_class(monkeypatch):
     """Test that fields are correctly registered on a new data class,
@@ -96,7 +90,7 @@ def test_query_new_class(monkeypatch):
     )
 
     class NewNode(orm.Data):
-        class Model(orm.Data.Model):
+        class AttributesModel(orm.Data.AttributesModel):
             some_label: str = MetadataField()  # type: ignore[annotation-unchecked]
             some_value: int = MetadataField()  # type: ignore[annotation-unchecked]
 

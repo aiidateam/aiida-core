@@ -1,28 +1,49 @@
-append_text: QbStrField('append_text', dtype=<class 'str'>, is_attribute=True)
-attributes: QbDictField('attributes', dtype=typing.Dict[str, typing.Any], is_attribute=False,
-  is_subscriptable=True)
-computer: QbStrField('computer', dtype=<class 'str'>, is_attribute=False)
-ctime: QbNumericField('ctime', dtype=<class 'datetime.datetime'>, is_attribute=False)
-default_calc_job_plugin: QbStrField('default_calc_job_plugin', dtype=typing.Optional[str],
-  is_attribute=True)
-description: QbStrField('description', dtype=<class 'str'>, is_attribute=True)
-engine_command: QbStrField('engine_command', dtype=<class 'str'>, is_attribute=True)
-extras: QbDictField('extras', dtype=typing.Dict[str, typing.Any], is_attribute=False,
-  is_subscriptable=True)
-filepath_executable: QbStrField('filepath_executable', dtype=<class 'str'>, is_attribute=True)
-image_name: QbStrField('image_name', dtype=<class 'str'>, is_attribute=True)
-label: QbStrField('label', dtype=<class 'str'>, is_attribute=True)
-mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, is_attribute=False)
-node_type: QbStrField('node_type', dtype=<class 'str'>, is_attribute=False)
-pk: QbNumericField('pk', dtype=<class 'int'>, is_attribute=False)
-prepend_text: QbStrField('prepend_text', dtype=<class 'str'>, is_attribute=True)
-process_type: QbStrField('process_type', dtype=typing.Optional[str], is_attribute=False)
-repository_content: QbDictField('repository_content', dtype=dict[str, bytes], is_attribute=False)
+append_text: QbStrField('attributes.append_text', dtype=<class 'str'>, doc='Bash commands
+  that should be appended to the run line in all submit scripts for this code')
+attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.data.code.containerized.ContainerizedCode.AttributesModel'>,
+  doc='The node attributes')
+computer: QbStrField('computer', dtype=<class 'str'>, doc='The label of the remote
+  computer on which the executable resides')
+ctime: QbNumericField('ctime', dtype=<class 'datetime.datetime'>, doc='The creation
+  time of the node')
+default_calc_job_plugin: QbStrField('attributes.default_calc_job_plugin', dtype=typing.Optional[str],
+  doc='Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`)')
+description: QbStrField('description', dtype=<class 'str'>, doc='Human-readable description,
+  ideally including version and compilation environment')
+engine_command: QbStrField('attributes.engine_command', dtype=<class 'str'>, doc='The
+  command to run the container. It must contain the placeholder {image_name} that
+  will be replaced with the `image_name`')
+extras: QbDictField('extras', dtype=typing.Dict[str, typing.Any], doc='The node extras')
+filepath_executable: QbStrField('attributes.filepath_executable', dtype=<class 'str'>,
+  doc='Filepath of the executable on the remote computer')
+image_name: QbStrField('attributes.image_name', dtype=<class 'str'>, doc='Name of
+  the image container in which to the run the executable')
+label: QbStrField('label', dtype=<class 'str'>, doc='A unique label to identify the
+  code by')
+mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
+  time of the node')
+node_type: QbStrField('node_type', dtype=<class 'str'>, doc='The type of the node')
+pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
+prepend_text: QbStrField('attributes.prepend_text', dtype=<class 'str'>, doc='Bash
+  commands that should be prepended to the run line in all submit scripts for this
+  code')
+process_type: QbStrField('process_type', dtype=typing.Optional[str], doc='The process
+  type of the node')
 repository_metadata: QbDictField('repository_metadata', dtype=typing.Dict[str, typing.Any],
-  is_attribute=False)
-source: QbDictField('source', dtype=typing.Optional[dict], is_attribute=True, is_subscriptable=True)
-use_double_quotes: QbField('use_double_quotes', dtype=<class 'bool'>, is_attribute=True)
-user: QbNumericField('user', dtype=<class 'int'>, is_attribute=False)
-uuid: QbField('uuid', dtype=<class 'uuid.UUID'>, is_attribute=False)
-with_mpi: QbField('with_mpi', dtype=typing.Optional[bool], is_attribute=True)
-wrap_cmdline_params: QbField('wrap_cmdline_params', dtype=<class 'bool'>, is_attribute=True)
+  doc='Virtual hierarchy of the file repository')
+source: QbDictField('attributes.source', dtype=typing.Optional[dict], doc='Source
+  of the data')
+use_double_quotes: QbAnyField('attributes.use_double_quotes', dtype=<class 'bool'>,
+  doc='Whether the executable and arguments of the code in the submission script should
+  be escaped with single or double quotes')
+user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
+  the node')
+uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+with_mpi: QbAnyField('attributes.with_mpi', dtype=typing.Optional[bool], doc='Whether
+  the executable should be run as an MPI program. This option can be left unspecified
+  in which case `None` will be set and it is left up to the calculation job plugin
+  or inputs whether to run with MPI')
+wrap_cmdline_params: QbAnyField('attributes.wrap_cmdline_params', dtype=<class 'bool'>,
+  doc='Whether all command line parameters to be passed to the engine command should
+  be wrapped in a double quotes to form a single argument. This should be set to `True`
+  for Docker')

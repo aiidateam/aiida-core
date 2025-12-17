@@ -49,8 +49,7 @@ class SinglefileData(Data):
             :return: the content as bytes
             :raises ValueError: if the content is not set
             """
-            if self.content:
-                return io.BytesIO(self.content.encode())
+            return io.BytesIO(self.content.encode()) if self.content else None
 
     @classmethod
     def from_string(cls, content: str, filename: str | pathlib.Path | None = None, **kwargs: t.Any) -> SinglefileData:

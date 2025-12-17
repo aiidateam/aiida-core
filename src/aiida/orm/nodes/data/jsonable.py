@@ -74,7 +74,7 @@ class JsonableData(Data):
             ),
         ]
 
-        @computed_field(
+        @computed_field(  # type: ignore[prop-decorator]
             title='Class name',
             alias='@class',
             description='The class name of the wrapped object',
@@ -83,7 +83,7 @@ class JsonableData(Data):
         def the_class(self) -> str:
             return self.obj.__class__.__name__
 
-        @computed_field(
+        @computed_field(  # type: ignore[prop-decorator]
             title='Module name',
             alias='@module',
             description='The module name of the wrapped object',

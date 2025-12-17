@@ -19,10 +19,10 @@ import typing as t
 from enum import Enum
 
 from plumpy.loaders import get_object_loader
+from pydantic import computed_field
 
 from aiida.common.lang import type_check
 from aiida.common.pydantic import MetadataField
-from pydantic import computed_field
 
 from .base import to_aiida_type
 from .data import Data
@@ -59,19 +59,19 @@ class EnumData(Data):
             write_only=True,
         )
 
-        @computed_field
+        @computed_field  # type: ignore[prop-decorator]
         @property
         def name(self) -> str:
             """Return the member name."""
-            return self.member.name
+            return self.member.name if self.member is not None else ''
 
-        @computed_field
+        @computed_field  # type: ignore[prop-decorator]
         @property
-        def value(self) -> t.Any:
+        def value(self) -> t.Any | None:
             """Return the member value."""
-            return self.member.value
+            return self.member.value if self.member is not None else None
 
-        @computed_field
+        @computed_field  # type: ignore[prop-decorator]
         @property
         def identifier(self) -> str:
             """Return the member identifier."""
@@ -80,10 +80,9 @@ class EnumData(Data):
     def __init__(self, member: Enum | None = None, *args, **kwargs):
         """Construct the node for the to enum member that is to be wrapped."""
 
-        attributes = kwargs.get('attributes', {})
+        attributes: dict = kwargs.get('attributes', {})
         member = member or attributes.pop('member', None)
-        attributes.pop(self.KEY_NAME, None)
-        attributes.pop(self.KEY_VALUE, None)
+        attributes.clear()  # we only need the member to construct the node
 
         type_check(member, Enum)
 

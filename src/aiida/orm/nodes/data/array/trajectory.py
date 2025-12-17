@@ -11,16 +11,11 @@
 from __future__ import annotations
 
 import collections.abc
-from typing import TYPE_CHECKING, List, Optional
-
-import numpy as np
+from typing import List
 
 from aiida.common.pydantic import MetadataField
 
 from .array import ArrayData
-
-if TYPE_CHECKING:
-    from aiida import orm
 
 __all__ = ('TrajectoryData',)
 

@@ -20,8 +20,11 @@ from aiida.orm.nodes.data.code.portable import PortableCode
 
 def test_constructor_raises(tmp_path, bash_path):
     """Test the constructor when it is supposed to raise."""
-    with pytest.raises(TypeError, match=r'missing .* required positional argument'):
-        PortableCode()
+    with pytest.raises(ValueError, match=r'Both `filepath_files` and `filepath_executable` must be provided.'):
+        PortableCode(filepath_files=tmp_path)
+
+    with pytest.raises(ValueError, match=r'Both `filepath_files` and `filepath_executable` must be provided.'):
+        PortableCode(filepath_executable=bash_path)
 
     with pytest.raises(ValueError, match=r'The `filepath_executable` should not be absolute.'):
         PortableCode(filepath_executable=bash_path, filepath_files=tmp_path)

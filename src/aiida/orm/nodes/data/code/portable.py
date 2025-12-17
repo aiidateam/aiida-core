@@ -97,7 +97,7 @@ class PortableCode(Code):
         """
         attributes = kwargs.get('attributes', {})
         filepath_executable = filepath_executable or attributes.pop(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, None)
-        filepath_files = filepath_files or attributes.pop(self._KEY_ATTRIBUTE_FILEPATH_FILES, None)
+        filepath_files = filepath_files or attributes.pop('filepath_files', None)
 
         if filepath_files is None or filepath_executable is None:
             raise ValueError('Both `filepath_files` and `filepath_executable` must be provided.')

@@ -54,9 +54,12 @@ class RemoteStashFolderData(RemoteStashData):
         target_basepath = target_basepath or attributes.pop('target_basepath', None)
         source_list = source_list or attributes.pop('source_list', None)
 
-        for param in (stash_mode, target_basepath, source_list):
-            if param is None:
-                raise ValueError(f'the `{param}` parameter must be specified.')
+        if stash_mode is None:
+            raise ValueError('the `stash_mode` parameter must be specified.')
+        if target_basepath is None:
+            raise ValueError('the `target_basepath` parameter must be specified.')
+        if source_list is None:
+            raise ValueError('the `source_list` parameter must be specified.')
 
         super().__init__(stash_mode, **kwargs)
 

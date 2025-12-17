@@ -61,11 +61,16 @@ class RemoteStashCompressedData(RemoteStashData):
         stash_mode = stash_mode or attributes.pop('stash_mode', None)
         target_basepath = target_basepath or attributes.pop('target_basepath', None)
         source_list = source_list or attributes.pop('source_list', None)
-        dereference = dereference or attributes.pop('dereference', None)
+        dereference = dereference if dereference is not None else attributes.pop('dereference', None)
 
-        for param in (stash_mode, target_basepath, source_list, dereference):
-            if param is None:
-                raise ValueError(f'the `{param}` parameter must be specified.')
+        if stash_mode is None:
+            raise ValueError('the `stash_mode` parameter must be specified.')
+        if target_basepath is None:
+            raise ValueError('the `target_basepath` parameter must be specified.')
+        if source_list is None:
+            raise ValueError('the `source_list` parameter must be specified.')
+        if dereference is None:
+            raise ValueError('the `dereference` parameter must be specified.')
 
         super().__init__(stash_mode, **kwargs)
 

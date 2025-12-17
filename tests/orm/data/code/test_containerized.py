@@ -17,8 +17,11 @@ from aiida.orm.nodes.data.code.containerized import ContainerizedCode
 
 def test_constructor_raises(aiida_localhost):
     """Test the constructor when it is supposed to raise."""
-    with pytest.raises(TypeError, match=r'missing .* required positional arguments'):
-        ContainerizedCode()
+    with pytest.raises(ValueError, match=r'Both `engine_command` and `image_name` must be provided.'):
+        ContainerizedCode(engine_command='bash')
+
+    with pytest.raises(ValueError, match=r'Both `engine_command` and `image_name` must be provided.'):
+        ContainerizedCode(image_name='img')
 
     with pytest.raises(TypeError, match=r'Got object of type .*'):
         path = pathlib.Path('bash')

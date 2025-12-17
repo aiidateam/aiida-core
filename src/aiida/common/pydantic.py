@@ -9,7 +9,6 @@ from pydantic_core import PydanticUndefined
 
 if t.TYPE_CHECKING:
     from aiida.orm import Entity
-    from aiida.orm.entities import EntityModelType
 
 
 def get_metadata(field_info: t.Any, key: str, default: t.Any | None = None) -> t.Any:
@@ -42,7 +41,7 @@ class OrmModel(BaseModel, defer_build=True):
         cls.model_config['title'] = cls.__qualname__.replace('.', '')
 
     @classmethod
-    def as_create_model(cls: t.Type[EntityModelType]) -> t.Type[EntityModelType]:
+    def _as_create_model(cls: t.Type[OrmModel]) -> t.Type[OrmModel]:
         """Return a derived creation model class with read-only fields removed.
 
         This also removes any serializers/validators defined on those fields.
@@ -69,7 +68,7 @@ class OrmModel(BaseModel, defer_build=True):
             if get_metadata(field, 'read_only'):
                 readonly_fields.append(key)
             elif isinstance(annotation, type) and issubclass(annotation, OrmModel):
-                field.annotation = annotation.as_create_model()
+                field.annotation = annotation._as_create_model()
 
         # Remove read-only fields
         for key in readonly_fields:
@@ -89,6 +88,9 @@ class OrmModel(BaseModel, defer_build=True):
 
         decorators.field_validators = prune_field_decorators(decorators.field_validators)
         decorators.field_serializers = prune_field_decorators(decorators.field_serializers)
+
+        # If called on CreateModel, return self
+        CreateModel._as_create_model = lambda: CreateModel
 
         CreateModel.model_rebuild(force=True)
         return CreateModel

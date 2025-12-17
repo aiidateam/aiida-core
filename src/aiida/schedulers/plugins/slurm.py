@@ -207,7 +207,7 @@ class SlurmScheduler(BashCliScheduler):
             else:
                 if not isinstance(jobs, (tuple, list)):
                     raise TypeError("If provided, the 'jobs' variable must be a string or a list of strings")
-                joblist = jobs
+                joblist = list(jobs)
 
             # Trick: When asking for a single job, append the same job once more.
             # This helps provide a reliable way of knowing whether the squeue command failed (if its exit code is

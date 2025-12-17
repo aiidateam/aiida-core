@@ -297,7 +297,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if 'Model' not in cls.__dict__:
             parent_model = Model
             Model = cast(
-                Node.Model,
+                type[Node.Model],
                 type(
                     'Model',
                     (parent_model,),

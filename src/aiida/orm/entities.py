@@ -183,19 +183,19 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
     _logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
-    class Model(OrmModel, defer_build=True):
+    class Model(OrmModel):
         pk: int = MetadataField(
             description='The primary key of the entity',
             read_only=True,
         )
 
     @classproperty
-    def CreateModel(cls) -> Type[Model]:  # noqa: N802, N805
+    def CreateModel(cls) -> Type[OrmModel]:  # noqa: N802, N805
         """Return the creation version of the model class for this entity.
 
         :return: The creation model class, with read-only fields removed.
         """
-        return cls.Model.as_create_model()
+        return cls.Model._as_create_model()
 
     @classmethod
     def model_to_orm_field_values(cls, valid_model: Model) -> dict[str, Any]:

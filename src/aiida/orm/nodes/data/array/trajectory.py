@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import collections.abc
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -19,9 +19,6 @@ from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
 
 from .array import ArrayData
-
-if TYPE_CHECKING:
-    from aiida import orm
 
 __all__ = ('TrajectoryData',)
 
@@ -712,7 +709,6 @@ class TrajectoryData(ArrayData):
 
     def show_mpl_heatmap(self, **kwargs):
         """Show a heatmap of the trajectory with matplotlib."""
-        import numpy as np
         from scipy import stats
 
         try:
@@ -874,7 +870,6 @@ def plot_positions_XYZ(  # noqa: N802
     :param maxtime: if specified, cut the time axis at the specified max value
     :param n_labels: how many labels (t, coord) to put
     """
-    import numpy as np
     from matplotlib import pyplot as plt
     from matplotlib.gridspec import GridSpec
 

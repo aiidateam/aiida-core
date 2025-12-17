@@ -65,7 +65,7 @@ if TYPE_CHECKING:
     from ..implementation.nodes import BackendNode
     from .repository import NodeRepository
 
-__all__ = ('Node',)
+__all__ = ('Node', 'NodeLinks')
 
 NodeType = TypeVar('NodeType', bound='Node')
 
@@ -291,12 +291,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
 
-        Model = cast(type[Node.Model], getattr(cls, 'Model'))
-        Attrs = cast(type[Node.AttributesModel], getattr(cls, 'AttributesModel'))
+        Model = cast(type[Node.Model], getattr(cls, 'Model'))  # noqa N806
+        Attrs = cast(type[Node.AttributesModel], getattr(cls, 'AttributesModel'))  # noqa N806
 
         if 'Model' not in cls.__dict__:
             parent_model = Model
-            Model = cast(
+            Model = cast(  # noqa N806
                 type[Node.Model],
                 type(
                     'Model',
@@ -306,7 +306,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                     },
                 ),
             )
-            cls.Model = Model
+            cls.Model = Model  # type: ignore[misc]
 
         base_field = Model.model_fields['attributes']
         new_field = deepcopy(base_field)
@@ -320,7 +320,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         user: Optional[User] = None,
         computer: Optional[Computer] = None,
         extras: Optional[Dict[str, Any]] = None,
-        attributes: Optional[Dict[str, Any] | Node.AttributesModel] = None,
+        attributes: Optional[Dict[str, Any]] = None,
         **kwargs: Any,
     ) -> None:
         backend = backend or get_manager().get_profile_storage()

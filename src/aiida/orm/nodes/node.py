@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Iterable
 from copy import deepcopy
 from functools import cached_property
 from typing import (
@@ -45,7 +44,6 @@ from aiida.orm.utils.node import (
     get_query_type_from_type_string,
     get_type_string_from_class,
 )
-from pydantic import ConfigDict
 
 from ..computers import Computer
 from ..entities import Collection as EntityCollection
@@ -70,19 +68,6 @@ if TYPE_CHECKING:
 __all__ = ('Node',)
 
 NodeType = TypeVar('NodeType', bound='Node')
-
-
-class UnhandledNodeAttributesError(Exception):
-    """Exception raised when any node attributes are not handled prior to the Node constructor."""
-
-    def __init__(self, attributes: Iterable[str], class_name: str) -> None:
-        bullet_list = '\n'.join(f'  • {attr}' for attr in attributes)
-        message = (
-            f'\nThe following attributes must be handled in a constructor prior to the Node class:\n'
-            f'{bullet_list}\n\n'
-            f'Consider implementing a constructor in {class_name} to handle the listed attributes.'
-        )
-        super().__init__(message)
 
 
 class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
@@ -227,17 +212,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     class AttributesModel(OrmModel):
         """The node attributes."""
 
-        model_config = ConfigDict(
-            ser_json_bytes='base64',
-            val_json_bytes='base64',
-        )
-
     class Model(Entity.Model):
-        model_config = ConfigDict(
-            ser_json_bytes='base64',
-            val_json_bytes='base64',
-        )
-
         uuid: UUID = MetadataField(
             description='The UUID of the node',
             read_only=True,
@@ -316,8 +291,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
 
-        Model = cast(Node.Model, getattr(cls, 'Model'))
-        Attrs = cast(Node.AttributesModel, getattr(cls, 'AttributesModel'))
+        Model = cast(type[Node.Model], getattr(cls, 'Model'))
+        Attrs = cast(type[Node.AttributesModel], getattr(cls, 'AttributesModel'))
 
         if 'Model' not in cls.__dict__:
             parent_model = Model
@@ -348,13 +323,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         attributes: Optional[Dict[str, Any] | Node.AttributesModel] = None,
         **kwargs: Any,
     ) -> None:
-        # We verify here that all attributes are handled in a constructor prior to the root
-        # Node class (here), gracefully rejecting them otherwise.
-        node_keys = set(Node.Model.model_fields.keys())
-        unhandled_keys = {key for key in kwargs if key not in node_keys}
-        if unhandled_keys:
-            raise UnhandledNodeAttributesError(unhandled_keys, self.__class__.__name__)
-
         backend = backend or get_manager().get_profile_storage()
 
         if computer and not computer.is_stored:

@@ -58,7 +58,7 @@ class OrmModel(BaseModel, defer_build=True):
         CreateModel.__qualname__ = new_name
         CreateModel.model_config['extra'] = 'ignore'
         CreateModel.model_config['json_schema_extra'] = {
-            **CreateModel.model_config.get('json_schema_extra', {}),
+            **CreateModel.model_config.get('json_schema_extra', {}),  # type: ignore[dict-item]
             'additionalProperties': False,
         }
 
@@ -90,7 +90,7 @@ class OrmModel(BaseModel, defer_build=True):
         decorators.field_serializers = prune_field_decorators(decorators.field_serializers)
 
         # If called on CreateModel, return self
-        CreateModel._as_create_model = lambda: CreateModel
+        CreateModel._as_create_model = lambda: CreateModel  # type: ignore[method-assign]
 
         CreateModel.model_rebuild(force=True)
         return CreateModel

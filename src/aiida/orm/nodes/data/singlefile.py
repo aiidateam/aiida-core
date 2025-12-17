@@ -34,13 +34,23 @@ class SinglefileData(Data):
         filename: str = MetadataField(
             'file.txt',
             description='The name of the stored file',
+            orm_to_model=lambda node, _: t.cast(SinglefileData, node).base.attributes.get('filename', 'file.txt'),
         )
-        content: t.Optional[bytes] = MetadataField(
+        content: t.Optional[str] = MetadataField(
             None,
             description='The file content',
-            model_to_orm=lambda model: io.BytesIO(t.cast(SinglefileData.AttributesModel, model).content),
+            model_to_orm=lambda model: t.cast(SinglefileData.AttributesModel, model).content_as_bytes(),
             write_only=True,
         )
+
+        def content_as_bytes(self) -> t.IO | None:
+            """Return the content as bytes.
+
+            :return: the content as bytes
+            :raises ValueError: if the content is not set
+            """
+            if self.content:
+                return io.BytesIO(self.content.encode())
 
     @classmethod
     def from_string(cls, content: str, filename: str | pathlib.Path | None = None, **kwargs: t.Any) -> SinglefileData:
@@ -204,19 +214,30 @@ class SinglefileData(Data):
         self.base.attributes.set('filename', key)
 
     def _validate(self) -> bool:
-        """Ensure that there is one object stored in the repository, whose key matches value set for `filename` attr."""
+        """Validate the node before storing.
+
+        This check ensures that there is one object stored in the repository,
+        whose key matches the value set for the `filename` attribute. If no
+        `filename` attribute is set, it will be set to the key of the stored
+        object. If there are no objects stored, a ValidationError is raised.
+
+        :return: True if the node is valid
+        :raises ValidationError: if the node is not valid
+        """
         super()._validate()
+
+        objects = self.base.repository.list_object_names()
 
         try:
             filename = self.filename
         except AttributeError:
-            raise exceptions.ValidationError('the `filename` attribute is not set.')
-
-        objects = self.base.repository.list_object_names()
+            if not objects:
+                raise exceptions.ValidationError('the `filename` attribute is not set.')
+            filename = objects[0]
 
         if [filename] != objects:
             raise exceptions.ValidationError(
-                f'respository files {objects} do not match the `filename` attribute `{filename}`.'
+                f'repository files {objects} do not match the `filename` attribute `{filename}`.'
             )
 
         return True

@@ -629,7 +629,7 @@ def process_dump(
 
     warning_msg = (
         'This is a new feature which is still in its testing phase. '
-        'If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.'
+        'If you encounter unexpected behavior or bugs, please report them via: Discourse: https://aiida.discourse.group/ or GitHub: https://github.com/aiidateam/aiida-core/issues .'
     )
     echo.echo_warning(warning_msg)
 

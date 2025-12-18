@@ -98,7 +98,7 @@ For one of our beloved ``MultiplyAddWorkChain``s, (PK=29) we run the ``verdi pro
 
     $ verdi process dump 29
 
-    Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.
+    Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via: Discourse: https://aiida.discourse.group/ or GitHub: https://github.com/aiidateam/aiida-core/issues .
     Report: No output path specified. Using default: `<my-pwd>/MultiplyAddWorkChain-29`
     Report: Starting dump of process node (PK: 29) in `incremental` mode.
     Report: Saving final dump log to file `aiida_dump_log.json`.
@@ -186,7 +186,7 @@ This command will create a directory structure with all processes contained in t
 .. code-block:: shell
 
     $ verdi group dump my-calculations
-    Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.
+    Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via: Discourse: https://aiida.discourse.group/ or GitHub: https://github.com/aiidateam/aiida-core/issues .
     Report: No output path specified. Using default: `<my-pwd>/my-calculations`
     Report: Starting dump of group `my-calculations` (PK: 1) in `incremental` mode.
     Report: Dumping 1 nodes for group 'my-calculations'
@@ -221,7 +221,7 @@ And similarly for a group ``my-workflows`` with a ``MultiplyAddWorkChain``:
 .. code-block:: shell
 
     $ verdi group dump my-workflows
-    Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.
+    Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via: Discourse: https://aiida.discourse.group/ or GitHub: https://github.com/aiidateam/aiida-core/issues .
     Report: No output path specified. Using default: `/home/geiger_j/aiida_projects/verdi-profile-dump/dev-dumps/docs/my-workflows`
     Report: Starting dump of group `my-workflows` (PK: 2) in `incremental` mode.
     Report: Dumping 1 nodes for group 'my-workflows'
@@ -318,7 +318,7 @@ dump my-calculations`` command, one obtains:
 .. code-block:: shell
 
     $ verdi group dump my-calculations
-    Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.
+    Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via: Discourse: https://aiida.discourse.group/ or GitHub: https://github.com/aiidateam/aiida-core/issues .
     Report: No output path specified. Using default: `<my-pwd>/my-calculations`
     Report: Starting dump of group `my-calculations` (PK: 1) in `incremental` mode.
     Report: Processing group changes.
@@ -357,7 +357,7 @@ To avoid initiating the ``dump`` operation for possibly very large databases, if
 .. code-block:: shell
 
     $ verdi profile dump
-    Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.
+    Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via: Discourse: https://aiida.discourse.group/ or GitHub: https://github.com/aiidateam/aiida-core/issues .
     Report: No output path specified. Using default: '<my-pwd>/my-profile'
     Warning: No profile data explicitly selected. No dump will be performed. Either select everything via `all_entries=True`, or filter via `groups`, `user`, etc.
 
@@ -369,7 +369,7 @@ If we run with ``--all`` on our current profile, we get the following result:
 .. code-block:: shell
 
     $ verdi profile dump --all
-    Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.
+    Warning: This is a new feature which is still in its testing phase. If you encounter unexpected behavior or bugs, please report them via: Discourse: https://aiida.discourse.group/ or GitHub: https://github.com/aiidateam/aiida-core/issues .
     Report: No output path specified. Using default: '<my-pwd>/my-profile'
     Report: Starting dump of profile `my-profile` in `incremental` mode.
     Report: Processing group changes.

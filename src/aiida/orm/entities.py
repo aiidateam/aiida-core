@@ -222,7 +222,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
             fields: dict[str, Any] = {}
             for key, field in schema.model_fields.items():
-                field_value = getattr(model, key)
+                field_value = getattr(model, key, field.default)
 
                 if field_value is None:
                     continue

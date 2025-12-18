@@ -65,7 +65,7 @@ class ArrayData(Data):
 
         arrays: Optional[Union[Sequence, dict[str, Sequence]]] = MetadataField(
             None,
-            description='A single (or dictionary of) numpy array(s) to store',
+            description='A single (or dictionary of) array(s) to store',
             orm_to_model=lambda node, _: cast(ArrayData, node).arrays,
             write_only=True,
         )

@@ -14,8 +14,6 @@
 
 from .main import *
 
-__all__ = (
-    'ArchiveFormatSqlZip',
-)
+__all__ = ()
 
 # fmt: on

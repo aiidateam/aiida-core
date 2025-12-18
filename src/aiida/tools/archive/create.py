@@ -38,7 +38,7 @@ from .common import entity_type_to_orm
 from .exceptions import ArchiveExportError, ExportValidationError
 from .implementations.sqlite_zip import ArchiveFormatSqlZip
 
-__all__ = ('EXPORT_LOGGER', 'create_archive')
+__all__ = ('create_archive',)
 
 EXPORT_LOGGER = AIIDA_LOGGER.getChild('export')
 QbType = Callable[[], orm.QueryBuilder]

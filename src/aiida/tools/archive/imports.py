@@ -32,7 +32,7 @@ from .common import entity_type_to_orm
 from .exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError
 from .implementations.sqlite_zip import ArchiveFormatSqlZip
 
-__all__ = ('IMPORT_LOGGER', 'import_archive')
+__all__ = ('import_archive',)
 
 IMPORT_LOGGER = AIIDA_LOGGER.getChild('export')
 

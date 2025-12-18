@@ -18,7 +18,7 @@ from aiida.tools.archive.abstract import ArchiveFormatAbstract
 from .reader import ArchiveReaderSqlZip
 from .writer import ArchiveAppenderSqlZip, ArchiveWriterSqlZip
 
-__all__ = ('ArchiveFormatSqlZip',)
+__all__ = ()
 
 
 class ArchiveFormatSqlZip(ArchiveFormatAbstract):

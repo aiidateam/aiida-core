@@ -230,7 +230,7 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
 @verdi_code.command()
 @arguments.CODE()
 @with_dbenv()
-def show(code):
+def show(code: Code):
     """Display detailed information for a code."""
     from aiida.cmdline import is_verbose
 
@@ -239,26 +239,17 @@ def show(code):
     # These are excluded from the CLI, so we add them manually
     table.append(['PK', code.pk])
     table.append(['UUID', code.uuid])
-    table.append(['Type', code.entry_point.name])
+    table.append(['Type', code.entry_point.name if code.entry_point else None])
+    table.append(['Label', code.label])
+    table.append(['Description', code.description or ''])
 
-    for key, field in code.CreateModel.model_fields.items():
-        # We don't show extras for codes
-        if key == 'extras':
+    if code.computer is not None:
+        table.append(['Computer', f'{code.computer.label} ({code.computer.hostname}), pk: {code.computer.pk}'])
+
+    for key, field in code.AttributesModel.model_fields.items():
+        if key == 'source' or get_metadata(field, 'write_only'):
             continue
-
-        if key == 'attributes':
-            for attr_key, attr_info in field.annotation.model_fields.items():
-                if get_metadata(attr_info, 'write_only'):
-                    continue
-                value = getattr(code, attr_key)
-                table.append([attr_info.title, value])
-            continue
-
         value = getattr(code, key)
-
-        if key == 'computer':
-            value = f'{value.label} ({value.hostname}), pk: {value.pk}'
-
         table.append([field.title, value])
 
     if is_verbose():

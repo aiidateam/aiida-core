@@ -207,6 +207,7 @@ class SlurmScheduler(BashCliScheduler):
             else:
                 if not isinstance(jobs, (tuple, list)):
                     raise TypeError("If provided, the 'jobs' variable must be a string or a list of strings")
+                # Create a copy to avoid mutating the caller's input when we append below (line 225)
                 joblist = list(jobs)
 
             # Trick: When asking for a single job, append the same job once more.

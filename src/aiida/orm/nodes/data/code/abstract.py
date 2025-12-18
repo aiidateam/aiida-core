@@ -43,7 +43,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     _KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS: str = 'wrap_cmdline_params'
     _KEY_EXTRA_IS_HIDDEN: str = 'hidden'  # Should become ``is_hidden`` once ``Code`` is dropped
 
-    class AttributesModel(Data.AttributesModel, defer_build=True):
+    class AttributesModel(Data.AttributesModel):
         """Model describing required information to create an instance."""
 
         default_calc_job_plugin: t.Optional[str] = MetadataField(
@@ -128,8 +128,9 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """
 
         attributes = kwargs.get('attributes', {})
-        default_calc_job_plugin = default_calc_job_plugin or attributes.get(
-            self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, None
+        default_calc_job_plugin = default_calc_job_plugin or attributes.pop(
+            self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN,
+            attributes.pop('default_calc_job_plugin', None),
         )
         append_text = append_text or attributes.pop(self._KEY_ATTRIBUTE_APPEND_TEXT, '')
         prepend_text = prepend_text or attributes.pop(self._KEY_ATTRIBUTE_PREPEND_TEXT, '')
@@ -385,7 +386,21 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """Export code to a YAML file."""
         import yaml
 
-        code_data = self.orm_to_model_field_values(repository_path=pathlib.Path.cwd() / f'{self.label}')
+        code_data = (
+            {
+                'label': self.label,
+                'description': self.description,
+            }
+            | ({'computer': self.computer.label} if self.computer else {})
+            | {
+                key: value
+                for key, value in self.orm_to_model_field_values(
+                    repository_path=pathlib.Path.cwd() / f'{self.label}',
+                    model=self.AttributesModel,
+                ).items()
+                if value is not None
+            }
+        )
 
         # If the attribute is not set, for example ``with_mpi`` do not export it
         # so that there are no null-values in the resulting YAML file

@@ -255,6 +255,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         self,
         *,
         repository_path: Optional[pathlib.Path] = None,
+        model: type[OrmModel] | None = None,
         minimal: bool = False,
     ) -> dict[str, Any]:
         """Collect values for the ``Model``'s fields from this entity.
@@ -268,15 +269,15 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         :return: Mapping of ORM field name to value.
         """
 
-        def get_model_field_values(model: Type[OrmModel]) -> dict[str, Any]:
+        def get_model_field_values(model_cls: Type[OrmModel]) -> dict[str, Any]:
             """Recursive helper function to collect field values for a model class.
 
-            :param model: The model class to extract field values for.
+            :param model_cls: The model class to extract field values for.
             :return: Mapping of ORM field name to value.
             """
             fields: dict[str, Any] = {}
 
-            for key, field in model.model_fields.items():
+            for key, field in model_cls.model_fields.items():
                 if get_metadata(field, 'may_be_large') and minimal:
                     continue
 
@@ -293,7 +294,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
             return fields
 
-        return get_model_field_values(self.Model)
+        return get_model_field_values(model or self.Model)
 
     def to_model(self, *, repository_path: Optional[pathlib.Path] = None, minimal: bool = False) -> OrmModel:
         """Return the entity instance as an instance of its model.

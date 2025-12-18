@@ -689,9 +689,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
         :return: The computer label or None if no computer is set.
         """
-        if self.computer is None:
-            return None
-        return self.computer.label
+        return self.computer.label if self.computer else None
 
     @property
     def is_valid_cache(self) -> bool:

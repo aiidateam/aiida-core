@@ -104,7 +104,7 @@ def MetadataField(  # noqa: N802
     option_cls: t.Any | None = None,
     orm_class: type[Entity[t.Any, t.Any]] | str | None = None,
     orm_to_model: t.Callable[[Entity[t.Any, t.Any], dict[str, t.Any]], t.Any] | None = None,
-    model_to_orm: t.Callable[[BaseModel], t.Any] | None = None,
+    model_to_orm: t.Callable[[OrmModel], t.Any] | None = None,
     read_only: bool = False,
     write_only: bool = False,
     may_be_large: bool = False,
@@ -114,7 +114,7 @@ def MetadataField(  # noqa: N802
 
     .. code-block:: python
 
-        class Model(BaseModel):
+        class Model(OrmModel):
 
             attribute: MetadataField('default', priority=1000, short_name='-A')
 

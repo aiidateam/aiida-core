@@ -153,9 +153,7 @@ def test_portablecode_extra_files(tmp_path, chdir_tmp_path):
     result, extra_args = code._prepare_yaml()
     ref_result = f"""label: some-label
 description: ''
-default_calc_job_plugin: null
 use_double_quotes: false
-with_mpi: null
 prepend_text: ''
 append_text: ''
 filepath_executable: bash

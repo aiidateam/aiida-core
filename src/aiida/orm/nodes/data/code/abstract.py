@@ -402,8 +402,6 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             }
         )
 
-        # If the attribute is not set, for example ``with_mpi`` do not export it
-        # so that there are no null-values in the resulting YAML file
         return yaml.dump(code_data, sort_keys=kwargs.get('sort', False), encoding='utf-8'), {}
 
     def _prepare_yml(self, *args, **kwargs):

@@ -226,7 +226,7 @@ class QbAttributesField(QbDictField):
     def __getattr__(self, key: str) -> 'QbField':
         """Return a typed child field if known; otherwise raise AttributeError.
 
-        This is what enables:
+        This enables autocomplete on fields such as:
             orm.Int.fields.attributes.value
             orm.Data.fields.attributes.source
         """
@@ -534,6 +534,8 @@ def add_field(
     }
     if not isidentifier(key):
         raise ValueError(f'{key} is not a valid python identifier')
+    if not is_attribute and alias:
+        raise ValueError('only attribute fields may be aliased')
     if key == 'attributes':
         return QbAttributesField(**kwargs)
     root_type = extract_root_type(dtype) if dtype else None

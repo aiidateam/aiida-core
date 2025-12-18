@@ -18,8 +18,6 @@ from aiida.tools.archive.abstract import ArchiveFormatAbstract
 from .reader import ArchiveReaderSqlZip
 from .writer import ArchiveAppenderSqlZip, ArchiveWriterSqlZip
 
-__all__ = ()
-
 
 class ArchiveFormatSqlZip(ArchiveFormatAbstract):
     """Archive format, which uses a zip file, containing an SQLite database.

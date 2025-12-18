@@ -22,8 +22,6 @@ if TYPE_CHECKING:
 
 EntityType = TypeVar('EntityType', bound='Entity')
 
-__all__ = ()
-
 
 class ArchiveWriterAbstract(ABC):
     """Writer of an archive, that will be used as a context manager."""

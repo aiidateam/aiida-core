@@ -30,7 +30,7 @@ from aiida.repository import Repository
 from .abstract import ArchiveFormatAbstract
 from .common import entity_type_to_orm
 from .exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError
-from .implementations.sqlite_zip import ArchiveFormatSqlZip
+from .implementations.sqlite_zip.main import ArchiveFormatSqlZip
 
 __all__ = ('import_archive',)
 

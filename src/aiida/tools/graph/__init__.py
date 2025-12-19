@@ -15,7 +15,6 @@
 from .deletions import *
 
 __all__ = (
-    'DELETE_LOGGER',
     'delete_group_nodes',
     'delete_nodes',
 )

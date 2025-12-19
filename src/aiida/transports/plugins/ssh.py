@@ -513,7 +513,7 @@ class SshTransport(BlockingTransport):
             self._close_proxies()
             raise InvalidOperation(
                 'Error in ssh transport plugin. This may be due to the remote computer not supporting SFTP. '
-                'Try setting it up with the aiida.transports:ssh_only transport from the aiida-sshonly plugin instead.'
+                'Try setting it up with the core.ssh_async transport plugin with openssh backend, instead.'
             )
 
         self._is_open = True
@@ -671,10 +671,6 @@ class SshTransport(BlockingTransport):
         this method will return None. But in __enter__ this is set explicitly,
         so this should never happen within this class.
         """
-        warn_deprecation(
-            '`getcwd()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
-            version=3,
-        )
         return self.sftp.getcwd()
 
     def makedirs(self, path: TransportPath, ignore_existing: bool = False):

@@ -13,7 +13,7 @@ import contextlib
 import contextvars
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Dict, Hashable, Iterator, List, Optional
+from typing import TYPE_CHECKING, Dict, Hashable, Iterator, Optional
 
 from aiida.common import lang
 from aiida.orm import AuthInfo
@@ -61,7 +61,7 @@ class JobsList:
         self._job_update_requests: Dict[str, asyncio.Future] = {}  # Mapping: {job_id: Future}
         self._last_updated = last_updated
         self._update_handle: Optional[asyncio.TimerHandle] = None
-        self._polling_jobs: List[str] = []
+        self._polling_jobs: frozenset[str] = frozenset()
 
     @property
     def logger(self) -> logging.Logger:
@@ -101,15 +101,12 @@ class JobsList:
             scheduler = self._authinfo.computer.get_scheduler()
             scheduler.set_transport(transport)
 
-            self._polling_jobs = [str(job_id) for job_id in self._job_update_requests.keys()]
+            self._polling_jobs = frozenset([str(job_id) for job_id in self._job_update_requests.keys()])
 
-            kwargs: Dict[str, Any] = {'as_dict': True}
             if scheduler.get_feature('can_query_by_user'):
-                kwargs['user'] = '$USER'
+                scheduler_response = scheduler.get_jobs(user='$USER', as_dict=True)
             else:
-                kwargs['jobs'] = self._polling_jobs
-
-            scheduler_response = scheduler.get_jobs(**kwargs)
+                scheduler_response = scheduler.get_jobs(jobs=list(self._polling_jobs), as_dict=True)
 
             # Update the last update time and clear the jobs cache
             self._last_updated = time.time()
@@ -154,7 +151,12 @@ class JobsList:
             for job_id in self._polling_jobs:
                 future = self._job_update_requests.pop(job_id, None)
                 if future is None:
-                    self.logger.debug(
+                    # This should not happen after fixing the mutation bug
+                    # where schedulers could modify _polling_jobs (#7155, now
+                    # immutable frozenset). If this warning fires, there may be
+                    # a race condition or other issue where job_id was removed
+                    # from _job_update_requests.
+                    self.logger.warning(  # type: ignore[unreachable]
                         f'This should not happen: polled job_id {job_id} '
                         f'not in _job_update_requests {self._job_update_requests}'
                     )

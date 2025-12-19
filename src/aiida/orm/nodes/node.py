@@ -250,7 +250,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             description='The node description',
         )
         attributes: Node.AttributesModel = MetadataField(
-            default_factory=lambda: Node.AttributesModel(),
             description='The node attributes',
             orm_to_model=lambda node, _: cast(Node, node).base.attributes.all,
             may_be_large=True,

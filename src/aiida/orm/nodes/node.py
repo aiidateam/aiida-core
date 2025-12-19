@@ -302,6 +302,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                     (parent_model,),
                     {
                         '__module__': cls.__module__,
+                        '__qualname__': f'{cls.__qualname__}.Model',
                     },
                 ),
             )

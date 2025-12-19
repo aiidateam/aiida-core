@@ -690,15 +690,19 @@ class StructureData(Data):
 
     class AttributesModel(Data.AttributesModel):
         pbc1: bool = MetadataField(
+            False,
             description='Whether periodic in the a direction',
         )
         pbc2: bool = MetadataField(
+            False,
             description='Whether periodic in the b direction',
         )
         pbc3: bool = MetadataField(
+            False,
             description='Whether periodic in the c direction',
         )
-        cell: t.List[t.List[float]] = MetadataField(
+        cell: t.Optional[t.List[t.List[float]]] = MetadataField(
+            None,
             description='The cell parameters',
         )
         kinds: t.List[dict] = MetadataField(
@@ -782,10 +786,22 @@ class StructureData(Data):
             self.set_pbc(pbc)
 
             if kinds is not None:
-                self.base.attributes.set('kinds', kinds)
+                for kind in kinds:
+                    if isinstance(kind, Kind):
+                        self.append_kind(kind)
+                    elif isinstance(kind, dict):
+                        self.append_kind(Kind(**kind))
+                    else:
+                        raise TypeError('Each kind must be either a Kind instance or a dictionary.')
 
             if sites is not None:
-                self.base.attributes.set('sites', sites)
+                for site in sites:
+                    if isinstance(site, Site):
+                        self.append_site(site)
+                    elif isinstance(site, dict):
+                        self.append_site(Site(**site))
+                    else:
+                        raise TypeError('Each site must be either a Site instance or a dictionary.')
 
     def get_dimensionality(self):
         """Return the dimensionality of the structure and its length/surface/volume.

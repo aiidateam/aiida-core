@@ -7,7 +7,6 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 """Commandline utility functions."""
-# AUTO-GENERATED
 
 # AUTO-GENERATED
 

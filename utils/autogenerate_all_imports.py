@@ -202,8 +202,6 @@ if __name__ == '__main__':
         'orm': ['implementation'],
         # skip all since the module requires extra requirements
         'restapi': ['*'],
-        # keep at aiida.tools.archive level
-        'tools': ['archive'],
     }
     _all_dict, _bad_all = parse_all(_folder)
     assert _all_dict, 'Did not find any aiida modules!'

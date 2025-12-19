@@ -232,7 +232,11 @@ class SinglefileData(Data):
         except AttributeError:
             if not objects:
                 raise exceptions.ValidationError('the `filename` attribute is not set.')
+            if len(objects) > 1:
+                raise exceptions.ValidationError(f'multiple repository files {objects} found.')
             filename = objects[0]
+            if self.base.repository.get_object(filename).is_dir():
+                raise exceptions.ValidationError(f'repository object `{filename}` is a directory.')
 
         if [filename] != objects:
             raise exceptions.ValidationError(

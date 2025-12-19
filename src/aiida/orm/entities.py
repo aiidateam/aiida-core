@@ -290,7 +290,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
                     kwargs = {'repository_path': repository_path}
                     fields[key] = orm_to_model(self, kwargs)
                 else:
-                    fields[key] = getattr(self, key)
+                    fields[key] = getattr(self, key, field.default)
 
             return fields
 

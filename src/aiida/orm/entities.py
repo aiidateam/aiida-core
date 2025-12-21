@@ -336,10 +336,6 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             as `datetime` objects.
         :return: A dictionary that can be serialized to JSON.
         """
-        self.logger.warning(
-            'Serialization through pydantic is still an experimental feature and might break in future releases.'
-        )
-
         if repository_path is None:
             import tempfile
 

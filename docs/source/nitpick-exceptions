@@ -70,7 +70,6 @@ py:class aiida.orm.implementation.entitites.EntityType
 py:class aiida.engine.processes.functions.FunctionType
 py:class aiida.engine.processes.workchains.workchain.MethodType
 py:class aiida.orm.entities.EntityInputModel
-py:class aiida.orm.entities.EntityModelType
 py:class aiida.orm.entities.EntityType
 py:class aiida.orm.entities.BackendEntityType
 py:class aiida.orm.entities.CollectionType

@@ -378,6 +378,24 @@ class TestGroups:
         assert result_path2.exists()
         assert result_path1 == result_path2
 
+    def test_dump_overwrite_false_does_not_fail(self, tmp_path):
+        """Test that dumping to an existing path with overwrite=False does not raise."""
+        group = orm.Group(label='test_overwrite_false').store()
+        node = orm.CalculationNode()
+        node.store()
+        node.seal()
+        group.add_nodes([node])
+
+        output_path = tmp_path / 'group_dump'
+
+        # First dump creates the directory
+        group.dump(output_path=output_path)
+
+        # Second dump should succeed without raising
+        result = group.dump(output_path=output_path, overwrite=False)
+
+        assert result == output_path
+
     def test_dump_with_time_filters(self, tmp_path):
         """Test dumping with time-based filters."""
         from datetime import datetime, timedelta

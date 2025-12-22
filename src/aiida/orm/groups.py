@@ -143,6 +143,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             default_factory=dict,
             description='The group extras',
             orm_to_model=lambda group, _: cast(Group, group).base.extras.all,
+            may_be_large=True,
         )
 
     _CLS_COLLECTION = GroupCollection

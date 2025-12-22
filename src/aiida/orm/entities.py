@@ -36,7 +36,6 @@ __all__ = ('Collection', 'Entity', 'EntityTypes')
 
 CollectionType = TypeVar('CollectionType', bound='Collection[Any]')
 EntityType = TypeVar('EntityType', bound='Entity[Any,Any]')
-EntityModelType = TypeVar('EntityModelType', bound=OrmModel)
 BackendEntityType = TypeVar('BackendEntityType', bound='BackendEntity')
 
 

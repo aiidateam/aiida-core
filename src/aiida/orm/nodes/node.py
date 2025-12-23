@@ -261,10 +261,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             orm_to_model=lambda node, _: cast(Node, node).base.extras.all,
             may_be_large=True,
         )
-        computer: Optional[str] = MetadataField(
+        computer: Optional[int] = MetadataField(
             None,
-            description='The label of the computer',
-            orm_to_model=lambda node, _: cast(Node, node).get_computer_label_if_exists(),
+            description='The PK of the computer',
+            orm_to_model=lambda node, _: cast(Node, node).get_computer_pk(),
             model_to_orm=lambda model: cast(Node.Model, model).load_computer(),
             read_only=True,
         )
@@ -685,12 +685,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
         return ''
 
-    def get_computer_label_if_exists(self) -> Optional[str]:
-        """Get the label of the computer of this node.
+    def get_computer_pk(self) -> Optional[int]:
+        """Get the pk of the computer of this node.
 
-        :return: The computer label or None if no computer is set.
+        :return: The computer pk or None if no computer is set.
         """
-        return self.computer.label if self.computer else None
+        return self.computer.pk if self.computer else None
 
     @property
     def is_valid_cache(self) -> bool:

@@ -15,7 +15,7 @@ import json
 import os
 import pathlib
 import re
-from typing import Dict, Iterable, List, Optional, Union
+from typing import Callable, Dict, Iterable, List, Optional, Union
 
 import numpy
 from disk_objectstore import Container
@@ -108,7 +108,12 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
         raise NotImplementedError()
 
     def _put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
-        return LazyOpener(handle.name)
+        return NotImplementedError()
+
+    def _import_from_other_repository(
+        self, src: AbstractRepositoryBackend, keys: set[str], step_cb: Optional[Callable[[str, int, int], None]]
+    ) -> List[str]:
+        return NotImplementedError()
 
     def has_objects(self, keys: List[str]) -> List[bool]:
         raise NotImplementedError()
@@ -123,10 +128,10 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
         raise NotImplementedError()
 
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_info(self, detailed: bool = False, **kwargs) -> dict:
-        raise NotImplementedError
+        raise NotImplementedError()
 
 
 def migrate_legacy_repository(profile, shard=None):

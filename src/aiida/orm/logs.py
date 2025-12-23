@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, cast
 from uuid import UUID
 
 from aiida.common import timezone
@@ -153,8 +153,10 @@ class Log(entities.Entity['BackendLog', LogCollection]):
             default_factory=dict,
             description='The metadata of the log',
         )
-        dbnode_id: int = MetadataField(
+        node: int = MetadataField(
             description='Associated node',
+            orm_class='core.node',
+            orm_to_model=lambda log, _: cast(Log, log).dbnode_id,
         )
 
     def __init__(
@@ -162,10 +164,11 @@ class Log(entities.Entity['BackendLog', LogCollection]):
         time: datetime,
         loggername: str,
         levelname: str,
-        dbnode_id: int,
+        dbnode_id: Optional[int] = None,
         message: str = '',
         metadata: Optional[Dict[str, Any]] = None,
         backend: Optional['StorageBackend'] = None,
+        node: Optional[Node] = None,
     ):
         """Construct a new log
 
@@ -184,6 +187,10 @@ class Log(entities.Entity['BackendLog', LogCollection]):
 
         if not loggername or not levelname:
             raise exceptions.ValidationError('The loggername and levelname cannot be empty')
+
+        dbnode_id = dbnode_id or (node.pk if node is not None else None)
+        if dbnode_id is None:
+            raise exceptions.ValidationError('Either dbnode_id or node must be provided to create a Log entry')
 
         backend = backend or get_manager().get_profile_storage()
         model = backend.logs.create(

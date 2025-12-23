@@ -15,6 +15,7 @@ import pytest
 from aiida import orm
 from aiida.common import exceptions
 from aiida.tools.graph.deletions import delete_nodes
+from aiida.tools.archive.exceptions import ExportValidationError
 
 
 class TestGroups:
@@ -395,6 +396,19 @@ class TestGroups:
         result = group.dump(output_path=output_path, overwrite=False)
 
         assert result == output_path
+
+    def test_dump_fails_with_unsealed_nodes_by_default(self, tmp_path):
+        """Test that dumping a group with unsealed nodes fails by default."""
+
+        group = orm.Group(label='group_with_unsealed').store()
+
+        # Create an UNSEALED node
+        node = orm.CalculationNode()
+        node.store()
+        group.add_nodes([node])
+
+        with pytest.raises(ExportValidationError, match='must be sealed'):
+            group.dump(output_path=tmp_path)
 
     def test_dump_with_time_filters(self, tmp_path):
         """Test dumping with time-based filters."""

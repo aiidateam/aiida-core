@@ -1,6 +1,6 @@
 attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.data.str.Str.AttributesModel'>,
   doc='The node attributes')
-computer: QbStrField('computer', dtype=typing.Optional[str], doc='The label of the
+computer: QbNumericField('computer', dtype=typing.Optional[int], doc='The PK of the
   computer')
 ctime: QbNumericField('ctime', dtype=<class 'datetime.datetime'>, doc='The creation
   time of the node')

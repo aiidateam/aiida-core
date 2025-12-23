@@ -1,9 +1,9 @@
-dbnode_id: QbNumericField('dbnode_id', dtype=<class 'int'>, doc='Associated node')
 levelname: QbStrField('levelname', dtype=<class 'str'>, doc='The name of the log level')
 loggername: QbStrField('loggername', dtype=<class 'str'>, doc='The name of the logger')
 message: QbStrField('message', dtype=<class 'str'>, doc='The message of the log')
 metadata: QbDictField('metadata', dtype=typing.Dict[str, typing.Any], doc='The metadata
   of the log')
+node: QbNumericField('node', dtype=<class 'int'>, doc='Associated node')
 pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
 time: QbNumericField('time', dtype=<class 'datetime.datetime'>, doc='The time at which
   the log was created')

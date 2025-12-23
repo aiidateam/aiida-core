@@ -4,7 +4,7 @@ attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.data.a
   doc='The node attributes')
 cell: QbArrayField('attributes.cell', dtype=typing.Optional[typing.List[typing.List[float]]],
   doc='Unit cell of the crystal, in Angstroms')
-computer: QbStrField('computer', dtype=typing.Optional[str], doc='The label of the
+computer: QbNumericField('computer', dtype=typing.Optional[int], doc='The PK of the
   computer')
 ctime: QbNumericField('ctime', dtype=<class 'datetime.datetime'>, doc='The creation
   time of the node')

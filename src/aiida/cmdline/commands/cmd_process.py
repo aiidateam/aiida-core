@@ -628,8 +628,10 @@ def process_dump(
     from aiida.tools.archive.exceptions import ExportValidationError
 
     warning_msg = (
-        'This is a new feature which is still in its testing phase. '
-        'If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.'
+        'This is a new feature which is still in its testing phase.\n'
+        'If you encounter unexpected behavior or bugs, please report them via:\n'
+        '   Discourse: https://aiida.discourse.group\n'
+        '   GitHub: https://github.com/aiidateam/aiida-core/issues'
     )
     echo.echo_warning(warning_msg)
 

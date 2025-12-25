@@ -26,6 +26,7 @@ from aiida.common.pydantic import MetadataField
 from aiida.orm import Computer
 from aiida.orm.entities import from_backend_entity
 
+from ....utils.loaders import load_computer
 from .abstract import AbstractCode
 from .legacy import Code
 
@@ -54,31 +55,18 @@ class InstalledCode(Code):
             priority=2,
             write_only=True,
             orm_to_model=lambda node, _: cast(InstalledCode, node).computer.label,
-            model_to_orm=lambda model: cast(InstalledCode.AttributesModel, model).load_computer(),
+            model_to_orm=lambda model: load_computer(cast(InstalledCode.AttributesModel, model).computer),
         )
-
-        def load_computer(self) -> Computer:
-            """Load the computer instance.
-
-            :return: The computer instance.
-            :raises ValueError: If the computer does not exist.
-            """
-            from aiida.orm import load_computer
-
-            try:
-                return load_computer(self.computer)
-            except exceptions.NotExistent as exception:
-                raise ValueError(exception) from exception
 
     def __init__(
         self,
-        computer: Computer | None = None,
+        computer: Computer | str | None = None,
         filepath_executable: str | None = None,
         **kwargs,
     ):
         """Construct a new instance.
 
-        :param computer: The remote computer on which the executable is located.
+        :param computer: The remote computer (instance or label) on which the executable is located.
         :param filepath_executable: The absolute filepath of the executable on the remote computer.
         """
         computer = computer or kwargs.get('attributes', {}).pop('computer', None)
@@ -90,12 +78,7 @@ class InstalledCode(Code):
             raise ValueError('The `computer` parameter must be provided.')
 
         if isinstance(computer, str):
-            from aiida.orm import Computer
-
-            try:
-                computer = Computer.collection.get(label=computer)
-            except exceptions.NotExistent as exception:
-                raise ValueError(f'Could not load computer with label `{computer}`.') from exception
+            computer = load_computer(computer)
 
         if filepath is None:
             raise ValueError('The `filepath_executable` parameter must be provided.')

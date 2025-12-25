@@ -51,6 +51,7 @@ from ..entities import Entity, from_backend_entity
 from ..extras import EntityExtras
 from ..querybuilder import QueryBuilder
 from ..users import User
+from ..utils.loaders import load_computer
 from .attributes import NodeAttributes
 from .caching import NodeCaching
 from .comments import NodeComments
@@ -265,7 +266,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             None,
             description='The PK of the computer',
             orm_to_model=lambda node, _: cast(Node, node).get_computer_pk(),
-            model_to_orm=lambda model: cast(Node.Model, model).load_computer(),
+            model_to_orm=lambda model: load_computer(cast(Node.Model, model).computer),
             read_only=True,
         )
         user: int = MetadataField(
@@ -274,19 +275,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             orm_class=User,
             read_only=True,
         )
-
-        def load_computer(self) -> Computer:
-            """Load the computer instance.
-
-            :return: The computer instance.
-            :raises ValueError: If the computer does not exist.
-            """
-            from aiida.orm import load_computer
-
-            try:
-                return load_computer(self.computer)
-            except exceptions.NotExistent as exception:
-                raise ValueError(exception) from exception
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)

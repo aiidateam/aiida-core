@@ -109,10 +109,10 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         default_calc_job_plugin: str | None = None,
         append_text: str = '',
         prepend_text: str = '',
-        use_double_quotes: bool = False,
+        use_double_quotes: bool | None = False,
         with_mpi: bool | None = None,
-        is_hidden: bool = False,
-        wrap_cmdline_params: bool = False,
+        is_hidden: bool | None = False,
+        wrap_cmdline_params: bool | None = False,
         **kwargs,
     ):
         """Construct a new instance.
@@ -134,11 +134,21 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         )
         append_text = append_text or attributes.pop(self._KEY_ATTRIBUTE_APPEND_TEXT, '')
         prepend_text = prepend_text or attributes.pop(self._KEY_ATTRIBUTE_PREPEND_TEXT, '')
-        use_double_quotes = use_double_quotes or attributes.pop(self._KEY_ATTRIBUTE_USE_DOUBLE_QUOTES, False)
+        use_double_quotes = (
+            use_double_quotes
+            if use_double_quotes is not None
+            else attributes.pop(self._KEY_ATTRIBUTE_USE_DOUBLE_QUOTES, False)
+        )
         with_mpi = with_mpi if with_mpi is not None else attributes.pop(self._KEY_ATTRIBUTE_WITH_MPI, None)
         wrap_cmdline_params = wrap_cmdline_params or attributes.pop(self._KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS, False)
-        is_hidden = is_hidden or kwargs.get('extras', {}).pop(self._KEY_EXTRA_IS_HIDDEN, False)
-        wrap_cmdline_params = wrap_cmdline_params or attributes.pop(self._KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS, False)
+        is_hidden = (
+            is_hidden if is_hidden is not None else kwargs.get('extras', {}).pop(self._KEY_EXTRA_IS_HIDDEN, False)
+        )
+        wrap_cmdline_params = (
+            wrap_cmdline_params
+            if wrap_cmdline_params is not None
+            else attributes.pop(self._KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS, False)
+        )
 
         super().__init__(**kwargs)
 

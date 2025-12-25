@@ -361,9 +361,6 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         :param serialized: A dictionary representing the serialized entity.
         :return: An instance of the entity class.
         """
-        cls._logger.warning(
-            'Serialization through pydantic is still an experimental feature and might break in future releases.'
-        )
         return cls.from_model(cls.CreateModel(**serialized))
 
     @classproperty

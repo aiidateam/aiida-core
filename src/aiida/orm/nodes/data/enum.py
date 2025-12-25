@@ -19,6 +19,7 @@ import typing as t
 from enum import Enum
 
 from plumpy.loaders import get_object_loader
+from pydantic import computed_field
 
 from aiida.common.lang import type_check
 from aiida.common.pydantic import MetadataField
@@ -50,15 +51,41 @@ class EnumData(Data):
     KEY_VALUE = 'value'
     KEY_IDENTIFIER = 'identifier'
 
-    class Model(Data.Model):
-        member: Enum = MetadataField(
-            description='The member name.',
-            orm_to_model=lambda node, _: node.get_member(),  # type: ignore[attr-defined]
+    class AttributesModel(Data.AttributesModel):
+        member: t.Optional[Enum] = MetadataField(
+            None,
+            description='The member name',
+            orm_to_model=lambda node, _: t.cast(EnumData, node).get_member(),
+            write_only=True,
         )
 
-    def __init__(self, member: Enum, *args, **kwargs):
+        @computed_field  # type: ignore[prop-decorator]
+        @property
+        def name(self) -> str:
+            """Return the member name."""
+            return self.member.name if self.member is not None else ''
+
+        @computed_field  # type: ignore[prop-decorator]
+        @property
+        def value(self) -> t.Optional[t.Any]:
+            """Return the member value."""
+            return self.member.value if self.member is not None else None
+
+        @computed_field  # type: ignore[prop-decorator]
+        @property
+        def identifier(self) -> str:
+            """Return the member identifier."""
+            return get_object_loader().identify_object(self.member.__class__)
+
+    def __init__(self, member: t.Optional[Enum] = None, *args, **kwargs):
         """Construct the node for the to enum member that is to be wrapped."""
+
+        attributes: dict = kwargs.get('attributes', {})
+        member = member or attributes.pop('member', None)
+        attributes.clear()  # we only need the member to construct the node
+
         type_check(member, Enum)
+
         super().__init__(*args, **kwargs)
 
         data = {

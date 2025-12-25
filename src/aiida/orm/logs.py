@@ -8,9 +8,12 @@
 ###########################################################################
 """Module for orm logging abstract classes"""
 
+from __future__ import annotations
+
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, cast
+from uuid import UUID
 
 from aiida.common import timezone
 from aiida.common.pydantic import MetadataField
@@ -40,10 +43,10 @@ class LogCollection(entities.Collection['Log']):
     """
 
     @staticmethod
-    def _entity_base_cls() -> Type['Log']:
+    def _entity_base_cls() -> Type[Log]:
         return Log
 
-    def create_entry_from_record(self, record: logging.LogRecord) -> Optional['Log']:
+    def create_entry_from_record(self, record: logging.LogRecord) -> Optional[Log]:
         """Helper function to create a log entry from a record created as by the python logging library
 
         :param record: The record created by the logging module
@@ -81,7 +84,7 @@ class LogCollection(entities.Collection['Log']):
             backend=self.backend,
         )
 
-    def get_logs_for(self, entity: 'Node', order_by: Optional['OrderByType'] = None) -> List['Log']:
+    def get_logs_for(self, entity: 'Node', order_by: Optional['OrderByType'] = None) -> List[Log]:
         """Get all the log messages for a given node and optionally sort
 
         :param entity: the entity to get logs for
@@ -130,23 +133,42 @@ class Log(entities.Entity['BackendLog', LogCollection]):
     _CLS_COLLECTION = LogCollection
 
     class Model(entities.Entity.Model):
-        uuid: str = MetadataField(description='The UUID of the node', is_attribute=False, exclude_to_orm=True)
-        loggername: str = MetadataField(description='The name of the logger', is_attribute=False)
-        levelname: str = MetadataField(description='The name of the log level', is_attribute=False)
-        message: str = MetadataField(description='The message of the log', is_attribute=False)
-        time: datetime = MetadataField(description='The time at which the log was created', is_attribute=False)
-        metadata: Dict[str, Any] = MetadataField(description='The metadata of the log', is_attribute=False)
-        dbnode_id: int = MetadataField(description='Associated node', is_attribute=False)
+        uuid: UUID = MetadataField(
+            description='The UUID of the node',
+            read_only=True,
+        )
+        loggername: str = MetadataField(
+            description='The name of the logger',
+        )
+        levelname: str = MetadataField(
+            description='The name of the log level',
+        )
+        message: str = MetadataField(
+            description='The message of the log',
+        )
+        time: datetime = MetadataField(
+            description='The time at which the log was created',
+        )
+        metadata: Dict[str, Any] = MetadataField(
+            default_factory=dict,
+            description='The metadata of the log',
+        )
+        node: int = MetadataField(
+            description='Associated node',
+            orm_class='core.node',
+            orm_to_model=lambda log, _: cast(Log, log).dbnode_id,
+        )
 
     def __init__(
         self,
         time: datetime,
         loggername: str,
         levelname: str,
-        dbnode_id: int,
+        dbnode_id: Optional[int] = None,
         message: str = '',
         metadata: Optional[Dict[str, Any]] = None,
         backend: Optional['StorageBackend'] = None,
+        node: Optional[Node] = None,
     ):
         """Construct a new log
 
@@ -165,6 +187,10 @@ class Log(entities.Entity['BackendLog', LogCollection]):
 
         if not loggername or not levelname:
             raise exceptions.ValidationError('The loggername and levelname cannot be empty')
+
+        dbnode_id = dbnode_id or (node.pk if node is not None else None)
+        if dbnode_id is None:
+            raise exceptions.ValidationError('Either dbnode_id or node must be provided to create a Log entry')
 
         backend = backend or get_manager().get_profile_storage()
         model = backend.logs.create(

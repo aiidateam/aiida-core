@@ -14,14 +14,17 @@ from aiida.orm.nodes.data import (
     ArrayData,
     Bool,
     CifData,
+    ContainerizedCode,
     Data,
     Dict,
     EnumData,
     Float,
     FolderData,
+    InstalledCode,
     Int,
     JsonableData,
     List,
+    PortableCode,
     RemoteData,
     RemoteStashCompressedData,
     RemoteStashData,
@@ -41,14 +44,17 @@ orms_to_test = (
     ArrayData,
     Bool,
     CifData,
+    ContainerizedCode,
     Data,
     Dict,
     EnumData,
     Float,
     FolderData,
+    InstalledCode,
     Int,
     JsonableData,
     List,
+    PortableCode,
     SinglefileData,
     Str,
     StructureData,
@@ -115,6 +121,16 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
         return Bool, {'attributes': {'value': True}}
     if request.param is CifData:
         return CifData, {'content': io.BytesIO(b'some-content')}
+    if request.param is ContainerizedCode:
+        return ContainerizedCode, {
+            'label': 'containerized_echo',
+            'attributes': {
+                'computer': aiida_localhost.label,
+                'filepath_executable': '/bin/echo',
+                'image_name': 'docker://alpine:3',
+                'engine_command': 'docker run {image_name}',
+            },
+        }
     if request.param is Data:
         return Data, {'attributes': {'source': {'uri': 'http://127.0.0.1'}}}
     if request.param is Dict:
@@ -129,12 +145,31 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
         (dirpath / 'binary_file').write_bytes(b'byte content')
         (dirpath / 'text_file').write_text('text content')
         return FolderData, {'tree': dirpath}
+    if request.param is InstalledCode:
+        return InstalledCode, {
+            'label': 'echo',
+            'attributes': {
+                'computer': aiida_localhost.label,
+                'filepath_executable': '/bin/echo',
+            },
+        }
     if request.param is Int:
         return Int, {'attributes': {'value': 1}}
     if request.param is JsonableData:
         return JsonableData, {'attributes': {'obj': JsonableClass({'a': 1})}}
     if request.param is List:
         return List, {'attributes': {'value': [1.0]}}
+    if request.param is PortableCode:
+        code_path = tmp_path / 'portable_code'
+        code_path.mkdir()
+        (code_path / 'code.sh').write_text('#!/bin/bash\necho "$@"\n')
+        return PortableCode, {
+            'label': 'portable_code',
+            'attributes': {
+                'filepath_executable': 'code.sh',
+                'filepath_files': code_path,
+            },
+        }
     if request.param is SinglefileData:
         return SinglefileData, {'attributes': {'content': io.BytesIO(b'some-content')}}
     if request.param is Str:

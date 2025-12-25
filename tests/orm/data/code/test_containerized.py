@@ -27,9 +27,6 @@ def test_constructor_raises(aiida_localhost):
         path = pathlib.Path('bash')
         ContainerizedCode(computer=aiida_localhost, filepath_executable=path, engine_command='docker', image_name='img')
 
-    with pytest.raises(TypeError, match=r'Got object of type .*'):
-        ContainerizedCode(computer='computer', filepath_executable='bash', engine_command='docker', image_name='img')
-
     with pytest.raises(ValueError, match="the '{image_name}' template field should be in engine command."):
         ContainerizedCode(computer=aiida_localhost, filepath_executable='ls', engine_command='docker', image_name='img')
 

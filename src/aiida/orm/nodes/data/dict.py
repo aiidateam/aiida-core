@@ -13,6 +13,8 @@ from __future__ import annotations
 import copy
 import typing as t
 
+import pydantic as pdt
+
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
 
@@ -51,12 +53,12 @@ class Dict(Data):
     """
 
     class AttributesModel(Data.AttributesModel):
-        model_config = {
-            'arbitrary_types_allowed': True,
-            'json_schema_extra': {
+        model_config = pdt.ConfigDict(
+            arbitrary_types_allowed=True,
+            json_schema_extra={
                 'additionalProperties': True,
             },
-        }
+        )
 
         value: t.Dict[str, t.Any] = MetadataField(
             description='The dictionary content',

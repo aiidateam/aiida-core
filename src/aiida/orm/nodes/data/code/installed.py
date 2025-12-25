@@ -19,8 +19,6 @@ from __future__ import annotations
 import pathlib
 from typing import cast
 
-from pydantic import field_validator
-
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
@@ -49,44 +47,55 @@ class InstalledCode(Code):
             short_name='-X',
             priority=1,
         )
-
-    class Model(AbstractCode.Model):
         computer: str = MetadataField(
             title='Computer',
             description='The label of the remote computer on which the executable resides',
-            orm_to_model=lambda node, _: cast(InstalledCode, node).computer.label,
-            model_to_orm=lambda model: cast(InstalledCode.Model, model).load_computer(),
             short_name='-Y',
             priority=2,
+            write_only=True,
+            orm_to_model=lambda node, _: cast(InstalledCode, node).computer.label,
+            model_to_orm=lambda model: cast(InstalledCode.AttributesModel, model).load_computer(),
         )
 
-        @field_validator('computer', mode='before')
-        @classmethod
-        def validate_computer(cls, value: str | int) -> str:
-            """Validate the ``computer`` field.
+        def load_computer(self) -> Computer:
+            """Load the computer instance.
 
-            :param value: The value to validate.
-            :return: The validated value.
-            :raises ValueError: If the value is not a string or integer.
+            :return: The computer instance.
+            :raises ValueError: If the computer does not exist.
             """
             from aiida.orm import load_computer
 
-            if isinstance(value, int):
-                try:
-                    return load_computer(value).label
-                except exceptions.NotExistent as exception:
-                    raise ValueError(f'No computer found for the given id: {value}') from exception
-            return value
+            try:
+                return load_computer(self.computer)
+            except exceptions.NotExistent as exception:
+                raise ValueError(exception) from exception
 
-    def __init__(self, computer: Computer, filepath_executable: str | None = None, **kwargs):
+    def __init__(
+        self,
+        computer: Computer | None = None,
+        filepath_executable: str | None = None,
+        **kwargs,
+    ):
         """Construct a new instance.
 
         :param computer: The remote computer on which the executable is located.
         :param filepath_executable: The absolute filepath of the executable on the remote computer.
         """
+        computer = computer or kwargs.get('attributes', {}).pop('computer', None)
         filepath = filepath_executable or kwargs.get('attributes', {}).pop(
             self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, None
         )
+
+        if computer is None:
+            raise ValueError('The `computer` parameter must be provided.')
+
+        if isinstance(computer, str):
+            from aiida.orm import Computer
+
+            try:
+                computer = Computer.collection.get(label=computer)
+            except exceptions.NotExistent as exception:
+                raise ValueError(f'Could not load computer with label `{computer}`.') from exception
 
         if filepath is None:
             raise ValueError('The `filepath_executable` parameter must be provided.')

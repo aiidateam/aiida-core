@@ -369,7 +369,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     def __hash__(self) -> int:
         """Python-Hash: Implementation that is compatible with __eq__"""
-        return UUID(self.uuid).int
+        return int(UUID(self.uuid))
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self!s}>'

@@ -51,7 +51,6 @@ from ..entities import Entity, from_backend_entity
 from ..extras import EntityExtras
 from ..querybuilder import QueryBuilder
 from ..users import User
-from ..utils.loaders import load_computer
 from .attributes import NodeAttributes
 from .caching import NodeCaching
 from .comments import NodeComments
@@ -210,6 +209,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     _storable = False
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
+    identity_field: ClassVar[str] = 'uuid'
+
     class AttributesModel(OrmModel):
         """The node attributes."""
 
@@ -266,7 +267,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             None,
             description='The PK of the computer',
             orm_to_model=lambda node, _: cast(Node, node).get_computer_pk(),
-            model_to_orm=lambda model: load_computer(cast(Node.Model, model).computer),
+            orm_class=Computer,
             read_only=True,
         )
         user: int = MetadataField(

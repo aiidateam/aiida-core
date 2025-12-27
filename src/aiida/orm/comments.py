@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional, Type, cast
+from typing import TYPE_CHECKING, ClassVar, List, Optional, Type, cast
 from uuid import UUID
 
 from aiida.common.pydantic import MetadataField
@@ -69,6 +69,8 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
     """Base class to map a DbComment that represents a comment attached to a certain Node."""
 
     _CLS_COLLECTION = CommentCollection
+
+    identity_field: ClassVar[str] = 'uuid'
 
     class Model(entities.Entity.Model):
         uuid: UUID = MetadataField(

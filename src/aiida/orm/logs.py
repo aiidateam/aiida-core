@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Type, cast
 from uuid import UUID
 
 from aiida.common import timezone
@@ -131,6 +131,8 @@ class Log(entities.Entity['BackendLog', LogCollection]):
     """An AiiDA Log entity.  Corresponds to a logged message against a particular AiiDA node."""
 
     _CLS_COLLECTION = LogCollection
+
+    identity_field: ClassVar[str] = 'uuid'
 
     class Model(entities.Entity.Model):
         uuid: UUID = MetadataField(

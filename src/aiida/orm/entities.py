@@ -14,7 +14,7 @@ import abc
 import pathlib
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Generic, List, Literal, NoReturn, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, List, Literal, NoReturn, Optional, Type, TypeVar, Union
 
 from plumpy.base.utils import call_with_super_check, super_check
 from typing_extensions import Self
@@ -181,6 +181,8 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
     _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
     _logger = log.AIIDA_LOGGER.getChild('orm.entities')
+
+    identity_field: ClassVar[str] = 'pk'
 
     class Model(OrmModel):
         pk: int = MetadataField(

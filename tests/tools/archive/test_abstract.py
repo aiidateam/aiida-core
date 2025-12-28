@@ -18,7 +18,7 @@ import pytest
 from aiida import orm
 from aiida.common.exceptions import IntegrityError
 from aiida.orm.entities import EntityTypes
-from aiida.tools.archive import ArchiveFormatSqlZip
+from aiida.tools.archive.implementations.sqlite_zip.main import ArchiveFormatSqlZip
 
 
 def test_write_read(tmp_path):

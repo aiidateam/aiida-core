@@ -36,6 +36,7 @@ dependencies = [
   'click-spinner~=0.1.8',
   'click>=8.1.0,<8.3',
   'disk-objectstore~=1.4.0',
+  'pygit2~=1.18.0',
   'docstring-parser',
   'get-annotations~=0.1;python_version<"3.10"',
   'graphviz~=0.19',
@@ -68,7 +69,7 @@ keywords = ['aiida', 'workflows']
 license = {file = 'LICENSE.txt'}
 name = 'aiida-core'
 readme = 'README.md'
-requires-python = '>=3.9'
+requires-python = '>=3.10'
 
 [project.entry-points.'aiida.brokers']
 'core.rabbitmq' = 'aiida.brokers.rabbitmq.broker:RabbitmqBroker'
@@ -179,6 +180,7 @@ requires-python = '>=3.9'
 [project.entry-points.'aiida.storage']
 'core.psql_dos' = 'aiida.storage.psql_dos.backend:PsqlDosBackend'
 'core.sqlite_dos' = 'aiida.storage.sqlite_dos.backend:SqliteDosStorage'
+'core.sqlite_git' = 'aiida.storage.sqlite_git.backend:SqliteGitStorage'
 'core.sqlite_temp' = 'aiida.storage.sqlite_temp.backend:SqliteTempBackend'
 'core.sqlite_zip' = 'aiida.storage.sqlite_zip.backend:SqliteZipBackend'
 

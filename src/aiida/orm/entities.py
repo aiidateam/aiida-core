@@ -353,6 +353,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             minimal=minimal,
         ).model_dump(
             mode=mode,
+            exclude_none=True,
             exclude_unset=minimal,
         )
 

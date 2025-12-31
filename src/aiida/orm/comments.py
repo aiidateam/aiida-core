@@ -31,6 +31,8 @@ __all__ = ('Comment',)
 class CommentCollection(entities.Collection['Comment']):
     """The collection of Comment entries."""
 
+    collection_type: ClassVar[str] = 'comments'
+
     @staticmethod
     def _entity_base_cls() -> Type[Comment]:
         return Comment
@@ -76,27 +78,33 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         uuid: UUID = MetadataField(
             description='The UUID of the comment',
             read_only=True,
+            examples=['123e4567-e89b-12d3-a456-426614174000'],
         )
         ctime: datetime = MetadataField(
             description='Creation time of the comment',
             read_only=True,
+            examples=['2024-01-01T12:00:00+00:00'],
         )
         mtime: datetime = MetadataField(
             description='Modified time of the comment',
             read_only=True,
+            examples=['2024-01-02T12:00:00+00:00'],
         )
         node: int = MetadataField(
             description='Node PK that the comment is attached to',
             orm_class='core.node',
             orm_to_model=lambda comment, _: cast(Comment, comment).node.pk,
+            examples=[42],
         )
         user: int = MetadataField(
             description='User PK that created the comment',
             orm_class='core.user',
             orm_to_model=lambda comment, _: cast(Comment, comment).user.pk,
+            examples=[7],
         )
         content: str = MetadataField(
             description='Content of the comment',
+            examples=['This is a comment.'],
         )
 
     def __init__(

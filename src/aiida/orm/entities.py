@@ -56,6 +56,8 @@ class EntityTypes(Enum):
 class Collection(abc.ABC, Generic[EntityType]):
     """Container class that represents the collection of objects of a particular entity type."""
 
+    collection_type: ClassVar[str] = 'entities'
+
     @staticmethod
     @abc.abstractmethod
     def _entity_base_cls() -> Type[EntityType]:

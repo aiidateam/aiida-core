@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Tuple, Type
+from typing import TYPE_CHECKING, ClassVar, Optional, Tuple, Type
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -27,6 +27,8 @@ __all__ = ('User',)
 
 class UserCollection(entities.Collection['User']):
     """The collection of users stored in a backend."""
+
+    collection_type: ClassVar[str] = 'users'
 
     @staticmethod
     def _entity_base_cls() -> Type[User]:

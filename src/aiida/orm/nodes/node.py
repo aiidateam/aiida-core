@@ -73,6 +73,8 @@ NodeType = TypeVar('NodeType', bound='Node')
 class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
     """The collection of nodes."""
 
+    collection_type: ClassVar[str] = 'nodes'
+
     @staticmethod
     def _entity_base_cls() -> Type[Node]:  # type: ignore[override]
         return Node

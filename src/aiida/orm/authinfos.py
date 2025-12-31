@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Type, cast
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -31,6 +31,8 @@ __all__ = ('AuthInfo',)
 
 class AuthInfoCollection(entities.Collection['AuthInfo']):
     """The collection of `AuthInfo` entries."""
+
+    collection_type: ClassVar[str] = 'authinfos'
 
     @staticmethod
     def _entity_base_cls() -> Type[AuthInfo]:

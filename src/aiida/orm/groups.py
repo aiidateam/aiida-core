@@ -61,6 +61,8 @@ def load_group_class(type_string: str) -> Type[Group]:
 class GroupCollection(entities.Collection['Group']):
     """Collection of Groups"""
 
+    collection_type: ClassVar[str] = 'groups'
+
     @staticmethod
     def _entity_base_cls() -> Type[Group]:
         return Group

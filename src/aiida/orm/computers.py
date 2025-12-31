@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Tuple, Type, Union
 from uuid import UUID
 
 from aiida.common import exceptions
@@ -33,6 +33,8 @@ __all__ = ('Computer',)
 
 class ComputerCollection(entities.Collection['Computer']):
     """The collection of Computer entries."""
+
+    collection_type: ClassVar[str] = 'computers'
 
     @staticmethod
     def _entity_base_cls() -> Type[Computer]:

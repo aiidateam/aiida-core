@@ -14,6 +14,8 @@ import os
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Tuple, Type, Union
 from uuid import UUID
 
+from pydantic import field_serializer
+
 from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER, AiidaLoggerType
 from aiida.common.pydantic import MetadataField
@@ -104,6 +106,11 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             description='Metadata of the computer',
             may_be_large=True,
         )
+
+        @field_serializer('uuid')
+        def serialize_uuid(self, value: UUID) -> str:
+            """Serialize UUID to string."""
+            return str(value)
 
     def __init__(
         self,

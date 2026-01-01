@@ -30,6 +30,7 @@ from typing import (
 )
 from uuid import UUID
 
+from pydantic import field_serializer
 from typing_extensions import Self
 
 from aiida.common import exceptions
@@ -278,6 +279,11 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             orm_class=User,
             read_only=True,
         )
+
+        @field_serializer('uuid')
+        def serialize_uuid(self, value: UUID) -> str:
+            """Serialize UUID to string."""
+            return str(value)
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)

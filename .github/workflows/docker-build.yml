@@ -36,7 +36,7 @@ jobs:
     steps:
 
     - name: Checkout Repo ⚡️
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Set up QEMU
       if: ${{ inputs.platforms != 'linux/amd64' }}
@@ -58,7 +58,7 @@ jobs:
 
     - name: Build and upload to ghcr.io 📤
       id: build
-      uses: docker/bake-action@v5
+      uses: docker/bake-action@v6
       with:
         push: true
         workdir: .docker/

@@ -15,6 +15,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Type, cast
 from uuid import UUID
 
+from pydantic import field_serializer
+
 from aiida.common import timezone
 from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
@@ -160,6 +162,11 @@ class Log(entities.Entity['BackendLog', LogCollection]):
             orm_class='core.node',
             orm_to_model=lambda log, _: cast(Log, log).dbnode_id,
         )
+
+        @field_serializer('uuid')
+        def serialize_uuid(self, value: UUID) -> str:
+            """Serialize UUID to string."""
+            return str(value)
 
     def __init__(
         self,

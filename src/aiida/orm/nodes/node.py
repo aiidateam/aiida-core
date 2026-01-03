@@ -66,7 +66,7 @@ if TYPE_CHECKING:
     from ..implementation.nodes import BackendNode
     from .repository import NodeRepository
 
-__all__ = ('Node', 'NodeLinks')
+__all__ = ('Node',)
 
 NodeType = TypeVar('NodeType', bound='Node')
 
@@ -215,21 +215,27 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     identity_field: ClassVar[str] = 'uuid'
 
     class AttributesModel(OrmModel):
-        """The node attributes."""
+        """The node attributes.
+
+        Extended by `Node` subclasses with specific attributes.
+        """
 
     class Model(Entity.Model):
         uuid: UUID = MetadataField(
             description='The UUID of the node',
             read_only=True,
+            examples=['123e4567-e89b-12d3-a456-426614174000'],
         )
         node_type: str = MetadataField(
             description='The type of the node',
             read_only=True,
+            examples=['process.calculation.calcjob.CalcJobNode.'],
         )
         process_type: Optional[str] = MetadataField(
             None,
             description='The process type of the node',
             read_only=True,
+            examples=['aiida.calculations:arithmetic.add.'],
         )
         repository_metadata: Dict[str, Any] = MetadataField(
             default_factory=dict,
@@ -237,34 +243,41 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             orm_to_model=lambda node, _: cast(Node, node).base.repository.metadata,
             read_only=True,
             may_be_large=True,
+            examples=[{'key': 'value'}],
         )
         ctime: datetime.datetime = MetadataField(
             description='The creation time of the node',
             read_only=True,
+            examples=['2024-01-01T12:00:00+00:00'],
         )
         mtime: datetime.datetime = MetadataField(
             description='The modification time of the node',
             read_only=True,
+            examples=['2024-01-02T12:00:00+00:00'],
         )
         label: str = MetadataField(
             '',
             description='The node label',
+            examples=['my_node'],
         )
         description: str = MetadataField(
             '',
             description='The node description',
+            examples=['This is my node description.'],
         )
         attributes: Node.AttributesModel = MetadataField(
             default_factory=lambda: Node.AttributesModel(),
             description='The node attributes',
             orm_to_model=lambda node, _: cast(Node, node).base.attributes.all,
             may_be_large=True,
+            examples=[{'attr_key': 'attr_value'}],
         )
         extras: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='The node extras',
             orm_to_model=lambda node, _: cast(Node, node).base.extras.all,
             may_be_large=True,
+            examples=[{'extra_key': 'extra_value'}],
         )
         computer: Optional[int] = MetadataField(
             None,
@@ -272,12 +285,14 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             orm_to_model=lambda node, _: cast(Node, node).get_computer_pk(),
             orm_class=Computer,
             read_only=True,
+            examples=[42],
         )
         user: int = MetadataField(
             description='The PK of the user who owns the node',
             orm_to_model=lambda node, _: cast(Node, node).user.pk,
             orm_class=User,
             read_only=True,
+            examples=[7],
         )
 
         @field_serializer('uuid')
@@ -337,10 +352,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         )
         super().__init__(backend_entity)
 
-        if attributes is not None:
+        if attributes:
             self.base.attributes.set_many(attributes)
 
-        if extras is not None:
+        if extras:
             self.base.extras.set_many(extras)
 
     @cached_property

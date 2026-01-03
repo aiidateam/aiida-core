@@ -84,27 +84,34 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         uuid: UUID = MetadataField(
             description='The UUID of the computer',
             read_only=True,
+            examples=['123e4567-e89b-12d3-a456-426614174000'],
         )
         label: str = MetadataField(
             description='Label for the computer',
+            examples=['localhost'],
         )
         description: str = MetadataField(
             '',
             description='Description of the computer',
+            examples=['My local machine'],
         )
         hostname: str = MetadataField(
             description='Hostname of the computer',
+            examples=['localhost'],
         )
         transport_type: str = MetadataField(
             description='Transport type of the computer',
+            examples=['core.local'],
         )
         scheduler_type: str = MetadataField(
             description='Scheduler type of the computer',
+            examples=['core.direct'],
         )
         metadata: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='Metadata of the computer',
             may_be_large=True,
+            examples=[{'key': 'value'}],
         )
 
         @field_serializer('uuid')

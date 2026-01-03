@@ -190,6 +190,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         pk: int = MetadataField(
             description='The primary key of the entity',
             read_only=True,
+            examples=[42],
         )
 
     @classproperty

@@ -23,7 +23,8 @@ from aiida.common.pydantic import MetadataField
 from aiida.orm.utils.mixins import Sealable
 
 from ..caching import NodeCaching
-from ..node import Node, NodeLinks
+from ..links import NodeLinks
+from ..node import Node
 
 if TYPE_CHECKING:
     from aiida.engine.processes import ExitCode, Process

@@ -1,6 +1,6 @@
 name: release
 
-# Automate plubishing to PyPI and TestPyPI. When pushing a release tag vX.Y.Z,
+# Automate publishing to PyPI and TestPyPI. When pushing a release tag vX.Y.Z,
 # the workflow will publish to PyPI. When the 'test-release' label is active on
 # a PR, the workflow will publish to TestPyPI on each update. In both cases it
 # is checked if pre-commit and the tests pass. When a release tag is pushed it

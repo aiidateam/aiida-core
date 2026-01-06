@@ -59,6 +59,36 @@ Further in-depth information is available in the dedicated :ref:`topic on perfor
 
         verdi config set daemon.worker_process_slots 1000
 
+.. dropdown:: Tune SSH connection interval (safe_interval)
+
+    By default, AiiDA enforces a **15s delay** between consecutive SSH connections to the same remote machine to prevent overload.
+    This delay is configurable via the CLI and can be adjusted interactively for each Computer.
+
+    If you are running many short tasks on a remote HPC and notice performance bottlenecks,
+    you can tune this value via the Computer configuration.
+
+    To view or change the safe interval of an existing Computer:
+
+    .. code:: console
+
+        verdi computer configure core.ssh <COMPUTER_LABEL>
+
+    During the interactive prompt, locate the **SSH safe interval** (sometimes shown as
+    *Connection cooldown time*) and enter a new value (in seconds) that matches your workload and
+    remote system. Increasing it reduces load on remote servers, while decreasing it allows faster
+    connection cycles when safe.
+
+    You can inspect the effective safe interval at any time via:
+
+    .. code:: console
+
+        verdi computer configure show <COMPUTER_LABEL>
+
+    .. note::
+
+        Setting an interval that is too low — especially when many daemon workers are active — can
+        overload the remote system and potentially violate usage policies of some HPC centers.
+
 .. dropdown:: Prevent your operating system from indexing the file repository.
 
     Many Linux distributions include the ``locate`` command to quickly find files and folders, and run a daily cron job ``updatedb.mlocate`` to create the corresponding index.

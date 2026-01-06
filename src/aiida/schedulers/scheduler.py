@@ -362,8 +362,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         :return: dictionary with `retval`, `stdout` and `stderr`.
         """
         command = self._get_detailed_job_info_command(job_id)
-        with self.transport:
-            retval, stdout, stderr = self.transport.exec_command_wait(command)
+        retval, stdout, stderr = self.transport.exec_command_wait(command)
 
         detailed_job_info = {
             'retval': retval,

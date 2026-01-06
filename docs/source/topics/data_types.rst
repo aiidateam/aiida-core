@@ -1338,7 +1338,7 @@ Here is an example for a custom data type that needs to wrap a single text file:
             super().__init__(**kwargs)
 
             filename = os.path.basename(filepath)  # Get the filename from the absolute path
-            self.put_object_from_file(filepath, filename)  # Store the file in the repository under the given filename
+            self.base.repository.put_object_from_file(filepath, filename)  # Store the file in the repository under the given filename
             self.base.attributes.set('filename', filename)  # Store in the attributes what the filename is
 
         def get_content(self):

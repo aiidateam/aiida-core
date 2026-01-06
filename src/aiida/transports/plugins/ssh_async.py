@@ -158,6 +158,7 @@ class AsyncSshTransport(AsyncTransport):
         :raises InvalidOperation: if the transport is already open
         """
         if self._is_open:
+            # That means the transport is already open, while it should not
             raise InvalidOperation('Cannot open the transport twice')
 
         if self.script_before != 'None':
@@ -180,7 +181,11 @@ class AsyncSshTransport(AsyncTransport):
         if not self._is_open:
             raise InvalidOperation('Cannot close the transport: it is already closed')
 
-        await self.async_backend.close()
+        try:
+            await self.async_backend.close()
+        except Exception as exc:
+            raise OSError(f'Error while closing the transport: {exc}')
+
         self._is_open = False
 
     def __str__(self):
@@ -861,11 +866,18 @@ class AsyncSshTransport(AsyncTransport):
             workdir = str(workdir)
             command = f'cd {workdir} && ( {command} )'
 
-        return await self.async_backend.run(
-            command=command,
-            stdin=stdin,
-            timeout=timeout,
-        )
+        async with self._semaphore:
+            try:
+                result = await self.async_backend.run(
+                    command=command,
+                    stdin=stdin,
+                    timeout=timeout,
+                )
+            except Exception as exc:
+                self.logger.warning(f'Failed to execute command on remote connection: {exc}')
+                raise
+
+        return result
 
     async def get_attribute_async(self, path: TransportPath):
         """Return an object FixedFieldsAttributeDict for file in a given path,

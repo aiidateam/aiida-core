@@ -738,7 +738,7 @@ Working with external codes
   If none meet your needs, then the {ref}`external codes how-to <how-to:plugin-codes>` can show you how to create your own calculation plugin.
 
 Tuning performance
-: To optimise the performance of AiiDA for running many concurrent computations see the {ref}`tuning performance how-to <how-to:installation:performance>`.
+: To optimise the performance of AiiDA for running many concurrent computations see the {ref}`tuning performance how-to <how-to:tune-performance>`.
 
 Saving computational resources
 : AiiDA can cache and reuse the outputs of identical computations, as described in the {ref}`caching how-to <how-to:run-codes:caching>`.

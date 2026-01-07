@@ -100,8 +100,8 @@ jobs:
             const image = bake_output[key];
             const image_envvar = `${key.toUpperCase().replace(/-/g, "_")}_IMAGE`;
             const image_name = image["image.name"].split(',')[0];
-            const image_digest = `${image_name}@${image["containerimage.digest"]}`;
+            const image_digest = image["containerimage.digest"];
 
-            images[image_envvar] = image_digest;
+            images[image_envvar] = `${image_name}@${image_digest}`;
           }
           return images;

@@ -46,6 +46,7 @@ jobs:
         # Load to Docker engine for testing
         load: true
         workdir: .docker/
+        source: .
         set: |
           *.platform=amd64
           *.cache-to=type=gha,scope=${{ github.workflow }},mode=min

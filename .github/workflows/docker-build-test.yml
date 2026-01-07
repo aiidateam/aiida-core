@@ -41,7 +41,7 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Build images
-      uses: docker/bake-action@v5
+      uses: docker/bake-action@v6.10.0
       with:
         # Load to Docker engine for testing
         load: true

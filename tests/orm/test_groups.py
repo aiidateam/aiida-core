@@ -14,6 +14,7 @@ import pytest
 
 from aiida import orm
 from aiida.common import exceptions
+from aiida.tools.archive.exceptions import ExportValidationError
 from aiida.tools.graph.deletions import delete_nodes
 
 
@@ -377,6 +378,37 @@ class TestGroups:
         result_path2 = group.dump(output_path=output_path, overwrite=True)
         assert result_path2.exists()
         assert result_path1 == result_path2
+
+    def test_dump_overwrite_false_does_not_fail(self, tmp_path):
+        """Test that dumping to an existing path with overwrite=False does not raise."""
+        group = orm.Group(label='test_overwrite_false').store()
+        node = orm.CalculationNode()
+        node.store()
+        node.seal()
+        group.add_nodes([node])
+
+        output_path = tmp_path / 'group_dump'
+
+        # First dump creates the directory
+        group.dump(output_path=output_path)
+
+        # Second dump should succeed without raising
+        result = group.dump(output_path=output_path, overwrite=False)
+
+        assert result == output_path
+
+    def test_dump_fails_with_unsealed_nodes_by_default(self, tmp_path):
+        """Test that dumping a group with unsealed nodes fails by default."""
+
+        group = orm.Group(label='group_with_unsealed').store()
+
+        # Create an UNSEALED node
+        node = orm.CalculationNode()
+        node.store()
+        group.add_nodes([node])
+
+        with pytest.raises(ExportValidationError, match='must be sealed'):
+            group.dump(output_path=tmp_path)
 
     def test_dump_with_time_filters(self, tmp_path):
         """Test dumping with time-based filters."""

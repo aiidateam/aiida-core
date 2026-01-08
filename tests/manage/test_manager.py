@@ -18,9 +18,7 @@ def test_disconnect():
     After at least one process would have been run, trying to disconnect the communcitor would time out. The problem
     is related to the update of the lower lying libraries ``aio-pika`` and ``aiormq`` to v9.4 and v6.8, respectively.
     After much painstaking debugging the cause could not be determined, nor a solution. This test is added to
-    demonstrate the problematic behavior. Getting the communicator and then disconnecting it (through calling
-    :meth:`aiida.manage.manager.Manager.reset_profile`) works fine. However, if a process is a run before closing it,
-    for example running a calcfunction, the closing of the communicator will raise a ``TimeoutError``.
+    demonstrate the problematic behavior.
     """
     from aiida.manage import get_manager
 
@@ -31,4 +29,4 @@ def test_disconnect():
     result, node = add_calcfunction.run_get_node(1)
     assert node.is_finished_ok
     assert result == 2
-    manager.reset_profile()  # This hangs before timing out
+    manager.reset_profile()

@@ -134,7 +134,7 @@ RUN set -x && \
         --prefix="${CONDA_DIR}" \
         --yes \
         "${PYTHON_SPECIFIER}" \
-        mamba=2.4 && \
+        mamba=2.3 && \
     rm micromamba && \
     # Pin major.minor version of python
     mamba list python | grep -oP 'python\s+\K[\d.]+' | tr -s ' ' | cut -d ' ' -f 1,2 >> "${CONDA_DIR}/conda-meta/pinned" && \

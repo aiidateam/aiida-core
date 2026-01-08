@@ -49,11 +49,8 @@ except AttributeError:
     # This type is not available for Python 3.9 and older
     UnionType = None  # type: ignore[assignment,misc]
 
-try:
-    from typing import ParamSpec
-except ImportError:
-    # Fallback for Python 3.9 and older
-    from typing_extensions import ParamSpec  # type: ignore[assignment]
+# Fallback for Python 3.9 and older
+from typing_extensions import ParamSpec
 
 try:
     get_annotations = inspect.get_annotations
@@ -355,11 +352,11 @@ class FunctionProcess(Process):
         """
         if (
             not issubclass(node_class, ProcessNode)  # type: ignore[redundant-expr]
-            or not issubclass(node_class, FunctionCalculationMixin)  # type: ignore[unreachable]
+            or not issubclass(node_class, FunctionCalculationMixin)
         ):
             raise TypeError('the node_class should be a sub class of `ProcessNode` and `FunctionCalculationMixin`')
 
-        signature = inspect.signature(func)  # type: ignore[unreachable]
+        signature = inspect.signature(func)
 
         args: list[str] = []
         var_positional: str | None = None
@@ -373,17 +370,21 @@ class FunctionProcess(Process):
             LOGGER.warning(f'function `{func.__name__}` has invalid type hints: {exception}')
             annotations = {}
 
-        try:
-            parsed_docstring = docstring_parser.parse(func.__doc__)
-        except Exception as exception:
-            LOGGER.warning(f'function `{func.__name__}` has a docstring that could not be parsed: {exception}')
-            param_help_string = {}
+        if func.__doc__ is None:
+            param_help_string: dict[str, str | None] = {}
             namespace_help_string = None
         else:
-            param_help_string = {param.arg_name: param.description for param in parsed_docstring.params}
-            namespace_help_string = parsed_docstring.short_description if parsed_docstring.short_description else ''
-            if parsed_docstring.long_description is not None:
-                namespace_help_string += f'\n\n{parsed_docstring.long_description}'
+            try:
+                parsed_docstring = docstring_parser.parse(func.__doc__)
+            except Exception as exception:
+                LOGGER.warning(f'function `{func.__name__}` has a docstring that could not be parsed: {exception}')
+                param_help_string = {}
+                namespace_help_string = None
+            else:
+                param_help_string = {param.arg_name: param.description for param in parsed_docstring.params}
+                namespace_help_string = parsed_docstring.short_description if parsed_docstring.short_description else ''
+                if parsed_docstring.long_description is not None:
+                    namespace_help_string += f'\n\n{parsed_docstring.long_description}'
 
         for key, parameter in signature.parameters.items():
             if parameter.kind in [parameter.POSITIONAL_ONLY, parameter.POSITIONAL_OR_KEYWORD, parameter.KEYWORD_ONLY]:
@@ -435,7 +436,7 @@ class FunctionProcess(Process):
                     def indirect_default(value=default):
                         return to_aiida_type(value)
                 else:
-                    indirect_default = default
+                    indirect_default = default  # type: ignore[assignment]
 
                 spec.input(
                     parameter.name,

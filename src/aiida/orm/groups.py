@@ -8,28 +8,30 @@
 ###########################################################################
 """AiiDA Group entites"""
 
+import datetime
 import warnings
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, Union, cast
+
+from typing_extensions import Self
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
+from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
 from . import convert, entities, extras, users
-from .fields import add_field
 
 if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
 
     from aiida.orm import Node, User
     from aiida.orm.implementation import StorageBackend
-    from aiida.orm.implementation.groups import BackendGroup  # noqa: F401
+    from aiida.orm.implementation.groups import BackendGroup
 
 __all__ = ('AutoGroup', 'Group', 'ImportGroup', 'UpfFamily')
-
-SelfType = TypeVar('SelfType', bound='Group')
 
 
 def load_group_class(type_string: str) -> Type['Group']:
@@ -108,51 +110,26 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
     __type_string: ClassVar[Optional[str]]
 
-    __qb_fields__ = [
-        add_field(
-            'uuid',
-            dtype=str,
+    class Model(entities.Entity.Model):
+        uuid: str = MetadataField(description='The UUID of the group', is_attribute=False, exclude_to_orm=True)
+        type_string: str = MetadataField(description='The type of the group', is_attribute=False, exclude_to_orm=True)
+        user: int = MetadataField(
+            description='The group owner',
             is_attribute=False,
-            doc='The UUID of the group',
-        ),
-        add_field(
-            'type_string',
-            dtype=str,
-            is_attribute=False,
-            doc='The type of the group',
-        ),
-        add_field(
-            'label',
-            dtype=str,
-            is_attribute=False,
-            doc='The group label',
-        ),
-        add_field(
-            'description',
-            dtype=str,
-            is_attribute=False,
-            doc='The group description',
-        ),
-        add_field(
-            'time',
-            dtype=str,
-            is_attribute=False,
-            doc='The time of the group creation',
-        ),
-        add_field(
-            'extras',
-            dtype=Dict[str, Any],
+            orm_class='core.user',
+            orm_to_model=lambda group, _: group.user.pk,  # type: ignore[attr-defined]
+        )
+        time: Optional[datetime.datetime] = MetadataField(
+            description='The creation time of the node', is_attribute=False
+        )
+        label: str = MetadataField(description='The group label', is_attribute=False)
+        description: Optional[str] = MetadataField(description='The group description', is_attribute=False)
+        extras: Optional[Dict[str, Any]] = MetadataField(
+            description='The group extras',
             is_attribute=False,
             is_subscriptable=True,
-            doc='The group extras',
-        ),
-        add_field(
-            'user_pk',
-            dtype=int,
-            is_attribute=False,
-            doc='The PK for the creating user',
-        ),
-    ]
+            orm_to_model=lambda group, _: group.base.extras.all,  # type: ignore[attr-defined]
+        )
 
     _CLS_COLLECTION = GroupCollection
 
@@ -162,6 +139,8 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         user: Optional['User'] = None,
         description: str = '',
         type_string: Optional[str] = None,
+        time: Optional[datetime.datetime] = None,
+        extras: Optional[Dict[str, Any]] = None,
         backend: Optional['StorageBackend'] = None,
     ):
         """Create a new group. Either pass a dbgroup parameter, to reload
@@ -177,15 +156,19 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         if not label:
             raise ValueError('Group label must be provided')
 
+        if type_string:
+            warn_deprecation('Passing the `type_string` is deprecated, it is determined automatically', version=3)
+
         backend = backend or get_manager().get_profile_storage()
         user = cast(users.User, user or backend.default_user)
         type_check(user, users.User)
-        type_string = self._type_string
 
         model = backend.groups.create(
-            label=label, user=user.backend_entity, description=description, type_string=type_string
+            label=label, user=user.backend_entity, description=description, type_string=self._type_string, time=time
         )
         super().__init__(model)
+        if extras is not None:
+            self.base.extras.set_many(extras)
 
     @classproperty
     def _type_string(cls) -> Optional[str]:  # noqa: N805
@@ -220,7 +203,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     def __str__(self) -> str:
         return f'{self.__class__.__name__}<{self.label}>'
 
-    def store(self: SelfType) -> SelfType:
+    def store(self) -> Self:
         """Verify that the group is allowed to be stored, which is the case along as `type_string` is set."""
         if self._type_string is None:
             raise exceptions.StoringNotAllowed('`type_string` is `None` so the group cannot be stored.')
@@ -279,6 +262,11 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     def type_string(self) -> str:
         """:return: the string defining the type of the group"""
         return self._backend_entity.type_string
+
+    @property
+    def time(self) -> datetime.datetime:
+        """:return: the creation time"""
+        return self._backend_entity.time
 
     @property
     def user(self) -> 'User':
@@ -370,6 +358,85 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     def is_user_defined(self) -> bool:
         """:return: True if the group is user defined, False otherwise"""
         return not self.type_string
+
+    def dump(
+        self,
+        output_path: Optional[Union[str, Path]] = None,
+        # Dump mode options
+        dry_run: bool = False,
+        overwrite: bool = False,
+        # Time filtering options
+        past_days: Optional[int] = None,
+        start_date: Optional[datetime.datetime] = None,
+        end_date: Optional[datetime.datetime] = None,
+        filter_by_last_dump_time: bool = True,
+        # Node collection options
+        only_top_level_calcs: bool = True,
+        only_top_level_workflows: bool = True,
+        # Process dump options
+        include_inputs: bool = True,
+        include_outputs: bool = False,
+        include_attributes: bool = True,
+        include_extras: bool = False,
+        flat: bool = False,
+        dump_unsealed: bool = False,
+        symlink_calcs: bool = False,
+    ) -> Path:
+        """Dump the group and its associated nodes to disk.
+
+        :param output_path: Target directory for the dump, defaults to None
+        :param dry_run: Show what would be dumped without actually dumping, defaults to False
+        :param overwrite: Overwrite existing dump directories, defaults to False
+        :param past_days: Only include nodes modified in the past N days, defaults to None
+        :param start_date: Only include nodes modified after this date, defaults to None
+        :param end_date: Only include nodes modified before this date, defaults to None
+        :param filter_by_last_dump_time: Filter nodes by last dump time, defaults to True
+        :param only_top_level_calcs: Only dump top-level calculations, defaults to True
+        :param only_top_level_workflows: Only dump top-level workflows, defaults to True
+        :param include_inputs: Include input files in the dump, defaults to True
+        :param include_outputs: Include output files in the dump, defaults to False
+        :param include_attributes: Include node attributes in metadata, defaults to True
+        :param include_extras: Include node extras in metadata, defaults to False
+        :param flat: Use flat directory structure, defaults to False
+        :param dump_unsealed: Allow dumping of unsealed nodes, defaults to False
+        :param symlink_calcs: Create symlinks for calculation nodes, defaults to False
+        :return: Path where the group was dumped
+        """
+        from aiida.tools._dumping.config import GroupDumpConfig
+        from aiida.tools._dumping.engine import DumpEngine
+        from aiida.tools._dumping.utils import DumpPaths
+
+        # Construct GroupDumpConfig from kwargs
+        config_data = {
+            'groups': [self],  # Set this specific group
+            'dry_run': dry_run,
+            'overwrite': overwrite,
+            'past_days': past_days,
+            'start_date': start_date,
+            'end_date': end_date,
+            'filter_by_last_dump_time': filter_by_last_dump_time,
+            'only_top_level_calcs': only_top_level_calcs,
+            'only_top_level_workflows': only_top_level_workflows,
+            'include_inputs': include_inputs,
+            'include_outputs': include_outputs,
+            'include_attributes': include_attributes,
+            'include_extras': include_extras,
+            'flat': flat,
+            'dump_unsealed': dump_unsealed,
+            'symlink_calcs': symlink_calcs,
+        }
+
+        config = GroupDumpConfig.model_validate(config_data)
+
+        if output_path:
+            target_path: Path = Path(output_path).resolve()
+        else:
+            target_path = DumpPaths.get_default_dump_path(entity=self)
+
+        engine = DumpEngine(base_output_path=target_path, config=config, dump_target_entity=self)
+        engine.dump()
+
+        return target_path
 
     _deprecated_extra_methods = {
         'extras': 'all',

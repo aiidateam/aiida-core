@@ -15,13 +15,11 @@ import functools
 import pathlib
 import typing as t
 
-from pydantic import BaseModel, field_validator
-
 from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
-from aiida.common.pydantic import MetadataField
+from aiida.common.pydantic import MetadataField, get_metadata
 from aiida.orm import Computer
 from aiida.plugins import CalculationFactory
 
@@ -45,7 +43,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     _KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS: str = 'wrap_cmdline_params'
     _KEY_EXTRA_IS_HIDDEN: str = 'hidden'  # Should become ``is_hidden`` once ``Code`` is dropped
 
-    class Model(BaseModel, defer_build=True):
+    class Model(Data.Model, defer_build=True):
         """Model describing required information to create an instance."""
 
         label: str = MetadataField(
@@ -103,21 +101,6 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 footer='All lines that start with `#=`: will be ignored.',
             ),
         )
-
-        @field_validator('label')
-        @classmethod
-        def validate_label_uniqueness(cls, value: str) -> str:
-            """Validate that the label does not already exist."""
-            from aiida.orm import load_code
-
-            try:
-                load_code(value)
-            except exceptions.NotExistent:
-                return value
-            except exceptions.MultipleObjectsError as exception:
-                raise ValueError(f'Multiple codes with the label `{value}` already exist.') from exception
-            else:
-                raise ValueError(f'A code with the label `{value}` already exists.')
 
     def __init__(
         self,
@@ -389,14 +372,17 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         code_data = {}
         sort = kwargs.get('sort', False)
 
-        for key in self.Model.model_fields.keys():
-            value = getattr(self, key).label if key == 'computer' else getattr(self, key)
+        for key, field in self.Model.model_fields.items():
+            if get_metadata(field, 'exclude_from_cli'):
+                continue
+            elif (orm_to_model := get_metadata(field, 'orm_to_model')) is None:
+                value = getattr(self, key)
+            else:
+                value = orm_to_model(self, pathlib.Path.cwd() / f'{self.label}')
 
             # If the attribute is not set, for example ``with_mpi`` do not export it
             # so that there are no null-values in the resulting YAML file
-            if value is not None:
-                code_data[key] = str(value)
-
+            code_data[key] = value
         return yaml.dump(code_data, sort_keys=sort, encoding='utf-8'), {}
 
     def _prepare_yml(self, *args, **kwargs):

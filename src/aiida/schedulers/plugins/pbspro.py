@@ -10,6 +10,8 @@
 This has been tested on PBSPro v. 12.
 """
 
+from __future__ import annotations
+
 import logging
 
 from .pbsbaseclasses import PbsBaseClass
@@ -48,8 +50,13 @@ class PbsproScheduler(PbsBaseClass):
     # _map_status = _map_status_pbs_common
 
     def _get_resource_lines(
-        self, num_machines, num_mpiprocs_per_machine, num_cores_per_machine, max_memory_kb, max_wallclock_seconds
-    ):
+        self,
+        num_machines: int,
+        num_mpiprocs_per_machine: int | None,
+        num_cores_per_machine: int | None,
+        max_memory_kb: int | None,
+        max_wallclock_seconds: int | None,
+    ) -> list[str]:
         """Return the lines for machines, memory and wallclock relative
         to pbspro.
         """

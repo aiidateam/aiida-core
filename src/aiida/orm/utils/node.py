@@ -40,10 +40,7 @@ def load_node_class(type_string):
     if not type_string.endswith('.'):
         raise exceptions.DbContentError(f'The type string `{type_string}` is invalid')
 
-    try:
-        base_path = type_string.rsplit('.', 2)[0]
-    except ValueError as exc:
-        raise exceptions.EntryPointError from exc
+    base_path = type_string.rsplit('.', 2)[0]
 
     # This exception needs to be there to make migrations work that rely on the old type string starting with `node.`
     # Since now the type strings no longer have that prefix, we simply strip it and continue with the normal logic.
@@ -60,8 +57,7 @@ def load_node_class(type_string):
             return Data
 
     if base_path.startswith('process'):
-        entry_point_name = base_path.removeprefix('data.')
-        return load_entry_point('aiida.node', entry_point_name)
+        return load_entry_point('aiida.node', base_path)
 
     # At this point we really have an anomalous type string. At some point, storing nodes with unresolvable type strings
     # was allowed, for example by creating a sub class in a shell and then storing an instance. Attempting to load the
@@ -94,7 +90,7 @@ def get_type_string_from_class(class_module, class_name):
     else:
         type_string = f'{class_module}.{class_name}.'
 
-    prefixes = ('aiida.orm.nodes.',)
+    prefixes = ('aiida.orm.nodes.', 'aiida.orm.core.')
 
     # Sequentially and **in order** strip the prefixes if present
     for prefix in prefixes:

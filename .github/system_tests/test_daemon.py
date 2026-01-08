@@ -437,6 +437,8 @@ def launch_all():
     run_multiply_add_workchain()
 
     # Testing the stashing functionality
+    # To speedup, here we only check with StashMode.COPY.
+    # All stash_modes are tested individually in `test_execmanager.py`
     print('Testing the stashing functionality')
     process, inputs, expected_result = create_calculation_process(code=code_doubler, inputval=1)
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -444,7 +446,11 @@ def launch_all():
         shutil.rmtree(tmpdir, ignore_errors=True)
 
         source_list = ['output.txt', 'triple_value.*']
-        inputs['metadata']['options']['stash'] = {'target_base': tmpdir, 'source_list': source_list}
+        inputs['metadata']['options']['stash'] = {
+            'stash_mode': StashMode.COPY.value,
+            'target_base': tmpdir,
+            'source_list': source_list,
+        }
         _, node = run.get_node(process, **inputs)
         assert node.is_finished_ok
         assert 'remote_stash' in node.outputs

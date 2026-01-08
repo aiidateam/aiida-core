@@ -51,7 +51,9 @@ from aiida.common.extendeddicts import AttributeDict
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.engine.utils import InterruptableFuture
 from aiida.orm.implementation.utils import clean_value
+from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.orm.utils import serialize
 
 from .builder import ProcessBuilder
@@ -72,6 +74,7 @@ class Process(PlumpyProcess):
     have full provenance saved in the database.
     """
 
+    _cancelling_scheduler_job: asyncio.Task | None = None
     _node_class = orm.ProcessNode
     _spec_class = ProcessSpec
 
@@ -80,7 +83,7 @@ class Process(PlumpyProcess):
     class SaveKeys(enum.Enum):
         """Keys used to identify things in the saved instance state bundle."""
 
-        CALC_ID: str = 'calc_id'
+        CALC_ID = 'calc_id'
 
     @classmethod
     def spec(cls) -> ProcessSpec:
@@ -329,16 +332,43 @@ class Process(PlumpyProcess):
 
         self.node.logger.info(f'Loaded process<{self.node.pk}> from saved state')
 
-    def kill(self, msg_text: str | None = None) -> Union[bool, plumpy.futures.Future]:
+    def kill(self, msg_text: str | None = None, force_kill: bool = False) -> Union[bool, plumpy.futures.Future]:
         """Kill the process and all the children calculations it called
 
         :param msg: message
         """
         self.node.logger.info(f'Request to kill Process<{self.node.pk}>')
 
-        had_been_terminated = self.has_terminated()
+        if self.killed():
+            # Already killed
+            return True
 
-        result = super().kill(msg_text)
+        if self.has_terminated():
+            # Can't kill
+            return False
+
+        # Cancel scheduler job
+        if not force_kill and isinstance(self.node, CalcJobNode):
+            if self._killing:
+                self._killing.cancel()
+
+            if self._cancelling_scheduler_job:
+                self._cancelling_scheduler_job.cancel()
+                self.node.logger.report('Found active scheduler job cancelation that will be rescheduled.')
+
+            from .calcjobs.tasks import task_kill_job
+
+            coro = self._launch_task(task_kill_job, self.node, self.runner.transport)
+            self._cancelling_scheduler_job = asyncio.create_task(coro)
+            try:
+                self.loop.run_until_complete(self._cancelling_scheduler_job)
+            except Exception as exc:
+                self.node.logger.error(f'While cancelling the scheduler job an error was raised: {exc}')
+                return False
+
+        result = super().kill(msg_text, force_kill)
+
+        had_been_terminated = self.has_terminated()
 
         # Only kill children if we could be killed ourselves
         if result is not False and not had_been_terminated:
@@ -349,7 +379,7 @@ class Process(PlumpyProcess):
                     continue
                 try:
                     result = self.runner.controller.kill_process(child.pk, msg_text=f'Killed by parent<{self.node.pk}>')
-                    result = asyncio.wrap_future(result)  # type: ignore[arg-type]
+                    result = asyncio.wrap_future(result)
                     if asyncio.isfuture(result):
                         killing.append(result)
                 except ConnectionClosed:
@@ -373,6 +403,22 @@ class Process(PlumpyProcess):
                 kill_future.add_done_callback(done)
 
         return result
+
+    async def _launch_task(self, coro, *args, **kwargs):
+        """Launch a coroutine as a task, making sure to make it interruptable."""
+        import functools
+
+        from aiida.engine.utils import interruptable_task
+
+        self._task: Union[InterruptableFuture, None]
+
+        task_fn = functools.partial(coro, *args, **kwargs)
+        try:
+            self._task = interruptable_task(task_fn)
+            result = await self._task
+            return result
+        finally:
+            self._task = None
 
     @override
     def out(self, output_port: str, value: Any = None) -> None:

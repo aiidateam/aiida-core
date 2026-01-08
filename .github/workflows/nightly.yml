@@ -2,7 +2,7 @@ name: nightly
 
 on:
   schedule:
-  - cron: 0 0 * * *        # Run every day at midnight
+  - cron: 0 0 * * *   # Run every day at midnight
   pull_request:
     paths:
     - .github/workflows/nightly.yml
@@ -15,7 +15,7 @@ on:
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
 concurrency:
-    # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
+  # only cancel in-progress jobs or runs for the current workflow - matches against branch & tags
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
@@ -26,7 +26,7 @@ jobs:
 
   nightly-tests:
 
-    if: github.repository == 'aiidateam/aiida-core'      # Prevent running the builds on forks as well
+    if: github.repository == 'aiidateam/aiida-core'  # Prevent running the builds on forks as well
     runs-on: ubuntu-24.04
 
     services:
@@ -54,7 +54,7 @@ jobs:
         - 5001:22
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql
@@ -82,18 +82,23 @@ jobs:
       run: .github/workflows/daemon_tests.sh
 
     - name: Slack notification
-      # Always run this step (otherwise it would be skipped if any of the previous steps fail) but only if the
-      # `install` or `tests` steps failed, and the `SLACK_WEBHOOK` is available. The latter is not the case for
-      # pull requests that come from forks. This is a limitation of secrets on GHA
-      if: always() && (steps.install.outcome == 'failure' || steps.pytest-tests.outcome == 'failure' || steps.daemon-tests.outcome == 'failure') && env.SLACK_WEBHOOK != null
-      uses: rtCamp/action-slack-notify@v2
+      # Always run this step (otherwise it would be skipped if any of the previous steps fail)
+      # but only if the `install` or `tests` steps failed.
+      # Don't run on PRs, the failure is clearly visible in GitHub UI.
+      # Run only when the `secrets.SLACK_WEBHOOK` is available, which is not the case for forks.
+      if: >-
+        always() &&
+        (steps.install.outcome == 'failure' ||
+         steps.pytest-tests.outcome == 'failure' ||
+         steps.daemon-tests.outcome == 'failure') &&
+        github.event_name != 'pull_request' &&
+        env.SLACK_WEBHOOK != null
+      uses: ./.github/actions/slack-notification
       env:
         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-        SLACK_ICON: https://www.materialscloud.org/discover/images/0ba0a17d.aiida-logo-128.png
-        SLACK_CHANNEL: dev-aiida-core
-        SLACK_COLOR: b60205
-        SLACK_TITLE: Nightly build of `aiida-core/main` failed
-        SLACK_MESSAGE: The tests of the `nightly.yml` GHA worklow failed.
+      with:
+        title: Nightly build of `aiida-core/main` failed
+        message: The tests of the `nightly.yml` GHA worklow failed.
 
 
   # Run a subset of test suite to ensure compatibility with latest RabbitMQ releases
@@ -117,7 +122,7 @@ jobs:
         - 15672:15672
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Install aiida-core
       id: install
@@ -127,27 +132,30 @@ jobs:
         from-lock: 'true'
 
     - name: Setup SSH on localhost
-      run: source .venv/bin/activate && .github/workflows/setup_ssh.sh
+      run: .github/workflows/setup_ssh.sh
 
     - name: Suppress RabbitMQ version warning
-      run: uv run verdi config set warnings.rabbitmq_version False
+      run: verdi config set warnings.rabbitmq_version False
 
     - name: Run tests
       id: tests
       env:
         AIIDA_WARN_v3: 0
-      run: uv run pytest -s --db-backend sqlite -m 'requires_rmq' tests/
+      run: pytest -s --db-backend sqlite -m 'requires_rmq' tests/
 
     - name: Slack notification
-      # Always run this step (otherwise it would be skipped if any of the previous steps fail) but only if the
-      # `install` or `tests` steps failed, and the `SLACK_WEBHOOK` is available. The latter is not the case for
-      # pull requests that come from forks. This is a limitation of secrets on GHA
-      if: always() && (steps.install.outcome == 'failure' || steps.tests.outcome == 'failure') && env.SLACK_WEBHOOK != null
-      uses: rtCamp/action-slack-notify@v2
+      # Always run this step (otherwise it would be skipped if any of the previous steps fail)
+      # but only if the `install` or `tests` steps failed.
+      # Don't run on PRs, the failure is clearly visible in GitHub UI.
+      # Run only when the `secrets.SLACK_WEBHOOK` is available, which is not the case for forks.
+      if: >-
+        always() &&
+        (steps.install.outcome == 'failure' || steps.tests.outcome == 'failure') &&
+        github.event_name != 'pull_request' &&
+        env.SLACK_WEBHOOK != null
+      uses: ./.github/actions/slack-notification
       env:
         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-        SLACK_ICON: https://www.materialscloud.org/discover/images/0ba0a17d.aiida-logo-128.png
-        SLACK_CHANNEL: dev-aiida-core
-        SLACK_COLOR: b60205
-        SLACK_TITLE: RabbitMQ nightly tests of `aiida-core/main` failed
-        SLACK_MESSAGE: The rabbitmq tests in the `nightly.yml` GHA worklow failed.
+      with:
+        title: RabbitMQ nightly tests of `aiida-core/main` failed
+        message: RabbitMQ (${{ matrix.rabbitmq-version }}) tests in the `nightly.yml` GHA worklow failed.

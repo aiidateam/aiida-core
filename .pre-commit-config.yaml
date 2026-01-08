@@ -1,14 +1,10 @@
-ci:
-  autofix_prs: true
-  autoupdate_commit_msg: 'Devops: Update pre-commit dependencies'
-  autoupdate_schedule: quarterly
-  skip: [mypy, generate-conda-environment, validate-conda-environment, verdi-autodocs]
-
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v5.0.0
   hooks:
   - id: check-merge-conflict
+  - id: check-added-large-files
+    exclude: uv.lock
   - id: check-yaml
   - id: double-quote-string-fixer
   - id: end-of-file-fixer
@@ -29,12 +25,6 @@ repos:
   rev: 0.30.0
   hooks:
   - id: check-github-workflows
-
-- repo: https://github.com/ikamensh/flynt/
-  rev: 1.0.1
-  hooks:
-  - id: flynt
-    args: [--line-length=120, --fail-on-change]
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.8.6
@@ -57,7 +47,7 @@ repos:
       )$
 
 - repo: https://github.com/astral-sh/uv-pre-commit
-  rev: 0.5.22
+  rev: 0.9.8
   hooks:
     # Check and update the uv lockfile
   - id: uv-lock
@@ -78,7 +68,7 @@ repos:
   - id: mypy
     name: mypy
     entry: mypy
-    args: [--config-file=pyproject.toml]
+    args: [--config-file=pyproject.toml, --pretty]
     language: python
     types: [python]
     require_serial: true
@@ -96,43 +86,10 @@ repos:
         src/aiida/calculations/diff_tutorial/calculations.py|
         src/aiida/calculations/templatereplacer.py|
         src/aiida/calculations/transfer.py|
-        src/aiida/cmdline/commands/cmd_archive.py|
-        src/aiida/cmdline/commands/cmd_calcjob.py|
-        src/aiida/cmdline/commands/cmd_code.py|
-        src/aiida/cmdline/commands/cmd_computer.py|
-        src/aiida/cmdline/commands/cmd_data/cmd_list.py|
-        src/aiida/cmdline/commands/cmd_data/cmd_upf.py|
-        src/aiida/cmdline/commands/cmd_devel.py|
-        src/aiida/cmdline/commands/cmd_group.py|
-        src/aiida/cmdline/commands/cmd_node.py|
-        src/aiida/cmdline/commands/cmd_shell.py|
-        src/aiida/cmdline/commands/cmd_storage.py|
-        src/aiida/cmdline/params/options/commands/setup.py|
-        src/aiida/cmdline/params/options/interactive.py|
-        src/aiida/cmdline/params/options/main.py|
-        src/aiida/cmdline/params/options/multivalue.py|
-        src/aiida/cmdline/params/types/group.py|
-        src/aiida/cmdline/utils/ascii_vis.py|
-        src/aiida/cmdline/utils/common.py|
-        src/aiida/cmdline/utils/echo.py|
-        src/aiida/common/extendeddicts.py|
-        src/aiida/common/utils.py|
         src/aiida/engine/daemon/execmanager.py|
-        src/aiida/engine/processes/calcjobs/manager.py|
-        src/aiida/engine/processes/calcjobs/monitors.py|
-        src/aiida/engine/processes/calcjobs/tasks.py|
-        src/aiida/engine/processes/control.py|
-        src/aiida/engine/processes/ports.py|
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
         src/aiida/manage/external/rmq/launcher.py|
-        src/aiida/manage/tests/main.py|
-        src/aiida/manage/tests/pytest_fixtures.py|
-        src/aiida/orm/comments.py|
-        src/aiida/orm/computers.py|
-        src/aiida/orm/implementation/storage_backend.py|
-        src/aiida/orm/nodes/comments.py|
-        src/aiida/orm/nodes/data/array/bands.py|
         src/aiida/orm/nodes/data/array/trajectory.py|
         src/aiida/orm/nodes/data/cif.py|
         src/aiida/orm/nodes/data/remote/base.py|
@@ -144,8 +101,6 @@ repos:
         src/aiida/orm/utils/builders/computer.py|
         src/aiida/orm/utils/calcjob.py|
         src/aiida/orm/utils/node.py|
-        src/aiida/repository/backend/disk_object_store.py|
-        src/aiida/repository/backend/sandbox.py|
         src/aiida/restapi/common/utils.py|
         src/aiida/restapi/resources.py|
         src/aiida/restapi/run_api.py|
@@ -168,7 +123,8 @@ repos:
         src/aiida/storage/psql_dos/migrations/versions/1de112340b16_django_parity_1.py|
         src/aiida/storage/psql_dos/migrator.py|
         src/aiida/storage/psql_dos/models/.*|
-        src/aiida/storage/psql_dos/orm/.*|
+        src/aiida/storage/psql_dos/orm/.*.py|
+        src/aiida/storage/psql_dos/orm/querybuilder/joiner.py|
         src/aiida/storage/sqlite_temp/backend.py|
         src/aiida/storage/sqlite_zip/backend.py|
         src/aiida/storage/sqlite_zip/migrations/legacy_to_main.py|
@@ -180,17 +136,9 @@ repos:
         src/aiida/tools/data/orbital/orbital.py|
         src/aiida/tools/data/orbital/realhydrogen.py|
         src/aiida/tools/dbimporters/plugins/.*|
-        src/aiida/tools/graph/age_entities.py|
-        src/aiida/tools/graph/age_rules.py|
-        src/aiida/tools/graph/deletions.py|
-        src/aiida/tools/graph/graph_traversers.py|
-        src/aiida/tools/groups/paths.py|
-        src/aiida/tools/query/calculation.py|
-        src/aiida/tools/query/mapping.py|
         src/aiida/transports/cli.py|
         src/aiida/transports/plugins/local.py|
         src/aiida/transports/plugins/ssh.py|
-        src/aiida/workflows/arithmetic/multiply_add.py|
       )$
 
   - id: generate-conda-environment
@@ -201,7 +149,8 @@ repos:
     files: >-
       (?x)^(
         pyproject.toml|
-        utils/dependency_management.py
+        utils/dependency_management.py|
+        environment.yml|
       )$
 
   - id: validate-conda-environment

@@ -12,16 +12,15 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Literal, Optional, Type, TypeVar, Union, overload
 
+from typing_extensions import Self
+
 if TYPE_CHECKING:
     from aiida.orm import QueryBuilder
     from aiida.orm.entities import Entity, EntityTypes
     from aiida.orm.implementation import StorageBackend
     from aiida.tools.visualization.graph import Graph
 
-SelfType = TypeVar('SelfType')
 EntityType = TypeVar('EntityType', bound='Entity')
-
-__all__ = ('ArchiveFormatAbstract', 'ArchiveReaderAbstract', 'ArchiveWriterAbstract', 'get_format')
 
 
 class ArchiveWriterAbstract(ABC):
@@ -67,7 +66,7 @@ class ArchiveWriterAbstract(ABC):
         """Return the compression level."""
         return self._compression
 
-    def __enter__(self: SelfType) -> SelfType:
+    def __enter__(self) -> Self:
         """Start writing to the archive."""
         return self
 
@@ -130,7 +129,7 @@ class ArchiveReaderAbstract(ABC):
         """Return the path to the archive."""
         return self._path
 
-    def __enter__(self: SelfType) -> SelfType:
+    def __enter__(self) -> Self:
         """Start reading from the archive."""
         return self
 

@@ -65,7 +65,7 @@ class File:
         self._objects = objects or {}
 
     @classmethod
-    def from_serialized(cls, serialized: dict, name='') -> 'File':
+    def from_serialized(cls, serialized: dict[str, typing.Any], name: str = '') -> 'File':
         """Construct a new instance from a serialized instance.
 
         :param serialized: the serialized instance.
@@ -80,11 +80,9 @@ class File:
             key = None
             objects = {name: File.from_serialized(obj, name) for name, obj in serialized.get('o', {}).items()}
 
-        instance = cls.__new__(cls)
-        instance.__init__(name, file_type, key, objects)  # type: ignore[misc]
-        return instance
+        return cls(name, file_type, key, objects)
 
-    def serialize(self) -> dict:
+    def serialize(self) -> dict[str, typing.Any]:
         """Serialize the metadata into a JSON-serializable format.
 
         .. note:: the serialization format is optimized to reduce the size in bytes.
@@ -125,7 +123,7 @@ class File:
         """Return the objects of the file object."""
         return self._objects
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         """Return whether this instance is equal to another file object instance."""
         if not isinstance(other, self.__class__):
             return False
@@ -136,6 +134,6 @@ class File:
 
         return equal_attributes and equal_objects
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         args = (self.name, self.file_type.value, self.key, self.objects.items())
         return 'File<name={}, file_type={}, key={}, objects={}>'.format(*args)

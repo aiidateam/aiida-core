@@ -111,7 +111,7 @@ jobs:
       fail-fast: false
       matrix:
 
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
 
         # Not being able to install with conda on a specific Python version is
         # not sufficient to fail the run, but something we want to be aware of.
@@ -131,15 +131,6 @@ jobs:
       with:
         channels: conda-forge
 
-    # Use mamba because conda is running out of memory
-    # see https://github.com/conda-incubator/setup-miniconda/issues/274
-    - run: |
-        conda install -n base conda-libmamba-solver
-        conda config --set solver libmamba
-
-    # Temporary workaround: https://github.com/mamba-org/mamba/issues/488
-    - run: rm /usr/share/miniconda/pkgs/cache/*.json
-
     - name: Test installation
       id: test_installation
       continue-on-error: ${{ matrix.optional }}
@@ -153,6 +144,18 @@ jobs:
         echo "::warning ::Failed conda installation for
         Python ${{ matrix.python-version }}."
 
+    - name: Slack notification
+      if: >-
+        failure() &&
+        github.event_name != 'pull_request' &&
+        env.SLACK_WEBHOOK != null
+      uses: ./.github/actions/slack-notification
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+      with:
+        title: Installation via Conda failed on `aiida-core/main`
+        message: '`test-install.yml:install-with-conda` GHA workflow for Python ${{ matrix.python-version }} failed.'
+
   tests:
 
     needs: [install-with-pip]
@@ -162,7 +165,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
 
     services:
       postgres:
@@ -195,18 +198,35 @@ jobs:
       run: sudo apt update && sudo apt install postgresql graphviz
 
     - name: Install aiida-core
+      id: install
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: ${{ matrix.python-version }}
-        extras: '[atomic_tools,docs,notebook,rest,tests,tui]'
+        extras: atomic_tools,docs,notebook,rest,tests,tui
         from-lock: 'false'
 
     - name: Setup AiiDA environment
       run: .github/workflows/setup.sh
 
     - name: Run test suite
+      id: tests
       env:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
       run: |
         pytest -n auto --db-backend psql -m 'not nightly' tests/
+
+    - name: Slack notification
+      # Run this step if any of the previous steps fail.
+      # Don't run on PRs, the failure is clearly visible in GitHub UI.
+      # Run only when the `secrets.SLACK_WEBHOOK` is available, which is not the case for forks.
+      if: >-
+        failure() &&
+        github.event_name != 'pull_request' &&
+        env.SLACK_WEBHOOK != null
+      uses: ./.github/actions/slack-notification
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+      with:
+        title: Install tests of `aiida-core/main` failed
+        message: '`test-install.yml` GHA workflow for Python ${{ matrix.python-version }} failed.'

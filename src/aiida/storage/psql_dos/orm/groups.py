@@ -32,7 +32,7 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
     NODE_CLASS = SqlaNode
     GROUP_NODE_CLASS = DbGroupNode
 
-    def __init__(self, backend, label, user, description='', type_string=''):
+    def __init__(self, backend, label, user, description='', type_string='', time=None):
         """Construct a new SQLA group
 
         :param backend: the backend to use
@@ -44,7 +44,9 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
         type_check(user, self.USER_CLASS)
         super().__init__(backend)
 
-        dbgroup = self.MODEL_CLASS(label=label, description=description, user=user.bare_model, type_string=type_string)
+        dbgroup = self.MODEL_CLASS(
+            label=label, description=description, user=user.bare_model, type_string=type_string, time=time
+        )
         self._model = utils.ModelWrapper(dbgroup, backend)
 
     @property
@@ -100,6 +102,10 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
     @property
     def uuid(self):
         return str(self.model.uuid)
+
+    @property
+    def time(self):
+        return self.model.time
 
     @property
     def is_stored(self):
@@ -189,8 +195,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
                 return
 
             table = self.GROUP_NODE_CLASS.__table__
-            ins = insert(table).values(ins_dict)
-            session.execute(ins.on_conflict_do_nothing(index_elements=['dbnode_id', 'dbgroup_id']))
+            ins = insert(table)
+            session.execute(ins.on_conflict_do_nothing(index_elements=['dbnode_id', 'dbgroup_id']), ins_dict)
 
             # Commit everything as up till now we've just flushed
             if not session.in_nested_transaction():

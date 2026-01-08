@@ -77,7 +77,7 @@ Any data that was created in a previous session is still available.
 
 .. caution::
 
-    When the container is not just stopped but *deleted*, any data stored in the container, including the data stored in the profile's storage, is permanently localhost
+    When the container is not just stopped but *deleted*, any data stored in the container, including the data stored in the profile's storage, is permanently deleted.
     To ensure the data is not lost, it should be persisted on a volume that is mounted to the container.
     Refer to the section on :ref:`persisting data <installation:docker:persisting-data>` for more details.
 

@@ -18,12 +18,11 @@ import typing as t
 from .data import Data
 
 if t.TYPE_CHECKING:
+    from aiida.common.typing import FilePath
     from aiida.repository import File
 
 
 __all__ = ('FolderData',)
-
-FilePath = t.Union[str, pathlib.PurePath]
 
 
 class FolderData(Data):

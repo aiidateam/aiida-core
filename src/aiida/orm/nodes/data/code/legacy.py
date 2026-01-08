@@ -10,13 +10,13 @@
 
 import os
 import pathlib
-from typing import Optional
+import typing as t
 
 from aiida.common import exceptions
 from aiida.common.log import override_log_level
+from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
 from aiida.orm import Computer
-from aiida.orm.fields import add_field
 
 from .abstract import AbstractCode
 
@@ -39,38 +39,21 @@ class Code(AbstractCode):
     for the code to be run).
     """
 
-    __qb_fields__ = [
-        add_field(
-            'prepend_text',
-            dtype=Optional[str],
-            doc='The code that will be put in the scheduler script before the execution of the code',
-        ),
-        add_field(
-            'append_text',
-            dtype=Optional[str],
-            doc='The code that will be put in the scheduler script after the execution of the code',
-        ),
-        add_field(
-            'input_plugin',
-            dtype=Optional[str],
-            doc='The name of the input plugin to be used for this code',
-        ),
-        add_field(
-            'local_executable',
-            dtype=Optional[str],
-            doc='Path to a local executable',
-        ),
-        add_field(
-            'remote_exec_path',
-            dtype=Optional[str],
-            doc='Remote path to executable',
-        ),
-        add_field(
-            'is_local',
-            dtype=Optional[bool],
-            doc='Whether the code is local or remote',
-        ),
-    ]
+    class Model(AbstractCode.Model):
+        prepend_text: str = MetadataField(
+            '',
+            description='The code that will be put in the scheduler script before the execution of the code',
+        )
+        append_text: str = MetadataField(
+            '',
+            description='The code that will be put in the scheduler script after the execution of the code',
+        )
+        input_plugin: t.Optional[str] = MetadataField(
+            description='The name of the input plugin to be used for this code'
+        )
+        local_executable: t.Optional[str] = MetadataField(description='Path to a local executable')
+        remote_exec_path: t.Optional[str] = MetadataField(description='Remote path to executable')
+        is_local: t.Optional[bool] = MetadataField(description='Whether the code is local or remote')
 
     def __init__(self, remote_computer_exec=None, local_executable=None, input_plugin_name=None, files=None, **kwargs):
         super().__init__(**kwargs)
@@ -237,7 +220,7 @@ class Code(AbstractCode):
         elif query.count() > 1:
             codes = query.all(flat=True)
             retstr = f"There are multiple codes with label '{label}', having IDs: "
-            retstr += f"{', '.join(sorted([str(c.pk) for c in codes]))}.\n"  # type: ignore[union-attr]
+            retstr += f"{', '.join(sorted([str(c.pk) for c in codes]))}.\n"
             retstr += 'Relabel them (using their ID), or refer to them with their ID.'
             raise MultipleObjectsError(retstr)
         else:
@@ -248,7 +231,7 @@ class Code(AbstractCode):
             return result[0]
 
     @classmethod
-    def get(cls, pk=None, label=None, machinename=None):
+    def get(cls, pk=None, label=None, machinename=None):  # type: ignore[override]
         """Get a Computer object with given identifier string, that can either be
         the numeric ID (pk), or the label (and computername) (if unique).
 
@@ -337,9 +320,9 @@ class Code(AbstractCode):
         valid_codes = query.all(flat=True)
 
         if labels:
-            return [c.label for c in valid_codes]  # type: ignore[union-attr]
+            return [c.label for c in valid_codes]
 
-        return [c.pk for c in valid_codes]  # type: ignore[union-attr]
+        return [c.pk for c in valid_codes]
 
     def _validate(self):
         super()._validate()

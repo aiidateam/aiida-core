@@ -78,6 +78,7 @@ __all__ = (
     'TestsNotAllowedError',
     'TransportTaskException',
     'UniquenessError',
+    'UnstashTargetMode',
     'UnsupportedSpeciesError',
     'ValidationError',
     'create_callback',

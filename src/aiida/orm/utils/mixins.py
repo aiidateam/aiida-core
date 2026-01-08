@@ -12,10 +12,12 @@ from __future__ import annotations
 
 import inspect
 
+import pydantic
+
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, override, type_check
+from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
-from aiida.orm.fields import add_field
 
 
 class FunctionCalculationMixin:
@@ -181,22 +183,21 @@ class Sealable:
 
     SEALED_KEY = 'sealed'
 
-    __qb_fields__ = [
-        add_field(
-            SEALED_KEY,
-            dtype=bool,
-            doc='Whether the node is sealed',
-        ),
-    ]
+    class Model(pydantic.BaseModel, defer_build=True):
+        sealed: bool = MetadataField(description='Whether the node is sealed')
 
     @classproperty
     def _updatable_attributes(cls) -> tuple[str, ...]:  # noqa: N805
         return (cls.SEALED_KEY,)
 
     @property
+    def sealed(self) -> bool:
+        return self.base.attributes.get(self.SEALED_KEY, False)  # type: ignore[attr-defined]
+
+    @property
     def is_sealed(self) -> bool:
         """Returns whether the node is sealed, i.e. whether the sealed attribute has been set to True."""
-        return self.base.attributes.get(self.SEALED_KEY, False)  # type: ignore[attr-defined]
+        return self.sealed
 
     def seal(self) -> 'Sealable':
         """Seal the node by setting the sealed attribute to True."""

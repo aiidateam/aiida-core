@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Sequence, T
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
-from aiida.orm.fields import add_field
+from aiida.common.pydantic import MetadataField
 
 from ..process import ProcessNodeCaching
 from .calculation import CalculationNode
@@ -64,58 +64,43 @@ class CalcJobNode(CalculationNode):
     SCHEDULER_LAST_JOB_INFO_KEY = 'last_job_info'
     SCHEDULER_DETAILED_JOB_INFO_KEY = 'detailed_job_info'
 
-    __qb_fields__ = [
-        add_field(
-            SCHEDULER_STATE_KEY,
-            dtype=Optional[str],
-            doc='The state of the scheduler',
-        ),
-        add_field(
-            CALC_JOB_STATE_KEY,
-            dtype=Optional[str],
-            doc='The active state of the calculation job',
-        ),
-        add_field(
-            REMOTE_WORKDIR_KEY,
-            dtype=Optional[str],
-            doc='The path to the remote (on cluster) scratch folder',
-        ),
-        add_field(
-            SCHEDULER_JOB_ID_KEY,
-            dtype=Optional[str],
-            doc='The scheduler job id',
-        ),
-        add_field(
-            SCHEDULER_LAST_CHECK_TIME_KEY,
-            dtype=Optional[str],
-            doc='The last time the scheduler was checked, in isoformat',
-        ),
-        add_field(
-            SCHEDULER_LAST_JOB_INFO_KEY,
-            dtype=Optional[str],
-            doc='The last job info returned by the scheduler',
-        ),
-        add_field(
-            SCHEDULER_DETAILED_JOB_INFO_KEY,
-            dtype=Optional[dict],
-            doc='The detailed job info returned by the scheduler',
-        ),
-        add_field(
-            RETRIEVE_LIST_KEY,
-            dtype=Optional[List[str]],
-            doc='The list of files to retrieve from the remote cluster',
-        ),
-        add_field(
-            RETRIEVE_TEMPORARY_LIST_KEY,
-            dtype=Optional[List[str]],
-            doc='The list of temporary files to retrieve from the remote cluster',
-        ),
-        add_field(
-            IMMIGRATED_KEY,
-            dtype=Optional[bool],
-            doc='Whether the node has been migrated',
-        ),
-    ]
+    class Model(CalculationNode.Model):
+        scheduler_state: Optional[str] = MetadataField(
+            description='The state of the scheduler', orm_to_model=lambda node, _: node.get_scheduler_state()
+        )
+        state: Optional[str] = MetadataField(
+            description='The active state of the calculation job', orm_to_model=lambda node, _: node.get_state()
+        )
+        remote_workdir: Optional[str] = MetadataField(
+            description='The path to the remote (on cluster) scratch folder',
+            orm_to_model=lambda node, _: node.get_remote_workdir(),
+        )
+        job_id: Optional[str] = MetadataField(
+            description='The scheduler job id', orm_to_model=lambda node, _: node.get_job_id()
+        )
+        scheduler_lastchecktime: Optional[datetime.datetime] = MetadataField(
+            description='The last time the scheduler was checked, in isoformat',
+            orm_to_model=lambda node, _: node.get_scheduler_lastchecktime(),
+        )
+        last_job_info: Optional[dict] = MetadataField(
+            description='The last job info returned by the scheduler',
+            orm_to_model=lambda node, _: dict(node.get_last_job_info() or {}),
+        )
+        detailed_job_info: Optional[dict] = MetadataField(
+            description='The detailed job info returned by the scheduler',
+            orm_to_model=lambda node, _: node.get_detailed_job_info(),
+        )
+        retrieve_list: Optional[List[str]] = MetadataField(
+            description='The list of files to retrieve from the remote cluster',
+            orm_to_model=lambda node, _: node.get_retrieve_list(),
+        )
+        retrieve_temporary_list: Optional[List[str]] = MetadataField(
+            description='The list of temporary files to retrieve from the remote cluster',
+            orm_to_model=lambda node, _: node.get_retrieve_temporary_list(),
+        )
+        imported: Optional[bool] = MetadataField(
+            description='Whether the node has been migrated', orm_to_model=lambda node, _: node.is_imported
+        )
 
     # An optional entry point for a CalculationTools instance
     _tools = None

@@ -1,6 +1,8 @@
 """Tests for the :mod:`aiida.orm.nodes.repository` module."""
 
+import io
 import pathlib
+import zipfile
 
 import pytest
 
@@ -178,6 +180,29 @@ def test_get_object():
     assert file_object.is_dir() is False
 
 
+def test_get_object_size():
+    """Test the ``NodeRepository.get_object_size`` method."""
+    node = Data()
+    node.base.repository.put_object_from_bytes(b'content', 'relative/path')
+
+    size = node.base.repository.get_object_size('relative/path')
+    assert size == len(b'content')
+
+
+def test_get_zipped_objects():
+    """Test the ``NodeRepository.get_zipped_objects`` method."""
+    node = Data()
+    node.base.repository.put_object_from_bytes(b'content1', 'file1.txt')
+    node.base.repository.put_object_from_bytes(b'content2', 'folder/file2.txt')
+
+    zipped_content = node.base.repository.get_zipped_objects()
+    with io.BytesIO(zipped_content) as byte_stream:
+        with zipfile.ZipFile(byte_stream, 'r') as zip_file:
+            assert set(zip_file.namelist()) == {'file1.txt', 'folder/file2.txt'}
+            assert zip_file.read('file1.txt') == b'content1'
+            assert zip_file.read('folder/file2.txt') == b'content2'
+
+
 def test_walk():
     """Test the ``NodeRepository.walk`` method."""
     node = Data()
@@ -260,3 +285,18 @@ def test_as_path():
     with node.base.repository.as_path('relative/path.dat') as filepath:
         assert filepath.read_bytes() == b'content_relative'
     assert not filepath.exists()
+
+
+def test_open_text():
+    """Test the ``NodeRepository.open`` method in text mode."""
+    node = Data()
+    node.base.repository.put_object_from_bytes(b'content', 'file')
+
+    # The 'r' case
+    with node.base.repository.open('file', 'r') as handle:
+        assert isinstance(handle, io.TextIOWrapper)
+        assert handle.read() == 'content'
+
+    # The 'rb' case
+    with node.base.repository.open('file', 'rb') as handle:
+        assert handle.read() == b'content'

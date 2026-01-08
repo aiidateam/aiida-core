@@ -13,6 +13,7 @@ Plugin specific tests will be written in the corresponding test file.
 
 import io
 import os
+import re
 import shutil
 import signal
 import tempfile
@@ -23,7 +24,8 @@ from pathlib import Path
 import psutil
 import pytest
 
-from aiida.plugins import SchedulerFactory, TransportFactory, entry_point
+from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.plugins import SchedulerFactory, TransportFactory
 from aiida.transports import Transport
 
 # TODO : test for copy with pattern
@@ -31,41 +33,49 @@ from aiida.transports import Transport
 # TODO : test for exotic cases of copy with source = destination
 # TODO : silly cases of copy/put/get from self to self
 
+CHDIR_WARNING = re.escape('`chdir()` is deprecated and will be removed')
+
 
 @pytest.fixture(scope='function')
 def tmp_path_remote(tmp_path_factory):
-    """Mock the remote tmp path using tmp_path_factory to create folder start with prefix 'remote'"""
+    """Provides a tmp path for mocking remote computer directory environment.
+
+    Local and remote directories must be kept separate to ensure proper functionality testing.
+    The created folder starts with prefix 'remote'
+    """
     return tmp_path_factory.mktemp('remote')
 
 
 @pytest.fixture(scope='function')
 def tmp_path_local(tmp_path_factory):
-    """Mock the local tmp path using tmp_path_factory to create folder start with prefix 'local'"""
+    """Provides a tmp path for mocking local computer directory environment.
+
+    Local and remote directories must be kept separate to ensure proper functionality testing.
+    The created folder starts with prefix 'local'
+    """
     return tmp_path_factory.mktemp('local')
 
 
 # Skip for any transport plugins that are locally installed but are not part of `aiida-core`
 @pytest.fixture(
     scope='function',
-    params=[name for name in entry_point.get_entry_point_names('aiida.transports') if name.startswith('core.')],
+    params=[
+        ('core.local', None),
+        ('core.ssh', None),
+        ('core.ssh_async', 'asyncssh'),
+        ('core.ssh_async', 'openssh'),
+    ],
 )
 def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
-    """Fixture that parametrizes over all the registered implementations of the ``CommonRelaxWorkChain``."""
-    plugin = TransportFactory(request.param)
+    """Fixture that parametrizes over all the registered implementations of the transport plugins."""
+    plugin = TransportFactory(request.param[0])
 
-    if request.param == 'core.ssh':
+    if request.param[0] == 'core.ssh':
         kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
-    elif request.param == 'core.ssh_auto':
-        kwargs = {'machine': 'localhost'}
-        # The transport config is store in a independent temporary path per test to not mix up
-        # with the files under operating.
-        filepath_config = tmp_path_factory.mktemp('transport') / 'config'
-        monkeypatch.setattr(plugin, 'FILEPATH_CONFIG', filepath_config)
-        if not filepath_config.exists():
-            filepath_config.write_text('Host localhost')
-    elif request.param == 'core.ssh_async':
+    elif request.param[0] == 'core.ssh_async':
         kwargs = {
             'machine': 'localhost',
+            'backend': request.param[1],
         }
     else:
         kwargs = {}
@@ -144,6 +154,7 @@ def test_listdir(custom_transport, tmp_path_remote):
     """Create directories, verify listdir, delete a folder with subfolders"""
     with custom_transport as transport:
         list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
+        list_of_dir = ['1', '-f', 'as', 'a2', 'a4f']
         list_of_files = ['a', 'b']
         for this_dir in list_of_dir:
             transport.mkdir(tmp_path_remote / this_dir)
@@ -176,6 +187,7 @@ def test_listdir_withattributes(custom_transport, tmp_path_remote):
 
     with custom_transport as transport:
         list_of_dir = ['1', '-f a&', 'as', 'a2', 'a4f']
+        list_of_dir = ['1', '-f', 'as', 'a2', 'a4f']
         list_of_files = ['a', 'b']
         for this_dir in list_of_dir:
             transport.mkdir(tmp_path_remote / this_dir)
@@ -231,7 +243,6 @@ def test_dir_permissions_creation_modification(custom_transport, tmp_path_remote
         directory = tmp_path_remote / 'test'
 
         transport.makedirs(directory)
-
         # change permissions
         transport.chmod(directory, 0o777)
 
@@ -314,10 +325,11 @@ def test_chdir_to_empty_string(custom_transport):
         return
 
     with custom_transport as transport:
-        new_dir = transport.normalize(os.path.join('/', 'tmp'))
-        transport.chdir(new_dir)
-        transport.chdir('')
-        assert new_dir == transport.getcwd()
+        with pytest.warns(AiidaDeprecationWarning, match=CHDIR_WARNING):
+            new_dir = transport.normalize(os.path.join('/', 'tmp'))
+            transport.chdir(new_dir)
+            transport.chdir('')
+            assert new_dir == transport.getcwd()
 
 
 def test_put_and_get(custom_transport, tmp_path_remote, tmp_path_local):
@@ -561,6 +573,12 @@ def test_put_and_get_tree(custom_transport, tmp_path_remote, tmp_path_local):
             {'local': {'file.txt': 'Viva verdi'}},
             ('local', 'local'),
             {'local': {'file.txt': 'Viva verdi', 'local': {'file.txt': 'Viva verdi'}}},
+        ),
+        (
+            {'local': {'sub': {'file.txt': 'Viva verdi'}}},
+            {},
+            ('local/sub', 'local/sub'),
+            {'local': {'sub': {'file.txt': 'Viva verdi'}}},
         ),
     ),
 )
@@ -972,14 +990,16 @@ def test_exec_pwd(custom_transport, tmp_path_remote):
         subfolder = """_'s f"#"""  # A folder with characters to escape
         subfolder_fullpath = os.path.join(location, subfolder)
 
-        transport.chdir(location)
+        with pytest.warns(AiidaDeprecationWarning, match=CHDIR_WARNING):
+            transport.chdir(location)
         if not transport.isdir(subfolder):
             # Since I created the folder, I will remember to
             # delete it at the end of this test
             transport.mkdir(subfolder)
 
             assert transport.isdir(subfolder)
-            transport.chdir(subfolder)
+            with pytest.warns(AiidaDeprecationWarning, match=CHDIR_WARNING):
+                transport.chdir(subfolder)
 
             assert subfolder_fullpath == transport.getcwd()
             retcode, stdout, stderr = transport.exec_command_wait('pwd')
@@ -1257,3 +1277,260 @@ def test_rename(custom_transport, tmp_path_remote):
         # Perform rename operation if new file already exists
         with pytest.raises(OSError, match='already exist|destination exists'):
             transport.rename(new_file, another_file)
+
+
+def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: Path, monkeypatch: pytest.MonkeyPatch):
+    """Test that the compress method raises an error according to instructions given in the abstract method."""
+    with custom_transport as transport:
+        # if the format is not supported
+        with pytest.raises(ValueError, match='Unsupported compression format'):
+            transport.compress('unsupported_format', tmp_path_remote, tmp_path_remote / 'archive.tar', '/')
+
+        # if the remotesource does not exist
+        with pytest.raises(OSError, match=f"{tmp_path_remote / 'non_existing'} does not exist"):
+            transport.compress('tar', tmp_path_remote / 'non_existing', tmp_path_remote / 'archive.tar', '/')
+
+        # if a matching pattern of the remote source is not found
+        with pytest.raises(OSError, match='does not exist, or a matching file/folder not found'):
+            transport.compress('tar', tmp_path_remote / 'non_existing*', tmp_path_remote / 'archive.tar', '/')
+
+        # if the remotedestination already exists
+        Path(tmp_path_remote / 'already_exist.tar').touch()
+        with pytest.raises(
+            OSError, match=f"The remote destination {tmp_path_remote / 'already_exist.tar'} already exists."
+        ):
+            transport.compress('tar', tmp_path_remote, tmp_path_remote / 'already_exist.tar', '/', overwrite=False)
+
+        # if the remotedestination is a directory, raise a sensible error.
+        with pytest.raises(OSError, match=' is a directory, should include a filename.'):
+            transport.compress('tar', tmp_path_remote, tmp_path_remote, '/')
+
+        # if the root_dir is not a directory
+        with pytest.raises(
+            OSError,
+            match=f"The relative root {tmp_path_remote / 'non_existing_folder'} does not exist, or is not a directory.",
+        ):
+            transport.compress(
+                'tar', tmp_path_remote, tmp_path_remote / 'archive.tar', tmp_path_remote / 'non_existing_folder'
+            )
+
+        # if creating the tar file fails should raise an OSError
+        # I do this by monkey patching transport.mock_exec_command_wait and transport.exec_command_wait_async
+        def mock_exec_command_wait(*args, **kwargs):
+            return 1, b'', b''
+
+        async def mock_exec_command_wait_async(*args, **kwargs):
+            return 1, b'', b''
+
+        monkeypatch.setattr(transport, 'exec_command_wait', mock_exec_command_wait)
+        monkeypatch.setattr(transport, 'exec_command_wait_async', mock_exec_command_wait_async)
+
+        with pytest.raises(OSError, match='Error while creating the tar archive.'):
+            Path(tmp_path_remote / 'file').touch()
+            transport.compress('tar', tmp_path_remote, tmp_path_remote / 'archive.tar', '/')
+
+
+@pytest.mark.parametrize('format', ['tar', 'tar.gz', 'tar.bz2', 'tar.xz'])
+@pytest.mark.parametrize('dereference', [True, False])
+@pytest.mark.parametrize('file_hierarchy', [{'file.txt': 'file', 'folder': {'file_1': '1'}}])
+def test_compress_basic(
+    custom_transport: Transport,
+    format: str,
+    dereference: bool,
+    create_file_hierarchy: callable,
+    file_hierarchy: dict,
+    tmp_path_remote: Path,
+    tmp_path_local: Path,
+) -> None:
+    """Test the basic functionality of the compress method.
+    This test will create a file hierarchy on the remote machine, compress and download it,
+    and then extract it on the local machine. The content of the files will be checked
+    to ensure that the compression and extraction was successful."""
+    remote = tmp_path_remote / 'root'
+    remote.mkdir()
+    create_file_hierarchy(file_hierarchy, remote)
+    Path(remote / 'symlink').symlink_to(remote / 'file.txt')
+
+    archive_name = 'archive.' + format
+
+    # 1) basic functionality
+    with custom_transport as transport:
+        transport.compress(format, remote, tmp_path_remote / archive_name, root_dir=remote, dereference=dereference)
+
+        transport.get(tmp_path_remote / archive_name, tmp_path_local / archive_name)
+
+        shutil.unpack_archive(tmp_path_local / archive_name, tmp_path_local / 'extracted', filter='tar')
+
+        extracted = [
+            str(path.relative_to(tmp_path_local / 'extracted')) for path in (tmp_path_local / 'extracted').rglob('*')
+        ]
+
+        assert sorted(extracted) == sorted(['file.txt', 'folder', 'folder/file_1', 'symlink'])
+
+        # test that the content of the files is the same
+        assert Path(tmp_path_local / 'extracted' / 'file.txt').read_text() == 'file'
+        assert Path(tmp_path_local / 'extracted' / 'folder' / 'file_1').read_text() == '1'
+
+        # test the symlink
+        if dereference:
+            assert not os.path.islink(tmp_path_local / 'extracted' / 'symlink')
+            assert Path(tmp_path_local / 'extracted' / 'symlink').read_text() == 'file'
+        else:
+            assert os.path.islink(tmp_path_local / 'extracted' / 'symlink')
+            assert os.readlink(tmp_path_local / 'extracted' / 'symlink') == str(remote / 'file.txt')
+
+
+@pytest.mark.parametrize('format', ['tar', 'tar.gz', 'tar.bz2', 'tar.xz'])
+@pytest.mark.parametrize(
+    'file_hierarchy',
+    [
+        {
+            'file.txt': 'file',
+            'folder_1': {'file_1': '1', 'file_11': '11', 'file_2': '2'},
+            'folder_2': {'file_1': '1', 'file_11': '11', 'file_2': '2'},
+        }
+    ],
+)
+def test_compress_glob(
+    custom_transport: Transport,
+    create_file_hierarchy: callable,
+    file_hierarchy: dict,
+    format: str,
+    tmp_path_remote: Path,
+    tmp_path_local: Path,
+) -> None:
+    """Test the glob functionality of the compress method.
+
+    It is similar to :func:`test_compress_basic` but specifies a glob pattern for the remote source allowing us to test
+    the resolving mechanism separately."""
+
+    remote = tmp_path_remote / 'root'
+    remote.mkdir()
+    create_file_hierarchy(file_hierarchy, remote)
+
+    archive_name = 'archive_glob.' + format
+
+    with custom_transport as transport:
+        transport.compress(
+            format,
+            remote / 'folder*' / 'file_1*',
+            tmp_path_remote / archive_name,
+            root_dir=remote,
+        )
+
+        transport.get(tmp_path_remote / archive_name, tmp_path_local / archive_name)
+
+        shutil.unpack_archive(tmp_path_local / archive_name, tmp_path_local / 'extracted_glob', filter='data')
+
+        extracted = [
+            str(path.relative_to(tmp_path_local / 'extracted_glob'))
+            for path in (tmp_path_local / 'extracted_glob').rglob('*')
+        ]
+        assert sorted(extracted) == sorted(
+            ['folder_1', 'folder_2', 'folder_1/file_1', 'folder_1/file_11', 'folder_2/file_1', 'folder_2/file_11']
+        )
+
+
+@pytest.mark.parametrize('format', ['tar', 'tar.gz', 'tar.bz2', 'tar.xz'])
+@pytest.mark.parametrize('file_hierarchy', [{'file.txt': 'file', 'folder_1': {'file_1': '1'}}])
+def test_extract(
+    custom_transport: Transport,
+    create_file_hierarchy: callable,
+    file_hierarchy: dict,
+    format: str,
+    tmp_path_remote: Path,
+    tmp_path_local: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    local = tmp_path_local / 'root'
+    local.mkdir()
+    create_file_hierarchy(file_hierarchy, local)
+
+    shutil_mapping_format = {'tar': 'tar', 'tar.gz': 'gztar', 'tar.bz2': 'bztar', 'tar.xz': 'xztar'}
+
+    archive_path = shutil.make_archive(str(tmp_path_local / 'archive'), shutil_mapping_format[format], root_dir=local)
+
+    archive_name = archive_path.split('/')[-1]
+    with custom_transport as transport:
+        transport.put(archive_path, tmp_path_remote / archive_name)
+
+        transport.extract(tmp_path_remote / archive_name, tmp_path_remote / 'extracted')
+
+        transport.get(tmp_path_remote / 'extracted', tmp_path_local / 'extracted')
+
+    extracted = [
+        str(path.relative_to(tmp_path_local / 'extracted')) for path in (tmp_path_local / 'extracted').rglob('*')
+    ]
+
+    assert sorted(extracted) == sorted(['file.txt', 'folder_1', 'folder_1/file_1'])
+
+    assert Path(tmp_path_local / 'extracted' / 'file.txt').read_text() == 'file'
+    assert Path(tmp_path_local / 'extracted' / 'folder_1' / 'file_1').read_text() == '1'
+
+    # should raise if remotesource does not exist
+    with pytest.raises(OSError, match='does not exist'):
+        with custom_transport as transport:
+            transport.extract(tmp_path_remote / 'non_existing', tmp_path_remote / 'extracted')
+
+    # should raise OSError in case extraction fails
+    # I do this by monkey patching transport.exec_command_wait and transport.exec_command_wait_async
+    def mock_exec_command_wait(*args, **kwargs):
+        return 1, b'', b''
+
+    async def mock_exec_command_wait_async(*args, **kwargs):
+        return 1, b'', b''
+
+    monkeypatch.setattr(transport, 'exec_command_wait', mock_exec_command_wait)
+    monkeypatch.setattr(transport, 'exec_command_wait_async', mock_exec_command_wait_async)
+
+    with pytest.raises(OSError, match='Error while extracting the tar archive.'):
+        with custom_transport as transport:
+            transport.extract(tmp_path_remote / archive_name, tmp_path_remote / 'extracted_1')
+
+
+def test_glob(custom_transport, tmp_path_local):
+    """Test the glob method of the transport plugin.
+    This tests mainly the implementation, doesn't need to run on remote
+    """
+
+    for subpath in [
+        'i.txt',
+        'j.txt',
+        'folder1/a/b.txt',
+        'folder1/a/c.txt',
+        'folder1/a/c.in',
+        'folder1/c.txt',
+        'folder1/e/f/g.txt',
+        'folder2/x',
+        'folder2/y/z',
+    ]:
+        tmp_path_local.joinpath(subpath).parent.mkdir(parents=True, exist_ok=True)
+        tmp_path_local.joinpath(subpath).write_text('touch')
+
+    with custom_transport as transport:
+        # do not raise an error if the path does not exist
+        g_list = transport.glob(str(tmp_path_local) + '/non_existing/*.txt')
+        assert g_list == []
+
+        g_list = transport.glob(str(tmp_path_local) + '/*.txt')
+        paths = [str(tmp_path_local.joinpath(item)) for item in ['i.txt', 'j.txt']]
+        assert sorted(paths) == sorted(g_list)
+
+        g_list = transport.glob(str(tmp_path_local) + '/folder1/*.txt')
+        paths = [str(tmp_path_local.joinpath(item)) for item in ['folder1/c.txt']]
+        assert sorted(paths) == sorted(g_list)
+
+        g_list = transport.glob(str(tmp_path_local) + '/folder1/*/*.txt')
+        paths = [str(tmp_path_local.joinpath(item)) for item in ['folder1/a/b.txt', 'folder1/a/c.txt']]
+        assert sorted(paths) == sorted(g_list)
+
+        g_list = transport.glob(str(tmp_path_local) + '/folder*/*')
+        paths = [
+            str(tmp_path_local.joinpath(item))
+            for item in ['folder1/a', 'folder1/c.txt', 'folder2/x', 'folder2/y', 'folder1/e']
+        ]
+        assert sorted(paths) == sorted(g_list)
+
+        g_list = transport.glob(str(tmp_path_local) + '/folder1/*/*/*.txt')
+        paths = [str(tmp_path_local.joinpath(item)) for item in ['folder1/e/f/g.txt']]
+        assert sorted(paths) == sorted(g_list)

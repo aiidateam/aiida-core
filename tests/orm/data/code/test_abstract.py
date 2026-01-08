@@ -41,7 +41,7 @@ def test_set_label():
     code.label = 'alternate-label'
     assert code.label == 'alternate-label'
 
-    with pytest.raises(ValueError, match=''):
+    with pytest.raises(ValueError, match='The label contains a `@` symbol, which is not allowed.'):
         code.label = 'illegal@label'
 
 
@@ -66,3 +66,10 @@ def test_constructor_defaults():
     assert code.prepend_text == ''
     assert code.use_double_quotes is False
     assert code.is_hidden is False
+
+
+def test_serialization():
+    label = 'some-label'
+    code = MockCode(label=label)
+
+    MockCode.from_serialized(**code.serialize())

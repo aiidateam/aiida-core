@@ -277,6 +277,8 @@ def parse_upf(fname, check_filename=True, encoding='utf-8'):
 class UpfData(SinglefileData):
     """`Data` sub class to represent a pseudopotential single file in UPF format."""
 
+    CHECK_FILENAME = True
+
     @classmethod
     def get_or_create(cls, filepath, use_first=False, store_upf=True, backend=None):
         """Get the `UpfData` with the same md5 of the given file, or create it if it does not yet exist.
@@ -375,7 +377,7 @@ class UpfData(SinglefileData):
         from aiida.common.exceptions import ParsingError
         from aiida.common.files import md5_file, md5_from_filelike
 
-        parsed_data = parse_upf(file)
+        parsed_data = parse_upf(file, check_filename=self.CHECK_FILENAME)
 
         try:
             md5sum = md5_file(file)

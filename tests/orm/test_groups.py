@@ -14,6 +14,7 @@ import pytest
 
 from aiida import orm
 from aiida.common import exceptions
+from aiida.tools.archive.exceptions import ExportValidationError
 from aiida.tools.graph.deletions import delete_nodes
 
 
@@ -320,6 +321,206 @@ class TestGroups:
         # And that the results are correct
         assert builder.count() == 1
         assert builder.first(flat=True) == group.pk
+
+    def test_dump_dry_run(self, tmp_path):
+        """Test dry run mode doesn't create files."""
+        group = orm.Group(label='test_dump_group').store()
+        node = orm.CalculationNode().store().seal()
+        group.add_nodes([node])
+
+        output_path = tmp_path / 'group_dump'
+        result_path = group.dump(output_path=output_path, dry_run=True)
+
+        # In dry run, the path is returned but no files are created
+        assert result_path == output_path
+        assert not result_path.exists()
+
+    @pytest.mark.usefixtures('aiida_profile_clean')
+    def test_dump_basic(self, tmp_path):
+        """Test basic dumping of a group."""
+        group = orm.Group(label='test_dump_group').store()
+        node = orm.CalculationNode().store().seal()
+        group.add_nodes([node])
+
+        output_path = tmp_path / 'group_dump'
+        result_path = group.dump(output_path=output_path)
+
+        # Check that dump was created
+        assert result_path.exists()
+        assert result_path.is_dir()
+
+        # Check for expected files
+        assert (result_path / '.aiida_dump_safeguard').exists()
+
+    def test_dump_empty_group(self, tmp_path):
+        """Test dumping an empty group."""
+        group = orm.Group(label='empty_group').store()
+
+        output_path = tmp_path / 'empty_group_dump'
+        result_path = group.dump(output_path=output_path)
+
+        assert result_path.exists()
+        assert result_path.is_dir()
+
+    def test_dump_overwrite(self, tmp_path):
+        """Test overwrite functionality."""
+        group = orm.Group(label='test_overwrite_group').store()
+        node = orm.CalculationNode().store().seal()
+        group.add_nodes([node])
+
+        output_path = tmp_path / 'group_dump'
+
+        # First dump
+        result_path1 = group.dump(output_path=output_path)
+        assert result_path1.exists()
+
+        # Second dump with overwrite should succeed
+        result_path2 = group.dump(output_path=output_path, overwrite=True)
+        assert result_path2.exists()
+        assert result_path1 == result_path2
+
+    def test_dump_overwrite_false_does_not_fail(self, tmp_path):
+        """Test that dumping to an existing path with overwrite=False does not raise."""
+        group = orm.Group(label='test_overwrite_false').store()
+        node = orm.CalculationNode()
+        node.store()
+        node.seal()
+        group.add_nodes([node])
+
+        output_path = tmp_path / 'group_dump'
+
+        # First dump creates the directory
+        group.dump(output_path=output_path)
+
+        # Second dump should succeed without raising
+        result = group.dump(output_path=output_path, overwrite=False)
+
+        assert result == output_path
+
+    def test_dump_fails_with_unsealed_nodes_by_default(self, tmp_path):
+        """Test that dumping a group with unsealed nodes fails by default."""
+
+        group = orm.Group(label='group_with_unsealed').store()
+
+        # Create an UNSEALED node
+        node = orm.CalculationNode()
+        node.store()
+        group.add_nodes([node])
+
+        with pytest.raises(ExportValidationError, match='must be sealed'):
+            group.dump(output_path=tmp_path)
+
+    def test_dump_with_time_filters(self, tmp_path):
+        """Test dumping with time-based filters."""
+        from datetime import datetime, timedelta
+
+        group = orm.Group(label='test_time_filter_group').store()
+        node = orm.CalculationNode().store().seal()
+        group.add_nodes([node])
+
+        output_path = tmp_path / 'group_dump_time'
+
+        # Test with past_days filter
+        result_path = group.dump(output_path=output_path, past_days=7)
+        assert result_path.exists()
+
+        # Test with date range
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=1)
+
+        result_path2 = group.dump(
+            output_path=output_path / 'date_range', start_date=start_date, end_date=end_date, overwrite=True
+        )
+        assert result_path2.exists()
+
+    def test_dump_node_type_filters(self, tmp_path):
+        """Test dumping with node type filters."""
+        group = orm.Group(label='test_node_filters_group').store()
+        calc_node = orm.CalculationNode().store().seal()
+        workflow_node = orm.WorkflowNode().store().seal()
+        group.add_nodes([calc_node, workflow_node])
+
+        output_path = tmp_path / 'group_dump_filters'
+
+        # Test with only top-level calculations
+        result_path = group.dump(output_path=output_path, only_top_level_calcs=False, only_top_level_workflows=False)
+        assert result_path.exists()
+
+    def test_dump_unsealed_node_allowed(self, tmp_path):
+        """Test that dumping group with unsealed nodes works with dump_unsealed=True."""
+        group = orm.Group(label='test_unsealed_group').store()
+        node = orm.CalculationNode()
+        node.store()  # Store but don't seal
+        group.add_nodes([node])
+
+        output_path = tmp_path / 'group_dump_unsealed'
+        result_path = group.dump(output_path=output_path, dump_unsealed=True)
+
+        assert result_path.exists()
+
+    def test_dump_symlink_calcs(self, tmp_path):
+        """Test dumping with symlinks for calculations."""
+        group = orm.Group(label='test_symlink_group').store()
+        node = orm.CalculationNode().store().seal()
+        group.add_nodes([node])
+
+        output_path = tmp_path / 'group_dump_symlink'
+        result_path = group.dump(output_path=output_path, symlink_calcs=True)
+
+        assert result_path.exists()
+
+    def test_dump_attributes_and_extras(self, tmp_path):
+        """Test dumping with different metadata inclusion options."""
+        group = orm.Group(label='test_metadata_group').store()
+        node = orm.CalculationNode()
+        node.base.attributes.set('test_attr', 'test_value')
+        node.base.extras.set('test_extra', 'extra_value')
+        node.store().seal()
+        group.add_nodes([node])
+
+        output_path = tmp_path / 'group_dump_metadata'
+
+        # Test with attributes included but not extras
+        result_path = group.dump(output_path=output_path, include_attributes=True, include_extras=False)
+        assert result_path.exists()
+
+        # Test with extras included but not attributes
+        result_path2 = group.dump(
+            output_path=output_path / 'extras_only', include_attributes=False, include_extras=True
+        )
+        assert result_path2.exists()
+
+    def test_dump_filter_by_last_dump_time(self, tmp_path):
+        """Test filtering by last dump time."""
+        group = orm.Group(label='test_last_dump_group').store()
+        node = orm.CalculationNode().store().seal()
+        group.add_nodes([node])
+
+        output_path = tmp_path / 'group_dump_last_time'
+
+        # First dump
+        result_path1 = group.dump(output_path=output_path)
+        assert result_path1.exists()
+
+        # Second dump with filter_by_last_dump_time
+        result_path2 = group.dump(output_path=output_path / 'filtered', filter_by_last_dump_time=False, overwrite=True)
+        assert result_path2.exists()
+
+    def test_dump_multiple_nodes_types(self, tmp_path):
+        """Test dumping a group with multiple node types."""
+        group = orm.Group(label='test_mixed_nodes_group').store()
+
+        # Add different types of nodes
+        calc_node = orm.CalculationNode().store().seal()
+        data_node = orm.Int(42).store()
+        workflow_node = orm.WorkflowNode().store().seal()
+
+        group.add_nodes([calc_node, data_node, workflow_node])
+
+        output_path = tmp_path / 'group_dump_mixed'
+        result_path = group.dump(output_path=output_path)
+
+        assert result_path.exists()
 
 
 class TestGroupsSubclasses:

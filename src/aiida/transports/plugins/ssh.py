@@ -21,7 +21,7 @@ from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
 from aiida.common.escaping import escape_for_bash
 from aiida.common.warnings import warn_deprecation
 
-from ..transport import BlockingTransport, TransportInternalError, TransportPath
+from ..transport import BlockingTransport, TransportInternalError, TransportPath, has_magic
 
 __all__ = ('SshTransport', 'convert_to_bool', 'parse_sshconfig')
 
@@ -513,7 +513,7 @@ class SshTransport(BlockingTransport):
             self._close_proxies()
             raise InvalidOperation(
                 'Error in ssh transport plugin. This may be due to the remote computer not supporting SFTP. '
-                'Try setting it up with the aiida.transports:ssh_only transport from the aiida-sshonly plugin instead.'
+                'Try setting it up with the core.ssh_async transport plugin with openssh backend, instead.'
             )
 
         self._is_open = True
@@ -671,10 +671,6 @@ class SshTransport(BlockingTransport):
         this method will return None. But in __enter__ this is set explicitly,
         so this should never happen within this class.
         """
-        warn_deprecation(
-            '`chdir()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
-            version=3,
-        )
         return self.sftp.getcwd()
 
     def makedirs(self, path: TransportPath, ignore_existing: bool = False):
@@ -805,10 +801,11 @@ class SshTransport(BlockingTransport):
             raise  # Typically if I don't have permissions (errno=13)
 
     def chmod(self, path: TransportPath, mode):
-        """Change permissions to path
+        """Change permissions of a path.
 
-        :param path: path to file
-        :param mode: new permission bits (integer)
+        :param path: Path to the file or directory.
+        :param mode: New permissions as an integer, for example 0o700 (octal) or 448 (decimal) results in `-rwx------`
+            for a file.
         """
         path = str(path)
 
@@ -866,8 +863,8 @@ class SshTransport(BlockingTransport):
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
 
-        if self.has_magic(localpath):
-            if self.has_magic(remotepath):
+        if has_magic(localpath):
+            if has_magic(remotepath):
                 raise ValueError('Pathname patterns are not allowed in the destination')
 
             # use the imported glob to analyze the path locally
@@ -993,7 +990,7 @@ class SshTransport(BlockingTransport):
             raise OSError('Cannot copy a directory into a file')
 
         if not self.isdir(remotepath):  # in this case copy things in the remotepath directly
-            self.mkdir(remotepath)  # and make a directory at its place
+            self.makedirs(remotepath)  # and make a directory at its place
         else:  # remotepath exists already: copy the folder inside of it!
             remotepath = os.path.join(remotepath, os.path.split(localpath)[1])
             self.makedirs(remotepath, ignore_existing=overwrite)  # create a nested folder
@@ -1049,8 +1046,8 @@ class SshTransport(BlockingTransport):
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
 
-        if self.has_magic(remotepath):
-            if self.has_magic(localpath):
+        if has_magic(remotepath):
+            if has_magic(localpath):
                 raise ValueError('Pathname patterns are not allowed in the destination')
             # use the self glob to analyze the path remotely
             to_copy_list = self.glob(remotepath)
@@ -1268,10 +1265,10 @@ class SshTransport(BlockingTransport):
                 + f'Found instead {remotedestination} as remotedestination'
             )
 
-        if self.has_magic(remotedestination):
+        if has_magic(remotedestination):
             raise ValueError('Pathname patterns are not allowed in the destination')
 
-        if self.has_magic(remotesource):
+        if has_magic(remotesource):
             to_copy_list = self.glob(remotesource)
 
             if len(to_copy_list) > 1:
@@ -1615,8 +1612,8 @@ class SshTransport(BlockingTransport):
         source = os.path.normpath(remotesource)
         dest = os.path.normpath(remotedestination)
 
-        if self.has_magic(source):
-            if self.has_magic(dest):
+        if has_magic(source):
+            if has_magic(dest):
                 # if there are patterns in dest, I don't know which name to assign
                 raise ValueError('`remotedestination` cannot have patterns')
 

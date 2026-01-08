@@ -17,15 +17,17 @@ build:
     # https://docs.readthedocs.io/en/stable/build-customization.html#install-dependencies-with-uv
     pre_create_environment:
     - asdf plugin add uv
-    - asdf install uv 0.5.22
-    - asdf global uv 0.5.22
+    - asdf install uv 0.9.8
+    - asdf global uv 0.9.8
     create_environment:
+    # Create a virtual environment in '.venv/' folder
+    # which is picked up automatically by `uv sync` and `uv run` commands below
     - uv venv
     install:
     - uv sync --extra docs --extra tests --extra rest --extra atomic_tools
     build:
       html:
-      - uv run sphinx-build -T -W --keep-going -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html
+      - uv run sphinx-build -T -W --keep-going -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html -w sphinx.log || (cat sphinx.log && exit 1)
 
 search:
   ranking:

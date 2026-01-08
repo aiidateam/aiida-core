@@ -16,7 +16,7 @@ from sqlalchemy import and_, join, select
 from sqlalchemy.dialects.postgresql import array
 from sqlalchemy.orm import Query, aliased
 from sqlalchemy.orm.util import AliasedClass
-from sqlalchemy.sql.elements import BooleanClauseList
+from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.sql.expression import cast as type_cast
 from sqlalchemy.sql.schema import Table
 from sqlalchemy.types import Integer
@@ -73,7 +73,7 @@ class SqlaJoiner:
     def __init__(
         self,
         entity_mapper: _EntityMapper,
-        filter_builder: Callable[[AliasedClass, FilterType], Optional[BooleanClauseList]],
+        filter_builder: Callable[[AliasedClass, FilterType], Optional[ColumnElement[bool]]],
     ):
         """Initialise the class"""
         self._entities = entity_mapper
@@ -127,7 +127,7 @@ class SqlaJoiner:
             },
         }
 
-        return mapping  # type: ignore
+        return mapping  # type: ignore[return-value]
 
     def _join_computer_authinfo(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
         """:param joined_entity: the aliased user you want to join to
@@ -407,7 +407,7 @@ class SqlaJoiner:
         selection_walk_list = [
             link1.input_id.label('ancestor_id'),
             link1.output_id.label('descendant_id'),
-            type_cast(0, Integer).label('depth'),  # type: ignore[type-var]
+            type_cast(0, Integer).label('depth'),
         ]
         if expand_path:
             selection_walk_list.append(array((link1.input_id, link1.output_id)).label('path'))
@@ -424,7 +424,7 @@ class SqlaJoiner:
         selection_union_list = [
             aliased_walk.c.ancestor_id.label('ancestor_id'),
             link2.output_id.label('descendant_id'),
-            (aliased_walk.c.depth + type_cast(1, Integer)).label('current_depth'),  # type: ignore[type-var]
+            (aliased_walk.c.depth + type_cast(1, Integer)).label('current_depth'),
         ]
         if expand_path:
             selection_union_list.append((aliased_walk.c.path + array((link2.output_id,))).label('path'))
@@ -474,7 +474,7 @@ class SqlaJoiner:
         selection_walk_list = [
             link1.input_id.label('ancestor_id'),
             link1.output_id.label('descendant_id'),
-            type_cast(0, Integer).label('depth'),  # type: ignore[type-var]
+            type_cast(0, Integer).label('depth'),
         ]
         if expand_path:
             selection_walk_list.append(array((link1.output_id, link1.input_id)).label('path'))
@@ -491,7 +491,7 @@ class SqlaJoiner:
         selection_union_list = [
             link2.input_id.label('ancestor_id'),
             aliased_walk.c.descendant_id.label('descendant_id'),
-            (aliased_walk.c.depth + type_cast(1, Integer)).label('current_depth'),  # type: ignore[type-var]
+            (aliased_walk.c.depth + type_cast(1, Integer)).label('current_depth'),
         ]
         if expand_path:
             selection_union_list.append((aliased_walk.c.path + array((link2.input_id,))).label('path'))

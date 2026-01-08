@@ -17,9 +17,9 @@ using an ``InstalledCode``, it will run its executable on the associated compute
 from __future__ import annotations
 
 import pathlib
-import typing as t
+from typing import cast
 
-from pydantic import ConfigDict, field_validator, model_validator
+from pydantic import field_serializer, field_validator
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
@@ -39,16 +39,16 @@ class InstalledCode(Code):
 
     _EMIT_CODE_DEPRECATION_WARNING: bool = False
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
+    _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
     class Model(AbstractCode.Model):
         """Model describing required information to create an instance."""
 
-        model_config = ConfigDict(arbitrary_types_allowed=True)
-
-        computer: t.Union[str, Computer] = MetadataField(
+        computer: str = MetadataField(  # type: ignore[assignment]
             ...,
             title='Computer',
             description='The remote computer on which the executable resides.',
+            orm_to_model=lambda node, _: cast('InstalledCode', node).computer.label,
             short_name='-Y',
             priority=2,
         )
@@ -56,15 +56,10 @@ class InstalledCode(Code):
             ...,
             title='Filepath executable',
             description='Filepath of the executable on the remote computer.',
+            orm_to_model=lambda node, _: str(cast('InstalledCode', node).filepath_executable),
             short_name='-X',
             priority=1,
         )
-
-        @field_validator('label')
-        @classmethod
-        def validate_label_uniqueness(cls, value: str) -> str:
-            """Override the validator for the ``label`` of the base class since uniqueness is defined on full label."""
-            return value
 
         @field_validator('computer')
         @classmethod
@@ -77,21 +72,9 @@ class InstalledCode(Code):
             except exceptions.NotExistent as exception:
                 raise ValueError(exception) from exception
 
-        @model_validator(mode='after')  # type: ignore[misc]
-        def validate_full_label_uniqueness(self) -> AbstractCode.Model:
-            """Validate that the full label does not already exist."""
-            from aiida.orm import load_code
-
-            full_label = f'{self.label}@{self.computer.label}'  # type: ignore[union-attr]
-
-            try:
-                load_code(full_label)
-            except exceptions.NotExistent:
-                return self
-            except exceptions.MultipleObjectsError as exception:
-                raise ValueError(f'Multiple codes with the label `{full_label}` already exist.') from exception
-            else:
-                raise ValueError(f'A code with the label `{full_label}` already exists.')
+        @field_serializer('computer')
+        def serialize_computer(self, computer: Computer, _info):
+            return computer.label
 
     def __init__(self, computer: Computer, filepath_executable: str, **kwargs):
         """Construct a new instance.
@@ -101,7 +84,7 @@ class InstalledCode(Code):
         """
         super().__init__(**kwargs)
         self.computer = computer
-        self.filepath_executable = filepath_executable  # type: ignore[assignment]
+        self.filepath_executable = filepath_executable
 
     def _validate(self):
         """Validate the instance by checking that a computer has been defined.
@@ -177,7 +160,7 @@ class InstalledCode(Code):
         """
         return self.filepath_executable
 
-    @property  # type: ignore[override]
+    @property
     def computer(self) -> Computer:
         """Return the computer of this code."""
         assert self.backend_entity.computer is not None

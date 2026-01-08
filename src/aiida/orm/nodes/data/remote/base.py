@@ -13,9 +13,10 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
+from typing import Union
 
+from aiida.common.pydantic import MetadataField
 from aiida.orm import AuthInfo
-from aiida.orm.fields import add_field
 from aiida.transports import Transport
 
 from ..data import Data
@@ -32,14 +33,15 @@ class RemoteData(Data):
     """
 
     KEY_EXTRA_CLEANED = 'cleaned'
-    __qb_fields__ = [
-        add_field(
-            'remote_path',
-            dtype=str,
-        ),
-    ]
 
-    def __init__(self, remote_path=None, **kwargs):
+    class Model(Data.Model):
+        remote_path: Union[str, None] = MetadataField(
+            title='Remote path',
+            description='Filepath on the remote computer.',
+            orm_to_model=lambda node, _: node.get_remote_path(),
+        )
+
+    def __init__(self, remote_path: Union[str, None] = None, **kwargs):
         super().__init__(**kwargs)
         if remote_path is not None:
             self.set_remote_path(remote_path)
@@ -47,7 +49,7 @@ class RemoteData(Data):
     def get_remote_path(self) -> str:
         return self.base.attributes.get('remote_path')
 
-    def set_remote_path(self, val):
+    def set_remote_path(self, val: str):
         self.base.attributes.set('remote_path', val)
 
     @property
@@ -229,7 +231,7 @@ class RemoteData(Data):
 
         with authinfo.get_transport() as transport:
             if not transport.path_exists(str(full_path)):
-                exc_message = f'The required remote path {full_path} on Computer <{computer_label}> ' 'does not exist.'
+                exc_message = f'The required remote path {full_path} on Computer <{computer_label}> does not exist.'
                 raise FileNotFoundError(exc_message)
 
             if method not in ('du', 'stat'):

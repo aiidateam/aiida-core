@@ -26,6 +26,7 @@ from aiida.common.datastructures import CalcInfo, FileCopyOperation
 from aiida.common.folders import Folder
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
+from aiida.common.typing import FilePath
 
 from ..exit_code import ExitCode
 from ..ports import PortNamespace
@@ -51,10 +52,9 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:
     :return: string with error message in case the inputs are invalid
     """
     try:
-        ctx.get_port('code')
         ctx.get_port('metadata.computer')
     except ValueError:
-        # If the namespace no longer contains the `code` or `metadata.computer` ports we skip validation
+        # If the namespace no longer contains `metadata.computer` port we skip validation
         return None
 
     remote_folder = inputs.get('remote_folder', None)
@@ -66,6 +66,10 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:
         return None
 
     code = inputs.get('code', None)
+    if not code:
+        # If the namespace no longer contains `code` port we skip validation
+        return None
+
     computer_from_code = code.computer
     computer_from_metadata = inputs.get('metadata', {}).get('computer', None)
 
@@ -110,13 +114,37 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:
     return None
 
 
+def validate_unstash_options(unstash_options: Any, _: Any) -> Optional[str]:
+    """Validate the ``unstash`` options."""
+    from aiida.common.datastructures import UnstashTargetMode
+
+    source_list = unstash_options.get('source_list', None)
+    unstash_target_mode = unstash_options.get('unstash_target_mode', None)
+
+    if not isinstance(source_list, (list, tuple)) or any(
+        not isinstance(src, str) or os.path.isabs(src) for src in source_list
+    ):
+        port = 'metadata.options.unstash.source_list'
+        return f'`{port}` should be a list or tuple of relative filepaths, got: {source_list}'
+
+    try:
+        UnstashTargetMode(unstash_target_mode)
+    except ValueError:
+        port = 'metadata.options.unstash.unstash_target_mode'
+        return (
+            f'`{port}` should be a member of aiida.common.datastructures.UnstashTargetMode, got: {unstash_target_mode}'
+        )
+
+    return None
+
+
 def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
     """Validate the ``stash`` options."""
     from aiida.common.datastructures import StashMode
 
     target_base = stash_options.get('target_base', None)
     source_list = stash_options.get('source_list', None)
-    stash_mode = stash_options.get('mode', StashMode.COPY.value)
+    stash_mode = stash_options.get('stash_mode', None)
 
     if not isinstance(target_base, str) or not os.path.isabs(target_base):
         return f'`metadata.options.stash.target_base` should be an absolute filepath, got: {target_base}'
@@ -130,8 +158,22 @@ def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
     try:
         StashMode(stash_mode)
     except ValueError:
-        port = 'metadata.options.stash.mode'
+        port = 'metadata.options.stash.stash_mode'
         return f'`{port}` should be a member of aiida.common.datastructures.StashMode, got: {stash_mode}'
+
+    dereference = stash_options.get('dereference', None)
+
+    if stash_mode in [
+        StashMode.COMPRESS_TAR.value,
+        StashMode.COMPRESS_TARBZ2.value,
+        StashMode.COMPRESS_TARGZ.value,
+        StashMode.COMPRESS_TARXZ.value,
+    ]:
+        if not isinstance(dereference, bool):
+            return f'`metadata.options.stash.dereference` should be a boolean, got: {dereference}'
+
+    elif dereference is not None:
+        return '`metadata.options.stash.dereference` is only valid for compression stashing modes'
 
     return None
 
@@ -216,6 +258,7 @@ class CalcJob(Process):
             'monitors',
             valid_type=orm.Dict,
             required=False,
+            populate_defaults=False,
             validator=validate_monitors,
             help='Add monitoring functions that can inspect output files while the job is running and decide to '
             'prematurely terminate the job.',
@@ -390,6 +433,26 @@ class CalcJob(Process):
             help='List of relative file paths that should be retrieved in addition to what the plugin specifies.',
         )
         spec.input_namespace(
+            'metadata.options.unstash',
+            required=False,
+            populate_defaults=False,
+            validator=validate_unstash_options,
+            help='Optional directives to unstash files after upload.',
+        )
+        spec.input(
+            'metadata.options.unstash.source_list',
+            valid_type=(tuple, list),
+            required=False,
+            help='Sequence of relative filepaths representing files in the remote directory that should be unstashed.',
+        )
+        spec.input(
+            'metadata.options.unstash.unstash_target_mode',
+            valid_type=str,
+            required=False,
+            help='Mode with which to perform the unstashing, should be value of '
+            '`aiida.common.datastructures.UnstashTargetMode`.',
+        )
+        spec.input_namespace(
             'metadata.options.stash',
             required=False,
             populate_defaults=False,
@@ -415,7 +478,12 @@ class CalcJob(Process):
             required=False,
             help='Mode with which to perform the stashing, should be value of `aiida.common.datastructures.StashMode`.',
         )
-
+        spec.input(
+            'metadata.options.stash.dereference',
+            valid_type=bool,
+            required=False,
+            help='Whether to follow symlinks while stashing or not, specific to StashMode.COMPRESS_* enums',
+        )
         spec.output(
             'remote_folder',
             valid_type=orm.RemoteData,
@@ -434,7 +502,6 @@ class CalcJob(Process):
             help='Files that are retrieved by the daemon will be stored in this node. By default the stdout and stderr '
             'of the scheduler will be added, but one can add more by specifying them in `CalcInfo.retrieve_list`.',
         )
-
         spec.exit_code(
             100,
             'ERROR_NO_RETRIEVED_FOLDER',
@@ -678,7 +745,7 @@ class CalcJob(Process):
                     return self.parse(retrieved_temporary_folder.abspath)
 
     def parse(
-        self, retrieved_temporary_folder: Optional[str] = None, existing_exit_code: ExitCode | None = None
+        self, retrieved_temporary_folder: FilePath | None = None, existing_exit_code: ExitCode | None = None
     ) -> ExitCode:
         """Parse a retrieved job calculation.
 
@@ -706,7 +773,7 @@ class CalcJob(Process):
 
         # Call the retrieved output parser
         try:
-            exit_code_retrieved = self.parse_retrieved_output(retrieved_temporary_folder)
+            exit_code_retrieved = self.parse_retrieved_output(str(retrieved_temporary_folder))
         finally:
             if retrieved_temporary_folder is not None:
                 shutil.rmtree(retrieved_temporary_folder, ignore_errors=True)
@@ -1057,7 +1124,10 @@ class CalcJob(Process):
             job_tmpl.max_wallclock_seconds = max_wallclock_seconds
 
         submit_script_filename = self.node.get_option('submit_script_filename')
+        assert submit_script_filename is not None
         script_content = scheduler.get_submit_script(job_tmpl)
+        # TODO: mypy error: Argument 2 to "create_file_from_filelike" of "Folder"
+        # has incompatible type "Any | None"; expected "str | PurePath"
         folder.create_file_from_filelike(io.StringIO(script_content), submit_script_filename, 'w', encoding='utf8')
 
         def encoder(obj):

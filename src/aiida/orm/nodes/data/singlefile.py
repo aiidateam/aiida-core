@@ -17,18 +17,25 @@ import pathlib
 import typing as t
 
 from aiida.common import exceptions
+from aiida.common.pydantic import MetadataField
+from aiida.common.typing import FilePath
 
 from .data import Data
 
 __all__ = ('SinglefileData',)
-
-FilePath = t.Union[str, pathlib.PurePath]
 
 
 class SinglefileData(Data):
     """Data class that can be used to store a single file in its repository."""
 
     DEFAULT_FILENAME = 'file.txt'
+
+    class Model(Data.Model):
+        content: bytes = MetadataField(
+            description='The file content.',
+            model_to_orm=lambda model: io.BytesIO(model.content),  # type: ignore[attr-defined]
+        )
+        filename: t.Optional[str] = MetadataField(None, description='The filename. Defaults to `file.txt`.')
 
     @classmethod
     def from_string(cls, content: str, filename: str | pathlib.Path | None = None, **kwargs: t.Any) -> 'SinglefileData':
@@ -51,7 +58,11 @@ class SinglefileData(Data):
         return cls(io.BytesIO(content), filename, **kwargs)
 
     def __init__(
-        self, file: str | pathlib.Path | t.IO, filename: str | pathlib.Path | None = None, **kwargs: t.Any
+        self,
+        file: str | pathlib.Path | t.IO | None = None,
+        filename: str | pathlib.Path | None = None,
+        content: str | pathlib.Path | t.IO | None = None,
+        **kwargs: t.Any,
     ) -> None:
         """Construct a new instance and set the contents to that of the file.
 
@@ -61,8 +72,18 @@ class SinglefileData(Data):
         """
         super().__init__(**kwargs)
 
+        if file is not None and content is not None:
+            raise ValueError('cannot specify both `file` and `content`.')
+
+        if content is not None:
+            file = content
+
         if file is not None:
             self.set_file(file, filename=filename)
+
+    @property
+    def content(self) -> bytes:
+        return self.get_content(mode='rb')
 
     @property
     def filename(self) -> str:
@@ -115,6 +136,12 @@ class SinglefileData(Data):
         """
         with self.base.repository.as_path(self.filename) as filepath:
             yield filepath
+
+    @t.overload
+    def get_content(self, mode: t.Literal['rb']) -> bytes: ...
+
+    @t.overload
+    def get_content(self, mode: t.Literal['r']) -> str: ...
 
     def get_content(self, mode: str = 'r') -> str | bytes:
         """Return the content of the single file stored for this data node.

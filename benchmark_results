@@ -1,0 +1,195 @@
+======================================================================
+REALISTIC WORKLOAD BENCHMARK: 100MB of Inhomogeneous Files
+======================================================================
+
+Generating realistic file size distribution...
+Generated 3,899 files totaling 100.00 MB
+
+Initializing Git backend...
+Initializing DiskObjectStore backend...
+
+======================================================================
+Benchmarking: GitRepositoryBackend
+Total files: 3,899
+Total size: 100.00 MB
+======================================================================
+
+File distribution:
+  Small (<10KB): 3,785 files, 20.01 MB
+  Medium (10KB-1MB): 108 files, 50.78 MB
+  Large (>1MB): 6 files, 29.22 MB
+
+📝 Writing 3,899 files...
+  Progress: 500/3,899 files (10.6%) - 28.42 MB/s
+  Progress: 1,000/3,899 files (19.4%) - 26.60 MB/s
+  Progress: 1,500/3,899 files (44.8%) - 34.68 MB/s
+  Progress: 2,000/3,899 files (59.6%) - 34.78 MB/s
+  Progress: 2,500/3,899 files (69.7%) - 33.29 MB/s
+  Progress: 3,000/3,899 files (78.3%) - 31.86 MB/s
+  Progress: 3,500/3,899 files (83.7%) - 30.08 MB/s
+
+  ✓ Write complete:
+    Total time: 3.22 seconds
+    Throughput: 31.07 MB/s
+    Avg time per file: 0.83 ms
+
+📖 Reading all 3,899 files...
+  Progress: 500/3,899 files (12.8%) - 41.36 MB/s
+  Progress: 1,000/3,899 files (25.6%) - 40.85 MB/s
+  Progress: 1,500/3,899 files (38.5%) - 44.06 MB/s
+  Progress: 2,000/3,899 files (51.3%) - 43.41 MB/s
+  Progress: 2,500/3,899 files (64.1%) - 42.44 MB/s
+  Progress: 3,000/3,899 files (76.9%) - 41.84 MB/s
+  Progress: 3,500/3,899 files (89.8%) - 41.13 MB/s
+
+  ✓ Read complete:
+    Total time: 2.44 seconds
+    Throughput: 41.02 MB/s
+    Avg time per file: 0.63 ms
+
+🔍 Checking existence of all 3,899 files...
+
+  ✓ Check complete:
+    Total time: 0.02 seconds
+    Checks per second: 172484.40
+
+📋 Listing all objects...
+
+  ✓ List complete:
+    Total time: 0.01 seconds
+    Objects found: 3,899
+
+🎲 Random read test (50 random files)...
+
+  ✓ Random read complete:
+    Total time: 0.03 seconds
+    Avg time per file: 0.70 ms
+
+🗑️  Deleting 100 objects...
+
+  ✓ Delete complete:
+    Total time: 0.39 seconds
+    Objects deleted: 100
+    Avg time per object: 3.90 ms
+    Deletion rate: 256.51 objects/second
+    Objects remaining: 0 (started with 3,899)
+
+📊 Repository Info:
+  Objects: {'total': 0}
+  Backend: git
+  Hash algorithm (keys): sha1
+  Hash algorithm (content): sha256
+
+======================================================================
+Benchmarking: DiskObjectStoreRepositoryBackend
+Total files: 3,899
+Total size: 100.00 MB
+======================================================================
+
+File distribution:
+  Small (<10KB): 3,785 files, 20.01 MB
+  Medium (10KB-1MB): 108 files, 50.78 MB
+  Large (>1MB): 6 files, 29.22 MB
+
+📝 Writing 3,899 files...
+  Progress: 500/3,899 files (10.6%) - 62.99 MB/s
+  Progress: 1,000/3,899 files (19.4%) - 60.46 MB/s
+  Progress: 1,500/3,899 files (44.8%) - 88.09 MB/s
+  Progress: 2,000/3,899 files (59.6%) - 89.07 MB/s
+  Progress: 2,500/3,899 files (69.7%) - 83.38 MB/s
+  Progress: 3,000/3,899 files (78.3%) - 79.04 MB/s
+  Progress: 3,500/3,899 files (83.7%) - 73.87 MB/s
+
+  ✓ Write complete:
+    Total time: 1.33 seconds
+    Throughput: 75.25 MB/s
+    Avg time per file: 0.34 ms
+
+📖 Reading all 3,899 files...
+  Progress: 500/3,899 files (12.8%) - 5.71 MB/s
+  Progress: 1,000/3,899 files (25.6%) - 4.93 MB/s
+  Progress: 1,500/3,899 files (38.5%) - 7.71 MB/s
+  Progress: 2,000/3,899 files (51.3%) - 7.69 MB/s
+  Progress: 2,500/3,899 files (64.1%) - 7.22 MB/s
+  Progress: 3,000/3,899 files (76.9%) - 6.82 MB/s
+  Progress: 3,500/3,899 files (89.8%) - 6.24 MB/s
+
+  ✓ Read complete:
+    Total time: 15.00 seconds
+    Throughput: 6.66 MB/s
+    Avg time per file: 3.85 ms
+
+🔍 Checking existence of all 3,899 files...
+
+  ✓ Check complete:
+    Total time: 0.13 seconds
+    Checks per second: 30229.51
+
+📋 Listing all objects...
+
+  ✓ List complete:
+    Total time: 0.03 seconds
+    Objects found: 3,899
+
+🎲 Random read test (50 random files)...
+
+  ✓ Random read complete:
+    Total time: 0.23 seconds
+    Avg time per file: 4.65 ms
+
+🗑️  Deleting 100 objects...
+
+  ✓ Delete complete:
+    Total time: 0.02 seconds
+    Objects deleted: 100
+    Avg time per object: 0.15 ms
+    Deletion rate: 6579.82 objects/second
+    Objects remaining: 3,799 (started with 3,899)
+
+📊 Repository Info:
+  SHA-hash algorithm: sha256
+  Compression algorithm: zlib+1
+  Objects: {'packed': 0, 'loose': 3799, 'pack_files': 0}
+
+======================================================================
+PERFORMANCE COMPARISON SUMMARY
+======================================================================
+
+📊 Overall Statistics:
+  Files: 3,899
+  Total size: 100.00 MB
+
+📝 Write Performance:
+  Git: 3.22s (31.07 MB/s)
+  DOS: 1.33s (75.25 MB/s)
+  Winner: 🔴 DOS faster (2.42x)
+
+📖 Read Performance:
+  Git: 2.44s (41.02 MB/s)
+  DOS: 15.00s (6.66 MB/s)
+  Winner: 🟢 Git faster (6.15x)
+
+🔍 has_objects Performance:
+  Git: 0.02s
+  DOS: 0.13s
+  Winner: 🟢 Git faster (5.71x)
+
+📋 list_objects Performance:
+  Git: 0.01s
+  DOS: 0.03s
+  Winner: 🟢 Git faster (3.07x)
+
+🎲 Random Read Performance (50 files):
+  Git: 0.03s
+  DOS: 0.23s
+  Winner: 🟢 Git faster (6.67x)
+
+🗑️  Delete Performance (100 objects):
+  Git: 0.39s (256.51 obj/s)
+  DOS: 0.02s (6579.82 obj/s)
+  Winner: 🔴 DOS faster (25.65x)
+
+======================================================================
+Benchmark complete!
+======================================================================
+

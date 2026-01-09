@@ -20,7 +20,7 @@ import typing as t
 
 from aiida.common.typing import FilePath
 
-__all__ = ('AIIDA_LOGGER', 'override_log_level')
+__all__ = ('AIIDA_LOGGER', 'get_process_logger', 'override_log_level')
 
 # Custom logging level, intended specifically for informative log messages reported during WorkChains.
 # We want the level between INFO(20) and WARNING(30) such that it will be logged for the default loglevel, however
@@ -37,8 +37,19 @@ def report(self: logging.Logger, msg: str, *args: t.Any, **kwargs: t.Any) -> Non
 
 
 class AiidaLoggerType(logging.Logger):
+    """Type stub for Logger with the report method."""
+
     def report(self, msg: str, *args: t.Any, **kwargs: t.Any) -> None:
         """Log a message at the ``REPORT`` level."""
+        self.log(LOG_LEVEL_REPORT, msg, *args, **kwargs)
+
+
+class AiidaLoggerAdapterType(logging.LoggerAdapter[logging.Logger]):
+    """Type stub for LoggerAdapter with the report method."""
+
+    def report(self, msg: str, *args: t.Any, **kwargs: t.Any) -> None:
+        """Log a message at the ``REPORT`` level."""
+        self.log(LOG_LEVEL_REPORT, msg, *args, **kwargs)
 
 
 setattr(logging, 'REPORT', LOG_LEVEL_REPORT)
@@ -59,6 +70,42 @@ LOG_LEVELS = {
 LogLevels = enum.Enum('LogLevels', {key: key for key in LOG_LEVELS})  # type: ignore[misc]
 
 AIIDA_LOGGER = t.cast(AiidaLoggerType, logging.getLogger('aiida'))
+
+
+def get_process_logger() -> AiidaLoggerType | AiidaLoggerAdapterType | None:
+    """Get the logger for the currently running process.
+
+    This is the recommended way to access logging from within calcfunctions and workfunctions,
+    where a ``self`` object is not available. The returned logger is configured to automatically
+    persist log messages to the database linked to the current process node.
+
+    .. note::
+        This function should only be called from within a running process (e.g., inside a
+        calcfunction or workfunction). If called outside a process context, it returns ``None``.
+
+    Example::
+
+        from aiida.engine import calcfunction
+        from aiida.common.log import get_process_logger
+
+        @calcfunction
+        def add(x, y):
+            logger = get_process_logger()
+            if logger:
+                logger.report(f'Adding {x.value} and {y.value}')
+            return x + y
+
+    :return: The logger of the current process, or ``None`` if not running within a process context.
+    """
+    # Import here to avoid circular imports
+    from aiida.engine.processes import Process
+
+    process = Process.current()
+    if process:
+        # The logger has been monkeypatched with the report method, so we cast to the appropriate type
+        return t.cast(AiidaLoggerType | AiidaLoggerAdapterType, process.logger)
+    return None
+
 
 CLI_ACTIVE: bool | None = None
 """Flag that is set to ``True`` if the module is imported by ``verdi`` being called."""

@@ -455,28 +455,28 @@ Logging from calculation functions and work functions
 Unlike work chains and calc jobs, calculation functions and work functions do not have a direct ``self.report()`` method available since they are plain Python functions decorated with ``@calcfunction`` or ``@workfunction``, respectively.
 However, it is still possible to generate persistent log messages that will be stored in the database and retrievable via ``verdi process report``.
 
-To presistently log messages from within a calculation function or work function, you can access the currently running process and use its logger:
+To persistently log messages from within a calculation function or work function, use the :py:func:`~aiida.common.log.get_process_logger` function:
 
 .. code:: python
 
-    from aiida.engine import Process, calcfunction
+    from aiida.engine import calcfunction, get_process_logger
     from aiida.orm import Int
 
     @calcfunction
     def add(x, y):
-        process = Process.current()
-        if process:
-            process.logger.report(f'Adding {x.value} and {y.value}')
+        logger = get_process_logger()
+        if logger:
+            logger.report(f'Adding {x.value} and {y.value}')
         return x + y
 
-The ``Process.current()`` method returns the currently running process instance (the ``FunctionProcess`` that wraps your function).
-The process has a ``logger`` attribute that is configured to automatically write log messages to the database, linked to the calcfunction's node.
-All of the messages will be stored in the database as :py:class:`~aiida.orm.logs.Log` entries and can be retrieved using ``verdi process report <PK>``.
+The :py:func:`~aiida.common.log.get_process_logger` function returns a logger that is configured to automatically write log messages to the database, linked to the process node.
+All messages will be stored in the database as :py:class:`~aiida.orm.logs.Log` entries and can be retrieved using ``verdi process report <PK>``.
+The same approach works for work functions, and the logger supports all standard Python logging levels (``debug``, ``info``, ``warning``, ``error``, ``critical``), as well as the AiiDA-specific ``report`` level.
 
 .. note::
 
     Using the standard Python ``logging`` module (e.g., ``logging.getLogger(__name__).report(...)``) will print messages to the terminal but will **not** store them in the database.
-    Only messages logged through ``process.logger`` are persisted and will appear in ``verdi process report``.
+    Only messages logged through the logger returned by :py:func:`~aiida.common.log.get_process_logger` are persisted and will appear in ``verdi process report``.
 
 .. _topics:workflows:usage:workchains:aborting_and_exit_codes:
 

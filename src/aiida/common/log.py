@@ -44,7 +44,7 @@ class AiidaLoggerType(logging.Logger):
         self.log(LOG_LEVEL_REPORT, msg, *args, **kwargs)
 
 
-class AiidaLoggerAdapterType(logging.LoggerAdapter[logging.Logger]):
+class AiidaLoggerAdapterType(logging.LoggerAdapter):  # type: ignore[type-arg]
     """Type stub for LoggerAdapter with the report method."""
 
     def report(self, msg: str, *args: t.Any, **kwargs: t.Any) -> None:

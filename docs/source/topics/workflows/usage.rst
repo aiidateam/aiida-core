@@ -449,6 +449,35 @@ This information will show up in the output of ``verdi process report``, so you 
 It is important to note that the report system is a form of logging and as such has been designed to be read by humans only.
 That is to say, the report system is not designed to pass information programmatically by parsing the log messages.
 
+Logging from calculation functions and work functions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Unlike work chains and calc jobs, calculation functions and work functions do not have a direct ``self.report()`` method available since they are plain Python functions decorated with ``@calcfunction`` or ``@workfunction``, respectively.
+However, it is still possible to generate persistent log messages that will be stored in the database and retrievable via ``verdi process report``.
+
+To presistently log messages from within a calculation function or work function, you can access the currently running process and use its logger:
+
+.. code:: python
+
+    from aiida.engine import Process, calcfunction
+    from aiida.orm import Int
+
+    @calcfunction
+    def add(x, y):
+        process = Process.current()
+        if process:
+            process.logger.report(f'Adding {x.value} and {y.value}')
+        return x + y
+
+The ``Process.current()`` method returns the currently running process instance (the ``FunctionProcess`` that wraps your function).
+The process has a ``logger`` attribute that is configured to automatically write log messages to the database, linked to the calcfunction's node.
+All of the messages will be stored in the database as :py:class:`~aiida.orm.logs.Log` entries and can be retrieved using ``verdi process report <PK>``.
+
+.. note::
+
+    Using the standard Python ``logging`` module (e.g., ``logging.getLogger(__name__).report(...)``) will print messages to the terminal but will **not** store them in the database.
+    Only messages logged through ``process.logger`` are persisted and will appear in ``verdi process report``.
+
 .. _topics:workflows:usage:workchains:aborting_and_exit_codes:
 
 Aborting and exit codes

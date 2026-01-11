@@ -282,7 +282,10 @@ class SlurmScheduler(BashCliScheduler):
             # I leave only letters, numbers, dots, dashes and underscores
             # Note: I don't compile the regexp, I am going to use it only once
             job_title = re.sub(r'[^a-zA-Z0-9_.-]+', '', job_tmpl.job_name)
-
+            if job_title != job_tmpl.job_name:
+                self.logger.debug(
+                    'Sanitized job name for SLURM compatibility: `%s` -> `%s`', job_tmpl.job_name, job_title
+                )
             # prepend a 'j' (for 'job') before the string if the string
             # is now empty or does not start with a valid charachter
             if not job_title or (job_title[0] not in string.ascii_letters + string.digits):
@@ -517,12 +520,10 @@ stderr='{stderr.strip()}'"""
             # There are actually a few others, like possible
             # failures, or partition-related reasons, but for the moment I
             # leave them in the QUEUED state.
-            if job_state_string == JobState.QUEUED and this_job.annotation in [
-                'Dependency',
-                'JobHeldUser',
-                'JobHeldAdmin',
-                'BeginTime',
-            ]:
+            if job_state_string == JobState.QUEUED and any(
+                this_job.annotation.startswith(key)
+                for key in ['Dependency', 'JobHeldUser', 'JobHeldAdmin', 'BeginTime']
+            ):
                 job_state_string = JobState.QUEUED_HELD
 
             this_job.job_state = job_state_string
@@ -622,6 +623,15 @@ stderr='{stderr.strip()}'"""
 
     def _convert_time(self, string):
         """Convert a string in the format DD-HH:MM:SS to a number of seconds."""
+        if not isinstance(string, str):
+            self.logger.warning(f"Unrecognized format for time string '{string}'")
+            raise ValueError('Unrecognized format for time string.')
+
+        string = string.strip()
+        if not string:
+            self.logger.warning("Unrecognized format for time string ''")
+            raise ValueError('Unrecognized format for time string.')
+
         if string == 'UNLIMITED':
             return 2147483647  # == 2**31 - 1, largest 32-bit signed integer (68 years)
 

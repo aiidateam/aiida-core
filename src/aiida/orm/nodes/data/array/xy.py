@@ -9,14 +9,6 @@
 """This module defines the classes related to Xy data. That is data that contains
 collections of y-arrays bound to a single x-array, and the methods to operate
 on them.
-
-Example:
-    xy = XyData()
-    xy.set_x(np.array([1, 2, 3]), 'x', 'unit_x')
-    xy.set_y([np.array([1, 2, 3]), np.array([4, 5, 6])], ['y', 'z'], ['unit_y', 'unit_z'])
-    print(xy.get_arraynames())  # ['x_array', 'y_array_0', 'y_array_1']
-    print(xy.get_y())           # [('y', array([1, 2, 3]), 'unit_y'), ('z', array([4, 5, 6]), 'unit_z')]
-    print(xy.get_y_arraynames())  # ['y', 'z']
 """
 
 from __future__ import annotations
@@ -53,6 +45,27 @@ class XyData(ArrayData):
     """A subclass designed to handle arrays that have an "XY" relationship to
     each other. That is there is one array, the X array, and there are several
     Y arrays, which can be considered functions of X.
+
+    The X array must be set first using :meth:`set_x`, followed by one or more Y arrays
+    using :meth:`set_y`. Each Y array must have the same shape as the X array::
+
+        xy = XyData()
+        xy.set_x(np.array([1, 2, 3]), 'position', 'm')
+        xy.set_y(np.array([10, 20, 30]), 'temperature', 'K')
+
+    Multiple Y arrays can be set at once by passing lists::
+
+        xy.set_y(
+            [np.array([10, 20, 30]), np.array([5, 6, 7])],
+            ['temperature', 'pressure'],
+            ['K', 'Pa']
+        )
+
+    To retrieve data, use :meth:`get_x` to get the X array with its metadata, and :meth:`get_y`
+    to get a list of tuples containing (name, array, units) for each Y array. The method
+    :meth:`get_y_arraynames` returns only the user-provided Y array names, as opposed to
+    :meth:`~aiida.orm.nodes.data.array.array.ArrayData.get_arraynames` which returns the
+    internal storage names (e.g. ``['x_array', 'y_array_0', 'y_array_1']``).
     """
 
     def __init__(
@@ -185,7 +198,14 @@ class XyData(ArrayData):
         return list(zip(y_names, y_arrays, y_units))
 
     def get_y_arraynames(self) -> list[str]:
-        """Returns the user-provided names of the y-arrays."""
+        """Returns the user-provided names of the y-arrays.
+
+        This returns only the names that were provided when calling :meth:`set_y`,
+        as opposed to :meth:`~aiida.orm.nodes.data.array.array.ArrayData.get_arraynames`
+        which returns the internal storage names (e.g., ``['x_array', 'y_array_0', 'y_array_1']``).
+
+        :return: List of user-provided y-array names.
+        """
 
         try:
             y_names = self.base.attributes.get('y_names')

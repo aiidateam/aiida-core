@@ -289,6 +289,7 @@ The user also has to specify the units for both ``x`` and ``y``:
 .. code-block:: ipython
 
   In [5]: x_name, x_array, x_units = xy.get_x()
+  # x_array is a 1D numpy array with shape (n,) where n is the number of data points
 
 Similarly, to retrieve the ``y`` values and their metadata, use the :py:meth:`~aiida.orm.XyData.get_y` method:
 
@@ -297,7 +298,7 @@ Similarly, to retrieve the ``y`` values and their metadata, use the :py:meth:`~a
   In [6]: y_values = xy.get_y()
   # y_values is a list of tuples, where each tuple contains:
   # (y_name, y_array, y_units)
-  # Each y_array has the same shape as the x_array.
+  # Each y_array is a 1D numpy array with shape (n,) matching the x_array shape.
 
   In [7]: for y_name, y_array, y_units in y_values:
      ...:     print(y_name, y_array, y_units)

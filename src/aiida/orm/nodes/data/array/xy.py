@@ -47,16 +47,18 @@ class XyData(ArrayData):
     Y arrays, which can be considered functions of X.
 
     The X array must be set first using :meth:`set_x`, followed by one or more Y arrays
-    using :meth:`set_y`. Each Y array must have the same shape as the X array::
+    using :meth:`set_y`. Each Y array must have the same shape as the X array. All arrays
+    are stored as 1D numpy arrays with shape ``(n,)`` where ``n`` is the number of data points::
 
         xy = XyData()
-        xy.set_x(np.array([1, 2, 3]), 'position', 'm')
-        xy.set_y(np.array([10, 20, 30]), 'temperature', 'K')
+        xy.set_x(np.array([1, 2, 3]), 'position', 'm')  # shape: (3,)
+        xy.set_y(np.array([10, 20, 30]), 'temperature', 'K')  # shape: (3,)
 
-    Multiple Y arrays can be set at once by passing lists::
+    Multiple Y arrays can be set at once by passing lists. Each Y array is stored
+    separately and must match the X array shape::
 
         xy.set_y(
-            [np.array([10, 20, 30]), np.array([5, 6, 7])],
+            [np.array([10, 20, 30]), np.array([5, 6, 7])],  # Two 1D arrays, each shape (3,)
             ['temperature', 'pressure'],
             ['K', 'Pa']
         )
@@ -195,6 +197,10 @@ class XyData(ArrayData):
             y_units = self.base.attributes.get('y_units')
         except (KeyError, AttributeError):
             raise NotExistent('No y units has been set yet!')
-
-        y_arrays = [self.get_array(f'y_array_{i}') for i in range(len(y_names))]
+        y_arrays = []
+        try:
+            for i in range(len(y_names)):
+                y_arrays += [self.get_array(f'y_array_{i}')]
+        except (KeyError, AttributeError):
+            raise NotExistent(f'Could not retrieve array associated with y array {y_names[i]}')
         return list(zip(y_names, y_arrays, y_units))

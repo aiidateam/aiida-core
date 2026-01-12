@@ -58,7 +58,7 @@ repos:
 
   - id: imports
     name: imports
-    entry: python utils/make_all.py
+    entry: python utils/autogenerate_all_imports.py
     language: python
     types: [python]
     require_serial: true

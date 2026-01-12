@@ -9,18 +9,21 @@
 # ruff: noqa: E402
 """Modules related to the configuration of an AiiDA instance."""
 
-from __future__ import annotations
-
 # AUTO-GENERATED
+
 # fmt: off
+
 from .migrations import *
 from .options import *
 from .profile import *
+from .settings import *
 
 __all__ = (
     'CURRENT_CONFIG_VERSION',
     'MIGRATIONS',
     'OLDEST_COMPATIBLE_CONFIG_VERSION',
+    'AiiDAConfigDir',
+    'AiiDAConfigPathResolver',
     'Option',
     'Profile',
     'check_and_migrate_config',
@@ -176,7 +179,7 @@ def get_profile() -> Optional['Profile']:
 
 
 @contextmanager
-def profile_context(profile: 'Profile' | str | None = None, allow_switch=False) -> 'Profile':
+def profile_context(profile: 'Profile | str | None' = None, allow_switch=False) -> 'Profile':
     """Return a context manager for temporarily loading a profile, and unloading on exit.
 
     :param profile: the name of the profile to load, by default will use the one marked as default in the config
@@ -201,7 +204,7 @@ def create_default_user(
     first_name: Optional[str] = None,
     last_name: Optional[str] = None,
     institution: Optional[str] = None,
-) -> User:
+) -> 'User':
     """Create a default user for the given profile.
 
     If the profile's storage is read only, a random existing user will be queried and set as default. Otherwise a new
@@ -241,8 +244,8 @@ def create_profile(
     *,
     storage_backend: str,
     storage_config: dict[str, Any],
-    broker_backend: str | None = None,
-    broker_config: dict[str, Any] | None = None,
+    broker_backend: 'str | None' = None,
+    broker_config: 'dict[str, Any] | None' = None,
     name: str,
     email: str,
     first_name: Optional[str] = None,
@@ -289,7 +292,7 @@ def reset_config():
     CONFIG = None
 
 
-def get_config(create=False) -> Config:
+def get_config(create=False) -> 'Config':
     """Return the current configuration.
 
     If the configuration has not been loaded yet

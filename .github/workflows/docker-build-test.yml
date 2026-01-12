@@ -41,11 +41,12 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Build images
-      uses: docker/bake-action@v5
+      uses: docker/bake-action@v6.10.0
       with:
         # Load to Docker engine for testing
         load: true
         workdir: .docker/
+        source: .
         set: |
           *.platform=amd64
           *.cache-to=type=gha,scope=${{ github.workflow }},mode=min

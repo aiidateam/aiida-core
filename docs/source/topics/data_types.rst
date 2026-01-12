@@ -302,13 +302,12 @@ Similarly, to retrieve the ``y`` values and their metadata, use the :py:meth:`~a
   In [7]: for y_name, y_array, y_units in y_values:
      ...:     print(y_name, y_array, y_units)
 
-You can also retrieve the names of all ``y`` arrays using :py:meth:`~aiida.orm.XyData.get_y_arraynames`:
+.. note::
 
-.. code-block:: ipython
-
-  In [8]: y_names = xy.get_y_arraynames()
-  In [9]: print(y_names)
-  ['Volume Expansion']
+  The :py:meth:`~aiida.orm.ArrayData.get_arraynames` method returns the internal storage names
+  (e.g., ``['x_array', 'y_array_0', 'y_array_1']``), not the user-provided names. To retrieve the
+  user-provided names, use :py:meth:`~aiida.orm.XyData.get_y` and extract the names from the
+  returned tuples.
 
 Note that you can set multiple ``y`` values that correspond to the ``x`` grid.
 Same as for the :py:class:`~aiida.orm.ArrayData`, the names and shapes of the arrays are stored to the database, the content of the arrays is stored to the repository in the `numpy format <https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html#npy-format>`_ (``.npy``).

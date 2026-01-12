@@ -62,10 +62,12 @@ class XyData(ArrayData):
         )
 
     To retrieve data, use :meth:`get_x` to get the X array with its metadata, and :meth:`get_y`
-    to get a list of tuples containing (name, array, units) for each Y array. The method
-    :meth:`get_y_arraynames` returns only the user-provided Y array names, as opposed to
-    :meth:`~aiida.orm.nodes.data.array.array.ArrayData.get_arraynames` which returns the
-    internal storage names (e.g. ``['x_array', 'y_array_0', 'y_array_1']``).
+    to get a list of tuples containing (name, array, units) for each Y array.
+
+    .. note:: The :meth:`~aiida.orm.nodes.data.array.array.ArrayData.get_arraynames` method
+        inherited from :class:`~aiida.orm.nodes.data.array.array.ArrayData` returns the internal
+        storage names (e.g. ``['x_array', 'y_array_0', 'y_array_1']``), not the user-provided names.
+        To get the user-provided names, use :meth:`get_y` and extract the names from the returned tuples.
     """
 
     def __init__(
@@ -196,19 +198,3 @@ class XyData(ArrayData):
 
         y_arrays = [self.get_array(f'y_array_{i}') for i in range(len(y_names))]
         return list(zip(y_names, y_arrays, y_units))
-
-    def get_y_arraynames(self) -> list[str]:
-        """Returns the user-provided names of the y-arrays.
-
-        This returns only the names that were provided when calling :meth:`set_y`,
-        as opposed to :meth:`~aiida.orm.nodes.data.array.array.ArrayData.get_arraynames`
-        which returns the internal storage names (e.g., ``['x_array', 'y_array_0', 'y_array_1']``).
-
-        :return: List of user-provided y-array names.
-        """
-
-        try:
-            y_names = self.base.attributes.get('y_names')
-        except (KeyError, AttributeError):
-            raise NotExistent('No y names have been set yet!')
-        return y_names

@@ -55,6 +55,7 @@ class TestTransportQueue:
 
         loop.run_until_complete(nested(transport_queue, self.authinfo))
 
+    @pytest.mark.asyncio
     def test_get_transport_interleaved(self):
         """Test interleaved calls to get the same transport."""
         transport_queue = TransportQueue()

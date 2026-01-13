@@ -24,7 +24,10 @@ class TestJobManager:
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        self.loop = asyncio.get_event_loop()
+        try:
+            self.loop = asyncio.get_event_loop()
+        except RuntimeError:
+            self.loop = asyncio.new_event_loop()
         self.transport_queue = TransportQueue(self.loop)
         self.user = User.collection.get_default()
         self.computer = aiida_localhost
@@ -39,7 +42,8 @@ class TestJobManager:
         # Calling the method again, should return the exact same instance of `JobsList`
         assert self.manager.get_jobs_list(self.auth_info) == jobs_list
 
-    def test_request_job_info_update(self):
+    @pytest.mark.asyncio
+    async def test_request_job_info_update(self):
         """Test the `JobManager.request_job_info_update` method."""
         with self.manager.request_job_info_update(self.auth_info, job_id=1) as request:
             assert isinstance(request, asyncio.Future)
@@ -54,7 +58,10 @@ class TestJobsList:
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        self.loop = asyncio.get_event_loop()
+        try:
+            self.loop = asyncio.get_event_loop()
+        except RuntimeError:
+            self.loop = asyncio.new_event_loop()
         self.transport_queue = TransportQueue(self.loop)
         self.user = User.collection.get_default()
         self.computer = aiida_localhost

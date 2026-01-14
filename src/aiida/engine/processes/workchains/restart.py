@@ -52,7 +52,7 @@ def validate_handler_overrides(
 
     The ``handler_overrides`` should be a dictionary where keys are strings that are the name of a process handler, i.e.
     an instance method of the ``process_class`` that has been decorated with the ``process_handler`` decorator. The
-    values should be a dictionary that can specify the keys ``enabled`` and ``priority``.
+    values should be a dictionary that can specify the keys ``enabled`` and ``priority``, and ``max_iterations``.
 
     .. note:: the normal signature of a port validator is ``(value, ctx)`` but since for the validation here we need a
         reference to the process class, we add it and the class is bound to the method in the port declaration in the
@@ -84,7 +84,7 @@ def validate_handler_overrides(
 
         if isinstance(overrides, dict):
             for key in overrides.keys():
-                if key not in ['enabled', 'priority']:
+                if key not in ['enabled', 'priority', 'max_iterations']:
                     return f'The value of key `{handler}` contain keys `{key}` which is not supported.'
 
     return None
@@ -177,7 +177,7 @@ class BaseRestartWorkChain(WorkChain):
             validator=functools.partial(validate_handler_overrides, cls),
             serializer=orm.to_aiida_type,
             help='Mapping where keys are process handler names and the values are a dictionary, where each dictionary '
-            'can define the ``enabled`` and ``priority`` key, which can be used to toggle the values set on '
+            'can define the `enabled`, `priority`, and `max_iterations` keys, which can be used to toggle '
             'the original process handler declaration.',
         )
         spec.input(
@@ -217,6 +217,7 @@ class BaseRestartWorkChain(WorkChain):
         self.ctx.unhandled_failure = False
         self.ctx.is_finished = False
         self.ctx.iteration = 0
+        self.ctx.handler_iteration_counts = {}
 
     def should_run_process(self) -> bool:
         """Return whether a new process should be run.
@@ -302,6 +303,8 @@ class BaseRestartWorkChain(WorkChain):
 
             # If an actual report was returned, save it so it is not overridden by next handler returning `None`
             if report:
+                self.ctx.handler_iteration_counts.setdefault(handler.__name__, 0)
+                self.ctx.handler_iteration_counts[handler.__name__] += 1
                 last_report = report
 
             # After certain handlers, we may want to skip all other handlers
@@ -391,6 +394,26 @@ class BaseRestartWorkChain(WorkChain):
 
                 self.ctx.iteration = 0
                 pause_process = True
+
+            # Check if any process handlers reached their max iterations
+            for handler in self.get_process_handlers():
+                max_iterations_override = self.ctx.handler_overrides.get(handler.__name__, {}).get(
+                    'max_iterations', None
+                )
+                max_handler_iterations = max_iterations_override or handler.max_iterations  # type: ignore[attr-defined]
+                handler_iterations = self.ctx.handler_iteration_counts.get(handler.__name__, 0)
+
+                if max_handler_iterations is not None and handler_iterations >= max_handler_iterations:
+                    self.report(
+                        f'Reached the maximum number of iterations ({max_handler_iterations}) for handler '
+                        f'`{handler.__name__}`.'
+                    )
+                    if not pause_on_max_iterations:
+                        self.report(f'Aborting! Last ran: {self.ctx.process_name}<{node.pk}>')
+                        return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
+
+                    self.ctx.handler_iteration_counts[handler.__name__] = 0
+                    pause_process = True
 
             if node.is_finished_ok and last_report.exit_code.status == 0:
                 template = '{}<{}> finished successfully but a handler was triggered, restarting'

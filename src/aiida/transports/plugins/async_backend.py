@@ -549,7 +549,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         else:
             return f'{self._escape_for_rcp(path)}'
 
-    def ssh_command_generator(self, command_template: str, paths: list[str] | None = None):
+    def ssh_command_generator(self, command_template: str, paths: Optional[list[str]] = None):
         """Generate an SSH command with properly quoted paths.
 
         :param command_template: The command template with {} placeholders for paths

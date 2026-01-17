@@ -1,7 +1,10 @@
-content: QbStrField('content', dtype=<class 'str'>, is_attribute=False)
-ctime: QbNumericField('ctime', dtype=typing.Optional[datetime.datetime], is_attribute=False)
-mtime: QbNumericField('mtime', dtype=typing.Optional[datetime.datetime], is_attribute=False)
-node: QbNumericField('node', dtype=<class 'int'>, is_attribute=False)
-pk: QbNumericField('pk', dtype=typing.Optional[int], is_attribute=False)
-user: QbNumericField('user', dtype=<class 'int'>, is_attribute=False)
-uuid: QbStrField('uuid', dtype=typing.Optional[str], is_attribute=False)
+content: QbStrField('content', dtype=<class 'str'>, doc='Content of the comment')
+ctime: QbNumericField('ctime', dtype=<class 'datetime.datetime'>, doc='Creation time
+  of the comment')
+mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='Modified time
+  of the comment')
+node: QbNumericField('node', dtype=<class 'int'>, doc='Node PK that the comment is
+  attached to')
+pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
+user: QbNumericField('user', dtype=<class 'int'>, doc='User PK that created the comment')
+uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the comment')

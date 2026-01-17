@@ -8,9 +8,13 @@
 ###########################################################################
 """`Data` sub class to represent an integer value."""
 
+from __future__ import annotations
+
 import numbers
 
-from .base import to_aiida_type
+from aiida.common.pydantic import MetadataField
+
+from .base import BaseType, to_aiida_type
 from .numeric import NumericType
 
 __all__ = ('Int',)
@@ -20,6 +24,12 @@ class Int(NumericType):
     """`Data` sub class to represent an integer value."""
 
     _type = int
+
+    class AttributesModel(BaseType.AttributesModel):
+        value: int = MetadataField(
+            title='Integer value',
+            description='The value of the integer',
+        )
 
 
 @to_aiida_type.register(numbers.Integral)

@@ -14,14 +14,17 @@ from aiida.orm.nodes.data import (
     ArrayData,
     Bool,
     CifData,
+    ContainerizedCode,
     Data,
     Dict,
     EnumData,
     Float,
     FolderData,
+    InstalledCode,
     Int,
     JsonableData,
     List,
+    PortableCode,
     RemoteData,
     RemoteStashCompressedData,
     RemoteStashData,
@@ -41,14 +44,17 @@ orms_to_test = (
     ArrayData,
     Bool,
     CifData,
+    ContainerizedCode,
     Data,
     Dict,
     EnumData,
     Float,
     FolderData,
+    InstalledCode,
     Int,
     JsonableData,
     List,
+    PortableCode,
     SinglefileData,
     Str,
     StructureData,
@@ -110,49 +116,88 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
     if request.param is User:
         return User, {'email': 'test@localhost'}
     if request.param is ArrayData:
-        return ArrayData, {'arrays': np.array([1, 0, 0])}
+        return ArrayData, {'attributes': {'arrays': np.array([1, 0, 0])}}
     if request.param is Bool:
-        return Bool, {'value': True}
+        return Bool, {'attributes': {'value': True}}
     if request.param is CifData:
         return CifData, {'content': io.BytesIO(b'some-content')}
+    if request.param is ContainerizedCode:
+        return ContainerizedCode, {
+            'label': 'containerized_echo',
+            'attributes': {
+                'computer': aiida_localhost.label,
+                'filepath_executable': '/bin/echo',
+                'image_name': 'docker://alpine:3',
+                'engine_command': 'docker run {image_name}',
+            },
+        }
     if request.param is Data:
-        return Data, {'source': {'uri': 'http://127.0.0.1'}}
+        return Data, {'attributes': {'source': {'uri': 'http://127.0.0.1'}}}
     if request.param is Dict:
         return Dict, {'value': {'a': 1}}
     if request.param is EnumData:
-        return EnumData, {'member': DummyEnum.OPTION_A}
+        return EnumData, {'attributes': {'member': DummyEnum.OPTION_A}}
     if request.param is Float:
-        return Float, {'value': 1.0}
+        return Float, {'attributes': {'value': 1.0}}
     if request.param is FolderData:
         dirpath = tmp_path / 'folder_data'
         dirpath.mkdir()
         (dirpath / 'binary_file').write_bytes(b'byte content')
         (dirpath / 'text_file').write_text('text content')
         return FolderData, {'tree': dirpath}
+    if request.param is InstalledCode:
+        return InstalledCode, {
+            'label': 'echo',
+            'attributes': {
+                'computer': aiida_localhost.label,
+                'filepath_executable': '/bin/echo',
+            },
+        }
     if request.param is Int:
-        return Int, {'value': 1}
+        return Int, {'attributes': {'value': 1}}
     if request.param is JsonableData:
-        return JsonableData, {'obj': JsonableClass({'a': 1})}
+        return JsonableData, {'attributes': {'obj': JsonableClass({'a': 1})}}
     if request.param is List:
-        return List, {'value': [1.0]}
+        return List, {'attributes': {'value': [1.0]}}
+    if request.param is PortableCode:
+        code_path = tmp_path / 'portable_code'
+        code_path.mkdir()
+        (code_path / 'code.sh').write_text('#!/bin/bash\necho "$@"\n')
+        return PortableCode, {
+            'label': 'portable_code',
+            'attributes': {
+                'filepath_executable': 'code.sh',
+                'filepath_files': code_path,
+            },
+        }
     if request.param is SinglefileData:
-        return SinglefileData, {'content': io.BytesIO(b'some-content')}
+        return SinglefileData, {'attributes': {'content': io.BytesIO(b'some-content')}}
     if request.param is Str:
-        return Str, {'value': 'string'}
+        return Str, {'attributes': {'value': 'string'}}
     if request.param is StructureData:
-        return StructureData, {'cell': [[1, 0, 0], [0, 1, 0], [0, 0, 1]]}
+        return StructureData, {
+            'attributes': {
+                'cell': [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+                'pbc1': True,
+                'pbc2': True,
+                'pbc3': True,
+                'sites': [{'kind_name': 'H', 'position': (0.0, 0.0, 0.0)}],
+                'kinds': [{'name': 'H', 'mass': 1.0, 'symbols': ('H',), 'weights': (1.0,)}],
+            }
+        }
     if request.param is RemoteData:
-        return RemoteData, {'remote_path': '/some/path'}
+        return RemoteData, {'attributes': {'remote_path': '/some/path'}}
     if request.param is RemoteStashData:
-        return RemoteStashData, {'stash_mode': StashMode.COMPRESS_TAR}
+        return RemoteStashData, {'attributes': {'stash_mode': StashMode.COMPRESS_TAR}}
     if request.param is RemoteStashCompressedData:
         return RemoteStashCompressedData, {
-            'stash_mode': StashMode.COMPRESS_TAR,
-            'target_basepath': '/some/path',
-            'source_list': ['/some/file'],
-            'dereference': True,
+            'attributes': {
+                'stash_mode': StashMode.COMPRESS_TAR,
+                'target_basepath': '/some/path',
+                'source_list': ['/some/file'],
+                'dereference': True,
+            }
         }
-
     raise NotImplementedError()
 
 
@@ -169,28 +214,28 @@ def test_roundtrip(required_arguments, tmp_path):
     assert isinstance(entity, cls)
 
     # Get the model instance from the entity instance
-    model = entity._to_model(tmp_path)
+    model = entity.to_model(repository_path=tmp_path)
     assert isinstance(model, BaseModel)
 
     # Reconstruct the entity instance from the model instance
-    roundtrip = cls._from_model(model)
+    roundtrip = cls.from_model(model)
     assert isinstance(roundtrip, cls)
 
     # Get the model instance again from the reconstructed entity and check that the fields that would be passed to the
-    # ORM entity constructor are identical of the original model. The ``model_to_orm_field_values`` excludes values of
-    # fields that define ``exclude_to_orm=True`` because these can change during roundtrips. This because these
-    # typically correspond to entity fields that have defaults set on the database level, e.g., UUIDs.
-    roundtrip_model = roundtrip._to_model(tmp_path)
+    # ORM entity constructor are identical of the original model.
+    roundtrip_model = roundtrip.to_model(repository_path=tmp_path)
     original_field_values = cls.model_to_orm_field_values(model)
 
-    for key, value in cls.model_to_orm_field_values(roundtrip_model).items():
+    def _validate_value(value):
+        if isinstance(value, dict):
+            return {k: _validate_value(v) for k, v in value.items()}
         if isinstance(value, io.BytesIO):
-            assert value.read() == original_field_values[key].read()
-        elif cls is ArrayData and key == 'arrays':
-            for array_name, array in value.items():
-                assert np.array_equal(array, original_field_values[key][array_name])
-        else:
-            assert value == original_field_values[key]
+            value.seek(0)
+            return value.read()
+        return value
+
+    for key, value in cls.model_to_orm_field_values(roundtrip_model).items():
+        assert _validate_value(value) == _validate_value(original_field_values[key])
 
 
 @pytest.mark.parametrize(
@@ -206,5 +251,5 @@ def test_roundtrip_serialization(required_arguments, tmp_path):
     assert isinstance(entity, cls)
 
     # Get the model instance from the entity instance
-    serialized_entity = entity.serialize(tmp_path)
-    entity.from_serialized(**serialized_entity)
+    serialized_entity = entity.serialize(repository_path=tmp_path, mode='python')
+    entity.from_serialized(serialized_entity)

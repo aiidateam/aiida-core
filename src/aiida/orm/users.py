@@ -8,7 +8,9 @@
 ###########################################################################
 """Module for the ORM user class."""
 
-from typing import TYPE_CHECKING, Optional, Tuple, Type
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, ClassVar, Optional, Tuple, Type
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -26,11 +28,13 @@ __all__ = ('User',)
 class UserCollection(entities.Collection['User']):
     """The collection of users stored in a backend."""
 
+    collection_type: ClassVar[str] = 'users'
+
     @staticmethod
-    def _entity_base_cls() -> Type['User']:
+    def _entity_base_cls() -> Type[User]:
         return User
 
-    def get_or_create(self, email: str, **kwargs) -> Tuple[bool, 'User']:
+    def get_or_create(self, email: str, **kwargs) -> Tuple[bool, User]:
         """Get the existing user with a given email address or create an unstored one
 
         :param kwargs: The properties of the user to get or create
@@ -43,7 +47,7 @@ class UserCollection(entities.Collection['User']):
         except exceptions.NotExistent:
             return True, User(backend=self.backend, email=email, **kwargs)
 
-    def get_default(self) -> Optional['User']:
+    def get_default(self) -> Optional[User]:
         """Get the current default user"""
         return self.backend.default_user
 
@@ -54,10 +58,25 @@ class User(entities.Entity['BackendUser', UserCollection]):
     _CLS_COLLECTION = UserCollection
 
     class Model(entities.Entity.Model):
-        email: str = MetadataField(description='The user email', is_attribute=False)
-        first_name: str = MetadataField(description='The user first name', is_attribute=False)
-        last_name: str = MetadataField(description='The user last name', is_attribute=False)
-        institution: str = MetadataField(description='The user institution', is_attribute=False)
+        email: str = MetadataField(
+            description='The user email',
+            examples=['verdi@opera.net'],
+        )
+        first_name: str = MetadataField(
+            '',
+            description='The user first name',
+            examples=['Giuseppe'],
+        )
+        last_name: str = MetadataField(
+            '',
+            description='The user last name',
+            examples=['Verdi'],
+        )
+        institution: str = MetadataField(
+            '',
+            description='The user institution',
+            examples=['Opera National de Paris'],
+        )
 
     def __init__(
         self,

@@ -1,5 +1,21 @@
 # Changelog
 
+## v2.7.3 - 2026-01-23
+
+### Fixes
+
+#### Transport
+- Improve path escaping in OpenSSH transport for special characters ([#7171](https://github.com/aiidateam/aiida-core/pull/7171)) [[4c89d9624]](https://github.com/aiidateam/aiida-core/commit/4c89d96249a64554ea795ebc3ffae317989d6e94)
+- Fix a critical race condition in `TransportQueue` ([#7144](https://github.com/aiidateam/aiida-core/pull/7144)) [[b02a233af]](https://github.com/aiidateam/aiida-core/commit/b02a233afecfbb2087b9d281c6be3f99fdbbc65f)
+- Add semaphore control to `AsyncSshTransport::exec_command_wait_async` to prevent SSH connection overwhelm ([#7144](https://github.com/aiidateam/aiida-core/pull/7144)) [[985d5c809]](https://github.com/aiidateam/aiida-core/commit/985d5c809325ac8b68f0867586613d050a5e3e1f)
+
+#### Engine
+- Fix: Avoid mutating `_polling_jobs` inside slurm scheduler ([#7155](https://github.com/aiidateam/aiida-core/pull/7155)) [[9f03a8e4c]](https://github.com/aiidateam/aiida-core/commit/9f03a8e4cad4764ac99a39b12677036eefe1a2ca)
+
+### Devops
+- Switch PyPI publishing to OIDC trusted publishing ([#7173](https://github.com/aiidateam/aiida-core/pull/7173)) [[c4e320816]](https://github.com/aiidateam/aiida-core/commit/c4e3208165cf2e090d711fd892cf47cb55181783)
+
+
 ## v2.7.2 - 2025-12-10
 
 ### Fixes

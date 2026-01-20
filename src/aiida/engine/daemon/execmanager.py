@@ -457,6 +457,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     source_list = stash_options.get('source_list', [])
     target_base = Path(stash_options['target_base'])
     dereference = stash_options.get('dereference', False)
+    skip_missing = stash_options.get('skip_missing', True)
 
     if not source_list:
         EXEC_LOGGER.warning(f'stashing source_list is empty for calculation<{calculation.pk}>. Stashing skipped.')
@@ -497,34 +498,54 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     if stash_mode == StashMode.COPY.value:
         target_basepath = target_base / uuid[:2] / uuid[2:4] / uuid[4:]
 
-        for source_filename in source_list:
-            if has_magic(source_filename):
-                copy_instructions = []
-                for globbed_filename in await transport.glob_async(source_basepath / source_filename):
-                    target_filepath = target_basepath / Path(globbed_filename).relative_to(source_basepath)
-                    copy_instructions.append((globbed_filename, target_filepath))
-            else:
-                copy_instructions = [(source_basepath / source_filename, target_basepath / source_filename)]
-
-            for source_filepath, target_filepath in copy_instructions:
-                # If the source file is in a (nested) directory, create those directories first in the target directory
-                target_dirname = target_filepath.parent
-                await transport.makedirs_async(target_dirname, ignore_existing=True)
-
-                try:
-                    await transport.copy_async(source_filepath, target_filepath)
-                except (OSError, ValueError) as exception:
-                    EXEC_LOGGER.warning(f'Failed to stash {source_filepath} to {target_filepath}: {exception}')
-                    # try to clean up in case of a failure
-                    await transport.rmtree_async(target_base / uuid[:2])
+        async def _do_copy():
+            for source_filename in source_list:
+                if has_magic(source_filename):
+                    copy_instructions = []
+                    for globbed_filename in await transport.glob_async(source_basepath / source_filename):
+                        target_filepath = target_basepath / Path(globbed_filename).relative_to(source_basepath)
+                        copy_instructions.append((globbed_filename, target_filepath))
                 else:
-                    EXEC_LOGGER.debug(f'stashed from {source_filepath} to {target_filepath}')
+                    copy_instructions = [(source_basepath / source_filename, target_basepath / source_filename)]
+
+                for source_filepath, target_filepath in copy_instructions:
+                    # If source is in a (nested) directory, create those directories first
+                    target_dirname = target_filepath.parent
+                    await transport.makedirs_async(target_dirname, ignore_existing=True)
+
+                    try:
+                        await transport.copy_async(source_filepath, target_filepath)
+                    except (OSError, ValueError) as exc:
+                        if not await transport.path_exists_async(source_filepath):
+                            if skip_missing:
+                                EXEC_LOGGER.debug(
+                                    f'File not found {source_filepath}. Skipping, because skip_missing=True'
+                                )
+                                continue
+                            else:
+                                raise exceptions.StashingError(
+                                    f'File {source_filepath} does not exist. Stashing failed.'
+                                ) from exc
+                        raise exceptions.StashingError(
+                            f'Failed to copy {source_filepath} to {target_filepath}: {exc}'
+                        ) from exc
+                    EXEC_LOGGER.debug(f'Stashed from {source_filepath} to {target_filepath}')
+
+        try:
+            await _do_copy()
+        except exceptions.StashingError as exception:
+            # try to clean up in case of a failure
+            await transport.rmtree_async(target_base / uuid[:2])
+            raise exception
+        else:
+            EXEC_LOGGER.debug(f'All files succesfully {source_list} stashed to {target_base / uuid[:2]}')
 
         remote_stash = RemoteStashFolderData(
             computer=calculation.computer,
             target_basepath=str(target_basepath),
             stash_mode=StashMode(stash_mode),
             source_list=source_list,
+            skip_missing=skip_missing,
         ).store()
 
     elif stash_mode in [
@@ -542,15 +563,28 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
 
         target_destination = str(target_base / file_name) + '.' + compression_format
 
+        source_list_abs = [source_basepath / source for source in source_list]
+
+        # When skip_missing is False, check that all files exist before compressing
+        if not skip_missing:
+            for source_filepath in source_list_abs:
+                if has_magic(str(source_filepath)):
+                    raise exceptions.StashingError(
+                        'Stashing with glob patterns is not supported when skip_missing is False. Stashing failed.'
+                    )
+                if not await transport.path_exists_async(source_filepath):
+                    raise exceptions.StashingError(
+                        f'File {source_filepath} does not exist and skip_missing is False. Stashing failed.'
+                    )
+
         remote_stash = RemoteStashCompressedData(
             computer=calculation.computer,
             target_basepath=target_destination,
             stash_mode=StashMode(stash_mode),
             source_list=source_list,
             dereference=dereference,
+            skip_missing=skip_missing,
         )
-
-        source_list_abs = [source_basepath / source for source in source_list]
 
         try:
             await transport.compress_async(

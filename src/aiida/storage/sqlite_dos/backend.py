@@ -10,11 +10,12 @@
 
 from __future__ import annotations
 
+import contextlib
 import pathlib
 from functools import cached_property, lru_cache
 from pathlib import Path
 from shutil import rmtree
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Generator, Optional
 from uuid import uuid4
 
 from alembic.config import Config
@@ -84,8 +85,23 @@ class SqliteDosMigrator(PsqlDosMigrator):
 
         :returns: The disk-object store container configured for the repository path of the current profile.
         """
+
+        # TODO for now we raise error later we deprecate with warinng
+        class DeprecatedError(Exception):
+            pass
+
+        raise DeprecatedError(
+            'Do not use `get_container` as it might leave resources open. Please use instead'
+            '`with container_context() as container` since it ensures that resources are correctly freed.'
+        )
+
+    @contextlib.contextmanager
+    def container_context(self) -> Generator['Container', None, None]:
+        from disk_objectstore import Container
+
         filepath_container = Path(self.profile.storage_config['filepath']) / FILENAME_CONTAINER
-        return Container(str(filepath_container))
+        with Container(str(filepath_container)) as container:
+            yield container
 
     def initialise_database(self) -> None:
         """Initialise the database.
@@ -272,12 +288,28 @@ class SqliteDosStorage(PsqlDosBackend):
             LOGGER.report(f'Deleted storage directory at `{self.filepath_root}`.')
 
     def get_container(self) -> 'Container':
-        return Container(str(self.filepath_container))
+        # TODO for now we raise error later we deprecate with warinng
+        class DeprecatedError(Exception):
+            pass
+
+        raise DeprecatedError(
+            'Do not use `get_container` as it might leave resources open. Please use instead'
+            '`with container_context() as container` since it ensures that resources are correctly freed.'
+        )
+
+    @contextlib.contextmanager
+    def container_context(self) -> Generator['Container', None, None]:
+        """Return the disk-object store container.
+        :returns: The disk-object store container configured for the repository path of the current profile.
+        """
+        with Container(str(self.filepath_container)) as container:
+            yield container
 
     def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
-        return DiskObjectStoreRepositoryBackend(container=self.get_container())
+        with self.container_context() as container:
+            return DiskObjectStoreRepositoryBackend(container=container)
 
     @classmethod
     def version_profile(cls, profile: Profile) -> Optional[str]:

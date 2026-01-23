@@ -774,13 +774,6 @@ class SshTransport(BlockingTransport):
         path = str(path)
         self.sftp.rmdir(path)
 
-    def chown(self, path: TransportPath, uid, gid):
-        """Change owner permissions of a file.
-
-        For now, this is not implemented for the SSH transport.
-        """
-        raise NotImplementedError
-
     def isdir(self, path: TransportPath):
         """Return True if the given path is a directory, False otherwise.
         Return False also if the path does not exist.

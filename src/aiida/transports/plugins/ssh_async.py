@@ -1221,28 +1221,6 @@ class AsyncSshTransport(AsyncTransport):
         else:
             raise OSError(f'Error, path {path} does not exist')
 
-    async def chown_async(self, path: TransportPath, uid: int, gid: int):
-        """Change the owner and group id of a file.
-
-        :param path: path to the file
-        :param uid: the new owner id
-        :param gid: the new group id
-
-        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
-        :type uid: int
-        :type gid: int
-
-        :raises OSError: if the path is empty
-        """
-        path = str(path)
-        if not path:
-            raise OSError('Input path is an empty argument.')
-
-        if await self.path_exists_async(path):
-            await self.async_backend.chown(path, uid, gid)
-        else:
-            raise OSError(f'Error, path {path} does not exist')
-
     async def copy_from_remote_to_remote_async(
         self,
         transportdestination: Transport,

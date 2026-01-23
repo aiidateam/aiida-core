@@ -57,7 +57,13 @@ def mock_profiles(empty_config, profile_factory):
 
 @pytest.mark.parametrize(
     'command',
-    (cmd_profile.profile_list, cmd_profile.profile_set_default, cmd_profile.profile_delete, cmd_profile.profile_show, cmd_profile.profile_rename),
+    (
+        cmd_profile.profile_list,
+        cmd_profile.profile_set_default,
+        cmd_profile.profile_delete,
+        cmd_profile.profile_show,
+        cmd_profile.profile_rename,
+    ),
 )
 def test_help(run_cli_command, command):
     """Tests help text for all ``verdi profile`` commands."""
@@ -599,7 +605,9 @@ def test_rename_existing_name(run_cli_command, mock_profiles):
     new_name = profile_list[1]  # This already exists
 
     # Try to rename to existing name
-    result = run_cli_command(cmd_profile.profile_rename, [old_name, new_name, '--force'], use_subprocess=False, raises=True)
+    result = run_cli_command(
+        cmd_profile.profile_rename, [old_name, new_name, '--force'], use_subprocess=False, raises=True
+    )
     assert f'Profile `{new_name}` already exists' in result.output
 
 
@@ -608,3 +616,23 @@ def test_rename_help(run_cli_command):
     result = run_cli_command(cmd_profile.profile_rename, ['--help'], use_subprocess=False)
     assert 'Usage' in result.output
     assert 'Rename a profile' in result.output
+
+
+def test_rename_no_broker(run_cli_command, empty_config, profile_factory):
+    """Test renaming a profile that has no broker configured."""
+    config = empty_config
+    old_name = 'profile_no_broker'
+    new_name = 'renamed_no_broker'
+
+    # Create a profile without a broker (process_control_backend=None)
+    profile = profile_factory(old_name, process_control_backend=None)
+    config.add_profile(profile)
+    config.set_default_profile(old_name, overwrite=True).store()
+
+    # Rename the profile - this should succeed without trying to check daemon status
+    result = run_cli_command(cmd_profile.profile_rename, [old_name, new_name, '--force'], use_subprocess=False)
+    assert f'Profile `{old_name}` successfully renamed to `{new_name}`' in result.output
+
+    # Verify profile was renamed in config
+    assert new_name in config.profile_names
+    assert old_name not in config.profile_names

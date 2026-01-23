@@ -401,6 +401,7 @@ Below is a list with all available subcommands.
       delete              Delete one or more profiles.
       dump                Dump all data in an AiiDA profile's storage to disk.
       list                Display a list of all available profiles.
+      rename              Rename a profile.
       set-default         Set a profile as the default profile.
       setdefault          Set a profile as the default profile. (DEPRECATED: Please use `verdi
                           profile set-default` instead.)

@@ -298,6 +298,7 @@ def profile_rename(profile, new_name, force):
     Renames the profile by updating the configuration file and moving associated directories such as the access control
     directory and daemon log files. The daemon must not be running for the profile being renamed.
     """
+    import os
     import shutil
     from pathlib import Path
 
@@ -312,13 +313,14 @@ def profile_rename(profile, new_name, force):
     if new_name in config.profile_names:
         echo.echo_critical(f'Profile `{new_name}` already exists.')
 
-    # Check if the daemon is running for this profile
-    daemon_client = get_daemon_client(old_name)
-    if daemon_client.is_daemon_running:
-        echo.echo_critical(
-            f'The daemon is currently running for profile `{old_name}`. Please stop it first with '
-            f'`verdi -p {old_name} daemon stop`.'
-        )
+    # Check if the daemon is running for this profile (only if profile has a broker configured)
+    if profile.process_control_backend is not None:
+        daemon_client = get_daemon_client(old_name)
+        if daemon_client.is_daemon_running:
+            echo.echo_critical(
+                f'The daemon is currently running for profile `{old_name}`. Please stop it first with '
+                f'`verdi -p {old_name} daemon stop`.'
+            )
 
     # Request exclusive access to the profile to prevent concurrent operations
     try:
@@ -364,6 +366,10 @@ def profile_rename(profile, new_name, force):
             # This way if any file operation fails, the config remains unchanged
             if old_access_dir.exists():
                 shutil.move(str(old_access_dir), str(new_access_dir))
+                # The lock file was moved along with the directory, so we need to clean it up
+                # from the new location (the context manager will try to clean up the old path)
+                moved_lock_file = new_access_dir / f'{os.getpid()}.lock'
+                moved_lock_file.unlink(missing_ok=True)
 
             # Move daemon log files
             if old_circus_log and old_circus_log.exists():

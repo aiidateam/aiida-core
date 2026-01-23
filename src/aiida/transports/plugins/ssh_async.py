@@ -18,6 +18,7 @@ from typing import Optional, Union
 
 import click
 
+from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import InvalidOperation
 from aiida.transports.transport import (
     AsyncTransport,
@@ -768,11 +769,11 @@ class AsyncSshTransport(AsyncTransport):
 
                 copy_list.append(source)
 
-        copy_items = ' '.join([str(Path(item).relative_to(root_dir)) for item in copy_list])
+        copy_items = ' '.join([escape_for_bash(str(Path(item).relative_to(root_dir))) for item in copy_list])
         # note: order of the flags is important
         tar_command = (
-            f"tar -c{compression_flag!s}{'h' if dereference else ''}f {remotedestination!s} -C {root_dir!s} "
-            + copy_items
+            f'tar -c{compression_flag!s}{"h" if dereference else ""}f '
+            f'{escape_for_bash(str(remotedestination))} -C {escape_for_bash(str(root_dir))} ' + copy_items
         )
 
         retval, stdout, stderr = await self.exec_command_wait_async(tar_command)
@@ -816,7 +817,10 @@ class AsyncSshTransport(AsyncTransport):
 
         await self.makedirs_async(remotedestination, ignore_existing=True)
 
-        tar_command = f'tar --strip-components {strip_components} -xf {remotesource!s} -C {remotedestination!s} '
+        tar_command = (
+            f'tar --strip-components {strip_components} -xf '
+            f'{escape_for_bash(str(remotesource))} -C {escape_for_bash(str(remotedestination))} '
+        )
 
         retval, stdout, stderr = await self.exec_command_wait_async(tar_command)
 
@@ -864,7 +868,7 @@ class AsyncSshTransport(AsyncTransport):
 
         if workdir:
             workdir = str(workdir)
-            command = f'cd {workdir} && ( {command} )'
+            command = f'cd {escape_for_bash(workdir)} && ( {command} )'
 
         async with self._semaphore:
             try:

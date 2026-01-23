@@ -9,7 +9,7 @@ on:
     - .github/workflows/test-install.yml
     branches-ignore: [gh-pages]
   schedule:
-  - cron: 30 02 * * *      # nightly build
+  - cron: 30 02 * * 0      # weekly build (Sunday)
 
 env:
   FORCE_COLOR: 1

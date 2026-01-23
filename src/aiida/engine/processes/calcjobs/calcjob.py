@@ -141,6 +141,7 @@ def validate_unstash_options(unstash_options: Any, _: Any) -> Optional[str]:
 def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
     """Validate the ``stash`` options."""
     from aiida.common.datastructures import StashMode
+    from aiida.transports.transport import has_magic
 
     target_base = stash_options.get('target_base', None)
     source_list = stash_options.get('source_list', None)
@@ -174,6 +175,23 @@ def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
 
     elif dereference is not None:
         return '`metadata.options.stash.dereference` is only valid for compression stashing modes'
+
+    skip_missing = stash_options.get('skip_missing', None)
+
+    if stash_mode != StashMode.SUBMIT_CUSTOM_CODE.value:
+        # For non-submit_custom_code modes, skip_missing defaults to True if not specified
+        if skip_missing is not None and not isinstance(skip_missing, bool):
+            return f'`metadata.options.stash.skip_missing` should be a boolean, got: {skip_missing}'
+        # When skip_missing is False, patterns are not allowed (only for copy and compress modes)
+        if skip_missing is False:
+            for src in source_list:
+                if has_magic(src):
+                    return (
+                        f'`metadata.options.stash.source_list` cannot contain glob patterns when '
+                        f'`skip_missing` is False, but found pattern: {src}'
+                    )
+    elif skip_missing is not None:
+        return '`metadata.options.stash.skip_missing` is not valid for the `submit_custom_code` stash mode'
 
     return None
 
@@ -484,6 +502,14 @@ class CalcJob(Process):
             required=False,
             help='Whether to follow symlinks while stashing or not, specific to StashMode.COMPRESS_* enums',
         )
+        spec.input(
+            'metadata.options.stash.skip_missing',
+            valid_type=bool,
+            required=False,
+            help='If True (default), patterns are allowed and missing files are skipped. If False, all files must be '
+            'specified explicitly (no patterns) and all must exist, otherwise it results in calcjob failure. '
+            'Only affects copy and compress modes.',
+        )
         spec.output(
             'remote_folder',
             valid_type=orm.RemoteData,
@@ -521,6 +547,7 @@ class CalcJob(Process):
             140, 'ERROR_SCHEDULER_NODE_FAILURE', invalidates_cache=True, message='The node running the job failed.'
         )
         spec.exit_code(150, 'STOPPED_BY_MONITOR', invalidates_cache=True, message='{message}')
+        spec.exit_code(160, 'ERROR_STASHING_FAILED', invalidates_cache=True, message='{message}')
 
     @classproperty
     def spec_options(cls):  # noqa: N805

@@ -14,6 +14,7 @@ repository_content: QbDictField('repository_content', dtype=typing.Optional[dict
   bytes]], is_attribute=False)
 repository_metadata: QbDictField('repository_metadata', dtype=typing.Optional[typing.Dict[str,
   typing.Any]], is_attribute=False)
+skip_missing: QbField('skip_missing', dtype=<class 'bool'>, is_attribute=True)
 source: QbDictField('source', dtype=typing.Optional[dict], is_attribute=True, is_subscriptable=True)
 source_list: QbArrayField('source_list', dtype=typing.List[str], is_attribute=True)
 stash_mode: QbField('stash_mode', dtype=<enum 'StashMode'>, is_attribute=True)

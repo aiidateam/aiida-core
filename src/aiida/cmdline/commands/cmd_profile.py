@@ -330,15 +330,59 @@ def profile_rename(profile, new_name, force):
                     echo.echo_report('Renaming cancelled.')
                     return
 
+            # Prepare paths for moving directories and files
+            path_resolver = AiiDAConfigPathResolver()
+            old_access_dir = path_resolver.access_control_dir / old_name
+            new_access_dir = path_resolver.access_control_dir / new_name
+            daemon_log_dir = Path(path_resolver.daemon_dir) / 'log'
+
+            # Check for conflicts with existing directories/files for the new name
+            if new_access_dir.exists():
+                echo.echo_critical(
+                    f'Access control directory for profile `{new_name}` already exists at `{new_access_dir}`. '
+                    'Please remove it first or choose a different name.'
+                )
+
+            old_circus_log = daemon_log_dir / f'circus-{old_name}.log' if daemon_log_dir.exists() else None
+            new_circus_log = daemon_log_dir / f'circus-{new_name}.log' if daemon_log_dir.exists() else None
+            old_aiida_log = daemon_log_dir / f'aiida-{old_name}.log' if daemon_log_dir.exists() else None
+            new_aiida_log = daemon_log_dir / f'aiida-{new_name}.log' if daemon_log_dir.exists() else None
+
+            if new_circus_log and new_circus_log.exists():
+                echo.echo_critical(
+                    f'Log file for profile `{new_name}` already exists at `{new_circus_log}`. '
+                    'Please remove it first or choose a different name.'
+                )
+
+            if new_aiida_log and new_aiida_log.exists():
+                echo.echo_critical(
+                    f'Log file for profile `{new_name}` already exists at `{new_aiida_log}`. '
+                    'Please remove it first or choose a different name.'
+                )
+
+            # Perform file system operations first, before changing the configuration
+            # This way if any file operation fails, the config remains unchanged
+            if old_access_dir.exists():
+                shutil.move(str(old_access_dir), str(new_access_dir))
+
+            # Move daemon log files
+            if old_circus_log and old_circus_log.exists():
+                shutil.move(str(old_circus_log), str(new_circus_log))
+
+            if old_aiida_log and old_aiida_log.exists():
+                shutil.move(str(old_aiida_log), str(new_aiida_log))
+
+            # Now update the configuration
             # Check if this is the default profile
             was_default = config.default_profile_name == old_name
 
             # Create a new profile with the same configuration but new name
             new_profile = Profile(new_name, profile.dictionary)
 
-            # Remove old profile and add new profile to config
-            config.remove_profile(old_name)
+            # Add new profile first, then remove old one
+            # This ensures that if add_profile fails, we still have the old profile
             config.add_profile(new_profile)
+            config.remove_profile(old_name)
 
             # Update default profile if necessary
             if was_default:
@@ -346,29 +390,6 @@ def profile_rename(profile, new_name, force):
 
             # Save the configuration
             config.store()
-
-            # Move the access control directory
-            path_resolver = AiiDAConfigPathResolver()
-            old_access_dir = path_resolver.access_control_dir / old_name
-            new_access_dir = path_resolver.access_control_dir / new_name
-
-            if old_access_dir.exists():
-                shutil.move(str(old_access_dir), str(new_access_dir))
-
-            # Move daemon log files
-            daemon_log_dir = Path(path_resolver.daemon_dir) / 'log'
-            if daemon_log_dir.exists():
-                # Rename circus log file
-                old_circus_log = daemon_log_dir / f'circus-{old_name}.log'
-                new_circus_log = daemon_log_dir / f'circus-{new_name}.log'
-                if old_circus_log.exists():
-                    shutil.move(str(old_circus_log), str(new_circus_log))
-
-                # Rename aiida log file
-                old_aiida_log = daemon_log_dir / f'aiida-{old_name}.log'
-                new_aiida_log = daemon_log_dir / f'aiida-{new_name}.log'
-                if old_aiida_log.exists():
-                    shutil.move(str(old_aiida_log), str(new_aiida_log))
 
             echo.echo_success(f'Profile `{old_name}` successfully renamed to `{new_name}`.')
 

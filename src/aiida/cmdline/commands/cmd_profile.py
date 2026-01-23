@@ -288,6 +288,94 @@ def profile_delete(force, delete_data, profiles):
         echo.echo_success(f'Profile `{profile.name}` was deleted.')
 
 
+@verdi_profile.command('rename')
+@arguments.PROFILE(required=True)
+@click.argument('new_name', type=click.STRING)
+@options.FORCE(help='Skip confirmation prompt.')
+def profile_rename(profile, new_name, force):
+    """Rename a profile.
+
+    Renames the profile by updating the configuration file and moving associated directories such as the access control
+    directory and daemon log files. The daemon must not be running for the profile being renamed.
+    """
+    import shutil
+    from pathlib import Path
+
+    from aiida.engine.daemon.client import get_daemon_client
+    from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+    from aiida.manage.profile_access import ProfileAccessManager
+
+    old_name = profile.name
+    config = get_config()
+
+    # Validation: check that the new name is not already in use
+    if new_name in config.profile_names:
+        echo.echo_critical(f'Profile `{new_name}` already exists.')
+
+    # Check if the daemon is running for this profile
+    daemon_client = get_daemon_client(old_name)
+    if daemon_client.is_daemon_running:
+        echo.echo_critical(
+            f'The daemon is currently running for profile `{old_name}`. Please stop it first with '
+            f'`verdi -p {old_name} daemon stop`.'
+        )
+
+    # Request exclusive access to the profile to prevent concurrent operations
+    try:
+        with ProfileAccessManager(profile).lock():
+            # Confirm the rename operation
+            if not force:
+                echo.echo_warning(f'Renaming profile `{old_name}` to `{new_name}`.')
+                if not click.confirm('Are you sure you want to continue?'):
+                    echo.echo_report('Renaming cancelled.')
+                    return
+
+            # Check if this is the default profile
+            was_default = config.default_profile_name == old_name
+
+            # Create a new profile with the same configuration but new name
+            new_profile = Profile(new_name, profile.dictionary)
+
+            # Remove old profile and add new profile to config
+            config.remove_profile(old_name)
+            config.add_profile(new_profile)
+
+            # Update default profile if necessary
+            if was_default:
+                config.set_default_profile(new_name, overwrite=True)
+
+            # Save the configuration
+            config.store()
+
+            # Move the access control directory
+            path_resolver = AiiDAConfigPathResolver()
+            old_access_dir = path_resolver.access_control_dir / old_name
+            new_access_dir = path_resolver.access_control_dir / new_name
+
+            if old_access_dir.exists():
+                shutil.move(str(old_access_dir), str(new_access_dir))
+
+            # Move daemon log files
+            daemon_log_dir = Path(path_resolver.daemon_dir) / 'log'
+            if daemon_log_dir.exists():
+                # Rename circus log file
+                old_circus_log = daemon_log_dir / f'circus-{old_name}.log'
+                new_circus_log = daemon_log_dir / f'circus-{new_name}.log'
+                if old_circus_log.exists():
+                    shutil.move(str(old_circus_log), str(new_circus_log))
+
+                # Rename aiida log file
+                old_aiida_log = daemon_log_dir / f'aiida-{old_name}.log'
+                new_aiida_log = daemon_log_dir / f'aiida-{new_name}.log'
+                if old_aiida_log.exists():
+                    shutil.move(str(old_aiida_log), str(new_aiida_log))
+
+            echo.echo_success(f'Profile `{old_name}` successfully renamed to `{new_name}`.')
+
+    except (exceptions.LockedProfileError, exceptions.LockingProfileError) as exc:
+        echo.echo_critical(str(exc))
+
+
 @verdi_profile.command('dump')
 @options.PATH()
 @options.DRY_RUN()

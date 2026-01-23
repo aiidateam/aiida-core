@@ -57,7 +57,7 @@ def mock_profiles(empty_config, profile_factory):
 
 @pytest.mark.parametrize(
     'command',
-    (cmd_profile.profile_list, cmd_profile.profile_set_default, cmd_profile.profile_delete, cmd_profile.profile_show),
+    (cmd_profile.profile_list, cmd_profile.profile_set_default, cmd_profile.profile_delete, cmd_profile.profile_show, cmd_profile.profile_rename),
 )
 def test_help(run_cli_command, command):
     """Tests help text for all ``verdi profile`` commands."""
@@ -522,3 +522,89 @@ class TestVerdiProfileDumpCLI:
         options = ['--path', str(test_path), '--user', default_user.email]
         result = run_cli_command(cmd_profile.profile_dump, options)
         assert result.exception is None, result.output
+
+
+def test_rename(run_cli_command, mock_profiles):
+    """Test the ``verdi profile rename`` command."""
+    from pathlib import Path
+
+    from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+
+    profile_list = mock_profiles()
+    old_name = profile_list[0]
+    new_name = 'renamed_profile'
+    config = configuration.get_config()
+
+    # Create access directory for the profile
+    path_resolver = AiiDAConfigPathResolver()
+    old_access_dir = path_resolver.access_control_dir / old_name
+    old_access_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create daemon log files
+    daemon_log_dir = Path(path_resolver.daemon_dir) / 'log'
+    daemon_log_dir.mkdir(parents=True, exist_ok=True)
+    old_circus_log = daemon_log_dir / f'circus-{old_name}.log'
+    old_circus_log.write_text('test circus log')
+    old_aiida_log = daemon_log_dir / f'aiida-{old_name}.log'
+    old_aiida_log.write_text('test aiida log')
+
+    # Rename the profile
+    result = run_cli_command(cmd_profile.profile_rename, [old_name, new_name, '--force'], use_subprocess=False)
+    assert f'Profile `{old_name}` successfully renamed to `{new_name}`' in result.output
+
+    # Verify profile was renamed in config
+    assert new_name in config.profile_names
+    assert old_name not in config.profile_names
+
+    # Verify the default profile was updated (since we renamed the default)
+    assert config.default_profile_name == new_name
+
+    # Verify access directory was moved
+    new_access_dir = path_resolver.access_control_dir / new_name
+    assert new_access_dir.exists()
+    assert not old_access_dir.exists()
+
+    # Verify log files were moved
+    new_circus_log = daemon_log_dir / f'circus-{new_name}.log'
+    new_aiida_log = daemon_log_dir / f'aiida-{new_name}.log'
+    assert new_circus_log.exists()
+    assert new_aiida_log.exists()
+    assert not old_circus_log.exists()
+    assert not old_aiida_log.exists()
+
+
+def test_rename_non_default(run_cli_command, mock_profiles):
+    """Test renaming a non-default profile."""
+    profile_list = mock_profiles()
+    old_name = profile_list[1]  # Not the default
+    new_name = 'renamed_non_default'
+    config = configuration.get_config()
+
+    # Rename the profile
+    result = run_cli_command(cmd_profile.profile_rename, [old_name, new_name, '--force'], use_subprocess=False)
+    assert f'Profile `{old_name}` successfully renamed to `{new_name}`' in result.output
+
+    # Verify profile was renamed in config
+    assert new_name in config.profile_names
+    assert old_name not in config.profile_names
+
+    # Verify the default profile was NOT changed (it should still be profile_list[0])
+    assert config.default_profile_name == profile_list[0]
+
+
+def test_rename_existing_name(run_cli_command, mock_profiles):
+    """Test that renaming to an existing profile name fails."""
+    profile_list = mock_profiles()
+    old_name = profile_list[0]
+    new_name = profile_list[1]  # This already exists
+
+    # Try to rename to existing name
+    result = run_cli_command(cmd_profile.profile_rename, [old_name, new_name, '--force'], use_subprocess=False, raises=True)
+    assert f'Profile `{new_name}` already exists' in result.output
+
+
+def test_rename_help(run_cli_command):
+    """Test help text for ``verdi profile rename`` command."""
+    result = run_cli_command(cmd_profile.profile_rename, ['--help'], use_subprocess=False)
+    assert 'Usage' in result.output
+    assert 'Rename a profile' in result.output

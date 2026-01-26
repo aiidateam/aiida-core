@@ -263,6 +263,220 @@ Simply copy & paste the same instructions as you have used for ``ProxyJump`` in 
     AiiDA replaces them only when parsing from the ``~/.ssh/config`` file.
 
 
+.. _how-to:ssh:2fa:
+
+Using two-factor authentication (2FA) with ``core.ssh_async``
+=============================================================
+
+Some HPC centers require two-factor authentication where you must first authenticate via an API using your credentials and a TOTP code, which then provides you with short-lived signed SSH keys for the actual connection.
+
+The ``core.ssh_async`` transport plugin provides a ``script_before`` option that runs a local script **before** each SSH connection is opened.
+This script must be provided by the user and is responsible for obtaining fresh SSH credentials so that the subsequent connection can succeed.
+
+.. warning::
+
+   You are responsible for securely storing your TOTP secret and any other credentials.
+   Never commit secrets to version control or store them in plaintext in shared locations.
+
+.. warning::
+
+   Make sure that your HPC center's policies allow automated 2FA connections.
+   It is your responsibility to comply with their security policies.
+
+.. important::
+
+   Your script will be called on each SSH connection and may run concurrently
+   from multiple daemon workers. Use ``flock`` to prevent race conditions, and
+   check certificate validity **after** acquiring the lock (another process may
+   have refreshed it while you were waiting).
+
+
+How it works
+^^^^^^^^^^^^
+
+The typical flow is:
+
+1. AiiDA needs to open an SSH connection
+2. Before connecting, AiiDA optionally runs an authentication script (``script_before``)
+3. Your script authenticates to the HPC center. This largely depends on the authentication mechanism of your HPC center. For example:
+   - a) It may require generating a TOTP code from a shared secret, sending your username, password, and TOTP code to the HPC center, and then receiving signed SSH keys in response.
+   - b) Your HPC center's authentication policy may strictly require you to enter credentials manually, in which case your script may prompt you to enter the required information (username, password, TOTP code, etc.) interactively.
+   - c) It may require you to authenticate via a web browser, in which case your script may open a browser for you to log in.
+
+In all of the above cases, your script should ultimately enable ``ssh <my-HPC>`` to succeed without a password.
+
+.. note::
+   If your HPC center does not allow multiple connections but relies on multiplexing, you will need to reconfigure your AiiDA computer to use the ``openssh`` transport backend instead of ``asyncssh``.
+
+.. note::
+
+   Your script may be called many times throughout the day. It is your responsibility to ensure the script is efficient and does not overload the HPC center's authentication service.
+   For example, if the signed keys are valid for 24 hours, your script should check whether existing keys are still valid before requesting new ones.
+
+4. AiiDA proceeds to open the SSH connection normally.
+
+Example: Automated key retrieval with TOTP (case a)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Below is an example script that authenticates to an HPC center's SSH key service using TOTP.
+This is based on real-world usage patterns.
+In this case, typically the HPC center has provided a script that, after filling in credentials, retrieves signed SSH keys from an API endpoint.
+Here we show how to automate the process and integrate the script with AiiDA, assuming the HPC center's security policies allow it.
+
+Suppose the script from the HPC center is called ``get_hpc_keys.sh``, which prompts the user to enter username, password, and TOTP code interactively.
+In that case, your wrapper script should look something like the example below, where the TOTP code is generated automatically from a shared secret.
+
+First, install the required tools:
+
+.. code-block:: console
+
+   # On Debian/Ubuntu
+   $ sudo apt-get install oathtool expect
+
+   # On macOS
+   $ brew install oath-toolkit expect
+
+Second, create an executable script at ``~/bin/get_hpc_keys.sh``:
+
+.. code-block:: bash
+
+   #!/bin/bash
+   # Wrapper script to automate 2FA authentication for HPC SSH access.
+   # Checks if existing keys are still valid before requesting new ones.
+   set -e
+
+   # === FILE LOCKING ===
+   # Prevents race conditions when multiple daemon workers run simultaneously.
+   # flock -x waits (blocks) if another process holds the lock.
+   # Lock is automatically released when the script exits (any exit code).
+   LOCK_FILE="/tmp/hpc_auth.lock"
+   exec 200>"$LOCK_FILE"
+   flock -x 200
+
+   # === CONFIGURATION ===
+   HPC_SCRIPT="/path/to/hpc_provided_script.sh"
+   SSH_CERT_PATH="$HOME/.ssh/id_ed25519-cert.pub"
+   MIN_VALIDITY=3600  # Refresh if less than 1 hour remaining
+   USERNAME="${HPC_USERNAME:-your_username}"
+   : "${HPC_PASSWORD:?Error: HPC_PASSWORD environment variable not set}"
+   : "${HPC_TOTP_SECRET:?Error: HPC_TOTP_SECRET environment variable not set}"
+   # === END CONFIGURATION ===
+
+   # Check if existing SSH certificate is still valid
+   check_cert_validity() {
+       [ -f "$SSH_CERT_PATH" ] || return 1
+       EXPIRY=$(ssh-keygen -L -f "$SSH_CERT_PATH" 2>/dev/null | grep "Valid:" | sed 's/.*to //')
+       [ -n "$EXPIRY" ] || return 1
+       EXPIRY_EPOCH=$(date -d "$EXPIRY" +%s 2>/dev/null) || \
+           EXPIRY_EPOCH=$(date -j -f "%Y-%m-%dT%H:%M:%S" "$EXPIRY" +%s 2>/dev/null) || return 1
+       [ $((EXPIRY_EPOCH - $(date +%s))) -gt $MIN_VALIDITY ]
+   }
+
+   # Check validity AFTER acquiring lock (another process may have refreshed while we waited)
+   if check_cert_validity; then
+       echo "SSH certificate still valid, skipping authentication"
+       exit 0
+   fi
+
+   echo "Obtaining new SSH keys..."
+   OTP_CODE=$(oathtool --totp --base32 "$HPC_TOTP_SECRET")
+
+   # Adjust the expect patterns to match your HPC script's prompts
+   expect <<EOF || exit 1
+   set timeout 60
+   spawn $HPC_SCRIPT
+   expect -re {[Uu]sername.*:}
+   send "$USERNAME\r"
+   expect -re {[Pp]assword.*:}
+   send "$HPC_PASSWORD\r"
+   expect -re {[Oo]ne-[Tt]ime|OTP|TOTP|[Cc]ode.*:}
+   send "$OTP_CODE\r"
+   expect eof
+   catch wait result
+   exit [lindex \$result 3]
+   EOF
+
+   exit 0
+
+.. tip::
+
+   The script checks whether existing SSH certificates are still valid before requesting new ones.
+   Adjust ``MIN_VALIDITY`` to control how early before expiry the script should refresh (default: 1 hour).
+
+Make the script executable:
+
+.. code-block:: console
+
+   $ chmod +x ~/bin/get_hpc_keys.sh
+
+
+Using a keyring instead of environment variables
+""""""""""""""""""""""""""""""""""""""""""""""""
+
+If you prefer to store credentials in a system keyring rather than environment variables, you can modify the script to retrieve them securely.
+
+**On Linux (GNOME Keyring / libsecret):**
+
+First, store your credentials:
+
+.. code-block:: console
+
+   $ secret-tool store --label="HPC Password" service hpc username your_username
+   $ secret-tool store --label="HPC TOTP Secret" service hpc_totp username your_username
+
+Then modify the script to read from the keyring:
+
+.. code-block:: bash
+
+   # Replace the environment variable reads with:
+   PASSWORD=$(secret-tool lookup service hpc username your_username)
+   TOTP_SECRET=$(secret-tool lookup service hpc_totp username your_username)
+
+**On macOS (Keychain):**
+
+First, store your credentials:
+
+.. code-block:: console
+
+   $ security add-generic-password -a your_username -s hpc_password -w
+   $ security add-generic-password -a your_username -s hpc_totp_secret -w
+
+Then modify the script to read from the keyring:
+
+.. code-block:: bash
+
+   # Replace the environment variable reads with:
+   PASSWORD=$(security find-generic-password -a your_username -s hpc_password -w)
+   TOTP_SECRET=$(security find-generic-password -a your_username -s hpc_totp_secret -w)
+
+
+Configuring AiiDA
+^^^^^^^^^^^^^^^^^
+
+When configuring your computer with the ``core.ssh_async`` transport, specify the script path:
+
+.. code-block:: console
+
+   $ verdi computer configure core.ssh_async YOURCOMPUTER
+   ...
+   Local script to run *before* opening connection (path) [None]: /home/YOURUSERNAME/bin/get_hpc_keys.sh
+   ...
+
+.. note::
+
+   - The ``script_before`` path must be **absolute** and the script must be **executable**.
+   - The script runs locally before each SSH connection is opened.
+   - If the script fails (non-zero exit code), the SSH connection will not be attempted and an error will be raised. AiiDA may retry later using its exponential backoff mechanism.
+
+Security considerations
+^^^^^^^^^^^^^^^^^^^^^^^
+
+* Consider using encrypted files or a keyring for credential storage.
+* The signed keys are typically short-lived (e.g., 24 hours), which limits exposure if compromised.
+* On shared systems, ensure your credential files and downloaded keys are not readable by others.
+
+
+
 Using kerberos tokens
 =====================
 

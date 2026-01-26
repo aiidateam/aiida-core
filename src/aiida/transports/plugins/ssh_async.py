@@ -1304,13 +1304,13 @@ class AsyncSshTransport(AsyncTransport):
                     os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put
                 )
 
-    def gotocomputer_command(self, remotedir: TransportPath):
+    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
         """Return a string to be used to connect to the remote computer.
 
         :param remotedir: the remote directory to connect to
 
         :type remotedir:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
-        connect_string = self._gotocomputer_string(remotedir)
+        connect_string = self._gotocomputer_string(remotedir=remotedir)
         cmd = f'ssh -t {self.machine} {connect_string}'
         return cmd

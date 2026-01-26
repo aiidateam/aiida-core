@@ -279,7 +279,7 @@ class Transport(abc.ABC):
         """
         return self._safe_open_interval
 
-    def _gotocomputer_string(self, remotedir=None):
+    def _gotocomputer_string(self, remotedir: Optional[TransportPath] = None):
         """Command executed when goto computer."""
         if remotedir is None:
             return self._bash_command_str

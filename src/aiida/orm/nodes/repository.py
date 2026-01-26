@@ -212,7 +212,17 @@ class NodeRepository:
 
         with self._repository.open(path) as handle:
             if 'b' not in mode:
-                yield io.TextIOWrapper(handle, encoding='utf-8')
+                # Note: do not yield directly the text_wrapper, but give it a variable name.
+                #
+                # In fact, if this is not done and the user does a
+                # `write ...repo.open():` (rather than
+                #  `write ...repo.open() as something:`),
+                # then one gets (at least in python 3.11) a
+                # `ResourceWarning: unclosed file <_io.TextIOWrapper...>`
+                # (even if the underlying file is closed).
+                # See more discussion in #7181.
+                text_wrapper = io.TextIOWrapper(handle, encoding='utf-8')
+                yield text_wrapper
             else:
                 yield handle
 

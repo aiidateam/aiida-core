@@ -274,8 +274,6 @@ class LsfScheduler(BashCliScheduler):
         jobnum, state, walltime, queue[=partition], user, numnodes, numcores, title
         """
 
-        # I add the environment variable SLURM_TIME_FORMAT in front to be
-        # sure to get the times in 'standard' format
         command = ['bjobs', '-noheader', f"-o '{' '.join(self._joblist_fields)} delimiter=\"{_FIELD_SEPARATOR}\"'"]
 
         if user and jobs:
@@ -322,8 +320,6 @@ class LsfScheduler(BashCliScheduler):
             lines.append('#BSUB -rn')
 
         if job_tmpl.email:
-            # If not specified, but email events are set, SLURM
-            # sends the mail to the job owner by default
             lines.append(f'#BSUB -u {job_tmpl.email}')
 
         if job_tmpl.email_on_started:

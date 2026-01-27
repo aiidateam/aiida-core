@@ -77,9 +77,6 @@ class AiiDAPersister(plumpy.persistence.Persister):
         """
         LOGGER.debug('Persisting process<%d>', process.pid)
 
-        if tag is not None:
-            raise NotImplementedError('Checkpoint tags not supported yet')
-
         try:
             bundle = plumpy.persistence.Bundle(process, plumpy.persistence.LoadSaveContext(loader=get_object_loader()))
         except ImportError:
@@ -87,7 +84,7 @@ class AiiDAPersister(plumpy.persistence.Persister):
             raise PersistenceError(f"Failed to create a bundle for '{process}': {traceback.format_exc()}")
 
         try:
-            process.node.set_checkpoint(serialize.serialize(bundle))
+            process.node.set_checkpoint(serialize.serialize(bundle), tag=tag)
         except Exception:
             raise PersistenceError(f"Failed to store a checkpoint for '{process}': {traceback.format_exc()}")
 
@@ -105,17 +102,16 @@ class AiiDAPersister(plumpy.persistence.Persister):
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
         from aiida.orm import load_node
 
-        if tag is not None:
-            raise NotImplementedError('Checkpoint tags not supported yet')
-
         try:
             calculation = load_node(pid)
         except (MultipleObjectsError, NotExistent):
             raise PersistenceError(f'Failed to load the node for process<{pid}>: {traceback.format_exc()}')
 
-        checkpoint = calculation.checkpoint
+        checkpoint = calculation.get_checkpoint(tag=tag)
 
         if checkpoint is None:
+            if tag is not None:
+                raise PersistenceError(f'Calculation<{calculation.pk}> does not have a checkpoint with tag "{tag}"')
             raise PersistenceError(f'Calculation<{calculation.pk}> does not have a saved checkpoint')
 
         try:
@@ -147,7 +143,7 @@ class AiiDAPersister(plumpy.persistence.Persister):
         from aiida.orm import load_node
 
         calc = load_node(pid)
-        calc.delete_checkpoint()
+        calc.delete_checkpoint(tag=tag)
 
     def delete_process_checkpoints(self, pid: Hashable):
         """Delete all persisted checkpoints related to the given process id.

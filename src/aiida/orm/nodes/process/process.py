@@ -528,21 +528,91 @@ class ProcessNode(Sealable, Node):
 
         :returns: checkpoint bundle if it exists, None otherwise
         """
-        return self.base.attributes.get(self.CHECKPOINT_KEY, None)
+        return self.get_checkpoint()
 
-    def set_checkpoint(self, checkpoint: str) -> None:
-        """Set the checkpoint bundle set for the process
+    def get_checkpoint(self, tag: Optional[str] = None) -> Optional[str]:
+        """Retrieve a checkpoint bundle for the process.
 
-        :param state: string representation of the stepper state info
+        :param tag: optional checkpoint tag identifier. If None, returns the latest checkpoint (default/untagged)
+        :returns: checkpoint bundle if it exists, None otherwise
         """
-        return self.base.attributes.set(self.CHECKPOINT_KEY, checkpoint)
+        checkpoints = self.base.attributes.get(self.CHECKPOINT_KEY, {})
+        
+        if isinstance(checkpoints, str):
+            # Handle legacy format: a single checkpoint stored as a string (no tags)
+            return checkpoints if tag is None else None
+        
+        if isinstance(checkpoints, dict):
+            if tag is None:
+                # Return the default checkpoint (stored with None key)
+                return checkpoints.get(None)
+            return checkpoints.get(tag)
+        
+        return None
 
-    def delete_checkpoint(self) -> None:
-        """Delete the checkpoint bundle set for the process"""
+    def set_checkpoint(self, checkpoint: str, tag: Optional[str] = None) -> None:
+        """Set a checkpoint bundle for the process.
+
+        :param checkpoint: string representation of the checkpoint state
+        :param tag: optional checkpoint tag identifier. If None, sets as the default checkpoint
+        """
+        current_checkpoints = self.base.attributes.get(self.CHECKPOINT_KEY, {})
+        
+        # Convert legacy format (string) to dict format
+        if isinstance(current_checkpoints, str):
+            current_checkpoints = {None: current_checkpoints}
+        elif not isinstance(current_checkpoints, dict):
+            current_checkpoints = {}
+        
+        # Store the new checkpoint
+        current_checkpoints[tag] = checkpoint
+        return self.base.attributes.set(self.CHECKPOINT_KEY, current_checkpoints)
+
+    def delete_checkpoint(self, tag: Optional[str] = None) -> None:
+        """Delete a checkpoint bundle for the process.
+
+        :param tag: optional checkpoint tag identifier. If None, deletes the default checkpoint.
+                    If no checkpoints remain, removes the attribute entirely.
+        """
         try:
-            self.base.attributes.delete(self.CHECKPOINT_KEY)
+            checkpoints = self.base.attributes.get(self.CHECKPOINT_KEY, {})
+            
+            # Handle legacy format: a single checkpoint stored as a string (no tags)
+            if isinstance(checkpoints, str):
+                if tag is None:
+                    self.base.attributes.delete(self.CHECKPOINT_KEY)
+                return
+            
+            if not isinstance(checkpoints, dict):
+                return
+            
+            # Remove the specified tag
+            if tag in checkpoints:
+                del checkpoints[tag]
+            
+            # If no checkpoints remain, delete the attribute; otherwise update it
+            if checkpoints:
+                self.base.attributes.set(self.CHECKPOINT_KEY, checkpoints)
+            else:
+                self.base.attributes.delete(self.CHECKPOINT_KEY)
         except AttributeError:
             pass
+
+    def get_checkpoints(self) -> list[Optional[str]]:
+        """Return a list of all checkpoint tags for this process.
+
+        :returns: list of checkpoint tags (None represents the default checkpoint)
+        """
+        checkpoints = self.base.attributes.get(self.CHECKPOINT_KEY, {})
+        
+        # Handle legacy format: a single checkpoint stored as a string (no tags)
+        if isinstance(checkpoints, str):
+            return [None]
+        
+        if isinstance(checkpoints, dict):
+            return list(checkpoints.keys())
+        
+        return []
 
     @property
     def paused(self) -> bool:

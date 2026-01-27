@@ -270,7 +270,7 @@ Using two-factor authentication (2FA) with ``core.ssh_async``
 
 Some HPC centers require two-factor authentication where you must first authenticate via an API using your credentials and a TOTP code, which then provides you with short-lived signed SSH keys for the actual connection.
 
-The ``core.ssh_async`` transport plugin provides a ``script_before`` option that runs a local script **before** each SSH connection is opened.
+The ``core.ssh_async`` transport plugin provides an ``authentication_script`` option that runs a local script before each SSH connection is opened.
 This script must be provided by the user and is responsible for obtaining fresh SSH credentials so that the subsequent connection can succeed.
 
 .. warning::
@@ -297,11 +297,12 @@ How it works
 The typical flow is:
 
 1. AiiDA needs to open an SSH connection
-2. Before connecting, AiiDA optionally runs an authentication script (``script_before``)
+2. Before connecting, AiiDA optionally runs an authentication script (``authentication_script``)
 3. Your script authenticates to the HPC center. This largely depends on the authentication mechanism of your HPC center. For example:
-   - a) It may require generating a TOTP code from a shared secret, sending your username, password, and TOTP code to the HPC center, and then receiving signed SSH keys in response.
-   - b) Your HPC center's authentication policy may strictly require you to enter credentials manually, in which case your script may prompt you to enter the required information (username, password, TOTP code, etc.) interactively.
-   - c) It may require you to authenticate via a web browser, in which case your script may open a browser for you to log in.
+
+   a. It may require generating a TOTP code from a shared secret, sending your username, password, and TOTP code to the HPC center, and then receiving signed SSH keys in response.
+   b. Your HPC center's authentication policy may strictly require you to enter credentials manually, in which case your script may prompt you to enter the required information (username, password, TOTP code, etc.) interactively.
+   c. It may require you to authenticate via a web browser, in which case your script may open a browser for you to log in.
 
 In all of the above cases, your script should ultimately enable ``ssh <my-HPC>`` to succeed without a password.
 
@@ -459,12 +460,12 @@ When configuring your computer with the ``core.ssh_async`` transport, specify th
 
    $ verdi computer configure core.ssh_async YOURCOMPUTER
    ...
-   Local script to run *before* opening connection (path) [None]: /home/YOURUSERNAME/bin/get_hpc_keys.sh
+   Local script to run before opening connection (path) [None]: /home/YOURUSERNAME/bin/get_hpc_keys.sh
    ...
 
 .. note::
 
-   - The ``script_before`` path must be **absolute** and the script must be **executable**.
+   - The ``authentication_script`` path must be **absolute** and the script must be **executable**.
    - The script runs locally before each SSH connection is opened.
    - If the script fails (non-zero exit code), the SSH connection will not be attempted and an error will be raised. AiiDA may retry later using its exponential backoff mechanism.
 

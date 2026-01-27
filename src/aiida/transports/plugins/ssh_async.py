@@ -13,6 +13,7 @@
 import asyncio
 import glob
 import os
+import subprocess
 from pathlib import Path, PurePath
 from typing import Optional, Union
 
@@ -84,13 +85,13 @@ class AsyncSshTransport(AsyncTransport):
             },
         ),
         (
-            'script_before',
+            'authentication_script',
             {
                 'type': str,
                 'default': 'None',
-                'prompt': 'Local script to run *before* opening connection (path)',
-                'help': ' (optional) Specify a script to run *before* opening SSH connection. '
-                'The script should be executable',
+                'prompt': 'Local script to run before opening connection (path)',
+                'help': ' (optional) This can be helpful for connection with complex authentication '
+                'methods (e.g. 2FA, etc). The script should be executable',
                 'non_interactive_default': True,
                 'callback': validate_script,
             },
@@ -135,7 +136,10 @@ class AsyncSshTransport(AsyncTransport):
         self.machine = kwargs.pop('host', kwargs.pop('machine'))
         self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
         self._semaphore = asyncio.Semaphore(self._max_io_allowed)
-        self.script_before = kwargs.pop('script_before', 'None')
+        self.auth_script = kwargs.pop('authentication_script', 'None')
+        if self.auth_script == 'None':
+            # for backward compatibility
+            self.auth_script = kwargs.pop('script_before', 'None')
 
         if kwargs.get('backend') == 'openssh':
             from .async_backend import _OpenSSH
@@ -162,8 +166,16 @@ class AsyncSshTransport(AsyncTransport):
             # That means the transport is already open, while it should not
             raise InvalidOperation('Cannot open the transport twice')
 
-        if self.script_before != 'None':
-            os.system(f'{self.script_before}')
+        if self.auth_script != 'None':
+            result = subprocess.run(self.auth_script, shell=True, capture_output=True, text=True, check=False)
+            if result.returncode != 0:
+                self.async_backend.logger.error(
+                    f'Authentication script {self.auth_script} failed with exit code {result.returncode}\n'
+                    f'stdout: {result.stdout}\n'
+                    f'stderr: {result.stderr}'
+                )
+                raise OSError(f'Authentication script {self.auth_script} failed with exit code {result.returncode}')
+            self.async_backend.logger.info(f'Authentication script {self.auth_script} executed successfully\n')
 
         try:
             await self.async_backend.open()

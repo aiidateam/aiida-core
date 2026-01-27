@@ -214,10 +214,11 @@ class NodeRepository:
             if 'b' not in mode:
                 # Note: do not yield directly the text_wrapper, but give it a variable name.
                 #
-                # In fact, if this is not done and the user does a
-                # `write ...repo.open():` (rather than
-                #  `write ...repo.open() as something:`),
+                # In fact, if this is not done and the caller does a
+                # `with ...repo.open():` (rather than
+                #  `with ...repo.open() as something:`),
                 # then one gets (at least in python 3.11) a
+                # then the following warning is triggered
                 # `ResourceWarning: unclosed file <_io.TextIOWrapper...>`
                 # (even if the underlying file is closed).
                 # See more discussion in #7181.

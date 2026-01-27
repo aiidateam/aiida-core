@@ -217,7 +217,6 @@ class SlurmScheduler(BashCliScheduler):
         if jobs:
             if isinstance(jobs, str):  # type: ignore[unreachable]
                 joblist = [jobs]  # type: ignore[unreachable]
-                joblist.append(jobs)
             else:
                 if not isinstance(jobs, (tuple, list)):
                     raise TypeError("If provided, the 'jobs' variable must be a string or a list of strings")

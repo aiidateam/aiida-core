@@ -588,8 +588,7 @@ stderr='{stderr.strip()}'"""
 
             try:
                 walltime = self._convert_time(thisjob_dict['time_limit'])
-                # TODO: Fix this type ignore, _convert_time can return None
-                this_job.requested_wallclock_time_seconds = walltime  # type: ignore[assignment]
+                this_job.requested_wallclock_time_seconds = walltime
             except ValueError:
                 self.logger.warning(f'Error parsing the time limit for job id {this_job.job_id}')
 

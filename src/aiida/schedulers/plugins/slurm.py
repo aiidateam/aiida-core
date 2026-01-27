@@ -568,13 +568,12 @@ stderr='{stderr.strip()}'"""
                     )
                 )
 
+            ncpus = thisjob_dict['number_cpus']
             try:
-                this_job.num_mpiprocs = int(thisjob_dict['number_cpus'])
+                this_job.num_mpiprocs = int(ncpus)
             except ValueError:
                 self.logger.warning(
-                    'The number of allocated cores is not ' 'an integer ({}) for job id {}!'.format(
-                        thisjob_dict['number_cpus'], this_job.job_id
-                    )
+                    f'The number of allocated cores is not an integer ({ncpus}) for job id {this_job.job_id}!'
                 )
 
             # ALLOCATED NODES HERE

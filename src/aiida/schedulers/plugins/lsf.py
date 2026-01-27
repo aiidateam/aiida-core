@@ -10,6 +10,8 @@
 This has been tested on the CERN lxplus cluster (LSF 9.1.3)
 """
 
+from __future__ import annotations
+
 import datetime
 import re
 import string

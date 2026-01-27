@@ -13,6 +13,8 @@ Plugin originally written by Marco Dorigo.
 Email: marco(DOT)dorigo(AT)rub(DOT)de
 """
 
+from __future__ import annotations
+
 import datetime
 import re
 import string

@@ -279,8 +279,11 @@ class Transport(abc.ABC):
         """
         return self._safe_open_interval
 
-    def _gotocomputer_string(self, remotedir):
+    def _gotocomputer_string(self, remotedir: Optional[TransportPath] = None):
         """Command executed when goto computer."""
+        if remotedir is None:
+            return self._bash_command_str
+        remotedir = str(remotedir)
         connect_string = (
             """ "if [ -d {escaped_remotedir} ] ;"""
             """ then cd {escaped_remotedir} ; {bash_command} ; else echo '  ** The directory' ; """
@@ -820,7 +823,7 @@ class Transport(abc.ABC):
         """
 
     @abc.abstractmethod
-    def gotocomputer_command(self, remotedir: TransportPath):
+    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
         """Return a string to be run using os.system in order to connect
         via the transport to the remote directory.
 

@@ -97,6 +97,7 @@ _MAP_STATUS_LSF = {
 _FIELD_SEPARATOR = '|'
 
 
+# TODO: This class could be simplified if we inhereted from `ParEnvJobResource` instead
 class LsfJobResource(JobResource):
     """An implementation of JobResource for LSF, that supports
     the OPTIONAL specification of a parallel environment (a string) + the total
@@ -111,6 +112,12 @@ class LsfJobResource(JobResource):
     """
 
     _default_fields = ('parallel_env', 'tot_num_mpiprocs', 'default_mpiprocs_per_machine', 'num_machines')
+
+    if t.TYPE_CHECKING:
+        parallel_env: str
+        tot_num_mpiprocs: int
+        default_mpiprocs_per_machine: int
+        num_machined: int
 
     @classmethod
     def validate_resources(cls, **kwargs: t.Any) -> AttributeDict:
@@ -168,7 +175,7 @@ class LsfJobResource(JobResource):
 
     def get_tot_num_mpiprocs(self) -> int:
         """Return the total number of cpus of this job resource."""
-        return self.tot_num_mpiprocs  # type: ignore[no-any-return]
+        return self.tot_num_mpiprocs
 
     @classmethod
     def accepts_default_mpiprocs_per_machine(cls) -> t.Literal[False]:

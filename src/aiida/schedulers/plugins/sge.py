@@ -419,13 +419,12 @@ class SgeScheduler(BashCliScheduler):
                 try:
                     job_element = job.getElementsByTagName('slots').pop(0)
                     element_child = job_element.childNodes.pop(0)
-                    # TODO: Fix this type error (should this be int?)
-                    this_job.num_mpiprocs = str(element_child.data).strip()  # type: ignore[assignment]
+                    this_job.num_mpiprocs = int(str(element_child.data).strip())
                 except IndexError:
                     self.logger.warning(f"No 'slots' field for job id {this_job.job_id}")
 
             joblist.append(this_job)
-        # self.logger.debug("joblist final: {}".format(joblist))
+
         return joblist
 
     def _parse_submit_output(self, retval: int, stdout: str, stderr: str) -> str | ExitCode:

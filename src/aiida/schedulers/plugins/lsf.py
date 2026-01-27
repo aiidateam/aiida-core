@@ -596,14 +596,14 @@ fi
 
             this_job.queue_name = partition
 
-            psd_finish_time = self._parse_time_string(finish_time, fmt='%b %d %H:%M')
-            psd_start_time = self._parse_time_string(start_time, fmt='%b %d %H:%M')
-
             # Now get the time in seconds which has been used
             # Only if it is RUNNING; otherwise it is not meaningful,
             # and may be not set (in my test, it is set to zero)
             if this_job.job_state == JobState.RUNNING:
                 try:
+                    psd_start_time = self._parse_time_string(start_time, fmt='%b %d %H:%M')
+                    psd_finish_time = self._parse_time_string(finish_time, fmt='%b %d %H:%M')
+
                     requested_walltime = psd_finish_time - psd_start_time
                     # fix of a weird bug. Since the year is not parsed, it is assumed
                     # to always be 1900. Therefore, job submitted

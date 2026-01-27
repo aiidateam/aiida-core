@@ -731,11 +731,12 @@ stderr='{stderr.strip()}'"""
                 raise ValueError('the `detailed_job_info` does not contain the required key `stdout`.')
 
             type_check(detailed_stdout, str)
+            assert isinstance(detailed_stdout, str)
 
             # The format of the detailed job info should be a multiline string, where the first line is the header, with
             # the labels of the projected attributes. The following line should be the values of those attributes for
             # the entire job. Any additional lines correspond to those values for any additional tasks that were run.
-            lines = detailed_stdout.splitlines()  # type: ignore[union-attr]
+            lines = detailed_stdout.splitlines()
 
             if len(lines) < 2:
                 raise ValueError('the `detailed_job_info.stdout` contained less than two lines.')

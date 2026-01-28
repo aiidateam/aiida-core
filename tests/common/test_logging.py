@@ -47,3 +47,11 @@ def test_capture_logging():
     with capture_logging(logger) as stream:
         logging.getLogger().error(message)
         assert stream.getvalue().strip() == message
+
+
+def test_get_process_logger_no_process():
+    """Test that :func:`aiida.common.log.get_process_logger` returns ``None`` when not in a process context."""
+    from aiida.common.log import get_process_logger
+
+    logger = get_process_logger()
+    assert logger is None

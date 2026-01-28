@@ -187,6 +187,30 @@ class Transport(abc.ABC):
         if self._enters == 0:
             self.close()
 
+    async def __aenter__(self):
+        """Async context manager entry. Opens the transport connection.
+
+        For sync transports, this just calls the sync open() method.
+        AsyncTransport subclasses override this to use async open.
+        """
+        if self._enters == 0:
+            if self.is_open:
+                self._enters += 1
+            else:
+                self.open()
+        self._enters += 1
+        return self
+
+    async def __aexit__(self, type_, value, traceback):
+        """Async context manager exit. Closes the transport connection if needed.
+
+        For sync transports, this just calls the sync close() method.
+        AsyncTransport subclasses override this to use async close.
+        """
+        self._enters -= 1
+        if self._enters == 0:
+            self.close()
+
     @property
     def is_open(self):
         return self._is_open
@@ -1843,13 +1867,38 @@ class AsyncTransport(Transport):
     because they will block the event loop.
     """
 
+    async def __aenter__(self):
+        """Async context manager entry. Opens the transport connection."""
+        if self._enters == 0:
+            if self.is_open:
+                self._enters += 1
+            else:
+                await self.open_async()
+        self._enters += 1
+        return self
+
+    async def __aexit__(self, type_, value, traceback):
+        """Async context manager exit. Closes the transport connection if needed."""
+        self._enters -= 1
+        if self._enters == 0:
+            await self.close_async()
+
     def run_command_blocking(self, func, *args, **kwargs):
         """The event loop must be the one of manager."""
+        from plumpy.greenlet_bridge import await_only, in_worker_greenlet, run_in_thread
 
         from aiida.manage import get_manager
 
-        loop = get_manager().get_runner()
-        return loop.run_until_complete(func(*args, **kwargs))
+        loop = get_manager().get_runner().loop
+
+        if loop.is_running():
+            if in_worker_greenlet():
+                return await_only(func(*args, **kwargs))
+            else:
+                # Pass a factory so the awaitable is created fresh in the new thread's loop
+                return run_in_thread(lambda: func(*args, **kwargs))
+        else:
+            return loop.run_until_complete(func(*args, **kwargs))
 
     def open(self):
         return self.run_command_blocking(self.open_async)

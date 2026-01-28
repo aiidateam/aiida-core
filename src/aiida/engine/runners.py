@@ -156,8 +156,10 @@ class Runner:
 
     def run_until_complete(self, future: asyncio.Future) -> Any:
         """Run the loop until the future has finished and return the result."""
+        import plumpy
+
         with utils.loop_scope(self._loop):
-            return self._loop.run_until_complete(future)
+            return plumpy.run_until_complete(future, self._loop)
 
     def close(self) -> None:
         """Close the runner by stopping the loop."""

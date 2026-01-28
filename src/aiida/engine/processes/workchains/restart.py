@@ -52,7 +52,7 @@ def validate_handler_overrides(
 
     The ``handler_overrides`` should be a dictionary where keys are strings that are the name of a process handler, i.e.
     an instance method of the ``process_class`` that has been decorated with the ``process_handler`` decorator. The
-    values should be a dictionary that can specify the keys ``enabled`` and ``priority``.
+    values should be a dictionary that can specify the keys ``enabled`` and ``priority``, and ``max_iterations``.
 
     .. note:: the normal signature of a port validator is ``(value, ctx)`` but since for the validation here we need a
         reference to the process class, we add it and the class is bound to the method in the port declaration in the
@@ -84,7 +84,7 @@ def validate_handler_overrides(
 
         if isinstance(overrides, dict):
             for key in overrides.keys():
-                if key not in ['enabled', 'priority']:
+                if key not in ['enabled', 'priority', 'max_iterations']:
                     return f'The value of key `{handler}` contain keys `{key}` which is not supported.'
 
     return None
@@ -177,7 +177,7 @@ class BaseRestartWorkChain(WorkChain):
             validator=functools.partial(validate_handler_overrides, cls),
             serializer=orm.to_aiida_type,
             help='Mapping where keys are process handler names and the values are a dictionary, where each dictionary '
-            'can define the ``enabled`` and ``priority`` key, which can be used to toggle the values set on '
+            'can define the `enabled`, `priority`, and `max_iterations` keys, which can be used to toggle '
             'the original process handler declaration.',
         )
         spec.input(
@@ -188,6 +188,13 @@ class BaseRestartWorkChain(WorkChain):
             help='Action to take when an unhandled failure occurs. Options: "abort" (default, fail immediately), '
             '"pause" (pause the workchain for inspection), "restart_once" (restart once then abort), '
             '"restart_and_pause" (restart once then pause if still failing).',
+        )
+        spec.input(
+            'pause_on_max_iterations',
+            valid_type=orm.Bool,
+            required=False,
+            help='If True, pause the workchain for inspection when max_iterations is reached (either globally or '
+            'for a specific handler) instead of aborting. When resumed, iteration counters are reset to zero.',
         )
         spec.exit_code(301, 'ERROR_SUB_PROCESS_EXCEPTED', message='The sub process excepted.')
         spec.exit_code(302, 'ERROR_SUB_PROCESS_KILLED', message='The sub process was killed.')
@@ -210,15 +217,14 @@ class BaseRestartWorkChain(WorkChain):
         self.ctx.unhandled_failure = False
         self.ctx.is_finished = False
         self.ctx.iteration = 0
+        self.ctx.handler_iteration_counts = {}
 
     def should_run_process(self) -> bool:
         """Return whether a new process should be run.
 
-        This is the case as long as the last process has not finished successfully and the maximum number of restarts
-        has not yet been exceeded.
+        This is the case as long as the last process has not finished successfully or a handler has been triggered.
         """
-        max_iterations = self.inputs.max_iterations.value
-        return not self.ctx.is_finished and self.ctx.iteration < max_iterations
+        return not self.ctx.is_finished
 
     def run_process(self) -> ToContext:
         """Run the next process, taking the input dictionary from the context at `self.ctx.inputs`."""
@@ -297,13 +303,13 @@ class BaseRestartWorkChain(WorkChain):
 
             # If an actual report was returned, save it so it is not overridden by next handler returning `None`
             if report:
+                self.ctx.handler_iteration_counts.setdefault(handler.__name__, 0)
+                self.ctx.handler_iteration_counts[handler.__name__] += 1
                 last_report = report
 
             # After certain handlers, we may want to skip all other handlers
             if report and report.do_break:
                 break
-
-        report_args = (self.ctx.process_name, node.pk)
 
         # If the process failed and no handler returned a report we consider it an unhandled failure
         if node.is_failed and not last_report:
@@ -364,8 +370,51 @@ class BaseRestartWorkChain(WorkChain):
         # considered to be an unhandled failed process and therefore we reset the flag
         self.ctx.unhandled_failure = False
 
-        # If at least one handler returned a report, the action depends on its exit code and that of the process itself
         if last_report:
+            # In some cases, a developer might want to indicate that a process hasn't finished with exit code 0, but
+            # is completed and attach the outputs. To do this, a process handler can set the process to `is_finished`
+            # and call the `results()` method to still attach the outputs. This is slightly hacky, but a valid use case.
+            # Until we support this use case in a more elegant manner, we check for this here and return the exit code.
+            if self.ctx.is_finished:
+                return last_report.exit_code
+
+            pause_on_max_iterations = (
+                self.inputs.pause_on_max_iterations.value
+                if self.inputs.get('pause_on_max_iterations', None) is not None
+                else False
+            )
+            pause_process = False
+
+            # Check if the global max iterations have been reached
+            if self.ctx.iteration >= self.inputs.max_iterations.value:
+                self.report(f'Reached the maximum number of global iterations ({self.inputs.max_iterations.value}).')
+                if not pause_on_max_iterations:
+                    self.report(f'Aborting! Last ran: {self.ctx.process_name}<{node.pk}>')
+                    return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
+
+                self.ctx.iteration = 0
+                pause_process = True
+
+            # Check if any process handlers reached their max iterations
+            for handler in self.get_process_handlers():
+                max_iterations_override = self.ctx.handler_overrides.get(handler.__name__, {}).get(
+                    'max_iterations', None
+                )
+                max_handler_iterations = max_iterations_override or handler.max_iterations  # type: ignore[attr-defined]
+                handler_iterations = self.ctx.handler_iteration_counts.get(handler.__name__, 0)
+
+                if max_handler_iterations is not None and handler_iterations >= max_handler_iterations:
+                    self.report(
+                        f'Reached the maximum number of iterations ({max_handler_iterations}) for handler '
+                        f'`{handler.__name__}`.'
+                    )
+                    if not pause_on_max_iterations:
+                        self.report(f'Aborting! Last ran: {self.ctx.process_name}<{node.pk}>')
+                        return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
+
+                    self.ctx.handler_iteration_counts[handler.__name__] = 0
+                    pause_process = True
+
             if node.is_finished_ok and last_report.exit_code.status == 0:
                 template = '{}<{}> finished successfully but a handler was triggered, restarting'
             elif node.is_failed and last_report.exit_code.status == 0:
@@ -375,9 +424,20 @@ class BaseRestartWorkChain(WorkChain):
             elif node.is_failed and last_report.exit_code.status != 0:
                 template = '{}<{}> failed but a handler detected an unrecoverable problem, aborting'
 
-            self.report(template.format(*report_args))
+            self.report(template.format(self.ctx.process_name, node.pk))
 
-            return last_report.exit_code
+            if last_report.exit_code.status != 0:
+                return last_report.exit_code
+
+            if pause_process:
+                self.report(
+                    'Resetting the iteration counter(s) and pausing for inspection. You can resume execution using '
+                    f'`verdi process play {self.node.pk}`, or kill the work chain using '
+                    f'`verdi process kill {self.node.pk}`.'
+                )
+                self.pause(f"Paused for user inspection, see: 'verdi process report {self.node.pk}'")
+
+            return None
 
         # Otherwise the process was successful and no handler returned anything so we consider the work done
         self.ctx.is_finished = True
@@ -396,17 +456,6 @@ class BaseRestartWorkChain(WorkChain):
     def results(self) -> Optional['ExitCode']:
         """Attach the outputs specified in the output specification from the last completed process."""
         node = self.ctx.children[self.ctx.iteration - 1]
-
-        # We check the `is_finished` attribute of the work chain and not the successfulness of the last process
-        # because the error handlers in the last iteration can have qualified a "failed" process as satisfactory
-        # for the outcome of the work chain and so have marked it as `is_finished=True`.
-        max_iterations = self.inputs.max_iterations.value
-        if not self.ctx.is_finished and self.ctx.iteration >= max_iterations:
-            self.report(
-                f'reached the maximum number of iterations {max_iterations}: '
-                f'last ran {self.ctx.process_name}<{node.pk}>'
-            )
-            return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
 
         self.report(f'work chain completed after {self.ctx.iteration} iterations')
         self._attach_outputs(node)

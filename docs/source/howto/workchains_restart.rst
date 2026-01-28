@@ -93,6 +93,28 @@ This is controlled by the ``max_iterations`` input, which defaults to ``5``:
 If the subprocess fails and is restarted repeatedly until ``max_iterations`` is reached without succeeding, the work chain will abort with exit code ``401`` (``ERROR_MAXIMUM_ITERATIONS_EXCEEDED``).
 
 
+**Pausing on maximum iterations**
+
+.. versionadded:: 2.8
+
+You can configure the ``BaseRestartWorkChain`` to pause when reaching the maximum number of iterations, allowing you to inspect the situation and decide whether to continue or abort.
+This is controlled by the ``pause_on_max_iterations`` input:
+
+.. code-block:: python
+
+    inputs = {
+        'max_iterations': 1,
+        'pause_on_max_iterations': True,
+        # ... other inputs
+    }
+    submit(SomeBaseWorkChain, **inputs)
+
+When ``pause_on_max_iterations`` is ``True`` and the maximum iteration limit is reached:
+
+1. The iteration counter is reset to zero.
+2. The work chain pauses for user inspection.
+3. You can resume using ``verdi process play <PK>`` or kill the work chain using ``verdi process kill <PK>``.
+
 Handler overrides
 -----------------
 
@@ -109,12 +131,25 @@ This input takes a ``Dict`` node, that has the following form:
         }
     })
 
-As you can see, the keys are the name of the handler to affect and the value is a dictionary that can take two keys: ``enabled`` and ``priority``.
+As you can see, the keys are the name of the handler to affect and the value is another dictionary that specifies the overrides for each setting.
 To enable or disable a handler, set ``enabled`` to ``True`` or ``False``, respectively.
 The ``priority`` key takes an integer and determines the priority of the handler.
 Note that the values of the ``handler_overrides`` are fully optional and will override the values configured by the process handler decorator in the source code of the work chain.
 The changes also only affect the work chain instance that receives the ``handler_overrides`` input, all other instances of the work chain that will be launched will be unaffected.
 
+**Per-handler iteration limits**
+
+.. versionadded:: 2.8
+
+In addition to the global ``max_iterations``, you can also set iteration limits for individual error handlers via the ``handler_overrides``:
+
+.. code-block:: python
+
+    handler_overrides = {
+        'handler_negative_sum': {   # Insert the name of the process handler here
+            'max_iterations': 1,
+        }
+    }
 
 Configuring unhandled failure behavior
 --------------------------------------

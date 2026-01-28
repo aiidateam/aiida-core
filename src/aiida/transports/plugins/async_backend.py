@@ -201,14 +201,6 @@ class _AsynchronousSSHBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    async def chown(self, path: str, uid: int, gid: int):
-        """Change the ownership of a file or directory.
-        :param path: The path to the file or directory
-        :param uid: The user ID to set
-        :param gid: The group ID to set
-        """
-
-    @abc.abstractmethod
     async def copy(
         self,
         remotesource: str,
@@ -356,9 +348,6 @@ class _AsyncSSH(_AsynchronousSSHBackend):
 
     async def chmod(self, path: str, mode: int, follow_symlinks: bool = True):
         await self._sftp.chmod(path, mode, follow_symlinks=follow_symlinks)
-
-    async def chown(self, path: str, uid: int, gid: int):
-        await self._sftp.chown(path, uid, gid, follow_symlinks=True)
 
     async def copy(
         self,
@@ -585,14 +574,6 @@ class _OpenSSH(_AsynchronousSSHBackend):
                     raise FileExistsError(f'Directory already exists: {path}')
             else:
                 raise OSError(f'Failed to create directory: {path}')
-
-    async def chown(self, path: str, uid: int, gid: int) -> None:
-        commands = self.ssh_command_generator(f'chown {uid}:{gid} {{}}', paths=[path])
-
-        returncode, stdout, stderr = await self.openssh_execute(commands)
-
-        if returncode != 0:
-            raise OSError(f'Failed to change ownership: {path}')
 
     async def chmod(self, path: str, mode: int, follow_symlinks: bool = True):
         # chmod works with octal numbers, so we have to convert the mode to octal

@@ -361,7 +361,9 @@ class Process(PlumpyProcess):
             coro = self._launch_task(task_kill_job, self.node, self.runner.transport)
             self._cancelling_scheduler_job = asyncio.create_task(coro)
             try:
-                self.loop.run_until_complete(self._cancelling_scheduler_job)
+                import plumpy
+
+                plumpy.run_until_complete(self._cancelling_scheduler_job, self.loop)
             except Exception as exc:
                 self.node.logger.error(f'While cancelling the scheduler job an error was raised: {exc}')
                 return False

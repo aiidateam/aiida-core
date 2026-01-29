@@ -72,6 +72,7 @@ class PortableCode(Code):
             short_name='-F',
             priority=2,
             write_only=True,
+            exclude=True,
             orm_to_model=lambda node, kwargs: _export_filepath_files_from_repo(
                 cast(PortableCode, node),
                 kwargs.get('repository_path', pathlib.Path.cwd() / f'{cast(PortableCode, node).label}'),

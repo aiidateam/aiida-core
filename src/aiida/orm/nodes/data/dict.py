@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import copy
 import typing as t
+from pathlib import Path
 
 import pydantic as pdt
 
@@ -63,6 +64,7 @@ class Dict(Data):
         value: t.Dict[str, t.Any] = MetadataField(
             description='The dictionary content',
             write_only=True,
+            exclude=True,
         )
 
     def __init__(self, value=None, **kwargs):
@@ -81,6 +83,17 @@ class Dict(Data):
 
         if dictionary:
             self.set_dict(dictionary)
+
+    def serialize(
+        self,
+        *,
+        repository_path: Path | None = None,
+        minimal: bool = False,
+        mode: t.Literal['json'] | t.Literal['python'] = 'json',
+    ) -> dict[str, t.Any]:
+        serialized = super().serialize(repository_path=repository_path, minimal=minimal, mode=mode)
+        serialized['attributes'] = self.get_dict()
+        return serialized
 
     def __getitem__(self, key):
         try:

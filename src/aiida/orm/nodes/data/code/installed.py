@@ -54,6 +54,7 @@ class InstalledCode(Code):
             short_name='-Y',
             priority=2,
             write_only=True,
+            exclude=True,
             orm_to_model=lambda node, _: cast(InstalledCode, node).computer.label,
             model_to_orm=lambda model: load_computer(cast(InstalledCode.AttributesModel, model).computer),
         )

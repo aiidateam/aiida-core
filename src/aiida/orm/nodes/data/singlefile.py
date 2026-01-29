@@ -41,6 +41,7 @@ class SinglefileData(Data):
             description='The file content',
             model_to_orm=lambda model: t.cast(SinglefileData.AttributesModel, model).content_as_bytes(),
             write_only=True,
+            exclude=True,
         )
 
         def content_as_bytes(self) -> t.IO | None:

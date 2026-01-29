@@ -1,8 +1,11 @@
 """Data plugin that allows to easily wrap objects that are JSON-able."""
 
+from __future__ import annotations
+
 import importlib
 import json
 import typing
+from pathlib import Path
 
 from pydantic import ConfigDict, WithJsonSchema, computed_field
 
@@ -53,6 +56,7 @@ class JsonableData(Data):
     class AttributesModel(Data.AttributesModel):
         model_config = ConfigDict(
             arbitrary_types_allowed=True,
+            serialize_by_alias=True,
             json_schema_extra={
                 'additionalProperties': True,
             },
@@ -71,6 +75,7 @@ class JsonableData(Data):
                 description='The JSON-serializable object',
                 orm_to_model=lambda node, _: typing.cast(JsonableData, node).obj,
                 write_only=True,
+                exclude=True,
             ),
         ]
 
@@ -129,6 +134,17 @@ class JsonableData(Data):
             raise TypeError(f'the object `{obj}` is not JSON-serializable and therefore cannot be stored.') from exc
 
         self.base.attributes.set_many(serialized)
+
+    def serialize(
+        self,
+        *,
+        repository_path: Path | None = None,
+        minimal: bool = False,
+        mode: typing.Literal['json'] | typing.Literal['python'] = 'json',
+    ) -> dict[str, typing.Any]:
+        serialize = super().serialize(repository_path=repository_path, minimal=minimal, mode=mode)
+        serialize['attributes'] |= self.obj.as_dict()
+        return serialize
 
     @classmethod
     def _deserialize_float_constants(cls, data: typing.Any):

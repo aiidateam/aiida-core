@@ -298,8 +298,10 @@ class WorkChain(Process, metaclass=Protect):
     @override
     @Protect.final
     async def run(self) -> t.Any:
+        from plumpy.greenlet_bridge import greenlet_spawn
+
         self._stepper = self.spec().get_outline().create_stepper(self)  # type: ignore[arg-type]
-        return self._do_step()
+        return await greenlet_spawn(self._do_step)
 
     def _do_step(self) -> t.Any:
         """Execute the next step in the outline and return the result.

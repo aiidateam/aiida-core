@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import io
 from collections.abc import Iterable, Iterator, Sequence
-from typing import Any, Optional, Union, cast
+from pathlib import Path
+from typing import Any, Literal, Optional, Union, cast
 
 import numpy as np
 from pydantic import ConfigDict, field_validator
@@ -68,6 +69,7 @@ class ArrayData(Data):
             description='A single (or dictionary of) array(s) to store',
             orm_to_model=lambda node, _: cast(ArrayData, node).arrays,
             write_only=True,
+            exclude=True,
         )
 
         @field_validator('arrays', mode='before')
@@ -120,6 +122,19 @@ class ArrayData(Data):
     @property
     def arrays(self) -> dict[str, np.ndarray]:
         return {name: self.get_array(name) for name in self.get_arraynames()}
+
+    def serialize(
+        self,
+        *,
+        repository_path: Path | None = None,
+        minimal: bool = False,
+        mode: Literal['json'] | Literal['python'] = 'json',
+    ) -> dict[str, Any]:
+        serialized = super().serialize(repository_path=repository_path, minimal=minimal, mode=mode)
+        serialized['attributes'] |= {
+            f'{self.array_prefix}{name}': list(array.shape) for name, array in self.get_iterarrays()
+        }
+        return serialized
 
     def initialize(self):
         super().initialize()

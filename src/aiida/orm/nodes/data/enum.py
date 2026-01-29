@@ -57,6 +57,7 @@ class EnumData(Data):
             description='The member name',
             orm_to_model=lambda node, _: t.cast(EnumData, node).get_member(),
             write_only=True,
+            exclude=True,
         )
 
         @computed_field  # type: ignore[prop-decorator]

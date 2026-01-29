@@ -9,7 +9,7 @@
 """Tools for handling Crystallographic Information Files (CIF)"""
 
 import re
-import typing as t
+from typing import List, Optional
 
 from aiida.common.pydantic import MetadataField
 from aiida.common.utils import Capturing
@@ -250,15 +250,21 @@ class CifData(SinglefileData):
     _values = None
     _ase = None
 
-    class Model(SinglefileData.Model):
-        formulae: t.Optional[t.List[str]] = MetadataField(
-            None, description='List of formulae contained in the CIF file.', exclude_to_orm=True
+    class AttributesModel(SinglefileData.AttributesModel):
+        formulae: Optional[List[str]] = MetadataField(
+            None,
+            description='List of formulae contained in the CIF file',
+            read_only=True,
         )
-        spacegroup_numbers: t.Optional[t.List[str]] = MetadataField(
-            None, description='List of space group numbers of the structure.', exclude_to_orm=True
+        spacegroup_numbers: Optional[List[str]] = MetadataField(
+            None,
+            description='List of space group numbers of the structure',
+            read_only=True,
         )
-        md5: t.Optional[str] = MetadataField(
-            None, description='MD5 checksum of the file contents.', exclude_to_orm=True
+        md5: Optional[str] = MetadataField(
+            None,
+            description='MD5 checksum of the file contents',
+            read_only=True,
         )
 
     def __init__(self, ase=None, file=None, filename=None, values=None, scan_type=None, parse_policy=None, **kwargs):
@@ -372,7 +378,7 @@ class CifData(SinglefileData):
                 return (cifs[0], False)
 
             raise ValueError(
-                'More than one copy of a CIF file ' 'with the same MD5 has been found in ' 'the DB. pks={}'.format(
+                'More than one copy of a CIF file with the same MD5 has been found in the DB. pks={}'.format(
                     ','.join([str(i.pk) for i in cifs])
                 )
             )

@@ -13,6 +13,8 @@ from __future__ import annotations
 import copy
 import typing as t
 
+import pydantic as pdt
+
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
 
@@ -50,11 +52,17 @@ class Dict(Data):
     Finally, all dictionary mutations will be forbidden once the node is stored.
     """
 
-    class Model(Data.Model):
+    class AttributesModel(Data.AttributesModel):
+        model_config = pdt.ConfigDict(
+            arbitrary_types_allowed=True,
+            json_schema_extra={
+                'additionalProperties': True,
+            },
+        )
+
         value: t.Dict[str, t.Any] = MetadataField(
-            description='Dictionary content.',
-            is_attribute=False,
-            is_subscriptable=True,
+            description='The dictionary content',
+            write_only=True,
         )
 
     def __init__(self, value=None, **kwargs):
@@ -67,8 +75,10 @@ class Dict(Data):
 
         :param value: dictionary to initialise the ``Dict`` node from
         """
-        dictionary = value or kwargs.pop('dict', None)
+        dictionary = value or kwargs.pop('dict', None) or kwargs.get('attributes', {}).pop('value', None)
+
         super().__init__(**kwargs)
+
         if dictionary:
             self.set_dict(dictionary)
 

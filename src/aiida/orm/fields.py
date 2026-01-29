@@ -15,10 +15,8 @@ from copy import deepcopy
 from functools import singledispatchmethod
 from pprint import pformat
 
-from pydantic import BaseModel
-
 from aiida.common.lang import isidentifier
-from aiida.common.pydantic import get_metadata
+from aiida.common.pydantic import OrmModel, get_metadata
 
 __all__ = (
     'QbField',
@@ -51,7 +49,6 @@ class QbField:
         '_doc',
         '_dtype',
         '_is_attribute',
-        '_is_subscriptable',
         '_key',
     )
 
@@ -63,7 +60,6 @@ class QbField:
         dtype: t.Optional[t.Any] = None,
         doc: str = '',
         is_attribute: bool = True,
-        is_subscriptable: bool = False,
     ) -> None:
         """Initialise a ORM entity field, accessible via the ``QueryBuilder``
 
@@ -72,14 +68,12 @@ class QbField:
         :param dtype: The data type of the field. If None, the field is of variable type.
         :param doc: A docstring for the field
         :param is_attribute: If True, the ``backend_key`` property will prepend "attributes." to field name
-        :param is_subscriptable: If True, a new field can be created by ``field["subkey"]``
         """
         self._key = key
         self._backend_key = alias if alias is not None else key
         self._doc = doc
         self._dtype = dtype
         self._is_attribute = is_attribute
-        self._is_subscriptable = is_subscriptable
 
     @property
     def key(self) -> str:
@@ -92,41 +86,29 @@ class QbField:
         return self._backend_key
 
     @property
-    def doc(self) -> str:
-        return self._doc
-
-    @property
     def dtype(self) -> t.Optional[t.Any]:
         """Return the primitive root type."""
         return extract_root_type(self._dtype)
 
-    @property
-    def annotation(self) -> t.Optional[t.Any]:
-        """Return the full type annotation."""
-        return self._dtype
-
-    @property
-    def is_attribute(self) -> bool:
-        return self._is_attribute
-
-    @property
-    def is_subscriptable(self) -> bool:
-        return self._is_subscriptable
+    def in_(self, value: t.Iterable[t.Any]):
+        """Return a filter for only values in the list"""
+        try:
+            set(value)
+        except TypeError:
+            raise TypeError('in_ must be iterable')
+        return QbFieldFilters(((self, 'in', value),))
 
     def __repr__(self) -> str:
         return (
-            f'{self.__class__.__name__}({self.key!r}'
+            f'{self.__class__.__name__}({self.backend_key!r}'
             + (f', {self._backend_key!r}' if self._backend_key != self.key else '')
             + (f', dtype={self._dtype or ""}')
-            + (f', is_attribute={self.is_attribute}')
-            + (f', is_subscriptable={self.is_subscriptable!r}' if self.is_subscriptable else '')
+            + (f', doc={self._doc!r}' if self._doc else '')
             + ')'
         )
 
     def __str__(self) -> str:
-        class_name = self.__class__.__name__
-        field_name = f'{self.backend_key}{".*" if self.is_subscriptable else ""}'
-        return f'{class_name}({field_name}) -> {self._dtype}'
+        return f'{self.__class__.__name__}({self.backend_key}) -> {self._dtype}'
 
     def __hash__(self):
         return hash((self.key, self.backend_key))
@@ -137,13 +119,9 @@ class QbField:
     def __ne__(self, value):
         return QbFieldFilters(((self, '!==', value),))
 
-    def in_(self, value: t.Iterable[t.Any]):
-        """Return a filter for only values in the list"""
-        try:
-            set(value)
-        except TypeError:
-            raise TypeError('in_ must be iterable')
-        return QbFieldFilters(((self, 'in', value),))
+    def __dir__(self) -> list[str]:
+        """Return the field properties for tab completion."""
+        return sorted(set(super().__dir__()) - {'key', 'backend_key', 'dtype'})
 
     if t.TYPE_CHECKING:
 
@@ -223,18 +201,52 @@ class QbDictField(QbField):
         """Return a filter for only values with these keys"""
         return QbFieldFilters(((self, 'has_key', value),))
 
-    def __getitem__(self, key: str) -> 'QbAttrField':
+    def __getitem__(self, key: str) -> 'QbAnyField':
         """Return a new `QbField` with a nested key."""
-        if not self.is_subscriptable:
-            raise IndexError('This field is not subscriptable')
-        return QbAttrField(
-            f'{self.key}.{key}',
-            f'{self._backend_key}.{key}' if self.is_attribute else None,
-            is_attribute=self.is_attribute,
+        return QbAnyField(
+            key=f'{self.key}.{key}',
+            alias=f'{self._backend_key}.{key}' if self._is_attribute else None,
+            dtype=t.Any,
+            is_attribute=self._is_attribute,
         )
 
+    def __str__(self) -> str:
+        return f'{self.__class__.__name__}({self.backend_key}[...]) -> {self._dtype}'
 
-class QbAttrField(QbNumericField, QbArrayField, QbStrField, QbDictField):
+
+class QbAttributesField(QbDictField):
+    """The 'attributes' field of an ORM Node.
+
+    Used specifically for `orm.Node.attributes`, where the inner keys
+    are defined by the node's `AttributesModel`.
+    """
+
+    _typed_children: dict[str, QbField]
+
+    def __getattr__(self, key: str) -> 'QbField':
+        """Return a typed child field if known; otherwise raise AttributeError.
+
+        This enables autocomplete on fields such as:
+            orm.Int.fields.attributes.value
+            orm.Data.fields.attributes.source
+        """
+        if key.startswith('_'):
+            # normal attribute lookup
+            raise AttributeError(key)
+
+        children = getattr(self, '_typed_children', None) or {}
+        if key in children:
+            return children[key]
+
+        raise AttributeError(key)
+
+    def __dir__(self) -> list[str]:
+        """Expose typed children for autocompletion."""
+        children = getattr(self, '_typed_children', None) or {}
+        return sorted(set(super().__dir__()) | set(children.keys()))
+
+
+class QbAnyField(QbNumericField, QbArrayField, QbStrField, QbDictField):
     """A generic flavor of `QbField` covering all operations."""
 
     def of_type(self, value):
@@ -354,8 +366,12 @@ class QbFields:
     def __init__(self, fields: t.Optional[t.Dict[str, QbField]] = None):
         self._fields = fields or {}
 
+    def keys(self) -> list[str]:
+        """Return the field keys, sorted, prefixed with 'attribute.' if field is an attribute."""
+        return sorted([field.backend_key for field in self._fields.values()])
+
     def __repr__(self) -> str:
-        return pformat({key: str(value) for key, value in self._fields.items()})
+        return pformat({key: repr(value) for key, value in self._fields.items()}, width=500)
 
     def __str__(self) -> str:
         return str({key: str(value) for key, value in self._fields.items()})
@@ -399,79 +415,90 @@ class EntityFieldMeta(ABCMeta):
     def __init__(cls, name, bases, classdict):
         super().__init__(name, bases, classdict)
 
-        # only allow an existing fields attribute if has been generated from a subclass
+        # Only allow an existing fields attribute if has been generated from a subclass
         current_fields = getattr(cls, 'fields', None)
         if current_fields is not None and not isinstance(current_fields, QbFields):
             raise ValueError(f"class '{cls}' already has a `fields` attribute set")
 
-        fields = {}
+        fields: dict[str, t.Any] = {}
 
-        # If the class has an attribute ``Model`` that is a subclass of :class:`pydantic.BaseModel`, parse the model
-        # fields to build up the ``fields`` class attribute, which is used to allow specifying ``QueryBuilder`` filters
-        # programmatically.
-        if hasattr(cls, 'Model') and issubclass(cls.Model, BaseModel):
-            # If the class itself directly specifies the ``Model`` attribute, check that it is valid. Here, the check
-            # ``cls.__dict__`` is used instead of ``hasattr`` as the former only returns true if the class itself
-            # defines the attribute and does not just inherit it from a base class. In that case, this check will
-            # already have been performed for that subclass.
-
-            # When a class defines a ``Model``, the following check ensures that the model inherits from the same bases
-            # as the class containing the attribute itself. For example, if ``cls`` inherits from ``ClassA`` and
-            # ``ClassB`` that each define a ``Model``, the ``cls.Model`` class should inherit from both ``ClassA.Model``
-            # and ``ClassBModel`` or it will be losing the attributes of some of the models.
+        if cls._has_model('Model'):
             if 'Model' in cls.__dict__:
-                # Get all the base classes in the MRO of this class that define a class attribute ``Model`` that is a
-                # subclass of pydantic's ``BaseModel`` and not the class itself
-                cls_bases_with_model = [
-                    base
-                    for base in cls.__mro__
-                    if base is not cls and 'Model' in base.__dict__ and issubclass(base.Model, BaseModel)  # type: ignore[attr-defined]
-                ]
+                cls._validate_model_inheritance('Model')
 
-                # Now get the "leaf" bases, i.e., those base classes in the subclass list that themselves do not have a
-                # subclass in the tree. This set should be the base classes for the class' ``Model`` attribute.
-                cls_bases_with_model_leaves = {
-                    base
-                    for base in cls_bases_with_model
-                    if all(
-                        not issubclass(b.Model, base.Model)  # type: ignore[attr-defined]
-                        for b in cls_bases_with_model
-                        if b is not base
-                    )
-                }
-
-                cls_model_bases = {base.Model for base in cls_bases_with_model_leaves}  # type: ignore[attr-defined]
-
-                # If the base class does not have a base that defines a model, it means the ``Model`` should simply have
-                # ``pydantic.BaseModel`` as its sole base.
-                if not cls_model_bases:
-                    cls_model_bases = {
-                        BaseModel,
-                    }
-
-                # Get the set of bases of ``cls.Model`` that are a subclass of :class:`pydantic.BaseModel`.
-                model_bases = {base for base in cls.Model.__bases__ if issubclass(base, BaseModel)}
-
-                # For ``cls.Model`` to be valid, the bases that contain a model, should equal to the leaf bases of the
-                # ``cls`` itself that also define a model.
-                if model_bases != cls_model_bases and not getattr(cls, '_SKIP_MODEL_INHERITANCE_CHECK', False):
-                    bases = [f'{e.__module__}.{e.__name__}.Model' for e in cls_bases_with_model_leaves]
-                    raise RuntimeError(
-                        f'`{cls.__name__}.Model` does not subclass all necessary base classes. It should be: '
-                        f'`class Model({", ".join(sorted(bases))}):`'
-                    )
-
-            for key, field in cls.Model.model_fields.items():
+            Model = cls.Model  # type: ignore[attr-defined] # noqa N806
+            for key, field in Model.model_fields.items():
                 fields[key] = add_field(
                     key,
-                    alias=get_metadata(field, 'alias', None),
+                    alias=field.alias,
                     dtype=field.annotation,
                     doc=field.description,
-                    is_attribute=get_metadata(field, 'is_attribute', False),
-                    is_subscriptable=get_metadata(field, 'is_subscriptable', False),
                 )
 
+        # TODO should this be done more generally/recursively for all nested models?
+        if cls._has_model('AttributesModel'):
+            if 'AttributesModel' in cls.__dict__:
+                cls._validate_model_inheritance('AttributesModel')
+
+            try:
+                container_field = fields['attributes']
+            except KeyError:
+                raise KeyError(f"class '{cls}' was expected to have a `Model` with an 'attributes' field")
+
+            container_field._typed_children = {}
+
+            Model = cls.AttributesModel  # type: ignore[attr-defined] # noqa N806
+            for key, field in Model.model_fields.items():
+                if get_metadata(field, 'write_only'):
+                    continue
+
+                typed_field = add_field(
+                    key,
+                    alias=field.alias,
+                    dtype=field.annotation,
+                    doc=field.description,
+                    is_attribute=True,
+                )
+
+                container_field._typed_children[key] = typed_field
+                fields[key] = typed_field  # BACKWARDS COMPATIBILITY
+
+        # Finalize
         cls.fields = QbFields({key: fields[key] for key in sorted(fields)})
+
+    def _has_model(cls, model_name: str = 'Model') -> bool:
+        """Return whether the class has a model defined."""
+        return hasattr(cls, model_name) and issubclass(getattr(cls, model_name), OrmModel)
+
+    def _validate_model_inheritance(cls, model_name: str = 'Model') -> None:
+        """Validate that model class inherits from all necessary base classes."""
+
+        cls_bases_with_model = [
+            base
+            for base in cls.__mro__
+            if base is not cls and model_name in base.__dict__ and issubclass(getattr(base, model_name), OrmModel)
+        ]
+
+        cls_bases_with_model_leaves = {
+            base
+            for base in cls_bases_with_model
+            if all(
+                not issubclass(getattr(b, model_name), getattr(base, model_name))
+                for b in cls_bases_with_model
+                if b is not base
+            )
+        }
+
+        cls_model_bases = {getattr(base, model_name) for base in cls_bases_with_model_leaves} or {OrmModel}
+
+        model_bases = {base for base in getattr(cls, model_name).__bases__ if issubclass(base, OrmModel)}
+
+        if model_bases != cls_model_bases and not getattr(cls, '_SKIP_MODEL_INHERITANCE_CHECK', False):
+            bases = [f'{e.__module__}.{e.__name__}.{model_name}' for e in cls_bases_with_model_leaves]
+            raise RuntimeError(
+                f'`{cls.__name__}.{model_name}` does not subclass all necessary base classes. It should be: '
+                f'`class {model_name}({", ".join(sorted(bases))}):`'
+            )
 
 
 class QbFieldArguments(t.TypedDict):
@@ -480,7 +507,6 @@ class QbFieldArguments(t.TypedDict):
     dtype: t.Optional[t.Any]
     doc: str
     is_attribute: bool
-    is_subscriptable: bool
 
 
 def add_field(
@@ -489,8 +515,7 @@ def add_field(
     *,
     dtype: t.Optional[t.Any] = None,
     doc: str = '',
-    is_attribute: bool = True,
-    is_subscriptable: bool = False,
+    is_attribute: bool = False,
 ) -> QbField:
     """Add a `dtype`-dependent `QbField` representation of a field.
 
@@ -499,7 +524,6 @@ def add_field(
     :param dtype: The data type of the field. If None, the field is of variable type.
     :param doc: A docstring for the field
     :param is_attribute: If True, the ``backend_key`` property will prepend "attributes." to field name
-    :param is_subscriptable: If True, a new field can be created by ``field["subkey"]``
     """
     kwargs: QbFieldArguments = {
         'key': key,
@@ -507,15 +531,14 @@ def add_field(
         'dtype': dtype,
         'doc': doc,
         'is_attribute': is_attribute,
-        'is_subscriptable': is_subscriptable,
     }
     if not isidentifier(key):
         raise ValueError(f'{key} is not a valid python identifier')
     if not is_attribute and alias:
         raise ValueError('only attribute fields may be aliased')
-    if not dtype:
-        return QbField(**kwargs)
-    root_type = extract_root_type(dtype)
+    if key == 'attributes':
+        return QbAttributesField(**kwargs)
+    root_type = extract_root_type(dtype) if dtype else None
     if root_type in (int, float, datetime.datetime):
         return QbNumericField(**kwargs)
     elif root_type is list:
@@ -525,4 +548,4 @@ def add_field(
     elif root_type is dict:
         return QbDictField(**kwargs)
     else:
-        return QbField(**kwargs)
+        return QbAnyField(**kwargs)

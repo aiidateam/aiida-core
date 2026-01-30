@@ -119,13 +119,11 @@ class TransportQueue:
             if transport_request.count == 0:
                 # IMPORTANT: Pop from _transport_requests BEFORE closing the transport.
                 # This prevents a race condition with async transports where:
-                # 1. close() is called, which for AsyncTransport uses run_until_complete(close_async)
-                # 2. With nest_asyncio (used by plumpy), this call yields back to the event loop
-                # 3. The event loop schedules close_async, then continues running another tasks
-                #   - for example one that requests the transport which is scheduled to be closed
-                # 4. The task now using the transport to do some operation awaits,
-                #   next the close_async task closes the transport while still in use -> error
-                # By poping first, new tasks will create a fresh transport request.
+                # 1. close() is called, which for AsyncTransport uses run_until_complete to run close_async
+                # 2. This can yield back to the event loop (via greenlet or re-entrant call)
+                # 3. The event loop then runs another task that requests the same transport
+                # 4. That task uses a transport that is being closed -> error
+                # By popping first, new tasks will create a fresh transport request.
                 self._transport_requests.pop(authinfo.pk, None)
 
                 if transport_request.future.done():

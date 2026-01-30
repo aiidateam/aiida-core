@@ -412,7 +412,6 @@ filterwarnings = [
   'ignore:The `Code` class is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   # https://github.com/aiidateam/plumpy/issues/283
   'ignore:There is no current event loop:DeprecationWarning:plumpy',
-  'ignore:There is no current event loop:DeprecationWarning:nest_asyncio',
   # spglib deprecation
   'ignore:dict interface is deprecated:DeprecationWarning',
   # https://github.com/aiidateam/archive-path/issues/21

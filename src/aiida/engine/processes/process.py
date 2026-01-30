@@ -40,6 +40,7 @@ import plumpy.futures
 import plumpy.persistence
 import plumpy.processes
 from kiwipy.communications import UnroutableError
+from plumpy import run_until_complete
 from plumpy.process_states import Finished, ProcessState
 from plumpy.processes import ConnectionClosed  # type: ignore[attr-defined]
 from plumpy.processes import Process as PlumpyProcess
@@ -361,8 +362,6 @@ class Process(PlumpyProcess):
             coro = self._launch_task(task_kill_job, self.node, self.runner.transport)
             self._cancelling_scheduler_job = asyncio.create_task(coro)
             try:
-                from plumpy import run_until_complete
-
                 run_until_complete(self.loop, self._cancelling_scheduler_job)
             except Exception as exc:
                 self.node.logger.error(f'While cancelling the scheduler job an error was raised: {exc}')

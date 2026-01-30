@@ -137,7 +137,7 @@ class TestTransportQueue:
 
         This is a regression test for a race condition with async transports where:
         1. close() is called, which for AsyncTransport uses run_until_complete()
-        2. With nest_asyncio (used by plumpy), this can yield to the event loop
+        2. This can yield back to the event loop (via greenlet for instance)
         3. Another task might enter and get the same transport_request
         4. That task tries to use the transport that's being closed -> error
 

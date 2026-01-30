@@ -1884,21 +1884,13 @@ class AsyncTransport(Transport):
             await self.close_async()
 
     def run_command_blocking(self, func, *args, **kwargs):
-        """The event loop must be the one of manager."""
-        from plumpy.greenlet_bridge import await_only, in_worker_greenlet, run_in_thread
+        """Run an async transport method synchronously, handling nested event loop scenarios."""
+        from plumpy import run_until_complete
 
         from aiida.manage import get_manager
 
         loop = get_manager().get_runner().loop
-
-        if loop.is_running():
-            if in_worker_greenlet():
-                return await_only(func(*args, **kwargs))
-            else:
-                # Pass a factory so the awaitable is created fresh in the new thread's loop
-                return run_in_thread(lambda: func(*args, **kwargs))
-        else:
-            return loop.run_until_complete(func(*args, **kwargs))
+        return run_until_complete(loop, func(*args, **kwargs))
 
     def open(self):
         return self.run_command_blocking(self.open_async)

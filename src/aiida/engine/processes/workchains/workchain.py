@@ -15,6 +15,7 @@ import functools
 import logging
 import typing as t
 
+from plumpy.greenlet_bridge import greenlet_spawn
 from plumpy.persistence import auto_persist
 from plumpy.process_states import Continue, Wait
 from plumpy.processes import ProcessStateMachineMeta
@@ -298,8 +299,6 @@ class WorkChain(Process, metaclass=Protect):
     @override
     @Protect.final
     async def run(self) -> t.Any:
-        from plumpy.greenlet_bridge import greenlet_spawn
-
         self._stepper = self.spec().get_outline().create_stepper(self)  # type: ignore[arg-type]
         return await greenlet_spawn(self._do_step)
 

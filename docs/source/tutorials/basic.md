@@ -192,6 +192,13 @@ Now it's time to multiply the two numbers!
 await multiply.run_async(x, y)
 ```
 
+:::{note}
+Because this tutorial runs as a Jupyter notebook, we use `await multiply.run_async(...)` instead of the synchronous `multiply(...)`.
+Jupyter's kernel has an event loop already running, so process execution must be `await`-ed rather than run synchronously.
+In a regular Python script, the event loop is not running, so you can call `multiply(x, y)` directly.
+The same applies to `engine.run_async` vs `engine.run` used later in this tutorial.
+:::
+
 Success!
 The `calcfunction`-decorated `multiply` function has multiplied the two `Int` data nodes and returned a new `Int` data node whose value is the product of the two input nodes.
 Note that by executing the `multiply` function, all input and output nodes are automatically stored in the database:

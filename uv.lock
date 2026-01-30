@@ -241,7 +241,7 @@ requires-dist = [
     { name = "psycopg", extras = ["binary"], specifier = ">=3.0.2,<4" },
     { name = "pyasn1", marker = "extra == 'ssh-kerberos'", specifier = "~=0.4.8" },
     { name = "pycifrw", marker = "extra == 'atomic-tools'", specifier = "~=4.4" },
-    { name = "pydantic", specifier = "~=2.6" },
+    { name = "pydantic", specifier = "~=2.11" },
     { name = "pydata-sphinx-theme", marker = "extra == 'docs'", specifier = "~=0.15.1" },
     { name = "pymatgen", marker = "extra == 'atomic-tools'", specifier = ">=2024.3.1" },
     { name = "pympler", marker = "extra == 'tests'", specifier = "~=1.0" },

@@ -25,7 +25,16 @@ from .processes.process import Process
 from .runners import ResultAndPk
 from .utils import instantiate_process, is_process_scoped, prepare_inputs
 
-__all__ = ('await_processes', 'run', 'run_get_node', 'run_get_pk', 'submit')
+__all__ = (
+    'await_processes',
+    'run',
+    'run_async',
+    'run_get_node',
+    'run_get_node_async',
+    'run_get_pk',
+    'run_get_pk_async',
+    'submit',
+)
 
 TYPE_RUN_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
 # run can also be process function, but it is not clear what type this should be
@@ -48,6 +57,23 @@ def run(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwa
     return runner.run(process, inputs, **kwargs)
 
 
+async def run_async(
+    process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any
+) -> dict[str, t.Any]:
+    """Run the process with the supplied inputs in a local runner without blocking the event loop.
+
+    :param process: the process class or process function to run
+    :param inputs: the inputs to be passed to the process
+    :return: the outputs of the process
+    """
+    if isinstance(process, Process):
+        runner = process.runner
+    else:
+        runner = manager.get_manager().get_runner()
+
+    return await runner.run_async(process, inputs, **kwargs)
+
+
 def run_get_node(
     process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any
 ) -> tuple[dict[str, t.Any], ProcessNode]:
@@ -65,6 +91,23 @@ def run_get_node(
     return runner.run_get_node(process, inputs, **kwargs)
 
 
+async def run_get_node_async(
+    process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any
+) -> tuple[dict[str, t.Any], ProcessNode]:
+    """Run the process with the supplied inputs in a local runner without blocking the event loop.
+
+    :param process: the process class, instance, builder or function to run
+    :param inputs: the inputs to be passed to the process
+    :return: tuple of the outputs of the process and the process node
+    """
+    if isinstance(process, Process):
+        runner = process.runner
+    else:
+        runner = manager.get_manager().get_runner()
+
+    return await runner.run_get_node_async(process, inputs, **kwargs)
+
+
 def run_get_pk(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any) -> ResultAndPk:
     """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
@@ -78,6 +121,23 @@ def run_get_pk(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None
         runner = manager.get_manager().get_runner()
 
     return runner.run_get_pk(process, inputs, **kwargs)
+
+
+async def run_get_pk_async(
+    process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any
+) -> ResultAndPk:
+    """Run the process with the supplied inputs in a local runner without blocking the event loop.
+
+    :param process: the process class, instance, builder or function to run
+    :param inputs: the inputs to be passed to the process
+    :return: tuple of the outputs of the process and process node pk
+    """
+    if isinstance(process, Process):
+        runner = process.runner
+    else:
+        runner = manager.get_manager().get_runner()
+
+    return await runner.run_get_pk_async(process, inputs, **kwargs)
 
 
 def submit(
@@ -182,3 +242,5 @@ def await_processes(nodes: t.Sequence[ProcessNode], wait_interval: int = 1) -> N
 # Allow one to also use run.get_node and run.get_pk as a shortcut, without having to import the functions themselves
 run.get_node = run_get_node  # type: ignore[attr-defined]
 run.get_pk = run_get_pk  # type: ignore[attr-defined]
+run_async.get_node = run_get_node_async  # type: ignore[attr-defined]
+run_async.get_pk = run_get_pk_async  # type: ignore[attr-defined]

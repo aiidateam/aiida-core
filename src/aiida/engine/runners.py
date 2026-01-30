@@ -267,6 +267,56 @@ class Runner:
 
             return process_inited.outputs, process_inited.node
 
+    async def _run_async(
+        self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any
+    ) -> Tuple[Dict[str, Any], ProcessNode]:
+        """Run the process with the supplied inputs in this runner without blocking the event loop.
+
+        The return value will be the results of the completed process.
+
+        :param process: the process class or process function to run
+        :param inputs: the inputs to be passed to the process
+        :return: tuple of the outputs of the process and the calculation node
+        """
+        assert not self._closed
+
+        inputs = utils.prepare_inputs(inputs, **kwargs)
+
+        if utils.is_process_function(process):
+            run_get_node_async = getattr(process, 'run_get_node_async', None)
+            if run_get_node_async is None:
+                raise exceptions.InvalidOperation(
+                    'Process function does not support async execution. '
+                    'Use the synchronous launcher or update to a version that provides `run_get_node_async`.'
+                )
+            result, node = await run_get_node_async(**inputs)
+            return result, node
+
+        with utils.loop_scope(self.loop):
+            process_inited = self.instantiate_process(process, **inputs)
+
+            def kill_process(_num, _frame):
+                """Send the kill signal to the process in the current scope."""
+                if process_inited.is_killing:
+                    LOGGER.warning('runner received interrupt, process %s already being killed', process_inited.pid)
+                    return
+                LOGGER.critical('runner received interrupt, killing process %s', process_inited.pid)
+                process_inited.kill(msg_text='Process was killed because the runner received an interrupt')
+
+            original_handler_int = signal.getsignal(signal.SIGINT)
+            original_handler_term = signal.getsignal(signal.SIGTERM)
+
+            try:
+                signal.signal(signal.SIGINT, kill_process)
+                signal.signal(signal.SIGTERM, kill_process)
+                await process_inited.step_until_terminated()
+                process_inited.future().result()
+            finally:
+                signal.signal(signal.SIGINT, original_handler_int)
+                signal.signal(signal.SIGTERM, original_handler_term)
+
+            return process_inited.outputs, process_inited.node
+
     def run(self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any) -> Dict[str, Any]:
         """Run the process with the supplied inputs in this runner that will block until the process is completed.
 
@@ -277,6 +327,20 @@ class Runner:
         :return: the outputs of the process
         """
         result, _ = self._run(process, inputs, **kwargs)
+        return result
+
+    async def run_async(
+        self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any
+    ) -> Dict[str, Any]:
+        """Run the process with the supplied inputs in this runner without blocking the event loop.
+
+        The return value will be the results of the completed process.
+
+        :param process: the process class or process function to run
+        :param inputs: the inputs to be passed to the process
+        :return: the outputs of the process
+        """
+        result, _ = await self._run_async(process, inputs, **kwargs)
         return result
 
     def run_get_node(
@@ -293,6 +357,20 @@ class Runner:
         result, node = self._run(process, inputs, **kwargs)
         return ResultAndNode(result, node)
 
+    async def run_get_node_async(
+        self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any
+    ) -> ResultAndNode:
+        """Run the process with the supplied inputs in this runner without blocking the event loop.
+
+        The return value will be the results of the completed process.
+
+        :param process: the process class or process function to run
+        :param inputs: the inputs to be passed to the process
+        :return: tuple of the outputs of the process and the calculation node
+        """
+        result, node = await self._run_async(process, inputs, **kwargs)
+        return ResultAndNode(result, node)
+
     def run_get_pk(self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any) -> ResultAndPk:
         """Run the process with the supplied inputs in this runner that will block until the process is completed.
 
@@ -303,6 +381,20 @@ class Runner:
         :return: tuple of the outputs of the process and process node pk
         """
         result, node = self._run(process, inputs, **kwargs)
+        return ResultAndPk(result, node.pk)
+
+    async def run_get_pk_async(
+        self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any
+    ) -> ResultAndPk:
+        """Run the process with the supplied inputs in this runner without blocking the event loop.
+
+        The return value will be the results of the completed process.
+
+        :param process: the process class or process function to run
+        :param inputs: the inputs to be passed to the process
+        :return: tuple of the outputs of the process and process node pk
+        """
+        result, node = await self._run_async(process, inputs, **kwargs)
         return ResultAndPk(result, node.pk)
 
     def call_on_process_finish(self, pk: int, callback: Callable[[], Any]) -> None:

@@ -107,6 +107,12 @@ class ProcessFunctionType(t.Protocol, t.Generic[P, R_co, N]):
 
     def run_get_node(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, N]: ...
 
+    async def run_async(self, *args: P.args, **kwargs: P.kwargs) -> R_co: ...
+
+    async def run_get_pk_async(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, int]: ...
+
+    async def run_get_node_async(self, *args: P.args, **kwargs: P.kwargs) -> tuple[dict[str, t.Any] | None, N]: ...
+
     is_process_function: bool
 
     node_class: t.Type[N]
@@ -253,6 +259,83 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
 
             return result, process.node
 
+        async def run_get_node_async(*args, **kwargs) -> tuple[dict[str, t.Any] | None, 'ProcessNode']:
+            """Run the FunctionProcess with the supplied inputs in a local runner without blocking the event loop.
+
+            :param args: input arguments to construct the FunctionProcess
+            :param kwargs: input keyword arguments to construct the FunctionProcess
+            :return: tuple of the outputs of the process and the process node
+            """
+            frame_delta = 1000
+            frame_count = get_stack_size()
+            stack_limit = sys.getrecursionlimit()
+            LOGGER.info('Executing process function, current stack status: %d frames of %d', frame_count, stack_limit)
+
+            # If the current frame count is more than 80% of the stack limit, or comes within 200 frames, increase the
+            # stack limit by ``frame_delta``.
+            if frame_count > min(0.8 * stack_limit, stack_limit - 200):
+                LOGGER.warning(
+                    'Current stack contains %d frames which is close to the limit of %d. Increasing the limit by %d',
+                    frame_count,
+                    stack_limit,
+                    frame_delta,
+                )
+                sys.setrecursionlimit(stack_limit + frame_delta)
+
+            manager = get_manager()
+            runner = manager.get_runner()
+            inputs = process_class.create_inputs(*args, **kwargs)
+
+            # Remove all the known inputs from the kwargs
+            for port in process_class.spec().inputs:
+                kwargs.pop(port, None)
+
+            # If any kwargs remain, the spec should be dynamic, so we raise if it isn't
+            if kwargs and not process_class.spec().inputs.dynamic:
+                raise ValueError(f'{function.__name__} does not support these kwargs: {kwargs.keys()}')
+
+            process: Process = process_class(inputs=inputs, runner=runner)
+
+            # Only add handlers for interrupt signal to kill the process if we are in a local and not a daemon runner.
+            # Without this check, running process functions in a daemon worker would be killed if the daemon is shutdown
+            current_runner = manager.get_runner()
+            original_handler = None
+            kill_signal = signal.SIGINT
+
+            if not current_runner.is_daemon_runner:
+
+                def kill_process(_num, _frame):
+                    """Send the kill signal to the process in the current scope."""
+                    LOGGER.critical('runner received interrupt, killing process %s', process.pid)
+                    result = process.kill(msg_text='Process was killed because the runner received an interrupt')
+                    return result
+
+                # Store the current handler on the signal such that it can be restored after process has terminated
+                original_handler = signal.getsignal(kill_signal)
+                signal.signal(kill_signal, kill_process)
+
+            try:
+                from aiida.engine import utils as engine_utils
+
+                with engine_utils.loop_scope(runner.loop):
+                    await process.step_until_terminated()
+                process.future().result()
+            finally:
+                # If the `original_handler` is set, that means the `kill_process` was bound, which needs to be reset
+                if original_handler:
+                    signal.signal(signal.SIGINT, original_handler)
+
+            store_provenance = inputs.get('metadata', {}).get('store_provenance', True)
+            if not store_provenance:
+                process.node._storable = False
+                process.node._unstorable_message = 'cannot store node because it was run with `store_provenance=False`'
+
+            result = process.outputs
+            if result and len(result) == 1 and process.SINGLE_OUTPUT_LINKNAME in result:
+                return result[process.SINGLE_OUTPUT_LINKNAME], process.node
+
+            return result, process.node
+
         def run_get_pk(*args, **kwargs) -> tuple[dict[str, t.Any] | None, int]:
             """Recreate the `run_get_pk` utility launcher.
 
@@ -265,15 +348,36 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
             assert node.pk is not None
             return result, node.pk
 
+        async def run_get_pk_async(*args, **kwargs) -> tuple[dict[str, t.Any] | None, int]:
+            """Recreate the `run_get_pk` utility launcher without blocking the event loop.
+
+            :param args: input arguments to construct the FunctionProcess
+            :param kwargs: input keyword arguments to construct the FunctionProcess
+            :return: tuple of the outputs of the process and the process node pk
+
+            """
+            result, node = await run_get_node_async(*args, **kwargs)
+            assert node.pk is not None
+            return result, node.pk
+
         @functools.wraps(function)
         def decorated_function(*args, **kwargs):
             """This wrapper function is the actual function that is called."""
             result, _ = run_get_node(*args, **kwargs)
             return result
 
+        @functools.wraps(function)
+        async def decorated_function_async(*args, **kwargs):
+            """Async wrapper for running a process function without blocking the event loop."""
+            result, _ = await run_get_node_async(*args, **kwargs)
+            return result
+
         decorated_function.run = decorated_function  # type: ignore[attr-defined]
         decorated_function.run_get_pk = run_get_pk  # type: ignore[attr-defined]
         decorated_function.run_get_node = run_get_node  # type: ignore[attr-defined]
+        decorated_function.run_async = decorated_function_async  # type: ignore[attr-defined]
+        decorated_function.run_get_pk_async = run_get_pk_async  # type: ignore[attr-defined]
+        decorated_function.run_get_node_async = run_get_node_async  # type: ignore[attr-defined]
         decorated_function.is_process_function = True  # type: ignore[attr-defined]
         decorated_function.node_class = node_class  # type: ignore[attr-defined]
         decorated_function.process_class = process_class  # type: ignore[attr-defined]

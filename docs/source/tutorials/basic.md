@@ -189,7 +189,7 @@ y = orm.Int(3)
 Now it's time to multiply the two numbers!
 
 ```{code-cell} ipython3
-multiply(x, y)
+await multiply.run_async(x, y)
 ```
 
 Success!
@@ -372,10 +372,10 @@ One nifty feature of the builder is the ability to use tab completion for the in
 Try it out by typing `builder.` + `<TAB>` in the verdi shell.
 :::
 
-To execute the `CalcJob`, we use the `run` function provided by the AiiDA engine, and wait for the process to complete:
+To execute the `CalcJob`, we use the `run_async` function provided by the AiiDA engine, and wait for the process to complete:
 
 ```{code-cell} ipython3
-engine.run(builder)
+await engine.run_async(builder)
 ```
 
 Besides the sum of the two `Int` nodes, the calculation function also returns two other outputs: one of type `RemoteData` and one of type `FolderData`.
@@ -532,7 +532,7 @@ Once the `WorkChain` input has been set up, we run it with the AiiDA engine:
 
 ```{code-cell} ipython3
 from aiida import engine
-engine.run(builder)
+await engine.run_async(builder)
 ```
 
 Now quickly leave the IPython shell and check the process list:
@@ -608,7 +608,7 @@ The provenance graph should be similar to the one we showed at the start of this
 
 ## Submitting to the daemon
 
-When we used the `run` command in the previous sections, the IPython shell was blocked while it was waiting for the `CalcJob` to finish.
+When we used the `run_async` function in the previous sections, the notebook cell was waiting for the `CalcJob` to finish.
 This is not a problem when we're simply adding two number together, but if we want to run multiple calculations that take hours or days, this is no longer practical.
 Instead, we are going to *submit* the `CalcJob` to the AiiDA *daemon*.
 The daemon is a program that runs in the background and manages submitted calculations until they are *terminated*.

@@ -54,7 +54,7 @@ jobs:
         - 5001:22
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql graphviz
@@ -101,7 +101,7 @@ jobs:
         - 15672:15672
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install graphviz
       run: sudo apt update && sudo apt install graphviz
@@ -129,7 +129,7 @@ jobs:
     timeout-minutes: 20
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install graphviz
       run: sudo apt update && sudo apt install graphviz
@@ -154,7 +154,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install aiida-core
       uses: ./.github/actions/install-aiida-core
@@ -197,7 +197,7 @@ jobs:
         - 15672:15672
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install aiida-core
       uses: ./.github/actions/install-aiida-core

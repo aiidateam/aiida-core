@@ -44,7 +44,7 @@ def main():
             },
         )
 
-        # 🔑 This is the part under test
+        # This is the part under test
         with PsqlDosMigrator(profile) as migrator:
             migrator.get_schema_version_head()
             migrator.get_schema_version_profile()

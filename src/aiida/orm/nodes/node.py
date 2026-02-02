@@ -30,7 +30,7 @@ from typing import (
 )
 from uuid import UUID
 
-from pydantic import field_serializer
+from pydantic import create_model, field_serializer
 from typing_extensions import Self
 
 from aiida.common import exceptions
@@ -301,31 +301,56 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             return str(value)
 
     def __init_subclass__(cls, **kwargs) -> None:
+        """Customize subclass creation.
+
+        This method ensures that each `Node` subclass has its own dedicated `Model`, and that the model's `attributes`
+        field points to the subclass's dedicated `AttributesModel`. The method takes care of dynamically assigning
+        models in case they are not explicitly defined in the subclass. This ensures proper namespacing and avoids
+        leaking of base class models into subclasses.
+        """
         super().__init_subclass__(**kwargs)
 
-        Model = cast(type[Node.Model], getattr(cls, 'Model'))  # noqa N806
-        Attrs = cast(type[Node.AttributesModel], getattr(cls, 'AttributesModel'))  # noqa N806
-
-        if 'Model' not in cls.__dict__:
-            parent_model = Model
-            Model = cast(  # noqa N806
-                type[Node.Model],
+        AttributesModel = cast(type[Node.AttributesModel], getattr(cls, 'AttributesModel'))  # noqa: N806
+        if 'AttributesModel' not in cls.__dict__:
+            AttributesModel = cast(  # noqa: N806
+                type[Node.AttributesModel],
                 type(
-                    'Model',
-                    (parent_model,),
+                    'AttributesModel',
+                    (AttributesModel,),
                     {
                         '__module__': cls.__module__,
-                        '__qualname__': f'{cls.__qualname__}.Model',
+                        '__qualname__': f'{cls.__qualname__}.AttributesModel',
                     },
                 ),
             )
-            cls.Model = Model  # type: ignore[misc]
+            cls.AttributesModel = AttributesModel  # type: ignore[misc]
 
-        base_field = Model.model_fields['attributes']
-        new_field = deepcopy(base_field)
-        new_field.annotation = Attrs
-        Model.model_fields['attributes'] = new_field
-        Model.model_rebuild(force=True)
+        if 'Model' in cls.__dict__:
+            base_field = deepcopy(cls.Model.model_fields['attributes'])
+            base_field.annotation = AttributesModel
+            base_field.default_factory = AttributesModel
+            cls.Model.model_fields['attributes'] = base_field
+            cls.Model.__annotations__ = dict(getattr(cls.Model, '__annotations__', {}))
+            cls.Model.__annotations__['attributes'] = AttributesModel
+            cls.Model.model_rebuild(force=True)
+        else:
+            parent_model = cast(type[Node.Model], getattr(cls, 'Model'))  # noqa: N806
+
+            base_field = deepcopy(parent_model.model_fields['attributes'])
+            base_field.annotation = AttributesModel
+            base_field.default_factory = AttributesModel
+
+            Model = cast(  # noqa: N806
+                type[Node.Model],
+                create_model(
+                    'Model',
+                    __base__=parent_model,
+                    __module__=cls.__module__,
+                    __qualname__=f'{cls.__qualname__}.Model',
+                    attributes=(AttributesModel, base_field),
+                ),
+            )
+            cls.Model = Model  # type: ignore[misc]
 
     def __init__(
         self,

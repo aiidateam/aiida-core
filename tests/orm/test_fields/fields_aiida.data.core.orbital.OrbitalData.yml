@@ -1,4 +1,4 @@
-attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.data.data.Data.AttributesModel'>,
+attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.data.orbital.OrbitalData.AttributesModel'>,
   doc='The node attributes')
 computer: QbNumericField('computer', dtype=typing.Optional[int], doc='The PK of the
   computer')

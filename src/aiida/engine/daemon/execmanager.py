@@ -457,7 +457,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
     source_list = stash_options.get('source_list', [])
     target_base = Path(stash_options['target_base'])
     dereference = stash_options.get('dereference', False)
-    skip_missing = stash_options.get('skip_missing', True)
+    fail_on_missing = stash_options.get('fail_on_missing', False)
 
     if not source_list:
         EXEC_LOGGER.warning(f'stashing source_list is empty for calculation<{calculation.pk}>. Stashing skipped.')
@@ -517,9 +517,9 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
                         await transport.copy_async(source_filepath, target_filepath)
                     except (OSError, ValueError) as exc:
                         if not await transport.path_exists_async(source_filepath):
-                            if skip_missing:
-                                EXEC_LOGGER.debug(
-                                    f'File not found {source_filepath}. Skipping, because skip_missing=True'
+                            if not fail_on_missing:
+                                EXEC_LOGGER.warning(
+                                    f'File not found {source_filepath}. Skipping, because fail_on_missing=False'
                                 )
                                 continue
                             else:
@@ -545,7 +545,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
             target_basepath=str(target_basepath),
             stash_mode=StashMode(stash_mode),
             source_list=source_list,
-            skip_missing=skip_missing,
+            fail_on_missing=fail_on_missing,
         ).store()
 
     elif stash_mode in [
@@ -565,16 +565,16 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
 
         source_list_abs = [source_basepath / source for source in source_list]
 
-        # When skip_missing is False, check that all files exist before compressing
-        if not skip_missing:
+        # When fail_on_missing is True, check that all files exist before compressing
+        if fail_on_missing:
             for source_filepath in source_list_abs:
                 if has_magic(str(source_filepath)):
                     raise exceptions.StashingError(
-                        'Stashing with glob patterns is not supported when skip_missing is False. Stashing failed.'
+                        'Stashing with glob patterns is not supported when fail_on_missing is True. Stashing failed.'
                     )
                 if not await transport.path_exists_async(source_filepath):
                     raise exceptions.StashingError(
-                        f'File {source_filepath} does not exist and skip_missing is False. Stashing failed.'
+                        f'File {source_filepath} does not exist and fail_on_missing is True. Stashing failed.'
                     )
 
         remote_stash = RemoteStashCompressedData(
@@ -583,7 +583,7 @@ async def stash_calculation(calculation: CalcJobNode, transport: Transport) -> N
             stash_mode=StashMode(stash_mode),
             source_list=source_list,
             dereference=dereference,
-            skip_missing=skip_missing,
+            fail_on_missing=fail_on_missing,
         )
 
         try:

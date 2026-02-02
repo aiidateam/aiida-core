@@ -493,8 +493,8 @@ def test_all_modes(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path
         assert unstashed_file.read_text() == expected_content
 
 
-def test_skip_missing_validation_rejects_patterns(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
-    """Test that patterns are rejected when skip_missing=False."""
+def test_fail_on_missing_validation_rejects_patterns(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
+    """Test that patterns are rejected when fail_on_missing=True."""
     source = tmp_path / 'source'
     source.mkdir()
 
@@ -509,7 +509,7 @@ def test_skip_missing_validation_rejects_patterns(fixture_sandbox, aiida_localho
                     'stash_mode': StashMode.COPY.value,
                     'target_base': str(tmp_path / 'target'),
                     'source_list': ['*.txt'],  # Pattern
-                    'skip_missing': False,
+                    'fail_on_missing': True,
                 },
             },
         },
@@ -523,9 +523,9 @@ def test_skip_missing_validation_rejects_patterns(fixture_sandbox, aiida_localho
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.requires_rmq
 @pytest.mark.parametrize('stash_mode', [StashMode.COPY.value, StashMode.COMPRESS_TARGZ.value])
-@pytest.mark.parametrize('skip_missing', [True, False])
-def test_skip_missing_with_missing_file(aiida_localhost, tmp_path, stash_mode, skip_missing):
-    """Test skip_missing behavior when file is missing."""
+@pytest.mark.parametrize('fail_on_missing', [False, True])
+def test_fail_on_missing_with_missing_file(aiida_localhost, tmp_path, stash_mode, fail_on_missing):
+    """Test fail_on_missing behavior when file is missing."""
     from aiida.engine import run_get_node
 
     source = tmp_path / 'source'
@@ -544,7 +544,7 @@ def test_skip_missing_with_missing_file(aiida_localhost, tmp_path, stash_mode, s
                     'stash_mode': stash_mode,
                     'target_base': str(tmp_path / 'target'),
                     'source_list': ['missing.txt'],
-                    'skip_missing': skip_missing,
+                    'fail_on_missing': fail_on_missing,
                 },
             },
         },
@@ -555,7 +555,7 @@ def test_skip_missing_with_missing_file(aiida_localhost, tmp_path, stash_mode, s
 
     _, node = run_get_node(CalculationFactory('core.stash'), **stash_inputs)
 
-    if skip_missing:
+    if not fail_on_missing:
         assert node.is_finished_ok
     else:
         assert node.is_failed

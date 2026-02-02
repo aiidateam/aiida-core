@@ -793,8 +793,6 @@ async def test_stashing(
 
             monkeypatch.setattr(transport, 'compress_async', mock_compress_async)
 
-            # For compress modes, errors are logged as warnings but no exception is raised
-            # See https://github.com/aiidateam/aiida-core/issues/6789
             with caplog.at_level(logging.WARNING):
                 await execmanager.stash_calculation(node, transport)
                 assert any('Failed to stash' in message for message in caplog.messages)

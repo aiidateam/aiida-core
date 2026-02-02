@@ -176,22 +176,22 @@ def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
     elif dereference is not None:
         return '`metadata.options.stash.dereference` is only valid for compression stashing modes'
 
-    skip_missing = stash_options.get('skip_missing', None)
+    fail_on_missing = stash_options.get('fail_on_missing', None)
 
     if stash_mode != StashMode.SUBMIT_CUSTOM_CODE.value:
-        # For non-submit_custom_code modes, skip_missing defaults to True if not specified
-        if skip_missing is not None and not isinstance(skip_missing, bool):
-            return f'`metadata.options.stash.skip_missing` should be a boolean, got: {skip_missing}'
-        # When skip_missing is False, patterns are not allowed (only for copy and compress modes)
-        if skip_missing is False:
+        # For non-submit_custom_code modes, fail_on_missing defaults to False if not specified
+        if fail_on_missing is not None and not isinstance(fail_on_missing, bool):
+            return f'`metadata.options.stash.fail_on_missing` should be a boolean, got: {fail_on_missing}'
+        # When fail_on_missing is True, patterns are not allowed (only for copy and compress modes)
+        if fail_on_missing is True:
             for src in source_list:
                 if has_magic(src):
                     return (
                         f'`metadata.options.stash.source_list` cannot contain glob patterns when '
-                        f'`skip_missing` is False, but found pattern: {src}'
+                        f'`fail_on_missing` is True, but found pattern: {src}'
                     )
-    elif skip_missing is not None:
-        return '`metadata.options.stash.skip_missing` is not valid for the `submit_custom_code` stash mode'
+    elif fail_on_missing is not None:
+        return '`metadata.options.stash.fail_on_missing` is not valid for the `submit_custom_code` stash mode'
 
     return None
 
@@ -503,11 +503,11 @@ class CalcJob(Process):
             help='Whether to follow symlinks while stashing or not, specific to StashMode.COMPRESS_* enums',
         )
         spec.input(
-            'metadata.options.stash.skip_missing',
+            'metadata.options.stash.fail_on_missing',
             valid_type=bool,
             required=False,
-            help='If True (default), patterns are allowed and missing files are skipped. If False, all files must be '
-            'specified explicitly (no patterns) and all must exist, otherwise it results in calcjob failure. '
+            help='If True, all files must be specified explicitly (no patterns) and all must exist, otherwise it '
+            'results in calcjob failure. If False (default), patterns are allowed and missing files are skipped. '
             'Only affects copy and compress modes.',
         )
         spec.output(

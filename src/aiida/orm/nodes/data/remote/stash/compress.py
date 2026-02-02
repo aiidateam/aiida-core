@@ -34,9 +34,9 @@ class RemoteStashCompressedData(RemoteStashData):
         dereference: bool = MetadataField(
             description='The format of the compression used when stashed',
         )
-        skip_missing: bool = MetadataField(
-            description='Whether missing files were skipped during stashing',
-            default=True,
+        fail_on_missing: bool = MetadataField(
+            description='Whether stashing should fail if any files are missing',
+            default=False,
         )
 
     def __init__(
@@ -45,7 +45,7 @@ class RemoteStashCompressedData(RemoteStashData):
         target_basepath: str,
         source_list: List,
         dereference: bool,
-        skip_missing: bool = True,
+        fail_on_missing: bool = False,
         **kwargs,
     ):
         """Construct a new instance
@@ -54,13 +54,13 @@ class RemoteStashCompressedData(RemoteStashData):
         :param target_basepath: absolute path to place the compressed file (path+filename).
         :param source_list: the list of source files.
         :param dereference: whether to follow symlinks while stashing.
-        :param skip_missing: whether missing files were skipped during stashing.
+        :param fail_on_missing: whether stashing should fail if any files are missing.
         """
         super().__init__(stash_mode, **kwargs)
         self.target_basepath = target_basepath
         self.source_list = source_list
         self.dereference = dereference
-        self.skip_missing = skip_missing
+        self.fail_on_missing = fail_on_missing
 
         if stash_mode not in [
             StashMode.COMPRESS_TAR,
@@ -126,19 +126,19 @@ class RemoteStashCompressedData(RemoteStashData):
         self.base.attributes.set('source_list', value)
 
     @property
-    def skip_missing(self) -> bool:
-        """Return whether missing files were skipped during stashing.
+    def fail_on_missing(self) -> bool:
+        """Return whether stashing should fail if any files are missing.
 
-        :return: the skip_missing flag.
+        :return: the fail_on_missing flag.
         """
         # The default is set for backward compatibility
-        return self.base.attributes.get('skip_missing', True)
+        return self.base.attributes.get('fail_on_missing', False)
 
-    @skip_missing.setter
-    def skip_missing(self, value: bool):
-        """Set whether missing files were skipped during stashing.
+    @fail_on_missing.setter
+    def fail_on_missing(self, value: bool):
+        """Set whether stashing should fail if any files are missing.
 
-        :param value: the skip_missing flag.
+        :param value: the fail_on_missing flag.
         """
         type_check(value, bool)
-        self.base.attributes.set('skip_missing', value)
+        self.base.attributes.set('fail_on_missing', value)

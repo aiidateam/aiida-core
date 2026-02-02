@@ -5,13 +5,14 @@ from __future__ import annotations
 import typing as t
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
+from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
 if t.TYPE_CHECKING:
     from aiida.orm import Entity
 
 
-def get_metadata(field_info: t.Any, key: str, default: t.Any | None = None) -> t.Any:
+def get_metadata(field_info: FieldInfo, key: str, default: t.Any | None = None) -> t.Any:
     """Return a the metadata of the given field for a particular key.
 
     :param field_info: The field from which to retrieve the metadata.
@@ -49,18 +50,23 @@ class OrmModel(BaseModel, defer_build=True):
         :return: The derived creation model class.
         """
 
-        new_name = cls.__qualname__.replace('Model', 'CreateModel')
+        cached = cls.__dict__.get('_AIIDA_CREATE_MODEL')
+        if isinstance(cached, type) and issubclass(cached, OrmModel):
+            return cached
+
         CreateModel = create_model(  # noqa: N806
-            new_name,
+            'CreateModel',
             __base__=cls,
             __module__=cls.__module__,
+            __qualname__=cls.__qualname__.replace('Model', 'CreateModel'),
         )
-        CreateModel.__qualname__ = new_name
         CreateModel.model_config['extra'] = 'ignore'
         CreateModel.model_config['json_schema_extra'] = {
             **CreateModel.model_config.get('json_schema_extra', {}),  # type: ignore[dict-item]
             'additionalProperties': False,
         }
+
+        CreateModel.model_rebuild(force=True)
 
         readonly_fields: t.List[str] = []
         for key, field in CreateModel.model_fields.items():
@@ -92,8 +98,8 @@ class OrmModel(BaseModel, defer_build=True):
         decorators.field_validators = prune_field_decorators(decorators.field_validators)
         decorators.field_serializers = prune_field_decorators(decorators.field_serializers)
 
-        # If called on CreateModel, return self
-        CreateModel._as_create_model = lambda: CreateModel  # type: ignore[method-assign]
+        # Make subsequent calls idempotent for this specific class
+        cls._AIIDA_CREATE_MODEL = CreateModel  # type: ignore[attr-defined]
 
         CreateModel.model_rebuild(force=True)
         return CreateModel

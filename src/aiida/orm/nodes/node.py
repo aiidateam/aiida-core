@@ -334,7 +334,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             cls.Model.__annotations__['attributes'] = AttributesModel
             cls.Model.model_rebuild(force=True)
         else:
-            parent_model = cast(type[Node.Model], getattr(cls, 'Model'))  # noqa: N806
+            parent_model = cast(type[Node.Model], getattr(cls, 'Model'))
 
             base_field = deepcopy(parent_model.model_fields['attributes'])
             base_field.annotation = AttributesModel

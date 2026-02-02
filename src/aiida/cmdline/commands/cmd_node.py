@@ -330,6 +330,43 @@ def extras(nodes, keys, fmt, identifier, raw):
     echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=False)
 
 
+def _warn_about_stash_nodes(pks_to_delete: set[int]) -> None:
+    """Warn about stash nodes whose target paths won't be automatically cleaned."""
+    from aiida.calculations.stash import StashCalculation
+    from aiida.orm import QueryBuilder
+    from aiida.orm.nodes.data.remote.stash import RemoteStashData
+
+    if not pks_to_delete:
+        return
+
+    # Find StashCalculation nodes in the deletion set
+    qb = QueryBuilder()
+    qb.append(
+        StashCalculation,
+        filters={'id': {'in': pks_to_delete}},
+        tag='stash_calc',
+    )
+    # Find their RemoteStashData output nodes
+    qb.append(
+        RemoteStashData,
+        with_incoming='stash_calc',
+        project=['id', 'attributes.target_basepath'],
+    )
+    stash_info = qb.all()
+
+    if not stash_info:
+        return
+
+    echo.echo_warning(
+        f'{len(stash_info)} StashCalculation node(s) will be deleted. '
+        'Note: the actual location where the data is stashed will NOT be automatically cleaned.'
+    )
+    echo.echo_report('Target paths of stash nodes:')
+    for pk, target_path in stash_info:
+        echo.echo_report(f'  <{pk}>: {target_path}')
+    echo.echo_warning('Consider manually removing these paths from the remote computer.')
+
+
 @verdi_node.command('delete')
 @click.argument('identifier', nargs=-1, metavar='NODES')
 @options.DRY_RUN()
@@ -379,7 +416,7 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
         from aiida.tools.graph.graph_traversers import get_nodes_delete
 
         backend = get_manager().get_profile_storage()
-        # For here we ignore missing nodes will be raised via func:``delete_nodes`` in the next block
+        # Here we ignore missing nodes, because errors about them will be raised in _perform_delete
         pks_set_to_delete = get_nodes_delete(
             pks, get_links=False, missing_callback=lambda missing_pks: None, backend=backend, **traversal_rules
         )['nodes']
@@ -402,6 +439,8 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
             echo.echo_report('--clean-workdir ignored. CalcJobNode work directories are already cleaned.')
             _perform_delete()
             return
+
+        _warn_about_stash_nodes(pks_set_to_delete)
 
         descendant_pks = [remote_folder.pk for paths in path_mapping.values() for remote_folder in paths]
 

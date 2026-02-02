@@ -44,6 +44,8 @@ def manager(monkeypatch):
         """Set a mock version of the storage backend."""
         self._profile_storage = StorageBackend()
 
+    # This ensures the Manager starts each test with unloaded storage
+    monkeypatch.setattr(manager, '_profile_storage', None)
     monkeypatch.setattr(manager.__class__, 'get_profile_storage', get_profile_storage)
     yield manager
 

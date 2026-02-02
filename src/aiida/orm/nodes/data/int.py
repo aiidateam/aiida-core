@@ -14,7 +14,7 @@ import numbers
 
 from aiida.common.pydantic import MetadataField
 
-from .base import BaseType, to_aiida_type
+from .base import to_aiida_type
 from .numeric import NumericType
 
 __all__ = ('Int',)
@@ -25,7 +25,7 @@ class Int(NumericType):
 
     _type = int
 
-    class AttributesModel(BaseType.AttributesModel):
+    class AttributesModel(NumericType.AttributesModel):
         value: int = MetadataField(
             title='Integer value',
             description='The value of the integer',

@@ -4930,7 +4930,7 @@ wheels = [
 [[package]]
 name = "plumpy"
 version = "0.25.1"
-source = { git = "https://github.com/khsrali/plumpy.git?rev=greenlet#5bdb0f5ee50ef31ea2b720634ab4dcdaf7f5977d" }
+source = { git = "https://github.com/khsrali/plumpy.git?rev=greenlet#c036472726030f58dadf8d93bf2cfb6019040fff" }
 dependencies = [
     { name = "greenlet" },
     { name = "kiwipy", extra = ["rmq"] },

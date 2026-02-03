@@ -6,6 +6,7 @@ dereference: QbField('dereference', dtype=<class 'bool'>, is_attribute=True)
 description: QbStrField('description', dtype=typing.Optional[str], is_attribute=False)
 extras: QbDictField('extras', dtype=typing.Optional[typing.Dict[str, typing.Any]],
   is_attribute=False, is_subscriptable=True)
+fail_on_missing: QbField('fail_on_missing', dtype=<class 'bool'>, is_attribute=True)
 label: QbStrField('label', dtype=typing.Optional[str], is_attribute=False)
 mtime: QbNumericField('mtime', dtype=typing.Optional[datetime.datetime], is_attribute=False)
 node_type: QbStrField('node_type', dtype=typing.Optional[str], is_attribute=False)

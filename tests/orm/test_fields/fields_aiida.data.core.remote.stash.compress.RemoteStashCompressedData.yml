@@ -8,6 +8,8 @@ dereference: QbAnyField('attributes.dereference', dtype=<class 'bool'>, doc='The
   of the compression used when stashed')
 description: QbStrField('description', dtype=<class 'str'>, doc='The node description')
 extras: QbDictField('extras', dtype=typing.Dict[str, typing.Any], doc='The node extras')
+fail_on_missing: QbAnyField('attributes.fail_on_missing', dtype=<class 'bool'>, doc='Whether
+  stashing should fail if any files are missing')
 label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
 mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
   time of the node')

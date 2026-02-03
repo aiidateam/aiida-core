@@ -53,6 +53,7 @@ class RemoteStashFolderData(RemoteStashData):
         stash_mode = stash_mode or attributes.pop('stash_mode', None)
         target_basepath = target_basepath or attributes.pop('target_basepath', None)
         source_list = source_list or attributes.pop('source_list', None)
+        fail_on_missing = fail_on_missing if fail_on_missing is not None else attributes.pop('fail_on_missing', False)
 
         if stash_mode is None:
             raise ValueError('the `stash_mode` parameter must be specified.')

@@ -283,6 +283,7 @@ tests = [
   'pytest-rerunfailures~=12.0',
   'pytest-benchmark~=4.0',
   'pytest-regressions~=2.2',
+  'pytest-sugar~=1.0',
   'pytest-xdist~=3.6',
   'pympler~=1.0',
   'sphinx~=7.2.0',

@@ -46,7 +46,6 @@ jobs:
     - name: Install additional tutorial dependencies
       run: |
         uv pip install aiida-shell aiida-pythonjob
-        uv run reentry scan
 
     - name: Setup AiiDA profile for testing
       run: |
@@ -88,15 +87,7 @@ jobs:
 
     - name: Setup AiiDA profile for docs build
       run: |
-        uv run verdi setup \
-          --non-interactive \
-          --profile docs-profile \
-          --email docs@localhost \
-          --first-name Docs \
-          --last-name Builder \
-          --institution DocsInst \
-          --storage aiida.storage.sqlite_temp:SqliteTempBackend
-        uv run verdi profile setdefault docs-profile
+        uv run verdi presto
         uv run verdi config set warnings.development_version False
 
     - name: Build HTML docs with tutorial execution

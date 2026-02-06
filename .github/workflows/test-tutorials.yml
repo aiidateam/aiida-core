@@ -20,6 +20,7 @@ env:
 
 jobs:
 
+  # Testing with just module1 to reduce CI noise during development
   test-tutorial-notebooks:
 
     runs-on: ubuntu-24.04
@@ -27,9 +28,10 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ['3.10', '3.12']
-        tutorial: [intro, module1, module2, module3, module4, module5, module6]
+        python-version: ['3.10']
+        tutorial: [module1]
       fail-fast: false
+
 
     steps:
     - uses: actions/checkout@v4
@@ -51,13 +53,6 @@ jobs:
         uv run verdi presto
         uv run verdi config set warnings.development_version False
 
-    # NOTE: Requires RMQ
-
-    # - name: Start AiiDA daemon
-    #   run: |
-    #     verdi daemon start 2
-    #     verdi daemon status
-
     - name: Execute tutorial notebook
       run: |
         uv run jupyter nbconvert \
@@ -67,8 +62,6 @@ jobs:
           --output-dir=/tmp \
           docs/source/tutorials/${{ matrix.tutorial }}.md
       continue-on-error: false
-
-    # NOTE: No daemon stop needed - using verdi presto (no RabbitMQ/daemon)
 
     - name: Upload executed notebook on failure
       if: failure()

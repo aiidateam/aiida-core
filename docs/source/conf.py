@@ -97,8 +97,13 @@ ipython_mplbackend = ''
 
 myst_enable_extensions = ['colon_fence', 'deflist']
 myst_heading_anchors = 4
+
+# MyST-NB configuration for executing tutorial notebooks
+nb_execution_mode = os.environ.get('MYST_NB_EXECUTION_MODE', 'auto')
 nb_execution_show_tb = 'READTHEDOCS' in os.environ
+nb_execution_timeout = 180  # 3 minutes per cell
 nb_merge_streams = True
+nb_execution_excludepatterns = []  # Can exclude specific files if needed
 nb_mime_priority_overrides = [
     ('gettext', 'application/vnd.jupyter.widget-view+json', 0),
     ('gettext', 'application/javascript', 10),

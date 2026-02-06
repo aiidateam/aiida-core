@@ -68,9 +68,7 @@ jobs:
           docs/source/tutorials/${{ matrix.tutorial }}.md
       continue-on-error: false
 
-    - name: Stop AiiDA daemon
-      if: always()
-      run: uv run verdi daemon stop
+    # NOTE: No daemon stop needed - using verdi presto (no RabbitMQ/daemon)
 
     - name: Upload executed notebook on failure
       if: failure()

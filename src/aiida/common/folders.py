@@ -34,15 +34,16 @@ GROUP_WRITABLE = True
 CALC_JOB_DRY_RUN_BASE_PATH = 'submit_test'
 
 
+def _is_path_within(path: str, directory: str) -> bool:
+    """Return True if path is the same as or contained within directory."""
+    path_resolved = pathlib.Path(path).resolve()
+    dir_resolved = pathlib.Path(directory).resolve()
+    return path_resolved.is_relative_to(dir_resolved)
+
+
 class Folder:
     """A class to manage generic folders, avoiding to get out of
     specific given folder borders.
-
-    .. todo::
-        fix this, os.path.commonprefix of /a/b/c and /a/b2/c will give
-        a/b, check if this is wanted or if we want to put trailing slashes.
-        (or if we want to use os.path.relpath and check for a string starting
-        with os.pardir?)
 
     .. todo::
         rethink whether the folder_limit option is still useful. If not, remove
@@ -59,7 +60,7 @@ class Folder:
             folder_limit = os.path.abspath(folder_limit)
 
             # check that it is a subfolder
-            if not os.path.commonprefix([abspath, folder_limit]) == folder_limit:
+            if not _is_path_within(str(abspath), str(folder_limit)):
                 raise ValueError(
                     'The absolute path for this folder is not within the '
                     'folder_limit. abspath={}, folder_limit={}.'.format(abspath, folder_limit)
@@ -270,7 +271,7 @@ class Folder:
             raise ValueError('relpath must be a relative path')
         dest_abs_path = os.path.join(self.abspath, relpath)
 
-        if not os.path.commonprefix([dest_abs_path, self.folder_limit]) == self.folder_limit:
+        if not _is_path_within(dest_abs_path, str(self.folder_limit)):
             errstr = f"You didn't specify a valid filename: {relpath}"
             raise ValueError(errstr)
 

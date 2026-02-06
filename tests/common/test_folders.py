@@ -57,6 +57,47 @@ def test_get_abs_path_without_limit():
     assert folder.get_abs_path('test_file.txt') == '/tmp/test_file.txt'
 
 
+def test_folder_path_within_limit(tmp_path):
+    """Folder accepts path that is truly inside folder_limit."""
+    folder_limit = tmp_path / 'a' / 'b'
+    folder_limit.mkdir(parents=True)
+    abspath = folder_limit / 'c'
+    abspath.mkdir()
+    folder = Folder(str(abspath), folder_limit=str(folder_limit))
+    assert folder.abspath == str(abspath)
+    assert folder.folder_limit == str(folder_limit)
+
+
+def test_folder_rejects_partial_prefix_false_positive(tmp_path):
+    """Folder rejects partial string prefix (e.g. foobar under foo)."""
+    folder_limit = tmp_path / 'foo'
+    folder_limit.mkdir(parents=True)
+    abspath = tmp_path / 'foobar'  # sibling, not child
+    abspath.mkdir()
+    with pytest.raises(ValueError, match='not within the folder_limit'):
+        Folder(str(abspath), folder_limit=str(folder_limit))
+
+
+def test_folder_rejects_sibling_directory(tmp_path):
+    """Folder rejects sibling directories with shared prefix (e.g. b2/c under b)."""
+    folder_limit = tmp_path / 'a' / 'b'
+    folder_limit.mkdir(parents=True)
+    abspath = tmp_path / 'a' / 'b2' / 'c'
+    abspath.mkdir(parents=True)
+    with pytest.raises(ValueError, match='not within the folder_limit'):
+        Folder(str(abspath), folder_limit=str(folder_limit))
+
+
+def test_get_abs_path_rejects_escape_via_relative(tmp_path):
+    """get_abs_path rejects relative paths that escape folder_limit."""
+    folder_limit = tmp_path / 'sandbox'
+    inner = folder_limit / 'inner'
+    inner.mkdir(parents=True)
+    folder = Folder(str(inner), folder_limit=str(folder_limit))
+    with pytest.raises(ValueError, match="You didn't specify a valid filename"):
+        folder.get_abs_path('../..')
+
+
 def test_create_file_from_filelike(tmpdir):
     """Test the :meth:`aiida.common.folders.Folder.create_file_from_filelike` method."""
     unicode_string = 'unicode_string'

@@ -1081,6 +1081,125 @@ def test_process_repair_verbosity(monkeypatch, run_cli_command):
     assert 'Process tasks: [1, 2]' in result.output
 
 
+@pytest.mark.requires_psql
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_no_unreferenced_connections(monkeypatch, run_cli_command):
+    """Test ``verdi process repair`` when there are no unreferenced database connections."""
+    from aiida.storage.psql_dos.backend import PsqlDosBackend
+
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [])
+    monkeypatch.setattr(PsqlDosBackend, 'get_unreferenced_connections', lambda self: [])
+
+    result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
+    assert 'No unreferenced database connections found.' in result.output
+
+
+@pytest.mark.requires_psql
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_unreferenced_connections(monkeypatch, run_cli_command):
+    """Test ``verdi process repair`` terminates unreferenced database connections."""
+    from aiida.storage.psql_dos.backend import PsqlDosBackend
+
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [])
+    monkeypatch.setattr(
+        PsqlDosBackend, 'get_unreferenced_connections', lambda self: [(1234, 'idle in transaction', 5678)]
+    )
+
+    terminated = []
+
+    def mock_terminate(self):
+        terminated.append(True)
+        return 1
+
+    monkeypatch.setattr(PsqlDosBackend, 'terminate_unreferenced_connections', mock_terminate)
+
+    result = run_cli_command(cmd_process.process_repair, user_input='y', use_subprocess=False)
+    assert 'Found 1 database connection(s)' in result.output
+    assert 'PID 1234' in result.output
+    assert 'Terminated 1 database connection(s)' in result.output
+    assert len(terminated) == 1
+
+
+@pytest.mark.requires_psql
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_unreferenced_connections_abort(monkeypatch, run_cli_command):
+    """Test ``verdi process repair`` aborts when user declines to terminate connections."""
+    from aiida.storage.psql_dos.backend import PsqlDosBackend
+
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [])
+    monkeypatch.setattr(
+        PsqlDosBackend, 'get_unreferenced_connections', lambda self: [(1234, 'idle in transaction', 5678)]
+    )
+
+    terminated = []
+
+    def mock_terminate(self):
+        terminated.append(True)
+        return 1
+
+    monkeypatch.setattr(PsqlDosBackend, 'terminate_unreferenced_connections', mock_terminate)
+
+    result = run_cli_command(cmd_process.process_repair, user_input='n', use_subprocess=False, raises=True)
+    assert 'Found 1 database connection(s)' in result.output
+    assert len(terminated) == 0  # Should not terminate when user says no
+
+
+@pytest.mark.requires_psql
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_unreferenced_connections_dry_run(monkeypatch, run_cli_command):
+    """Test ``verdi process repair --dry-run`` does not terminate unreferenced connections."""
+    from aiida.storage.psql_dos.backend import PsqlDosBackend
+
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [])
+    monkeypatch.setattr(
+        PsqlDosBackend, 'get_unreferenced_connections', lambda self: [(1234, 'idle in transaction', 5678)]
+    )
+
+    terminated = []
+
+    def mock_terminate(self):
+        terminated.append(True)
+        return 1
+
+    monkeypatch.setattr(PsqlDosBackend, 'terminate_unreferenced_connections', mock_terminate)
+
+    result = run_cli_command(cmd_process.process_repair, ['--dry-run'], use_subprocess=False)
+    assert 'Found 1 database connection(s)' in result.output
+    assert 'PID 1234' in result.output
+    assert len(terminated) == 0  # Should not terminate in dry-run mode
+
+
+@pytest.mark.requires_psql
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_process_repair_unreferenced_connections_force(monkeypatch, run_cli_command):
+    """Test ``verdi process repair --force`` terminates connections without confirmation."""
+    from aiida.storage.psql_dos.backend import PsqlDosBackend
+
+    monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [])
+    monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [])
+    monkeypatch.setattr(
+        PsqlDosBackend, 'get_unreferenced_connections', lambda self: [(1234, 'idle in transaction', 5678)]
+    )
+
+    terminated = []
+
+    def mock_terminate(self):
+        terminated.append(True)
+        return 1
+
+    monkeypatch.setattr(PsqlDosBackend, 'terminate_unreferenced_connections', mock_terminate)
+
+    # No user_input needed with --force
+    result = run_cli_command(cmd_process.process_repair, ['--force'], use_subprocess=False)
+    assert 'Found 1 database connection(s)' in result.output
+    assert 'Terminated 1 database connection(s)' in result.output
+    assert len(terminated) == 1
+
+
 @pytest.fixture
 def process_nodes():
     """Return a list of two stored ``CalcJobNode`` instances with a finished process state."""

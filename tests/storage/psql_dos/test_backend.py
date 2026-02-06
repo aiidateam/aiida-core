@@ -194,3 +194,70 @@ def test_backup(tmp_path):
     contents = [c.name for c in last_backup.iterdir()]
     for name in ['container', 'db.psql']:
         assert name in contents
+
+
+def test_get_unreferenced_connections(monkeypatch):
+    """Test that ``get_unreferenced_connections`` detects external database connections.
+
+    This test creates a real database connection outside of the AiiDA session and verifies
+    it appears in the unreferenced connections list. It also tests terminating that connection.
+    """
+    import psycopg
+
+    storage = get_manager().get_profile_storage()
+
+    # Get connection parameters from the storage engine
+    engine = storage.get_session().get_bind()
+    url = engine.url
+
+    # Create an external connection that simulates an orphaned connection
+    external_conn = psycopg.connect(
+        host=url.host,
+        port=url.port,
+        user=url.username,
+        password=url.password,
+        dbname=url.database,
+    )
+
+    try:
+        # Start a transaction to simulate "idle in transaction" state
+        cursor = external_conn.cursor()
+        cursor.execute('SELECT 1')
+
+        # Get the client port and pid of our external connection for verification
+        cursor.execute('SELECT inet_client_port(), pg_backend_pid()')
+        external_port, external_pid = cursor.fetchone()
+
+        # Verify the external connection appears in unreferenced connections
+        unreferenced = storage.get_unreferenced_connections()
+        unreferenced_ports = [port for _, _, port in unreferenced]
+        assert (
+            external_port in unreferenced_ports
+        ), f'External connection port {external_port} not found in {unreferenced_ports}'
+
+        # Monkeypatch get_unreferenced_connections to return only our connection
+        # This prevents killing connections from parallel tests
+        monkeypatch.setattr(
+            storage,
+            'get_unreferenced_connections',
+            lambda: [(external_pid, 'idle in transaction', external_port)],
+        )
+
+        # Terminate unreferenced connections (only our connection due to monkeypatch)
+        count = storage.terminate_unreferenced_connections()
+        assert count == 1, 'Expected exactly one connection to be terminated'
+
+        # Verify the external connection was actually terminated
+        # The connection should be closed/broken now
+        try:
+            cursor.execute('SELECT 1')
+            pytest.fail('Connection should have been terminated')
+        except psycopg.OperationalError:
+            pass  # Expected - connection was terminated
+
+    finally:
+        # Clean up - close the connection if it's still open
+        try:
+            external_conn.close()
+        except Exception:
+            pass  # Connection may already be terminated

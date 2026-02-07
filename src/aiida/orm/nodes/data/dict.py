@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import copy
 import typing as t
-from pathlib import Path
 
 import pydantic as pdt
 
@@ -67,6 +66,11 @@ class Dict(Data):
             exclude=True,
         )
 
+        @pdt.model_validator(mode='before')
+        @classmethod
+        def assign_dict_to_value(cls, value: dict) -> dict:
+            return value if 'value' in value else {'value': value}
+
     def __init__(self, value=None, **kwargs):
         """Initialise a ``Dict`` node instance.
 
@@ -87,11 +91,17 @@ class Dict(Data):
     def serialize(
         self,
         *,
-        repository_path: Path | None = None,
+        context: dict[str, t.Any] | None = None,
         minimal: bool = False,
         mode: t.Literal['json'] | t.Literal['python'] = 'json',
+        dump_repo: bool = False,
     ) -> dict[str, t.Any]:
-        serialized = super().serialize(repository_path=repository_path, minimal=minimal, mode=mode)
+        serialized = super().serialize(
+            context=context,
+            minimal=minimal,
+            mode=mode,
+            dump_repo=dump_repo,
+        )
         serialized['attributes'] = self.get_dict()
         return serialized
 

@@ -168,7 +168,7 @@ class Log(entities.Entity['BackendLog', LogCollection]):
         node: int = MetadataField(
             description='Associated node',
             orm_class='core.node',
-            orm_to_model=lambda log, _: cast(Log, log).dbnode_id,
+            orm_to_model=lambda log: cast(Log, log).dbnode_id,
             examples=[42],
         )
 

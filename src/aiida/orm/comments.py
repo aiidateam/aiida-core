@@ -95,13 +95,13 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         node: int = MetadataField(
             description='Node PK that the comment is attached to',
             orm_class='core.node',
-            orm_to_model=lambda comment, _: cast(Comment, comment).node.pk,
+            orm_to_model=lambda comment: cast(Comment, comment).node.pk,
             examples=[42],
         )
         user: int = MetadataField(
             description='User PK that created the comment',
             orm_class='core.user',
-            orm_to_model=lambda comment, _: cast(Comment, comment).user.pk,
+            orm_to_model=lambda comment: cast(Comment, comment).user.pk,
             examples=[7],
         )
         content: str = MetadataField(

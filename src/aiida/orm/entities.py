@@ -11,10 +11,23 @@
 from __future__ import annotations
 
 import abc
-import pathlib
+import inspect
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, List, Literal, NoReturn, Optional, Type, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Generic,
+    List,
+    Literal,
+    NoReturn,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from plumpy.base.utils import call_with_super_check, super_check
 from typing_extensions import Self
@@ -258,8 +271,8 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     def orm_to_model_field_values(
         self,
         *,
-        repository_path: Optional[pathlib.Path] = None,
         model: type[OrmModel] | None = None,
+        context: dict[str, Any] | None = None,
         minimal: bool = False,
     ) -> dict[str, Any]:
         """Collect values for the ``Model``'s fields from this entity.
@@ -268,12 +281,29 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         functions and optional filtering based on field metadata (e.g., excluding CLI-only fields).
         The process is recursive, applying metadata field rules to nested models as well.
 
-        :param repository_path: Optional path to use for repository-based fields.
+        :param model: The model class to collect field values for. If not provided, defaults to the entity's ``Model``.
+        :param context: Optional context dictionary to pass to ``orm_to_model`` callables.
         :param minimal: Whether to exclude potentially large value fields.
         :return: Mapping of ORM field name to value.
         """
 
-        def get_model_field_values(model_cls: Type[OrmModel]) -> dict[str, Any]:
+        context = context or {}
+
+        def call_orm_to_model(orm_to_model: Callable) -> Any:
+            """Call an ``orm_to_model`` callable with an optional context.
+
+            For backwards compatibility, both of the following are supported:
+
+            - ``orm_to_model(entity)``
+            - ``orm_to_model(entity, context)``
+            """
+            signature = inspect.signature(orm_to_model)
+            parameters = list(signature.parameters.values())
+            if len(parameters) > 1:
+                return orm_to_model(self, context)
+            return orm_to_model(self)
+
+        def get_model_field_values(model_cls: type[OrmModel]) -> dict[str, Any]:
             """Recursive helper function to collect field values for a model class.
 
             :param model_cls: The model class to extract field values for.
@@ -291,8 +321,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
                     continue
 
                 if orm_to_model := get_metadata(field, 'orm_to_model'):
-                    kwargs = {'repository_path': repository_path}
-                    fields[key] = orm_to_model(self, kwargs)
+                    fields[key] = call_orm_to_model(orm_to_model)
                 else:
                     fields[key] = getattr(self, key, field.default)
 
@@ -300,17 +329,17 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
         return get_model_field_values(model or self.Model)
 
-    def to_model(self, *, repository_path: Optional[pathlib.Path] = None, minimal: bool = False) -> OrmModel:
+    def to_model(self, *, context: dict[str, Any] | None = None, minimal: bool = False) -> OrmModel:
         """Return the entity instance as an instance of its model.
 
-        :param repository_path: If the orm node has files in the repository, this path is used to read the repository
-            files from. If no path is specified a temporary path is created using the entities pk.
-            This field can be very large, so it is excluded by default.
+        :param context: Optional context dictionary to pass to ``orm_to_model`` callables.
         :param minimal: Whether to exclude potentially large value fields.
         :return: An instance of the entity's model class.
         """
-        fields = self.orm_to_model_field_values(repository_path=repository_path, minimal=minimal)
+        fields = self.orm_to_model_field_values(context=context, minimal=minimal)
         Model = self.Model if self.is_stored else self.CreateModel  # noqa: N806
+        if minimal:
+            Model = Model._as_minimal_model()  # noqa: N806
         return Model(**fields)
 
     @classmethod
@@ -326,35 +355,20 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     def serialize(
         self,
         *,
-        repository_path: Optional[pathlib.Path] = None,
+        context: dict[str, Any] | None = None,
         minimal: bool = False,
         mode: Literal['json', 'python'] = 'json',
     ) -> dict[str, Any]:
         """Serialize the entity instance to JSON.
 
-        :param repository_path: If the orm node has files in the repository, this path is used to dump the repository
-            files to. If no path is specified a temporary path is created using the entities pk.
+        :param context: Optional context dictionary to pass to ``orm_to_model`` callables.
         :param minimal: Whether to exclude potentially large value fields.
         :param mode: The serialization mode, either 'json' or 'python'. The 'json' mode is the most strict and ensures
             that the output is JSON serializable, whereas the 'python' mode allows for more complex Python types, such
             as `datetime` objects.
         :return: A dictionary that can be serialized to JSON.
         """
-        if repository_path is None:
-            import tempfile
-
-            repository_path = pathlib.Path(tempfile.mkdtemp()) / f'./aiida_serialization/{self.pk}/'
-            repository_path.mkdir(parents=True)
-        else:
-            if not repository_path.exists():
-                raise ValueError(f'The repository_path `{repository_path}` does not exist.')
-            if not repository_path.is_dir():
-                raise ValueError(f'The repository_path `{repository_path}` is not a directory.')
-
-        return self.to_model(
-            repository_path=repository_path,
-            minimal=minimal,
-        ).model_dump(
+        return self.to_model(context=context, minimal=minimal).model_dump(
             mode=mode,
             exclude_none=True,
             exclude_unset=minimal,
@@ -364,8 +378,8 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     def from_serialized(cls, serialized: dict[str, Any]) -> Self:
         """Construct an entity instance from JSON serialized data.
 
-        :param serialized: A dictionary representing the serialized entity.
-        :return: An instance of the entity class.
+        :param serialized: The serialized data.
+        :return: The constructed entity instance.
         """
         return cls.from_model(cls.CreateModel(**serialized))
 

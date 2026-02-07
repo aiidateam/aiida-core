@@ -56,12 +56,12 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         computer: int = MetadataField(
             description='The PK of the computer',
             orm_class=Computer,
-            orm_to_model=lambda auth_info, _: cast(AuthInfo, auth_info).computer.pk,
+            orm_to_model=lambda auth_info: cast(AuthInfo, auth_info).computer.pk,
         )
         user: int = MetadataField(
             description='The PK of the user',
             orm_class=User,
-            orm_to_model=lambda auth_info, _: cast(AuthInfo, auth_info).user.pk,
+            orm_to_model=lambda auth_info: cast(AuthInfo, auth_info).user.pk,
         )
         enabled: bool = MetadataField(
             True,

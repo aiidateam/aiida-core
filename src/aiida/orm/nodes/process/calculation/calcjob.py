@@ -70,52 +70,52 @@ class CalcJobNode(CalculationNode):
         scheduler_state: Optional[str] = MetadataField(
             None,
             description='The state of the scheduler',
-            orm_to_model=lambda node, _: cast(CalcJobNode, node).get_scheduler_state(),
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_scheduler_state(),
         )
         state: Optional[str] = MetadataField(
             None,
             description='The active state of the calculation job',
-            orm_to_model=lambda node, _: cast(CalcJobNode, node).get_state(),
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_state(),
         )
         remote_workdir: Optional[str] = MetadataField(
             None,
             description='The path to the remote (on cluster) scratch folder',
-            orm_to_model=lambda node, _: cast(CalcJobNode, node).get_remote_workdir(),
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_remote_workdir(),
         )
         job_id: Optional[str] = MetadataField(
             None,
             description='The scheduler job id',
-            orm_to_model=lambda node, _: cast(CalcJobNode, node).get_job_id(),
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_job_id(),
         )
         scheduler_lastchecktime: Optional[datetime.datetime] = MetadataField(
             None,
             description='The last time the scheduler was checked, in isoformat',
-            orm_to_model=lambda node, _: cast(CalcJobNode, node).get_scheduler_lastchecktime(),
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_scheduler_lastchecktime(),
         )
         last_job_info: Optional[dict] = MetadataField(
             None,
             description='The last job info returned by the scheduler',
-            orm_to_model=lambda node, _: dict(cast(CalcJobNode, node).get_last_job_info() or {}),
+            orm_to_model=lambda node: dict(cast(CalcJobNode, node).get_last_job_info() or {}),
         )
         detailed_job_info: Optional[dict] = MetadataField(
             None,
             description='The detailed job info returned by the scheduler',
-            orm_to_model=lambda node, _: cast(CalcJobNode, node).get_detailed_job_info(),
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_detailed_job_info(),
         )
         retrieve_list: Optional[Sequence[Union[str, Tuple[str, str, int]]]] = MetadataField(
             None,
             description='The list of files to retrieve from the remote cluster',
-            orm_to_model=lambda node, _: cast(CalcJobNode, node).get_retrieve_list(),
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_retrieve_list(),
         )
         retrieve_temporary_list: Optional[Sequence[Union[str, Tuple[str, str, int]]]] = MetadataField(
             None,
             description='The list of temporary files to retrieve from the remote cluster',
-            orm_to_model=lambda node, _: cast(CalcJobNode, node).get_retrieve_temporary_list(),
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_retrieve_temporary_list(),
         )
         imported: Optional[bool] = MetadataField(
             None,
             description='Whether the node has been migrated',
-            orm_to_model=lambda node, _: cast(CalcJobNode, node).is_imported,
+            orm_to_model=lambda node: cast(CalcJobNode, node).is_imported,
         )
 
     # An optional entry point for a CalculationTools instance

@@ -21,7 +21,8 @@ from __future__ import annotations
 
 import logging
 import pathlib
-from typing import cast
+import warnings
+from typing import Optional, cast
 
 from aiida.common import exceptions
 from aiida.common.folders import Folder
@@ -64,18 +65,19 @@ class PortableCode(Code):
             description='Relative filepath of executable with directory of code files',
             short_name='-X',
             priority=1,
-            orm_to_model=lambda node, _: str(cast(PortableCode, node).filepath_executable),
+            orm_to_model=lambda node: str(cast(PortableCode, node).filepath_executable),
         )
-        filepath_files: str = MetadataField(
+        filepath_files: Optional[str] = MetadataField(
+            None,
             title='Code directory',
             description='Filepath to directory containing code files',
             short_name='-F',
             priority=2,
             write_only=True,
             exclude=True,
-            orm_to_model=lambda node, kwargs: _export_filepath_files_from_repo(
+            orm_to_model=lambda node, ctx: _export_filepath_files_from_repo(
                 cast(PortableCode, node),
-                kwargs.get('repository_path', pathlib.Path.cwd() / f'{cast(PortableCode, node).label}'),
+                ctx.get('repository_path', pathlib.Path.cwd() / f'{cast(PortableCode, node).label}'),
             ),
         )
 
@@ -104,22 +106,33 @@ class PortableCode(Code):
         filepath_executable = filepath_executable or attributes.pop(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, None)
         filepath_files = filepath_files or attributes.pop('filepath_files', None)
 
-        if filepath_files is None or filepath_executable is None:
-            raise ValueError('Both `filepath_files` and `filepath_executable` must be provided.')
+        if filepath_executable is None:
+            raise ValueError('`filepath_executable` must be provided.')
 
         super().__init__(**kwargs)
 
-        type_check(filepath_files, (pathlib.PurePath, str))
+        if filepath_files is not None:
+            type_check(filepath_files, (pathlib.PurePath, str))
 
-        filepath_files_path = pathlib.Path(filepath_files)
-        if not filepath_files_path.exists():
-            raise ValueError(f'The filepath `{filepath_files}` does not exist.')
+            filepath_files_path = pathlib.Path(filepath_files)
+            if not filepath_files_path.exists():
+                raise ValueError(f'The filepath `{filepath_files}` does not exist.')
 
-        if not filepath_files_path.is_dir():
-            raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
+            if not filepath_files_path.is_dir():
+                raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
 
-        self.filepath_executable = filepath_executable
-        self.base.repository.put_object_from_tree(str(filepath_files))
+            self.filepath_executable = filepath_executable
+            self.base.repository.put_object_from_tree(str(filepath_files))
+        else:
+            warnings.warn(
+                '\n'
+                'No `filepath_files` provided. Before storing the portable code, please upload the necessary files '
+                'using one of the following `node.base.repository` methods: '
+                '\n    `put_object_from_file(...)`'
+                '\n    `put_object_from_filelike(...)`'
+                '\n    `put_object_from_tree(...)`',
+                stacklevel=2,
+            )
 
     def _validate(self):
         """Validate the instance by checking that an executable is defined and it is part of the repository files.

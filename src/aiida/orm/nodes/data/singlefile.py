@@ -34,7 +34,7 @@ class SinglefileData(Data):
         filename: str = MetadataField(
             'file.txt',
             description='The name of the stored file',
-            orm_to_model=lambda node, _: t.cast(SinglefileData, node).base.attributes.get('filename', 'file.txt'),
+            orm_to_model=lambda node: t.cast(SinglefileData, node).base.attributes.get('filename', 'file.txt'),
         )
         content: t.Optional[str] = MetadataField(
             None,

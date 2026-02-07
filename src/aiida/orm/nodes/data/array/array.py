@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import io
 from collections.abc import Iterable, Iterator, Sequence
-from pathlib import Path
 from typing import Any, Literal, Optional, Union, cast
 
 import numpy as np
@@ -67,7 +66,7 @@ class ArrayData(Data):
         arrays: Optional[Union[Sequence, dict[str, Sequence]]] = MetadataField(
             None,
             description='A single (or dictionary of) array(s) to store',
-            orm_to_model=lambda node, _: cast(ArrayData, node).arrays,
+            orm_to_model=lambda node: cast(ArrayData, node).arrays,
             write_only=True,
             exclude=True,
         )
@@ -126,11 +125,12 @@ class ArrayData(Data):
     def serialize(
         self,
         *,
-        repository_path: Path | None = None,
+        context: dict[str, Any] | None = None,
         minimal: bool = False,
         mode: Literal['json'] | Literal['python'] = 'json',
+        dump_repo: bool = False,
     ) -> dict[str, Any]:
-        serialized = super().serialize(repository_path=repository_path, minimal=minimal, mode=mode)
+        serialized = super().serialize(context=context, minimal=minimal, mode=mode, dump_repo=dump_repo)
         serialized['attributes'] |= {
             f'{self.array_prefix}{name}': list(array.shape) for name, array in self.get_iterarrays()
         }

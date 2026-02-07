@@ -11,6 +11,8 @@
 from __future__ import annotations
 
 import datetime
+import io
+import pathlib
 from copy import deepcopy
 from functools import cached_property
 from typing import (
@@ -21,6 +23,7 @@ from typing import (
     Generic,
     Iterator,
     List,
+    Literal,
     NoReturn,
     Optional,
     Tuple,
@@ -240,7 +243,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         repository_metadata: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='Virtual hierarchy of the file repository',
-            orm_to_model=lambda node, _: cast(Node, node).base.repository.metadata,
+            orm_to_model=lambda node: cast(Node, node).base.repository.metadata,
             read_only=True,
             may_be_large=True,
             examples=[{'key': 'value'}],
@@ -268,28 +271,28 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         attributes: Node.AttributesModel = MetadataField(
             default_factory=lambda: Node.AttributesModel(),
             description='The node attributes',
-            orm_to_model=lambda node, _: cast(Node, node).base.attributes.all,
+            orm_to_model=lambda node: cast(Node, node).base.attributes.all,
             may_be_large=True,
             examples=[{'attr_key': 'attr_value'}],
         )
         extras: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='The node extras',
-            orm_to_model=lambda node, _: cast(Node, node).base.extras.all,
+            orm_to_model=lambda node: cast(Node, node).base.extras.all,
             may_be_large=True,
             examples=[{'extra_key': 'extra_value'}],
         )
         computer: Optional[int] = MetadataField(
             None,
             description='The PK of the computer',
-            orm_to_model=lambda node, _: cast(Node, node).get_computer_pk(),
+            orm_to_model=lambda node: cast(Node, node).get_computer_pk(),
             orm_class=Computer,
             read_only=True,
             examples=[42],
         )
         user: int = MetadataField(
             description='The PK of the user who owns the node',
-            orm_to_model=lambda node, _: cast(Node, node).user.pk,
+            orm_to_model=lambda node: cast(Node, node).user.pk,
             orm_class=User,
             read_only=True,
             examples=[7],
@@ -387,6 +390,91 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def base(self) -> NodeBase:
         """Return the node base namespace."""
         return NodeBase(self)
+
+    def serialize(
+        self,
+        *,
+        context: dict[str, Any] | None = None,
+        minimal: bool = False,
+        mode: Literal['json'] | Literal['python'] = 'json',
+        dump_repo: bool = False,
+    ) -> dict[str, Any]:
+        """Serialize the entity instance to JSON.
+
+        :param context: Optional context dictionary to pass to ``orm_to_model`` callables.
+        :param minimal: Whether to exclude potentially large value fields.
+        :param mode: The serialization mode, either 'json' or 'python'. The 'json' mode is the most strict and ensures
+            that the output is JSON serializable, whereas the 'python' mode allows for more complex Python types, such
+            as `datetime` objects.
+        :param dump_repo: Whether to dump the repository contents to the serialization directory.
+        :return: A dictionary that can be serialized to JSON.
+        """
+        if dump_repo:
+            repository_path = (context or {}).get('repository_path')
+            if repository_path is None:
+                import tempfile
+
+                repository_path = pathlib.Path(tempfile.mkdtemp()) / f'./aiida_serialization/{self.pk}/'
+                repository_path.mkdir(parents=True)
+            else:
+                if not repository_path.exists():
+                    raise ValueError(f'The repository_path `{repository_path}` does not exist.')
+                if not repository_path.is_dir():
+                    raise ValueError(f'The repository_path `{repository_path}` is not a directory.')
+
+            self.base.repository.copy_tree(repository_path)
+
+        return self.to_model(
+            context=context,
+            minimal=minimal,
+        ).model_dump(
+            mode=mode,
+            exclude_none=True,
+            exclude_unset=minimal,
+        )
+
+    @classmethod
+    def from_serialized(
+        cls,
+        serialized: dict[str, Any],
+        files: dict[str, io.BufferedReader] | None = None,
+    ) -> Self:
+        """Construct an entity instance from JSON serialized data and optional files.
+
+        :param serialized: The serialized data.
+        :param files: A dictionary of file-like objects representing the files in the repository.
+        :return: The constructed node instance.
+        """
+        import hashlib
+
+        from aiida.repository import Repository
+
+        instance = cls.from_model(cls.CreateModel(**serialized))
+        repository_metadata = serialized.get('repository_metadata', {})
+
+        if repository_metadata:
+            if not files:
+                raise ValueError('No files were provided from which to reconstruct the repository.')
+            flattened_repo = Repository.flatten(repository_metadata)
+
+        seen = set()
+        for filepath, fileobj in (files or {}).items():
+            if filepath in seen:
+                raise ValueError(f'File `{filepath}` already exists in the repository.')
+
+            if repository_metadata:
+                expected_hash = flattened_repo.get(filepath)
+                actual_hash = hashlib.sha256(fileobj.read()).hexdigest()
+                if expected_hash != actual_hash:
+                    raise ValueError(
+                        f'File hash mismatch for `{filepath}`: expected {expected_hash}, got {actual_hash}'
+                    )
+
+            fileobj.seek(0)
+            instance.base.repository.put_object_from_filelike(fileobj, filepath)
+            seen.add(filepath)
+
+        return instance
 
     def _check_mutability_attributes(self, keys: Optional[List[str]] = None) -> None:
         """Check if the entity is mutable and raise an exception if not.

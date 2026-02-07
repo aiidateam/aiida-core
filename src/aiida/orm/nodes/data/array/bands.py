@@ -223,7 +223,7 @@ class BandsData(KpointsData):
         units: t.Optional[str] = MetadataField(
             None,
             description='Units in which the data in bands were stored',
-            orm_to_model=lambda node, _: t.cast(BandsData, node).base.attributes.get('units', None),
+            orm_to_model=lambda node: t.cast(BandsData, node).base.attributes.get('units', None),
         )
 
     def __init__(

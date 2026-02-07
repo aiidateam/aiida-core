@@ -132,7 +132,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         user: int = MetadataField(
             description='The PK of the group owner',
             orm_class='core.user',
-            orm_to_model=lambda group, _: cast(Group, group).user.pk,
+            orm_to_model=lambda group: cast(Group, group).user.pk,
             read_only=True,
             examples=[1],
         )
@@ -153,7 +153,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         extras: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='The group extras',
-            orm_to_model=lambda group, _: cast(Group, group).base.extras.all,
+            orm_to_model=lambda group: cast(Group, group).base.extras.all,
             may_be_large=True,
             examples=[{'key': 'value'}],
         )

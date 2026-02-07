@@ -42,6 +42,37 @@ class OrmModel(BaseModel, defer_build=True):
         cls.model_config['title'] = cls.__qualname__.replace('.', '')
 
     @classmethod
+    def _as_minimal_model(cls: t.Type[OrmModel]) -> t.Type[OrmModel]:
+        """Return a derived model class with fields marked as "may_be_large" excluded from the model schema."""
+        cached = cls.__dict__.get('_AIIDA_MINIMAL_MODEL')
+        if isinstance(cached, type) and issubclass(cached, OrmModel):
+            return cached
+
+        MinimalModel = create_model(  # noqa: N806
+            'Minimal' + cls.__name__,
+            __base__=OrmModel,
+            __module__=cls.__module__,
+        )
+        MinimalModel.model_config['extra'] = 'ignore'
+
+        for key, field in cls.model_fields.items():
+            annotation = field.annotation
+            if get_metadata(field, 'may_be_large'):
+                continue
+            if isinstance(annotation, type) and issubclass(annotation, OrmModel):
+                sub_minimal_model = annotation._as_minimal_model()
+                field.annotation = sub_minimal_model
+                if any(f.is_required() for f in sub_minimal_model.model_fields.values()):
+                    field.default_factory = None
+            MinimalModel.model_fields[key] = field
+
+        # Make subsequent calls idempotent for this specific class
+        cls._AIIDA_MINIMAL_MODEL = MinimalModel  # type: ignore[attr-defined]
+
+        MinimalModel.model_rebuild(force=True)
+        return MinimalModel
+
+    @classmethod
     def _as_create_model(cls: t.Type[OrmModel]) -> t.Type[OrmModel]:
         """Return a derived creation model class with read-only fields removed.
 
@@ -112,7 +143,9 @@ def MetadataField(  # noqa: N802
     short_name: str | None = None,
     option_cls: t.Any | None = None,
     orm_class: type[Entity[t.Any, t.Any]] | str | None = None,
-    orm_to_model: t.Callable[[Entity[t.Any, t.Any], dict[str, t.Any]], t.Any] | None = None,
+    orm_to_model: (
+        t.Callable[[Entity[t.Any, t.Any]], t.Any] | t.Callable[[Entity[t.Any, t.Any], dict[str, t.Any]], t.Any] | None
+    ) = None,
     model_to_orm: t.Callable[[OrmModel], t.Any] | None = None,
     read_only: bool = False,
     write_only: bool = False,
@@ -148,6 +181,8 @@ def MetadataField(  # noqa: N802
         store the ``pk`` of the user, but the ORM entity instance would receive the actual ``User`` instance with that
         primary key.
     :param orm_to_model: Optional callable to convert the value of a field from an ORM instance to a model instance.
+        It optionally accepts a second argument, which is a dictionary of context values that may be used during the
+        conversion.
     :param model_to_orm: Optional callable to convert the value of a field from a model instance to an ORM instance.
     :param read_only: When set to ``True``, this field value will not be passed to the ORM entity constructor
         through ``Entity.from_model``.

@@ -405,7 +405,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             | {
                 key: value
                 for key, value in self.orm_to_model_field_values(
-                    repository_path=pathlib.Path.cwd() / f'{self.label}',
+                    context={'repository_path': pathlib.Path.cwd() / f'{self.label}'},
                     model=self.AttributesModel,
                 ).items()
                 if value is not None

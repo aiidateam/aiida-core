@@ -19,6 +19,8 @@ from __future__ import annotations
 import pathlib
 from typing import cast
 
+from pydantic import model_validator
+
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
@@ -44,7 +46,7 @@ class InstalledCode(Code):
         filepath_executable: str = MetadataField(
             title='Filepath executable',
             description='Filepath of the executable on the remote computer',
-            orm_to_model=lambda node, _: str(cast(InstalledCode, node).filepath_executable),
+            orm_to_model=lambda node: str(cast(InstalledCode, node).filepath_executable),
             short_name='-X',
             priority=1,
         )
@@ -55,9 +57,26 @@ class InstalledCode(Code):
             priority=2,
             write_only=True,
             exclude=True,
-            orm_to_model=lambda node, _: cast(InstalledCode, node).computer.label,
+            orm_to_model=lambda node: cast(InstalledCode, node).computer.label,
             model_to_orm=lambda model: load_computer(cast(InstalledCode.AttributesModel, model).computer),
         )
+
+    class Model(AbstractCode.Model):
+        @model_validator(mode='before')
+        @classmethod
+        def pass_computer_label_to_attributes(cls, values: dict) -> dict:
+            """Pass the computer label to the attributes so that it can be used in the ``AttributesModel``."""
+            attributes: dict = values.get('attributes', {})
+            if values.get('computer') is not None and not attributes.get('computer'):
+                try:
+                    computer = load_computer(values.pop('computer'))
+                except Exception as exception:
+                    raise exceptions.ValidationError(
+                        'Could not load the computer provided to the `computer` field.'
+                    ) from exception
+                attributes['computer'] = computer.label
+                values['attributes'] = attributes
+            return values
 
     def __init__(
         self,

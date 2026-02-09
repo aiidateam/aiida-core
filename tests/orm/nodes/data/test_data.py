@@ -9,8 +9,6 @@
 """Tests for the :class:`aiida.orm.nodes.data.data:Data` class."""
 
 import os
-import tempfile
-from contextlib import contextmanager
 
 import numpy
 import pytest
@@ -178,29 +176,17 @@ def test_constructor():
     assert node.source == source
 
 
-@contextmanager
-def temporary_directory():
-    """Context manager that changes to a temporary directory."""
-    original_cwd = os.getcwd()
-    with tempfile.TemporaryDirectory() as temp_dir:
-        try:
-            os.chdir(temp_dir)
-            yield temp_dir
-        finally:
-            os.chdir(original_cwd)
-
-
-def test_data_exporters(data_plugin, generate_class_instance):
+def test_data_exporters(data_plugin, generate_class_instance, tmp_path):
     """Verify that the return value of the export methods of all `Data` sub classes have the correct type."""
     export_formats = data_plugin.get_export_formats()
 
     if not export_formats:
-        return
+        pytest.skip('no formats available')
 
     instance = generate_class_instance(data_plugin)
 
-    with temporary_directory():
-        for fileformat in export_formats:
-            content, dictionary = instance._exportcontent(fileformat)
-            assert isinstance(content, bytes)
-            assert isinstance(dictionary, dict)
+    for fileformat in export_formats:
+        temp_file = tmp_path / f'test.{fileformat}'
+        content, dictionary = instance._exportcontent(fileformat, main_file_name=str(temp_file))
+        assert isinstance(content, bytes)
+        assert isinstance(dictionary, dict)

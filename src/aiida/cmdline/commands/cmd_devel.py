@@ -48,10 +48,16 @@ def devel_check_load_time():
         echo.echo_critical('potential `verdi` speed problem: database backend is loaded.')
 
     allowed = ('aiida.brokers', 'aiida.cmdline', 'aiida.common', 'aiida.manage', 'aiida.plugins', 'aiida.restapi')
+    allowed_str = "', '".join(allowed)
     for loaded in loaded_aiida_modules:
         if not any(loaded.startswith(mod) for mod in allowed):
             echo.echo_critical(
-                f'potential `verdi` speed problem: `{loaded}` module is imported which is not in: {allowed}'
+                f'potential `verdi` speed problem: `{loaded}` module is imported by the cmdline package.\n'
+                f'The `verdi` CLI is optimized for fast startup and should only import from these packages: '
+                f"('{allowed_str}').\n"
+                f'Importing this module increases load time significantly.\n'
+                f'To fix this, consider moving the import inside a function for lazy loading, '
+                f'or restructuring your code to avoid cmdline → orm dependencies.'
             )
 
     echo.echo_success('no load time issues detected')

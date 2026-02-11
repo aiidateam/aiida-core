@@ -19,6 +19,7 @@ How-To Guides
    share_data
    archive_profile
    visualising_graphs
+   high_throughput
    installation
    plugins_develop
    cookbook

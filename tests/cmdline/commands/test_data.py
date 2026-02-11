@@ -233,7 +233,7 @@ class TestVerdiDataArray:
         assert res.exit_code == 0, 'The command did not finish correctly'
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestVerdiDataBands(DummyVerdiDataListable):
     """Testing verdi data core.bands."""
 

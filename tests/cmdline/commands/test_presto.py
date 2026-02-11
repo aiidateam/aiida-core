@@ -51,7 +51,7 @@ def test_presto_without_rmq(pytestconfig, run_cli_command, monkeypatch):
         assert profile.process_control_backend is None
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('empty_config')
 def test_presto_with_rmq(pytestconfig, run_cli_command):
     """Test the ``verdi presto``."""

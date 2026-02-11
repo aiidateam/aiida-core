@@ -17,7 +17,7 @@ from aiida import get_profile
 from aiida.cmdline.commands import cmd_daemon
 from aiida.engine.daemon.client import DaemonClient
 
-pytestmark = pytest.mark.requires_rmq
+pytestmark = pytest.mark.requires_broker
 
 
 def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):

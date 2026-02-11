@@ -46,7 +46,7 @@ def the_hans_klok_comeback(loop):
     loop.stop()
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_call_on_process_finish(runner):
     """Test call on calculation finish."""
     loop = runner.loop

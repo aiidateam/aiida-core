@@ -72,6 +72,7 @@ requires-python = '>=3.9'
 
 [project.entry-points.'aiida.brokers']
 'core.rabbitmq' = 'aiida.brokers.rabbitmq.broker:RabbitmqBroker'
+'core.zmq' = 'aiida.brokers.zmq.broker:ZmqBroker'
 
 [project.entry-points.'aiida.calculations']
 'core.arithmetic.add' = 'aiida.calculations.arithmetic.add:ArithmeticAddCalculation'

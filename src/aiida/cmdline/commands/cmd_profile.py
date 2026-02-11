@@ -36,7 +36,8 @@ def command_create_profile(
     first_name: str | None = None,
     last_name: str | None = None,
     institution: str | None = None,
-    use_rabbitmq: bool = True,
+    broker: str = 'rabbitmq',
+    use_rabbitmq: bool | None = None,
     **kwargs,
 ):
     """Create a new profile, initialise its storage and create a default user.
@@ -51,10 +52,17 @@ def command_create_profile(
     :param first_name: First name for the default user.
     :param last_name: Last name for the default user.
     :param institution: Institution for the default user.
-    :param use_rabbitmq: Whether to configure RabbitMQ as the broker.
+    :param broker: Message broker backend ('rabbitmq', 'zmq', or 'none').
+    :param use_rabbitmq: Deprecated. Use ``broker`` instead. If False, equivalent to ``broker='none'``.
     :param kwargs: Arguments to initialise instance of the selected storage implementation.
     """
-    from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
+    # Handle deprecated --use-rabbitmq/--no-use-rabbitmq option
+    if use_rabbitmq is not None:
+        from aiida.common.warnings import warn_deprecation
+
+        warn_deprecation('The `--use-rabbitmq` option is deprecated. Use `--broker` instead.', version=3)
+        if not use_rabbitmq:
+            broker = 'none'
     from aiida.common import docs
     from aiida.plugins.entry_point import get_entry_point_from_class
 
@@ -70,7 +78,9 @@ def command_create_profile(
     broker_backend = None
     broker_config = None
 
-    if use_rabbitmq:
+    if broker == 'rabbitmq':
+        from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
+
         try:
             broker_config = detect_rabbitmq_config()
         except ConnectionError as exception:
@@ -80,8 +90,17 @@ def command_create_profile(
             broker_backend = 'core.rabbitmq'
 
         echo.echo_report('RabbitMQ can be reconfigured with `verdi profile configure-rabbitmq`.')
-    else:
-        echo.echo_report('Creating profile without RabbitMQ.')
+
+    elif broker == 'zmq':
+        from aiida.brokers.zmq.defaults import get_zmq_config
+
+        broker_backend = 'core.zmq'
+        broker_config = get_zmq_config()
+        echo.echo_success('ZMQ broker configured (no external service required).')
+        echo.echo_report('The ZMQ broker service will be started automatically with the daemon.')
+
+    else:  # broker == 'none'
+        echo.echo_report('Creating profile without a message broker.')
         echo.echo_report('It can be configured at a later point in time with `verdi profile configure-rabbitmq`.')
         echo.echo_report(f'See {docs.URL_NO_BROKER} for details on the limitations of running without a broker.')
 
@@ -124,7 +143,8 @@ def command_create_profile(
         setup.SETUP_USER_FIRST_NAME(),
         setup.SETUP_USER_LAST_NAME(),
         setup.SETUP_USER_INSTITUTION(),
-        setup.SETUP_USE_RABBITMQ(),
+        setup.SETUP_BROKER_BACKEND(),
+        setup.SETUP_USE_RABBITMQ(),  # Deprecated, for backward compatibility
     ],
 )
 def profile_setup():

@@ -57,7 +57,7 @@ def get_calcjob_builder(aiida_code_installed):
     return _factory
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class DummyCalcJob(CalcJob):
     """`DummyCalcJob` implementation to test the calcinfo with container code."""
 
@@ -81,7 +81,7 @@ class DummyCalcJob(CalcJob):
         return calcinfo
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class FileCalcJob(CalcJob):
     """Example `CalcJob` implementation to test the `provenance_exclude_list` functionality.
 
@@ -119,7 +119,7 @@ class FileCalcJob(CalcJob):
         return calcinfo
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class MultiCodesCalcJob(CalcJob):
     """`MultiCodesCalcJob` implementation to test the calcinfo with multiple codes set.
 
@@ -250,7 +250,7 @@ def test_multi_codes_with_mpi(
     assert len(job_tmpl['codes_info'][0]['prepend_cmdline_params']) == expected
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('chdir_tmp_path')
 @pytest.mark.parametrize('parallel_run', [True, False])
 def test_multi_codes_run_parallel(aiida_code_installed, file_regression, parallel_run):
@@ -279,7 +279,7 @@ def test_multi_codes_run_parallel(aiida_code_installed, file_regression, paralle
     file_regression.check(content, extension='.sh')
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('chdir_tmp_path')
 @pytest.mark.parametrize('computer_use_double_quotes', [True, False])
 def test_computer_double_quotes(
@@ -311,7 +311,7 @@ def test_computer_double_quotes(
     file_regression.check(content, extension='.sh')
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('chdir_tmp_path')
 @pytest.mark.parametrize('code_use_double_quotes', [True, False])
 def test_code_double_quotes(aiida_localhost, file_regression, code_use_double_quotes):
@@ -338,7 +338,7 @@ def test_code_double_quotes(aiida_localhost, file_regression, code_use_double_qu
     file_regression.check(content, extension='.sh')
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('chdir_tmp_path')
 def test_containerized_code(file_regression, aiida_localhost):
     """Test the :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode`."""
@@ -371,7 +371,7 @@ def test_containerized_code(file_regression, aiida_localhost):
     file_regression.check(content, extension='.sh')
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('chdir_tmp_path')
 def test_containerized_code_wrap_cmdline_params(file_regression, aiida_localhost):
     """Test :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` with ``wrap_cmdline_params = True``."""
@@ -405,7 +405,7 @@ def test_containerized_code_wrap_cmdline_params(file_regression, aiida_localhost
     file_regression.check(content, extension='.sh')
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('chdir_tmp_path')
 def test_containerized_code_withmpi_true(file_regression, aiida_localhost):
     """Test the :class:`~aiida.orm.nodes.data.code.containerized.ContainerizedCode` with ``withmpi=True``."""
@@ -438,7 +438,7 @@ def test_containerized_code_withmpi_true(file_regression, aiida_localhost):
     file_regression.check(content, extension='.sh')
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('chdir_tmp_path')
 def test_portable_code(tmp_path, aiida_localhost):
     """Test run container code"""
@@ -484,7 +484,7 @@ def test_portable_code(tmp_path, aiida_localhost):
     assert subsubcontent == 'sub dummy'
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestCalcJob:
     """Test for the `CalcJob` process sub class."""
 
@@ -855,7 +855,7 @@ def generate_process(aiida_code_installed):
     return _generate_process
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('override_logging')
 def test_parse_insufficient_data(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
@@ -886,7 +886,7 @@ def test_parse_insufficient_data(generate_process):
         assert log in logs
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('override_logging')
 def test_parse_non_zero_retval(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
@@ -906,7 +906,7 @@ def test_parse_non_zero_retval(generate_process):
     assert 'could not parse scheduler output: return value of `detailed_job_info` is non-zero' in logs
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('override_logging')
 def test_parse_not_implemented(generate_process):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
@@ -938,7 +938,7 @@ def test_parse_not_implemented(generate_process):
         assert log in logs
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('override_logging')
 def test_parse_scheduler_excepted(generate_process, monkeypatch):
     """Test the scheduler output parsing logic in `CalcJob.parse`.
@@ -976,7 +976,7 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
         assert log in logs
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.parametrize(
     ('exit_status_scheduler', 'exit_status_retrieved', 'final'),
     (
@@ -1046,7 +1046,7 @@ def test_parse_exit_code_priority(
     assert result.status == final
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_additional_retrieve_list(generate_process, fixture_sandbox):
     """Test the ``additional_retrieve_list`` option."""
     process = generate_process()
@@ -1342,7 +1342,7 @@ def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
     assert node.exit_status == 418
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_and_await):
     """Test that a job can be restarted when it is launched and the daemon is restarted.
 

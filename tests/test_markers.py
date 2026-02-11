@@ -12,7 +12,7 @@ def test_presto_auto_mark(request):
 
 @pytest.mark.sphinx
 def test_presto_mark_and_another_mark(request):
-    """Test that presto marker is added even if there is an existing marker (except requires_rmq|psql)"""
+    """Test that presto marker is added even if there is an existing marker (except requires_broker|psql)"""
     own_markers = [marker.name for marker in request.node.own_markers]
 
     assert len(own_markers) == 2
@@ -20,13 +20,13 @@ def test_presto_mark_and_another_mark(request):
     assert 'sphinx' in own_markers
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_no_presto_mark_if_rmq(request):
-    """Test that presto marker is NOT added if the test is mark with "requires_rmq"""
+    """Test that presto marker is NOT added if the test is mark with "requires_broker"""
     own_markers = [marker.name for marker in request.node.own_markers]
 
     assert len(own_markers) == 1
-    assert own_markers[0] == 'requires_rmq'
+    assert own_markers[0] == 'requires_broker'
 
 
 @pytest.mark.requires_psql
@@ -56,9 +56,9 @@ def test_requires_psql_with_sqlite_impossible(pytestconfig):
 
 def test_daemon_client_fixture_automarked(request, daemon_client):
     """Test that any test using ``daemon_client`` fixture is
-    automatically tagged with 'requires_rmq' mark
+    automatically tagged with 'requires_broker' mark
     """
     own_markers = [marker.name for marker in request.node.own_markers]
 
     assert len(own_markers) == 1
-    assert own_markers[0] == 'requires_rmq'
+    assert own_markers[0] == 'requires_broker'

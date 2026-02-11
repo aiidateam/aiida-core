@@ -73,7 +73,7 @@ def pytest_collection_modifyitems(items, config):
     """Automatically generate markers for certain tests.
 
     Most notably, we add the 'presto' marker for all tests that
-    are not marked with either requires_rmq or requires_psql.
+    are not marked with either requires_broker or requires_psql.
     """
     filepath_psqldos = Path(__file__).parent / 'storage' / 'psql_dos'
     filepath_django = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'django_branch'
@@ -90,19 +90,20 @@ def pytest_collection_modifyitems(items, config):
     # Handle broker backend selection
     broker_backend = config.option.broker_backend
 
-    # If using ZMQ, skip tests that specifically require RabbitMQ
+    # If using ZMQ, skip tests that specifically require RabbitMQ (requires_rmq marker)
+    # but allow tests with requires_broker marker (they work with any broker)
     if broker_backend is TestBrokerBackend.ZMQ:
         if config.option.markexpr != '':
             config.option.markexpr += ' and (not requires_rmq)'
         else:
             config.option.markexpr = 'not requires_rmq'
 
-    # If no broker, skip all tests that require any broker (RMQ-specific or general broker tests)
+    # If no broker, skip all tests that require any broker (both RMQ-specific and general broker tests)
     if broker_backend is TestBrokerBackend.NONE:
         if config.option.markexpr != '':
-            config.option.markexpr += ' and (not requires_rmq) and (not requires_broker)'
+            config.option.markexpr += ' and (not requires_broker) and (not requires_rmq)'
         else:
-            config.option.markexpr = 'not requires_rmq and not requires_broker'
+            config.option.markexpr = 'not requires_broker and not requires_rmq'
 
     for item in items:
         filepath_item = Path(item.fspath)
@@ -122,8 +123,8 @@ def pytest_collection_modifyitems(items, config):
         # Add 'presto' marker to tests that require no external services (no PSQL, no broker).
         markers = [marker.name for marker in item.iter_markers()]
         if (
-            'requires_rmq' not in markers
-            and 'requires_broker' not in markers
+            'requires_broker' not in markers
+            and 'requires_rmq' not in markers
             and 'requires_psql' not in markers
             and 'nightly' not in markers
         ):

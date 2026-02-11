@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import threading
 import uuid
@@ -10,6 +9,8 @@ from concurrent.futures import Future
 from typing import Any, Callable
 
 import zmq
+
+from aiida.brokers.utils import YAML_DECODER, YAML_ENCODER
 
 from .protocol import (
     MessageType,
@@ -42,8 +43,8 @@ class ZmqCommunicator:
         self,
         router_endpoint: str,
         pub_endpoint: str,
-        encoder: Callable[[Any], str] = json.dumps,
-        decoder: Callable[[str], Any] = json.loads,
+        encoder: Callable[[Any], str] | None = None,
+        decoder: Callable[[str], Any] | None = None,
         client_id: str | None = None,
     ):
         """Initialize the communicator.
@@ -56,8 +57,8 @@ class ZmqCommunicator:
         """
         self._router_endpoint = router_endpoint
         self._pub_endpoint = pub_endpoint
-        self._encoder = encoder
-        self._decoder = decoder
+        self._encoder = encoder if encoder is not None else YAML_ENCODER
+        self._decoder = decoder if decoder is not None else YAML_DECODER
         self._client_id = client_id or f'client-{uuid.uuid4().hex[:8]}'
 
         # ZMQ sockets

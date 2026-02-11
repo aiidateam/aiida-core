@@ -174,7 +174,7 @@ def make_rpc_response(rpc_id: str, sender: str, result: Any = None, error: str |
 
 
 def make_broadcast_message(
-    body: Any, sender: str, subject: str | None = None, correlation_id: str | None = None
+    body: Any, sender: str | uuid.UUID, subject: str | None = None, correlation_id: str | None = None
 ) -> dict:
     """Create a broadcast message dictionary."""
     return {

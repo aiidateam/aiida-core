@@ -9,7 +9,6 @@ message broker server. It handles:
 
 from __future__ import annotations
 
-import json
 import logging
 import threading
 import time
@@ -18,6 +17,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 import zmq
+
+from aiida.brokers.utils import YAML_DECODER, YAML_ENCODER
 
 from .protocol import MessageType, decode_message, encode_message
 from .queue import PersistentQueue
@@ -44,16 +45,18 @@ class ZmqBrokerServer:
         self,
         storage_path: Path | str,
         sockets_path: Path | str,
-        encoder: Callable[[Any], str] = json.dumps,
-        decoder: Callable[[str], Any] = json.loads,
+        encoder: Callable[[Any], str] | None = None,
+        decoder: Callable[[str], Any] | None = None,
     ):
         """Initialize the broker server.
 
         :param storage_path: Path for task queue persistence
         :param sockets_path: Path for IPC socket files
-        :param encoder: Function to encode messages to JSON string
-        :param decoder: Function to decode JSON string to messages
+        :param encoder: Function to encode messages (default: yaml.dump)
+        :param decoder: Function to decode messages (default: yaml.load)
         """
+        encoder = encoder if encoder is not None else YAML_ENCODER
+        decoder = decoder if decoder is not None else YAML_DECODER
         self._storage_path = Path(storage_path)
         self._sockets_path = Path(sockets_path)
 

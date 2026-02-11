@@ -170,9 +170,8 @@ def verdi_presto(
     * Set a number of configuration options with sensible defaults
 
     By default the command creates a profile that uses SQLite for the database. It automatically checks for RabbitMQ
-    running on the localhost, and, if it can connect, configures that as the broker for the profile. Otherwise, the
-    profile is created without a broker, in which case some functionality will be unavailable, most notably running the
-    daemon and submitting processes to said daemon.
+    running on the localhost, and, if it can connect, configures that as the broker for the profile. Otherwise, it
+    falls back to the ZMQ broker which requires no external services and is started automatically with the daemon.
 
     When the `--use-postgres` flag is toggled, the command tries to connect to the PostgreSQL server with connection
     paramaters taken from the `--postgres-hostname`, `--postgres-port`, `--postgres-username` and `--postgres-password`
@@ -180,7 +179,8 @@ def verdi_presto(
     created profile uses the new PostgreSQL database instead of SQLite.
     """
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
-    from aiida.common import docs, exceptions
+    from aiida.brokers.zmq.defaults import get_zmq_config
+    from aiida.common import exceptions
     from aiida.manage.configuration import create_profile, load_profile
     from aiida.orm import Computer
 
@@ -218,10 +218,12 @@ def verdi_presto(
     try:
         broker_config = detect_rabbitmq_config()
     except ConnectionError as exception:
-        echo.echo_report(f'RabbitMQ server not found ({exception}): configuring the profile without a broker.')
-        echo.echo_report(f'See {docs.URL_NO_BROKER} for details on the limitations of running without a broker.')
+        echo.echo_report(f'RabbitMQ server not found ({exception}): falling back to ZMQ broker.')
+        echo.echo_report('ZMQ broker requires no external services and will be started automatically with the daemon.')
+        broker_backend = 'core.zmq'
+        broker_config = get_zmq_config()
     else:
-        echo.echo_report('RabbitMQ server detected: configuring the profile with a broker.')
+        echo.echo_report('RabbitMQ server detected: configuring the profile with RabbitMQ broker.')
         broker_backend = 'core.rabbitmq'
 
     try:

@@ -347,9 +347,8 @@ Below is a list with all available subcommands.
 
       By default the command creates a profile that uses SQLite for the database. It
       automatically checks for RabbitMQ running on the localhost, and, if it can connect,
-      configures that as the broker for the profile. Otherwise, the profile is created without
-      a broker, in which case some functionality will be unavailable, most notably running the
-      daemon and submitting processes to said daemon.
+      configures that as the broker for the profile. Otherwise, it falls back to the ZMQ
+      broker which requires no external services and is started automatically with the daemon.
 
       When the `--use-postgres` flag is toggled, the command tries to connect to the
       PostgreSQL server with connection paramaters taken from the `--postgres-hostname`,

@@ -15,6 +15,7 @@ import functools
 import logging
 import typing as t
 
+from plumpy.greenback_bridge import run_in_greenback
 from plumpy.persistence import auto_persist
 from plumpy.process_states import Continue, Wait
 from plumpy.processes import ProcessStateMachineMeta
@@ -299,7 +300,7 @@ class WorkChain(Process, metaclass=Protect):
     @Protect.final
     async def run(self) -> t.Any:
         self._stepper = self.spec().get_outline().create_stepper(self)  # type: ignore[arg-type]
-        return self._do_step()
+        return await run_in_greenback(self._do_step)
 
     def _do_step(self) -> t.Any:
         """Execute the next step in the outline and return the result.

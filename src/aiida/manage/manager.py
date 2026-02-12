@@ -145,8 +145,69 @@ class Manager:
         # Check whether a development version is being run. Note that needs to be called after ``configure_logging``
         # because this function relies on the logging being properly configured for the warning to show.
         self.check_version()
+        self._install_greenback_portal()
 
         return self._profile
+
+    def _install_greenback_portal(self) -> None:
+        """Register an IPython input transformer that ensures a greenback portal.
+
+        When running inside an environment with an already-running event loop
+        (e.g. a Jupyter notebook kernel), this registers an IPython input
+        transformer that prepends ``await greenback.ensure_portal()`` to
+        every cell.  This activates a greenback portal on whichever asyncio
+        task ipykernel uses for that cell.
+
+        The transformer is registered during ``load_profile()`` and takes
+        effect from the **next cell**.  ``load_profile()`` must therefore be
+        called in a prior cell before synchronous process execution.
+
+        Expected Trade-off: error tracebacks show line numbers offset by 1 due to the
+        prepended line.
+
+        This is a no-op if no event loop is running (scripts, CLI, daemon).
+        """
+        import asyncio
+
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return  # No running loop — not in Jupyter, nothing to do
+
+        self._register_portal_transformer()
+
+    def _register_portal_transformer(self) -> None:
+        """Register an IPython input transformer that ensures a greenback portal."""
+        try:
+            from IPython import get_ipython  # type: ignore[attr-defined]
+
+            ip = get_ipython()
+            if ip is None:
+                return
+
+            # Only patch inside a real Jupyter kernel (ZMQInteractiveShell),
+            # not plain terminal IPython.
+            if 'zmq' not in type(ip).__module__:
+                return
+
+            if getattr(ip, '_aiida_portal_transformer', False):
+                return  # Already registered
+
+            def _ensure_portal_transformer(lines):
+                return ["await __import__('greenback').ensure_portal()  # aiida: activate greenback portal\n"] + lines
+
+            ip.input_transformers_post.append(_ensure_portal_transformer)
+            ip._aiida_portal_transformer = True
+            self.logger.debug(
+                'Registered IPython transformer for greenback portal. '
+                'This should occur in a Jupyter kernel, and only once per kernel session.'
+            )
+            print(
+                'Warning: Synchronous process execution is available only from the next cell. '
+                'All aiida engine methods is only availabe from the next cell.'
+            )
+        except Exception:
+            self.logger.debug('Could not register IPython portal transformer.', exc_info=True)
 
     def reset_profile(self) -> None:
         """Close and reset any associated resources for the current profile."""

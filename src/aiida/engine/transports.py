@@ -67,6 +67,14 @@ class TransportQueue:
         :param authinfo: The authinfo to be used to get transport
         :return: A future that can be yielded to give the transport
         """
+
+        import greenback
+
+        # NOTE: We need to ensure the portal here only because
+        # our scheduler has only a sync interface and _get_jobs_from_scheduler is using that
+        # if we ever provide a fully async scheduler interface then we can remove this here
+        await greenback.ensure_portal()
+
         open_callback_handle = None
         transport_request = self._transport_requests.get(authinfo.pk, None)
 

@@ -1,164 +1,128 @@
 .. _how-to:tune-performance:
 
-*******************************
-How to Tune AiiDA performance
-*******************************
+***************************************
+How to tune high-throughput performance
+***************************************
 
 AiiDA supports running hundreds of thousands of calculations and graphs with millions of nodes.
 However, optimal performance at that scale can require tweaking the AiiDA configuration to balance the CPU and disk load.
 
-Below, we share a few practical tips for assessing and tuning AiiDA performance.
 Further in-depth information is available in the dedicated :ref:`topic on performance<topics:performance>`.
 
-.. dropdown:: Benchmark workflow engine performance
+TL;DR
+=====
 
-    Download the :download:`benchmark script <include/scripts/performance_benchmark_base.py>` :fa:`download`, and run it in your AiiDA environment.
+Quick settings to consider for high-throughput workloads:
 
-    .. code:: console
+- Start the daemon with multiple workers: ``verdi daemon start X`` (e.g., ``X=4``)
+- Reduce the SSH connection cooldown time for remote Computers (default 15s)
+- Enable caching: ``verdi config set caching.default_enabled True``
+- Increase worker slots: ``verdi config set daemon.worker_process_slots X`` (e.g., ``X=1000``)
 
-        sph@citadel:~/$ python performance_benchmark_base.py -n 100
-            Success: Created and configured temporary `Computer` benchmark-e73b8647 for localhost.
-            Success: Created temporary `Code` bash for localhost.
-            Running 100 calculations.  [####################################]  100%
-            Success: All calculations finished successfully.
-            Elapsed time: 24.90 seconds.
-            Cleaning up...
-            12/19/2022 10:57:43 AM <12625> aiida.delete: [REPORT] 400 Node(s) marked for deletion
-            12/19/2022 10:57:43 AM <12625> aiida.delete: [REPORT] Starting node deletion...
-            12/19/2022 10:57:43 AM <12625> aiida.delete: [REPORT] Deletion of nodes completed.
-            Success: Deleted all calculations.
-            Success: Deleted the created code bash@benchmark-e73b8647.
-            Success: Deleted the created computer benchmark-e73b8647.
-            Performance: 0.25 s / process
+To see all available configuration options and their current values, run ``verdi config list``.
 
-    The output above was generated on an AMD Ryzen 5 3600 6-Core processor (3.6 GHz, 4.2 GHz turbo boost) using AiiDA v2.2.0, and RabbitMQ and PostgreSQL running on the same machine.
-    Here, 100 ``ArithmeticAddCalculation`` processes completed in ~25s, corresponding to 0.25 seconds per process.
+Daemon configuration
+====================
 
-    If you observe a significantly higher runtime, you may want to check whether any relevant component (CPU, disk, postgresql, rabbitmq) is congested.
+**Increase the number of daemon workers** --
+By default, the AiiDA daemon only uses a single worker, i.e. a single operating system process.
+If ``verdi daemon status`` shows the daemon worker constantly at high CPU usage, use ``verdi daemon start X`` to run with ``X`` workers, or ``verdi daemon incr X`` to add ``X`` workers to a running daemon.
+Keep in mind that other processes need to run on your computer, so it's a good idea to stop increasing the number of workers before you reach the number of cores of your CPU.
+To set the default value for your profile:
 
-.. dropdown:: Increase the number of daemon workers
+.. code:: console
 
-    By default, the AiiDA daemon only uses a single worker, i.e. a single operating system process.
-    If ``verdi daemon status`` shows the daemon worker constantly at high CPU usage, you can use ``verdi daemon incr X`` to add ``X`` parallel daemon workers.
+    $ verdi config set daemon.default_workers X
 
-    Keep in mind that other processes need to run on your computer (e.g. rabbitmq, the PostgreSQL database, ...), i.e. it's a good idea to stop increasing the number of workers before you reach the number of cores of your CPU.
+**Increase the number of daemon worker slots** --
+Each daemon worker accepts only a limited number of concurrent process tasks (event loop tasks) at a time.
+If ``verdi daemon status`` constantly warns about a high percentage of the available daemon worker slots being used, increase the number of tasks handled by each daemon worker and restart the daemon:
 
-    To make the change permanent, set
-    ::
+.. code:: console
 
-        verdi config set daemon.default_workers 4
+    $ verdi config set daemon.worker_process_slots X
 
-.. dropdown:: Increase the number of daemon worker slots
+Remote connections
+==================
 
-    Each daemon worker accepts only a limited number of tasks at a time.
-    If ``verdi daemon status`` constantly warns about a high percentage of the available daemon worker slots being used, you can increase the number of tasks handled by each daemon worker (thus increasing the workload per worker).
-    Increasing it to 1000 should typically work.
+**Tune SSH connection interval** --
+By default, AiiDA enforces a 15-second delay between consecutive SSH connections to the same remote machine.
+This cooldown prevents overloading remote systems with too many connection requests, which could get you blocked by HPC center firewalls or violate their usage policies.
 
-    Set the corresponding config variable and restart the daemon
-    ::
+If you are running many short tasks and notice performance bottlenecks, you can adjust this value via the interactive configuration:
 
-        verdi config set daemon.worker_process_slots 1000
+.. code:: console
 
-.. dropdown:: Tune SSH connection interval (safe_interval)
+    $ verdi computer configure core.ssh <COMPUTER_LABEL>
+    ...
+    Connection cooldown time (s) [15.0]: <lower-value>
 
-    By default, AiiDA enforces a **15s delay** between consecutive SSH connections to the same remote machine to prevent overload.
-    This delay is configurable via the CLI and can be adjusted interactively for each Computer.
+Or non-interactively with ``--safe-interval``:
 
-    If you are running many short tasks on a remote HPC and notice performance bottlenecks,
-    you can tune this value via the Computer configuration.
+.. code:: console
 
-    To view or change the safe interval of an existing Computer:
+    $ verdi computer configure core.ssh --safe-interval <lower-value> <COMPUTER_LABEL>
 
-    .. code:: console
+Inspect the current value with:
 
-        verdi computer configure core.ssh <COMPUTER_LABEL>
+.. code:: console
 
-    During the interactive prompt, locate the **SSH safe interval** (sometimes shown as
-    *Connection cooldown time*) and enter a new value (in seconds) that matches your workload and
-    remote system. Increasing it reduces load on remote servers, while decreasing it allows faster
-    connection cycles when safe.
+    $ verdi computer configure show <COMPUTER_LABEL>
 
-    You can inspect the effective safe interval at any time via:
+.. warning::
 
-    .. code:: console
+    Setting the interval too low -- especially with many daemon workers active -- can trigger
+    rate limiting or IP bans from HPC centers. Check your center's policies before reducing this value.
 
-        verdi computer configure show <COMPUTER_LABEL>
+**Consider using aiida-hyperqueue for many short calculations** --
+When running many small calculations on HPC systems, you may hit limits on the number of active jobs allowed, or face long total queueing times.
+The `aiida-hyperqueue <https://aiida-hyperqueue.readthedocs.io/>`_ plugin allows you to submit many AiiDA calculations to the `HyperQueue <https://github.com/It4innovations/hyperqueue>`_ metascheduler, which runs them within a single job allocation.
 
-    .. note::
+Caching
+=======
 
-        Setting an interval that is too low — especially when many daemon workers are active — can
-        overload the remote system and potentially violate usage policies of some HPC centers.
+AiiDA can skip redundant calculations entirely by reusing cached results from identical previous runs.
+This can dramatically improve throughput when running similar calculations.
+Enable it globally:
 
-.. dropdown:: Prevent your operating system from indexing the file repository.
+.. code:: console
 
-    Many Linux distributions include the ``locate`` command to quickly find files and folders, and run a daily cron job ``updatedb.mlocate`` to create the corresponding index.
-    A large file repository can take a long time to index, up to the point where the hard drive is constantly indexing.
+    $ verdi config set caching.default_enabled True
 
-    In order to exclude the repository folder from indexing, add its path to the ``PRUNEPATH`` variable in the ``/etc/updatedb.conf`` configuration file (use ``sudo``).
+See :ref:`how-to:run-codes:caching` for details on how caching works and how to configure it per calculation type.
 
-.. dropdown:: Move the Postgresql database to a fast disk (SSD), ideally on a large partition.
+System and storage
+==================
 
-    1. Stop the AiiDA daemon and :ref:`back up your database <how-to:installation:backup>`.
+**Move the PostgreSQL database to an SSD** --
+If AiiDA's database is on a slow disk, moving it to an SSD can significantly improve query performance.
+Consult the `PostgreSQL documentation <https://www.postgresql.org/docs/current/manage-ag-tablespaces.html>`_ for instructions on relocating the data directory.
+Remember to :ref:`back up your database <how-to:installation:backup>` before making changes.
 
-    2. Find the data directory of your postgres installation (something like ``/var/lib/postgresql/9.6/main``, ``/scratch/postgres/9.6/main``, ...).
+Diagnosing bottlenecks
+======================
 
-        The best way is to become the postgres UNIX user and enter the postgres shell::
+**Analyze the RabbitMQ message rate** --
+The `RabbitMQ management plugin <https://www.rabbitmq.com/management.html>`_ provides a dashboard to monitor the message rate.
+Enable it with:
 
-            psql
-            SHOW data_directory;
-            \q
+.. code:: console
 
-        If you are unable to enter the postgres shell, try looking for the ``data_directory`` variable in a file ``/etc/postgresql/9.6/main/postgresql.conf`` or similar.
+    $ sudo rabbitmq-plugins enable rabbitmq_management
 
-    3. Stop the postgres database service::
+Then navigate to http://localhost:15672/ (login: ``guest``/``guest``).
 
-        service postgresql stop
+**Benchmark workflow engine performance** --
+Download the :download:`benchmark script <include/scripts/performance_benchmark_base.py>` :fa:`download` and run it in your AiiDA environment:
 
-    4. Copy all files and folders from the postgres ``data_directory`` to the new location::
+.. code:: console
 
-        cp -a SOURCE_DIRECTORY DESTINATION_DIRECTORY
+    $ python performance_benchmark_base.py -n 100
+    ...
+    Elapsed time: 24.90 seconds.
+    Performance: 0.25 s / process
 
-        .. note:: Flag ``-a`` will create a directory within ``DESTINATION_DIRECTORY``, e.g.::
-
-        cp -a OLD_DIR/main/ NEW_DIR/
-
-        creates ``NEW_DIR/main``.
-        It will also keep the file permissions (necessary).
-
-        The file permissions of the new and old directory need to be identical (including subdirectories).
-        In particular, the owner and group should be both ``postgres`` (except for symbolic links in ``server.crt`` and ``server.key`` that may or may not be present).
-
-        .. note::
-
-            If the permissions of these links need to be changed, use the ``-h`` option of ``chown`` to avoid changing the permissions of the destination of the links.
-            In case you have changed the permission of the links destination by mistake, they should typically be (beware that this might depend on your actual distribution!)::
-
-            -rw-r--r-- 1 root root 989 Mar  1  2012 /etc/ssl/certs/ssl-cert-snakeoil.pem
-            -rw-r----- 1 root ssl-cert 1704 Mar  1  2012 /etc/ssl/private/ssl-cert-snakeoil.key
-
-    5. Point the ``data_directory`` variable in your postgres configuration file (e.g. ``/etc/postgresql/9.6/main/postgresql.conf``) to the new directory.
-
-    6. Restart the database daemon::
-
-        service postgresql start
-
-    Finally, check that the data directory has indeed changed::
-
-        psql
-        SHOW data_directory;
-        \q
-
-    and try a simple AiiDA query with the new database.
-    If everything went fine, you can delete the old database location.
-
-If you're still encountering performance issues, the following tips can help with pinpointing performance bottlenecks.
-
-.. dropdown:: Analyze the RabbitMQ message rate
-
-    If you're observing slow performance of the AiiDA engine, the `RabbitMQ management plugin <https://www.rabbitmq.com/management.html>`_ provides an intuitive dashboard that lets you monitor the message rate and check on what the AiiDA engine is up to.
-
-    Enable the management plugin via something like::
-
-        sudo rabbitmq-plugins enable rabbitmq_management
-
-    Then, navigate to http://localhost:15672/ and log in with ``guest``/``guest``.
+This runs 100 ``ArithmeticAddCalculation`` processes and reports the time per process.
+The example above was obtained on an AMD Ryzen 5 3600 (3.6 GHz) with AiiDA v2.2.0.
+If you observe significantly higher runtimes, check whether any relevant component (CPU, disk, PostgreSQL, RabbitMQ) is congested.
+Results may vary depending on your hardware and AiiDA version.

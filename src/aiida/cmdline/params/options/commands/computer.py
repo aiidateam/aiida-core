@@ -8,21 +8,28 @@
 ###########################################################################
 """Reusable command line interface options for Computer commands."""
 
+import typing as t
+
 import click
 
 from aiida.cmdline.params import options, types
 from aiida.cmdline.params.options.interactive import InteractiveOption, TemplateInteractiveOption
 from aiida.cmdline.params.options.overridable import OverridableOption
+from aiida.cmdline.utils import echo
+
+if t.TYPE_CHECKING:
+    from aiida.schedulers.datastructures import JobResource
 
 
-def get_job_resource_cls(ctx):
+def get_job_resource_cls(ctx: click.Context) -> 'type[JobResource]':
     """Return job resource cls from ctx."""
     from aiida.common.exceptions import ValidationError
+    from aiida.schedulers import Scheduler
 
     scheduler_ep = ctx.params['scheduler']
     if scheduler_ep is not None:
         try:
-            scheduler_cls = scheduler_ep.load()
+            scheduler_cls = t.cast(Scheduler, scheduler_ep.load())
         except ImportError:
             raise ImportError(f"Unable to load the '{scheduler_ep.name}' scheduler")
     else:
@@ -33,22 +40,21 @@ def get_job_resource_cls(ctx):
     return scheduler_cls.job_resource_class
 
 
-def should_call_default_mpiprocs_per_machine(ctx):
+def should_call_default_mpiprocs_per_machine(ctx: click.Context) -> bool:
     """Return whether the selected scheduler type accepts `default_mpiprocs_per_machine`.
 
     :return: `True` if the scheduler type accepts `default_mpiprocs_per_machine`, `False`
         otherwise. If the scheduler class could not be loaded `False` is returned by default.
     """
     job_resource_cls = get_job_resource_cls(ctx)
-
     if job_resource_cls is None:
         # Odd situation...
-        return False
+        return False  # type: ignore[unreachable]
 
     return job_resource_cls.accepts_default_mpiprocs_per_machine()
 
 
-def should_call_default_memory_per_machine(ctx):
+def should_call_default_memory_per_machine(ctx: click.Context) -> bool:
     """Return whether the selected scheduler type accepts `default_memory_per_machine`.
 
     :return: `True` if the scheduler type accepts `default_memory_per_machine`, `False`
@@ -58,7 +64,7 @@ def should_call_default_memory_per_machine(ctx):
 
     if job_resource_cls is None:
         # Odd situation...
-        return False
+        return False  # type: ignore[unreachable]
 
     return job_resource_cls.accepts_default_memory_per_machine()
 
@@ -82,7 +88,19 @@ DESCRIPTION = options.DESCRIPTION.clone(
     prompt='Description', cls=InteractiveOption, help='A human-readable description of this computer.'
 )
 
-TRANSPORT = options.TRANSPORT.clone(prompt='Transport plugin', cls=InteractiveOption)
+
+def transport_callback(ctx: click.Context, param: click.Parameter, value: t.Any) -> t.Any:
+    """Callback for the transport option that shows a deprecation warning for core.ssh."""
+    if value is not None and value.name == 'core.ssh':
+        echo.echo_deprecated(
+            'The `core.ssh` transport plugin is deprecated and will be removed in v3.0. '
+            'Use `core.ssh_async` instead, which is significantly faster and provides an '
+            'easier configuration interface.'
+        )
+    return value
+
+
+TRANSPORT = options.TRANSPORT.clone(prompt='Transport plugin', cls=InteractiveOption, callback=transport_callback)
 
 SCHEDULER = options.SCHEDULER.clone(prompt='Scheduler plugin', cls=InteractiveOption)
 

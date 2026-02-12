@@ -1,19 +1,16 @@
-"""Tests for the :mod:`aiida.manage.tests.pytest_fixtures` module."""
+"""Tests for the :mod:`aiida.tools.pytest_fixtures.orm` module."""
 
 import uuid
 
 import pytest
 
-from aiida.manage.configuration import get_config
-from aiida.manage.configuration.config import Config
 from aiida.orm import Computer
 from aiida.transports import AsyncTransport, BlockingTransport
-from aiida.transports.plugins import _AsyncSSH, _OpenSSH
+from aiida.transports.plugins.async_backend import _AsyncSSH, _OpenSSH
 
-
-def test_profile_config():
-    """Check that the config file created with the test profile passes validation."""
-    Config.from_file(get_config().filepath)
+# This is needed when we run this file in isolation using
+# the `--noconftest` pytest option in the 'test-pytest-fixtures' CI job.
+pytest_plugins = ['aiida.tools.pytest_fixtures']
 
 
 def test_aiida_localhost(aiida_localhost):

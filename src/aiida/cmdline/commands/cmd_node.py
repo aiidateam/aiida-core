@@ -8,8 +8,11 @@
 ###########################################################################
 """`verdi node` command."""
 
+from __future__ import annotations
+
 import datetime
 import pathlib
+from typing import TYPE_CHECKING
 
 import click
 
@@ -21,6 +24,9 @@ from aiida.cmdline.utils import decorators, echo, echo_tabulate, multi_line_inpu
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common import exceptions, timezone
 from aiida.common.links import GraphTraversalRules
+
+if TYPE_CHECKING:
+    from aiida.orm import Node
 
 
 @verdi.group('node')
@@ -270,7 +276,7 @@ def node_show(nodes, print_groups):
                 echo_tabulate(table, headers=['PK', 'Label', 'Group type'])
 
 
-def echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=True):
+def echo_node_dict(nodes: list[Node], keys: list, fmt: str, identifier: str, raw: bool, use_attrs: bool = True) -> None:
     """Show the attributes or extras of one or more nodes."""
     all_nodes = []
     for node in nodes:
@@ -279,7 +285,7 @@ def echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=True):
             id_value = node.pk
         else:
             id_name = 'UUID'
-            id_value = node.uuid
+            id_value = node.uuid  # type: ignore[assignment]
 
         if use_attrs:
             node_dict = node.base.attributes.all
@@ -322,6 +328,43 @@ def attributes(nodes, keys, fmt, identifier, raw):
 def extras(nodes, keys, fmt, identifier, raw):
     """Show the extras of one or more nodes."""
     echo_node_dict(nodes, keys, fmt, identifier, raw, use_attrs=False)
+
+
+def _warn_about_stash_nodes(pks_to_delete: set[int]) -> None:
+    """Warn about stash nodes whose target paths won't be automatically cleaned."""
+    from aiida.calculations.stash import StashCalculation
+    from aiida.orm import QueryBuilder
+    from aiida.orm.nodes.data.remote.stash import RemoteStashData
+
+    if not pks_to_delete:
+        return
+
+    # Find StashCalculation nodes in the deletion set
+    qb = QueryBuilder()
+    qb.append(
+        StashCalculation,
+        filters={'id': {'in': pks_to_delete}},
+        tag='stash_calc',
+    )
+    # Find their RemoteStashData output nodes
+    qb.append(
+        RemoteStashData,
+        with_incoming='stash_calc',
+        project=['id', 'attributes.target_basepath'],
+    )
+    stash_info = qb.all()
+
+    if not stash_info:
+        return
+
+    echo.echo_warning(
+        f'{len(stash_info)} StashCalculation node(s) will be deleted. '
+        'Note: the actual location where the data is stashed will NOT be automatically cleaned.'
+    )
+    echo.echo_report('Target paths of stash nodes:')
+    for pk, target_path in stash_info:
+        echo.echo_report(f'  <{pk}>: {target_path}')
+    echo.echo_warning('Consider manually removing these paths from the remote computer.')
 
 
 @verdi_node.command('delete')
@@ -373,7 +416,7 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
         from aiida.tools.graph.graph_traversers import get_nodes_delete
 
         backend = get_manager().get_profile_storage()
-        # For here we ignore missing nodes will be raised via func:``delete_nodes`` in the next block
+        # Here we ignore missing nodes, because errors about them will be raised in _perform_delete
         pks_set_to_delete = get_nodes_delete(
             pks, get_links=False, missing_callback=lambda missing_pks: None, backend=backend, **traversal_rules
         )['nodes']
@@ -396,6 +439,8 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
             echo.echo_report('--clean-workdir ignored. CalcJobNode work directories are already cleaned.')
             _perform_delete()
             return
+
+        _warn_about_stash_nodes(pks_set_to_delete)
 
         descendant_pks = [remote_folder.pk for paths in path_mapping.values() for remote_folder in paths]
 
@@ -439,7 +484,7 @@ def rehash(nodes, entry_point, force):
 
     # If no explicit entry point is defined, rehash all nodes, which are either Data nodes or ProcessNodes
     if entry_point is None:
-        classes = (Data, ProcessNode)
+        classes: tuple = (Data, ProcessNode)
     else:
         classes = (entry_point,)
 
@@ -464,7 +509,7 @@ def rehash(nodes, entry_point, force):
     else:
         builder = QueryBuilder()
         builder.append(classes, tag='node')
-        to_hash = builder.iterall()
+        to_hash = builder.iterall()  # type: ignore[assignment]
         num_nodes = builder.count()
 
     if not num_nodes:

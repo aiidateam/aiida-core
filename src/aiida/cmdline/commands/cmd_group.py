@@ -8,6 +8,8 @@
 ###########################################################################
 """`verdi group` commands"""
 
+from typing import Any
+
 import click
 
 from aiida.cmdline.commands.cmd_verdi import verdi
@@ -65,8 +67,8 @@ def group_remove_nodes(group, nodes, clear, force):
                 echo.echo_critical(f'None of the specified nodes are in {group}.')
 
             if len(node_pks) > len(group_node_pks):
-                node_pks = set(node_pks).difference(set(group_node_pks))
-                echo.echo_warning(f'{len(node_pks)} nodes with PK {node_pks} are not in {group}.')
+                nodes_not_in_group = set(node_pks).difference(set(group_node_pks))
+                echo.echo_warning(f'{len(nodes_not_in_group)} nodes with PK {nodes_not_in_group} are not in {group}.')
 
             message = f'Are you sure you want to remove {len(group_node_pks)} nodes from {group}?'
 
@@ -105,7 +107,7 @@ def group_move_nodes(source_group, target_group, force, nodes, all_entries):
         else:
             echo.echo_critical('Neither NODES or the `-a, --all` option was specified.')
 
-    node_pks = [node.pk for node in nodes]
+    node_pks = {node.pk for node in nodes}
 
     if not all_entries:
         query = QueryBuilder()
@@ -214,7 +216,7 @@ def group_delete(
         from aiida.common.escaping import escape_for_sql_like
 
         builder = orm.QueryBuilder()
-        filters = {}
+        filters: dict[str, Any] = {}
 
         # Note: we could have set 'core' as a default value for type_string,
         # but for the sake of uniform interface, we decided to keep the default value of None.
@@ -248,7 +250,9 @@ def group_delete(
             user_email = user.email
         else:
             # By default: only groups of this user
-            user_email = orm.User.collection.get_default().email
+            if not (default_user := orm.User.collection.get_default()):
+                echo.echo_critical('Could not get default user')
+            user_email = default_user.email
 
         # Query groups that belong to all users
         if not all_users:
@@ -325,11 +329,6 @@ def group_relabel(group, label):
         echo.echo_critical(str(exception))
     else:
         echo.echo_success(f"Label changed to '{label}'")
-        msg = (
-            'Note that if you are dumping your profile data to disk, to reflect the relabeling of the group, '
-            'run your `verdi profile dump` command again.'
-        )
-        echo.echo_report(msg)
 
 
 @verdi_group.command('description')
@@ -465,7 +464,7 @@ def group_list(
     from aiida.common.escaping import escape_for_sql_like
 
     builder = orm.QueryBuilder()
-    filters = {}
+    filters: dict[str, Any] = {}
 
     if not all_entries:
         if '%' in type_string or '_' in type_string:
@@ -493,7 +492,9 @@ def group_list(
         user_email = user.email
     else:
         # By default: only groups of this user
-        user_email = orm.User.collection.get_default().email
+        if not (default_user := orm.User.collection.get_default()):
+            echo.echo_critical('Could not get default user')
+        user_email = default_user.email
 
     # Query groups that belong to all users
     if not all_users:
@@ -690,8 +691,10 @@ def group_dump(
     from aiida.tools._dumping.utils import DumpPaths
 
     warning_msg = (
-        'This is a new feature which is still in its testing phase. '
-        'If you encounter unexpected behavior or bugs, please report them via Discourse or GitHub.'
+        'This is a new feature which is still in its testing phase.\n'
+        'If you encounter unexpected behavior or bugs, please report them via:\n'
+        '   Discourse: https://aiida.discourse.group\n'
+        '   GitHub: https://github.com/aiidateam/aiida-core/issues'
     )
     echo.echo_warning(warning_msg)
 

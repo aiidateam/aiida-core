@@ -21,7 +21,7 @@ from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 from aiida.common.warnings import warn_deprecation
 
-__all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath', 'has_magic')
+__all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath')
 
 TransportPath = Union[str, Path, PurePosixPath]
 
@@ -65,7 +65,7 @@ class Transport(abc.ABC):
     """
 
     # This will be used for ``Computer.get_minimum_job_poll_interval``
-    DEFAULT_MINIMUM_JOB_POLL_INTERVAL = 10
+    DEFAULT_MINIMUM_JOB_POLL_INTERVAL = 10.0
 
     # This is used as a global default in case subclasses don't redefine this,
     # but this should  be redefined in plugins where appropriate
@@ -279,8 +279,11 @@ class Transport(abc.ABC):
         """
         return self._safe_open_interval
 
-    def _gotocomputer_string(self, remotedir):
+    def _gotocomputer_string(self, remotedir: Optional[TransportPath] = None):
         """Command executed when goto computer."""
+        if remotedir is None:
+            return self._bash_command_str
+        remotedir = str(remotedir)
         connect_string = (
             """ "if [ -d {escaped_remotedir} ] ;"""
             """ then cd {escaped_remotedir} ; {bash_command} ; else echo '  ** The directory' ; """
@@ -304,12 +307,15 @@ class Transport(abc.ABC):
         :type mode: int
         """
 
-    @abc.abstractmethod
     def chown(self, path: TransportPath, uid: int, gid: int):
         """Change the owner (uid) and group (gid) of a file.
         As with python's os.chown function, you must pass both arguments,
         so if you only want to change one, use stat first to retrieve the
         current owner and group.
+
+        .. deprecated:: 2.7
+            This method is deprecated and will be removed in a future version.
+            It is not used internally by AiiDA and has no test coverage.
 
         :param path: path to the file to change the owner and group of
         :param uid: new owner's uid
@@ -319,6 +325,11 @@ class Transport(abc.ABC):
         :type uid: int
         :type gid: int
         """
+        warn_deprecation(
+            'The `Transport.chown` method is deprecated and will be removed. ' 'It is not used internally by AiiDA.',
+            version=3,
+        )
+        raise NotImplementedError('chown is not implemented for this transport.')
 
     @abc.abstractmethod
     def copy(self, remotesource: TransportPath, remotedestination: TransportPath, dereference=False, recursive=True):
@@ -421,7 +432,10 @@ class Transport(abc.ABC):
             self.logger.error('Unknown parameters passed to copy_from_remote_to_remote')
 
         with SandboxFolder() as sandbox:
-            self.get(remotesource, sandbox.abspath, **kwargs_get)
+            # TODO: mypy error: Argument 2 to "get" of "Transport"
+            # has incompatible type "str | PurePath";
+            # expected "str | Path | PurePosixPath"
+            self.get(remotesource, sandbox.abspath, **kwargs_get)  # type: ignore[arg-type]
             # Then we scan the full sandbox directory with get_content_list,
             # because copying directly from sandbox.abspath would not work
             # to copy a single file into another single file, and copying
@@ -817,7 +831,7 @@ class Transport(abc.ABC):
         """
 
     @abc.abstractmethod
-    def gotocomputer_command(self, remotedir: TransportPath):
+    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
         """Return a string to be run using os.system in order to connect
         via the transport to the remote directory.
 
@@ -1048,9 +1062,12 @@ class Transport(abc.ABC):
         :type mode: int
         """
 
-    @abc.abstractmethod
     async def chown_async(self, path: TransportPath, uid: int, gid: int):
         """Change the owner (uid) and group (gid) of a file.
+
+        .. deprecated:: 2.7
+            This method is deprecated and will be removed in a future version.
+            It is not used internally by AiiDA and has no test coverage.
 
         :param path: path to file
         :param uid: user id of the new owner
@@ -1060,6 +1077,12 @@ class Transport(abc.ABC):
         :type uid: int
         :type gid: int
         """
+        warn_deprecation(
+            'The `Transport.chown_async` method is deprecated and will be removed. '
+            'It is not used internally by AiiDA.',
+            version=3,
+        )
+        raise NotImplementedError('chown_async is not implemented for this transport.')
 
     @abc.abstractmethod
     async def copy_async(self, remotesource, remotedestination, dereference=False, recursive=True):

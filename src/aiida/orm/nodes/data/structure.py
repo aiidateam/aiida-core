@@ -102,18 +102,6 @@ def has_pymatgen():
     return True
 
 
-def get_pymatgen_version():
-    """:return: string with pymatgen version, None if can not import."""
-    if not has_pymatgen():
-        return None
-    try:
-        from pymatgen import __version__
-    except ImportError:
-        # this was changed in version 2022.0.3
-        from pymatgen.core import __version__
-    return __version__
-
-
 def has_spglib():
     """:return: True if the spglib module can be imported, False otherwise."""
     try:
@@ -1840,14 +1828,7 @@ class StructureData(Data):
                 if len(kind.symbols) != 1 or (len(kind.weights) != 1 or sum(kind.weights) < 1.0):
                     raise ValueError('Cannot set partial occupancies and spins at the same time')
                 spin = -1 if kind.name.endswith('1') else 1 if kind.name.endswith('2') else 0
-                try:
-                    specie = Specie(kind.symbols[0], oxidation_state, properties={'spin': spin})
-                except TypeError:
-                    # As of v2023.9.2, the ``properties`` argument is removed and the ``spin`` argument should be used.
-                    # See: https://github.com/materialsproject/pymatgen/commit/118c245d6082fe0b13e19d348fc1db9c0d512019
-                    # The ``spin`` argument was introduced in v2023.6.28.
-                    # See: https://github.com/materialsproject/pymatgen/commit/9f2b3939af45d5129e0778d371d814811924aeb6
-                    specie = Specie(kind.symbols[0], oxidation_state, spin=spin)
+                specie = Specie(kind.symbols[0], oxidation_state, spin=spin)
                 species.append(specie)
         else:
             # case when no spin are defined

@@ -26,6 +26,7 @@ from aiida.common.datastructures import CalcInfo, FileCopyOperation
 from aiida.common.folders import Folder
 from aiida.common.lang import classproperty, override
 from aiida.common.links import LinkType
+from aiida.common.typing import FilePath
 
 from ..exit_code import ExitCode
 from ..ports import PortNamespace
@@ -140,6 +141,7 @@ def validate_unstash_options(unstash_options: Any, _: Any) -> Optional[str]:
 def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
     """Validate the ``stash`` options."""
     from aiida.common.datastructures import StashMode
+    from aiida.transports.transport import has_magic
 
     target_base = stash_options.get('target_base', None)
     source_list = stash_options.get('source_list', None)
@@ -173,6 +175,23 @@ def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
 
     elif dereference is not None:
         return '`metadata.options.stash.dereference` is only valid for compression stashing modes'
+
+    fail_on_missing = stash_options.get('fail_on_missing', None)
+
+    if stash_mode != StashMode.SUBMIT_CUSTOM_CODE.value:
+        # For non-submit_custom_code modes, fail_on_missing defaults to False if not specified
+        if fail_on_missing is not None and not isinstance(fail_on_missing, bool):
+            return f'`metadata.options.stash.fail_on_missing` should be a boolean, got: {fail_on_missing}'
+        # When fail_on_missing is True, patterns are not allowed (only for copy and compress modes)
+        if fail_on_missing is True:
+            for src in source_list:
+                if has_magic(src):
+                    return (
+                        f'`metadata.options.stash.source_list` cannot contain glob patterns when '
+                        f'`fail_on_missing` is True, but found pattern: {src}'
+                    )
+    elif fail_on_missing is not None:
+        return '`metadata.options.stash.fail_on_missing` is not valid for the `submit_custom_code` stash mode'
 
     return None
 
@@ -257,6 +276,7 @@ class CalcJob(Process):
             'monitors',
             valid_type=orm.Dict,
             required=False,
+            populate_defaults=False,
             validator=validate_monitors,
             help='Add monitoring functions that can inspect output files while the job is running and decide to '
             'prematurely terminate the job.',
@@ -482,6 +502,14 @@ class CalcJob(Process):
             required=False,
             help='Whether to follow symlinks while stashing or not, specific to StashMode.COMPRESS_* enums',
         )
+        spec.input(
+            'metadata.options.stash.fail_on_missing',
+            valid_type=bool,
+            required=False,
+            help='If True, all files must be specified explicitly (no patterns) and all must exist, otherwise it '
+            'results in calcjob failure. If False (default), patterns are allowed and missing files are skipped. '
+            'Only affects copy and compress modes.',
+        )
         spec.output(
             'remote_folder',
             valid_type=orm.RemoteData,
@@ -519,6 +547,7 @@ class CalcJob(Process):
             140, 'ERROR_SCHEDULER_NODE_FAILURE', invalidates_cache=True, message='The node running the job failed.'
         )
         spec.exit_code(150, 'STOPPED_BY_MONITOR', invalidates_cache=True, message='{message}')
+        spec.exit_code(160, 'ERROR_STASHING_FAILED', invalidates_cache=True, message='{message}')
 
     @classproperty
     def spec_options(cls):  # noqa: N805
@@ -743,7 +772,7 @@ class CalcJob(Process):
                     return self.parse(retrieved_temporary_folder.abspath)
 
     def parse(
-        self, retrieved_temporary_folder: Optional[str] = None, existing_exit_code: ExitCode | None = None
+        self, retrieved_temporary_folder: FilePath | None = None, existing_exit_code: ExitCode | None = None
     ) -> ExitCode:
         """Parse a retrieved job calculation.
 
@@ -771,7 +800,7 @@ class CalcJob(Process):
 
         # Call the retrieved output parser
         try:
-            exit_code_retrieved = self.parse_retrieved_output(retrieved_temporary_folder)
+            exit_code_retrieved = self.parse_retrieved_output(str(retrieved_temporary_folder))
         finally:
             if retrieved_temporary_folder is not None:
                 shutil.rmtree(retrieved_temporary_folder, ignore_errors=True)
@@ -1122,7 +1151,10 @@ class CalcJob(Process):
             job_tmpl.max_wallclock_seconds = max_wallclock_seconds
 
         submit_script_filename = self.node.get_option('submit_script_filename')
+        assert submit_script_filename is not None
         script_content = scheduler.get_submit_script(job_tmpl)
+        # TODO: mypy error: Argument 2 to "create_file_from_filelike" of "Folder"
+        # has incompatible type "Any | None"; expected "str | PurePath"
         folder.create_file_from_filelike(io.StringIO(script_content), submit_script_filename, 'w', encoding='utf8')
 
         def encoder(obj):

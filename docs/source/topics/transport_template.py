@@ -115,7 +115,7 @@ class NewTransport(Transport):
         :param str localpath: local_folder_path
         """
 
-    def gotocomputer_command(self, remotedir):
+    def gotocomputer_command(self, remotedir=None):
         """Return a string to be run using os.system in order to connect via the transport to the remote directory.
 
         Expected behaviors:

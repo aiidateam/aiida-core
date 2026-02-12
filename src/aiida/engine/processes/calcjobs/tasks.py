@@ -22,7 +22,7 @@ import plumpy.persistence
 import plumpy.process_states
 
 from aiida.common.datastructures import CalcJobState
-from aiida.common.exceptions import FeatureNotAvailable, TransportTaskException
+from aiida.common.exceptions import FeatureNotAvailable, StashingError, TransportTaskException
 from aiida.common.folders import SandboxFolder
 from aiida.engine import utils
 from aiida.engine.daemon import execmanager
@@ -306,12 +306,13 @@ async def task_retrieve_job(
             scheduler = node.computer.get_scheduler()  # type: ignore[union-attr]
             scheduler.set_transport(transport)
 
-            if node.get_job_id() is None:
+            job_id = node.get_job_id()
+            if job_id is None:
                 logger.warning(f'there is no job id for CalcJobNoe<{node.pk}>: skipping `get_detailed_job_info`')
                 retrieved = await execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
             else:
                 try:
-                    detailed_job_info = scheduler.get_detailed_job_info(node.get_job_id())
+                    detailed_job_info = scheduler.get_detailed_job_info(job_id)
                 except FeatureNotAvailable:
                     logger.info(f'detailed job info not available for scheduler of CalcJob<{node.pk}>')
                     node.set_detailed_job_info(None)
@@ -377,9 +378,12 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
             initial_interval,
             max_attempts,
             logger=node.logger,
-            ignore_exceptions=plumpy.process_states.Interruption,
+            ignore_exceptions=(plumpy.process_states.Interruption, StashingError),
         )
     except plumpy.process_states.Interruption:
+        raise
+    except StashingError:
+        # Re-raise StashingError so it can be handled in the Waiting state with an exit code
         raise
     except Exception as exception:
         logger.warning(f'stashing calculation<{node.pk}> failed')
@@ -483,7 +487,7 @@ class Waiting(plumpy.process_states.Waiting):
         super().__init__(process, done_callback, msg, data)
         self._task: InterruptableFuture | None = None
         self._killing: plumpy.futures.Future | None = None
-        self._command: Callable[..., Any] | None = None
+        self._command: str | None = None
         self._monitor_result: CalcJobMonitorResult | None = None
         self._monitors: CalcJobMonitors | None = None
 
@@ -517,7 +521,7 @@ class Waiting(plumpy.process_states.Waiting):
         self._task = None
         self._killing = None
 
-    async def execute(self) -> plumpy.process_states.State:  # type: ignore[override]
+    async def execute(self) -> plumpy.process_states.State | plumpy.base.state_machine.State:  # type: ignore[override]
         """Override the execute coroutine of the base `Waiting` state.
         Using the plumpy state machine the waiting state is repeatedly re-entered with different commands.
         The waiting state is not always the same instance, it could be re-instantiated when re-entering this method,
@@ -562,12 +566,12 @@ class Waiting(plumpy.process_states.Waiting):
                     result = self.submit()
 
             elif self._command == SUBMIT_COMMAND:
-                result = await self._launch_task(task_submit_job, node, transport_queue)
+                task_result = await self._launch_task(task_submit_job, node, transport_queue)
 
-                if isinstance(result, ExitCode):
+                if isinstance(task_result, ExitCode):
                     # The scheduler plugin returned an exit code from ``Scheduler.submit_job`` indicating the
                     # job submission failed due to a non-transient problem and the job should be terminated.
-                    return self.create_state(ProcessState.RUNNING, self.process.terminate, result)
+                    return self.create_state(ProcessState.RUNNING, self.process.terminate, task_result)
 
                 result = self.update()
 
@@ -588,7 +592,7 @@ class Waiting(plumpy.process_states.Waiting):
 
                     if monitor_result and not monitor_result.retrieve:
                         exit_code = self.process.exit_codes.STOPPED_BY_MONITOR.format(message=monitor_result.message)
-                        return self.create_state(ProcessState.RUNNING, self.process.terminate, exit_code)  # type: ignore[return-value]
+                        return self.create_state(ProcessState.RUNNING, self.process.terminate, exit_code)
 
                 result = self.stash(monitor_result=monitor_result)
 
@@ -621,6 +625,9 @@ class Waiting(plumpy.process_states.Waiting):
 
         except TransportTaskException as exception:
             raise plumpy.process_states.PauseInterruption(f'Pausing after failed transport task: {exception}')
+        except StashingError as exception:
+            exit_code = self.process.exit_codes.ERROR_STASHING_FAILED.format(message=str(exception))
+            return self.create_state(ProcessState.RUNNING, self.process.terminate, exit_code)
         except plumpy.process_states.KillInterruption as exception:
             node.set_process_status(str(exception))
             return self.retrieve(monitor_result=self._monitor_result)

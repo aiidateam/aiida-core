@@ -8,6 +8,7 @@
 ###########################################################################
 """`verdi computer` command."""
 
+import os
 import pathlib
 import traceback
 from copy import deepcopy
@@ -16,7 +17,8 @@ from math import isclose
 
 import click
 
-from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup, verdi
+from aiida.cmdline import VerdiCommandGroup
+from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.commands import computer as options_computer
 from aiida.cmdline.utils import echo, echo_tabulate
@@ -447,6 +449,29 @@ def computer_list(all_entries, raw):
     echo.echo_formatted_list(computers, ['label'], sort=sort, highlight=highlight, hide=hide)
 
 
+@verdi_computer.command('goto')
+@arguments.COMPUTER()
+def computer_goto(computer):
+    """Open a shell connecting to the remote computer.
+
+    This command opens a ssh connection to the remote
+    computer specified on the command line.
+    """
+    from aiida.common.exceptions import NotExistent
+
+    try:
+        transport = computer.get_transport()
+    except NotExistent as exception:
+        echo.echo_critical(repr(exception))
+
+    try:
+        command = transport.gotocomputer_command()
+        echo.echo_report('going to the remote work directory...')
+        os.system(command)
+    except NotImplementedError:
+        echo.echo_report(f'gotocomputer is not implemented for {transport}')
+
+
 @verdi_computer.command('show')
 @arguments.COMPUTER()
 @with_dbenv()
@@ -627,7 +652,7 @@ def computer_delete(computer, dry_run):
     # Sofar, we can only get this info with QueryBuilder
     builder = QueryBuilder()
     builder.append(Computer, filters={'label': label}, tag='computer')
-    builder.append(Node, with_computer='computer', project=Node.fields.pk)
+    builder.append(Node, with_computer='computer', project=Node.fields.pk)  # type: ignore[arg-type]
     associated_nodes_pk = builder.all(flat=True)
 
     echo.echo_report(f'This computer has {len(associated_nodes_pk)} associated nodes')
@@ -716,7 +741,7 @@ def computer_config_show(computer, user, defaults, as_option_string):
             if config.get(option.name) or config.get(option.name) is False:
                 if t_opt.get('switch'):
                     option_value = (
-                        option.opts[-1] if config.get(option.name) else f"--no-{option.name.replace('_', '-')}"
+                        option.opts[-1] if config.get(option.name) else f"--no-{option.name.replace('_', '-')}"  # type: ignore[union-attr]
                     )
                 elif t_opt.get('is_flag'):
                     is_default = config.get(option.name) == transport_cli.transport_option_default(

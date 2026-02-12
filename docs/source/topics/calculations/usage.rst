@@ -625,9 +625,9 @@ Which method should I use?
    * - Stash files regardless of calculation outcome (even if failed)
      - Method 1: Stashing **Immediately After Job Completion on HPC**
    * - Stash files from an already completed calculation
-     - Method 2: Stashing via a **Separate Calculation Job**
+     - Method 2: Stashing via a **Dedicated Calculation Job**
    * - I want to submit my own custom script for stashing
-     - Method 2: Stashing via a **Separate Calculation Job**
+     - Method 2: Stashing via a **Dedicated Calculation Job**
 
 Quick comparison between these methods:
 
@@ -644,7 +644,7 @@ Quick comparison between these methods:
                                 | Retrieve & parse files |
                                 +------------------------+
 
-   (Method 2) Post-completion stashing:
+   (Method 2) Stashing via Dedicated Calculation:
    +---------------------+      +------------------------+
    |  Calculation job    | ---> | Retrieve & parse files |  ->
    +---------------------+      +------------------------+
@@ -689,14 +689,21 @@ The stashed files are represented by an output node with the label ``remote_stas
 
    The stashing operation occurs *before* any file retrieval or parsing. As a result, files may be stashed even for calculations that later turn out to have failed.
 
-Method 2: Stashing via a Separate Calculation Job
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Method 2: Stashing via a Dedicated Calculation Job
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This approach lets you stash files **only after a successful calculation**. This is done by running a follow-up `core.stash` calculation that copies or archives files from the remote folder of a finished calculation job.
 
 **Typical use case:** You want to avoid keeping files from failed calculations, or need to run custom post-processing scripts.
 
-This method requires specifying the ``remote_folder`` of the original calculation as ``source_node``. Example:
+This method requires specifying the ``remote_folder`` of the original calculation as ``source_node``.
+
+.. note::
+
+   If the ``source_node`` was created by a calculation, that calculation must be sealed (finished). AiiDA will reject a ``RemoteData`` node whose creator is still running, to prevent stashing incomplete files.
+   Please use either the direct stashing method (via metadata.options.stash), or package the ``StashCalculation`` in a workflow to ensure proper sequencing.'
+
+Example:
 
 .. code-block:: python
 
@@ -733,7 +740,7 @@ First, place your script on the remote machine and define it as an AiiDA code:
 .. code-block:: python
 
    code = InstalledCode(
-       label='<MY_CODE>',
+       label='<MY_STASH_CODE>',
        default_calc_job_plugin='core.stash',
        computer=load_computer(<COMPUTER_LABEL>),
        filepath_executable=str(<Path_to_script.sh>),
@@ -758,7 +765,7 @@ Run the custom stashing job with:
            },
        },
        'source_node': <orm.RemoteData>,
-       'code': load_code(label='<MY_CODE>'),
+       'code': load_code(label='<MY_STASH_CODE>'),
    }
    submit(StashCalculation, **inputs)
 
@@ -790,7 +797,7 @@ Therefore, your script should parse the JSON, and implement the stashing by any 
    mkdir -p "$target_base"
    for item in $source_list; do
        cp "$source_path/$item" "$target_base/"
-       echo "$source_path/$item copied successfully."
+       echo "$item copied successfully."
    done
 
 This way you can implement any custom logic in your script, such as tape commands, handling errors, or filtering files dynamically.
@@ -806,6 +813,178 @@ Caveats and best practices
    - **Source files are not deleted after stashing**: This is to prevent unwanted data-loss.
 
 
+.. _topics:calculations:usage:calcjobs:unstashing:
+
+
+Unstashing Files from the Remote
+--------------------------------
+
+AiiDA provides an unstashing mechanism through the `core.unstash` calculation to retrieve previously stashed files. The process supports all stash modes and offers two restoration targets:
+
+1. **OriginalPlace**: Restores files back to the original remote folder location. E.g., for restarting a calculation.
+2. **NewRemoteData**: Restores files to the new remote folder of `UnstashCalculation`. E.g., for further processing.
+
+::
+
+   +------------------------+      +---------------------+
+   | Stashed files          | ---> | UnstashCalculation  |
+   | (RemoteStashData node) |      +---------------------+
+   +------------------------+                |
+                                             v
+                              +---------------------------+
+                              | Files restored to:        |
+                              | - Original location OR    |
+                              | - New RemoteData folder   |
+                              +---------------------------+
+
+
+Example of unstashing files:
+
+.. code-block:: python
+
+    from aiida.common.datastructures import UnstashTargetMode
+    from aiida.orm import load_node, load_computer
+
+    UnstashCalculation = CalculationFactory('core.unstash')
+
+    # Get the stashed data node from a previous stash operation
+    stash_node = load_node(<STASH_NODE_PK>)  # RemoteStashFolderData or RemoteStashCompressedData
+
+    inputs = {
+        'metadata': {
+            'computer': load_computer(label=<COMPUTER_LABEL>),
+            'options': {
+                'resources': {'num_machines': 1},
+                'unstash': {
+                    'unstash_target_mode': UnstashTargetMode.NewRemoteData.value,
+                    'source_list': ['*'],  # Optional for StashMode.COPY
+                },
+            },
+        },
+        'source_node': stash_node,
+    }
+
+    result = run(UnstashCalculation, **inputs)
+
+
+Unstashing from Different Stash Modes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The unstashing process automatically handles different stash modes with varying capabilities:
+
+**COPY mode:**
+Files are directly copied from the stashed location to the target. You can selectively restore specific files using the ``source_list`` parameter. For example, ``source_list = ['restart.chk']`` will only restore the restart file if it exists in the stash.
+
+**COMPRESS modes (TAR, TARBZ2, TARGZ, TARXZ):**
+Archives are automatically extracted and files restored to the target location. Currently, ``source_list`` must be set to ``['*']`` to extract all contents. Future versions may support selective file extraction.
+
+**SUBMIT_CUSTOM_CODE mode:**
+For custom stashing scripts, you must provide a corresponding custom unstashing script with full control over the restoration process.
+
+Custom Script Unstashing (Advanced)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For stashed files created with custom scripts, you can provide a custom unstashing script.
+The custom unstashing script receives a JSON input file (``aiida.in``) with the following structure:
+
+.. code-block:: none
+
+   {"source_path": "/path/to/stashed/files",
+    "source_list": ["aiida.out", "output.txt"],
+    "target_base": "/path/to/restore/location"}
+
+Example custom unstashing script:
+
+.. code-block:: bash
+
+   #!/bin/bash
+   json=$(cat)
+   source_path=$(echo "$json" | jq -r '.source_path')
+   source_list=$(echo "$json" | jq -r '.source_list[]')
+   target_base=$(echo "$json" | jq -r '.target_base')
+
+   mkdir -p "$target_base"
+   for item in $source_list; do
+       cp "$source_path/$item" "$target_base/"
+       echo "$item copied successfully."
+   done
+
+Now, you can install that script as a `code`.
+
+.. code-block:: python
+
+   # Define your custom unstashing script as an AiiDA code
+   unstash_code = InstalledCode(
+       label='<MY_UNSTASH_CODE>',
+       default_calc_job_plugin='core.unstash',
+       computer=load_computer(<COMPUTER_LABEL>),
+       filepath_executable=str(<Path_to_unstash_script.sh>),
+   )
+   unstash_code.store()
+
+.. note::
+
+   In this example, our unstashing script is identical to the stashing script that we used earlier!
+   That means we could just as well skip the installation step and use the `MY_STASH_CODE` code again!
+
+.. code-block:: python
+
+   # Run unstashing with custom code
+   inputs = {
+       'metadata': {
+           'computer': load_computer(<COMPUTER_LABEL>),
+           'options': {
+               'resources': {'num_machines': 1},
+               'unstash': {
+                   'unstash_target_mode': UnstashTargetMode.NewRemoteData.value,
+                   'source_list': ['aiida.out', 'output.txt'],
+               },
+           },
+       },
+       'source_node': stash_node,  # RemoteStashCustomData node
+       'code': unstash_code,
+   }
+
+   submit(UnstashCalculation, **inputs)
+
+
+Finding Stashed Data Nodes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To locate stashed data nodes from previous calculations:
+
+.. code-block:: python
+
+    from aiida.orm import QueryBuilder, RemoteStashData
+
+    # Find all stashed data from a specific calculation
+    calcjob_node = load_node(<CALCJOB_PK>)
+
+    # For immediate stashing (Method 1)
+    if 'remote_stash' in calcjob_node.outputs:
+        stash_node = calcjob_node.outputs.remote_stash
+
+    # For separate stash calculation (Method 2)
+    qb = QueryBuilder()
+    qb.append(CalculationFactory('core.stash'),
+              filters={'id': <STASH_CALC_PK>},
+              tag='calc')
+    qb.append((RemoteStashData),
+              with_incoming='calc',
+              project='*')
+    stash_node = qb.one()[0]
+
+
+Best Practices and Considerations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. important::
+
+   - **Usability**: Unlike stashing, untashing can only be performed as a dedicated calcjob via `core.unstash`.
+
+   - **Check stash node availability**: Before unstashing, verify that the stashed files still exist on the remote system. Files in the stash location are not managed by AiiDA and may be deleted by system administrators.
+
+   - **Error handling**: In case of custom stashing, it's your sole responsibility to manage the failures and log errors.
 
 .. _topics:calculations:usage:calcjobs:options:
 

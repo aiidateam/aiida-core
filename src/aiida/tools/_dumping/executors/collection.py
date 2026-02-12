@@ -14,12 +14,14 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
 
+import click
+
 from aiida import orm
 from aiida.common import AIIDA_LOGGER, NotExistent
 from aiida.common.progress_reporter import get_progress_reporter, set_progress_bar_tqdm
 from aiida.tools._dumping.detect import DumpChangeDetector
 from aiida.tools._dumping.tracking import DumpRecord, DumpTracker
-from aiida.tools._dumping.utils import DumpChanges, DumpPaths, ProcessingQueue
+from aiida.tools._dumping.utils import DUMP_PROGRESS_BAR_FORMAT, DumpChanges, DumpPaths, ProcessingQueue
 
 if TYPE_CHECKING:
     from aiida.tools._dumping.config import GroupDumpConfig, ProfileDumpConfig
@@ -129,7 +131,7 @@ class CollectionDumpExecutor:
         :param group_context: _description_, defaults to None
         :param current_dump_root_for_nodes: _description_, defaults to None
         """
-        set_progress_bar_tqdm()
+        set_progress_bar_tqdm(bar_format=DUMP_PROGRESS_BAR_FORMAT)
         nodes_to_dump = []
         nodes_to_dump.extend(processing_queue.calculations)
         nodes_to_dump.extend(processing_queue.workflows)
@@ -139,7 +141,6 @@ class CollectionDumpExecutor:
         desc = f'Dumping {len(nodes_to_dump)} nodes'
         if group_context:
             desc += f" for group '{group_context.label}'"
-        logger.report(desc)
 
         if current_dump_root_for_nodes is None:
             # This is a fallback, the caller should ideally always provide the explicit root.
@@ -149,7 +150,8 @@ class CollectionDumpExecutor:
                 current_dump_root_for_nodes = self.dump_paths.get_path_for_ungrouped_nodes()
             logger.warning(f'current_dump_root_for_nodes was None, derived as: {current_dump_root_for_nodes}')
 
-        with get_progress_reporter()(desc=desc, total=len(nodes_to_dump)) as progress:
+        progress_desc = f'{click.style("Report", fg="blue", bold=True)}: {desc}'
+        with get_progress_reporter()(desc=progress_desc, total=len(nodes_to_dump)) as progress:
             for node in nodes_to_dump:
                 # Determine the specific, absolute path for this node's dump directory
                 node_specific_dump_path = self.dump_paths.get_path_for_node(
@@ -211,7 +213,7 @@ class CollectionDumpExecutor:
 
         :param group_changes: Populated ``GroupChanges`` object
         """
-        logger.report('Processing group changes.')
+        logger.report('Processing group changes...')
 
         # Handle Deleted Groups. Actual directory deletion handled by DeletionExecutor, only logging done here.
         if group_changes.deleted:

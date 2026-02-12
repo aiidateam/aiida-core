@@ -23,15 +23,22 @@ A good thing to remember is that while it is running, we are dealing with the ``
 Process types
 =============
 
-Processes in AiiDA come in two flavors:
+In AiiDA, all processes are conceptually divided into two main types:
 
-* Calculation-like
-* Workflow-like
+* Calculation-like processes: These are processes that create data. Their role is to perform well-defined computations or transformations that produce new ``Data`` nodes, which are recorded as outputs (of type ``CREATE`` in the provenance graph).
 
-The calculation-like processes have the capability to *create* data, whereas the workflow-like processes orchestrate other processes and have the ability to *return* data produced by calculations.
+* Workflow-like processes: These are processes that orchestrate other processes, defining how multiple calculations or sub-workflows are executed in sequence or in parallel. Conceptually, workflows do not directly generate data, but rather return data produced by the calculations they run.
+
 Again, this is a distinction that plays a big role in AiiDA and is crucial to understand.
 For this reason, these different types of processes also get a different sub class of the ``ProcessNode`` class.
 The hierarchy of these node classes and the link types that are allowed between them and ``Data`` nodes, is explained in detail in the :ref:`provenance implementation<topics:provenance:implementation>` documentation.
+
+
+.. note:: Technically, a workflow is able to create new ``Data`` nodes directly (for example, by instantiating and storing a ``Dict`` or ``StructureData`` node inside its code). However, this will *not* show up as a node created by the workflow in the provenance graph, and the ``Data`` node will appear as having no creator (similar to a ``Data`` node created in the shell).
+
+  In practice, this scenario is supported and actually turns out to be a good practice when the purpose is to prepare inputs for a subprocess (a sub-calculation or sub-workflow) that the workflow will launch. In fact, in such cases, the provenance remains interpretable: these Data nodes will have no creator (i.e. no ``CREATE`` link from a calculation-like process) but will typically appear as inputs to a process that is called by the workflow. From the combination of data provenance (no creator) and logical provenance (the call link from the parent workflow), it becomes clear that the workflow either created the ``Data`` node to pass it as input, or picked an existing node in the database (e.g. some input data created manually by the user) and passed it as input. Knowing the goal of the calling workflow (or inspecting its source code) will often be enough to understand what happened exactly. Furthermore, this approach helps keep the provenance graph readable and avoids introducing extra ``calcfunctions`` (see below), whose only role would be trivial data assembly.
+
+  However, we stress that instead workflows *should not* create data that are meant to represent final results, and just store them as outputs. In such cases, the data should instead be produced by a calculation-like process (e.g. a ``calcfunction`` or ``CalcJob``, see below), so that the provenance clearly records how and why the output was generated.
 
 Currently, there are four types of processes in ``aiida-core`` and the following table shows with which node class it is represented in the provenance graph and what the process is used for.
 

@@ -687,11 +687,12 @@ class TestVerdiProcess:
         assert result.exception is None, result.output
         assert f'Using specified output path: `{test_path}`' in result.output
 
-    def test_dump_warning_message_displayed(self, run_cli_command, generate_calculation_node_add):
+    def test_dump_warning_message_displayed(self, run_cli_command, tmp_path, generate_calculation_node_add):
         """Test that warning message about new feature is displayed"""
+        test_path = tmp_path / 'specified-path'
         node = generate_calculation_node_add()
 
-        options = [str(node.pk)]
+        options = [str(node.pk), '--path', str(test_path)]
         result = run_cli_command(cmd_process.process_dump, options)
         assert result.exception is None, result.output
         assert 'This is a new feature which is still in its testing phase' in result.output

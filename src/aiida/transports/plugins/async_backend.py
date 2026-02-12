@@ -19,6 +19,8 @@ import abc
 import asyncio
 import logging
 import posixpath
+import re
+import subprocess
 from typing import Optional
 
 import asyncssh
@@ -30,7 +32,21 @@ from aiida.transports.transport import (
     has_magic,
 )
 
-__all__ = ('_AsyncSSH', '_OpenSSH')
+
+def get_openssh_version() -> Optional[int]:
+    """Get the major version of the local OpenSSH client.
+
+    Returns the major version number (e.g., 9 for OpenSSH_9.0), or None if detection fails.
+    """
+    try:
+        result = subprocess.run(['ssh', '-V'], capture_output=True, text=True, check=False)
+        output = result.stderr + result.stdout
+        match = re.search(r'OpenSSH_(\d+)', output)
+        if match:
+            return int(match.group(1))
+    except Exception:
+        pass
+    return None
 
 
 class _AsynchronousSSHBackend(abc.ABC):
@@ -185,14 +201,6 @@ class _AsynchronousSSHBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    async def chown(self, path: str, uid: int, gid: int):
-        """Change the ownership of a file or directory.
-        :param path: The path to the file or directory
-        :param uid: The user ID to set
-        :param gid: The group ID to set
-        """
-
-    @abc.abstractmethod
     async def copy(
         self,
         remotesource: str,
@@ -341,9 +349,6 @@ class _AsyncSSH(_AsynchronousSSHBackend):
     async def chmod(self, path: str, mode: int, follow_symlinks: bool = True):
         await self._sftp.chmod(path, mode, follow_symlinks=follow_symlinks)
 
-    async def chown(self, path: str, uid: int, gid: int):
-        await self._sftp.chown(path, uid, gid, follow_symlinks=True)
-
     async def copy(
         self,
         remotesource: str,
@@ -389,7 +394,10 @@ class _AsyncSSH(_AsynchronousSSHBackend):
             except asyncssh.sftp.SFTPFailure as exc:
                 raise OSError(f'Error while copying {remotesource} to {remotedestination}: {exc}')
         else:
-            self.logger.warning('The remote copy is not supported, using the `cp` command to copy the file/folder')
+            self.logger.debug(
+                'The SSH server does not support SFTP remote copy (SFTP >= v9.0), '
+                'falling back on the `cp` command to copy the file/folder.'
+            )
             # I copy pasted the whole logic below from SshTransport class:
 
             async def _exec_cp(cp_exe: str, cp_flags: str, src: str, dst: str):
@@ -453,6 +461,18 @@ class _OpenSSH(_AsynchronousSSHBackend):
     def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
         super().__init__(machine, logger, bash_command)
 
+        # Check if the local OpenSSH client version is 9.0 or higher.
+        # OpenSSH 9.0+ changed scp to use SFTP protocol by default instead of RCP.
+        # This affects how paths are interpreted - SFTP treats paths as binary data,
+        # so shell quoting is not needed and can cause issues.
+        openssh_version = get_openssh_version()
+        if openssh_version is not None and openssh_version >= 9:
+            self.logger.debug(f'Detected OpenSSH version {openssh_version}, using SFTP mode for scp commands.')
+            self.is_openssh_9_or_higher = True
+        else:
+            self.logger.debug(f'Detected OpenSSH version {openssh_version}, using RCP mode for scp commands.')
+            self.is_openssh_9_or_higher = False
+
     async def openssh_execute(self, commands, stdin: Optional[str] = None, timeout: Optional[float] = None):
         """
         Execute a command using the _OpenSSH command line client.
@@ -481,15 +501,63 @@ class _OpenSSH(_AsynchronousSSHBackend):
 
         return process.returncode, stdout.decode(), stderr.decode()
 
-    def ssh_command_generator(self, raw_command: str):
+    def _escape_for_rcp(self, path: str) -> str:
+        """Escape special characters for scp RCP mode using backslashes.
+
+        Note: escape_for_bash() does NOT work here because scp's RCP protocol
+        expects backslash-escaped paths, not quote-wrapped strings.
+
+        :param path: The path to escape
+        :return: The escaped path with backslashes before special characters
         """
-        Generate the command to execute
-        :param raw_command: The command to execute
+
+        result = []
+        special = set(' \t\n"\'`$\\!#&*?;<>|(){}[]')
+        for char in path:
+            if char in special:
+                result.append('\\')
+            result.append(char)
+        return ''.join(result)
+
+    def _escape_for_scp(self, path: str) -> str:
+        """Prepare a path for use in scp commands.
+
+        In OpenSSH < 9.0, scp uses the RCP protocol which passes paths through
+        the remote shell. We must escape shell metacharacters with backslashes
+        to prevent shell expansion/injection.
+
+        OpenSSH 9.0+, however, uses SFTP mode by default - paths are binary data, no shell quoting needed.
         """
-        # if "'" in raw_command:
-        treated_raw_command = f'"{raw_command}"'
-        # else:
-        #     treated_raw_command = f"\'{raw_command}\'"
+
+        if self.is_openssh_9_or_higher:
+            return f'{path}'
+        else:
+            return f'{self._escape_for_rcp(path)}'
+
+    def ssh_command_generator(self, command_template: str, paths: Optional[list[str]] = None):
+        """Generate an SSH command with properly quoted paths.
+
+        :param command_template: The command template with {} placeholders for paths
+        :param paths: List of paths to be quoted and substituted into the template.
+            Each path will be safely quoted using escape_for_bash() to prevent shell injection.
+        :return: A list of command arguments for subprocess execution
+        """
+
+        if paths:
+            # Quote paths for safe shell execution using escape_for_bash.
+            # This prevents command injection via malicious filenames containing
+            # shell metacharacters like ; & | $ ` etc.
+            quoted_paths = [escape_for_bash(p) for p in paths]
+            raw_command = command_template.format(*quoted_paths)
+        else:
+            raw_command = command_template
+
+        # Double-quote for SSH; escape ", `, and $ so all variables ($!, $?, $$)
+        # are expanded only by the inner `bash `, not by the SSH shell.
+        escaped_command = raw_command.replace('$', r'\$')
+        escaped_command = escaped_command.replace('`', '\\`')
+        escaped_command = escaped_command.replace('"', '\\"')
+        treated_raw_command = f'"{escaped_command}"'
         return ['ssh', self.machine, self.bash_command + treated_raw_command]
 
     async def mkdir(self, path: str, exist_ok: bool = False, parents: bool = False):
@@ -497,7 +565,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
             if await self.path_exists(path):
                 raise FileExistsError(f'Directory already exists: {path}')
 
-        commands = self.ssh_command_generator(f"mkdir {'-p' if parents else ''} {path}")
+        commands = self.ssh_command_generator(f"mkdir {'-p' if parents else ''} {{}}", paths=[path])
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
@@ -507,25 +575,32 @@ class _OpenSSH(_AsynchronousSSHBackend):
             else:
                 raise OSError(f'Failed to create directory: {path}')
 
-    async def chown(self, path: str, uid: int, gid: int) -> None:
-        commands = self.ssh_command_generator(f'chown {uid}:{gid} {path}')
-
-        returncode, stdout, stderr = await self.openssh_execute(commands)
-
-        if returncode != 0:
-            raise OSError(f'Failed to change ownership: {path}')
-
     async def chmod(self, path: str, mode: int, follow_symlinks: bool = True):
         # chmod works with octal numbers, so we have to convert the mode to octal
         mode = oct(mode)[2:]  # type: ignore[assignment]
-        commands = self.ssh_command_generator(f"chmod {'-h' if not follow_symlinks else ''} {mode} {path}")
+        commands = self.ssh_command_generator(f"chmod {'-h' if not follow_symlinks else ''} {mode} {{}}", paths=[path])
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             raise OSError(f'Failed to change permissions: {path}')
 
+    def _escape_for_glob(self, s):
+        """Escape dangerous shell characters while preserving glob wildcards (* ? [ ])
+        This allows safe glob expansion without command injection
+        Characters that need escaping in shell (excluding glob chars)"""
+
+        dangerous = {';', '&', '|', '$', '`', '(', ')', '<', '>', '\n', '"', "'", '\\', '!', '#', ' ', '\t'}
+        result = []
+        for c in s:
+            if c in dangerous:
+                result.append('\\' + c)
+            else:
+                result.append(c)
+        return ''.join(result)
+
     async def glob(self, path: str, ignore_nonexisting: bool = True):
-        commands = self.ssh_command_generator(f'find {path} -maxdepth 0')
+        escaped_path = self._escape_for_glob(path)
+        commands = self.ssh_command_generator(f'find {escaped_path} -maxdepth 0')
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
@@ -541,14 +616,14 @@ class _OpenSSH(_AsynchronousSSHBackend):
         No magic is allowed in source or destination.
         """
 
-        commands = self.ssh_command_generator(f'ln -s {source} {destination}')
+        commands = self.ssh_command_generator('ln -s {} {}', paths=[source, destination])
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             raise OSError(f'Failed to create symlink: {source} -> {destination}')
 
     async def path_exists(self, path: str):
-        commands = self.ssh_command_generator(f'test -e {path}')
+        commands = self.ssh_command_generator('test -e {}', paths=[path])
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if stderr:
@@ -558,35 +633,35 @@ class _OpenSSH(_AsynchronousSSHBackend):
         return returncode == 0
 
     async def rmtree(self, path: str):
-        commands = self.ssh_command_generator(f'rm -rf {path}')
+        commands = self.ssh_command_generator('rm -rf {}', paths=[path])
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             raise OSError(f'Failed to remove path: {path}')
 
     async def rmdir(self, path: str):
-        commands = self.ssh_command_generator(f'rmdir {path}')
+        commands = self.ssh_command_generator('rmdir {}', paths=[path])
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             raise OSError('Failed to remove directory')
 
     async def rename(self, oldpath: str, newpath: str):
-        commands = self.ssh_command_generator(f'mv {oldpath} {newpath}')
+        commands = self.ssh_command_generator('mv {} {}', paths=[oldpath, newpath])
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             raise OSError(f'Failed to rename path: {oldpath} -> {newpath}')
 
     async def remove(self, path: str):
-        commands = self.ssh_command_generator(f'rm {path}')
+        commands = self.ssh_command_generator('rm {}', paths=[path])
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
             raise OSError(f'Failed to remove path: {path}')
 
     async def listdir(self, path: str):
-        commands = self.ssh_command_generator(f'ls {path}')
+        commands = self.ssh_command_generator('ls {}', paths=[path])
         # '-d' is used prevents recursive listing of directories.
         # This is useful when 'path' includes glob patterns.
         returncode, stdout, stderr = await self.openssh_execute(commands)
@@ -595,18 +670,18 @@ class _OpenSSH(_AsynchronousSSHBackend):
         return list(stdout.strip().split())
 
     async def isdir(self, path: str):
-        commands = self.ssh_command_generator(f'test -d {path}')
+        commands = self.ssh_command_generator('test -d {}', paths=[path])
         returncode, stdout, stderr = await self.openssh_execute(commands)
         return returncode == 0
 
     async def isfile(self, path: str):
-        commands = self.ssh_command_generator(f'test -f {path}')
+        commands = self.ssh_command_generator('test -f {}', paths=[path])
         returncode, stdout, stderr = await self.openssh_execute(commands)
         return returncode == 0
 
     async def lstat(self, path: str):
         # order of stat matters
-        commands = self.ssh_command_generator(f"stat -c '%s %u %g %a %X %Y' {path}")
+        commands = self.ssh_command_generator("stat -c '%s %u %g %a %X %Y' {}", paths=[path])
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         stdout = stdout.strip()
@@ -617,12 +692,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         return Stat(*stdout.split())
 
     async def run(self, command: str, stdin: Optional[str] = None, timeout: Optional[float] = None):
-        # Not sure if sending the entire command as a single string is a good idea
-        # This is a hack to escape the $ character in the stdin
-        command = command.replace('$', r'\$')
-        command = command.replace('\\$', r'\$')
         commands = self.ssh_command_generator(command)
-
         returncode, stdout, stderr = await self.openssh_execute(commands, stdin, timeout)
         return returncode, stdout, stderr
 
@@ -638,7 +708,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
             options.append('-r')
 
         returncode, stdout, stderr = await self.openssh_execute(
-            ['scp', *options, f'{self.machine}:{remotepath}', localpath]
+            ['scp', *options, f'{self.machine}:{self._escape_for_scp(remotepath)}', self._escape_for_scp(localpath)]
         )
         if returncode != 0:
             raise OSError({stderr})
@@ -655,7 +725,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
             options.append('-r')
 
         returncode, stdout, stderr = await self.openssh_execute(
-            ['scp', *options, localpath, f'{self.machine}:{remotepath}']
+            ['scp', *options, self._escape_for_scp(localpath), f'{self.machine}:{self._escape_for_scp(remotepath)}']
         )
         if returncode != 0:
             raise OSError({stderr})
@@ -704,7 +774,12 @@ class _OpenSSH(_AsynchronousSSHBackend):
             )
 
         returncode, stdout, stderr = await self.openssh_execute(
-            ['scp', *options, f'{self.machine}:{remotesource}', f'{self.machine}:{remotedestination}']
+            [
+                'scp',
+                *options,
+                f'{self.machine}:{self._escape_for_scp(remotesource)}',
+                f'{self.machine}:{self._escape_for_scp(remotedestination)}',
+            ]
         )
         if returncode != 0:
             raise OSError(f'Failed to copy from {remotesource} to {remotedestination} : {stderr}')

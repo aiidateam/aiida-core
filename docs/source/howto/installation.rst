@@ -367,8 +367,6 @@ How to do this, is operating system specific.
 For Ubuntu, here is `a template for the service file <https://github.com/marvel-nccr/ansible-role-aiida/blob/c709088dff74d1e1ae4d8379e740aba35fb2ef97/templates/aiida-daemon%40.service>`_ and `ansible instructions to install the service <https://github.com/marvel-nccr/ansible-role-aiida/blob/c709088dff74d1e1ae4d8379e740aba35fb2ef97/tasks/aiida-daemon.yml>`_.
 
 
-.. _how-to:installation:performance:
-
 Tuning performance
 ==================
 

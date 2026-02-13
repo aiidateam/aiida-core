@@ -15,6 +15,7 @@ import io
 import os
 import pathlib
 import typing as t
+import warnings
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -93,11 +94,18 @@ class SinglefileData(Data):
         if file is not None and content is not None:
             raise ValueError('cannot specify both `file` and `content`.')
 
+        self.filename = filename
+
         if content is not None:
             file = content
 
         if file is not None:
             self.set_file(file, filename=filename)
+        else:
+            warnings.warn(
+                'No content provided for `SinglefileData`. Please use the `set_file` method to set the file content.',
+                stacklevel=2,
+            )
 
     @property
     def content(self) -> bytes:
@@ -110,6 +118,16 @@ class SinglefileData(Data):
         :return: the filename under which the file is stored in the repository
         """
         return self.base.attributes.get('filename')
+
+    @filename.setter
+    def filename(self, value: str) -> None:
+        """Set the name of the file stored.
+
+        :param value: the filename under which the file is stored in the repository
+        """
+        if not isinstance(value, str):
+            raise TypeError(f'filename must be a string, got {type(value)}')
+        self.base.attributes.set('filename', value)
 
     @t.overload
     @contextlib.contextmanager

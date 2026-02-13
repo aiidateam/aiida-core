@@ -84,7 +84,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def _put_object_from_filelike(self, handle: BinaryIO) -> str:
-        pass
+        raise NotImplementedError
 
     def put_object_from_file(self, filepath: Union[str, pathlib.Path]) -> str:
         """Store a new object with contents of the file located at `filepath` on this file system.
@@ -132,8 +132,9 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :return: a dictionary with the information.
         """
 
+    @abc.abstractmethod
     @contextlib.contextmanager
-    def open(self, key: str) -> Iterator[BinaryIO]:  # type: ignore[return]
+    def open(self, key: str) -> Iterator[BinaryIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -146,6 +147,8 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
         if not self.has_object(key):
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
+
+        raise NotImplementedError('Subclasses must implement open()')
 
     def get_object_content(self, key: str) -> bytes:
         """Return the content of a object identified by key.
@@ -168,6 +171,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :raise FileNotFoundError: if the file does not exist.
         :raise OSError: if a file could not be opened.
         """
+        raise NotImplementedError
 
     def get_object_hash(self, key: str) -> str:
         """Return the SHA-256 hash of an object stored under the given key.

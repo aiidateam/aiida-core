@@ -498,12 +498,13 @@ class PbsBaseClass(BashCliScheduler):
                         if len(jobidx_and_ncpu) == 1:
                             node.job_index = int(jobidx_and_ncpu[0])
                             node.num_cpus = 1
-                        elif len(data) == 2:
+                        elif len(jobidx_and_ncpu) == 2:
                             node.job_index = int(jobidx_and_ncpu[0])
                             node.num_cpus = int(jobidx_and_ncpu[1])
                         else:
                             raise ValueError(
-                                f'Wrong number of pieces: {len(data)} instead of 1 or 2 in exec_hosts: {exec_hosts}'
+                                f'Wrong number of pieces: {len(jobidx_and_ncpu)} '
+                                f'instead of 1 or 2 in exec_hosts: {exec_hosts}'
                             )
                         exec_host_list.append(node)
                     this_job.allocated_machines = exec_host_list

@@ -359,7 +359,7 @@ class CalcJobNode(CalculationNode):
         """
         from aiida.schedulers.datastructures import JobState
 
-        state = self.base.attributes.get(self.SCHEDULER_STATE_KEY)
+        state = self.base.attributes.get(self.SCHEDULER_STATE_KEY, None)
 
         if state is None:
             return None

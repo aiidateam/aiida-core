@@ -268,25 +268,26 @@ Simply copy & paste the same instructions as you have used for ``ProxyJump`` in 
 Using two-factor authentication (2FA) with ``core.ssh_async``
 =============================================================
 
-Some HPC centers require two-factor authentication where you must first authenticate via an API using your credentials and a TOTP code, which then provides you with short-lived signed SSH keys for the actual connection.
+Some HPC centers require two-factor authentication where you must first authenticate via an API using your credentials and a TOTP (Time-based One-Time Password) code, which then provides you with short-lived signed SSH keys for the actual connection.
 
 The ``core.ssh_async`` transport plugin provides an ``authentication_script`` option that runs a local script before each SSH connection is opened.
 This script must be provided by the user and is responsible for obtaining fresh SSH credentials so that the subsequent connection can succeed.
+
+.. danger::
+
+   Make sure that your HPC center's policies allow automated 2FA connections.
+   It is your responsibility to comply with their security policies.
+   We strongly recommend that you do not follow these steps if your HPC center advises against it.
 
 .. warning::
 
    You are responsible for securely storing your TOTP secret and any other credentials.
    Never commit secrets to version control or store them in plaintext in shared locations.
 
-.. warning::
-
-   Make sure that your HPC center's policies allow automated 2FA connections.
-   It is your responsibility to comply with their security policies.
-
 .. important::
 
    Your script will be called on each SSH connection and may run concurrently
-   from multiple daemon workers. Use ``flock`` to prevent race conditions, and
+   from multiple daemon workers. Use ``flock`` to prevent race conditions (as shown in the example below), and
    check certificate validity **after** acquiring the lock (another process may
    have refreshed it while you were waiting).
 
@@ -307,9 +308,9 @@ The typical flow is:
 In all of the above cases, your script should ultimately enable ``ssh <my-HPC>`` to succeed without a password.
 
 .. note::
-   If your HPC center does not allow multiple connections but relies on multiplexing, you will need to reconfigure your AiiDA computer to use the ``openssh`` transport backend instead of ``asyncssh``.
+   If your HPC center does not allow multiple connections but relies on multiplexing, you will need to reconfigure your AiiDA `Computer` to use the ``openssh`` transport backend instead of ``asyncssh``.
 
-.. note::
+.. warning::
 
    Your script may be called many times throughout the day. It is your responsibility to ensure the script is efficient and does not overload the HPC center's authentication service.
    For example, if the signed keys are valid for 24 hours, your script should check whether existing keys are still valid before requesting new ones.
@@ -414,7 +415,9 @@ Make the script executable:
 Using a keyring instead of environment variables
 """"""""""""""""""""""""""""""""""""""""""""""""
 
-If you prefer to store credentials in a system keyring rather than environment variables, you can modify the script to retrieve them securely.
+We strongly recommend storing your credentials in a system keyring rather than in environment variables or plaintext files.
+A keyring is the only secure way to store secrets—never store credentials in plaintext, in scripts, or in version control.
+Below is how to modify the script to retrieve credentials from a secure keyring.
 
 **On Linux (GNOME Keyring / libsecret):**
 

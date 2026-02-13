@@ -88,3 +88,21 @@ class TestCellAngles:
         assert angles[0] is None  # alpha: angle(b, c)
         assert angles[1] is None  # beta: angle(a, c)
         assert angles[2] is None  # gamma: angle(a, b)
+
+    def test_parallel_vectors_clamps_cosine(self):
+        """Test that parallel vectors don't produce nan from floating-point overshoot.
+
+        When two cell vectors are parallel, the cosine can slightly exceed 1.0
+        due to floating-point arithmetic. The implementation clamps to [-1, 1]
+        so that ``arccos`` returns a valid angle instead of nan.
+        """
+        # These specific full-precision values produce cos_angle = 1.0000000000000002
+        # when the dot product and norms are computed independently.
+        # Values that trigger the safeguard were brute-forced by Claude.
+        # Without it, angles[2] would be nan
+        a = [-0.46572975357025687, -2.6125490126936013, 0.9503696823969031]
+        b = [-13.596417137478522, -76.27021013020025, 27.74489398116585]
+        structure = StructureData(cell=(a, b, (0.0, 0.0, 1.0)))
+        angles = structure.cell_angles
+        assert not any(np.isnan(a) for a in angles)
+        np.testing.assert_allclose(angles[2], 0.0, atol=1e-10)  # gamma: angle(a, b) ~ 0°

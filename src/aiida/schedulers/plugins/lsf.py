@@ -117,7 +117,7 @@ class LsfJobResource(JobResource):
         parallel_env: str
         tot_num_mpiprocs: int
         default_mpiprocs_per_machine: int
-        num_machined: int
+        num_machines: int
 
     @classmethod
     def validate_resources(cls, **kwargs: t.Any) -> AttributeDict:

@@ -298,7 +298,6 @@ def profile_rename(profile, new_name, force):
     Renames the profile by updating the configuration file and moving associated directories such as the access control
     directory and daemon log files. The daemon must not be running for the profile being renamed.
     """
-    import os
     import shutil
     from pathlib import Path
 
@@ -362,16 +361,8 @@ def profile_rename(profile, new_name, force):
                     'Please remove it first or choose a different name.'
                 )
 
-            # Perform file system operations first, before changing the configuration
-            # This way if any file operation fails, the config remains unchanged
-            if old_access_dir.exists():
-                shutil.move(str(old_access_dir), str(new_access_dir))
-                # The lock file was moved along with the directory, so we need to clean it up
-                # from the new location (the context manager will try to clean up the old path)
-                moved_lock_file = new_access_dir / f'{os.getpid()}.lock'
-                moved_lock_file.unlink(missing_ok=True)
-
-            # Move daemon log files
+            # Move daemon log files before changing configuration
+            # so if any file operation fails, the config remains unchanged
             if old_circus_log and old_circus_log.exists():
                 shutil.move(str(old_circus_log), str(new_circus_log))
 
@@ -397,7 +388,12 @@ def profile_rename(profile, new_name, force):
             # Save the configuration
             config.store()
 
-            echo.echo_success(f'Profile `{old_name}` successfully renamed to `{new_name}`.')
+        # Move the access directory after releasing the lock to avoid issues with
+        # deleting the lock file on Windows and to not encode lock file naming internals
+        if old_access_dir.exists():
+            shutil.move(str(old_access_dir), str(new_access_dir))
+
+        echo.echo_success(f'Profile `{old_name}` successfully renamed to `{new_name}`.')
 
     except (exceptions.LockedProfileError, exceptions.LockingProfileError) as exc:
         echo.echo_critical(str(exc))

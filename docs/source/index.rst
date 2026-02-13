@@ -181,7 +181,7 @@
    :class: title-icon-code-fork
 
    Saw a typo in the documentation? Want to improve the code?
-   Help is always welcome, get started with the `contributing guidelines <https://github.com/aiidateam/aiida-core/wiki>`__.
+   Help is always welcome, get started with the :doc:`developer guide <developer_guide/index>`.
 
 
 .. toctree::
@@ -194,6 +194,7 @@
    howto/index
    topics/index
    internals/index
+   developer_guide/index
    reference/core_plugins
    reference/index
 

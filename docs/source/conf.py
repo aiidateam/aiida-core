@@ -47,7 +47,6 @@ master_doc = 'index'
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 exclude_patterns = [
-    'developer_guide/**',
     'import_export/**',
     'internals/global_design.rst',
     'reference/apidoc/**',

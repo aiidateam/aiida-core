@@ -64,7 +64,8 @@ def convert_to_bool(string):
 
 
 class SshTransport(BlockingTransport):
-    """Support connection, command execution and data transfer to remote computers via SSH+SFTP."""
+    """(Deprecated!) Support connection, command execution and data transfer
+    to remote computers via SSH+SFTP (using paramiko)."""
 
     # Valid keywords accepted by the connect method of paramiko.SSHClient
     # I disable 'password' and 'pkey' to avoid these data to get logged in the

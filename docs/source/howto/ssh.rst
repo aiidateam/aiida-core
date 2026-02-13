@@ -300,6 +300,8 @@ The typical flow is:
 
 In all of the above cases, your script should ultimately enable ``ssh <my-HPC>`` to succeed without a password.
 
+4. AiiDA proceeds to open the SSH connection normally.
+
 .. note::
    If your HPC center does not allow multiple connections but relies on multiplexing, you will need to reconfigure your AiiDA `Computer` to use the ``openssh`` transport backend instead of ``asyncssh``.
 
@@ -315,8 +317,6 @@ In all of the above cases, your script should ultimately enable ``ssh <my-HPC>``
    Your script may be called many times throughout the day. It is your responsibility to ensure the script is efficient and does not overload the HPC center's authentication service.
    For example, if the signed keys are valid for 24 hours, your script should check whether existing keys are still valid before requesting new ones.
 
-
-4. AiiDA proceeds to open the SSH connection normally.
 
 Example: Automated key retrieval with TOTP (case a)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

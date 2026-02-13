@@ -133,8 +133,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    @contextlib.contextmanager
-    def open(self, key: str) -> Iterator[BinaryIO]:
+    def open(self, key: str) -> contextlib.AbstractContextManager[BinaryIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -148,6 +147,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         if not self.has_object(key):
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
 
+        # This method must be implemented by subclasses.
         raise NotImplementedError('Subclasses must implement open()')
 
     def get_object_content(self, key: str) -> bytes:

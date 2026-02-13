@@ -171,20 +171,13 @@ class Transport(abc.ABC):
 
         """
         # Keep track of how many times enter has been called
-        if self._enters == 0:
-            if self.is_open:
-                # Already open, so just add one to the entered counter
-                # this way on the final exit we will not close
-                self._enters += 1
-            else:
-                self.open()
-        self._enters += 1
+        if self._track_enter():
+            self.open()
         return self
 
     def __exit__(self, type_, value, traceback):
         """Closes connections, if needed (used in 'with' statements)."""
-        self._enters -= 1
-        if self._enters == 0:
+        if self._track_exit():
             self.close()
 
     async def __aenter__(self):
@@ -193,12 +186,8 @@ class Transport(abc.ABC):
         For sync transports, this just calls the sync open() method.
         AsyncTransport subclasses override this to use async open.
         """
-        if self._enters == 0:
-            if self.is_open:
-                self._enters += 1
-            else:
-                self.open()
-        self._enters += 1
+        if self._track_enter():
+            self.open()
         return self
 
     async def __aexit__(self, type_, value, traceback):
@@ -207,9 +196,28 @@ class Transport(abc.ABC):
         For sync transports, this just calls the sync close() method.
         AsyncTransport subclasses override this to use async close.
         """
-        self._enters -= 1
-        if self._enters == 0:
+        if self._track_exit():
             self.close()
+
+    def _track_enter(self) -> bool:
+        """Track a context manager entry and return whether open() needs to be called.
+
+        Manages the ``_enters`` reference counter. If the transport is already open
+        (e.g. opened externally), an extra count is added so the final exit won't close it.
+        """
+        need_open = False
+        if self._enters == 0:
+            if self.is_open:
+                self._enters += 1
+            else:
+                need_open = True
+        self._enters += 1
+        return need_open
+
+    def _track_exit(self) -> bool:
+        """Track a context manager exit and return whether close() needs to be called."""
+        self._enters -= 1
+        return self._enters == 0
 
     @property
     def is_open(self):
@@ -1883,18 +1891,13 @@ class AsyncTransport(Transport):
 
     async def __aenter__(self):
         """Async context manager entry. Opens the transport connection."""
-        if self._enters == 0:
-            if self.is_open:
-                self._enters += 1
-            else:
-                await self.open_async()
-        self._enters += 1
+        if self._track_enter():
+            await self.open_async()
         return self
 
     async def __aexit__(self, type_, value, traceback):
         """Async context manager exit. Closes the transport connection if needed."""
-        self._enters -= 1
-        if self._enters == 0:
+        if self._track_exit():
             await self.close_async()
 
     def get(self, *args, **kwargs):

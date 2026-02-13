@@ -117,10 +117,6 @@ class LocalTransport(BlockingTransport):
 
         self._internal_dir = os.path.normpath(new_path)
 
-    def chown(self, path: TransportPath, uid, gid):
-        path = str(path)
-        os.chown(path, uid, gid)
-
     def normalize(self, path: TransportPath = '.'):
         """Normalizes path, eliminating double slashes, etc..
         :param path: path to normalize

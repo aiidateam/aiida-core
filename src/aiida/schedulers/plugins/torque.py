@@ -31,10 +31,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class TorqueScheduler(PbsBaseClass):
-    """Subclass to support the Torque scheduler..
-
-    I redefine only what needs to change from the base class
-    """
+    """Support for the Torque scheduler."""
 
     ## I don't need to change this from the base class
     # _job_resource_class = PbsJobResource

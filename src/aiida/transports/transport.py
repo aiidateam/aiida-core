@@ -307,12 +307,15 @@ class Transport(abc.ABC):
         :type mode: int
         """
 
-    @abc.abstractmethod
     def chown(self, path: TransportPath, uid: int, gid: int):
         """Change the owner (uid) and group (gid) of a file.
         As with python's os.chown function, you must pass both arguments,
         so if you only want to change one, use stat first to retrieve the
         current owner and group.
+
+        .. deprecated:: 2.7
+            This method is deprecated and will be removed in a future version.
+            It is not used internally by AiiDA and has no test coverage.
 
         :param path: path to the file to change the owner and group of
         :param uid: new owner's uid
@@ -322,6 +325,11 @@ class Transport(abc.ABC):
         :type uid: int
         :type gid: int
         """
+        warn_deprecation(
+            'The `Transport.chown` method is deprecated and will be removed. ' 'It is not used internally by AiiDA.',
+            version=3,
+        )
+        raise NotImplementedError('chown is not implemented for this transport.')
 
     @abc.abstractmethod
     def copy(self, remotesource: TransportPath, remotedestination: TransportPath, dereference=False, recursive=True):
@@ -1054,9 +1062,12 @@ class Transport(abc.ABC):
         :type mode: int
         """
 
-    @abc.abstractmethod
     async def chown_async(self, path: TransportPath, uid: int, gid: int):
         """Change the owner (uid) and group (gid) of a file.
+
+        .. deprecated:: 2.7
+            This method is deprecated and will be removed in a future version.
+            It is not used internally by AiiDA and has no test coverage.
 
         :param path: path to file
         :param uid: user id of the new owner
@@ -1066,6 +1077,12 @@ class Transport(abc.ABC):
         :type uid: int
         :type gid: int
         """
+        warn_deprecation(
+            'The `Transport.chown_async` method is deprecated and will be removed. '
+            'It is not used internally by AiiDA.',
+            version=3,
+        )
+        raise NotImplementedError('chown_async is not implemented for this transport.')
 
     @abc.abstractmethod
     async def copy_async(self, remotesource, remotedestination, dereference=False, recursive=True):

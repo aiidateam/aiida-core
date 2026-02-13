@@ -12,7 +12,6 @@ The archive is a subset of the provenance graph,
 stored in a single file.
 """
 
-import os
 import shutil
 import tempfile
 from collections.abc import Sequence
@@ -47,7 +46,6 @@ QbType = Callable[[], orm.QueryBuilder]
 
 def create_archive(
     entities: Optional[Iterable[Union[orm.Computer, orm.Node, orm.Group, orm.User]]],
-    # TODO: This is different from the CLI implementation, where OUTPUT_FILENAME is a required argument
     filename: Union[None, str, Path] = None,
     *,
     archive_format: Optional[ArchiveFormatAbstract] = None,
@@ -63,7 +61,6 @@ def create_archive(
     compression: int = 6,
     test_run: bool = False,
     backend: Optional[StorageBackend] = None,
-    tmp_dir: Optional[Union[str, Path]] = None,
     **traversal_rules: bool,
 ) -> Path:
     """Export AiiDA data to an archive file.
@@ -146,11 +143,6 @@ def create_archive(
     :param test_run: if True, do not write to file
 
     :param backend: the backend to export from. If not specified, the default backend is used.
-
-    :param tmp_dir: Location where the temporary directory will be written during archive creation.
-        The directory must exist and be writable, and defaults to the parent directory of the output file.
-        This parameter is useful when the output directory has limited space or when you want to use a specific
-        filesystem (e.g., faster storage) for temporary operations.
 
     :param traversal_rules: graph traversal rules. See :const:`aiida.common.links.GraphTraversalRules`
         what rule names are toggleable and what the defaults are.
@@ -294,23 +286,12 @@ def create_archive(
 
     EXPORT_LOGGER.report(f'Creating archive with:\n{tabulate(count_summary)}')
 
-    # Create temporary directory in the same folder as the output file
-    parent_dir = filename.parent
-
-    if not parent_dir.exists():
-        msg = "Parent directory of the export file doesn't exist."
-        raise ArchiveExportError(msg)
-    # Check if directory is writable
-    # Taken from: https://stackoverflow.com/a/2113511
-    if not os.access(parent_dir, os.W_OK | os.X_OK):
-        msg = f"Specified temporary directory '{tmp_dir}' is not writable"
-        raise ArchiveExportError(msg)
-
     # Create and open the archive for writing.
     # We create in a temp dir then move to final place at end,
     # so that the user cannot end up with a half written archive on errors
+    filename.parent.mkdir(parents=True, exist_ok=True)
     try:
-        with tempfile.TemporaryDirectory(dir=tmp_dir, prefix='.aiida-export-') as tmpdir:
+        with tempfile.TemporaryDirectory(dir=filename.parent, prefix='.aiida-export-') as tmpdir:
             tmp_filename = Path(tmpdir) / 'export.zip'
             with archive_format.open(tmp_filename, mode='x', compression=compression) as writer:
                 # add metadata
@@ -386,26 +367,31 @@ def create_archive(
                         progress.update(nrows)
                     del group_nodes  # release memory
 
-            # stream node repository files to the archive
-            if entity_ids[EntityTypes.NODE]:
-                _stream_repo_files(
-                    archive_format.key_format, writer, entity_ids[EntityTypes.NODE], backend, batch_size, filter_size
-                )
+                # stream node repository files to the archive
+                if entity_ids[EntityTypes.NODE]:
+                    _stream_repo_files(
+                        archive_format.key_format,
+                        writer,
+                        entity_ids[EntityTypes.NODE],
+                        backend,
+                        batch_size,
+                        filter_size,
+                    )
 
                 EXPORT_LOGGER.report('Finalizing archive creation...')
 
             if filename.exists():
                 filename.unlink()
 
-            filename.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(tmp_filename, filename)
     except OSError as e:
         if e.errno == 28:  # No space left on device
-            msg = f"Insufficient disk space in temporary directory '{tmp_dir}'. "
+            msg = (
+                f"Insufficient disk space in '{filename.parent}'. "
+                f'Consider freeing up space or writing the archive to a different location.'
+            )
             raise ArchiveExportError(msg) from e
-
-        msg = f'Failed to create temporary directory: {e}'
-        raise ArchiveExportError(msg) from e
+        raise
 
     EXPORT_LOGGER.report('Archive created successfully')
 

@@ -362,6 +362,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         computer: Optional[Computer] = None,
         extras: Optional[Dict[str, Any]] = None,
         attributes: Optional[Dict[str, Any]] = None,
+        node_type: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
         backend = backend or get_manager().get_profile_storage()
@@ -376,7 +377,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             raise ValueError('the user cannot be None')
 
         backend_entity = backend.nodes.create(
-            node_type=self.class_node_type, user=user.backend_entity, computer=backend_computer, **kwargs
+            node_type=node_type or self.class_node_type, user=user.backend_entity, computer=backend_computer, **kwargs
         )
         super().__init__(backend_entity)
 

@@ -1674,10 +1674,10 @@ class StructureData(Data):
 
         angles = []
 
-        # Calculate angles, using None for undefined angles involving zero-length vectors
-        angle_indices = [(1, 2, 0), (0, 2, 1), (0, 1, 2)]  # (vec1, vec2, angle_position)
+        # Pairs of vector indices for each angle: alpha=(b,c), beta=(a,c), gamma=(a,b)
+        vector_pairs = [(1, 2), (0, 2), (0, 1)]
 
-        for i, j, k in angle_indices:
+        for i, j in vector_pairs:
             if lengths[i] == 0.0 or lengths[j] == 0.0:
                 angles.append(None)
             else:

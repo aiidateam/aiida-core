@@ -187,6 +187,30 @@ class Transport(abc.ABC):
         if self._enters == 0:
             self.close()
 
+    async def __aenter__(self):
+        """Async context manager entry. Opens the transport connection.
+
+        For sync transports, this just calls the sync open() method.
+        AsyncTransport subclasses override this to use async open.
+        """
+        if self._enters == 0:
+            if self.is_open:
+                self._enters += 1
+            else:
+                self.open()
+        self._enters += 1
+        return self
+
+    async def __aexit__(self, type_, value, traceback):
+        """Async context manager exit. Closes the transport connection if needed.
+
+        For sync transports, this just calls the sync close() method.
+        AsyncTransport subclasses override this to use async close.
+        """
+        self._enters -= 1
+        if self._enters == 0:
+            self.close()
+
     @property
     def is_open(self):
         return self._is_open
@@ -1856,6 +1880,22 @@ class AsyncTransport(Transport):
 
     def close(self):
         return self.run_command_blocking(self.close_async)
+
+    async def __aenter__(self):
+        """Async context manager entry. Opens the transport connection."""
+        if self._enters == 0:
+            if self.is_open:
+                self._enters += 1
+            else:
+                await self.open_async()
+        self._enters += 1
+        return self
+
+    async def __aexit__(self, type_, value, traceback):
+        """Async context manager exit. Closes the transport connection if needed."""
+        self._enters -= 1
+        if self._enters == 0:
+            await self.close_async()
 
     def get(self, *args, **kwargs):
         return self.run_command_blocking(self.get_async, *args, **kwargs)

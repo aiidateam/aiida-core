@@ -8,12 +8,14 @@
 ###########################################################################
 """Module containing utilities and classes relating to job calculations running on systems that require transport."""
 
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import contextvars
 import logging
 import time
-from typing import TYPE_CHECKING, Any, Dict, Hashable, Iterator, List, Optional
+from typing import TYPE_CHECKING, Dict, Hashable, Iterator, Optional, cast
 
 from aiida.common import lang
 from aiida.orm import AuthInfo
@@ -61,7 +63,7 @@ class JobsList:
         self._job_update_requests: Dict[str, asyncio.Future] = {}  # Mapping: {job_id: Future}
         self._last_updated = last_updated
         self._update_handle: Optional[asyncio.TimerHandle] = None
-        self._polling_jobs: List[str] = []
+        self._polling_jobs: frozenset[str] = frozenset()
 
     @property
     def logger(self) -> logging.Logger:
@@ -101,15 +103,12 @@ class JobsList:
             scheduler = self._authinfo.computer.get_scheduler()
             scheduler.set_transport(transport)
 
-            self._polling_jobs = [str(job_id) for job_id in self._job_update_requests.keys()]
+            self._polling_jobs = frozenset([str(job_id) for job_id in self._job_update_requests.keys()])
 
-            kwargs: Dict[str, Any] = {'as_dict': True}
             if scheduler.get_feature('can_query_by_user'):
-                kwargs['user'] = '$USER'
+                scheduler_response = scheduler.get_jobs(user='$USER', as_dict=True)
             else:
-                kwargs['jobs'] = self._polling_jobs
-
-            scheduler_response = scheduler.get_jobs(**kwargs)
+                scheduler_response = scheduler.get_jobs(jobs=list(self._polling_jobs), as_dict=True)
 
             # Update the last update time and clear the jobs cache
             self._last_updated = time.time()
@@ -152,9 +151,14 @@ class JobsList:
             raise
         else:
             for job_id in self._polling_jobs:
-                future = self._job_update_requests.pop(job_id, None)
+                future = self._job_update_requests.pop(job_id, None)  # type: ignore[arg-type]
                 if future is None:
-                    self.logger.debug(
+                    # This should not happen after fixing the mutation bug
+                    # where schedulers could modify _polling_jobs (#7155, now
+                    # immutable frozenset). If this warning fires, there may be
+                    # a race condition or other issue where job_id was removed
+                    # from _job_update_requests.
+                    self.logger.warning(  # type: ignore[unreachable]
                         f'This should not happen: polled job_id {job_id} '
                         f'not in _job_update_requests {self._job_update_requests}'
                     )
@@ -187,7 +191,7 @@ class JobsList:
         This will automatically stop if there are no outstanding requests.
         """
 
-        async def updating():
+        async def updating() -> None:
             """Do the actual update, stop if not requests left."""
             await self._update_job_info()
             # Any outstanding requests?
@@ -196,7 +200,7 @@ class JobsList:
                     self._get_next_update_delay(),
                     asyncio.ensure_future,
                     updating(),
-                    context=contextvars.Context(),  #  type: ignore[call-arg]
+                    context=contextvars.Context(),
                 )
             else:
                 self._update_handle = None
@@ -207,7 +211,7 @@ class JobsList:
                 self._get_next_update_delay(),
                 asyncio.ensure_future,
                 updating(),
-                context=contextvars.Context(),  #  type: ignore[call-arg]
+                context=contextvars.Context(),
             )
 
     @staticmethod
@@ -264,7 +268,7 @@ class JobManager:
 
     def __init__(self, transport_queue: 'TransportQueue') -> None:
         self._transport_queue = transport_queue
-        self._job_lists: Dict[Hashable, 'JobInfo'] = {}
+        self._job_lists: dict[int, JobsList] = {}
 
     def get_jobs_list(self, authinfo: AuthInfo) -> JobsList:
         """Get or create a new `JobLists` instance for the given authinfo.
@@ -272,10 +276,16 @@ class JobManager:
         :param authinfo: the `AuthInfo`
         :return: a `JobsList` instance
         """
-        if authinfo.pk not in self._job_lists:
-            self._job_lists[authinfo.pk] = JobsList(authinfo, self._transport_queue)
+        # TODO: Mypy infers type of `authinfo.pk` as `int | None`
+        # It's not clear if it can actually by None at runtime,
+        # or is just a limitation of the current typing.
+        # Instead of using `cast` Perhaps we should do:
+        # assert authinfo.pk is not None
+        pk = cast(int, authinfo.pk)
+        if pk not in self._job_lists:
+            self._job_lists[pk] = JobsList(authinfo, self._transport_queue)
 
-        return self._job_lists[authinfo.pk]
+        return self._job_lists[pk]
 
     @contextlib.contextmanager
     def request_job_info_update(self, authinfo: AuthInfo, job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:

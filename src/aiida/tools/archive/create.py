@@ -37,9 +37,9 @@ from aiida.tools.graph.graph_traversers import get_nodes_export, validate_traver
 from .abstract import ArchiveFormatAbstract, ArchiveWriterAbstract
 from .common import entity_type_to_orm
 from .exceptions import ArchiveExportError, ExportValidationError
-from .implementations.sqlite_zip import ArchiveFormatSqlZip
+from .implementations.sqlite_zip.main import ArchiveFormatSqlZip
 
-__all__ = ('EXPORT_LOGGER', 'create_archive')
+__all__ = ('create_archive',)
 
 EXPORT_LOGGER = AIIDA_LOGGER.getChild('export')
 QbType = Callable[[], orm.QueryBuilder]

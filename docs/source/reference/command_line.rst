@@ -107,6 +107,7 @@ Below is a list with all available subcommands.
       duplicate  Duplicate a computer allowing to change some parameters.
       enable     Enable the computer for the given user.
       export     Export the setup or configuration of a computer.
+      goto       Open a shell connecting to the remote computer.
       list       List all available computers.
       relabel    Relabel a computer.
       setup      Create a new computer.

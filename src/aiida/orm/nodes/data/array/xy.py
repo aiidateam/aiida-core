@@ -45,6 +45,31 @@ class XyData(ArrayData):
     """A subclass designed to handle arrays that have an "XY" relationship to
     each other. That is there is one array, the X array, and there are several
     Y arrays, which can be considered functions of X.
+
+    The X array must be set first using :meth:`set_x`, followed by one or more Y arrays
+    using :meth:`set_y`. Each Y array must have the same shape as the X array. All arrays
+    are stored as 1D numpy arrays with shape ``(n,)`` where ``n`` is the number of data points::
+
+        xy = XyData()
+        xy.set_x(np.array([1, 2, 3]), 'position', 'm')  # shape: (3,)
+        xy.set_y(np.array([10, 20, 30]), 'temperature', 'K')  # shape: (3,)
+
+    Multiple Y arrays can be set at once by passing lists. Each Y array is stored
+    separately and must match the X array shape::
+
+        xy.set_y(
+            [np.array([10, 20, 30]), np.array([5, 6, 7])],  # Two 1D arrays, each shape (3,)
+            ['temperature', 'pressure'],
+            ['K', 'Pa']
+        )
+
+    To retrieve data, use :meth:`get_x` to get the X array with its metadata, and :meth:`get_y`
+    to get a list of tuples containing (name, array, units) for each Y array.
+
+    .. note:: The :meth:`~aiida.orm.nodes.data.array.array.ArrayData.get_arraynames` method
+        inherited from :class:`~aiida.orm.nodes.data.array.array.ArrayData` returns the internal
+        storage names (e.g. ``['x_array', 'y_array_0', 'y_array_1']``), not the user-provided names.
+        To get the user-provided names, use :meth:`get_y` and extract the names from the returned tuples.
     """
 
     def __init__(
@@ -134,7 +159,7 @@ class XyData(ArrayData):
         for num, (y_array, y_name, y_unit) in enumerate(zip(y_arrays, y_names, y_units)):
             self._arrayandname_validator(y_array, y_name, y_unit)
             if np.shape(y_array) != np.shape(x_array):
-                raise ValueError(f'y_array {y_name} did not have the same shape has the x_array!')
+                raise ValueError(f'y_array {y_name} does not have the same shape as x_array!')
             self.set_array(f'y_array_{num}', y_array)
 
         # if the y_arrays pass the initial validation, sets each

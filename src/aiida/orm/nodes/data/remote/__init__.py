@@ -12,7 +12,7 @@ __all__ = (
     'RemoteStashCompressedData',
     'RemoteStashCustomData',
     'RemoteStashData',
-    'RemoteStashFolderData'
+    'RemoteStashFolderData',
 )
 
 # fmt: on

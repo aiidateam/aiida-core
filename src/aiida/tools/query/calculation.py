@@ -76,7 +76,7 @@ class CalculationQueryBuilder:
     def get_filters(
         self,
         all_entries: bool = False,
-        process_state: str | None = None,
+        process_state: t.Sequence[str] | str | None = None,
         process_label: str | None = None,
         paused: bool = False,
         exit_status: str | None = None,

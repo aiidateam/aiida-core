@@ -24,6 +24,7 @@ from aiida.cmdline.commands.cmd_computer import (
     computer_duplicate,
     computer_export_config,
     computer_export_setup,
+    computer_goto,
     computer_list,
     computer_relabel,
     computer_setup,
@@ -1027,3 +1028,39 @@ def test_computer_setup_with_various_transport(run_cli_command, aiida_computer, 
     options = [transport_type, computer.uuid] + config
     run_cli_command(computer_configure, options, use_subprocess=False)
     assert computer.is_configured
+
+
+def test_computer_goto(run_cli_command, aiida_localhost):
+    """Test verdi computer goto command."""
+
+    from unittest.mock import patch
+
+    from aiida.common.exceptions import NotExistent
+
+    options = [str(aiida_localhost.label)]
+
+    # Simple case:no exception
+    with patch('os.system') as mock_os_system:
+        run_cli_command(computer_goto, options, use_subprocess=False)
+        mock_os_system.assert_called_once()
+        assert mock_os_system.call_args[0][0] is not None
+
+    def raise_(e):
+        raise e('something-AAA')
+
+    # Test when get_transport raises NotExistent
+    with patch('aiida.orm.computers.Computer.get_transport', new=lambda _: raise_(NotExistent)):
+        # The run_cli_command wraps the actual exception into an AssertionError
+        with pytest.raises(AssertionError) as exc_info:
+            run_cli_command(computer_goto, options, use_subprocess=False)
+        assert 'something-AAA' in str(exc_info.value)
+
+    # Test when gotocomputer_command raises NotImplementedError
+    with patch(
+        'aiida.transports.plugins.local.LocalTransport.gotocomputer_command',
+        new=lambda _, __=None: raise_(NotImplementedError('something-BBB')),
+    ):
+        # The run_cli_command wraps the actual exception into an AssertionError
+        with pytest.raises(AssertionError) as exc_info:
+            run_cli_command(computer_goto, options, use_subprocess=False)
+        assert 'something-BBB' in str(exc_info.value)

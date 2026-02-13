@@ -8,6 +8,7 @@
 ###########################################################################
 """`verdi computer` command."""
 
+import os
 import pathlib
 import traceback
 from copy import deepcopy
@@ -446,6 +447,29 @@ def computer_list(all_entries, raw):
     highlight = lambda comp: comp.is_configured and comp.is_user_enabled(user)  # noqa: E731
     hide = lambda comp: not (comp.is_configured and comp.is_user_enabled(user)) and not all_entries  # noqa: E731
     echo.echo_formatted_list(computers, ['label'], sort=sort, highlight=highlight, hide=hide)
+
+
+@verdi_computer.command('goto')
+@arguments.COMPUTER()
+def computer_goto(computer):
+    """Open a shell connecting to the remote computer.
+
+    This command opens a ssh connection to the remote
+    computer specified on the command line.
+    """
+    from aiida.common.exceptions import NotExistent
+
+    try:
+        transport = computer.get_transport()
+    except NotExistent as exception:
+        echo.echo_critical(repr(exception))
+
+    try:
+        command = transport.gotocomputer_command()
+        echo.echo_report('going to the remote work directory...')
+        os.system(command)
+    except NotImplementedError:
+        echo.echo_report(f'gotocomputer is not implemented for {transport}')
 
 
 @verdi_computer.command('show')

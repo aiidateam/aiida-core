@@ -115,7 +115,7 @@ class WithSerialize:
     def __init__(self, *args, **kwargs) -> None:
         serializer = kwargs.pop('serializer', None)
         super().__init__(*args, **kwargs)
-        self._serializer: Callable[[Any], 'Data'] = serializer
+        self._serializer: Callable[[Any], 'Data'] | None = serializer
 
     @property
     def serializer(self) -> Callable[[Any], 'Data'] | None:
@@ -210,10 +210,10 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
 
         self.validate_port_name(key)
 
-        if hasattr(port, 'is_metadata_explicitly_set') and not port.is_metadata_explicitly_set:  # type: ignore[attr-defined]
+        if hasattr(port, 'is_metadata_explicitly_set') and not port.is_metadata_explicitly_set:
             port.is_metadata = self.is_metadata  # type: ignore[attr-defined]
 
-        if hasattr(port, 'non_db_explicitly_set') and not port.non_db_explicitly_set:  # type: ignore[attr-defined]
+        if hasattr(port, 'non_db_explicitly_set') and not port.non_db_explicitly_set:
             port.non_db = self.non_db  # type: ignore[attr-defined]
 
         # If the port is not metadata (signified by ``is_metadata`` and ``non_db`` being ``False`` if defined) and it
@@ -223,7 +223,7 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
             and hasattr(port, 'serializer')
             and port.serializer is None
         ):
-            port._serializer = to_aiida_type
+            port._serializer = to_aiida_type  # type: ignore[attr-defined]
 
         super().__setitem__(key, port)
 
@@ -273,10 +273,10 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
         breadcrumbs = (*breadcrumbs, self.name)
 
         if not isinstance(mapping, Mapping):
-            port_name = breadcrumbs_to_port(breadcrumbs)
+            port_name = breadcrumbs_to_port(breadcrumbs)  # type: ignore[unreachable]
             raise TypeError(f'port namespace `{port_name}` received `{type(mapping)}` instead of a dictionary')
 
-        result = {}
+        result: dict[str, Any] = {}
 
         for name, value in mapping.items():
             if name in self:

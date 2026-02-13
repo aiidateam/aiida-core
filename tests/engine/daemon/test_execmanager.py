@@ -14,6 +14,7 @@ import pathlib
 import pytest
 
 from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation, StashMode
+from aiida.common.exceptions import StashingError
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
 from aiida.orm import CalcJobNode, FolderData, PortableCode, RemoteData, SinglefileData
@@ -781,6 +782,10 @@ async def test_stashing(
                 raise OSError('copy mocked error')
 
             monkeypatch.setattr(transport, 'copy_async', mock_copy_async)
+
+            # StashingError should be raised for copy failures
+            with pytest.raises(StashingError, match='Failed to copy'):
+                await execmanager.stash_calculation(node, transport)
         else:
 
             async def mock_compress_async(*args, **kwargs):
@@ -788,11 +793,9 @@ async def test_stashing(
 
             monkeypatch.setattr(transport, 'compress_async', mock_compress_async)
 
-        # no error should be raised
-        # the error should only be logged to EXEC_LOGGER.warning and exit with 0
-        with caplog.at_level(logging.WARNING):
-            await execmanager.stash_calculation(node, transport)
-            assert any('Failed to stash' in message for message in caplog.messages)
+            with caplog.at_level(logging.WARNING):
+                await execmanager.stash_calculation(node, transport)
+                assert any('Failed to stash' in message for message in caplog.messages)
 
     # Ensure no files were created in the destination path after the error
     assert not any(dest_path_error.iterdir())

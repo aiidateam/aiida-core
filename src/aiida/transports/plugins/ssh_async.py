@@ -50,7 +50,7 @@ def validate_backend(ctx, param, value: str):
 
 
 class AsyncSshTransport(AsyncTransport):
-    """Transport plugin via SSH, asynchronously."""
+    """(Recommended)  Asynchronous SSH transport plugin. Supports both OpenSSH and AsyncSSH as backends."""
 
     _DEFAULT_max_io_allowed = 8
 

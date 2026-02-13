@@ -8,6 +8,8 @@
 ###########################################################################
 """Tests for the `PluginParamType`."""
 
+from unittest.mock import MagicMock, patch
+
 import click
 import pytest
 
@@ -222,3 +224,46 @@ class TestPluginParamType:
         options = [item.value for item in param.shell_complete(None, None, 'core.arithmetic.add')]
         assert entry_point_full_calculations not in options
         assert entry_point_full_parsers not in options
+
+    def test_shell_complete_includes_help_text(self):
+        """Test that shell_complete populates CompletionItem.help with the plugin docstring."""
+
+        class PluginWithDoc:
+            """My plugin description.\n\nMore details here."""
+
+        class PluginWithoutDoc:
+            pass
+
+        ep_with_doc = MagicMock()
+        ep_with_doc.name = 'plugin.with_doc'
+        ep_with_doc.load.return_value = PluginWithDoc
+
+        ep_without_doc = MagicMock()
+        ep_without_doc.name = 'plugin.without_doc'
+        ep_without_doc.load.return_value = PluginWithoutDoc
+
+        ep_failing = MagicMock()
+        ep_failing.name = 'plugin.failing'
+        ep_failing.load.side_effect = ImportError('cannot load')
+
+        fake_entry_points = [
+            ('aiida.test_group', ep_with_doc),
+            ('aiida.test_group', ep_without_doc),
+            ('aiida.test_group', ep_failing),
+        ]
+
+        param = PluginParamType(group='transports')
+
+        param._entry_points = fake_entry_points
+        with patch.object(
+            param, 'get_possibilities', return_value=['plugin.with_doc', 'plugin.without_doc', 'plugin.failing']
+        ):
+            items = param.shell_complete(None, None, '')
+
+        assert len(items) == 3
+        assert items[0].value == 'plugin.with_doc'
+        assert items[0].help == 'My plugin description.'
+        assert items[1].value == 'plugin.without_doc'
+        assert items[1].help is None
+        assert items[2].value == 'plugin.failing'
+        assert items[2].help is None

@@ -138,16 +138,27 @@ class Repository:
         if path is None:
             return pathlib.PurePath()
 
+        # convert str to PurePath
         if isinstance(path, str):
-            path = pathlib.PurePath(path)
-
-        if not isinstance(path, pathlib.PurePath):
+            path_obj = pathlib.PurePath(path)
+        elif isinstance(path, pathlib.PurePath):
+            path_obj = path
+        else:
             raise TypeError('path is not of type `str` nor `pathlib.PurePath`.')
 
-        if path.is_absolute():
-            raise TypeError(f'path `{path}` is not a relative path.')
+        # reject absolute paths
+        if path_obj.is_absolute():
+            raise TypeError(f'path `{path_obj}` is not a relative path.')
 
-        return path
+        # reject Windows absolute paths
+        if path_obj.anchor:
+            raise TypeError(f'path `{path_obj}` is not a relative path.')
+
+        # reject parent traversal
+        if '..' in path_obj.parts:
+            raise TypeError(f'path `{path_obj}` cannot contain parent traversal (`..`).')
+
+        return path_obj
 
     @property
     def backend(self) -> AbstractRepositoryBackend:

@@ -84,7 +84,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def _put_object_from_filelike(self, handle: BinaryIO) -> str:
-        raise NotImplementedError
+        pass
 
     def put_object_from_file(self, filepath: Union[str, pathlib.Path]) -> str:
         """Store a new object with contents of the file located at `filepath` on this file system.
@@ -144,11 +144,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :raise FileNotFoundError: if the file does not exist.
         :raise OSError: if the file could not be opened.
         """
-        if not self.has_object(key):
-            raise FileNotFoundError(f'object with key `{key}` does not exist.')
-
-        # This method must be implemented by subclasses.
-        raise NotImplementedError('Subclasses must implement open()')
+        pass
 
     def get_object_content(self, key: str) -> bytes:
         """Return the content of a object identified by key.

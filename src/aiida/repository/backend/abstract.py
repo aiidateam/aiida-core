@@ -87,10 +87,16 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def _import_from_other_repository(
+    def bulk_copy_objects_from(
         self, src: 'AbstractRepositoryBackend', keys: set[str], step_cb: Optional[Callable[[str, int, int], None]]
     ) -> list[str]:
-        pass
+        """Bulk copy objects from another repository backend.
+
+        :param src: the source repository backend from which to copy the objects.
+        :param keys: set of fully qualified identifiers for the objects within the source repository.
+        :param step_cb: optional callback called after each object with (key, imported_count, total_count).
+        :return: list of fully qualified identifiers for the objects within this repository.
+        """
 
     def put_object_from_file(self, filepath: Union[str, pathlib.Path]) -> str:
         """Store a new object with contents of the file located at `filepath` on this file system.

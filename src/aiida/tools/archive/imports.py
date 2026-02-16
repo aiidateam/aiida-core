@@ -1243,4 +1243,4 @@ def _add_files_to_repo_packed(backend_from: StorageBackend, backend_to: StorageB
         def _cb(_: str, __: int, ___: int) -> None:
             progress.update()
 
-        repository_to._import_from_other_repository(repository_from, new_keys, step_cb=_cb)
+        repository_to.bulk_copy_objects_from(repository_from, new_keys, step_cb=_cb)

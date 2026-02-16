@@ -164,3 +164,80 @@ def test_import_checkpoints(aiida_profile_clean, tmp_path):
     assert orm.QueryBuilder().append(orm.Node).count() == len(nodes)
     node_new = orm.load_node(node_uuid)
     assert node_new.checkpoint is None
+
+
+def test_packed_import_content_integrity(tmp_path, aiida_profile_clean):
+    """Verify that packed import preserves file content correctly with mixed sizes."""
+    import hashlib
+    import io
+    import os
+
+    files_and_hashes = {}
+    node = orm.FolderData()
+
+    for i in range(50):
+        # Create varied content (different sizes and patterns)
+        if i % 4 == 0:
+            content = os.urandom(100)  # Small random binary
+        elif i % 4 == 1:
+            content = f'Text content for file {i}\n'.encode() * 100  # Medium text
+        elif i % 4 == 2:
+            content = bytes([i % 256]) * 10_000  # Medium repeated byte
+        else:
+            content = os.urandom(100_000)  # Large random binary
+
+        filename = f'file_{i:03d}.dat'
+        node.base.repository.put_object_from_filelike(io.BytesIO(content), filename)
+        files_and_hashes[filename] = hashlib.sha256(content).hexdigest()
+
+    node.store()
+    node_uuid = node.uuid
+
+    archive_path = tmp_path / 'integrity.aiida'
+    create_archive([node], filename=archive_path, overwrite=True)
+
+    aiida_profile_clean.reset_storage()
+    import_archive(str(archive_path), packed=True)
+
+    imported_node = orm.load_node(node_uuid)
+    for filename, expected_hash in files_and_hashes.items():
+        content = imported_node.base.repository.get_object_content(filename, mode='rb')
+        actual_hash = hashlib.sha256(content).hexdigest()
+        assert actual_hash == expected_hash, f'Content mismatch for {filename}'
+
+
+def test_packed_import_batch_flushing(tmp_path, aiida_profile_clean):
+    """Test that batch flushing works correctly with a large object."""
+    import io
+
+    node = orm.FolderData()
+
+    # Small objects before
+    for i in range(10):
+        content = f'small_{i}'.encode() * 100
+        node.base.repository.put_object_from_filelike(io.BytesIO(content), f'small_{i}.dat')
+
+    # Large object (50MB) to trigger batch flush
+    large_content = b'L' * (50 * 1024 * 1024)
+    node.base.repository.put_object_from_filelike(io.BytesIO(large_content), 'large.dat')
+
+    # Small objects after
+    for i in range(10):
+        content = f'after_{i}'.encode() * 100
+        node.base.repository.put_object_from_filelike(io.BytesIO(content), f'after_{i}.dat')
+
+    node.store()
+    node_uuid = node.uuid
+
+    archive_path = tmp_path / 'batch.aiida'
+    create_archive([node], filename=archive_path, overwrite=True)
+
+    aiida_profile_clean.reset_storage()
+    import_archive(str(archive_path), packed=True)
+
+    imported_node = orm.load_node(node_uuid)
+    filenames = list(imported_node.base.repository.list_object_names())
+    assert len(filenames) == 21
+
+    large_imported = imported_node.base.repository.get_object_content('large.dat', mode='rb')
+    assert large_imported == large_content

@@ -110,10 +110,10 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
     def _put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
         return NotImplementedError()
 
-    def _import_from_other_repository(
+    def bulk_copy_objects_from(
         self, src: AbstractRepositoryBackend, keys: set[str], step_cb: Optional[Callable[[str, int, int], None]]
     ) -> List[str]:
-        return NotImplementedError()
+        raise NotImplementedError()
 
     def has_objects(self, keys: List[str]) -> List[bool]:
         raise NotImplementedError()

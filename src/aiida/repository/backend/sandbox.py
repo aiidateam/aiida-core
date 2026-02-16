@@ -95,12 +95,13 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
 
         return key
 
-    def _import_from_other_repository(
+    def bulk_copy_objects_from(
         self,
         src: AbstractRepositoryBackend,
         keys: set[str],
         step_cb: t.Optional[t.Callable[[str, int, int], None]] = None,
     ) -> list[str]:
+        """Bulk copy objects from another repository backend."""
         imported_keys: list[str] = []
         total = len(keys)
         sandbox_path = self.sandbox.abspath

@@ -95,26 +95,25 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         with self._container as container:
             return container.add_streamed_object(handle)
 
-    def _import_from_other_repository(
+    def bulk_copy_objects_from(
         self,
         src: AbstractRepositoryBackend,
         keys: set[str],
         step_cb: t.Optional[t.Callable[[str, int, int], None]] = None,
     ) -> list[str]:
-        """Import objects from another repository backend directly to packed storage.
+        """Bulk copy objects from another repository backend directly to packed storage.
 
         This method efficiently imports objects by:
         1. Reading streams immediately within their valid context (avoiding closed handle issues)
         2. Batching data in memory up to _IMPORT_BATCH_MEMORY_BYTES before flushing to pack
         3. Using bulk pack operations for efficiency
-        4. Committing once at the end for optimal performance
+        4. Deferring fsync and commit to the end for optimal performance
 
-        :param src: the source repository backend from which to import the objects.
+        :param src: the source repository backend from which to copy the objects.
         :param keys: set of fully qualified identifiers for the objects within the source repository.
         :param step_cb: optional callback called after each object with (key, imported_count, total_count).
         :return: list of fully qualified identifiers for the objects within this repository.
         """
-
         if not keys:
             return []
 
@@ -139,7 +138,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                     if content_cache:
                         container.add_objects_to_pack(
                             list(content_cache.values()),
-                            do_fsync=True,
+                            do_fsync=False,
                             do_commit=False,
                         )
                         content_cache.clear()
@@ -148,7 +147,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                     # Write large object directly
                     container.add_streamed_object_to_pack(
                         io.BytesIO(content),
-                        do_fsync=True,
+                        do_fsync=False,
                         do_commit=False,
                     )
                 # If adding this would exceed memory limit, flush first
@@ -156,7 +155,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                     if content_cache:
                         container.add_objects_to_pack(
                             list(content_cache.values()),
-                            do_fsync=True,
+                            do_fsync=False,
                             do_commit=False,
                         )
                         content_cache.clear()
@@ -174,7 +173,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 if step_cb:
                     step_cb(key, len(imported_keys), total_keys)
 
-            # Flush any remaining cached content
+            # Flush any remaining cached content (with fsync since it's the final write)
             if content_cache:
                 container.add_objects_to_pack(
                     list(content_cache.values()),

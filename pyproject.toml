@@ -274,6 +274,7 @@ ssh_kerberos = [
 tests = [
   'aiida-core[atomic_tools,rest]',
   'aiida-export-migration-tests==0.9.0',
+  'ipykernel~=6.0',
   'nbclient~=0.10',
   'nbformat~=5.10',
   'pg8000~=1.13',

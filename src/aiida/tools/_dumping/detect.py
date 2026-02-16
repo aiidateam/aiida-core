@@ -38,8 +38,6 @@ if TYPE_CHECKING:
     from aiida.tools._dumping.tracking import DumpTracker
 
 
-__all__ = ('DumpChangeDetector',)
-
 logger = AIIDA_LOGGER.getChild('tools._dumping.detect')
 
 
@@ -204,7 +202,7 @@ class DumpChangeDetector:
             return_nodes = []
             set_progress_bar_tqdm(bar_format=DUMP_PROGRESS_BAR_FORMAT)
 
-            progress_desc = f"{click.style('Report', fg='blue', bold=True)}: Excluding already dumped {store_type}..."
+            progress_desc = f'{click.style("Report", fg="blue", bold=True)}: Excluding already dumped {store_type}...'
             with get_progress_reporter()(desc=progress_desc, total=len(nodes)) as progress:
                 for node in nodes:
                     if node.uuid not in tracked_uuids:
@@ -244,7 +242,7 @@ class DumpChangeDetector:
         filtered_nodes = []
         set_progress_bar_tqdm(bar_format=DUMP_PROGRESS_BAR_FORMAT)
 
-        progress_desc = f"{click.style('Report', fg='blue', bold=True)}: Applying filters to {store_type}..."
+        progress_desc = f'{click.style("Report", fg="blue", bold=True)}: Applying filters to {store_type}...'
         with get_progress_reporter()(desc=progress_desc, total=len(nodes)) as progress:
             for node in nodes:
                 is_sub_node = bool(getattr(node, 'caller', None))

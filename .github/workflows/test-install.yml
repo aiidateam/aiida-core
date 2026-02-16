@@ -9,7 +9,7 @@ on:
     - .github/workflows/test-install.yml
     branches-ignore: [gh-pages]
   schedule:
-  - cron: 30 02 * * *      # nightly build
+  - cron: 30 02 * * 0      # weekly build (Sunday)
 
 env:
   FORCE_COLOR: 1
@@ -30,15 +30,15 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python 3.11
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.11'
 
     - name: Set up uv
-      uses: astral-sh/setup-uv@v5.2.1
+      uses: astral-sh/setup-uv@v7.2.1
       with:
         version: latest
 
@@ -57,7 +57,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Setup Conda
       uses: conda-incubator/setup-miniconda@v3
@@ -82,10 +82,10 @@ jobs:
         extras: ['', '[atomic_tools,docs,notebook,rest,tests,tui]']
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Python 3.9
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.9'
 
@@ -124,7 +124,7 @@ jobs:
           optional: false
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Setup Conda
       uses: conda-incubator/setup-miniconda@v3
@@ -192,7 +192,7 @@ jobs:
         - 5001:22
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql graphviz

@@ -284,6 +284,51 @@ The user also has to specify the units for both ``x`` and ``y``:
 
   In [4]: xy.set_y(np.array([1, 2, 3, 4]), 'Volume Expansion', '%')
 
+To retrieve the ``x`` values and their metadata, you can use the :py:meth:`~aiida.orm.XyData.get_x` method.
+This returns a tuple of ``(name, array, units)`` where the array is a 1D numpy array with shape ``(n,)``:
+
+.. code-block:: ipython
+
+  In [5]: x_name, x_array, x_units = xy.get_x()
+
+  In [6]: x_name
+  Out[6]: 'Temperate'
+
+  In [7]: x_array
+  Out[7]: array([10, 20, 30, 40])
+
+  In [8]: x_units
+  Out[8]: 'Celsius'
+
+Similarly, to retrieve the ``y`` values and their metadata, use the :py:meth:`~aiida.orm.XyData.get_y` method.
+This returns a list of tuples ``[(name, array, units), ...]`` where each array is a 1D numpy array with shape ``(n,)`` matching the ``x`` array:
+
+.. code-block:: ipython
+
+  In [9]: y_values = xy.get_y()
+
+  In [10]: y_values
+  Out[10]: [('Volume Expansion', array([1, 2, 3, 4]), '%')]
+
+  In [11]: for y_name, y_array, y_units in y_values:
+      ...:     print(y_name, y_array, y_units)
+  Volume Expansion [1 2 3 4] %
+
+.. note::
+
+  The :py:meth:`~aiida.orm.ArrayData.get_arraynames` method returns the internal storage names
+  (e.g., ``['x_array', 'y_array_0', 'y_array_1']``), not the user-provided names. To retrieve the
+  user-provided names, use :py:meth:`~aiida.orm.XyData.get_y` and extract the names from the
+  returned tuples:
+
+.. code-block:: ipython
+
+  In [12]: xy.get_arraynames()  # Internal storage names
+  Out[12]: ['x_array', 'y_array_0']
+
+  In [13]: [name for name, _, _ in xy.get_y()]  # User-provided names
+  Out[13]: ['Volume Expansion']
+
 Note that you can set multiple ``y`` values that correspond to the ``x`` grid.
 Same as for the :py:class:`~aiida.orm.ArrayData`, the names and shapes of the arrays are stored to the database, the content of the arrays is stored to the repository in the `numpy format <https://numpy.org/doc/stable/reference/generated/numpy.lib.format.html#npy-format>`_ (``.npy``).
 
@@ -1338,7 +1383,7 @@ Here is an example for a custom data type that needs to wrap a single text file:
             super().__init__(**kwargs)
 
             filename = os.path.basename(filepath)  # Get the filename from the absolute path
-            self.put_object_from_file(filepath, filename)  # Store the file in the repository under the given filename
+            self.base.repository.put_object_from_file(filepath, filename)  # Store the file in the repository under the given filename
             self.base.attributes.set('filename', filename)  # Store in the attributes what the filename is
 
         def get_content(self):

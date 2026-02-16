@@ -244,7 +244,7 @@ notebook = [
 # https://github.com/python/typeshed?tab=readme-ov-file#package-versioning-for-third-party-stubs
 pre-commit = [
   'aiida-core[tests]',
-  'mypy~=1.18.0',
+  'mypy~=1.19.0',
   'packaging~=23.0',
   'pre-commit~=3.5',
   'sqlalchemy[mypy]~=2.0',
@@ -361,6 +361,7 @@ module = [
   'aiida.cmdline.params.*',
   'aiida.common.*',
   'aiida.repository.*',
+  'aiida.schedulers.*',
   'aiida.tools.graph.*',
   'aiida.tools.query.*'
 ]

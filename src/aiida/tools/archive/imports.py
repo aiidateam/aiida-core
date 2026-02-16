@@ -30,9 +30,9 @@ from aiida.repository import Repository
 from .abstract import ArchiveFormatAbstract
 from .common import entity_type_to_orm
 from .exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError
-from .implementations.sqlite_zip import ArchiveFormatSqlZip
+from .implementations.sqlite_zip.main import ArchiveFormatSqlZip
 
-__all__ = ('IMPORT_LOGGER', 'import_archive')
+__all__ = ('import_archive',)
 
 IMPORT_LOGGER = AIIDA_LOGGER.getChild('export')
 
@@ -110,7 +110,7 @@ def import_archive(
     if not (merge_extras[0] in ['k', 'n'] and merge_extras[1] in ['c', 'n'] and merge_extras[2] in ['l', 'u', 'd']):
         raise ValueError('merge_extras contains invalid values')
     if merge_comments not in ('leave', 'newest', 'overwrite'):
-        raise ValueError(f"merge_comments not in {('leave', 'newest', 'overwrite')!r}")
+        raise ValueError(f'merge_comments not in {("leave", "newest", "overwrite")!r}')
     type_check(group, orm.Group, allow_none=True)
     type_check(test_run, bool)
     backend = backend or get_manager().get_profile_storage()
@@ -245,20 +245,24 @@ def _add_new_entities(
             ufields.append(ufield)
 
     with get_progress_reporter()(desc=f'Adding new {etype.value}(s)', total=total) as progress:
-        rows = [
-            transform(row)
-            for row in QueryBuilder(backend=backend_from)
-            .append(
+        # For UX: batch large ID lists so queries start returning results faster
+        # Even though the improved IN clause handles any size, query planning for 500k+ IDs can be slow
+        query_batch_size = 50_000
+
+        # Batch the IDs for querying (UX optimization, not a technical requirement)
+        for _, ufields_batch in batch_iter(ufields, query_batch_size):
+            query = QueryBuilder(backend=backend_from).append(
                 entity_type_to_orm[etype],
-                filters={unique_field: {'in': ufields}},
+                filters={unique_field: {'in': ufields_batch}},
                 project=['**'],
                 tag='entity',
             )
-            .dict(batch_size=batch_size)
-        ]
-        new_ids = backend_to.bulk_insert(etype, rows)
-        backend_unique_id.update({row[unique_field]: pk for pk, row in zip(new_ids, rows)})
-        progress.update(len(rows))
+
+            # Batch the results processing for progress updates and memory efficiency
+            for nrows, rows_batch in batch_iter(query.dict(batch_size=batch_size), batch_size, transform):
+                new_ids = backend_to.bulk_insert(etype, rows_batch)
+                backend_unique_id.update({row[unique_field]: pk for pk, row in zip(new_ids, rows_batch)})
+                progress.update(nrows)
 
 
 def _import_users(

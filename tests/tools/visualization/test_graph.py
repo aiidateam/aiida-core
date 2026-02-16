@@ -187,8 +187,6 @@ class TestVisGraph:
 
     def test_graph_recurse_spot_highlight_classes(self):
         """Test adding nodes and all its (recursed) incoming nodes to a graph"""
-        import difflib
-
         nodes = self.create_provenance()
 
         graph = graph_mod.Graph()
@@ -199,21 +197,20 @@ class TestVisGraph:
         graph_highlight.recurse_ancestors(nodes.pd0, highlight_classes=['Dict'])
         graph_highlight.recurse_descendants(nodes.pd0, highlight_classes=['Dict', 'CalcJobNode', 'Dummy'])
 
-        diff = difflib.unified_diff(
-            graph.graphviz.source.splitlines(keepends=True), graph_highlight.graphviz.source.splitlines(keepends=True)
-        )
-        got_diff = ''.join([line for line in diff if line.startswith('+')])
+        base_lines = set(graph.graphviz.source.splitlines(keepends=True))
+        hl_lines = set(graph_highlight.graphviz.source.splitlines(keepends=True))
 
-        expected_diff = """\
-        +State: running" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]
-        +@localhost" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]
-        +Exit Code: 200" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]
-        +\tN{fd1} [label="FolderData ({fd1})" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]
-        +++""".format(**{k: v.pk for k, v in nodes.items()})
+        added = hl_lines - base_lines
+        added_stripped = {line.strip() for line in added}
 
-        assert sorted([line.strip() for line in got_diff.splitlines()]) == sorted(
-            [line.strip() for line in expected_diff.splitlines()]
-        )
+        expected = {
+            'State: running" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]',
+            '@localhost" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]',
+            'Exit Code: 200" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]',
+            f'N{nodes.fd1.pk} [label="FolderData ({nodes.fd1.pk})" color=lightgray fillcolor=white penwidth=2 '
+            'shape=ellipse style=filled]',
+        }
+        assert added_stripped == expected
 
     def test_graph_recurse_ancestors_filter_links(self):
         """Test adding nodes and all its (recursed) incoming nodes to a graph, but filter link types"""

@@ -212,7 +212,8 @@ class NodeRepository:
 
         with self._repository.open(path) as handle:
             if 'b' not in mode:
-                yield io.TextIOWrapper(handle, encoding='utf-8')
+                with io.TextIOWrapper(handle, encoding='utf-8') as text_stream:
+                    yield text_stream
             else:
                 yield handle
 

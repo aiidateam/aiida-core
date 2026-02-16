@@ -201,6 +201,8 @@ requires-python = '>=3.9'
 'core.pcod' = 'aiida.tools.dbimporters.plugins.pcod:PcodDbImporter'
 'core.tcod' = 'aiida.tools.dbimporters.plugins.tcod:TcodDbImporter'
 
+[project.entry-points.'aiida.tools.workflows']
+
 [project.entry-points.'aiida.transports']
 'core.local' = 'aiida.transports.plugins.local:LocalTransport'
 'core.ssh' = 'aiida.transports.plugins.ssh:SshTransport'

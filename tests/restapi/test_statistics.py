@@ -53,4 +53,4 @@ def test_count_consistency(restapi_server, server_url):
 
     for full_type, count in statistics_dict.items():
         if full_type in type_count_dict:
-            assert count == type_count_dict[full_type]
+            assert count == type_count_dict[full_type], f'Found inconsistency for full_type {full_type!r}'

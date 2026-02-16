@@ -470,6 +470,7 @@ class Process(PlumpyProcess):
             # complete the state transition to the terminal state. If another exception is raised during this exception
             # handling, the process transitioning is cut short and never makes it to the terminal state.
             self.node.set_process_state(self._state.LABEL)
+            super().on_entered(from_state)
             return
 
         # We need to guarantee that the process state gets updated even if the ``update_outputs`` call excepts, for

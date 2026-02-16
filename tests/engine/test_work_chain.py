@@ -1647,6 +1647,69 @@ class TestDefaultUniqueness:
         assert len(uuids) == len(nodes), f'Only {len(uuids)} unique UUIDS for {len(nodes)} input nodes'
 
 
+@pytest.mark.requires_rmq
+class TestWorkChainEvents:
+    class WorkChainWithException(WorkChain):
+        @classmethod
+        def define(cls, spec):
+            super().define(spec)
+            spec.outline(cls.step_one, cls.step_two)
+
+        def step_one(self):
+            self.report('In step one.')
+
+        def step_two(self):
+            self.report('In step two, about to raise exception.')
+            raise RuntimeError('Intentional exception for testing.')
+
+    def test_workchain_events_on_exception(self):
+        import plumpy
+
+        class ProcessListenerTester(plumpy.ProcessListener):
+            def __init__(self, process, expected_events):
+                process.add_process_listener(self)
+                self.expected_events = set(expected_events)
+                self.called = set()
+
+            def on_process_created(self, process):
+                self.called.add('created')
+
+            def on_process_running(self, process):
+                self.called.add('running')
+
+            def on_process_waiting(self, process):
+                self.called.add('waiting')
+
+            def on_process_paused(self, process):
+                self.called.add('paused')
+
+            def on_output_emitted(self, process, output_port, value, dynamic):
+                self.called.add('output_emitted')
+
+            def on_process_finished(self, process, outputs):
+                self.called.add('finished')
+
+            def on_process_excepted(self, process, reason):
+                self.called.add('excepted')
+
+            def on_process_killed(self, process, msg):
+                self.called.add('killed')
+
+        workflow = TestWorkChainEvents.WorkChainWithException()
+        event_listener = ProcessListenerTester(
+            workflow,
+            expected_events=[
+                'running',
+                'excepted',
+            ],
+        )
+
+        with pytest.raises(RuntimeError, match='Intentional exception for testing.'):
+            launch.run(workflow)
+
+        assert event_listener.expected_events == event_listener.called
+
+
 def test_illegal_override_run():
     """Test that overriding a protected workchain method raises a ``RuntimeError``."""
     with pytest.raises(RuntimeError, match='the method `run` is protected cannot be overridden.'):

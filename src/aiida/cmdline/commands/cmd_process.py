@@ -529,16 +529,19 @@ def process_repair(manager, broker, dry_run, force):
     # Terminate unreferenced database connections that could be holding locks
     # Note: Use `type()` instead of `isinstance()` because SqliteDosBackend inherits from PsqlDosBackend
     storage = manager.get_profile_storage()
+    profile = manager.get_profile()
     if type(storage) is PsqlDosBackend:
         unreferenced = storage.get_unreferenced_connections()
         if unreferenced:
-            echo.echo_warning(f'Found {len(unreferenced)} database connection(s) that may be orphaned:')
+            echo.echo_warning(
+                f'Found {len(unreferenced)} database connection(s) for profile `{profile.name}` that may be orphaned:'
+            )
             for pid, state, port in unreferenced:
                 echo.echo(f'  PID {pid} | {state} | port {port}')
             echo.echo_warning(
-                'These may include legitimate connections from workers, Jupyter notebooks, or other processes '
-                'running under the current profile. Only terminate if you are sure no other AiiDA processes '
-                'are using this profile.'
+                f'These may include legitimate connections from workers, Jupyter notebooks, or other processes '
+                f'using profile `{profile.name}`. Only terminate if you are sure no other AiiDA processes '
+                f'are using this profile.'
             )
             if not dry_run:
                 if not force:

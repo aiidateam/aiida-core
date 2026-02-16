@@ -196,7 +196,7 @@ def test_backup(tmp_path):
         assert name in contents
 
 
-def test_get_unreferenced_connections():
+def test_get_and_terminate_unreferenced_connections():
     """Test that ``get_unreferenced_connections`` detects external database connections.
 
     This test creates a real database connection outside of the AiiDA session and verifies

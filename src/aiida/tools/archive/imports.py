@@ -206,17 +206,10 @@ def import_archive(
 
             # now the transaction has been successfully populated, but not committed, we add the repository files
             # if the commit fails, this is not so much an issue, since the files can be removed on repo maintenance
-            import time
-
-            begin = time.time()
             if packed:
-                IMPORT_LOGGER.report('Adding repository files to `packed`')
                 _add_files_to_repo_packed(backend_from, backend, new_repo_keys)
             else:
-                IMPORT_LOGGER.report('Adding repository files to `loose`')
                 _add_files_to_repo(backend_from, backend, new_repo_keys)
-            end = time.time()
-            IMPORT_LOGGER.report(f'Added repository files in {(end - begin)*1e3:.1f} milliseconds')
 
             IMPORT_LOGGER.report('Committing transaction to database...')
 

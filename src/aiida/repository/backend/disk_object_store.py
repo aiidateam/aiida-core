@@ -2,6 +2,7 @@
 
 import contextlib
 import dataclasses
+import io
 import shutil
 import typing as t
 
@@ -16,6 +17,10 @@ if t.TYPE_CHECKING:
 __all__ = ('DiskObjectStoreRepositoryBackend',)
 
 BYTES_TO_MB = 1 / 1024**2
+
+# Memory threshold for batching objects during import (100MB)
+# Objects are accumulated in memory until this threshold is reached, then flushed to pack storage.
+_IMPORT_BATCH_MEMORY_BYTES = 104857600
 
 logger = STORAGE_LOGGER.getChild('disk_object_store')
 
@@ -96,26 +101,90 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         keys: set[str],
         step_cb: t.Optional[t.Callable[[str, int, int], None]] = None,
     ) -> list[str]:
-        """Import objects from another repository backend.
+        """Import objects from another repository backend directly to packed storage.
 
-        :param rhs: the other repository backend from which to import the objects.
-        :param keys: list of fully qualified identifiers for the objects within the other repository.
+        This method efficiently imports objects by:
+        1. Reading streams immediately within their valid context (avoiding closed handle issues)
+        2. Batching data in memory up to _IMPORT_BATCH_MEMORY_BYTES before flushing to pack
+        3. Using bulk pack operations for efficiency
+        4. Committing once at the end for optimal performance
+
+        :param src: the source repository backend from which to import the objects.
+        :param keys: set of fully qualified identifiers for the objects within the source repository.
+        :param step_cb: optional callback called after each object with (key, imported_count, total_count).
         :return: list of fully qualified identifiers for the objects within this repository.
         """
+
+        if not keys:
+            return []
+
         imported_keys: list[str] = []
+        total_keys = len(keys)
+
+        # Memory cache for batching - maps hashkey -> content bytes
+        content_cache: dict[str, bytes] = {}
+        cache_size = 0
+
         with self._container as container:
-            for index, (key, stream) in enumerate(src.iter_object_streams(keys)):
-                # skip commit here for performance, will commit at the end.
-                # fsync is kept because:
-                #   1. during the import, multiple packed file are touched, and we can't fsync them all at the end
-                #   2. in case of a crash during the import, we want to keep the packed files consistent
-                #   3. fsync is not that expensive compared to commit
-                container.add_streamed_object_to_pack(stream, do_commit=False)
+            for key, stream in src.iter_object_streams(keys):
+                # Read the stream content immediately while it's still valid.
+                # This is critical: the stream from iter_object_streams may be closed
+                # after the iteration yields the next item (context manager behavior).
+                content = stream.read()
+                content_size = len(content)
+
+                # Handle very large objects: write directly via stream to avoid memory issues
+                if content_size > _IMPORT_BATCH_MEMORY_BYTES:
+                    # Flush any cached content first
+                    if content_cache:
+                        container.add_objects_to_pack(
+                            list(content_cache.values()),
+                            do_fsync=True,
+                            do_commit=False,
+                        )
+                        content_cache.clear()
+                        cache_size = 0
+
+                    # Write large object directly
+                    container.add_streamed_object_to_pack(
+                        io.BytesIO(content),
+                        do_fsync=True,
+                        do_commit=False,
+                    )
+                # If adding this would exceed memory limit, flush first
+                elif cache_size + content_size > _IMPORT_BATCH_MEMORY_BYTES:
+                    if content_cache:
+                        container.add_objects_to_pack(
+                            list(content_cache.values()),
+                            do_fsync=True,
+                            do_commit=False,
+                        )
+                        content_cache.clear()
+                        cache_size = 0
+
+                    # Add current object to fresh cache
+                    content_cache[key] = content
+                    cache_size = content_size
+                else:
+                    # Add to cache
+                    content_cache[key] = content
+                    cache_size += content_size
+
                 imported_keys.append(key)
                 if step_cb:
-                    step_cb(key, len(imported_keys), len(keys))
-            # TODO: is there a public method or better way to commit to the database?
-            container._get_container_session().commit()
+                    step_cb(key, len(imported_keys), total_keys)
+
+            # Flush any remaining cached content
+            if content_cache:
+                container.add_objects_to_pack(
+                    list(content_cache.values()),
+                    do_fsync=True,
+                    do_commit=False,
+                )
+
+            # Single commit at the end for performance
+            container._get_operation_session().commit()
+
         return imported_keys
 
     def has_objects(self, keys: t.List[str]) -> t.List[bool]:

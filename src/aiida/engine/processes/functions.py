@@ -601,9 +601,9 @@ class FunctionProcess(Process):
         # The remaining inputs have to be keyword arguments.
         kwargs.update(**inputs)
 
-        from plumpy.greenback_bridge import run_in_greenback
+        from plumpy import run_with_portal
 
-        result = await run_in_greenback(self._func, *args, **kwargs)
+        result = await run_with_portal(self._func, *args, **kwargs)
 
         if result is None or isinstance(result, ExitCode):  # type: ignore[redundant-expr]
             return result  # type: ignore[unreachable]

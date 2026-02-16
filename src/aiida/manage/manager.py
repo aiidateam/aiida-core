@@ -150,19 +150,19 @@ class Manager:
         return self._profile
 
     def _install_greenback_portal(self) -> None:
-        """Register an IPython input transformer that ensures a greenback portal.
+        """Register an IPython input transformer that ensures a portal.
 
         When running inside an environment with an already-running event loop
         (e.g. a Jupyter notebook kernel), this registers an IPython input
-        transformer that prepends ``await greenback.ensure_portal()`` to
-        every cell.  This activates a greenback portal on whichever asyncio
-        task ipykernel uses for that cell.
+        transformer that prepends ``await plumpy.ensure_portal()`` to every
+        cell.  This activates a portal on whichever asyncio task ipykernel
+        uses for that cell.
 
-        The transformer is registered during ``load_profile()`` and takes
-        effect from the **next cell**.  ``load_profile()`` must therefore be
-        called in a prior cell before synchronous process execution.
+        The transformer takes effect from the **next cell**.
+        ``load_profile()`` must therefore be called in a prior cell before
+        synchronous process execution.
 
-        Expected Trade-off: error tracebacks show line numbers offset by 1 due to the
+        Trade-off: error tracebacks show line numbers offset by 1 due to the
         prepended line.
 
         This is a no-op if no event loop is running (scripts, CLI, daemon).
@@ -177,7 +177,7 @@ class Manager:
         self._register_portal_transformer()
 
     def _register_portal_transformer(self) -> None:
-        """Register an IPython input transformer that ensures a greenback portal."""
+        """Register an IPython input transformer that ensures a portal."""
         try:
             from IPython import get_ipython  # type: ignore[attr-defined]
 
@@ -194,12 +194,12 @@ class Manager:
                 return  # Already registered
 
             def _ensure_portal_transformer(lines):
-                return ["await __import__('greenback').ensure_portal()  # aiida: activate greenback portal\n"] + lines
+                return ["await __import__('plumpy').ensure_portal()  # aiida: activate portal\n"] + lines
 
             ip.input_transformers_post.append(_ensure_portal_transformer)
             ip._aiida_portal_transformer = True
             self.logger.debug(
-                'Registered IPython transformer for greenback portal. '
+                'Registered IPython transformer for portal. '
                 'This should occur in a Jupyter kernel, and only once per kernel session.'
             )
             print(

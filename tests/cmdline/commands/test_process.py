@@ -1109,17 +1109,17 @@ def test_process_repair_unreferenced_connections(monkeypatch, run_cli_command):
 
     terminated = []
 
-    def mock_terminate(self):
-        terminated.append(True)
-        return 1
+    def mock_terminate(self, pids):
+        terminated.extend(pids)
+        return len(pids)
 
-    monkeypatch.setattr(PsqlDosBackend, 'terminate_unreferenced_connections', mock_terminate)
+    monkeypatch.setattr(PsqlDosBackend, 'terminate_connections', mock_terminate)
 
     result = run_cli_command(cmd_process.process_repair, user_input='y', use_subprocess=False)
     assert 'Found 1 database connection(s)' in result.output
     assert 'PID 1234' in result.output
     assert 'Terminated 1 database connection(s)' in result.output
-    assert len(terminated) == 1
+    assert terminated == [1234]  # Verify the correct PID was passed
 
 
 @pytest.mark.requires_psql
@@ -1136,11 +1136,11 @@ def test_process_repair_unreferenced_connections_abort(monkeypatch, run_cli_comm
 
     terminated = []
 
-    def mock_terminate(self):
-        terminated.append(True)
-        return 1
+    def mock_terminate(self, pids):
+        terminated.extend(pids)
+        return len(pids)
 
-    monkeypatch.setattr(PsqlDosBackend, 'terminate_unreferenced_connections', mock_terminate)
+    monkeypatch.setattr(PsqlDosBackend, 'terminate_connections', mock_terminate)
 
     result = run_cli_command(cmd_process.process_repair, user_input='n', use_subprocess=False, raises=True)
     assert 'Found 1 database connection(s)' in result.output
@@ -1161,11 +1161,11 @@ def test_process_repair_unreferenced_connections_dry_run(monkeypatch, run_cli_co
 
     terminated = []
 
-    def mock_terminate(self):
-        terminated.append(True)
-        return 1
+    def mock_terminate(self, pids):
+        terminated.extend(pids)
+        return len(pids)
 
-    monkeypatch.setattr(PsqlDosBackend, 'terminate_unreferenced_connections', mock_terminate)
+    monkeypatch.setattr(PsqlDosBackend, 'terminate_connections', mock_terminate)
 
     result = run_cli_command(cmd_process.process_repair, ['--dry-run'], use_subprocess=False)
     assert 'Found 1 database connection(s)' in result.output
@@ -1187,17 +1187,17 @@ def test_process_repair_unreferenced_connections_force(monkeypatch, run_cli_comm
 
     terminated = []
 
-    def mock_terminate(self):
-        terminated.append(True)
-        return 1
+    def mock_terminate(self, pids):
+        terminated.extend(pids)
+        return len(pids)
 
-    monkeypatch.setattr(PsqlDosBackend, 'terminate_unreferenced_connections', mock_terminate)
+    monkeypatch.setattr(PsqlDosBackend, 'terminate_connections', mock_terminate)
 
     # No user_input needed with --force
     result = run_cli_command(cmd_process.process_repair, ['--force'], use_subprocess=False)
     assert 'Found 1 database connection(s)' in result.output
     assert 'Terminated 1 database connection(s)' in result.output
-    assert len(terminated) == 1
+    assert terminated == [1234]  # Verify the correct PID was passed
 
 
 @pytest.fixture

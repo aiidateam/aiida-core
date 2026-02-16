@@ -196,7 +196,7 @@ def test_backup(tmp_path):
         assert name in contents
 
 
-def test_get_unreferenced_connections(monkeypatch):
+def test_get_unreferenced_connections():
     """Test that ``get_unreferenced_connections`` detects external database connections.
 
     This test creates a real database connection outside of the AiiDA session and verifies
@@ -235,16 +235,9 @@ def test_get_unreferenced_connections(monkeypatch):
             external_port in unreferenced_ports
         ), f'External connection port {external_port} not found in {unreferenced_ports}'
 
-        # Monkeypatch get_unreferenced_connections to return only our connection
+        # Terminate only our specific connection (not all unreferenced ones)
         # This prevents killing connections from parallel tests
-        monkeypatch.setattr(
-            storage,
-            'get_unreferenced_connections',
-            lambda: [(external_pid, 'idle in transaction', external_port)],
-        )
-
-        # Terminate unreferenced connections (only our connection due to monkeypatch)
-        count = storage.terminate_unreferenced_connections()
+        count = storage.terminate_connections([external_pid])
         assert count == 1, 'Expected exactly one connection to be terminated'
 
         # Verify the external connection was actually terminated

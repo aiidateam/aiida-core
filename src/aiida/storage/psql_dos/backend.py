@@ -454,34 +454,26 @@ class PsqlDosBackend(StorageBackend):
         )
         return [(row[0], row[1], row[2]) for row in result]
 
-    def terminate_unreferenced_connections(self) -> int:
-        """Terminate all database connections not associated with the current session.
+    def terminate_connections(self, pids: list[int]) -> int:
+        """Terminate specific database connections by their PIDs.
 
-        These are connections owned by the current user to the current database,
-        excluding the current connection. When the daemon is not running, these
-        connections are likely orphaned zombies that could be holding locks.
-
+        :param pids: list of process IDs to terminate
         :return: number of connections terminated
         """
         from sqlalchemy import text
 
-        unreferenced = self.get_unreferenced_connections()
-        count = len(unreferenced)
+        if not pids:
+            return 0
 
-        if count > 0:
-            session = self.get_session()
-            session.execute(
-                text("""
-                SELECT pg_terminate_backend(pid)
-                FROM pg_stat_activity
-                WHERE usename = current_user
-                AND datname = current_database()
-                AND pid != pg_backend_pid()
-            """)
-            )
-            session.commit()
+        session = self.get_session()
+        terminated = 0
+        for pid in pids:
+            result = session.execute(text('SELECT pg_terminate_backend(:pid)'), {'pid': pid})
+            if result.scalar():
+                terminated += 1
+        session.commit()
 
-        return count
+        return terminated
 
     def maintain(self, full: bool = False, dry_run: bool = False, **kwargs) -> None:
         from aiida.manage.profile_access import ProfileAccessManager

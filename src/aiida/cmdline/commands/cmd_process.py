@@ -543,8 +543,9 @@ def process_repair(manager, broker, dry_run, force):
             if not dry_run:
                 if not force:
                     click.confirm('Do you want to terminate these connections?', abort=True)
-                storage.terminate_unreferenced_connections()
-                echo.echo_success(f'Terminated {len(unreferenced)} database connection(s)')
+                pids = [pid for pid, _, _ in unreferenced]
+                terminated = storage.terminate_connections(pids)
+                echo.echo_success(f'Terminated {terminated} database connection(s)')
         else:
             echo.echo_success('No unreferenced database connections found.')
 

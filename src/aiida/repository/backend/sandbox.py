@@ -106,15 +106,11 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
     def open(self, key: str) -> t.Iterator[t.BinaryIO]:
         """Open a file handle to an object stored under the given key."""
 
-        # enforce abstract contract
-        if not isinstance(key, str):
-            raise TypeError('key must be a string')
-
-        try:
-            with self.sandbox.open(key, mode='rb') as handle:
-                yield handle
-        except FileNotFoundError:
+        if not self.has_object(key):
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
+
+        with self.sandbox.open(key, mode='rb') as handle:
+            yield handle
 
     def iter_object_streams(self, keys: t.Iterable[str]) -> t.Iterator[tuple[str, t.BinaryIO]]:
         for key in keys:

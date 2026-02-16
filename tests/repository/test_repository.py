@@ -117,10 +117,6 @@ def test_pre_process_path():
     with pytest.raises(TypeError, match=r'path `.*` is not a relative path.'):
         Repository._pre_process_path(path=pathlib.PureWindowsPath('C:/absolute/path'))
 
-    # reject parent traversal
-    with pytest.raises(TypeError, match=r'cannot contain parent traversal'):
-        Repository._pre_process_path(path='../evil')
-
 
 def test_create_directory_raises(repository):
     """Test the ``Repository.create_directory`` method when it is supposed to raise."""

@@ -150,14 +150,6 @@ class Repository:
         if path_obj.is_absolute():
             raise TypeError(f'path `{path_obj}` is not a relative path.')
 
-        # reject Windows absolute paths
-        if path_obj.anchor:
-            raise TypeError(f'path `{path_obj}` is not a relative path.')
-
-        # reject parent traversal
-        if '..' in path_obj.parts:
-            raise TypeError(f'path `{path_obj}` cannot contain parent traversal (`..`).')
-
         return path_obj
 
     @property

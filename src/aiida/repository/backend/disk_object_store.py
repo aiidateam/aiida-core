@@ -106,18 +106,12 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         :raise FileNotFoundError: if the file does not exist.
         :raise OSError: if the file could not be opened.
         """
-        from disk_objectstore.exceptions import NotExistent
 
-        # enforce abstract contract
-        if not isinstance(key, str):
-            raise TypeError('key must be a string')
-
+        if not self.has_object(key):
+            raise FileNotFoundError(f'object with key `{key}` does not exist.')
         with self._container as container:
-            try:
-                with container.get_object_stream(key) as handle:
-                    yield t.cast(t.BinaryIO, handle)
-            except NotExistent:
-                raise FileNotFoundError(f'object with key `{key}` does not exist.')
+            with container.get_object_stream(key) as handle:
+                yield t.cast(t.BinaryIO, handle)
 
     def iter_object_streams(self, keys: t.Iterable[str]) -> t.Iterator[t.Tuple[str, t.BinaryIO]]:
         with self._container.get_objects_stream_and_meta(keys) as triplets:  # type: ignore[arg-type]

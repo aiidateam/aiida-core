@@ -102,7 +102,15 @@ class TransportQueue:
             # See https://github.com/aiidateam/aiida-core/issues/4698
             empty_ctx = contextvars.Context()
             open_callback_handle = empty_ctx.run(self._loop.create_task, do_open())
+<<<<<<< HEAD
             # self._loop.create_task supports passing a context but only after Python 3.11+
+=======
+            # Note: after making do_open async, we use create_task instead of call_later.
+            # Passing `context` to create_task is only supported in Python 3.11+, so we use
+            # empty_ctx.run() to ensure the task inherits an empty context.
+            # Once the minimum supported Python version is 3.11, this can be simplified to:
+            # open_callback_handle = self._loop.create_task(do_open(), context=contextvars.Context())
+>>>>>>> 5b3d4d4f2 (Asyncify `request_transport` context manager to avoid two nested loops)
         try:
             transport_request.count += 1
             yield transport_request.future

@@ -33,7 +33,7 @@ class RepositoryBackend(AbstractRepositoryBackend):
     def _put_object_from_filelike(self, handle: BinaryIO) -> str:
         return 'key'
 
-    def _import_from_other_repository(
+    def bulk_copy_objects_from(
         self, src: AbstractRepositoryBackend, keys: set[str], step_cb: Optional[Callable[[str, int, int], None]]
     ) -> List[str]:
         return list(keys)

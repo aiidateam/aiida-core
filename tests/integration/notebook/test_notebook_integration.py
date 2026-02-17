@@ -48,8 +48,8 @@ def test_same_cell_fails_with_expected_error():
     # Note: this error message is from plumpy and is not ideal,
     # but we have to ensure it contains the key information about the nature of the error and how to fix it.
     assert 'RuntimeError' in error_message
-    assert 'Cannot synchronously execute a process while the event loop is running' in error_message
-    assert 'call load_profile() in a prior cell' in error_message
+    assert 'event loop is running but no greenback portal' in error_message
+    assert 'If running in a Jupyter notebook, call load_profile() in a prior cell' in error_message
 
 
 @pytest.mark.timeout(180)

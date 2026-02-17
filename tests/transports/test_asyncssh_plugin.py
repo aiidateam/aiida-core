@@ -34,7 +34,7 @@ class TestSemaphoreBehavior:
         }
         async_transport = AsyncSshTransport(**transport_params)
 
-        with async_transport as transport:
+        async with async_transport as transport:
             # Each operation should fail but release the semaphore
             with pytest.raises(OSError, match='Error while downloading file'):
                 await transport.getfile_async('non_existing', local_dir)
@@ -46,7 +46,7 @@ class TestSemaphoreBehavior:
             with pytest.raises(OSError, match='Error while downloading file'):
                 await transport.getfile_async('non_existing', local_dir)
 
-        assert transport._semaphore._value == 1, 'Semaphore should be fully released'
+        assert async_transport._semaphore._value == 1, 'Semaphore should be fully released'
 
     @pytest.mark.asyncio
     async def test_semaphore_limits_concurrent_operations(self):

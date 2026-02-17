@@ -83,7 +83,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
     authinfo = node.get_authinfo()
 
     async def do_upload():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
 
             with SandboxFolder(filepath_sandbox) as folder:
@@ -144,7 +144,7 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
     authinfo = node.get_authinfo()
 
     async def do_submit():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             return execmanager.submit_calculation(node, transport)
 
@@ -252,7 +252,7 @@ async def task_monitor_job(
     authinfo = node.get_authinfo()
 
     async def do_monitor():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             return monitors.process(node, transport)
 
@@ -298,7 +298,7 @@ async def task_retrieve_job(
     authinfo = node.get_authinfo()
 
     async def do_retrieve():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             # Perform the job accounting and set it on the node if successful. If the scheduler does not implement this
             # still set the attribute but set it to `None`. This way we can distinguish calculation jobs for which the
@@ -366,7 +366,7 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
     authinfo = node.get_authinfo()
 
     async def do_stash():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
 
             logger.info(f'stashing calculation<{node.pk}>')
@@ -405,7 +405,7 @@ async def task_unstash_job(node: CalcJobNode, transport_queue: TransportQueue, c
     authinfo = node.get_authinfo()
 
     async def do_unstash():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
 
             logger.info(f'unstashing calculation<{node.pk}>')
@@ -454,7 +454,7 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
     authinfo = node.get_authinfo()
 
     async def do_kill():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             return execmanager.kill_calculation(node, transport)
 

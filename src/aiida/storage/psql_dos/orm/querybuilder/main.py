@@ -66,6 +66,7 @@ PROJECT_MAP = {
     'db_dbgroup': {
         'pk': 'id',
         'user_pk': 'user_id',
+        'ctime': 'time',
     },
     'db_dbcomment': {
         'pk': 'id',

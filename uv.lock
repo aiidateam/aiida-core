@@ -225,7 +225,7 @@ requires-dist = [
     { name = "graphviz", specifier = "~=0.19" },
     { name = "gssapi", marker = "extra == 'ssh-kerberos'", specifier = "~=1.6" },
     { name = "importlib-metadata", specifier = "~=6.0" },
-    { name = "ipykernel", marker = "extra == 'tests'", specifier = "~=6.0" },
+    { name = "ipykernel", marker = "extra == 'tests'", specifier = "~=6.9" },
     { name = "ipython", specifier = ">=7.6" },
     { name = "jedi", specifier = "<0.19" },
     { name = "jinja2", specifier = "~=3.0" },

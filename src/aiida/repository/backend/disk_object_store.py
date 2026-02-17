@@ -95,7 +95,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         with self._container as container:
             return container.add_streamed_object(handle)
 
-    def bulk_copy_objects_from(
+    def import_objects_to_pack(
         self,
         src: AbstractRepositoryBackend,
         keys: set[str],

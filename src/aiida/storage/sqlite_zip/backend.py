@@ -20,7 +20,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import BinaryIO, Callable, Optional, Tuple, Union, cast
+from typing import BinaryIO, Optional, Tuple, Union, cast
 from zipfile import ZipFile, is_zipfile
 
 from pydantic import BaseModel, Field, field_validator
@@ -445,11 +445,6 @@ class _RoBackendRepository(AbstractRepositoryBackend):
         raise ReadOnlyError()
 
     def _put_object_from_filelike(self, handle: BinaryIO) -> str:
-        raise ReadOnlyError()
-
-    def bulk_copy_objects_from(
-        self, src: AbstractRepositoryBackend, keys: set[str], step_cb: Optional[Callable[[str, int, int], None]]
-    ) -> list[str]:
         raise ReadOnlyError()
 
     def has_objects(self, keys: list[str]) -> list[bool]:

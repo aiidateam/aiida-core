@@ -229,7 +229,7 @@ def test_import_old_local_archives(version, run_cli_command):
     assert f'Success: imported archive {options[0]}' in result.output, result.exception
 
 
-def test_import_packed_flag(run_cli_command, newest_archive):
+def test_import_packed_flag(run_cli_command, newest_archive, aiida_profile_clean):
     """Test import with --packed flag streams directly to packed storage."""
     from aiida.manage import get_manager
 

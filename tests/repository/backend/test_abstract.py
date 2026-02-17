@@ -3,7 +3,7 @@
 import contextlib
 import io
 import tempfile
-from typing import BinaryIO, Callable, Iterable, List, Optional
+from typing import BinaryIO, Iterable, List, Optional
 
 import pytest
 
@@ -33,11 +33,6 @@ class RepositoryBackend(AbstractRepositoryBackend):
 
     def _put_object_from_filelike(self, handle: BinaryIO) -> str:
         return 'key'
-
-    def bulk_copy_objects_from(
-        self, src: AbstractRepositoryBackend, keys: set[str], step_cb: Optional[Callable[[str, int, int], None]]
-    ) -> List[str]:
-        return list(keys)
 
     def delete_objects(self, keys: List[str]) -> None:
         super().delete_objects(keys)

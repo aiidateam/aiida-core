@@ -16,7 +16,7 @@ import json
 import os
 import pathlib
 import re
-from typing import Callable, Dict, Iterable, Iterator, List, Optional, Union
+from typing import Dict, Iterable, Iterator, List, Optional, Union
 
 import numpy
 from disk_objectstore import Container
@@ -109,11 +109,6 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
         raise NotImplementedError()
 
     def _put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
-        return NotImplementedError()
-
-    def bulk_copy_objects_from(
-        self, src: AbstractRepositoryBackend, keys: set[str], step_cb: Optional[Callable[[str, int, int], None]]
-    ) -> List[str]:
         raise NotImplementedError()
 
     def has_objects(self, keys: List[str]) -> List[bool]:

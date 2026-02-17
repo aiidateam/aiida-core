@@ -86,17 +86,23 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
     def _put_object_from_filelike(self, handle: BinaryIO) -> str:
         pass
 
-    @abc.abstractmethod
     def bulk_copy_objects_from(
-        self, src: 'AbstractRepositoryBackend', keys: set[str], step_cb: Optional[Callable[[str, int, int], None]]
+        self,
+        src: 'AbstractRepositoryBackend',
+        keys: set[str],
+        step_cb: Optional[Callable[[str, int, int], None]] = None,
     ) -> list[str]:
         """Bulk copy objects from another repository backend.
+
+        Subclasses may override this for optimized bulk operations (e.g., writing directly to pack files).
+        The default implementation raises NotImplementedError.
 
         :param src: the source repository backend from which to copy the objects.
         :param keys: set of fully qualified identifiers for the objects within the source repository.
         :param step_cb: optional callback called after each object with (key, imported_count, total_count).
         :return: list of fully qualified identifiers for the objects within this repository.
         """
+        raise NotImplementedError('This repository backend does not support bulk copy operations.')
 
     def put_object_from_file(self, filepath: Union[str, pathlib.Path]) -> str:
         """Store a new object with contents of the file located at `filepath` on this file system.

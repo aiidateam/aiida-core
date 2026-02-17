@@ -95,26 +95,6 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
 
         return key
 
-    def bulk_copy_objects_from(
-        self,
-        src: AbstractRepositoryBackend,
-        keys: set[str],
-        step_cb: t.Optional[t.Callable[[str, int, int], None]] = None,
-    ) -> list[str]:
-        """Bulk copy objects from another repository backend."""
-        imported_keys: list[str] = []
-        total = len(keys)
-        sandbox_path = self.sandbox.abspath
-
-        for key, stream in src.iter_object_streams(keys):
-            with open(os.path.join(sandbox_path, key), 'wb') as target:
-                shutil.copyfileobj(stream, target)
-            imported_keys.append(key)
-            if step_cb:
-                step_cb(key, len(imported_keys), total)
-
-        return imported_keys
-
     def has_objects(self, keys: list[str]) -> list[bool]:
         result = []
         dirlist = os.listdir(self.sandbox.abspath)

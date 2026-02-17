@@ -113,16 +113,45 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         :param keys: set of fully qualified identifiers for the objects within the source repository.
         :param step_cb: optional callback called after each object with (key, imported_count, total_count).
         :return: list of fully qualified identifiers for the objects within this repository.
+        :raises ImportValidationError: if hash keys returned by the container don't match source keys.
         """
+        from aiida.tools.archive.exceptions import ImportValidationError
+
         if not keys:
             return []
 
         imported_keys: list[str] = []
         total_keys = len(keys)
 
-        # Memory cache for batching - maps hashkey -> content bytes
-        content_cache: dict[str, bytes] = {}
-        cache_size = 0
+        # Track source keys in order for validation against returned hash keys
+        batch_source_keys: list[str] = []
+        # Memory cache for batching - list of content bytes (order matches batch_source_keys)
+        content_batch: list[bytes] = []
+        batch_size = 0
+
+        def _flush_batch(container: 'Container', do_fsync: bool) -> None:
+            """Flush the current batch to pack storage and validate hash keys."""
+            nonlocal batch_source_keys, content_batch, batch_size
+
+            if not content_batch:
+                return
+
+            returned_keys = container.add_objects_to_pack(
+                content_batch,
+                do_fsync=do_fsync,
+                do_commit=False,
+            )
+
+            # Validate that returned hash keys match source keys
+            for source_key, returned_key in zip(batch_source_keys, returned_keys):
+                if source_key != returned_key:
+                    raise ImportValidationError(
+                        f'Hash key mismatch: source key {source_key!r} != returned key {returned_key!r}'
+                    )
+
+            batch_source_keys = []
+            content_batch = []
+            batch_size = 0
 
         with self._container as container:
             for key, stream in src.iter_object_streams(keys):
@@ -132,54 +161,40 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 content = stream.read()
                 content_size = len(content)
 
-                # Handle very large objects: write directly via stream to avoid memory issues
+                # Handle very large objects: flush batch first, then write directly
                 if content_size > _IMPORT_BATCH_MEMORY_BYTES:
-                    # Flush any cached content first
-                    if content_cache:
-                        container.add_objects_to_pack(
-                            list(content_cache.values()),
-                            do_fsync=False,
-                            do_commit=False,
-                        )
-                        content_cache.clear()
-                        cache_size = 0
+                    _flush_batch(container, do_fsync=False)
 
-                    # Write large object directly
-                    container.add_streamed_object_to_pack(
+                    # Write large object directly and validate
+                    returned_key = container.add_streamed_object_to_pack(
                         io.BytesIO(content),
                         do_fsync=False,
                         do_commit=False,
                     )
-                # If adding this would exceed memory limit, flush first
-                elif cache_size + content_size > _IMPORT_BATCH_MEMORY_BYTES:
-                    if content_cache:
-                        container.add_objects_to_pack(
-                            list(content_cache.values()),
-                            do_fsync=False,
-                            do_commit=False,
+                    if key != returned_key:
+                        raise ImportValidationError(
+                            f'Hash key mismatch: source key {key!r} != returned key {returned_key!r}'
                         )
-                        content_cache.clear()
-                        cache_size = 0
 
-                    # Add current object to fresh cache
-                    content_cache[key] = content
-                    cache_size = content_size
+                # If adding this would exceed memory limit, flush first
+                elif batch_size + content_size > _IMPORT_BATCH_MEMORY_BYTES:
+                    _flush_batch(container, do_fsync=False)
+                    # Add current object to fresh batch
+                    batch_source_keys.append(key)
+                    content_batch.append(content)
+                    batch_size = content_size
                 else:
-                    # Add to cache
-                    content_cache[key] = content
-                    cache_size += content_size
+                    # Add to batch
+                    batch_source_keys.append(key)
+                    content_batch.append(content)
+                    batch_size += content_size
 
                 imported_keys.append(key)
                 if step_cb:
                     step_cb(key, len(imported_keys), total_keys)
 
-            # Flush any remaining cached content (with fsync since it's the final write)
-            if content_cache:
-                container.add_objects_to_pack(
-                    list(content_cache.values()),
-                    do_fsync=True,
-                    do_commit=False,
-                )
+            # Flush any remaining content (with fsync since it's the final write)
+            _flush_batch(container, do_fsync=True)
 
             # Single commit at the end for performance
             container._get_operation_session().commit()

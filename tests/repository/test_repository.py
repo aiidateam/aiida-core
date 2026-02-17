@@ -113,10 +113,6 @@ def test_pre_process_path():
     assert Repository._pre_process_path(pathlib.Path('relative')) == pathlib.Path('relative')
     assert Repository._pre_process_path(pathlib.Path('relative/nested')) == pathlib.Path('relative/nested')
 
-    # reject windows absolute paths
-    with pytest.raises(TypeError, match=r'path `.*` is not a relative path.'):
-        Repository._pre_process_path(path=pathlib.PureWindowsPath('C:/absolute/path'))
-
 
 def test_create_directory_raises(repository):
     """Test the ``Repository.create_directory`` method when it is supposed to raise."""

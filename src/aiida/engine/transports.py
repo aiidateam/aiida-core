@@ -73,6 +73,7 @@ class TransportQueue:
         # NOTE: We need to ensure the portal here only because
         # our scheduler has only a sync interface and _get_jobs_from_scheduler is using that
         # if we ever provide a fully async scheduler interface then we can remove this here
+        # An issue is opened to reference this https://github.com/aiidateam/aiida-core/issues/7222
         await ensure_portal()
 
         open_callback_handle = None

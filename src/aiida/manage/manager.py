@@ -154,9 +154,8 @@ class Manager:
 
         When running inside an environment with an already-running event loop
         (e.g. a Jupyter notebook kernel), this patches the kernel's
-        ``do_execute`` so that ``await greenback.ensure_portal()`` is called
-        before every cell execution.  This activates a portal on whichever
-        asyncio task ipykernel uses for that cell.
+        ``do_execute`` to open a portal before executing each cell.
+        The portal is opended on whichever asyncio task ipykernel uses for that cell.
 
         The patch takes effect from the **next cell**.
         ``load_profile()`` must therefore be called in a prior cell before

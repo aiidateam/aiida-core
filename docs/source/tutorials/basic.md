@@ -35,7 +35,7 @@ If this is not the case, consult the {ref}`getting started page<installation>`.
 :::
 
 :::{important}
-If you are running this tutorial in a Jupyter notebook, make sure to call `load_profile()` in a **separate cell** before executing any AiiDA engine processes (e.g. calculation functions or work chains).
+If you are running this tutorial in a Jupyter notebook, make sure to call `load_profile()` in a **separate cell** before running any AiiDA engine processes (e.g. calculation functions or work chains).
 :::
 
 :::{tip}

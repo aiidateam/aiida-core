@@ -9,6 +9,7 @@
 """Transport interface."""
 
 import abc
+import asyncio
 import fnmatch
 import os
 import re
@@ -127,6 +128,7 @@ class Transport(abc.ABC):
         self._logger_extra = None
         self._is_open = False
         self._enters = 0
+        self._open_lock = asyncio.Lock()
 
         # for accessing the identity of the underlying machine
         self.hostname = kwargs.get('machine')
@@ -186,8 +188,9 @@ class Transport(abc.ABC):
         For sync transports, this just calls the sync open() method.
         AsyncTransport subclasses override this to use async open.
         """
-        if self._track_enter():
-            self.open()
+        async with self._open_lock:
+            if self._track_enter():
+                self.open()
         return self
 
     async def __aexit__(self, type_, value, traceback):
@@ -196,14 +199,18 @@ class Transport(abc.ABC):
         For sync transports, this just calls the sync close() method.
         AsyncTransport subclasses override this to use async close.
         """
-        if self._track_exit():
-            self.close()
+        async with self._open_lock:
+            if self._track_exit():
+                self.close()
 
     def _track_enter(self) -> bool:
         """Track a context manager entry and return whether open() needs to be called.
 
         Manages the ``_enters`` reference counter. If the transport is already open
         (e.g. opened externally), an extra count is added so the final exit won't close it.
+
+        Note: The caller must call ``open()``/``open_async()`` immediately when this returns True.
+        In async context, use ``self._open_lock`` to prevent potential concurrent open/close races.
         """
         need_open = False
         if self._enters == 0:
@@ -1891,14 +1898,16 @@ class AsyncTransport(Transport):
 
     async def __aenter__(self):
         """Async context manager entry. Opens the transport connection."""
-        if self._track_enter():
-            await self.open_async()
+        async with self._open_lock:
+            if self._track_enter():
+                await self.open_async()
         return self
 
     async def __aexit__(self, type_, value, traceback):
         """Async context manager exit. Closes the transport connection if needed."""
-        if self._track_exit():
-            await self.close_async()
+        async with self._open_lock:
+            if self._track_exit():
+                await self.close_async()
 
     def get(self, *args, **kwargs):
         return self.run_command_blocking(self.get_async, *args, **kwargs)

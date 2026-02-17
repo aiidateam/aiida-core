@@ -8,6 +8,7 @@
 ###########################################################################
 """Various utils that should be used during migrations and migrations tests because the AiiDA ORM cannot be used."""
 
+import contextlib
 import datetime
 import functools
 import io
@@ -15,7 +16,7 @@ import json
 import os
 import pathlib
 import re
-from typing import Callable, Dict, Iterable, List, Optional, Union
+from typing import Callable, Dict, Iterable, Iterator, List, Optional, Union
 
 import numpy
 from disk_objectstore import Container
@@ -131,6 +132,10 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
         raise NotImplementedError()
 
     def get_info(self, detailed: bool = False, **kwargs) -> dict:
+        raise NotImplementedError
+
+    @contextlib.contextmanager
+    def open(self, key: str) -> Iterator[io.BufferedIOBase]:
         raise NotImplementedError()
 
 

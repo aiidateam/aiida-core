@@ -124,7 +124,10 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
 
     @contextlib.contextmanager
     def open(self, key: str) -> t.Iterator[t.BinaryIO]:
-        super().open(key)
+        """Open a file handle to an object stored under the given key."""
+
+        if not self.has_object(key):
+            raise FileNotFoundError(f'object with key `{key}` does not exist.')
 
         with self.sandbox.open(key, mode='rb') as handle:
             yield handle

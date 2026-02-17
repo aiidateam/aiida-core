@@ -32,3 +32,15 @@ def test_disconnect():
     assert node.is_finished_ok
     assert result == 2
     manager.reset_profile()  # This hangs before timing out
+
+
+def test_kernel_patch_not_applied_outside_notebook():
+    """Test that ``_install_portal`` does not patch when no event loop is running."""
+    from ipykernel.ipkernel import IPythonKernel
+
+    from aiida.manage.manager import Manager
+
+    manager = Manager()
+    manager._install_portal()
+
+    assert not getattr(IPythonKernel, '_aiida_portal_patched', False)

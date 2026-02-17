@@ -145,25 +145,22 @@ class Manager:
         # Check whether a development version is being run. Note that needs to be called after ``configure_logging``
         # because this function relies on the logging being properly configured for the warning to show.
         self.check_version()
-        self._install_greenback_portal()
+        self._install_portal()
 
         return self._profile
 
-    def _install_greenback_portal(self) -> None:
-        """Register an IPython input transformer that ensures a portal.
+    def _install_portal(self) -> None:
+        """Monkey-patch ``IPythonKernel.do_execute`` to ensure a portal.
 
         When running inside an environment with an already-running event loop
-        (e.g. a Jupyter notebook kernel), this registers an IPython input
-        transformer that prepends ``await plumpy.ensure_portal()`` to every
-        cell.  This activates a portal on whichever asyncio task ipykernel
-        uses for that cell.
+        (e.g. a Jupyter notebook kernel), this patches the kernel's
+        ``do_execute`` so that ``await greenback.ensure_portal()`` is called
+        before every cell execution.  This activates a portal on whichever
+        asyncio task ipykernel uses for that cell.
 
-        The transformer takes effect from the **next cell**.
+        The patch takes effect from the **next cell**.
         ``load_profile()`` must therefore be called in a prior cell before
         synchronous process execution.
-
-        Trade-off: error tracebacks show line numbers offset by 1 due to the
-        prepended line.
 
         This is a no-op if no event loop is running (scripts, CLI, daemon).
         """
@@ -174,32 +171,28 @@ class Manager:
         except RuntimeError:
             return  # No running loop — not in Jupyter, nothing to do
 
-        self._register_portal_transformer()
+        self._patch_kernel_do_execute()
 
-    def _register_portal_transformer(self) -> None:
-        """Register an IPython input transformer that ensures a portal."""
+    def _patch_kernel_do_execute(self) -> None:
+        """Patch ``IPythonKernel.do_execute`` to ensure a portal before each cell."""
         try:
-            from IPython import get_ipython  # type: ignore[attr-defined]
+            from ipykernel.ipkernel import IPythonKernel
 
-            ip = get_ipython()
-            if ip is None:
-                return
+            if getattr(IPythonKernel, '_aiida_portal_patched', False):
+                return  # Already patched
 
-            # Only patch inside a real Jupyter kernel (ZMQInteractiveShell),
-            # not plain terminal IPython.
-            if 'zmq' not in type(ip).__module__:
-                return
+            from plumpy import ensure_portal
 
-            if getattr(ip, '_aiida_portal_transformer', False):
-                return  # Already registered
+            _orig_do_execute = IPythonKernel.do_execute
 
-            def _ensure_portal_transformer(lines):
-                return ["await __import__('plumpy').ensure_portal()  # aiida: activate portal\n"] + lines
+            async def _patched_do_execute(self, code, silent, *args, **kwargs):
+                await ensure_portal()
+                return await _orig_do_execute(self, code, silent, *args, **kwargs)
 
-            ip.input_transformers_post.append(_ensure_portal_transformer)
-            ip._aiida_portal_transformer = True
+            IPythonKernel.do_execute = _patched_do_execute  # type: ignore[method-assign]
+            IPythonKernel._aiida_portal_patched = True  # type: ignore[attr-defined]
             self.logger.debug(
-                'Registered IPython transformer for portal. '
+                'Patched IPythonKernel.do_execute for portal. '
                 'This should occur in a Jupyter kernel, and only once per kernel session.'
             )
             print(
@@ -207,7 +200,7 @@ class Manager:
                 'All aiida engine methods is only availabe from the next cell.'
             )
         except Exception:
-            self.logger.debug('Could not register IPython portal transformer.', exc_info=True)
+            self.logger.debug('Could not patch IPythonKernel for portal.', exc_info=True)
 
     def reset_profile(self) -> None:
         """Close and reset any associated resources for the current profile."""

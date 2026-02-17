@@ -145,11 +145,11 @@ class Manager:
         # Check whether a development version is being run. Note that needs to be called after ``configure_logging``
         # because this function relies on the logging being properly configured for the warning to show.
         self.check_version()
-        self._install_portal()
+        self._setup_event_loop_in_ipython()
 
         return self._profile
 
-    def _install_portal(self) -> None:
+    def _setup_event_loop_in_ipython(self) -> None:
         """Monkey-patch ``IPythonKernel.do_execute`` to ensure a portal.
 
         When running inside an environment with an already-running event loop

@@ -35,12 +35,12 @@ def test_disconnect():
 
 
 def test_kernel_patch_not_applied_outside_notebook():
-    """Test that ``_install_portal`` does not patch when no event loop is running."""
+    """Test that ``_setup_event_loop_in_ipython`` does not patch when no event loop is running."""
     from ipykernel.ipkernel import IPythonKernel
 
     from aiida.manage.manager import Manager
 
     manager = Manager()
-    manager._install_portal()
+    manager._setup_event_loop_in_ipython()
 
     assert not getattr(IPythonKernel, '_aiida_portal_patched', False)

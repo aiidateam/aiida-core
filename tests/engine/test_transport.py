@@ -32,7 +32,7 @@ class TestTransportQueue:
 
         async def test():
             trans = None
-            with queue.request_transport(self.authinfo) as request:
+            async with queue.request_transport(self.authinfo) as request:
                 trans = await request
                 assert trans.is_open
             assert not trans.is_open
@@ -45,10 +45,10 @@ class TestTransportQueue:
         loop = transport_queue.loop
 
         async def nested(queue, authinfo):
-            with queue.request_transport(authinfo) as request1:
+            async with queue.request_transport(authinfo) as request1:
                 trans1 = await request1
                 assert trans1.is_open
-                with queue.request_transport(authinfo) as request2:
+                async with queue.request_transport(authinfo) as request2:
                     trans2 = await request2
                     assert trans1 is trans2
                     assert trans2.is_open
@@ -61,7 +61,7 @@ class TestTransportQueue:
         loop = transport_queue.loop
 
         async def interleaved(authinfo):
-            with transport_queue.request_transport(authinfo) as trans_future:
+            async with transport_queue.request_transport(authinfo) as trans_future:
                 await trans_future
 
         loop.run_until_complete(asyncio.gather(interleaved(self.authinfo), interleaved(self.authinfo)))
@@ -72,7 +72,7 @@ class TestTransportQueue:
         loop = queue.loop
 
         async def test():
-            with queue.request_transport(self.authinfo) as request:
+            async with queue.request_transport(self.authinfo) as request:
                 trans = await request
                 return trans.is_open
 
@@ -85,7 +85,7 @@ class TestTransportQueue:
         loop = queue.loop
 
         async def test():
-            with queue.request_transport(self.authinfo) as request:
+            async with queue.request_transport(self.authinfo) as request:
                 await request
 
         def broken_open(trans):
@@ -119,7 +119,7 @@ class TestTransportQueue:
 
             async def test(iteration):
                 trans = None
-                with queue.request_transport(self.authinfo) as request:
+                async with queue.request_transport(self.authinfo) as request:
                     trans = await request
                     time_current = time.time()
                     time_elapsed = time_current - time_start
@@ -133,15 +133,15 @@ class TestTransportQueue:
             transport_class._DEFAULT_SAFE_OPEN_INTERVAL = original_interval
 
     def test_request_removed_before_close(self):
-        """Test that transport_request is removed from dict before close() is called.
+        """Test that transport_request is removed from dict before close_async() is called.
 
         This is a regression test for a race condition with async transports where:
-        1. close() is called, which for AsyncTransport uses run_until_complete()
-        2. With nest_asyncio (used by plumpy), this can yield to the event loop
+        1. close_async() is called during context manager cleanup
+        2. This can yield back to the event loop
         3. Another task might enter and get the same transport_request
         4. That task tries to use the transport that's being closed -> error
 
-        The fix ensures transport_request is removed BEFORE close(), so new tasks
+        The fix ensures transport_request is removed BEFORE close_async(), so new tasks
         create fresh transport requests.
         """
         queue = TransportQueue()
@@ -150,24 +150,24 @@ class TestTransportQueue:
         events = []  # Track order of operations
 
         async def test():
-            with queue.request_transport(self.authinfo) as request:
+            async with queue.request_transport(self.authinfo) as request:
                 trans = await request
-                # Patch close to track when it's called
-                original_close = trans.close
+                # Patch close_async to track when it's called
+                original_close_async = trans.close_async
 
-                def mock_close():
+                async def mock_close_async():
                     # Check if request was already removed from dict
                     if self.authinfo.pk not in queue._transport_requests:
                         events.append('pop_before_close')
                     events.append('close')
-                    return original_close()
+                    return await original_close_async()
 
-                trans.close = mock_close
+                trans.close_async = mock_close_async
 
         loop.run_until_complete(test())
 
-        assert 'close' in events, 'Transport close() should have been called'
-        assert 'pop_before_close' in events, 'Transport request should be removed before close() is called'
+        assert 'close' in events, 'Transport close_async() should have been called'
+        assert 'pop_before_close' in events, 'Transport request should be removed before close_async() is called'
         assert events.index('pop_before_close') < events.index('close'), 'pop should happen before close'
 
     def test_new_request_during_close_gets_fresh_transport(self):
@@ -192,7 +192,7 @@ class TestTransportQueue:
             async def use_transport(task_id):
                 # Before requesting, check if there's an existing request in the queue
                 had_existing_request = self.authinfo.pk in queue._transport_requests
-                with queue.request_transport(self.authinfo) as request:
+                async with queue.request_transport(self.authinfo) as request:
                     trans = await request
                     transport_states.append(
                         {

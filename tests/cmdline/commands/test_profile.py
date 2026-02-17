@@ -618,6 +618,35 @@ def test_rename_help(run_cli_command):
     assert 'Rename a profile' in result.output
 
 
+def test_rename_with_held_lock_files(run_cli_command, mock_profiles):
+    """Test that rename succeeds when the access directory contains lock files during the operation."""
+    import shutil
+    from pathlib import Path
+    from unittest.mock import patch
+
+    from aiida.manage.configuration.settings import AiiDAConfigPathResolver
+
+    profile_list = mock_profiles()
+    old_name = profile_list[0]
+    new_name = 'renamed_locked'
+
+    (AiiDAConfigPathResolver().access_control_dir / old_name).mkdir(parents=True, exist_ok=True)
+
+    original_move = shutil.move
+
+    def guarded_move(src, dst):
+        """Fail if trying to move a directory that still contains lock files."""
+        src_path = Path(src)
+        if src_path.is_dir() and list(src_path.glob('*.lock')):
+            raise PermissionError(f'Cannot move directory with held lock files: {src}')
+        return original_move(src, dst)
+
+    with patch('shutil.move', side_effect=guarded_move):
+        result = run_cli_command(cmd_profile.profile_rename, [old_name, new_name, '--force'], use_subprocess=False)
+
+    assert f'Profile `{old_name}` successfully renamed to `{new_name}`' in result.output
+
+
 def test_rename_no_broker(run_cli_command, empty_config, profile_factory):
     """Test renaming a profile that has no broker configured."""
     config = empty_config

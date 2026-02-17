@@ -15,7 +15,6 @@ from aiida.orm import Int, ProcessNode, Str
 from tests.utils.processes import DummyProcess
 
 
-@pytest.mark.requires_rmq
 class TestRun:
     """Tests for the `run` functions."""
 

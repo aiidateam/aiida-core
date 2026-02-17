@@ -131,7 +131,6 @@ def test_await_processes(aiida_code_installed, caplog):
     assert 'out of 1 processes terminated.' in caplog.records[0].message
 
 
-@pytest.mark.requires_rmq
 class TestLaunchers:
     """Class to test process launchers."""
 
@@ -210,7 +209,6 @@ class TestLaunchers:
             launch.submit(AddWorkChain, term_a=self.term_a, term_b=self.term_b, metadata={'store_provenance': False})
 
 
-@pytest.mark.requires_rmq
 class TestLaunchersDryRun:
     """Test the launchers when performing a dry-run."""
 

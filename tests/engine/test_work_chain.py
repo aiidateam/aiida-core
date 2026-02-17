@@ -223,7 +223,6 @@ class PotentialFailureWorkChain(WorkChain):
         self.out(self.OUTPUT_LABEL, Int(self.OUTPUT_VALUE).store())
 
 
-@pytest.mark.requires_rmq
 class TestExitStatus:
     """This class should test the various ways that one can exit from the outline flow of a WorkChain, other than
     it running it all the way through. Currently this can be done directly in the outline by calling the `return_`
@@ -303,7 +302,6 @@ class IfTest(WorkChain):
         self.ctx.s2 = True
 
 
-@pytest.mark.requires_rmq
 class TestContext:
     def test_attributes(self):
         wc = IfTest()
@@ -324,7 +322,6 @@ class TestContext:
             wc.ctx['new_attr']
 
 
-@pytest.mark.requires_rmq
 class TestWorkchain:
     @pytest.fixture(autouse=True)
     def init_profile(self):
@@ -1255,7 +1252,6 @@ class TestWorkChainAbortChildren:
         assert process.node.is_killed is True
 
 
-@pytest.mark.requires_rmq
 class TestImmutableInputWorkchain:
     """Test that inputs cannot be modified"""
 

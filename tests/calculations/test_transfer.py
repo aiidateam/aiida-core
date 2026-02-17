@@ -16,7 +16,6 @@ from aiida import orm
 from aiida.common import datastructures
 
 
-@pytest.mark.requires_rmq
 def test_get_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
     """Test a default `TransferCalculation`."""
     file1 = tmp_path / 'file1.txt'
@@ -64,7 +63,6 @@ def test_get_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_p
     assert sorted(calc_info.retrieve_list) == sorted(retrieve_list)
 
 
-@pytest.mark.requires_rmq
 def test_put_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
     """Test a default `TransferCalculation`."""
     file1 = tmp_path / 'file1.txt'

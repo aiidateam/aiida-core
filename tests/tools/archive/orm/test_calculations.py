@@ -17,7 +17,6 @@ from aiida.engine import calcfunction
 from aiida.tools.archive import create_archive, import_archive
 
 
-@pytest.mark.requires_rmq
 def test_calcfunction(tmp_path, aiida_profile):
     """Test @calcfunction"""
     aiida_profile.reset_storage()

@@ -23,7 +23,6 @@ from aiida.common.datastructures import StashMode, UnstashTargetMode
 from aiida.plugins import CalculationFactory
 
 
-@pytest.mark.requires_rmq
 @pytest.mark.parametrize(
     'operation_type,entry_point_name',
     [

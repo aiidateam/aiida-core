@@ -19,7 +19,6 @@ from aiida.plugins import CalculationFactory
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
 
 
-@pytest.mark.requires_rmq
 class TestRegisterProcessHandler:
     """Tests for the `process_handler` decorator."""
 

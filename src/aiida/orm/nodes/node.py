@@ -16,12 +16,13 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterator, List, NoReturn, Optional, Tuple, Type, TypeVar
 from uuid import UUID
 
+from typing_extensions import Self
+
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.pydantic import MetadataField
-from aiida.common.typing import Self
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 from aiida.orm.utils.node import (

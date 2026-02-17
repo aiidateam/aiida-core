@@ -4,6 +4,7 @@ repos:
   hooks:
   - id: check-merge-conflict
   - id: check-added-large-files
+    exclude: uv.lock
   - id: check-yaml
   - id: double-quote-string-fixer
   - id: end-of-file-fixer
@@ -46,7 +47,7 @@ repos:
       )$
 
 - repo: https://github.com/astral-sh/uv-pre-commit
-  rev: 0.7.6
+  rev: 0.9.8
   hooks:
     # Check and update the uv lockfile
   - id: uv-lock
@@ -57,7 +58,7 @@ repos:
 
   - id: imports
     name: imports
-    entry: python utils/make_all.py
+    entry: python utils/autogenerate_all_imports.py
     language: python
     types: [python]
     require_serial: true
@@ -86,11 +87,6 @@ repos:
         src/aiida/calculations/templatereplacer.py|
         src/aiida/calculations/transfer.py|
         src/aiida/engine/daemon/execmanager.py|
-        src/aiida/engine/processes/calcjobs/manager.py|
-        src/aiida/engine/processes/calcjobs/monitors.py|
-        src/aiida/engine/processes/calcjobs/tasks.py|
-        src/aiida/engine/processes/control.py|
-        src/aiida/engine/processes/ports.py|
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
         src/aiida/manage/external/rmq/launcher.py|

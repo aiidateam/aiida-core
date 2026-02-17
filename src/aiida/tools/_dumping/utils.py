@@ -11,17 +11,13 @@
 from __future__ import annotations
 
 import os
-import sys
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Set, Type, Union
 
-if sys.version_info >= (3, 11):
-    # typing.assert_never available since 3.11
-    from typing import assert_never
-else:
-    from typing_extensions import assert_never
+# typing.assert_never available since 3.11
+from typing_extensions import assert_never
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER, timezone
@@ -49,21 +45,6 @@ ORM_TYPE_TO_REGISTRY = {
     orm.Group: 'groups',
 }
 
-__all__ = (
-    'DUMP_PROGRESS_BAR_FORMAT',
-    'ORM_TYPE_TO_REGISTRY',
-    'REGISTRY_TO_ORM_TYPE',
-    'DumpMode',
-    'DumpPaths',
-    'DumpTimes',
-    'GroupChanges',
-    'GroupInfo',
-    'GroupRenameInfo',
-    'NodeChanges',
-    'NodeMembershipChange',
-    'ProcessingQueue',
-    'RegistryNameType',
-)
 
 logger = AIIDA_LOGGER.getChild('tools._dumping.utils')
 

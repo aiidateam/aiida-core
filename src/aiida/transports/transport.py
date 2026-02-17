@@ -9,6 +9,7 @@
 """Transport interface."""
 
 import abc
+import asyncio
 import fnmatch
 import os
 import re
@@ -21,7 +22,7 @@ from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 from aiida.common.warnings import warn_deprecation
 
-__all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath', 'has_magic')
+__all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath')
 
 TransportPath = Union[str, Path, PurePosixPath]
 
@@ -127,6 +128,7 @@ class Transport(abc.ABC):
         self._logger_extra = None
         self._is_open = False
         self._enters = 0
+        self._open_lock = asyncio.Lock()
 
         # for accessing the identity of the underlying machine
         self.hostname = kwargs.get('machine')
@@ -171,21 +173,58 @@ class Transport(abc.ABC):
 
         """
         # Keep track of how many times enter has been called
-        if self._enters == 0:
-            if self.is_open:
-                # Already open, so just add one to the entered counter
-                # this way on the final exit we will not close
-                self._enters += 1
-            else:
-                self.open()
-        self._enters += 1
+        if self._track_enter():
+            self.open()
         return self
 
     def __exit__(self, type_, value, traceback):
         """Closes connections, if needed (used in 'with' statements)."""
-        self._enters -= 1
-        if self._enters == 0:
+        if self._track_exit():
             self.close()
+
+    async def __aenter__(self):
+        """Async context manager entry. Opens the transport connection.
+
+        For sync transports, this just calls the sync open() method.
+        AsyncTransport subclasses override this to use async open.
+        """
+        async with self._open_lock:
+            if self._track_enter():
+                self.open()
+        return self
+
+    async def __aexit__(self, type_, value, traceback):
+        """Async context manager exit. Closes the transport connection if needed.
+
+        For sync transports, this just calls the sync close() method.
+        AsyncTransport subclasses override this to use async close.
+        """
+        async with self._open_lock:
+            if self._track_exit():
+                self.close()
+
+    def _track_enter(self) -> bool:
+        """Track a context manager entry and return whether open() needs to be called.
+
+        Manages the ``_enters`` reference counter. If the transport is already open
+        (e.g. opened externally), an extra count is added so the final exit won't close it.
+
+        Note: The caller must call ``open()``/``open_async()`` immediately when this returns True.
+        In async context, use ``self._open_lock`` to prevent potential concurrent open/close races.
+        """
+        need_open = False
+        if self._enters == 0:
+            if self.is_open:
+                self._enters += 1
+            else:
+                need_open = True
+        self._enters += 1
+        return need_open
+
+    def _track_exit(self) -> bool:
+        """Track a context manager exit and return whether close() needs to be called."""
+        self._enters -= 1
+        return self._enters == 0
 
     @property
     def is_open(self):
@@ -279,8 +318,11 @@ class Transport(abc.ABC):
         """
         return self._safe_open_interval
 
-    def _gotocomputer_string(self, remotedir):
+    def _gotocomputer_string(self, remotedir: Optional[TransportPath] = None):
         """Command executed when goto computer."""
+        if remotedir is None:
+            return self._bash_command_str
+        remotedir = str(remotedir)
         connect_string = (
             """ "if [ -d {escaped_remotedir} ] ;"""
             """ then cd {escaped_remotedir} ; {bash_command} ; else echo '  ** The directory' ; """
@@ -304,12 +346,15 @@ class Transport(abc.ABC):
         :type mode: int
         """
 
-    @abc.abstractmethod
     def chown(self, path: TransportPath, uid: int, gid: int):
         """Change the owner (uid) and group (gid) of a file.
         As with python's os.chown function, you must pass both arguments,
         so if you only want to change one, use stat first to retrieve the
         current owner and group.
+
+        .. deprecated:: 2.7
+            This method is deprecated and will be removed in a future version.
+            It is not used internally by AiiDA and has no test coverage.
 
         :param path: path to the file to change the owner and group of
         :param uid: new owner's uid
@@ -319,6 +364,11 @@ class Transport(abc.ABC):
         :type uid: int
         :type gid: int
         """
+        warn_deprecation(
+            'The `Transport.chown` method is deprecated and will be removed. ' 'It is not used internally by AiiDA.',
+            version=3,
+        )
+        raise NotImplementedError('chown is not implemented for this transport.')
 
     @abc.abstractmethod
     def copy(self, remotesource: TransportPath, remotedestination: TransportPath, dereference=False, recursive=True):
@@ -820,7 +870,7 @@ class Transport(abc.ABC):
         """
 
     @abc.abstractmethod
-    def gotocomputer_command(self, remotedir: TransportPath):
+    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
         """Return a string to be run using os.system in order to connect
         via the transport to the remote directory.
 
@@ -1051,9 +1101,12 @@ class Transport(abc.ABC):
         :type mode: int
         """
 
-    @abc.abstractmethod
     async def chown_async(self, path: TransportPath, uid: int, gid: int):
         """Change the owner (uid) and group (gid) of a file.
+
+        .. deprecated:: 2.7
+            This method is deprecated and will be removed in a future version.
+            It is not used internally by AiiDA and has no test coverage.
 
         :param path: path to file
         :param uid: user id of the new owner
@@ -1063,6 +1116,12 @@ class Transport(abc.ABC):
         :type uid: int
         :type gid: int
         """
+        warn_deprecation(
+            'The `Transport.chown_async` method is deprecated and will be removed. '
+            'It is not used internally by AiiDA.',
+            version=3,
+        )
+        raise NotImplementedError('chown_async is not implemented for this transport.')
 
     @abc.abstractmethod
     async def copy_async(self, remotesource, remotedestination, dereference=False, recursive=True):
@@ -1836,6 +1895,19 @@ class AsyncTransport(Transport):
 
     def close(self):
         return self.run_command_blocking(self.close_async)
+
+    async def __aenter__(self):
+        """Async context manager entry. Opens the transport connection."""
+        async with self._open_lock:
+            if self._track_enter():
+                await self.open_async()
+        return self
+
+    async def __aexit__(self, type_, value, traceback):
+        """Async context manager exit. Closes the transport connection if needed."""
+        async with self._open_lock:
+            if self._track_exit():
+                await self.close_async()
 
     def get(self, *args, **kwargs):
         return self.run_command_blocking(self.get_async, *args, **kwargs)

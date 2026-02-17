@@ -8,8 +8,6 @@ import typing as t
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.log import AIIDA_LOGGER
 
-__all__ = ('BROKER_DEFAULTS',)
-
 LOGGER = AIIDA_LOGGER.getChild('brokers.rabbitmq.defaults')
 
 LAUNCH_QUEUE = 'process.queue'

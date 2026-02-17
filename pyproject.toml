@@ -57,7 +57,7 @@ dependencies = [
   'sqlalchemy>=2.0.20,<3',
   'tabulate>=0.9.0,<0.10.0',
   'tqdm~=4.45',
-  'typing-extensions~=4.1;python_version<"3.11"',
+  'typing-extensions~=4.1',
   'upf_to_json~=0.9.2',
   'wrapt~=1.11',
   'chardet~=5.2.0;platform_system=="Windows"'
@@ -221,7 +221,7 @@ atomic_tools = [
   'spglib>=1.14,<3.0'
 ]
 bpython = [
-  'bpython~=0.18.0'
+  'bpython~=0.20'
 ]
 docs = [
   'pydata-sphinx-theme~=0.15.1',
@@ -244,7 +244,7 @@ notebook = [
 # https://github.com/python/typeshed?tab=readme-ov-file#package-versioning-for-third-party-stubs
 pre-commit = [
   'aiida-core[tests]',
-  'mypy~=1.18.0',
+  'mypy~=1.19.0',
   'packaging~=23.0',
   'pre-commit~=3.5',
   'sqlalchemy[mypy]~=2.0',
@@ -307,6 +307,7 @@ core = 'sysmon'
 omit = [
   "src/aiida/tools/_dumping/**/*"
 ]
+patch = ['subprocess']
 
 [tool.flit.module]
 name = 'aiida'
@@ -360,6 +361,7 @@ module = [
   'aiida.cmdline.params.*',
   'aiida.common.*',
   'aiida.repository.*',
+  'aiida.schedulers.*',
   'aiida.tools.graph.*',
   'aiida.tools.query.*'
 ]
@@ -568,8 +570,12 @@ commands = molecule {posargs:test}
 """
 
 [tool.uv]
-# NOTE: When you bump the minimum uv version, you also need to change it in:
+# We specify a minimum uv version so that the format of uv.lock file
+# does not change depending on uv version that a particular developer has installed.
+# The uv.lock format is versioned, using the "version" and "revision" fields in uv.lock,
+# and the minimum version here should be the first one that introduced a given version/revision.
+# NOTE: When you bump the minimum uv version, you might also need to change it in:
 # .pre-commit-config.yaml
 # .github/actions/install-aiida-core/action.yml
 # .readthedocs.yml
-required-version = ">=0.7.0"
+required-version = ">=0.8.4"

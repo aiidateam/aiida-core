@@ -35,17 +35,18 @@ jobs:
     steps:
 
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
     - name: Build images
-      uses: docker/bake-action@v5
+      uses: docker/bake-action@v6.10.0
       with:
         # Load to Docker engine for testing
         load: true
         workdir: .docker/
+        source: .
         set: |
           *.platform=amd64
           *.cache-to=type=gha,scope=${{ github.workflow }},mode=min
@@ -55,7 +56,7 @@ jobs:
           build.json
 
     - name: Set Up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.11'
         cache: pip

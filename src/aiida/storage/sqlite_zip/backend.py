@@ -353,6 +353,25 @@ class SqliteZipBackend(StorageBackend):
     def get_info(self, detailed: bool = False) -> dict:
         # since extracting the database file is expensive, we only do it if detailed is True
         results = {'metadata': extract_metadata(self._path)}
+
+        # Truncate entities_starting_set in metadata if not detailed
+        if not detailed:
+            creation_params = results['metadata'].get('creation_parameters')
+            if creation_params and creation_params.get('entities_starting_set') is not None:
+                entities_starting_set = creation_params['entities_starting_set']
+                truncated_entities = {}
+                max_display = 5
+
+                for entity_type, uuid_list in entities_starting_set.items():
+                    if isinstance(uuid_list, list) and len(uuid_list) > max_display:
+                        truncated_entities[entity_type] = uuid_list[:max_display] + [
+                            f'... and {len(uuid_list) - max_display} more (use --detailed to show all)'
+                        ]
+                    else:
+                        truncated_entities[entity_type] = uuid_list
+
+                results['metadata']['creation_parameters']['entities_starting_set'] = truncated_entities
+
         if detailed:
             results.update(super().get_info(detailed=detailed))
             results['repository'] = self.get_repository().get_info(detailed)
@@ -494,13 +513,15 @@ class ZipfileBackendRepository(_RoBackendRepository):
 
     @contextmanager
     def open(self, key: str) -> Iterator[BinaryIO]:
+        handle = None
         try:
             handle = self._zipfile.open(f'{self._folder}/{key}')
             yield cast(BinaryIO, handle)
         except KeyError:
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
         finally:
-            handle.close()
+            if handle is not None:
+                handle.close()
 
 
 class FolderBackendRepository(_RoBackendRepository):

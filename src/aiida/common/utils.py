@@ -16,14 +16,16 @@ import io
 import os
 import re
 import sys
-from collections.abc import Iterable, Iterator
 from datetime import datetime, timedelta
-from typing import Any, Callable, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Callable, TypeVar, overload
 from uuid import UUID
 
-from aiida.common.typing import Self
+from typing_extensions import Self
 
 from .lang import classproperty
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
 
 T = TypeVar('T')
 R = TypeVar('R')
@@ -638,7 +640,8 @@ def batch_iter(
         yield length, current
 
 
-# NOTE: `sqlite` has an `SQLITE_MAX_VARIABLE_NUMBER` compile-time flag.
+# NOTE: This parameter is largely obsolete after implementing unnest()/json_each() for large IN clauses.
+# `sqlite` has an `SQLITE_MAX_VARIABLE_NUMBER` compile-time flag.
 # On older `sqlite` versions, this was set to 999 by default,
 # while for newer versions it is generally higher, see:
 # https://www.sqlite.org/limits.html

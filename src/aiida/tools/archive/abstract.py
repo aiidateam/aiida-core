@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Literal, Optional, Type, TypeVar, Union, overload
 
-from aiida.common.typing import Self
+from typing_extensions import Self
 
 if TYPE_CHECKING:
     from aiida.orm import QueryBuilder
@@ -21,8 +21,6 @@ if TYPE_CHECKING:
     from aiida.tools.visualization.graph import Graph
 
 EntityType = TypeVar('EntityType', bound='Entity')
-
-__all__ = ('ArchiveFormatAbstract', 'ArchiveReaderAbstract', 'ArchiveWriterAbstract', 'get_format')
 
 
 class ArchiveWriterAbstract(ABC):

@@ -13,31 +13,37 @@ from __future__ import annotations
 
 import uuid
 import warnings
-from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
-from sqlalchemy import and_, not_, or_
+from sqlalchemy import and_, not_, or_, select
 from sqlalchemy import func as sa_func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Row
 from sqlalchemy.exc import CompileError, SAWarning
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import InstrumentedAttribute, QueryableAttribute
-from sqlalchemy.orm.query import Query
-from sqlalchemy.orm.session import Session
-from sqlalchemy.orm.util import AliasedClass
-from sqlalchemy.sql.compiler import SQLCompiler
-from sqlalchemy.sql.elements import BinaryExpression, Cast, ColumnClause, ColumnElement, Label
+from sqlalchemy.sql.elements import BinaryExpression, Cast, ColumnClause, ColumnElement, KeyedColumnElement, Label
 from sqlalchemy.sql.expression import case, text
 from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 
 from aiida.common.exceptions import NotExistent
+from aiida.common.utils import batch_iter
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import QUERYBUILD_LOGGER, BackendQueryBuilder, QueryDictType
 
 from .joiner import JoinReturn, SqlaJoiner
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
+    from sqlalchemy import Function, ScalarSelect, TableValuedAlias
+    from sqlalchemy.orm.query import Query
+    from sqlalchemy.orm.session import Session
+    from sqlalchemy.orm.util import AliasedClass
+    from sqlalchemy.sql.compiler import SQLCompiler
+    from sqlalchemy.sql.elements import KeyedColumnElement
 
 jsonb_typeof = sa_func.jsonb_typeof
 jsonb_array_length = sa_func.jsonb_array_length
@@ -360,7 +366,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         if attrpath and 'cast' not in entityspec.keys():
             # JSONB fields ar delimited by '.' must be cast
             raise ValueError(
-                f'To order_by {field_key!r}, the value has to be cast, ' "but no 'cast' key has been specified."
+                f"To order_by {field_key!r}, the value has to be cast, but no 'cast' key has been specified."
             )
         entity = self._get_projectable_entity(alias, column_name, attrpath, cast=entityspec.get('cast'))
         order = entityspec.get('order', 'asc')
@@ -603,8 +609,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             return not_(expr)
         return expr
 
-    @staticmethod
     def get_filter_expr_from_jsonb(
+        self,
         operator: str,
         value: Any,
         attr_key: List[str],
@@ -718,8 +724,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             raise ValueError(f'Unknown operator {operator} for filters in JSON field')
         return expr
 
-    @staticmethod
-    def get_filter_expr_from_column(operator: str, value: Any, column) -> BinaryExpression:
+    def get_filter_expr_from_column(self, operator: str, value: Any, column) -> BinaryExpression:
         """A method that returns an valid SQLAlchemy expression.
 
         :param operator: The operator provided by the user ('==',  '>', ...)
@@ -752,10 +757,108 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         elif operator == 'ilike':
             expr = database_entity.ilike(value)
         elif operator == 'in':
-            expr = database_entity.in_(value)
+            # Instead of plain `in` use `unnest()` (PSQL) or `json_each` (SQLite) to avoid parameter limits
+            # For a regular `IN` clause, each value in the clause uses one parameter.
+            # Instead, using `unnest()` or `json_each()` with an array uses only 1 parameter.
+            expr = self._create_smarter_in_clause(column, value)
         else:
             raise ValueError(f'Unknown operator {operator} for filters on columns')
         return expr
+
+    def _create_smarter_in_clause(self, column, values_list):
+        """Return an IN condition using database-specific functions to avoid parameter limits.
+
+        This method uses unnest() (PostgreSQL) or json_each() (SQLite) to pass large lists
+        as a single parameter instead of N parameters, avoiding database parameter limits.
+
+        For very large lists (>500k items), automatically batches into multiple OR'd conditions
+        to balance query performance with memory usage and database load.
+
+        .. note::
+            The 500k batch threshold is chosen to balance several factors:
+
+            - **Parameter limits**: Each batch uses 1 parameter. With SQLite's minimum limit of 999
+              parameters, this allows up to ~500M items (999 x 500k). PostgreSQL's limit of ~65k
+              parameters allows up to ~33B items (65,535 x 500k).
+            - **Memory constraints**: In practice, Python memory becomes the bottleneck before
+              database limits. A list of 500M items would require 4-20GB RAM before even reaching
+              the database.
+            - **Database performance**: Modern databases handle 500k-item arrays/JSON easily on
+              typical workstations and servers.
+
+        For example, small list (50k items)::
+
+            WHERE column IN (SELECT unnest(:array))  -- 1 parameter
+
+        Large list (1.5M items)::
+
+            WHERE (
+                column IN (SELECT unnest(:array_1))  -- First 500k
+                OR column IN (SELECT unnest(:array_2))  -- Second 500k
+                OR column IN (SELECT unnest(:array_3))  -- Remaining 500k
+            )
+        """
+        import json
+
+        from sqlalchemy import cast as sql_cast
+        from sqlalchemy import func, type_coerce
+
+        batch_threshold = 500_000
+
+        # For very large lists, batch to avoid memory/performance issues
+        # Recursion depth is always exactly 2:
+        # - First call: splits list into batches of ≤500k items each
+        # - Recursive calls: each batch is ≤500k, so hits base case immediately
+        if len(values_list) > batch_threshold:
+            batches = []
+            for _, batch in batch_iter(values_list, batch_threshold):
+                # Recursively call with smaller batch (will use unnest/json_each in base case)
+                batches.append(self._create_smarter_in_clause(column, batch))
+            # Combine all batches with OR: (col IN batch1) OR (col IN batch2) OR ...
+            return or_(*batches)
+
+        # Base case: use database-specific optimized approach for lists ≤500k items
+        session: Session = self.get_session()
+        dialect_name: str = session.bind.dialect.name
+
+        if dialect_name == 'postgresql':
+            # PostgreSQL: Use unnest() with native ARRAY type
+            # - type_coerce: Python-side hint to SQLAlchemy (no SQL CAST generated)
+            # - Tells SQLAlchemy to treat the Python list as a PostgreSQL ARRAY parameter
+            # - PostgreSQL natively understands arrays, so no SQL casting needed
+            # Result: column IN (SELECT unnest(:array_param))  -- 1 parameter for entire list
+            from sqlalchemy.dialects.postgresql import ARRAY
+
+            coltype: Any = column.type
+            unnest_expr: Function[Any] = func.unnest(
+                type_coerce(expression=values_list, type_=ARRAY(item_type=coltype))
+            )
+            subq: ScalarSelect[Any] = select(unnest_expr).scalar_subquery()
+
+        elif dialect_name == 'sqlite':
+            # SQLite: Use json_each() with JSON array (SQLite has no native array type)
+            # - Serialize Python list to JSON string
+            # - json_each() extracts values from JSON, but returns them as TEXT
+            # - sql_cast: Generate SQL CAST() to convert TEXT to target column type
+            # Result: column IN (SELECT CAST(value AS coltype) FROM json_each(:json_param))
+            coltype: Any = column.type
+            json_array: str = json.dumps(obj=list(values_list))
+
+            # Create table-valued function: json_each(json_array) returns virtual table
+            json_each_table: TableValuedAlias = func.json_each(json_array).table_valued('value')
+
+            # Extract the 'value' column and cast from TEXT to target type
+            value_col: KeyedColumnElement = json_each_table.c.value
+            subq: ScalarSelect[Any] = (
+                select(sql_cast(expression=value_col, type_=coltype)).select_from(json_each_table).scalar_subquery()
+            )
+
+        else:
+            msg = f'Unsupported database backend: {dialect_name}. AiiDA only supports PostgreSQL and SQLite.'
+            raise NotImplementedError(msg)
+
+        # Return the IN clause: column IN (subquery)
+        return column.in_(subq)
 
     def to_backend(self, res) -> Any:
         """Convert results to return backend specific objects.
@@ -906,7 +1009,7 @@ def get_column(colname: str, alias: AliasedClass) -> InstrumentedAttribute:
         return getattr(alias, colname)
     except AttributeError as exc:
         raise ValueError(
-            '{} is not a column of {}\n' 'Valid columns are:\n' '{}'.format(
+            '{} is not a column of {}\nValid columns are:\n{}'.format(
                 colname, alias, '\n'.join(alias._sa_class_manager.mapper.c.keys())
             )
         ) from exc

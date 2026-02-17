@@ -31,12 +31,12 @@ jobs:
         shell: bash -e -o pipefail {0}
 
     outputs:
-      images: ${{ steps.bake_metadata.outputs.images }}
+      images: ${{ steps.bake_metadata.outputs.result }}
 
     steps:
 
     - name: Checkout Repo ⚡️
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Set up QEMU
       if: ${{ inputs.platforms != 'linux/amd64' }}
@@ -58,10 +58,11 @@ jobs:
 
     - name: Build and upload to ghcr.io 📤
       id: build
-      uses: docker/bake-action@v5
+      uses: docker/bake-action@v6.10.0
       with:
         push: true
         workdir: .docker/
+        source: .
         # Using provenance to disable default attestation so it will build only desired images:
         # https://github.com/orgs/community/discussions/45969
         provenance: false
@@ -74,9 +75,34 @@ jobs:
           docker-bake.hcl
           build.json
 
+    - name: Write metadata output to a json file
+      run: |
+        cat << EOF > bake_metadata.json
+        ${{ steps.build.outputs.metadata }}
+        EOF
+
     - name: Set output variables
       id: bake_metadata
-      run: |
-        .github/workflows/extract-docker-image-names.sh | tee -a "${GITHUB_OUTPUT}"
-      env:
-        BAKE_METADATA: ${{ steps.build.outputs.metadata }}
+      uses: actions/github-script@v8
+      with:
+        script: |
+          const fs = require('fs');
+          const bake_output = JSON.parse(
+            fs.readFileSync('bake_metadata.json', 'utf8')
+          );
+
+          const images = {};
+
+          for (const key in bake_output) {
+            if (!key.startsWith('aiida')) {
+              continue;
+            }
+
+            const image = bake_output[key];
+            const image_envvar = `${key.toUpperCase().replace(/-/g, "_")}_IMAGE`;
+            const image_name = image["image.name"].split(',')[0];
+            const image_digest = image["containerimage.digest"];
+
+            images[image_envvar] = `${image_name}@${image_digest}`;
+          }
+          return images;

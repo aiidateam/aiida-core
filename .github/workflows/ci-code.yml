@@ -83,6 +83,14 @@ jobs:
         files: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
 
+    - name: Upload coverage artifact
+      if: matrix.python-version == '3.13'
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-xml
+        path: coverage.xml
+        retention-days: 30
+
   tests-minimum-requirements:
     name: test minimum reqs (${{ matrix.python-version }}, ${{ matrix.database-backend }})
     runs-on: ubuntu-24.04

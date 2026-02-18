@@ -85,7 +85,7 @@ jobs:
 
     - name: Upload coverage artifact
       if: matrix.python-version == '3.13'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: coverage-xml
         path: coverage.xml

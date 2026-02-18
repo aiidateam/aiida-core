@@ -17,6 +17,7 @@ from archive_path import ZipPath
 from aiida import orm
 from aiida.common.exceptions import IncompatibleStorageSchema, LicensingException
 from aiida.common.links import LinkType
+from aiida.manage import get_manager
 from aiida.tools.archive import create_archive, import_archive
 
 
@@ -182,3 +183,36 @@ def test_export_filter_size(tmp_path, aiida_profile_clean):
     assert len(imported_nodes) == nb_nodes
     expected_labels = [f'node_{i}' for i in range(nb_nodes)]
     assert set(imported_nodes) == set(expected_labels)
+
+
+def test_import_packed(tmp_path, aiida_profile_clean):
+    """Test importing archive with packed=True stores objects directly in pack storage."""
+    import io
+
+    # Create a FolderData with repository files
+    folder = orm.FolderData()
+    folder.base.repository.put_object_from_filelike(io.BytesIO(b'content one'), 'file1.txt')
+    folder.base.repository.put_object_from_filelike(io.BytesIO(b'content two'), 'file2.txt')
+    folder.base.repository.put_object_from_filelike(io.BytesIO(b'content three'), 'file3.txt')
+    folder.store()
+    folder_uuid = folder.uuid
+
+    # Export the archive
+    export_file = tmp_path / 'export.aiida'
+    create_archive([folder], filename=export_file)
+
+    # Reset storage and import with packed=True
+    aiida_profile_clean.reset_storage()
+    import_archive(export_file, packed=True)
+
+    # Verify the node was imported correctly
+    imported_folder = orm.load_node(folder_uuid)
+    assert set(imported_folder.base.repository.list_object_names()) == {'file1.txt', 'file2.txt', 'file3.txt'}
+
+    # Verify objects are in packed storage (not loose)
+    repo = get_manager().get_profile_storage().get_repository()
+    with repo._container as container:
+        counts = container.count_objects()
+        assert counts.packed == 3
+        assert counts.loose == 0
+        assert counts.pack_files == 1

@@ -132,8 +132,8 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :return: a dictionary with the information.
         """
 
-    @contextlib.contextmanager
-    def open(self, key: str) -> Iterator[BinaryIO]:  # type: ignore[return]
+    @abc.abstractmethod
+    def open(self, key: str) -> contextlib.AbstractContextManager[BinaryIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -144,8 +144,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :raise FileNotFoundError: if the file does not exist.
         :raise OSError: if the file could not be opened.
         """
-        if not self.has_object(key):
-            raise FileNotFoundError(f'object with key `{key}` does not exist.')
+        pass
 
     def get_object_content(self, key: str) -> bytes:
         """Return the content of a object identified by key.
@@ -168,6 +167,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :raise FileNotFoundError: if the file does not exist.
         :raise OSError: if a file could not be opened.
         """
+        pass
 
     def get_object_hash(self, key: str) -> str:
         """Return the SHA-256 hash of an object stored under the given key.

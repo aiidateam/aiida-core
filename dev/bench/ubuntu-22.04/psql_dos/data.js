@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771322094183,
+  "lastUpdate": 1771414417679,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -102201,6 +102201,205 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.038505",
             "group": "node",
             "extra": "mean: 31.225 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "0.00",
+          "cores": 4,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.19",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "1deba397de8cd611a73721be46639296e3835ade",
+          "message": "Add orphaned database connection cleanup to `verdi process repair`\n\nWhen AiiDA daemon workers crash or are killed without proper cleanup,\ntheir postgres connections can remain open. These connections hold locks\nthat can block other processes indefinitely, causing workchains and\ncalcjobs to hang.\n\nThis commit adds functionality to detect and terminate these connections\nas part of the `verdi process repair` command. Since `verdi process\nrepair` requires the daemon to be stopped, any postgres connections\nfound (other than the current session) are likely from crashed processes\nthat should be terminated. We however cannot ensure that the no other\nAiiDA process is run outside of the daemon (e.g. through directly\nrunning a process) that could hold one of the connections. Therefore we\nask the user for confirmation before performing a termination of these\nunreferenced postgres connections.\n\nSummary of changes in code:\n\n- Add `get_unreferenced_connections()` method to `PsqlDosBackend` that\n  queries `pg_stat_activity` to find connections owned by the current\n  user that are not the current session\n- Add `terminate_connections(pids: list[int])` method to `PsqlDosBackend`\n  that uses `pg_terminate_backend()` to kill these connections\n- Update `verdi process repair` to check for and terminate unreferenced\n  connections after confirmation before proceeding with RabbitMQ repairs\n- Add `--force` flag to skip confirmation prompt",
+          "timestamp": "2026-02-18T12:23:21+01:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/1deba397de8cd611a73721be46639296e3835ade",
+          "distinct": true,
+          "tree_id": "60fbdb7cb371dc061beaff940439bfe2fee02169"
+        },
+        "date": 1771414411274,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 2.31369371506075,
+            "unit": "iter/sec",
+            "range": "stddev: 0.073756",
+            "group": "import-export",
+            "extra": "mean: 432.21 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 2.2932942452235223,
+            "unit": "iter/sec",
+            "range": "stddev: 0.087340",
+            "group": "import-export",
+            "extra": "mean: 436.05 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 3.1299141477903416,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0069150",
+            "group": "import-export",
+            "extra": "mean: 319.50 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 3.0562926664903287,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0083301",
+            "group": "import-export",
+            "extra": "mean: 327.19 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_large_archive_export_benchmark",
+            "value": 0.5624959760092563,
+            "unit": "iter/sec",
+            "range": "stddev: 0.18603",
+            "group": "large-archive",
+            "extra": "mean: 1.7778 sec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_large_archive_import_benchmark",
+            "value": 0.17399038309316628,
+            "unit": "iter/sec",
+            "range": "stddev: 0.017685",
+            "group": "large-archive",
+            "extra": "mean: 5.7474 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 2.646198541815083,
+            "unit": "iter/sec",
+            "range": "stddev: 0.013882",
+            "group": "engine",
+            "extra": "mean: 377.90 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.5737464852298196,
+            "unit": "iter/sec",
+            "range": "stddev: 0.058817",
+            "group": "engine",
+            "extra": "mean: 1.7429 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.6518405124497457,
+            "unit": "iter/sec",
+            "range": "stddev: 0.11855",
+            "group": "engine",
+            "extra": "mean: 1.5341 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.16027709638132678,
+            "unit": "iter/sec",
+            "range": "stddev: 0.18911",
+            "group": "engine",
+            "extra": "mean: 6.2392 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.181183617749318,
+            "unit": "iter/sec",
+            "range": "stddev: 0.16556",
+            "group": "engine",
+            "extra": "mean: 5.5193 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.1537535464860724,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0049232",
+            "group": "engine",
+            "extra": "mean: 464.31 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.46036628144548264,
+            "unit": "iter/sec",
+            "range": "stddev: 0.14780",
+            "group": "engine",
+            "extra": "mean: 2.1722 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.5271111999136989,
+            "unit": "iter/sec",
+            "range": "stddev: 0.042502",
+            "group": "engine",
+            "extra": "mean: 1.8971 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.14844871432072151,
+            "unit": "iter/sec",
+            "range": "stddev: 0.055902",
+            "group": "engine",
+            "extra": "mean: 6.7363 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.16850343071365614,
+            "unit": "iter/sec",
+            "range": "stddev: 0.076045",
+            "group": "engine",
+            "extra": "mean: 5.9346 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 436.19506943946004,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00016855",
+            "group": "node",
+            "extra": "mean: 2.2926 msec\nrounds: 252"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 44.68149911952641,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00094489",
+            "group": "node",
+            "extra": "mean: 22.381 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 31.930172758368727,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0015697",
+            "group": "node",
+            "extra": "mean: 31.318 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 265.29517268842835,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00032012",
+            "group": "node",
+            "extra": "mean: 3.7694 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 32.88025715559594,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0012009",
+            "group": "node",
+            "extra": "mean: 30.413 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 32.20391782520296,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0014513",
+            "group": "node",
+            "extra": "mean: 31.052 msec\nrounds: 100"
           }
         ]
       }

@@ -399,3 +399,70 @@ class TestImportObjectsToPack:
         ) as mock:
             target.import_objects_to_pack(source, keys)
             assert mock.call_count >= 2  # Should flush multiple times due to count limit
+
+    def test_import_to_non_empty_repository(self, create_repository):
+        """Test importing to a repository with existing loose and packed objects.
+
+        Verifies:
+        - Existing loose objects remain loose
+        - Existing packed objects remain packed
+        - New objects are added as packed
+        - Duplicate objects (same hash) are deduplicated
+        - Repository state is consistent after import
+        """
+        source = create_repository('source')
+        target = create_repository('target')
+
+        # Add existing objects to target: some loose, some packed
+        existing_loose_content = b'existing loose object'
+        existing_packed_content = b'existing packed object'
+        duplicate_content = b'duplicate content'  # Will exist in both source and target
+
+        existing_loose_key = target.put_object_from_filelike(io.BytesIO(existing_loose_content))
+        existing_packed_key = target.put_object_from_filelike(io.BytesIO(existing_packed_content))
+        duplicate_key = target.put_object_from_filelike(io.BytesIO(duplicate_content))
+
+        # Pack some objects (not the loose one)
+        target.maintain(live=False)  # Packs all loose objects
+
+        # Add a new loose object after packing
+        new_loose_content = b'new loose after packing'
+        new_loose_key = target.put_object_from_filelike(io.BytesIO(new_loose_content))
+
+        # Verify initial state: 1 loose, 3 packed
+        with target._container as container:
+            counts = container.count_objects()
+            assert counts.loose == 1
+            assert counts.packed == 3
+
+        # Create source objects: one new, one duplicate
+        new_content = b'brand new object'
+        new_key = source.put_object_from_filelike(io.BytesIO(new_content))
+        source_duplicate_key = source.put_object_from_filelike(io.BytesIO(duplicate_content))
+
+        # Import to target
+        imported_keys = target.import_objects_to_pack(source, {new_key, source_duplicate_key})
+
+        # Verify import results
+        assert set(imported_keys) == {new_key, source_duplicate_key}
+        assert duplicate_key == source_duplicate_key  # Same content = same hash
+
+        # Verify final state:
+        # - 1 loose (new_loose_key, unchanged)
+        # - 4 packed (3 original + 1 new, duplicate was deduplicated)
+        with target._container as container:
+            counts = container.count_objects()
+            assert counts.loose == 1
+            assert counts.packed == 4
+
+        # Verify all objects are accessible
+        for key, expected_content in [
+            (existing_loose_key, existing_loose_content),
+            (existing_packed_key, existing_packed_content),
+            (duplicate_key, duplicate_content),
+            (new_loose_key, new_loose_content),
+            (new_key, new_content),
+        ]:
+            assert target.has_object(key)
+            with target.open(key) as handle:
+                assert handle.read() == expected_content

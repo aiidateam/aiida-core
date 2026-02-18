@@ -110,6 +110,19 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         3. Using bulk pack operations for efficiency
         4. Deferring fsync and commit to the end for optimal performance
 
+        Performance notes:
+        - The main speedup comes from reducing fsync operations: writing to loose storage
+          requires one fsync per file, while writing to packed storage requires one fsync
+          per pack file (~4GB each). For typical imports this means a handful of fsyncs
+          instead of tens of thousands.
+        - We use do_commit=False to keep the transaction open across all batches. This provides
+          atomicity: if the import fails partway through, the entire transaction is rolled back.
+          Any orphaned pack data (written but not committed) is cleaned up by `verdi storage maintain`.
+        - We call flush() after each batch to release SQLAlchemy ORM objects from memory.
+          Without this, SQLAlchemy accumulates all pending objects until commit(), which can
+          exhaust memory for large imports. flush() sends SQL to the database and clears the
+          session's identity map while keeping the transaction open for rollback safety.
+
         :param src: the source repository backend from which to copy the objects.
         :param keys: set of fully qualified identifiers for the objects within the source repository.
         :param step_cb: optional callback called after each object with (key, imported_count, total_count).
@@ -143,6 +156,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             if not contents:
                 return
 
+            # do_fsync=False for intermediate batches, True only for final batch (1 fsync total)
+            # do_commit=False keeps transaction open for atomicity across all batches
             returned_keys = container.add_objects_to_pack(
                 contents,
                 do_fsync=do_fsync,
@@ -156,8 +171,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                         f'Hash key mismatch: source key {source_key!r} != returned key {returned_key!r}'
                     )
 
-            # Flush SQLite session to reduce memory pressure from accumulated ORM objects.
-            # This writes pending changes to the database but doesn't commit the transaction.
+            # Flush session to release ORM objects from memory (see docstring for details)
             container._get_operation_session().flush()
 
             source_keys.clear()
@@ -176,7 +190,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                     _flush_batch(container, batch_source_keys, content_batch, do_fsync=False)
                     batch_size = 0
 
-                    # Write large object directly and validate
+                    # Write large object directly (do_fsync/do_commit=False for same reasons)
                     returned_key = container.add_streamed_object_to_pack(
                         io.BytesIO(content),
                         do_fsync=False,
@@ -207,10 +221,10 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 if step_cb:
                     step_cb(key, len(imported_keys), total_keys)
 
-            # Flush any remaining content (with fsync since it's the final write)
+            # Flush remaining content with do_fsync=True to finalize the current pack file
             _flush_batch(container, batch_source_keys, content_batch, do_fsync=True)
 
-            # Single commit at the end for performance
+            # Single commit at the end: makes all changes permanent atomically
             container._get_operation_session().commit()
 
         return imported_keys

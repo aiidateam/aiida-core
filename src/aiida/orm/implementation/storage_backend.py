@@ -241,12 +241,14 @@ class StorageBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    def bulk_update(self, entity_type: 'EntityTypes', rows: List[dict]) -> None:
+    def bulk_update(self, entity_type: 'EntityTypes', rows: List[dict], extend_json: bool = False) -> None:
         """Update a list of entities in the database, directly with a backend transaction.
 
         :param entity_type: The type of the entity
         :param data: A list of dictionaries, containing fields of the backend model to update,
             and the `id` field (a.k.a primary key)
+        :param extend_json: A boolean flag indicating if updates on JSON fields are treated as an extension,
+            instead of overwriting the entire JSON object
 
         :raises: ``IntegrityError`` if the keys in a row are not a subset of the columns in the table
         """

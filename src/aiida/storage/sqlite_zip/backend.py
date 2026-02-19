@@ -328,7 +328,7 @@ class SqliteZipBackend(StorageBackend):
     def bulk_insert(self, entity_type: EntityTypes, rows: list[dict], allow_defaults: bool = False) -> list[int]:
         raise ReadOnlyError()
 
-    def bulk_update(self, entity_type: EntityTypes, rows: list[dict]) -> None:
+    def bulk_update(self, entity_type: EntityTypes, rows: list[dict], extend_json: bool = False) -> None:
         raise ReadOnlyError()
 
     def delete(self) -> None:

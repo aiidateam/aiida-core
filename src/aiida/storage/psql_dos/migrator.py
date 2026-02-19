@@ -286,11 +286,17 @@ class PsqlDosMigrator:
         models at the current head version without migrating through all of them one by one.
         """
         from aiida.storage.psql_dos.models.base import get_orm_metadata
+        from aiida.storage.psql_dos.utils import JSONB_PATCH_FUNCTION
 
         # setup the database
         # see: https://alembic.sqlalchemy.org/en/latest/cookbook.html#building-an-up-to-date-database-from-scratch
         MIGRATE_LOGGER.report('initialising empty storage schema')
         get_orm_metadata().create_all(self._engine)
+
+        # Register the json_patch function for bulk updates with JSON field merging
+        MIGRATE_LOGGER.report('registering json_patch function')
+        with self._engine.begin() as conn:
+            conn.exec_driver_sql(JSONB_PATCH_FUNCTION)
 
         repository_uuid = self.get_repository_uuid()
 

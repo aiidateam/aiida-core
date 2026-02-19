@@ -109,7 +109,7 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
         raise NotImplementedError()
 
     def _put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
-        return LazyOpener(handle.name)
+        raise NotImplementedError()
 
     def has_objects(self, keys: List[str]) -> List[bool]:
         raise NotImplementedError()
@@ -124,7 +124,7 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
         raise NotImplementedError()
 
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_info(self, detailed: bool = False, **kwargs) -> dict:
         raise NotImplementedError

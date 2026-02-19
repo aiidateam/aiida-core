@@ -2,6 +2,7 @@
 
 import contextlib
 import dataclasses
+import io
 import shutil
 import typing as t
 
@@ -16,6 +17,11 @@ if t.TYPE_CHECKING:
 __all__ = ('DiskObjectStoreRepositoryBackend',)
 
 BYTES_TO_MB = 1 / 1024**2
+
+# Thresholds for batching objects during import.
+# Objects are accumulated until either threshold is reached, then flushed to pack storage.
+_IMPORT_BATCH_MEMORY_BYTES = 52428800  # 50MB - memory threshold
+_IMPORT_BATCH_COUNT = 5000  # Maximum number of objects per batch
 
 logger = STORAGE_LOGGER.getChild('disk_object_store')
 
@@ -90,6 +96,139 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         with self._container as container:
             return container.add_streamed_object(handle)
 
+    def import_objects_to_pack(
+        self,
+        src: AbstractRepositoryBackend,
+        keys: set[str],
+        step_cb: t.Optional[t.Callable[[str, int, int], None]] = None,
+    ) -> list[str]:
+        """Bulk copy objects from another repository backend directly to packed storage.
+
+        This method efficiently imports objects by:
+        1. Reading streams immediately within their valid context (avoiding closed handle issues)
+        2. Batching data in memory up to _IMPORT_BATCH_MEMORY_BYTES before flushing to pack
+        3. Using bulk pack operations for efficiency
+        4. Deferring fsync and commit to the end for optimal performance
+
+        Performance notes:
+        - The main speedup comes from reducing fsync operations: writing to loose storage
+          requires one fsync per file, while writing to packed storage requires one fsync
+          per pack file (~4GB each). For typical imports this means a handful of fsyncs
+          instead of tens of thousands.
+        - We use do_commit=False to keep the transaction open across all batches. This provides
+          atomicity: if the import fails partway through, the entire transaction is rolled back.
+          Any orphaned pack data (written but not committed) is cleaned up by `verdi storage maintain`.
+        - We call flush() after each batch to release SQLAlchemy ORM objects from memory.
+          Without this, SQLAlchemy accumulates all pending objects until commit(), which can
+          exhaust memory for large imports. flush() sends SQL to the database and clears the
+          session's identity map while keeping the transaction open for rollback safety.
+
+        :param src: the source repository backend from which to copy the objects.
+        :param keys: set of fully qualified identifiers for the objects within the source repository.
+        :param step_cb: optional callback called after each object with (key, imported_count, total_count).
+        :return: list of fully qualified identifiers for the objects within this repository.
+        :raises ImportValidationError: if hash keys returned by the container don't match source keys.
+        """
+        from aiida.tools.archive.exceptions import ImportValidationError
+
+        if not keys:
+            return []
+
+        imported_keys: list[str] = []
+        total_keys = len(keys)
+
+        # Track source keys in order for validation against returned hash keys
+        batch_source_keys: list[str] = []
+        # Memory cache for batching - list of content bytes (order matches batch_source_keys)
+        content_batch: list[bytes] = []
+        batch_size = 0
+
+        def _flush_batch(
+            container: 'Container',
+            source_keys: list[str],
+            contents: list[bytes],
+            do_fsync: bool,
+        ) -> None:
+            """Flush the current batch to pack storage and validate hash keys.
+
+            Clears the source_keys and contents lists in place.
+            """
+            if not contents:
+                return
+
+            # do_fsync=False for intermediate batches, True only for final batch (1 fsync total)
+            # do_commit=False keeps transaction open for atomicity across all batches
+            returned_keys = container.add_objects_to_pack(
+                contents,
+                do_fsync=do_fsync,
+                do_commit=False,
+            )
+
+            # Validate that returned hash keys match source keys
+            for source_key, returned_key in zip(source_keys, returned_keys):
+                if source_key != returned_key:
+                    raise ImportValidationError(
+                        f'Hash key mismatch: source key {source_key!r} != returned key {returned_key!r}'
+                    )
+
+            # Flush session to release ORM objects from memory (see docstring for details)
+            container._get_operation_session().flush()
+
+            source_keys.clear()
+            contents.clear()
+
+        with self._container as container:
+            for key, stream in src.iter_object_streams(keys):
+                # Read the stream content immediately while it's still valid.
+                # This is critical: the stream from iter_object_streams may be closed
+                # after the iteration yields the next item (context manager behavior).
+                content = stream.read()
+                content_size = len(content)
+
+                # Handle very large objects: flush batch first, then write directly
+                if content_size > _IMPORT_BATCH_MEMORY_BYTES:
+                    _flush_batch(container, batch_source_keys, content_batch, do_fsync=False)
+                    batch_size = 0
+
+                    # Write large object directly (do_fsync/do_commit=False for same reasons)
+                    returned_key = container.add_streamed_object_to_pack(
+                        io.BytesIO(content),
+                        do_fsync=False,
+                        do_commit=False,
+                    )
+                    if key != returned_key:
+                        raise ImportValidationError(
+                            f'Hash key mismatch: source key {key!r} != returned key {returned_key!r}'
+                        )
+
+                # If adding this would exceed memory or count limit, flush first
+                elif (
+                    batch_size + content_size > _IMPORT_BATCH_MEMORY_BYTES or len(content_batch) >= _IMPORT_BATCH_COUNT
+                ):
+                    _flush_batch(container, batch_source_keys, content_batch, do_fsync=False)
+                    batch_size = 0
+                    # Add current object to fresh batch
+                    batch_source_keys.append(key)
+                    content_batch.append(content)
+                    batch_size = content_size
+                else:
+                    # Add to batch
+                    batch_source_keys.append(key)
+                    content_batch.append(content)
+                    batch_size += content_size
+
+                imported_keys.append(key)
+                if step_cb:
+                    step_cb(key, len(imported_keys), total_keys)
+
+            # Flush remaining content with do_fsync=True to finalize the current pack file
+            _flush_batch(container, batch_source_keys, content_batch, do_fsync=True)
+
+            # Single commit at the end: makes all changes permanent atomically
+            container._get_operation_session().commit()
+
+        return imported_keys
+
     def has_objects(self, keys: t.List[str]) -> t.List[bool]:
         with self._container as container:
             return container.has_objects(keys)
@@ -114,7 +253,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 yield t.cast(t.BinaryIO, handle)
 
     def iter_object_streams(self, keys: t.Iterable[str]) -> t.Iterator[t.Tuple[str, t.BinaryIO]]:
-        with self._container.get_objects_stream_and_meta(keys) as triplets:  # type: ignore[arg-type]
+        with self._container.get_objects_stream_and_meta(list(keys)) as triplets:
             for key, stream, _ in triplets:
                 assert stream is not None
                 yield key, stream  # type: ignore[misc]

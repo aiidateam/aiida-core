@@ -62,6 +62,7 @@ def import_archive(
     backend: Optional[StorageBackend] = None,
     filter_size: int = DEFAULT_FILTER_SIZE,
     batch_size: int = DEFAULT_BATCH_SIZE,
+    packed: bool = False,
 ) -> Optional[int]:
     """Import an archive into the AiiDA backend.
 
@@ -205,8 +206,10 @@ def import_archive(
 
             # now the transaction has been successfully populated, but not committed, we add the repository files
             # if the commit fails, this is not so much an issue, since the files can be removed on repo maintenance
-            _add_files_to_repo(backend_from, backend, new_repo_keys)
-
+            if packed:
+                _add_files_to_repo_packed(backend_from, backend, new_repo_keys)
+            else:
+                _add_files_to_repo(backend_from, backend, new_repo_keys)
             IMPORT_LOGGER.report('Committing transaction to database...')
 
     return import_group_id
@@ -1217,10 +1220,35 @@ def _add_files_to_repo(backend_from: StorageBackend, backend_to: StorageBackend,
     repository_to = backend_to.get_repository()
     repository_from = backend_from.get_repository()
     with get_progress_reporter()(desc='Adding archive files to repository', total=len(new_keys)) as progress:
-        for key, handle in repository_from.iter_object_streams(new_keys):
+        for key, handle in repository_from.iter_object_streams(list(new_keys)):
             backend_key = repository_to.put_object_from_filelike(handle)
             if backend_key != key:
                 raise ImportValidationError(
                     f'Archive repository key is different to backend key: {key!r} != {backend_key!r}'
                 )
             progress.update()
+
+
+def _add_files_to_repo_packed(backend_from: StorageBackend, backend_to: StorageBackend, new_keys: Set[str]) -> None:
+    """Add the new files to the repository directly to packed storage.
+
+    This is an optimization for backends that support bulk copy operations (e.g., DiskObjectStoreRepositoryBackend).
+    """
+    if not new_keys:
+        return None
+
+    repository_to = backend_to.get_repository()
+    repository_from = backend_from.get_repository()
+
+    if not hasattr(repository_to, 'import_objects_to_pack'):
+        raise ImportValidationError(
+            f'The --packed option is not supported by this storage backend: {type(repository_to).__name__}. '
+            'Remove the --packed flag to import using the standard method.'
+        )
+
+    with get_progress_reporter()(desc='Adding archive files to repository', total=len(new_keys)) as progress:
+
+        def _cb(_: str, __: int, ___: int) -> None:
+            progress.update()
+
+        repository_to.import_objects_to_pack(repository_from, new_keys, step_cb=_cb)

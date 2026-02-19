@@ -10,15 +10,24 @@
 
 from __future__ import annotations
 
+import datetime
 import logging
+import re
+import string
+import time
+import typing as t
 
+from aiida.common import AttributeDict, FeatureNotAvailable
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import SchedulerError, SchedulerParsingError
-from aiida.schedulers.datastructures import JobInfo, JobState, MachineInfo, NodeNumberJobResource
+from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, MachineInfo, NodeNumberJobResource
 
 from .bash import BashCliScheduler
 
 _LOGGER = logging.getLogger(__name__)
+
+if t.TYPE_CHECKING:
+    from aiida.engine.processes.exit_code import ExitCode
 
 # This maps PbsPro status letters to our own status list
 
@@ -69,7 +78,7 @@ class PbsJobResource(NodeNumberJobResource):
     """Class for PBS job resources."""
 
     @classmethod
-    def validate_resources(cls, **kwargs):
+    def validate_resources(cls, **kwargs: t.Any) -> AttributeDict:
         """Validate the resources against the job resource class of this scheduler.
 
         This extends the base class validator and calculates the `num_cores_per_machine` fields to pass to PBSlike
@@ -141,13 +150,12 @@ class PbsBaseClass(BashCliScheduler):
         """
         raise NotImplementedError('Implement the _get_resource_lines in each subclass!')
 
-    def _get_joblist_command(self, jobs=None, user=None):
+    def _get_joblist_command(self, jobs: list[str] | None = None, user: str | None = None) -> str:
         """The command to report full information on existing jobs.
 
         TODO: in the case of job arrays, decide what to do (i.e., if we want
               to pass the -t options to list each subjob).
         """
-        from aiida.common.exceptions import FeatureNotAvailable
 
         command = ['qstat', '-f']
 
@@ -158,8 +166,8 @@ class PbsBaseClass(BashCliScheduler):
             command.append(f'-u{user}')
 
         if jobs:
-            if isinstance(jobs, str):
-                command.append(f'{escape_for_bash(jobs)}')
+            if isinstance(jobs, str):  # type: ignore[unreachable]
+                command.append(f'{escape_for_bash(jobs)}')  # type: ignore[unreachable]
             else:
                 try:
                     command.append(f"{' '.join(escape_for_bash(j) for j in jobs)}")
@@ -170,7 +178,7 @@ class PbsBaseClass(BashCliScheduler):
         _LOGGER.debug(f'qstat command: {comm}')
         return comm
 
-    def _get_detailed_job_info_command(self, job_id):
+    def _get_detailed_job_info_command(self, job_id: str) -> str:
         """Return the command to run to get the detailed information on a job,
         even after the job has finished.
 
@@ -178,7 +186,7 @@ class PbsBaseClass(BashCliScheduler):
         """
         return f'tracejob -v {escape_for_bash(job_id)}'
 
-    def _get_submit_script_header(self, job_tmpl):
+    def _get_submit_script_header(self, job_tmpl: JobTemplate) -> str:
         """Return the submit script header, using the parameters from the
         job_tmpl.
 
@@ -188,9 +196,6 @@ class PbsBaseClass(BashCliScheduler):
 
         TODO: truncate the title if too long
         """
-        import re
-        import string
-
         empty_line = ''
 
         lines = []
@@ -306,7 +311,7 @@ class PbsBaseClass(BashCliScheduler):
 
         return '\n'.join(lines)
 
-    def _get_submit_command(self, submit_script):
+    def _get_submit_command(self, submit_script: str) -> str:
         """Return the string to execute to submit a given script.
 
         Args:
@@ -321,7 +326,7 @@ class PbsBaseClass(BashCliScheduler):
 
         return submit_command
 
-    def _parse_joblist_output(self, retval, stdout, stderr):
+    def _parse_joblist_output(self, retval: int, stdout: str, stderr: str) -> list[JobInfo]:
         """Parse the queue output string, as returned by executing the
         command returned by _get_joblist_command command (qstat -f).
 
@@ -357,7 +362,7 @@ class PbsBaseClass(BashCliScheduler):
             if retval != 0:
                 raise SchedulerError(f'Error during qstat parsing, retval={retval}\nstdout={stdout}\nstderr={stderr}')
 
-        jobdata_raw = []  # will contain raw data parsed from qstat output
+        jobdata_raw: list[dict[str, t.Any]] = []  # will contain raw data parsed from qstat output
         # Get raw data and split in lines
         for line_num, line in enumerate(stdout.split('\n'), start=1):
             # Each new job stanza starts with the string 'Job Id:': I
@@ -489,16 +494,17 @@ class PbsBaseClass(BashCliScheduler):
                     for exec_host in exec_hosts:
                         node = MachineInfo()
                         node.name, data = exec_host.split('/')
-                        data = data.split('*')
-                        if len(data) == 1:
-                            node.job_index = int(data[0])
+                        jobidx_and_ncpu = data.split('*')
+                        if len(jobidx_and_ncpu) == 1:
+                            node.job_index = int(jobidx_and_ncpu[0])
                             node.num_cpus = 1
-                        elif len(data) == 2:
-                            node.job_index = int(data[0])
-                            node.num_cpus = int(data[1])
+                        elif len(jobidx_and_ncpu) == 2:
+                            node.job_index = int(jobidx_and_ncpu[0])
+                            node.num_cpus = int(jobidx_and_ncpu[1])
                         else:
                             raise ValueError(
-                                f'Wrong number of pieces: {len(data)} instead of 1 or 2 in exec_hosts: {exec_hosts}'
+                                f'Wrong number of pieces: {len(jobidx_and_ncpu)} '
+                                f'instead of 1 or 2 in exec_hosts: {exec_hosts}'
                             )
                         exec_host_list.append(node)
                     this_job.allocated_machines = exec_host_list
@@ -547,7 +553,7 @@ class PbsBaseClass(BashCliScheduler):
                 )
 
             # Double check of redundant info
-            if this_job.allocated_machines is not None and this_job.num_machines is not None:
+            if this_job.allocated_machines is not None and this_job.num_machines is not None:  # type: ignore[redundant-expr]
                 if len(set(machine.name for machine in this_job.allocated_machines)) != this_job.num_machines:
                     _LOGGER.error(
                         f'The length of the list of allocated nodes ({len(this_job.allocated_machines)}) is different '
@@ -617,7 +623,7 @@ class PbsBaseClass(BashCliScheduler):
         return job_list
 
     @staticmethod
-    def _convert_time(string):
+    def _convert_time(string: str) -> int:
         """Convert a string in the format HH:MM:SS to a number of seconds."""
         pieces = string.split(':')
         if len(pieces) != 3:
@@ -651,12 +657,10 @@ class PbsBaseClass(BashCliScheduler):
         return hours * 3600 + mins * 60 + secs
 
     @staticmethod
-    def _parse_time_string(string, fmt='%a %b %d %H:%M:%S %Y'):
+    def _parse_time_string(string: str, fmt: str = '%a %b %d %H:%M:%S %Y') -> datetime.datetime:
         """Parse a time string in the format returned from qstat -f and
         returns a datetime object.
         """
-        import datetime
-        import time
 
         try:
             time_struct = time.strptime(string, fmt)
@@ -669,7 +673,7 @@ class PbsBaseClass(BashCliScheduler):
         # http://stackoverflow.com/questions/1697815
         return datetime.datetime.fromtimestamp(time.mktime(time_struct))
 
-    def _parse_submit_output(self, retval, stdout, stderr):
+    def _parse_submit_output(self, retval: int, stdout: str, stderr: str) -> str | ExitCode:
         """Parse the output of the submit command, as returned by executing the
         command returned by _get_submit_command command.
 
@@ -686,7 +690,7 @@ class PbsBaseClass(BashCliScheduler):
 
         return stdout.strip()
 
-    def _get_kill_command(self, jobid):
+    def _get_kill_command(self, jobid: str) -> str:
         """Return the command to kill the job with specified jobid."""
         submit_command = f'qdel {jobid}'
 
@@ -694,7 +698,7 @@ class PbsBaseClass(BashCliScheduler):
 
         return submit_command
 
-    def _parse_kill_output(self, retval, stdout, stderr):
+    def _parse_kill_output(self, retval: int, stdout: str, stderr: str) -> bool:
         """Parse the output of the kill command.
 
         To be implemented by the plugin.

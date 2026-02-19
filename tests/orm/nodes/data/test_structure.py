@@ -8,6 +8,7 @@
 ###########################################################################
 """Tests for StructureData-related functions."""
 
+import numpy as np
 import pytest
 
 from aiida.orm.nodes.data.structure import StructureData, get_formula
@@ -47,3 +48,61 @@ def test_get_composition(mode, expected):
         structure.append_atom(name=symbol, symbols=[symbol], position=[0, 0, 0])
 
     assert structure.get_composition(mode=mode) == expected
+
+
+class TestCellAngles:
+    """Tests for ``StructureData.cell_angles`` with zero-length vectors."""
+
+    def test_orthogonal_cell(self):
+        """Test angles of an orthogonal cell are all 90 degrees."""
+        structure = StructureData(cell=((2.0, 0.0, 0.0), (0.0, 3.0, 0.0), (0.0, 0.0, 4.0)))
+        np.testing.assert_allclose(structure.cell_angles, [90.0, 90.0, 90.0])
+
+    def test_non_orthogonal_cell(self):
+        """Test angles of a non-orthogonal cell."""
+        structure = StructureData(cell=((1.0, 0.0, 0.0), (0.5, 0.5, 0.0), (0.0, 0.0, 1.0)))
+        angles = structure.cell_angles
+        np.testing.assert_allclose(angles[0], 90.0)  # alpha: angle(b, c)
+        np.testing.assert_allclose(angles[1], 90.0)  # beta: angle(a, c)
+        np.testing.assert_allclose(angles[2], 45.0)  # gamma: angle(a, b)
+
+    def test_all_zero_vectors_raises(self):
+        """Test that all-zero cell vectors raise ``ValueError``."""
+        structure = StructureData(cell=((0.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0)))
+        with pytest.raises(ValueError, match='all zero-length vectors'):
+            structure.cell_angles
+
+    def test_one_zero_vector(self):
+        """Test that a single zero-length vector gives ``None`` for affected angles."""
+        # First vector (a) is zero -> beta (a,c) and gamma (a,b) are None, alpha (b,c) is valid
+        structure = StructureData(cell=((0.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)))
+        angles = structure.cell_angles
+        np.testing.assert_allclose(angles[0], 90.0)  # alpha: angle(b, c)
+        assert angles[1] is None  # beta: angle(a, c)
+        assert angles[2] is None  # gamma: angle(a, b)
+
+    def test_two_zero_vectors(self):
+        """Test that two zero-length vectors give ``None`` for all angles."""
+        structure = StructureData(cell=((1.0, 0.0, 0.0), (0.0, 0.0, 0.0), (0.0, 0.0, 0.0)))
+        angles = structure.cell_angles
+        assert angles[0] is None  # alpha: angle(b, c)
+        assert angles[1] is None  # beta: angle(a, c)
+        assert angles[2] is None  # gamma: angle(a, b)
+
+    def test_parallel_vectors_clamps_cosine(self):
+        """Test that parallel vectors don't produce nan from floating-point overshoot.
+
+        When two cell vectors are parallel, the cosine can slightly exceed 1.0
+        due to floating-point arithmetic. The implementation clamps to [-1, 1]
+        so that ``arccos`` returns a valid angle instead of nan.
+        """
+        # These specific full-precision values produce cos_angle = 1.0000000000000002
+        # when the dot product and norms are computed independently.
+        # Values that trigger the safeguard were brute-forced by Claude.
+        # Without it, angles[2] would be nan
+        a = [-0.46572975357025687, -2.6125490126936013, 0.9503696823969031]
+        b = [-13.596417137478522, -76.27021013020025, 27.74489398116585]
+        structure = StructureData(cell=(a, b, (0.0, 0.0, 1.0)))
+        angles = structure.cell_angles
+        assert not any(np.isnan(a) for a in angles)
+        np.testing.assert_allclose(angles[2], 0.0, atol=1e-10)  # gamma: angle(a, b) ~ 0°

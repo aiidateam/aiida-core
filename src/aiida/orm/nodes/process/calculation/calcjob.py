@@ -355,14 +355,17 @@ class CalcJobNode(CalculationNode):
     def get_scheduler_state(self) -> Optional['JobState']:
         """Return the status of the calculation according to the cluster scheduler.
 
-        :return: a JobState enum instance.
+        :return: a JobState enum instance, or None if no state has been set.
         """
         from aiida.schedulers.datastructures import JobState
 
         state = self.base.attributes.get(self.SCHEDULER_STATE_KEY, None)
 
         if state is None:
-            return state
+            return None
+
+        # In older versions, the scheduler state was stored in uppercase
+        state = state.lower()
 
         return JobState(state)
 

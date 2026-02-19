@@ -791,3 +791,142 @@ def test_help_text_spec_inference_invalid_docstring(caplog, monkeypatch):
     # Now call the spec to have it parse the docstring.
     function.spec()
     assert 'function `function` has a docstring that could not be parsed' in caplog.records[0].message
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_get_process_logger_calcfunction():
+    """Test that ``get_process_logger`` returns a logger when called from within a calcfunction."""
+    from aiida.common.log import get_process_logger
+
+    message = 'Log message from calcfunction'
+
+    @calcfunction
+    def function_with_logging(data):
+        logger = get_process_logger()
+        assert logger is not None, 'get_process_logger should return a logger within a calcfunction'
+        logger.report(message)
+        return data + orm.Int(1)
+
+    _, node = function_with_logging.run_get_node(data=orm.Int(1))
+
+    # Verify that the log was stored in the database
+    logs = orm.Log.collection.get_logs_for(node)
+    assert len(logs) == 1
+    assert logs[0].message == message
+    assert logs[0].levelname == 'REPORT'
+    assert logs[0].dbnode_id == node.pk
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_get_process_logger_workfunction():
+    """Test that ``get_process_logger`` returns a logger when called from within a workfunction."""
+    from aiida.common.log import get_process_logger
+
+    message = 'Log message from workfunction'
+
+    @workfunction
+    def function_with_logging(data):
+        logger = get_process_logger()
+        assert logger is not None, 'get_process_logger should return a logger within a workfunction'
+        logger.report(message)
+        return data
+
+    _, node = function_with_logging.run_get_node(data=orm.Int(1).store())
+
+    # Verify that the log was stored in the database
+    logs = orm.Log.collection.get_logs_for(node)
+    assert len(logs) == 1
+    assert logs[0].message == message
+    assert logs[0].levelname == 'REPORT'
+    assert logs[0].dbnode_id == node.pk
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_get_process_logger_multiple_levels():
+    """Test that ``get_process_logger`` supports different log levels.
+
+    Note: By default, only REPORT level and above (REPORT, WARNING, ERROR, CRITICAL) are stored
+    to the database. DEBUG and INFO levels are below the default threshold.
+    """
+    from aiida.common.log import get_process_logger
+
+    messages = {
+        'warning': 'Warning message',
+        'error': 'Error message',
+        'report': 'Report message',
+    }
+
+    @calcfunction
+    def function_with_multiple_logs(data):
+        logger = get_process_logger()
+        assert logger is not None
+        logger.warning(messages['warning'])
+        logger.error(messages['error'])
+        logger.report(messages['report'])
+        return data + orm.Int(1)
+
+    _, node = function_with_multiple_logs.run_get_node(data=orm.Int(1))
+
+    # Verify that all logs at or above REPORT level were stored in the database
+    logs = orm.Log.collection.get_logs_for(node)
+    assert len(logs) == 3
+
+    # Check that each log level was recorded correctly
+    log_messages = {log.levelname: log.message for log in logs}
+    assert log_messages['WARNING'] == messages['warning']
+    assert log_messages['ERROR'] == messages['error']
+    assert log_messages['REPORT'] == messages['report']
+
+
+def test_get_process_logger_outside_process():
+    """Test that ``get_process_logger`` returns None when called outside a process context."""
+    from aiida.common.log import get_process_logger
+
+    logger = get_process_logger()
+    assert logger is None, 'get_process_logger should return None when called outside a process context'
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_get_process_logger_nested_calls():
+    """Test that ``get_process_logger`` works correctly in nested process function calls."""
+    from aiida.common.log import get_process_logger
+
+    outer_message = 'Message from outer workfunction'
+    inner_message = 'Message from inner calcfunction'
+
+    @calcfunction
+    def inner_function(data):
+        logger = get_process_logger()
+        assert logger is not None
+        logger.report(inner_message)
+        return data + orm.Int(1)
+
+    @workfunction
+    def outer_function(data):
+        logger = get_process_logger()
+        assert logger is not None
+        logger.report(outer_message)
+        result = inner_function(data)
+        return result
+
+    _, outer_node = outer_function.run_get_node(data=orm.Int(1).store())
+
+    # Verify that the outer workfunction's log was stored
+    outer_logs = orm.Log.collection.get_logs_for(outer_node)
+    assert len(outer_logs) == 1
+    assert outer_logs[0].message == outer_message
+
+    # Find the inner calcfunction node
+    from aiida.orm import QueryBuilder
+
+    builder = QueryBuilder()
+    builder.append(orm.WorkFunctionNode, filters={'id': outer_node.pk}, tag='outer')
+    builder.append(orm.CalcFunctionNode, with_incoming='outer')
+    inner_nodes = builder.all(flat=True)
+    assert len(inner_nodes) == 1
+    inner_node = inner_nodes[0]
+
+    # Verify that the inner calcfunction's log was stored
+    inner_logs = orm.Log.collection.get_logs_for(inner_node)
+    assert len(inner_logs) == 1
+    assert inner_logs[0].message == inner_message

@@ -1,0 +1,110 @@
+name: test-tutorials
+
+on:
+  push:
+    branches-ignore: [gh-pages]
+    paths:
+    - docs/source/tutorials/**
+    - .github/workflows/test-tutorials.yml
+  pull_request:
+    branches-ignore: [gh-pages]
+    paths:
+    - docs/source/tutorials/**
+    - .github/workflows/test-tutorials.yml
+  schedule:
+    # Run weekly to catch issues from dependency updates
+  - cron: 0 3 * * 1
+
+env:
+  FORCE_COLOR: 1
+
+jobs:
+
+  # Testing with just module1 to reduce CI noise during development
+  test-tutorial-notebooks:
+
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    strategy:
+      matrix:
+        python-version: ['3.10']
+        tutorial: [module1]
+      fail-fast: false
+
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install aiida-core and tutorial dependencies
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: ${{ matrix.python-version }}
+        extras: docs,tests,atomic_tools
+        from-lock: 'false'
+
+    - name: Install additional tutorial dependencies
+      run: |
+        uv pip install aiida-shell aiida-pythonjob
+
+    - name: Setup AiiDA profile for testing
+      run: |
+        uv run verdi presto
+        uv run verdi config set warnings.development_version False
+
+    - name: Execute tutorial notebook
+      run: |
+        uv run jupyter nbconvert \
+          --to notebook \
+          --execute \
+          --ExecutePreprocessor.timeout=180 \
+          --output-dir=/tmp \
+          docs/source/tutorials/${{ matrix.tutorial }}.md
+      continue-on-error: false
+
+    - name: Upload executed notebook on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: executed-notebook-${{ matrix.python-version }}-${{ matrix.tutorial }}
+        path: /tmp/${{ matrix.tutorial }}.ipynb
+        retention-days: 7
+
+  test-tutorials-build:
+    # Test that tutorials build correctly in docs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install aiida-core and docs dependencies
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: '3.10'
+        extras: docs,tests,atomic_tools
+        from-lock: 'false'
+
+    - name: Setup AiiDA profile for docs build
+      run: |
+        uv run verdi presto
+        uv run verdi config set warnings.development_version False
+
+    - name: Build HTML docs with tutorial execution
+      run: |
+        cd docs
+        # Set myst-nb to execute notebooks during build
+        export MYST_NB_EXECUTION_MODE=cache
+        make html
+      env:
+        SPHINXOPTS: -nW --keep-going -j auto
+
+    - name: Upload build artifacts on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: docs-build-artifacts
+        path: |
+          docs/build/
+          docs/source/tutorials/.jupyter_cache/
+        retention-days: 7

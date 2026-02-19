@@ -18,6 +18,7 @@ from aiida import orm
 from aiida.common.exceptions import IncompatibleStorageSchema, LicensingException
 from aiida.common.links import LinkType
 from aiida.tools.archive import create_archive, import_archive
+from aiida.tools.archive.exceptions import ArchiveExportError
 
 
 @pytest.mark.parametrize('entities', ['all', 'specific'])
@@ -154,6 +155,52 @@ def test_control_of_licenses(tmp_path):
 
     with pytest.raises(LicensingException):
         create_archive([struct], test_run=True, forbidden_licenses=crashing_filter)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_archive_creates_temp_in_parent_dir(tmp_path):
+    """Test that archive creation uses the output file's parent directory for temporary files."""
+    node = orm.Int(42).store()
+    filename = tmp_path / 'export.aiida'
+
+    create_archive([node], filename=filename)
+    assert filename.exists()
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_disk_space_error(tmp_path):
+    """Test disk space error handling."""
+    from unittest.mock import patch
+
+    node = orm.Int(42).store()
+    filename = tmp_path / 'export.aiida'
+
+    def mock_temp_dir_error(*args, **kwargs):
+        error = OSError('No space left on device')
+        error.errno = 28
+        raise error
+
+    with patch('aiida.tools.archive.create.tempfile.TemporaryDirectory', side_effect=mock_temp_dir_error):
+        with pytest.raises(ArchiveExportError, match='Insufficient disk space'):
+            create_archive([node], filename=filename)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_general_os_error(tmp_path):
+    """Test that non-disk-space OS errors are re-raised."""
+    from unittest.mock import patch
+
+    node = orm.Int(42).store()
+    filename = tmp_path / 'export.aiida'
+
+    def mock_temp_dir_error(*args, **kwargs):
+        error = OSError('Permission denied')
+        error.errno = 13
+        raise error
+
+    with patch('aiida.tools.archive.create.tempfile.TemporaryDirectory', side_effect=mock_temp_dir_error):
+        with pytest.raises(OSError, match='Permission denied'):
+            create_archive([node], filename=filename)
 
 
 def test_export_filter_size(tmp_path, aiida_profile_clean):

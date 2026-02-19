@@ -2,12 +2,78 @@ import asyncio
 import os
 import stat
 import subprocess
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from aiida.transports.plugins.async_backend import _OpenSSH, get_openssh_version
 from aiida.transports.plugins.ssh_async import AsyncSshTransport
+
+
+class TestAuthenticationScript:
+    """Tests for authentication script (2FA) functionality."""
+
+    @pytest.fixture
+    def make_script(self, tmp_path):
+        """Factory to create a script with given exit code."""
+
+        def _make(exit_code=0):
+            script = tmp_path / f'script_{exit_code}.sh'
+            script.write_text(f'#!/bin/bash\necho "STDOUT"\necho "STDERR" >&2\nexit {exit_code}\n')
+            os.chmod(script, 0o755)
+            return script
+
+        return _make
+
+    def _make_transport(self, script_path=None, use_old_param=False):
+        """Helper to create transport with mocked backend."""
+        kwargs = {'machine': 'localhost', 'backend': 'asyncssh'}
+        if script_path:
+            key = 'script_before' if use_old_param else 'authentication_script'
+            kwargs[key] = str(script_path)
+
+        transport = AsyncSshTransport(**kwargs)
+        transport.async_backend = MagicMock()
+        transport.async_backend.open = AsyncMock()
+        transport.async_backend.logger = MagicMock()
+        return transport
+
+    @pytest.mark.asyncio
+    async def test_script_success(self, make_script):
+        """Script returning 0 succeeds and logs info."""
+        transport = self._make_transport(make_script(exit_code=0))
+
+        await transport.open_async()
+
+        transport.async_backend.logger.info.assert_called()
+        assert 'executed successfully' in transport.async_backend.logger.info.call_args[0][0]
+
+    @pytest.mark.asyncio
+    async def test_script_failure_raises_and_logs(self, make_script):
+        """Script returning non-zero raises OSError and logs stdout/stderr."""
+        transport = self._make_transport(make_script(exit_code=1))
+
+        with pytest.raises(OSError, match='failed with exit code 1'):
+            await transport.open_async()
+
+        error_msg = transport.async_backend.logger.error.call_args[0][0]
+        assert 'stdout: STDOUT' in error_msg
+        assert 'stderr: STDERR' in error_msg
+
+    @pytest.mark.asyncio
+    async def test_backward_compatibility_script_before(self, make_script):
+        """Old 'script_before' parameter still works."""
+        script = make_script(exit_code=0)
+        transport = self._make_transport(script, use_old_param=True)
+        assert transport.auth_script == str(script)
+
+    @pytest.mark.asyncio
+    async def test_no_script_configured(self):
+        """Transport works without authentication script."""
+        transport = self._make_transport()
+        await transport.open_async()
+
+        assert transport.auth_script == 'None'
 
 
 class TestSemaphoreBehavior:

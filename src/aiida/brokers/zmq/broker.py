@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import typing as t
+from contextlib import contextmanager
 from pathlib import Path
 
 from aiida.brokers.broker import Broker
@@ -123,12 +124,13 @@ class ZmqBroker(Broker):
 
         return self._communicator
 
-    def iterate_tasks(self) -> t.Iterator[dict]:
+    def iterate_tasks(self) -> t.Iterator['ZmqIncomingTask']:
         """Iterate over pending tasks in the queue.
 
-        This provides direct access to the task queue for inspection.
+        Yields :class:`ZmqIncomingTask` objects that provide a compatible interface
+        with RabbitMQ incoming tasks (`.body` attribute and `.processing()` context manager).
 
-        :yield: Task data dictionaries
+        :yield: ZmqIncomingTask wrapper objects
         """
         queue_path = self._storage_path / 'tasks'
         if not queue_path.exists():
@@ -136,7 +138,7 @@ class ZmqBroker(Broker):
 
         queue = PersistentQueue(queue_path)
         for task_id, task_data in queue.get_all_pending():
-            yield task_data
+            yield ZmqIncomingTask(task_id, task_data, queue)
 
     def close(self) -> None:
         """Close the broker and release resources."""
@@ -152,6 +154,31 @@ class ZmqBroker(Broker):
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Context manager exit."""
         self.close()
+
+
+class ZmqIncomingTask:
+    """Wrapper providing an interface compatible with RabbitMQ incoming tasks.
+
+    Provides `.body` attribute and `.processing()` context manager so that
+    code consuming ``iterate_tasks`` works uniformly for both RMQ and ZMQ brokers.
+    """
+
+    def __init__(self, task_id: str, task_data: dict, queue: PersistentQueue) -> None:
+        self._task_id = task_id
+        self._task_data = task_data
+        self._queue = queue
+        self.body = task_data.get('body')
+
+    @contextmanager
+    def processing(self):
+        """Context manager that removes the task from the queue on exit."""
+
+        class _Outcome:
+            def set_result(self, result):
+                pass
+
+        yield _Outcome()
+        self._queue.remove_pending(self._task_id)
 
 
 def get_broker_base_path(profile: 'Profile') -> Path:

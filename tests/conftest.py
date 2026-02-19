@@ -815,184 +815,154 @@ def reset_log_level():
 
 
 @pytest.fixture
-def generate_calculation_node_add(aiida_localhost):
-    def _generate_calculation_node_add():
-        from aiida.engine import run_get_node
-        from aiida.orm import InstalledCode, Int
-        from aiida.plugins import CalculationFactory
+def generate_calculation_node_add(tmp_path, aiida_localhost, request):
+    def _generate_calculation_node_add(x: int = 1, y: int = 2, method: t.Literal['run', 'construct'] = 'run'):
+        if method == 'run':
+            # Actually run the calculation
+            from aiida.engine import run_get_node
+            from aiida.orm import InstalledCode, Int
+            from aiida.plugins import CalculationFactory
 
-        arithmetic_add = CalculationFactory('core.arithmetic.add')
+            arithmetic_add = CalculationFactory('core.arithmetic.add')
 
-        add_inputs = {
-            'x': Int(1),
-            'y': Int(2),
-            'code': InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
-        }
+            add_inputs = {
+                'x': Int(x),
+                'y': Int(y),
+                'code': InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
+            }
 
-        _, add_node = run_get_node(arithmetic_add, **add_inputs)
+            _, add_node = run_get_node(arithmetic_add, **add_inputs)
 
-        return add_node
+            return add_node
+
+        elif method == 'construct':
+            # Artificially create the node
+            import json
+
+            from aiida.common import LinkType
+            from aiida.engine import ProcessState
+            from aiida.orm import FolderData, InstalledCode, Int
+            from aiida.orm.utils.log import create_logger_adapter
+            from aiida.orm.utils.node import get_query_type_from_type_string
+
+            workdir = tmp_path / 'workdir'
+            computer = aiida_localhost
+            generate_calcjob_node = request.getfixturevalue('generate_calcjob_node')
+
+            # Create the calculation node
+            # NOTE: Not passing entry point due to:
+            # "[WARNING] could not load the calculation tools entry point core.arithmetic.add:
+            # Entry point 'core.arithmetic.add' not found in group 'aiida.tools.calculations'"
+            # As `aiida.tools.calculations` section is empty in `pyproject.toml`
+            # entry_point='core.arithmetic.add',
+            calcjob_node = generate_calcjob_node(
+                process_state=ProcessState.FINISHED,
+                exit_status=0,
+                entry_point=None,
+                workdir=str(workdir),
+            )
+            calcjob_node.computer = computer
+
+            # Create and store input nodes
+            x_node = Int(x)
+            y_node = Int(y)
+            code_node = InstalledCode(computer=computer, filepath_executable='/bin/bash')
+
+            x_node.store()
+            y_node.store()
+            code_node.store()
+
+            # Input files
+            input_content = f'echo $(({x} + {y}))\n'
+            calcjob_node.base.repository.put_object_from_bytes(input_content.encode(), 'aiida.in')
+
+            # .aiida folder contents
+            calcinfo_dict = {'foo': 'bar'}
+            job_tmpl_dict = {'foo': 'bar'}
+            calcjob_node.base.repository.put_object_from_bytes(
+                json.dumps(calcinfo_dict, indent=4).encode(), '.aiida/calcinfo.json'
+            )
+            calcjob_node.base.repository.put_object_from_bytes(
+                json.dumps(job_tmpl_dict, indent=4).encode(), '.aiida/job_tmpl.json'
+            )
+
+            # Submit script
+            submit_script = 'foobar'
+            calcjob_node.base.repository.put_object_from_bytes(submit_script.encode(), '_aiidasubmit.sh')
+
+            # Add input links
+            calcjob_node.base.links.add_incoming(x_node, link_type=LinkType.INPUT_CALC, link_label='x')
+            calcjob_node.base.links.add_incoming(y_node, link_type=LinkType.INPUT_CALC, link_label='y')
+            calcjob_node.base.links.add_incoming(code_node, link_type=LinkType.INPUT_CALC, link_label='code')
+
+            # Set some properties/attributes before storing
+            calcjob_node.base.attributes.set('is_valid_cache', True)
+            calcjob_node.base.attributes.set(
+                '_query_type_string', get_query_type_from_type_string(calcjob_node._plugin_type_string)
+            )
+            calcjob_node._logger_adapter = create_logger_adapter(calcjob_node._logger, calcjob_node)
+            calcjob_node.set_process_state('finished')
+            calcjob_node.set_process_label('ArithmeticAddCalculation')
+            calcjob_node.set_process_type('aiida.calculations:core.arithmetic.add')
+            calcjob_node.set_exit_status(0)
+            calcjob_node.base.attributes.set('input_filename', 'aiida.in')
+            calcjob_node.base.attributes.set('output_filename', 'aiida.out')
+
+            # Must store CalcjobNode before I can add output files
+            calcjob_node.store()
+
+            # Create FolderData node for `retrieved`
+            retrieved_folder = FolderData()
+            output_content = f'{x+y}\n'.encode()
+            retrieved_folder.put_object_from_bytes(output_content, 'aiida.out')
+
+            scheduler_stdout = '\n'.encode()
+            scheduler_stderr = '\n'.encode()
+            retrieved_folder.base.repository.put_object_from_bytes(scheduler_stdout, '_scheduler-stdout.txt')
+            retrieved_folder.base.repository.put_object_from_bytes(scheduler_stderr, '_scheduler-stderr.txt')
+            retrieved_folder.store()
+
+            retrieved_folder.base.links.add_incoming(calcjob_node, link_type=LinkType.CREATE, link_label='retrieved')
+
+            # Create and link output node (sum)
+            output_node = Int(x + y)
+            output_node.store()
+            output_node.base.links.add_incoming(calcjob_node, link_type=LinkType.CREATE, link_label='sum')
+
+            calcjob_node.seal()
+
+            return calcjob_node
 
     return _generate_calculation_node_add
 
 
-@pytest.fixture(scope='class')
-def construct_calculation_node_add(tmp_path_factory):
-    def _construct_calculation_node_add(x: int = 1, y: int = 2):
-        import json
-        import textwrap
-
-        from aiida.common import LinkType
-        from aiida.orm import CalcJobNode, Computer, FolderData, InstalledCode, Int
-
-        # Create a minimal computer
-        # Not using any of the `aiida_localhost` or `aiida_computer_local` fixtures as they are function-scoped
-        created, computer = Computer.collection.get_or_create(
-            label='mock_computer', hostname='localhost', transport_type='core.local', scheduler_type='core.direct'
-        )
-        if created:
-            computer.store()
-
-        # Create the calculation node
-        calc_node = CalcJobNode(computer=computer)
-
-        # Create input nodes
-        x_node = Int(x)
-        y_node = Int(y)
-        code_node = InstalledCode(computer=computer, filepath_executable='/bin/bash')
-
-        # Store input nodes
-        x_node.store()
-        y_node.store()
-        code_node.store()
-
-        # Input files
-        input_content = f'echo $(({x} + {y}))\n'
-        calc_node.base.repository.put_object_from_bytes(input_content.encode(), 'aiida.in')
-
-        # .aiida folder content
-        calcinfo_dict = {
-            'codes_info': [{'stdin_name': 'aiida.in', 'stdout_name': 'aiida.out', 'code_uuid': code_node.uuid}],
-            'retrieve_list': ['aiida.out', '_scheduler-stdout.txt', '_scheduler-stderr.txt'],
-            'uuid': calc_node.uuid,
-            'file_copy_operation_order': [2, 0, 1],
-        }
-
-        job_tmpl_dict = {
-            'submit_as_hold': False,
-            'rerunnable': False,
-            'job_name': 'aiida-42',
-            'sched_output_path': '_scheduler-stdout.txt',
-            'shebang': '#!/bin/bash',
-            'sched_error_path': '_scheduler-stderr.txt',
-            'sched_join_files': False,
-            'prepend_text': '',
-            'append_text': '',
-            'job_resource': {
-                'num_machines': 1,
-                'num_mpiprocs_per_machine': 1,
-                'num_cores_per_machine': None,
-                'num_cores_per_mpiproc': None,
-                'tot_num_mpiprocs': 1,
-            },
-            'codes_info': [
-                {
-                    'prepend_cmdline_params': [],
-                    'cmdline_params': ['/usr/bin/bash'],
-                    'use_double_quotes': [False, False],
-                    'wrap_cmdline_params': False,
-                    'stdin_name': 'aiida.in',
-                    'stdout_name': 'aiida.out',
-                    'stderr_name': None,
-                    'join_files': False,
-                }
-            ],
-            'codes_run_mode': 0,
-            'import_sys_environment': True,
-            'job_environment': {},
-            'environment_variables_double_quotes': False,
-            'max_memory_kb': None,
-            'max_wallclock_seconds': 3600,
-        }
-
-        calc_node.base.repository.put_object_from_bytes(
-            json.dumps(calcinfo_dict, indent=4).encode(), '.aiida/calcinfo.json'
-        )
-        calc_node.base.repository.put_object_from_bytes(
-            json.dumps(job_tmpl_dict, indent=4).encode(), '.aiida/job_tmpl.json'
-        )
-
-        # Submit script
-        submit_script = textwrap.dedent("""\
-            #!/bin/bash
-            exec > _scheduler-stdout.txt
-            exec 2> _scheduler-stderr.txt
-
-            '/usr/bin/bash' < 'aiida.in' > 'aiida.out'
-        """)
-
-        calc_node.base.repository.put_object_from_bytes(submit_script.encode(), '_aiidasubmit.sh')
-
-        # Store CalcInfo in node attributes
-        calc_node.base.attributes.set('input_filename', 'aiida.in')
-        calc_node.base.attributes.set('output_filename', 'aiida.out')
-
-        # Add input links
-        calc_node.base.links.add_incoming(x_node, link_type=LinkType.INPUT_CALC, link_label='x')
-        calc_node.base.links.add_incoming(y_node, link_type=LinkType.INPUT_CALC, link_label='y')
-        calc_node.base.links.add_incoming(code_node, link_type=LinkType.INPUT_CALC, link_label='code')
-
-        # Must store CalcjobNode before I can add output files
-        calc_node.store()
-
-        # Create FolderData node for retrieved
-        retrieved_folder = FolderData()
-        output_content = f'{x+y}\n'.encode()
-        retrieved_folder.put_object_from_bytes(output_content, 'aiida.out')
-
-        scheduler_stdout = '\n'.encode()
-        scheduler_stderr = '\n'.encode()
-        retrieved_folder.base.repository.put_object_from_bytes(scheduler_stdout, '_scheduler-stdout.txt')
-        retrieved_folder.base.repository.put_object_from_bytes(scheduler_stderr, '_scheduler-stderr.txt')
-        retrieved_folder.store()
-
-        retrieved_folder.base.links.add_incoming(calc_node, link_type=LinkType.CREATE, link_label='retrieved')
-
-        # Create and link output node (sum)
-        output_node = Int(x + y)
-        output_node.store()
-        output_node.base.links.add_incoming(calc_node, link_type=LinkType.CREATE, link_label='sum')
-
-        # Set process properties
-        calc_node.set_process_state('finished')
-        calc_node.set_process_label('ArithmeticAddCalculation')
-        calc_node.set_process_type('aiida.calculations:core.arithmetic.add')
-        calc_node.set_exit_status(0)
-
-        return calc_node
-
-    return _construct_calculation_node_add
-
-
 @pytest.fixture
 def generate_workchain_multiply_add(aiida_localhost):
-    def _generate_workchain_multiply_add():
-        from aiida.engine import run_get_node
-        from aiida.orm import InstalledCode, Int
-        from aiida.plugins import WorkflowFactory
+    def _generate_workchain_multiply_add(
+        x: int = 1, y: int = 2, z: int = 3, method: t.Literal['run', 'construct'] = 'run'
+    ):
+        if method == 'run':
+            # Original implementation - actually run the workchain
+            from aiida.engine import run_get_node
+            from aiida.orm import InstalledCode, Int
+            from aiida.plugins import WorkflowFactory
 
-        multiplyaddworkchain = WorkflowFactory('core.arithmetic.multiply_add')
+            multiplyaddworkchain = WorkflowFactory('core.arithmetic.multiply_add')
 
-        multiply_add_inputs = {
-            'x': Int(1),
-            'y': Int(2),
-            'z': Int(3),
-            'code': InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
-        }
+            multiply_add_inputs = {
+                'x': Int(x),
+                'y': Int(y),
+                'z': Int(z),
+                'code': InstalledCode(computer=aiida_localhost, filepath_executable='/bin/bash'),
+            }
 
-        _, multiply_add_node = run_get_node(multiplyaddworkchain, **multiply_add_inputs)
+            _, multiply_add_node = run_get_node(multiplyaddworkchain, **multiply_add_inputs)
 
-        return multiply_add_node
+            return multiply_add_node
+
+        elif method == 'construct':
+            msg = 'Manual construction method for multiply_add workchain not yet implemented.'
+            raise NotImplementedError(msg)
 
     return _generate_workchain_multiply_add
 

@@ -217,6 +217,21 @@ class PersistentQueue:
         _LOGGER.info('Cleared %d pending tasks', count)
         return count
 
+    def remove_pending(self, task_id: str) -> bool:
+        """Remove a pending task by its ID without processing it.
+
+        :param task_id: ID of the task to remove
+        :return: True if the task was removed, False if not found
+        """
+        for filename in self._pending:
+            if self._extract_task_id(filename) == task_id:
+                task_file = self._pending_path / filename
+                task_file.unlink(missing_ok=True)
+                self._pending.remove(filename)
+                _LOGGER.debug('Removed pending task %s', task_id)
+                return True
+        return False
+
     def get_all_pending(self) -> list[tuple[str, dict[str, Any]]]:
         """Get all pending tasks without removing them.
 

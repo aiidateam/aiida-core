@@ -399,7 +399,7 @@ class TestProcessQueueRouting:
             runner._controller = original_controller
 
     def test_submit_to_custom_queue(self, queue_config, arithmetic_add_builder, manager):
-        """Test that submit() with queue parameter routes to the specified queue."""
+        """Test that submit() with user_queue parameter routes to the specified queue."""
         from unittest.mock import MagicMock
 
         from aiida.orm import ProcessNode
@@ -411,7 +411,7 @@ class TestProcessQueueRouting:
         runner._controller = mock_controller
 
         try:
-            node = launch.submit(arithmetic_add_builder, queue='priority')
+            node = launch.submit(arithmetic_add_builder, user_queue='priority')
 
             # Queue name should be stored on the node
             queue_name = node.base.attributes.get(ProcessNode.QUEUE_NAME_KEY, None)

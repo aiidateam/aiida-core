@@ -126,11 +126,35 @@ def run_get_pk(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None
     return runner.run_get_pk(process, inputs, **kwargs)
 
 
+def _get_process_class(process: TYPE_SUBMIT_PROCESS) -> t.Type[Process]:
+    """Get the process class from a process argument.
+
+    :param process: Process class, instance, or builder.
+    :return: The process class.
+    """
+    if isinstance(process, ProcessBuilder):
+        return process.process_class
+    if isinstance(process, Process):
+        return type(process)
+    return process
+
+
+def _has_input_port(process: TYPE_SUBMIT_PROCESS, port_name: str) -> bool:
+    """Check if a process has a specific input port.
+
+    :param process: Process class, instance, or builder.
+    :param port_name: Name of the input port to check.
+    :return: True if the process has the input port.
+    """
+    process_class = _get_process_class(process)
+    return port_name in process_class.spec().inputs
+
+
 def submit(
     process: TYPE_SUBMIT_PROCESS,
     inputs: dict[str, t.Any] | None = None,
     *,
-    queue: str | None = None,
+    user_queue: str | None = None,
     wait: bool = False,
     wait_interval: int = 5,
     **kwargs: t.Any,
@@ -144,7 +168,8 @@ def submit(
 
     :param process: the process class, instance or builder to submit
     :param inputs: the input dictionary to be passed to the process
-    :param queue: the user queue name to submit to (default: 'default'). Must be created with `verdi broker queue create`.
+    :param user_queue: the user queue name to submit to (default: 'default'). Must be created with
+        `verdi broker queue create`. If the process has an input port named `user_queue`, use `_user_queue` instead.
     :param wait: when set to ``True``, the submission will be blocking and wait for the process to complete at which
         point the function returns the calculation node.
     :param wait_interval: the number of seconds to wait between checking the state of the process when ``wait=True``.
@@ -152,6 +177,18 @@ def submit(
     :return: the calculation node of the process
     """
     from aiida.common.docs import URL_NO_BROKER
+
+    # Handle user_queue parameter conflict with process input ports
+    # If the process has an input port named 'user_queue', users must use '_user_queue' instead
+    if _has_input_port(process, 'user_queue'):
+        if user_queue is not None:
+            raise InvalidOperation(
+                "This process has an input port named 'user_queue'. To specify the submission queue, "
+                "use '_user_queue' instead: submit(process, _user_queue='queue_name', ...)"
+            )
+        # Check for _user_queue fallback in kwargs
+        if '_user_queue' in kwargs:
+            user_queue = kwargs.pop('_user_queue')
 
     inputs = prepare_inputs(inputs, **kwargs)
 
@@ -188,7 +225,7 @@ def submit(
     # Determine queue routing for multi-queue mode
     # Since we verified runner.controller exists above, broker must also exist,
     # so _get_queue_info_for_submit will return a valid tuple (not None)
-    queue_info = _get_queue_info_for_submit(process_inited, user_queue=queue)
+    queue_info = _get_queue_info_for_submit(process_inited, user_queue=user_queue)
     assert queue_info is not None, 'Queue info must be set when broker is configured'
     user_queue, queue_type = queue_info
     process_inited.set_queue_name(user_queue)  # Store for nested submissions

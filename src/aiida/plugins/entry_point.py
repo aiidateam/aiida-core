@@ -87,6 +87,7 @@ ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP = {
     'aiida.cmdline.computer.configure': 'aiida.cmdline.computer.configure',
     'aiida.cmdline.data': 'aiida.cmdline.data',
     'aiida.cmdline.data.structure.import': 'aiida.cmdline.data.structure.import',
+    'aiida.cmdline.verdi': 'aiida.cmdline.verdi',
     'aiida.data': 'aiida.orm.nodes.data',
     'aiida.groups': 'aiida.orm.groups',
     'aiida.orm': 'aiida.orm',

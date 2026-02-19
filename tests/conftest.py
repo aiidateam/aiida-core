@@ -73,7 +73,9 @@ def pytest_collection_modifyitems(items, config):
     """Automatically generate markers for certain tests.
 
     Most notably, we add the 'presto' marker for all tests that
-    are not marked with either requires_broker or requires_psql.
+    are not marked with requires_rmq, requires_psql, or nightly.
+    Tests marked requires_broker are included in presto since ZMQ
+    broker is available without external services.
     """
     filepath_psqldos = Path(__file__).parent / 'storage' / 'psql_dos'
     filepath_django = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'django_branch'
@@ -120,11 +122,12 @@ def pytest_collection_modifyitems(items, config):
         if filepath_item.is_relative_to(filepath_psqldos):
             item.add_marker('requires_psql')
 
-        # Add 'presto' marker to tests that require no external services (no PSQL, no broker).
+        # Add 'presto' marker to tests that don't need external services.
+        # Tests with requires_broker ARE included (ZMQ broker needs no external service).
+        # Tests with requires_rmq, requires_psql, or nightly are excluded.
         markers = [marker.name for marker in item.iter_markers()]
         if (
-            'requires_broker' not in markers
-            and 'requires_rmq' not in markers
+            'requires_rmq' not in markers
             and 'requires_psql' not in markers
             and 'nightly' not in markers
         ):
@@ -195,8 +198,8 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
 
     # Determine broker based on CLI option and markers
     if 'presto' in marker_opts:
-        # Presto tests don't use a broker
-        broker = None
+        # Presto tests use ZMQ broker (no external service required)
+        broker = 'core.zmq'
     elif broker_backend is TestBrokerBackend.RMQ:
         broker = 'core.rabbitmq'
     elif broker_backend is TestBrokerBackend.ZMQ:

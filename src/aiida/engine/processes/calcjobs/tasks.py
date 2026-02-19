@@ -243,6 +243,9 @@ async def task_monitor_job(
     """
     state = node.get_state()
 
+    # import traceback
+    # traceback.print_stack()
+    # breakpoint()
     if state in [CalcJobState.RETRIEVING, CalcJobState.STASHING]:
         logger.warning(f'CalcJob<{node.pk}> already marked as `{state}`, skipping task_monitor_job')
         return None

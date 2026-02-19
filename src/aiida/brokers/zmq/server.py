@@ -354,8 +354,9 @@ class ZmqBrokerServer:
             self._send_rpc_error(identity, rpc_id, 'Missing recipient')
             return
 
-        # Find recipient identity
-        recipient_identity = self._rpc_subscribers.get(recipient)
+        # Find recipient identity (convert to string for consistent lookup,
+        # since subscribers register with string identifiers)
+        recipient_identity = self._rpc_subscribers.get(str(recipient))
         if not recipient_identity:
             _LOGGER.warning('RPC recipient not found: %s', recipient)
             self._send_rpc_error(identity, rpc_id, f'Recipient not found: {recipient}')

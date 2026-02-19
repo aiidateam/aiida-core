@@ -9,6 +9,7 @@ import typing as t
 import click
 
 from aiida.common import exceptions
+from aiida.common.pydantic import OrmModel
 from aiida.plugins.entry_point import ENTRY_POINT_GROUP_FACTORY_MAPPING, get_entry_point_names
 from aiida.plugins.factories import BaseFactory
 
@@ -96,9 +97,15 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         from pydantic import ValidationError
 
         if hasattr(cls, 'Model'):
-            # The plugin defines a pydantic model: use it to validate the provided arguments
             try:
-                cls.Model(**kwargs)
+                Model = getattr(cls, 'CreateModel', cls.Model)  # noqa: N806
+                if 'attributes' in Model.model_fields:
+                    attr_field = Model.model_fields['attributes']
+                    AttributesModel = t.cast(OrmModel, attr_field.annotation)  # noqa: N806
+                    kwargs['attributes'] = {
+                        key: kwargs.pop(key) for key in AttributesModel.model_fields.keys() if key in kwargs
+                    }
+                Model(**kwargs)
             except ValidationError as exception:
                 param_hint = [
                     f'--{loc.replace("_", "-")}'  # type: ignore[union-attr]
@@ -153,8 +160,6 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         """
         from pydantic_core import PydanticUndefined
 
-        from aiida.common.pydantic import get_metadata
-
         cls = self.factory(entry_point)
 
         if not hasattr(cls, 'Model'):
@@ -168,10 +173,18 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             options_spec = self.factory(entry_point).get_cli_options()  # type: ignore[union-attr]
             return [self.create_option(*item) for item in options_spec]
 
+        Model = getattr(cls, 'CreateModel', cls.Model)  # noqa: N806
+
         options_spec = {}
 
-        for key, field_info in cls.Model.model_fields.items():
-            if get_metadata(field_info, 'exclude_from_cli'):
+        fields = dict(Model.model_fields)
+        attr_field = fields.get('attributes')
+        if attr_field is not None:
+            AttributesModel = t.cast(OrmModel, attr_field.annotation)  # noqa: N806
+            fields |= AttributesModel.model_fields
+
+        for key, field_info in fields.items():
+            if key in ('extras', 'attributes'):
                 continue
 
             default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default

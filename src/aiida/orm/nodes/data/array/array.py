@@ -10,12 +10,12 @@
 
 from __future__ import annotations
 
-import base64
 import io
-from typing import Any, Iterator, Optional
+from collections.abc import Iterable, Iterator, Sequence
+from typing import Any, Literal, Optional, Union, cast
 
 import numpy as np
-from pydantic import ConfigDict
+from pydantic import ConfigDict, field_validator
 
 from aiida.common.pydantic import MetadataField
 
@@ -47,66 +47,94 @@ class ArrayData(Data):
 
     """
 
-    class Model(Data.Model):
-        model_config = ConfigDict(arbitrary_types_allowed=True)
-        arrays: Optional[dict[str, bytes]] = MetadataField(
-            None,
-            description='The dictionary of numpy arrays.',
-            orm_to_model=lambda node, _: ArrayData.save_arrays(node.arrays),  # type: ignore[attr-defined]
-            model_to_orm=lambda model: ArrayData.load_arrays(model.arrays),  # type: ignore[attr-defined]
+    class AttributesModel(Data.AttributesModel):
+        model_config = ConfigDict(
+            arbitrary_types_allowed=True,
+            json_schema_extra={
+                'patternProperties': {
+                    r'^array\|[A-Za-z0-9_]+$': {
+                        'type': 'array',
+                        'items': {'type': 'integer'},
+                        'minItems': 1,
+                        'description': 'Shape of an array stored in the repository',
+                        'readOnly': True,
+                    }
+                }
+            },
         )
+
+        arrays: Optional[Union[Sequence, dict[str, Sequence]]] = MetadataField(
+            None,
+            description='A single (or dictionary of) array(s) to store',
+            orm_to_model=lambda node: cast(ArrayData, node).arrays,
+            write_only=True,
+            exclude=True,
+        )
+
+        @field_validator('arrays', mode='before')
+        @classmethod
+        def normalize_arrays(
+            cls,
+            value: Sequence | np.ndarray | dict[str, Sequence | np.ndarray] | None,
+        ) -> Sequence | dict[str, Sequence] | None:
+            if value is None:
+                return value
+            if isinstance(value, Sequence):
+                return value
+            if isinstance(value, np.ndarray):
+                return value.tolist()
+            elif isinstance(value, dict):
+                arrays: dict[str, Sequence] = {}
+                for key, array in value.items():
+                    if isinstance(array, Sequence):
+                        arrays[key] = array
+                    elif isinstance(array, np.ndarray):
+                        arrays[key] = array.tolist()
+                    else:
+                        raise TypeError(f'`arrays` should be an iterable or dictionary of iterables but got: {value}')
+                return arrays
+            else:
+                raise TypeError(f'`arrays` should be an iterable or dictionary of iterables but got: {value}')
 
     array_prefix = 'array|'
     default_array_name = 'default'
 
-    def __init__(self, arrays: np.ndarray | dict[str, np.ndarray] | None = None, **kwargs):
+    def __init__(self, arrays: Iterable | dict[str, Iterable] | None = None, **kwargs):
         """Construct a new instance and set one or multiple numpy arrays.
 
         :param arrays: An optional single numpy array, or dictionary of numpy arrays to store.
         """
+        arrays = arrays if arrays is not None else kwargs.get('attributes', {}).pop('arrays', {})
+
         super().__init__(**kwargs)
         self._cached_arrays: dict[str, np.ndarray] = {}
 
-        arrays = arrays if arrays is not None else {}
-
-        if isinstance(arrays, np.ndarray):
+        if isinstance(arrays, (Sequence, np.ndarray)):
             arrays = {self.default_array_name: arrays}
 
-        if (
-            not isinstance(arrays, dict)  # type: ignore[redundant-expr]
-            or any(not isinstance(a, np.ndarray) for a in arrays.values())
-        ):
-            raise TypeError(f'`arrays` should be a single numpy array or dictionary of numpy arrays but got: {arrays}')
+        if not isinstance(arrays, dict) or any(not isinstance(a, (Sequence, np.ndarray)) for a in arrays.values()):
+            raise TypeError(f'`arrays` should be a single sequence or dictionary of sequences but got: {arrays}')
 
         for key, value in arrays.items():
-            self.set_array(key, value)
-
-    @staticmethod
-    def save_arrays(arrays: dict[str, np.ndarray]) -> dict[str, bytes]:
-        results = {}
-
-        for key, array in arrays.items():
-            stream = io.BytesIO()
-            np.save(stream, array)
-            stream.seek(0)
-            results[key] = base64.encodebytes(stream.read())
-
-        return results
-
-    @staticmethod
-    def load_arrays(arrays: dict[str, bytes]) -> dict[str, np.ndarray]:
-        results = {}
-
-        for key, encoded in arrays.items():
-            stream = io.BytesIO(base64.decodebytes(encoded))
-            stream.seek(0)
-            results[key] = np.load(stream)
-
-        return results
+            self.set_array(key, np.array(value))
 
     @property
     def arrays(self) -> dict[str, np.ndarray]:
         return {name: self.get_array(name) for name in self.get_arraynames()}
+
+    def serialize(
+        self,
+        *,
+        context: dict[str, Any] | None = None,
+        minimal: bool = False,
+        mode: Literal['json'] | Literal['python'] = 'json',
+        dump_repo: bool = False,
+    ) -> dict[str, Any]:
+        serialized = super().serialize(context=context, minimal=minimal, mode=mode, dump_repo=dump_repo)
+        serialized['attributes'] |= {
+            f'{self.array_prefix}{name}': list(array.shape) for name, array in self.get_iterarrays()
+        }
+        return serialized
 
     def initialize(self):
         super().initialize()
@@ -218,18 +246,13 @@ class ArrayData(Data):
         :param name: The name of the array.
         :param array: The numpy array to store.
         """
-        import re
         import tempfile
 
         if not isinstance(array, np.ndarray):
             raise TypeError('ArrayData can only store numpy arrays. Convert the object to an array first')
 
         # Check if the name is valid
-        if not name or re.sub('[0-9a-zA-Z_]', '', name):
-            raise ValueError(
-                'The name assigned to the array ({}) is not valid,'
-                'it can only contain digits, letters and underscores'
-            )
+        self._validate_array_name(name)
 
         # Write the array to a temporary file, and then add it to the repository of the node
         with tempfile.NamedTemporaryFile() as handle:
@@ -245,11 +268,29 @@ class ArrayData(Data):
         # Store the array name and shape for querying purposes
         self.base.attributes.set(f'{self.array_prefix}{name}', list(array.shape))
 
+    def _validate_array_name(self, name: str) -> None:
+        """Validate the array name.
+
+        :param name: The name of the array.
+        :raises ValueError: if the name is not valid.
+        """
+        import re
+
+        if not name or re.sub('[0-9a-zA-Z_]', '', name):
+            raise ValueError(
+                f'The name assigned to the array ({name}) is not valid. '
+                'It can only contain digits, letters and underscores'
+            )
+
     def _validate(self) -> bool:
         """Check if the list of .npy files stored inside the node and the
         list of properties match. Just a name check, no check on the size
         since this would require to reload all arrays and this may take time
         and memory.
+
+        In case of mismatch, try to fix it by loading the arrays from files
+        and updating the properties accordingly. If no files are found,
+        raise a ValidationError.
         """
         from aiida.common.exceptions import ValidationError
 
@@ -257,9 +298,21 @@ class ArrayData(Data):
         properties = self._arraynames_from_properties()
 
         if set(files) != set(properties):
-            raise ValidationError(
-                f'Mismatch of files and properties for ArrayData node (pk= {self.pk}): {files} vs. {properties}'
-            )
+            if not files:
+                raise ValidationError(
+                    f'Mismatch of files and properties for ArrayData node (pk= {self.pk}): {files} vs. {properties}'
+                )
+            for file in files:
+                self._validate_array_name(file)
+                try:
+                    content = self.base.repository.get_object_content(f'{file}.npy', 'rb')
+                    array = np.load(io.BytesIO(content))
+                    self.base.attributes.set(f'{self.array_prefix}{file}', list(array.shape))
+                except Exception as exc:
+                    raise ValidationError(
+                        f'ArrayData node (pk= {self.pk}): could not load array `{file}` from file to fix mismatch.'
+                    ) from exc
+
         return super()._validate()
 
     def _get_array_entries(self) -> dict[str, Any]:

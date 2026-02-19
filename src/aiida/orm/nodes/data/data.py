@@ -8,6 +8,8 @@
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
 
+from __future__ import annotations
+
 from typing import Dict, Optional
 
 from aiida.common import exceptions
@@ -46,14 +48,20 @@ class Data(Node):
     _storable = True
     _unstorable_message = 'storing for this node has been disabled'
 
-    class Model(Node.Model):
+    class AttributesModel(Node.AttributesModel):
         source: Optional[dict] = MetadataField(
-            None, description='Source of the data.', is_subscriptable=True, exclude_from_cli=True
+            None,
+            description='Source of the data',
+            read_only=True,
         )
 
     def __init__(self, *args, source=None, **kwargs):
         """Construct a new instance, setting the ``source`` attribute if provided as a keyword argument."""
+
+        source = kwargs.get('attributes', {}).pop('source', source)
+
         super().__init__(*args, **kwargs)
+
         if source is not None:
             self.source = source
 
@@ -113,7 +121,7 @@ class Data(Node):
             raise ValueError('Source must be supplied as a dictionary')
         unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
         if unknown_attrs:
-            raise KeyError(f"Unknown source parameters: {', '.join(unknown_attrs)}")
+            raise KeyError(f'Unknown source parameters: {", ".join(unknown_attrs)}')
 
         self.base.attributes.set('source', source)
 
@@ -161,13 +169,13 @@ class Data(Node):
         except KeyError:
             if exporters.keys():
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'Currently implemented are: {}.'.format(
+                    'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
                         fileformat, self.__class__.__name__, ','.join(exporters.keys())
                     )
                 )
             else:
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'No formats are implemented yet.'.format(
+                    'The format {} is not implemented for {}. No formats are implemented yet.'.format(
                         fileformat, self.__class__.__name__
                     )
                 )
@@ -269,13 +277,13 @@ class Data(Node):
         except KeyError:
             if importers.keys():
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'Currently implemented are: {}.'.format(
+                    'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
                         fileformat, self.__class__.__name__, ','.join(importers.keys())
                     )
                 )
             else:
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'No formats are implemented yet.'.format(
+                    'The format {} is not implemented for {}. No formats are implemented yet.'.format(
                         fileformat, self.__class__.__name__
                     )
                 )
@@ -326,13 +334,13 @@ class Data(Node):
         except KeyError:
             if converters.keys():
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'Currently implemented are: {}.'.format(
+                    'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
                         object_format, self.__class__.__name__, ','.join(converters.keys())
                     )
                 )
             else:
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'No formats are implemented yet.'.format(
+                    'The format {} is not implemented for {}. No formats are implemented yet.'.format(
                         object_format, self.__class__.__name__
                     )
                 )

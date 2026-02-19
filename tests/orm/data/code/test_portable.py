@@ -20,8 +20,8 @@ from aiida.orm.nodes.data.code.portable import PortableCode
 
 def test_constructor_raises(tmp_path, bash_path):
     """Test the constructor when it is supposed to raise."""
-    with pytest.raises(TypeError, match=r'missing .* required positional argument'):
-        PortableCode()
+    with pytest.raises(ValueError, match=r'`filepath_executable` must be provided.'):
+        PortableCode(filepath_files=tmp_path)
 
     with pytest.raises(ValueError, match=r'The `filepath_executable` should not be absolute.'):
         PortableCode(filepath_executable=bash_path, filepath_files=tmp_path)
@@ -36,6 +36,12 @@ def test_constructor_raises(tmp_path, bash_path):
     file.touch()
     with pytest.raises(ValueError, match=r'The filepath .* is not a directory.'):
         PortableCode(filepath_executable='bash', filepath_files=file)
+
+
+def test_constructor_warns(bash_path):
+    """Test the constructor when it is supposed to warn."""
+    with pytest.warns(UserWarning, match=r'No `filepath_files` provided.*'):
+        PortableCode(filepath_executable=bash_path)
 
 
 def test_constructor(tmp_path):
@@ -150,9 +156,7 @@ def test_portablecode_extra_files(tmp_path, chdir_tmp_path):
     result, extra_args = code._prepare_yaml()
     ref_result = f"""label: some-label
 description: ''
-default_calc_job_plugin: null
 use_double_quotes: false
-with_mpi: null
 prepend_text: ''
 append_text: ''
 filepath_executable: bash
@@ -166,14 +170,3 @@ filepath_files: {tmp_path}/some-label
     dumped_files = {f.relative_to(repo_dump_path) for f in repo_dump_path.rglob('*')}
     inserted_files = {f.relative_to(filepath_files) for f in filepath_files.rglob('*')}
     assert dumped_files == inserted_files
-
-
-def test_serialization(tmp_path, chdir_tmp_path):
-    """Test that the node repository contents of an orm.PortableCode are dumped upon YAML export."""
-    filepath_files = tmp_path / 'tmp'
-    filepath_files.mkdir()
-    (filepath_files / 'bash').write_text('bash')
-    (filepath_files / 'subdir').mkdir()
-    (filepath_files / 'subdir/test').write_text('test')
-    code = PortableCode(label='some-label', filepath_executable='bash', filepath_files=filepath_files)
-    PortableCode.from_serialized(**code.serialize())

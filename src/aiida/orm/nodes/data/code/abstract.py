@@ -19,7 +19,7 @@ from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
-from aiida.common.pydantic import MetadataField, get_metadata
+from aiida.common.pydantic import MetadataField
 from aiida.orm import Computer
 from aiida.plugins import CalculationFactory
 
@@ -43,44 +43,32 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     _KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS: str = 'wrap_cmdline_params'
     _KEY_EXTRA_IS_HIDDEN: str = 'hidden'  # Should become ``is_hidden`` once ``Code`` is dropped
 
-    class Model(Data.Model, defer_build=True):
+    class AttributesModel(Data.AttributesModel):
         """Model describing required information to create an instance."""
 
-        label: str = MetadataField(
-            ...,
-            title='Label',
-            description='A unique label to identify the code by.',
-            short_name='-L',
-        )
-        description: str = MetadataField(
-            '',
-            title='Description',
-            description='Human-readable description, ideally including version and compilation environment.',
-            short_name='-D',
-        )
         default_calc_job_plugin: t.Optional[str] = MetadataField(
             None,
             title='Default `CalcJob` plugin',
-            description='Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`).',
+            description='Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`)',
             short_name='-P',
         )
         use_double_quotes: bool = MetadataField(
             False,
             title='Escape using double quotes',
             description='Whether the executable and arguments of the code in the submission script should be escaped '
-            'with single or double quotes.',
+            'with single or double quotes',
         )
         with_mpi: t.Optional[bool] = MetadataField(
             None,
             title='Run with MPI',
             description='Whether the executable should be run as an MPI program. This option can be left unspecified '
             'in which case `None` will be set and it is left up to the calculation job plugin or inputs '
-            'whether to run with MPI.',
+            'whether to run with MPI',
         )
         prepend_text: str = MetadataField(
             '',
             title='Prepend script',
-            description='Bash commands that should be prepended to the run line in all submit scripts for this code.',
+            description='Bash commands that should be prepended to the run line in all submit scripts for this code',
             option_cls=functools.partial(
                 TemplateInteractiveOption,
                 extension='.bash',
@@ -92,7 +80,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         append_text: str = MetadataField(
             '',
             title='Append script',
-            description='Bash commands that should be appended to the run line in all submit scripts for this code.',
+            description='Bash commands that should be appended to the run line in all submit scripts for this code',
             option_cls=functools.partial(
                 TemplateInteractiveOption,
                 extension='.bash',
@@ -102,15 +90,29 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             ),
         )
 
+    class Model(Data.Model):
+        label: str = MetadataField(
+            ...,
+            title='Label',
+            description='A unique label to identify the code by',
+            short_name='-L',
+        )
+        description: str = MetadataField(
+            '',
+            title='Description',
+            description='Human-readable description, ideally including version and compilation environment',
+            short_name='-D',
+        )
+
     def __init__(
         self,
         default_calc_job_plugin: str | None = None,
         append_text: str = '',
         prepend_text: str = '',
-        use_double_quotes: bool = False,
+        use_double_quotes: bool | None = False,
         with_mpi: bool | None = None,
-        is_hidden: bool = False,
-        wrap_cmdline_params: bool = False,
+        is_hidden: bool | None = False,
+        wrap_cmdline_params: bool | None = False,
         **kwargs,
     ):
         """Construct a new instance.
@@ -124,7 +126,32 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             form a single string. This is required to enable support for Docker with the ``ContainerizedCode``.
         :param is_hidden: Whether the code is hidden.
         """
+
+        attributes = kwargs.get('attributes', {})
+        default_calc_job_plugin = default_calc_job_plugin or attributes.pop(
+            self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN,
+            attributes.pop('default_calc_job_plugin', None),
+        )
+        append_text = append_text or attributes.pop(self._KEY_ATTRIBUTE_APPEND_TEXT, '')
+        prepend_text = prepend_text or attributes.pop(self._KEY_ATTRIBUTE_PREPEND_TEXT, '')
+        use_double_quotes = (
+            use_double_quotes
+            if use_double_quotes is not None
+            else attributes.pop(self._KEY_ATTRIBUTE_USE_DOUBLE_QUOTES, False)
+        )
+        with_mpi = with_mpi if with_mpi is not None else attributes.pop(self._KEY_ATTRIBUTE_WITH_MPI, None)
+        wrap_cmdline_params = wrap_cmdline_params or attributes.pop(self._KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS, False)
+        is_hidden = (
+            is_hidden if is_hidden is not None else kwargs.get('extras', {}).pop(self._KEY_EXTRA_IS_HIDDEN, False)
+        )
+        wrap_cmdline_params = (
+            wrap_cmdline_params
+            if wrap_cmdline_params is not None
+            else attributes.pop(self._KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS, False)
+        )
+
         super().__init__(**kwargs)
+
         self.default_calc_job_plugin = default_calc_job_plugin
         self.append_text = append_text
         self.prepend_text = prepend_text
@@ -369,21 +396,23 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """Export code to a YAML file."""
         import yaml
 
-        code_data = {}
-        sort = kwargs.get('sort', False)
+        code_data = (
+            {
+                'label': self.label,
+                'description': self.description,
+            }
+            | ({'computer': self.computer.label} if self.computer else {})
+            | {
+                key: value
+                for key, value in self.orm_to_model_field_values(
+                    context={'repository_path': pathlib.Path.cwd() / f'{self.label}'},
+                    model=self.AttributesModel,
+                ).items()
+                if value is not None
+            }
+        )
 
-        for key, field in self.Model.model_fields.items():
-            if get_metadata(field, 'exclude_from_cli'):
-                continue
-            elif (orm_to_model := get_metadata(field, 'orm_to_model')) is None:
-                value = getattr(self, key)
-            else:
-                value = orm_to_model(self, pathlib.Path.cwd() / f'{self.label}')
-
-            # If the attribute is not set, for example ``with_mpi`` do not export it
-            # so that there are no null-values in the resulting YAML file
-            code_data[key] = value
-        return yaml.dump(code_data, sort_keys=sort, encoding='utf-8'), {}
+        return yaml.dump(code_data, sort_keys=kwargs.get('sort', False), encoding='utf-8'), {}
 
     def _prepare_yml(self, *args, **kwargs):
         """Also allow for export as .yml"""

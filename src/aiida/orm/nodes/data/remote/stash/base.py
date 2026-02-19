@@ -8,6 +8,8 @@
 ###########################################################################
 """Data plugin that models an archived folder on a remote computer."""
 
+from typing import Optional
+
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
 from aiida.common.pydantic import MetadataField
@@ -36,15 +38,23 @@ class RemoteStashData(Data):
 
     _storable = False
 
-    class Model(Data.Model):
-        stash_mode: StashMode = MetadataField(description='The mode with which the data was stashed')
+    class AttributesModel(Data.AttributesModel):
+        stash_mode: StashMode = MetadataField(
+            description='The mode with which the data was stashed',
+        )
 
-    def __init__(self, stash_mode: StashMode, **kwargs):
+    def __init__(self, stash_mode: Optional[StashMode] = None, **kwargs):
         """Construct a new instance
 
         :param stash_mode: the stashing mode with which the data was stashed on the remote.
         """
+        stash_mode = stash_mode or kwargs.get('attributes', {}).pop('stash_mode', None)
+
+        if stash_mode is None:
+            raise ValueError('the `stash_mode` parameter must be specified.')
+
         super().__init__(**kwargs)
+
         self.stash_mode = stash_mode
 
     @property

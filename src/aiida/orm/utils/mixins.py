@@ -12,11 +12,9 @@ from __future__ import annotations
 
 import inspect
 
-import pydantic
-
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, override, type_check
-from aiida.common.pydantic import MetadataField
+from aiida.common.pydantic import MetadataField, OrmModel
 from aiida.common.warnings import warn_deprecation
 
 
@@ -183,8 +181,10 @@ class Sealable:
 
     SEALED_KEY = 'sealed'
 
-    class Model(pydantic.BaseModel, defer_build=True):
-        sealed: bool = MetadataField(description='Whether the node is sealed')
+    class AttributesModel(OrmModel):
+        sealed: bool = MetadataField(
+            description='Whether the node is sealed',
+        )
 
     @classproperty
     def _updatable_attributes(cls) -> tuple[str, ...]:  # noqa: N805

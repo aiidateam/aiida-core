@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, Sequence
 import numpy as np
 
 from aiida.common.exceptions import NotExistent
+from aiida.common.pydantic import MetadataField
 
 from .array import ArrayData
 
@@ -72,6 +73,20 @@ class XyData(ArrayData):
         To get the user-provided names, use :meth:`get_y` and extract the names from the returned tuples.
     """
 
+    class AttributesModel(ArrayData.AttributesModel):
+        x_name: str = MetadataField(
+            description='The name of the x array',
+        )
+        x_units: str = MetadataField(
+            description='The units of the x array',
+        )
+        y_names: Sequence[str] = MetadataField(
+            description='The names of the y arrays',
+        )
+        y_units: Sequence[str] = MetadataField(
+            description='The units of the y arrays',
+        )
+
     def __init__(
         self,
         x_array: 'ndarray' | None = None,
@@ -94,10 +109,16 @@ class XyData(ArrayData):
         :param y_names: The names of the y arrays.
         :param y_units: The units of the y arrays.
         """
+        attributes = kwargs.get('attributes', {})
+        x_name = x_name or attributes.pop('x_name', None)
+        x_units = x_units or attributes.pop('x_units', None)
+        y_names = y_names or attributes.pop('y_names', None)
+        y_units = y_units or attributes.pop('y_units', None)
+
         super().__init__(**kwargs)
 
         if x_array is not None:
-            self.set_x(x_array, x_name, x_units)  # type: ignore[arg-type]
+            self.set_x(x_array, x_name, x_units)
             self.set_y(y_arrays, y_names, y_units)  # type: ignore[arg-type]
 
     @staticmethod

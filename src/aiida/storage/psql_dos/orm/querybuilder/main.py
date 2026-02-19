@@ -52,30 +52,40 @@ array_length = sa_func.array_length
 PROJECT_MAP = {
     'db_dbauthinfo': {
         'pk': 'id',
-        'computer_pk': 'dbcomputer_id',
-        'user_pk': 'aiidauser_id',
+        'computer': 'dbcomputer_id',
+        'user': 'aiidauser_id',
     },
     'db_dbnode': {
         'pk': 'id',
-        'computer_pk': 'dbcomputer_id',
-        'user_pk': 'user_id',
+        'computer': 'dbcomputer_id',
+        'user': 'user_id',
+    },
+    'db_dbuser': {
+        'pk': 'id',
     },
     'db_dbcomputer': {
         'pk': 'id',
     },
     'db_dbgroup': {
         'pk': 'id',
-        'user_pk': 'user_id',
+        'user': 'user_id',
     },
     'db_dbcomment': {
         'pk': 'id',
-        'user_pk': 'user_id',
-        'node_pk': 'dbnode_id',
+        'user': 'user_id',
+        'node': 'dbnode_id',
     },
     'db_dblog': {
         'pk': 'id',
-        'node_pk': 'dbnode_id',
+        'node': 'dbnode_id',
     },
+}
+
+ALIAS_MAP = {
+    'id': 'pk',
+    'dbcomputer_id': 'computer',
+    'user_id': 'user',
+    'dbnode_id': 'node',
 }
 
 
@@ -1008,10 +1018,14 @@ def get_column(colname: str, alias: AliasedClass) -> InstrumentedAttribute:
     try:
         return getattr(alias, colname)
     except AttributeError as exc:
+        keys = []
+        for key in alias._sa_class_manager.mapper.c.keys():
+            if colalias := ALIAS_MAP.get(key):
+                keys.append(f'{colalias} (alias for {key})')
+            else:
+                keys.append(key)
         raise ValueError(
-            '{} is not a column of {}\nValid columns are:\n{}'.format(
-                colname, alias, '\n'.join(alias._sa_class_manager.mapper.c.keys())
-            )
+            '{} is not a column of {}\nValid columns are:\n{}'.format(colname, alias, '\n'.join(keys))
         ) from exc
 
 

@@ -25,7 +25,7 @@ class List(Data, MutableSequence):
 
     _LIST_KEY = 'list'
 
-    class Model(Data.Model):
+    class AttributesModel(Data.AttributesModel):
         value: t.List[t.Any] = MetadataField(
             description='Content of the data',
         )
@@ -35,7 +35,7 @@ class List(Data, MutableSequence):
 
         :param value: list to initialise the ``List`` node from
         """
-        data = value or kwargs.pop('list', [])
+        data = value or kwargs.pop('list', []) or kwargs.get('attributes', {}).pop('value', [])
         super().__init__(**kwargs)
         self.set_list(data)
 

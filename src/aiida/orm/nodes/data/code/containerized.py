@@ -30,21 +30,21 @@ class ContainerizedCode(InstalledCode):
     _KEY_ATTRIBUTE_ENGINE_COMMAND: str = 'engine_command'
     _KEY_ATTRIBUTE_IMAGE_NAME: str = 'image_name'
 
-    class Model(InstalledCode.Model):
+    class AttributesModel(InstalledCode.AttributesModel):
         """Model describing required information to create an instance."""
 
         engine_command: str = MetadataField(
             ...,
             title='Engine command',
             description='The command to run the container. It must contain the placeholder {image_name} that will be '
-            'replaced with the `image_name`.',
+            'replaced with the `image_name`',
             short_name='-E',
             priority=3,
         )
         image_name: str = MetadataField(
             ...,
             title='Image name',
-            description='Name of the image container in which to the run the executable.',
+            description='Name of the image container in which to the run the executable',
             short_name='-I',
             priority=2,
         )
@@ -52,12 +52,25 @@ class ContainerizedCode(InstalledCode):
             False,
             title='Wrap command line parameters',
             description='Whether all command line parameters to be passed to the engine command should be wrapped in '
-            'a double quotes to form a single argument. This should be set to `True` for Docker.',
+            'a double quotes to form a single argument. This should be set to `True` for Docker',
             priority=1,
         )
 
-    def __init__(self, engine_command: str, image_name: str, **kwargs):
+    def __init__(
+        self,
+        engine_command: str | None = None,
+        image_name: str | None = None,
+        **kwargs,
+    ):
+        attributes = kwargs.get('attributes', {})
+        engine_command = engine_command or attributes.pop(self._KEY_ATTRIBUTE_ENGINE_COMMAND, None)
+        image_name = image_name or attributes.pop(self._KEY_ATTRIBUTE_IMAGE_NAME, None)
+
+        if engine_command is None or image_name is None:
+            raise ValueError('Both `engine_command` and `image_name` must be provided.')
+
         super().__init__(**kwargs)
+
         self.engine_command = engine_command
         self.image_name = image_name
 

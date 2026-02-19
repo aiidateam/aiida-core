@@ -1,31 +1,42 @@
-array_labels: QbArrayField('array_labels', dtype=typing.Optional[typing.List[str]],
-  is_attribute=True)
-arrays: QbDictField('arrays', dtype=typing.Optional[dict[str, bytes]], is_attribute=True)
-attributes: QbDictField('attributes', dtype=typing.Optional[typing.Dict[str, typing.Any]],
-  is_attribute=False, is_subscriptable=True)
-cell: QbArrayField('cell', dtype=typing.List[typing.List[float]], is_attribute=True)
-computer: QbNumericField('computer', dtype=typing.Optional[int], is_attribute=False)
-ctime: QbNumericField('ctime', dtype=typing.Optional[datetime.datetime], is_attribute=False)
-description: QbStrField('description', dtype=typing.Optional[str], is_attribute=False)
-extras: QbDictField('extras', dtype=typing.Optional[typing.Dict[str, typing.Any]],
-  is_attribute=False, is_subscriptable=True)
-label: QbStrField('label', dtype=typing.Optional[str], is_attribute=False)
-label_numbers: QbArrayField('label_numbers', dtype=typing.List[int], is_attribute=True)
-labels: QbArrayField('labels', dtype=typing.List[str], is_attribute=True)
-mesh: QbArrayField('mesh', dtype=typing.List[int], is_attribute=True)
-mtime: QbNumericField('mtime', dtype=typing.Optional[datetime.datetime], is_attribute=False)
-node_type: QbStrField('node_type', dtype=typing.Optional[str], is_attribute=False)
-offset: QbArrayField('offset', dtype=typing.List[float], is_attribute=True)
-pbc1: QbField('pbc1', dtype=<class 'bool'>, is_attribute=True)
-pbc2: QbField('pbc2', dtype=<class 'bool'>, is_attribute=True)
-pbc3: QbField('pbc3', dtype=<class 'bool'>, is_attribute=True)
-pk: QbNumericField('pk', dtype=typing.Optional[int], is_attribute=False)
-process_type: QbStrField('process_type', dtype=typing.Optional[str], is_attribute=False)
-repository_content: QbDictField('repository_content', dtype=typing.Optional[dict[str,
-  bytes]], is_attribute=False)
-repository_metadata: QbDictField('repository_metadata', dtype=typing.Optional[typing.Dict[str,
-  typing.Any]], is_attribute=False)
-source: QbDictField('source', dtype=typing.Optional[dict], is_attribute=True, is_subscriptable=True)
-units: QbStrField('units', dtype=<class 'str'>, is_attribute=True)
-user: QbNumericField('user', dtype=typing.Optional[int], is_attribute=False)
-uuid: QbStrField('uuid', dtype=typing.Optional[str], is_attribute=False)
+array_labels: QbArrayField('attributes.array_labels', dtype=typing.Optional[typing.List[str]],
+  doc='Labels associated with the band arrays')
+attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.data.array.bands.BandsData.AttributesModel'>,
+  doc='The node attributes')
+cell: QbArrayField('attributes.cell', dtype=typing.Optional[typing.List[typing.List[float]]],
+  doc='Unit cell of the crystal, in Angstroms')
+computer: QbNumericField('computer', dtype=typing.Optional[int], doc='The PK of the
+  computer')
+ctime: QbNumericField('ctime', dtype=<class 'datetime.datetime'>, doc='The creation
+  time of the node')
+description: QbStrField('description', dtype=<class 'str'>, doc='The node description')
+extras: QbDictField('extras', dtype=typing.Dict[str, typing.Any], doc='The node extras')
+label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
+label_numbers: QbArrayField('attributes.label_numbers', dtype=typing.Optional[typing.List[int]],
+  doc='Index of the labels in the list of kpoints')
+labels: QbArrayField('attributes.labels', dtype=typing.Optional[typing.List[str]],
+  doc='Labels associated with the list of kpoints')
+mesh: QbArrayField('attributes.mesh', dtype=typing.Optional[typing.List[int]], doc='Mesh
+  of kpoints')
+mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
+  time of the node')
+node_type: QbStrField('node_type', dtype=<class 'str'>, doc='The type of the node')
+offset: QbArrayField('attributes.offset', dtype=typing.Optional[typing.List[float]],
+  doc='Offset of kpoints')
+pbc1: QbAnyField('attributes.pbc1', dtype=typing.Optional[bool], doc='Periodicity
+  in the first lattice vector direction')
+pbc2: QbAnyField('attributes.pbc2', dtype=typing.Optional[bool], doc='Periodicity
+  in the second lattice vector direction')
+pbc3: QbAnyField('attributes.pbc3', dtype=typing.Optional[bool], doc='Periodicity
+  in the third lattice vector direction')
+pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
+process_type: QbStrField('process_type', dtype=typing.Optional[str], doc='The process
+  type of the node')
+repository_metadata: QbDictField('repository_metadata', dtype=typing.Dict[str, typing.Any],
+  doc='Virtual hierarchy of the file repository')
+source: QbDictField('attributes.source', dtype=typing.Optional[dict], doc='Source
+  of the data')
+units: QbStrField('attributes.units', dtype=typing.Optional[str], doc='Units in which
+  the data in bands were stored')
+user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
+  the node')
+uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')

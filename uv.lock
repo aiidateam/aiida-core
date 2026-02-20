@@ -244,7 +244,7 @@ requires-dist = [
     { name = "pg8000", marker = "extra == 'tests'", specifier = "~=1.13" },
     { name = "pgsu", specifier = "~=0.3.0" },
     { name = "pgtest", marker = "extra == 'tests'", specifier = "~=1.3,>=1.3.1" },
-    { name = "plumpy", git = "https://github.com/khsrali/plumpy.git?rev=greenback" },
+    { name = "plumpy", git = "https://github.com/khsrali/plumpy.git?rev=3.14" },
     { name = "pre-commit", marker = "extra == 'pre-commit'", specifier = "~=3.5" },
     { name = "psutil", specifier = "~=7.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.0.2,<4" },
@@ -4924,7 +4924,7 @@ wheels = [
 [[package]]
 name = "plumpy"
 version = "0.25.1"
-source = { git = "https://github.com/khsrali/plumpy.git?rev=greenback#3fb333c3e7acd47dde902986859243739e872156" }
+source = { git = "https://github.com/khsrali/plumpy.git?rev=3.14#0693a5feeda0f90550efed2b7397ae7d48ca4262" }
 dependencies = [
     { name = "greenback" },
     { name = "kiwipy", extra = ["rmq"] },

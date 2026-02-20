@@ -16,7 +16,7 @@ dependencies:
 - docstring_parser
 - get-annotations~=0.1
 - python-graphviz~=0.19
-- plumpy@ git+https://github.com/khsrali/plumpy.git@greenback
+- plumpy@ git+https://github.com/khsrali/plumpy.git@3.14
 - ipython>=7.6
 - jedi<0.19
 - jinja2~=3.0

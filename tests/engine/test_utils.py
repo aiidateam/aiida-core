@@ -12,6 +12,7 @@ import asyncio
 import contextlib
 
 import pytest
+from plumpy import get_or_create_event_loop
 
 from aiida import orm
 from aiida.engine import calcfunction, workfunction
@@ -43,7 +44,7 @@ class TestExponentialBackoffRetry:
         """Test that exponential backoff will successfully catch exceptions as long as max_attempts is not exceeded."""
         global ITERATION  # noqa: PLW0603
         ITERATION = 0
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
 
         async def coro():
             """A function that will raise RuntimeError as long as ITERATION is smaller than MAX_ITERATIONS."""
@@ -59,7 +60,7 @@ class TestExponentialBackoffRetry:
         """Test that exponential backoff will finally raise if max_attempts is exceeded"""
         global ITERATION  # noqa: PLW0603
         ITERATION = 0
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
 
         def coro():
             """A function that will raise RuntimeError as long as ITERATION is smaller than MAX_ITERATIONS."""
@@ -103,7 +104,7 @@ class TestInterruptable:
 
     def test_normal_future(self):
         """Test interrupt future not being interrupted"""
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
 
         interruptable = InterruptableFuture()
         fut = asyncio.Future()
@@ -117,7 +118,7 @@ class TestInterruptable:
 
     def test_interrupt(self):
         """Test interrupt future being interrupted"""
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
 
         interruptable = InterruptableFuture()
         loop.call_soon(interruptable.interrupt, RuntimeError('STOP'))
@@ -132,7 +133,7 @@ class TestInterruptable:
 
     def test_inside_interrupted(self):
         """Test interrupt future being interrupted from inside of coroutine"""
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
 
         interruptable = InterruptableFuture()
         fut = asyncio.Future()
@@ -154,7 +155,7 @@ class TestInterruptable:
 
     def test_interruptable_future_set(self):
         """Test interrupt future being set before coroutine is done"""
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
 
         interruptable = InterruptableFuture()
 

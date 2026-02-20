@@ -234,3 +234,13 @@ class TestTrajectory:
         )
         trajectory.set_trajectory(**data)
         assert trajectory.get_step_structure(0).pbc == (True, False, False)
+
+    def test_trajectory_without_pbc(self, trajectory_data):
+        """Test old `TrajectoryData` that do not have the `pbc` attribute."""
+        trajectory = TrajectoryData()
+        trajectory.set_trajectory(**trajectory_data)
+        trajectory.base.attributes.delete('pbc')  # Emulate an old TrajectoryData without pbc
+
+        assert trajectory.pbc is None
+        structure = trajectory.get_step_structure(0)
+        assert structure.pbc == (True, True, True)

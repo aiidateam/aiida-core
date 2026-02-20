@@ -8,10 +8,13 @@
 ###########################################################################
 """AiiDA class to deal with crystal structure trajectories."""
 
+from __future__ import annotations
+
 import collections.abc
 from typing import List
 
 from aiida.common.pydantic import MetadataField
+from aiida.common.warnings import warn_deprecation
 
 from .array import ArrayData
 
@@ -33,7 +36,7 @@ class TrajectoryData(ArrayData):
         if structurelist is not None:
             self.set_structurelist(structurelist)
 
-    def _internal_validate(self, stepids, cells, symbols, positions, times, velocities):
+    def _internal_validate(self, stepids, cells, symbols, positions, times, velocities, pbc):
         """Internal function to validate the type and shape of the arrays. See
         the documentation of py:meth:`.set_trajectory` for a description of the
         valid shape and type of the parameters.
@@ -82,8 +85,14 @@ class TrajectoryData(ArrayData):
                     'have shape (s,n,3), '
                     'with s=number of steps and n=number of symbols'
                 )
+        if not (isinstance(pbc, (list, tuple)) and len(pbc) == 3 and all(isinstance(val, bool) for val in pbc)):
+            raise ValueError('`pbc` must be a list/tuple of length three with boolean values.')
+        if cells is None and list(pbc) != [False, False, False]:
+            raise ValueError('Periodic boundary conditions are only possible when a cell is defined.')
 
-    def set_trajectory(self, symbols, positions, stepids=None, cells=None, times=None, velocities=None):
+    def set_trajectory(
+        self, symbols, positions, stepids=None, cells=None, times=None, velocities=None, pbc: None | list | tuple = None
+    ):
         r"""Store the whole trajectory, after checking that types and dimensions
         are correct.
 
@@ -131,14 +140,28 @@ class TrajectoryData(ArrayData):
         :param velocities: if specified, must be a float array with the same
                       dimensions of the ``positions`` array.
                       The array contains the velocities in the atoms.
+        :param pbc: periodic boundary conditions of the structure. Should be a list of
+            length three with booleans indicating if the structure is periodic in that
+            direction. The same periodic boundary conditions are set for each step.
 
         .. todo :: Choose suitable units for velocities
         """
         import numpy
 
-        self._internal_validate(stepids, cells, symbols, positions, times, velocities)
-        # set symbols as attribute for easier querying
+        if cells is None:
+            pbc = pbc or [False, False, False]
+        elif pbc is None:
+            warn_deprecation(
+                "When 'cells' is not None, the periodic boundary conditions should be explicitly specified via"
+                "the 'pbc' keyword argument. Defaulting to '[True, True, True]', but this will raise in v3.0.0.",
+                version=3,
+            )
+            pbc = [True, True, True]
+
+        self._internal_validate(stepids, cells, symbols, positions, times, velocities, pbc)
+        # set symbols/pbc as attributes for easier querying
         self.base.attributes.set('symbols', list(symbols))
+        self.base.attributes.set('pbc', tuple(pbc))
         self.set_array('positions', positions)
         if stepids is not None:  # use input stepids
             self.set_array('steps', stepids)
@@ -189,7 +212,12 @@ class TrajectoryData(ArrayData):
                 raise ValueError('Symbol lists have to be the same for all of the supplied structures')
         symbols = list(symbols_first)
         positions = numpy.array([[list(s.position) for s in x.sites] for x in structurelist])
-        self.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions)
+        pbc_set = {structure.pbc for structure in structurelist}
+        if len(pbc_set) == 1:
+            pbc = pbc_set.pop()
+        else:
+            raise ValueError(f'All structures should have the same `pbc`, found: {pbc_set}')
+        self.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, pbc=pbc)
 
     def _validate(self):
         """Verify that the required arrays are present and that their type and
@@ -206,6 +234,7 @@ class TrajectoryData(ArrayData):
                 self.get_positions(),
                 self.get_times(),
                 self.get_velocities(),
+                self.pbc,
             )
         # Should catch TypeErrors, ValueErrors, and KeyErrors for missing arrays
         except Exception as exception:
@@ -263,6 +292,15 @@ class TrajectoryData(ArrayData):
         :raises KeyError: if the trajectory has not been set yet.
         """
         return self.base.attributes.get('symbols')
+
+    @property
+    def pbc(self) -> tuple[bool]:
+        """Return the tuple of periodic boundary conditions.
+
+        Returns a tuple of length three with booleans indicating if the structure is
+        periodic in that direction.
+        """
+        return self.base.attributes.get('pbc', None)
 
     def get_positions(self):
         """Return the array of positions, if it has already been set.
@@ -384,7 +422,7 @@ class TrajectoryData(ArrayData):
                     'passed {}, but the symbols are {}'.format(sorted(kind_names), sorted(symbols))
                 )
 
-        struc = StructureData(cell=cell)
+        struc = StructureData(cell=cell, pbc=self.pbc)
         if custom_kinds is not None:
             for _k in custom_kinds:
                 struc.append_kind(_k)

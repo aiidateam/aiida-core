@@ -1081,6 +1081,90 @@ def test_process_repair_verbosity(monkeypatch, run_cli_command):
     assert 'Process tasks: [1, 2]' in result.output
 
 
+@pytest.mark.requires_psql
+@pytest.mark.usefixtures('stopped_daemon_client')
+class TestProcessRepairUnreferencedConnections:
+    """Tests for unreferenced database connection cleanup in ``verdi process repair``."""
+
+    @pytest.fixture
+    def mock_no_rmq_inconsistencies(self, monkeypatch):
+        """Mock RabbitMQ-related functions to return empty lists.
+
+        This allows testing the database connection cleanup feature in isolation,
+        without any RabbitMQ inconsistencies to repair.
+        """
+        monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [])
+        monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [])
+
+    @pytest.fixture
+    def mock_unreferenced_connection(self, monkeypatch):
+        """Mock a single unreferenced database connection."""
+        from aiida.storage.psql_dos.backend import PsqlDosBackend
+
+        monkeypatch.setattr(
+            PsqlDosBackend, 'get_unreferenced_connections', lambda self: [(1234, 'idle in transaction', 5678)]
+        )
+
+    @pytest.fixture
+    def mock_terminate_connections(self, monkeypatch):
+        """Mock terminate_connections and track which PIDs were passed."""
+        from aiida.storage.psql_dos.backend import PsqlDosBackend
+
+        terminated = []
+
+        def mock_terminate(self, pids):
+            terminated.extend(pids)
+            return len(pids)
+
+        monkeypatch.setattr(PsqlDosBackend, 'terminate_connections', mock_terminate)
+        return terminated
+
+    def test_no_unreferenced_connections(self, monkeypatch, run_cli_command, mock_no_rmq_inconsistencies):
+        """Test ``verdi process repair`` when there are no unreferenced database connections."""
+        from aiida.storage.psql_dos.backend import PsqlDosBackend
+
+        monkeypatch.setattr(PsqlDosBackend, 'get_unreferenced_connections', lambda self: [])
+
+        result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
+        assert 'No unreferenced database connections found.' in result.output
+
+    def test_terminates_connections(
+        self, run_cli_command, mock_no_rmq_inconsistencies, mock_unreferenced_connection, mock_terminate_connections
+    ):
+        """Test ``verdi process repair`` terminates unreferenced database connections."""
+        result = run_cli_command(cmd_process.process_repair, user_input='y', use_subprocess=False)
+        assert 'Found 1 database connection(s)' in result.output
+        assert 'PID 1234' in result.output
+        assert 'Terminated 1 database connection(s)' in result.output
+        assert mock_terminate_connections == [1234]
+
+    def test_abort_on_user_decline(
+        self, run_cli_command, mock_no_rmq_inconsistencies, mock_unreferenced_connection, mock_terminate_connections
+    ):
+        """Test ``verdi process repair`` aborts when user declines to terminate connections."""
+        result = run_cli_command(cmd_process.process_repair, user_input='n', use_subprocess=False, raises=True)
+        assert 'Found 1 database connection(s)' in result.output
+        assert len(mock_terminate_connections) == 0
+
+    def test_dry_run_does_not_terminate(
+        self, run_cli_command, mock_no_rmq_inconsistencies, mock_unreferenced_connection, mock_terminate_connections
+    ):
+        """Test ``verdi process repair --dry-run`` does not terminate unreferenced connections."""
+        result = run_cli_command(cmd_process.process_repair, ['--dry-run'], use_subprocess=False)
+        assert 'Found 1 database connection(s)' in result.output
+        assert 'PID 1234' in result.output
+        assert len(mock_terminate_connections) == 0
+
+    def test_force_skips_confirmation(
+        self, run_cli_command, mock_no_rmq_inconsistencies, mock_unreferenced_connection, mock_terminate_connections
+    ):
+        """Test ``verdi process repair --force`` terminates connections without confirmation."""
+        result = run_cli_command(cmd_process.process_repair, ['--force'], use_subprocess=False)
+        assert 'Found 1 database connection(s)' in result.output
+        assert 'Terminated 1 database connection(s)' in result.output
+        assert mock_terminate_connections == [1234]
+
+
 @pytest.fixture
 def process_nodes():
     """Return a list of two stored ``CalcJobNode`` instances with a finished process state."""

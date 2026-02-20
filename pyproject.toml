@@ -308,6 +308,7 @@ omit = [
   "src/aiida/tools/_dumping/**/*"
 ]
 patch = ['subprocess']
+relative_files = true
 
 [tool.flit.module]
 name = 'aiida'

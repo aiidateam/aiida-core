@@ -145,8 +145,61 @@ class Manager:
         # Check whether a development version is being run. Note that needs to be called after ``configure_logging``
         # because this function relies on the logging being properly configured for the warning to show.
         self.check_version()
+        self._setup_event_loop_in_ipython()
 
         return self._profile
+
+    def _setup_event_loop_in_ipython(self) -> None:
+        """Monkey-patch ``IPythonKernel.do_execute`` to ensure a portal.
+
+        When running inside an environment with an already-running event loop
+        (e.g. a Jupyter notebook kernel), this patches the kernel's
+        ``do_execute`` to open a portal before executing each cell.
+        The portal is opended on whichever asyncio task ipykernel uses for that cell.
+
+        The patch takes effect from the **next cell**.
+        ``load_profile()`` must therefore be called in a prior cell before
+        synchronous process execution.
+
+        This is a no-op if no event loop is running (scripts, CLI, daemon).
+        """
+        import asyncio
+
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return  # No running loop — not in Jupyter, nothing to do
+
+        self._patch_kernel_do_execute()
+
+    def _patch_kernel_do_execute(self) -> None:
+        """Patch ``IPythonKernel.do_execute`` to ensure a portal before each cell."""
+        try:
+            from ipykernel.ipkernel import IPythonKernel
+
+            if getattr(IPythonKernel, '_aiida_portal_patched', False):
+                return  # Already patched
+
+            from plumpy import ensure_portal
+
+            _orig_do_execute = IPythonKernel.do_execute
+
+            async def _patched_do_execute(self, code, silent, *args, **kwargs):
+                await ensure_portal()
+                return await _orig_do_execute(self, code, silent, *args, **kwargs)
+
+            IPythonKernel.do_execute = _patched_do_execute  # type: ignore[method-assign]
+            IPythonKernel._aiida_portal_patched = True  # type: ignore[attr-defined]
+            self.logger.debug(
+                'Patched IPythonKernel.do_execute for portal. '
+                'This should occur in a Jupyter kernel, and only once per kernel session.'
+            )
+            print(
+                'Warning: Synchronous process execution is available only from the next cell. '
+                'All aiida engine methods is only availabe from the next cell.'
+            )
+        except Exception:
+            self.logger.debug('Could not patch IPythonKernel for portal.', exc_info=True)
 
     def reset_profile(self) -> None:
         """Close and reset any associated resources for the current profile."""

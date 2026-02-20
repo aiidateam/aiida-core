@@ -13,10 +13,8 @@ from __future__ import annotations
 import collections
 import functools
 import inspect
-import itertools
 import logging
 import signal
-import sys
 import types
 import typing as t
 from typing import TYPE_CHECKING
@@ -66,29 +64,6 @@ __all__ = ('FunctionProcess', 'calcfunction', 'workfunction')
 LOGGER = logging.getLogger(__name__)
 
 FunctionType = t.TypeVar('FunctionType', bound=t.Callable[..., t.Any])
-
-
-def get_stack_size(size: int = 2) -> int:  # type: ignore[return]
-    """Return the stack size for the caller's frame.
-
-    This solution is taken from https://stackoverflow.com/questions/34115298/ as a more performant alternative to the
-    naive ``len(inspect.stack())` solution. This implementation is about three orders of magnitude faster compared to
-    the naive solution and it scales especially well for larger stacks, which will be usually the case for the usage
-    of ``aiida-core``. However, it does use the internal ``_getframe`` of the ``sys`` standard library. It this ever
-    were to stop working, simply switch to using ``len(inspect.stack())``.
-
-    :param size: Hint for the expected stack size.
-    :returns: The stack size for caller's frame.
-    """
-    frame = sys._getframe(size)
-    try:
-        for size in itertools.count(size, 8):  # noqa: PLR1704
-            frame = frame.f_back.f_back.f_back.f_back.f_back.f_back.f_back.f_back  # type: ignore[assignment,union-attr]
-    except AttributeError:
-        while frame:  # type: ignore[truthy-bool]
-            frame = frame.f_back  # type: ignore[assignment]
-            size += 1
-        return size - 1  # type: ignore[unreachable]
 
 
 P = ParamSpec('P')
@@ -191,22 +166,6 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
             :param kwargs: input keyword arguments to construct the FunctionProcess
             :return: tuple of the outputs of the process and the process node
             """
-            frame_delta = 1000
-            frame_count = get_stack_size()
-            stack_limit = sys.getrecursionlimit()
-            LOGGER.info('Executing process function, current stack status: %d frames of %d', frame_count, stack_limit)
-
-            # If the current frame count is more than 80% of the stack limit, or comes within 200 frames, increase the
-            # stack limit by ``frame_delta``.
-            if frame_count > min(0.8 * stack_limit, stack_limit - 200):
-                LOGGER.warning(
-                    'Current stack contains %d frames which is close to the limit of %d. Increasing the limit by %d',
-                    frame_count,
-                    stack_limit,
-                    frame_delta,
-                )
-                sys.setrecursionlimit(stack_limit + frame_delta)
-
             manager = get_manager()
             runner = manager.get_runner()
             inputs = process_class.create_inputs(*args, **kwargs)
@@ -601,7 +560,9 @@ class FunctionProcess(Process):
         # The remaining inputs have to be keyword arguments.
         kwargs.update(**inputs)
 
-        result = self._func(*args, **kwargs)
+        from plumpy import run_with_portal
+
+        result = await run_with_portal(self._func, *args, **kwargs)
 
         if result is None or isinstance(result, ExitCode):  # type: ignore[redundant-expr]
             return result  # type: ignore[unreachable]

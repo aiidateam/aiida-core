@@ -15,6 +15,8 @@ import logging
 import traceback
 from typing import TYPE_CHECKING, AsyncIterator, Awaitable, Dict, Hashable, Optional
 
+from plumpy import get_or_create_event_loop
+
 from aiida.orm import AuthInfo
 
 if TYPE_CHECKING:
@@ -44,8 +46,8 @@ class TransportQueue:
     """
 
     def __init__(self, loop: Optional[asyncio.AbstractEventLoop] = None):
-        """:param loop: An asyncio event, will use `asyncio.get_event_loop()` if not supplied"""
-        self._loop = loop if loop is not None else asyncio.get_event_loop()
+        """:param loop: An asyncio event, will use `get_or_create_event_loop()` if not supplied"""
+        self._loop = loop if loop else get_or_create_event_loop()
         self._transport_requests: Dict[Hashable, TransportRequest] = {}
 
     @property
@@ -67,6 +69,15 @@ class TransportQueue:
         :param authinfo: The authinfo to be used to get transport
         :return: A future that can be yielded to give the transport
         """
+
+        from plumpy import ensure_portal
+
+        # NOTE: We need to ensure the portal here only because
+        # our scheduler has only a sync interface and _get_jobs_from_scheduler is using that
+        # if we ever provide a fully async scheduler interface then we can remove this here
+        # An issue is opened to reference this https://github.com/aiidateam/aiida-core/issues/7222
+        await ensure_portal()
+
         open_callback_handle = None
         transport_request = self._transport_requests.get(authinfo.pk, None)
 

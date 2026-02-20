@@ -10,6 +10,7 @@
 
 import asyncio
 
+from plumpy import get_or_create_event_loop
 from pympler import muppy
 
 
@@ -25,7 +26,7 @@ def get_instances(classes, delay=0.0):
         carry, although they may not actually be leaking memory.
     """
     if delay > 0:
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
         loop.run_until_complete(asyncio.sleep(delay))
 
     all_objects = muppy.get_objects()  # this also calls gc.collect()

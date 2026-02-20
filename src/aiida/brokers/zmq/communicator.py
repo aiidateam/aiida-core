@@ -489,10 +489,11 @@ class ZmqCommunicator:
             try:
                 result = subscriber(self, body)
 
-                # Resolve Future before serializing: plumpy subscribers
+                # Resolve Future(s) before serializing: plumpy subscribers
                 # return a kiwipy.Future (concurrent.futures.Future) whose
-                # result is computed on the runner's event loop thread.
-                if isinstance(result, Future):
+                # result may itself be another Future (via plum_to_kiwi_future
+                # chaining), so we loop until we get a concrete value.
+                while isinstance(result, Future):
                     result = result.result(timeout=RPC_TIMEOUT)
 
                 # Send response

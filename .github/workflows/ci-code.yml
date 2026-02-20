@@ -87,7 +87,7 @@ jobs:
       if: matrix.python-version == '3.13'
       uses: actions/upload-artifact@v6
       with:
-        name: coverage-xml
+        name: coverage
         include-hidden-files: true
         path: |
           coverage.xml

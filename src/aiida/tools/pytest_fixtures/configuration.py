@@ -140,6 +140,7 @@ def aiida_profile_factory():
             email=email,
             is_test_profile=True,
         )
+        profile.set_option('warnings.development_version', False)
         config.set_default_profile(profile.name)
         config.store()
 

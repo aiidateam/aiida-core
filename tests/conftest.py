@@ -510,6 +510,7 @@ def event_loop(manager, aiida_profile_clean):
 
     This is automatically called as a fixture for any test marked with ``@pytest.mark.asyncio``.
     """
+    assert manager.get_runner().loop is not None
     yield manager.get_runner().loop
 
 

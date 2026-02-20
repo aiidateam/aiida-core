@@ -32,18 +32,18 @@ MAX_ITERATIONS = 3
 class TestExponentialBackoffRetry:
     """Tests for the exponential backoff retry coroutine."""
 
-    @pytest.fixture(autouse=True)
-    def init_profile(self, aiida_localhost):
-        """Initialize the profile."""
-        self.computer = aiida_localhost
-        self.authinfo = self.computer.get_authinfo(orm.User.collection.get_default())
+    #    @pytest.fixture(autouse=True)
+    #    def init_profile(self, aiida_localhost):
+    #        """Initialize the profile."""
+    #        self.computer = aiida_localhost
+    #        self.authinfo = self.computer.get_authinfo(orm.User.collection.get_default())
 
-    @staticmethod
-    def test_exp_backoff_success():
+    # @staticmethod
+    @pytest.mark.asyncio
+    async def test_exp_backoff_success(self):
         """Test that exponential backoff will successfully catch exceptions as long as max_attempts is not exceeded."""
         global ITERATION  # noqa: PLW0603
         ITERATION = 0
-        loop = asyncio.get_event_loop()
 
         async def coro():
             """A function that will raise RuntimeError as long as ITERATION is smaller than MAX_ITERATIONS."""
@@ -53,13 +53,13 @@ class TestExponentialBackoffRetry:
                 raise RuntimeError
 
         max_attempts = MAX_ITERATIONS + 1
-        loop.run_until_complete(exponential_backoff_retry(coro, initial_interval=0.1, max_attempts=max_attempts))
+        await exponential_backoff_retry(coro, initial_interval=0.1, max_attempts=max_attempts)
 
-    def test_exp_backoff_max_attempts_exceeded(self):
+    @pytest.mark.asyncio
+    async def test_exp_backoff_max_attempts_exceeded(self):
         """Test that exponential backoff will finally raise if max_attempts is exceeded"""
         global ITERATION  # noqa: PLW0603
         ITERATION = 0
-        loop = asyncio.get_event_loop()
 
         def coro():
             """A function that will raise RuntimeError as long as ITERATION is smaller than MAX_ITERATIONS."""
@@ -70,7 +70,7 @@ class TestExponentialBackoffRetry:
 
         max_attempts = MAX_ITERATIONS - 1
         with pytest.raises(RuntimeError):
-            loop.run_until_complete(exponential_backoff_retry(coro, initial_interval=0.1, max_attempts=max_attempts))
+            await exponential_backoff_retry(coro, initial_interval=0.1, max_attempts=max_attempts)
 
 
 def test_instantiate_process_invalid(manager):
@@ -101,28 +101,28 @@ def test_is_process_function():
 class TestInterruptable:
     """Tests for InterruptableFuture and interruptable_task."""
 
-    def test_normal_future(self):
+    @pytest.mark.asyncio
+    async def test_normal_future(self):
         """Test interrupt future not being interrupted"""
-        loop = asyncio.get_event_loop()
-
         interruptable = InterruptableFuture()
         fut = asyncio.Future()
 
         async def task():
             fut.set_result('I am done')
 
-        loop.run_until_complete(interruptable.with_interrupt(task()))
+        await interruptable.with_interrupt(task())
         assert not interruptable.done()
         assert fut.result() == 'I am done'
 
-    def test_interrupt(self):
+    @pytest.mark.asyncio
+    async def test_interrupt(self):
         """Test interrupt future being interrupted"""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         interruptable = InterruptableFuture()
         loop.call_soon(interruptable.interrupt, RuntimeError('STOP'))
         try:
-            loop.run_until_complete(interruptable.with_interrupt(asyncio.sleep(10.0)))
+            await interruptable.with_interrupt(asyncio.sleep(10.0))
         except RuntimeError as err:
             assert str(err) == 'STOP'
         else:
@@ -130,6 +130,7 @@ class TestInterruptable:
 
         assert interruptable.done()
 
+    @pytest.mark.asyncio
     def test_inside_interrupted(self):
         """Test interrupt future being interrupted from inside of coroutine"""
         loop = asyncio.get_event_loop()
@@ -152,6 +153,7 @@ class TestInterruptable:
         assert interruptable.done()
         assert fut.result() == 'I got set.'
 
+    @pytest.mark.asyncio
     def test_interruptable_future_set(self):
         """Test interrupt future being set before coroutine is done"""
         loop = asyncio.get_event_loop()

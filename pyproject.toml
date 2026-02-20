@@ -31,7 +31,7 @@ classifiers = [
 dependencies = [
   'alembic~=1.8',
   'archive-path~=0.4.2',
-  "asyncssh~=2.19.0",
+  "asyncssh~=2.21.0",
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
   'click>=8.1.0,<8.3',
@@ -39,11 +39,11 @@ dependencies = [
   'docstring-parser',
   'get-annotations~=0.1;python_version<"3.10"',
   'graphviz~=0.19',
-  'plumpy~=0.25.0',
+  "plumpy~=0.25.0",
   'ipython>=7.6',
   'jedi<0.19',
   'jinja2~=3.0',
-  'kiwipy[rmq]~=0.8.4',
+  "kiwipy[rmq]>=0.8.4",
   'importlib-metadata~=6.0',
   'numpy>=1.21,<3',
   'paramiko~=3.0',
@@ -60,7 +60,8 @@ dependencies = [
   'typing-extensions~=4.1',
   'upf_to_json~=0.9.2',
   'wrapt~=1.11',
-  'chardet~=5.2.0;platform_system=="Windows"'
+  'chardet~=5.2.0;platform_system=="Windows"',
+  "nest-asyncio"
 ]
 description = 'AiiDA is a workflow manager for computational science with a strong focus on provenance, performance and extensibility.'
 dynamic = ['version']  # read from aiida/__init__.py
@@ -280,7 +281,7 @@ tests = [
   'pytest-asyncio~=0.12,<0.17',
   'pytest-timeout~=2.0',
   'pytest-cov~=7.0',
-  'pytest-rerunfailures~=12.0',
+  'pytest-rerunfailures~=16.0',
   'pytest-benchmark~=4.0',
   'pytest-regressions~=2.2',
   'pytest-xdist~=3.6',
@@ -411,8 +412,9 @@ filterwarnings = [
   'ignore:The `aiida.orm.nodes.data.upf` module is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   'ignore:The `Code` class is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   # https://github.com/aiidateam/plumpy/issues/283
-  'ignore:There is no current event loop:DeprecationWarning:plumpy',
-  'ignore:There is no current event loop:DeprecationWarning:nest_asyncio',
+  "ignore:'asyncio.[sg]et_event_loop_policy' is deprecated:DeprecationWarning",
+  "ignore:'asyncio.DefaultEventLoopPolicy' is deprecated:DeprecationWarning",
+  "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:pytest_asyncio",
   # spglib deprecation
   'ignore:dict interface is deprecated:DeprecationWarning',
   # https://github.com/aiidateam/archive-path/issues/21
@@ -579,3 +581,7 @@ commands = molecule {posargs:test}
 # .github/actions/install-aiida-core/action.yml
 # .readthedocs.yml
 required-version = ">=0.8.4"
+
+[tool.uv.sources]
+nest-asyncio = {git = "https://github.com/danielhollas/nest_asyncio", branch = "python-3.14"}
+plumpy = {git = "https://github.com/danielhollas/plumpy", rev = "06d6f3c32ee4e7f7dafcba0bd507401f349184c6"}

@@ -409,7 +409,7 @@ def clear_database_before_test_class(aiida_profile):
 @pytest.fixture(scope='function')
 def temporary_event_loop():
     """Create a temporary loop for independent test case"""
-    current = asyncio.get_event_loop()
+    current = plumpy.get_or_create_event_loop()
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:

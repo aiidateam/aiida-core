@@ -17,6 +17,8 @@ import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterator, List, Optional, Tuple, Type, Union
 
+from plumpy import get_or_create_event_loop
+
 if TYPE_CHECKING:
     from aiida.orm import ProcessNode
 
@@ -125,10 +127,10 @@ def interruptable_task(
     """Turn the given coroutine into an interruptable task by turning it into an InterruptableFuture and returning it.
 
     :param coro: the coroutine that should be made interruptable with object of InterutableFuture as last paramenter
-    :param loop: the event loop in which to run the coroutine, by default uses asyncio.get_event_loop()
+    :param loop: the event loop in which to run the coroutine, by default uses get_or_create_event_loop()
     :return: an InterruptableFuture
     """
-    loop = loop or asyncio.get_event_loop()
+    loop = loop or get_or_create_event_loop()
     future = InterruptableFuture()
 
     async def execute_coroutine():
@@ -252,7 +254,7 @@ def loop_scope(loop) -> Iterator[None]:
 
     :param loop: The event loop to make current for the duration of the scope
     """
-    current = asyncio.get_event_loop()
+    current = get_or_create_event_loop()
 
     try:
         asyncio.set_event_loop(loop)

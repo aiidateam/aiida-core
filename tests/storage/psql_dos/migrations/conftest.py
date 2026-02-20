@@ -10,6 +10,7 @@
 
 from uuid import uuid4
 
+import psycopg
 import pytest
 from pgtest.pgtest import PGTest
 from sqlalchemy import text
@@ -30,7 +31,6 @@ def empty_pg_cluster():
 @pytest.fixture
 def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):
     """Create a profile attached to an empty database and repository folder."""
-    import psycopg
 
     database_name = f'test_{uuid4().hex}'
     dsn = empty_pg_cluster.dsn
@@ -41,7 +41,7 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):
         conn = psycopg.connect(**dsn)
         conn.autocommit = True
         with conn.cursor() as cursor:
-            cursor.execute(f"CREATE DATABASE {database_name} ENCODING 'utf8';")
+            cursor.execute(f'CREATE DATABASE {database_name} ' "ENCODING 'UTF8' TEMPLATE template0;")
     finally:
         if conn:
             conn.close()

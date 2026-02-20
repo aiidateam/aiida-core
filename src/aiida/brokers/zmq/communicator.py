@@ -12,6 +12,7 @@ import zmq
 
 from aiida.brokers.utils import YAML_DECODER, YAML_ENCODER
 
+from .defaults import RPC_TIMEOUT
 from .protocol import (
     MessageType,
     decode_message,
@@ -487,6 +488,12 @@ class ZmqCommunicator:
         for identifier, subscriber in self._rpc_subscribers.items():
             try:
                 result = subscriber(self, body)
+
+                # Resolve Future before serializing: plumpy subscribers
+                # return a kiwipy.Future (concurrent.futures.Future) whose
+                # result is computed on the runner's event loop thread.
+                if isinstance(result, Future):
+                    result = result.result(timeout=RPC_TIMEOUT)
 
                 # Send response
                 response = make_rpc_response(rpc_id, self._client_id, result=result)

@@ -300,7 +300,7 @@ class TrajectoryData(ArrayData):
         Returns a tuple of length three with booleans indicating if the structure is
         periodic in that direction.
         """
-        return self.base.attributes.get('pbc')
+        return self.base.attributes.get('pbc', None)
 
     def get_positions(self):
         """Return the array of positions, if it has already been set.

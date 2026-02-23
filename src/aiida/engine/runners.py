@@ -166,6 +166,7 @@ class Runner:
         self.stop()
         if not self._loop.is_running():
             self._loop.close()
+        asyncio.set_event_loop_policy(None)
         self._closed = True
 
     def instantiate_process(self, process: TYPE_RUN_PROCESS, **inputs):

@@ -217,7 +217,6 @@ def test_global_max_iterations(generate_work_chain, generate_calculation_node, m
     process.ctx.children = []
 
     if max_iterations > 1:
-        # Trigger `handler_without_max_iter` max_iterations - 1 times
         while process.ctx.iteration < max_iterations - 1:
             process.ctx.children.append(generate_calculation_node(exit_status=1))
             process.ctx.iteration += 1

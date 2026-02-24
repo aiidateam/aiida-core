@@ -389,7 +389,6 @@ class BaseRestartWorkChain(WorkChain):
                     self.report(f'Aborting! Last ran: {self.ctx.process_name}<{node.pk}>')
                     return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
 
-                self.ctx.iteration = 0
                 pause_process = True
 
             if node.is_finished_ok and last_report.exit_code.status == 0:
@@ -412,6 +411,7 @@ class BaseRestartWorkChain(WorkChain):
                     f'`verdi process play {self.node.pk}`, or kill the work chain using '
                     f'`verdi process kill {self.node.pk}`.'
                 )
+                self.ctx.iteration = 0
                 self.pause(f"Paused for user inspection, see: 'verdi process report {self.node.pk}'")
 
             return None

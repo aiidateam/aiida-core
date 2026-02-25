@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import base64
 import io
-from typing import Any, Iterator, Optional
+from typing import Any, Iterator
 
 import numpy as np
 from pydantic import ConfigDict
@@ -49,7 +49,7 @@ class ArrayData(Data):
 
     class Model(Data.Model):
         model_config = ConfigDict(arbitrary_types_allowed=True)
-        arrays: Optional[dict[str, bytes]] = MetadataField(
+        arrays: dict[str, bytes] | None = MetadataField(
             None,
             description='The dictionary of numpy arrays.',
             orm_to_model=lambda node, _: ArrayData.save_arrays(node.arrays),  # type: ignore[attr-defined]

@@ -13,7 +13,15 @@ from __future__ import annotations
 import functools
 from inspect import getmembers
 from types import FunctionType
-from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Mapping,
+    Tuple,
+    Type,
+)
 
 from aiida import orm
 from aiida.common import AttributeDict
@@ -46,8 +54,8 @@ def validate_on_unhandled_failure(value: None | orm.Str, _) -> None | str:
 
 
 def validate_handler_overrides(
-    process_class: type['BaseRestartWorkChain'], handler_overrides: Optional[orm.Dict], ctx: 'PortNamespace'
-) -> Optional[str]:
+    process_class: type['BaseRestartWorkChain'], handler_overrides: orm.Dict | None, ctx: 'PortNamespace'
+) -> str | None:
     """Validator for the ``handler_overrides`` input port of the ``BaseRestartWorkChain``.
 
     The ``handler_overrides`` should be a dictionary where keys are strings that are the name of a process handler, i.e.
@@ -142,7 +150,7 @@ class BaseRestartWorkChain(WorkChain):
     `inspect_process`. Refer to their respective documentation for details.
     """
 
-    _process_class: Optional[Type['Process']] = None
+    _process_class: Type['Process'] | None = None
     _considered_handlers_extra = 'considered_handlers'
 
     @property
@@ -251,7 +259,7 @@ class BaseRestartWorkChain(WorkChain):
 
         return ToContext(children=append_(node))
 
-    def inspect_process(self) -> Optional['ExitCode']:
+    def inspect_process(self) -> 'ExitCode' | None:
         """Analyse the results of the previous process and call the handlers when necessary.
 
         If the process is excepted or killed, the work chain will abort. Otherwise any attached handlers will be called
@@ -430,7 +438,7 @@ class BaseRestartWorkChain(WorkChain):
         """
         return self.exposed_outputs(node, self.process_class)
 
-    def results(self) -> Optional['ExitCode']:
+    def results(self) -> 'ExitCode' | None:
         """Attach the outputs specified in the output specification from the last completed process."""
         node = self.ctx.children[self.ctx.iteration - 1]
 
@@ -472,7 +480,7 @@ class BaseRestartWorkChain(WorkChain):
         self.process_class
 
     @classmethod
-    def is_process_handler(cls, process_handler_name: Union[str, FunctionType]) -> bool:
+    def is_process_handler(cls, process_handler_name: str | FunctionType) -> bool:
         """Return whether the given method name corresponds to a process handler of this class.
 
         :param process_handler_name: string name of the instance method

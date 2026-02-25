@@ -689,8 +689,8 @@ class StructureData(Data):
         pbc2: bool = MetadataField(description='Whether periodic in the b direction')
         pbc3: bool = MetadataField(description='Whether periodic in the c direction')
         cell: t.List[t.List[float]] = MetadataField(description='The cell parameters')
-        kinds: t.Optional[t.List[dict]] = MetadataField(description='The kinds of atoms')
-        sites: t.Optional[t.List[dict]] = MetadataField(description='The atomic sites')
+        kinds: t.List[dict] | None = MetadataField(description='The kinds of atoms')
+        sites: t.List[dict] | None = MetadataField(description='The atomic sites')
 
     def __init__(
         self,

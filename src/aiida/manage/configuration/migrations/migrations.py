@@ -8,7 +8,13 @@
 ###########################################################################
 """Define the current configuration version and migrations."""
 
-from typing import Any, Dict, Iterable, Optional, Protocol, Type
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    Protocol,
+    Type,
+)
 
 from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER
@@ -475,7 +481,7 @@ def downgrade_config(
     return config
 
 
-def check_and_migrate_config(config, filepath: Optional[str] = None):
+def check_and_migrate_config(config, filepath: str | None = None):
     """Checks if the config needs to be migrated, and performs the migration if needed.
 
     :param config: the configuration dictionary
@@ -488,7 +494,7 @@ def check_and_migrate_config(config, filepath: Optional[str] = None):
     return config
 
 
-def config_needs_migrating(config, filepath: Optional[str] = None):
+def config_needs_migrating(config, filepath: str | None = None):
     """Checks if the config needs to be migrated.
 
     If the oldest compatible version of the configuration is higher than the current configuration version defined

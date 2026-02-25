@@ -3,7 +3,6 @@
 import contextlib
 import io
 import pathlib
-import typing as t
 
 import pytest
 
@@ -59,7 +58,7 @@ def repository_uninitialised(request, tmp_path_factory) -> Repository:
 
 
 @pytest.fixture(scope='function', params=[True, False])
-def tmp_path_parametrized(request, tmp_path_factory) -> t.Union[str, pathlib.Path]:
+def tmp_path_parametrized(request, tmp_path_factory) -> str | pathlib.Path:
     """Indirect parametrized fixture that returns temporary path both as ``str`` and as ``pathlib.Path``.
 
     This is a useful fixture to automatically parametrize a test for a method that accepts both types.

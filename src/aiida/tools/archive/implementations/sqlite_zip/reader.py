@@ -9,7 +9,7 @@
 """AiiDA archive reader implementation."""
 
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict
 
 from aiida.common.exceptions import CorruptStorage
 from aiida.storage.sqlite_zip.backend import SqliteZipBackend
@@ -20,11 +20,11 @@ from aiida.tools.archive.abstract import ArchiveReaderAbstract
 class ArchiveReaderSqlZip(ArchiveReaderAbstract):
     """An archive reader for the SQLite format."""
 
-    def __init__(self, path: Union[str, Path], **kwargs: Any):
+    def __init__(self, path: str | Path, **kwargs: Any):
         super().__init__(path, **kwargs)
         self._in_context = False
         # we lazily create the storage backend, then clean up on exit
-        self._backend: Optional[SqliteZipBackend] = None
+        self._backend: SqliteZipBackend | None = None
 
     def __enter__(self) -> 'ArchiveReaderSqlZip':
         self._in_context = True

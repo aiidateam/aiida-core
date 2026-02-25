@@ -3,7 +3,7 @@
 import contextlib
 import io
 import tempfile
-from typing import BinaryIO, Iterable, List, Optional
+from typing import BinaryIO, Iterable, List
 
 import pytest
 
@@ -14,11 +14,11 @@ class RepositoryBackend(AbstractRepositoryBackend):
     """Concrete implementation of ``AbstractRepositoryBackend``."""
 
     @property
-    def key_format(self) -> Optional[str]:
+    def key_format(self) -> str | None:
         return None
 
     @property
-    def uuid(self) -> Optional[str]:
+    def uuid(self) -> str | None:
         return None
 
     def initialise(self, **kwargs) -> None:

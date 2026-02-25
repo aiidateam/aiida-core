@@ -11,13 +11,13 @@ import hashlib
 import io
 import pathlib
 from collections.abc import Iterable, Iterator
-from typing import Any, BinaryIO, List, Optional, Tuple, Union
+from typing import Any, BinaryIO, List, Tuple
 
 from aiida.common.hashing import chunked_file_hash
 
 __all__ = ('AbstractRepositoryBackend',)
 
-InfoDictType = dict[str, Union[int, str, dict[str, int], dict[str, float]]]
+InfoDictType = dict[str, int | str | dict[str, int] | dict[str, float]]
 
 
 class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
@@ -33,12 +33,12 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
-    def uuid(self) -> Optional[str]:
+    def uuid(self) -> str | None:
         """Return the unique identifier of the repository."""
 
     @property
     @abc.abstractmethod
-    def key_format(self) -> Optional[str]:
+    def key_format(self) -> str | None:
         """Return the format for the keys of the repository.
 
         Important for when migrating between backends (e.g. archive -> main), as if they are not equal then it is
@@ -86,7 +86,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
     def _put_object_from_filelike(self, handle: BinaryIO) -> str:
         pass
 
-    def put_object_from_file(self, filepath: Union[str, pathlib.Path]) -> str:
+    def put_object_from_file(self, filepath: str | pathlib.Path) -> str:
         """Store a new object with contents of the file located at `filepath` on this file system.
 
         :param filepath: absolute path of file whose contents to copy to the repository.

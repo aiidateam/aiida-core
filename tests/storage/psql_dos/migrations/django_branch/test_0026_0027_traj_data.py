@@ -8,6 +8,8 @@
 ###########################################################################
 """Test `TrajectoryData` nodes migration, moving symbol lists from repository array to attributes."""
 
+from __future__ import annotations
+
 import numpy
 import pytest
 

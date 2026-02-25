@@ -8,7 +8,7 @@
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
 
-from typing import Dict, Optional
+from typing import Dict
 
 from aiida.common import exceptions
 from aiida.common.lang import override
@@ -47,7 +47,7 @@ class Data(Node):
     _unstorable_message = 'storing for this node has been disabled'
 
     class Model(Node.Model):
-        source: Optional[dict] = MetadataField(
+        source: dict | None = MetadataField(
             None, description='Source of the data.', is_subscriptable=True, exclude_from_cli=True
         )
 
@@ -83,7 +83,7 @@ class Data(Node):
         return clone
 
     @property
-    def source(self) -> Optional[dict]:
+    def source(self) -> dict | None:
         """Gets the dictionary describing the source of Data object. Possible fields:
 
         * **db_name**: name of the source database.

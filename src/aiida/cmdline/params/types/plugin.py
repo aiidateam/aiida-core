@@ -180,7 +180,7 @@ class PluginParamType(EntryPointType):
         return results
 
     @shim_add_ctx
-    def get_missing_message(self, param: click.Parameter, ctx: click.Context | None) -> str:
+    def get_missing_message(self, param: click.Parameter, ctx: click.Context | None) -> str:  # type: ignore[override]
         return 'Possible arguments are:\n\n' + '\n'.join(self.get_valid_arguments())
 
     def get_entry_point_from_string(self, entry_point_string: str) -> EntryPoint:
@@ -235,7 +235,7 @@ class PluginParamType(EntryPointType):
 
     def convert(  # type: ignore[override]
         self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None
-    ) -> t.Union[EntryPoint, t.Any]:
+    ) -> EntryPoint | t.Any:
         """Convert the string value to an entry point instance, if the value can be successfully parsed
         into an actual entry point. Will raise click.BadParameter if validation fails.
         """

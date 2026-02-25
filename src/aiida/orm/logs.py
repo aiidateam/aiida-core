@@ -8,9 +8,17 @@
 ###########################################################################
 """Module for orm logging abstract classes"""
 
+from __future__ import annotations
+
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Type,
+)
 
 from aiida.common import timezone
 from aiida.common.pydantic import MetadataField
@@ -43,7 +51,7 @@ class LogCollection(entities.Collection['Log']):
     def _entity_base_cls() -> Type['Log']:
         return Log
 
-    def create_entry_from_record(self, record: logging.LogRecord) -> Optional['Log']:
+    def create_entry_from_record(self, record: logging.LogRecord) -> 'Log' | None:
         """Helper function to create a log entry from a record created as by the python logging library
 
         :param record: The record created by the logging module
@@ -81,7 +89,7 @@ class LogCollection(entities.Collection['Log']):
             backend=self.backend,
         )
 
-    def get_logs_for(self, entity: 'Node', order_by: Optional['OrderByType'] = None) -> List['Log']:
+    def get_logs_for(self, entity: 'Node', order_by: 'OrderByType' | None = None) -> List['Log']:
         """Get all the log messages for a given node and optionally sort
 
         :param entity: the entity to get logs for
@@ -145,8 +153,8 @@ class Log(entities.Entity['BackendLog', LogCollection]):
         levelname: str,
         dbnode_id: int,
         message: str = '',
-        metadata: Optional[Dict[str, Any]] = None,
-        backend: Optional['StorageBackend'] = None,
+        metadata: Dict[str, Any] | None = None,
+        backend: 'StorageBackend' | None = None,
     ):
         """Construct a new log
 

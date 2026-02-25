@@ -9,7 +9,6 @@
 """Base class implementation for an external database importer."""
 
 import io
-from typing import Optional
 
 
 class DbImporter:
@@ -173,7 +172,7 @@ class DbSearchResults:
 class DbEntry:
     """Represents an entry from external database."""
 
-    _license: Optional[str] = None
+    _license: str | None = None
 
     def __init__(self, db_name=None, db_uri=None, id=None, version=None, extras=None, uri=None):
         """Sets the basic parameters for the database entry:

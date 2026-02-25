@@ -15,7 +15,13 @@ import contextlib
 import contextvars
 import logging
 import time
-from typing import TYPE_CHECKING, Dict, Hashable, Iterator, Optional, cast
+from typing import (
+    TYPE_CHECKING,
+    Dict,
+    Hashable,
+    Iterator,
+    cast,
+)
 
 from aiida.common import lang
 from aiida.orm import AuthInfo
@@ -44,7 +50,7 @@ class JobsList:
     See the :py:class:`~aiida.engine.processes.calcjobs.manager.JobManager` for example usage.
     """
 
-    def __init__(self, authinfo: AuthInfo, transport_queue: 'TransportQueue', last_updated: Optional[float] = None):
+    def __init__(self, authinfo: AuthInfo, transport_queue: 'TransportQueue', last_updated: float | None = None):
         """Construct an instance for the given authinfo and transport queue.
 
         :param authinfo: The authinfo used to check the jobs list
@@ -62,7 +68,7 @@ class JobsList:
         self._jobs_cache: Dict[str, 'JobInfo'] = {}
         self._job_update_requests: Dict[str, asyncio.Future] = {}  # Mapping: {job_id: Future}
         self._last_updated = last_updated
-        self._update_handle: Optional[asyncio.TimerHandle] = None
+        self._update_handle: asyncio.TimerHandle | None = None
         self._polling_jobs: frozenset[str] = frozenset()
 
     @property
@@ -82,7 +88,7 @@ class JobsList:
         return self._authinfo.computer.get_minimum_job_poll_interval()
 
     @property
-    def last_updated(self) -> Optional[float]:
+    def last_updated(self) -> float | None:
         """Get the timestamp of when the list was last updated as produced by `time.time()`
 
         :return: The last update point
@@ -215,7 +221,7 @@ class JobsList:
             )
 
     @staticmethod
-    def _has_job_state_changed(old: Optional['JobInfo'], new: Optional['JobInfo']) -> bool:
+    def _has_job_state_changed(old: 'JobInfo' | None, new: 'JobInfo' | None) -> bool:
         """Return whether the states `old` and `new` are different."""
         if old is None and new is None:
             return False

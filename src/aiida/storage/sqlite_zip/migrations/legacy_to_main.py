@@ -14,7 +14,15 @@ from contextlib import contextmanager
 from datetime import datetime
 from hashlib import sha256
 from pathlib import Path, PurePath
-from typing import Any, Callable, ContextManager, Dict, Iterator, List, Optional, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    ContextManager,
+    Dict,
+    Iterator,
+    List,
+    Tuple,
+)
 
 from archive_path import ZipPath
 from sqlalchemy import insert, select
@@ -69,8 +77,8 @@ def perform_v1_migration(
     :returns:the path to the sqlite database file
     """
     MIGRATE_LOGGER.report('Initialising new archive...')
-    node_repos: Dict[str, List[Tuple[str, Optional[str]]]] = {}
-    in_archive_context: Callable[[Path], ContextManager[Union[Path, ZipPath]]] = ZipPath
+    node_repos: Dict[str, List[Tuple[str, str | None]]] = {}
+    in_archive_context: Callable[[Path], ContextManager[Path | ZipPath]] = ZipPath
     if is_tar:
         # we cannot stream from a tar file performantly, so we extract it to disk first
         @contextmanager
@@ -128,7 +136,7 @@ def perform_v1_migration(
 
 
 def _json_to_sqlite(
-    outpath: Path, data: dict, node_repos: Dict[str, List[Tuple[str, Optional[str]]]], batch_size: int = 100
+    outpath: Path, data: dict, node_repos: Dict[str, List[Tuple[str, str | None]]], batch_size: int = 100
 ) -> None:
     """Convert a JSON archive format to SQLite."""
     from aiida.common.utils import batch_iter
@@ -238,7 +246,7 @@ def _convert_datetime(key, value):
 def _iter_entity_fields(
     data,
     name: str,
-    node_repos: Dict[str, List[Tuple[str, Optional[str]]]],
+    node_repos: Dict[str, List[Tuple[str, str | None]]],
 ) -> Iterator[Dict[str, Any]]:
     """Iterate through entity fields."""
     keys = file_fields_to_model_fields.get(name, {})
@@ -267,7 +275,7 @@ def _iter_entity_fields(
             yield {**{keys.get(key, key): _convert_datetime(key, val) for key, val in all_fields.items()}, **{'id': pk}}
 
 
-def _create_repo_metadata(paths: List[Tuple[str, Optional[str]]]) -> Dict[str, Any]:
+def _create_repo_metadata(paths: List[Tuple[str, str | None]]) -> Dict[str, Any]:
     """Create the repository metadata.
 
     :param paths: list of (path, hashkey) tuples

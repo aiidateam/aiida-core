@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Union, cast
+from typing import Dict, List, Set, cast
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
@@ -72,7 +72,7 @@ class GroupNodeMapping:
         return mapping
 
     @classmethod
-    def build_from_db(cls, groups: Optional[Union[List[orm.Group], List[str], List[int]]] = None) -> 'GroupNodeMapping':
+    def build_from_db(cls, groups: List[orm.Group] | List[str] | List[int] | None = None) -> 'GroupNodeMapping':
         """Build a mapping from the current database state.
 
         :param groups: If provided, only build mapping for these specific groups.

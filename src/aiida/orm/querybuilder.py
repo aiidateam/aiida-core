@@ -30,12 +30,11 @@ from typing import (
     List,
     Literal,
     NamedTuple,
-    Optional,
     Sequence,
     Set,
     Tuple,
     Type,
-    Union,
+    TypeAlias,
     cast,
     overload,
 )
@@ -61,10 +60,10 @@ if TYPE_CHECKING:
 __all__ = ('QueryBuilder',)
 
 # re-usable type annotations
-EntityClsType = Type[Union[entities.Entity, 'Process']]
-ProjectType = Union[str, dict, Sequence[Union[str, dict]]]
-FilterType = Union[Dict[str, Any], fields.QbFieldFilters]
-OrderByType = Union[dict, List[dict], Tuple[dict, ...]]
+EntityClsType: TypeAlias = 'Type[entities.Entity | Process]'
+ProjectType: TypeAlias = 'str | dict | Sequence[str | dict]'
+FilterType: TypeAlias = 'Dict[str, Any] | fields.QbFieldFilters'
+OrderByType: TypeAlias = 'dict | List[dict] | Tuple[dict, ...]'
 
 LOGGER = AIIDA_LOGGER.getChild('querybuilder')
 
@@ -73,7 +72,7 @@ class Classifier(NamedTuple):
     """A classifier for an entity."""
 
     ormclass_type_string: str
-    process_type_string: Optional[str] = None
+    process_type_string: str | None = None
 
 
 class QueryBuilder:
@@ -97,17 +96,17 @@ class QueryBuilder:
 
     def __init__(
         self,
-        backend: Optional['StorageBackend'] = None,
+        backend: 'StorageBackend' | None = None,
         *,
         debug: bool | None = None,
-        path: Optional[Sequence[Union[str, Dict[str, Any], EntityClsType]]] = (),
-        filters: Optional[Dict[str, FilterType]] = None,
-        project: Optional[Dict[str, ProjectType]] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-        order_by: Optional[OrderByType] = None,
+        path: Sequence[str | Dict[str, Any] | EntityClsType] | None = (),
+        filters: Dict[str, FilterType] | None = None,
+        project: Dict[str, ProjectType] | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+        order_by: OrderByType | None = None,
         distinct: bool = False,
-        project_map: Optional[Dict[str, Dict[str, str]]] = None,
+        project_map: Dict[str, Dict[str, str]] | None = None,
     ) -> None:
         """Instantiates a QueryBuilder instance.
 
@@ -154,8 +153,8 @@ class QueryBuilder:
         self._project_map: Dict[str, Dict[str, str]] = {}
         # list of mappings: tag -> list(fields) -> 'order' | 'cast' -> value (str('asc' | 'desc'), str(cast_key))
         self._order_by: List[Dict[str, List[Dict[str, Dict[str, str]]]]] = []
-        self._limit: Optional[int] = None
-        self._offset: Optional[int] = None
+        self._limit: int | None = None
+        self._offset: int | None = None
         self._distinct: bool = distinct
 
         # cache of tag mappings, populated during appends
@@ -290,19 +289,19 @@ class QueryBuilder:
 
     def append(
         self,
-        cls: Optional[Union[EntityClsType, Sequence[EntityClsType]]] = None,
-        entity_type: Optional[Union[str, Sequence[str]]] = None,
-        tag: Optional[str] = None,
-        filters: Optional[FilterType] = None,
-        project: Optional[ProjectType] = None,
+        cls: EntityClsType | Sequence[EntityClsType] | None = None,
+        entity_type: str | Sequence[str] | None = None,
+        tag: str | None = None,
+        filters: FilterType | None = None,
+        project: ProjectType | None = None,
         subclassing: bool = True,
-        edge_tag: Optional[str] = None,
-        edge_filters: Optional[FilterType] = None,
-        edge_project: Optional[ProjectType] = None,
+        edge_tag: str | None = None,
+        edge_filters: FilterType | None = None,
+        edge_project: ProjectType | None = None,
         outerjoin: bool = False,
-        joining_keyword: Optional[str] = None,
-        joining_value: Optional[Any] = None,
-        orm_base: Optional[str] = None,
+        joining_keyword: str | None = None,
+        joining_value: Any | None = None,
+        orm_base: str | None = None,
         **kwargs: Any,
     ) -> 'QueryBuilder':
         """Any iterative procedure to build the path for a graph query
@@ -551,7 +550,7 @@ class QueryBuilder:
         # EXTENDING THE PATH #################################
         # Note: 'type' being a list is a relict of an earlier implementation
         # Could simply pass all classifiers here.
-        path_type: Union[List[str], str]
+        path_type: List[str] | str
         if len(classifiers) > 1:
             path_type = [c.ormclass_type_string for c in classifiers]
         else:
@@ -691,7 +690,7 @@ class QueryBuilder:
             self._order_by.append(_order_spec)
         return self
 
-    def add_filter(self, tagspec: Union[str, EntityClsType], filter_spec: FilterType) -> 'QueryBuilder':
+    def add_filter(self, tagspec: str | EntityClsType, filter_spec: FilterType) -> 'QueryBuilder':
         """Adding a filter to my filters.
 
         :param tagspec: A tag string or an ORM class which maps to an existing tag
@@ -790,7 +789,7 @@ class QueryBuilder:
 
         self.add_filter(tagspec, {'type_string': type_string_filter})
 
-    def add_projection(self, tag_spec: Union[str, EntityClsType], projection_spec: ProjectType) -> None:
+    def add_projection(self, tag_spec: str | EntityClsType, projection_spec: ProjectType) -> None:
         r"""Adds a projection
 
         :param tag_spec: A tag string or an ORM class which maps to an existing tag
@@ -902,7 +901,7 @@ class QueryBuilder:
         if self._debug:
             print(f'DEBUG: {msg}' % objects)
 
-    def limit(self, limit: Optional[int]) -> 'QueryBuilder':
+    def limit(self, limit: int | None) -> 'QueryBuilder':
         """Set the limit (nr of rows to return)
 
         :param limit: integers of number of rows of rows to return
@@ -912,7 +911,7 @@ class QueryBuilder:
         self._limit = limit
         return self
 
-    def offset(self, offset: Optional[int]) -> 'QueryBuilder':
+    def offset(self, offset: int | None) -> 'QueryBuilder':
         """Set the offset. If offset is set, that many rows are skipped before returning.
         *offset* = 0 is the same as omitting setting the offset.
         If both offset and limit appear,
@@ -1068,7 +1067,7 @@ class QueryBuilder:
         """
         return self._impl.count(self.as_dict())
 
-    def iterall(self, batch_size: Optional[int] = 100) -> Iterable[List[Any]]:
+    def iterall(self, batch_size: int | None = 100) -> Iterable[List[Any]]:
         """Same as :meth:`.all`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
         transaction. You might also want to read the SQLAlchemy documentation on
@@ -1087,7 +1086,7 @@ class QueryBuilder:
 
             yield item
 
-    def iterdict(self, batch_size: Optional[int] = 100) -> Iterable[Dict[str, Dict[str, Any]]]:
+    def iterdict(self, batch_size: int | None = 100) -> Iterable[Dict[str, Dict[str, Any]]]:
         """Same as :meth:`.dict`, but returns a generator.
         Be aware that this is only safe if no commit will take place during this
         transaction. You might also want to read the SQLAlchemy documentation on
@@ -1152,7 +1151,7 @@ class QueryBuilder:
             raise NotExistent('No result was found')
         return res[0]
 
-    def dict(self, batch_size: Optional[int] = None) -> List[Dict[str, Dict[str, Any]]]:
+    def dict(self, batch_size: int | None = None) -> List[Dict[str, Dict[str, Any]]]:
         """Executes the full query with the order of the rows as returned by the backend.
         the order inside each row is given by the order of the vertices in the path
         and the order of the projections for each vertice in the path.
@@ -1201,7 +1200,7 @@ class QueryBuilder:
 
 
 def _get_ormclass(
-    cls: Union[None, EntityClsType, Sequence[EntityClsType]], entity_type: Union[None, str, Sequence[str]]
+    cls: None | EntityClsType | Sequence[EntityClsType], entity_type: None | str | Sequence[str]
 ) -> Tuple[EntityTypes, List[Classifier]]:
     """Get ORM classifiers from either class(es) or ormclass_type_string(s).
 
@@ -1425,7 +1424,7 @@ class _QueryTagMap:
 
     def __init__(self):
         """Construct a new instance."""
-        self._tag_to_type: Dict[str, Union[None, EntityTypes]] = {}
+        self._tag_to_type: Dict[str, None | EntityTypes] = {}
         # A dictionary for classes passed to the tag given to them
         # Everything is specified with unique tags, which are strings.
         # But somebody might not care about giving tags, so to do
@@ -1452,8 +1451,8 @@ class _QueryTagMap:
     def add(
         self,
         tag: str,
-        etype: Union[None, EntityTypes] = None,
-        klasses: Union[None, EntityClsType, Sequence[EntityClsType]] = None,
+        etype: None | EntityTypes = None,
+        klasses: None | EntityClsType | Sequence[EntityClsType] = None,
     ) -> None:
         """Add a tag."""
         self._tag_to_type[tag] = etype
@@ -1468,7 +1467,7 @@ class _QueryTagMap:
         for tags in self._cls_to_tag_map.values():
             tags.discard(tag)
 
-    def get(self, tag_or_cls: Union[str, EntityClsType]) -> str:
+    def get(self, tag_or_cls: str | EntityClsType) -> str:
         """Return the tag or, given a class(es), map to a tag.
 
         :raises ValueError: if the tag is not found, or the class(es) does not map to a single tag

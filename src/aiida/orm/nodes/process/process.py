@@ -8,9 +8,18 @@
 ###########################################################################
 """Module with `Node` sub class for processes."""
 
+from __future__ import annotations
+
 import enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Tuple,
+    Type,
+)
 
 from plumpy.process_states import ProcessState
 
@@ -189,19 +198,19 @@ class ProcessNode(Sealable, Node):
         )
 
     class Model(Node.Model, Sealable.Model):
-        process_label: Optional[str] = MetadataField(description='The process label')
-        process_state: Optional[str] = MetadataField(description='The process state enum')
-        process_status: Optional[str] = MetadataField(description='The process status is a generic status message')
-        exit_status: Optional[int] = MetadataField(description='The process exit status')
-        exit_message: Optional[str] = MetadataField(description='The process exit message')
-        exception: Optional[str] = MetadataField(description='The process exception message')
+        process_label: str | None = MetadataField(description='The process label')
+        process_state: str | None = MetadataField(description='The process state enum')
+        process_status: str | None = MetadataField(description='The process status is a generic status message')
+        exit_status: int | None = MetadataField(description='The process exit status')
+        exit_message: str | None = MetadataField(description='The process exit message')
+        exception: str | None = MetadataField(description='The process exception message')
         paused: bool = MetadataField(description='Whether the process is paused')
 
     def set_metadata_inputs(self, value: Dict[str, Any]) -> None:
         """Set the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
         return self.base.attributes.set(self.METADATA_INPUTS_KEY, value)
 
-    def get_metadata_inputs(self) -> Optional[Dict[str, Any]]:
+    def get_metadata_inputs(self) -> Dict[str, Any] | None:
         """Return the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
         return self.base.attributes.get(self.METADATA_INPUTS_KEY, None)
 
@@ -303,7 +312,7 @@ class ProcessNode(Sealable, Node):
         self.process_type = process_type_string
 
     @property
-    def process_label(self) -> Optional[str]:
+    def process_label(self) -> str | None:
         """Return the process label
 
         :returns: the process label
@@ -318,7 +327,7 @@ class ProcessNode(Sealable, Node):
         self.base.attributes.set(self.PROCESS_LABEL_KEY, label)
 
     @property
-    def process_state(self) -> Optional[ProcessState]:
+    def process_state(self) -> ProcessState | None:
         """Return the process state
 
         :returns: the process state instance of ProcessState enum
@@ -330,7 +339,7 @@ class ProcessNode(Sealable, Node):
 
         return ProcessState(state)
 
-    def set_process_state(self, state: Union[str, ProcessState, None]):
+    def set_process_state(self, state: str | ProcessState | None):
         """Set the process state
 
         :param state: value or instance of ProcessState enum
@@ -340,7 +349,7 @@ class ProcessNode(Sealable, Node):
         return self.base.attributes.set(self.PROCESS_STATE_KEY, state)
 
     @property
-    def process_status(self) -> Optional[str]:
+    def process_status(self) -> str | None:
         """Return the process status
 
         The process status is a generic status message e.g. the reason it might be paused or when it is being killed
@@ -349,7 +358,7 @@ class ProcessNode(Sealable, Node):
         """
         return self.base.attributes.get(self.PROCESS_STATUS_KEY, None)
 
-    def set_process_status(self, status: Optional[str]) -> None:
+    def set_process_status(self, status: str | None) -> None:
         """Set the process status
 
         The process status is a generic status message e.g. the reason it might be paused or when it is being killed.
@@ -437,7 +446,7 @@ class ProcessNode(Sealable, Node):
         return self.is_finished and self.exit_status != 0
 
     @property
-    def exit_code(self) -> Optional['ExitCode']:
+    def exit_code(self) -> 'ExitCode' | None:
         """Return the exit code of the process.
 
         It is reconstituted from the ``exit_status`` and ``exit_message`` attributes if both of those are defined.
@@ -455,14 +464,14 @@ class ProcessNode(Sealable, Node):
         return ExitCode(exit_status, exit_message)
 
     @property
-    def exit_status(self) -> Optional[int]:
+    def exit_status(self) -> int | None:
         """Return the exit status of the process
 
         :returns: the exit status, an integer exit code or None
         """
         return self.base.attributes.get(self.EXIT_STATUS_KEY, None)
 
-    def set_exit_status(self, status: Union[None, enum.Enum, int]) -> None:
+    def set_exit_status(self, status: None | enum.Enum | int) -> None:
         """Set the exit status of the process
 
         :param state: an integer exit code or None, which will be interpreted as zero
@@ -479,14 +488,14 @@ class ProcessNode(Sealable, Node):
         return self.base.attributes.set(self.EXIT_STATUS_KEY, status)
 
     @property
-    def exit_message(self) -> Optional[str]:
+    def exit_message(self) -> str | None:
         """Return the exit message of the process
 
         :returns: the exit message
         """
         return self.base.attributes.get(self.EXIT_MESSAGE_KEY, None)
 
-    def set_exit_message(self, message: Optional[str]) -> None:
+    def set_exit_message(self, message: str | None) -> None:
         """Set the exit message of the process, if None nothing will be done
 
         :param message: a string message
@@ -500,7 +509,7 @@ class ProcessNode(Sealable, Node):
         return self.base.attributes.set(self.EXIT_MESSAGE_KEY, message)
 
     @property
-    def exception(self) -> Optional[str]:
+    def exception(self) -> str | None:
         """Return the exception of the process or None if the process is not excepted.
 
         If the process is marked as excepted yet there is no exception attribute, an empty string will be returned.
@@ -523,7 +532,7 @@ class ProcessNode(Sealable, Node):
         return self.base.attributes.set(self.EXCEPTION_KEY, exception)
 
     @property
-    def checkpoint(self) -> Optional[str]:
+    def checkpoint(self) -> str | None:
         """Return the checkpoint bundle set for the process
 
         :returns: checkpoint bundle if it exists, None otherwise
@@ -594,7 +603,7 @@ class ProcessNode(Sealable, Node):
         return descendants
 
     @property
-    def caller(self) -> Optional['ProcessNode']:
+    def caller(self) -> 'ProcessNode' | None:
         """Return the process node that called this process node, or None if it does not have a caller
 
         :returns: process node that called this process node instance or None
@@ -607,7 +616,7 @@ class ProcessNode(Sealable, Node):
 
     def dump(
         self,
-        output_path: Optional[Union[str, Path]] = None,
+        output_path: str | Path | None = None,
         # Dump mode options
         dry_run: bool = False,
         overwrite: bool = False,

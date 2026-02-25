@@ -8,7 +8,7 @@
 ###########################################################################
 """Plugin for direct execution."""
 
-from typing import Union
+from __future__ import annotations
 
 import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
@@ -356,7 +356,7 @@ class DirectScheduler(BashCliScheduler):
 
         return stdout.strip()
 
-    def _get_kill_command(self, jobid: Union[int, str]) -> str:
+    def _get_kill_command(self, jobid: int | str) -> str:
         """Return the command to kill the process with specified id and all its descendants.
 
         :param jobid: The job id is in the case of the

@@ -28,8 +28,8 @@ class File:
         self,
         name: str = '',
         file_type: FileType = FileType.DIRECTORY,
-        key: typing.Union[str, None] = None,
-        objects: typing.Optional[typing.Dict[str, 'File']] = None,
+        key: str | None = None,
+        objects: typing.Dict[str, 'File'] | None = None,
     ) -> None:
         """Construct a new instance.
 
@@ -114,7 +114,7 @@ class File:
         return self.file_type == FileType.DIRECTORY
 
     @property
-    def key(self) -> typing.Union[str, None]:
+    def key(self) -> str | None:
         """Return the key of the file object."""
         return self._key
 

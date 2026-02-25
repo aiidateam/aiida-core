@@ -17,7 +17,7 @@ import tempfile
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Union
+from typing import Any, Dict, Iterator, List
 
 from alembic.command import upgrade
 from alembic.config import Config
@@ -70,7 +70,7 @@ def validate_storage(inpath: Path) -> None:
 
 
 def migrate(
-    inpath: Union[str, Path], outpath: Union[str, Path], version: str, *, force: bool = False, compression: int = 6
+    inpath: str | Path, outpath: str | Path, version: str, *, force: bool = False, compression: int = 6
 ) -> None:
     """Migrate an `sqlite_zip` storage file to a specific version.
 
@@ -136,7 +136,7 @@ def migrate(
     metadata['compression'] = compression
 
     # if the archive is a "legacy" format, i.e. has a data.json file, migrate it to the target/final legacy schema
-    data: Optional[Dict[str, Any]] = None
+    data: Dict[str, Any] | None = None
     if current_version in LEGACY_MIGRATE_FUNCTIONS:
         MIGRATE_LOGGER.report(f'Legacy migrations required from {"tar" if is_tar else "zip"} format')
         MIGRATE_LOGGER.report('Extracting data.json ...')

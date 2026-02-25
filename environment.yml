@@ -5,16 +5,15 @@ channels:
 - conda-forge
 - defaults
 dependencies:
-- python~=3.9
+- python~=3.10
 - alembic~=1.8
 - archive-path~=0.4.2
-- asyncssh~=2.19.0
+- asyncssh~=2.22.0
 - circus~=0.19.0
 - click-spinner~=0.1.8
 - click<8.3,>=8.1.0
 - disk-objectstore~=1.4.0
 - docstring_parser
-- get-annotations~=0.1
 - python-graphviz~=0.19
 - plumpy~=0.25.0
 - ipython>=7.6

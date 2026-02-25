@@ -22,6 +22,7 @@ import typing as t
 from typing import TYPE_CHECKING
 
 import docstring_parser
+from typing_extensions import ParamSpec
 
 from aiida.common.lang import override
 from aiida.manage import get_manager
@@ -43,20 +44,8 @@ from aiida.orm.utils.mixins import FunctionCalculationMixin
 from .process import Process
 from .process_spec import ProcessSpec
 
-try:
-    UnionType = types.UnionType
-except AttributeError:
-    # This type is not available for Python 3.9 and older
-    UnionType = None  # type: ignore[assignment,misc]
-
-# Fallback for Python 3.9 and older
-from typing_extensions import ParamSpec
-
-try:
-    get_annotations = inspect.get_annotations
-except AttributeError:
-    # This is the backport for Python 3.9 and older
-    from get_annotations import get_annotations  # type: ignore[no-redef]
+UnionType = types.UnionType
+get_annotations = inspect.get_annotations
 
 if TYPE_CHECKING:
     from .exit_code import ExitCode
@@ -316,8 +305,6 @@ def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...
         inferred_valid_type = (get_type_from_annotation(annotation),)
     elif t.get_origin(annotation) is t.Union or t.get_origin(annotation) is UnionType:
         inferred_valid_type = tuple(get_type_from_annotation(valid_type) for valid_type in t.get_args(annotation))
-    elif t.get_origin(annotation) is t.Optional:
-        inferred_valid_type = (t.get_args(annotation),)
 
     return tuple(valid_type for valid_type in inferred_valid_type if valid_type is not None)
 

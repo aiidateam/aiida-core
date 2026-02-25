@@ -6,8 +6,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-# ruff: noqa: E402
+# ruff: noqa: E402, I001
 """Modules related to the configuration of an AiiDA instance."""
+
+from __future__ import annotations
 
 # AUTO-GENERATED
 
@@ -54,7 +56,7 @@ __all__ += (
 import os
 import warnings
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from aiida.common.warnings import AiidaDeprecationWarning
 
@@ -64,7 +66,7 @@ if TYPE_CHECKING:
     from .config import Config
 
 # global variables for aiida
-CONFIG: Optional['Config'] = None
+CONFIG: 'Config' | None = None
 
 
 def get_config_path():
@@ -151,7 +153,7 @@ def _merge_deprecated_cache_yaml(config, filepath):
     shutil.move(cache_path, cache_path_backup)
 
 
-def load_profile(profile: Optional[str] = None, allow_switch=False) -> 'Profile':
+def load_profile(profile: str | None = None, allow_switch=False) -> 'Profile':
     """Load a global profile, unloading any previously loaded profile.
 
     .. note:: if a profile is already loaded and no explicit profile is specified, nothing will be done
@@ -168,7 +170,7 @@ def load_profile(profile: Optional[str] = None, allow_switch=False) -> 'Profile'
     return get_manager().load_profile(profile, allow_switch)
 
 
-def get_profile() -> Optional['Profile']:
+def get_profile() -> 'Profile' | None:
     """Return the currently loaded profile.
 
     :return: the globally loaded `Profile` instance or `None`
@@ -201,9 +203,9 @@ def profile_context(profile: 'Profile | str | None' = None, allow_switch=False) 
 def create_default_user(
     profile: Profile,
     email: str,
-    first_name: Optional[str] = None,
-    last_name: Optional[str] = None,
-    institution: Optional[str] = None,
+    first_name: str | None = None,
+    last_name: str | None = None,
+    institution: str | None = None,
 ) -> 'User':
     """Create a default user for the given profile.
 
@@ -248,9 +250,9 @@ def create_profile(
     broker_config: 'dict[str, Any] | None' = None,
     name: str,
     email: str,
-    first_name: Optional[str] = None,
-    last_name: Optional[str] = None,
-    institution: Optional[str] = None,
+    first_name: str | None = None,
+    last_name: str | None = None,
+    institution: str | None = None,
     is_test_profile: bool = False,
 ) -> Profile:
     """Create a new profile, initialise its storage and create a default user.

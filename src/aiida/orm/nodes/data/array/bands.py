@@ -10,6 +10,9 @@
 in a Brillouin zone, and how to operate on them.
 """
 
+from __future__ import annotations
+
+import itertools
 import json
 import typing as t
 from string import Template
@@ -214,7 +217,7 @@ class BandsData(KpointsData):
     """Class to handle bands data"""
 
     class Model(KpointsData.Model):
-        array_labels: t.Optional[t.List[str]] = MetadataField(description='Labels associated with the band arrays')
+        array_labels: t.List[str] | None = MetadataField(description='Labels associated with the band arrays')
         units: str = MetadataField(description='Units in which the data in bands were stored')
 
     def set_kpointsdata(self, kpointsdata):
@@ -493,7 +496,7 @@ class BandsData(KpointsData):
                 # I add an empty label that points to the last band if the last label does not do it
                 if labels[-1][0] != len(bands) - 1:
                     labels.append((len(bands) - 1, ''))
-                for (position_from, label_from), (position_to, label_to) in zip(labels[:-1], labels[1:]):
+                for (position_from, label_from), (position_to, label_to) in itertools.pairwise(labels):
                     if position_to - position_from > 1:
                         # Create a new path line only if there are at least two points,
                         # otherwise it is probably just a discontinuity point in the band

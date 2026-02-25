@@ -3,7 +3,7 @@
 from pathlib import Path
 from re import match
 from tempfile import NamedTemporaryFile
-from typing import Dict, Union
+from typing import Dict
 
 from aiida.engine import CalcJobImporter
 from aiida.orm import Int, Node, RemoteData
@@ -13,7 +13,7 @@ class ArithmeticAddCalculationImporter(CalcJobImporter):
     """Importer for the :class:`aiida.calculations.arithmetic.add.ArithmeticAddCalculation` plugin."""
 
     @staticmethod
-    def parse_remote_data(remote_data: RemoteData, **kwargs) -> Dict[str, Union[Node, Dict]]:
+    def parse_remote_data(remote_data: RemoteData, **kwargs) -> Dict[str, Node | Dict]:
         """Parse the input nodes from the files in the provided ``RemoteData``.
 
         :param remote_data: the remote data node containing the raw input files.

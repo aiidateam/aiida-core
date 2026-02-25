@@ -15,7 +15,7 @@ import os
 from enum import Enum, auto
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Callable, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Callable, Tuple, cast
 
 import yaml
 
@@ -55,12 +55,12 @@ class ProcessDumpExecutor:
 
     def __init__(
         self,
-        config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig],
+        config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig,
         dump_paths: DumpPaths,
         dump_tracker: DumpTracker,
         dump_times: DumpTimes,
     ):
-        self.config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig] = config
+        self.config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig = config
         self.dump_paths: DumpPaths = dump_paths
         self.dump_tracker: DumpTracker = dump_tracker
         self.dump_times: DumpTimes = dump_times
@@ -166,7 +166,7 @@ class ProcessDumpExecutor:
         self,
         process_node: orm.ProcessNode,
         output_path: Path,
-    ) -> Tuple[NodeDumpAction, Optional[DumpRecord]]:
+    ) -> Tuple[NodeDumpAction, DumpRecord | None]:
         """Checks the logger and node status to determine the appropriate dump action.
 
         :param node: The ``orm.ProcessNode`` to be evaluated
@@ -403,8 +403,8 @@ class ProcessDumpExecutor:
 class NodeMetadataWriter:
     """Handles writing the aiida_node_metadata.yaml file."""
 
-    def __init__(self, config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig]):
-        self.config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig] = config
+    def __init__(self, config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig):
+        self.config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig = config
 
     def _write(
         self,
@@ -475,8 +475,8 @@ class NodeMetadataWriter:
 class NodeRepoIoDumper:
     """Handles dumping repository contents and linked I/O Data nodes."""
 
-    def __init__(self, config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig]):
-        self.config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig] = config
+    def __init__(self, config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig):
+        self.config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig = config
 
     def _dump_calculation_content(self, calculation_node: orm.CalculationNode, output_path: Path) -> None:
         """Dump repository and I/O file contents for a CalculationNode.

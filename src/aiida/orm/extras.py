@@ -8,8 +8,17 @@
 ###########################################################################
 """Interface to the extras of a node instance."""
 
+from __future__ import annotations
+
 import copy
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Tuple,
+)
 
 if TYPE_CHECKING:
     from .groups import Group
@@ -30,7 +39,7 @@ class EntityExtras:
     and as such are not deemed a core part of the provenance graph.
     """
 
-    def __init__(self, entity: Union['Node', 'Group']) -> None:
+    def __init__(self, entity: 'Node' | 'Group') -> None:
         """Initialize the interface."""
         self._entity = entity
         self._backend_entity = entity.backend_entity

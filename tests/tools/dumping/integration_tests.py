@@ -10,7 +10,7 @@
 
 import logging
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import pytest
 
@@ -244,8 +244,8 @@ def _assemble_nodes_by_type(node_trees: List[Dict]) -> Dict[str, List[Dict]]:
 
 
 def get_expected_profile_dump_tree(
-    groups_data: Optional[Dict[str, List[Dict]]] = None,
-    ungrouped_data: Optional[List[Dict]] = None,
+    groups_data: Dict[str, List[Dict]] | None = None,
+    ungrouped_data: List[Dict] | None = None,
     organize_by_groups: bool = True,
 ) -> Dict[str, List[Any]]:
     """

@@ -14,7 +14,7 @@ import asyncio
 import functools
 import logging
 import tempfile
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable
 
 import plumpy
 import plumpy.futures
@@ -479,9 +479,9 @@ class Waiting(plumpy.process_states.Waiting):
     def __init__(
         self,
         process: 'CalcJob',
-        done_callback: Optional[Callable[..., Any]],
-        msg: Optional[str] = None,
-        data: Optional[Any] = None,
+        done_callback: Callable[..., Any] | None,
+        msg: str | None = None,
+        data: Any | None = None,
     ):
         """:param process: The process this state belongs to"""
         super().__init__(process, done_callback, msg, data)
@@ -739,7 +739,7 @@ class Waiting(plumpy.process_states.Waiting):
             ProcessState.RUNNING, self.process.parse, retrieved_temporary_folder, exit_code
         )
 
-    def interrupt(self, reason: Any) -> Optional[plumpy.futures.Future]:  # type: ignore[override]
+    def interrupt(self, reason: Any) -> plumpy.futures.Future | None:  # type: ignore[override]
         """Interrupt the `Waiting` state by calling interrupt on the transport task `InterruptableFuture`."""
         if self._task is not None:
             self._task.interrupt(reason)

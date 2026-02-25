@@ -15,7 +15,7 @@ but redefines the SQLAlchemy models to the SQLite compatible ones.
 
 import json
 from functools import singledispatch
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Tuple
 
 from sqlalchemy import JSON, case, func, select
 from sqlalchemy.orm.util import AliasedClass
@@ -183,8 +183,8 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
         alias: AliasedClass,
         column_name: str,
         attrpath: List[str],
-        cast: Optional[str] = None,
-    ) -> Union[ColumnElement, InstrumentedAttribute]:
+        cast: str | None = None,
+    ) -> ColumnElement | InstrumentedAttribute:
         if not (attrpath or column_name in ('attributes', 'extras')):
             return get_column(column_name, alias)
 

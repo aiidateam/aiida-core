@@ -8,9 +8,17 @@
 ###########################################################################
 """Utilities for dealing with links between nodes."""
 
+from __future__ import annotations
+
 from collections import OrderedDict
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Generator, Iterator, List, NamedTuple, Optional
+from typing import (
+    TYPE_CHECKING,
+    Generator,
+    Iterator,
+    List,
+    NamedTuple,
+)
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
@@ -42,7 +50,7 @@ class LinkQuadruple(NamedTuple):
 
 
 def link_triple_exists(
-    source: 'Node', target: 'Node', link_type: 'LinkType', link_label: str, backend: Optional['StorageBackend'] = None
+    source: 'Node', target: 'Node', link_type: 'LinkType', link_label: str, backend: 'StorageBackend' | None = None
 ) -> bool:
     """Return whether a link with the given type and label exists between the given source and target node.
 
@@ -75,7 +83,7 @@ def link_triple_exists(
 
 
 def validate_link(
-    source: 'Node', target: 'Node', link_type: 'LinkType', link_label: str, backend: Optional['StorageBackend'] = None
+    source: 'Node', target: 'Node', link_type: 'LinkType', link_label: str, backend: 'StorageBackend' | None = None
 ) -> None:
     """Validate adding a link of the given type and label from a given node to ourself.
 
@@ -280,7 +288,7 @@ class LinkManager:
 
         raise ValueError('no entries found')
 
-    def first(self) -> Optional[LinkTriple]:
+    def first(self) -> LinkTriple | None:
         """Return the first entry from the iterator.
 
         :return: LinkTriple instance or None if no entries were matched

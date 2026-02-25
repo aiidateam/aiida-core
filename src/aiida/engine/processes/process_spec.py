@@ -8,8 +8,6 @@
 ###########################################################################
 """AiiDA specific implementation of plumpy's ProcessSpec."""
 
-from typing import Optional
-
 import plumpy.process_spec
 
 from aiida.orm import Dict
@@ -100,10 +98,10 @@ class CalcJobProcessSpec(ProcessSpec):
 
     def __init__(self) -> None:
         super().__init__()
-        self._default_output_node: Optional[str] = None
+        self._default_output_node: str | None = None
 
     @property
-    def default_output_node(self) -> Optional[str]:
+    def default_output_node(self) -> str | None:
         return self._default_output_node
 
     @default_output_node.setter

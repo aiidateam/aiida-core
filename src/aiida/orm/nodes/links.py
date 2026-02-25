@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import typing as t
-from typing import Optional, cast
+from typing import cast
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
@@ -113,9 +113,9 @@ class NodeLinks:
 
     def get_stored_link_triples(
         self,
-        node_class: Optional[t.Type['Node']] = None,
-        link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
-        link_label_filter: t.Optional[str] = None,
+        node_class: t.Type['Node'] | None = None,
+        link_type: LinkType | t.Sequence[LinkType] = (),
+        link_label_filter: str | None = None,
         link_direction: str = 'incoming',
         only_uuid: bool = False,
     ) -> list[LinkTriple]:
@@ -173,9 +173,9 @@ class NodeLinks:
 
     def get_incoming(
         self,
-        node_class: Optional[t.Type['Node']] = None,
-        link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
-        link_label_filter: t.Optional[str] = None,
+        node_class: t.Type['Node'] | None = None,
+        link_type: LinkType | t.Sequence[LinkType] = (),
+        link_label_filter: str | None = None,
         only_uuid: bool = False,
     ) -> LinkManager:
         """Return a list of link triples that are (directly) incoming into this node.
@@ -223,9 +223,9 @@ class NodeLinks:
 
     def get_outgoing(
         self,
-        node_class: Optional[t.Type['Node']] = None,
-        link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
-        link_label_filter: t.Optional[str] = None,
+        node_class: t.Type['Node'] | None = None,
+        link_type: LinkType | t.Sequence[LinkType] = (),
+        link_label_filter: str | None = None,
         only_uuid: bool = False,
     ) -> LinkManager:
         """Return a list of link triples that are (directly) outgoing of this node.

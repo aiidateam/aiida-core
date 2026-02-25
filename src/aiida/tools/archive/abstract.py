@@ -10,7 +10,17 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Literal, Optional, Type, TypeVar, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    BinaryIO,
+    Dict,
+    List,
+    Literal,
+    Type,
+    TypeVar,
+    overload,
+)
 
 from typing_extensions import Self
 
@@ -28,7 +38,7 @@ class ArchiveWriterAbstract(ABC):
 
     def __init__(
         self,
-        path: Union[str, Path],
+        path: str | Path,
         fmt: 'ArchiveFormatAbstract',
         *,
         mode: Literal['x', 'w', 'a'] = 'x',
@@ -96,7 +106,7 @@ class ArchiveWriterAbstract(ABC):
         """
 
     @abstractmethod
-    def put_object(self, stream: BinaryIO, *, buffer_size: Optional[int] = None, key: Optional[str] = None) -> str:
+    def put_object(self, stream: BinaryIO, *, buffer_size: int | None = None, key: str | None = None) -> str:
         """Add an object to the archive.
 
         :param stream: byte stream to read the object from
@@ -117,7 +127,7 @@ class ArchiveWriterAbstract(ABC):
 class ArchiveReaderAbstract(ABC):
     """Reader of an archive, that will be used as a context manager."""
 
-    def __init__(self, path: Union[str, Path], **kwargs: Any):
+    def __init__(self, path: str | Path, **kwargs: Any):
         """Initialise the reader.
 
         :param path: archive path
@@ -190,7 +200,7 @@ class ArchiveFormatAbstract(ABC):
         """Return the format of repository keys."""
 
     @abstractmethod
-    def read_version(self, path: Union[str, Path]) -> str:
+    def read_version(self, path: str | Path) -> str:
         """Read the version of the archive from a file.
 
         This method should account for reading all versions of the archive format.
@@ -204,25 +214,25 @@ class ArchiveFormatAbstract(ABC):
     @overload
     @abstractmethod
     def open(
-        self, path: Union[str, Path], mode: Literal['r'], *, compression: int = 6, **kwargs: Any
+        self, path: str | Path, mode: Literal['r'], *, compression: int = 6, **kwargs: Any
     ) -> ArchiveReaderAbstract: ...
 
     @overload
     @abstractmethod
     def open(
-        self, path: Union[str, Path], mode: Literal['x', 'w'], *, compression: int = 6, **kwargs: Any
+        self, path: str | Path, mode: Literal['x', 'w'], *, compression: int = 6, **kwargs: Any
     ) -> ArchiveWriterAbstract: ...
 
     @overload
     @abstractmethod
     def open(
-        self, path: Union[str, Path], mode: Literal['a'], *, compression: int = 6, **kwargs: Any
+        self, path: str | Path, mode: Literal['a'], *, compression: int = 6, **kwargs: Any
     ) -> ArchiveWriterAbstract: ...
 
     @abstractmethod
     def open(
-        self, path: Union[str, Path], mode: Literal['r', 'x', 'w', 'a'] = 'r', *, compression: int = 6, **kwargs: Any
-    ) -> Union[ArchiveReaderAbstract, ArchiveWriterAbstract]:
+        self, path: str | Path, mode: Literal['r', 'x', 'w', 'a'] = 'r', *, compression: int = 6, **kwargs: Any
+    ) -> ArchiveReaderAbstract | ArchiveWriterAbstract:
         """Open an archive (latest version only).
 
         :param path: archive path
@@ -235,8 +245,8 @@ class ArchiveFormatAbstract(ABC):
     @abstractmethod
     def migrate(
         self,
-        inpath: Union[str, Path],
-        outpath: Union[str, Path],
+        inpath: str | Path,
+        outpath: str | Path,
         version: str,
         *,
         force: bool = False,

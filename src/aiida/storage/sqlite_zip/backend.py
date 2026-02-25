@@ -20,7 +20,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import BinaryIO, Optional, Tuple, Union, cast
+from typing import BinaryIO, Tuple, cast
 from zipfile import ZipFile, is_zipfile
 
 from pydantic import BaseModel, Field, field_validator
@@ -122,7 +122,7 @@ class SqliteZipBackend(StorageBackend):
         )
 
     @classmethod
-    def version_profile(cls, profile: Profile) -> Optional[str]:
+    def version_profile(cls, profile: Profile) -> str | None:
         return read_version(profile.storage_config['filepath'], search_limit=None)
 
     @classmethod
@@ -209,9 +209,9 @@ class SqliteZipBackend(StorageBackend):
         self._path = Path(profile.storage_config['filepath'])
         validate_storage(self._path)
         # lazy open the archive zipfile and extract the database file
-        self._db_file: Optional[Path] = None
-        self._session: Optional[Session] = None
-        self._repo: Optional[_RoBackendRepository] = None
+        self._db_file: Path | None = None
+        self._session: Session | None = None
+        self._repo: _RoBackendRepository | None = None
         self._closed = False
 
     def __str__(self) -> str:
@@ -344,7 +344,7 @@ class SqliteZipBackend(StorageBackend):
     def get_global_variable(self, key: str):
         raise NotImplementedError
 
-    def set_global_variable(self, key: str, value, description: Optional[str] = None, overwrite=True) -> None:
+    def set_global_variable(self, key: str, value, description: str | None = None, overwrite=True) -> None:
         raise ReadOnlyError()
 
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
@@ -378,7 +378,7 @@ class SqliteZipBackend(StorageBackend):
         return results
 
     @staticmethod
-    def get_current_archive_version(inpath: Union[str, Path]) -> str:
+    def get_current_archive_version(inpath: str | Path) -> str:
         """Return the current version from metadata, raising if invalid/corrupt."""
 
         inpath = Path(inpath)
@@ -427,11 +427,11 @@ class _RoBackendRepository(AbstractRepositoryBackend):
         self._closed = True
 
     @property
-    def uuid(self) -> Optional[str]:
+    def uuid(self) -> str | None:
         return None
 
     @property
-    def key_format(self) -> Optional[str]:
+    def key_format(self) -> str | None:
         return 'sha256'
 
     def initialise(self, **kwargs) -> None:

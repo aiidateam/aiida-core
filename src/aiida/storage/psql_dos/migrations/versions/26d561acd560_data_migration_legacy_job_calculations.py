@@ -47,6 +47,8 @@ Create Date: 2019-06-22 09:55:25.284168
 
 """
 
+from __future__ import annotations
+
 from alembic import op
 from sqlalchemy.sql import text
 

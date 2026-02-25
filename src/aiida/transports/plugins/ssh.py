@@ -13,7 +13,6 @@ import io
 import os
 import re
 from stat import S_ISDIR, S_ISREG
-from typing import Optional
 
 import click
 
@@ -1556,7 +1555,7 @@ class SshTransport(BlockingTransport):
 
         return (retval, b''.join(stdout_bytes), b''.join(stderr_bytes))
 
-    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
+    def gotocomputer_command(self, remotedir: TransportPath | None = None):
         """Specific gotocomputer string to connect to a given remote computer via
         ssh and directly go to the calculation folder.
         """

@@ -17,7 +17,14 @@ import zipfile
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from typing import Any, BinaryIO, Dict, List, Literal, Optional, Set, Union
+from typing import (
+    Any,
+    BinaryIO,
+    Dict,
+    List,
+    Literal,
+    Set,
+)
 
 from archive_path import NOTSET, ZipPath, extract_file_in_zip, read_file_in_zip
 from sqlalchemy import insert
@@ -41,12 +48,12 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
 
     def __init__(
         self,
-        path: Union[str, Path],
+        path: str | Path,
         fmt: ArchiveFormatAbstract,
         *,
         mode: Literal['x', 'w', 'a'] = 'x',
         compression: int = 6,
-        work_dir: Optional[Path] = None,
+        work_dir: Path | None = None,
         _debug: bool = False,
         _enforce_foreign_keys: bool = True,
     ):
@@ -58,9 +65,9 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         self._metadata: Dict[str, Any] = {}
         self._central_dir: Dict[str, Any] = {}
         self._deleted_paths: Set[str] = set()
-        self._zip_path: Optional[ZipPath] = None
-        self._work_dir: Optional[Path] = None
-        self._conn: Optional[Connection] = None
+        self._zip_path: ZipPath | None = None
+        self._work_dir: Path | None = None
+        self._conn: Connection | None = None
 
     def _assert_in_context(self):
         if not self._in_context:
@@ -149,9 +156,9 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         name: str,
         handle: BinaryIO,
         *,
-        buffer_size: Optional[int] = None,
-        compression: Optional[int] = None,
-        comment: Optional[bytes] = None,
+        buffer_size: int | None = None,
+        compression: int | None = None,
+        comment: bytes | None = None,
     ) -> None:
         """Add a binary stream to the archive.
 
@@ -183,7 +190,7 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
             else:
                 shutil.copyfileobj(handle, zip_handle, length=buffer_size)
 
-    def put_object(self, stream: BinaryIO, *, buffer_size: Optional[int] = None, key: Optional[str] = None) -> str:
+    def put_object(self, stream: BinaryIO, *, buffer_size: int | None = None, key: str | None = None) -> str:
         if key is None:
             key = chunked_file_hash(stream, hashlib.sha256)
             stream.seek(0)

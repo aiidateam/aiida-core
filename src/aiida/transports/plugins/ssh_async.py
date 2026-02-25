@@ -14,7 +14,6 @@ import asyncio
 import glob
 import os
 from pathlib import Path, PurePath
-from typing import Optional, Union
 
 import click
 
@@ -710,7 +709,7 @@ class AsyncSshTransport(AsyncTransport):
     async def compress_async(
         self,
         format: str,
-        remotesources: Union[TransportPath, list[TransportPath]],
+        remotesources: TransportPath | list[TransportPath],
         remotedestination: TransportPath,
         root_dir: TransportPath,
         overwrite: bool = True,
@@ -838,10 +837,10 @@ class AsyncSshTransport(AsyncTransport):
     async def exec_command_wait_async(
         self,
         command: str,
-        stdin: Optional[str] = None,
+        stdin: str | None = None,
         encoding: str = 'utf-8',
-        workdir: Optional[TransportPath] = None,
-        timeout: Optional[float] = None,
+        workdir: TransportPath | None = None,
+        timeout: float | None = None,
         **kwargs,
     ):
         """Execute a command on the remote machine and wait for it to finish.
@@ -992,7 +991,7 @@ class AsyncSshTransport(AsyncTransport):
 
         return list_
 
-    async def listdir_withattributes_async(self, path: TransportPath, pattern: Optional[str] = None):
+    async def listdir_withattributes_async(self, path: TransportPath, pattern: str | None = None):
         """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
@@ -1282,7 +1281,7 @@ class AsyncSshTransport(AsyncTransport):
                     os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put
                 )
 
-    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
+    def gotocomputer_command(self, remotedir: TransportPath | None = None):
         """Return a string to be used to connect to the remote computer.
 
         :param remotedir: the remote directory to connect to

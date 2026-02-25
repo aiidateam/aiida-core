@@ -13,7 +13,7 @@ to allow the reading of the outputs of a calculation.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Tuple
 
 from aiida.common import exceptions, extendeddicts, log
 from aiida.engine import ExitCode, ExitCodesNamespace, calcfunction
@@ -118,7 +118,7 @@ class Parser(ABC):
     @classmethod
     def parse_from_node(
         cls, node: 'CalcJobNode', store_provenance=True, retrieved_temporary_folder=None
-    ) -> Tuple[Optional[Dict[str, Any]], 'orm.CalcFunctionNode']:
+    ) -> Tuple[Dict[str, Any] | None, 'orm.CalcFunctionNode']:
         """Parse the outputs directly from the `CalcJobNode`.
 
         If `store_provenance` is set to False, a `CalcFunctionNode` will still be generated, but it will not be stored.
@@ -186,7 +186,7 @@ class Parser(ABC):
         return parse_calcfunction.run_get_node(**inputs)
 
     @abstractmethod
-    def parse(self, **kwargs) -> Optional[ExitCode]:
+    def parse(self, **kwargs) -> ExitCode | None:
         """Parse the contents of the output files retrieved in the `FolderData`.
 
         This method should be implemented in the sub class. Outputs can be registered through the `out` method.

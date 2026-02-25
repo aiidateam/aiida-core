@@ -9,7 +9,6 @@
 """Futures that can poll or receive broadcasted messages while waiting for a task to be completed."""
 
 import asyncio
-from typing import Optional, Union
 
 import kiwipy
 
@@ -26,9 +25,9 @@ class ProcessFuture(asyncio.Future):
     def __init__(
         self,
         pk: int,
-        loop: Optional[asyncio.AbstractEventLoop] = None,
-        poll_interval: Union[None, int, float] = None,
-        communicator: Optional[kiwipy.Communicator] = None,
+        loop: asyncio.AbstractEventLoop | None = None,
+        poll_interval: None | int | float = None,
+        communicator: kiwipy.Communicator | None = None,
     ):
         """Construct a future for a process node being finished.
 
@@ -79,7 +78,7 @@ class ProcessFuture(asyncio.Future):
             self._communicator = None
             self._broadcast_identifier = None
 
-    async def _poll_process(self, node: Node, poll_interval: Union[int, float]) -> None:
+    async def _poll_process(self, node: Node, poll_interval: int | float) -> None:
         """Poll whether the process node has reached a terminal state."""
         print('polling', node)
         while not self.done() and not node.is_terminated:

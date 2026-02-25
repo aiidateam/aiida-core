@@ -12,7 +12,13 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, ContextManager, List, Optional, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ContextManager,
+    List,
+    TypeVar,
+)
 
 if TYPE_CHECKING:
     from disk_objectstore.backup_utils import BackupManager
@@ -64,7 +70,7 @@ class StorageBackend(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def version_profile(cls, profile: 'Profile') -> Optional[str]:
+    def version_profile(cls, profile: 'Profile') -> str | None:
         """Return the schema version of the given profile's storage, or None for empty/uninitialised storage.
 
         :raises: `~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed
@@ -108,7 +114,7 @@ class StorageBackend(abc.ABC):
         from aiida.orm.autogroup import AutogroupManager
 
         self._profile = profile
-        self._default_user: Optional['User'] = None
+        self._default_user: 'User' | None = None
         self._autogroup = AutogroupManager(self)
 
     @abc.abstractmethod
@@ -195,7 +201,7 @@ class StorageBackend(abc.ABC):
         """Return the collection of users"""
 
     @property
-    def default_user(self) -> Optional['User']:
+    def default_user(self) -> 'User' | None:
         """Return the default user for the profile, if it has been created.
 
         This is cached, since it is a frequently used operation, for creating other entities.
@@ -272,7 +278,7 @@ class StorageBackend(abc.ABC):
 
     @abc.abstractmethod
     def set_global_variable(
-        self, key: str, value: Union[None, str, int, float], description: Optional[str] = None, overwrite: bool = True
+        self, key: str, value: None | str | int | float, description: str | None = None, overwrite: bool = True
     ) -> None:
         """Set a global variable in the storage.
 
@@ -285,7 +291,7 @@ class StorageBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_global_variable(self, key: str) -> Union[None, str, int, float]:
+    def get_global_variable(self, key: str) -> None | str | int | float:
         """Return a global variable from the storage.
 
         :param key: the key of the setting
@@ -311,7 +317,7 @@ class StorageBackend(abc.ABC):
     def _backup(
         self,
         dest: str,
-        keep: Optional[int] = None,
+        keep: int | None = None,
     ) -> None:
         raise NotImplementedError
 
@@ -398,7 +404,7 @@ class StorageBackend(abc.ABC):
     def backup(
         self,
         dest: str,
-        keep: Optional[int] = None,
+        keep: int | None = None,
     ) -> None:
         """Create a backup of the storage contents.
 

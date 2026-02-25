@@ -10,7 +10,7 @@
 
 import abc
 import datetime
-from typing import TYPE_CHECKING, List, Optional, Protocol, Sequence, Union
+from typing import TYPE_CHECKING, List, Protocol, Sequence
 
 from .entities import BackendCollection, BackendEntity, BackendEntityExtrasMixin
 from .nodes import BackendNode
@@ -30,7 +30,7 @@ class NodeIterator(Protocol):
     def __next__(self) -> BackendNode:
         """Return the next node in the group."""
 
-    def __getitem__(self, value: Union[int, slice]) -> Union[BackendNode, List[BackendNode]]:
+    def __getitem__(self, value: int | slice) -> BackendNode | List[BackendNode]:
         """Index node(s) from the group."""
 
     def __len__(self) -> int:
@@ -61,12 +61,12 @@ class BackendGroup(BackendEntity, BackendEntityExtrasMixin):
 
     @property
     @abc.abstractmethod
-    def description(self) -> Optional[str]:
+    def description(self) -> str | None:
         """Return the description of the group as a string."""
 
     @description.setter
     @abc.abstractmethod
-    def description(self, value: Optional[str]):
+    def description(self, value: str | None):
         """Return the description of the group as a string."""
 
     @property

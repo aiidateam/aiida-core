@@ -8,9 +8,20 @@
 ###########################################################################
 """Abstract BackendNode and BackendNodeCollection implementation."""
 
+from __future__ import annotations
+
 import abc
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Sequence, Tuple, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Sequence,
+    Tuple,
+    TypeVar,
+)
 
 from .entities import BackendCollection, BackendEntity, BackendEntityExtrasMixin
 
@@ -55,7 +66,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
 
     @property
     @abc.abstractmethod
-    def process_type(self) -> Optional[str]:
+    def process_type(self) -> str | None:
         """Return the node process type.
 
         :return: the process type
@@ -63,7 +74,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
 
     @process_type.setter
     @abc.abstractmethod
-    def process_type(self, value: Optional[str]) -> None:
+    def process_type(self, value: str | None) -> None:
         """Set the process type.
 
         :param value: the new value to set
@@ -119,7 +130,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
 
     @property
     @abc.abstractmethod
-    def computer(self) -> Optional['BackendComputer']:
+    def computer(self) -> 'BackendComputer' | None:
         """Return the computer of this node.
 
         :return: the computer or None
@@ -127,7 +138,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
 
     @computer.setter
     @abc.abstractmethod
-    def computer(self, computer: Optional['BackendComputer']) -> None:
+    def computer(self, computer: 'BackendComputer' | None) -> None:
         """Set the computer of this node.
 
         :param computer: a `BackendComputer`
@@ -180,7 +191,7 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
 
     @abc.abstractmethod
     def store(
-        self: BackendNodeType, links: Optional[Sequence['LinkTriple']] = None, clean: bool = True
+        self: BackendNodeType, links: Sequence['LinkTriple'] | None = None, clean: bool = True
     ) -> BackendNodeType:
         """Store the node in the database.
 

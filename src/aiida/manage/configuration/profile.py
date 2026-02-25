@@ -16,7 +16,14 @@ import pathlib
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Mapping,
+    Type,
+)
 
 from aiida.common import exceptions
 
@@ -87,12 +94,12 @@ class Profile:
         self._attributes[self.KEY_UUID] = value
 
     @property
-    def default_user_email(self) -> Optional[str]:
+    def default_user_email(self) -> str | None:
         """Return the default user email."""
         return self._attributes.get(self.KEY_DEFAULT_USER_EMAIL, None)
 
     @default_user_email.setter
-    def default_user_email(self, value: Optional[str]) -> None:
+    def default_user_email(self, value: str | None) -> None:
         """Set the default user email."""
         self._attributes[self.KEY_DEFAULT_USER_EMAIL] = value
 
@@ -213,8 +220,7 @@ class Profile:
 
         :return: absolute filepath of the profile's file repository
         """
-        from urllib.parse import urlparse
-        from urllib.request import url2pathname
+        from urllib.parse import unquote, urlparse
 
         from aiida.common.warnings import warn_deprecation
 
@@ -228,10 +234,10 @@ class Profile:
         if parts.scheme != 'file':
             raise exceptions.ConfigurationError('invalid repository protocol, only the local `file://` is supported')
 
-        if not os.path.isabs(url2pathname(parts.path)):
+        if not os.path.isabs(unquote(parts.path)):
             raise exceptions.ConfigurationError('invalid repository URI: the path has to be absolute')
 
-        return pathlib.Path(os.path.expanduser(url2pathname(parts.path)))
+        return pathlib.Path(os.path.expanduser(unquote(parts.path)))
 
     @property
     def filepaths(self):
@@ -267,20 +273,20 @@ class Profile:
 
     def dump(
         self,
-        output_path: Optional[Union[str, Path]] = None,
+        output_path: str | Path | None = None,
         # Dump mode options
         dry_run: bool = False,
         overwrite: bool = False,
         # Scope options
         all_entries: bool = False,
-        groups: Optional[Union[List[str], List[Group]]] = None,
-        user: Optional[Union[List[str], List[User]]] = None,
-        computers: Optional[Union[List[str], List[Computer]]] = None,
-        codes: Optional[Union[List[str], List[Code]]] = None,
+        groups: List[str] | List[Group] | None = None,
+        user: List[str] | List[User] | None = None,
+        computers: List[str] | List[Computer] | None = None,
+        codes: List[str] | List[Code] | None = None,
         # Time filtering options
-        past_days: Optional[int] = None,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        past_days: int | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
         filter_by_last_dump_time: bool = True,
         # Node collection options
         only_top_level_calcs: bool = True,

@@ -1,7 +1,7 @@
 """Abstract utility class that helps to import calculation jobs completed outside of AiiDA."""
 
 from abc import ABC, abstractmethod
-from typing import Dict, Union
+from typing import Dict
 
 from aiida.orm import Node, RemoteData
 
@@ -18,7 +18,7 @@ class CalcJobImporter(ABC):
 
     @staticmethod
     @abstractmethod
-    def parse_remote_data(remote_data: RemoteData, **kwargs) -> Dict[str, Union[Node, Dict]]:
+    def parse_remote_data(remote_data: RemoteData, **kwargs) -> Dict[str, Node | Dict]:
         """Parse the input nodes from the files in the provided ``RemoteData``.
 
         :param remote_data: the remote data node containing the raw input files.

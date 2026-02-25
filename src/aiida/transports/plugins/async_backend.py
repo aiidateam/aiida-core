@@ -15,13 +15,14 @@ The `_AsyncSSH` class uses the `asyncssh` library to execute commands and transf
 while the `_OpenSSH` class uses the `ssh` command line client.
 """
 
+from __future__ import annotations
+
 import abc
 import asyncio
 import logging
 import posixpath
 import re
 import subprocess
-from typing import Optional
 
 import asyncssh
 from asyncssh import SFTPFileAlreadyExists
@@ -33,7 +34,7 @@ from aiida.transports.transport import (
 )
 
 
-def get_openssh_version() -> Optional[int]:
+def get_openssh_version() -> int | None:
     """Get the major version of the local OpenSSH client.
 
     Returns the major version number (e.g., 9 for OpenSSH_9.0), or None if detection fails.
@@ -96,7 +97,7 @@ class _AsynchronousSSHBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    async def run(self, command: str, stdin: Optional[str] = None, timeout: Optional[int] = None):
+    async def run(self, command: str, stdin: str | None = None, timeout: int | None = None):
         """Run a command on the remote machine.
         :param command: The command to run
         :param stdin: The input to send to the command
@@ -262,7 +263,7 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         except asyncssh.Error as exc:
             raise OSError from exc
 
-    async def run(self, command: str, stdin: Optional[str] = None, timeout: Optional[int] = None):
+    async def run(self, command: str, stdin: str | None = None, timeout: int | None = None):
         result = await self._conn.run(
             self.bash_command + escape_for_bash(command),
             input=stdin,
@@ -473,7 +474,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
             self.logger.debug(f'Detected OpenSSH version {openssh_version}, using RCP mode for scp commands.')
             self.is_openssh_9_or_higher = False
 
-    async def openssh_execute(self, commands, stdin: Optional[str] = None, timeout: Optional[float] = None):
+    async def openssh_execute(self, commands, stdin: str | None = None, timeout: float | None = None):
         """
         Execute a command using the _OpenSSH command line client.
         :param commands: The list of commands to execute
@@ -534,7 +535,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         else:
             return f'{self._escape_for_rcp(path)}'
 
-    def ssh_command_generator(self, command_template: str, paths: Optional[list[str]] = None):
+    def ssh_command_generator(self, command_template: str, paths: list[str] | None = None):
         """Generate an SSH command with properly quoted paths.
 
         :param command_template: The command template with {} placeholders for paths
@@ -691,7 +692,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         # order matters
         return Stat(*stdout.split())
 
-    async def run(self, command: str, stdin: Optional[str] = None, timeout: Optional[float] = None):
+    async def run(self, command: str, stdin: str | None = None, timeout: float | None = None):
         commands = self.ssh_command_generator(command)
         returncode, stdout, stderr = await self.openssh_execute(commands, stdin, timeout)
         return returncode, stdout, stderr

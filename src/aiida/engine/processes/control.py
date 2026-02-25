@@ -206,7 +206,7 @@ def _perform_actions(
     action: t.Callable,
     infinitive: str,
     present: str,
-    timeout: t.Optional[float] = None,
+    timeout: float | None = None,
     **kwargs: t.Any,
 ) -> None:
     """Perform an action on a list of processes.
@@ -242,7 +242,7 @@ def _resolve_futures(
     futures: dict[concurrent.futures.Future, ProcessNode],
     infinitive: str,
     present: str,
-    timeout: t.Optional[float] = None,
+    timeout: float | None = None,
 ) -> None:
     """Process a mapping of futures representing an action on an active process.
 

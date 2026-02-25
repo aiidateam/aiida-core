@@ -11,7 +11,7 @@
 import importlib
 import logging
 import traceback
-from typing import TYPE_CHECKING, Any, Hashable, Optional
+from typing import TYPE_CHECKING, Any, Hashable
 
 import plumpy.loaders
 import plumpy.persistence
@@ -68,7 +68,7 @@ def get_object_loader() -> ObjectLoader:
 class AiiDAPersister(plumpy.persistence.Persister):
     """Persister to take saved process instance states and persisting them to the database."""
 
-    def save_checkpoint(self, process: 'Process', tag: Optional[str] = None):  # type: ignore[override]
+    def save_checkpoint(self, process: 'Process', tag: str | None = None):  # type: ignore[override]
         """Persist a Process instance.
 
         :param process: :class:`aiida.engine.Process`
@@ -93,7 +93,7 @@ class AiiDAPersister(plumpy.persistence.Persister):
 
         return bundle
 
-    def load_checkpoint(self, pid: Hashable, tag: Optional[str] = None) -> plumpy.persistence.Bundle:
+    def load_checkpoint(self, pid: Hashable, tag: str | None = None) -> plumpy.persistence.Bundle:
         """Load a process from a persisted checkpoint by its process id.
 
         :param pid: the process id of the :class:`plumpy.Process`
@@ -138,7 +138,7 @@ class AiiDAPersister(plumpy.persistence.Persister):
         :return: list of PersistedCheckpoint tuples with element containing the process id and optional checkpoint tag.
         """
 
-    def delete_checkpoint(self, pid: Hashable, tag: Optional[str] = None) -> None:
+    def delete_checkpoint(self, pid: Hashable, tag: str | None = None) -> None:
         """Delete a persisted process checkpoint, where no error will be raised if the checkpoint does not exist.
 
         :param pid: the process id of the :class:`plumpy.Process`

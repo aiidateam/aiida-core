@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Type
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -86,7 +86,7 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         enabled: bool = True,
         auth_params: Dict[str, Any] | None = None,
         metadata: Dict[str, Any] | None = None,
-        backend: Optional['StorageBackend'] = None,
+        backend: 'StorageBackend' | None = None,
     ) -> None:
         """Create an `AuthInfo` instance for the given computer and user.
 

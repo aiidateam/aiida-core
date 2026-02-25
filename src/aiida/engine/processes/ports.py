@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 import warnings
 from collections.abc import Mapping
-from typing import Any, Callable, Dict, Optional, Sequence
+from typing import Any, Callable, Dict, Sequence
 
 from plumpy import ports
 from plumpy.ports import breadcrumbs_to_port
@@ -258,7 +258,7 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
         if any(len(entry) > PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES for entry in consecutive_underscores):
             raise ValueError(f'invalid port name `{port_name}`: more than two consecutive underscores')
 
-    def serialize(self, mapping: Optional[Dict[str, Any]], breadcrumbs: Sequence[str] = ()) -> Optional[Dict[str, Any]]:
+    def serialize(self, mapping: Dict[str, Any] | None, breadcrumbs: Sequence[str] = ()) -> Dict[str, Any] | None:
         """Serialize the given mapping onto this `Portnamespace`.
 
         It will recursively call this function on any nested `PortNamespace` or the serialize function on any `Ports`.

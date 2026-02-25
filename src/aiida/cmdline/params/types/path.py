@@ -20,7 +20,7 @@ __all__ = ('AbsolutePathParamType', 'FileOrUrl', 'PathOrUrl')
 
 URL_TIMEOUT_SECONDS = 10
 
-PathType = t.Union[str, bytes, os.PathLike[str]]
+PathType = str | bytes | os.PathLike[str]
 
 
 def check_timeout_seconds(timeout_seconds: float) -> int:

@@ -8,6 +8,8 @@
 ###########################################################################
 """Tests for the `LsfScheduler` plugin."""
 
+from __future__ import annotations
+
 import logging
 import uuid
 

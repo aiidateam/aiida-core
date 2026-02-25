@@ -46,7 +46,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         return 'DiskObjectStoreRepository: <uninitialised>'
 
     @property
-    def uuid(self) -> t.Optional[str]:
+    def uuid(self) -> str | None:
         """Return the unique identifier of the repository."""
         if not self.is_initialised:
             return None
@@ -54,7 +54,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             return container.container_id
 
     @property
-    def key_format(self) -> t.Optional[str]:
+    def key_format(self) -> str | None:
         with self._container as container:
             return container.hash_type
 
@@ -150,10 +150,10 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         self,
         dry_run: bool = False,
         live: bool = True,
-        pack_loose: t.Optional[bool] = None,
-        do_repack: t.Optional[bool] = None,
-        clean_storage: t.Optional[bool] = None,
-        do_vacuum: t.Optional[bool] = None,
+        pack_loose: bool | None = None,
+        do_repack: bool | None = None,
+        clean_storage: bool | None = None,
+        do_vacuum: bool | None = None,
         compress: bool = False,
     ) -> None:
         """Performs maintenance operations.

@@ -153,6 +153,7 @@ def write_inits(folder_path: Path, all_dict: dict, skip_children: dict[str, list
             )
 
         start_content = []
+        future_imports = []
         end_content = []
         in_docstring = in_end_content = False
         in_start_content = True
@@ -162,10 +163,11 @@ def write_inits(folder_path: Path, all_dict: dict, skip_children: dict[str, list
             if in_end_content:
                 end_content.append(line)
                 continue
+            # Capture __future__ imports separately (they must stay at the top)
+            if line.startswith('from __future__'):
+                future_imports.append(line)
+                continue
             # Only keep initial comments and docstring
-            # TODO: Support __future__ imports, for which we will also
-            # need to retain any empty lines since ruff formatter automatically
-            # injects empty line between a module docstring and __future__ import
             if not (
                 (line.startswith('#') and not line.startswith(f'# {AUTO_GENERATED}'))
                 or line.startswith('"""')
@@ -180,6 +182,9 @@ def write_inits(folder_path: Path, all_dict: dict, skip_children: dict[str, list
                     in_docstring = False
             if in_start_content:
                 start_content.append(line)
+        # Re-insert __future__ imports right after the header
+        if future_imports:
+            start_content.extend([''] + future_imports)
 
         new_content = start_content + auto_content + end_content
 

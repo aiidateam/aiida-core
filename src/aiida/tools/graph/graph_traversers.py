@@ -10,7 +10,16 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, TypedDict, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    TypedDict,
+    cast,
+)
 
 from aiida import orm
 from aiida.common import exceptions
@@ -33,8 +42,8 @@ class TraverseGraphOutput(TypedDict, total=False):
 def get_nodes_delete(
     starting_pks: Iterable[int],
     get_links: bool = False,
-    missing_callback: Optional[Callable[[Iterable[int]], None]] = None,
-    backend: Optional['StorageBackend'] = None,
+    missing_callback: Callable[[Iterable[int]], None] | None = None,
+    backend: 'StorageBackend' | None = None,
     **traversal_rules: bool,
 ) -> TraverseGraphOutput:
     """This function will return the set of all nodes that can be connected
@@ -76,7 +85,7 @@ def get_nodes_delete(
 def get_nodes_export(
     starting_pks: Iterable[int],
     get_links: bool = False,
-    backend: Optional['StorageBackend'] = None,
+    backend: 'StorageBackend' | None = None,
     **traversal_rules: bool,
 ) -> TraverseGraphOutput:
     """This function will return the set of all nodes that can be connected
@@ -181,12 +190,12 @@ def validate_traversal_rules(
 
 def traverse_graph(
     starting_pks: Iterable[int],
-    max_iterations: Optional[int] = None,
+    max_iterations: int | None = None,
     get_links: bool = False,
     links_forward: Iterable[LinkType] = (),
     links_backward: Iterable[LinkType] = (),
-    missing_callback: Optional[Callable[[Iterable[int]], None]] = None,
-    backend: Optional['StorageBackend'] = None,
+    missing_callback: Callable[[Iterable[int]], None] | None = None,
+    backend: 'StorageBackend' | None = None,
 ) -> TraverseGraphOutput:
     """This function will return the set of all nodes that can be connected
     to a list of initial nodes through any sequence of specified links.

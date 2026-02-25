@@ -8,6 +8,8 @@
 ###########################################################################
 """Module which provides decorators for AiiDA ORM entity -> DB field mappings."""
 
+from __future__ import annotations
+
 import datetime
 import typing as t
 from abc import ABCMeta
@@ -30,15 +32,22 @@ __all__ = (
 def extract_root_type(dtype: t.Any) -> t.Any:
     """Recursively search for the primitive root type.
 
-    >>> extract_root_type(List[str]) -> list
-    >>> extract_root_type(Optional[List[str]]) -> list
+    >>> extract_root_type(list[str]) -> list
+    >>> extract_root_type(int | None) -> int
     """
+    from types import NoneType, UnionType
+
     origin = t.get_origin(dtype)
     if origin:
-        if origin is t.Union:
-            return extract_root_type(t.get_args(dtype)[0])
+        if origin is t.Union or origin is UnionType:
+            # For Union/optional types, get the first non-None argument
+            args = [a for a in t.get_args(dtype) if a is not NoneType]
+            return extract_root_type(args[0]) if args else dtype
         else:
             return origin
+    elif isinstance(dtype, UnionType):
+        args = [a for a in t.get_args(dtype) if a is not NoneType]
+        return extract_root_type(args[0]) if args else dtype
     else:
         return dtype
 
@@ -58,9 +67,9 @@ class QbField:
     def __init__(
         self,
         key: str,
-        alias: t.Optional[str] = None,
+        alias: str | None = None,
         *,
-        dtype: t.Optional[t.Any] = None,
+        dtype: t.Any | None = None,
         doc: str = '',
         is_attribute: bool = True,
         is_subscriptable: bool = False,
@@ -96,12 +105,12 @@ class QbField:
         return self._doc
 
     @property
-    def dtype(self) -> t.Optional[t.Any]:
+    def dtype(self) -> t.Any | None:
         """Return the primitive root type."""
         return extract_root_type(self._dtype)
 
     @property
-    def annotation(self) -> t.Optional[t.Any]:
+    def annotation(self) -> t.Any | None:
         """Return the full type annotation."""
         return self._dtype
 
@@ -249,7 +258,7 @@ class QbFieldFilters:
 
     def __init__(
         self,
-        filters: t.Union[t.Sequence[t.Tuple[QbField, str, t.Any]], dict],
+        filters: t.Sequence[t.Tuple[QbField, str, t.Any]] | dict,
     ):
         self.filters: t.Dict[str, t.Any] = {}
         self.add_filters(filters)
@@ -321,7 +330,7 @@ class QbFieldFilters:
             filters[key] = {operator: value}
         return QbFieldFilters(filters)
 
-    def _resolve_redundancy(self, other: 'QbFieldFilters', logical: str) -> t.Optional['QbFieldFilters']:
+    def _resolve_redundancy(self, other: 'QbFieldFilters', logical: str) -> 'QbFieldFilters' | None:
         """Resolve redundant filters and nested logical operators."""
 
         if not isinstance(other, QbFieldFilters):
@@ -351,7 +360,7 @@ class QbFields:
 
     __isabstractmethod__ = False
 
-    def __init__(self, fields: t.Optional[t.Dict[str, QbField]] = None):
+    def __init__(self, fields: t.Dict[str, QbField] | None = None):
         self._fields = fields or {}
 
     def __repr__(self) -> str:
@@ -476,8 +485,8 @@ class EntityFieldMeta(ABCMeta):
 
 class QbFieldArguments(t.TypedDict):
     key: str
-    alias: t.Optional[str]
-    dtype: t.Optional[t.Any]
+    alias: str | None
+    dtype: t.Any | None
     doc: str
     is_attribute: bool
     is_subscriptable: bool
@@ -485,9 +494,9 @@ class QbFieldArguments(t.TypedDict):
 
 def add_field(
     key: str,
-    alias: t.Optional[str] = None,
+    alias: str | None = None,
     *,
-    dtype: t.Optional[t.Any] = None,
+    dtype: t.Any | None = None,
     doc: str = '',
     is_attribute: bool = True,
     is_subscriptable: bool = False,

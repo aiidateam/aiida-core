@@ -16,7 +16,14 @@ import logging
 import signal
 import threading
 import uuid
-from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    NamedTuple,
+    Tuple,
+    Type,
+)
 
 import kiwipy
 from plumpy.communications import wrap_communicator
@@ -47,26 +54,26 @@ class ResultAndPk(NamedTuple):
     pk: int | None
 
 
-TYPE_RUN_PROCESS = Union[Process, Type[Process], ProcessBuilder]
+TYPE_RUN_PROCESS = Process | Type[Process] | ProcessBuilder
 # run can also be process function, but it is not clear what type this should be
-TYPE_SUBMIT_PROCESS = Union[Process, Type[Process], ProcessBuilder]
+TYPE_SUBMIT_PROCESS = Process | Type[Process] | ProcessBuilder
 
 
 class Runner:
     """Class that can launch processes by running in the current interpreter or by submitting them to the daemon."""
 
-    _persister: Optional[Persister] = None
-    _communicator: Optional[kiwipy.Communicator] = None
-    _controller: Optional[RemoteProcessThreadController] = None
+    _persister: Persister | None = None
+    _communicator: kiwipy.Communicator | None = None
+    _controller: RemoteProcessThreadController | None = None
     _closed: bool = False
 
     def __init__(
         self,
-        poll_interval: Union[int, float] = 0,
-        loop: Optional[asyncio.AbstractEventLoop] = None,
-        communicator: Optional[kiwipy.Communicator] = None,
+        poll_interval: int | float = 0,
+        loop: asyncio.AbstractEventLoop | None = None,
+        communicator: kiwipy.Communicator | None = None,
         broker_submit: bool = False,
-        persister: Optional[Persister] = None,
+        persister: Persister | None = None,
     ):
         """Construct a new runner.
 
@@ -113,12 +120,12 @@ class Runner:
         return self._transport
 
     @property
-    def persister(self) -> Optional[Persister]:
+    def persister(self) -> Persister | None:
         """Get the persister used by this runner."""
         return self._persister
 
     @property
-    def communicator(self) -> Optional[kiwipy.Communicator]:
+    def communicator(self) -> kiwipy.Communicator | None:
         """Get the communicator used by this runner."""
         return self._communicator
 
@@ -131,7 +138,7 @@ class Runner:
         return self._job_manager
 
     @property
-    def controller(self) -> Optional[RemoteProcessThreadController]:
+    def controller(self) -> RemoteProcessThreadController | None:
         """Get the controller used by this runner."""
         return self._controller
 

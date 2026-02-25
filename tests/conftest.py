@@ -1007,7 +1007,7 @@ def create_file_hierarchy():
     :param target: the target where the hierarchy should be created.
     """
 
-    def _create_file_hierarchy(hierarchy: t.Dict, target: t.Union[pathlib.Path, Folder]) -> None:
+    def _create_file_hierarchy(hierarchy: t.Dict, target: pathlib.Path | Folder) -> None:
         for filename, value in hierarchy.items():
             if isinstance(value, dict):
                 if isinstance(target, pathlib.Path):

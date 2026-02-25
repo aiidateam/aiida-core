@@ -8,6 +8,8 @@
 ###########################################################################
 """Test for entity fields"""
 
+from __future__ import annotations
+
 import pytest
 from importlib_metadata import entry_points
 

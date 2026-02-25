@@ -15,7 +15,13 @@ import uuid
 import warnings
 from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Tuple,
+)
 
 from sqlalchemy import and_, not_, or_, select
 from sqlalchemy import func as sa_func
@@ -84,7 +90,7 @@ class BuiltQuery:
     """A class to store the query and the corresponding projections."""
 
     query: Query
-    tag_to_alias: Dict[str, Optional[AliasedClass]]
+    tag_to_alias: Dict[str, AliasedClass | None]
     tag_to_projected: Dict[str, Dict[str, int]]
 
 
@@ -124,8 +130,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         }
 
         # Hashing the internal query representation avoids rebuilding a query
-        self._query_cache: Optional[BuiltQuery] = None
-        self._query_hash: Optional[str] = None
+        self._query_cache: BuiltQuery | None = None
+        self._query_hash: str | None = None
 
     @property
     def Node(self):
@@ -190,7 +196,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             result = build.query.count()
         return result
 
-    def first(self, data: QueryDictType) -> Optional[List[Any]]:
+    def first(self, data: QueryDictType) -> List[Any] | None:
         with self.query_session(data) as build:
             result = build.query.first()
 
@@ -204,7 +210,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         return [self.to_backend(r) for r in result]
 
-    def iterall(self, data: QueryDictType, batch_size: Optional[int]) -> Iterable[List[Any]]:
+    def iterall(self, data: QueryDictType, batch_size: int | None) -> Iterable[List[Any]]:
         """Return an iterator over all the results of a list of lists."""
         with self.query_session(data) as build:
             stmt = build.query.statement.execution_options(yield_per=batch_size)
@@ -217,7 +223,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 for resultrow in session.execute(stmt):
                     yield [self.to_backend(rowitem) for rowitem in resultrow]
 
-    def iterdict(self, data: QueryDictType, batch_size: Optional[int]) -> Iterable[Dict[str, Dict[str, Any]]]:
+    def iterdict(self, data: QueryDictType, batch_size: int | None) -> Iterable[Dict[str, Dict[str, Any]]]:
         """Return an iterator over all the results of a list of dictionaries."""
         with self.query_session(data) as build:
             stmt = build.query.statement.execution_options(yield_per=batch_size)
@@ -277,7 +283,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
     def _build(self, data: QueryDictType) -> BuiltQuery:
         """Build the query and return."""
         # generate aliases for tags
-        tag_to_alias: Dict[str, Optional[AliasedClass]] = {}
+        tag_to_alias: Dict[str, AliasedClass | None] = {}
         cls_map = {
             EntityTypes.AUTHINFO.value: self.AuthInfo,
             EntityTypes.COMMENT.value: self.Comment,
@@ -359,7 +365,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
     def _create_order_by(
         self, alias: AliasedClass, field_key: str, entityspec: dict
-    ) -> Union[ColumnElement, InstrumentedAttribute]:
+    ) -> ColumnElement | InstrumentedAttribute:
         """Build the order_by parameter of the query."""
         column_name = field_key.split('.')[0]
         attrpath = field_key.split('.')[1:]
@@ -381,8 +387,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         alias: AliasedClass,
         column_name: str,
         attrpath: List[str],
-        cast: Optional[str] = None,
-    ) -> Union[ColumnElement, InstrumentedAttribute]:
+        cast: str | None = None,
+    ) -> ColumnElement | InstrumentedAttribute:
         """Return projectable entity for a given alias and column name."""
         if not (attrpath or column_name in ('attributes', 'extras')):
             return get_column(column_name, alias)
@@ -436,7 +442,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
                 attr_key = path_spec.split('.')[1:]
                 is_jsonb = bool(attr_key) or column_name in ('dict', 'attributes', 'extras')
-                column: Optional[InstrumentedAttribute]
+                column: InstrumentedAttribute | None
                 try:
                     column = get_column(column_name, alias)
                 except (ValueError, TypeError):
@@ -897,7 +903,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         rows = self.get_session().execute(text(f'EXPLAIN{options} {compiled.string}')).fetchall()
         return '\n'.join(row[0] for row in rows)
 
-    def get_creation_statistics(self, user_pk: Optional[int] = None) -> Dict[str, Any]:
+    def get_creation_statistics(self, user_pk: int | None = None) -> Dict[str, Any]:
         session = self.get_session()
         retdict: Dict[Any, Any] = {}
 
@@ -1060,7 +1066,7 @@ def compile_query(query: Query, literal_binds: bool = False) -> SQLCompiler:
 
 
 def generate_joins(
-    data: QueryDictType, aliases: Dict[str, Optional[AliasedClass]], joiner: SqlaJoiner
+    data: QueryDictType, aliases: Dict[str, AliasedClass | None], joiner: SqlaJoiner
 ) -> List[JoinReturn]:
     """Generate the joins for the query."""
     joins: List[JoinReturn] = []
@@ -1109,12 +1115,12 @@ def generate_joins(
 
 
 def generate_projections(
-    data: QueryDictType, aliases: Dict[str, Optional[AliasedClass]], outer_to_inner_schema, get_projectable_entity
+    data: QueryDictType, aliases: Dict[str, AliasedClass | None], outer_to_inner_schema, get_projectable_entity
 ):
     """Generate the projections for the query."""
     # mapping of tag -> field -> projection_index
     tag_to_projected_fields: Dict[str, Dict[str, int]] = {}
-    projections: List[Tuple[Union[AliasedClass, ColumnElement], bool]] = []
+    projections: List[Tuple[AliasedClass | ColumnElement, bool]] = []
 
     QUERYBUILD_LOGGER.debug('projections data: %s', data['project'])
 
@@ -1181,13 +1187,13 @@ def generate_projections(
 
 def _create_projections(
     tag: str,
-    aliases: Dict[str, Optional[AliasedClass]],
+    aliases: Dict[str, AliasedClass | None],
     projection_count: int,
     project_dict: List[Dict[str, dict]],
     get_projectable_entity,
     tag_to_projected_fields,
     outer_to_inner_schema,
-) -> List[Tuple[Union[AliasedClass, ColumnElement], bool]]:
+) -> List[Tuple[AliasedClass | ColumnElement, bool]]:
     """Build the projections for a given tag.
 
     :param tag: the tag of the node for which to build the projections
@@ -1229,10 +1235,10 @@ def _get_projection(
     alias: AliasedClass,
     projectable_entity_name: str,
     get_projectable_entity,
-    cast: Optional[str] = None,
-    func: Optional[str] = None,
+    cast: str | None = None,
+    func: str | None = None,
     **_kw: Any,
-) -> Tuple[Union[AliasedClass, ColumnElement], bool]:
+) -> Tuple[AliasedClass | ColumnElement, bool]:
     """:param alias: An alias for an ormclass
     :param projectable_entity_name:
         User specification of what to project.

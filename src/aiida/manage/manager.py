@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import asyncio
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 __all__ = ('get_manager',)
 
-MANAGER: Optional['Manager'] = None
+MANAGER: 'Manager' | None = None
 
 
 def get_manager() -> 'Manager':
@@ -71,13 +71,13 @@ class Manager:
         from aiida.common.log import AIIDA_LOGGER
 
         # note: the config currently references the global variables
-        self._broker: Optional['Broker'] = None
-        self._profile: Optional['Profile'] = None
-        self._profile_storage: Optional['StorageBackend'] = None
-        self._daemon_client: Optional['DaemonClient'] = None
-        self._process_controller: Optional['RemoteProcessThreadController'] = None
-        self._persister: Optional['AiiDAPersister'] = None
-        self._runner: Optional['Runner'] = None
+        self._broker: 'Broker' | None = None
+        self._profile: 'Profile' | None = None
+        self._profile_storage: 'StorageBackend' | None = None
+        self._daemon_client: 'DaemonClient' | None = None
+        self._process_controller: 'RemoteProcessThreadController' | None = None
+        self._persister: 'AiiDAPersister' | None = None
+        self._runner: 'Runner' | None = None
         self.logger = AIIDA_LOGGER.getChild(__name__)
 
     @staticmethod
@@ -92,14 +92,14 @@ class Manager:
 
         return get_config(create=create)
 
-    def get_profile(self) -> Optional['Profile']:
+    def get_profile(self) -> 'Profile' | None:
         """Return the current loaded profile, if any
 
         :return: current loaded profile instance
         """
         return self._profile
 
-    def load_profile(self, profile: Union[None, str, 'Profile'] = None, allow_switch=False) -> 'Profile':
+    def load_profile(self, profile: None | str | 'Profile' = None, allow_switch=False) -> 'Profile':
         """Load a global profile, unloading any previously loaded profile.
 
         .. note:: If a profile is already loaded and no explicit profile is specified, nothing will be done.
@@ -432,7 +432,7 @@ class Manager:
 
         return runners.Runner(**settings)  # type: ignore[arg-type]
 
-    def create_daemon_runner(self, loop: Optional['asyncio.AbstractEventLoop'] = None) -> 'Runner':
+    def create_daemon_runner(self, loop: 'asyncio.AbstractEventLoop' | None = None) -> 'Runner':
         """Create and return a new daemon runner.
 
         This is used by workers when the daemon is running and in testing.

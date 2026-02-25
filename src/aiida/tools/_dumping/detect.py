@@ -11,7 +11,15 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Tuple,
+    Type,
+    cast,
+)
 
 import click
 
@@ -52,19 +60,19 @@ class DumpChangeDetector:
 
     def __init__(
         self,
-        config: Union[GroupDumpConfig, ProfileDumpConfig],
+        config: GroupDumpConfig | ProfileDumpConfig,
         dump_tracker: DumpTracker,
         dump_paths: DumpPaths,
         dump_times: DumpTimes,
         current_mapping: GroupNodeMapping,
     ) -> None:
         """Initializes the DumpChangeDetector."""
-        self.config: Union[GroupDumpConfig, ProfileDumpConfig] = config
+        self.config: GroupDumpConfig | ProfileDumpConfig = config
         self.dump_tracker: DumpTracker = dump_tracker
         self.dump_paths: DumpPaths = dump_paths
         self.dump_times: DumpTimes = dump_times
         self._current_mapping: GroupNodeMapping = current_mapping
-        self._grouped_node_uuids_cache: Optional[set[str]] = None
+        self._grouped_node_uuids_cache: set[str] | None = None
 
     @property
     def grouped_node_uuids(self) -> set[str]:
@@ -80,7 +88,7 @@ class DumpChangeDetector:
     def get_nodes(
         self,
         group_scope: GroupDumpScope = GroupDumpScope.ANY,
-        group: Optional[orm.Group] = None,
+        group: orm.Group | None = None,
         apply_filters: bool = True,
         ignore_time_filters: bool = False,
         exclude_tracked: bool = True,
@@ -139,7 +147,7 @@ class DumpChangeDetector:
         self,
         orm_type: Type[orm.ProcessNode],
         group_scope: GroupDumpScope,
-        group: Optional[orm.Group],
+        group: orm.Group | None,
         base_filters: Dict[str, Any],
     ) -> List[orm.ProcessNode]:
         """Query nodes of a single ORM type with the given scope and filters.
@@ -257,7 +265,7 @@ class DumpChangeDetector:
 
         return filtered_nodes
 
-    def _detect_new_nodes(self, group: Optional[orm.Group] = None) -> ProcessingQueue:
+    def _detect_new_nodes(self, group: orm.Group | None = None) -> ProcessingQueue:
         """Detect new/modified nodes for dumping.
 
         :param group: Specific group to detect changes for, or None for general detection
@@ -286,7 +294,7 @@ class DumpChangeDetector:
             group_scope=GroupDumpScope.NO_GROUP, apply_filters=True, ignore_time_filters=True, exclude_tracked=False
         )
 
-    def _detect_node_changes(self, group: Optional[orm.Group] = None) -> NodeChanges:
+    def _detect_node_changes(self, group: orm.Group | None = None) -> NodeChanges:
         """Detect node changes (main orchestration method).
 
         :param group: The specific group to filter by when scope is IN_GROUP
@@ -454,7 +462,7 @@ class DumpChangeDetector:
         time_filters['<='] = upper_bound
 
         # Lower bound (priority: past_days > start_date > last_dump_time)
-        lower_bound: Optional[datetime] = None
+        lower_bound: datetime | None = None
 
         if self.config.past_days is not None:
             days = int(self.config.past_days)

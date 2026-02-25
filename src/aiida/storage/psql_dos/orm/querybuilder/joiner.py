@@ -10,7 +10,13 @@
 """A module containing the logic for creating joined queries."""
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional, Protocol, Type
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Protocol,
+    Type,
+)
 
 from sqlalchemy import and_, join, select
 from sqlalchemy.dialects.postgresql import array
@@ -59,7 +65,7 @@ class _EntityMapper(Protocol):
 @dataclass
 class JoinReturn:
     join: Callable[[Query], Query]
-    aliased_edge: Optional[AliasedClass] = None
+    aliased_edge: AliasedClass | None = None
     edge_tag: str = ''
 
 
@@ -73,7 +79,7 @@ class SqlaJoiner:
     def __init__(
         self,
         entity_mapper: _EntityMapper,
-        filter_builder: Callable[[AliasedClass, FilterType], Optional[ColumnElement[bool]]],
+        filter_builder: Callable[[AliasedClass, FilterType], ColumnElement[bool] | None],
     ):
         """Initialise the class"""
         self._entities = entity_mapper

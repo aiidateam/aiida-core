@@ -17,7 +17,7 @@ import tempfile
 from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable, Optional, Union
+from typing import Any, Callable, Iterable
 
 from tabulate import tabulate
 
@@ -45,22 +45,22 @@ QbType = Callable[[], orm.QueryBuilder]
 
 
 def create_archive(
-    entities: Optional[Iterable[Union[orm.Computer, orm.Node, orm.Group, orm.User]]],
-    filename: Union[None, str, Path] = None,
+    entities: Iterable[orm.Computer | orm.Node | orm.Group | orm.User] | None,
+    filename: None | str | Path = None,
     *,
-    archive_format: Optional[ArchiveFormatAbstract] = None,
+    archive_format: ArchiveFormatAbstract | None = None,
     overwrite: bool = False,
     include_comments: bool = True,
     include_logs: bool = True,
     include_authinfos: bool = False,
-    allowed_licenses: Optional[Union[list, Callable]] = None,
-    forbidden_licenses: Optional[Union[list, Callable]] = None,
+    allowed_licenses: list | Callable | None = None,
+    forbidden_licenses: list | Callable | None = None,
     strip_checkpoints: bool = True,
     batch_size: int = DEFAULT_BATCH_SIZE,
     filter_size: int = DEFAULT_FILTER_SIZE,
     compression: int = 6,
     test_run: bool = False,
-    backend: Optional[StorageBackend] = None,
+    backend: StorageBackend | None = None,
     **traversal_rules: bool,
 ) -> Path:
     """Export AiiDA data to an archive file.
@@ -687,8 +687,8 @@ def _check_unsealed_nodes(querybuilder: QbType, node_ids: set[int], batch_size: 
 def _check_node_licenses(
     querybuilder: QbType,
     node_ids: set[int],
-    allowed_licenses: Union[None, Sequence[str], Callable],
-    forbidden_licenses: Union[None, Sequence[str], Callable],
+    allowed_licenses: None | Sequence[str] | Callable,
+    forbidden_licenses: None | Sequence[str] | Callable,
     batch_size: int,
     filter_size: int,
 ) -> None:

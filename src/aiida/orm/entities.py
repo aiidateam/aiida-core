@@ -14,7 +14,15 @@ import abc
 import pathlib
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Generic, List, NoReturn, Optional, Type, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    List,
+    NoReturn,
+    Type,
+    TypeVar,
+)
 
 from plumpy.base.utils import call_with_super_check, super_check
 from pydantic import BaseModel
@@ -75,7 +83,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         type_check(backend, StorageBackend)
         return cls(entity_class, backend=backend)
 
-    def __init__(self, entity_class: Type[EntityType], backend: Optional['StorageBackend'] = None) -> None:
+    def __init__(self, entity_class: Type[EntityType], backend: 'StorageBackend' | None = None) -> None:
         """Construct a new entity collection.
 
         :param entity_class: the entity type e.g. User, Computer, etc
@@ -106,11 +114,11 @@ class Collection(abc.ABC, Generic[EntityType]):
 
     def query(
         self,
-        filters: Optional['FilterType'] = None,
-        order_by: Optional['OrderByType'] = None,
-        project: Optional[Union[list[str], str]] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        filters: 'FilterType' | None = None,
+        order_by: 'OrderByType' | None = None,
+        project: list[str] | str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
         subclassing: bool = True,
     ) -> 'QueryBuilder':
         """Get a query builder for the objects of this collection.
@@ -144,10 +152,10 @@ class Collection(abc.ABC, Generic[EntityType]):
 
     def find(
         self,
-        filters: Optional['FilterType'] = None,
-        order_by: Optional['OrderByType'] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        filters: 'FilterType' | None = None,
+        order_by: 'OrderByType' | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
     ) -> List[EntityType]:
         """Find collection entries matching the filter criteria.
 
@@ -168,7 +176,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         """
         return self.query().all(flat=True)
 
-    def count(self, filters: Optional['FilterType'] = None) -> int:
+    def count(self, filters: 'FilterType' | None = None) -> int:
         """Count entities in this collection according to criteria.
 
         :param filters: the keyword value pair filters to match
@@ -185,7 +193,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     _logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
     class Model(BaseModel, defer_build=True):
-        pk: Optional[int] = MetadataField(
+        pk: int | None = MetadataField(
             None,
             description='The primary key of the entity. Can be `None` if the entity is not yet stored.',
             is_attribute=False,
@@ -248,7 +256,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         fields = cls.model_to_orm_field_values(model)
         return cls(**fields)
 
-    def serialize(self, repository_path: Union[pathlib.Path, None] = None) -> dict[str, Any]:
+    def serialize(self, repository_path: pathlib.Path | None = None) -> dict[str, Any]:
         """Serialize the entity instance to JSON.
 
         :param repository_path: If the orm node has files in the repository, this path is used to dump the repostiory

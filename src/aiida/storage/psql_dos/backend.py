@@ -13,7 +13,7 @@ import gc
 import pathlib
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
-from typing import TYPE_CHECKING, List, Optional, Set, Union
+from typing import TYPE_CHECKING, List, Set
 
 from disk_objectstore import Container, backup_utils
 from pydantic import BaseModel, Field
@@ -48,8 +48,7 @@ CONTAINER_DEFAULTS: dict = {
 
 def get_filepath_container(profile: Profile) -> pathlib.Path:
     """Return the filepath of the disk-object store container."""
-    from urllib.parse import urlparse
-    from urllib.request import url2pathname
+    from urllib.parse import unquote, urlparse
 
     try:
         parts = urlparse(profile.storage_config['repository_uri'])
@@ -61,7 +60,7 @@ def get_filepath_container(profile: Profile) -> pathlib.Path:
             f'invalid profile {profile.name}: `storage.config.repository_uri` does not start with `file://`.'
         )
 
-    filepath = pathlib.Path(url2pathname(parts.path))
+    filepath = pathlib.Path(unquote(parts.path))
 
     if not filepath.is_absolute():
         raise ConfigurationError(f'invalid profile {profile.name}: `storage.config.repository_uri` is not absolute')
@@ -111,7 +110,7 @@ class PsqlDosBackend(StorageBackend):
         return cls.migrator.get_schema_version_head()
 
     @classmethod
-    def version_profile(cls, profile: Profile) -> Optional[str]:
+    def version_profile(cls, profile: Profile) -> str | None:
         with cls.migrator_context(profile) as migrator:
             return migrator.get_schema_version_profile(check_legacy=True)
 
@@ -141,7 +140,7 @@ class PsqlDosBackend(StorageBackend):
         with self.migrator_context(profile) as migrator:
             migrator.validate_storage()
 
-        self._session_factory: Optional[scoped_session] = None
+        self._session_factory: scoped_session | None = None
         self._initialise_session()
         # save the URL of the database, for use in the __str__ method
         self._db_url = self.get_session().get_bind().url  # type: ignore[union-attr]
@@ -407,7 +406,7 @@ class PsqlDosBackend(StorageBackend):
         return convert.get_backend_entity(model, self)
 
     def set_global_variable(
-        self, key: str, value: Union[None, str, int, float], description: Optional[str] = None, overwrite=True
+        self, key: str, value: None | str | int | float, description: str | None = None, overwrite=True
     ) -> None:
         from aiida.storage.psql_dos.models.settings import DbSetting
 
@@ -421,7 +420,7 @@ class PsqlDosBackend(StorageBackend):
             else:
                 session.add(DbSetting(key=key, val=value, description=description or ''))
 
-    def get_global_variable(self, key: str) -> Union[None, str, int, float]:
+    def get_global_variable(self, key: str) -> None | str | int | float:
         from aiida.storage.psql_dos.models.settings import DbSetting
 
         session = self.get_session()
@@ -533,7 +532,7 @@ class PsqlDosBackend(StorageBackend):
         self,
         manager: backup_utils.BackupManager,
         path: pathlib.Path,
-        prev_backup: Optional[pathlib.Path] = None,
+        prev_backup: pathlib.Path | None = None,
     ) -> None:
         """Create a backup of the postgres database and disk-objectstore to the provided path.
 
@@ -606,7 +605,7 @@ class PsqlDosBackend(StorageBackend):
     def _backup(
         self,
         dest: str,
-        keep: Optional[int] = None,
+        keep: int | None = None,
     ):
         try:
             backup_manager = backup_utils.BackupManager(dest, keep=keep)

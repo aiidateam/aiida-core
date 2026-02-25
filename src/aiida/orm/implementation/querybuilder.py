@@ -8,8 +8,19 @@
 ###########################################################################
 """Abstract `QueryBuilder` definition."""
 
+from __future__ import annotations
+
 import abc
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Literal, Optional, Set, TypedDict, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Literal,
+    Set,
+    TypedDict,
+)
 
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
@@ -47,7 +58,7 @@ EntityRelationships: Dict[str, Set[str]] = {
 class PathItemType(TypedDict):
     """An item on the query path"""
 
-    entity_type: Union[str, List[str]]
+    entity_type: str | List[str]
     # this can be derived from the entity_type, but it is more efficient to store
     orm_base: Literal['node', 'group', 'authinfo', 'comment', 'computer', 'log', 'user']
     tag: str
@@ -63,7 +74,7 @@ class QueryDictType(TypedDict):
     path: List[PathItemType]
     # mapping: tag -> 'and' | 'or' | '~or' | '~and' | '!and' | '!or' -> [] -> operator -> value
     #              -> operator -> value
-    filters: Dict[str, Dict[str, Union[Dict[str, List[Dict[str, Any]]], Dict[str, Any]]]]
+    filters: Dict[str, Dict[str, Dict[str, List[Dict[str, Any]]] | Dict[str, Any]]]
     # mapping: tag -> [] -> field -> 'func' -> 'max' | 'min' | 'count'
     #                                'cast' -> 'b' | 'd' | 'f' | 'i' | 'j' | 't'
     project: Dict[str, List[Dict[str, Dict[str, Any]]]]
@@ -72,8 +83,8 @@ class QueryDictType(TypedDict):
     # list of mappings: tag  -> [] -> field -> 'order' -> 'asc' | 'desc'
     #                                          'cast'  -> 'b' | 'd' | 'f' | 'i' | 'j' | 't'
     order_by: List[Dict[str, List[Dict[str, Dict[str, str]]]]]
-    offset: Optional[int]
-    limit: Optional[int]
+    offset: int | None
+    limit: int | None
     distinct: bool
 
 
@@ -101,18 +112,18 @@ class BackendQueryBuilder(abc.ABC):
         """Return the number of results of the query"""
 
     @abc.abstractmethod
-    def first(self, data: QueryDictType) -> Optional[List[Any]]:
+    def first(self, data: QueryDictType) -> List[Any] | None:
         """Executes query, asking for one instance.
 
         :returns: One row of aiida results
         """
 
     @abc.abstractmethod
-    def iterall(self, data: QueryDictType, batch_size: Optional[int]) -> Iterable[List[Any]]:
+    def iterall(self, data: QueryDictType, batch_size: int | None) -> Iterable[List[Any]]:
         """Return an iterator over all the results of a list of lists."""
 
     @abc.abstractmethod
-    def iterdict(self, data: QueryDictType, batch_size: Optional[int]) -> Iterable[Dict[str, Dict[str, Any]]]:
+    def iterdict(self, data: QueryDictType, batch_size: int | None) -> Iterable[Dict[str, Dict[str, Any]]]:
         """Return an iterator over all the results of a list of dictionaries."""
 
     def as_sql(self, data: QueryDictType, inline: bool = False) -> str:
@@ -138,7 +149,7 @@ class BackendQueryBuilder(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def get_creation_statistics(self, user_pk: Optional[int] = None) -> Dict[str, Any]:
+    def get_creation_statistics(self, user_pk: int | None = None) -> Dict[str, Any]:
         """Return a dictionary with the statistics of node creation, summarized by day.
 
         :note: Days when no nodes were created are not present in the returned `ctime_by_day` dictionary.

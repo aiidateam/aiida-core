@@ -11,7 +11,16 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Literal, NoReturn, Tuple, Type, Union, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Literal,
+    NoReturn,
+    Tuple,
+    Type,
+    overload,
+)
 
 from aiida.common.exceptions import InvalidEntryPointTypeError
 
@@ -58,7 +67,7 @@ def raise_invalid_type_error(entry_point_name: str, entry_point_group: str, vali
     raise InvalidEntryPointTypeError(template.format(*args))
 
 
-def BaseFactory(group: str, name: str, load: bool = True) -> Union[EntryPoint, Any]:
+def BaseFactory(group: str, name: str, load: bool = True) -> EntryPoint | Any:
     """Return the plugin class registered under a given entry point group and name.
 
     :param group: entry point group
@@ -85,7 +94,7 @@ def BrokerFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Br
 def BrokerFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
-def BrokerFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Broker'], Callable]:
+def BrokerFactory(entry_point_name: str, load: bool = True) -> EntryPoint | Type['Broker'] | Callable:
     """Return the `Broker` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -111,14 +120,14 @@ def BrokerFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint,
 
 
 @overload
-def CalculationFactory(entry_point_name: str, load: Literal[True] = True) -> Union[Type['CalcJob'], Callable]: ...
+def CalculationFactory(entry_point_name: str, load: Literal[True] = True) -> Type['CalcJob'] | Callable: ...
 
 
 @overload
 def CalculationFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
-def CalculationFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['CalcJob'], Callable]:
+def CalculationFactory(entry_point_name: str, load: bool = True) -> EntryPoint | Type['CalcJob'] | Callable:
     """Return the `CalcJob` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -154,7 +163,7 @@ def CalcJobImporterFactory(entry_point_name: str, load: Literal[True] = True) ->
 def CalcJobImporterFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
-def CalcJobImporterFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['CalcJobImporter']]:
+def CalcJobImporterFactory(entry_point_name: str, load: bool = True) -> EntryPoint | Type['CalcJobImporter']:
     """Return the plugin registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -186,7 +195,7 @@ def DataFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Data
 def DataFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
-def DataFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Data']]:
+def DataFactory(entry_point_name: str, load: bool = True) -> EntryPoint | Type['Data']:
     """Return the `Data` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -219,7 +228,7 @@ def DbImporterFactory(entry_point_name: str, load: Literal[True] = True) -> Type
 def DbImporterFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
-def DbImporterFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['DbImporter']]:
+def DbImporterFactory(entry_point_name: str, load: bool = True) -> EntryPoint | Type['DbImporter']:
     """Return the `DbImporter` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -252,7 +261,7 @@ def GroupFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Gro
 def GroupFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
-def GroupFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Group']]:
+def GroupFactory(entry_point_name: str, load: bool = True) -> EntryPoint | Type['Group']:
     """Return the `Group` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -285,7 +294,7 @@ def OrbitalFactory(entry_point_name: str, load: Literal[True] = True) -> Type['O
 def OrbitalFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
-def OrbitalFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Orbital']]:
+def OrbitalFactory(entry_point_name: str, load: bool = True) -> EntryPoint | Type['Orbital']:
     """Return the `Orbital` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -318,7 +327,7 @@ def ParserFactory(entry_point_name: str, load: Literal[True] = True) -> Type['Pa
 def ParserFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
-def ParserFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Parser']]:
+def ParserFactory(entry_point_name: str, load: bool = True) -> EntryPoint | Type['Parser']:
     """Return the `Parser` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -351,7 +360,7 @@ def SchedulerFactory(entry_point_name: str, load: Literal[True] = True) -> Type[
 def SchedulerFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
-def SchedulerFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Scheduler']]:
+def SchedulerFactory(entry_point_name: str, load: bool = True) -> EntryPoint | Type['Scheduler']:
     """Return the `Scheduler` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -384,7 +393,7 @@ def StorageFactory(entry_point_name: str, load: Literal[True] = True) -> Type['S
 def StorageFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
-def StorageFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['StorageBackend']]:
+def StorageFactory(entry_point_name: str, load: bool = True) -> EntryPoint | Type['StorageBackend']:
     """Return the ``StorageBackend`` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -417,7 +426,7 @@ def TransportFactory(entry_point_name: str, load: Literal[True] = True) -> Type[
 def TransportFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
-def TransportFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['Transport']]:
+def TransportFactory(entry_point_name: str, load: bool = True) -> EntryPoint | Type['Transport']:
     """Return the Transport sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.
@@ -442,14 +451,14 @@ def TransportFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoi
 
 
 @overload
-def WorkflowFactory(entry_point_name: str, load: Literal[True] = True) -> Union[Type['WorkChain'], Callable]: ...
+def WorkflowFactory(entry_point_name: str, load: Literal[True] = True) -> Type['WorkChain'] | Callable: ...
 
 
 @overload
 def WorkflowFactory(entry_point_name: str, load: Literal[False]) -> EntryPoint: ...
 
 
-def WorkflowFactory(entry_point_name: str, load: bool = True) -> Union[EntryPoint, Type['WorkChain'], Callable]:
+def WorkflowFactory(entry_point_name: str, load: bool = True) -> EntryPoint | Type['WorkChain'] | Callable:
     """Return the `WorkChain` sub class registered under the given entry point.
 
     :param entry_point_name: the entry point name.

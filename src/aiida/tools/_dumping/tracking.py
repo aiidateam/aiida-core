@@ -15,7 +15,13 @@ from collections.abc import Collection
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Literal, Optional
+from typing import (
+    Any,
+    Dict,
+    Generator,
+    List,
+    Literal,
+)
 
 from aiida.common import AIIDA_LOGGER, timezone
 from aiida.tools._dumping.mapping import GroupNodeMapping
@@ -31,8 +37,8 @@ class DumpRecord:
     path: Path
     symlinks: List[Path] = field(default_factory=list)
     duplicates: List[Path] = field(default_factory=list)
-    dir_mtime: Optional[datetime] = None
-    dir_size: Optional[int] = None
+    dir_mtime: datetime | None = None
+    dir_size: int | None = None
 
     def to_dict(self) -> dict:
         """Returns a serialized dictionary representation of the entry."""
@@ -117,7 +123,7 @@ class DumpRecord:
         if path in self.duplicates:
             self.duplicates.remove(path)
 
-    def update_stats(self, path: Optional[Path]) -> None:
+    def update_stats(self, path: Path | None) -> None:
         """Update directory stats from the path of the ``DumpRecord`` or an optional given path.
 
         :param path: An optional path. If not given, the path of the ``DumpRecord`` instance is used
@@ -216,9 +222,9 @@ class DumpTracker:
     def __init__(
         self,
         dump_paths: DumpPaths,
-        dump_times: Optional[DumpTimes] = None,
-        previous_mapping: Optional[GroupNodeMapping] = None,
-        current_mapping: Optional[GroupNodeMapping] = None,
+        dump_times: DumpTimes | None = None,
+        previous_mapping: GroupNodeMapping | None = None,
+        current_mapping: GroupNodeMapping | None = None,
     ) -> None:
         """Initialize the DumpTracker. Typically be instantiated via `load`.
 

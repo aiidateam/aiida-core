@@ -18,7 +18,7 @@ class NodeComments:
         """Initialize the comments interface."""
         self._node = node
 
-    def add(self, content: str, user: t.Optional[User] = None) -> Comment:
+    def add(self, content: str, user: User | None = None) -> Comment:
         """Add a new comment.
 
         :param content: string with comment

@@ -8,7 +8,9 @@
 ###########################################################################
 """Module for the ORM user class."""
 
-from typing import TYPE_CHECKING, Optional, Tuple, Type
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Tuple, Type
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -43,7 +45,7 @@ class UserCollection(entities.Collection['User']):
         except exceptions.NotExistent:
             return True, User(backend=self.backend, email=email, **kwargs)
 
-    def get_default(self) -> Optional['User']:
+    def get_default(self) -> 'User' | None:
         """Get the current default user"""
         return self.backend.default_user
 
@@ -65,7 +67,7 @@ class User(entities.Entity['BackendUser', UserCollection]):
         first_name: str = '',
         last_name: str = '',
         institution: str = '',
-        backend: Optional['StorageBackend'] = None,
+        backend: 'StorageBackend' | None = None,
     ):
         """Create a new `User`."""
         backend = backend or get_manager().get_profile_storage()

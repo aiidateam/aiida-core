@@ -4,7 +4,7 @@ description: Install aiida-core package and its Python dependencies
 inputs:
   python-version:
     description: Python version
-    default: '3.9'              # Lowest supported version
+    default: '3.10'              # Lowest supported version
     required: false
   extras:
     description: list of optional dependencies

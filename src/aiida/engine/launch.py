@@ -27,9 +27,9 @@ from .utils import instantiate_process, is_process_scoped, prepare_inputs
 
 __all__ = ('await_processes', 'run', 'run_get_node', 'run_get_pk', 'submit')
 
-TYPE_RUN_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
+TYPE_RUN_PROCESS = Process | t.Type[Process] | ProcessBuilder
 # run can also be process function, but it is not clear what type this should be
-TYPE_SUBMIT_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
+TYPE_SUBMIT_PROCESS = Process | t.Type[Process] | ProcessBuilder
 LOGGER = AIIDA_LOGGER.getChild('engine.launch')
 
 

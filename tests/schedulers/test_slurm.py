@@ -9,6 +9,8 @@
 # ruff: noqa: E501
 """Tests for the SLURM scheduler plugin."""
 
+from __future__ import annotations
+
 import datetime
 import logging
 import unittest

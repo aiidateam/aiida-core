@@ -10,6 +10,8 @@
 This has been tested on SLURM 14.03.7 on the CSCS.ch machines.
 """
 
+from __future__ import annotations
+
 import re
 
 from aiida.common.lang import type_check

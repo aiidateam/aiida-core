@@ -13,7 +13,14 @@ from __future__ import annotations
 import enum
 import functools
 import traceback
-from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Set, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    List,
+    Sequence,
+    Set,
+    Tuple,
+)
 
 from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
 from aiida.common.warnings import warn_deprecation
@@ -355,7 +362,7 @@ def convert_potentially_deprecated_entry_point(group: str, name: str) -> str:
 
 
 @functools.lru_cache(maxsize=100)
-def get_entry_point_from_class(class_module: str, class_name: str) -> Tuple[Optional[str], Optional[EntryPoint]]:
+def get_entry_point_from_class(class_module: str, class_name: str) -> Tuple[str | None, EntryPoint | None]:
     """Given the module and name of a class, attempt to obtain the corresponding entry point if it exists
 
     :param class_module: module of the class
@@ -368,7 +375,7 @@ def get_entry_point_from_class(class_module: str, class_name: str) -> Tuple[Opti
     return None, None
 
 
-def get_entry_point_string_from_class(class_module: str, class_name: str) -> Optional[str]:
+def get_entry_point_string_from_class(class_module: str, class_name: str) -> str | None:
     """Given the module and name of a class, attempt to obtain the corresponding entry point if it
     exists and return the entry point string which will be the entry point group and entry point
     name concatenated by the entry point string separator
@@ -410,7 +417,7 @@ def is_valid_entry_point_string(entry_point_string: str) -> bool:
 
 
 @functools.lru_cache(maxsize=100)
-def is_registered_entry_point(class_module: str, class_name: str, groups: Optional[Sequence[str]] = None) -> bool:
+def is_registered_entry_point(class_module: str, class_name: str, groups: Sequence[str] | None = None) -> bool:
     """Verify whether the class with the given module and class name is a registered entry point.
 
     .. note:: this function only checks whether the class has a registered entry point. It does explicitly not verify

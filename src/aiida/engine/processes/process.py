@@ -27,10 +27,8 @@ from typing import (
     Iterator,
     List,
     MutableMapping,
-    Optional,
     Tuple,
     Type,
-    Union,
     cast,
 )
 from uuid import UUID
@@ -157,10 +155,10 @@ class Process(PlumpyProcess):
 
     def __init__(
         self,
-        inputs: Optional[Dict[str, Any]] = None,
-        logger: Optional[logging.Logger] = None,
-        runner: Optional['Runner'] = None,
-        parent_pid: Optional[int] = None,
+        inputs: Dict[str, Any] | None = None,
+        logger: logging.Logger | None = None,
+        runner: 'Runner' | None = None,
+        parent_pid: int | None = None,
         enable_persistence: bool = True,
     ) -> None:
         """Process constructor.
@@ -184,7 +182,7 @@ class Process(PlumpyProcess):
             communicator=self._runner.communicator,
         )
 
-        self._node: Optional[orm.ProcessNode] = None
+        self._node: orm.ProcessNode | None = None
         self._parent_pid = parent_pid
         self._enable_persistence = enable_persistence
         if self._enable_persistence and self.runner.persister is None:
@@ -284,7 +282,7 @@ class Process(PlumpyProcess):
 
     @override
     def save_instance_state(
-        self, out_state: MutableMapping[str, Any], save_context: Optional[plumpy.persistence.LoadSaveContext]
+        self, out_state: MutableMapping[str, Any], save_context: plumpy.persistence.LoadSaveContext | None
     ) -> None:
         """Save instance state.
 
@@ -297,7 +295,7 @@ class Process(PlumpyProcess):
 
         out_state[self.SaveKeys.CALC_ID.value] = self.pid
 
-    def get_provenance_inputs_iterator(self) -> Iterator[Tuple[str, Union[InputPort, PortNamespace]]]:
+    def get_provenance_inputs_iterator(self) -> Iterator[Tuple[str, InputPort | PortNamespace]]:
         """Get provenance input iterator.
 
         :rtype: filter
@@ -332,7 +330,7 @@ class Process(PlumpyProcess):
 
         self.node.logger.info(f'Loaded process<{self.node.pk}> from saved state')
 
-    def kill(self, msg_text: str | None = None, force_kill: bool = False) -> Union[bool, plumpy.futures.Future]:
+    def kill(self, msg_text: str | None = None, force_kill: bool = False) -> bool | plumpy.futures.Future:
         """Kill the process and all the children calculations it called
 
         :param msg: message
@@ -410,7 +408,7 @@ class Process(PlumpyProcess):
 
         from aiida.engine.utils import interruptable_task
 
-        self._task: Union[InterruptableFuture, None]
+        self._task: InterruptableFuture | None
 
         task_fn = functools.partial(coro, *args, **kwargs)
         try:
@@ -459,7 +457,7 @@ class Process(PlumpyProcess):
         self._pid = self._create_and_setup_db_record()
 
     @override
-    def on_entered(self, from_state: Optional[plumpy.process_states.State]) -> None:
+    def on_entered(self, from_state: plumpy.process_states.State | None) -> None:
         """After entering a new state, save a checkpoint and update the latest process state change timestamp."""
         from plumpy import ProcessState
 
@@ -520,7 +518,7 @@ class Process(PlumpyProcess):
         self.report(''.join(traceback.format_exception(*exc_info)))
 
     @override
-    def on_finish(self, result: Union[int, ExitCode, None], successful: bool) -> None:
+    def on_finish(self, result: int | ExitCode | None, successful: bool) -> None:
         """Set the finish status on the process node.
 
         :param result: result of the process
@@ -546,7 +544,7 @@ class Process(PlumpyProcess):
             )
 
     @override
-    def on_paused(self, msg: Optional[str] = None) -> None:
+    def on_paused(self, msg: str | None = None) -> None:
         """The Process was paused so set the paused attribute on the process node
 
         :param msg: message
@@ -576,7 +574,7 @@ class Process(PlumpyProcess):
         if isinstance(output_port, OutputPort) and not isinstance(value, orm.Data):
             raise TypeError(f'Processes can only return `orm.Data` instances as output, got {value.__class__}')
 
-    def set_status(self, status: Optional[str]) -> None:
+    def set_status(self, status: str | None) -> None:
         """The status of the Process is about to be changed, so we reflect this is in node's attribute proxy.
 
         :param status: the status message
@@ -599,7 +597,7 @@ class Process(PlumpyProcess):
         """Get process runner."""
         return self._runner
 
-    def get_parent_calc(self) -> Optional[orm.ProcessNode]:
+    def get_parent_calc(self) -> orm.ProcessNode | None:
         """Get the parent process node
 
         :return: the parent process node if there is one
@@ -647,7 +645,7 @@ class Process(PlumpyProcess):
         message = f'[{self.node.pk}|{self.__class__.__name__}|{inspect.stack()[1][3]}]: {msg}'
         self.logger.log(LOG_LEVEL_REPORT, message, *args, **kwargs)
 
-    def _create_and_setup_db_record(self) -> Union[int, UUID]:
+    def _create_and_setup_db_record(self) -> int | UUID:
         """Create and setup the database record for this process
 
         :return: the uuid or pk of the process
@@ -815,9 +813,9 @@ class Process(PlumpyProcess):
 
     def _filter_serializable_metadata(
         self,
-        port: Union[None, InputPort, PortNamespace],
+        port: None | InputPort | PortNamespace,
         port_value: Any,
-    ) -> Union[Any, None]:
+    ) -> Any | None:
         """Return the inputs that correspond to ports with ``is_metadata=True`` and that are JSON serializable.
 
         The function is called recursively for any port namespaces.
@@ -880,7 +878,7 @@ class Process(PlumpyProcess):
 
     def _flatten_inputs(
         self,
-        port: Union[None, InputPort, PortNamespace],
+        port: None | InputPort | PortNamespace,
         port_value: Any,
         parent_name: str = '',
         separator: str = PORT_NAMESPACE_SEPARATOR,
@@ -906,7 +904,7 @@ class Process(PlumpyProcess):
                 prefixed_key = parent_name + separator + name if parent_name else name
 
                 try:
-                    nested_port = cast(Union[InputPort, PortNamespace], port[name]) if port else None
+                    nested_port = cast(InputPort | PortNamespace, port[name]) if port else None
                 except (KeyError, TypeError):
                     nested_port = None
 
@@ -923,7 +921,7 @@ class Process(PlumpyProcess):
 
     def _flatten_outputs(
         self,
-        port: Union[None, OutputPort, PortNamespace],
+        port: None | OutputPort | PortNamespace,
         port_value: Any,
         parent_name: str = '',
         separator: str = PORT_NAMESPACE_SEPARATOR,
@@ -947,7 +945,7 @@ class Process(PlumpyProcess):
                 prefixed_key = parent_name + separator + name if parent_name else name
 
                 try:
-                    nested_port = cast(Union[OutputPort, PortNamespace], port[name]) if port else None
+                    nested_port = cast(OutputPort | PortNamespace, port[name]) if port else None
                 except (KeyError, TypeError):
                     nested_port = None
 
@@ -961,7 +959,7 @@ class Process(PlumpyProcess):
         return []
 
     def exposed_inputs(
-        self, process_class: Type['Process'], namespace: Optional[str] = None, agglomerate: bool = True
+        self, process_class: Type['Process'], namespace: str | None = None, agglomerate: bool = True
     ) -> AttributeDict:
         """Gather a dictionary of the inputs that were exposed for a given Process class under an optional namespace.
 
@@ -1003,7 +1001,7 @@ class Process(PlumpyProcess):
         self,
         node: orm.ProcessNode,
         process_class: Type['Process'],
-        namespace: Optional[str] = None,
+        namespace: str | None = None,
         agglomerate: bool = True,
     ) -> AttributeDict:
         """Return the outputs which were exposed from the ``process_class`` and emitted by the specific ``node``
@@ -1049,7 +1047,7 @@ class Process(PlumpyProcess):
         return AttributeDict(result)
 
     @staticmethod
-    def _get_namespace_list(namespace: Optional[str] = None, agglomerate: bool = True) -> List[Optional[str]]:
+    def _get_namespace_list(namespace: str | None = None, agglomerate: bool = True) -> List[str | None]:
         """Get the list of namespaces in a given namespace.
 
         :param namespace: name space
@@ -1062,7 +1060,7 @@ class Process(PlumpyProcess):
         if not agglomerate:
             return [namespace]
 
-        namespace_list: List[Optional[str]] = [None]
+        namespace_list: List[str | None] = [None]
         if namespace is not None:
             split_ns = namespace.split('.')
             namespace_list.extend(['.'.join(split_ns[:i]) for i in range(1, len(split_ns) + 1)])

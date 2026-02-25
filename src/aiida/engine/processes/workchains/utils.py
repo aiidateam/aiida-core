@@ -11,7 +11,7 @@
 from functools import partial
 from inspect import getfullargspec
 from types import FunctionType
-from typing import List, NamedTuple, Optional, Union
+from typing import List, NamedTuple
 
 from wrapt import decorator
 
@@ -43,10 +43,10 @@ class ProcessHandlerReport(NamedTuple):
 
 
 def process_handler(
-    wrapped: Optional[FunctionType] = None,
+    wrapped: FunctionType | None = None,
     *,
     priority: int = 0,
-    exit_codes: Union[None, ExitCode, List[ExitCode]] = None,
+    exit_codes: None | ExitCode | List[ExitCode] = None,
     enabled: bool = True,
 ) -> FunctionType:
     """Decorator to register a :class:`~aiida.engine.BaseRestartWorkChain` instance method as a process handler.

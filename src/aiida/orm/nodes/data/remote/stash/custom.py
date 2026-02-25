@@ -8,7 +8,7 @@
 ###########################################################################
 """Data plugin that models a stashed folder on a remote computer."""
 
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
@@ -65,7 +65,7 @@ class RemoteStashCustomData(RemoteStashData):
         self.base.attributes.set('target_basepath', value)
 
     @property
-    def source_list(self) -> Union[List, Tuple]:
+    def source_list(self) -> List | Tuple:
         """Return the list of source files that were stashed.
 
         :return: the list of source files.
@@ -73,7 +73,7 @@ class RemoteStashCustomData(RemoteStashData):
         return self.base.attributes.get('source_list')
 
     @source_list.setter
-    def source_list(self, value: Union[List, Tuple]):
+    def source_list(self, value: List | Tuple):
         """Set the list of source files that were stashed.
 
         :param value: the list of source files.

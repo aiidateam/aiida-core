@@ -9,7 +9,14 @@
 """Import an archive."""
 
 from pathlib import Path
-from typing import Any, Callable, Dict, Literal, Optional, Set, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Literal,
+    Set,
+    Tuple,
+)
 
 from tabulate import tabulate
 
@@ -49,20 +56,20 @@ DUPLICATE_LABEL_TEMPLATE = '{0} (Imported #{1})'
 
 
 def import_archive(
-    path: Union[str, Path],
+    path: str | Path,
     *,
-    archive_format: Optional[ArchiveFormatAbstract] = None,
+    archive_format: ArchiveFormatAbstract | None = None,
     import_new_extras: bool = True,
     merge_extras: MergeExtrasType = ('k', 'n', 'l'),
     merge_comments: MergeCommentsType = 'leave',
     include_authinfos: bool = False,
     create_group: bool = True,
-    group: Optional[orm.Group] = None,
+    group: orm.Group | None = None,
     test_run: bool = False,
-    backend: Optional[StorageBackend] = None,
+    backend: StorageBackend | None = None,
     filter_size: int = DEFAULT_FILTER_SIZE,
     batch_size: int = DEFAULT_BATCH_SIZE,
-) -> Optional[int]:
+) -> int | None:
     """Import an archive into the AiiDA backend.
 
     :param path: the path to the archive
@@ -1108,12 +1115,12 @@ def _import_groups(
 
 
 def _make_import_group(
-    group: Optional[orm.Group],
+    group: orm.Group | None,
     labels: Set[str],
     node_ids_archive_backend: Dict[int, int],
     backend_to: StorageBackend,
     batch_size: int,
-) -> Optional[int]:
+) -> int | None:
     """Make an import group containing all imported nodes.
 
     :param group: Use an existing group

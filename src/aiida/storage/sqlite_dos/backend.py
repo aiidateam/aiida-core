@@ -14,7 +14,7 @@ import pathlib
 from functools import cached_property, lru_cache
 from pathlib import Path
 from shutil import rmtree
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from alembic.config import Config
@@ -108,7 +108,7 @@ class SqliteDosMigrator(PsqlDosMigrator):
             context.stamp(context.script, 'main@head')  # type: ignore[arg-type]
             self.connection.commit()
 
-    def get_schema_version_profile(self) -> Optional[str]:  # type: ignore[override]
+    def get_schema_version_profile(self) -> str | None:  # type: ignore[override]
         """Return the schema version of the backend instance for this profile.
 
         Note, the version will be None if the database is empty or is a legacy django database.
@@ -280,7 +280,7 @@ class SqliteDosStorage(PsqlDosBackend):
         return DiskObjectStoreRepositoryBackend(container=self.get_container())
 
     @classmethod
-    def version_profile(cls, profile: Profile) -> Optional[str]:
+    def version_profile(cls, profile: Profile) -> str | None:
         with cls.migrator_context(profile) as migrator:
             return migrator.get_schema_version_profile()
 
@@ -338,7 +338,7 @@ class SqliteDosStorage(PsqlDosBackend):
     def _backup(
         self,
         dest: str,
-        keep: Optional[int] = None,
+        keep: int | None = None,
     ):
         """Create a backup of the storage.
 

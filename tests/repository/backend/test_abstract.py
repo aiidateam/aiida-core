@@ -43,7 +43,7 @@ class RepositoryBackend(AbstractRepositoryBackend):
     def list_objects(self) -> Iterable[str]:
         raise NotImplementedError
 
-    def iter_object_streams(self, keys: List[str]):
+    def iter_object_streams(self, keys: Iterable[str]):
         raise NotImplementedError
 
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:

@@ -227,3 +227,21 @@ def test_import_old_local_archives(version, run_cli_command):
     result = run_cli_command(cmd_archive.import_archive, options)
     assert version in result.output, result.exception
     assert f'Success: imported archive {options[0]}' in result.output, result.exception
+
+
+def test_import_packed_flag(run_cli_command, newest_archive, aiida_profile_clean):
+    """Test import with --packed flag streams directly to packed storage."""
+    from aiida.manage import get_manager
+
+    archive = get_archive_file(newest_archive, filepath=ARCHIVE_PATH)
+    options = ['--packed', archive]
+    result = run_cli_command(cmd_archive.import_archive, options)
+    assert f'Success: imported archive {archive}' in result.output, result.exception
+
+    # Verify objects are in packed storage (not loose)
+    repo = get_manager().get_profile_storage().get_repository()
+    with repo._container as container:
+        counts = container.count_objects()
+        # The archive should have some repository objects that end up packed
+        # We just verify that loose is 0 when --packed is used
+        assert counts.loose == 0, f'Expected 0 loose objects with --packed flag, got {counts.loose}'

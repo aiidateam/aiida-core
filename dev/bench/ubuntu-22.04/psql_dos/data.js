@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1771939954381,
+  "lastUpdate": 1772016602545,
   "repoUrl": "https://github.com/aiidateam/aiida-core",
   "xAxis": "id",
   "oneChartGroups": [],
@@ -102798,6 +102798,205 @@ window.BENCHMARK_DATA = {
             "range": "stddev: 0.0012334",
             "group": "node",
             "extra": "mean: 28.432 msec\nrounds: 100"
+          }
+        ]
+      },
+      {
+        "cpu": {
+          "speed": "0.00",
+          "cores": 4,
+          "physicalCores": 2,
+          "processors": 1
+        },
+        "extra": {
+          "pythonVersion": "3.10.19",
+          "metadata": "postgres:12.14, rabbitmq:3.8.14-management"
+        },
+        "commit": {
+          "id": "08c58ffc0eae5f89d4f1e7923d62af30f418f3d7",
+          "message": "🐛 `TrajectoryData`: Fix `pbc` handling for non-periodic structures\n\nCurrently, the `TrajectoryData` is not functional for structures that are not periodic,\nsince their `pbc` property is not considered when using the `set_structurelist` method,\nwhich is also used in the constructor.\n\nHere we add the `pbc` attribute to the `TrajectoryData` class, which is set in the\n`set_trajectory` method. The value should be a list/tuple of length 3 with boolean\nvalues, which is validated in the `_internal_validate` method.  The `pbc` should also be\nthe same for all structures in the trajectory, which is validated in the\n`set_structurelist` method. In line with the current approach for `symbols`, a property\nis added. This property is used in the `get_step_structure` method to set the `pbc` in\nthe `StructureData` constructor. The pydantic model is also updated with a new `pbc`\nfield.\n\nThe current changes try to remain backwards-compatible:\n\n1. Since old `TrajectoryData` will not have the `pbc` AiiDA attribute in the database,\n   the `pbc` property returns `None` in case it is missing. We also considered doing a\n   migration to add the `pbc` attribute, but it is unclear what is the correct default,\n   and migrations are often disruptive for the user.\n2. The `pbc` input is optional in the `set_trajectory` method. In case it is not\n   provided, the structure is assumed to be periodic for trajectories which define\n   `cells`, and aperiodic in all directions otherwise. However, not specifying the\n   `pbc` when `cells` are defined is deprecated and will raise in v3.0.\n3. The `get_step_data` method still returns the same tuple of length 5. However, this\n   does mean that the method does not return the `pbc`.",
+          "timestamp": "2026-02-25T11:40:25+01:00",
+          "url": "https://github.com/aiidateam/aiida-core/commit/08c58ffc0eae5f89d4f1e7923d62af30f418f3d7",
+          "distinct": true,
+          "tree_id": "9dc6ac91b457597172b286fc684e8752376d2bb2"
+        },
+        "date": 1772016595401,
+        "benches": [
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[no-objects]",
+            "value": 2.5136778559883526,
+            "unit": "iter/sec",
+            "range": "stddev: 0.062305",
+            "group": "import-export",
+            "extra": "mean: 397.82 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_export[with-objects]",
+            "value": 2.4576195962801024,
+            "unit": "iter/sec",
+            "range": "stddev: 0.077713",
+            "group": "import-export",
+            "extra": "mean: 406.90 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[no-objects]",
+            "value": 3.328867421892034,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0059983",
+            "group": "import-export",
+            "extra": "mean: 300.40 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_import[with-objects]",
+            "value": 3.163788497656311,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0071295",
+            "group": "import-export",
+            "extra": "mean: 316.08 msec\nrounds: 12"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_large_archive_export_benchmark",
+            "value": 0.5791868107517679,
+            "unit": "iter/sec",
+            "range": "stddev: 0.15798",
+            "group": "large-archive",
+            "extra": "mean: 1.7266 sec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmark/test_archive.py::test_large_archive_import_benchmark",
+            "value": 0.1852195947326958,
+            "unit": "iter/sec",
+            "range": "stddev: 0.032584",
+            "group": "large-archive",
+            "extra": "mean: 5.3990 sec\nrounds: 5"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[basic-loop]",
+            "value": 2.857752357749252,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0067962",
+            "group": "engine",
+            "extra": "mean: 349.93 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-wc-loop]",
+            "value": 0.6317010753342226,
+            "unit": "iter/sec",
+            "range": "stddev: 0.013279",
+            "group": "engine",
+            "extra": "mean: 1.5830 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-wc-loop]",
+            "value": 0.703550713765941,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12001",
+            "group": "engine",
+            "extra": "mean: 1.4214 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[serial-calcjob-loop]",
+            "value": 0.1680434572312827,
+            "unit": "iter/sec",
+            "range": "stddev: 0.14793",
+            "group": "engine",
+            "extra": "mean: 5.9508 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_local[threaded-calcjob-loop]",
+            "value": 0.1952197765923508,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12965",
+            "group": "engine",
+            "extra": "mean: 5.1224 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[basic-loop]",
+            "value": 2.196430808195342,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0024389",
+            "group": "engine",
+            "extra": "mean: 455.28 msec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-wc-loop]",
+            "value": 0.4855621022511049,
+            "unit": "iter/sec",
+            "range": "stddev: 0.051248",
+            "group": "engine",
+            "extra": "mean: 2.0595 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-wc-loop]",
+            "value": 0.5459420853058683,
+            "unit": "iter/sec",
+            "range": "stddev: 0.10295",
+            "group": "engine",
+            "extra": "mean: 1.8317 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[serial-calcjob-loop]",
+            "value": 0.15246390300602483,
+            "unit": "iter/sec",
+            "range": "stddev: 0.12043",
+            "group": "engine",
+            "extra": "mean: 6.5589 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_engine.py::test_workchain_daemon[threaded-calcjob-loop]",
+            "value": 0.16717874900333304,
+            "unit": "iter/sec",
+            "range": "stddev: 0.088111",
+            "group": "engine",
+            "extra": "mean: 5.9816 sec\nrounds: 10"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_backend",
+            "value": 457.22376831623353,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00015431",
+            "group": "node",
+            "extra": "mean: 2.1871 msec\nrounds: 269"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store",
+            "value": 45.72823352581495,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00049479",
+            "group": "node",
+            "extra": "mean: 21.868 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_store_with_object",
+            "value": 33.10216000736963,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0017094",
+            "group": "node",
+            "extra": "mean: 30.210 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_backend",
+            "value": 285.2583027618473,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00014364",
+            "group": "node",
+            "extra": "mean: 3.5056 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete",
+            "value": 32.90618466562168,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0011078",
+            "group": "node",
+            "extra": "mean: 30.389 msec\nrounds: 100"
+          },
+          {
+            "name": "tests/benchmark/test_nodes.py::test_delete_with_object",
+            "value": 30.253670412959003,
+            "unit": "iter/sec",
+            "range": "stddev: 0.033545",
+            "group": "node",
+            "extra": "mean: 33.054 msec\nrounds: 100"
           }
         ]
       }

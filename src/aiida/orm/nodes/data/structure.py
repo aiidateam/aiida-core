@@ -1662,7 +1662,19 @@ class StructureData(Data):
 
     @property
     def cell_angles(self):
-        """Get the angles between the cell lattice vectors in degrees."""
+        """Get the angles between the cell lattice vectors in degrees.
+
+        :return: a list of three floats ``[alpha, beta, gamma]`` representing the angles
+            (in degrees) between cell vectors: alpha is the angle between b and c,
+            beta between a and c, and gamma between a and b. Returns ``None`` for
+            angles that cannot be computed due to zero-length vectors.
+
+        :raises ValueError: if all cell vectors have zero length.
+
+        .. versionchanged:: 2.8.0
+            Now returns ``None`` for angles involving zero-length vectors (previously
+            returned ``nan``), and raises ``ValueError`` when all vectors have zero length.
+        """
         import numpy
 
         cell = self.cell

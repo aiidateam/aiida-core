@@ -19,6 +19,7 @@ import uuid
 from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Type, Union
 
 import kiwipy
+from plumpy import run_until_complete
 from plumpy.communications import wrap_communicator
 from plumpy.events import reset_event_loop_policy, set_event_loop_policy
 from plumpy.persistence import Persister
@@ -156,8 +157,9 @@ class Runner:
 
     def run_until_complete(self, future: asyncio.Future) -> Any:
         """Run the loop until the future has finished and return the result."""
+
         with utils.loop_scope(self._loop):
-            return self._loop.run_until_complete(future)
+            return run_until_complete(self._loop, future)
 
     def close(self) -> None:
         """Close the runner by stopping the loop."""

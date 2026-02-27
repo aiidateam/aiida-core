@@ -215,7 +215,7 @@ requires-dist = [
     { name = "circus", specifier = "~=0.19.0" },
     { name = "click", specifier = ">=8.1.0,<8.3" },
     { name = "click-spinner", specifier = "~=0.1.8" },
-    { name = "disk-objectstore", specifier = "~=1.4.0" },
+    { name = "disk-objectstore", specifier = "~=1.5.0" },
     { name = "docstring-parser" },
     { name = "docutils", marker = "extra == 'tests'", specifier = "~=0.20" },
     { name = "flask", marker = "extra == 'rest'", specifier = "~=2.3.3" },
@@ -1905,16 +1905,16 @@ wheels = [
 
 [[package]]
 name = "disk-objectstore"
-version = "1.4.0"
+version = "1.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click", version = "8.1.8", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "click", version = "8.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "sqlalchemy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a6/06/2f76aef59917d47e372158580db988bae1d09f73f5a22721cf88cb5b1dd1/disk_objectstore-1.4.0.tar.gz", hash = "sha256:4d9ea7617dd2de1c817255d7c8123f69e106f6daa0d4c0bdd09ab919ddbc49c8", size = 7390473, upload-time = "2025-10-06T08:35:53.392Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/43/e1/6504cb67263efc95310652980aa7ac4ce28451117088bb9f6c440ff2efc0/disk_objectstore-1.5.0.tar.gz", hash = "sha256:1327843630dfec5956c5c92b14001e75aaf12f3014f98fd71e8ab896f1546e2e", size = 7438940, upload-time = "2026-02-26T13:15:26.857Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fe/95/fc379912f1c2b336de2af95331da764b6f09e3f8fabc6050cd7b71a6b895/disk_objectstore-1.4.0-py3-none-any.whl", hash = "sha256:e29d33e51a1196468062f30a79126b3d82ef9fcca6a505f7984cdfc8bed72f5e", size = 70636, upload-time = "2025-10-06T08:35:51.915Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/ab/765f7ae779de4aabf30fcf362ffa3827d42e43a353f67a90477b9e84177e/disk_objectstore-1.5.0-py3-none-any.whl", hash = "sha256:55dbdaa99340cf127a61d38926ae801a728a7028cc4e487b59a873aa0af9c172", size = 71324, upload-time = "2026-02-26T13:15:25.512Z" },
 ]
 
 [[package]]

@@ -114,7 +114,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 yield t.cast(t.BinaryIO, handle)
 
     def iter_object_streams(self, keys: t.Iterable[str]) -> t.Iterator[t.Tuple[str, t.BinaryIO]]:
-        with self._container.get_objects_stream_and_meta(keys) as triplets:  # type: ignore[arg-type]
+        with self._container.get_objects_stream_and_meta(keys) as triplets:
             for key, stream, _ in triplets:
                 assert stream is not None
                 yield key, stream  # type: ignore[misc]
@@ -155,6 +155,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         clean_storage: t.Optional[bool] = None,
         do_vacuum: t.Optional[bool] = None,
         compress: bool = False,
+        clean_loose_per_pack: bool = True,
     ) -> None:
         """Performs maintenance operations.
 
@@ -165,6 +166,8 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         :param do_vacuum: flag for forcing the vacuuming of the internal database when cleaning the repository.
         :param compress: flag for compressing the data when packing loose files.
                          Set to ``CompressMode.AUTO`` if ``True``.
+        :param clean_loose_per_pack: if True, the loose files that went into a `pack` are deleted immediately after this
+            `pack` is created.
         :return: a dictionary with information on the operations performed.
         """
         from disk_objectstore import CompressMode
@@ -199,7 +202,11 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 if not dry_run:
                     with get_progress_reporter()(total=1) as progress:
                         callback = create_callback(progress)
-                        container.pack_all_loose(compress=compress_mode, callback=callback)  # type: ignore[arg-type]
+                        container.pack_all_loose(
+                            compress=compress_mode,
+                            callback=callback,
+                            clean_loose_per_pack=clean_loose_per_pack,
+                        )
 
             if do_repack:
                 files_numb = container.count_objects().packed
@@ -208,7 +215,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 if not dry_run:
                     with get_progress_reporter()(total=1) as progress:
                         callback = create_callback(progress)
-                        container.repack(callback=callback)  # type: ignore[arg-type]
+                        container.repack(callback=callback)
 
             if clean_storage:
                 logger.report(f'Cleaning the repository database (with `vacuum={do_vacuum}`) ...')

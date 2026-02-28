@@ -49,7 +49,8 @@ CONTAINER_DEFAULTS: dict = {
 def get_filepath_container(profile: Profile) -> pathlib.Path:
     """Return the filepath of the disk-object store container."""
     from urllib.parse import urlparse
-    from urllib.request import url2pathname
+
+    from aiida.common.utils import url2pathname
 
     try:
         parts = urlparse(profile.storage_config['repository_uri'])

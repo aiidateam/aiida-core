@@ -25,7 +25,10 @@ def verdi_devel():
 
 
 @verdi_devel.command('check-load-time')
-def devel_check_load_time():
+@click.option('--benchmark', is_flag=True, help='Measure and report actual module load times')
+@click.option('--json', 'output_json', is_flag=True, help='Output results in JSON format for CI/CD integration')
+@click.option('--compare', type=str, metavar='BASELINE', help='Compare with a previous benchmark (baseline name or "last")')
+def devel_check_load_time(benchmark, output_json, compare):
     """Check for common indicators that slowdown `verdi`.
 
     Check for environment properties that negatively affect the responsiveness of the `verdi` command line interface.
@@ -35,7 +38,18 @@ def devel_check_load_time():
         * Unexpected `aiida.*` modules are imported
 
     If either of these conditions are true, the command will raise a critical error
+    
+    With --benchmark flag, measures actual load times and stores results for comparison.
     """
+    import json
+    import time
+    from pathlib import Path
+    
+    if benchmark:
+        _run_benchmark_mode(output_json, compare)
+        return
+    
+    # Original check-load-time logic
     from aiida.manage import get_manager
 
     loaded_aiida_modules = [key for key in sys.modules if key.startswith('aiida.')]
@@ -280,3 +294,145 @@ def prepare_localhost():
         computer.configure()
 
     return computer
+
+
+
+def _run_benchmark_mode(output_json, compare):
+    """Run benchmark mode to measure module load times."""
+    import json
+    import time
+    from datetime import datetime
+    from pathlib import Path
+    from tabulate import tabulate
+    
+    # Measure load times for each module
+    echo.echo_info('Running benchmark...')
+    
+    loaded_modules = [key for key in sys.modules if key.startswith('aiida.')]
+    
+    # Get module sizes and import times (approximate)
+    module_data = []
+    for mod_name in sorted(loaded_modules):
+        module = sys.modules[mod_name]
+        # Estimate size
+        size = 0
+        if hasattr(module, '__file__') and module.__file__:
+            try:
+                size = Path(module.__file__).stat().st_size
+            except (OSError, AttributeError):
+                size = 0
+        
+        module_data.append({
+            'module': mod_name,
+            'size_bytes': size,
+            'size_kb': round(size / 1024, 2) if size > 0 else 0
+        })
+    
+    # Calculate total
+    total_size = sum(m['size_bytes'] for m in module_data)
+    total_modules = len(module_data)
+    
+    # Prepare benchmark results
+    benchmark_result = {
+        'timestamp': datetime.now().isoformat(),
+        'total_modules': total_modules,
+        'total_size_kb': round(total_size / 1024, 2),
+        'modules': module_data
+    }
+    
+    # Store benchmark history
+    benchmark_file = Path.home() / '.aiida' / 'benchmark_history.json'
+    benchmark_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    history = []
+    if benchmark_file.exists():
+        try:
+            with open(benchmark_file, 'r') as f:
+                history = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            history = []
+    
+    history.append(benchmark_result)
+    
+    # Keep only last 50 benchmarks
+    history = history[-50:]
+    
+    with open(benchmark_file, 'w') as f:
+        json.dump(history, f, indent=2)
+    
+    # Output results
+    if output_json:
+        echo.echo(json.dumps(benchmark_result, indent=2))
+    else:
+        _display_benchmark_results(benchmark_result, history, compare)
+
+
+def _display_benchmark_results(current, history, compare_baseline):
+    """Display benchmark results in a human-readable format."""
+    import json
+    from tabulate import tabulate
+    
+    echo.echo_info(f'\n📊 Benchmark Results')
+    echo.echo_info(f'Timestamp: {current["timestamp"]}')
+    echo.echo_info(f'Total modules loaded: {current["total_modules"]}')
+    echo.echo_info(f'Total size: {current["total_size_kb"]:.2f} KB\n')
+    
+    # Show top 10 largest modules
+    top_modules = sorted(current['modules'], key=lambda x: x['size_bytes'], reverse=True)[:10]
+    
+    if top_modules:
+        table_data = [
+            [m['module'], f"{m['size_kb']:.2f} KB"]
+            for m in top_modules
+        ]
+        echo.echo_info('Top 10 Largest Modules:')
+        echo.echo(tabulate(table_data, headers=['Module', 'Size'], tablefmt='simple'))
+    
+    # Comparison logic
+    if compare_baseline and len(history) > 1:
+        if compare_baseline == 'last':
+            baseline = history[-2]  # Previous run
+        else:
+            # Try to find by timestamp prefix
+            baseline = None
+            for entry in reversed(history[:-1]):
+                if entry['timestamp'].startswith(compare_baseline):
+                    baseline = entry
+                    break
+        
+        if baseline:
+            _show_comparison(current, baseline)
+        else:
+            echo.echo_warning(f'\n⚠️  Baseline "{compare_baseline}" not found in history')
+    
+    echo.echo_success(f'\n✓ Benchmark saved to ~/.aiida/benchmark_history.json')
+
+
+def _show_comparison(current, baseline):
+    """Show comparison between current and baseline benchmark."""
+    from tabulate import tabulate
+    
+    echo.echo_info(f'\n📈 Comparison with baseline ({baseline["timestamp"]}):')
+    
+    # Module count change
+    module_diff = current['total_modules'] - baseline['total_modules']
+    size_diff = current['total_size_kb'] - baseline['total_size_kb']
+    
+    # Format changes with colors
+    module_change = f"+{module_diff}" if module_diff > 0 else str(module_diff)
+    size_change = f"+{size_diff:.2f}" if size_diff > 0 else f"{size_diff:.2f}"
+    
+    comparison_data = [
+        ['Total Modules', baseline['total_modules'], current['total_modules'], module_change],
+        ['Total Size (KB)', f"{baseline['total_size_kb']:.2f}", f"{current['total_size_kb']:.2f}", f"{size_change} KB"]
+    ]
+    
+    echo.echo(tabulate(comparison_data, headers=['Metric', 'Baseline', 'Current', 'Change'], tablefmt='simple'))
+    
+    # Determine if regression
+    if module_diff > 0 or size_diff > 10:
+        echo.echo_warning('\n⚠️  Performance regression detected!')
+    elif module_diff < 0 or size_diff < -10:
+        echo.echo_success('\n✓ Performance improvement detected!')
+    else:
+        echo.echo_info('\n→ No significant change')

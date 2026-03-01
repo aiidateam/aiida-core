@@ -8,9 +8,10 @@
 ###########################################################################
 """Tests for the :mod:`~aiida.plugins.entry_point` module."""
 
+from importlib.metadata import EntryPoint as EP  # noqa: N817
+from importlib.metadata import EntryPoints
+
 import pytest
-from importlib_metadata import EntryPoint as EP  # noqa: N817
-from importlib_metadata import EntryPoints
 
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError
 from aiida.common.warnings import AiidaDeprecationWarning

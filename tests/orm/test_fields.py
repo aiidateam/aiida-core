@@ -9,9 +9,9 @@
 """Test for entity fields"""
 
 import sys
+from importlib.metadata import entry_points
 
 import pytest
-from importlib_metadata import entry_points
 
 from aiida import orm
 from aiida.common.pydantic import MetadataField

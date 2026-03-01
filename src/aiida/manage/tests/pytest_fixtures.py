@@ -32,11 +32,11 @@ import time
 import typing as t
 import uuid
 import warnings
+from importlib.metadata import EntryPoint, EntryPoints
 
 import plumpy
 import pytest
 import wrapt
-from importlib_metadata import EntryPoint, EntryPoints
 
 from aiida import plugins
 from aiida.common.exceptions import NotExistent
@@ -844,7 +844,7 @@ class EntryPointManager:
 
         group, name = self._validate_entry_point(entry_point_string, group, name)
         entry_point = EntryPoint(name, value, group)
-        self.entry_points = EntryPoints(self.entry_points + (entry_point,))
+        self.entry_points = EntryPoints([*self.entry_points, entry_point])
 
     def remove(
         self, entry_point_string: str | None = None, *, name: str | None = None, group: str | None = None

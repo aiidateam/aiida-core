@@ -110,13 +110,6 @@ class PsqlDosMigrator:
 
         return self._connection
 
-    # @property
-    # def inspector(self):
-    #     """Return a cached SQLAlchemy inspector bound to the managed connection."""
-    #     if self._inspector is None:
-    #         self._inspector = inspect(self.connection)
-    #     return self._inspector
-
     @classmethod
     def get_schema_versions(cls) -> Dict[str, str]:
         """Return all available schema versions (oldest to latest).

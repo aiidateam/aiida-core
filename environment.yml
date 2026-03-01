@@ -14,7 +14,6 @@ dependencies:
 - click<8.3,>=8.1.0
 - disk-objectstore~=1.5.0
 - docstring_parser
-- get-annotations~=0.1
 - python-graphviz~=0.19
 - plumpy~=0.26.0
 - ipython>=7.6

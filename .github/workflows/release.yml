@@ -30,10 +30,10 @@ jobs:
     - name: Checkout repo
       uses: actions/checkout@v6
 
-    - name: Set up Python 3.9
+    - name: Set up Python 3.10
       uses: actions/setup-python@v6
       with:
-        python-version: '3.9'
+        python-version: '3.10'
 
     - name: Check tag
       run: python .github/workflows/check_release_tag.py $GITHUB_REF
@@ -95,10 +95,10 @@ jobs:
     steps:
     - name: Checkout source
       uses: actions/checkout@v6
-    - name: Set up Python 3.9
+    - name: Set up Python 3.10
       uses: actions/setup-python@v6
       with:
-        python-version: '3.9'
+        python-version: '3.10'
     - name: Install flit
       run: pip install flit~=3.4
     - name: Build
@@ -123,10 +123,10 @@ jobs:
     steps:
     - name: Checkout source
       uses: actions/checkout@v6
-    - name: Set up Python 3.9
+    - name: Set up Python 3.10
       uses: actions/setup-python@v6
       with:
-        python-version: '3.9'
+        python-version: '3.10'
     - name: Install flit
       run: pip install flit~=3.4
     - name: Build

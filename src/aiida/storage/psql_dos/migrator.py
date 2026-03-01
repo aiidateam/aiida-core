@@ -110,12 +110,12 @@ class PsqlDosMigrator:
 
         return self._connection
 
-    @property
-    def inspector(self):
-        """Return a cached SQLAlchemy inspector bound to the managed connection."""
-        if self._inspector is None:
-            self._inspector = inspect(self.connection)
-        return self._inspector
+    # @property
+    # def inspector(self):
+    #     """Return a cached SQLAlchemy inspector bound to the managed connection."""
+    #     if self._inspector is None:
+    #         self._inspector = inspect(self.connection)
+    #     return self._inspector
 
     @classmethod
     def get_schema_versions(cls) -> Dict[str, str]:
@@ -159,9 +159,9 @@ class PsqlDosMigrator:
             if the repository ID is not equal to the UUID set in thedatabase.
         """
         # check there is an alembic_version table from which to get the schema version
-        if not self.inspector.has_table(self.alembic_version_tbl_name):
+        if not inspect(self.connection).has_table(self.alembic_version_tbl_name):
             # if not present, it might be that this is a legacy django database
-            if self.inspector.has_table(self.django_version_table.name):
+            if inspect(self.connection).has_table(self.django_version_table.name):
                 raise exceptions.IncompatibleStorageSchema(
                     TEMPLATE_LEGACY_DJANGO_SCHEMA.format(profile_name=self.profile.name)
                 )
@@ -271,7 +271,7 @@ class PsqlDosMigrator:
 
         :returns: ``True`` if the database is initialised, ``False`` otherwise.
         """
-        return self.inspector.has_table(self.alembic_version_tbl_name) or self.inspector.has_table(
+        return inspect(self.connection).has_table(self.alembic_version_tbl_name) or inspect(self.connection).has_table(
             self.django_version_table.name
         )
 
@@ -337,7 +337,7 @@ class PsqlDosMigrator:
         """
         exclude_tables = exclude_tables or []
 
-        if self.inspector.has_table(self.alembic_version_tbl_name):
+        if inspect(self.connection).has_table(self.alembic_version_tbl_name):
             metadata = MetaData()
             metadata.reflect(bind=self.connection)
 
@@ -363,8 +363,8 @@ class PsqlDosMigrator:
         #    reset the revision as one on the main branch, and then migrate to the head of the main branch
         # 3. Already on the main branch -> we migrate to the head of the main branch
 
-        if not self.inspector.has_table(self.alembic_version_tbl_name):
-            if not self.inspector.has_table(self.django_version_table.name):
+        if not inspect(self.connection).has_table(self.alembic_version_tbl_name):
+            if not inspect(self.connection).has_table(self.django_version_table.name):
                 raise exceptions.StorageMigrationError('storage is uninitialised, cannot migrate.')
             # the database is a legacy django one,
             # so we need to copy the version from the 'django_migrations' table to the 'alembic_version' one

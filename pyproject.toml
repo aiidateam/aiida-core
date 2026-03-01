@@ -18,7 +18,6 @@ classifiers = [
   'Operating System :: POSIX :: Linux',
   'Operating System :: MacOS :: MacOS X',
   'Programming Language :: Python',
-  'Programming Language :: Python :: 3.9',
   'Programming Language :: Python :: 3.10',
   'Programming Language :: Python :: 3.11',
   'Programming Language :: Python :: 3.12',
@@ -69,7 +68,7 @@ keywords = ['aiida', 'workflows']
 license = {file = 'LICENSE.txt'}
 name = 'aiida-core'
 readme = 'README.md'
-requires-python = '>=3.9'
+requires-python = '>=3.10'
 
 [project.entry-points.'aiida.brokers']
 'core.rabbitmq' = 'aiida.brokers.rabbitmq.broker:RabbitmqBroker'
@@ -261,7 +260,7 @@ pre-commit = [
   'types-requests~=2.0'
 ]
 rest = [
-  'flask-cors~=3.0',
+  'flask-cors~=4.0',
   'flask-restful~=0.3.10',
   'flask~=2.3.3',
   'pyparsing~=3.1',
@@ -496,33 +495,32 @@ envlist = py39
 [testenv]
 usedevelop=True
 deps =
-    py39: -rrequirements/requirements-py-3.9.txt
     py310: -rrequirements/requirements-py-3.10.txt
     py311: -rrequirements/requirements-py-3.11.txt
     py312: -rrequirements/requirements-py-3.12.txt
 
-[testenv:py{39,310,311,312}-presto]
+[testenv:py{310,311,312}-presto]
 passenv =
     PYTHONASYNCIODEBUG
 setenv =
     AIIDA_WARN_v3 =
 commands = pytest -m 'presto' {posargs}
 
-[testenv:py{39,310,311,312}]
+[testenv:py{310,311,312}]
 passenv =
     PYTHONASYNCIODEBUG
 setenv =
     AIIDA_WARN_v3 =
 commands = pytest {posargs}
 
-[testenv:py{39,310,311,312}-verdi]
+[testenv:py{310,311,312}-verdi]
 passenv =
     AIIDA_TEST_BACKEND
 setenv =
     AIIDA_PATH = {toxinidir}/.tox/.aiida
 commands = verdi {posargs}
 
-[testenv:py{39,310,311,312}-docs-{clean,update}]
+[testenv:py{310,311,312}-docs-{clean,update}]
 description =
     clean: Build the documentation (remove any existing build)
     update: Build the documentation (modify any existing build)
@@ -535,11 +533,10 @@ commands =
     clean: make clean
     make debug
 
-[testenv:py{39,310,311,312}-docs-live]
+[testenv:py{310,311,312}-docs-live]
 # tip: remove apidocs before using this feature (`cd docs; make clean`)
 description = Build the documentation and launch browser (with live updates)
 deps =
-    py39: -rrequirements/requirements-py-3.9.txt
     py310: -rrequirements/requirements-py-3.10.txt
     py311: -rrequirements/requirements-py-3.11.txt
     py312: -rrequirements/requirements-py-3.12.txt

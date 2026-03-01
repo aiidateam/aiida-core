@@ -1,6 +1,6 @@
 [build-system]
-build-backend = 'flit_core.buildapi'
-requires = ['flit_core >=3.4,<4']
+build-backend = 'hatchling.build'
+requires = ['hatchling>=1.27']
 
 # The "dev" dependency group is automatically synced by uv
 # and should thus contain all necessary deps for local development.
@@ -313,14 +313,72 @@ omit = [
 patch = ['subprocess']
 relative_files = true
 
-[tool.flit.module]
-name = 'aiida'
+[tool.hatch.build.targets.sdist]
+exclude = ["docs/", "tests/"]
 
-[tool.flit.sdist]
-exclude = [
-  'docs/',
-  'tests/'
+[tool.hatch.build.targets.wheel]
+packages = ["src/aiida"]
+
+[tool.hatch.envs.docs]
+dependencies = ["sphinx-autobuild"]
+features = ["docs", "tests", "rest", "atomic_tools"]
+
+[tool.hatch.envs.docs.scripts]
+clean = ["make -C docs clean", "make -C docs debug"]
+live = "RUN_APIDOC=False sphinx-autobuild --re-ignore build/.* --port 0 --open-browser -n -b {args:html} docs/source/ docs/build/{args:html}"
+update = "RUN_APIDOC=False make -C docs debug"
+
+[tool.hatch.envs.hatch-static-analysis]
+# overwrites hatch's default ruff config
+config-path = "none"
+
+[tool.hatch.envs.hatch-test]
+# overwrites hatch's default dependencies
+dependencies = []
+# uses tests dependencies from project.optional-dependencies
+features = ["tests"]
+
+[tool.hatch.envs.lint]
+features = ["pre-commit"]
+
+[tool.hatch.envs.lint.scripts]
+run = "pre-commit run {args}"
+
+[tool.hatch.envs.molecule]
+dependencies = [
+  "ansible~=2.10.0",
+  "docker~=4.2",
+  "molecule[docker]~=3.1.0"
 ]
+skip-install = true
+
+[tool.hatch.envs.molecule.env-vars]
+MOLECULE_GLOB = ".molecule/*/config_local.yml"
+
+[tool.hatch.envs.molecule.scripts]
+run = "molecule {args:test}"
+
+[tool.hatch.envs.test]
+features = ["tests"]
+
+[tool.hatch.envs.test.env-vars]
+AIIDA_WARN_v3 = ""
+
+[[tool.hatch.envs.test.matrix]]
+python = ["3.10", "3.11", "3.12", "3.13", "3.14"]
+
+[tool.hatch.envs.test.scripts]
+run = "pytest {args}"
+run-presto = "pytest -m 'presto' {args}"
+
+[tool.hatch.envs.verdi]
+features = ["tests"]
+
+[tool.hatch.envs.verdi.scripts]
+run = "verdi {args}"
+
+[tool.hatch.version]
+path = "src/aiida/__init__.py"
 
 [tool.mypy]
 disallow_any_generics = false
@@ -485,90 +543,6 @@ select = [
 # Needed due to https://github.com/astral-sh/ruff/issues/9298
 [tool.ruff.lint.pyflakes]
 extend-generics = ["aiida.orm.entities.Entity", "aiida.orm.entities.Collection"]
-
-[tool.tox]
-legacy_tox_ini = """
-[tox]
-minversion = 3.18.0
-envlist = py39
-
-[testenv]
-usedevelop=True
-deps =
-    py310: -rrequirements/requirements-py-3.10.txt
-    py311: -rrequirements/requirements-py-3.11.txt
-    py312: -rrequirements/requirements-py-3.12.txt
-
-[testenv:py{310,311,312}-presto]
-passenv =
-    PYTHONASYNCIODEBUG
-setenv =
-    AIIDA_WARN_v3 =
-commands = pytest -m 'presto' {posargs}
-
-[testenv:py{310,311,312}]
-passenv =
-    PYTHONASYNCIODEBUG
-setenv =
-    AIIDA_WARN_v3 =
-commands = pytest {posargs}
-
-[testenv:py{310,311,312}-verdi]
-passenv =
-    AIIDA_TEST_BACKEND
-setenv =
-    AIIDA_PATH = {toxinidir}/.tox/.aiida
-commands = verdi {posargs}
-
-[testenv:py{310,311,312}-docs-{clean,update}]
-description =
-    clean: Build the documentation (remove any existing build)
-    update: Build the documentation (modify any existing build)
-passenv = RUN_APIDOC
-setenv =
-    update: RUN_APIDOC = False
-changedir = docs
-allowlist_externals = make
-commands =
-    clean: make clean
-    make debug
-
-[testenv:py{310,311,312}-docs-live]
-# tip: remove apidocs before using this feature (`cd docs; make clean`)
-description = Build the documentation and launch browser (with live updates)
-deps =
-    py310: -rrequirements/requirements-py-3.10.txt
-    py311: -rrequirements/requirements-py-3.11.txt
-    py312: -rrequirements/requirements-py-3.12.txt
-    sphinx-autobuild
-setenv =
-    RUN_APIDOC = False
-commands =
-    sphinx-autobuild \
-        --re-ignore build/.* \
-        --port 0 --open-browser \
-        -n -b {posargs:html} docs/source/ docs/build/{posargs:html}
-
-[testenv:py{39,310,311,312}-pre-commit]
-description = Run the pre-commit checks
-extras = pre-commit
-commands = pre-commit run {posargs}
-
-[testenv:molecule]
-description = Run the molecule containerised tests
-skip_install = true
-parallel_show_output = true
-deps =
-    ansible~=2.10.0
-    docker~=4.2
-    molecule[docker]~=3.1.0
-setenv =
-    MOLECULE_GLOB = .molecule/*/config_local.yml
-passenv =
-    AIIDA_TEST_BACKEND
-    AIIDA_TEST_WORKERS
-commands = molecule {posargs:test}
-"""
 
 [tool.uv]
 # We specify a minimum uv version so that the format of uv.lock file

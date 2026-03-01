@@ -8,11 +8,11 @@ The tests are currently set up to stress-test the AiiDA engine by launching a nu
 
 ## Running the tests locally
 
-The simplest way to run these tests is to use the `tox` environment provided in this repository's `pyproject.toml` file:
+The simplest way to run these tests is to use the `hatch` environment provided in this repository's `pyproject.toml` file:
 
 ```console
-$ pip install tox
-$ tox -e molecule
+$ pip install hatch
+$ hatch run molecule:run
 ```
 
 **NOTE**: if you wan to run molecule directly, ensure that you set `export MOLECULE_GLOB=.molecule/*/config_local.yml`.
@@ -29,19 +29,19 @@ This runs the `test` scenario (defined in `config_local.yml`) which:
 If you wish to setup the container for manual inspection (i.e. only run steps 2 - 4) you can run:
 
 ```console
-$ tox -e molecule converge
+$ hatch run molecule:run converge
 ```
 
 Then you can jump into this container or run the tests (step 5) separately with:
 
 ```console
-$ tox -e molecule validate
+$ hatch run molecule:run validate
 ```
 
 and finally run step 6:
 
 ```console
-$ tox -e molecule destroy
+$ hatch run molecule:run destroy
 ```
 
 ## Additional variables
@@ -49,5 +49,5 @@ $ tox -e molecule destroy
 You can specify the number of daemon workers to spawn using the `AIIDA_TEST_WORKERS` environment variable:
 
 ```console
-$ AIIDA_TEST_WORKERS=4 tox -e molecule
+$ AIIDA_TEST_WORKERS=4 hatch run molecule:run
 ```

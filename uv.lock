@@ -212,7 +212,6 @@ requires-dist = [
     { name = "flask", marker = "extra == 'rest'", specifier = "~=2.3.3" },
     { name = "flask-cors", marker = "extra == 'rest'", specifier = "~=4.0" },
     { name = "flask-restful", marker = "extra == 'rest'", specifier = "~=0.3.10" },
-    { name = "get-annotations", marker = "python_full_version < '3.10'", specifier = "~=0.1" },
     { name = "graphviz", specifier = "~=0.19" },
     { name = "gssapi", marker = "extra == 'ssh-kerberos'", specifier = "~=1.6" },
     { name = "importlib-metadata", specifier = "~=6.0" },
@@ -3754,7 +3753,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess" },
+    { name = "ptyprocess", marker = "sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [

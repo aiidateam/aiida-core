@@ -32,7 +32,7 @@ from .._shims import shim_add_ctx
 from .strings import EntryPointType
 
 if t.TYPE_CHECKING:
-    from importlib_metadata import EntryPoint
+    from importlib.metadata import EntryPoint
 
 __all__ = ('PluginParamType',)
 
@@ -169,7 +169,7 @@ class PluginParamType(EntryPointType):
             entry_point = entry_points_by_name.get(p)
             if entry_point is not None:
                 try:
-                    plugin = entry_point.load()  # type: ignore[no-untyped-call]
+                    plugin = entry_point.load()
                     if plugin.__doc__:
                         # extract the initial/summary paragraph (before double newline)
                         doc_summary = plugin.__doc__.strip().split('\n\n')[0]
@@ -239,7 +239,7 @@ class PluginParamType(EntryPointType):
         """Convert the string value to an entry point instance, if the value can be successfully parsed
         into an actual entry point. Will raise click.BadParameter if validation fails.
         """
-        from importlib_metadata import EntryPoint
+        from importlib.metadata import EntryPoint
 
         # If the value is already of the expected return type, simply return it. This behavior is new in `click==8.0`:
         # https://click.palletsprojects.com/en/8.0.x/parameters/#implementing-custom-types
@@ -260,7 +260,7 @@ class PluginParamType(EntryPointType):
 
         if self.load:
             try:
-                return entry_point.load()  # type: ignore[no-untyped-call]
+                return entry_point.load()
             except exceptions.LoadingEntryPointError as exception:
                 raise click.BadParameter(str(exception))
         else:

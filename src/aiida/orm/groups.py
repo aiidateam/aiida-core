@@ -25,7 +25,7 @@ from aiida.manage import get_manager
 from . import convert, entities, extras, users
 
 if TYPE_CHECKING:
-    from importlib_metadata import EntryPoint
+    from importlib.metadata import EntryPoint
 
     from aiida.orm import Node, User
     from aiida.orm.implementation import StorageBackend

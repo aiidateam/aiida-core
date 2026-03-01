@@ -32,7 +32,7 @@ from .._shims import shim_add_ctx
 from .strings import EntryPointType
 
 if t.TYPE_CHECKING:
-    from importlib_metadata import EntryPoint
+    from importlib.metadata import EntryPoint
 
 __all__ = ('PluginParamType',)
 
@@ -239,7 +239,7 @@ class PluginParamType(EntryPointType):
         """Convert the string value to an entry point instance, if the value can be successfully parsed
         into an actual entry point. Will raise click.BadParameter if validation fails.
         """
-        from importlib_metadata import EntryPoint
+        from importlib.metadata import EntryPoint
 
         # If the value is already of the expected return type, simply return it. This behavior is new in `click==8.0`:
         # https://click.palletsprojects.com/en/8.0.x/parameters/#implementing-custom-types

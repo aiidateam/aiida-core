@@ -32,11 +32,11 @@ import time
 import typing as t
 import uuid
 import warnings
+from importlib.metadata import EntryPoint, EntryPoints
 
 import plumpy
 import pytest
 import wrapt
-from importlib_metadata import EntryPoint, EntryPoints
 
 from aiida import plugins
 from aiida.common.exceptions import NotExistent

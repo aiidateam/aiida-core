@@ -21,10 +21,7 @@ from aiida.common.warnings import warn_deprecation
 from . import factories
 
 if TYPE_CHECKING:
-    # importlib.metadata was introduced into the standard library in python 3.8,
-    # but was then updated in python 3.10 to use an improved API.
-    # So for now we use the backport importlib_metadata package.
-    from importlib_metadata import EntryPoint, EntryPoints
+    from importlib.metadata import EntryPoint, EntryPoints
 
 __all__ = ('get_entry_points', 'load_entry_point', 'load_entry_point_from_string', 'parse_entry_point')
 
@@ -43,10 +40,17 @@ def eps() -> EntryPoints:
     which will always iterate over all entry points since it looks for
     possible duplicate entries.
     """
-    from importlib_metadata import EntryPoints, entry_points
+    from importlib.metadata import EntryPoints, entry_points
 
     all_eps = entry_points()
-    return EntryPoints(sorted(all_eps, key=lambda x: x.group))
+    # In Python 3.10-3.11, entry_points() returns a SelectableGroups dict
+    # (iterating yields group name strings). In 3.12+ it returns a flat
+    # EntryPoints sequence. Normalise to a flat list in both cases.
+    if isinstance(all_eps, dict):
+        flat = [ep for group_eps in all_eps.values() for ep in group_eps]
+    else:
+        flat = list(all_eps)
+    return EntryPoints(sorted(flat, key=lambda x: x.group))
 
 
 @functools.lru_cache(maxsize=100)
@@ -154,7 +158,7 @@ ENTRY_POINT_GROUP_FACTORY_MAPPING = {
 
 def parse_entry_point(group: str, spec: str) -> EntryPoint:
     """Return an entry point, given its group and spec (as formatted in the setup)"""
-    from importlib_metadata import EntryPoint
+    from importlib.metadata import EntryPoint
 
     name, value = spec.split('=', maxsplit=1)
     return EntryPoint(group=group, name=name.strip(), value=value.strip())

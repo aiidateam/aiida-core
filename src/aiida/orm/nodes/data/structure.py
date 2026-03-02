@@ -1681,7 +1681,8 @@ class StructureData(Data):
         lengths = self.cell_lengths
 
         # Check for zero-length vectors
-        if all(length == 0.0 for length in lengths):
+        eps = numpy.finfo(numpy.asarray(lengths[0]).dtype).eps
+        if all(length < eps for length in lengths):
             raise ValueError('Cannot calculate angles for a cell with all zero-length vectors')
 
         angles = []
@@ -1690,7 +1691,7 @@ class StructureData(Data):
         vector_pairs = [(1, 2), (0, 2), (0, 1)]
 
         for i, j in vector_pairs:
-            if lengths[i] == 0.0 or lengths[j] == 0.0:
+            if lengths[i] < eps or lengths[j] < eps:
                 angles.append(None)
             else:
                 dot_product = numpy.vdot(cell[i], cell[j])

@@ -89,6 +89,14 @@ class TestCellAngles:
         assert angles[1] is None  # beta: angle(a, c)
         assert angles[2] is None  # gamma: angle(a, b)
 
+    def test_near_zero_vectors_raises(self):
+        """Test that vectors smaller than machine epsilon are treated as zero."""
+        eps = np.finfo(np.float64).eps
+        tiny = eps / 10
+        structure = StructureData(cell=((tiny, 0.0, 0.0), (0.0, tiny, 0.0), (0.0, 0.0, tiny)))
+        with pytest.raises(ValueError, match='all zero-length vectors'):
+            structure.cell_angles
+
     def test_cosine_clamping(self, monkeypatch):
         """Test that cosine values outside [-1, 1] are clamped to avoid nan from arccos."""
         import numpy

@@ -67,7 +67,6 @@ class PsqlDosMigrator:
         self.profile = profile
         self._engine = create_sqlalchemy_engine(self.profile.storage_config)
         self._connection = None
-        self._inspector = None
 
     def close(self) -> None:
         """Close the connection if it was opened and dispose of the engine."""

@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 15
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install python dependencies
       uses: ./.github/actions/install-aiida-core

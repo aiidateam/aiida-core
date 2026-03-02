@@ -801,7 +801,8 @@ This sections lists these data types and provides some important examples of the
   +===================================================================+======================+=================================================================================+===================================+
   | :ref:`StructureData <topics:data_types:materials:structure>`      | ``structure``        | The cell, periodic boundary conditions, atomic positions, species and kinds.    |  \\-                              |
   +-------------------------------------------------------------------+----------------------+---------------------------------------------------------------------------------+-----------------------------------+
-  | :ref:`TrajectoryData <topics:data_types:materials:trajectory>`    | ``array.trajectory`` | The structure species and the shape of the cell, step and position arrays.      | The array data in numpy format.   |
+  | :ref:`TrajectoryData <topics:data_types:materials:trajectory>`    | ``array.trajectory`` | The structure species, periodic boundary conditions, and the shape of the cell, | The array data in numpy format.   |
+  |                                                                   |                      | step and position arrays.                                                       |                                   |
   +-------------------------------------------------------------------+----------------------+---------------------------------------------------------------------------------+-----------------------------------+
   | :ref:`UpfData <topics:data_types:materials:upf>`                  | ``upf``              | The MD5 of the UPF and the element of the pseudopotential.                      | The pseudopotential file.         |
   +-------------------------------------------------------------------+----------------------+---------------------------------------------------------------------------------+-----------------------------------+
@@ -900,15 +901,81 @@ TrajectoryData
 
 The :py:class:`~aiida.orm.nodes.data.array.trajectory.TrajectoryData` data type represents a sequences of StructureData objects, where the number of atomic kinds and sites does not change over time.
 Beside the coordinates, it can also optionally store velocities.
-If you have a list of :py:class:`~aiida.orm.nodes.data.structure.StructureData` instances called ``structure_list`` that represent the trajectory of your system, you can create a :py:class:`~aiida.orm.nodes.data.array.trajectory.TrajectoryData` instance from this list:
+As of version 2.8, periodic boundary conditions can be explicitly specified and are stored for the entire trajectory.
 
-.. code-block:: ipython
+For example, to create a simple two-step trajectory from a list of structures:
 
-  In [1]: TrajectoryData = DataFactory('core.array.trajectory')
+.. code-block:: python
 
-  In [2]: trajectory = TrajectoryData(structure_list)
+  from aiida import orm
+
+  # Create step 1
+  cell = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
+  structure1 = orm.StructureData(cell=cell, pbc=(True, True, False))
+  structure1.append_atom(position=(0.0, 0.0, 0.0), symbols='H')
+  structure1.append_atom(position=(0.5, 0.5, 0.5), symbols='H')
+
+  # Create step 2
+  structure2 = orm.StructureData(cell=cell, pbc=(True, True, False))
+  structure2.append_atom(position=(0.1, 0.0, 0.0), symbols='H')
+  structure2.append_atom(position=(0.6, 0.5, 0.5), symbols='H')
+
+  # Create the trajectory from the structure list
+  trajectory = orm.TrajectoryData([structure1, structure2])
+
+Alternatively, you can create a trajectory by directly setting the arrays using the :py:meth:`~aiida.orm.nodes.data.array.trajectory.TrajectoryData.set_trajectory` method:
+
+.. code-block:: python
+
+  import numpy as np
+
+  trajectory = orm.TrajectoryData()
+
+  trajectory.set_trajectory(
+      symbols=['H', 'H'],
+      positions=np.array([
+          [[0.0, 0.0, 0.0], [0.5, 0.5, 0.5]],  # Step 1
+          [[0.1, 0.0, 0.0], [0.6, 0.5, 0.5]],  # Step 2
+      ]),
+      cells=np.array([
+          [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],  # Step 1
+          [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],  # Step 2
+      ]),
+      pbc=(True, True, False)  # Periodic in x,y but not z
+  )
+
+This example creates a trajectory with two time steps for a two-atom system.
+The ``positions`` array has shape ``(2, 2, 3)`` representing 2 steps, 2 atoms, and 3 coordinates.
+The ``cells`` array has shape ``(2, 3, 3)`` representing 2 steps and a 3×3 cell matrix.
 
 Note that contrary with the :py:class:`~aiida.orm.nodes.data.structure.StructureData` data type, the cell and atomic positions are stored a ``numpy`` array in the repository and not in the database.
+
+Periodic Boundary Conditions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. versionadded:: 2.8
+
+Starting from version 2.8, ``TrajectoryData`` supports explicit periodic boundary conditions via the ``pbc`` property.
+The periodic boundary conditions apply to all steps in the trajectory:
+
+.. code-block:: python
+
+  trajectory.pbc
+  # (True, True, False)
+
+When creating a trajectory from structure lists, the periodic boundary conditions are automatically extracted:
+
+.. code-block:: python
+
+  trajectory = TrajectoryData(structure_list)
+  trajectory.pbc  # Extracted from the StructureData instances
+  # (True, True, False)
+
+Note that all structures in the list must have the same periodic boundary conditions, otherwise a ``ValueError`` is raised.
+
+.. warning::
+
+   For backward compatibility, ``TrajectoryData`` created before version 2.8 will have ``trajectory.pbc`` return ``None``.
 
 Exporting
 ^^^^^^^^^

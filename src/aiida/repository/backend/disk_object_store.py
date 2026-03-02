@@ -106,14 +106,15 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         :raise FileNotFoundError: if the file does not exist.
         :raise OSError: if the file could not be opened.
         """
-        super().open(key)
 
+        if not self.has_object(key):
+            raise FileNotFoundError(f'object with key `{key}` does not exist.')
         with self._container as container:
             with container.get_object_stream(key) as handle:
-                yield handle  # type: ignore[misc]
+                yield t.cast(t.BinaryIO, handle)
 
     def iter_object_streams(self, keys: t.Iterable[str]) -> t.Iterator[t.Tuple[str, t.BinaryIO]]:
-        with self._container.get_objects_stream_and_meta(keys) as triplets:  # type: ignore[arg-type]
+        with self._container.get_objects_stream_and_meta(keys) as triplets:
             for key, stream, _ in triplets:
                 assert stream is not None
                 yield key, stream  # type: ignore[misc]
@@ -198,7 +199,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 if not dry_run:
                     with get_progress_reporter()(total=1) as progress:
                         callback = create_callback(progress)
-                        container.pack_all_loose(compress=compress_mode, callback=callback)  # type: ignore[arg-type]
+                        container.pack_all_loose(compress=compress_mode, callback=callback)
 
             if do_repack:
                 files_numb = container.count_objects().packed
@@ -207,7 +208,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
                 if not dry_run:
                     with get_progress_reporter()(total=1) as progress:
                         callback = create_callback(progress)
-                        container.repack(callback=callback)  # type: ignore[arg-type]
+                        container.repack(callback=callback)
 
             if clean_storage:
                 logger.report(f'Cleaning the repository database (with `vacuum={do_vacuum}`) ...')

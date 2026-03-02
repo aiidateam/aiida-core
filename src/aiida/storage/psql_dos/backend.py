@@ -431,6 +431,50 @@ class PsqlDosBackend(StorageBackend):
                 raise KeyError(f'No setting found with key {key}')
             return setting.val
 
+    def get_unreferenced_connections(self) -> list[tuple[int, str, int]]:
+        """Return a list of database connections not associated with the current session.
+
+        These are connections owned by the current user to the current database,
+        excluding the current connection. When the daemon is not running, these
+        connections are likely orphaned zombies that could be holding locks.
+
+        :return: list of tuples (pid, state, client_port)
+        """
+        from sqlalchemy import text
+
+        session = self.get_session()
+        result = session.execute(
+            text("""
+            SELECT pid, state, client_port
+            FROM pg_stat_activity
+            WHERE usename = current_user
+            AND datname = current_database()
+            AND pid != pg_backend_pid()
+        """)
+        )
+        return [(row[0], row[1], row[2]) for row in result]
+
+    def terminate_connections(self, pids: list[int]) -> int:
+        """Terminate specific database connections by their PIDs.
+
+        :param pids: list of process IDs to terminate
+        :return: number of connections terminated
+        """
+        from sqlalchemy import text
+
+        if not pids:
+            return 0
+
+        session = self.get_session()
+        terminated = 0
+        for pid in pids:
+            result = session.execute(text('SELECT pg_terminate_backend(:pid)'), {'pid': pid})
+            if result.scalar():
+                terminated += 1
+        session.commit()
+
+        return terminated
+
     def maintain(self, full: bool = False, dry_run: bool = False, **kwargs) -> None:
         from aiida.manage.profile_access import ProfileAccessManager
 

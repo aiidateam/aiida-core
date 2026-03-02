@@ -9,6 +9,7 @@ extras: QbDictField('extras', dtype=typing.Optional[typing.Dict[str, typing.Any]
 label: QbStrField('label', dtype=typing.Optional[str], is_attribute=False)
 mtime: QbNumericField('mtime', dtype=typing.Optional[datetime.datetime], is_attribute=False)
 node_type: QbStrField('node_type', dtype=typing.Optional[str], is_attribute=False)
+pbc: QbField('pbc', dtype=typing.Optional[typing.Tuple[bool, bool, bool]], is_attribute=True)
 pk: QbNumericField('pk', dtype=typing.Optional[int], is_attribute=False)
 process_type: QbStrField('process_type', dtype=typing.Optional[str], is_attribute=False)
 repository_content: QbDictField('repository_content', dtype=typing.Optional[dict[str,

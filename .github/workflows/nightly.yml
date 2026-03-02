@@ -9,6 +9,7 @@ on:
     - .github/workflows/setup.sh
     - .github/system_tests/test_daemon.py
     - .molecule/default/files/**
+    - src/aiida/storage/psql_dos/migrator.py
     - aiida/storage/psql_dos/migrations/**
     - tests/storage/psql_dos/migrations/**
   workflow_dispatch:

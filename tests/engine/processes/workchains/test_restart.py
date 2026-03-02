@@ -221,7 +221,8 @@ def test_global_max_iterations(generate_work_chain, generate_calculation_node, m
             process.ctx.children.append(generate_calculation_node(exit_status=1))
             process.ctx.iteration += 1
             result = process.inspect_process()
-            assert result is None  # No exit code
+            assert isinstance(result, engine.ExitCode)
+            assert result.status == 0
 
     # One more trigger - `max_iterations` is reached
     process.ctx.children.append(generate_calculation_node(exit_status=1))

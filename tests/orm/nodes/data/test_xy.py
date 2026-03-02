@@ -51,3 +51,17 @@ def test_constructor():
     node = XyData(x_array, y_array, x_name='x_name', x_units='x_unit', y_names='y_name', y_units='y_units')
     assert numpy.array_equal(node.get_x()[1], x_array)
     assert numpy.array_equal(node.get_y()[0][1], y_array)
+
+
+def test_set_y_shape_validation():
+    """Test that set_y validates array shapes match x_array."""
+    x_array = numpy.array([1, 2])
+    y_array1 = numpy.array([3, 4])
+    invalid_y_array = numpy.array([3, 4, 5])
+
+    node = XyData()
+    node.set_x(x_array, 'x_name', 'x_unit')
+
+    # Should raise ValueError when y_array shape doesn't match x_array
+    with pytest.raises(ValueError, match=r'y_array .* does not have the same shape as x_array!'):
+        node.set_y([y_array1, invalid_y_array], ['y_name1', 'invalid_y_name'], ['y_unit1', 'invalid_y_unit'])

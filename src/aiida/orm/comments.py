@@ -9,7 +9,7 @@
 """Comment objects and functions"""
 
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional, Type
+from typing import TYPE_CHECKING, List, Optional, Type, cast
 
 from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
@@ -17,7 +17,7 @@ from aiida.manage import get_manager
 from . import entities
 
 if TYPE_CHECKING:
-    from aiida.orm.implementation import StorageBackend
+    from aiida.orm.implementation import BackendComment, BackendNode, StorageBackend
 
     from .nodes.node import Node
     from .users import User
@@ -81,13 +81,13 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
             description='Node PK that the comment is attached to',
             is_attribute=False,
             orm_class='core.node',
-            orm_to_model=lambda comment, _: comment.node.pk,
+            orm_to_model=lambda comment, _: cast('Comment', comment).node.pk,
         )
         user: int = MetadataField(
             description='User PK that created the comment',
             is_attribute=False,
             orm_class='core.user',
-            orm_to_model=lambda comment, _: comment.user.pk,
+            orm_to_model=lambda comment, _: cast('Comment', comment).user.pk,
         )
         content: str = MetadataField(description='Content of the comment', is_attribute=False)
 
@@ -111,7 +111,7 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         arguments = [self.uuid, self.node.pk, self.user.email, self.content]
         return 'Comment<{}> for node<{}> and user<{}>: {}'.format(*arguments)
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Comment):
             return False
 
@@ -139,7 +139,7 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         return self._backend_entity.set_mtime(value)
 
     @property
-    def node(self) -> 'Node':
+    def node(self) -> 'BackendNode':
         return self._backend_entity.node
 
     @property
@@ -149,7 +149,8 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         return entities.from_backend_entity(User, self._backend_entity.user)
 
     def set_user(self, value: 'User') -> None:
-        self._backend_entity.user = value.backend_entity
+        # mypy error: Property "user" defined in "BackendComment" is read-only
+        self._backend_entity.user = value.backend_entity  # type: ignore[misc]
 
     @property
     def content(self) -> str:

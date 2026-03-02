@@ -60,6 +60,7 @@ py:obj ModelType
 py:class aiida.common.ReturnType
 py:class aiida.common.SelfType
 py:class aiida.common.lang.MethodType
+py:class aiida.cmdline.params._shims.C
 py:class aiida.orm.entitites.CollectionType
 py:class aiida.orm.entitites.EntityType
 py:class aiida.orm.entitites.BackendEntityType
@@ -114,13 +115,22 @@ py:class aiida.engine.processes.workchains.context.ToContext
 py:func aiida.orm.implementation.BackendQueryBuilder
 
 ### Typing aliases
+py:obj aiida.cmdline.params.types.choice.T
 py:obj aiida.engine.processes.functions.P
 py:obj aiida.engine.processes.functions.N
 py:obj aiida.engine.processes.functions.R_co
+py:class FC
 py:class P
 py:class N
+py:class T
+py:class _ContainerTypes
+py:class _NodeOrGroupCls
+py:class aiida.cmdline.params.types.choice.T
+py:class aiida.common.lang.T
 py:class aiida.engine.processes.functions.N
 py:class aiida.engine.processes.functions.R_co
+py:class aiida.common.utils.T
+py:class aiida.common.utils.R
 
 ### third-party packages
 # Note: These exceptions are needed if
@@ -136,6 +146,7 @@ py:class click.types.Path
 py:class click.types.File
 py:class click.types.StringParamType
 py:class click.parser.OptionParser
+py:class click.parser._OptionParser
 py:func click.shell_completion._start_of_option
 py:meth click.Option.get_default
 py:meth fail
@@ -153,6 +164,7 @@ py:class requests.Response
 py:class concurrent.futures._base.TimeoutError
 py:class concurrent.futures._base.Future
 
+py:class BackupManager
 py:class disk_objectstore.utils.LazyOpener
 py:class disk_objectstore.backup_utils.BackupManager
 
@@ -197,6 +209,7 @@ py:class RmqThreadCommunicator
 py:class _asyncio.Future
 
 py:class tqdm.std.tqdm
+py:class tqdm
 
 py:class _pytest.tmpdir.TempPathFactory
 py:class pytest.tmpdir.TempPathFactory
@@ -223,7 +236,6 @@ py:class sqlalchemy.sql.compiler.TypeCompiler
 py:class sqlalchemy.sql.elements.BooleanClauseList
 py:meth sqlalchemy.orm.unitofwork.UOWTransaction.register_object
 
-py:class sphinx.ext.autodoc.ClassDocumenter
 py:class sphinx.util.docutils.SphinxDirective
 py:class ModuleAnalyzer
 py:class BuildEnvironment

@@ -14,6 +14,7 @@ import pathlib
 import pytest
 
 from aiida.common.datastructures import CalcInfo, CodeInfo, FileCopyOperation, StashMode
+from aiida.common.exceptions import StashingError
 from aiida.common.folders import SandboxFolder
 from aiida.engine.daemon import execmanager
 from aiida.orm import CalcJobNode, FolderData, PortableCode, RemoteData, SinglefileData
@@ -178,7 +179,7 @@ async def test_upload_local_copy_list(
     node, calc_info = node_and_calc_info
     calc_info.local_copy_list = [[folder.uuid] + local_copy_list]
 
-    with node.computer.get_transport() as transport:
+    async with node.computer.get_transport() as transport:
         await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
     # Check that none of the files were written to the repository of the calculation node, since they were communicated
@@ -216,7 +217,7 @@ async def test_upload_local_copy_list_files_folders(
         (inputs['folder'].uuid, None, '.'),
     ]
 
-    with node.computer.get_transport() as transport:
+    async with node.computer.get_transport() as transport:
         await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
     # Check that none of the files were written to the repository of the calculation node, since they were communicated
@@ -248,7 +249,7 @@ async def test_upload_remote_symlink_list(
         (node.computer.uuid, str(tmp_path / 'file_a.txt'), 'file_a.txt'),
     ]
 
-    with node.computer.get_transport() as transport:
+    async with node.computer.get_transport() as transport:
         await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
     filepath_workdir = pathlib.Path(node.get_remote_workdir())
@@ -313,7 +314,7 @@ async def test_upload_file_copy_operation_order(node_and_calc_info, tmp_path, or
     if order is not None:
         calc_info.file_copy_operation_order = order
 
-    with node.computer.get_transport() as transport:
+    async with node.computer.get_transport() as transport:
         await execmanager.upload_calculation(node, transport, calc_info, sandbox, inputs)
         filepath = pathlib.Path(node.get_remote_workdir()) / 'file.txt'
         assert filepath.is_file()
@@ -613,14 +614,14 @@ async def test_upload_combinations(
         )
     if expected_exception is not None:
         with pytest.raises(expected_exception):
-            with node.computer.get_transport() as transport:
+            async with node.computer.get_transport() as transport:
                 await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
             filepath_workdir = pathlib.Path(node.get_remote_workdir())
 
             assert serialize_file_hierarchy(filepath_workdir, read_bytes=False) == expected_hierarchy
     else:
-        with node.computer.get_transport() as transport:
+        async with node.computer.get_transport() as transport:
             await execmanager.upload_calculation(node, transport, calc_info, fixture_sandbox)
 
         filepath_workdir = pathlib.Path(node.get_remote_workdir())
@@ -649,7 +650,7 @@ async def test_upload_calculation_portable_code(fixture_sandbox, node_and_calc_i
     code_info.code_uuid = code.uuid
     calc_info.codes_info = [code_info]
 
-    with node.computer.get_transport() as transport:
+    async with node.computer.get_transport() as transport:
         await execmanager.upload_calculation(
             node,
             transport,
@@ -781,6 +782,10 @@ async def test_stashing(
                 raise OSError('copy mocked error')
 
             monkeypatch.setattr(transport, 'copy_async', mock_copy_async)
+
+            # StashingError should be raised for copy failures
+            with pytest.raises(StashingError, match='Failed to copy'):
+                await execmanager.stash_calculation(node, transport)
         else:
 
             async def mock_compress_async(*args, **kwargs):
@@ -788,11 +793,9 @@ async def test_stashing(
 
             monkeypatch.setattr(transport, 'compress_async', mock_compress_async)
 
-        # no error should be raised
-        # the error should only be logged to EXEC_LOGGER.warning and exit with 0
-        with caplog.at_level(logging.WARNING):
-            await execmanager.stash_calculation(node, transport)
-            assert any('Failed to stash' in message for message in caplog.messages)
+            with caplog.at_level(logging.WARNING):
+                await execmanager.stash_calculation(node, transport)
+                assert any('Failed to stash' in message for message in caplog.messages)
 
     # Ensure no files were created in the destination path after the error
     assert not any(dest_path_error.iterdir())

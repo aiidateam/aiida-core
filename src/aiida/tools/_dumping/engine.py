@@ -78,7 +78,7 @@ class DumpEngine:
     def _build_mapping_for_target(self) -> GroupNodeMapping:
         """Build the appropriate group-node mapping based on the target entity and config."""
         if isinstance(self.dump_target_entity, orm.Group):
-            # Single group dump - pass it as a single-element list
+            logger.report(f'Building group-node mapping for single group `{self.dump_target_entity.label}`...')
             return GroupNodeMapping.build_from_db(groups=[self.dump_target_entity])
 
         elif isinstance(self.dump_target_entity, Profile):
@@ -86,13 +86,12 @@ class DumpEngine:
             assert isinstance(self.config, ProfileDumpConfig)
 
             if self.config.all_entries:
-                # Build mapping for all groups
+                logger.report('Building group-node mapping for all groups in profile...')
                 return GroupNodeMapping.build_from_db(groups=None)
             elif self.config.groups:
-                # Build mapping only for specified groups
+                logger.report(f'Building group-node mapping for {len(self.config.groups)} specified groups...')
                 return GroupNodeMapping.build_from_db(groups=self.config.groups)
             else:
-                # No groups specified - return empty mapping
                 return GroupNodeMapping()
 
         else:
@@ -109,7 +108,7 @@ class DumpEngine:
         elif isinstance(self.dump_target_entity, Profile):
             dump_start_report = f'profile `{self.dump_target_entity.name}`'
 
-        msg = f'Starting dump of {dump_start_report} in {self.config.dump_mode.name.lower()} mode.'
+        msg = f'Starting dump of {dump_start_report} in {self.config.dump_mode.name.lower()} mode...'
         if self.config.dump_mode != DumpMode.DRY_RUN:
             logger.report(msg)
 
@@ -226,10 +225,27 @@ class DumpEngine:
             return None
 
         self.dump_tracker.set_current_mapping(self.current_mapping)
+
+        logger.report('Detecting changes since last dump. This may take a while for large databases...')
+
+        logger.report('Detecting node changes...')
         node_changes = self.detector._detect_node_changes()
+        msg = (
+            f'Detected {len(node_changes.new_or_modified)} new/modified nodes '
+            f'and {len(node_changes.deleted)} deleted nodes.'
+        )
+        logger.report(msg)
+
+        logger.report('Detecting group changes...')
         group_changes = self.detector._detect_group_changes(
             previous_mapping=self.dump_tracker.previous_mapping, current_mapping=self.current_mapping
         )
+        msg = (
+            f'Detected {len(group_changes.new)} new, {len(group_changes.modified)} modified, '
+            f'and {len(group_changes.deleted)} deleted groups.'
+        )
+        logger.report(msg)
+
         all_changes = DumpChanges(nodes=node_changes, groups=group_changes)
 
         if all_changes.is_empty():

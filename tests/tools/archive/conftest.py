@@ -12,7 +12,8 @@ import logging
 
 import pytest
 
-from aiida.tools.archive import EXPORT_LOGGER, IMPORT_LOGGER
+from aiida.tools.archive.create import EXPORT_LOGGER
+from aiida.tools.archive.imports import IMPORT_LOGGER
 
 
 @pytest.fixture(scope='function', autouse=True)

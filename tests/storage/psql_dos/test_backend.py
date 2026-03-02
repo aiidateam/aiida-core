@@ -11,7 +11,7 @@
 import pytest
 
 from aiida.manage import get_manager
-from aiida.orm import User
+from aiida.orm import User, load_node
 
 
 def test_all_tests_marked_with_requires_psql(request):
@@ -108,6 +108,8 @@ def test_maintain(caplog, monkeypatch, kwargs, logged_texts):
 
 def test_get_info(monkeypatch):
     """Test the ``get_info`` method."""
+    from aiida import orm
+
     storage_backend = get_manager().get_profile_storage()
 
     def mock_get_info(self, detailed=False, **kwargs):
@@ -128,12 +130,26 @@ def test_get_info(monkeypatch):
     assert 'extra_value' not in repository_info_out
     assert repository_info_out['value'] == 42
 
-    storage_info_out = storage_backend.get_info(detailed=True)
-    repository_info_out = storage_info_out['repository']
+    node1 = orm.Data().store()
+    node2 = orm.Data().store()
+
+    detailed_storage_info_out = storage_backend.get_info(detailed=True)
+    repository_info_out = detailed_storage_info_out['repository']
     assert 'value' in repository_info_out
     assert 'extra_value' in repository_info_out
     assert repository_info_out['value'] == 42
     assert repository_info_out['extra_value'] == 0
+
+    # Test first_created and last_created timestamps
+    nodes_info = detailed_storage_info_out['entities']['Nodes']
+
+    assert 'first_created' in nodes_info
+    assert 'last_created' in nodes_info
+    # Reload nodes to get their ctime as stored in DB
+    first_created = load_node(node1.pk).ctime
+    last_created = load_node(node2.pk).ctime
+    assert nodes_info['first_created'] == str(first_created)
+    assert nodes_info['last_created'] == str(last_created)
 
 
 def test_unload_profile():
@@ -178,3 +194,63 @@ def test_backup(tmp_path):
     contents = [c.name for c in last_backup.iterdir()]
     for name in ['container', 'db.psql']:
         assert name in contents
+
+
+def test_get_and_terminate_unreferenced_connections():
+    """Test that ``get_unreferenced_connections`` detects external database connections.
+
+    This test creates a real database connection outside of the AiiDA session and verifies
+    it appears in the unreferenced connections list. It also tests terminating that connection.
+    """
+    import psycopg
+
+    storage = get_manager().get_profile_storage()
+
+    # Get connection parameters from the storage engine
+    engine = storage.get_session().get_bind()
+    url = engine.url
+
+    # Create an external connection that simulates an orphaned connection
+    external_conn = psycopg.connect(
+        host=url.host,
+        port=url.port,
+        user=url.username,
+        password=url.password,
+        dbname=url.database,
+    )
+
+    try:
+        # Start a transaction to simulate "idle in transaction" state
+        cursor = external_conn.cursor()
+        cursor.execute('SELECT 1')
+
+        # Get the client port and pid of our external connection for verification
+        cursor.execute('SELECT inet_client_port(), pg_backend_pid()')
+        external_port, external_pid = cursor.fetchone()
+
+        # Verify the external connection appears in unreferenced connections
+        unreferenced = storage.get_unreferenced_connections()
+        unreferenced_ports = [port for _, _, port in unreferenced]
+        assert (
+            external_port in unreferenced_ports
+        ), f'External connection port {external_port} not found in {unreferenced_ports}'
+
+        # Terminate only our specific connection (not all unreferenced ones)
+        # This prevents killing connections from parallel tests
+        count = storage.terminate_connections([external_pid])
+        assert count == 1, 'Expected exactly one connection to be terminated'
+
+        # Verify the external connection was actually terminated
+        # The connection should be closed/broken now
+        try:
+            cursor.execute('SELECT 1')
+            pytest.fail('Connection should have been terminated')
+        except psycopg.OperationalError:
+            pass  # Expected - connection was terminated
+
+    finally:
+        # Clean up - close the connection if it's still open
+        try:
+            external_conn.close()
+        except Exception:
+            pass  # Connection may already be terminated

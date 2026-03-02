@@ -102,18 +102,6 @@ def has_pymatgen():
     return True
 
 
-def get_pymatgen_version():
-    """:return: string with pymatgen version, None if can not import."""
-    if not has_pymatgen():
-        return None
-    try:
-        from pymatgen import __version__
-    except ImportError:
-        # this was changed in version 2022.0.3
-        from pymatgen.core import __version__
-    return __version__
-
-
 def has_spglib():
     """:return: True if the spglib module can be imported, False otherwise."""
     try:
@@ -1674,19 +1662,45 @@ class StructureData(Data):
 
     @property
     def cell_angles(self):
-        """Get the angles between the cell lattice vectors in degrees."""
+        """Get the angles between the cell lattice vectors in degrees.
+
+        :return: a list of three floats ``[alpha, beta, gamma]`` representing the angles
+            (in degrees) between cell vectors: alpha is the angle between b and c,
+            beta between a and c, and gamma between a and b. Returns ``None`` for
+            angles that cannot be computed due to zero-length vectors.
+
+        :raises ValueError: if all cell vectors have zero length.
+
+        .. versionchanged:: 2.8.0
+            Now returns ``None`` for angles involving zero-length vectors (previously
+            returned ``nan``), and raises ``ValueError`` when all vectors have zero length.
+        """
         import numpy
 
         cell = self.cell
         lengths = self.cell_lengths
-        return [
-            float(numpy.arccos(x) / numpy.pi * 180)
-            for x in [
-                numpy.vdot(cell[1], cell[2]) / lengths[1] / lengths[2],
-                numpy.vdot(cell[0], cell[2]) / lengths[0] / lengths[2],
-                numpy.vdot(cell[0], cell[1]) / lengths[0] / lengths[1],
-            ]
-        ]
+
+        # Check for zero-length vectors
+        eps = numpy.finfo(numpy.asarray(lengths[0]).dtype).eps
+        if all(length < eps for length in lengths):
+            raise ValueError('Cannot calculate angles for a cell with all zero-length vectors')
+
+        angles = []
+
+        # Pairs of vector indices for each angle: alpha=(b,c), beta=(a,c), gamma=(a,b)
+        vector_pairs = [(1, 2), (0, 2), (0, 1)]
+
+        for i, j in vector_pairs:
+            if lengths[i] < eps or lengths[j] < eps:
+                angles.append(None)
+            else:
+                dot_product = numpy.vdot(cell[i], cell[j])
+                cos_angle = dot_product / (lengths[i] * lengths[j])
+                # Handle numerical issues where |cos_angle| might slightly exceed 1
+                cos_angle = max(min(cos_angle, 1.0), -1.0)
+                angles.append(numpy.degrees(numpy.arccos(cos_angle)))
+
+        return angles
 
     @cell_angles.setter
     def cell_angles(self, value):
@@ -1827,14 +1841,7 @@ class StructureData(Data):
                 if len(kind.symbols) != 1 or (len(kind.weights) != 1 or sum(kind.weights) < 1.0):
                     raise ValueError('Cannot set partial occupancies and spins at the same time')
                 spin = -1 if kind.name.endswith('1') else 1 if kind.name.endswith('2') else 0
-                try:
-                    specie = Specie(kind.symbols[0], oxidation_state, properties={'spin': spin})
-                except TypeError:
-                    # As of v2023.9.2, the ``properties`` argument is removed and the ``spin`` argument should be used.
-                    # See: https://github.com/materialsproject/pymatgen/commit/118c245d6082fe0b13e19d348fc1db9c0d512019
-                    # The ``spin`` argument was introduced in v2023.6.28.
-                    # See: https://github.com/materialsproject/pymatgen/commit/9f2b3939af45d5129e0778d371d814811924aeb6
-                    specie = Specie(kind.symbols[0], oxidation_state, spin=spin)
+                specie = Specie(kind.symbols[0], oxidation_state, spin=spin)
                 species.append(specie)
         else:
             # case when no spin are defined

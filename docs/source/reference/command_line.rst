@@ -80,7 +80,8 @@ Below is a list with all available subcommands.
       list       List the available codes.
       relabel    Relabel a code.
       reveal     Reveal one or more hidden codes in `verdi code list`.
-      setup      (Deprecated) Setup a new code (use `verdi code create`).
+      setup      Setup a new code (use `verdi code create`). (DEPRECATED: Please use `verdi
+                 code create` instead.)
       show       Display detailed information for a code.
       test       Run tests for the given code to check whether it is usable.
 
@@ -106,6 +107,7 @@ Below is a list with all available subcommands.
       duplicate   Duplicate a computer allowing to change some parameters.
       enable      Enable the computer for the given user.
       export      Export the setup or configuration of a computer.
+      goto        Open a shell connecting to the remote computer.
       list        List all available computers.
       relabel     Relabel a computer.
       setup       Create a new computer.
@@ -402,7 +404,8 @@ Below is a list with all available subcommands.
       dump                Dump all data in an AiiDA profile's storage to disk.
       list                Display a list of all available profiles.
       set-default         Set a profile as the default profile.
-      setdefault          (Deprecated) Set a profile as the default profile.
+      setdefault          Set a profile as the default profile. (DEPRECATED: Please use `verdi
+                          profile set-default` instead.)
       setup               Set up a new profile.
       show                Show details for a profile.
 
@@ -416,7 +419,9 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS]
 
-      (Deprecated) Setup a new profile in a fully automated fashion.
+      Setup a new profile in a fully automated fashion. (DEPRECATED: This command is
+      deprecated. For a fully automated alternative, use `verdi presto --use-postgres`
+      instead. For full control, use `verdi profile setup core.psql_dos`.)
 
     Options:
       -n, --non-interactive / -I, --interactive
@@ -454,7 +459,7 @@ Below is a list with all available subcommands.
       --broker-host HOSTNAME          Hostname for the message broker.  [default: 127.0.0.1]
       --broker-port INTEGER           Port for the message broker.  [default: 5672]
       --broker-virtual-host TEXT      Name of the virtual host for the message broker without
-                                      leading forward slash.
+                                      leading forward slash.  [default: ""]
       --repository DIRECTORY          Absolute path to the file repository.
       --test-profile                  Designate the profile to be used for running the test
                                       suite only.
@@ -520,10 +525,10 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS]
 
-      (Deprecated) Setup a new profile (use `verdi profile setup`).
+      Setup a new profile (use `verdi profile setup`).
 
       This method assumes that an empty PSQL database has been created and that the database
-      user has been created.
+      user has been created. (DEPRECATED: Please use `verdi profile setup` instead.)
 
     Options:
       -n, --non-interactive / -I, --interactive

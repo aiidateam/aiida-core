@@ -34,6 +34,10 @@ If you are working on your own machine, note that the tutorial assumes that you 
 If this is not the case, consult the {ref}`getting started page<installation>`.
 :::
 
+:::{important}
+If you are running this tutorial in a Jupyter notebook, make sure to call `load_profile()` in a **separate cell** before running any AiiDA engine processes (e.g. calculation functions or work chains).
+:::
+
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter Notebook: {nb-download}`basic.ipynb` {octicon}`download`
 :::

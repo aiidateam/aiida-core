@@ -23,7 +23,7 @@ from .users import User
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
-    from aiida.orm.implementation.authinfos import BackendAuthInfo  # noqa: F401
+    from aiida.orm.implementation.authinfos import BackendAuthInfo
     from aiida.transports import Transport
 
 __all__ = ('AuthInfo',)

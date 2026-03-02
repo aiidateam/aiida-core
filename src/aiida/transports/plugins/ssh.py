@@ -13,6 +13,7 @@ import io
 import os
 import re
 from stat import S_ISDIR, S_ISREG
+from typing import Optional
 
 import click
 
@@ -63,7 +64,8 @@ def convert_to_bool(string):
 
 
 class SshTransport(BlockingTransport):
-    """Support connection, command execution and data transfer to remote computers via SSH+SFTP."""
+    """(Deprecated!) Support connection, command execution and data transfer
+    to remote computers via SSH+SFTP (using paramiko)."""
 
     # Valid keywords accepted by the connect method of paramiko.SSHClient
     # I disable 'password' and 'pkey' to avoid these data to get logged in the
@@ -513,7 +515,7 @@ class SshTransport(BlockingTransport):
             self._close_proxies()
             raise InvalidOperation(
                 'Error in ssh transport plugin. This may be due to the remote computer not supporting SFTP. '
-                'Try setting it up with the aiida.transports:ssh_only transport from the aiida-sshonly plugin instead.'
+                'Try setting it up with the core.ssh_async transport plugin with openssh backend, instead.'
             )
 
         self._is_open = True
@@ -671,10 +673,6 @@ class SshTransport(BlockingTransport):
         this method will return None. But in __enter__ this is set explicitly,
         so this should never happen within this class.
         """
-        warn_deprecation(
-            '`getcwd()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
-            version=3,
-        )
         return self.sftp.getcwd()
 
     def makedirs(self, path: TransportPath, ignore_existing: bool = False):
@@ -777,13 +775,6 @@ class SshTransport(BlockingTransport):
         """Remove the folder named 'path' if empty."""
         path = str(path)
         self.sftp.rmdir(path)
-
-    def chown(self, path: TransportPath, uid, gid):
-        """Change owner permissions of a file.
-
-        For now, this is not implemented for the SSH transport.
-        """
-        raise NotImplementedError
 
     def isdir(self, path: TransportPath):
         """Return True if the given path is a directory, False otherwise.
@@ -1565,12 +1556,10 @@ class SshTransport(BlockingTransport):
 
         return (retval, b''.join(stdout_bytes), b''.join(stderr_bytes))
 
-    def gotocomputer_command(self, remotedir: TransportPath):
+    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
         """Specific gotocomputer string to connect to a given remote computer via
         ssh and directly go to the calculation folder.
         """
-        remotedir = str(remotedir)
-
         further_params = []
         if 'username' in self._connect_args:
             further_params.append(f"-l {escape_for_bash(self._connect_args['username'])}")
@@ -1589,7 +1578,7 @@ class SshTransport(BlockingTransport):
 
         further_params_str = ' '.join(further_params)
 
-        connect_string = self._gotocomputer_string(remotedir)
+        connect_string = self._gotocomputer_string(remotedir=remotedir)
         cmd = f'ssh -t {self._machine} {further_params_str} {connect_string}'
         return cmd
 

@@ -33,7 +33,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
             return f'SandboxRepository: {self._sandbox.abspath if self._sandbox else "null"}'
         return 'SandboxRepository: <uninitialised>'
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Delete the entire sandbox folder if it was instantiated and still exists."""
         self.erase()
 
@@ -49,7 +49,7 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
     def key_format(self) -> str | None:
         return 'uuid4'
 
-    def initialise(self, **kwargs) -> None:
+    def initialise(self, **kwargs: t.Any) -> None:
         """Initialise the repository if it hasn't already been initialised.
 
         :param kwargs: parameters for the initialisation.
@@ -63,14 +63,14 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
         return isinstance(self._sandbox, SandboxFolder)
 
     @property
-    def sandbox(self):
+    def sandbox(self) -> SandboxFolder:
         """Return the sandbox instance of this repository."""
         if self._sandbox is None:
             self._sandbox = SandboxFolder(filepath=pathlib.Path(self._filepath) if self._filepath is not None else None)
 
         return self._sandbox
 
-    def erase(self):
+    def erase(self) -> None:
         """Delete the repository itself and all its contents."""
         if getattr(self, '_sandbox', None) is not None:
             try:
@@ -104,12 +104,15 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
 
     @contextlib.contextmanager
     def open(self, key: str) -> t.Iterator[t.BinaryIO]:
-        super().open(key)
+        """Open a file handle to an object stored under the given key."""
+
+        if not self.has_object(key):
+            raise FileNotFoundError(f'object with key `{key}` does not exist.')
 
         with self.sandbox.open(key, mode='rb') as handle:
             yield handle
 
-    def iter_object_streams(self, keys: list[str]) -> t.Iterator[tuple[str, t.BinaryIO]]:
+    def iter_object_streams(self, keys: t.Iterable[str]) -> t.Iterator[tuple[str, t.BinaryIO]]:
         for key in keys:
             with self.open(key) as handle:
                 yield key, handle
@@ -122,8 +125,5 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
     def list_objects(self) -> t.Iterable[str]:
         return self.sandbox.get_content_list()
 
-    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
-        raise NotImplementedError
-
-    def get_info(self, detailed: bool = False, **kwargs) -> dict:
+    def get_info(self, detailed: bool = False) -> t.NoReturn:
         raise NotImplementedError

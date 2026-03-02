@@ -20,7 +20,9 @@ from typing import Any, Callable, NoReturn, Optional
 
 import click
 
-CMDLINE_LOGGER = logging.getLogger('verdi')
+from aiida.common.log import AiidaLoggerType
+
+CMDLINE_LOGGER: AiidaLoggerType = logging.getLogger('verdi')  # type: ignore[assignment]
 
 __all__ = (
     'echo_critical',
@@ -81,7 +83,7 @@ def echo(message: Any, fg: Optional[str] = None, bold: bool = False, nl: bool = 
     :param err: whether to log to stderr.
     """
     message = click.style(message, fg=fg, bold=bold)
-    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': False})  # type: ignore[attr-defined]
+    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': False})
 
 
 def echo_debug(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
@@ -120,7 +122,7 @@ def echo_report(message: str, bold: bool = False, nl: bool = True, err: bool = F
     :param prefix: whether the message should be prefixed with a colored version of the log level.
     """
     message = click.style(message, bold=bold)
-    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': prefix})  # type: ignore[attr-defined]
+    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': prefix})
 
 
 def echo_success(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:
@@ -139,7 +141,7 @@ def echo_success(message: str, bold: bool = False, nl: bool = True, err: bool = 
     if prefix:
         message = click.style('Success: ', bold=True, fg=COLORS['success']) + message
 
-    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': False})  # type: ignore[attr-defined]
+    CMDLINE_LOGGER.report(message, extra={'nl': nl, 'err': err, 'prefix': False})
 
 
 def echo_warning(message: str, bold: bool = False, nl: bool = True, err: bool = False, prefix: bool = True) -> None:

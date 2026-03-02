@@ -19,8 +19,9 @@ import uuid
 from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Type, Union
 
 import kiwipy
+from plumpy import run_until_complete
 from plumpy.communications import wrap_communicator
-from plumpy.events import reset_event_loop_policy, set_event_loop_policy
+from plumpy.events import get_or_create_event_loop
 from plumpy.persistence import Persister
 from plumpy.process_comms import RemoteProcessThreadController
 
@@ -81,8 +82,7 @@ class Runner:
             broker_submit and persister is None
         ), 'Must supply a persister if you want to submit using communicator'
 
-        set_event_loop_policy()
-        self._loop = loop if loop is not None else asyncio.get_event_loop()
+        self._loop = loop if loop else get_or_create_event_loop()
         self._poll_interval = poll_interval
         self._broker_submit = broker_submit
         self._transport = transports.TransportQueue(self._loop)
@@ -156,8 +156,9 @@ class Runner:
 
     def run_until_complete(self, future: asyncio.Future) -> Any:
         """Run the loop until the future has finished and return the result."""
+
         with utils.loop_scope(self._loop):
-            return self._loop.run_until_complete(future)
+            return run_until_complete(self._loop, future)
 
     def close(self) -> None:
         """Close the runner by stopping the loop."""
@@ -165,7 +166,6 @@ class Runner:
         self.stop()
         if not self._loop.is_running():
             self._loop.close()
-        reset_event_loop_policy()
         self._closed = True
 
     def instantiate_process(self, process: TYPE_RUN_PROCESS, **inputs):

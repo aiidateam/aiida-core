@@ -497,8 +497,8 @@ However, it is perfectly possible to use the same builder in scripts where you s
 
 .. _topics:processes:usage:monitoring:
 
-Monitoring processes
-====================
+Inspect processes
+=================
 When you have launched a process, you may want to investigate its status, progression and the results.
 The :ref:`verdi<reference:command-line>` command line tool provides various commands to do just this.
 

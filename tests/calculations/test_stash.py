@@ -368,6 +368,87 @@ done
         assert unstashed_file.read_text() == expected_content
 
 
+def test_source_node_validation_unsealed_creator(aiida_localhost, tmp_path):
+    """Test that StashCalculation rejects source_node if its creator is not sealed (still running)."""
+    from aiida.common.links import LinkType
+
+    source = tmp_path / 'source'
+    source.mkdir()
+
+    # Create an unsealed CalcJobNode (simulates a running calculation)
+    calcjob = orm.CalcJobNode(computer=aiida_localhost)
+    calcjob.set_options({'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}})
+    calcjob.store()
+    # CalcJobNode is stored but NOT sealed - simulates a running job
+
+    # Create RemoteData and link it to the unsealed CalcJobNode
+    remote_data = orm.RemoteData(computer=aiida_localhost, remote_path=str(source))
+    remote_data.base.links.add_incoming(calcjob, link_type=LinkType.CREATE, link_label='remote_folder')
+    remote_data.store()
+
+    # Verify the creator relationship
+    assert remote_data.creator is not None
+    assert remote_data.creator.pk == calcjob.pk
+    assert not calcjob.is_sealed
+
+    # Validation should fail because the creator is not sealed
+    # The validation happens when setting the source_node on the builder
+    stashcalculation = CalculationFactory('core.stash')
+    builder = stashcalculation.get_builder()
+
+    with pytest.raises(ValueError, match='The source_node is an expected output of an active calculation'):
+        builder.source_node = remote_data
+
+
+def test_source_node_validation_sealed_creator(aiida_localhost, tmp_path):
+    """Test that StashCalculation accepts source_node if its creator is sealed (finished)."""
+    from aiida.common.links import LinkType
+
+    source = tmp_path / 'source'
+    source.mkdir()
+
+    # Create a CalcJobNode (NOT sealed yet - need to add link first)
+    calcjob = orm.CalcJobNode(computer=aiida_localhost)
+    calcjob.set_options({'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}})
+    calcjob.store()
+
+    # Create RemoteData and link it to the CalcJobNode BEFORE sealing
+    remote_data = orm.RemoteData(computer=aiida_localhost, remote_path=str(source))
+    remote_data.base.links.add_incoming(calcjob, link_type=LinkType.CREATE, link_label='remote_folder')
+    remote_data.store()
+
+    # Now seal the CalcJobNode (simulates a finished job)
+    calcjob.seal()
+
+    # Verify the creator relationship
+    assert remote_data.creator is not None
+    assert remote_data.creator.pk == calcjob.pk
+    assert calcjob.is_sealed
+
+    # Validation should pass because the creator is sealed
+    stashcalculation = CalculationFactory('core.stash')
+    builder = stashcalculation.get_builder()
+    builder.source_node = remote_data  # Should not raise
+
+
+def test_source_node_validation_no_creator(aiida_localhost, tmp_path):
+    """Test that StashCalculation accepts source_node without a creator (manually created RemoteData)."""
+    source = tmp_path / 'source'
+    source.mkdir()
+
+    # Create RemoteData without linking to any CalcJobNode (no creator)
+    remote_data = orm.RemoteData(computer=aiida_localhost, remote_path=str(source))
+    remote_data.store()
+
+    # Verify no creator
+    assert remote_data.creator is None
+
+    # Validation should pass because there is no creator
+    stashcalculation = CalculationFactory('core.stash')
+    builder = stashcalculation.get_builder()
+    builder.source_node = remote_data  # Should not raise
+
+
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.requires_rmq
 @pytest.mark.parametrize(
@@ -491,3 +572,72 @@ def test_all_modes(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path
         unstashed_file = Path(expected_target_base) / filename
         assert unstashed_file.exists()
         assert unstashed_file.read_text() == expected_content
+
+
+def test_fail_on_missing_validation_rejects_patterns(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_path):
+    """Test that patterns are rejected when fail_on_missing=True."""
+    source = tmp_path / 'source'
+    source.mkdir()
+
+    source_node = orm.RemoteData(computer=aiida_localhost, remote_path=str(source))
+
+    inputs = {
+        'metadata': {
+            'computer': aiida_localhost,
+            'options': {
+                'resources': {'num_machines': 1},
+                'stash': {
+                    'stash_mode': StashMode.COPY.value,
+                    'target_base': str(tmp_path / 'target'),
+                    'source_list': ['*.txt'],  # Pattern
+                    'fail_on_missing': True,
+                },
+            },
+        },
+        'source_node': source_node,
+    }
+
+    with pytest.raises(ValueError, match='cannot contain glob patterns'):
+        generate_calc_job(fixture_sandbox, 'core.stash', inputs)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+@pytest.mark.requires_rmq
+@pytest.mark.parametrize('stash_mode', [StashMode.COPY.value, StashMode.COMPRESS_TARGZ.value])
+@pytest.mark.parametrize('fail_on_missing', [False, True])
+def test_fail_on_missing_with_missing_file(aiida_localhost, tmp_path, stash_mode, fail_on_missing):
+    """Test fail_on_missing behavior when file is missing."""
+    from aiida.engine import run_get_node
+
+    source = tmp_path / 'source'
+    source.mkdir()
+    # Don't create the file
+
+    source_node = orm.RemoteData(computer=aiida_localhost, remote_path=str(source))
+    source_node.store()
+
+    stash_inputs = {
+        'metadata': {
+            'computer': aiida_localhost,
+            'options': {
+                'resources': {'num_machines': 1},
+                'stash': {
+                    'stash_mode': stash_mode,
+                    'target_base': str(tmp_path / 'target'),
+                    'source_list': ['missing.txt'],
+                    'fail_on_missing': fail_on_missing,
+                },
+            },
+        },
+        'source_node': source_node,
+    }
+    if stash_mode != StashMode.COPY.value:
+        stash_inputs['metadata']['options']['stash']['dereference'] = True
+
+    _, node = run_get_node(CalculationFactory('core.stash'), **stash_inputs)
+
+    if not fail_on_missing:
+        assert node.is_finished_ok
+    else:
+        assert node.is_failed
+        assert node.exit_status == 160  # ERROR_STASHING_FAILED

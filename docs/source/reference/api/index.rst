@@ -5,4 +5,3 @@ AiiDA API
    :maxdepth: 1
 
    public
-   ../apidoc/aiida.rst

@@ -8,6 +8,8 @@
 ###########################################################################
 """Base implementation of `WorkChain` class that implements a simple automated restart mechanism for sub processes."""
 
+from __future__ import annotations
+
 import functools
 from inspect import getmembers
 from types import FunctionType
@@ -26,6 +28,21 @@ if TYPE_CHECKING:
     from aiida.engine.processes import ExitCode, PortNamespace, Process, ProcessSpec
 
 __all__ = ('BaseRestartWorkChain',)
+
+
+def validate_on_unhandled_failure(value: None | orm.Str, _) -> None | str:
+    """Validator for the `on_unhandled_failure` input port.
+
+    :param value: the input `Str` node
+    """
+    if value is None:
+        return None
+
+    valid_options = ('abort', 'pause', 'restart_once', 'restart_and_pause')
+    if value.value not in valid_options:
+        return f"`on_unhandled_failure`: '{value.value}'. Must be one of: {', '.join(valid_options)}"
+
+    return None
 
 
 def validate_handler_overrides(
@@ -163,6 +180,22 @@ class BaseRestartWorkChain(WorkChain):
             'can define the ``enabled`` and ``priority`` key, which can be used to toggle the values set on '
             'the original process handler declaration.',
         )
+        spec.input(
+            'on_unhandled_failure',
+            valid_type=orm.Str,
+            required=False,
+            validator=validate_on_unhandled_failure,
+            help='Action to take when an unhandled failure occurs. Options: "abort" (default, fail immediately), '
+            '"pause" (pause the workchain for inspection), "restart_once" (restart once then abort), '
+            '"restart_and_pause" (restart once then pause if still failing).',
+        )
+        spec.input(
+            'pause_on_max_iterations',
+            valid_type=orm.Bool,
+            required=False,
+            help='If True, pause the workchain for inspection when max_iterations is reached (either globally or '
+            'for a specific handler) instead of aborting. When resumed, iteration counters are reset to zero.',
+        )
         spec.exit_code(301, 'ERROR_SUB_PROCESS_EXCEPTED', message='The sub process excepted.')
         spec.exit_code(302, 'ERROR_SUB_PROCESS_KILLED', message='The sub process was killed.')
         spec.exit_code(
@@ -170,8 +203,8 @@ class BaseRestartWorkChain(WorkChain):
         )
         spec.exit_code(
             402,
-            'ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE',
-            message='The process failed for an unknown reason, twice in a row.',
+            'ERROR_UNHANDLED_FAILURE',
+            message='The process failed with an unhandled failure.',
         )
 
     def setup(self) -> None:
@@ -188,11 +221,9 @@ class BaseRestartWorkChain(WorkChain):
     def should_run_process(self) -> bool:
         """Return whether a new process should be run.
 
-        This is the case as long as the last process has not finished successfully and the maximum number of restarts
-        has not yet been exceeded.
+        This is the case as long as the last process has not finished successfully or a handler has been triggered.
         """
-        max_iterations = self.inputs.max_iterations.value
-        return not self.ctx.is_finished and self.ctx.iteration < max_iterations
+        return not self.ctx.is_finished
 
     def run_process(self) -> ToContext:
         """Run the next process, taking the input dictionary from the context at `self.ctx.inputs`."""
@@ -225,9 +256,16 @@ class BaseRestartWorkChain(WorkChain):
 
         If the process is excepted or killed, the work chain will abort. Otherwise any attached handlers will be called
         in order of their specified priority. If the process was failed and no handler returns a report indicating that
-        the error was handled, it is considered an unhandled process failure and the process is relaunched. If this
-        happens twice in a row, the work chain is aborted. In the case that at least one handler returned a report the
-        following matrix determines the logic that is followed:
+        the error was handled, it is considered an unhandled process failure. The behavior depends on the
+        `on_unhandled_failure` input:
+
+        - `abort` (default): Abort immediately with ERROR_UNHANDLED_FAILURE
+        - `pause`: Pause the workchain for user inspection
+        - `restart_once`: Restart once, then abort if it fails again
+        - `restart_and_pause`: Restart once, then pause if it fails again
+
+        In the case that at least one handler returned a report the following matrix determines the logic that is
+        followed:
 
             Process  Handler    Handler     Action
             result   report?    exit code
@@ -270,25 +308,89 @@ class BaseRestartWorkChain(WorkChain):
             if report and report.do_break:
                 break
 
-        report_args = (self.ctx.process_name, node.pk)
-
         # If the process failed and no handler returned a report we consider it an unhandled failure
         if node.is_failed and not last_report:
-            if self.ctx.unhandled_failure:
-                template = '{}<{}> failed and error was not handled for the second consecutive time, aborting'
-                self.report(template.format(*report_args))
-                return self.exit_codes.ERROR_SECOND_CONSECUTIVE_UNHANDLED_FAILURE
+            action = self.inputs.get('on_unhandled_failure', None)
+            action = action.value if action is not None else 'abort'
 
-            self.ctx.unhandled_failure = True
-            self.report('{}<{}> failed and error was not handled, restarting once more'.format(*report_args))
-            return None
+            if action == 'abort':
+                self.report(f'{self.ctx.process_name}<{node.pk}> failed with an unhandled failure, aborting')
+                return self.exit_codes.ERROR_UNHANDLED_FAILURE
+            elif action == 'pause':
+                self.report(
+                    f'{self.ctx.process_name}<{node.pk}> failed with an unhandled failure, pausing for inspection'
+                )
+                self.report(
+                    'If you believe that the issue can be resolved by just retrying the same execution '
+                    '(e.g., in case of a node failure), you can just replay this work chain using '
+                    f'`verdi process play {self.node.pk}`. Otherwise, you can kill the work chain using '
+                    f'`verdi process kill {self.node.pk}`.'
+                )
+                self.pause(f"Paused for user inspection, see: 'verdi process report {self.node.pk}'")
+                return None
+            elif action == 'restart_once':
+                if self.ctx.unhandled_failure:
+                    self.report(
+                        f'{self.ctx.process_name}<{node.pk}> failed with an unhandled failure for the second '
+                        'consecutive time, aborting'
+                    )
+                    return self.exit_codes.ERROR_UNHANDLED_FAILURE
+                self.ctx.unhandled_failure = True
+                self.report(
+                    f'{self.ctx.process_name}<{node.pk}> failed with an unhandled failure, restarting once more'
+                )
+                return None
+            elif action == 'restart_and_pause':
+                if self.ctx.unhandled_failure:
+                    self.report(
+                        f'{self.ctx.process_name}<{node.pk}> failed with an unhandled failure for the second '
+                        'consecutive time, pausing for inspection'
+                    )
+                    self.report(
+                        'If you believe that the issue can be resolved by just retrying the same execution '
+                        '(e.g., in case of a node failure), you can just replay this work chain using '
+                        f'`verdi process play {self.node.pk}`. Otherwise, you can kill the work chain using '
+                        f'`verdi process kill {self.node.pk}`.'
+                    )
+                    # reset the unhandled failure flag, so that after replaying, it will
+                    # try again twice for future errors
+                    self.ctx.unhandled_failure = False
+                    self.pause(f"Paused for user inspection, see: 'verdi process report {self.node.pk}'")
+                    return None
+                self.ctx.unhandled_failure = True
+                self.report(
+                    f'{self.ctx.process_name}<{node.pk}> failed with an unhandled failure, restarting once more'
+                )
+                return None
 
         # Here either the process finished successful or at least one handler returned a report so it can no longer be
         # considered to be an unhandled failed process and therefore we reset the flag
         self.ctx.unhandled_failure = False
 
-        # If at least one handler returned a report, the action depends on its exit code and that of the process itself
         if last_report:
+            # In some cases, a developer might want to indicate that a process hasn't finished with exit code 0, but
+            # is completed and attach the outputs. To do this, a process handler can set the process to `is_finished`
+            # and call the `results()` method to still attach the outputs. This is slightly hacky, but a valid use case.
+            # Until we support this use case in a more elegant manner, we check for this here and return the exit code.
+            if self.ctx.is_finished:
+                return last_report.exit_code
+
+            pause_on_max_iterations = (
+                self.inputs.pause_on_max_iterations.value
+                if self.inputs.get('pause_on_max_iterations', None) is not None
+                else False
+            )
+            pause_process = False
+
+            # Check if the global max iterations have been reached
+            if self.ctx.iteration >= self.inputs.max_iterations.value:
+                self.report(f'Reached the maximum number of global iterations ({self.inputs.max_iterations.value}).')
+                if not pause_on_max_iterations:
+                    self.report(f'Aborting! Last ran: {self.ctx.process_name}<{node.pk}>')
+                    return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
+
+                pause_process = True
+
             if node.is_finished_ok and last_report.exit_code.status == 0:
                 template = '{}<{}> finished successfully but a handler was triggered, restarting'
             elif node.is_failed and last_report.exit_code.status == 0:
@@ -298,9 +400,21 @@ class BaseRestartWorkChain(WorkChain):
             elif node.is_failed and last_report.exit_code.status != 0:
                 template = '{}<{}> failed but a handler detected an unrecoverable problem, aborting'
 
-            self.report(template.format(*report_args))
+            self.report(template.format(self.ctx.process_name, node.pk))
 
-            return last_report.exit_code
+            if last_report.exit_code.status != 0:
+                return last_report.exit_code
+
+            if pause_process:
+                self.report(
+                    'Resetting the iteration counter(s) and pausing for inspection. You can resume execution using '
+                    f'`verdi process play {self.node.pk}`, or kill the work chain using '
+                    f'`verdi process kill {self.node.pk}`.'
+                )
+                self.ctx.iteration = 0
+                self.pause(f"Paused for user inspection, see: 'verdi process report {self.node.pk}'")
+
+            return None
 
         # Otherwise the process was successful and no handler returned anything so we consider the work done
         self.ctx.is_finished = True
@@ -319,17 +433,6 @@ class BaseRestartWorkChain(WorkChain):
     def results(self) -> Optional['ExitCode']:
         """Attach the outputs specified in the output specification from the last completed process."""
         node = self.ctx.children[self.ctx.iteration - 1]
-
-        # We check the `is_finished` attribute of the work chain and not the successfulness of the last process
-        # because the error handlers in the last iteration can have qualified a "failed" process as satisfactory
-        # for the outcome of the work chain and so have marked it as `is_finished=True`.
-        max_iterations = self.inputs.max_iterations.value
-        if not self.ctx.is_finished and self.ctx.iteration >= max_iterations:
-            self.report(
-                f'reached the maximum number of iterations {max_iterations}: '
-                f'last ran {self.ctx.process_name}<{node.pk}>'
-            )
-            return self.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
 
         self.report(f'work chain completed after {self.ctx.iteration} iterations')
         self._attach_outputs(node)

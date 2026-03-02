@@ -11,8 +11,9 @@
 import functools
 import gc
 import pathlib
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
-from typing import TYPE_CHECKING, Iterator, List, Optional, Sequence, Set, Union
+from typing import TYPE_CHECKING, List, Optional, Set, Union
 
 from disk_objectstore import Container, backup_utils
 from pydantic import BaseModel, Field
@@ -378,24 +379,24 @@ class PsqlDosBackend(StorageBackend):
             postgres.drop_dbuser(config['database_username'])
             LOGGER.report(f'Deleted database user `{config["database_username"]}`.')
 
-    def delete_nodes_and_connections(self, pks_to_delete: Sequence[int]) -> None:
+    def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
         from aiida.storage.psql_dos.models.group import DbGroupNode
         from aiida.storage.psql_dos.models.node import DbLink, DbNode
 
         if not self.in_transaction:
             raise AssertionError('Cannot delete nodes and links outside a transaction')
 
+        pks = list(pks_to_delete)
+
         session = self.get_session()
         # Delete the membership of these nodes to groups.
-        session.query(DbGroupNode).filter(DbGroupNode.dbnode_id.in_(list(pks_to_delete))).delete(
-            synchronize_session='fetch'
-        )
+        session.query(DbGroupNode).filter(DbGroupNode.dbnode_id.in_(pks)).delete(synchronize_session='fetch')
         # Delete the links coming out of the nodes marked for deletion.
-        session.query(DbLink).filter(DbLink.input_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        session.query(DbLink).filter(DbLink.input_id.in_(pks)).delete(synchronize_session='fetch')
         # Delete the links pointing to the nodes marked for deletion.
-        session.query(DbLink).filter(DbLink.output_id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        session.query(DbLink).filter(DbLink.output_id.in_(pks)).delete(synchronize_session='fetch')
         # Delete the actual nodes
-        session.query(DbNode).filter(DbNode.id.in_(list(pks_to_delete))).delete(synchronize_session='fetch')
+        session.query(DbNode).filter(DbNode.id.in_(pks)).delete(synchronize_session='fetch')
 
     def get_backend_entity(self, model: base.Base) -> BackendEntity:
         """Return the backend entity that corresponds to the given Model instance
@@ -429,6 +430,50 @@ class PsqlDosBackend(StorageBackend):
             if setting is None:
                 raise KeyError(f'No setting found with key {key}')
             return setting.val
+
+    def get_unreferenced_connections(self) -> list[tuple[int, str, int]]:
+        """Return a list of database connections not associated with the current session.
+
+        These are connections owned by the current user to the current database,
+        excluding the current connection. When the daemon is not running, these
+        connections are likely orphaned zombies that could be holding locks.
+
+        :return: list of tuples (pid, state, client_port)
+        """
+        from sqlalchemy import text
+
+        session = self.get_session()
+        result = session.execute(
+            text("""
+            SELECT pid, state, client_port
+            FROM pg_stat_activity
+            WHERE usename = current_user
+            AND datname = current_database()
+            AND pid != pg_backend_pid()
+        """)
+        )
+        return [(row[0], row[1], row[2]) for row in result]
+
+    def terminate_connections(self, pids: list[int]) -> int:
+        """Terminate specific database connections by their PIDs.
+
+        :param pids: list of process IDs to terminate
+        :return: number of connections terminated
+        """
+        from sqlalchemy import text
+
+        if not pids:
+            return 0
+
+        session = self.get_session()
+        terminated = 0
+        for pid in pids:
+            result = session.execute(text('SELECT pg_terminate_backend(:pid)'), {'pid': pid})
+            if result.scalar():
+                terminated += 1
+        session.commit()
+
+        return terminated
 
     def maintain(self, full: bool = False, dry_run: bool = False, **kwargs) -> None:
         from aiida.manage.profile_access import ProfileAccessManager

@@ -82,7 +82,7 @@ class Repository:
         return self._directory.serialize()
 
     @classmethod
-    def flatten(cls, serialized=Optional[Dict[str, Any]], delimiter: str = '/') -> Dict[str, Optional[str]]:
+    def flatten(cls, serialized: Optional[Dict[str, Any]], delimiter: str = '/') -> Dict[str, Optional[str]]:
         """Flatten the serialized content of a repository into a mapping of path -> key or None (if folder).
 
         Note, all folders are represented in the flattened output, and their path is suffixed with the delimiter.
@@ -138,16 +138,19 @@ class Repository:
         if path is None:
             return pathlib.PurePath()
 
+        # convert str to PurePath
         if isinstance(path, str):
-            path = pathlib.PurePath(path)
-
-        if not isinstance(path, pathlib.PurePath):
+            path_obj = pathlib.PurePath(path)
+        elif isinstance(path, pathlib.PurePath):
+            path_obj = path
+        else:
             raise TypeError('path is not of type `str` nor `pathlib.PurePath`.')
 
-        if path.is_absolute():
-            raise TypeError(f'path `{path}` is not a relative path.')
+        # reject absolute paths
+        if path_obj.is_absolute():
+            raise TypeError(f'path `{path_obj}` is not a relative path.')
 
-        return path
+        return path_obj
 
     @property
     def backend(self) -> AbstractRepositoryBackend:
@@ -205,7 +208,7 @@ class Repository:
         """
         file_keys: List[str] = []
 
-        def _add_file_keys(keys, objects):
+        def _add_file_keys(keys: list[str], objects: dict[str, File]) -> None:
             """Recursively add keys of all file objects to the keys list."""
             for obj in objects.values():
                 if obj.file_type == FileType.FILE and obj.key is not None:

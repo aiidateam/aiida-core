@@ -14,8 +14,6 @@
 
 from .sqlite_zip import *
 
-__all__ = (
-    'ArchiveFormatSqlZip',
-)
+__all__ = ()
 
 # fmt: on

@@ -8,6 +8,8 @@
 ###########################################################################
 """Tools to operate on `CifData` nodes."""
 
+import io
+
 from aiida.engine import calcfunction
 from aiida.orm import CifData
 from aiida.orm.implementation.utils import clean_value
@@ -123,7 +125,8 @@ def _get_aiida_structure_pymatgen_inline(cif, **kwargs):
             constructor_kwargs[argument] = parameters.pop(argument)
 
     with cif.open() as handle:
-        parser = CifParser(handle, **constructor_kwargs)
+        # CifParser can only accept StringIO streams.
+        parser = CifParser(io.StringIO(handle.read()), **constructor_kwargs)
 
     try:
         structures = parser.parse_structures(**parameters)

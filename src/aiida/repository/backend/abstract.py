@@ -10,11 +10,14 @@ import contextlib
 import hashlib
 import io
 import pathlib
-from typing import BinaryIO, Iterable, Iterator, List, Optional, Tuple, Union
+from collections.abc import Iterable, Iterator
+from typing import Any, BinaryIO, List, Optional, Tuple, Union
 
 from aiida.common.hashing import chunked_file_hash
 
 __all__ = ('AbstractRepositoryBackend',)
+
+InfoDictType = dict[str, Union[int, str, dict[str, int], dict[str, float]]]
 
 
 class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
@@ -44,7 +47,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def initialise(self, **kwargs) -> None:
+    def initialise(self, **kwargs: Any) -> None:
         """Initialise the repository if it hasn't already been initialised.
 
         :param kwargs: parameters for the initialisation.
@@ -65,7 +68,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
 
     @staticmethod
-    def is_readable_byte_stream(handle) -> bool:
+    def is_readable_byte_stream(handle: Any) -> bool:
         return hasattr(handle, 'read') and hasattr(handle, 'mode') and 'b' in handle.mode
 
     def put_object_from_filelike(self, handle: BinaryIO) -> str:
@@ -120,7 +123,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def get_info(self, detailed: bool = False, **kwargs) -> dict:
+    def get_info(self, detailed: bool = False) -> InfoDictType:
         """Returns relevant information about the content of the repository.
 
         :param detailed:
@@ -130,20 +133,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
-        """Performs maintenance operations.
-
-        :param dry_run:
-            flag to only print the actions that would be taken without actually executing them.
-
-        :param live:
-            flag to indicate to the backend whether AiiDA is live or not (i.e. if the profile of the
-            backend is currently being used/accessed). The backend is expected then to only allow (and
-            thus set by default) the operations that are safe to perform in this state.
-        """
-
-    @contextlib.contextmanager
-    def open(self, key: str) -> Iterator[BinaryIO]:  # type: ignore[return]
+    def open(self, key: str) -> contextlib.AbstractContextManager[BinaryIO]:
         """Open a file handle to an object stored under the given key.
 
         .. note:: this should only be used to open a handle to read an existing file. To write a new file use the method
@@ -154,8 +144,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :raise FileNotFoundError: if the file does not exist.
         :raise OSError: if the file could not be opened.
         """
-        if not self.has_object(key):
-            raise FileNotFoundError(f'object with key `{key}` does not exist.')
+        pass
 
     def get_object_content(self, key: str) -> bytes:
         """Return the content of a object identified by key.
@@ -168,7 +157,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
             return handle.read()
 
     @abc.abstractmethod
-    def iter_object_streams(self, keys: List[str]) -> Iterator[Tuple[str, BinaryIO]]:
+    def iter_object_streams(self, keys: Iterable[str]) -> Iterator[Tuple[str, BinaryIO]]:
         """Return an iterator over the (read-only) byte streams of objects identified by key.
 
         .. note:: handles should only be read within the context of this iterator.
@@ -178,6 +167,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
         :raise FileNotFoundError: if the file does not exist.
         :raise OSError: if a file could not be opened.
         """
+        pass
 
     def get_object_hash(self, key: str) -> str:
         """Return the SHA-256 hash of an object stored under the given key.

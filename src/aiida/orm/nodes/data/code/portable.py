@@ -111,6 +111,8 @@ class PortableCode(Code):
 
         super().__init__(**kwargs)
 
+        self.filepath_executable = filepath_executable
+
         if filepath_files is not None:
             type_check(filepath_files, (pathlib.PurePath, str))
 
@@ -121,7 +123,6 @@ class PortableCode(Code):
             if not filepath_files_path.is_dir():
                 raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
 
-            self.filepath_executable = filepath_executable
             self.base.repository.put_object_from_tree(str(filepath_files))
         else:
             warnings.warn(

@@ -16,35 +16,34 @@ from aiida.storage.sqlite_dos.backend import SqliteDosMigrator
 @pytest.mark.parametrize('version', list(v for v in SqliteDosMigrator.get_schema_versions() if v.startswith('main')))
 def test_main(version, uninitialised_profile, reflect_schema, data_regression):
     """Test that the migrations produce the expected database schema."""
-    migrator = SqliteDosMigrator(uninitialised_profile)
-    migrator.migrate_up(f'main@{version}')
-    data_regression.check(reflect_schema(uninitialised_profile))
+    with SqliteDosMigrator(uninitialised_profile) as migrator:
+        migrator.migrate_up(f'main@{version}')
+        data_regression.check(reflect_schema(uninitialised_profile))
 
 
 def test_main_initialized(uninitialised_profile):
     """Test that ``migrate`` properly stamps the new schema version when updating database with existing schema."""
-    migrator = SqliteDosMigrator(uninitialised_profile)
-
-    # Initialize database at first version of main branch
-    migrator.migrate_up('main@main_0001')
-    assert migrator.get_schema_version_profile() == 'main_0001'
-    migrator.close()
+    with SqliteDosMigrator(uninitialised_profile) as migrator:
+        # Initialize database at first version of main branch
+        migrator.migrate_up('main@main_0001')
+        assert migrator.get_schema_version_profile() == 'main_0001'
+        migrator.close()
 
     # Reinitialize the migrator to make sure we are fetching actual state of database and not in-memory state and then
     # migrate to head schema version.
-    migrator = SqliteDosMigrator(uninitialised_profile)
-    migrator.migrate()
-    migrator.close()
+    with SqliteDosMigrator(uninitialised_profile) as migrator:
+        migrator.migrate()
+        migrator.close()
 
     # Reinitialize the migrator to make sure we are fetching actual state of database and not in-memory state and then
     # assert that the database version is properly set to the head schema version
-    migrator = SqliteDosMigrator(uninitialised_profile)
-    assert migrator.get_schema_version_profile() == migrator.get_schema_version_head()
+    with SqliteDosMigrator(uninitialised_profile) as migrator:
+        assert migrator.get_schema_version_profile() == migrator.get_schema_version_head()
 
 
 def test_head_vs_orm(uninitialised_profile, reflect_schema, data_regression):
     """Test that the migrations produce the same database schema as the models."""
-    migrator = SqliteDosMigrator(uninitialised_profile)
-    head_version = migrator.get_schema_version_head()
-    migrator.initialise()
-    data_regression.check(reflect_schema(uninitialised_profile), basename=f'test_head_vs_orm_{head_version}_')
+    with SqliteDosMigrator(uninitialised_profile) as migrator:
+        head_version = migrator.get_schema_version_head()
+        migrator.initialise()
+        data_regression.check(reflect_schema(uninitialised_profile), basename=f'test_head_vs_orm_{head_version}_')

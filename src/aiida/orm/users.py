@@ -18,7 +18,7 @@ from . import entities
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
-    from aiida.orm.implementation.users import BackendUser  # noqa: F401
+    from aiida.orm.implementation.users import BackendUser
 
 __all__ = ('User',)
 
@@ -93,7 +93,7 @@ class User(entities.Entity['BackendUser', UserCollection]):
         except ValueError:
             pass
         else:
-            email = '@'.join([email_name, domain_part.lower()])
+            email = f'{email_name}@{domain_part.lower()}'
         return email
 
     @property

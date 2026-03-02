@@ -73,7 +73,12 @@ def test_submit_script_with_num_cores_per_mpiproc(scheduler, template):
     assert f'export OMP_NUM_THREADS={num_cores_per_mpiproc}' in result
 
 
+# TODO(danielhollas): It's not clear if the fork method can lead to actual deadlock in this case
+_FORK_WARNING = 'This process .* is multi-threaded, use of fork\\(\\) may lead to deadlocks in the child'
+
+
 @pytest.mark.timeout(timeout=10)
+@pytest.mark.filterwarnings(f'ignore:{_FORK_WARNING}:DeprecationWarning')
 def test_kill_job(scheduler, tmpdir):
     """Test if kill_job kill all descendant children from the process.
     For that we spawn a new process that runs a sleep command, then we
@@ -98,7 +103,10 @@ def test_kill_job(scheduler, tmpdir):
         # this is blocking for the process entering
         subprocess.run(['bash', script.strpath], check=False)
 
-    forked_process = multiprocessing.Process(target=run_sleep_100)
+    # NOTE: If we need to switch away from 'fork',
+    # we need to define the `run_sleep_100` function outside of the test.
+    ctx = multiprocessing.get_context(method='fork')
+    forked_process = ctx.Process(target=run_sleep_100)
     forked_process.start()
     while len(forked_process_children := Process(forked_process.pid).children(recursive=True)) != 2:
         time.sleep(0.1)

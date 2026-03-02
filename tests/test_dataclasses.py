@@ -25,7 +25,6 @@ from aiida.orm.nodes.data.structure import (
     _atomic_masses,
     ase_refine_cell,
     get_formula,
-    get_pymatgen_version,
     has_ase,
     has_pymatgen,
     has_spglib,
@@ -68,11 +67,6 @@ skip_ase = pytest.mark.skipif(not has_ase(), reason='Unable to import ase')
 skip_spglib = pytest.mark.skipif(not has_spglib(), reason='Unable to import spglib')
 skip_pycifrw = pytest.mark.skipif(not has_pycifrw(), reason='Unable to import PyCifRW')
 skip_pymatgen = pytest.mark.skipif(not has_pymatgen(), reason='Unable to import pymatgen')
-
-
-@skip_pymatgen
-def test_get_pymatgen_version():
-    assert isinstance(get_pymatgen_version(), str)
 
 
 class TestCifData:
@@ -212,6 +206,7 @@ class TestCifData:
     @skip_ase
     @skip_pycifrw
     @pytest.mark.requires_rmq
+    @pytest.mark.filterwarnings('ignore:Cannot determine chemical composition from CIF:UserWarning:pymatgen.io')
     def test_get_structure(self):
         """Test `CifData.get_structure`."""
         with tempfile.NamedTemporaryFile(mode='w+') as tmpf:
@@ -293,6 +288,7 @@ O 0.5 0.5 0.5
     @skip_pycifrw
     @skip_pymatgen
     @pytest.mark.requires_rmq
+    @pytest.mark.filterwarnings('ignore:Cannot determine chemical composition from CIF:UserWarning:pymatgen.io')
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """Checking the number of atoms per primitive/conventional cell
         returned by ASE ase.io.read() method. Test input is
@@ -2058,6 +2054,7 @@ class TestStructureDataFromPymatgen:
     """
 
     @skip_pymatgen
+    @pytest.mark.filterwarnings('ignore:Cannot determine chemical composition from CIF:UserWarning:pymatgen.io')
     def test_1(self):
         """Tests roundtrip pymatgen -> StructureData -> pymatgen
         Test's input is derived from COD entry 9011963, processed with
@@ -2095,7 +2092,7 @@ class TestStructureDataFromPymatgen:
             )
             tmpf.flush()
             pymatgen_parser = CifParser(tmpf.name)
-            pymatgen_struct = pymatgen_parser.get_structures()[0]
+            pymatgen_struct = pymatgen_parser.parse_structures(primitive=True)[0]
 
         structs_to_test = [StructureData(pymatgen=pymatgen_struct), StructureData(pymatgen_structure=pymatgen_struct)]
 

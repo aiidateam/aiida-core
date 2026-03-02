@@ -27,6 +27,12 @@ def match_comp_transport(ctx, param, computer, transport_type):
         echo.echo_critical(
             f'Computer {computer.label} has transport of type "{computer.transport_type}", not {transport_type}!'
         )
+    if transport_type == 'core.ssh':
+        echo.echo_deprecated(
+            'The `core.ssh` transport plugin is deprecated and will be removed in v3.0. '
+            'Use `core.ssh_async` instead, which is significantly faster and provides an '
+            'easier configuration interface.'
+        )
     return computer
 
 

@@ -1,6 +1,6 @@
 name: pre-commit
 # NOTE: This job is not duplicating pre-commit.ci job,
-# since that once skips running mypy type-checking\
+# since that once skips running mypy type-checking
 # due to technical limitations of pre-commit.ci runners.
 
 on:
@@ -20,13 +20,14 @@ jobs:
     timeout-minutes: 15
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install python dependencies
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.11'
         from-lock: 'true'
+        extras: pre-commit
 
     - name: Run pre-commit
       run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )

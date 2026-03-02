@@ -8,13 +8,16 @@
 ###########################################################################
 """Module with pre-defined reusable commandline options that can be used as `click` decorators."""
 
+from __future__ import annotations
+
 import pathlib
+import typing as t
 
 import click
 
 from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS
 from aiida.common.log import LOG_LEVELS, configure_logging
-from aiida.manage.external.postgres import DEFAULT_DBINFO
+from aiida.manage.external.postgres import DEFAULT_DBINFO  # type: ignore[attr-defined]
 
 from ...utils import defaults, echo
 from .. import types
@@ -22,6 +25,9 @@ from .callable import CallableDefaultOption
 from .config import ConfigFileOption
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
+
+if t.TYPE_CHECKING:
+    from click.decorators import FC
 
 __all__ = (
     'ALL',
@@ -149,21 +155,21 @@ TRAVERSAL_RULE_HELP_STRING = {
 }
 
 
-def valid_process_states():
+def valid_process_states() -> tuple[str, ...]:
     """Return a list of valid values for the ProcessState enum."""
     from plumpy import ProcessState
 
     return tuple(state.value for state in ProcessState)
 
 
-def valid_calc_job_states():
+def valid_calc_job_states() -> tuple[str, ...]:
     """Return a list of valid values for the CalcState enum."""
     from aiida.common.datastructures import CalcJobState
 
     return tuple(state.value for state in CalcJobState)
 
 
-def active_process_states():
+def active_process_states() -> list[str]:
     """Return a list of process states that are considered active."""
     from plumpy import ProcessState
 
@@ -174,10 +180,10 @@ def active_process_states():
     ]
 
 
-def graph_traversal_rules(rules):
+def graph_traversal_rules(rules: dict[t.Any, t.Any]) -> t.Callable[[FC], FC]:
     """Apply the graph traversal rule options to the command."""
 
-    def decorator(command):
+    def decorator(command: FC) -> FC:
         """Only apply to traversal rules if they are toggleable."""
         for name, traversal_rule in sorted(rules.items(), reverse=True):
             if traversal_rule.toggleable:
@@ -191,7 +197,7 @@ def graph_traversal_rules(rules):
     return decorator
 
 
-def set_log_level(ctx, _param, value):
+def set_log_level(ctx: click.Context, _param: click.Parameter, value: t.Any) -> t.Any:
     """Configure the logging for the CLI command being executed.
 
     Note that we cannot use the most obvious approach of directly setting the level on the various loggers. The reason
@@ -766,7 +772,6 @@ PRINT_TRACEBACK = OverridableOption(
 )
 
 PATH = OverridableOption(
-    '-p',
     '--path',
     type=click.Path(path_type=pathlib.Path),
     show_default=False,

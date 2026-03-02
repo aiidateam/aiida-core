@@ -23,8 +23,9 @@ from aiida import orm
 from aiida.common import LinkType, timezone
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.utils import LinkTriple
+from aiida.tools._dumping.config import DumpMode
 from aiida.tools._dumping.tracking import DumpRecord
-from aiida.tools._dumping.utils import ORM_TYPE_TO_REGISTRY, DumpMode, DumpPaths, RegistryNameType
+from aiida.tools._dumping.utils import ORM_TYPE_TO_REGISTRY, DumpPaths, RegistryNameType
 from aiida.tools.archive.exceptions import ExportValidationError
 
 if TYPE_CHECKING:
@@ -32,7 +33,6 @@ if TYPE_CHECKING:
     from aiida.tools._dumping.tracking import DumpTracker
     from aiida.tools._dumping.utils import DumpTimes
 
-__all__ = ('NodeMetadataWriter', 'NodeRepoIoDumper', 'ProcessDumpExecutor', 'ReadmeGenerator', 'WorkflowWalker')
 
 logger = AIIDA_LOGGER.getChild('tools._dumping.executors.process')
 
@@ -621,6 +621,7 @@ class ReadmeGenerator:
         from aiida.cmdline.utils.ascii_vis import format_call_graph
         from aiida.cmdline.utils.common import (
             get_calcjob_report,
+            get_node_info,
             get_process_function_report,
             get_workchain_report,
         )
@@ -662,7 +663,7 @@ class ReadmeGenerator:
         _readme_string += f'\n## Process Report (`verdi process report {pk}`)\n\n```\n{report}\n```\n'
 
         _readme_string += (
-            f'\n## Node Info (`verdi node show {process_node.uuid}`)\n\n```\n{{get_node_info(process_node)}}\n```\n'
+            f'\n## Node Info (`verdi node show {process_node.uuid}`)\n\n```\n{get_node_info(process_node)}\n```\n'
         )
 
         (output_path / 'README.md').write_text(_readme_string, encoding='utf-8')

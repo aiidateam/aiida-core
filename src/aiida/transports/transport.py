@@ -9,6 +9,7 @@
 """Transport interface."""
 
 import abc
+import asyncio
 import fnmatch
 import os
 import re
@@ -21,7 +22,7 @@ from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
 from aiida.common.warnings import warn_deprecation
 
-__all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath', 'has_magic')
+__all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath')
 
 TransportPath = Union[str, Path, PurePosixPath]
 
@@ -65,11 +66,11 @@ class Transport(abc.ABC):
     """
 
     # This will be used for ``Computer.get_minimum_job_poll_interval``
-    DEFAULT_MINIMUM_JOB_POLL_INTERVAL = 10
+    DEFAULT_MINIMUM_JOB_POLL_INTERVAL = 10.0
 
     # This is used as a global default in case subclasses don't redefine this,
     # but this should  be redefined in plugins where appropriate
-    _DEFAULT_SAFE_OPEN_INTERVAL = 30.0
+    _DEFAULT_SAFE_OPEN_INTERVAL = 15.0
 
     # To be defined in the subclass
     # See the ssh or local plugin to see the format
@@ -100,6 +101,8 @@ class Transport(abc.ABC):
                 'prompt': 'Connection cooldown time (s)',
                 'help': 'Minimum time interval in seconds between opening new connections.',
                 'callback': validate_positive_number,
+                'default': _DEFAULT_SAFE_OPEN_INTERVAL,
+                'non_interactive_default': True,
             },
         ),
     ]
@@ -125,6 +128,7 @@ class Transport(abc.ABC):
         self._logger_extra = None
         self._is_open = False
         self._enters = 0
+        self._open_lock = asyncio.Lock()
 
         # for accessing the identity of the underlying machine
         self.hostname = kwargs.get('machine')
@@ -169,21 +173,58 @@ class Transport(abc.ABC):
 
         """
         # Keep track of how many times enter has been called
-        if self._enters == 0:
-            if self.is_open:
-                # Already open, so just add one to the entered counter
-                # this way on the final exit we will not close
-                self._enters += 1
-            else:
-                self.open()
-        self._enters += 1
+        if self._track_enter():
+            self.open()
         return self
 
     def __exit__(self, type_, value, traceback):
         """Closes connections, if needed (used in 'with' statements)."""
-        self._enters -= 1
-        if self._enters == 0:
+        if self._track_exit():
             self.close()
+
+    async def __aenter__(self):
+        """Async context manager entry. Opens the transport connection.
+
+        For sync transports, this just calls the sync open() method.
+        AsyncTransport subclasses override this to use async open.
+        """
+        async with self._open_lock:
+            if self._track_enter():
+                self.open()
+        return self
+
+    async def __aexit__(self, type_, value, traceback):
+        """Async context manager exit. Closes the transport connection if needed.
+
+        For sync transports, this just calls the sync close() method.
+        AsyncTransport subclasses override this to use async close.
+        """
+        async with self._open_lock:
+            if self._track_exit():
+                self.close()
+
+    def _track_enter(self) -> bool:
+        """Track a context manager entry and return whether open() needs to be called.
+
+        Manages the ``_enters`` reference counter. If the transport is already open
+        (e.g. opened externally), an extra count is added so the final exit won't close it.
+
+        Note: The caller must call ``open()``/``open_async()`` immediately when this returns True.
+        In async context, use ``self._open_lock`` to prevent potential concurrent open/close races.
+        """
+        need_open = False
+        if self._enters == 0:
+            if self.is_open:
+                self._enters += 1
+            else:
+                need_open = True
+        self._enters += 1
+        return need_open
+
+    def _track_exit(self) -> bool:
+        """Track a context manager exit and return whether close() needs to be called."""
+        self._enters -= 1
+        return self._enters == 0
 
     @property
     def is_open(self):
@@ -277,8 +318,11 @@ class Transport(abc.ABC):
         """
         return self._safe_open_interval
 
-    def _gotocomputer_string(self, remotedir):
+    def _gotocomputer_string(self, remotedir: Optional[TransportPath] = None):
         """Command executed when goto computer."""
+        if remotedir is None:
+            return self._bash_command_str
+        remotedir = str(remotedir)
         connect_string = (
             """ "if [ -d {escaped_remotedir} ] ;"""
             """ then cd {escaped_remotedir} ; {bash_command} ; else echo '  ** The directory' ; """
@@ -302,12 +346,15 @@ class Transport(abc.ABC):
         :type mode: int
         """
 
-    @abc.abstractmethod
     def chown(self, path: TransportPath, uid: int, gid: int):
         """Change the owner (uid) and group (gid) of a file.
         As with python's os.chown function, you must pass both arguments,
         so if you only want to change one, use stat first to retrieve the
         current owner and group.
+
+        .. deprecated:: 2.7
+            This method is deprecated and will be removed in a future version.
+            It is not used internally by AiiDA and has no test coverage.
 
         :param path: path to the file to change the owner and group of
         :param uid: new owner's uid
@@ -317,6 +364,11 @@ class Transport(abc.ABC):
         :type uid: int
         :type gid: int
         """
+        warn_deprecation(
+            'The `Transport.chown` method is deprecated and will be removed. ' 'It is not used internally by AiiDA.',
+            version=3,
+        )
+        raise NotImplementedError('chown is not implemented for this transport.')
 
     @abc.abstractmethod
     def copy(self, remotesource: TransportPath, remotedestination: TransportPath, dereference=False, recursive=True):
@@ -419,7 +471,10 @@ class Transport(abc.ABC):
             self.logger.error('Unknown parameters passed to copy_from_remote_to_remote')
 
         with SandboxFolder() as sandbox:
-            self.get(remotesource, sandbox.abspath, **kwargs_get)
+            # TODO: mypy error: Argument 2 to "get" of "Transport"
+            # has incompatible type "str | PurePath";
+            # expected "str | Path | PurePosixPath"
+            self.get(remotesource, sandbox.abspath, **kwargs_get)  # type: ignore[arg-type]
             # Then we scan the full sandbox directory with get_content_list,
             # because copying directly from sandbox.abspath would not work
             # to copy a single file into another single file, and copying
@@ -815,7 +870,7 @@ class Transport(abc.ABC):
         """
 
     @abc.abstractmethod
-    def gotocomputer_command(self, remotedir: TransportPath):
+    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
         """Return a string to be run using os.system in order to connect
         via the transport to the remote directory.
 
@@ -998,7 +1053,13 @@ class Transport(abc.ABC):
         """
 
     @abc.abstractmethod
-    def extract(self, remotesource: TransportPath, remotedestination: TransportPath, overwrite: bool = True):
+    def extract(
+        self,
+        remotesource: TransportPath,
+        remotedestination: TransportPath,
+        overwrite: bool = True,
+        strip_components: int = 0,
+    ):
         """Extract a remote archive.
 
         Does not accept glob patterns, as it doesn't make much sense and we don't have a usecase for it.
@@ -1007,6 +1068,7 @@ class Transport(abc.ABC):
         :param remotedestination: path to the remote destination directory
         :param overwrite: if True, overwrite the file at remotedestination if it already exists
             (we don't have a usecase for False, sofar. The parameter is kept for clarity.)
+        :param strip_components: strip NUMBER leading components from file names on extraction
 
         :raises OSError: if the remotesource does not exist.
         :raises OSError: if the extraction fails.
@@ -1039,9 +1101,12 @@ class Transport(abc.ABC):
         :type mode: int
         """
 
-    @abc.abstractmethod
     async def chown_async(self, path: TransportPath, uid: int, gid: int):
         """Change the owner (uid) and group (gid) of a file.
+
+        .. deprecated:: 2.7
+            This method is deprecated and will be removed in a future version.
+            It is not used internally by AiiDA and has no test coverage.
 
         :param path: path to file
         :param uid: user id of the new owner
@@ -1051,6 +1116,12 @@ class Transport(abc.ABC):
         :type uid: int
         :type gid: int
         """
+        warn_deprecation(
+            'The `Transport.chown_async` method is deprecated and will be removed. '
+            'It is not used internally by AiiDA.',
+            version=3,
+        )
+        raise NotImplementedError('chown_async is not implemented for this transport.')
 
     @abc.abstractmethod
     async def copy_async(self, remotesource, remotedestination, dereference=False, recursive=True):
@@ -1494,7 +1565,11 @@ class Transport(abc.ABC):
 
     @abc.abstractmethod
     async def extract_async(
-        self, remotesource: TransportPath, remotedestination: TransportPath, overwrite: bool = True
+        self,
+        remotesource: TransportPath,
+        remotedestination: TransportPath,
+        overwrite: bool = True,
+        strip_components: int = 0,
     ):
         """Extract a remote archive.
 
@@ -1504,6 +1579,7 @@ class Transport(abc.ABC):
         :param remotedestination: path to the remote destination directory
         :param overwrite: if True, overwrite the file at remotedestination if it already exists
             (we don't have a usecase for False, sofar. The parameter is kept for clarity.)
+        :param strip_components: strip NUMBER leading components from file names on extraction
 
         :raises OSError: if the remotesource does not exist.
         :raises OSError: if the extraction fails.
@@ -1558,6 +1634,8 @@ class BlockingTransport(Transport):
         if format not in ['tar', 'tar.gz', 'tar.bz2', 'tar.xz']:
             raise ValueError(f'Unsupported compression format: {type}')
 
+        self.makedirs(Path(remotedestination).parent, ignore_existing=True)
+
         compression_flag = {
             'tar': '',
             'tar.gz': 'z',
@@ -1603,7 +1681,15 @@ class BlockingTransport(Transport):
             )
             raise OSError(f'Error while creating the tar archive. Exit code: {retval}')
 
-    def extract(self, remotesource, remotedestination, overwrite=True, *args, **kwargs):
+    def extract(
+        self,
+        remotesource: TransportPath,
+        remotedestination: TransportPath,
+        overwrite: bool = True,
+        strip_components: int = 0,
+        *args,
+        **kwargs,
+    ):
         # The following implementation works for all blocking transoprt plugins
         """Extract a remote archive.
 
@@ -1613,6 +1699,7 @@ class BlockingTransport(Transport):
         :param remotedestination: path to the remote destination directory
         :param overwrite: if True, overwrite the file at remotedestination if it already exists
             (we don't have a usecase for False, sofar. The parameter is kept for clarity.)
+        :param strip_components: strip NUMBER leading components from file names on extraction
 
         :raises OSError: if the remotesource does not exist.
         :raises OSError: if the extraction fails.
@@ -1625,7 +1712,7 @@ class BlockingTransport(Transport):
 
         self.makedirs(remotedestination, ignore_existing=True)
 
-        tar_command = f'tar -xf {remotesource!s} -C {remotedestination!s} '
+        tar_command = f'tar --strip-components {strip_components} -xf {remotesource!s} -C {remotedestination!s} '
 
         retval, stdout, stderr = self.exec_command_wait(tar_command)
 
@@ -1782,9 +1869,9 @@ class BlockingTransport(Transport):
         """Counterpart to compress() that is async."""
         return self.compress(format, remotesources, remotedestination, root_dir, overwrite, dereference)
 
-    async def extract_async(self, remotesource, remotedestination, overwrite=True):
+    async def extract_async(self, remotesource, remotedestination, overwrite=True, strip_components=0):
         """Counterpart to extract() that is async."""
-        return self.extract(remotesource, remotedestination, overwrite)
+        return self.extract(remotesource, remotedestination, overwrite, strip_components)
 
 
 class AsyncTransport(Transport):
@@ -1796,18 +1883,32 @@ class AsyncTransport(Transport):
     """
 
     def run_command_blocking(self, func, *args, **kwargs):
-        """The event loop must be the one of manager."""
+        """Run an async transport method synchronously."""
+        from plumpy import run_until_complete
 
         from aiida.manage import get_manager
 
-        loop = get_manager().get_runner()
-        return loop.run_until_complete(func(*args, **kwargs))
+        loop = get_manager().get_runner().loop
+        return run_until_complete(loop, func(*args, **kwargs))
 
     def open(self):
         return self.run_command_blocking(self.open_async)
 
     def close(self):
         return self.run_command_blocking(self.close_async)
+
+    async def __aenter__(self):
+        """Async context manager entry. Opens the transport connection."""
+        async with self._open_lock:
+            if self._track_enter():
+                await self.open_async()
+        return self
+
+    async def __aexit__(self, type_, value, traceback):
+        """Async context manager exit. Closes the transport connection if needed."""
+        async with self._open_lock:
+            if self._track_exit():
+                await self.close_async()
 
     def get(self, *args, **kwargs):
         return self.run_command_blocking(self.get_async, *args, **kwargs)

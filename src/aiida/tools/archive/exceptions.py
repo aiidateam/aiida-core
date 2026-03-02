@@ -19,7 +19,6 @@ __all__ = (
     'ArchiveImportError',
     'ExportImportException',
     'ExportValidationError',
-    'ImportTestRun',
     'ImportUniquenessError',
     'ImportValidationError',
 )

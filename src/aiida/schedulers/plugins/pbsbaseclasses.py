@@ -8,6 +8,8 @@
 ###########################################################################
 """Base classes for PBSPro and PBS/Torque plugins."""
 
+from __future__ import annotations
+
 import logging
 
 from aiida.common.escaping import escape_for_bash
@@ -118,8 +120,13 @@ class PbsBaseClass(BashCliScheduler):
     _map_status = _MAP_STATUS_PBS_COMMON
 
     def _get_resource_lines(
-        self, num_machines, num_mpiprocs_per_machine, num_cores_per_machine, max_memory_kb, max_wallclock_seconds
-    ):
+        self,
+        num_machines: int,
+        num_mpiprocs_per_machine: int | None,
+        num_cores_per_machine: int | None,
+        max_memory_kb: int | None,
+        max_wallclock_seconds: int | None,
+    ) -> list[str]:
         """Return a set a list of lines (possibly empty) with the header
         lines relative to:
 

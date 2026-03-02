@@ -13,8 +13,10 @@ from __future__ import annotations
 import base64
 import datetime
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterator, List, Optional, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterator, List, NoReturn, Optional, Tuple, Type, TypeVar
 from uuid import UUID
+
+from typing_extensions import Self
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
@@ -46,7 +48,7 @@ if TYPE_CHECKING:
     from aiida.common.log import AiidaLoggerType
 
     from ..implementation import StorageBackend
-    from ..implementation.nodes import BackendNode  # noqa: F401
+    from ..implementation.nodes import BackendNode
     from .repository import NodeRepository
 
 __all__ = ('Node',)
@@ -105,7 +107,7 @@ class NodeBase:
 
     def __init__(self, node: 'Node') -> None:
         """Construct a new instance of the base namespace."""
-        self._node: 'Node' = node
+        self._node = node
 
     @cached_property
     def repository(self) -> 'NodeRepository':
@@ -140,7 +142,7 @@ class NodeBase:
         return self._node._CLS_NODE_LINKS(self._node)
 
 
-class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
+class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNodeMeta):
     """Base class for all nodes in AiiDA.
 
     Stores attributes starting with an underscore.
@@ -155,7 +157,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     the 'type' field.
     """
 
-    _CLS_COLLECTION = NodeCollection
+    _CLS_COLLECTION = NodeCollection['Node']
     _CLS_NODE_LINKS = NodeLinks
     _CLS_NODE_CACHING = NodeCaching
 
@@ -309,7 +311,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
             self.base.extras.set_many(extras)
 
     @classmethod
-    def _from_model(cls, model: Model) -> 'Node':  # type: ignore[override]
+    def _from_model(cls, model: Model) -> Self:  # type: ignore[override]
         """Return an entity instance from an instance of its model."""
         fields = cls.model_to_orm_field_values(model)
 
@@ -355,11 +357,11 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
         return f'uuid: {self.uuid} (pk: {self.pk})'
 
-    def __copy__(self):
+    def __copy__(self) -> NoReturn:
         """Copying a Node is not supported in general, but only for the Data sub class."""
         raise exceptions.InvalidOperation('copying a base Node is not supported')
 
-    def __deepcopy__(self, memo):
+    def __deepcopy__(self, memo: Any) -> NoReturn:
         """Deep copying a Node is not supported in general, but only for the Data sub class."""
         raise exceptions.InvalidOperation('deep copying a base Node is not supported')
 
@@ -409,7 +411,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         return get_entry_point_from_class(cls.__module__, cls.__name__)[1]
 
     @property
-    def logger(self) -> Optional[AiidaLoggerType]:
+    def logger(self) -> AiidaLoggerType:
         """Return the logger configured for this Node.
 
         :return: Logger object
@@ -534,7 +536,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
         """
         return self.backend_entity.mtime
 
-    def store_all(self) -> 'Node':
+    def store_all(self) -> Self:
         """Store the node, together with all input links.
 
         Unstored nodes from cached incoming linkswill also be stored.
@@ -552,7 +554,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
         return self.store()
 
-    def store(self) -> 'Node':
+    def store(self) -> Self:
         """Store the node in the database while saving its attributes and repository directory.
 
         After being called attributes cannot be changed anymore! Instead, extras can be changed only AFTER calling
@@ -587,7 +589,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
 
         return self
 
-    def _store(self, clean: bool = True) -> 'Node':
+    def _store(self, clean: bool = True) -> Self:
         """Store the node in the database while saving its attributes and repository directory.
 
         :param clean: boolean, if True, will clean the attributes and extras before attempting to store
@@ -768,7 +770,7 @@ class Node(Entity['BackendNode', NodeCollection], metaclass=AbstractNodeMeta):
     }
 
     @classproperty
-    def Collection(cls):  # noqa: N802, N805
+    def Collection(cls) -> type[NodeCollection]:  # noqa: N802, N805
         """Return the collection type for this class.
 
         This used to be a class argument with the value ``NodeCollection``. The argument is deprecated and this property

@@ -10,13 +10,15 @@
 
 from __future__ import annotations
 
-import collections
+import collections.abc
 import contextlib
 import enum
 import io
 import logging
 import types
 import typing as t
+
+from aiida.common.typing import FilePath
 
 __all__ = ('AIIDA_LOGGER', 'override_log_level')
 
@@ -29,13 +31,13 @@ LOG_LEVEL_REPORT = 23
 logging.addLevelName(LOG_LEVEL_REPORT, 'REPORT')
 
 
-def report(self: logging.Logger, msg, *args, **kwargs):
+def report(self: logging.Logger, msg: str, *args: t.Any, **kwargs: t.Any) -> None:
     """Log a message at the ``REPORT`` level."""
     self.log(LOG_LEVEL_REPORT, msg, *args, **kwargs)
 
 
 class AiidaLoggerType(logging.Logger):
-    def report(self, msg: str, *args, **kwargs) -> None:
+    def report(self, msg: str, *args: t.Any, **kwargs: t.Any) -> None:
         """Log a message at the ``REPORT`` level."""
 
 
@@ -67,7 +69,7 @@ CLI_LOG_LEVEL: str | None = None
 
 # The default logging dictionary for AiiDA that can be used in conjunction
 # with the config.dictConfig method of python's logging module
-def get_logging_config():
+def get_logging_config() -> dict[str, t.Any]:
     from aiida.manage.configuration import get_config_option
 
     return {
@@ -144,7 +146,7 @@ def get_logging_config():
     }
 
 
-def evaluate_logging_configuration(dictionary):
+def evaluate_logging_configuration(dictionary: collections.abc.Mapping[t.Any, t.Any]) -> dict[t.Any, t.Any]:
     """Recursively evaluate the logging configuration, calling lambdas when encountered.
 
     This allows the configuration options that are dependent on the active profile to be loaded lazily.
@@ -164,7 +166,7 @@ def evaluate_logging_configuration(dictionary):
     return result
 
 
-def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
+def configure_logging(with_orm: bool = False, daemon: bool = False, daemon_log_file: FilePath | None = None) -> None:
     """Setup the logging by retrieving the LOGGING dictionary from aiida and passing it to
     the python module logging.config.dictConfig. If the logging needs to be setup for the
     daemon, set the argument 'daemon' to True and specify the path to the log file. This
@@ -243,7 +245,7 @@ def configure_logging(with_orm=False, daemon=False, daemon_log_file=None):
 
 
 @contextlib.contextmanager
-def override_log_level(level=logging.CRITICAL):
+def override_log_level(level: int = logging.CRITICAL) -> collections.abc.Iterator[None]:
     """Temporarily adjust the log-level of logger."""
     logging.disable(level=level)
     try:

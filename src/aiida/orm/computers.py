@@ -8,11 +8,11 @@
 ###########################################################################
 """Module for Computer entities"""
 
-import logging
 import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 from aiida.common import exceptions
+from aiida.common.log import AIIDA_LOGGER, AiidaLoggerType
 from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
 from aiida.plugins import SchedulerFactory, TransportFactory
@@ -21,7 +21,7 @@ from . import entities, users
 
 if TYPE_CHECKING:
     from aiida.orm import AuthInfo, User
-    from aiida.orm.implementation import StorageBackend
+    from aiida.orm.implementation import BackendComputer, StorageBackend
     from aiida.schedulers import Scheduler
     from aiida.transports import Transport
 
@@ -35,7 +35,7 @@ class ComputerCollection(entities.Collection['Computer']):
     def _entity_base_cls() -> Type['Computer']:
         return Computer
 
-    def get_or_create(self, label: Optional[str] = None, **kwargs) -> Tuple[bool, 'Computer']:
+    def get_or_create(self, label: str, **kwargs: Any) -> Tuple[bool, 'Computer']:
         """Try to retrieve a Computer from the DB with the given arguments;
         create (and store) a new Computer if such a Computer was not present yet.
 
@@ -52,7 +52,7 @@ class ComputerCollection(entities.Collection['Computer']):
         except exceptions.NotExistent:
             return True, Computer(backend=self.backend, label=label, **kwargs)
 
-    def list_labels(self) -> List[str]:
+    def list_labels(self) -> list[tuple[str]]:
         """Return a list with all the labels of the computers in the DB."""
         return self._backend.computers.list_names()
 
@@ -64,7 +64,7 @@ class ComputerCollection(entities.Collection['Computer']):
 class Computer(entities.Entity['BackendComputer', ComputerCollection]):
     """Computer entity."""
 
-    _logger = logging.getLogger(__name__)
+    _logger = AIIDA_LOGGER.getChild('orm.computers')
 
     PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL = 'minimum_scheduler_poll_interval'
     PROPERTY_MINIMUM_SCHEDULER_POLL_INTERVAL__DEFAULT = 10.0
@@ -107,10 +107,10 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         if workdir is not None:
             self.set_workdir(workdir)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self!s}>'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.label} ({self.hostname}), pk: {self.pk}'
 
     @property
@@ -124,7 +124,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         return self._backend_entity.uuid
 
     @property
-    def logger(self) -> logging.Logger:
+    def logger(self) -> AiidaLoggerType:
         return self._logger
 
     @classmethod
@@ -190,7 +190,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         """Validates the mpirun_command variable. MUST be called after properly
         checking for a valid scheduler.
         """
-        if not isinstance(mpirun_cmd, (tuple, list)) or not all(isinstance(i, str) for i in mpirun_cmd):
+        if not isinstance(mpirun_cmd, (tuple, list)) or not all(isinstance(i, str) for i in mpirun_cmd):  # type: ignore[redundant-expr]
             raise exceptions.ValidationError('the mpirun_command must be a list of strings')
 
         try:
@@ -244,7 +244,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         if def_cpus_per_machine is None:
             return
 
-        if not isinstance(def_cpus_per_machine, int) or def_cpus_per_machine <= 0:
+        if not isinstance(def_cpus_per_machine, int) or def_cpus_per_machine <= 0:  # type: ignore[redundant-expr]
             raise exceptions.ValidationError(
                 'Invalid value for default_mpiprocs_per_machine, must be a positive integer, or an empty string if you '
                 'do not want to provide a default value.'
@@ -256,7 +256,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         if def_memory_per_machine is None:
             return
 
-        if not isinstance(def_memory_per_machine, int) or def_memory_per_machine <= 0:
+        if not isinstance(def_memory_per_machine, int) or def_memory_per_machine <= 0:  # type: ignore[redundant-expr]
             raise exceptions.ValidationError(
                 f'Invalid value for def_memory_per_machine, must be a positive int, got: {def_memory_per_machine}'
             )
@@ -453,7 +453,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         """Set the mpirun command. It must be a list of strings (you can use
         string.split() if you have a single, space-separated string).
         """
-        if not isinstance(val, (tuple, list)) or not all(isinstance(i, str) for i in val):
+        if not isinstance(val, (tuple, list)) or not all(isinstance(i, str) for i in val):  # type: ignore[redundant-expr]
             raise TypeError('the mpirun_command must be a list of strings')
         self.set_property('mpirun_command', val)
 
@@ -561,7 +561,9 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
         :return: Boolean, ``True`` if the computer is configured for the current default user, ``False`` otherwise.
         """
-        return self.is_user_configured(users.User.get_collection(self.backend).get_default())
+        user = users.User.get_collection(self.backend).get_default()
+        assert user is not None
+        return self.is_user_configured(user)
 
     def is_user_configured(self, user: 'User') -> bool:
         """Is the user configured on this computer?
@@ -609,6 +611,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         from . import authinfos
 
         user = user or users.User.get_collection(self.backend).get_default()
+        assert user is not None
         authinfo = authinfos.AuthInfo.get_collection(self.backend).get(dbcomputer=self, aiidauser=user)
         return authinfo.get_transport()
 
@@ -643,6 +646,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
         transport_cls = self.get_transport_class()
         user = user or users.User.get_collection(self.backend).get_default()
+        assert user is not None
         valid_keys = set(transport_cls.get_valid_auth_params())
 
         if not set(kwargs.keys()).issubset(valid_keys):
@@ -669,6 +673,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         :param user: the user to to get the configuration for, otherwise default user
         """
         user = user or users.User.get_collection(self.backend).get_default()
+        assert user is not None
 
         try:
             authinfo = self.get_authinfo(user)

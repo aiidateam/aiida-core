@@ -1,5 +1,74 @@
 # Changelog
 
+## v2.7.3 - 2026-01-23
+
+### Fixes
+
+#### Transport
+- Improve path escaping in OpenSSH transport for special characters ([#7171](https://github.com/aiidateam/aiida-core/pull/7171)) [[4c89d9624]](https://github.com/aiidateam/aiida-core/commit/4c89d96249a64554ea795ebc3ffae317989d6e94)
+- Fix a critical race condition in `TransportQueue` ([#7144](https://github.com/aiidateam/aiida-core/pull/7144)) [[b02a233af]](https://github.com/aiidateam/aiida-core/commit/b02a233afecfbb2087b9d281c6be3f99fdbbc65f)
+- Add semaphore control to `AsyncSshTransport::exec_command_wait_async` to prevent SSH connection overwhelm ([#7144](https://github.com/aiidateam/aiida-core/pull/7144)) [[985d5c809]](https://github.com/aiidateam/aiida-core/commit/985d5c809325ac8b68f0867586613d050a5e3e1f)
+
+#### Engine
+- Fix: Avoid mutating `_polling_jobs` inside slurm scheduler ([#7155](https://github.com/aiidateam/aiida-core/pull/7155)) [[9f03a8e4c]](https://github.com/aiidateam/aiida-core/commit/9f03a8e4cad4764ac99a39b12677036eefe1a2ca)
+
+### Devops
+- Switch PyPI publishing to OIDC trusted publishing ([#7173](https://github.com/aiidateam/aiida-core/pull/7173)) [[c4e320816]](https://github.com/aiidateam/aiida-core/commit/c4e3208165cf2e090d711fd892cf47cb55181783)
+
+
+## v2.7.2 - 2025-12-10
+
+This patch release comes with a number of important bug fixes to the CLI, storage, archive, and transport modules.
+Most notably, SQLAlchemy operational errors (affecting archive operations and the QB) and various race conditions (affecting mainly the transport plugins) have been resolved.
+We strongly recommend upgrading from prior 2.7.x versions.
+
+### Fixes
+
+#### CLI
+- CLI: Fix `verdi code list` for codes without computer (#7081) [[27b52da2f]](https://github.com/aiidateam/aiida-core/commit/27b52da2f6dc948af0fab8e71d7089e532548640)
+- CLI: Fix wrongly formatted `verdi code show` output (#7073) [[32742c0e0]](https://github.com/aiidateam/aiida-core/commit/32742c0e0b60b53b54a42a5dd3b2b04d3449d2de)
+- CLI: Additional logging during `dump` operations (#7046) [[fc00f5dec]](https://github.com/aiidateam/aiida-core/commit/fc00f5deccff2cb030a45f622d5c2cd49f3b0ff6)
+- CLI: Drop non-unique `-n` option for archive import (#7044) [[3a7d440e9]](https://github.com/aiidateam/aiida-core/commit/3a7d440e9086d5127b4705034e8c3bda8c323a60)
+- CLI: Drop non-unique `-p` option for `dump` endpoints (#7043) [[019172c2d]](https://github.com/aiidateam/aiida-core/commit/019172c2d96c6b2761e865e61ba9a09d6cbb6750)
+- CLI: Fix output of `verdi node show` in dump README files (#6971) [[5e4da5b4d]](https://github.com/aiidateam/aiida-core/commit/5e4da5b4dfd00b6ae270e020b8446887b1754230)
+
+#### Storage
+- Fix RST code snippets in QB `smarter_in` docstring (#7146) [[cc0bb483d]](https://github.com/aiidateam/aiida-core/commit/cc0bb483d125c81e893ca085161d275015e1d87f)
+- Fix QB `IN` clause to avoid parameter limits (#6998) [[8d562b44e]](https://github.com/aiidateam/aiida-core/commit/8d562b44ee37bc8ef9840f1806c48702a70b638e)
+- Fix PSQL OperationalError on archive creation by batching (#6993) [[cfbbd687f]](https://github.com/aiidateam/aiida-core/commit/cfbbd687f4e4416a880dce186f9e198fd20c9164)
+- Fix OperationalError for `add_nodes` with PSQL backend (#6991) [[9bccdc816]](https://github.com/aiidateam/aiida-core/commit/9bccdc816e859823f8347c540c6e914b43432d43)
+
+#### Archive
+- Fix `UnboundLocalError` in `ZipfileBackendRepository` (#7129) [[166d06c25]](https://github.com/aiidateam/aiida-core/commit/166d06c2532309aa500a949b757773abb470e5ca)
+- Fix stuck progress bar on "Add nodes" of archive import (#7118) [[4e54cd476]](https://github.com/aiidateam/aiida-core/commit/4e54cd476dd2f089bcb501e9b74ca4b1e8d4f988)
+- Don't break on `sqlite_zip` profile deletion despite original aiida archive file missing (#6929) [[274ce6717]](https://github.com/aiidateam/aiida-core/commit/274ce6717d3e7e184e5e058a4bfeab9cd808604a)
+
+#### Engine
+- Adding ./ in front of a portable code binary (#7080) [[9256f2fdd]](https://github.com/aiidateam/aiida-core/commit/9256f2fddd71abecf1e649065ef7dca5c67d061c)
+- Fix race condition in `JobsList` (#7061) [[e79f0a44c]](https://github.com/aiidateam/aiida-core/commit/e79f0a44c4c816323c24510dfa3462ecd5a9f5ae)
+
+#### Transport
+- async_ssh: Use async semaphore instead of manual locking (#7018) [[ad5cafdb1]](https://github.com/aiidateam/aiida-core/commit/ad5cafdb10ff3889e53c3a7473cadc566b3ecb78)
+
+#### Configuration
+- Fix: use platform-specific separator for AIIDA_PATH in config directory detection (#6935) [[32d515a6b]](https://github.com/aiidateam/aiida-core/commit/32d515a6bd0fef4ae4abe99ed5a288ac438b7096)
+
+### Devops
+- CI: Fix install-with-conda job (#7103) [[0dcd10ac4]](https://github.com/aiidateam/aiida-core/commit/0dcd10ac4a83d65338aeefdf7a158f7a60b15fd2)
+- Fix PyPI index url (#6923) [[a8230b45c]](https://github.com/aiidateam/aiida-core/commit/a8230b45c91a45bf5e351626a15d7578aac1fa26)
+
+
+## v2.7.1 - 2025-07-16
+
+### Fixes
+
+- Extend check of stash options when they are specified as empty dict (#6942) [[cbbdedb138c76c5d1114688da6d044641ad86d58]](https://github.com/aiidateam/aiida-core/commit/cbbdedb138c76c5d1114688da6d044641ad86d58)
+
+### Docs
+
+- Docs: Remove note on unsupported `contains` and `get_creation_statistics` (#6930) [[a392f5c5cc2babddb2c5152989db7009bb53b87d]](https://github.com/aiidateam/aiida-core/commit/a392f5c5cc2babddb2c5152989db7009bb53b87d)
+
+
 ## v2.7.0 - 2025-06-24
 
 - [Asynchronous SSH connection](#asynchronous-ssh-connection-6626)

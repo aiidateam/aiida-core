@@ -51,7 +51,7 @@ jobs:
         - 5672:5672
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install aiida-core
       uses: ./.github/actions/install-aiida-core

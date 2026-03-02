@@ -41,7 +41,7 @@ def test_set_label():
     code.label = 'alternate-label'
     assert code.label == 'alternate-label'
 
-    with pytest.raises(ValueError, match=''):
+    with pytest.raises(ValueError, match='The label contains a `@` symbol, which is not allowed.'):
         code.label = 'illegal@label'
 
 

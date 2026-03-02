@@ -195,8 +195,8 @@ class SqlaGroup(entities.SqlaModelEntity[DbGroup], ExtrasMixin, BackendGroup):
                 return
 
             table = self.GROUP_NODE_CLASS.__table__
-            ins = insert(table).values(ins_dict)
-            session.execute(ins.on_conflict_do_nothing(index_elements=['dbnode_id', 'dbgroup_id']))
+            ins = insert(table)
+            session.execute(ins.on_conflict_do_nothing(index_elements=['dbnode_id', 'dbgroup_id']), ins_dict)
 
             # Commit everything as up till now we've just flushed
             if not session.in_nested_transaction():

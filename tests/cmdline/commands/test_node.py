@@ -606,7 +606,7 @@ class TestVerdiDelete:
 
                 for i in range(n_calcjobs):
                     calcjob_node = CalcJobNode(computer=aiida_localhost)
-                    calcjob_node.add_incoming(workflow_node, link_type=LinkType.CALL_CALC, link_label='call')
+                    calcjob_node.base.links.add_incoming(workflow_node, link_type=LinkType.CALL_CALC, link_label='call')
 
                     workdir = tmp_path / f'calcjob_{uuid.uuid4()}'
                     workdir.mkdir()
@@ -637,22 +637,22 @@ class TestVerdiDelete:
         if nodes_deleted:
             for workflow_pk in self.workflow_pks:
                 with pytest.raises(NotExistent):
-                    WorkflowNode.objects.get(pk=workflow_pk)
+                    WorkflowNode.collection.get(pk=workflow_pk)
 
             for calcjob_pk in self.calcjob_pks:
                 with pytest.raises(NotExistent):
-                    CalcJobNode.objects.get(pk=calcjob_pk)
+                    CalcJobNode.collection.get(pk=calcjob_pk)
 
             for remote_pk in self.remote_pks:
                 with pytest.raises(NotExistent):
-                    RemoteData.objects.get(pk=remote_pk)
+                    RemoteData.collection.get(pk=remote_pk)
         else:
             for workflow_pk in self.workflow_pks:
-                WorkflowNode.objects.get(pk=workflow_pk)
+                WorkflowNode.collection.get(pk=workflow_pk)
             for calcjob_pk in self.calcjob_pks:
-                CalcJobNode.objects.get(pk=calcjob_pk)
+                CalcJobNode.collection.get(pk=calcjob_pk)
             for remote_pk in self.remote_pks:
-                RemoteData.objects.get(pk=remote_pk)
+                RemoteData.collection.get(pk=remote_pk)
 
         for remote_folder in self.remote_folders:
             if folders_deleted:
@@ -825,6 +825,53 @@ class TestVerdiDelete:
 
         with pytest.raises(NotExistent):
             orm.load_node(pk)
+
+    @pytest.mark.parametrize(
+        'clean_workdir, expect_warning',
+        [
+            (True, True),
+            (False, False),
+        ],
+    )
+    def test_node_delete_stash_warning(self, clean_workdir, expect_warning, run_cli_command, aiida_localhost, tmp_path):
+        """Warn about stash nodes only when deleting StashCalculation with --clean-workdir."""
+        from aiida.common.datastructures import StashMode
+        from aiida.orm.nodes.data.remote.stash import RemoteStashFolderData
+
+        workdir = tmp_path / 'stash_workdir'
+        workdir.mkdir()
+
+        # Create a CalcJobNode with process_type matching StashCalculation
+        stash_calc = CalcJobNode(computer=aiida_localhost)
+        stash_calc.set_process_type('aiida.calculations:core.stash')
+        stash_calc.set_remote_workdir(str(workdir))
+        stash_calc.store()
+
+        remote_folder = RemoteData(remote_path=str(workdir), computer=aiida_localhost)
+        remote_folder.base.links.add_incoming(stash_calc, LinkType.CREATE, link_label='remote_folder')
+        remote_folder.store()
+
+        stash_node_1 = RemoteStashFolderData(
+            stash_mode=StashMode.COPY,
+            target_basepath='/remote/stash/path1',
+            source_list=['file1.txt'],
+            computer=aiida_localhost,
+        )
+        stash_node_1.base.links.add_incoming(stash_calc, link_type=LinkType.CREATE, link_label='remote_stash_1')
+        stash_node_1.store()
+
+        options = ['--force']
+        if clean_workdir:
+            options.append('--clean-workdir')
+        options.append(str(stash_calc.pk))
+        result = run_cli_command(cmd_node.node_delete, options)
+
+        if expect_warning:
+            assert '1 StashCalculation node(s) will be deleted' in result.output
+            assert '/remote/stash/path1' in result.output
+            assert 'will not be automatically cleaned' in result.output.lower()
+        else:
+            assert 'StashCalculation' not in result.output
 
 
 @pytest.fixture(scope='class')

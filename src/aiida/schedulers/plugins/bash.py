@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import abc
+import typing as t
 
 from aiida.common.escaping import escape_for_bash
 from aiida.engine.processes.exit_code import ExitCode
@@ -33,6 +34,22 @@ class BashCliScheduler(Scheduler, metaclass=abc.ABCMeta):
             self._get_submit_command(escape_for_bash(filename)), workdir=working_directory
         )
         return self._parse_submit_output(*result)
+
+    @t.overload
+    def get_jobs(
+        self,
+        jobs: list[str] | None = None,
+        user: str | None = None,
+        as_dict: t.Literal[False] = False,
+    ) -> list[JobInfo]: ...
+
+    @t.overload
+    def get_jobs(
+        self,
+        jobs: list[str] | None = None,
+        user: str | None = None,
+        as_dict: t.Literal[True] = True,
+    ) -> dict[str, JobInfo]: ...
 
     def get_jobs(
         self,

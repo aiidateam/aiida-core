@@ -21,7 +21,9 @@ import enum
 import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal
+
+from typing_extensions import Self
 
 from aiida.common import AIIDA_LOGGER, CodeRunMode
 from aiida.common.extendeddicts import AttributeDict, DefaultFieldsAttributeDict
@@ -78,31 +80,31 @@ class JobResource(DefaultFieldsAttributeDict, metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    def validate_resources(cls, **kwargs):
+    def validate_resources(cls, **kwargs: Any) -> dict[Any, Any] | None:
         """Validate the resources against the job resource class of this scheduler.
 
         :param kwargs: dictionary of values to define the job resources
         :raises ValueError: if the resources are invalid or incomplete
-        :return: optional tuple of parsed resource settings
+        :return: optional dict of parsed resource settings
         """
 
     @classmethod
-    def get_valid_keys(cls):
+    def get_valid_keys(cls) -> list[str]:
         """Return a list of valid keys to be passed to the constructor."""
         return list(cls._default_fields)
 
     @classmethod
     @abc.abstractmethod
-    def accepts_default_mpiprocs_per_machine(cls):
+    def accepts_default_mpiprocs_per_machine(cls) -> bool:
         """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
 
     @classmethod
-    def accepts_default_memory_per_machine(cls):
+    def accepts_default_memory_per_machine(cls) -> bool:
         """Return True if this subclass accepts a `default_memory_per_machine` key, False otherwise."""
         return True
 
     @abc.abstractmethod
-    def get_tot_num_mpiprocs(self):
+    def get_tot_num_mpiprocs(self) -> int:
         """Return the total number of cpus of this job resource."""
 
 
@@ -123,7 +125,7 @@ class NodeNumberJobResource(JobResource):
         num_cores_per_mpiproc: int
 
     @classmethod
-    def validate_resources(cls, **kwargs):
+    def validate_resources(cls, **kwargs: Any) -> AttributeDict:
         """Validate the resources against the job resource class of this scheduler.
 
         :param kwargs: dictionary of values to define the job resources
@@ -132,7 +134,7 @@ class NodeNumberJobResource(JobResource):
         """
         resources = AttributeDict()
 
-        def is_greater_equal_one(parameter):
+        def is_greater_equal_one(parameter: str) -> None:
             value = getattr(resources, parameter, None)
             if value is not None and value < 1:
                 raise ValueError(f'`{parameter}` must be greater than or equal to one.')
@@ -176,7 +178,7 @@ class NodeNumberJobResource(JobResource):
 
         return resources
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any):
         """Initialize the job resources from the passed arguments.
 
         :raises ValueError: if the resources are invalid or incomplete
@@ -185,16 +187,16 @@ class NodeNumberJobResource(JobResource):
         super().__init__(resources)
 
     @classmethod
-    def get_valid_keys(cls):
+    def get_valid_keys(cls) -> list[str]:
         """Return a list of valid keys to be passed to the constructor."""
         return super().get_valid_keys() + ['tot_num_mpiprocs']
 
     @classmethod
-    def accepts_default_mpiprocs_per_machine(cls):
+    def accepts_default_mpiprocs_per_machine(cls) -> Literal[True]:
         """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
         return True
 
-    def get_tot_num_mpiprocs(self):
+    def get_tot_num_mpiprocs(self) -> int:
         """Return the total number of cpus of this job resource."""
         return self.num_machines * self.num_mpiprocs_per_machine
 
@@ -212,7 +214,7 @@ class ParEnvJobResource(JobResource):
         tot_num_mpiprocs: int
 
     @classmethod
-    def validate_resources(cls, **kwargs):
+    def validate_resources(cls, **kwargs: Any) -> AttributeDict:
         """Validate the resources against the job resource class of this scheduler.
 
         :param kwargs: dictionary of values to define the job resources
@@ -242,7 +244,7 @@ class ParEnvJobResource(JobResource):
 
         return resources
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any):
         """Initialize the job resources from the passed arguments (the valid keys can be
         obtained with the function self.get_valid_keys()).
 
@@ -252,11 +254,11 @@ class ParEnvJobResource(JobResource):
         super().__init__(resources)
 
     @classmethod
-    def accepts_default_mpiprocs_per_machine(cls):
+    def accepts_default_mpiprocs_per_machine(cls) -> Literal[False]:
         """Return True if this subclass accepts a `default_mpiprocs_per_machine` key, False otherwise."""
         return False
 
-    def get_tot_num_mpiprocs(self):
+    def get_tot_num_mpiprocs(self) -> int:
         """Return the total number of cpus of this job resource."""
         return self.tot_num_mpiprocs
 
@@ -569,7 +571,7 @@ class JobInfo(DefaultFieldsAttributeDict):
     }
 
     @staticmethod
-    def _serialize_job_state(job_state):
+    def _serialize_job_state(job_state: JobState) -> str:
         """Return the serialized value of the JobState instance."""
         if not isinstance(job_state, JobState):
             raise TypeError(f'invalid type for value {job_state}, should be an instance of `JobState`')
@@ -577,12 +579,12 @@ class JobInfo(DefaultFieldsAttributeDict):
         return job_state.value
 
     @staticmethod
-    def _deserialize_job_state(job_state):
+    def _deserialize_job_state(job_state: str) -> JobState:
         """Return an instance of JobState from the job_state string."""
         return JobState(job_state)
 
     @staticmethod
-    def _serialize_date(value):
+    def _serialize_date(value: datetime | None) -> dict[str, str | None] | None:
         """Serialise a data value
         :param value: The value to serialise
         :return: The serialised value
@@ -600,7 +602,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         return {'date': value.astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%f'), 'timezone': 'UTC'}
 
     @staticmethod
-    def _deserialize_date(value):
+    def _deserialize_date(value: dict[str, str] | None) -> datetime | None:
         """Deserialise a date
         :param value: The date vlue
         :return: The deserialised date
@@ -610,7 +612,7 @@ class JobInfo(DefaultFieldsAttributeDict):
 
         if value['timezone'] is None:
             # naive date
-            return datetime.strptime(value['date'], '%Y-%m-%dT%H:%M:%S.%f')
+            return datetime.strptime(value['date'], '%Y-%m-%dT%H:%M:%S.%f')  # type: ignore[unreachable]
         if value['timezone'] == 'UTC':
             return make_aware(datetime.strptime(value['date'], '%Y-%m-%dT%H:%M:%S.%f'), timezone.utc)
 
@@ -620,7 +622,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         )
 
     @classmethod
-    def serialize_field(cls, value, field_type):
+    def serialize_field(cls, value: Any, field_type: str | None) -> Any:
         """Serialise a particular field value
 
         :param value: The value to serialise
@@ -635,7 +637,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         return serializer_method(value)
 
     @classmethod
-    def deserialize_field(cls, value, field_type):
+    def deserialize_field(cls, value: Any, field_type: str | None) -> Any:
         """Deserialise the value of a particular field with a type
         :param value: The value
         :param field_type: The field type
@@ -648,14 +650,14 @@ class JobInfo(DefaultFieldsAttributeDict):
 
         return deserializer_method(value)
 
-    def serialize(self):
+    def serialize(self) -> str:
         """Serialize the current data (as obtained by ``self.get_dict()``) into a JSON string.
 
         :return: A string with serialised representation of the current data.
         """
         return json.dumps(self.get_dict())
 
-    def get_dict(self):
+    def get_dict(self) -> dict[str, Any]:
         """Serialise the current data into a dictionary that is JSON-serializable.
 
         :return: A dictionary
@@ -663,7 +665,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         return {k: self.serialize_field(v, self._special_serializers.get(k, None)) for k, v in self.items()}
 
     @classmethod
-    def load_from_dict(cls, data):
+    def load_from_dict(cls, data: dict[str, Any]) -> Self:
         """Create a new instance loading the values from serialised data in dictionary form
 
         :param data: The dictionary with the data to load from
@@ -674,7 +676,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         return instance
 
     @classmethod
-    def load_from_serialized(cls, data):
+    def load_from_serialized(cls, data: str) -> Self:
         """Create a new instance loading the values from JSON-serialised data as a string
 
         :param data: The string with the JSON-serialised data to load from

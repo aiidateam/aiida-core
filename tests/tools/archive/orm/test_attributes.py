@@ -9,7 +9,8 @@
 """Extras tests for the export and import routines"""
 
 from aiida import orm
-from aiida.tools.archive import create_archive, get_format, import_archive
+from aiida.tools.archive import create_archive, import_archive
+from aiida.tools.archive.abstract import get_format
 
 
 def test_import_of_attributes(tmp_path, aiida_profile):

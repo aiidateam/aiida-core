@@ -22,7 +22,7 @@ import plumpy.persistence
 import plumpy.process_states
 
 from aiida.common.datastructures import CalcJobState
-from aiida.common.exceptions import FeatureNotAvailable, TransportTaskException
+from aiida.common.exceptions import FeatureNotAvailable, StashingError, TransportTaskException
 from aiida.common.folders import SandboxFolder
 from aiida.engine import utils
 from aiida.engine.daemon import execmanager
@@ -72,8 +72,8 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
     """
     node = process.node
 
-    if node.get_state() == CalcJobState.SUBMITTING:
-        logger.warning(f'CalcJob<{node.pk}> already marked as SUBMITTING, skipping task_update_job')
+    if node.get_state() == CalcJobState.UNSTASHING:
+        logger.warning(f'CalcJob<{node.pk}> already marked as UNSTASHING, skipping task_update_job')
         return
 
     initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
@@ -83,7 +83,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
     authinfo = node.get_authinfo()
 
     async def do_upload():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
 
             with SandboxFolder(filepath_sandbox) as folder:
@@ -115,7 +115,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
         raise TransportTaskException(f'upload_calculation failed {max_attempts} times consecutively') from exception
     else:
         logger.info(f'uploading CalcJob<{node.pk}> successful')
-        node.set_state(CalcJobState.SUBMITTING)
+        node.set_state(CalcJobState.UNSTASHING)
         return skip_submit
 
 
@@ -144,7 +144,7 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
     authinfo = node.get_authinfo()
 
     async def do_submit():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             return execmanager.submit_calculation(node, transport)
 
@@ -252,7 +252,7 @@ async def task_monitor_job(
     authinfo = node.get_authinfo()
 
     async def do_monitor():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             return monitors.process(node, transport)
 
@@ -298,7 +298,7 @@ async def task_retrieve_job(
     authinfo = node.get_authinfo()
 
     async def do_retrieve():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             # Perform the job accounting and set it on the node if successful. If the scheduler does not implement this
             # still set the attribute but set it to `None`. This way we can distinguish calculation jobs for which the
@@ -306,12 +306,13 @@ async def task_retrieve_job(
             scheduler = node.computer.get_scheduler()  # type: ignore[union-attr]
             scheduler.set_transport(transport)
 
-            if node.get_job_id() is None:
+            job_id = node.get_job_id()
+            if job_id is None:
                 logger.warning(f'there is no job id for CalcJobNoe<{node.pk}>: skipping `get_detailed_job_info`')
                 retrieved = await execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
             else:
                 try:
-                    detailed_job_info = scheduler.get_detailed_job_info(node.get_job_id())
+                    detailed_job_info = scheduler.get_detailed_job_info(job_id)
                 except FeatureNotAvailable:
                     logger.info(f'detailed job info not available for scheduler of CalcJob<{node.pk}>')
                     node.set_detailed_job_info(None)
@@ -365,7 +366,7 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
     authinfo = node.get_authinfo()
 
     async def do_stash():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
 
             logger.info(f'stashing calculation<{node.pk}>')
@@ -377,9 +378,12 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
             initial_interval,
             max_attempts,
             logger=node.logger,
-            ignore_exceptions=plumpy.process_states.Interruption,
+            ignore_exceptions=(plumpy.process_states.Interruption, StashingError),
         )
     except plumpy.process_states.Interruption:
+        raise
+    except StashingError:
+        # Re-raise StashingError so it can be handled in the Waiting state with an exit code
         raise
     except Exception as exception:
         logger.warning(f'stashing calculation<{node.pk}> failed')
@@ -387,6 +391,42 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
     else:
         node.set_state(CalcJobState.RETRIEVING)
         logger.info(f'stashing calculation<{node.pk}> successful')
+        return
+
+
+async def task_unstash_job(node: CalcJobNode, transport_queue: TransportQueue, cancellable: InterruptableFuture):
+    if node.get_state() == CalcJobState.SUBMITTING:
+        logger.warning(f'CalcJob<{node.pk}> already marked as SUBMITTING, skipping task_update_job')
+        return
+
+    initial_interval = get_config_option(RETRY_INTERVAL_OPTION)
+    max_attempts = get_config_option(MAX_ATTEMPTS_OPTION)
+
+    authinfo = node.get_authinfo()
+
+    async def do_unstash():
+        async with transport_queue.request_transport(authinfo) as request:
+            transport = await cancellable.with_interrupt(request)
+
+            logger.info(f'unstashing calculation<{node.pk}>')
+            return await execmanager.unstash_calculation(node, transport)
+
+    try:
+        await utils.exponential_backoff_retry(
+            do_unstash,
+            initial_interval,
+            max_attempts,
+            logger=node.logger,
+            ignore_exceptions=plumpy.process_states.Interruption,
+        )
+    except plumpy.process_states.Interruption:
+        raise
+    except Exception as exception:
+        logger.warning(f'unstashing calculation<{node.pk}> failed')
+        raise TransportTaskException(f'unstash_calculation failed {max_attempts} times consecutively') from exception
+    else:
+        node.set_state(CalcJobState.SUBMITTING)
+        logger.info(f'unstashing calculation<{node.pk}> successful')
         return
 
 
@@ -414,7 +454,7 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
     authinfo = node.get_authinfo()
 
     async def do_kill():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             return execmanager.kill_calculation(node, transport)
 
@@ -447,7 +487,7 @@ class Waiting(plumpy.process_states.Waiting):
         super().__init__(process, done_callback, msg, data)
         self._task: InterruptableFuture | None = None
         self._killing: plumpy.futures.Future | None = None
-        self._command: Callable[..., Any] | None = None
+        self._command: str | None = None
         self._monitor_result: CalcJobMonitorResult | None = None
         self._monitors: CalcJobMonitors | None = None
 
@@ -481,7 +521,7 @@ class Waiting(plumpy.process_states.Waiting):
         self._task = None
         self._killing = None
 
-    async def execute(self) -> plumpy.process_states.State:  # type: ignore[override]
+    async def execute(self) -> plumpy.process_states.State | plumpy.base.state_machine.State:  # type: ignore[override]
         """Override the execute coroutine of the base `Waiting` state.
         Using the plumpy state machine the waiting state is repeatedly re-entered with different commands.
         The waiting state is not always the same instance, it could be re-instantiated when re-entering this method,
@@ -516,18 +556,22 @@ class Waiting(plumpy.process_states.Waiting):
         try:
             if self._command == UPLOAD_COMMAND:
                 skip_submit = await self._launch_task(task_upload_job, self.process, transport_queue)
+                # Note: we do both `task_upload_job` and `task_unstash_job` at the same time,
+                # only because `skip_submit` is not easily accesible outside this `if` block!
+                if node.get_option('unstash') and node.process_type == 'aiida.calculations:core.unstash':
+                    await self._launch_task(task_unstash_job, node, transport_queue)
                 if skip_submit:
                     result = self.stash(monitor_result=self._monitor_result)
                 else:
                     result = self.submit()
 
             elif self._command == SUBMIT_COMMAND:
-                result = await self._launch_task(task_submit_job, node, transport_queue)
+                task_result = await self._launch_task(task_submit_job, node, transport_queue)
 
-                if isinstance(result, ExitCode):
+                if isinstance(task_result, ExitCode):
                     # The scheduler plugin returned an exit code from ``Scheduler.submit_job`` indicating the
                     # job submission failed due to a non-transient problem and the job should be terminated.
-                    return self.create_state(ProcessState.RUNNING, self.process.terminate, result)
+                    return self.create_state(ProcessState.RUNNING, self.process.terminate, task_result)
 
                 result = self.update()
 
@@ -548,12 +592,12 @@ class Waiting(plumpy.process_states.Waiting):
 
                     if monitor_result and not monitor_result.retrieve:
                         exit_code = self.process.exit_codes.STOPPED_BY_MONITOR.format(message=monitor_result.message)
-                        return self.create_state(ProcessState.RUNNING, self.process.terminate, exit_code)  # type: ignore[return-value]
+                        return self.create_state(ProcessState.RUNNING, self.process.terminate, exit_code)
 
                 result = self.stash(monitor_result=monitor_result)
 
             elif self._command == STASH_COMMAND:
-                if node.get_option('stash') is not None:
+                if node.get_option('stash'):
                     await self._launch_task(task_stash_job, node, transport_queue)
                 result = self.retrieve(monitor_result=self._monitor_result)
 
@@ -581,6 +625,9 @@ class Waiting(plumpy.process_states.Waiting):
 
         except TransportTaskException as exception:
             raise plumpy.process_states.PauseInterruption(f'Pausing after failed transport task: {exception}')
+        except StashingError as exception:
+            exit_code = self.process.exit_codes.ERROR_STASHING_FAILED.format(message=str(exception))
+            return self.create_state(ProcessState.RUNNING, self.process.terminate, exit_code)
         except plumpy.process_states.KillInterruption as exception:
             node.set_process_status(str(exception))
             return self.retrieve(monitor_result=self._monitor_result)
@@ -666,6 +713,13 @@ class Waiting(plumpy.process_states.Waiting):
         return self.create_state(  # type: ignore[return-value]
             ProcessState.WAITING, None, msg=msg, data={'command': STASH_COMMAND, 'monitor_result': monitor_result}
         )
+
+    # def unstash(self, monitor_result: CalcJobMonitorResult | None = None) -> 'Waiting':
+    #     """Return the `Waiting` state that will `unstash` the `CalcJob`."""
+    #     msg = 'Waiting to unstash'
+    #     return self.create_state(  # type: ignore[return-value]
+    #         ProcessState.WAITING, None, msg=msg, data={'command': UNSTASH_COMMAND, 'monitor_result': monitor_result}
+    #     )
 
     def retrieve(self, monitor_result: CalcJobMonitorResult | None = None) -> 'Waiting':
         """Return the `Waiting` state that will `retrieve` the `CalcJob`."""

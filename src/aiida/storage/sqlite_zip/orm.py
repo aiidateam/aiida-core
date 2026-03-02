@@ -339,8 +339,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
 
         raise ValueError(f'SQLite does not support JSON query: {query_str}')
 
-    @staticmethod
-    def get_filter_expr_from_column(operator: str, value: Any, column) -> BinaryExpression:
+    def get_filter_expr_from_column(self, operator: str, value: Any, column) -> BinaryExpression:
         # Label is used because it is what is returned for the
         # 'state' column by the hybrid_column construct
         if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):
@@ -363,7 +362,8 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
         elif operator == 'ilike':
             expr = database_entity.ilike(value, escape='\\')
         elif operator == 'in':
-            expr = database_entity.in_(value)
+            # Use the smarter IN clause implementation from parent class
+            expr = self._create_smarter_in_clause(column, value)
         else:
             raise ValueError(f'Unknown operator {operator} for filters on columns')
         return expr

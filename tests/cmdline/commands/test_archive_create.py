@@ -17,7 +17,7 @@ import pytest
 from aiida.cmdline.commands import cmd_archive
 from aiida.orm import Computer, Dict, Group, InstalledCode
 from aiida.storage.sqlite_zip.migrator import list_versions
-from aiida.tools.archive import ArchiveFormatSqlZip
+from aiida.tools.archive.implementations.sqlite_zip.main import ArchiveFormatSqlZip
 from tests.utils.archives import get_archive_file
 
 pytest.mark.usefixtures('chdir_tmp_path')
@@ -208,3 +208,26 @@ def test_info_empty_archive(run_cli_command):
     filename_input = get_archive_file('empty.aiida', filepath='export/migrate')
     result = run_cli_command(cmd_archive.archive_info, [filename_input], raises=True)
     assert 'archive file unreadable' in result.output
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_info_entities_starting_set_truncation(run_cli_command, tmp_path):
+    """Test that entities_starting_set is truncated in non-detailed mode and shown fully with --detailed."""
+    # Create 10 nodes to test truncation (should show 5 + message)
+    nodes = [Dict().store() for _ in range(10)]
+    filename_output = tmp_path / 'archive.aiida'
+
+    # Create archive with 10 nodes
+    options = ['-N'] + [str(node.pk) for node in nodes] + ['--', filename_output]
+    run_cli_command(cmd_archive.create, options)
+
+    # Test without --detailed (should be truncated)
+    result = run_cli_command(cmd_archive.archive_info, [filename_output])
+    assert '... and 5 more (use --detailed to show all)' in result.output
+
+    # Test with --detailed (should show all)
+    result_detailed = run_cli_command(cmd_archive.archive_info, ['--detailed', filename_output])
+    assert '... and 5 more (use --detailed to show all)' not in result_detailed.output
+    # All 10 UUIDs should be present in detailed mode
+    for node in nodes:
+        assert str(node.uuid) in result_detailed.output

@@ -93,6 +93,28 @@ This is controlled by the ``max_iterations`` input, which defaults to ``5``:
 If the subprocess fails and is restarted repeatedly until ``max_iterations`` is reached without succeeding, the work chain will abort with exit code ``401`` (``ERROR_MAXIMUM_ITERATIONS_EXCEEDED``).
 
 
+**Pausing on maximum iterations**
+
+.. versionadded:: 2.8
+
+You can configure the ``BaseRestartWorkChain`` to pause when reaching the maximum number of iterations, allowing you to inspect the situation and decide whether to continue or abort.
+This is controlled by the ``pause_on_max_iterations`` input:
+
+.. code-block:: python
+
+    inputs = {
+        'max_iterations': 1,
+        'pause_on_max_iterations': True,
+        # ... other inputs
+    }
+    submit(SomeBaseWorkChain, **inputs)
+
+When ``pause_on_max_iterations`` is ``True`` and the maximum iteration limit is reached:
+
+1. The iteration counter is reset to zero.
+2. The work chain pauses for user inspection.
+3. You can resume using ``verdi process play <PK>`` or kill the work chain using ``verdi process kill <PK>``.
+
 Handler overrides
 -----------------
 

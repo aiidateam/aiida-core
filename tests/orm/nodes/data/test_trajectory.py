@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import StructureData, TrajectoryData, load_node
 
 
@@ -10,6 +11,7 @@ from aiida.orm import StructureData, TrajectoryData, load_node
 def trajectory_data():
     """Return a dictionary of data to create a ``TrajectoryData``."""
     symbols = ['H'] * 5 + ['Cl'] * 5
+    pbc = [True, True, True]
     stepids = np.arange(1000, 3000, 10)
     times = stepids * 0.01
     positions = np.arange(6000, dtype=float).reshape((200, 10, 3))
@@ -23,6 +25,7 @@ def trajectory_data():
         'cells': cells,
         'times': times,
         'velocities': velocities,
+        'pbc': pbc,
     }
 
 
@@ -107,10 +110,11 @@ class TestTrajectory:
         stepid, time, cell, symbols, positions, velocities = trajectory.get_step_data(-2)
         assert stepid == trajectory_data['stepids'][-2]
         assert time == trajectory_data['times'][-2]
-        np.array_equal(cell, trajectory_data['cells'][-2, :, :])
-        np.array_equal(symbols, trajectory_data['symbols'])
-        np.array_equal(positions, trajectory_data['positions'][-2, :, :])
-        np.array_equal(velocities, trajectory_data['velocities'][-2, :, :])
+        assert np.array_equal(cell, trajectory_data['cells'][-2, :, :])
+        assert np.array_equal(symbols, trajectory_data['symbols'])
+        assert np.array_equal(trajectory.pbc, trajectory_data['pbc'])
+        assert np.array_equal(positions, trajectory_data['positions'][-2, :, :])
+        assert np.array_equal(velocities, trajectory_data['velocities'][-2, :, :])
 
     def test_trajectory_get_step_data_empty(self, trajectory_data):
         """Test the `get_step_data` method when some arrays are not defined."""
@@ -123,6 +127,7 @@ class TestTrajectory:
         assert np.array_equal(symbols, trajectory_data['symbols'])
         assert np.array_equal(positions, trajectory_data['positions'][3, :, :])
         assert velocities is None
+        assert trajectory.pbc == (False, False, False), 'Trajectory without a cell should not have PBC set'
 
     def test_trajectory_get_step_structure(self, trajectory_data):
         """Test the `get_step_structure` method."""
@@ -141,3 +146,100 @@ class TestTrajectory:
 
         with pytest.raises(IndexError):
             trajectory.get_step_structure(500)
+
+    def test_trajectory_pbc_structures(self, trajectory_data):
+        """Test the `pbc` for the `TrajectoryData` using structure inputs."""
+        # Test non-pbc structure with no cell
+        structure = StructureData(cell=None, pbc=[False, False, False])
+        structure.append_atom(position=[0.0, 0.0, 0.0], symbols='H')
+
+        trajectory = TrajectoryData(structurelist=(structure,))
+
+        trajectory.get_step_structure(0).store()  # Verify that the `StructureData` can be stored
+        assert trajectory.get_step_structure(0).pbc == structure.pbc
+
+        # Test failure for incorrect pbc
+        trajectory_data_incorrect = trajectory_data.copy()
+        trajectory_data_incorrect['pbc'] = [0, 0, 0]
+        with pytest.raises(ValueError, match='`pbc` must be a list/tuple of length three with boolean values'):
+            trajectory = TrajectoryData()
+            trajectory.set_trajectory(**trajectory_data_incorrect)
+
+        # Test failure when structures have different pbc
+        cell = [[3.0, 0.1, 0.3], [-0.05, 3.0, -0.2], [0.02, -0.08, 3.0]]
+        structure_periodic = StructureData(cell=cell)
+        structure_periodic.append_atom(position=[0.0, 0.0, 0.0], symbols='H')
+        structure_non_periodic = StructureData(cell=cell, pbc=[False, False, False])
+        structure_non_periodic.append_atom(position=[0.0, 0.0, 0.0], symbols='H')
+
+        with pytest.raises(ValueError, match='All structures should have the same `pbc`'):
+            TrajectoryData(structurelist=(structure_periodic, structure_non_periodic))
+
+    def test_trajectory_pbc_set_trajectory(self):
+        """Test the `pbc` for the `TrajectoryData` using `set_trajectory`."""
+        data = {
+            'symbols': ['H'],
+            'positions': np.array(
+                [
+                    [
+                        [0.0, 0.0, 0.0],
+                    ]
+                ]
+            ),
+        }
+        trajectory = TrajectoryData()
+
+        data.update(
+            {
+                'cells': None,
+                'pbc': None,
+            }
+        )
+        trajectory.set_trajectory(**data)
+        assert trajectory.get_step_structure(0).pbc == (False, False, False)
+
+        data.update(
+            {
+                'cells': None,
+                'pbc': [False, False, False],
+            }
+        )
+        trajectory.set_trajectory(**data)
+        assert trajectory.get_step_structure(0).pbc == (False, False, False)
+
+        data.update(
+            {
+                'cells': None,
+                'pbc': [True, False, False],
+            }
+        )
+        with pytest.raises(ValueError, match='Periodic boundary conditions are only possible when a cell is defined'):
+            trajectory.set_trajectory(**data)
+
+        data.update(
+            {
+                'cells': np.array([[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]]),
+                'pbc': None,
+            }
+        )
+        with pytest.warns(AiidaDeprecationWarning, match="When 'cells' is not None, the periodic"):
+            trajectory.set_trajectory(**data)
+
+        data.update(
+            {
+                'cells': np.array([[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]]),
+                'pbc': (True, False, False),
+            }
+        )
+        trajectory.set_trajectory(**data)
+        assert trajectory.get_step_structure(0).pbc == (True, False, False)
+
+    def test_trajectory_without_pbc(self, trajectory_data):
+        """Test old `TrajectoryData` that do not have the `pbc` attribute."""
+        trajectory = TrajectoryData()
+        trajectory.set_trajectory(**trajectory_data)
+        trajectory.base.attributes.delete('pbc')  # Emulate an old TrajectoryData without pbc
+
+        assert trajectory.pbc is None
+        structure = trajectory.get_step_structure(0)
+        assert structure.pbc == (True, True, True)

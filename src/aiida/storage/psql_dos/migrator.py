@@ -83,9 +83,6 @@ class PsqlDosMigrator:
         return self
 
     def __exit__(self, exc_type, exc, tb):
-        if self._inspector is not None:
-            self._inspector = None
-
         if self._connection is not None:
             self._connection.close()
             self._connection = None

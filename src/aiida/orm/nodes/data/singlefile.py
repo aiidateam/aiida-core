@@ -94,14 +94,17 @@ class SinglefileData(Data):
         if file is not None and content is not None:
             raise ValueError('cannot specify both `file` and `content`.')
 
-        self.filename = filename
-
         if content is not None:
             file = content
 
         if file is not None:
             self.set_file(file, filename=filename)
         else:
+            # Store the filename if provided, even if the file is not yet set.
+            # We check for consistency later on `store`.
+            if filename is not None:
+                self.filename = filename
+
             warnings.warn(
                 'No content provided for `SinglefileData`. Please use the `set_file` method to set the file content.',
                 stacklevel=2,

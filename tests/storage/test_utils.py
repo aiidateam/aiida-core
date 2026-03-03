@@ -41,7 +41,7 @@ def test_sqlite_batches_large_lists(sqlite_session):
     values = list(range(IN_CLAUSE_BATCH_SIZE + 1))
     in_clause = _create_smarter_in_clause(session=session, column=column, values=values)
     sql = str(in_clause.compile(session.bind))
-    assert sql.count('json_each') == 2
+    assert sql.count('IN (SELECT') == 2
     assert ' OR ' in sql
 
 
@@ -70,5 +70,5 @@ def test_psql_batches_large_lists():
     values = list(range(IN_CLAUSE_BATCH_SIZE + 1))
     in_clause = _create_smarter_in_clause(session=session, column=DbNode.id, values=values)
     sql = str(in_clause.compile(session.bind))
-    assert sql.count('unnest') == 2
+    assert sql.count('IN (SELECT') == 2
     assert ' OR ' in sql

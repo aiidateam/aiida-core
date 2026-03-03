@@ -12,51 +12,63 @@ from __future__ import annotations
 
 import json
 from functools import singledispatch
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Sequence
 
+from sqlalchemy import Select, or_, select, type_coerce
 from sqlalchemy import cast as sql_cast
 from sqlalchemy import func as sa_func
-from sqlalchemy import or_, select, type_coerce
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.dialects.sqlite.base import SQLiteDialect
+from sqlalchemy.engine import Dialect
 from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.types import TypeEngine
 
 from aiida.common.utils import batch_iter
 
 if TYPE_CHECKING:
-    from sqlalchemy import Function, Select, TableValuedAlias
     from sqlalchemy.orm.session import Session
-    from sqlalchemy.sql.elements import KeyedColumnElement
+
+
+# NOTE: Controls how many values are passed to a single unnest() (PostgreSQL) or json_each() (SQLite) call.
+# For very large lists, multiple batches are combined with OR. 500k balances memory usage with query performance.
+IN_CLAUSE_BATCH_SIZE: int = 500_000
 
 
 @singledispatch
-def _in_clause_select(dialect, coltype: Any, values) -> 'Select[Any]':
-    """Return a SELECT subquery over ``values`` appropriate for the given dialect.
+def _build_select_stmt(dialect: Dialect, coltype: TypeEngine[Any], values: Sequence[Any]) -> Select[Any]:
+    """Return a SELECT statement over ``values`` appropriate for the given dialect.
 
     Dispatches to the dialect-specific implementation via :func:`singledispatch`.
+
+    :param dialect: The SQLAlchemy dialect (e.g., PostgreSQL, SQLite).
+    :param coltype: The SQLAlchemy type of the column being filtered.
+    :param values: The sequence of values to match against.
+    :return: A SELECT statement that can be used as a subquery.
     """
     msg = f'Unsupported database dialect: {type(dialect).__name__}. AiiDA only supports PostgreSQL and SQLite.'
     raise NotImplementedError(msg)
 
 
-@_in_clause_select.register(PGDialect)
-def _postgresql_in_clause_select(dialect, coltype: Any, values) -> 'Select[Any]':
+@_build_select_stmt.register
+def _build_select_stmt_psql(dialect: PGDialect, coltype: TypeEngine[Any], values: Sequence[Any]) -> Select[Any]:
     """PostgreSQL: ``SELECT unnest(:array)`` — passes the entire list as 1 parameter."""
     from sqlalchemy.dialects.postgresql import ARRAY
 
-    unnest_expr: Function[Any] = sa_func.unnest(type_coerce(expression=values, type_=ARRAY(item_type=coltype)))
+    unnest_expr = sa_func.unnest(type_coerce(expression=values, type_=ARRAY(item_type=coltype)))
     return select(unnest_expr)
 
 
-@_in_clause_select.register(SQLiteDialect)
-def _sqlite_in_clause_select(dialect, coltype: Any, values) -> 'Select[Any]':
+@_build_select_stmt.register
+def _build_select_stmt_sqlite(dialect: SQLiteDialect, coltype: TypeEngine[Any], values: Sequence[Any]) -> Select[Any]:
     """SQLite: ``SELECT CAST(value AS coltype) FROM json_each(:json)`` — passes the list as 1 parameter."""
-    json_each_table: TableValuedAlias = sa_func.json_each(json.dumps(list(values))).table_valued('value')
-    value_col: KeyedColumnElement = json_each_table.c.value
+    json_each_table = sa_func.json_each(json.dumps(list(values))).table_valued('value')
+    value_col = json_each_table.c.value
     return select(sql_cast(expression=value_col, type_=coltype)).select_from(json_each_table)
 
 
-def _create_smarter_in_clause(session: 'Session', column, values) -> 'ColumnElement[bool]':
+def _create_smarter_in_clause(
+    session: 'Session', column: ColumnElement[Any], values: Sequence[Any]
+) -> ColumnElement[bool]:
     """Return an IN condition using database-specific functions to avoid parameter limits.
 
     Uses ``unnest()`` (PostgreSQL) or ``json_each()`` (SQLite) to pass large lists as a single
@@ -89,24 +101,25 @@ def _create_smarter_in_clause(session: 'Session', column, values) -> 'ColumnElem
             OR column IN (SELECT unnest(:array_3))  -- Remaining 500k
         )
 
-    :param session: the SQLAlchemy session, used to detect the database dialect.
-    :param column: the SQLAlchemy column to filter on.
-    :param values: the list of values to match against.
+    :param session: The SQLAlchemy session, used to detect the database dialect.
+    :param column: The SQLAlchemy column to filter on.
+    :param values: The sequence of values to match against.
+    :return: A SQLAlchemy expression representing the IN clause.
     """
-    assert session.bind is not None
-    dialect = session.bind.dialect
-    coltype: Any = column.type
+    if session.bind is None:
+        msg = 'Session is not bound to an engine; cannot determine database dialect.'
+        raise RuntimeError(msg)
+    dialect: Dialect = session.bind.dialect
+    coltype: TypeEngine[Any] = column.type
 
-    batch_threshold = 500_000
-
-    if len(values) > batch_threshold:
+    if len(values) > IN_CLAUSE_BATCH_SIZE:
         # For very large lists, batch to avoid memory/performance issues
         # Create individual IN clauses for each batch and combine with OR
         batch_in_clauses = [
-            column.in_(_in_clause_select(dialect, coltype, batch).scalar_subquery())
-            for _, batch in batch_iter(values, batch_threshold)
+            column.in_(_build_select_stmt(dialect, coltype, batch).scalar_subquery())
+            for _, batch in batch_iter(values, IN_CLAUSE_BATCH_SIZE)
         ]
         return or_(*batch_in_clauses)
 
-    subq = _in_clause_select(dialect, coltype, values).scalar_subquery()
+    subq = _build_select_stmt(dialect, coltype, values).scalar_subquery()
     return column.in_(subq)

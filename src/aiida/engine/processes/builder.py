@@ -13,6 +13,8 @@ from collections.abc import Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any, Type
 from uuid import uuid4
 
+import yaml
+
 from aiida.engine.processes.ports import PortNamespace
 from aiida.orm import Dict, Node
 from aiida.orm.nodes.data.base import BaseType
@@ -23,6 +25,145 @@ if TYPE_CHECKING:
     from aiida.engine.processes.process import Process
 
 __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
+
+
+def _get_schema(
+    self,
+    keys_only: bool = True,
+    show_descriptions: bool = False,
+    show_types: bool = True,
+    collapse: tuple[str, ...] = ('metadata',),
+    only_required: bool = False,
+    only_set: bool = False,
+    max_depth: int | None = None,
+) -> str:
+    """Return a YAML-formatted schema of all available inputs for this builder.
+
+    This method is dynamically attached to each ``ProcessBuilderNamespace`` instance
+    to provide introspection of the available input ports.
+
+    :param keys_only: If True (default), only show the structure of input names.
+        If False, include type and metadata information.
+    :param show_descriptions: Include help text for each input (only used when ``keys_only=False``).
+    :param show_types: Include expected data types (only used when ``keys_only=False``).
+    :param collapse: Tuple of namespace names to collapse to ``{...}``. Default: ``('metadata',)``.
+        Use ``()`` to expand everything, or add more like ``('metadata', 'monitors')``.
+    :param only_required: If True, only show required inputs. Default: False.
+    :param only_set: If True, only show inputs that have been explicitly set on the builder.
+        Default: False.
+    :param max_depth: Maximum nesting depth to display. None means unlimited.
+    :returns: YAML-formatted string of the input structure.
+
+    Example::
+
+        >>> builder = SomeProcess.get_builder()
+        >>> print(builder.get_schema())
+        code:
+        x:
+        y:
+        metadata: {...}
+
+        >>> print(builder.get_schema(collapse=()))  # expand everything
+        code:
+        x:
+        y:
+        metadata:
+          options:
+            resources:
+            ...
+
+        >>> print(builder.get_schema(only_required=True))
+        x:
+        y:
+
+        >>> builder.x = Int(1)
+        >>> print(builder.get_schema(only_set=True))
+        x: 1
+
+    """
+
+    def build_schema_dict(namespace: PortNamespace, data: dict, depth: int = 0) -> dict[str, Any]:
+        """Recursively build schema dictionary from port namespace."""
+        schema: dict[str, Any] = {}
+
+        for name, port in namespace.items():
+            # Check if this input is set in the builder's data
+            is_set = name in data
+
+            if isinstance(port, PortNamespace):
+                # Skip non-required namespaces if only_required is True
+                if only_required and not port.required:
+                    continue
+
+                # For only_set mode, get the nested data if it exists
+                nested_data = data.get(name, {})
+                if isinstance(nested_data, ProcessBuilderNamespace):
+                    nested_data = nested_data._data
+
+                # Skip empty namespaces in only_set mode
+                if only_set and not nested_data:
+                    continue
+
+                # Collapse specified namespaces or if max_depth is reached
+                if name in collapse or (max_depth is not None and depth >= max_depth):
+                    if only_set and nested_data:
+                        schema[name] = '{...}'
+                    elif not only_set:
+                        schema[name] = '{...}'
+                else:
+                    nested = build_schema_dict(port, nested_data, depth + 1)
+                    if nested or (not only_required and not only_set):
+                        schema[name] = nested
+            else:
+                # Skip non-required ports if only_required is True
+                if only_required and not port.required:
+                    continue
+
+                # Skip unset ports if only_set is True
+                if only_set and not is_set:
+                    continue
+
+                if only_set:
+                    # Show the actual value when only_set is True
+                    value = data.get(name)
+                    # Try to get a nice representation
+                    if value is not None and hasattr(value, 'value'):
+                        schema[name] = value.value
+                    elif value is not None and hasattr(value, 'get_dict'):
+                        schema[name] = value.get_dict()
+                    elif value is not None:
+                        schema[name] = str(value)
+                    else:
+                        schema[name] = None
+                elif keys_only:
+                    schema[name] = None
+                else:
+                    port_info: dict[str, Any] = {}
+                    if show_types and port.valid_type is not None:
+                        port_info['type'] = str(port.valid_type)
+                    if show_descriptions and port.help:
+                        port_info['help'] = port.help
+                    if port.required:
+                        port_info['required'] = True
+                    if port.has_default():
+                        port_info['has_default'] = True
+
+                    # Simplify output: if only type info, just show the type string
+                    if len(port_info) == 1 and 'type' in port_info:
+                        schema[name] = port_info['type']
+                    else:
+                        schema[name] = port_info if port_info else None
+
+        return schema
+
+    schema_dict = build_schema_dict(self._port_namespace, self._data)
+
+    # Reorder: move 'metadata' to the end if present
+    if 'metadata' in schema_dict:
+        metadata = schema_dict.pop('metadata')
+        schema_dict['metadata'] = metadata
+
+    return yaml.dump(schema_dict, default_flow_style=False, sort_keys=False)
 
 
 class PrettyEncoder(json.JSONEncoder):
@@ -56,10 +197,10 @@ class ProcessBuilderNamespace(MutableMapping):
 
         """
         self._port_namespace = port_namespace
-        self._valid_fields = []
-        self._data = {}
+        self._valid_fields: list[str] = []
+        self._data: dict[str, Any] = {}
 
-        dynamic_properties = {}
+        dynamic_properties: dict[str, Any] = {}
 
         # The name and port objects have to be passed to the defined functions as defaults for
         # their arguments, because this way the content at the time of defining the method is
@@ -97,6 +238,9 @@ class ProcessBuilderNamespace(MutableMapping):
             getter = property(fgetter)
             getter.setter(fsetter)
             dynamic_properties[name] = getter
+
+        # Add helper methods to the dynamic properties
+        dynamic_properties['get_schema'] = _get_schema
 
         # The dynamic property can only be attached to a class and not an instance, however, we cannot attach it to
         # the ``ProcessBuilderNamespace`` class since it would interfere with other instances that may already
@@ -145,7 +289,8 @@ class ProcessBuilderNamespace(MutableMapping):
         return self._data.__repr__()
 
     def __dir__(self):
-        return sorted(set(self._valid_fields + [key for key, _ in self.__dict__.items() if key.startswith('_')]))
+        base = set(self._valid_fields + [key for key, _ in self.__dict__.items() if key.startswith('_')])
+        return sorted(base | {'get_schema'})
 
     def __iter__(self):
         for key in self._data:
@@ -187,7 +332,7 @@ class ProcessBuilderNamespace(MutableMapping):
         :param kwds: keyword value pairs that should be mapped onto the ports.
         """
         if len(args) > 1:
-            raise TypeError(f'update expected at most 1 arguments, got {int(len(args))}')
+            raise TypeError(f'update expected at most 1 arguments, got {len(args)}')
 
         if args:
             for key, value in args[0].items():
@@ -249,8 +394,6 @@ class ProcessBuilder(ProcessBuilderNamespace):
 
     def _repr_pretty_(self, p, _) -> str:
         """Pretty representation for in the IPython console and notebooks."""
-        import yaml
-
         return p.text(
             f'Process class: {self._process_class.__name__}\n'
             f'Inputs:\n{yaml.safe_dump(json.JSONDecoder().decode(PrettyEncoder().encode(self)))}'

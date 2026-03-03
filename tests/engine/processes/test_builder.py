@@ -466,3 +466,171 @@ def test_pretty_repr(example_inputs):
     name_spaced: underscored
     """
     assert pretty(builder) == textwrap.dedent(pretty_repr.lstrip('\n'))
+
+
+def test_get_schema_basic():
+    """Test the basic ``get_schema`` method of the ``ProcessBuilder`` class."""
+    import yaml
+
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+
+    builder = ArithmeticAddCalculation.get_builder()
+
+    # Test keys_only mode (default)
+    schema = builder.get_schema()
+    assert isinstance(schema, str)
+    assert 'code:' in schema
+    assert 'x:' in schema
+    assert 'y:' in schema
+
+    # Test that it returns valid YAML
+    parsed = yaml.safe_load(schema)
+    assert isinstance(parsed, dict)
+    assert 'code' in parsed
+    assert 'metadata' in parsed
+
+    # Test that get_schema appears in dir()
+    assert 'get_schema' in dir(builder)
+
+    # Test on a nested namespace
+    nested_schema = builder.metadata.get_schema()
+    assert isinstance(nested_schema, str)
+
+
+def test_get_schema_collapse():
+    """Test the ``collapse`` parameter of ``get_schema``."""
+    import yaml
+
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+
+    builder = ArithmeticAddCalculation.get_builder()
+
+    # Default: metadata is collapsed
+    schema_default = builder.get_schema()
+    parsed = yaml.safe_load(schema_default)
+    assert parsed['metadata'] == '{...}', 'metadata should be collapsed by default'
+
+    # Expand everything with collapse=()
+    schema_expanded = builder.get_schema(collapse=())
+    parsed_expanded = yaml.safe_load(schema_expanded)
+    assert isinstance(parsed_expanded['metadata'], dict), 'metadata should be expanded when collapse=()'
+    assert 'options' in parsed_expanded['metadata'], 'expanded metadata should contain options'
+
+    # Collapse multiple namespaces
+    schema_multi = builder.get_schema(collapse=('metadata', 'monitors'))
+    parsed_multi = yaml.safe_load(schema_multi)
+    assert parsed_multi['metadata'] == '{...}'
+    assert parsed_multi['monitors'] == '{...}'
+
+
+def test_get_schema_only_required():
+    """Test the ``only_required`` parameter of ``get_schema``."""
+    import yaml
+
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+
+    builder = ArithmeticAddCalculation.get_builder()
+
+    # Get full schema and required-only schema
+    schema_all = builder.get_schema(only_required=False, collapse=())
+    schema_required = builder.get_schema(only_required=True, collapse=())
+    parsed_all = yaml.safe_load(schema_all)
+    parsed_required = yaml.safe_load(schema_required)
+
+    # Required schema should have fewer entries
+    assert len(parsed_required) <= len(parsed_all), 'required-only should have fewer or equal entries'
+
+    # x and y are required for ArithmeticAddCalculation
+    assert 'x' in parsed_required, 'required input x should be present'
+    assert 'y' in parsed_required, 'required input y should be present'
+
+
+def test_get_schema_only_set():
+    """Test the ``only_set`` parameter of ``get_schema``."""
+    import yaml
+
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+
+    builder = ArithmeticAddCalculation.get_builder()
+
+    # Initially nothing is set
+    schema_empty = builder.get_schema(only_set=True)
+    parsed_empty = yaml.safe_load(schema_empty)
+    assert parsed_empty is None or parsed_empty == {}, 'should be empty when nothing is set'
+
+    # Set some values
+    builder.x = orm.Int(42)
+    builder.y = orm.Int(7)
+
+    schema_set = builder.get_schema(only_set=True)
+    parsed_set = yaml.safe_load(schema_set)
+
+    assert 'x' in parsed_set, 'x should be in schema after being set'
+    assert 'y' in parsed_set, 'y should be in schema after being set'
+    assert parsed_set['x'] == 42, 'x value should be shown'
+    assert parsed_set['y'] == 7, 'y value should be shown'
+    assert 'code' not in parsed_set, 'unset inputs should not appear'
+
+
+def test_get_schema_max_depth():
+    """Test the ``max_depth`` parameter of ``get_schema``."""
+    import yaml
+
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+
+    builder = ArithmeticAddCalculation.get_builder()
+
+    # With max_depth=0, all namespaces should be collapsed at first level
+    schema_depth0 = builder.get_schema(max_depth=0, collapse=())
+    parsed = yaml.safe_load(schema_depth0)
+    assert parsed['metadata'] == '{...}', 'metadata should be collapsed at depth 0'
+    assert parsed['monitors'] == '{...}', 'monitors should be collapsed at depth 0'
+
+    # With max_depth=1, first level is expanded, second level collapsed
+    schema_depth1 = builder.get_schema(max_depth=1, collapse=())
+    parsed = yaml.safe_load(schema_depth1)
+    assert isinstance(parsed['metadata'], dict), 'first level should be expanded'
+    assert parsed['metadata']['options'] == '{...}', 'second level should be collapsed'
+
+
+def test_get_schema_show_types():
+    """Test the ``show_types`` parameter of ``get_schema``."""
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+
+    builder = ArithmeticAddCalculation.get_builder()
+
+    # With keys_only=False and show_types=True
+    schema_with_types = builder.get_schema(keys_only=False, show_types=True, collapse=())
+    assert 'type:' in schema_with_types or "class 'aiida.orm" in schema_with_types
+    assert 'Int' in schema_with_types, 'Int type should appear for x or y inputs'
+
+
+def test_get_schema_show_descriptions():
+    """Test the ``show_descriptions`` parameter of ``get_schema``."""
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+
+    builder = ArithmeticAddCalculation.get_builder()
+
+    # With show_descriptions=True
+    schema_with_desc = builder.get_schema(keys_only=False, show_descriptions=True, collapse=())
+    assert 'help:' in schema_with_desc, 'help text should be present when show_descriptions=True'
+
+
+def test_get_schema_metadata_at_end():
+    """Test that metadata appears at the end of the schema output."""
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+
+    builder = ArithmeticAddCalculation.get_builder()
+
+    schema = builder.get_schema()
+    lines = schema.strip().split('\n')
+
+    # Find the line with 'metadata:'
+    metadata_line_idx = None
+    for i, line in enumerate(lines):
+        if line.startswith('metadata:'):
+            metadata_line_idx = i
+            break
+
+    assert metadata_line_idx is not None, 'metadata should be in schema'
+    assert metadata_line_idx == len(lines) - 1, 'metadata should be the last top-level entry'

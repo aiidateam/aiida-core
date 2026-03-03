@@ -72,8 +72,8 @@ class ProcessBuilderNamespace(MutableMapping):
                 # Only add the nested namespace to _data if populate_defaults is True.
                 # This prevents empty namespaces from appearing in the builder when they
                 # have no values set and populate_defaults=False.
-                if port.populate_defaults:
-                    self._data[name] = ProcessBuilderNamespace(port)
+                #if port.populate_defaults:
+                self._data[name] = ProcessBuilderNamespace(port)
 
                 def fgetter(self, name=name, port=port, default=None):
                     # Lazily create the ProcessBuilderNamespace if it doesn't exist yet.

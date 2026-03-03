@@ -8,6 +8,8 @@
 ###########################################################################
 """Convenience classes to help building the input dictionaries for Processes."""
 
+from __future__ import annotations
+
 import json
 from collections.abc import Mapping, MutableMapping
 from typing import TYPE_CHECKING, Any, Type
@@ -50,11 +52,9 @@ def _format_valid_type(valid_type) -> str:
 
 def _get_schema(
     self,
-    keys_only: bool = False,
-    show_help: bool = False,
+    format: str = 'compact',  # Literal['compact', 'keys', 'verbose']
+    show: str = 'all',  # Literal['all', 'required', 'set']
     collapse: tuple[str, ...] = ('metadata',),
-    only_required: bool = False,
-    only_set: bool = False,
     max_depth: int | None = None,
 ) -> str:
     """Return a YAML-formatted schema of all available inputs for this builder.
@@ -62,15 +62,20 @@ def _get_schema(
     This method is dynamically attached to each ``ProcessBuilderNamespace`` instance
     to provide introspection of the available input ports.
 
-    :param keys_only: If True, only show the structure of input names without type information.
-        Default: False (shows compact type info like ``x: Int (required)``).
-    :param show_help: Include help text for each input. When True, output uses a nested
-        format with 'type' and 'help' keys. Default: False.
+    :param format: Output format. Options:
+
+        - ``'compact'`` (default): Shows type and required status inline, e.g. ``x: Int (required)``
+        - ``'keys'``: Only show input names without type information
+        - ``'verbose'``: Nested format with type, help text, and other metadata
+
+    :param show: Filter which inputs to display. Options:
+
+        - ``'all'`` (default): Show all inputs
+        - ``'required'``: Only show required inputs
+        - ``'set'``: Only show inputs that have been explicitly set on the builder
+
     :param collapse: Tuple of namespace names to collapse to ``{...}``. Default: ``('metadata',)``.
         Use ``()`` to expand everything, or add more like ``('metadata', 'monitors')``.
-    :param only_required: If True, only show required inputs. Default: False.
-    :param only_set: If True, only show inputs that have been explicitly set on the builder.
-        Default: False.
     :param max_depth: Maximum nesting depth to display. None means unlimited.
     :returns: YAML-formatted string of the input structure.
 
@@ -83,21 +88,25 @@ def _get_schema(
         y: Int (required)
         metadata: {...}
 
-        >>> print(builder.get_schema(keys_only=True))
+        >>> print(builder.get_schema(format='keys'))
         code:
         x:
         y:
         metadata: {...}
 
-        >>> print(builder.get_schema(only_required=True))
+        >>> print(builder.get_schema(show='required'))
         x: Int (required)
         y: Int (required)
 
         >>> builder.x = Int(1)
-        >>> print(builder.get_schema(only_set=True))
+        >>> print(builder.get_schema(show='set'))
         x: 1
 
     """
+    if format not in ('compact', 'keys', 'verbose'):
+        raise ValueError(f"format must be 'compact', 'keys', or 'verbose', got {format!r}")
+    if show not in ('all', 'required', 'set'):
+        raise ValueError(f"show must be 'all', 'required', or 'set', got {show!r}")
 
     def build_schema_dict(namespace: PortNamespace, data: dict, depth: int = 0) -> dict[str, Any]:
         """Recursively build schema dictionary from port namespace."""
@@ -108,43 +117,43 @@ def _get_schema(
             is_set = name in data
 
             if isinstance(port, PortNamespace):
-                # Skip non-required namespaces if only_required is True
-                if only_required and not port.required:
+                # Skip non-required namespaces if show='required'
+                if show == 'required' and not port.required:
                     continue
 
-                # For only_set mode, get the nested data if it exists
+                # For show='set' mode, get the nested data if it exists
                 nested_data = data.get(name, {})
                 if isinstance(nested_data, ProcessBuilderNamespace):
                     nested_data = nested_data._data
 
-                # Skip empty namespaces in only_set mode
-                if only_set and not nested_data:
+                # Skip empty namespaces in show='set' mode
+                if show == 'set' and not nested_data:
                     continue
 
-                # For only_set mode, check if namespace has actual values (not just empty nested dicts)
+                # For show='set' mode, check if namespace has actual values (not just empty nested dicts)
                 # by recursively building the schema and checking if it's non-empty
                 nested = build_schema_dict(port, nested_data, depth + 1)
 
                 # Collapse specified namespaces or if max_depth is reached
                 if name in collapse or (max_depth is not None and depth >= max_depth):
-                    if only_set and nested:
+                    if show == 'set' and nested:
                         # Only show collapsed namespace if it actually has content
                         schema[name] = '{...}'
-                    elif not only_set:
+                    elif show != 'set':
                         schema[name] = '{...}'
-                elif nested or (not only_required and not only_set):
+                elif nested or show == 'all':
                     schema[name] = nested
             else:
-                # Skip non-required ports if only_required is True
-                if only_required and not port.required:
+                # Skip non-required ports if show='required'
+                if show == 'required' and not port.required:
                     continue
 
-                # Skip unset ports if only_set is True
-                if only_set and not is_set:
+                # Skip unset ports if show='set'
+                if show == 'set' and not is_set:
                     continue
 
-                if only_set:
-                    # Show the actual value when only_set is True
+                if show == 'set':
+                    # Show the actual value when show='set'
                     value = data.get(name)
                     # Try to get a nice representation
                     if value is not None and hasattr(value, 'value'):
@@ -155,9 +164,9 @@ def _get_schema(
                         schema[name] = str(value)
                     else:
                         schema[name] = None
-                elif keys_only:
+                elif format == 'keys':
                     schema[name] = None
-                elif show_help:
+                elif format == 'verbose':
                     # Verbose nested format with help text
                     port_info: dict[str, Any] = {}
                     if port.valid_type is not None:

@@ -522,8 +522,8 @@ def test_get_schema_collapse():
     assert parsed_multi['monitors'] == '{...}'
 
 
-def test_get_schema_only_required():
-    """Test the ``only_required`` parameter of ``get_schema``."""
+def test_get_schema_show_required():
+    """Test the ``show='required'`` parameter of ``get_schema``."""
     import yaml
 
     from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
@@ -531,8 +531,8 @@ def test_get_schema_only_required():
     builder = ArithmeticAddCalculation.get_builder()
 
     # Get full schema and required-only schema
-    schema_all = builder.get_schema(only_required=False, collapse=())
-    schema_required = builder.get_schema(only_required=True, collapse=())
+    schema_all = builder.get_schema(show='all', collapse=())
+    schema_required = builder.get_schema(show='required', collapse=())
     parsed_all = yaml.safe_load(schema_all)
     parsed_required = yaml.safe_load(schema_required)
 
@@ -544,8 +544,8 @@ def test_get_schema_only_required():
     assert 'y' in parsed_required, 'required input y should be present'
 
 
-def test_get_schema_only_set():
-    """Test the ``only_set`` parameter of ``get_schema``."""
+def test_get_schema_show_set():
+    """Test the ``show='set'`` parameter of ``get_schema``."""
     import yaml
 
     from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
@@ -553,7 +553,7 @@ def test_get_schema_only_set():
     builder = ArithmeticAddCalculation.get_builder()
 
     # Initially nothing is set
-    schema_empty = builder.get_schema(only_set=True)
+    schema_empty = builder.get_schema(show='set')
     parsed_empty = yaml.safe_load(schema_empty)
     assert parsed_empty is None or parsed_empty == {}, 'should be empty when nothing is set'
 
@@ -561,7 +561,7 @@ def test_get_schema_only_set():
     builder.x = orm.Int(42)
     builder.y = orm.Int(7)
 
-    schema_set = builder.get_schema(only_set=True)
+    schema_set = builder.get_schema(show='set')
     parsed_set = yaml.safe_load(schema_set)
 
     assert 'x' in parsed_set, 'x should be in schema after being set'
@@ -592,36 +592,49 @@ def test_get_schema_max_depth():
     assert parsed['metadata']['options'] == '{...}', 'second level should be collapsed'
 
 
-def test_get_schema_keys_only():
-    """Test the ``keys_only`` parameter of ``get_schema``."""
+def test_get_schema_format_keys():
+    """Test the ``format='keys'`` parameter of ``get_schema``."""
     import yaml
 
     from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
     builder = ArithmeticAddCalculation.get_builder()
 
-    # Default: types are shown
+    # Default (format='compact'): types are shown
     schema_default = builder.get_schema(collapse=())
     assert 'Int' in schema_default, 'Int type should appear in default output'
 
-    # With keys_only=True: no types shown
-    schema_keys_only = builder.get_schema(keys_only=True, collapse=())
-    parsed = yaml.safe_load(schema_keys_only)
-    # In keys_only mode, values should be None (rendered as empty in YAML)
-    assert parsed['x'] is None, 'x should have no type info in keys_only mode'
-    assert parsed['y'] is None, 'y should have no type info in keys_only mode'
+    # With format='keys': no types shown
+    schema_keys = builder.get_schema(format='keys', collapse=())
+    parsed = yaml.safe_load(schema_keys)
+    # In keys mode, values should be None (rendered as empty in YAML)
+    assert parsed['x'] is None, 'x should have no type info in format=keys mode'
+    assert parsed['y'] is None, 'y should have no type info in format=keys mode'
 
 
-def test_get_schema_show_help():
-    """Test the ``show_help`` parameter of ``get_schema``."""
+def test_get_schema_format_verbose():
+    """Test the ``format='verbose'`` parameter of ``get_schema``."""
     from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
     builder = ArithmeticAddCalculation.get_builder()
 
-    # With show_help=True: nested format with help text
-    schema_with_help = builder.get_schema(show_help=True, collapse=())
-    assert 'help:' in schema_with_help, 'help text should be present when show_help=True'
-    assert 'type:' in schema_with_help, 'type should also be present in verbose mode'
+    # With format='verbose': nested format with help text
+    schema_verbose = builder.get_schema(format='verbose', collapse=())
+    assert 'help:' in schema_verbose, 'help text should be present in format=verbose'
+    assert 'type:' in schema_verbose, 'type should also be present in verbose mode'
+
+
+def test_get_schema_invalid_parameters():
+    """Test that invalid parameter values raise ValueError."""
+    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+
+    builder = ArithmeticAddCalculation.get_builder()
+
+    with pytest.raises(ValueError, match='format must be'):
+        builder.get_schema(format='invalid')
+
+    with pytest.raises(ValueError, match='show must be'):
+        builder.get_schema(show='invalid')
 
 
 def test_get_schema_metadata_at_end():

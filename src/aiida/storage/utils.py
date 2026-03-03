@@ -20,6 +20,7 @@ from sqlalchemy import func as sa_func
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.dialects.sqlite.base import SQLiteDialect
 from sqlalchemy.engine import Dialect
+from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.sql.elements import ColumnElement
 from sqlalchemy.types import TypeEngine
 
@@ -67,7 +68,7 @@ def _build_select_stmt_sqlite(dialect: SQLiteDialect, coltype: TypeEngine[Any], 
 
 
 def _create_smarter_in_clause(
-    session: 'Session', column: ColumnElement[Any], values: Sequence[Any]
+    session: 'Session', column: ColumnElement[Any] | InstrumentedAttribute[Any], values: Sequence[Any]
 ) -> ColumnElement[bool]:
     """Return an IN condition using database-specific functions to avoid parameter limits.
 

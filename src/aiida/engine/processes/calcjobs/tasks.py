@@ -22,7 +22,7 @@ import plumpy.persistence
 import plumpy.process_states
 
 from aiida.common.datastructures import CalcJobState
-from aiida.common.exceptions import FeatureNotAvailable, TransportTaskException
+from aiida.common.exceptions import FeatureNotAvailable, StashingError, TransportTaskException
 from aiida.common.folders import SandboxFolder
 from aiida.engine import utils
 from aiida.engine.daemon import execmanager
@@ -83,7 +83,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
     authinfo = node.get_authinfo()
 
     async def do_upload():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
 
             with SandboxFolder(filepath_sandbox) as folder:
@@ -144,7 +144,7 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
     authinfo = node.get_authinfo()
 
     async def do_submit():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             return execmanager.submit_calculation(node, transport)
 
@@ -252,7 +252,7 @@ async def task_monitor_job(
     authinfo = node.get_authinfo()
 
     async def do_monitor():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             return monitors.process(node, transport)
 
@@ -298,7 +298,7 @@ async def task_retrieve_job(
     authinfo = node.get_authinfo()
 
     async def do_retrieve():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             # Perform the job accounting and set it on the node if successful. If the scheduler does not implement this
             # still set the attribute but set it to `None`. This way we can distinguish calculation jobs for which the
@@ -366,7 +366,7 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
     authinfo = node.get_authinfo()
 
     async def do_stash():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
 
             logger.info(f'stashing calculation<{node.pk}>')
@@ -378,9 +378,12 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
             initial_interval,
             max_attempts,
             logger=node.logger,
-            ignore_exceptions=plumpy.process_states.Interruption,
+            ignore_exceptions=(plumpy.process_states.Interruption, StashingError),
         )
     except plumpy.process_states.Interruption:
+        raise
+    except StashingError:
+        # Re-raise StashingError so it can be handled in the Waiting state with an exit code
         raise
     except Exception as exception:
         logger.warning(f'stashing calculation<{node.pk}> failed')
@@ -402,7 +405,7 @@ async def task_unstash_job(node: CalcJobNode, transport_queue: TransportQueue, c
     authinfo = node.get_authinfo()
 
     async def do_unstash():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
 
             logger.info(f'unstashing calculation<{node.pk}>')
@@ -451,7 +454,7 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
     authinfo = node.get_authinfo()
 
     async def do_kill():
-        with transport_queue.request_transport(authinfo) as request:
+        async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
             return execmanager.kill_calculation(node, transport)
 
@@ -622,6 +625,9 @@ class Waiting(plumpy.process_states.Waiting):
 
         except TransportTaskException as exception:
             raise plumpy.process_states.PauseInterruption(f'Pausing after failed transport task: {exception}')
+        except StashingError as exception:
+            exit_code = self.process.exit_codes.ERROR_STASHING_FAILED.format(message=str(exception))
+            return self.create_state(ProcessState.RUNNING, self.process.terminate, exit_code)
         except plumpy.process_states.KillInterruption as exception:
             node.set_process_status(str(exception))
             return self.retrieve(monitor_result=self._monitor_result)

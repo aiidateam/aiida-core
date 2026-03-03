@@ -117,10 +117,6 @@ class LocalTransport(BlockingTransport):
 
         self._internal_dir = os.path.normpath(new_path)
 
-    def chown(self, path: TransportPath, uid, gid):
-        path = str(path)
-        os.chown(path, uid, gid)
-
     def normalize(self, path: TransportPath = '.'):
         """Normalizes path, eliminating double slashes, etc..
         :param path: path to normalize
@@ -852,7 +848,7 @@ class LocalTransport(BlockingTransport):
 
         return retval, output_text, stderr_text
 
-    def gotocomputer_command(self, remotedir: TransportPath):
+    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
         """Return a string to be run using os.system in order to connect
         via the transport to the remote directory.
 
@@ -863,7 +859,6 @@ class LocalTransport(BlockingTransport):
 
         :param str remotedir: the full path of the remote directory
         """
-        remotedir = str(remotedir)
         connect_string = self._gotocomputer_string(remotedir)
         cmd = f'bash -c {connect_string}'
         return cmd

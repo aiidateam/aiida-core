@@ -365,6 +365,40 @@ def test_put_and_get(custom_transport, tmp_path_remote, tmp_path_local):
         assert retrieved_file_name not in list_of_files
 
 
+@pytest.mark.parametrize(
+    'filename',
+    [
+        pytest.param('file with spaces.txt', id='spaces'),
+        pytest.param("file'with'quotes.txt", id='quotes'),
+        pytest.param('file;semicolon.txt', id='semicolon-cmd-separator'),
+        pytest.param('file$dollar.txt', id='dollar-var-expansion'),
+        pytest.param('file`backtick`.txt', id='backtick-cmd-substitution'),
+    ],
+)
+def test_put_and_get_with_special_chars(custom_transport, tmp_path_remote, tmp_path_local, filename):
+    """Test that filenames with shell metacharacters are handled safely.
+
+    This verifies that special characters in filenames don't cause shell injection
+    or path handling issues (CWE-78).
+    """
+    with custom_transport as transport:
+        local_file = tmp_path_local / 'source.txt'
+        remote_file = tmp_path_remote / filename
+        retrieved_file = tmp_path_local / 'retrieved.txt'
+
+        local_file.write_text('test content')
+
+        transport.put(local_file, remote_file)
+        assert transport.isfile(remote_file), f'File with special chars not created: {filename}'
+
+        transport.get(remote_file, retrieved_file)
+        assert retrieved_file.read_text() == 'test content'
+
+        # Clean up
+        transport.remove(remote_file)
+        assert not transport.path_exists(remote_file)
+
+
 def test_putfile_and_getfile(custom_transport, tmp_path_remote, tmp_path_local):
     """Test putting and getting files."""
     local_dir = tmp_path_local
@@ -1503,6 +1537,7 @@ def test_glob(custom_transport, tmp_path_local):
         'folder1/e/f/g.txt',
         'folder2/x',
         'folder2/y/z',
+        'folder2/aiida.pdos_atm#2(Al)_wfc#2(p)',
     ]:
         tmp_path_local.joinpath(subpath).parent.mkdir(parents=True, exist_ok=True)
         tmp_path_local.joinpath(subpath).write_text('touch')
@@ -1527,10 +1562,21 @@ def test_glob(custom_transport, tmp_path_local):
         g_list = transport.glob(str(tmp_path_local) + '/folder*/*')
         paths = [
             str(tmp_path_local.joinpath(item))
-            for item in ['folder1/a', 'folder1/c.txt', 'folder2/x', 'folder2/y', 'folder1/e']
+            for item in [
+                'folder1/a',
+                'folder1/c.txt',
+                'folder2/x',
+                'folder2/y',
+                'folder1/e',
+                'folder2/aiida.pdos_atm#2(Al)_wfc#2(p)',
+            ]
         ]
         assert sorted(paths) == sorted(g_list)
 
         g_list = transport.glob(str(tmp_path_local) + '/folder1/*/*/*.txt')
         paths = [str(tmp_path_local.joinpath(item)) for item in ['folder1/e/f/g.txt']]
+        assert sorted(paths) == sorted(g_list)
+
+        g_list = transport.glob(str(tmp_path_local) + '/folder2/aiida.pdos*')
+        paths = [str(tmp_path_local.joinpath('folder2/aiida.pdos_atm#2(Al)_wfc#2(p)'))]
         assert sorted(paths) == sorted(g_list)

@@ -52,6 +52,12 @@ repos:
     # Check and update the uv lockfile
   - id: uv-lock
 
+- repo: https://github.com/kynan/nbstripout
+  rev: 0.8.1
+  hooks:
+  - id: nbstripout
+    files: \.ipynb$
+
 - repo: local
 
   hooks:

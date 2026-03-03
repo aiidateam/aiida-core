@@ -1,11 +1,79 @@
 import asyncio
 import os
 import stat
-from unittest.mock import MagicMock
+import subprocess
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from aiida.transports.plugins.async_backend import _OpenSSH, get_openssh_version
 from aiida.transports.plugins.ssh_async import AsyncSshTransport
+
+
+class TestAuthenticationScript:
+    """Tests for authentication script (2FA) functionality."""
+
+    @pytest.fixture
+    def make_script(self, tmp_path):
+        """Factory to create a script with given exit code."""
+
+        def _make(exit_code=0):
+            script = tmp_path / f'script_{exit_code}.sh'
+            script.write_text(f'#!/bin/bash\necho "STDOUT"\necho "STDERR" >&2\nexit {exit_code}\n')
+            os.chmod(script, 0o755)
+            return script
+
+        return _make
+
+    def _make_transport(self, script_path=None, use_old_param=False):
+        """Helper to create transport with mocked backend."""
+        kwargs = {'machine': 'localhost', 'backend': 'asyncssh'}
+        if script_path:
+            key = 'script_before' if use_old_param else 'authentication_script'
+            kwargs[key] = str(script_path)
+
+        transport = AsyncSshTransport(**kwargs)
+        transport.async_backend = MagicMock()
+        transport.async_backend.open = AsyncMock()
+        transport.async_backend.logger = MagicMock()
+        return transport
+
+    @pytest.mark.asyncio
+    async def test_script_success(self, make_script):
+        """Script returning 0 succeeds and logs info."""
+        transport = self._make_transport(make_script(exit_code=0))
+
+        await transport.open_async()
+
+        transport.async_backend.logger.info.assert_called()
+        assert 'executed successfully' in transport.async_backend.logger.info.call_args[0][0]
+
+    @pytest.mark.asyncio
+    async def test_script_failure_raises_and_logs(self, make_script):
+        """Script returning non-zero raises OSError and logs stdout/stderr."""
+        transport = self._make_transport(make_script(exit_code=1))
+
+        with pytest.raises(OSError, match='failed with exit code 1'):
+            await transport.open_async()
+
+        error_msg = transport.async_backend.logger.error.call_args[0][0]
+        assert 'stdout: STDOUT' in error_msg
+        assert 'stderr: STDERR' in error_msg
+
+    @pytest.mark.asyncio
+    async def test_backward_compatibility_script_before(self, make_script):
+        """Old 'script_before' parameter still works."""
+        script = make_script(exit_code=0)
+        transport = self._make_transport(script, use_old_param=True)
+        assert transport.auth_script == str(script)
+
+    @pytest.mark.asyncio
+    async def test_no_script_configured(self):
+        """Transport works without authentication script."""
+        transport = self._make_transport()
+        await transport.open_async()
+
+        assert transport.auth_script == 'None'
 
 
 class TestSemaphoreBehavior:
@@ -32,7 +100,7 @@ class TestSemaphoreBehavior:
         }
         async_transport = AsyncSshTransport(**transport_params)
 
-        with async_transport as transport:
+        async with async_transport as transport:
             # Each operation should fail but release the semaphore
             with pytest.raises(OSError, match='Error while downloading file'):
                 await transport.getfile_async('non_existing', local_dir)
@@ -44,7 +112,7 @@ class TestSemaphoreBehavior:
             with pytest.raises(OSError, match='Error while downloading file'):
                 await transport.getfile_async('non_existing', local_dir)
 
-        assert transport._semaphore._value == 1, 'Semaphore should be fully released'
+        assert async_transport._semaphore._value == 1, 'Semaphore should be fully released'
 
     @pytest.mark.asyncio
     async def test_semaphore_limits_concurrent_operations(self):
@@ -83,3 +151,115 @@ class TestSemaphoreBehavior:
             max_concurrent <= max_allowed
         ), f'Semaphore should limit to {max_allowed} concurrent ops, got {max_concurrent}'
         assert max_concurrent == max_allowed, f'Expected {max_allowed} concurrent ops to verify semaphore is being used'
+
+
+def test_get_openssh_version():
+    """Test that get_openssh_version() parses version correctly."""
+    mock_result = MagicMock()
+    mock_result.stdout = ''
+
+    mock_result.stderr = 'OpenSSH_9.0p1, OpenSSL 3.0.2'
+    with patch('aiida.transports.plugins.async_backend.subprocess.run', return_value=mock_result):
+        assert get_openssh_version() == 9
+
+    mock_result.stderr = 'OpenSSH_8.9p1, OpenSSL 3.0.2'
+    with patch('aiida.transports.plugins.async_backend.subprocess.run', return_value=mock_result):
+        assert get_openssh_version() == 8
+
+    mock_result.stderr = ''
+    with patch('aiida.transports.plugins.async_backend.subprocess.run', return_value=mock_result):
+        assert get_openssh_version() is None
+
+
+class _TestOpenSSH(_OpenSSH):
+    """Minimal OpenSSH subclass for testing escape methods."""
+
+    def __init__(self):
+        self.machine = 'localhost'
+        self.bash_command = 'bash -c '
+
+
+class TestSshCommandGenerator:
+    """Tests for ssh_command_generator escaping."""
+
+    def test_escapes_shell_chars_and_paths(self):
+        """Test $, `, " escaped and paths safely quoted."""
+
+        openssh = _TestOpenSSH()
+
+        """Test command structure and that $, `, " are escaped for the outer double-quote wrapper."""
+        result = openssh.ssh_command_generator('echo $HOME `cmd` "test"')
+        assert result[:2] == ['ssh', 'localhost']
+        assert result[2].startswith('bash -c "') and result[2].endswith('"')
+        assert r'\$HOME' in result[2]
+        assert r'\`cmd\`' in result[2]
+        assert r'\"test\"' in result[2]
+
+        """Test $!, $?, $$ are escaped so they're interpreted by inner bash -c shell."""
+        result = openssh.ssh_command_generator('script.sh & echo $!; echo $?; echo $$')
+        assert r'\$!' in result[2]
+        assert r'\$?' in result[2]
+        assert r'\$\$' in result[2]
+
+        """Test paths with special chars are safely quoted via escape_for_bash."""
+        result = openssh.ssh_command_generator('cp {} {}', paths=['/path;rm -rf /', '/dst'])
+        # Semicolon should be safely quoted, not interpreted as command separator
+        assert "'/path;rm -rf /'" in result[2]
+        assert "'/dst'" in result[2]
+
+
+def test_escape_for_glob_preserves_wildcards_escapes_dangerous_chars():
+    """Test wildcards (*, ?, []) preserved while dangerous chars escaped."""
+    backend = _TestOpenSSH()
+    # Wildcards preserved, dangerous chars escaped
+    assert backend._escape_for_glob('/home/$USER/my files/[0-9]*.log') == '/home/\\$USER/my\\ files/[0-9]*.log'
+    # Command injection attempt escaped
+    assert backend._escape_for_glob('/path;rm -rf /*') == '/path\\;rm\\ -rf\\ /*'
+
+
+def test_escape_for_rcp():
+    """Test RCP mode escapes shell metacharacters."""
+    backend = _TestOpenSSH()
+    assert backend._escape_for_rcp('/path/with spaces/$VAR;cmd') == '/path/with\\ spaces/\\$VAR\\;cmd'
+
+
+def test_escape_for_scp_version_aware():
+    """Test _escape_for_scp behavior differs by OpenSSH version."""
+    backend = _TestOpenSSH()
+    path = '/path/with spaces'
+
+    # SFTP mode (OpenSSH 9+): no escaping needed
+    backend.is_openssh_9_or_higher = True
+    assert backend._escape_for_scp(path) == path
+
+    # RCP mode (OpenSSH < 9): escaping required
+    backend.is_openssh_9_or_higher = False
+    assert backend._escape_for_scp(path) == '/path/with\\ spaces'
+
+
+def test_scp_with_special_chars(tmp_path):
+    """Test scp in both SFTP and RCP modes with special characters."""
+    backend = _TestOpenSSH()
+
+    remote_dir = tmp_path / 'remote'
+    local_dir = tmp_path / 'local'
+    remote_dir.mkdir()
+    local_dir.mkdir()
+
+    special_files = ['file with spaces.txt', "file'quote.txt", 'file$dollar.txt']
+    for f in special_files:
+        (remote_dir / f).write_text(f'content of {f}')
+
+    for filename in special_files:
+        source = remote_dir / filename
+
+        # SFTP mode (default on OpenSSH 9+)
+        dest_sftp = local_dir / f'sftp_{filename}'
+        result = subprocess.run(['scp', f'localhost:{source}', str(dest_sftp)], capture_output=True, check=False)
+        assert result.returncode == 0 and dest_sftp.read_text() == f'content of {filename}'
+
+        # RCP mode (forced with -O)
+        dest_rcp = local_dir / f'rcp_{filename}'
+        escaped = backend._escape_for_rcp(str(source))
+        result = subprocess.run(['scp', '-O', f'localhost:{escaped}', str(dest_rcp)], capture_output=True, check=False)
+        assert result.returncode == 0 and dest_rcp.read_text() == f'content of {filename}'

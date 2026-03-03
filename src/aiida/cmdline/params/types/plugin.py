@@ -162,7 +162,22 @@ class PluginParamType(EntryPointType):
 
         :returns: list of tuples of valid entry points (matching incomplete) and a description
         """
-        return [click.shell_completion.CompletionItem(p) for p in self.get_possibilities(incomplete=incomplete)]
+        entry_points_by_name = {ep.name: ep for _, ep in self._entry_points}
+        results = []
+        for p in self.get_possibilities(incomplete=incomplete):
+            help_text = None
+            entry_point = entry_points_by_name.get(p)
+            if entry_point is not None:
+                try:
+                    plugin = entry_point.load()  # type: ignore[no-untyped-call]
+                    if plugin.__doc__:
+                        # extract the initial/summary paragraph (before double newline)
+                        doc_summary = plugin.__doc__.strip().split('\n\n')[0]
+                        help_text = ' '.join(doc_summary.split())
+                except Exception:
+                    pass
+            results.append(click.shell_completion.CompletionItem(p, help=help_text))
+        return results
 
     @shim_add_ctx
     def get_missing_message(self, param: click.Parameter, ctx: click.Context | None) -> str:

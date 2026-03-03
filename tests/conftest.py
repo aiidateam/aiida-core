@@ -55,6 +55,12 @@ class TestDbBackend(Enum):
     PSQL = 'psql'
 
 
+@pytest.fixture(autouse=True)
+def _reset_runner(request):
+    yield
+    get_manager().reset_runner()
+
+
 def pytest_collection_modifyitems(items, config):
     """Automatically generate markers for certain tests.
 

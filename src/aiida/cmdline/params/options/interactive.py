@@ -153,10 +153,12 @@ class InteractiveOption(ConditionalOption):
         choices_string = []
 
         for choice in choices:
+            label = f' * {choice.value:<14}'
+            colored_label = click.style(label, fg='green')
             if choice.value and choice.help:
-                choices_string.append(f' * {choice.value:<12} {choice.help}')
+                choices_string.append(f'{colored_label} {choice.help}')
             elif choice.value:
-                choices_string.append(f' * {choice.value}')
+                choices_string.append(colored_label)
 
         if any(choices_string):
             message += '\nSelect one of:\n'

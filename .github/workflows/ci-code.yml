@@ -54,7 +54,7 @@ jobs:
         - 5001:22
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql graphviz
@@ -83,6 +83,17 @@ jobs:
         files: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
 
+    - name: Upload coverage artifact
+      if: matrix.python-version == '3.13'
+      uses: actions/upload-artifact@v6
+      with:
+        name: coverage
+        include-hidden-files: true
+        path: |
+          coverage.xml
+          .coverage
+        retention-days: 30
+
   tests-minimum-requirements:
     name: test minimum reqs (${{ matrix.python-version }}, ${{ matrix.database-backend }})
     runs-on: ubuntu-24.04
@@ -101,7 +112,7 @@ jobs:
         - 15672:15672
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install graphviz
       run: sudo apt update && sudo apt install graphviz
@@ -129,7 +140,7 @@ jobs:
     timeout-minutes: 20
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install graphviz
       run: sudo apt update && sudo apt install graphviz
@@ -154,7 +165,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install aiida-core
       uses: ./.github/actions/install-aiida-core
@@ -197,7 +208,7 @@ jobs:
         - 15672:15672
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install aiida-core
       uses: ./.github/actions/install-aiida-core

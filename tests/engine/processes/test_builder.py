@@ -476,12 +476,16 @@ def test_get_schema_basic():
 
     builder = ArithmeticAddCalculation.get_builder()
 
-    # Test keys_only mode (default)
+    # Test default mode (compact with types)
     schema = builder.get_schema()
     assert isinstance(schema, str)
     assert 'code:' in schema
     assert 'x:' in schema
     assert 'y:' in schema
+
+    # Default should show types in compact format
+    assert 'Int' in schema, 'Int type should appear in default output'
+    assert '(required)' in schema, 'required marker should appear'
 
     # Test that it returns valid YAML
     parsed = yaml.safe_load(schema)
@@ -593,27 +597,36 @@ def test_get_schema_max_depth():
     assert parsed['metadata']['options'] == '{...}', 'second level should be collapsed'
 
 
-def test_get_schema_show_types():
-    """Test the ``show_types`` parameter of ``get_schema``."""
+def test_get_schema_keys_only():
+    """Test the ``keys_only`` parameter of ``get_schema``."""
+    import yaml
+
     from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
     builder = ArithmeticAddCalculation.get_builder()
 
-    # With keys_only=False and show_types=True
-    schema_with_types = builder.get_schema(keys_only=False, show_types=True, collapse=())
-    assert 'type:' in schema_with_types or "class 'aiida.orm" in schema_with_types
-    assert 'Int' in schema_with_types, 'Int type should appear for x or y inputs'
+    # Default: types are shown
+    schema_default = builder.get_schema(collapse=())
+    assert 'Int' in schema_default, 'Int type should appear in default output'
+
+    # With keys_only=True: no types shown
+    schema_keys_only = builder.get_schema(keys_only=True, collapse=())
+    parsed = yaml.safe_load(schema_keys_only)
+    # In keys_only mode, values should be None (rendered as empty in YAML)
+    assert parsed['x'] is None, 'x should have no type info in keys_only mode'
+    assert parsed['y'] is None, 'y should have no type info in keys_only mode'
 
 
-def test_get_schema_show_descriptions():
-    """Test the ``show_descriptions`` parameter of ``get_schema``."""
+def test_get_schema_show_help():
+    """Test the ``show_help`` parameter of ``get_schema``."""
     from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
     builder = ArithmeticAddCalculation.get_builder()
 
-    # With show_descriptions=True
-    schema_with_desc = builder.get_schema(keys_only=False, show_descriptions=True, collapse=())
-    assert 'help:' in schema_with_desc, 'help text should be present when show_descriptions=True'
+    # With show_help=True: nested format with help text
+    schema_with_help = builder.get_schema(show_help=True, collapse=())
+    assert 'help:' in schema_with_help, 'help text should be present when show_help=True'
+    assert 'type:' in schema_with_help, 'type should also be present in verbose mode'
 
 
 def test_get_schema_metadata_at_end():

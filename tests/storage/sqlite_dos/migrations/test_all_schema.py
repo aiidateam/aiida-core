@@ -27,13 +27,11 @@ def test_main_initialized(uninitialised_profile):
         # Initialize database at first version of main branch
         migrator.migrate_up('main@main_0001')
         assert migrator.get_schema_version_profile() == 'main_0001'
-        migrator.close()
 
     # Reinitialize the migrator to make sure we are fetching actual state of database and not in-memory state and then
     # migrate to head schema version.
     with SqliteDosMigrator(uninitialised_profile) as migrator:
         migrator.migrate()
-        migrator.close()
 
     # Reinitialize the migrator to make sure we are fetching actual state of database and not in-memory state and then
     # assert that the database version is properly set to the head schema version

@@ -13,6 +13,8 @@ from __future__ import annotations
 import copy
 import typing as t
 
+import pydantic as pdt
+
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
 
@@ -50,12 +52,24 @@ class Dict(Data):
     Finally, all dictionary mutations will be forbidden once the node is stored.
     """
 
-    class Model(Data.Model):
-        value: t.Dict[str, t.Any] = MetadataField(
-            description='Dictionary content.',
-            is_attribute=False,
-            is_subscriptable=True,
+    class AttributesModel(Data.AttributesModel):
+        model_config = pdt.ConfigDict(
+            arbitrary_types_allowed=True,
+            json_schema_extra={
+                'additionalProperties': True,
+            },
         )
+
+        value: t.Dict[str, t.Any] = MetadataField(
+            description='The dictionary content',
+            write_only=True,
+            exclude=True,
+        )
+
+        @pdt.model_validator(mode='before')
+        @classmethod
+        def assign_dict_to_value(cls, value: dict) -> dict:
+            return value if 'value' in value else {'value': value}
 
     def __init__(self, value=None, **kwargs):
         """Initialise a ``Dict`` node instance.
@@ -67,10 +81,29 @@ class Dict(Data):
 
         :param value: dictionary to initialise the ``Dict`` node from
         """
-        dictionary = value or kwargs.pop('dict', None)
+        dictionary = value or kwargs.pop('dict', None) or kwargs.get('attributes', {}).pop('value', None)
+
         super().__init__(**kwargs)
+
         if dictionary:
             self.set_dict(dictionary)
+
+    def serialize(
+        self,
+        *,
+        context: dict[str, t.Any] | None = None,
+        minimal: bool = False,
+        mode: t.Literal['json'] | t.Literal['python'] = 'json',
+        dump_repo: bool = False,
+    ) -> dict[str, t.Any]:
+        serialized = super().serialize(
+            context=context,
+            minimal=minimal,
+            mode=mode,
+            dump_repo=dump_repo,
+        )
+        serialized['attributes'] = self.get_dict()
+        return serialized
 
     def __getitem__(self, key):
         try:

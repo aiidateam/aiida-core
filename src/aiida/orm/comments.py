@@ -8,8 +8,13 @@
 ###########################################################################
 """Comment objects and functions"""
 
+from __future__ import annotations
+
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional, Type, cast
+from typing import TYPE_CHECKING, ClassVar, List, Optional, Type, cast
+from uuid import UUID
+
+from pydantic import field_serializer
 
 from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
@@ -28,8 +33,10 @@ __all__ = ('Comment',)
 class CommentCollection(entities.Collection['Comment']):
     """The collection of Comment entries."""
 
+    collection_type: ClassVar[str] = 'comments'
+
     @staticmethod
-    def _entity_base_cls() -> Type['Comment']:
+    def _entity_base_cls() -> Type[Comment]:
         return Comment
 
     def delete(self, pk: int) -> None:
@@ -67,29 +74,45 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
 
     _CLS_COLLECTION = CommentCollection
 
+    identity_field: ClassVar[str] = 'uuid'
+
     class Model(entities.Entity.Model):
-        uuid: Optional[str] = MetadataField(
-            description='The UUID of the comment', is_attribute=False, exclude_to_orm=True
+        uuid: UUID = MetadataField(
+            description='The UUID of the comment',
+            read_only=True,
+            examples=['123e4567-e89b-12d3-a456-426614174000'],
         )
-        ctime: Optional[datetime] = MetadataField(
-            description='Creation time of the comment', is_attribute=False, exclude_to_orm=True
+        ctime: datetime = MetadataField(
+            description='Creation time of the comment',
+            read_only=True,
+            examples=['2024-01-01T12:00:00+00:00'],
         )
-        mtime: Optional[datetime] = MetadataField(
-            description='Modified time of the comment', is_attribute=False, exclude_to_orm=True
+        mtime: datetime = MetadataField(
+            description='Modified time of the comment',
+            read_only=True,
+            examples=['2024-01-02T12:00:00+00:00'],
         )
         node: int = MetadataField(
             description='Node PK that the comment is attached to',
-            is_attribute=False,
             orm_class='core.node',
-            orm_to_model=lambda comment, _: cast('Comment', comment).node.pk,
+            orm_to_model=lambda comment: cast(Comment, comment).node.pk,
+            examples=[42],
         )
         user: int = MetadataField(
             description='User PK that created the comment',
-            is_attribute=False,
             orm_class='core.user',
-            orm_to_model=lambda comment, _: cast('Comment', comment).user.pk,
+            orm_to_model=lambda comment: cast(Comment, comment).user.pk,
+            examples=[7],
         )
-        content: str = MetadataField(description='Content of the comment', is_attribute=False)
+        content: str = MetadataField(
+            description='Content of the comment',
+            examples=['This is a comment.'],
+        )
+
+        @field_serializer('uuid')
+        def serialize_uuid(self, value: UUID) -> str:
+            """Serialize UUID to string."""
+            return str(value)
 
     def __init__(
         self, node: 'Node', user: 'User', content: Optional[str] = None, backend: Optional['StorageBackend'] = None

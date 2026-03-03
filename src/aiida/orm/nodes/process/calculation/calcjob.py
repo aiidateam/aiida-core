@@ -8,8 +8,10 @@
 ###########################################################################
 """Module with `Node` sub class for calculation job processes."""
 
+from __future__ import annotations
+
 import datetime
-from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Sequence, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Sequence, Tuple, Type, Union, cast
 
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
@@ -64,42 +66,56 @@ class CalcJobNode(CalculationNode):
     SCHEDULER_LAST_JOB_INFO_KEY = 'last_job_info'
     SCHEDULER_DETAILED_JOB_INFO_KEY = 'detailed_job_info'
 
-    class Model(CalculationNode.Model):
+    class AttributesModel(CalculationNode.AttributesModel):
         scheduler_state: Optional[str] = MetadataField(
-            description='The state of the scheduler', orm_to_model=lambda node, _: node.get_scheduler_state()
+            None,
+            description='The state of the scheduler',
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_scheduler_state(),
         )
         state: Optional[str] = MetadataField(
-            description='The active state of the calculation job', orm_to_model=lambda node, _: node.get_state()
+            None,
+            description='The active state of the calculation job',
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_state(),
         )
         remote_workdir: Optional[str] = MetadataField(
+            None,
             description='The path to the remote (on cluster) scratch folder',
-            orm_to_model=lambda node, _: node.get_remote_workdir(),
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_remote_workdir(),
         )
         job_id: Optional[str] = MetadataField(
-            description='The scheduler job id', orm_to_model=lambda node, _: node.get_job_id()
+            None,
+            description='The scheduler job id',
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_job_id(),
         )
         scheduler_lastchecktime: Optional[datetime.datetime] = MetadataField(
+            None,
             description='The last time the scheduler was checked, in isoformat',
-            orm_to_model=lambda node, _: node.get_scheduler_lastchecktime(),
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_scheduler_lastchecktime(),
         )
         last_job_info: Optional[dict] = MetadataField(
+            None,
             description='The last job info returned by the scheduler',
-            orm_to_model=lambda node, _: dict(node.get_last_job_info() or {}),
+            orm_to_model=lambda node: dict(cast(CalcJobNode, node).get_last_job_info() or {}),
         )
         detailed_job_info: Optional[dict] = MetadataField(
+            None,
             description='The detailed job info returned by the scheduler',
-            orm_to_model=lambda node, _: node.get_detailed_job_info(),
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_detailed_job_info(),
         )
-        retrieve_list: Optional[List[str]] = MetadataField(
+        retrieve_list: Optional[Sequence[Union[str, Tuple[str, str, int]]]] = MetadataField(
+            None,
             description='The list of files to retrieve from the remote cluster',
-            orm_to_model=lambda node, _: node.get_retrieve_list(),
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_retrieve_list(),
         )
-        retrieve_temporary_list: Optional[List[str]] = MetadataField(
+        retrieve_temporary_list: Optional[Sequence[Union[str, Tuple[str, str, int]]]] = MetadataField(
+            None,
             description='The list of temporary files to retrieve from the remote cluster',
-            orm_to_model=lambda node, _: node.get_retrieve_temporary_list(),
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_retrieve_temporary_list(),
         )
         imported: Optional[bool] = MetadataField(
-            description='Whether the node has been migrated', orm_to_model=lambda node, _: node.is_imported
+            None,
+            description='Whether the node has been migrated',
+            orm_to_model=lambda node: cast(CalcJobNode, node).is_imported,
         )
 
     # An optional entry point for a CalculationTools instance
@@ -259,7 +275,7 @@ class CalcJobNode(CalculationNode):
         return self.base.attributes.get(self.REMOTE_WORKDIR_KEY, None)
 
     @staticmethod
-    def _validate_retrieval_directive(directives: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
+    def _validate_retrieval_directive(directives: Sequence[Union[str, Tuple[str, str, int]]]) -> None:
         """Validate a list or tuple of file retrieval directives.
 
         :param directives: a list or tuple of file retrieval directives
@@ -286,7 +302,7 @@ class CalcJobNode(CalculationNode):
             if not isinstance(directive[2], (int, type(None))):
                 raise ValueError('invalid directive, third element has to be an integer representing the depth')
 
-    def set_retrieve_list(self, retrieve_list: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
+    def set_retrieve_list(self, retrieve_list: Sequence[Union[str, Tuple[str, str, int]]]) -> None:
         """Set the retrieve list.
 
         This list of directives will instruct the daemon what files to retrieve after the calculation has completed.
@@ -297,14 +313,14 @@ class CalcJobNode(CalculationNode):
         self._validate_retrieval_directive(retrieve_list)
         self.base.attributes.set(self.RETRIEVE_LIST_KEY, retrieve_list)
 
-    def get_retrieve_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, str]]]]:
+    def get_retrieve_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, int]]]]:
         """Return the list of files/directories to be retrieved on the cluster after the calculation has completed.
 
         :return: a list of file directives
         """
         return self.base.attributes.get(self.RETRIEVE_LIST_KEY, None)
 
-    def set_retrieve_temporary_list(self, retrieve_temporary_list: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
+    def set_retrieve_temporary_list(self, retrieve_temporary_list: Sequence[Union[str, Tuple[str, str, int]]]) -> None:
         """Set the retrieve temporary list.
 
         The retrieve temporary list stores files that are retrieved after completion and made available during parsing
@@ -315,7 +331,7 @@ class CalcJobNode(CalculationNode):
         self._validate_retrieval_directive(retrieve_temporary_list)
         self.base.attributes.set(self.RETRIEVE_TEMPORARY_LIST_KEY, retrieve_temporary_list)
 
-    def get_retrieve_temporary_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, str]]]]:
+    def get_retrieve_temporary_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, int]]]]:
         """Return list of files to be retrieved from the cluster which will be available during parsing.
 
         :return: a list of file directives
@@ -338,7 +354,7 @@ class CalcJobNode(CalculationNode):
         """
         return self.base.attributes.get(self.SCHEDULER_JOB_ID_KEY, None)
 
-    def set_scheduler_state(self, state: 'JobState') -> None:
+    def set_scheduler_state(self, state: JobState) -> None:
         """Set the scheduler state.
 
         :param state: an instance of `JobState`
@@ -423,7 +439,7 @@ class CalcJobNode(CalculationNode):
 
         return job_info
 
-    def get_authinfo(self) -> 'AuthInfo':
+    def get_authinfo(self) -> AuthInfo:
         """Return the `AuthInfo` that is configured for the `Computer` set for this node.
 
         :return: `AuthInfo`
@@ -435,7 +451,7 @@ class CalcJobNode(CalculationNode):
 
         return computer.get_authinfo(self.user)
 
-    def get_transport(self) -> 'Transport':
+    def get_transport(self) -> Transport:
         """Return the transport for this calculation.
 
         :return: Transport configured
@@ -443,7 +459,7 @@ class CalcJobNode(CalculationNode):
         """
         return self.get_authinfo().get_transport()
 
-    def get_parser_class(self) -> Optional[Type['Parser']]:
+    def get_parser_class(self) -> Optional[Type[Parser]]:
         """Return the output parser object for this calculation or None if no parser is set.
 
         :return: a `Parser` class.
@@ -463,7 +479,7 @@ class CalcJobNode(CalculationNode):
         """Return the link label used for the retrieved FolderData node."""
         return 'retrieved'
 
-    def get_retrieved_node(self) -> Optional['FolderData']:
+    def get_retrieved_node(self) -> Optional[FolderData]:
         """Return the retrieved data folder.
 
         :return: the retrieved FolderData node or None if not found
@@ -480,7 +496,7 @@ class CalcJobNode(CalculationNode):
             return None
 
     @property
-    def res(self) -> 'CalcJobResultManager':
+    def res(self) -> CalcJobResultManager:
         """To be used to get direct access to the parsed parameters.
 
         :return: an instance of the CalcJobResultManager.

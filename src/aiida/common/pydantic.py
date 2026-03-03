@@ -3,18 +3,16 @@
 from __future__ import annotations
 
 import typing as t
-from pathlib import Path
 
-from pydantic import Field
+from pydantic import BaseModel, ConfigDict, Field, create_model
+from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
 if t.TYPE_CHECKING:
-    from pydantic import BaseModel
-
     from aiida.orm import Entity
 
 
-def get_metadata(field_info: t.Any, key: str, default: t.Any | None = None) -> t.Any:
+def get_metadata(field_info: FieldInfo, key: str, default: t.Any | None = None) -> t.Any:
     """Return a the metadata of the given field for a particular key.
 
     :param field_info: The field from which to retrieve the metadata.
@@ -23,9 +21,119 @@ def get_metadata(field_info: t.Any, key: str, default: t.Any | None = None) -> t
     :returns: The metadata if defined, otherwise the default.
     """
     for element in field_info.metadata:
-        if key in element:
+        if isinstance(element, dict) and key in element:
             return element[key]
     return default
+
+
+class OrmModel(BaseModel, defer_build=True):
+    """Base class for all ORM entity models."""
+
+    model_config = ConfigDict(extra='forbid')
+
+    @classmethod
+    def __pydantic_init_subclass__(cls, **kwargs: t.Any) -> None:
+        """Sets the JSON schema title of the model.
+
+        The qualified name of the class is used, with dots removed. For example, `Node.Model` becomes `NodeModel`
+        in the JSON schema.
+        """
+        super().__pydantic_init_subclass__(**kwargs)
+        cls.model_config['title'] = cls.__qualname__.replace('.', '')
+
+    @classmethod
+    def _as_minimal_model(cls: t.Type[OrmModel]) -> t.Type[OrmModel]:
+        """Return a derived model class with fields marked as "may_be_large" excluded from the model schema."""
+        cached = cls.__dict__.get('_AIIDA_MINIMAL_MODEL')
+        if isinstance(cached, type) and issubclass(cached, OrmModel):
+            return cached
+
+        MinimalModel = create_model(  # noqa: N806
+            'Minimal' + cls.__name__,
+            __base__=OrmModel,
+            __module__=cls.__module__,
+        )
+        MinimalModel.model_config['extra'] = 'ignore'
+
+        for key, field in cls.model_fields.items():
+            annotation = field.annotation
+            if get_metadata(field, 'may_be_large'):
+                continue
+            if isinstance(annotation, type) and issubclass(annotation, OrmModel):
+                sub_minimal_model = annotation._as_minimal_model()
+                field.annotation = sub_minimal_model
+                if any(f.is_required() for f in sub_minimal_model.model_fields.values()):
+                    field.default_factory = None
+            MinimalModel.model_fields[key] = field
+
+        # Make subsequent calls idempotent for this specific class
+        cls._AIIDA_MINIMAL_MODEL = MinimalModel  # type: ignore[attr-defined]
+
+        MinimalModel.model_rebuild(force=True)
+        return MinimalModel
+
+    @classmethod
+    def _as_create_model(cls: t.Type[OrmModel]) -> t.Type[OrmModel]:
+        """Return a derived creation model class with read-only fields removed.
+
+        This also removes any serializers/validators defined on those fields.
+
+        :return: The derived creation model class.
+        """
+
+        cached = cls.__dict__.get('_AIIDA_CREATE_MODEL')
+        if isinstance(cached, type) and issubclass(cached, OrmModel):
+            return cached
+
+        CreateModel = create_model(  # noqa: N806
+            'CreateModel',
+            __base__=cls,
+            __module__=cls.__module__,
+            __qualname__=cls.__qualname__.replace('Model', 'CreateModel'),
+        )
+        CreateModel.model_config['extra'] = 'ignore'
+        CreateModel.model_config['json_schema_extra'] = {
+            **CreateModel.model_config.get('json_schema_extra', {}),  # type: ignore[dict-item]
+            'additionalProperties': False,
+        }
+
+        CreateModel.model_rebuild(force=True)
+
+        readonly_fields: t.List[str] = []
+        for key, field in CreateModel.model_fields.items():
+            annotation = field.annotation
+            if get_metadata(field, 'read_only'):
+                readonly_fields.append(key)
+            elif isinstance(annotation, type) and issubclass(annotation, OrmModel):
+                sub_create_model = annotation._as_create_model()
+                field.annotation = sub_create_model
+                if any(f.is_required() for f in sub_create_model.model_fields.values()):
+                    field.default_factory = None
+
+        # Remove read-only fields
+        for key in readonly_fields:
+            CreateModel.model_fields.pop(key, None)
+            if hasattr(CreateModel, key):
+                delattr(CreateModel, key)
+
+        # Prune field validators/serializers referring to read-only fields
+        decorators = CreateModel.__pydantic_decorators__
+
+        def prune_field_decorators(field_decorators: dict[str, t.Any]) -> dict[str, t.Any]:
+            return {
+                key: decorator
+                for key, decorator in field_decorators.items()
+                if all(field not in readonly_fields for field in decorator.info.fields)
+            }
+
+        decorators.field_validators = prune_field_decorators(decorators.field_validators)
+        decorators.field_serializers = prune_field_decorators(decorators.field_serializers)
+
+        # Make subsequent calls idempotent for this specific class
+        cls._AIIDA_CREATE_MODEL = CreateModel  # type: ignore[attr-defined]
+
+        CreateModel.model_rebuild(force=True)
+        return CreateModel
 
 
 def MetadataField(  # noqa: N802
@@ -35,19 +143,20 @@ def MetadataField(  # noqa: N802
     short_name: str | None = None,
     option_cls: t.Any | None = None,
     orm_class: type[Entity[t.Any, t.Any]] | str | None = None,
-    orm_to_model: t.Callable[[Entity[t.Any, t.Any], Path], t.Any] | None = None,
-    model_to_orm: t.Callable[['BaseModel'], t.Any] | None = None,
-    exclude_to_orm: bool = False,
-    exclude_from_cli: bool = False,
-    is_attribute: bool = True,
-    is_subscriptable: bool = False,
+    orm_to_model: (
+        t.Callable[[Entity[t.Any, t.Any]], t.Any] | t.Callable[[Entity[t.Any, t.Any], dict[str, t.Any]], t.Any] | None
+    ) = None,
+    model_to_orm: t.Callable[[OrmModel], t.Any] | None = None,
+    read_only: bool = False,
+    write_only: bool = False,
+    may_be_large: bool = False,
     **kwargs: t.Any,
 ) -> t.Any:
     """Return a :class:`pydantic.fields.Field` instance with additional metadata.
 
     .. code-block:: python
 
-        class Model(BaseModel):
+        class Model(OrmModel):
 
             attribute: MetadataField('default', priority=1000, short_name='-A')
 
@@ -66,20 +175,36 @@ def MetadataField(  # noqa: N802
     :param short_name: Optional short name to use for an option on a command line interface.
     :param option_cls: The :class:`click.Option` class to use to construct the option.
     :param orm_class: The class, or entry point name thereof, to which the field should be converted. If this field is
-        defined, the value of this field should acccept an integer which will automatically be converted to an instance
+        defined, the value of this field should accept an integer which will automatically be converted to an instance
         of said ORM class using ``orm_class.collection.get(id={field_value})``. This is useful, for example, where a
         field represents an instance of a different entity, such as an instance of ``User``. The serialized data would
         store the ``pk`` of the user, but the ORM entity instance would receive the actual ``User`` instance with that
         primary key.
     :param orm_to_model: Optional callable to convert the value of a field from an ORM instance to a model instance.
+        It optionally accepts a second argument, which is a dictionary of context values that may be used during the
+        conversion.
     :param model_to_orm: Optional callable to convert the value of a field from a model instance to an ORM instance.
-    :param exclude_to_orm: When set to ``True``, this field value will not be passed to the ORM entity constructor
+    :param read_only: When set to ``True``, this field value will not be passed to the ORM entity constructor
         through ``Entity.from_model``.
-    :param exclude_from_cli: When set to ``True``, this field value will not be exposed on the CLI command that is
-        dynamically generated to create a new instance.
-    :param is_attribute: Whether the field is stored as an attribute.
-    :param is_subscriptable: Whether the field can be indexed like a list or dictionary.
+    :param write_only: When set to ``True``, this field value will not be populated when constructing the model from an
+        ORM entity through ``Entity.to_model``.
+    :param may_be_large: Whether the field value may be large. This is used to determine whether to include the field
+        when serializing the entity for various purposes, such as exporting or logging.
     """
+
+    extra = kwargs.pop('json_schema_extra', {})
+
+    if read_only and write_only:
+        raise ValueError('A field cannot be both read-only and write-only.')
+
+    if read_only:
+        extra.update({'readOnly': True})
+
+    if write_only:
+        extra.update({'writeOnly': True})
+
+    kwargs['json_schema_extra'] = extra
+
     field_info = Field(default, **kwargs)
 
     for key, value in (
@@ -89,10 +214,9 @@ def MetadataField(  # noqa: N802
         ('orm_class', orm_class),
         ('orm_to_model', orm_to_model),
         ('model_to_orm', model_to_orm),
-        ('exclude_to_orm', exclude_to_orm),
-        ('exclude_from_cli', exclude_from_cli),
-        ('is_attribute', is_attribute),
-        ('is_subscriptable', is_subscriptable),
+        ('read_only', read_only),
+        ('write_only', write_only),
+        ('may_be_large', may_be_large),
     ):
         if value is not None:
             field_info.metadata.append({key: value})

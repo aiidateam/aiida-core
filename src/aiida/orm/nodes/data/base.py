@@ -8,6 +8,8 @@
 ###########################################################################
 """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
+from __future__ import annotations
+
 import typing as t
 from functools import singledispatch
 
@@ -27,10 +29,10 @@ def to_aiida_type(value):
 class BaseType(Data):
     """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
-    class Model(Data.Model):
+    class AttributesModel(Data.AttributesModel):
         value: t.Any = MetadataField(
             ...,
-            title='Data value.',
+            title='Data value',
             description='The value of the data',
         )
 
@@ -40,9 +42,11 @@ class BaseType(Data):
         except AttributeError:
             raise RuntimeError('Derived class must define the `_type` class member')
 
+        value = value if value is not None else kwargs.get('attributes', {}).pop('value', None)
+
         super().__init__(**kwargs)
 
-        self.value = value or self._type()
+        self.value = value if value is not None else self._type()
 
     @property
     def value(self):

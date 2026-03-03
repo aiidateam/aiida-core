@@ -11,6 +11,8 @@ lists and meshes of k-points (i.e., points in the reciprocal space of a
 periodic crystal structure).
 """
 
+from __future__ import annotations
+
 import typing as t
 
 import numpy
@@ -38,15 +40,110 @@ class KpointsData(ArrayData):
     set_cell_from_structure methods.
     """
 
-    class Model(ArrayData.Model):
-        labels: t.List[str] = MetadataField(description='Labels associated with the list of kpoints')
-        label_numbers: t.List[int] = MetadataField(description='Index of the labels in the list of kpoints')
-        mesh: t.List[int] = MetadataField(description='Mesh of kpoints')
-        offset: t.List[float] = MetadataField(description='Offset of kpoints')
-        cell: t.List[t.List[float]] = MetadataField(description='Unit cell of the crystal, in Angstroms')
-        pbc1: bool = MetadataField(description='True if the first lattice vector is periodic')
-        pbc2: bool = MetadataField(description='True if the second lattice vector is periodic')
-        pbc3: bool = MetadataField(description='True if the third lattice vector is periodic')
+    class AttributesModel(ArrayData.AttributesModel):
+        labels: t.Optional[t.List[str]] = MetadataField(
+            None,
+            description='Labels associated with the list of kpoints',
+            orm_to_model=lambda node: t.cast(KpointsData, node).base.attributes.get('labels', None),
+        )
+        label_numbers: t.Optional[t.List[int]] = MetadataField(
+            None,
+            description='Index of the labels in the list of kpoints',
+            orm_to_model=lambda node: t.cast(KpointsData, node).base.attributes.get('label_numbers', None),
+        )
+        cell: t.Optional[t.List[t.List[float]]] = MetadataField(
+            None,
+            description='Unit cell of the crystal, in Angstroms',
+            orm_to_model=lambda node: t.cast(KpointsData, node).base.attributes.get('cell', None),
+        )
+        pbc1: t.Optional[bool] = MetadataField(
+            None,
+            description='Periodicity in the first lattice vector direction',
+            orm_to_model=lambda node: t.cast(KpointsData, node).pbc[0],
+        )
+        pbc2: t.Optional[bool] = MetadataField(
+            None,
+            description='Periodicity in the second lattice vector direction',
+            orm_to_model=lambda node: t.cast(KpointsData, node).pbc[1],
+        )
+        pbc3: t.Optional[bool] = MetadataField(
+            None,
+            description='Periodicity in the third lattice vector direction',
+            orm_to_model=lambda node: t.cast(KpointsData, node).pbc[2],
+        )
+        mesh: t.Optional[t.List[int]] = MetadataField(
+            None,
+            description='Mesh of kpoints',
+            orm_to_model=lambda node: t.cast(KpointsData, node).base.attributes.get('mesh', None),
+        )
+        offset: t.Optional[t.List[float]] = MetadataField(
+            None,
+            description='Offset of kpoints',
+            orm_to_model=lambda node: t.cast(KpointsData, node).base.attributes.get('offset', None),
+        )
+
+    def __init__(
+        self,
+        *,
+        labels: list[str] | None = None,
+        label_numbers: list[int] | None = None,
+        cell: list[list[float]] | None = None,
+        pbc1: bool | None = None,
+        pbc2: bool | None = None,
+        pbc3: bool | None = None,
+        mesh: list[int] | None = None,
+        offset: list[float] | None = None,
+        **kwargs,
+    ):
+        attributes = kwargs.get('attributes', {})
+        labels = labels or attributes.pop('labels', None)
+        label_numbers = label_numbers or attributes.pop('label_numbers', None)
+        cell = cell or attributes.pop('cell', None)
+        pbc1 = pbc1 if pbc1 is not None else attributes.pop('pbc1', None)
+        pbc2 = pbc2 if pbc2 is not None else attributes.pop('pbc2', None)
+        pbc3 = pbc3 if pbc3 is not None else attributes.pop('pbc3', None)
+        mesh = mesh or attributes.pop('mesh', None)
+        offset = offset or attributes.pop('offset', None)
+
+        arrays = kwargs.pop('arrays', None)
+
+        super().__init__(**kwargs)
+
+        if offset is not None and mesh is None:
+            raise ValueError('Cannot set an offset without a kpoints mesh')
+
+        given_list_kwargs = any(kwarg is not None for kwarg in (labels, label_numbers, cell, pbc1, pbc2, pbc3))
+
+        if mesh is not None:
+            if arrays is not None or given_list_kwargs:
+                raise ValueError('When providing a kpoints mesh, only mesh and offset are allowed')
+            self.set_kpoints_mesh(mesh, offset=offset)
+
+        if arrays is not None:
+            if labels is not None and label_numbers is not None:
+                if len(labels) != len(label_numbers):
+                    raise ValueError('Labels and label numbers must have the same length')
+                label_list = list(zip(label_numbers, labels))
+            else:
+                label_list = None
+
+            pbc = (pbc1 or False, pbc2 or False, pbc3 or False)
+
+            if cell is not None:
+                self.set_cell(cell, pbc)
+            else:
+                self.pbc = pbc
+
+            if isinstance(arrays, dict):
+                kpoints = arrays.get('kpoints', None)
+                if kpoints is None:
+                    raise ValueError("When providing a dict of arrays, it must contain the key 'kpoints'")
+                arrays = kpoints
+
+            self.set_kpoints(arrays, labels=label_list)
+
+        elif given_list_kwargs:
+            raise ValueError('Missing kpoints list')
 
     def get_description(self):
         """Returns a string with infos retrieved from  kpoints node's properties.
@@ -99,8 +196,11 @@ class KpointsData(ArrayData):
         :return: a tuple of three booleans, each one tells if there are periodic
             boundary conditions for the i-th real-space direction (i=1,2,3)
         """
-        # return copy.deepcopy(self._pbc)
-        return (self.base.attributes.get('pbc1'), self.base.attributes.get('pbc2'), self.base.attributes.get('pbc3'))
+        return (
+            self.base.attributes.get('pbc1', False),
+            self.base.attributes.get('pbc2', False),
+            self.base.attributes.get('pbc3', False),
+        )
 
     @pbc.setter
     def pbc(self, value):
@@ -194,7 +294,7 @@ class KpointsData(ArrayData):
 
         if not isinstance(structuredata, StructureData):
             raise ValueError(
-                'An instance of StructureData should be passed to ' 'the KpointsData, found instead {}'.format(
+                'An instance of StructureData should be passed to the KpointsData, found instead {}'.format(
                     structuredata.__class__
                 )
             )
@@ -333,12 +433,8 @@ class KpointsData(ArrayData):
         """Dimensionality of the structure, found from its pbc (i.e. 1 if it's a 1D
         structure, 2 if its 2D, 3 if it's 3D ...).
         :return dimensionality: 0, 1, 2 or 3
-        :note: will return 3 if pbc has not been set beforehand
         """
-        try:
-            return sum(self.pbc)
-        except AttributeError:
-            return 3
+        return sum(self.pbc)
 
     def _validate_kpoints_weights(self, kpoints, weights):
         """Validate the list of kpoints and of weights before storage.
@@ -355,9 +451,9 @@ class KpointsData(ArrayData):
                 kpoints = numpy.array([[0.0, 0.0, 0.0]])
             else:
                 raise ValueError(
-                    'empty kpoints list is valid only in zero dimension'
-                    '; instead here with have {} dimensions'
-                    ''.format(self._dimension)
+                    'empty kpoints list is valid only in zero dimension; instead here with have {} dimensions'.format(
+                        self._dimension
+                    )
                 )
 
         if len(kpoints.shape) <= 1:
@@ -373,8 +469,9 @@ class KpointsData(ArrayData):
 
         if kpoints.shape[1] < self._dimension:
             raise ValueError(
-                'In a system which has {0} dimensions, kpoint need'
-                'more than {0} coordinates (found instead {1})'.format(self._dimension, kpoints.shape[1])
+                'In a system which has {0} dimensions, kpoint needmore than {0} coordinates (found instead {1})'.format(
+                    self._dimension, kpoints.shape[1]
+                )
             )
 
         if weights is not None:

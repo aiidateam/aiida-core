@@ -142,6 +142,31 @@ def test_builder_inputs():
     assert builder._inputs(prune=True) == {'namespace': {'nested': {'bird': []}}}
 
 
+def test_builder_lazy_namespaces():
+    """Test that dict-style access lazily creates namespaces, including through nested levels."""
+    # Dict-style access creates the namespace
+    builder = LazyProcessNamespace.get_builder()
+    _ = builder['namespace']
+    assert 'namespace' in dict(builder)
+
+    # Nested dict-style access where both parent and child are absent
+    builder = LazyProcessNamespace.get_builder()
+    _ = builder['namespace']['nested']
+    assert 'nested' in dict(builder['namespace'])
+
+    # Setting a value through nested dict-style access
+    builder = LazyProcessNamespace.get_builder()
+    builder['namespace']['nested']['bird'] = 'robin'
+    assert builder._inputs(prune=True) == {'namespace': {'nested': {'bird': 'robin'}}}
+
+    # Invalid keys raise KeyError at any nesting level
+    builder = LazyProcessNamespace.get_builder()
+    with pytest.raises(KeyError):
+        builder['nonexistent']
+    with pytest.raises(KeyError):
+        builder['namespace']['nonexistent']
+
+
 @pytest.mark.parametrize(
     'process_class',
     [
@@ -182,6 +207,7 @@ def test_dynamic_setters(example_inputs):
     builder.name_spaced = example_inputs['name_spaced']
     builder.boolean = example_inputs['boolean']
     builder.dict = example_inputs['dict']
+    builder.metadata = example_inputs['metadata']
     assert builder == example_inputs
 
 

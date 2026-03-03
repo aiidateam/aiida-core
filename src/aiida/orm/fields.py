@@ -541,7 +541,7 @@ def add_field(
     root_type = extract_root_type(dtype) if dtype else None
     if root_type in (int, float, datetime.datetime):
         return QbNumericField(**kwargs)
-    elif root_type is list:
+    elif root_type in (list, tuple):
         return QbArrayField(**kwargs)
     elif root_type is str:
         return QbStrField(**kwargs)

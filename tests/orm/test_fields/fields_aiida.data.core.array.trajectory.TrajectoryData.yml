@@ -10,7 +10,8 @@ label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
 mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
   time of the node')
 node_type: QbStrField('node_type', dtype=<class 'str'>, doc='The type of the node')
-pbc: QbField('pbc', dtype=typing.Optional[typing.Tuple[bool, bool, bool]], is_attribute=True)
+pbc: QbArrayField('attributes.pbc', dtype=typing.Optional[typing.Tuple[bool, bool,
+  bool]], doc='Periodic boundary conditions')
 pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
 process_type: QbStrField('process_type', dtype=typing.Optional[str], doc='The process
   type of the node')

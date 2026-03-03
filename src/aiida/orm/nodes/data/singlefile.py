@@ -103,7 +103,7 @@ class SinglefileData(Data):
             # Store the filename if provided, even if the file is not yet set.
             # We check for consistency later on `store`.
             if filename is not None:
-                self.filename = filename
+                self.filename = str(filename)
 
             warnings.warn(
                 'No content provided for `SinglefileData`. Please use the `set_file` method to set the file content.',

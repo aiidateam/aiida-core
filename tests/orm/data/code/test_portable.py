@@ -38,10 +38,10 @@ def test_constructor_raises(tmp_path, bash_path):
         PortableCode(filepath_executable='bash', filepath_files=file)
 
 
-def test_constructor_warns(bash_path):
+def test_constructor_warns():
     """Test the constructor when it is supposed to warn."""
     with pytest.warns(UserWarning, match=r'No `filepath_files` provided.*'):
-        PortableCode(filepath_executable=bash_path)
+        PortableCode(filepath_executable='bash')
 
 
 def test_constructor(tmp_path):

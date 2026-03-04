@@ -18,11 +18,15 @@ from aiida.storage.utils import IN_CLAUSE_BATCH_SIZE, _create_smarter_in_clause
 @pytest.fixture
 def sqlite_session():
     """In-memory SQLite session with a simple integer table."""
-    engine = sa.create_engine('sqlite://')
+    engine = sa.create_engine(url='sqlite://')
     metadata = sa.MetaData()
-    table = sa.Table('items', metadata, sa.Column('id', sa.Integer, primary_key=True))
-    metadata.create_all(engine)
-    with Session(engine) as session:
+    table = sa.Table(
+        'items',
+        metadata,
+        sa.Column(name='id', type_=sa.Integer, primary_key=True),
+    )
+    metadata.create_all(bind=engine)
+    with Session(bind=engine) as session:
         yield session, table.c.id
 
 
@@ -30,7 +34,7 @@ def test_sqlite_uses_json_each(sqlite_session):
     """SQLite: generates ``id IN (SELECT CAST(value AS INTEGER) FROM json_each(?))``."""
     session, column = sqlite_session
     in_clause = _create_smarter_in_clause(session=session, column=column, values=[1, 2])
-    sql = str(in_clause.compile(session.bind))
+    sql = str(in_clause.compile(bind=session.bind))
     assert 'json_each' in sql
     assert 'IN (SELECT' in sql
 
@@ -40,7 +44,7 @@ def test_sqlite_batches_large_lists(sqlite_session):
     session, column = sqlite_session
     values = list(range(IN_CLAUSE_BATCH_SIZE + 1))
     in_clause = _create_smarter_in_clause(session=session, column=column, values=values)
-    sql = str(in_clause.compile(session.bind))
+    sql = str(in_clause.compile(bind=session.bind))
     assert sql.count('IN (SELECT') == 2
     assert ' OR ' in sql
 
@@ -54,7 +58,7 @@ def test_psql_uses_unnest():
 
     session = get_manager().get_profile_storage().get_session()
     in_clause = _create_smarter_in_clause(session=session, column=DbNode.id, values=[1, 2])
-    sql = str(in_clause.compile(session.bind))
+    sql = str(in_clause.compile(bind=session.bind))
     assert 'unnest' in sql
     assert 'IN (SELECT' in sql
 
@@ -69,6 +73,6 @@ def test_psql_batches_large_lists():
     session = get_manager().get_profile_storage().get_session()
     values = list(range(IN_CLAUSE_BATCH_SIZE + 1))
     in_clause = _create_smarter_in_clause(session=session, column=DbNode.id, values=values)
-    sql = str(in_clause.compile(session.bind))
+    sql = str(in_clause.compile(bind=session.bind))
     assert sql.count('IN (SELECT') == 2
     assert ' OR ' in sql

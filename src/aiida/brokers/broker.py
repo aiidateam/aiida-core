@@ -7,7 +7,27 @@ import typing as t
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.profile import Profile
 
-__all__ = ('Broker', 'QueueType')
+__all__ = ('Broker', 'QueueType', 'TaskQueue')
+
+
+@t.runtime_checkable
+class TaskQueue(t.Protocol):
+    """Protocol for task queues that can send tasks and manage subscribers.
+
+    TODO: Remove this once kiwipy exposes ``kiwipy.TaskQueue`` and the dependency is updated.
+    """
+
+    def task_send(self, task: t.Any, no_reply: bool = False, nowait: bool = False) -> t.Any:
+        """Send a task to the queue."""
+        ...
+
+    def add_task_subscriber(self, subscriber: t.Callable[..., t.Any]) -> t.Any:
+        """Add a task subscriber."""
+        ...
+
+    def remove_task_subscriber(self, identifier: t.Any) -> None:
+        """Remove a task subscriber."""
+        ...
 
 
 class QueueType(enum.Enum):
@@ -57,7 +77,7 @@ class Broker:
         """
 
     @abc.abstractmethod
-    def get_task_queue(self, queue_type: QueueType, user_queue: str):
+    def get_task_queue(self, queue_type: QueueType, user_queue: str) -> TaskQueue:
         """Get a task queue by type and user queue name.
 
         :param queue_type: The queue type.

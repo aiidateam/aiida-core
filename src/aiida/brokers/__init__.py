@@ -9,6 +9,7 @@ __all__ = (
     'Broker',
     'QueueType',
     'RabbitmqBroker',
+    'TaskQueue',
 )
 
 # fmt: on

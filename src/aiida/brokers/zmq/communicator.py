@@ -490,9 +490,11 @@ class ZmqCommunicator:
                 result = subscriber(self, body)
 
                 # Resolve Future(s) before serializing: plumpy subscribers
-                # return a kiwipy.Future (concurrent.futures.Future) whose
-                # result may itself be another Future (via plum_to_kiwi_future
-                # chaining), so we loop until we get a concrete value.
+                # (via convert_to_comm) return a kiwipy.Future whose result
+                # may itself be another Future (via plum_to_kiwi_future
+                # chaining). We resolve all layers to get a concrete value.
+                # Callers use unwrap_kiwi_future to handle both nested and
+                # flat responses, so fully resolving here is correct.
                 while isinstance(result, Future):
                     result = result.result(timeout=RPC_TIMEOUT)
 

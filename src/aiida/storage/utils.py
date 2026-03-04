@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 from functools import singledispatch
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Sequence, TypeVar
 
 from sqlalchemy import Select, or_, select, type_coerce
 from sqlalchemy import cast as sql_cast
@@ -34,9 +34,11 @@ if TYPE_CHECKING:
 # For very large lists, multiple batches are combined with OR. 500k balances memory usage with query performance.
 IN_CLAUSE_BATCH_SIZE: int = 500_000
 
+T = TypeVar('T')
+
 
 @singledispatch
-def _build_select_stmt(dialect: Dialect, coltype: TypeEngine[Any], values: Sequence[Any]) -> Select[Any]:
+def _build_select_stmt(dialect: Dialect, coltype: TypeEngine[T], values: Sequence[T]) -> Select[tuple[T]]:
     """Return a SELECT statement over ``values`` appropriate for the given dialect.
 
     Dispatches to the dialect-specific implementation via :func:`singledispatch`.
@@ -51,7 +53,7 @@ def _build_select_stmt(dialect: Dialect, coltype: TypeEngine[Any], values: Seque
 
 
 @_build_select_stmt.register
-def _build_select_stmt_psql(dialect: PGDialect, coltype: TypeEngine[Any], values: Sequence[Any]) -> Select[Any]:
+def _build_select_stmt_psql(dialect: PGDialect, coltype: TypeEngine[T], values: Sequence[T]) -> Select[tuple[T]]:
     """PostgreSQL: ``SELECT unnest(:array)`` — passes the entire list as 1 parameter."""
     from sqlalchemy.dialects.postgresql import ARRAY
 
@@ -60,7 +62,7 @@ def _build_select_stmt_psql(dialect: PGDialect, coltype: TypeEngine[Any], values
 
 
 @_build_select_stmt.register
-def _build_select_stmt_sqlite(dialect: SQLiteDialect, coltype: TypeEngine[Any], values: Sequence[Any]) -> Select[Any]:
+def _build_select_stmt_sqlite(dialect: SQLiteDialect, coltype: TypeEngine[T], values: Sequence[T]) -> Select[tuple[T]]:
     """SQLite: ``SELECT CAST(value AS coltype) FROM json_each(:json)`` — passes the list as 1 parameter."""
     json_each_table = sa_func.json_each(json.dumps(list(values))).table_valued('value')
     value_col = json_each_table.c.value
@@ -68,7 +70,7 @@ def _build_select_stmt_sqlite(dialect: SQLiteDialect, coltype: TypeEngine[Any], 
 
 
 def _create_smarter_in_clause(
-    session: 'Session', column: ColumnElement[Any] | InstrumentedAttribute[Any], values: Sequence[Any]
+    session: 'Session', column: ColumnElement[T] | InstrumentedAttribute[T], values: Sequence[T]
 ) -> ColumnElement[bool]:
     """Return an IN condition using database-specific functions to avoid parameter limits.
 
@@ -111,7 +113,7 @@ def _create_smarter_in_clause(
         msg = 'Session is not bound to an engine; cannot determine database dialect.'
         raise RuntimeError(msg)
     dialect: Dialect = session.bind.dialect
-    coltype: TypeEngine[Any] = column.type
+    coltype: TypeEngine[T] = column.type
 
     if len(values) > IN_CLAUSE_BATCH_SIZE:
         # For very large lists, batch to avoid memory/performance issues

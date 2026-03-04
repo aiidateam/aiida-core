@@ -11,17 +11,18 @@
 from __future__ import annotations
 
 import json
+import math
 import typing as t
 from collections.abc import Sequence
 from functools import singledispatch
 
-from sqlalchemy import Select, or_, select, type_coerce
+from sqlalchemy import Select, select, type_coerce, union_all
 from sqlalchemy import func as sa_func
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.dialects.sqlite.base import SQLiteDialect
 from sqlalchemy.engine import Dialect
 from sqlalchemy.orm.attributes import InstrumentedAttribute
-from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.sql.elements import BinaryExpression, ColumnElement
 from sqlalchemy.types import TypeEngine
 
 from aiida.common.utils import batch_iter
@@ -30,9 +31,15 @@ if t.TYPE_CHECKING:
     from sqlalchemy.orm.session import Session
 
 
-# NOTE: Controls how many values are passed to a single unnest() (PostgreSQL) or json_each() (SQLite) call.
-# For very large lists, multiple batches are combined with OR. 500k balances memory usage with query performance.
-IN_CLAUSE_BATCH_SIZE: int = 500_000
+# NOTE: How many values a single unnest() (PostgreSQL) or json_each() (SQLite) call is meant to carry, and the
+# threshold above which a list is batched at all. 500k balances memory usage with query performance. Batches are
+# combined with UNION ALL, and grow past this size only where MAX_COMPOUND_SELECT_TERMS would otherwise be exceeded.
+DEFAULT_IN_CLAUSE_BATCH_SIZE: t.Final[int] = 500_000
+
+# NOTE: Caps how many batches a UNION ALL may have. SQLite refuses a compound SELECT with more terms than
+# SQLITE_MAX_COMPOUND_SELECT, whose default is 500; beyond that the batches grow instead. PostgreSQL has no
+# equivalent limit, so capping both dialects costs nothing and saves a dialect branch here.
+MAX_COMPOUND_SELECT_TERMS: t.Final[int] = 500
 
 T = t.TypeVar('T')
 
@@ -79,21 +86,22 @@ def _build_select_stmt_sqlite(dialect: SQLiteDialect, coltype: TypeEngine[T], va
 
 def _create_smarter_in_clause(
     session: Session, column: ColumnElement[T] | InstrumentedAttribute[T], values: Sequence[T]
-) -> ColumnElement[bool]:
+) -> BinaryExpression[bool]:
     """Return an IN condition using database-specific functions to avoid parameter limits.
 
     Uses ``unnest()`` (PostgreSQL) or ``json_each()`` (SQLite) to pass large lists as a single
     parameter instead of N parameters, avoiding database parameter limits.
 
-    For very large lists (>500k items), automatically batches into multiple OR'd conditions
-    to balance query performance with memory usage and database load.
+    For very large lists (>500k items), automatically batches into multiple subqueries
+    combined with UNION ALL to balance query performance with memory usage and database load.
 
     .. note::
         The 500k batch threshold is chosen to balance several factors:
 
-        - **Parameter limits**: Each batch uses 1 parameter. With SQLite's minimum limit of 999
-          parameters, this allows up to ~500M items (999 x 500k). PostgreSQL's limit of ~65k
-          parameters allows up to ~33B items (65,535 x 500k).
+        - **Parameter limits**: Each batch uses 1 parameter and contributes one term to the
+          ``UNION ALL``. Beyond 500 batches the batch grows instead, so the term count stays
+          within ``SQLITE_MAX_COMPOUND_SELECT`` and the ceiling becomes the payload size of a
+          single batch: ~64B items for SQLite under ``SQLITE_MAX_LENGTH``.
         - **Memory constraints**: In practice, Python memory becomes the bottleneck before
           database limits. A list of 500M items would require 4-20GB RAM before even reaching
           the database.
@@ -106,10 +114,10 @@ def _create_smarter_in_clause(
 
     Large list (1.5M items)::
 
-        WHERE (
-            column IN (SELECT unnest(:array_1))  -- First 500k
-            OR column IN (SELECT unnest(:array_2))  -- Second 500k
-            OR column IN (SELECT unnest(:array_3))  -- Remaining 500k
+        WHERE column IN (
+            SELECT unnest(:array_1)  -- First 500k
+            UNION ALL SELECT unnest(:array_2)  -- Second 500k
+            UNION ALL SELECT unnest(:array_3)  -- Remaining 500k
         )
 
     :param session: The SQLAlchemy session, used to detect the database dialect.
@@ -123,14 +131,15 @@ def _create_smarter_in_clause(
     dialect: Dialect = session.bind.dialect
     coltype: TypeEngine[T] = column.type
 
-    if len(values) > IN_CLAUSE_BATCH_SIZE:
-        # For very large lists, batch to avoid memory/performance issues
-        # Create individual IN clauses for each batch and combine with OR
-        batch_in_clauses = [
-            column.in_(_build_select_stmt(dialect, coltype, batch).scalar_subquery())
-            for _, batch in batch_iter(values, IN_CLAUSE_BATCH_SIZE)
-        ]
-        return or_(*batch_in_clauses)
+    if len(values) > DEFAULT_IN_CLAUSE_BATCH_SIZE:
+        # PostgreSQL plans one IN over a single derived set as an index-driven nested loop,
+        # where OR'd IN subqueries become hashed subplans behind a sequential scan.
+        # SQLite caps how many terms that compound SELECT may have, and each batch is one of
+        # them, so past MAX_COMPOUND_SELECT_TERMS the batches grow in size instead of in number.
+        n_batches: int = min(MAX_COMPOUND_SELECT_TERMS, math.ceil(len(values) / DEFAULT_IN_CLAUSE_BATCH_SIZE))
+        batch_size: int = math.ceil(len(values) / n_batches)
+        batch_selects = [_build_select_stmt(dialect, coltype, batch) for _, batch in batch_iter(values, batch_size)]
+        return column.in_(union_all(*batch_selects).scalar_subquery())
 
     subq = _build_select_stmt(dialect, coltype, values).scalar_subquery()
     return column.in_(subq)

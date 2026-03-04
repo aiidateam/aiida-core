@@ -20,7 +20,7 @@ from aiida.manage import manager
 from aiida.orm import ProcessNode
 
 if t.TYPE_CHECKING:
-    from aiida.brokers.rabbitmq.defaults import QueueType
+    from aiida.brokers.broker import QueueType
 
 from .processes.builder import ProcessBuilder
 from .processes.functions import FunctionProcess
@@ -42,7 +42,7 @@ def _determine_queue_type(process_class: t.Type[Process]) -> 'QueueType':
     :param process_class: The process class being submitted.
     :return: Queue type (ROOT_WORKCHAIN or CALCJOB).
     """
-    from aiida.brokers.rabbitmq.defaults import QueueType
+    from aiida.brokers.broker import QueueType
     from aiida.engine.processes.calcjobs import CalcJob
     from aiida.engine.processes.workchains import WorkChain
 

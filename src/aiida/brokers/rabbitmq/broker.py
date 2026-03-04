@@ -8,11 +8,9 @@ import typing as t
 # typing.assert_never available since 3.11
 from typing_extensions import assert_never
 
-from aiida.brokers.broker import Broker
+from aiida.brokers.broker import Broker, QueueType
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import get_config_option
-
-from .defaults import QueueType
 from .utils import get_message_exchange_name, get_queue_name, get_task_exchange_name
 
 if t.TYPE_CHECKING:
@@ -74,7 +72,7 @@ class RabbitmqBroker(Broker):
 
         from aiida.orm.utils import serialize
 
-        from .defaults import DEFAULT_USER_QUEUE, QueueType
+        from .defaults import DEFAULT_USER_QUEUE
 
         # Use calcjob queue as the default task queue for the communicator
         default_task_queue = get_queue_name(self._prefix, DEFAULT_USER_QUEUE, QueueType.CALCJOB.value)

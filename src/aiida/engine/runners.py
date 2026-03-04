@@ -221,7 +221,8 @@ class Runner:
         :return: The full RabbitMQ queue name (e.g., 'aiida-{uuid}.default.calcjob.queue').
         :raises exceptions.InvalidOperation: If queue is not configured for the profile.
         """
-        from aiida.brokers.rabbitmq.defaults import DEFAULT_USER_QUEUE, QueueType
+        from aiida.brokers.broker import QueueType
+        from aiida.brokers.rabbitmq.defaults import DEFAULT_USER_QUEUE
         from aiida.engine.processes.workchains import WorkChain
         from aiida.manage import get_manager
 

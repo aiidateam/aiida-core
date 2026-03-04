@@ -28,7 +28,8 @@ def get_queue_name_from_node(node: ProcessNode) -> str:
     :param node: The process node.
     :return: The full queue name (e.g., 'aiida-{uuid}.default.root-workchain.queue').
     """
-    from aiida.brokers.rabbitmq.defaults import DEFAULT_USER_QUEUE, QueueType
+    from aiida.brokers.broker import QueueType
+    from aiida.brokers.rabbitmq.defaults import DEFAULT_USER_QUEUE
     from aiida.orm.nodes.process.workflow import WorkChainNode
 
     # Get the stored user queue name

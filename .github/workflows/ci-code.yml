@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.13']
+        python-version: ['3.9', '3.14']
         database-backend: [psql]
 
     services:
@@ -72,19 +72,19 @@ jobs:
         AIIDA_TEST_PROFILE: test_aiida
         AIIDA_WARN_v3: 1
       run: |
-        pytest -n auto --db-backend ${{ matrix.database-backend }} -m 'not nightly' tests/ ${{ matrix.python-version == '3.13' && '--cov aiida' || '' }}
+        pytest -n auto --db-backend ${{ matrix.database-backend }} -m 'not nightly' tests/ ${{ matrix.python-version == '3.14' && '--cov aiida' || '' }}
 
     - name: Upload coverage report
-      if: matrix.python-version == 3.13 && github.repository == 'aiidateam/aiida-core'
+      if: matrix.python-version == 3.14 && github.repository == 'aiidateam/aiida-core'
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        name: aiida-pytests-py3.13
+        name: aiida-pytests-py3.14
         files: ./coverage.xml
         fail_ci_if_error: false  # don't fail job, if coverage upload fails
 
     - name: Upload coverage artifact
-      if: matrix.python-version == '3.13'
+      if: matrix.python-version == '3.14'
       uses: actions/upload-artifact@v6
       with:
         name: coverage
@@ -148,7 +148,7 @@ jobs:
     - name: Install aiida-core
       uses: ./.github/actions/install-aiida-core
       with:
-        python-version: '3.13'
+        python-version: '3.14'
 
     - name: Setup SSH on localhost
       run: .github/workflows/setup_ssh.sh
@@ -170,7 +170,7 @@ jobs:
     - name: Install aiida-core
       uses: ./.github/actions/install-aiida-core
       with:
-        python-version: '3.13'
+        python-version: '3.14'
         from-lock: 'true'
         extras: ''
 

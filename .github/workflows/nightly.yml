@@ -11,6 +11,7 @@ on:
     - .molecule/default/files/**
     - aiida/storage/psql_dos/migrations/**
     - tests/storage/psql_dos/migrations/**
+    - tests/storage/psql_dos/test_nodes.py
   workflow_dispatch:
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency

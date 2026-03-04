@@ -50,13 +50,10 @@ class RabbitmqBroker(Broker):
             self._communicator = None
 
     def iterate_tasks(self):
-        """Return an iterator over the tasks in all process queues."""
-        queue_config = self._profile.get_queue_config() or {}
-        for user_queue in queue_config.keys():
-            for queue_type in QueueType:
-                task_queue = self.get_task_queue(queue_type, user_queue)
-                for task in task_queue:
-                    yield task
+        """Return an iterator over the tasks in all cached process queues."""
+        for task_queue in self._task_queues.values():
+            for task in task_queue:
+                yield task
 
     def get_communicator(self) -> 'RmqThreadCommunicator':
         if self._communicator is None:

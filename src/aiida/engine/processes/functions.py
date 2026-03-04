@@ -17,7 +17,7 @@ import logging
 import signal
 import types
 import typing as t
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ParamSpec
 
 import docstring_parser
 
@@ -41,20 +41,10 @@ from aiida.orm.utils.mixins import FunctionCalculationMixin
 from .process import Process
 from .process_spec import ProcessSpec
 
-try:
-    UnionType = types.UnionType
-except AttributeError:
-    # This type is not available for Python 3.9 and older
-    UnionType = None  # type: ignore[assignment,misc]
+UnionType = types.UnionType
 
-# Fallback for Python 3.9 and older
-from typing_extensions import ParamSpec
 
-try:
-    get_annotations = inspect.get_annotations
-except AttributeError:
-    # This is the backport for Python 3.9 and older
-    from get_annotations import get_annotations  # type: ignore[no-redef]
+get_annotations = inspect.get_annotations
 
 if TYPE_CHECKING:
     from .exit_code import ExitCode

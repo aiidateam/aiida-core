@@ -224,6 +224,7 @@ class Runner:
         from aiida.brokers.broker import QueueType
         from aiida.brokers.rabbitmq.defaults import DEFAULT_USER_QUEUE
         from aiida.engine.processes.workchains import WorkChain
+        from aiida.engine.processes.calcjobs import CalcJob 
         from aiida.manage import get_manager
 
         from .processes import Process
@@ -241,8 +242,13 @@ class Runner:
         # Route based on submitted process type
         if isinstance(process_inited, WorkChain):
             queue_type = QueueType.NESTED_WORKCHAIN
-        else:
+        elif isinstance(process_inited, CalcJob):
             queue_type = QueueType.CALCJOB
+        else:
+            raise TypeError(
+                f'Cannot determine queue type for process of type `{type(process_inited)}`. '
+                f'Only `WorkChain` and `CalcJob` processes can be routed to task queues.'
+            )
 
         # Get the full RabbitMQ queue name including the profile prefix
         broker = get_manager().get_broker()

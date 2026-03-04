@@ -31,6 +31,7 @@ def get_queue_name_from_node(node: ProcessNode) -> str:
     from aiida.brokers.broker import QueueType
     from aiida.brokers.rabbitmq.defaults import DEFAULT_USER_QUEUE
     from aiida.orm.nodes.process.workflow import WorkChainNode
+    from aiida.orm.nodes.process.calculation import CalcJobNode
 
     # Get the stored user queue name
     user_queue = node.base.attributes.get(ProcessNode.QUEUE_NAME_KEY, DEFAULT_USER_QUEUE)
@@ -41,8 +42,13 @@ def get_queue_name_from_node(node: ProcessNode) -> str:
             queue_type = QueueType.ROOT_WORKCHAIN
         else:
             queue_type = QueueType.NESTED_WORKCHAIN
-    else:
+    elif isinstance(node, CalcJobNode):
         queue_type = QueueType.CALCJOB
+    else:
+        raise TypeError(
+            f'Cannot determine queue type for node of type `{type(node)}`. '
+            f'Only `WorkChainNode` and `CalcJobNode` can be routed to task queues.'
+        )
 
     # Get the full RabbitMQ queue name including the profile prefix
     broker = get_manager().get_broker()

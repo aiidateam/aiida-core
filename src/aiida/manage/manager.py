@@ -465,6 +465,7 @@ class Manager:
         if broker is not None:
             from plumpy.communications import convert_to_comm
 
+            from aiida.brokers.broker import QueueType
             from aiida.manage.configuration import get_config, get_config_option
 
             profile = self.get_profile()
@@ -476,7 +477,7 @@ class Manager:
             wrapped_receiver = convert_to_comm(task_receiver, runner_loop)
 
             for user_queue in queue_config.keys():
-                for queue_type in broker.get_queue_types():
+                for queue_type in QueueType:
                     task_queue = broker.get_task_queue(queue_type, user_queue)
                     task_queue.add_task_subscriber(wrapped_receiver)
                     self.logger.info(f'Daemon subscribed to queue: {user_queue}.{queue_type.value}')

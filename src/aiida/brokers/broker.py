@@ -70,13 +70,6 @@ class Broker:
         """
 
     @abc.abstractmethod
-    def get_queue_types(self) -> 'list[QueueType]':
-        """Get the list of queue types.
-
-        :return: List of queue types.
-        """
-
-    @abc.abstractmethod
     def get_task_queue(self, queue_type: QueueType, user_queue: str) -> TaskQueue:
         """Get a task queue by type and user queue name.
 

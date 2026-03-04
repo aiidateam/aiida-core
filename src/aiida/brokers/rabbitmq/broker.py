@@ -53,7 +53,7 @@ class RabbitmqBroker(Broker):
         """Return an iterator over the tasks in all process queues."""
         queue_config = self._profile.get_queue_config() or {}
         for user_queue in queue_config.keys():
-            for queue_type in self.get_queue_types():
+            for queue_type in QueueType:
                 task_queue = self.get_task_queue(queue_type, user_queue)
                 for task in task_queue:
                     yield task
@@ -189,13 +189,6 @@ class RabbitmqBroker(Broker):
         task_queue = self.get_communicator().task_queue(rmq_queue_name, prefetch_count=prefetch_count)
         self._task_queues[cache_key] = task_queue
         return task_queue
-
-    def get_queue_types(self) -> list[QueueType]:
-        """Get the list of queue types.
-
-        :return: List of queue types.
-        """
-        return list(QueueType)
 
     def get_full_queue_name(self, user_queue: str, queue_type: QueueType) -> str:
         """Get the full RabbitMQ queue name for routing.

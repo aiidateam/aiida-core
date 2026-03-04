@@ -33,19 +33,6 @@ repos:
   - id: ruff
     args: [--fix, --exit-non-zero-on-fix, --show-fixes]
 
-- repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.14.0
-  hooks:
-  - id: pretty-format-toml
-    args: [--autofix]
-  - id: pretty-format-yaml
-    args: [--autofix]
-    exclude: >-
-      (?x)^(
-        tests/.*|
-        environment.yml|
-      )$
-
 - repo: https://github.com/astral-sh/uv-pre-commit
   rev: 0.9.8
   hooks:

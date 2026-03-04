@@ -8,13 +8,16 @@
 ###########################################################################
 """Migration from the "legacy" JSON format, to an sqlite database, and node uuid based repository to hash based."""
 
+from __future__ import annotations
+
 import shutil
 import tarfile
-from contextlib import contextmanager
+from collections.abc import Callable, Iterator
+from contextlib import AbstractContextManager, contextmanager
 from datetime import datetime
 from hashlib import sha256
 from pathlib import Path, PurePath
-from typing import Any, Callable, ContextManager, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any
 
 from archive_path import ZipPath
 from sqlalchemy import insert, select
@@ -36,7 +39,7 @@ _USER_ENTITY_NAME = 'User'
 _LOG_ENTITY_NAME = 'Log'
 _COMMENT_ENTITY_NAME = 'Comment'
 
-file_fields_to_model_fields: Dict[str, Dict[str, str]] = {
+file_fields_to_model_fields: dict[str, dict[str, str]] = {
     _NODE_ENTITY_NAME: {'dbcomputer': 'dbcomputer_id', 'user': 'user_id'},
     _GROUP_ENTITY_NAME: {'user': 'user_id'},
     _COMPUTER_ENTITY_NAME: {},
@@ -51,7 +54,7 @@ def perform_v1_migration(
     inpath: Path,
     working: Path,
     new_zip: ZipPath,
-    central_dir: Dict[str, Any],
+    central_dir: dict[str, Any],
     is_tar: bool,
     metadata: dict,
     data: dict,
@@ -69,8 +72,8 @@ def perform_v1_migration(
     :returns:the path to the sqlite database file
     """
     MIGRATE_LOGGER.report('Initialising new archive...')
-    node_repos: Dict[str, List[Tuple[str, Optional[str]]]] = {}
-    in_archive_context: Callable[[Path], ContextManager[Union[Path, ZipPath]]] = ZipPath
+    node_repos: dict[str, list[tuple[str, str | None]]] = {}
+    in_archive_context: Callable[[Path], AbstractContextManager[Path | ZipPath]] = ZipPath
     if is_tar:
         # we cannot stream from a tar file performantly, so we extract it to disk first
         @contextmanager
@@ -128,7 +131,7 @@ def perform_v1_migration(
 
 
 def _json_to_sqlite(
-    outpath: Path, data: dict, node_repos: Dict[str, List[Tuple[str, Optional[str]]]], batch_size: int = 100
+    outpath: Path, data: dict, node_repos: dict[str, list[tuple[str, str | None]]], batch_size: int = 100
 ) -> None:
     """Convert a JSON archive format to SQLite."""
     from aiida.common.utils import batch_iter
@@ -213,7 +216,7 @@ def _json_to_sqlite(
                 uuid: pk for uuid, pk in connection.execute(select(v1_schema.DbGroup.uuid, v1_schema.DbGroup.id))
             }
             length = sum(len(uuids) for uuids in data['groups_uuid'].values())
-            unknown_nodes: Dict[str, set] = {}
+            unknown_nodes: dict[str, set] = {}
             with get_progress_reporter()(desc='Adding Group-Nodes', total=length) as progress:
                 for group_uuid, node_uuids in data['groups_uuid'].items():
                     group_id = group_uuid_map[group_uuid]
@@ -238,8 +241,8 @@ def _convert_datetime(key, value):
 def _iter_entity_fields(
     data,
     name: str,
-    node_repos: Dict[str, List[Tuple[str, Optional[str]]]],
-) -> Iterator[Dict[str, Any]]:
+    node_repos: dict[str, list[tuple[str, str | None]]],
+) -> Iterator[dict[str, Any]]:
     """Iterate through entity fields."""
     keys = file_fields_to_model_fields.get(name, {})
     if name == _NODE_ENTITY_NAME:
@@ -267,7 +270,7 @@ def _iter_entity_fields(
             yield {**{keys.get(key, key): _convert_datetime(key, val) for key, val in all_fields.items()}, **{'id': pk}}
 
 
-def _create_repo_metadata(paths: List[Tuple[str, Optional[str]]]) -> Dict[str, Any]:
+def _create_repo_metadata(paths: list[tuple[str, str | None]]) -> dict[str, Any]:
     """Create the repository metadata.
 
     :param paths: list of (path, hashkey) tuples

@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import base64
 import io
-from typing import Any, Iterator, Optional
+from collections.abc import Iterator
+from typing import Any
 
 import numpy as np
 from pydantic import ConfigDict
@@ -49,7 +50,7 @@ class ArrayData(Data):
 
     class Model(Data.Model):
         model_config = ConfigDict(arbitrary_types_allowed=True)
-        arrays: Optional[dict[str, bytes]] = MetadataField(
+        arrays: dict[str, bytes] | None = MetadataField(
             None,
             description='The dictionary of numpy arrays.',
             orm_to_model=lambda node, _: ArrayData.save_arrays(node.arrays),  # type: ignore[attr-defined]
@@ -227,8 +228,7 @@ class ArrayData(Data):
         # Check if the name is valid
         if not name or re.sub('[0-9a-zA-Z_]', '', name):
             raise ValueError(
-                'The name assigned to the array ({}) is not valid,'
-                'it can only contain digits, letters and underscores'
+                'The name assigned to the array ({}) is not valid,it can only contain digits, letters and underscores'
             )
 
         # Write the array to a temporary file, and then add it to the repository of the node

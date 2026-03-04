@@ -43,7 +43,7 @@ def test_add_default(fixture_sandbox, aiida_localhost, generate_calc_job):
 
     with fixture_sandbox.open(options['input_filename'].default) as handle:
         input_written = handle.read()
-        assert input_written == f"echo $(({inputs['x'].value} + {inputs['y'].value}))\n"
+        assert input_written == f'echo $(({inputs["x"].value} + {inputs["y"].value}))\n'
 
 
 @pytest.mark.requires_rmq

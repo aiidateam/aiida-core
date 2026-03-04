@@ -9,7 +9,8 @@
 """Module with `Node` sub class for calculation job processes."""
 
 import datetime
-from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Sequence, Tuple, Type, Union
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, AnyStr, Optional, Union
 
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
@@ -34,7 +35,7 @@ __all__ = ('CalcJobNode',)
 class CalcJobNodeCaching(ProcessNodeCaching):
     """Interface to control caching of a node instance."""
 
-    def get_objects_to_hash(self) -> List[Any]:
+    def get_objects_to_hash(self) -> list[Any]:
         """Return a list of objects which should be included in the hash.
 
         This method is purposefully overridden from the base `Node` class, because we do not want to include the
@@ -90,11 +91,11 @@ class CalcJobNode(CalculationNode):
             description='The detailed job info returned by the scheduler',
             orm_to_model=lambda node, _: node.get_detailed_job_info(),
         )
-        retrieve_list: Optional[List[str]] = MetadataField(
+        retrieve_list: Optional[list[str]] = MetadataField(
             description='The list of files to retrieve from the remote cluster',
             orm_to_model=lambda node, _: node.get_retrieve_list(),
         )
-        retrieve_temporary_list: Optional[List[str]] = MetadataField(
+        retrieve_temporary_list: Optional[list[str]] = MetadataField(
             description='The list of temporary files to retrieve from the remote cluster',
             orm_to_model=lambda node, _: node.get_retrieve_temporary_list(),
         )
@@ -137,7 +138,7 @@ class CalcJobNode(CalculationNode):
         return self._tools
 
     @classproperty
-    def _updatable_attributes(cls) -> Tuple[str, ...]:  # noqa: N805
+    def _updatable_attributes(cls) -> tuple[str, ...]:  # noqa: N805
         return super()._updatable_attributes + (
             cls.CALC_JOB_STATE_KEY,
             cls.IMMIGRATED_KEY,
@@ -152,7 +153,7 @@ class CalcJobNode(CalculationNode):
         )
 
     @classproperty
-    def _hash_ignored_attributes(cls) -> Tuple[str, ...]:  # noqa: N805
+    def _hash_ignored_attributes(cls) -> tuple[str, ...]:  # noqa: N805
         return super()._hash_ignored_attributes + (
             'queue_name',
             'account',
@@ -187,7 +188,7 @@ class CalcJobNode(CalculationNode):
         """
         self.base.attributes.set(name, value)
 
-    def get_options(self) -> Dict[str, Any]:
+    def get_options(self) -> dict[str, Any]:
         """Return the dictionary of options set for this CalcJobNode
 
         :return: dictionary of the options and their values
@@ -200,7 +201,7 @@ class CalcJobNode(CalculationNode):
 
         return options
 
-    def set_options(self, options: Dict[str, Any]) -> None:
+    def set_options(self, options: dict[str, Any]) -> None:
         """Set the options for this CalcJobNode
 
         :param options: dictionary of option and their values to set
@@ -259,7 +260,7 @@ class CalcJobNode(CalculationNode):
         return self.base.attributes.get(self.REMOTE_WORKDIR_KEY, None)
 
     @staticmethod
-    def _validate_retrieval_directive(directives: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
+    def _validate_retrieval_directive(directives: Sequence[Union[str, tuple[str, str, str]]]) -> None:
         """Validate a list or tuple of file retrieval directives.
 
         :param directives: a list or tuple of file retrieval directives
@@ -286,7 +287,7 @@ class CalcJobNode(CalculationNode):
             if not isinstance(directive[2], (int, type(None))):
                 raise ValueError('invalid directive, third element has to be an integer representing the depth')
 
-    def set_retrieve_list(self, retrieve_list: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
+    def set_retrieve_list(self, retrieve_list: Sequence[Union[str, tuple[str, str, str]]]) -> None:
         """Set the retrieve list.
 
         This list of directives will instruct the daemon what files to retrieve after the calculation has completed.
@@ -297,14 +298,14 @@ class CalcJobNode(CalculationNode):
         self._validate_retrieval_directive(retrieve_list)
         self.base.attributes.set(self.RETRIEVE_LIST_KEY, retrieve_list)
 
-    def get_retrieve_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, str]]]]:
+    def get_retrieve_list(self) -> Optional[Sequence[Union[str, tuple[str, str, str]]]]:
         """Return the list of files/directories to be retrieved on the cluster after the calculation has completed.
 
         :return: a list of file directives
         """
         return self.base.attributes.get(self.RETRIEVE_LIST_KEY, None)
 
-    def set_retrieve_temporary_list(self, retrieve_temporary_list: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
+    def set_retrieve_temporary_list(self, retrieve_temporary_list: Sequence[Union[str, tuple[str, str, str]]]) -> None:
         """Set the retrieve temporary list.
 
         The retrieve temporary list stores files that are retrieved after completion and made available during parsing
@@ -315,7 +316,7 @@ class CalcJobNode(CalculationNode):
         self._validate_retrieval_directive(retrieve_temporary_list)
         self.base.attributes.set(self.RETRIEVE_TEMPORARY_LIST_KEY, retrieve_temporary_list)
 
-    def get_retrieve_temporary_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, str]]]]:
+    def get_retrieve_temporary_list(self) -> Optional[Sequence[Union[str, tuple[str, str, str]]]]:
         """Return list of files to be retrieved from the cluster which will be available during parsing.
 
         :return: a list of file directives
@@ -443,7 +444,7 @@ class CalcJobNode(CalculationNode):
         """
         return self.get_authinfo().get_transport()
 
-    def get_parser_class(self) -> Optional[Type['Parser']]:
+    def get_parser_class(self) -> Optional[type['Parser']]:
         """Return the output parser object for this calculation or None if no parser is set.
 
         :return: a `Parser` class.

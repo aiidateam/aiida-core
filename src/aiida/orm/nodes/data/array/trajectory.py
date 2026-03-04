@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 import collections.abc
-from typing import List, Optional, Tuple
 
 from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
@@ -29,8 +28,8 @@ class TrajectoryData(ArrayData):
     class Model(ArrayData.Model):
         units_positions: str = MetadataField(alias='units|positions', description='Unit of positions')
         units_times: str = MetadataField(alias='units|times', description='Unit of time')
-        symbols: List[str] = MetadataField(description='List of symbols')
-        pbc: Optional[Tuple[bool, bool, bool]] = MetadataField(description='Periodic boundary conditions')
+        symbols: list[str] = MetadataField(description='List of symbols')
+        pbc: tuple[bool, bool, bool] | None = MetadataField(description='Periodic boundary conditions')
 
     def __init__(self, structurelist=None, **kwargs):
         super().__init__(**kwargs)
@@ -74,7 +73,7 @@ class TrajectoryData(ArrayData):
         numatoms = len(symbols)
         if positions.shape != (numsteps, numatoms, 3):
             raise ValueError(
-                'TrajectoryData.positions must have shape (s,n,3), ' 'with s=number of steps and n=number of symbols'
+                'TrajectoryData.positions must have shape (s,n,3), with s=number of steps and n=number of symbols'
             )
         if times is not None:
             if times.shape != (numsteps,):
@@ -295,7 +294,7 @@ class TrajectoryData(ArrayData):
             return None
 
     @property
-    def symbols(self) -> List[str]:
+    def symbols(self) -> list[str]:
         """Return the array of symbols, if it has already been set.
 
         :raises KeyError: if the trajectory has not been set yet.
@@ -423,7 +422,7 @@ class TrajectoryData(ArrayData):
             for k in custom_kinds:
                 if not isinstance(k, Kind):
                     raise TypeError(
-                        'Each element of the custom_kinds list must ' 'be a aiida.orm.nodes.data.structure.Kind object'
+                        'Each element of the custom_kinds list must be a aiida.orm.nodes.data.structure.Kind object'
                     )
                 kind_names.append(k.name)
             if len(kind_names) != len(set(kind_names)):
@@ -433,7 +432,7 @@ class TrajectoryData(ArrayData):
                     'If you pass custom_kinds, you have to '
                     'pass one Kind object for each symbol '
                     'that is present in the trajectory. You '
-                    'passed {}, but the symbols are {}'.format(sorted(kind_names), sorted(symbols))
+                    f'passed {sorted(kind_names)}, but the symbols are {sorted(symbols)}'
                 )
 
         struc = StructureData(cell=cell, pbc=self.pbc)
@@ -579,8 +578,8 @@ class TrajectoryData(ArrayData):
         if positions.shape != (numsteps, numsites, 3):
             raise ValueError(
                 'TrajectoryData.positions must have shape (s,n,3), '
-                'with s=number of steps={} and '
-                'n=number of symbols={}'.format(numsteps, numsites)
+                f'with s=number of steps={numsteps} and '
+                f'n=number of symbols={numsites}'
             )
 
         self.set_array('positions', positions)
@@ -612,8 +611,8 @@ class TrajectoryData(ArrayData):
         if velocities.shape != (numsteps, numsites, 3):
             raise ValueError(
                 'TrajectoryData.positions must have shape (s,n,3), '
-                'with s=number of steps={} and '
-                'n=number of symbols={}'.format(numsteps, numsites)
+                f'with s=number of steps={numsteps} and '
+                f'n=number of symbols={numsites}'
             )
 
         self.set_array('velocities', velocities)
@@ -886,20 +885,20 @@ def plot_positions_XYZ(  # noqa: N802
     trajectories = zip(*positions.tolist())  # only used in enumerate() below
     fig = plt.figure(figsize=(12, 7))
 
-    plt.suptitle(r'Trajectory of {}'.format(label), fontsize=16)
+    plt.suptitle(rf'Trajectory of {label}', fontsize=16)
     nr_of_axes = 3
     gridspec = GridSpec(nr_of_axes, 1, hspace=0.0)
 
     ax1 = fig.add_subplot(gridspec[0])
-    plt.ylabel(r'X Position $\left[{}\right]$'.format(positions_unit))
+    plt.ylabel(rf'X Position $\left[{positions_unit}\right]$')
     plt.xticks([])
     plt.xlim(*tlim)
     ax2 = fig.add_subplot(gridspec[1])
-    plt.ylabel(r'Y Position $\left[{}\right]$'.format(positions_unit))
+    plt.ylabel(rf'Y Position $\left[{positions_unit}\right]$')
     plt.xticks([])
     plt.xlim(*tlim)
     ax3 = fig.add_subplot(gridspec[2])
-    plt.ylabel(r'Z Position $\left[{}\right]$'.format(positions_unit))
+    plt.ylabel(rf'Z Position $\left[{positions_unit}\right]$')
     plt.xlabel(f'Time [{times_unit}]')
     plt.xlim(*tlim)
     n_labels = np.minimum(n_labels, len(times))  # don't need more labels than times

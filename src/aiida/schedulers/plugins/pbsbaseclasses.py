@@ -162,7 +162,7 @@ class PbsBaseClass(BashCliScheduler):
                 command.append(f'{escape_for_bash(jobs)}')
             else:
                 try:
-                    command.append(f"{' '.join(escape_for_bash(j) for j in jobs)}")
+                    command.append(f'{" ".join(escape_for_bash(j) for j in jobs)}')
                 except TypeError:
                     raise TypeError("If provided, the 'jobs' variable must be a string or an iterable of strings")
 
@@ -263,8 +263,7 @@ class PbsBaseClass(BashCliScheduler):
             lines.append('#PBS -j oe')
             if job_tmpl.sched_error_path:
                 _LOGGER.info(
-                    'sched_join_files is True, but sched_error_path is set in '
-                    'PBSPro script; ignoring sched_error_path'
+                    'sched_join_files is True, but sched_error_path is set in PBSPro script; ignoring sched_error_path'
                 )
         elif job_tmpl.sched_error_path:
             lines.append(f'#PBS -e {job_tmpl.sched_error_path}')
@@ -522,7 +521,7 @@ class PbsBaseClass(BashCliScheduler):
             except ValueError:
                 _LOGGER.warning(
                     f"'resource_list.ncpus' is not an integer "
-                    f"({raw_data['resource_list.ncpus']}) for job id {this_job.job_id}!"
+                    f'({raw_data["resource_list.ncpus"]}) for job id {this_job.job_id}!'
                 )
 
             try:
@@ -533,7 +532,7 @@ class PbsBaseClass(BashCliScheduler):
             except ValueError:
                 _LOGGER.warning(
                     f"'resource_list.mpiprocs' is not an integer "
-                    f"({raw_data['resource_list.mpiprocs']}) for job id {this_job.job_id}!"
+                    f'({raw_data["resource_list.mpiprocs"]}) for job id {this_job.job_id}!'
                 )
 
             try:
@@ -543,7 +542,7 @@ class PbsBaseClass(BashCliScheduler):
             except ValueError:
                 _LOGGER.warning(
                     f"'resource_list.nodect' is not an integer "
-                    f"{raw_data['resource_list.nodect']}) for job id {this_job.job_id}!"
+                    f'{raw_data["resource_list.nodect"]}) for job id {this_job.job_id}!'
                 )
 
             # Double check of redundant info

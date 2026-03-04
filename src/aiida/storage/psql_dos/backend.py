@@ -13,7 +13,7 @@ import gc
 import pathlib
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
-from typing import TYPE_CHECKING, List, Optional, Set, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from disk_objectstore import Container, backup_utils
 from pydantic import BaseModel, Field
@@ -318,7 +318,7 @@ class PsqlDosBackend(StorageBackend):
         keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
         return mapper, keys
 
-    def bulk_insert(self, entity_type: EntityTypes, rows: List[dict], allow_defaults: bool = False) -> List[int]:
+    def bulk_insert(self, entity_type: EntityTypes, rows: list[dict], allow_defaults: bool = False) -> list[int]:
         mapper, keys = self._get_mapper_from_entity(entity_type, False)
         if not rows:
             return []
@@ -341,7 +341,7 @@ class PsqlDosBackend(StorageBackend):
             result = session.execute(insert(mapper).returning(mapper, column('id')), rows).fetchall()
         return [row.id for row in result]
 
-    def bulk_update(self, entity_type: EntityTypes, rows: List[dict]) -> None:
+    def bulk_update(self, entity_type: EntityTypes, rows: list[dict]) -> None:
         mapper, keys = self._get_mapper_from_entity(entity_type, True)
         if not rows:
             return None
@@ -504,7 +504,7 @@ class PsqlDosBackend(StorageBackend):
             STORAGE_LOGGER.info('Starting repository-specific operations ...')
             repository.maintain(live=not full, dry_run=dry_run, **kwargs)
 
-    def get_unreferenced_keyset(self, check_consistency: bool = True) -> Set[str]:
+    def get_unreferenced_keyset(self, check_consistency: bool = True) -> set[str]:
         """Returns the keyset of objects that exist in the repository but are not tracked by AiiDA.
 
         This should be all the soft-deleted files.

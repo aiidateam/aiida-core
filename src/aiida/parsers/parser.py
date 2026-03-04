@@ -13,7 +13,7 @@ to allow the reading of the outputs of a calculation.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any
 
 from aiida.common import exceptions, extendeddicts, log
 from aiida.engine import ExitCode, ExitCodesNamespace, calcfunction
@@ -33,7 +33,7 @@ class Parser(ABC):
 
     CACHE_VERSION: int | None = None
 
-    def __init__(self, node: 'CalcJobNode'):
+    def __init__(self, node: CalcJobNode):
         """Construct the Parser instance.
 
         :param node: the `CalcJobNode` that contains the results of the executed `CalcJob` process.
@@ -54,7 +54,7 @@ class Parser(ABC):
         return self._logger
 
     @property
-    def node(self) -> 'CalcJobNode':
+    def node(self) -> CalcJobNode:
         """Return the node instance
 
         :return: the `CalcJobNode` instance
@@ -70,7 +70,7 @@ class Parser(ABC):
         return self.node.process_class.exit_codes
 
     @property
-    def retrieved(self) -> 'FolderData':
+    def retrieved(self) -> FolderData:
         return self.node.base.links.get_outgoing().get_node_by_label(
             self.node.process_class.link_label_retrieved  # type: ignore[attr-defined, return-value]
         )
@@ -83,7 +83,7 @@ class Parser(ABC):
         """
         return self._outputs
 
-    def out(self, link_label: str, node: 'Data') -> None:
+    def out(self, link_label: str, node: Data) -> None:
         """Register a node as an output with the given link label.
 
         :param link_label: the name of the link label
@@ -117,8 +117,8 @@ class Parser(ABC):
 
     @classmethod
     def parse_from_node(
-        cls, node: 'CalcJobNode', store_provenance=True, retrieved_temporary_folder=None
-    ) -> Tuple[Optional[Dict[str, Any]], 'orm.CalcFunctionNode']:
+        cls, node: CalcJobNode, store_provenance=True, retrieved_temporary_folder=None
+    ) -> tuple[dict[str, Any] | None, orm.CalcFunctionNode]:
         """Parse the outputs directly from the `CalcJobNode`.
 
         If `store_provenance` is set to False, a `CalcFunctionNode` will still be generated, but it will not be stored.
@@ -186,7 +186,7 @@ class Parser(ABC):
         return parse_calcfunction.run_get_node(**inputs)
 
     @abstractmethod
-    def parse(self, **kwargs) -> Optional[ExitCode]:
+    def parse(self, **kwargs) -> ExitCode | None:
         """Parse the contents of the output files retrieved in the `FolderData`.
 
         This method should be implemented in the sub class. Outputs can be registered through the `out` method.

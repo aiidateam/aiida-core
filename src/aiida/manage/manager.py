@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     import asyncio
@@ -28,10 +28,10 @@ if TYPE_CHECKING:
 
 __all__ = ('get_manager',)
 
-MANAGER: Optional['Manager'] = None
+MANAGER: Manager | None = None
 
 
-def get_manager() -> 'Manager':
+def get_manager() -> Manager:
     """Return the AiiDA global manager instance."""
     global MANAGER  # noqa: PLW0603
     if MANAGER is None:
@@ -71,17 +71,17 @@ class Manager:
         from aiida.common.log import AIIDA_LOGGER
 
         # note: the config currently references the global variables
-        self._broker: Optional['Broker'] = None
-        self._profile: Optional['Profile'] = None
-        self._profile_storage: Optional['StorageBackend'] = None
-        self._daemon_client: Optional['DaemonClient'] = None
-        self._process_controller: Optional['RemoteProcessThreadController'] = None
-        self._persister: Optional['AiiDAPersister'] = None
-        self._runner: Optional['Runner'] = None
+        self._broker: Broker | None = None
+        self._profile: Profile | None = None
+        self._profile_storage: StorageBackend | None = None
+        self._daemon_client: DaemonClient | None = None
+        self._process_controller: RemoteProcessThreadController | None = None
+        self._persister: AiiDAPersister | None = None
+        self._runner: Runner | None = None
         self.logger = AIIDA_LOGGER.getChild(__name__)
 
     @staticmethod
-    def get_config(create=False) -> 'Config':
+    def get_config(create=False) -> Config:
         """Return the current config.
 
         :return: current loaded config instance
@@ -92,14 +92,14 @@ class Manager:
 
         return get_config(create=create)
 
-    def get_profile(self) -> Optional['Profile']:
+    def get_profile(self) -> Profile | None:
         """Return the current loaded profile, if any
 
         :return: current loaded profile instance
         """
         return self._profile
 
-    def load_profile(self, profile: Union[None, str, 'Profile'] = None, allow_switch=False) -> 'Profile':
+    def load_profile(self, profile: None | str | Profile = None, allow_switch=False) -> Profile:
         """Load a global profile, unloading any previously loaded profile.
 
         .. note:: If a profile is already loaded and no explicit profile is specified, nothing will be done.
@@ -240,7 +240,7 @@ class Manager:
         self.reset_profile()
         self._profile = None
 
-    def set_default_user_email(self, profile: 'Profile', user_email: str) -> None:
+    def set_default_user_email(self, profile: Profile, user_email: str) -> None:
         """Set the default user for the given profile.
 
         :param profile: The profile to update.
@@ -290,7 +290,7 @@ class Manager:
         option = get_option(option_name)
         return option.default
 
-    def get_backend(self) -> 'StorageBackend':
+    def get_backend(self) -> StorageBackend:
         """Return the current profile's storage backend, loading it if necessary.
 
         Deprecated: use `get_profile_storage` instead.
@@ -300,7 +300,7 @@ class Manager:
         warn_deprecation('get_backend() is deprecated, use get_profile_storage() instead', version=3, stacklevel=3)
         return self.get_profile_storage()
 
-    def get_profile_storage(self) -> 'StorageBackend':
+    def get_profile_storage(self) -> StorageBackend:
         """Return the current profile's storage backend, loading it if necessary."""
         from aiida.common import ConfigurationError
         from aiida.common.log import configure_logging
@@ -334,7 +334,7 @@ class Manager:
 
         return self._profile_storage
 
-    def get_broker(self) -> 'Broker' | None:
+    def get_broker(self) -> Broker | None:
         """Return an instance of :class:`aiida.brokers.broker.Broker` if the profile defines a broker.
 
         :returns: The broker of the profile, or ``None`` if the profile doesn't define one.
@@ -360,7 +360,7 @@ class Manager:
 
         return self._broker
 
-    def get_persister(self) -> 'AiiDAPersister':
+    def get_persister(self) -> AiiDAPersister:
         """Return the persister
 
         :return: the current persister instance
@@ -373,7 +373,7 @@ class Manager:
 
         return self._persister
 
-    def get_communicator(self) -> 'RmqThreadCommunicator':
+    def get_communicator(self) -> RmqThreadCommunicator:
         """Return the communicator
 
         :return: a global communicator instance
@@ -391,7 +391,7 @@ class Manager:
 
         return broker.get_communicator()
 
-    def get_daemon_client(self) -> 'DaemonClient':
+    def get_daemon_client(self) -> DaemonClient:
         """Return the daemon client for the current profile.
 
         :return: the daemon client
@@ -412,7 +412,7 @@ class Manager:
 
         return self._daemon_client
 
-    def get_process_controller(self) -> 'RemoteProcessThreadController':
+    def get_process_controller(self) -> RemoteProcessThreadController:
         """Return the process controller
 
         :return: the process controller instance
@@ -425,7 +425,7 @@ class Manager:
 
         return self._process_controller
 
-    def get_runner(self, **kwargs) -> 'Runner':
+    def get_runner(self, **kwargs) -> Runner:
         """Return a runner that is based on the current profile settings and can be used globally by the code.
 
         :return: the global runner
@@ -436,7 +436,7 @@ class Manager:
 
         return self._runner
 
-    def set_runner(self, new_runner: 'Runner') -> None:
+    def set_runner(self, new_runner: Runner) -> None:
         """Set the currently used runner
 
         :param new_runner: the new runner to use
@@ -447,7 +447,7 @@ class Manager:
 
         self._runner = new_runner
 
-    def create_runner(self, with_persistence: bool = True, **kwargs: Any) -> 'Runner':
+    def create_runner(self, with_persistence: bool = True, **kwargs: Any) -> Runner:
         """Create and return a new runner
 
         :param with_persistence: create a runner with persistence enabled
@@ -481,7 +481,7 @@ class Manager:
 
         return runners.Runner(**settings)  # type: ignore[arg-type]
 
-    def create_daemon_runner(self, loop: Optional['asyncio.AbstractEventLoop'] = None) -> 'Runner':
+    def create_daemon_runner(self, loop: asyncio.AbstractEventLoop | None = None) -> Runner:
         """Create and return a new daemon runner.
 
         This is used by workers when the daemon is running and in testing.

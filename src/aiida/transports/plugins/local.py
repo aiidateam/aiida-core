@@ -83,7 +83,7 @@ class LocalTransport(BlockingTransport):
 
     def __str__(self):
         """Return a description as a string."""
-        return f"local [{'OPEN' if self._is_open else 'CLOSED'}]"
+        return f'local [{"OPEN" if self._is_open else "CLOSED"}]'
 
     @property
     def curdir(self):

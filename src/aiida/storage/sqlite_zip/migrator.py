@@ -15,9 +15,10 @@ import shutil
 import tarfile
 import tempfile
 import zipfile
+from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Union
+from typing import Any, Optional, Union
 
 from alembic.command import upgrade
 from alembic.config import Config
@@ -42,7 +43,7 @@ def get_schema_version_head() -> str:
     return _alembic_script().revision_map.get_current_head('main') or ''
 
 
-def list_versions() -> List[str]:
+def list_versions() -> list[str]:
     """Return all available schema versions (oldest to latest)."""
     legacy_versions = list(LEGACY_MIGRATE_FUNCTIONS) + [FINAL_LEGACY_VERSION]
     alembic_versions = [entry.revision for entry in reversed(list(_alembic_script().walk_revisions()))]
@@ -136,7 +137,7 @@ def migrate(
     metadata['compression'] = compression
 
     # if the archive is a "legacy" format, i.e. has a data.json file, migrate it to the target/final legacy schema
-    data: Optional[Dict[str, Any]] = None
+    data: Optional[dict[str, Any]] = None
     if current_version in LEGACY_MIGRATE_FUNCTIONS:
         MIGRATE_LOGGER.report(f'Legacy migrations required from {"tar" if is_tar else "zip"} format')
         MIGRATE_LOGGER.report('Extracting data.json ...')
@@ -174,7 +175,7 @@ def migrate(
     with tempfile.TemporaryDirectory() as tmpdirname:
         # open the new zip file, within which to write the migrated content
         new_zip_path = Path(tmpdirname) / 'new.zip'
-        central_dir: Dict[str, Any] = {}
+        central_dir: dict[str, Any] = {}
         with ZipPath(
             new_zip_path,
             mode='w',
@@ -255,7 +256,7 @@ def migrate(
         shutil.move(new_zip_path, outpath)  # type: ignore[arg-type]
 
 
-def _read_json(inpath: Path, filename: str, is_tar: bool) -> Dict[str, Any]:
+def _read_json(inpath: Path, filename: str, is_tar: bool) -> dict[str, Any]:
     """Read a JSON file from the archive."""
     if is_tar:
         with open_file_in_tar(inpath, filename) as handle:
@@ -280,7 +281,7 @@ def _perform_legacy_migrations(current_version: str, to_version: str, metadata: 
     """
     # compute the migration pathway
     prev_version = current_version
-    pathway: List[str] = []
+    pathway: list[str] = []
     while prev_version != to_version:
         if prev_version not in LEGACY_MIGRATE_FUNCTIONS:
             raise StorageMigrationError(f"No migration pathway available for '{current_version}' to '{to_version}'")

@@ -44,7 +44,7 @@ def run_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **kwargs)
     api = configure_api(flask_app, flask_api, **kwargs)
 
     # Run app through built-in werkzeug server
-    print(f" * REST API running on http://{hostname}:{port}{API_CONFIG['PREFIX']}")
+    print(f' * REST API running on http://{hostname}:{port}{API_CONFIG["PREFIX"]}')
     api.app.run(debug=debug, host=hostname, port=int(port), threaded=True)
 
 

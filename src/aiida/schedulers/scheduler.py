@@ -47,7 +47,7 @@ class Scheduler(metaclass=abc.ABCMeta):
     _features: dict[str, bool] = {}
 
     # The class to be used for the job resource.
-    _job_resource_class: t.Type[JobResource] | None = None
+    _job_resource_class: type[JobResource] | None = None
 
     def __init__(self) -> None:
         assert self._job_resource_class is not None and issubclass(self._job_resource_class, JobResource)
@@ -115,7 +115,7 @@ class Scheduler(metaclass=abc.ABCMeta):
             raise exceptions.InternalError('No self._logger configured for {}!')
 
     @classproperty
-    def job_resource_class(cls) -> t.Type[JobResource]:  # noqa: N805
+    def job_resource_class(cls) -> type[JobResource]:  # noqa: N805
         assert cls._job_resource_class is not None and issubclass(cls._job_resource_class, JobResource)
         return cls._job_resource_class
 

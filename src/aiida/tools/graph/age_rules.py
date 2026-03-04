@@ -115,9 +115,8 @@ class QueryRule(Operation, metaclass=ABCMeta):
             if query_projections[projection_key] != []:
                 raise ValueError(
                     'The input querybuilder must not have any projections.\n'
-                    'Instead, it has the following:\n - Key: {}\n - Val: {}\n'.format(
-                        projection_key, query_projections[projection_key]
-                    )
+                    f'Instead, it has the following:\n - Key: {projection_key}\n'
+                    f' - Val: {query_projections[projection_key]}\n'
                 )
         for pathspec in query_dict['path']:
             if not pathspec['entity_type']:

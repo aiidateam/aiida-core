@@ -93,8 +93,9 @@ def storage_migrate(force):
         echo.echo_warning('', nl=False)
 
         expected_answer = 'MIGRATE NOW'
-        confirm_message = 'If you have completed the steps above and want to migrate profile "{}", type {}'.format(
-            profile.name, expected_answer
+        confirm_message = (
+            f'If you have completed the steps above and want to migrate profile "{profile.name}", '
+            f'type {expected_answer}'
         )
 
         try:

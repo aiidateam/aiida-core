@@ -120,7 +120,7 @@ def create_option(name, spec):
     existing_option = spec.pop('option', None)
 
     if spec.pop('switch', False):
-        option_name = '--{name}/--no-{name}'.format(name=name_dashed)
+        option_name = f'--{name_dashed}/--no-{name_dashed}'
 
     kwargs = {'cls': InteractiveOption, 'show_default': True}
 

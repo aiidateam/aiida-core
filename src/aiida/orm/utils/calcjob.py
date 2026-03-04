@@ -83,8 +83,7 @@ class CalcJobResultManager:
 
     def __iter__(self):
         """Return an iterator over the keys of the result dictionary."""
-        for key in self.get_results().keys():
-            yield key
+        yield from self.get_results().keys()
 
     def __getattr__(self, name):
         """Return an attribute from the results dictionary.

@@ -21,7 +21,6 @@ from __future__ import annotations
 import enum
 import re
 import sys
-import typing as t
 
 import pytest
 
@@ -676,9 +675,9 @@ def test_type_hinting_spec_inference():
         b: str,
         c: bool,
         d: orm.Str,
-        e: t.Union[orm.Str, orm.Int],
-        f: t.Union[str, int],
-        g: t.Optional[t.Dict] = None,
+        e: orm.Str | orm.Int,
+        f: str | int,
+        g: dict | None = None,
     ):
         pass
 
@@ -745,7 +744,7 @@ def test_type_hinting_validation():
     """Test that type hints are converted to automatic type checking through the process specification."""
 
     @calcfunction  # type: ignore[misc]
-    def function_type_hinting(a: t.Union[int, float]):
+    def function_type_hinting(a: int | float):
         return a + 1
 
     with pytest.raises(ValueError, match=r'.*value \'a\' is not of the right type.*'):

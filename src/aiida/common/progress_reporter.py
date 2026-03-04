@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from functools import partial
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Type
+from typing import TYPE_CHECKING, Any, Callable, Literal
 
 if TYPE_CHECKING:
     from tqdm import tqdm
@@ -51,7 +51,7 @@ class ProgressReporterAbstract:
 
     """
 
-    def __init__(self, *, total: int, desc: Optional[str] = None, **kwargs: Any):
+    def __init__(self, *, total: int, desc: str | None = None, **kwargs: Any):
         """Initialise the progress reporting contextmanager.
 
         :param total: The number of expected iterations.
@@ -68,7 +68,7 @@ class ProgressReporterAbstract:
         return self._total
 
     @property
-    def desc(self) -> Optional[str]:
+    def desc(self) -> str | None:
         """Return the description of the process."""
         return self._desc
 
@@ -78,17 +78,17 @@ class ProgressReporterAbstract:
         # note using `n` as the attribute name is necessary for compatibility with tqdm
         return self._increment
 
-    def __enter__(self) -> 'ProgressReporterAbstract':
+    def __enter__(self) -> ProgressReporterAbstract:
         """Enter the contextmanager."""
         return self
 
     def __exit__(
-        self, exctype: Optional[Type[BaseException]], excinst: Optional[BaseException], exctb: Optional[TracebackType]
+        self, exctype: type[BaseException] | None, excinst: BaseException | None, exctb: TracebackType | None
     ) -> Literal[False]:
         """Exit the contextmanager."""
         return False
 
-    def set_description_str(self, text: Optional[str] = None, refresh: bool = True) -> None:
+    def set_description_str(self, text: str | None = None, refresh: bool = True) -> None:
         """Set the text shown by the progress reporter.
 
         :param text: The text to show
@@ -105,7 +105,7 @@ class ProgressReporterAbstract:
         """
         self._increment += n
 
-    def reset(self, total: Optional[int] = None) -> None:
+    def reset(self, total: int | None = None) -> None:
         """Resets current iterations to 0.
 
         :param total: If not None, update number of expected iterations.
@@ -171,9 +171,7 @@ def set_progress_reporter(
         PROGRESS_REPORTER = reporter
 
 
-def set_progress_bar_tqdm(
-    bar_format: Optional[str] = TQDM_BAR_FORMAT, leave: Optional[bool] = False, **kwargs: Any
-) -> None:
+def set_progress_bar_tqdm(bar_format: str | None = TQDM_BAR_FORMAT, leave: bool | None = False, **kwargs: Any) -> None:
     """Set a `tqdm <https://github.com/tqdm/tqdm>`__ implementation of the progress reporter interface.
 
     See :func:`~aiida.common.progress_reporter.set_progress_reporter` for details.

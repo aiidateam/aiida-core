@@ -9,7 +9,7 @@
 """AiiDA archive reader implementation."""
 
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 from aiida.common.exceptions import CorruptStorage
 from aiida.storage.sqlite_zip.backend import SqliteZipBackend
@@ -38,7 +38,7 @@ class ArchiveReaderSqlZip(ArchiveReaderAbstract):
             self._backend = None
         self._in_context = False
 
-    def get_metadata(self) -> Dict[str, Any]:
+    def get_metadata(self) -> dict[str, Any]:
         try:
             return extract_metadata(self.path)
         except Exception as exc:

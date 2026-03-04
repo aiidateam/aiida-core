@@ -17,11 +17,11 @@ from __future__ import annotations
 import os
 import shutil
 from collections.abc import Mapping
+from collections.abc import Mapping as MappingType
 from logging import LoggerAdapter
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
-from typing import Mapping as MappingType
+from typing import TYPE_CHECKING, Any
 
 # typing.assert_never available since 3.11
 from typing_extensions import assert_never
@@ -47,7 +47,7 @@ REMOTE_WORK_DIRECTORY_LOST_FOUND = 'lost+found'
 EXEC_LOGGER = AIIDA_LOGGER.getChild('execmanager')
 
 
-def _find_data_node(inputs: MappingType[str, Any], uuid: str) -> Optional[Node]:
+def _find_data_node(inputs: MappingType[str, Any], uuid: str) -> Node | None:
     """Find and return the node with the given UUID from a nested mapping of input nodes.
 
     :param inputs: (nested) mapping of nodes
@@ -72,7 +72,7 @@ async def upload_calculation(
     transport: Transport,
     calc_info: CalcInfo,
     folder: Folder,
-    inputs: Optional[MappingType[str, Any]] = None,
+    inputs: MappingType[str, Any] | None = None,
     dry_run: bool = False,
 ) -> RemoteData | None:
     """Upload a `CalcJob` instance
@@ -126,7 +126,7 @@ async def upload_calculation(
             )
             try:
                 await transport.makedirs_async(remote_working_directory)
-            except EnvironmentError as exc:
+            except OSError as exc:
                 raise exceptions.ConfigurationError(
                     f'[submission of calculation {node.pk}] '
                     f'Unable to create the remote directory {remote_working_directory} on '
@@ -828,7 +828,7 @@ async def retrieve_files_from_list(
     calculation: CalcJobNode,
     transport: Transport,
     folder: str,
-    retrieve_list: List[Union[str, Tuple[str, str, int], list]],
+    retrieve_list: list[str | tuple[str, str, int] | list],
 ) -> None:
     """Retrieve all the files in the retrieve_list from the remote into the
     local folder instance through the transport. The entries in the retrieve_list

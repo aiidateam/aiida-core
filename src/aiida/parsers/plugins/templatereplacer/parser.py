@@ -50,13 +50,12 @@ class TemplatereplacerParser(Parser):
 
                 if not os.path.isfile(file_path):
                     self.logger.error(
-                        'the file {} was not found in the temporary retrieved folder {}'.format(
-                            retrieved_file, retrieved_temporary_folder
-                        )
+                        f'the file {retrieved_file} was not found in the temporary retrieved folder '
+                        f'{retrieved_temporary_folder}'
                     )
                     return self.exit_codes.ERROR_READING_TEMPORARY_RETRIEVED_FILE
 
-                with open(file_path, 'r', encoding='utf8') as handle:
+                with open(file_path, encoding='utf8') as handle:
                     parsed_value = handle.read().strip()
 
                 # We always strip the content of the file from whitespace to simplify testing for expected output

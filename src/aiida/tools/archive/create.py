@@ -14,10 +14,10 @@ stored in a single file.
 
 import shutil
 import tempfile
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable, Optional, Union
+from typing import Any, Callable, Optional, Union
 
 from tabulate import tabulate
 
@@ -244,7 +244,7 @@ def create_archive(
                 entity_ids[EntityTypes.USER].add(entry.pk)
             else:
                 raise ArchiveExportError(
-                    f'I was given {entry} ({type(entry)}),' ' which is not a User, Node, Computer, or Group instance'
+                    f'I was given {entry} ({type(entry)}), which is not a User, Node, Computer, or Group instance'
                 )
         group_nodes, link_data = _collect_required_entities(
             querybuilder,
@@ -680,7 +680,7 @@ def _check_unsealed_nodes(querybuilder: QbType, node_ids: set[int], batch_size: 
     if unsealed_node_pks:
         raise ExportValidationError(
             'All ProcessNodes must be sealed before they can be exported. '
-            f"Node(s) with PK(s): {', '.join(str(pk) for pk in unsealed_node_pks)} is/are not sealed."
+            f'Node(s) with PK(s): {", ".join(str(pk) for pk in unsealed_node_pks)} is/are not sealed.'
         )
 
 
@@ -775,7 +775,7 @@ def get_init_summary(
     """Get summary for archive initialisation"""
     parameters: list[list[Any]] = [['Path', str(outfile)], ['Version', archive_version], ['Compression', compression]]
 
-    result = f"\n{tabulate(parameters, headers=['Archive Parameters', ''])}"
+    result = f'\n{tabulate(parameters, headers=["Archive Parameters", ""])}'
 
     inclusions: list[list[Any]] = [
         ['Computers/Nodes/Groups/Users', 'All' if collect_all else 'Selected'],
@@ -783,10 +783,10 @@ def get_init_summary(
         ['Node Comments', include_comments],
         ['Node Logs', include_logs],
     ]
-    result += f"\n\n{tabulate(inclusions, headers=['Inclusion rules', ''])}"
+    result += f'\n\n{tabulate(inclusions, headers=["Inclusion rules", ""])}'
 
     if not collect_all:
-        rules_table = [[f"Follow links {' '.join(name.split('_'))}s", value] for name, value in traversal_rules.items()]
-        result += f"\n\n{tabulate(rules_table, headers=['Traversal rules', ''])}"
+        rules_table = [[f'Follow links {" ".join(name.split("_"))}s', value] for name, value in traversal_rules.items()]
+        result += f'\n\n{tabulate(rules_table, headers=["Traversal rules", ""])}'
 
     return result + '\n'

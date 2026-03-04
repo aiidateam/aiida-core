@@ -8,7 +8,7 @@
 ###########################################################################
 """Data plugin that models a stashed folder on a remote computer."""
 
-from typing import List, Tuple, Union
+from typing import Union
 
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
@@ -29,13 +29,13 @@ class RemoteStashFolderData(RemoteStashData):
 
     class Model(RemoteStashData.Model):
         target_basepath: str = MetadataField(description='The the target basepath')
-        source_list: List[str] = MetadataField(description='The list of source files that were stashed')
+        source_list: list[str] = MetadataField(description='The list of source files that were stashed')
         fail_on_missing: bool = MetadataField(
             description='Whether stashing should fail if any files are missing', default=False
         )
 
     def __init__(
-        self, stash_mode: StashMode, target_basepath: str, source_list: List, fail_on_missing: bool = False, **kwargs
+        self, stash_mode: StashMode, target_basepath: str, source_list: list, fail_on_missing: bool = False, **kwargs
     ):
         """Construct a new instance
 
@@ -70,7 +70,7 @@ class RemoteStashFolderData(RemoteStashData):
         self.base.attributes.set('target_basepath', value)
 
     @property
-    def source_list(self) -> Union[List, Tuple]:
+    def source_list(self) -> Union[list, tuple]:
         """Return the list of source files that were stashed.
 
         :return: the list of source files.
@@ -78,7 +78,7 @@ class RemoteStashFolderData(RemoteStashData):
         return self.base.attributes.get('source_list')
 
     @source_list.setter
-    def source_list(self, value: Union[List, Tuple]):
+    def source_list(self, value: Union[list, tuple]):
         """Set the list of source files that were stashed.
 
         :param value: the list of source files.

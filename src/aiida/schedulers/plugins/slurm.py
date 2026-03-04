@@ -225,7 +225,7 @@ class SlurmScheduler(BashCliScheduler):
             if len(joblist) == 1:
                 joblist += [joblist[0]]
 
-            command.append(f"--jobs={','.join(joblist)}")
+            command.append(f'--jobs={",".join(joblist)}')
 
         comm = ' '.join(command)
         self.logger.debug(f'squeue command: {comm}')
@@ -309,8 +309,7 @@ class SlurmScheduler(BashCliScheduler):
             # I specify a different --output file
             if job_tmpl.sched_error_path:
                 self.logger.info(
-                    'sched_join_files is True, but sched_error_path is set in '
-                    'SLURM script; ignoring sched_error_path'
+                    'sched_join_files is True, but sched_error_path is set in SLURM script; ignoring sched_error_path'
                 )
         elif job_tmpl.sched_error_path:
             lines.append(f'#SBATCH --error={job_tmpl.sched_error_path}')
@@ -351,9 +350,8 @@ class SlurmScheduler(BashCliScheduler):
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    'max_wallclock_seconds must be ' "a positive integer (in seconds)! It is instead '{}'" ''.format(
-                        (job_tmpl.max_wallclock_seconds)
-                    )
+                    'max_wallclock_seconds must be '
+                    f"a positive integer (in seconds)! It is instead '{job_tmpl.max_wallclock_seconds}'"
                 )
             days = tot_secs // 86400
             tot_hours = tot_secs % 86400
@@ -436,7 +434,7 @@ class SlurmScheduler(BashCliScheduler):
         # If I am here, no valid line could be found.
         self.logger.error(f'in _parse_submit_output{transport_string}: unable to find the job id: {stdout}')
         raise SchedulerError(
-            'Error during submission, could not retrieve the jobID from ' 'sbatch output; see log for more info.'
+            'Error during submission, could not retrieve the jobID from sbatch output; see log for more info.'
         )
 
     def _parse_joblist_output(self, retval, stdout, stderr):
@@ -550,7 +548,7 @@ stderr='{stderr.strip()}'"""
                 this_job.num_machines = int(thisjob_dict['number_nodes'])
             except ValueError:
                 self.logger.warning(
-                    'The number of allocated nodes is not ' 'an integer ({}) for job id {}!'.format(
+                    'The number of allocated nodes is not an integer ({}) for job id {}!'.format(
                         thisjob_dict['number_nodes'], this_job.job_id
                     )
                 )
@@ -559,7 +557,7 @@ stderr='{stderr.strip()}'"""
                 this_job.num_mpiprocs = int(thisjob_dict['number_cpus'])
             except ValueError:
                 self.logger.warning(
-                    'The number of allocated cores is not ' 'an integer ({}) for job id {}!'.format(
+                    'The number of allocated cores is not an integer ({}) for job id {}!'.format(
                         thisjob_dict['number_cpus'], this_job.job_id
                     )
                 )
@@ -611,8 +609,8 @@ stderr='{stderr.strip()}'"""
                 if len(this_job.allocated_machines) != this_job.num_machines:
                     self.logger.error(
                         'The length of the list of allocated '
-                        'nodes ({}) is different from the '
-                        'expected number of nodes ({})!'.format(len(this_job.allocated_machines), this_job.num_machines)
+                        f'nodes ({len(this_job.allocated_machines)}) is different from the '
+                        f'expected number of nodes ({this_job.num_machines})!'
                     )
 
             # I append to the list of jobs to return

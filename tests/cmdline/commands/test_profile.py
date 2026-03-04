@@ -431,7 +431,7 @@ class TestVerdiProfileDumpCLI:
         run_cli_command(cmd_profile.profile_dump, options)
 
         # Verify the dump method was called with expected arguments
-        args, kwargs = mock_dump.call_args
+        _args, kwargs = mock_dump.call_args
         assert kwargs['output_path'] == test_path.resolve()
         assert kwargs['all_entries'] is True
         assert kwargs['groups'] == [group]  # Converted to `orm.Group`

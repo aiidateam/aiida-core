@@ -18,9 +18,9 @@ def test_migrate_external(migrate_from_func):
     # Check that no links have the label '_return', since it should now be 'result'
     illegal_label = '_return'
     for link in data.get('links_uuid'):
-        assert link['label'] != illegal_label, (
-            f'The illegal link label {illegal_label} was not expected to be present - ' "it should now be 'result'"
-        )
+        assert (
+            link['label'] != illegal_label
+        ), f"The illegal link label {illegal_label} was not expected to be present - it should now be 'result'"
 
 
 def test_migration_0043_default_link_label():

@@ -95,7 +95,7 @@ class VerdiCommand(click.Command):
     message handled by ``click`` as that would result in the deprecation message being printed twice.
     """
 
-    def parse_args(self, ctx: click.Context, args: t.List[str]) -> t.List[str]:
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
         """Given a context and a list of arguments this creates the parser and parses the arguments.
 
         Then context is modified as necessary.

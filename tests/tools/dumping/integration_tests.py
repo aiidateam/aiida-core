@@ -10,7 +10,7 @@
 
 import logging
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 import pytest
 
@@ -99,31 +99,31 @@ _IO_CALC_NODE_CONTENT_FLAT = [
 
 
 # Dynamic Node Tree Generation Helpers
-def get_expected_io_calc_tree(pk: int, process_label: str) -> Dict[str, List[Any]]:
+def get_expected_io_calc_tree(pk: int, process_label: str) -> dict[str, list[Any]]:
     """Generates the expected nested dump tree dict for the IO CalculationNode."""
     node_dir_name = f'{process_label}-{pk}'
     return {node_dir_name: _IO_CALC_NODE_CONTENT_NESTED}
 
 
-def get_expected_io_calc_tree_flat(pk: int, process_label: str) -> Dict[str, List[Any]]:
+def get_expected_io_calc_tree_flat(pk: int, process_label: str) -> dict[str, list[Any]]:
     """Generates the expected flat dump tree dict for the IO CalculationNode."""
     node_dir_name = f'{process_label}-{pk}'
     return {node_dir_name: _IO_CALC_NODE_CONTENT_FLAT}
 
 
-def get_expected_add_calc_tree(pk: int) -> Dict[str, List[Any]]:
+def get_expected_add_calc_tree(pk: int) -> dict[str, list[Any]]:
     """Generates the expected dump tree dict for an ArithmeticAddCalculation."""
     node_dir_name = f'ArithmeticAddCalculation-{pk}'
     return {node_dir_name: _ADD_CALC_NODE_CONTENT}
 
 
-def get_expected_multiply_func_tree(pk: int) -> Dict[str, List[Any]]:
+def get_expected_multiply_func_tree(pk: int) -> dict[str, list[Any]]:
     """Generates the expected dump tree dict for a 'multiply' function node."""
     node_dir_name = f'multiply-{pk}'
     return {node_dir_name: _MULTIPLY_FUNC_NODE_CONTENT}
 
 
-def get_expected_multiply_add_wc_tree(wc_pk: int, child_pks: Tuple[int, int]) -> Dict[str, List[Any]]:
+def get_expected_multiply_add_wc_tree(wc_pk: int, child_pks: tuple[int, int]) -> dict[str, list[Any]]:
     """Generates the expected dump tree dict for a MultiplyAddWorkChain."""
     wc_process_label = 'MultiplyAddWorkChain'
     node_dir_name = f'{wc_process_label}-{wc_pk}'
@@ -150,10 +150,10 @@ def get_expected_multiply_add_wc_tree(wc_pk: int, child_pks: Tuple[int, int]) ->
 # Helper for the WorkChain with IO children
 def get_expected_io_wc_tree(
     wc_pk: int,
-    child_pks: Tuple[int, int],  # Expecting PKs of the two IO Calcs
+    child_pks: tuple[int, int],  # Expecting PKs of the two IO Calcs
     wc_process_label: str,
     child_process_label: str,
-) -> Dict[str, List[Any]]:
+) -> dict[str, list[Any]]:
     """
     Generates the expected dump tree for the test WorkChain with IO children.
     Assumes two children called in sequence.
@@ -183,11 +183,11 @@ def get_expected_io_wc_tree(
 def get_expected_nested_io_wc_tree(
     wc_pk: int,
     wc_sub_pk: int,
-    child_calc_pks: Tuple[int, int],  # Expecting PKs of the two IO Calcs called by sub-WC
+    child_calc_pks: tuple[int, int],  # Expecting PKs of the two IO Calcs called by sub-WC
     wc_process_label: str,
     wc_to_sub_link_label: str,
     sub_to_calc_link_label: str,
-) -> Dict[str, List[Any]]:
+) -> dict[str, list[Any]]:
     """Generates the expected dump tree for the test nested WorkChain with IO children.
 
     Assumes wc_node calls wc_node_sub, which calls the two calculation nodes.  Uses numerical prefixes, content
@@ -222,15 +222,15 @@ def get_expected_nested_io_wc_tree(
 
 
 # Dynamic assembly helpers
-def _assemble_nodes_by_type(node_trees: List[Dict]) -> Dict[str, List[Dict]]:
+def _assemble_nodes_by_type(node_trees: list[dict]) -> dict[str, list[dict]]:
     """Helper to group node tree dicts by type."""
-    grouped_by_type: Dict[str, List[Dict]] = {
+    grouped_by_type: dict[str, list[dict]] = {
         'calculations': [],
         'workflows': [],
         'misc': [],
     }
     for node_tree in node_trees:
-        node_key = next(iter((node_tree.keys())))
+        node_key = next(iter(node_tree.keys()))
 
         # This is very fragile...
         if 'Calculation' in node_key or 'multiply' in node_key:
@@ -244,10 +244,10 @@ def _assemble_nodes_by_type(node_trees: List[Dict]) -> Dict[str, List[Dict]]:
 
 
 def get_expected_profile_dump_tree(
-    groups_data: Optional[Dict[str, List[Dict]]] = None,
-    ungrouped_data: Optional[List[Dict]] = None,
+    groups_data: Optional[dict[str, list[dict]]] = None,
+    ungrouped_data: Optional[list[dict]] = None,
     organize_by_groups: bool = True,
-) -> Dict[str, List[Any]]:
+) -> dict[str, list[Any]]:
     """
     Generates the expected profile dump tree structure dynamically.
 
@@ -313,7 +313,7 @@ def get_expected_profile_dump_tree(
     return {profile_dump_label: top_level_content}
 
 
-def get_expected_group_dump_tree(dump_label: str, node_trees: List[Dict]) -> Dict[str, List[Any]]:
+def get_expected_group_dump_tree(dump_label: str, node_trees: list[dict]) -> dict[str, list[Any]]:
     """Generates the expected tree for the output of a group dump."""
     content = [
         log_filename,

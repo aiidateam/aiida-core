@@ -15,7 +15,8 @@ import io
 import json
 import os
 import shutil
-from typing import Any, Dict, Hashable, Optional, Type, Union
+from collections.abc import Hashable
+from typing import Any
 
 import plumpy.ports
 import plumpy.process_states
@@ -39,7 +40,7 @@ from .tasks import UPLOAD_COMMAND, Waiting
 __all__ = ('CalcJob',)
 
 
-def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:
+def validate_calc_job(inputs: Any, ctx: PortNamespace) -> str | None:
     """Validate the entire set of inputs passed to the `CalcJob` constructor.
 
     Reasons that will cause this validation to raise an `InputValidationError`:
@@ -84,8 +85,8 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:
 
     if computer_from_code and computer_from_metadata and computer_from_code.uuid != computer_from_metadata.uuid:
         return (
-            'Computer<{}> explicitly defined in `metadata.computer` is different from Computer<{}> which is the '
-            'computer of Code<{}> defined as the `code` input.'.format(computer_from_metadata, computer_from_code, code)
+            f'Computer<{computer_from_metadata}> explicitly defined in `metadata.computer` is different from '
+            f'Computer<{computer_from_code}> which is the computer of Code<{code}> defined as the `code` input.'
         )
 
     try:
@@ -114,7 +115,7 @@ def validate_calc_job(inputs: Any, ctx: PortNamespace) -> Optional[str]:
     return None
 
 
-def validate_unstash_options(unstash_options: Any, _: Any) -> Optional[str]:
+def validate_unstash_options(unstash_options: Any, _: Any) -> str | None:
     """Validate the ``unstash`` options."""
     from aiida.common.datastructures import UnstashTargetMode
 
@@ -138,7 +139,7 @@ def validate_unstash_options(unstash_options: Any, _: Any) -> Optional[str]:
     return None
 
 
-def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
+def validate_stash_options(stash_options: Any, _: Any) -> str | None:
     """Validate the ``stash`` options."""
     from aiida.common.datastructures import StashMode
     from aiida.transports.transport import has_magic
@@ -196,7 +197,7 @@ def validate_stash_options(stash_options: Any, _: Any) -> Optional[str]:
     return None
 
 
-def validate_monitors(monitors: Any, _: PortNamespace) -> Optional[str]:
+def validate_monitors(monitors: Any, _: PortNamespace) -> str | None:
     """Validate the ``monitors`` input namespace."""
     for key, monitor_node in monitors.items():
         try:
@@ -206,7 +207,7 @@ def validate_monitors(monitors: Any, _: PortNamespace) -> Optional[str]:
     return None
 
 
-def validate_parser(parser_name: Any, _: PortNamespace) -> Optional[str]:
+def validate_parser(parser_name: Any, _: PortNamespace) -> str | None:
     """Validate the parser.
 
     :return: string with error message in case the inputs are invalid
@@ -221,7 +222,7 @@ def validate_parser(parser_name: Any, _: PortNamespace) -> Optional[str]:
     return None
 
 
-def validate_additional_retrieve_list(additional_retrieve_list: Any, _: Any) -> Optional[str]:
+def validate_additional_retrieve_list(additional_retrieve_list: Any, _: Any) -> str | None:
     """Validate the additional retrieve list.
 
     :return: string with error message in case the input is invalid.
@@ -593,7 +594,7 @@ class CalcJob(Process):
             return AttributeDict()
 
     @classmethod
-    def get_state_classes(cls) -> Dict[Hashable, Type[plumpy.process_states.State]]:
+    def get_state_classes(cls) -> dict[Hashable, type[plumpy.process_states.State]]:
         """A mapping of the State constants to the corresponding state class.
 
         Overrides the waiting state with the Calcjob specific version.
@@ -617,7 +618,7 @@ class CalcJob(Process):
         super().on_terminated()
 
     @override
-    async def run(self) -> Union[plumpy.process_states.Stop, int, plumpy.process_states.Wait]:
+    async def run(self) -> plumpy.process_states.Stop | int | plumpy.process_states.Wait:
         """Run the calculation job.
 
         This means invoking the `presubmit` and storing the temporary folder in the node's repository. Then we move the
@@ -809,7 +810,7 @@ class CalcJob(Process):
             self.logger.warning(msg)
 
         # The final exit code is that of the scheduler, unless the output parser returned one
-        exit_code: Optional[ExitCode]
+        exit_code: ExitCode | None
         if exit_code_retrieved is not None:
             exit_code = exit_code_retrieved
         else:
@@ -833,7 +834,7 @@ class CalcJob(Process):
         """
         return exit_code
 
-    def parse_scheduler_output(self, retrieved: orm.Node) -> Optional[ExitCode]:
+    def parse_scheduler_output(self, retrieved: orm.Node) -> ExitCode | None:
         """Parse the output of the scheduler if that functionality has been implemented for the plugin."""
         computer = self.node.computer
 
@@ -893,7 +894,7 @@ class CalcJob(Process):
 
         return exit_code
 
-    def parse_retrieved_output(self, retrieved_temporary_folder: Optional[str] = None) -> Optional[ExitCode]:
+    def parse_retrieved_output(self, retrieved_temporary_folder: str | None = None) -> ExitCode | None:
         """Parse the retrieved data by calling the parser plugin if it was defined in the inputs."""
         parser_class = self.node.get_parser_class()
 
@@ -948,9 +949,8 @@ class CalcJob(Process):
         for code in codes:
             if not code.can_run_on_computer(computer):
                 raise InputValidationError(
-                    'The selected code {} for calculation {} cannot run on computer {}'.format(
-                        code.pk, self.node.pk, computer.label
-                    )
+                    f'The selected code {code.pk} for calculation {self.node.pk} cannot run on computer '
+                    f'{computer.label}'
                 )
 
             code.validate_working_directory(folder)
@@ -1196,16 +1196,16 @@ class CalcJob(Process):
                 Computer.collection.get(uuid=remote_computer_uuid)
             except exceptions.NotExistent as exception:
                 raise PluginInternalError(
-                    '[presubmission of calc {}] '
-                    'The remote copy requires a computer with UUID={}'
+                    f'[presubmission of calc {this_pk}] '
+                    f'The remote copy requires a computer with UUID={remote_computer_uuid}'
                     'but no such computer was found in the '
-                    'database'.format(this_pk, remote_computer_uuid)
+                    'database'
                 ) from exception
             if os.path.isabs(dest_rel_path):
                 raise PluginInternalError(
-                    '[presubmission of calc {}] ' 'The destination path of the remote copy ' 'is absolute! ({})'.format(
-                        this_pk, dest_rel_path
-                    )
+                    f'[presubmission of calc {this_pk}] '
+                    'The destination path of the remote copy '
+                    f'is absolute! ({dest_rel_path})'
                 )
 
         return calc_info

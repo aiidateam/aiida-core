@@ -10,7 +10,7 @@
 
 import enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from plumpy.process_states import ProcessState
 
@@ -82,7 +82,7 @@ class ProcessNodeCaching(NodeCaching):
         """
         super(ProcessNodeCaching, self.__class__).is_valid_cache.fset(self, valid)
 
-    def get_objects_to_hash(self) -> List[Any]:
+    def get_objects_to_hash(self) -> list[Any]:
         """Return a list of objects which should be included in the hash."""
         res = super().get_objects_to_hash()
         res.update(
@@ -172,11 +172,11 @@ class ProcessNode(Sealable, Node):
         return f'{base}'
 
     @classproperty
-    def _hash_ignored_attributes(cls) -> Tuple[str, ...]:  # noqa: N805
+    def _hash_ignored_attributes(cls) -> tuple[str, ...]:  # noqa: N805
         return super()._hash_ignored_attributes + ('metadata_inputs',)
 
     @classproperty
-    def _updatable_attributes(cls) -> Tuple[str, ...]:  # noqa: N805
+    def _updatable_attributes(cls) -> tuple[str, ...]:  # noqa: N805
         return super()._updatable_attributes + (
             cls.PROCESS_PAUSED_KEY,
             cls.CHECKPOINT_KEY,
@@ -197,11 +197,11 @@ class ProcessNode(Sealable, Node):
         exception: Optional[str] = MetadataField(description='The process exception message')
         paused: bool = MetadataField(description='Whether the process is paused')
 
-    def set_metadata_inputs(self, value: Dict[str, Any]) -> None:
+    def set_metadata_inputs(self, value: dict[str, Any]) -> None:
         """Set the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
         return self.base.attributes.set(self.METADATA_INPUTS_KEY, value)
 
-    def get_metadata_inputs(self) -> Optional[Dict[str, Any]]:
+    def get_metadata_inputs(self) -> Optional[dict[str, Any]]:
         """Return the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
         return self.base.attributes.get(self.METADATA_INPUTS_KEY, None)
 
@@ -253,7 +253,7 @@ class ProcessNode(Sealable, Node):
         return builder
 
     @property
-    def process_class(self) -> Type['Process']:
+    def process_class(self) -> type['Process']:
         """Return the process class that was used to create this node.
 
         :return: `Process` class
@@ -572,7 +572,7 @@ class ProcessNode(Sealable, Node):
             pass
 
     @property
-    def called(self) -> List['ProcessNode']:
+    def called(self) -> list['ProcessNode']:
         """Return a list of nodes that the process called
 
         :returns: list of process nodes called by this process
@@ -580,7 +580,7 @@ class ProcessNode(Sealable, Node):
         return self.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all_nodes()
 
     @property
-    def called_descendants(self) -> List['ProcessNode']:
+    def called_descendants(self) -> list['ProcessNode']:
         """Return a list of all nodes that have been called downstream of this process
 
         This will recursively find all the called processes for this process and its children.

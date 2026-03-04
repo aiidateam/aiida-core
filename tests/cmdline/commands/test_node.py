@@ -691,7 +691,7 @@ class TestVerdiDelete:
         result = run_cli_command(cmd_node.node_delete, options + all_workflow_pks)
         assert (
             'Report: Remote folders of these node are marked for '
-            f"deletion: {' '.join(str(remote_node.pk) for remote_node in self.remote_nodes)}"
+            f'deletion: {" ".join(str(remote_node.pk) for remote_node in self.remote_nodes)}'
             in str(result.stdout_bytes)
         )
         assert f'Report: {self.total_nodes} Node(s) marked for deletion' in str(result.stdout_bytes)
@@ -710,7 +710,7 @@ class TestVerdiDelete:
         result = run_cli_command(cmd_node.node_delete, options + all_workflow_pks)
         assert (
             'Report: Remote folders of these node are marked for '
-            f"deletion: {' '.join(str(remote_node.pk) for remote_node in self.remote_nodes)}"
+            f'deletion: {" ".join(str(remote_node.pk) for remote_node in self.remote_nodes)}'
             in str(result.stdout_bytes)
         )
         assert f'Report: {self.total_nodes} Node(s) marked for deletion' in str(result.stdout_bytes)

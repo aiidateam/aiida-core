@@ -65,9 +65,8 @@ class CodeParamType(IdentifierParamType):
             entry_point = code.default_calc_job_plugin
             if entry_point != self._entry_point:
                 raise click.BadParameter(
-                    'the retrieved Code<{}> has plugin type "{}" while "{}" is required'.format(
-                        code.pk, entry_point, self._entry_point
-                    )
+                    f'the retrieved Code<{code.pk}> has plugin type "{entry_point}" '
+                    f'while "{self._entry_point}" is required'
                 )
 
         return code

@@ -29,7 +29,7 @@ class File:
         name: str = '',
         file_type: FileType = FileType.DIRECTORY,
         key: typing.Union[str, None] = None,
-        objects: typing.Optional[typing.Dict[str, 'File']] = None,
+        objects: typing.Optional[dict[str, 'File']] = None,
     ) -> None:
         """Construct a new instance.
 
@@ -119,7 +119,7 @@ class File:
         return self._key
 
     @property
-    def objects(self) -> typing.Dict[str, 'File']:
+    def objects(self) -> dict[str, 'File']:
         """Return the objects of the file object."""
         return self._objects
 

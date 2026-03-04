@@ -10,7 +10,7 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, BinaryIO, Dict, List, Literal, Optional, Type, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, BinaryIO, Literal, Optional, TypeVar, Union, overload
 
 from typing_extensions import Self
 
@@ -74,14 +74,14 @@ class ArchiveWriterAbstract(ABC):
         """Finalise the archive."""
 
     @abstractmethod
-    def update_metadata(self, data: Dict[str, Any], overwrite: bool = False) -> None:
+    def update_metadata(self, data: dict[str, Any], overwrite: bool = False) -> None:
         """Add key, values to the top-level metadata."""
 
     @abstractmethod
     def bulk_insert(
         self,
         entity_type: 'EntityTypes',
-        rows: List[Dict[str, Any]],
+        rows: list[dict[str, Any]],
         allow_defaults: bool = False,
     ) -> None:
         """Add multiple rows of entity data to the archive.
@@ -137,7 +137,7 @@ class ArchiveReaderAbstract(ABC):
         """Finalise the archive."""
 
     @abstractmethod
-    def get_metadata(self) -> Dict[str, Any]:
+    def get_metadata(self) -> dict[str, Any]:
         """Return the top-level metadata.
 
         :raises: ``CorruptStorage`` if the top-level metadata cannot be read from the archive
@@ -155,7 +155,7 @@ class ArchiveReaderAbstract(ABC):
 
         return QueryBuilder(backend=self.get_backend(), **kwargs)
 
-    def get(self, entity_cls: Type[EntityType], **filters: Any) -> EntityType:
+    def get(self, entity_cls: type[EntityType], **filters: Any) -> EntityType:
         """Return the entity for the given filters.
 
         Example::

@@ -9,7 +9,7 @@
 """Import an archive."""
 
 from pathlib import Path
-from typing import Any, Callable, Dict, Literal, Optional, Set, Tuple, Union
+from typing import Any, Callable, Literal, Optional, Union
 
 from tabulate import tabulate
 
@@ -36,7 +36,7 @@ __all__ = ('import_archive',)
 
 IMPORT_LOGGER = AIIDA_LOGGER.getChild('export')
 
-MergeExtrasType = Tuple[Literal['k', 'n'], Literal['c', 'n'], Literal['l', 'u', 'd']]
+MergeExtrasType = tuple[Literal['k', 'n'], Literal['c', 'n'], Literal['l', 'u', 'd']]
 MergeExtraDescs = (
     {'k': '(k)eep', 'n': 'do (n)ot keep'},
     {'c': '(c)reate', 'n': 'do (n)ot create'},
@@ -256,7 +256,7 @@ def _add_new_entities(
 
 def _import_users(
     backend_from: StorageBackend, backend_to: StorageBackend, batch_size: int, filter_size: int
-) -> Dict[int, int]:
+) -> dict[int, int]:
     """Import users from one backend to another.
 
     :returns: mapping of input backend id to output backend id
@@ -266,7 +266,7 @@ def _import_users(
     input_id_email = dict(qbuilder.append(orm.User, project=['id', 'email']).all(batch_size=batch_size))
 
     # get matching emails from the backend
-    output_email_id: Dict[str, int] = {}
+    output_email_id: dict[str, int] = {}
     if input_id_email:
         output_email_id = dict(
             orm.QueryBuilder(backend=backend_to)
@@ -302,7 +302,7 @@ def _import_users(
 
 def _import_computers(
     backend_from: StorageBackend, backend_to: StorageBackend, batch_size: int, filter_size: int
-) -> Dict[int, int]:
+) -> dict[int, int]:
     """Import computers from one backend to another.
 
     :returns: mapping of input backend id to output backend id
@@ -312,7 +312,7 @@ def _import_computers(
     input_id_uuid = dict(qbuilder.append(orm.Computer, project=['id', 'uuid']).all(batch_size=batch_size))
 
     # get matching uuids from the backend
-    backend_uuid_id: Dict[str, int] = {}
+    backend_uuid_id: dict[str, int] = {}
     if input_id_uuid:
         backend_uuid_id = dict(
             orm.QueryBuilder(backend=backend_to)
@@ -379,8 +379,8 @@ def _import_authinfos(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
     batch_size: int,
-    user_ids_archive_backend: Dict[int, int],
-    computer_ids_archive_backend: Dict[int, int],
+    user_ids_archive_backend: dict[int, int],
+    computer_ids_archive_backend: dict[int, int],
 ) -> None:
     """Import logs from one backend to another.
 
@@ -460,11 +460,11 @@ def _import_nodes(
     backend_to: StorageBackend,
     batch_size: int,
     filter_size: int,
-    user_ids_archive_backend: Dict[int, int],
-    computer_ids_archive_backend: Dict[int, int],
+    user_ids_archive_backend: dict[int, int],
+    computer_ids_archive_backend: dict[int, int],
     import_new_extras: bool,
     merge_extras: MergeExtrasType,
-) -> Dict[int, int]:
+) -> dict[int, int]:
     """Import nodes from one backend to another.
 
     :returns: mapping of input backend id to output backend id
@@ -475,7 +475,7 @@ def _import_nodes(
     input_id_uuid = dict(qbuilder.append(orm.Node, project=['id', 'uuid']).all(batch_size=batch_size))
 
     # get matching uuids from the backend
-    backend_uuid_id: Dict[str, int] = {}
+    backend_uuid_id: dict[str, int] = {}
 
     if input_id_uuid:
         backend_uuid_id = dict(
@@ -513,8 +513,8 @@ class NodeTransform:
 
     def __init__(
         self,
-        user_ids_archive_backend: Dict[int, int],
-        computer_ids_archive_backend: Dict[int, int],
+        user_ids_archive_backend: dict[int, int],
+        computer_ids_archive_backend: dict[int, int],
         import_new_extras: bool,
     ):
         """Construct a new instance."""
@@ -553,8 +553,8 @@ def _import_logs(
     backend_to: StorageBackend,
     batch_size: int,
     filter_size: int,
-    node_ids_archive_backend: Dict[int, int],
-) -> Dict[int, int]:
+    node_ids_archive_backend: dict[int, int],
+) -> dict[int, int]:
     """Import logs from one backend to another.
 
     :returns: mapping of input backend id to output backend id
@@ -564,7 +564,7 @@ def _import_logs(
     input_id_uuid = dict(qbuilder.append(orm.Log, project=['id', 'uuid']).all(batch_size=batch_size))
 
     # get matching uuids from the backend
-    backend_uuid_id: Dict[str, int] = {}
+    backend_uuid_id: dict[str, int] = {}
 
     if input_id_uuid:
         backend_uuid_id = dict(
@@ -609,7 +609,7 @@ def _merge_node_extras(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
     batch_size: int,
-    backend_uuid_id: Dict[str, int],
+    backend_uuid_id: dict[str, int],
     mode: MergeExtrasType,
 ) -> None:
     """Merge extras from the input backend with the ones in the output backend.
@@ -735,8 +735,8 @@ class CommentTransform:
 
     def __init__(
         self,
-        user_ids_archive_backend: Dict[int, int],
-        node_ids_archive_backend: Dict[int, int],
+        user_ids_archive_backend: dict[int, int],
+        node_ids_archive_backend: dict[int, int],
     ):
         """Construct a new instance."""
         self.user_ids_archive_backend = user_ids_archive_backend
@@ -762,10 +762,10 @@ def _import_comments(
     backend: StorageBackend,
     batch_size: int,
     filter_size: int,
-    user_ids_archive_backend: Dict[int, int],
-    node_ids_archive_backend: Dict[int, int],
+    user_ids_archive_backend: dict[int, int],
+    node_ids_archive_backend: dict[int, int],
     merge_comments: MergeCommentsType,
-) -> Dict[int, int]:
+) -> dict[int, int]:
     """Import comments from one backend to another.
 
     :returns: mapping of archive id to backend id
@@ -775,7 +775,7 @@ def _import_comments(
     input_id_uuid = dict(qbuilder.append(orm.Comment, project=['id', 'uuid']).all(batch_size=batch_size))
 
     # get matching uuids from the backend
-    backend_uuid_id: Dict[str, int] = {}
+    backend_uuid_id: dict[str, int] = {}
     if input_id_uuid:
         backend_uuid_id = dict(
             orm.QueryBuilder(backend=backend)
@@ -844,7 +844,7 @@ def _import_links(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
     batch_size: int,
-    node_ids_archive_backend: Dict[int, int],
+    node_ids_archive_backend: dict[int, int],
 ) -> None:
     """Import links from one backend to another."""
     # initial variables
@@ -989,7 +989,7 @@ def _import_links(
 class GroupTransform:
     """Callable to transform a Group DB row, between the source archive and target backend."""
 
-    def __init__(self, user_ids_archive_backend: Dict[int, int], labels: Set[str]):
+    def __init__(self, user_ids_archive_backend: dict[int, int], labels: set[str]):
         self.user_ids_archive_backend = user_ids_archive_backend
         self.labels = labels
         self.relabelled = 0
@@ -1023,9 +1023,9 @@ def _import_groups(
     backend_to: StorageBackend,
     batch_size: int,
     filter_size: int,
-    user_ids_archive_backend: Dict[int, int],
-    node_ids_archive_backend: Dict[int, int],
-) -> Set[str]:
+    user_ids_archive_backend: dict[int, int],
+    node_ids_archive_backend: dict[int, int],
+) -> set[str]:
     """Import groups from the input backend, and add group -> node records.
 
     :returns: Set of labels
@@ -1035,7 +1035,7 @@ def _import_groups(
     input_id_uuid = dict(qbuilder.append(orm.Group, project=['id', 'uuid']).all(batch_size=batch_size))
 
     # get matching uuids from the backend
-    backend_uuid_id: Dict[str, int] = {}
+    backend_uuid_id: dict[str, int] = {}
     if input_id_uuid:
         backend_uuid_id = dict(
             orm.QueryBuilder(backend=backend_to)
@@ -1109,8 +1109,8 @@ def _import_groups(
 
 def _make_import_group(
     group: Optional[orm.Group],
-    labels: Set[str],
-    node_ids_archive_backend: Dict[int, int],
+    labels: set[str],
+    node_ids_archive_backend: dict[int, int],
     backend_to: StorageBackend,
     batch_size: int,
 ) -> Optional[int]:
@@ -1182,9 +1182,9 @@ def _get_new_object_keys(
     backend_from: StorageBackend,
     backend_to: StorageBackend,
     batch_size: int,
-) -> Set[str]:
+) -> set[str]:
     """Return the object keys that need to be added to the backend."""
-    archive_hashkeys: Set[str] = set()
+    archive_hashkeys: set[str] = set()
     query = QueryBuilder(backend=backend_from).append(orm.Node, project='repository_metadata')
     with get_progress_reporter()(desc='Collecting archive Node file keys', total=query.count()) as progress:
         for (repository_metadata,) in query.iterall(batch_size=batch_size):
@@ -1209,7 +1209,7 @@ def _get_new_object_keys(
     return new_hashkeys
 
 
-def _add_files_to_repo(backend_from: StorageBackend, backend_to: StorageBackend, new_keys: Set[str]) -> None:
+def _add_files_to_repo(backend_from: StorageBackend, backend_to: StorageBackend, new_keys: set[str]) -> None:
     """Add the new files to the repository."""
     if not new_keys:
         return None

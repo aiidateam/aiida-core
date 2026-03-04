@@ -13,10 +13,11 @@ from __future__ import annotations
 import collections
 import os
 import pathlib
+from collections.abc import Mapping
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Type, Union
+from typing import TYPE_CHECKING, Any
 
 from aiida.common import exceptions
 
@@ -59,7 +60,7 @@ class Profile:
             )
 
         self._name = name
-        self._attributes: Dict[str, Any] = deepcopy(config)  # type: ignore[arg-type]
+        self._attributes: dict[str, Any] = deepcopy(config)  # type: ignore[arg-type]
 
         # Create a default UUID if not specified
         if self._attributes.get(self.KEY_UUID, None) is None:
@@ -87,12 +88,12 @@ class Profile:
         self._attributes[self.KEY_UUID] = value
 
     @property
-    def default_user_email(self) -> Optional[str]:
+    def default_user_email(self) -> str | None:
         """Return the default user email."""
         return self._attributes.get(self.KEY_DEFAULT_USER_EMAIL, None)
 
     @default_user_email.setter
-    def default_user_email(self, value: Optional[str]) -> None:
+    def default_user_email(self, value: str | None) -> None:
         """Set the default user email."""
         self._attributes[self.KEY_DEFAULT_USER_EMAIL] = value
 
@@ -102,11 +103,11 @@ class Profile:
         return self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_BACKEND]
 
     @property
-    def storage_config(self) -> Dict[str, Any]:
+    def storage_config(self) -> dict[str, Any]:
         """Return the configuration required by the storage backend."""
         return self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_CONFIG]
 
-    def set_storage(self, name: str, config: Dict[str, Any]) -> None:
+    def set_storage(self, name: str, config: dict[str, Any]) -> None:
         """Set the storage backend and its configuration.
 
         :param name: the name of the storage backend
@@ -117,7 +118,7 @@ class Profile:
         self._attributes[self.KEY_STORAGE][self.KEY_STORAGE_CONFIG] = config
 
     @property
-    def storage_cls(self) -> Type['StorageBackend']:
+    def storage_cls(self) -> type[StorageBackend]:
         """Return the storage backend class for this profile."""
         from aiida.plugins import StorageFactory
 
@@ -129,11 +130,11 @@ class Profile:
         return self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_BACKEND]
 
     @property
-    def process_control_config(self) -> Dict[str, Any]:
+    def process_control_config(self) -> dict[str, Any]:
         """Return the configuration required by the process control backend."""
         return self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_CONFIG] or {}
 
-    def set_process_controller(self, name: str, config: Dict[str, Any]) -> None:
+    def set_process_controller(self, name: str, config: dict[str, Any]) -> None:
         """Set the process control backend and its configuration.
 
         :param name: the name of the process backend
@@ -178,7 +179,7 @@ class Profile:
         return self._name
 
     @property
-    def dictionary(self) -> Dict[str, Any]:
+    def dictionary(self) -> dict[str, Any]:
         """Return the profile attributes as a dictionary with keys as it is stored in the config
 
         :return: the profile configuration dictionary
@@ -267,20 +268,20 @@ class Profile:
 
     def dump(
         self,
-        output_path: Optional[Union[str, Path]] = None,
+        output_path: str | Path | None = None,
         # Dump mode options
         dry_run: bool = False,
         overwrite: bool = False,
         # Scope options
         all_entries: bool = False,
-        groups: Optional[Union[List[str], List[Group]]] = None,
-        user: Optional[Union[List[str], List[User]]] = None,
-        computers: Optional[Union[List[str], List[Computer]]] = None,
-        codes: Optional[Union[List[str], List[Code]]] = None,
+        groups: list[str] | list[Group] | None = None,
+        user: list[str] | list[User] | None = None,
+        computers: list[str] | list[Computer] | None = None,
+        codes: list[str] | list[Code] | None = None,
         # Time filtering options
-        past_days: Optional[int] = None,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        past_days: int | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
         filter_by_last_dump_time: bool = True,
         # Node collection options
         only_top_level_calcs: bool = True,

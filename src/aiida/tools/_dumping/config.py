@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum, auto
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
@@ -31,7 +31,7 @@ class GroupDumpScope(Enum):
     NO_GROUP = auto()
 
 
-def _load_computer_validator(value: Union[int, str, orm.Computer]) -> orm.Computer:
+def _load_computer_validator(value: int | str | orm.Computer) -> orm.Computer:
     """Pydantic validator to load an ``orm.Computer`` from identifier."""
     if isinstance(value, orm.Computer):
         return value
@@ -39,7 +39,7 @@ def _load_computer_validator(value: Union[int, str, orm.Computer]) -> orm.Comput
         return orm.load_computer(identifier=value)
 
 
-def _load_code_validator(value: Union[int, str, orm.Code]) -> orm.Code:
+def _load_code_validator(value: int | str | orm.Code) -> orm.Code:
     """Pydantic validator to load an ``orm.Code`` from identifier."""
     if isinstance(value, orm.Code):
         return value
@@ -47,7 +47,7 @@ def _load_code_validator(value: Union[int, str, orm.Code]) -> orm.Code:
         return orm.load_code(identifier=value)
 
 
-def _validate_user_input(value: Optional[Union[orm.User, str]]) -> orm.User | None:
+def _validate_user_input(value: orm.User | str | None) -> orm.User | None:
     """Load User object from email string."""
     if value is None or isinstance(value, orm.User):
         return value
@@ -55,7 +55,7 @@ def _validate_user_input(value: Optional[Union[orm.User, str]]) -> orm.User | No
         return orm.User.collection.get(email=value)
 
 
-def _validate_computers_input(value: Optional[Union[List[orm.Computer], List[str]]]) -> Optional[List[orm.Computer]]:
+def _validate_computers_input(value: list[orm.Computer] | list[str] | None) -> list[orm.Computer] | None:
     """Load Computer objects from identifiers."""
     if not value:
         return None
@@ -64,7 +64,7 @@ def _validate_computers_input(value: Optional[Union[List[orm.Computer], List[str
     return [_load_computer_validator(item) for item in value]
 
 
-def _validate_codes_input(value: Optional[Union[List[orm.Code], List[str]]]) -> Optional[List[orm.Code]]:
+def _validate_codes_input(value: list[orm.Code] | list[str] | None) -> list[orm.Code] | None:
     """Load Code objects from identifiers."""
     if not value:
         return None
@@ -88,7 +88,7 @@ def _validate_codes_input(value: Optional[Union[List[orm.Code], List[str]]]) -> 
     raise ValueError(msg)
 
 
-def _validate_groups_input(value: Optional[Union[List[orm.Group], List[str]]]) -> Optional[List[orm.Group]]:
+def _validate_groups_input(value: list[orm.Group] | list[str] | None) -> list[orm.Group] | None:
     """Utility function to validate groups input - must be either all strings OR all Group objects."""
     if not value:
         return None
@@ -134,7 +134,7 @@ class BaseDumpConfig(BaseModel):
 
     @model_validator(mode='before')
     @classmethod
-    def _resolve_dump_mode_from_flags(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+    def _resolve_dump_mode_from_flags(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Map incoming CLI click options to internal representation."""
         # Convert Dump Mode
 
@@ -151,13 +151,13 @@ class BaseDumpConfig(BaseModel):
 class TimeFilterMixin(BaseModel):
     """Mixin for time-based filtering options."""
 
-    start_date: Optional[datetime] = Field(default=None, description='Start date/time for modification time filter')
-    end_date: Optional[datetime] = Field(default=None, description='End date/time for modification time filter')
-    past_days: Optional[int] = Field(default=None, description='Number of past days to include based on mtime')
+    start_date: datetime | None = Field(default=None, description='Start date/time for modification time filter')
+    end_date: datetime | None = Field(default=None, description='End date/time for modification time filter')
+    past_days: int | None = Field(default=None, description='Number of past days to include based on mtime')
     filter_by_last_dump_time: bool = Field(default=True, description='Filter nodes by mtime since last dump')
 
     @model_validator(mode='after')
-    def _check_date_filters(self) -> 'TimeFilterMixin':
+    def _check_date_filters(self) -> TimeFilterMixin:
         """Ensure past_days is not used with start_date or end_date."""
         if self.past_days is not None and (self.start_date is not None or self.end_date is not None):
             msg = 'Cannot use `past_days` filter together with `start_date` or `end_date`.'
@@ -173,13 +173,11 @@ class EntityFilterMixin(BaseModel):
         arbitrary_types_allowed=True,
         validate_assignment=True,
     )
-    user: Optional[orm.User] = Field(default=None, description='User object or email to filter by')
-    computers: Optional[List[orm.Computer]] = Field(
+    user: orm.User | None = Field(default=None, description='User object or email to filter by')
+    computers: list[orm.Computer] | None = Field(
         default=None, description='List of Computer objects or UUIDs/labels to filter by'
     )
-    codes: Optional[List[orm.Code]] = Field(
-        default=None, description='List of Code objects or UUIDs/labels to filter by'
-    )
+    codes: list[orm.Code] | None = Field(default=None, description='List of Code objects or UUIDs/labels to filter by')
 
     @field_validator('user', mode='before')
     @classmethod
@@ -223,7 +221,7 @@ class ProcessDumpConfig(BaseDumpConfig, ProcessHandlingMixin):
 class GroupDumpConfig(BaseDumpConfig, ProcessHandlingMixin, TimeFilterMixin, EntityFilterMixin, GroupManagementMixin):
     """Configuration for dumping groups."""
 
-    groups: Optional[Union[List[orm.Group], List[str], List[int]]] = Field(
+    groups: list[orm.Group] | list[str] | list[int] | None = Field(
         default=None, description='Groups to dump (either list of PKs/UUIDs/labels OR list of Group objects)'
     )
 
@@ -256,7 +254,7 @@ class GroupDumpConfig(BaseDumpConfig, ProcessHandlingMixin, TimeFilterMixin, Ent
 class ProfileDumpConfig(BaseDumpConfig, ProcessHandlingMixin, TimeFilterMixin, EntityFilterMixin, GroupManagementMixin):
     """Configuration for dumping entire profiles."""
 
-    groups: Optional[Union[List[orm.Group], List[str], List[int]]] = Field(
+    groups: list[orm.Group] | list[str] | list[int] | None = Field(
         default=None, description='Groups to dump (either list of UUIDs/labels OR list of Group objects)'
     )
 

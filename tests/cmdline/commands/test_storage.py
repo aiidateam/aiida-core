@@ -232,7 +232,7 @@ def tests_storage_backup_keep(run_cli_command, tmp_path):
         assert 'backed up to' in result.output
         assert result.exit_code == 0
     # make sure only two copies of the backup are kept
-    assert len(list((tmp_path.glob('backup_*')))) == 2
+    assert len(list(tmp_path.glob('backup_*'))) == 2
 
 
 def tests_storage_backup_nonempty_dest(run_cli_command, tmp_path):

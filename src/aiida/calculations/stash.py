@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Optional
+from typing import Any
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
@@ -21,7 +21,7 @@ from aiida.engine import CalcJob
 EXEC_LOGGER = AIIDA_LOGGER.getChild('StashCalculation')
 
 
-def validate_source_node(source_node: Any, _: Any) -> Optional[str]:
+def validate_source_node(source_node: Any, _: Any) -> str | None:
     """Validate the ``source_node`` input.
 
     Checks that the creator of the source_node (i.e., the CalcJob that produced this RemoteData)

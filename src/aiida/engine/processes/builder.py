@@ -10,7 +10,7 @@
 
 import json
 from collections.abc import Mapping, MutableMapping
-from typing import TYPE_CHECKING, Any, Type
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from aiida.engine.processes.ports import PortNamespace
@@ -141,8 +141,7 @@ class ProcessBuilderNamespace(MutableMapping):
         return sorted(set(self._valid_fields + [key for key, _ in self.__dict__.items() if key.startswith('_')]))
 
     def __iter__(self):
-        for key in self._data:
-            yield key
+        yield from self._data
 
     def __len__(self):
         return len(self._data)
@@ -184,7 +183,7 @@ class ProcessBuilderNamespace(MutableMapping):
         :param kwds: keyword value pairs that should be mapped onto the ports.
         """
         if len(args) > 1:
-            raise TypeError(f'update expected at most 1 arguments, got {int(len(args))}')
+            raise TypeError(f'update expected at most 1 arguments, got {len(args)}')
 
         if args:
             for key, value in args[0].items():
@@ -236,7 +235,7 @@ class ProcessBuilderNamespace(MutableMapping):
 class ProcessBuilder(ProcessBuilderNamespace):
     """A process builder that helps setting up the inputs for creating a new process."""
 
-    def __init__(self, process_class: Type['Process']):
+    def __init__(self, process_class: type['Process']):
         """Construct a `ProcessBuilder` instance for the given `Process` class.
 
         :param process_class: the `Process` subclass
@@ -246,7 +245,7 @@ class ProcessBuilder(ProcessBuilderNamespace):
         super().__init__(self._process_spec.inputs)
 
     @property
-    def process_class(self) -> Type['Process']:
+    def process_class(self) -> type['Process']:
         """Return the process class for which this builder is constructed."""
         return self._process_class
 

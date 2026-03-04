@@ -249,12 +249,12 @@ class QbFieldFilters:
 
     def __init__(
         self,
-        filters: t.Union[t.Sequence[t.Tuple[QbField, str, t.Any]], dict],
+        filters: t.Union[t.Sequence[tuple[QbField, str, t.Any]], dict],
     ):
-        self.filters: t.Dict[str, t.Any] = {}
+        self.filters: dict[str, t.Any] = {}
         self.add_filters(filters)
 
-    def as_dict(self) -> t.Dict[str, t.Any]:
+    def as_dict(self) -> dict[str, t.Any]:
         """Return the filters dictionary."""
         return self.filters
 
@@ -351,7 +351,7 @@ class QbFields:
 
     __isabstractmethod__ = False
 
-    def __init__(self, fields: t.Optional[t.Dict[str, QbField]] = None):
+    def __init__(self, fields: t.Optional[dict[str, QbField]] = None):
         self._fields = fields or {}
 
     def __repr__(self) -> str:

@@ -74,9 +74,8 @@ class PbsproScheduler(PbsBaseClass):
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    'max_wallclock_seconds must be ' "a positive integer (in seconds)! It is instead '{}'" ''.format(
-                        max_wallclock_seconds
-                    )
+                    'max_wallclock_seconds must be '
+                    f"a positive integer (in seconds)! It is instead '{max_wallclock_seconds}'"
                 )
             hours = tot_secs // 3600
             tot_minutes = tot_secs % 3600

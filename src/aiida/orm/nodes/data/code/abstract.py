@@ -58,7 +58,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             description='Human-readable description, ideally including version and compilation environment.',
             short_name='-D',
         )
-        default_calc_job_plugin: t.Optional[str] = MetadataField(
+        default_calc_job_plugin: str | None = MetadataField(
             None,
             title='Default `CalcJob` plugin',
             description='Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`).',
@@ -70,7 +70,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             description='Whether the executable and arguments of the code in the submission script should be escaped '
             'with single or double quotes.',
         )
-        with_mpi: t.Optional[bool] = MetadataField(
+        with_mpi: bool | None = MetadataField(
             None,
             title='Run with MPI',
             description='Whether the executable should be run as an MPI program. This option can be left unspecified '
@@ -339,7 +339,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         type_check(value, bool)
         self.base.extras.set(self._KEY_EXTRA_IS_HIDDEN, value)
 
-    def get_builder(self) -> 'ProcessBuilder':
+    def get_builder(self) -> ProcessBuilder:
         """Create and return a new ``ProcessBuilder`` for the ``CalcJob`` class of the plugin configured for this code.
 
         The configured calculation plugin class is defined by the ``default_calc_job_plugin`` property.

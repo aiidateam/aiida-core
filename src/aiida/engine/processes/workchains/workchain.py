@@ -62,18 +62,18 @@ class Protect(ProcessStateMachineMeta):
 
     __SENTINEL = object()
 
-    def __new__(mcs, name, bases, namespace, **kwargs):  # noqa: N804
+    def __new__(cls, name, bases, namespace, **kwargs):
         """Collect all methods that were marked as protected and raise if the subclass defines it.
 
         :raises RuntimeError: If the new class defines (i.e. overrides) a method that was decorated with ``final``.
         """
         private = {
-            key for base in bases for key, value in vars(base).items() if callable(value) and mcs.__is_final(value)
+            key for base in bases for key, value in vars(base).items() if callable(value) and cls.__is_final(value)
         }
         for key in namespace:
             if key in private:
                 raise RuntimeError(f'the method `{key}` is protected cannot be overridden.')
-        return super().__new__(mcs, name, bases, namespace, **kwargs)
+        return super().__new__(cls, name, bases, namespace, **kwargs)
 
     @classmethod
     def __is_final(mcs, method) -> bool:  # noqa: N804
@@ -111,7 +111,7 @@ class WorkChain(Process, metaclass=Protect):
         self,
         inputs: dict | None = None,
         logger: logging.Logger | None = None,
-        runner: 'Runner' | None = None,
+        runner: Runner | None = None,
         enable_persistence: bool = True,
     ) -> None:
         """Construct a WorkChain instance.
@@ -212,7 +212,7 @@ class WorkChain(Process, metaclass=Protect):
             if type(ctx) is not AttributeDict:
                 raise ValueError(
                     f'Can not update the context for key `{key}`:'
-                    f' found instance of `{type(ctx)}` at `{".".join(ctx_path[:index+1])}`, expected AttributeDict'
+                    f' found instance of `{type(ctx)}` at `{".".join(ctx_path[: index + 1])}`, expected AttributeDict'
                 )
 
         return ctx, ctx_path[-1]
@@ -286,7 +286,7 @@ class WorkChain(Process, metaclass=Protect):
     def _update_process_status(self) -> None:
         """Set the process status with a message accounting the current sub processes that we are waiting for."""
         if self._awaitables:
-            status = f"Waiting for child processes: {', '.join([str(_.pk) for _ in self._awaitables])}"
+            status = f'Waiting for child processes: {", ".join([str(_.pk) for _ in self._awaitables])}'
         else:
             status = None
         if self.paused:

@@ -202,7 +202,7 @@ class AsyncSshTransport(AsyncTransport):
         self._is_open = False
 
     def __str__(self):
-        return f"{'OPEN' if self._is_open else 'CLOSED'} [AsyncSshTransport]"
+        return f'{"OPEN" if self._is_open else "CLOSED"} [AsyncSshTransport]'
 
     async def get_async(
         self,
@@ -795,9 +795,8 @@ class AsyncSshTransport(AsyncTransport):
                 self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing tar. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
-                    retval, stdout, stderr, tar_command
-                )
+                f"Problem executing tar. Exit code: {retval}, stdout: '{stdout}', stderr: '{stderr}', "
+                f"command: '{tar_command}'"
             )
             raise OSError(f'Error while creating the tar archive. Exit code: {retval}')
 
@@ -841,9 +840,8 @@ class AsyncSshTransport(AsyncTransport):
                 self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing tar. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
-                    retval, stdout, stderr, tar_command
-                )
+                f"Problem executing tar. Exit code: {retval}, stdout: '{stdout}', "
+                f"stderr: '{stderr}', command: '{tar_command}'"
             )
             raise OSError(f'Error while extracting the tar archive. Exit code: {retval}')
 

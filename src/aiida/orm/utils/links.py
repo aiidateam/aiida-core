@@ -9,8 +9,8 @@
 """Utilities for dealing with links between nodes."""
 
 from collections import OrderedDict
-from collections.abc import Mapping
-from typing import TYPE_CHECKING, Generator, Iterator, List, NamedTuple, Optional
+from collections.abc import Generator, Iterator, Mapping
+from typing import TYPE_CHECKING, NamedTuple, Optional
 
 from aiida.common import exceptions
 from aiida.common.lang import type_check
@@ -198,9 +198,8 @@ def validate_link(
     # If the outdegree is `unique_triple`, then the link triples of link type, link label and target should be unique
     elif outdegree == 'unique_triple' and duplicate_link_triple:
         raise ValueError(
-            'node<{}> already has an outgoing {} link with label "{}" from node<{}>'.format(
-                source.uuid, link_type, link_label, target.uuid
-            )
+            f'node<{source.uuid}> already has an outgoing {link_type} link with label "{link_label}" '
+            f'from node<{target.uuid}>'
         )
 
     # If the indegree is `unique` there cannot already be any other incoming links of that type
@@ -217,9 +216,8 @@ def validate_link(
     # If the indegree is `unique_triple`, then the link triples of link type, link label and source should be unique
     elif indegree == 'unique_triple' and duplicate_link_triple:
         raise ValueError(
-            'node<{}> already has an incoming {} link with label "{}" from node<{}>'.format(
-                target.uuid, link_type, link_label, source.uuid
-            )
+            f'node<{target.uuid}> already has an incoming {link_type} link with label "{link_label}" '
+            f'from node<{source.uuid}>'
         )
 
 
@@ -237,7 +235,7 @@ class LinkManager:
     incoming nodes or link labels, respectively.
     """
 
-    def __init__(self, link_triples: List[LinkTriple]):
+    def __init__(self, link_triples: list[LinkTriple]):
         """Initialise the collection."""
         self.link_triples = link_triples
 
@@ -253,8 +251,7 @@ class LinkManager:
 
         :return: LinkTriple
         """
-        for link_triple in self.link_triples:
-            yield link_triple
+        yield from self.link_triples
 
     def __bool__(self):
         return bool(len(self.link_triples))
@@ -290,28 +287,28 @@ class LinkManager:
 
         return None
 
-    def all(self) -> List[LinkTriple]:
+    def all(self) -> list[LinkTriple]:
         """Return all entries from the list.
 
         :return: list of LinkTriple instances
         """
         return self.link_triples
 
-    def all_nodes(self) -> List['Node']:
+    def all_nodes(self) -> list['Node']:
         """Return a list of all nodes.
 
         :return: list of nodes
         """
         return [entry.node for entry in self.all()]
 
-    def all_link_pairs(self) -> List[LinkPair]:
+    def all_link_pairs(self) -> list[LinkPair]:
         """Return a list of all link pairs.
 
         :return: list of LinkPair instances
         """
         return [LinkPair(entry.link_type, entry.link_label) for entry in self.all()]
 
-    def all_link_labels(self) -> List[str]:
+    def all_link_labels(self) -> list[str]:
         """Return a list of all link labels.
 
         :return: list of link labels

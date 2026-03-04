@@ -15,7 +15,7 @@ import uuid
 import warnings
 from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import and_, not_, or_
 from sqlalchemy import func as sa_func
@@ -82,8 +82,8 @@ class BuiltQuery:
     """A class to store the query and the corresponding projections."""
 
     query: Query
-    tag_to_alias: Dict[str, Optional[AliasedClass]]
-    tag_to_projected: Dict[str, Dict[str, int]]
+    tag_to_alias: dict[str, AliasedClass | None]
+    tag_to_projected: dict[str, dict[str, int]]
 
 
 class SqlaQueryBuilder(BackendQueryBuilder):
@@ -98,12 +98,12 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         # Set conversions between the field names in the database and used by the `QueryBuilder`
         # table -> field -> field
-        self.inner_to_outer_schema: Dict[str, Dict[str, str]] = {
+        self.inner_to_outer_schema: dict[str, dict[str, str]] = {
             'db_dbauthinfo': {'_metadata': 'metadata'},
             'db_dbcomputer': {'_metadata': 'metadata'},
             'db_dblog': {'_metadata': 'metadata'},
         }
-        self.outer_to_inner_schema: Dict[str, Dict[str, str]] = {
+        self.outer_to_inner_schema: dict[str, dict[str, str]] = {
             'db_dbauthinfo': {'metadata': '_metadata'},
             'db_dbcomputer': {'metadata': '_metadata'},
             'db_dblog': {'metadata': '_metadata'},
@@ -122,8 +122,8 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         }
 
         # Hashing the internal query representation avoids rebuilding a query
-        self._query_cache: Optional[BuiltQuery] = None
-        self._query_hash: Optional[str] = None
+        self._query_cache: BuiltQuery | None = None
+        self._query_hash: str | None = None
 
     @property
     def Node(self):
@@ -188,7 +188,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             result = build.query.count()
         return result
 
-    def first(self, data: QueryDictType) -> Optional[List[Any]]:
+    def first(self, data: QueryDictType) -> list[Any] | None:
         with self.query_session(data) as build:
             result = build.query.first()
 
@@ -202,7 +202,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         return [self.to_backend(r) for r in result]
 
-    def iterall(self, data: QueryDictType, batch_size: Optional[int]) -> Iterable[List[Any]]:
+    def iterall(self, data: QueryDictType, batch_size: int | None) -> Iterable[list[Any]]:
         """Return an iterator over all the results of a list of lists."""
         with self.query_session(data) as build:
             stmt = build.query.statement.execution_options(yield_per=batch_size)
@@ -215,7 +215,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                 for resultrow in session.execute(stmt):
                     yield [self.to_backend(rowitem) for rowitem in resultrow]
 
-    def iterdict(self, data: QueryDictType, batch_size: Optional[int]) -> Iterable[Dict[str, Dict[str, Any]]]:
+    def iterdict(self, data: QueryDictType, batch_size: int | None) -> Iterable[dict[str, dict[str, Any]]]:
         """Return an iterator over all the results of a list of dictionaries."""
         with self.query_session(data) as build:
             stmt = build.query.statement.execution_options(yield_per=batch_size)
@@ -227,7 +227,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             with nullcontext() if session.in_nested_transaction() else self._backend.transaction():
                 for row in self.get_session().execute(stmt):
                     # build the yield result
-                    yield_result: Dict[str, Dict[str, Any]] = {}
+                    yield_result: dict[str, dict[str, Any]] = {}
                     for (
                         tag,
                         projected_entities_dict,
@@ -275,7 +275,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
     def _build(self, data: QueryDictType) -> BuiltQuery:
         """Build the query and return."""
         # generate aliases for tags
-        tag_to_alias: Dict[str, Optional[AliasedClass]] = {}
+        tag_to_alias: dict[str, AliasedClass | None] = {}
         cls_map = {
             EntityTypes.AUTHINFO.value: self.AuthInfo,
             EntityTypes.COMMENT.value: self.Comment,
@@ -357,7 +357,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
     def _create_order_by(
         self, alias: AliasedClass, field_key: str, entityspec: dict
-    ) -> Union[ColumnElement, InstrumentedAttribute]:
+    ) -> ColumnElement | InstrumentedAttribute:
         """Build the order_by parameter of the query."""
         column_name = field_key.split('.')[0]
         attrpath = field_key.split('.')[1:]
@@ -378,9 +378,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
     def _get_projectable_entity(
         alias: AliasedClass,
         column_name: str,
-        attrpath: List[str],
-        cast: Optional[str] = None,
-    ) -> Union[ColumnElement, InstrumentedAttribute]:
+        attrpath: list[str],
+        cast: str | None = None,
+    ) -> ColumnElement | InstrumentedAttribute:
         """Return projectable entity for a given alias and column name."""
         if not (attrpath or column_name in ('attributes', 'extras')):
             return get_column(column_name, alias)
@@ -412,7 +412,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         :returns: an sqlalchemy expression.
         """
-        expressions: List[Any] = []
+        expressions: list[Any] = []
         for path_spec, filter_operation_dict in filter_spec.items():
             if path_spec in ('and', 'or', '~or', '~and', '!and', '!or'):
                 subexpressions = []
@@ -434,7 +434,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
                 attr_key = path_spec.split('.')[1:]
                 is_jsonb = bool(attr_key) or column_name in ('dict', 'attributes', 'extras')
-                column: Optional[InstrumentedAttribute]
+                column: InstrumentedAttribute | None
                 try:
                     column = get_column(column_name, alias)
                 except (ValueError, TypeError):
@@ -462,7 +462,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         self,
         operator: str,
         value: Any,
-        attr_key: List[str],
+        attr_key: list[str],
         is_jsonb: bool,
         alias: AliasedClass | None = None,
         column: InstrumentedAttribute | None = None,
@@ -611,7 +611,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         self,
         operator: str,
         value: Any,
-        attr_key: List[str],
+        attr_key: list[str],
         column: InstrumentedAttribute | None = None,
         column_name: str | None = None,
         alias: AliasedClass | None = None,
@@ -806,9 +806,9 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         rows = self.get_session().execute(text(f'EXPLAIN{options} {compiled.string}')).fetchall()
         return '\n'.join(row[0] for row in rows)
 
-    def get_creation_statistics(self, user_pk: Optional[int] = None) -> Dict[str, Any]:
+    def get_creation_statistics(self, user_pk: int | None = None) -> dict[str, Any]:
         session = self.get_session()
-        retdict: Dict[Any, Any] = {}
+        retdict: dict[Any, Any] = {}
 
         total_query = session.query(self.Node)
         types_query = session.query(self.Node.node_type.label('typestring'), sa_func.count(self.Node.id))
@@ -857,7 +857,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         # Still not containing all dates
 
 
-def get_corresponding_property(entity_table: str, given_property: str, mapper: Dict[str, Dict[str, str]]) -> str:
+def get_corresponding_property(entity_table: str, given_property: str, mapper: dict[str, dict[str, str]]) -> str:
     """This method returns an updated property for a given a property.
     If there is no update for the property, the given property is returned.
     """
@@ -875,7 +875,7 @@ def get_corresponding_property(entity_table: str, given_property: str, mapper: D
         return given_property
 
 
-def get_corresponding_properties(entity_table: str, given_properties: List[str], mapper: Dict[str, Dict[str, str]]):
+def get_corresponding_properties(entity_table: str, given_properties: list[str], mapper: dict[str, dict[str, str]]):
     """This method returns a list of updated properties for a given list of properties.
     If there is no update for the property, the given property is returned in the list.
     """
@@ -890,9 +890,9 @@ def get_corresponding_properties(entity_table: str, given_properties: List[str],
 
 def modify_expansions(
     alias: AliasedClass,
-    expansions: List[str],
-    outer_to_inner_schema=Dict[str, Dict[str, str]],
-) -> List[str]:
+    expansions: list[str],
+    outer_to_inner_schema=dict[str, dict[str, str]],
+) -> list[str]:
     """Modify names of projections if `**` was specified.
 
     This is important for the schema having attributes in a different table.
@@ -924,7 +924,7 @@ def get_column(colname: str, alias: AliasedClass) -> InstrumentedAttribute:
         ) from exc
 
 
-def get_column_names(alias: AliasedClass) -> List[str]:
+def get_column_names(alias: AliasedClass) -> list[str]:
     """Given the backend specific alias, return the column names that correspond to the aliased table."""
     return [str(c).replace(f'{alias.__table__.name}.', '') for c in alias.__table__.columns]
 
@@ -969,10 +969,10 @@ def compile_query(query: Query, literal_binds: bool = False) -> SQLCompiler:
 
 
 def generate_joins(
-    data: QueryDictType, aliases: Dict[str, Optional[AliasedClass]], joiner: SqlaJoiner
-) -> List[JoinReturn]:
+    data: QueryDictType, aliases: dict[str, AliasedClass | None], joiner: SqlaJoiner
+) -> list[JoinReturn]:
     """Generate the joins for the query."""
-    joins: List[JoinReturn] = []
+    joins: list[JoinReturn] = []
     # Start on second path item, since there is nothing to join if that is the first table
     for index, verticespec in enumerate(data['path'][1:], start=1):
         join_to = aliases[verticespec['tag']]
@@ -1018,12 +1018,12 @@ def generate_joins(
 
 
 def generate_projections(
-    data: QueryDictType, aliases: Dict[str, Optional[AliasedClass]], outer_to_inner_schema, get_projectable_entity
+    data: QueryDictType, aliases: dict[str, AliasedClass | None], outer_to_inner_schema, get_projectable_entity
 ):
     """Generate the projections for the query."""
     # mapping of tag -> field -> projection_index
-    tag_to_projected_fields: Dict[str, Dict[str, int]] = {}
-    projections: List[Tuple[Union[AliasedClass, ColumnElement], bool]] = []
+    tag_to_projected_fields: dict[str, dict[str, int]] = {}
+    projections: list[tuple[AliasedClass | ColumnElement, bool]] = []
 
     QUERYBUILD_LOGGER.debug('projections data: %s', data['project'])
 
@@ -1090,13 +1090,13 @@ def generate_projections(
 
 def _create_projections(
     tag: str,
-    aliases: Dict[str, Optional[AliasedClass]],
+    aliases: dict[str, AliasedClass | None],
     projection_count: int,
-    project_dict: List[Dict[str, dict]],
+    project_dict: list[dict[str, dict]],
     get_projectable_entity,
     tag_to_projected_fields,
     outer_to_inner_schema,
-) -> List[Tuple[Union[AliasedClass, ColumnElement], bool]]:
+) -> list[tuple[AliasedClass | ColumnElement, bool]]:
     """Build the projections for a given tag.
 
     :param tag: the tag of the node for which to build the projections
@@ -1138,10 +1138,10 @@ def _get_projection(
     alias: AliasedClass,
     projectable_entity_name: str,
     get_projectable_entity,
-    cast: Optional[str] = None,
-    func: Optional[str] = None,
+    cast: str | None = None,
+    func: str | None = None,
     **_kw: Any,
-) -> Tuple[Union[AliasedClass, ColumnElement], bool]:
+) -> tuple[AliasedClass | ColumnElement, bool]:
     """:param alias: An alias for an ormclass
     :param projectable_entity_name:
         User specification of what to project.

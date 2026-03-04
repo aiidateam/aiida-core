@@ -397,10 +397,9 @@ def link_flags_import_helper(test_data, reset_db):
         for node_type, node_cls in nodes_util.items():
             if node_type in expected_nodes:
                 builder = orm.QueryBuilder().append(node_cls, project='uuid')
-                assert builder.count() == len(
-                    expected_nodes[node_type]
-                ), 'Expected {} {} node(s), but got {}. Test: "{}"'.format(
-                    len(expected_nodes[node_type]), node_type, builder.count(), test
+                assert builder.count() == len(expected_nodes[node_type]), (
+                    f'Expected {len(expected_nodes[node_type])} {node_type} node(s), but got {builder.count()}. '
+                    f'Test: "{test}"'
                 )
                 for node_uuid in builder.iterall():
                     assert node_uuid[0] in expected_nodes[node_type], f'Failed for test: "{test}"'
@@ -676,7 +675,7 @@ def test_multiple_post_return_links(tmp_path, aiida_profile_clean):
     links = get_all_node_links()
     assert len(links) == 1, (
         'Only a single Link (from Calc. to Data) is expected, '
-        'instead {} were found (in, out, label, type): {}'.format(len(links), links)
+        f'instead {len(links)} were found (in, out, label, type): {links}'
     )
     for from_uuid, to_uuid, found_label, found_type in links:
         assert from_uuid == calc_uuid

@@ -14,7 +14,7 @@ import asyncio
 import functools
 import logging
 import tempfile
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable
 
 import plumpy
 import plumpy.futures
@@ -56,7 +56,7 @@ class PreSubmitException(Exception):  # noqa: N818
     """Raise in the `do_upload` coroutine when an exception is raised in `CalcJob.presubmit`."""
 
 
-async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, cancellable: InterruptableFuture):
+async def task_upload_job(process: CalcJob, transport_queue: TransportQueue, cancellable: InterruptableFuture):
     """Transport task that will attempt to upload the files of a job calculation to the remote.
 
     The task will first request a transport from the queue. Once the transport is yielded, the relevant execmanager
@@ -273,7 +273,7 @@ async def task_monitor_job(
 
 
 async def task_retrieve_job(
-    process: 'CalcJob',
+    process: CalcJob,
     transport_queue: TransportQueue,
     retrieved_temporary_folder: str,
     cancellable: InterruptableFuture,
@@ -478,10 +478,10 @@ class Waiting(plumpy.process_states.Waiting):
 
     def __init__(
         self,
-        process: 'CalcJob',
-        done_callback: Optional[Callable[..., Any]],
-        msg: Optional[str] = None,
-        data: Optional[Any] = None,
+        process: CalcJob,
+        done_callback: Callable[..., Any] | None,
+        msg: str | None = None,
+        data: Any | None = None,
     ):
         """:param process: The process this state belongs to"""
         super().__init__(process, done_callback, msg, data)
@@ -512,7 +512,7 @@ class Waiting(plumpy.process_states.Waiting):
         return self._monitors
 
     @property
-    def process(self) -> 'CalcJob':
+    def process(self) -> CalcJob:
         """:return: The process"""
         return self.state_machine  # type: ignore[return-value]
 
@@ -686,28 +686,28 @@ class Waiting(plumpy.process_states.Waiting):
         finally:
             self._task = None
 
-    def upload(self) -> 'Waiting':
+    def upload(self) -> Waiting:
         """Return the `Waiting` state that will `upload` the `CalcJob`."""
         msg = 'Waiting for calculation folder upload'
         return self.create_state(  # type: ignore[return-value]
             ProcessState.WAITING, None, msg=msg, data={'command': UPLOAD_COMMAND}
         )
 
-    def submit(self) -> 'Waiting':
+    def submit(self) -> Waiting:
         """Return the `Waiting` state that will `submit` the `CalcJob`."""
         msg = 'Waiting for scheduler submission'
         return self.create_state(  # type: ignore[return-value]
             ProcessState.WAITING, None, msg=msg, data={'command': SUBMIT_COMMAND}
         )
 
-    def update(self) -> 'Waiting':
+    def update(self) -> Waiting:
         """Return the `Waiting` state that will `update` the `CalcJob`."""
         msg = 'Waiting for scheduler update'
         return self.create_state(  # type: ignore[return-value]
             ProcessState.WAITING, None, msg=msg, data={'command': UPDATE_COMMAND}
         )
 
-    def stash(self, monitor_result: CalcJobMonitorResult | None = None) -> 'Waiting':
+    def stash(self, monitor_result: CalcJobMonitorResult | None = None) -> Waiting:
         """Return the `Waiting` state that will `stash` the `CalcJob`."""
         msg = 'Waiting to stash'
         return self.create_state(  # type: ignore[return-value]
@@ -721,7 +721,7 @@ class Waiting(plumpy.process_states.Waiting):
     #         ProcessState.WAITING, None, msg=msg, data={'command': UNSTASH_COMMAND, 'monitor_result': monitor_result}
     #     )
 
-    def retrieve(self, monitor_result: CalcJobMonitorResult | None = None) -> 'Waiting':
+    def retrieve(self, monitor_result: CalcJobMonitorResult | None = None) -> Waiting:
         """Return the `Waiting` state that will `retrieve` the `CalcJob`."""
         msg = 'Waiting to retrieve'
         return self.create_state(  # type: ignore[return-value]
@@ -739,7 +739,7 @@ class Waiting(plumpy.process_states.Waiting):
             ProcessState.RUNNING, self.process.parse, retrieved_temporary_folder, exit_code
         )
 
-    def interrupt(self, reason: Any) -> Optional[plumpy.futures.Future]:  # type: ignore[override]
+    def interrupt(self, reason: Any) -> plumpy.futures.Future | None:  # type: ignore[override]
         """Interrupt the `Waiting` state by calling interrupt on the transport task `InterruptableFuture`."""
         if self._task is not None:
             self._task.interrupt(reason)

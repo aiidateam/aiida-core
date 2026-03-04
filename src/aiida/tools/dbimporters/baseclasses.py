@@ -205,7 +205,7 @@ class DbEntry:
                 [
                     '{}={}'.format(
                         k,
-                        '"{}"'.format(self.source[k]) if issubclass(self.source[k].__class__, str) else self.source[k],
+                        f'"{self.source[k]}"' if issubclass(self.source[k].__class__, str) else self.source[k],
                     )
                     for k in sorted(self.source.keys())
                 ]

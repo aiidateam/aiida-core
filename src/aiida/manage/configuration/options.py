@@ -8,7 +8,7 @@
 ###########################################################################
 """Definition of known configuration options and methods to parse and get option values."""
 
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from aiida.common.exceptions import ConfigurationError
 
@@ -18,7 +18,7 @@ __all__ = ('Option', 'get_option', 'get_option_names', 'parse_option')
 class Option:
     """Represent a configuration option schema."""
 
-    def __init__(self, name: str, schema: Dict[str, Any], field):
+    def __init__(self, name: str, schema: dict[str, Any], field):
         self._name = name
         self._schema = schema
         self._field = field
@@ -35,7 +35,7 @@ class Option:
         return self._field.annotation
 
     @property
-    def schema(self) -> Dict[str, Any]:
+    def schema(self) -> dict[str, Any]:
         return self._schema
 
     @property
@@ -77,7 +77,7 @@ class Option:
                 try:
                     messages.append(str(error['ctx']['error']))
                 except KeyError:
-                    messages.append(f"Invalid value for `{error['loc'][0]}`: {error['msg']}")
+                    messages.append(f'Invalid value for `{error["loc"][0]}`: {error["msg"]}')
 
             raise ConfigurationError('\n'.join(messages)) from exception
 
@@ -85,7 +85,7 @@ class Option:
         return getattr(result, attribute)
 
 
-def get_option_names() -> List[str]:
+def get_option_names() -> list[str]:
     """Return a list of available option names."""
     from .config import GlobalOptionsSchema
 
@@ -103,7 +103,7 @@ def get_option(name: str) -> Option:
     return Option(name, GlobalOptionsSchema.model_json_schema()['properties'][option_name], options[option_name])
 
 
-def parse_option(option_name: str, option_value: Any) -> Tuple[Option, Any]:
+def parse_option(option_name: str, option_value: Any) -> tuple[Option, Any]:
     """Parse and validate a value for a configuration option.
 
     :param option_name: the name of the configuration option

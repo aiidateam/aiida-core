@@ -327,7 +327,7 @@ class Transport(abc.ABC):
             """ "if [ -d {escaped_remotedir} ] ;"""
             """ then cd {escaped_remotedir} ; {bash_command} ; else echo '  ** The directory' ; """
             """echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
-                bash_command=self._bash_command_str, escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir
+                bash_command=self._bash_command_str, escaped_remotedir=f"'{remotedir}'", remotedir=remotedir
             )
         )
 
@@ -365,7 +365,7 @@ class Transport(abc.ABC):
         :type gid: int
         """
         warn_deprecation(
-            'The `Transport.chown` method is deprecated and will be removed. ' 'It is not used internally by AiiDA.',
+            'The `Transport.chown` method is deprecated and will be removed. It is not used internally by AiiDA.',
             version=3,
         )
         raise NotImplementedError('chown is not implemented for this transport.')
@@ -1000,7 +1000,7 @@ class Transport(abc.ABC):
             dirname = dirname.decode(sys.getfilesystemencoding() or sys.getdefaultencoding())
         try:
             names = self.listdir(dirname)
-        except EnvironmentError:
+        except OSError:
             return []
         if pattern[0] != '.':
             names = [name for name in names if name[0] != '.']
@@ -1117,8 +1117,7 @@ class Transport(abc.ABC):
         :type gid: int
         """
         warn_deprecation(
-            'The `Transport.chown_async` method is deprecated and will be removed. '
-            'It is not used internally by AiiDA.',
+            'The `Transport.chown_async` method is deprecated and will be removed. It is not used internally by AiiDA.',
             version=3,
         )
         raise NotImplementedError('chown_async is not implemented for this transport.')
@@ -1664,7 +1663,7 @@ class BlockingTransport(Transport):
         copy_items = ' '.join([str(Path(item).relative_to(root_dir)) for item in copy_list])
         # note: order of the flags is important
         tar_command = (
-            f"tar -c{compression_flag!s}{'h' if dereference else ''}f {remotedestination!s} -C {root_dir!s} "
+            f'tar -c{compression_flag!s}{"h" if dereference else ""}f {remotedestination!s} -C {root_dir!s} '
             + copy_items
         )
 
@@ -1675,9 +1674,8 @@ class BlockingTransport(Transport):
                 self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing tar. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
-                    retval, stdout, stderr, tar_command
-                )
+                f"Problem executing tar. Exit code: {retval}, stdout: '{stdout}', "
+                f"stderr: '{stderr}', command: '{tar_command}'"
             )
             raise OSError(f'Error while creating the tar archive. Exit code: {retval}')
 
@@ -1721,9 +1719,8 @@ class BlockingTransport(Transport):
                 self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing tar. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
-                    retval, stdout, stderr, tar_command
-                )
+                f"Problem executing tar. Exit code: {retval}, stdout: '{stdout}', "
+                f"stderr: '{stderr}', command: '{tar_command}'"
             )
             raise OSError(f'Error while extracting the tar archive. Exit code: {retval}')
 

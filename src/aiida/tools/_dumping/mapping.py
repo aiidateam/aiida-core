@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Union, cast
+from typing import cast
 
 from aiida import orm
 from aiida.common.log import AIIDA_LOGGER
@@ -25,12 +25,12 @@ class GroupNodeMapping:
     """Stores the mapping between groups and their member nodes."""
 
     # Map of group UUID to set of node UUIDs
-    group_to_nodes: Dict[str, Set[str]] = field(default_factory=dict)
+    group_to_nodes: dict[str, set[str]] = field(default_factory=dict)
 
     # Map of node UUID to set of group UUIDs (for faster lookups)
-    node_to_groups: Dict[str, Set[str]] = field(default_factory=dict)
+    node_to_groups: dict[str, set[str]] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Convert to serializable dictionary."""
         return {
             'group_to_nodes': {group_uuid: list(node_uuids) for group_uuid, node_uuids in self.group_to_nodes.items()},
@@ -38,7 +38,7 @@ class GroupNodeMapping:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict) -> 'GroupNodeMapping':
+    def from_dict(cls, data: dict) -> GroupNodeMapping:
         """Create from serialized dictionary.
 
         :param data: Dictionary representation of the mapping
@@ -72,7 +72,7 @@ class GroupNodeMapping:
         return mapping
 
     @classmethod
-    def build_from_db(cls, groups: Optional[Union[List[orm.Group], List[str], List[int]]] = None) -> 'GroupNodeMapping':
+    def build_from_db(cls, groups: list[orm.Group] | list[str] | list[int] | None = None) -> GroupNodeMapping:
         """Build a mapping from the current database state.
 
         :param groups: If provided, only build mapping for these specific groups.
@@ -88,7 +88,7 @@ class GroupNodeMapping:
         if groups is not None:
             # Only query the specified groups
             if all(isinstance(g, orm.Group) for g in groups):
-                orm_groups = cast(List[orm.Group], groups)
+                orm_groups = cast(list[orm.Group], groups)
                 group_uuids = [g.uuid for g in orm_groups]
             else:
                 group_uuids = [orm.load_group(g).uuid for g in groups]
@@ -111,16 +111,16 @@ class GroupNodeMapping:
         LOGGER.report('Completed group-node mapping.')
         return mapping
 
-    def diff(self, other: 'GroupNodeMapping') -> GroupChanges:
+    def diff(self, other: GroupNodeMapping) -> GroupChanges:
         """Calculate differences between this mapping and another.
 
         :param other: Other ``GroupNodeMapping`` instance to compare to
         :return: Populated ``GroupChanges`` object
         """
-        deleted_groups_info: List[GroupInfo] = []
-        new_groups_info: List[GroupInfo] = []
-        modified_groups_info: List[GroupModificationInfo] = []
-        node_membership_changes: Dict[str, NodeMembershipChange] = {}
+        deleted_groups_info: list[GroupInfo] = []
+        new_groups_info: list[GroupInfo] = []
+        modified_groups_info: list[GroupModificationInfo] = []
+        node_membership_changes: dict[str, NodeMembershipChange] = {}
 
         self_group_uuids = set(self.group_to_nodes.keys())
         other_group_uuids = set(other.group_to_nodes.keys())

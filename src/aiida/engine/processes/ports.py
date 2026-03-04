@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import re
 import warnings
-from collections.abc import Mapping
-from typing import Any, Callable, Dict, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any, Callable
 
 from plumpy import ports
 from plumpy.ports import breadcrumbs_to_port
@@ -115,14 +115,14 @@ class WithSerialize:
     def __init__(self, *args, **kwargs) -> None:
         serializer = kwargs.pop('serializer', None)
         super().__init__(*args, **kwargs)
-        self._serializer: Callable[[Any], 'Data'] | None = serializer
+        self._serializer: Callable[[Any], Data] | None = serializer
 
     @property
-    def serializer(self) -> Callable[[Any], 'Data'] | None:
+    def serializer(self) -> Callable[[Any], Data] | None:
         """Return the serializer."""
         return self._serializer
 
-    def serialize(self, value: Any) -> 'Data':
+    def serialize(self, value: Any) -> Data:
         """Serialize the given value, unless it is ``None``, already a Data type, or no serializer function is defined.
 
         :param value: the value to be serialized
@@ -150,8 +150,8 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
             # people set node instances as defaults which can cause various problems.
             if default is not ports.UNSPECIFIED and isinstance(default, Node):
                 message = (
-                    'default of input port `{}` is a `Node` instance, which can lead to unexpected side effects.'
-                    ' It is advised to use a lambda instead, e.g.: `default=lambda: orm.Int(5)`.'.format(args[0])
+                    f'default of input port `{args[0]}` is a `Node` instance, which can lead to unexpected side '
+                    'effects. It is advised to use a lambda instead, e.g.: `default=lambda: orm.Int(5)`.'
                 )
                 warnings.warn(UserWarning(message))
 
@@ -166,7 +166,7 @@ class InputPort(WithMetadata, WithSerialize, WithNonDb, ports.InputPort):
 
         super().__init__(*args, **kwargs)
 
-    def get_description(self) -> Dict[str, str]:
+    def get_description(self) -> dict[str, str]:
         """Return a description of the InputPort, which will be a dictionary of its attributes
 
         :returns: a dictionary of the stringified InputPort attributes
@@ -258,7 +258,7 @@ class PortNamespace(WithMetadata, WithNonDb, ports.PortNamespace):
         if any(len(entry) > PORT_NAME_MAX_CONSECUTIVE_UNDERSCORES for entry in consecutive_underscores):
             raise ValueError(f'invalid port name `{port_name}`: more than two consecutive underscores')
 
-    def serialize(self, mapping: Optional[Dict[str, Any]], breadcrumbs: Sequence[str] = ()) -> Optional[Dict[str, Any]]:
+    def serialize(self, mapping: dict[str, Any] | None, breadcrumbs: Sequence[str] = ()) -> dict[str, Any] | None:
         """Serialize the given mapping onto this `Portnamespace`.
 
         It will recursively call this function on any nested `PortNamespace` or the serialize function on any `Ports`.

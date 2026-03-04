@@ -35,10 +35,10 @@ class SinglefileData(Data):
             description='The file content.',
             model_to_orm=lambda model: io.BytesIO(model.content),  # type: ignore[attr-defined]
         )
-        filename: t.Optional[str] = MetadataField(None, description='The filename. Defaults to `file.txt`.')
+        filename: str | None = MetadataField(None, description='The filename. Defaults to `file.txt`.')
 
     @classmethod
-    def from_string(cls, content: str, filename: str | pathlib.Path | None = None, **kwargs: t.Any) -> 'SinglefileData':
+    def from_string(cls, content: str, filename: str | pathlib.Path | None = None, **kwargs: t.Any) -> SinglefileData:
         """Construct a new instance and set ``content`` as its contents.
 
         :param content: The content as a string.
@@ -47,9 +47,7 @@ class SinglefileData(Data):
         return cls(io.StringIO(content), filename, **kwargs)
 
     @classmethod
-    def from_bytes(
-        cls, content: bytes, filename: str | pathlib.Path | None = None, **kwargs: t.Any
-    ) -> 'SinglefileData':
+    def from_bytes(cls, content: bytes, filename: str | pathlib.Path | None = None, **kwargs: t.Any) -> SinglefileData:
         """Construct a new instance and set ``content`` as its contents.
 
         :param content: The content as bytes.

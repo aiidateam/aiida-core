@@ -50,9 +50,9 @@ jobs:
     - name: Install aiida-core and pre-commit
       uses: ./.github/actions/install-aiida-core
       with:
-        python-version: '3.11'
+        python-version: '3.9'
         extras: pre-commit
-        from-lock: 'false'
+        from-lock: 'true'
 
     - name: Run pre-commit
       run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )

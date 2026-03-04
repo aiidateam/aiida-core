@@ -90,14 +90,12 @@ class TestProcessControl:
             assert not calc_node.paused
 
             pause_future = controller.pause_process(calc_node.pk)
-            future = await with_timeout(asyncio.wrap_future(pause_future))
-            result = await self.wait_future(asyncio.wrap_future(future))
+            result = await with_timeout(asyncio.wrap_future(pause_future))
             assert result
             assert calc_node.paused
 
             kill_future = controller.kill_process(calc_node.pk, msg_text='Sorry, you have to go mate')
-            future = await with_timeout(asyncio.wrap_future(kill_future))
-            result = await self.wait_future(asyncio.wrap_future(future))
+            result = await with_timeout(asyncio.wrap_future(kill_future))
             assert result
 
         self.runner.loop.run_until_complete(do_pause())
@@ -114,22 +112,19 @@ class TestProcessControl:
 
             pause_message = 'Take a seat'
             pause_future = controller.pause_process(calc_node.pk, msg_text=pause_message)
-            future = await with_timeout(asyncio.wrap_future(pause_future))
-            result = await self.wait_future(asyncio.wrap_future(future))
+            result = await with_timeout(asyncio.wrap_future(pause_future))
             assert calc_node.paused
             assert calc_node.process_status == pause_message
 
             play_future = controller.play_process(calc_node.pk)
-            future = await with_timeout(asyncio.wrap_future(play_future))
-            result = await self.wait_future(asyncio.wrap_future(future))
+            result = await with_timeout(asyncio.wrap_future(play_future))
 
             assert result
             assert not calc_node.paused
             assert calc_node.process_status is None
 
             kill_future = controller.kill_process(calc_node.pk, msg_text='Sorry, you have to go mate')
-            future = await with_timeout(asyncio.wrap_future(kill_future))
-            result = await self.wait_future(asyncio.wrap_future(future))
+            result = await with_timeout(asyncio.wrap_future(kill_future))
             assert result
 
         self.runner.loop.run_until_complete(do_pause_play())
@@ -146,8 +141,7 @@ class TestProcessControl:
 
             kill_message = 'Sorry, you have to go mate'
             kill_future = controller.kill_process(calc_node.pk, msg_text=kill_message)
-            future = await with_timeout(asyncio.wrap_future(kill_future))
-            result = await self.wait_future(asyncio.wrap_future(future))
+            result = await with_timeout(asyncio.wrap_future(kill_future))
             assert result
 
             await self.wait_for_process(calc_node)
@@ -161,13 +155,6 @@ class TestProcessControl:
         future = self.runner.get_process_future(calc_node.pk)
         result = await with_timeout(future, timeout)
         return result
-
-    @staticmethod
-    async def wait_future(future, timeout=2.0):
-        """Wait for a future with timeout."""
-        result = await with_timeout(future, timeout)
-        return result
-
 
 async def with_timeout(what, timeout=5.0):
     """Wait for a coroutine with timeout."""

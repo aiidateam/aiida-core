@@ -16,6 +16,7 @@ import typing as t
 from aiida.common import InvalidOperation
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.workgraph import is_workgraph_instance
 from aiida.manage import manager
 from aiida.orm import ProcessNode
 
@@ -33,6 +34,26 @@ TYPE_SUBMIT_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
 LOGGER = AIIDA_LOGGER.getChild('engine.launch')
 
 
+def _prepare_workgraph_inputs(
+    inputs: dict[str, t.Any] | None,
+    kwargs: dict[str, t.Any],
+) -> dict[str, t.Any] | None:
+    """Prepare inputs for a WorkGraph by merging inputs dict and kwargs.
+
+    :param inputs: the input dictionary
+    :param kwargs: additional keyword arguments to be merged with inputs
+    :return: merged inputs dictionary, or None if both are empty
+    """
+    if not inputs and not kwargs:
+        return None
+    wg_inputs: dict[str, t.Any] = {}
+    if inputs:
+        wg_inputs.update(inputs)
+    if kwargs:
+        wg_inputs.update(kwargs)
+    return wg_inputs if wg_inputs else None
+
+
 def run(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any) -> dict[str, t.Any]:
     """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
@@ -40,6 +61,12 @@ def run(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwa
     :param inputs: the inputs to be passed to the process
     :return: the outputs of the process
     """
+    # Handle WorkGraph instances (cast to Any since mypy can't narrow the union type)
+    if is_workgraph_instance(process):
+        wg_inputs = _prepare_workgraph_inputs(inputs, kwargs)
+        wg = t.cast(t.Any, process)
+        return wg.run(inputs=wg_inputs)
+
     if isinstance(process, Process):
         runner = process.runner
     else:
@@ -59,6 +86,13 @@ def run_get_node(
     """
     if isinstance(process, Process):
         runner = process.runner
+    # Handle WorkGraph instances (cast to Any since mypy can't narrow the union type)
+    elif is_workgraph_instance(process):
+        wg_inputs = _prepare_workgraph_inputs(inputs, kwargs)
+        wg = t.cast(t.Any, process)
+        result = wg.run(inputs=wg_inputs)
+        return result, wg.process
+
     else:
         runner = manager.get_manager().get_runner()
 
@@ -72,6 +106,13 @@ def run_get_pk(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None
     :param inputs: the inputs to be passed to the process
     :return: tuple of the outputs of the process and process node pk
     """
+    # Handle WorkGraph instances (cast to Any since mypy can't narrow the union type)
+    if is_workgraph_instance(process):
+        wg_inputs = _prepare_workgraph_inputs(inputs, kwargs)
+        wg = t.cast(t.Any, process)
+        result = wg.run(inputs=wg_inputs)
+        return ResultAndPk(result, wg.process.pk)
+
     if isinstance(process, Process):
         runner = process.runner
     else:
@@ -86,6 +127,7 @@ def submit(
     *,
     wait: bool = False,
     wait_interval: int = 5,
+    timeout: int = 600,
     **kwargs: t.Any,
 ) -> ProcessNode:
     """Submit the process with the supplied inputs to the daemon immediately returning control to the interpreter.
@@ -100,10 +142,31 @@ def submit(
     :param wait: when set to ``True``, the submission will be blocking and wait for the process to complete at which
         point the function returns the calculation node.
     :param wait_interval: the number of seconds to wait between checking the state of the process when ``wait=True``.
+    :param timeout: when ``wait=True``, the maximum number of seconds to wait for the process to complete. Only applies
+        to WorkGraph processes. Defaults to 600 seconds.
     :param kwargs: inputs to be passed to the process. This is an alternative to the positional ``inputs`` argument.
     :return: the calculation node of the process
     """
     from aiida.common.docs import URL_NO_BROKER
+
+    # Handle WorkGraph instances (cast to Any since mypy can't narrow the union type)
+    if is_workgraph_instance(process):
+        wg_inputs = _prepare_workgraph_inputs(inputs, kwargs)
+        # Warn if execution option names are found in inputs (might be user error)
+        if wg_inputs:
+            suspicious_keys = [k for k in ('wait', 'timeout', 'interval') if k in wg_inputs]
+            if suspicious_keys:
+                LOGGER.warning(
+                    f'Found {suspicious_keys} in inputs dict. If these are meant as execution options, '
+                    f'pass them as function arguments: submit(wg, wait=..., timeout=..., wait_interval=...)'
+                )
+        wg = t.cast(t.Any, process)
+        return wg.submit(
+            inputs=wg_inputs,
+            wait=wait,
+            timeout=timeout,
+            interval=wait_interval,
+        )
 
     inputs = prepare_inputs(inputs, **kwargs)
 

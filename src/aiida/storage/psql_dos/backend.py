@@ -31,8 +31,7 @@ from aiida.storage.psql_dos.migrator import REPOSITORY_UUID_KEY, PsqlDosMigrator
 from aiida.storage.psql_dos.models import base
 from aiida.storage.utils import _create_smarter_in_clause
 
-from .orm import authinfos, comments, computers, convert, groups, logs, nodes, users
-from .orm.querybuilder import SqlaQueryBuilder
+from .orm import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
 
 if TYPE_CHECKING:
     from aiida.repository.backend import DiskObjectStoreRepositoryBackend
@@ -257,7 +256,7 @@ class PsqlDosBackend(StorageBackend):
         return self._nodes
 
     def query(self):
-        return SqlaQueryBuilder(self)
+        return querybuilder.SqlaQueryBuilder(self)
 
     @property
     def users(self):

@@ -416,7 +416,7 @@ filterwarnings = [
   'ignore:The `Code` class is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   "ignore:'asyncio.[sg]et_event_loop_policy' is deprecated:DeprecationWarning",
   "ignore:'asyncio.DefaultEventLoopPolicy' is deprecated:DeprecationWarning",
-  "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:pytest_asyncio",
+  "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:pytest_asyncio|kiwipy",
   # spglib deprecation
   'ignore:dict interface is deprecated:DeprecationWarning',
   # https://github.com/aiidateam/archive-path/issues/21

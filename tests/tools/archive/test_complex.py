@@ -175,13 +175,13 @@ def get_hash_from_db_content(grouplabel):
     hash_ = make_hash(
         [
             (
-                item['param']['*'].base.attributes.all,
+                item['param']['*'].base.attributes.get_dict(),
                 item['param']['*'].uuid,
                 item['param']['*'].label,
                 item['param']['*'].description,
                 item['calc']['*'].uuid,
-                item['calc']['*'].base.attributes.all,
-                item['array']['*'].base.attributes.all,
+                item['calc']['*'].base.attributes.get_dict(),
+                item['array']['*'].base.attributes.get_dict(),
                 [item['array']['*'].get_array(name).tolist() for name in item['array']['*'].get_arraynames()],
                 item['array']['*'].uuid,
                 item['group']['*'].uuid,

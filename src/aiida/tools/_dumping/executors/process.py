@@ -448,7 +448,7 @@ class NodeMetadataWriter:
                 node_dict['Computer data'] = computer_dict
 
         if self.config.include_attributes:
-            node_attributes = process_node.base.attributes.all
+            node_attributes = process_node.base.attributes.get_dict()
             if node_attributes:
                 node_dict['Node attributes'] = node_attributes
 

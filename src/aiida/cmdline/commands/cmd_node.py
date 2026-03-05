@@ -288,7 +288,7 @@ def echo_node_dict(nodes: list[Node], keys: list, fmt: str, identifier: str, raw
             id_value = node.uuid  # type: ignore[assignment]
 
         if use_attrs:
-            node_dict = node.base.attributes.all
+            node_dict = node.base.attributes.get_dict()
             dict_name = 'attributes'
         else:
             node_dict = node.base.extras.all

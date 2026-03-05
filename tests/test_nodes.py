@@ -342,7 +342,7 @@ class TestNodeBasic:
         }
 
         # Now I check if I can retrieve them, before the storage
-        assert a.base.attributes.all == target_attrs
+        assert a.base.attributes.get_dict() == target_attrs
 
         # And now I try to delete the keys
         a.base.attributes.delete('k1')
@@ -355,7 +355,7 @@ class TestNodeBasic:
         a.base.attributes.delete('k8')
         a.base.attributes.delete('k9')
 
-        assert a.base.attributes.all == {}
+        assert a.base.attributes.get_dict() == {}
 
     def test_get_attrs_after_storing(self):
         a = orm.Data()
@@ -384,7 +384,7 @@ class TestNodeBasic:
         }
 
         # Now I check if I can retrieve them, before the storage
-        assert a.base.attributes.all == target_attrs
+        assert a.base.attributes.get_dict() == target_attrs
 
     def test_store_object(self):
         """Trying to set objects as attributes should fail, because they are not json-serializable."""
@@ -427,7 +427,7 @@ class TestNodeBasic:
         b_expected_attributes['new'] = 'cvb'
 
         # I check before storing that the attributes are ok
-        assert b.base.attributes.all == b_expected_attributes
+        assert b.base.attributes.get_dict() == b_expected_attributes
         # Note that during copy, I do not copy the extras!
         assert b.base.extras.all == {}
 
@@ -438,11 +438,11 @@ class TestNodeBasic:
         b_expected_extras = {'meta': 'textofext', '_aiida_hash': AnyValue()}
 
         # Now I check that the attributes of the original node have not changed
-        assert a.base.attributes.all == attrs_to_set
+        assert a.base.attributes.get_dict() == attrs_to_set
 
         # I check then on the 'b' copy
         assert b.base.extras.all == b_expected_extras
-        assert b.base.attributes.all == b_expected_attributes
+        assert b.base.attributes.get_dict() == b_expected_attributes
 
     def test_files(self):
         a = orm.Data()
@@ -777,7 +777,7 @@ class TestNodeBasic:
         assert set(list(a.base.extras.keys())) == set(all_extras.keys())
         assert set(list(a.base.attributes.keys())) == set(attrs_to_set.keys())
 
-        assert a.base.attributes.all == attrs_to_set
+        assert a.base.attributes.get_dict() == attrs_to_set
 
         assert a.base.extras.all == all_extras
 

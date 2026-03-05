@@ -139,6 +139,7 @@ class ZmqBrokerServer:
 
         # ROUTER socket for request-reply
         self._router = self._context.socket(zmq.ROUTER)
+        self._router.setsockopt(zmq.ROUTER_MANDATORY, 1)
         self._router.bind(self._router_endpoint)
 
         # PUB socket for broadcasts
@@ -366,7 +367,14 @@ class ZmqBrokerServer:
         self._pending_rpc_responses[rpc_id] = (identity, time.time())
 
         # Forward to recipient
-        self._send_to_client(recipient_identity, msg)
+        try:
+            self._send_to_client(recipient_identity, msg)
+        except zmq.ZMQError:
+            _LOGGER.warning('RPC recipient %s disconnected', recipient)
+            self._pending_rpc_responses.pop(rpc_id, None)
+            self._remove_dead_worker(recipient_identity)
+            self._send_rpc_error(identity, rpc_id, f'Recipient not found: {recipient}')
+            return
 
     def _handle_rpc_response(self, identity: bytes, msg: dict) -> None:
         """Handle RPC response.
@@ -464,8 +472,33 @@ class ZmqBrokerServer:
                 'body': task_data.get('body'),
                 'no_reply': task_data.get('no_reply', False),
             }
-            self._send_to_client(worker_identity, task_msg)
+            try:
+                self._send_to_client(worker_identity, task_msg)
+            except zmq.ZMQError:
+                # Worker disconnected — requeue the task and remove the
+                # dead worker so we don't keep trying to reach it.
+                _LOGGER.warning('Worker %s disconnected, requeuing task %s', worker_identity.hex()[:8], task_id)
+                self._task_queue.nack(task_id, requeue=True)
+                self._remove_dead_worker(worker_identity)
+                continue
             _LOGGER.debug('Dispatched task %s to worker', task_id)
+
+    def _remove_dead_worker(self, identity: bytes) -> None:
+        """Remove a disconnected worker from all registries."""
+        # Remove from task subscribers
+        dead_keys = [k for k, v in self._task_subscribers.items() if v == identity]
+        for key in dead_keys:
+            del self._task_subscribers[key]
+            _LOGGER.info('Removed dead task subscriber: %s', key)
+
+        # Remove from RPC subscribers
+        dead_keys = [k for k, v in self._rpc_subscribers.items() if v == identity]
+        for key in dead_keys:
+            del self._rpc_subscribers[key]
+            _LOGGER.info('Removed dead RPC subscriber: %s', key)
+
+        # Remove from available workers
+        self._available_workers = deque(w for w in self._available_workers if w != identity)
 
     def _mark_worker_available(self, identity: bytes) -> None:
         """Mark a worker as available for tasks."""
@@ -473,7 +506,10 @@ class ZmqBrokerServer:
             self._available_workers.append(identity)
 
     def _send_to_client(self, identity: bytes, msg: dict) -> None:
-        """Send a message to a specific client."""
+        """Send a message to a specific client.
+
+        :raises zmq.ZMQError: If the client is disconnected (ROUTER_MANDATORY).
+        """
         if not self._router:
             return
 

@@ -393,7 +393,7 @@ module = [
 ]
 
 [tool.pytest.ini_options]
-addopts = '--benchmark-skip --durations=5 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append '
+addopts = '--benchmark-skip --durations=5 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append --tb=short'
 filterwarnings = [
   'ignore:.*and will be removed in NumPy 2.0.*:DeprecationWarning:ase:',
   'ignore:datetime.datetime.utcfromtimestamp:DeprecationWarning:pytz|dateutil|tqdm|aio_pika:',

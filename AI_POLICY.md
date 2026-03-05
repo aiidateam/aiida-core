@@ -82,5 +82,5 @@ For comprehensive guidance on contributing to AiiDA, including code quality stan
 
 ## Acknowledgements
 
-This document draws on and adapts text from the [Kornia AI policy](https://github.com/kornia/kornia/blob/main/AI_POLICY.md), the [MDAnalysis AI policy](https://github.com/MDAnalysis/mdanalysis/blob/develop/AI_POLICY.md), the [pip AI policy](https://pip.pypa.io/en/stable/development/contribute/#generative-ai-llm-policy), and the [attrs AI policy](https://github.com/python-attrs/attrs/blob/main/.github/AI_POLICY.md).
+This document draws on and adapts text from the [Kornia AI policy](https://github.com/kornia/kornia/blob/main/AI_POLICY.md), the [MDAnalysis AI policy](https://github.com/MDAnalysis/mdanalysis/blob/develop/AI_POLICY.md), the [pip AI policy](https://github.com/pypa/pip/pull/13826), and the [attrs AI policy](https://github.com/python-attrs/attrs/blob/main/.github/AI_POLICY.md).
 Many thanks to their authors.

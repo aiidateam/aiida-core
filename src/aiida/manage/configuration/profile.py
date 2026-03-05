@@ -143,13 +143,17 @@ class Profile:
         self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_BACKEND] = name
         self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_CONFIG] = config
 
-    def get_queue_config(self) -> Dict[str, Any]:
+    def get_queue_config(self, user_queue_name: Optional[str] = None, create: bool = False):
         """Return the queue configuration.
 
-        If no queue configuration exists, initializes with the default queue.
-        The default will be persisted when the profile config is next saved.
+        If ``user_queue_name`` is provided, return the :class:`QueueConfig` for that queue.
+        If the queue doesn't exist and ``create`` is True, it will be created with defaults.
+        If the queue doesn't exist and ``create`` is False, returns defaults without persisting.
+        Otherwise return the full queue configuration dict.
 
-        :return: The queue configuration dict.
+        :param user_queue_name: Optional queue name to look up a specific queue config.
+        :param create: If True, create the queue with defaults if it doesn't exist.
+        :return: The queue configuration dict, or a QueueConfig if user_queue_name is given.
         """
         from aiida.brokers.rabbitmq.defaults import DEFAULT_USER_QUEUE
 
@@ -157,7 +161,28 @@ class Profile:
         if queues is None:
             queues = {DEFAULT_USER_QUEUE: {}}
             self.set_queue_config(queues)
-        return queues
+
+        if user_queue_name is None:
+            return queues
+
+        from aiida.manage.configuration.config import QueueConfig
+
+        if user_queue_name not in queues:
+            if create:
+                queues[user_queue_name] = {}
+                self.set_queue_config(queues)
+            return QueueConfig()
+
+        return QueueConfig(**queues[user_queue_name])
+
+    def has_queue(self, user_queue_name: str) -> bool:
+        """Check if a named queue exists in the configuration.
+
+        :param user_queue_name: The queue name to check.
+        :return: True if the queue exists.
+        """
+        queues = self.process_control_config.get('queues')
+        return queues is not None and user_queue_name in queues
 
     def set_queue_config(self, queues: Optional[Dict[str, Any]]) -> None:
         """Set the queue configuration for multi-queue mode.
@@ -179,6 +204,28 @@ class Profile:
             self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_CONFIG].pop('queues', None)
         else:
             self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_CONFIG]['queues'] = queues
+
+    def get_prefetch_count(self, queue_type: 'QueueType', user_queue_name: str) -> int:
+        """Get the prefetch count for a queue type.
+
+        :param queue_type: The queue type.
+        :param user_queue_name: The user-defined queue name.
+        :return: The prefetch count (0 means unlimited).
+        """
+        from aiida.brokers.broker import QueueType
+
+        queue_config = self.get_queue_config(user_queue_name)
+
+        if queue_type == QueueType.ROOT_WORKCHAIN:
+            limit = queue_config.root_workchain_prefetch
+        elif queue_type == QueueType.CALCJOB:
+            limit = queue_config.calcjob_prefetch
+        elif queue_type == QueueType.NESTED_WORKCHAIN:
+            return 0  # Always unlimited
+        else:
+            raise ValueError(f'Unknown queue type: {queue_type}')
+
+        return 0 if limit == 'UNLIMITED' else limit
 
     @property
     def options(self):

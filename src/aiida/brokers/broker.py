@@ -61,19 +61,19 @@ class Broker:
         """Close the broker."""
 
     @abc.abstractmethod
-    def get_full_queue_name(self, user_queue: str, queue_type: QueueType) -> str:
+    def get_full_queue_name(self, user_queue_name: str, queue_type: QueueType) -> str:
         """Get the full queue name for routing.
 
-        :param user_queue: The user-defined queue name (e.g., 'default').
+        :param user_queue_name: The user-defined queue name (e.g., 'default').
         :param queue_type: The queue type.
         :return: The full queue name for routing.
         """
 
     @abc.abstractmethod
-    def get_task_queue(self, queue_type: QueueType, user_queue: str) -> TaskQueue:
+    def get_task_queue(self, queue_type: QueueType, user_queue_name: str) -> TaskQueue:
         """Get a task queue by type and user queue name.
 
         :param queue_type: The queue type.
-        :param user_queue: The user-defined queue name.
+        :param user_queue_name: The user-defined queue name.
         :return: The task queue instance.
         """

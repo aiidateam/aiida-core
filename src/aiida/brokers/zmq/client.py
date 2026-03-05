@@ -1,7 +1,7 @@
-"""ZMQ Broker Controller - client-side control for ZmqBrokerService.
+"""ZMQ Broker Management Client - lifecycle management for ZmqBrokerService.
 
-This module provides a client-side interface to interact with the broker service
-by reading PID/status files. Similar to AiiDA's DaemonClient pattern.
+This module provides a management interface to start/stop the broker service
+and query its status via PID/status files. Analogous to RabbitmqManagementClient.
 """
 
 from __future__ import annotations
@@ -23,8 +23,8 @@ except ImportError:
     HAS_PSUTIL = False
 
 
-class ZmqBrokerController:
-    """Controller for ZmqBrokerService.
+class ZmqBrokerManagementClient:
+    """Management client for ZmqBrokerService.
 
     Allows external code to:
     - Start/stop the broker service
@@ -32,6 +32,7 @@ class ZmqBrokerController:
     - Get service status
 
     Interacts with the service via PID/status files, not direct IPC.
+    Analogous to RabbitmqManagementClient for the RabbitMQ broker.
     """
 
     def __init__(self, base_path: Path | str):

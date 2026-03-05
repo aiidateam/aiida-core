@@ -10,7 +10,7 @@ from aiida.brokers.broker import Broker
 from aiida.common.log import AIIDA_LOGGER
 
 from .communicator import ZmqCommunicator
-from .controller import ZmqBrokerController
+from .client import ZmqBrokerManagementClient
 from .queue import PersistentQueue
 
 if t.TYPE_CHECKING:
@@ -59,8 +59,8 @@ class ZmqBroker(Broker):
         self._storage_path = broker_dir / 'storage'
         self._broker_dir = broker_dir
 
-        # Controller for managing the broker service
-        self._controller = ZmqBrokerController(broker_dir)
+        # Management client for broker service lifecycle (start/stop/status)
+        self._management_client = ZmqBrokerManagementClient(broker_dir)
 
         LOGGER.debug('ZMQ Broker initialized for profile: %s', profile.name)
         LOGGER.debug('Broker directory: %s', broker_dir)
@@ -68,8 +68,8 @@ class ZmqBroker(Broker):
 
     def __str__(self) -> str:
         """Return string representation with broker status."""
-        if self._controller.is_running():
-            status = self._controller.get_status()
+        if self._management_client.is_running():
+            status = self._management_client.get_status()
             pid = status.get('pid', '?') if status else '?'
             return f'ZMQ Broker (PID {pid}) @ {self._broker_dir}'
         return f'ZMQ Broker @ {self._broker_dir} <not running>'
@@ -85,7 +85,7 @@ class ZmqBroker(Broker):
 
         :return: Endpoint string, or None if broker is not running
         """
-        return self._controller.router_endpoint
+        return self._management_client.router_endpoint
 
     @property
     def pub_endpoint(self) -> str | None:
@@ -93,12 +93,12 @@ class ZmqBroker(Broker):
 
         :return: Endpoint string, or None if broker is not running
         """
-        return self._controller.pub_endpoint
+        return self._management_client.pub_endpoint
 
     @property
-    def controller(self) -> ZmqBrokerController:
-        """Return the broker controller for managing the broker service."""
-        return self._controller
+    def management_client(self) -> ZmqBrokerManagementClient:
+        """Return the management client for broker service lifecycle."""
+        return self._management_client
 
     def get_communicator(self) -> ZmqCommunicator:
         """Return a ZMQ communicator instance.

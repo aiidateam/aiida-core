@@ -10,7 +10,7 @@
 
 import pytest
 
-from aiida.brokers.zmq import ZmqBrokerController, ZmqCommunicator, get_zmq_config
+from aiida.brokers.zmq import ZmqBrokerManagementClient, ZmqCommunicator, get_zmq_config
 from aiida.brokers.zmq.queue import PersistentQueue
 from aiida.brokers.zmq.server import ZmqBrokerServer
 from aiida.brokers.zmq.service import ZmqBrokerService
@@ -25,40 +25,40 @@ class TestZmqDefaults:
         assert config == {}
 
 
-class TestZmqBrokerController:
-    """Tests for the ZmqBrokerController."""
+class TestZmqBrokerManagementClient:
+    """Tests for the ZmqBrokerManagementClient."""
 
     def test_init(self, tmp_path):
         """Test controller initialization."""
-        controller = ZmqBrokerController(tmp_path)
+        controller = ZmqBrokerManagementClient(tmp_path)
         assert controller.base_path == tmp_path
         assert controller.pid_file == tmp_path / 'broker.pid'
         assert controller.status_file == tmp_path / 'broker.status'
 
     def test_is_running_no_pid_file(self, tmp_path):
         """Test is_running returns False when no PID file exists."""
-        controller = ZmqBrokerController(tmp_path)
+        controller = ZmqBrokerManagementClient(tmp_path)
         assert not controller.is_running()
 
     def test_get_pid_no_file(self, tmp_path):
         """Test get_pid returns None when no PID file exists."""
-        controller = ZmqBrokerController(tmp_path)
+        controller = ZmqBrokerManagementClient(tmp_path)
         assert controller.get_pid() is None
 
     def test_get_status_no_file(self, tmp_path):
         """Test get_status returns None when no status file exists."""
-        controller = ZmqBrokerController(tmp_path)
+        controller = ZmqBrokerManagementClient(tmp_path)
         assert controller.get_status() is None
 
     def test_endpoints_no_sockets_file(self, tmp_path):
         """Test endpoints return None when sockets file doesn't exist."""
-        controller = ZmqBrokerController(tmp_path)
+        controller = ZmqBrokerManagementClient(tmp_path)
         assert controller.router_endpoint is None
         assert controller.pub_endpoint is None
 
     def test_start_stop_cycle(self, tmp_path):
         """Test starting and stopping the broker service."""
-        controller = ZmqBrokerController(tmp_path)
+        controller = ZmqBrokerManagementClient(tmp_path)
 
         # Start the broker
         assert controller.start(wait=True, timeout=10.0)
@@ -73,7 +73,7 @@ class TestZmqBrokerController:
 
     def test_start_already_running(self, tmp_path):
         """Test starting when already running returns True."""
-        controller = ZmqBrokerController(tmp_path)
+        controller = ZmqBrokerManagementClient(tmp_path)
 
         try:
             controller.start(wait=True, timeout=10.0)
@@ -84,12 +84,12 @@ class TestZmqBrokerController:
 
     def test_stop_not_running(self, tmp_path):
         """Test stopping when not running returns True."""
-        controller = ZmqBrokerController(tmp_path)
+        controller = ZmqBrokerManagementClient(tmp_path)
         assert controller.stop()
 
     def test_restart(self, tmp_path):
         """Test restarting the broker service."""
-        controller = ZmqBrokerController(tmp_path)
+        controller = ZmqBrokerManagementClient(tmp_path)
 
         try:
             controller.start(wait=True, timeout=10.0)
@@ -264,7 +264,7 @@ class TestZmqCommunicator:
 
     def test_init(self, tmp_path):
         """Test communicator initialization."""
-        controller = ZmqBrokerController(tmp_path)
+        controller = ZmqBrokerManagementClient(tmp_path)
 
         try:
             controller.start(wait=True, timeout=10.0)
@@ -286,7 +286,7 @@ class TestZmqCommunicator:
 
     def test_context_manager(self, tmp_path):
         """Test communicator as context manager."""
-        controller = ZmqBrokerController(tmp_path)
+        controller = ZmqBrokerManagementClient(tmp_path)
 
         try:
             controller.start(wait=True, timeout=10.0)
@@ -314,7 +314,7 @@ class TestZmqBrokerIntegration:
         broker_dir = tmp_path / 'broker' / 'test-uuid'
         broker_dir.mkdir(parents=True)
 
-        controller = ZmqBrokerController(broker_dir)
+        controller = ZmqBrokerManagementClient(broker_dir)
         controller.start(wait=True, timeout=10.0)
 
         yield controller

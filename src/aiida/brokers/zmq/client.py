@@ -165,12 +165,19 @@ class ZmqBrokerManagementClient:
         except (json.JSONDecodeError, OSError):
             return None
 
-    def start(self, foreground: bool = False, wait: bool = True, timeout: float = 10.0) -> bool:
+    def start(
+        self,
+        foreground: bool = False,
+        wait: bool = True,
+        timeout: float = 10.0,
+        task_timeout: float = 10.0,
+    ) -> bool:
         """Start the broker service.
 
         :param foreground: If True, run in foreground (blocking); else daemonize
         :param wait: If True and not foreground, wait for service to start
         :param timeout: Timeout in seconds when waiting for service to start
+        :param task_timeout: Seconds before an unacked task is requeued (default: 10)
         :return: True if service started successfully
         """
         if self.is_running():
@@ -186,6 +193,8 @@ class ZmqBrokerManagementClient:
             'aiida.brokers.zmq.service',
             '--base-path',
             str(self._base_path),
+            '--task-timeout',
+            str(task_timeout),
         ]
 
         if foreground:

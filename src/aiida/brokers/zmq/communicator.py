@@ -138,6 +138,26 @@ class ZmqCommunicator:
 
         _LOGGER.info('Closing ZMQ Communicator: %s', self._client_id)
 
+        # Unsubscribe all subscribers before closing so the broker server
+        # removes our identity from its routing tables.  Without this, the
+        # broker may dispatch tasks/RPCs to our dead identity, silently
+        # dropping the messages.
+        for identifier in list(self._task_subscribers):
+            try:
+                msg = make_subscribe_message(MessageType.UNSUBSCRIBE_TASK, self._client_id, identifier)
+                self._send(msg)
+            except Exception:
+                pass
+        self._task_subscribers.clear()
+
+        for identifier in list(self._rpc_subscribers):
+            try:
+                msg = make_subscribe_message(MessageType.UNSUBSCRIBE_RPC, self._client_id, identifier)
+                self._send(msg)
+            except Exception:
+                pass
+        self._rpc_subscribers.clear()
+
         self._closed = True
         self._stop_event.set()
 

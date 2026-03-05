@@ -223,12 +223,12 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
         # Start ZMQ broker service if using ZMQ backend
         if broker == 'core.zmq':
             broker_instance = get_manager().get_broker()
-            if broker_instance is not None and hasattr(broker_instance, 'controller'):
-                broker_instance.controller.start()
+            if broker_instance is not None and hasattr(broker_instance, 'management_client'):
+                broker_instance.management_client.start()
                 try:
                     yield profile
                 finally:
-                    broker_instance.controller.stop()
+                    broker_instance.management_client.stop()
             else:
                 yield profile
         else:

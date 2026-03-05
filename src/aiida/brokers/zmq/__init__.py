@@ -2,7 +2,7 @@
 
 from .broker import ZmqBroker
 from .communicator import ZmqCommunicator
-from .controller import ZmqBrokerController
+from .client import ZmqBrokerManagementClient
 from .defaults import BROKER_DEFAULTS, get_zmq_config
 from .server import ZmqBrokerServer
 from .service import ZmqBrokerService
@@ -10,7 +10,7 @@ from .service import ZmqBrokerService
 __all__ = [
     'BROKER_DEFAULTS',
     'ZmqBroker',
-    'ZmqBrokerController',
+    'ZmqBrokerManagementClient',
     'ZmqBrokerServer',
     'ZmqBrokerService',
     'ZmqCommunicator',

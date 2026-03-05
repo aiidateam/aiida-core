@@ -47,6 +47,7 @@ class ZmqBrokerServer:
         sockets_path: Path | str,
         encoder: Callable[[Any], str] | None = None,
         decoder: Callable[[str], Any] | None = None,
+        task_timeout: float = 10.0,
     ):
         """Initialize the broker server.
 
@@ -54,6 +55,7 @@ class ZmqBrokerServer:
         :param sockets_path: Path for IPC socket files
         :param encoder: Function to encode messages (default: yaml.dump)
         :param decoder: Function to decode messages (default: yaml.load)
+        :param task_timeout: Seconds before an unacked task is requeued (default: 10)
         """
         encoder = encoder if encoder is not None else YAML_ENCODER
         decoder = decoder if decoder is not None else YAML_DECODER
@@ -91,6 +93,10 @@ class ZmqBrokerServer:
         # Pending responses: correlation_id -> (client_identity, timestamp)
         self._pending_task_responses: dict[str, tuple[bytes, float]] = {}
         self._pending_rpc_responses: dict[str, tuple[bytes, float]] = {}
+
+        # Task timeout for redelivery: task_id -> dispatch_time
+        self._task_timeout = task_timeout
+        self._task_dispatch_times: dict[str, float] = {}
 
         # Server state
         self._running = False
@@ -221,6 +227,9 @@ class ZmqBrokerServer:
             self._handle_router_message()
             return True
 
+        # Requeue tasks stuck in processing beyond the timeout
+        self._requeue_timed_out_tasks()
+
         # Try to dispatch pending tasks to available workers
         self._dispatch_pending_tasks()
         return False
@@ -327,6 +336,7 @@ class ZmqBrokerServer:
         task_id = msg.get('task_id')
         if task_id:
             self._task_queue.ack(task_id)
+            self._task_dispatch_times.pop(task_id, None)
             _LOGGER.debug('Task acknowledged: %s', task_id)
 
         # Worker is available for more tasks
@@ -448,6 +458,26 @@ class ZmqBrokerServer:
             del self._rpc_subscribers[identifier]
             _LOGGER.info('RPC subscriber removed: %s', identifier)
 
+    def _requeue_timed_out_tasks(self) -> None:
+        """Requeue tasks that have been in processing beyond the timeout.
+
+        This handles the case where a worker received a task but crashed
+        before sending an ACK.
+        """
+        if not self._task_dispatch_times:
+            return
+
+        now = time.time()
+        timed_out = [
+            task_id for task_id, dispatch_time in self._task_dispatch_times.items()
+            if now - dispatch_time > self._task_timeout
+        ]
+
+        for task_id in timed_out:
+            self._task_dispatch_times.pop(task_id, None)
+            self._task_queue.nack(task_id, requeue=True)
+            _LOGGER.warning('Task %s timed out after %.1fs, requeued', task_id, self._task_timeout)
+
     def _dispatch_pending_tasks(self) -> None:
         """Dispatch pending tasks to available workers."""
         while self._available_workers and not self._task_queue.is_empty():
@@ -481,6 +511,7 @@ class ZmqBrokerServer:
                 self._task_queue.nack(task_id, requeue=True)
                 self._remove_dead_worker(worker_identity)
                 continue
+            self._task_dispatch_times[task_id] = time.time()
             _LOGGER.debug('Dispatched task %s to worker', task_id)
 
     def _remove_dead_worker(self, identity: bytes) -> None:

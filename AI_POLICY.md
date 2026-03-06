@@ -10,24 +10,12 @@ We expect to periodically review and update this policy as the landscape changes
 We recognize that AI tools have become part of the modern developer's toolbox and, as users of these tools ourselves, we would be dishonest to entirely prohibit their use.
 However, contributions must reflect genuine effort and understanding from the author: submitting AI-generated code without meaningful human input, verification, and comprehension is not acceptable.
 
-**Every contributor bears full responsibility for what they submit.**
-You must understand, verify, and be able to explain every line of code, every comment, and every design decision in your PR.
-
-## Legal considerations
-
-There is ongoing legal uncertainty regarding the copyright status of LLM-generated content and its provenance.
-Since this project does not have a formal [Contributor License Agreement](https://en.wikipedia.org/wiki/Contributor_license_agreement) (CLA), contributors retain copyright over their changes.
-Allowing LLM-generated code into the codebase therefore has unpredictable consequences for the project's copyright status (even setting aside possible copyright violations due to plagiarism).
-
-Every contribution must be backed by a human who holds the copyright for the changes submitted or has the legal right to contribute them under this project's license.
-By submitting a PR, you certify that you are the author of the contribution and that you understand it.
-"An LLM wrote it" is not an acceptable response to questions or critique.
-
 ## Contributor expectations
 
 ### Understand what you submit
 
-Contributors must demonstrate genuine understanding of their changes and how they fit into the broader codebase.
+**Every contributor bears full responsibility for what they submit.**
+You must understand, verify, and be able to explain every line of code, every comment, and every design decision in your PR.
 If reviewers perceive a lack of understanding (from the code itself, PR descriptions, or interactions during review), we reserve the right to close the PR.
 
 Before contributing, we encourage you to engage with the project and familiarize yourself with the codebase, and to discuss proposed changes with maintainers (via a [GitHub issue](https://github.com/aiidateam/aiida-core/issues) or [Discourse](https://aiida.discourse.group/)) before opening a PR.
@@ -47,6 +35,16 @@ The PR description should clearly explain what the change does, why it is needed
 
 Contributions should stem from genuine use of or engagement with AiiDA.
 Unsolicited refactors, style-only changes, or speculative features are unlikely to be accepted; if in doubt, open a [GitHub issue](https://github.com/aiidateam/aiida-core/issues) or discuss on [Discourse](https://aiida.discourse.group/) before investing time in a PR.
+
+## Legal considerations
+
+There is ongoing legal uncertainty regarding the copyright status of LLM-generated content and its provenance.
+Since this project does not have a formal [Contributor License Agreement](https://en.wikipedia.org/wiki/Contributor_license_agreement) (CLA), contributors retain copyright over their changes.
+Allowing LLM-generated code into the codebase therefore has unpredictable consequences for the project's copyright status (even setting aside possible copyright violations due to plagiarism).
+
+Every contribution must be backed by a human who holds the copyright for the changes submitted or has the legal right to contribute them under this project's license.
+By submitting a PR, you certify that you are the author of the contribution and that you understand it.
+"An LLM wrote it" is not an acceptable response to questions or critique.
 
 ## Review process and community impact
 
@@ -82,5 +80,5 @@ For comprehensive guidance on contributing to AiiDA, including code quality stan
 
 ## Acknowledgements
 
-This document draws on and adapts text from the [Kornia AI policy](https://github.com/kornia/kornia/blob/main/AI_POLICY.md), the [MDAnalysis AI policy](https://github.com/MDAnalysis/mdanalysis/blob/develop/AI_POLICY.md), the [pip AI policy](https://github.com/pypa/pip/pull/13826), and the [attrs AI policy](https://github.com/python-attrs/attrs/blob/main/.github/AI_POLICY.md).
+This document draws on and adapts text from the [Kornia AI policy](https://github.com/kornia/kornia/blob/main/AI_POLICY.md), the [MDAnalysis AI policy](https://github.com/MDAnalysis/mdanalysis/blob/develop/AI_POLICY.md), and the [attrs AI policy](https://github.com/python-attrs/attrs/blob/main/.github/AI_POLICY.md).
 Many thanks to their authors.

@@ -2,11 +2,16 @@
 
 ## Testing philosophy
 
-* Whenever you encounter a bug, add a (failing) test for it. Then fix the bug.
-* Whenever you modify or add a feature, write a test for it.
+- Whenever you encounter a bug, add a (failing) test for it. Then fix the bug.
+- Whenever you modify or add a feature, write a test for it.
   Writing tests [before the implementation](http://en.wikipedia.org/wiki/Test_Driven_Development) helps keep your API clean.
-* Make unit tests as atomic as possible. A unit test should run in the blink of an eye.
-* Document *why* you wrote your test -- developers will thank you for it once it fails.
+- Make unit tests as atomic as possible. A unit test should run in the blink of an eye.
+- Document *why* you wrote your test -- developers will thank you for it once it fails.
+- **Prefer real objects over mocks**: Use fixtures to create real nodes, processes, etc.
+  Mocks should only be used for truly external dependencies (e.g., network calls, SSH connections), cases where setup would be too complex, or where it is otherwise difficult to get the desired behavior (e.g., mocking to enforce exceptions being raised that would not appear naturally).
+- **Don't chase coverage with shallow tests**: A test that mocks everything tests nothing.
+  Tests should exercise actual behavior.
+- **Test the contract, not the implementation**: Don't assert internal method calls; assert observable outcomes.
 
 ## Types of tests
 
@@ -19,58 +24,55 @@
 
 ## Setting up your test environment
 
-1. Install extra dependencies:
+Install all dependencies (including test extras) with:
 
-   ```console
-   $ pip install -e .[tests]
-   ```
+```console
+$ uv sync
+```
 
-2. Optionally, set up a test profile for faster testing:
+Optionally, set up a test profile for faster testing:
 
-   ```console
-   $ verdi quicksetup --profile test_profile --test-profile
-   ```
+```console
+$ verdi quicksetup --profile test_profile --test-profile
+```
 
-   :::{note}
-   The database name and repository folder must start with `test_` to avoid accidental data loss, since tests modify the database.
-   :::
-
-You can also use [tox](https://tox.readthedocs.io) to automate the creation of local virtual environments for tests.
-The configuration is in `pyproject.toml`.
+:::{note}
+The database name and repository folder must start with `test_` to avoid accidental data loss, since tests modify the database.
+:::
 
 ## Running the test suite
 
-* Run all tests (uses `pgtest` for a temporary postgres cluster by default):
+```console
+$ uv run pytest                        # run all tests (uses pgtest for a temporary postgres cluster by default)
+$ uv run pytest -m presto              # fast tests (no PostgreSQL/RabbitMQ required)
+$ uv run pytest -n auto                # run tests in parallel (via pytest-xdist)
+$ uv run pytest tests/path/to/test     # run a subset of tests
+$ uv run pytest --cov aiida            # run with coverage
+$ AIIDA_TEST_PROFILE=test_profile uv run pytest  # run against a specific test profile
+```
 
-  ```console
-  $ pytest
-  ```
+### Test markers
 
-* Run with a specific test profile:
-
-  ```console
-  $ AIIDA_TEST_PROFILE=test_profile pytest
-  ```
-
-* Run a subset of tests:
-
-  ```console
-  $ pytest tests/path/to/test
-  ```
+- `presto` — fast tests that use `SqliteTempBackend` (in-memory, no external services).
+  Add this marker to new tests that don't need PostgreSQL or RabbitMQ.
+- `requires_rmq` — requires RabbitMQ
+- `requires_psql` — requires PostgreSQL
+- `nightly` — long-running tests (CI only)
 
 ### Transport tests
 
 For transport tests, you need passwordless SSH to `localhost`:
 
-* Make sure you have an SSH server running.
-* Configure an SSH key and add your public key to `~/.ssh/authorized_keys`:
+- Make sure you have an SSH server running.
+
+- Configure an SSH key and add your public key to `~/.ssh/authorized_keys`:
 
   ```console
   $ sudo apt install openssh-server  # Linux/Ubuntu
   $ ssh-copy-id localhost
   ```
 
-* For security, restrict SSH to local connections by editing `/etc/ssh/sshd_config`:
+- For security, restrict SSH to local connections by editing `/etc/ssh/sshd_config`:
   change `#ListenAddress 0.0.0.0` to `ListenAddress 127.0.0.1`.
 
 ### RabbitMQ tests
@@ -81,9 +83,10 @@ For tests that require the RabbitMQ message broker, set up RabbitMQ locally or u
 
 AiiDA uses `pytest` as the testing framework.
 
-* Create a `test_MODULENAME.py` in the appropriate subfolder of `tests/`, or add to an existing file.
-* Write test functions starting with `test_`.
-* Reuse existing [fixtures](https://docs.pytest.org/en/latest/how-to/fixtures.html) where possible, or add your own.
+- Create a `test_MODULENAME.py` in the appropriate subfolder of `tests/`.
+  Tests should mirror the source structure so it is easy to find the test for any given module.
+- Write test functions starting with `test_`.
+- Reuse existing [fixtures](https://docs.pytest.org/en/latest/how-to/fixtures.html) where possible (many are available in `tests/conftest.py`), or add your own.
 
 :::{note}
 Some tests still use the `AiidaTestCase` unittest class.

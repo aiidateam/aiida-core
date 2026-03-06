@@ -6,7 +6,7 @@ AiiDA uses SQLAlchemy with [Alembic](https://alembic.sqlalchemy.org/en/latest/) 
 
 1. Make the necessary changes to the models in `src/aiida/storage/psql_dos/models/`.
 
-2. Create a new migration file:
+1. Create a new migration file:
 
    ```console
    $ alembic revision -m "Description of the migration"
@@ -14,7 +14,7 @@ AiiDA uses SQLAlchemy with [Alembic](https://alembic.sqlalchemy.org/en/latest/) 
 
    This creates a migration file in the migrations directory with an auto-generated hash and your description.
 
-3. Review the generated migration file.
+1. Review the generated migration file.
    It should contain automatically generated hashes pointing to the previous and current revisions:
 
    ```python
@@ -24,7 +24,7 @@ AiiDA uses SQLAlchemy with [Alembic](https://alembic.sqlalchemy.org/en/latest/) 
 
    Ensure the `upgrade()` and `downgrade()` functions are correct.
 
-4. For data migrations (changes to database content rather than schema), add manual SQL commands:
+1. For data migrations (changes to database content rather than schema), add manual SQL commands:
 
    ```python
    from sqlalchemy.sql import text
@@ -48,13 +48,13 @@ AiiDA uses SQLAlchemy with [Alembic](https://alembic.sqlalchemy.org/en/latest/) 
        conn.execute(statement)
    ```
 
-5. Test the migration:
+1. Test the migration:
 
    ```console
    $ verdi -p {profile} storage migrate
    ```
 
-6. Add tests for the migration.
+1. Add tests for the migration.
 
 ## Testing migrations
 
@@ -66,20 +66,21 @@ AiiDA uses SQLAlchemy with [Alembic](https://alembic.sqlalchemy.org/en/latest/) 
    CREATE DATABASE aiida_clone WITH TEMPLATE aiida_original_db OWNER aiida;
    ```
 
-2. Check database statistics before migration:
+1. Check database statistics before migration:
 
    ```sql
    SELECT count(*) FROM db_dbnode;
    SELECT pg_size_pretty(pg_database_size('aiida_clone'));
    ```
 
-3. Create a profile with the correct database configured.
+1. Create a profile with the correct database configured.
    The easiest approach is to open the AiiDA `config.json` and clone an existing entry, updating the database name and repository location.
 
 ### Running the migration
 
 1. Ensure the daemon is not running.
-2. Run the migration:
+
+1. Run the migration:
 
    ```console
    $ time verdi -p PROFILE storage migrate -f
@@ -87,10 +88,10 @@ AiiDA uses SQLAlchemy with [Alembic](https://alembic.sqlalchemy.org/en/latest/) 
 
 ### Checks after migration
 
-* Rerun database statistics (node count, database size) and compare with pre-migration values.
-* Run `verdi status` and check that the storage connection is green.
-* Run `verdi storage info --statistics` and check the outcome.
-* Open `verdi shell` and run some test queries, open repository files, etc.
+- Rerun database statistics (node count, database size) and compare with pre-migration values.
+- Run `verdi status` and check that the storage connection is green.
+- Run `verdi storage info --statistics` and check the outcome.
+- Open `verdi shell` and run some test queries, open repository files, etc.
 
 :::{tip}
 You can use `verdi devel run-sql "SQL_TEXT"` to run arbitrary SQL against the profile's database.

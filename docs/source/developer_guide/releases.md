@@ -7,8 +7,8 @@ The main branch is called `main` and all development happens directly on that br
 
 In the following, we assume the following naming conventions for remotes:
 
-* `origin`: remote pointing to `aiidateam/aiida-core`
-* `fork`: remote pointing to your personal fork
+- `origin`: remote pointing to `aiidateam/aiida-core`
+- `fork`: remote pointing to your personal fork
 
 Check your remotes with `git remote -v`.
 
@@ -59,9 +59,9 @@ $ ./utils/patch-release.sh <HASH-0> <HASH-1> ... <HASH-N>
 
 The final commit on the release branch should contain:
 
-* Updated `__version__` attribute in `src/aiida/__init__.py`
-* Updated `CHANGELOG.md` with the changes (divided into relevant categories)
-* Updated `AUTHORS.txt` if there are new contributors
+- Updated `__version__` attribute in `src/aiida/__init__.py`
+- Updated `CHANGELOG.md` with the changes (divided into relevant categories)
+- Updated `AUTHORS.txt` if there are new contributors
 
 Commit message: `Release vX.Y.Z`
 
@@ -96,13 +96,14 @@ $ git push --tags
 The tag triggers the `release.yml` workflow, which runs tests and deploys to PyPI.
 
 Create a [GitHub release](https://github.com/aiidateam/aiida-core/releases/new) with:
-* Title: `AiiDA vX.Y.Z`
-* Body: `See [CHANGELOG.md](https://github.com/aiidateam/aiida-core/blob/vX.Y.Z/CHANGELOG.md)`
+
+- Title: `AiiDA vX.Y.Z`
+- Body: `See [CHANGELOG.md](https://github.com/aiidateam/aiida-core/blob/vX.Y.Z/CHANGELOG.md)`
 
 ### 6. Communication and dependent packages
 
 1. Announce on the [AiiDA website](https://github.com/aiidateam/aiida-website), [Discourse](https://aiida.discourse.group/), and social media.
-2. The [conda-forge feedstock](https://github.com/conda-forge/aiida-core-feedstock) should automatically create a PR.
+1. The [conda-forge feedstock](https://github.com/conda-forge/aiida-core-feedstock) should automatically create a PR.
 
 ## Post-release suffix
 

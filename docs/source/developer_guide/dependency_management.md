@@ -17,13 +17,13 @@ The current Dependency Manager should be a member of the [dependency-manager](ht
 The `pyproject.toml` file is the **authoritative source** for all dependency specifications.
 Dependencies are divided into:
 
-* Main dependencies in the `dependencies` list
-* Optional dependencies (extras) in the `project.optional-dependencies` table
+- Main dependencies in the `dependencies` list
+- Optional dependencies (extras) in the `project.optional-dependencies` table
 
 Other files that must stay in sync with `pyproject.toml`:
 
-* `environment.yml` -- conda environment specification
-* `uv.lock` -- lock file used for development and CI
+- `environment.yml` -- conda environment specification
+- `uv.lock` -- lock file used for development and CI
 
 ## Prerequisites for adding a dependency
 
@@ -37,10 +37,11 @@ Before adding a new dependency, ensure it meets all of the following:
 
 :::{note}
 If a critical dependency is not yet available on PyPI or conda-forge:
+
 1. For lightweight packages, consider vendoring if the license permits.
-2. Request the maintainer to publish to PyPI/conda-forge.
-3. As a last resort, maintain the PyPI project and conda-forge recipes ourselves.
-:::
+1. Request the maintainer to publish to PyPI/conda-forge.
+1. As a last resort, maintain the PyPI project and conda-forge recipes ourselves.
+   :::
 
 ## Updating dependencies
 
@@ -58,7 +59,11 @@ For packages named differently between PyPI and conda-forge, add an entry to the
 
 ### 2. Update `uv.lock`
 
-Update the lock file to reflect the new dependency specifications.
+Update the lock file to reflect the new dependency specifications:
+
+```console
+$ uv lock
+```
 
 ## Continuous integration
 

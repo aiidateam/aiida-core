@@ -35,8 +35,8 @@ In the following sections, the most important methods and properties of the {py:
 
 The {py:class}`~aiida.orm.nodes.node.Node` class has two important attributes:
 
-* {py:attr}`~aiida.orm.nodes.node.Node._plugin_type_string` characterizes the class of the object.
-* {py:attr}`~aiida.orm.nodes.node.Node._query_type_string` characterizes the class and all its subclasses (by pointing to the package or Python file that contain the class).
+- {py:attr}`~aiida.orm.nodes.node.Node._plugin_type_string` characterizes the class of the object.
+- {py:attr}`~aiida.orm.nodes.node.Node._query_type_string` characterizes the class and all its subclasses (by pointing to the package or Python file that contain the class).
 
 The convention for all the {py:class}`~aiida.orm.nodes.node.Node` subclasses is that if a `class B` is inherited by a `class A` then there should be a package `A` under `aiida/orm` that has a file `__init__.py` and a `B.py` in that directory (or a `B` package with the corresponding `__init__.py`).
 
@@ -213,6 +213,7 @@ Key methods:
 - {py:meth}`~aiida.orm.CalculationNode.outputs` returns a {py:class}`~aiida.orm.utils.managers.NodeLinksManager` object that can be used to access the node's outgoing `CREATE` links.
 
 (updatable-attributes)=
+
 ### Updatable attributes
 
 The {py:class}`~aiida.orm.ProcessNode` class is a subclass of the {py:class}`~aiida.orm.nodes.node.Node` class, which means that its attributes become immutable once stored.
@@ -237,22 +238,22 @@ However, if there is a need to modify it, the following procedure should be used
 1. Determine whether the change will be backwards-compatible.
    This means that an older version of AiiDA will still be able to run with the new `config.json` structure.
 
-2. In `aiida/manage/configuration/migrations/migrations.py`, increase the `CURRENT_CONFIG_VERSION` by one.
+1. In `aiida/manage/configuration/migrations/migrations.py`, increase the `CURRENT_CONFIG_VERSION` by one.
    If the change is **not** backwards-compatible, set `OLDEST_COMPATIBLE_CONFIG_VERSION` to the same value.
 
-3. Write a function which transforms the old config dict into the new version.
+1. Write a function which transforms the old config dict into the new version.
    It is possible that you need user input for the migration, in which case this should also be handled in that function.
 
-4. Add an entry in `_MIGRATION_LOOKUP` where the key is the version **before** the migration, and the value is a `ConfigMigration` object.
+1. Add an entry in `_MIGRATION_LOOKUP` where the key is the version **before** the migration, and the value is a `ConfigMigration` object.
    The `ConfigMigration` is constructed from your migration function, and the **hard-coded** values of `CURRENT_CONFIG_VERSION` and `OLDEST_COMPATIBLE_CONFIG_VERSION`.
    If these values are not hard-coded, the migration will break as soon as the values are changed again.
 
-5. Add tests for the migration.
+1. Add tests for the migration.
    You can add two types of tests:
 
-   * Tests that run the entire migration, using the `check_and_migrate_config` function.
+   - Tests that run the entire migration, using the `check_and_migrate_config` function.
      Make sure to run it with `store=False`, otherwise it will overwrite your `config.json` file.
-   * Tests that run a single step in the migration, using the `ConfigMigration.apply` method.
+   - Tests that run a single step in the migration, using the `ConfigMigration.apply` method.
 
 ## Daemon and signal handling
 

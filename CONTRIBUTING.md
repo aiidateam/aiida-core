@@ -13,14 +13,16 @@ Thanks for your interest in contributing to AiiDA!
 
 ## Development guide
 
-See [`AGENTS.md`](AGENTS.md) for comprehensive development documentation, including:
+For in-depth development documentation, see the [Developer Guide](https://aiida.readthedocs.io/projects/aiida-core/en/latest/developer_guide/index.html) in the AiiDA docs (`docs/source/developer_guide/`), covering:
 
-- Project architecture and source layout
-- Code style and pre-commit hooks
-- Testing conventions and commands
-- Branching, versioning, and commit style
-- Common patterns (adding nodes, CalcJobs, WorkChains, CLI commands)
-- Debugging tips
+- Development environment setup
+- Coding style and pre-commit hooks
+- Writing tests and documentation
+- Pull requests, code review, and commit conventions
+- Deprecations, dependency management, releases
+- AiiDA internals and design evolution
+
+[`AGENTS.md`](AGENTS.md) provides a concise summary of the same conventions, optimized for AI coding assistants.
 
 ## Quick reference
 

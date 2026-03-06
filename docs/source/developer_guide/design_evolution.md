@@ -5,6 +5,7 @@ This document records the evolution of the design and architecture of AiiDA, inc
 ## Version 1.0.0
 
 (design-changes-1-0-0-provenance-redesign)=
+
 ### The provenance redesign
 
 In the early stages of AiiDA, the concept of its provenance graph was simple.
@@ -30,6 +31,7 @@ This time around is no different, except for the fact that the migration was a l
 A more detailed explanation of the new provenance design and the motivation can be found {ref}`here <topics:provenance>`.
 
 (design-changes-1-0-0-calcjob-redesign)=
+
 ### The calculation job redesign
 
 The calculation job has been one of the most used and important components of AiiDA as it represents a calculation that is submitted to a scheduler, often on a remote cluster.
@@ -59,6 +61,7 @@ From a plugin developer standpoint, the rest works exactly as before, and the `p
 A more detailed explanation about the new `CalcJob` and best practices for writing `Parser` implementations can be found {ref}`here <topics:calculations:usage:calcjobs>`.
 
 (design-changes-1-0-0-module-hierarchy)=
+
 ### The module hierarchy and importing
 
 AiiDA has been developed and used since 2013 and in the past years we have tried, as much as possible, to reduce the changes to the Python API over time to a minimum.
@@ -94,22 +97,22 @@ For better clarity, we are {ref}`curating a list of classes and functions<refere
 
 The plugin system was designed with the following goals in mind:
 
-* **Sharing of calculations, workflows and data types**: plugins are bundled in a Python package, distributed as a zip source archive, Python egg, or PyPI package. There is extensive documentation available for how to [distribute Python packages](https://packaging.python.org/en/latest/).
+- **Sharing of calculations, workflows and data types**: plugins are bundled in a Python package, distributed as a zip source archive, Python egg, or PyPI package. There is extensive documentation available for how to [distribute Python packages](https://packaging.python.org/en/latest/).
 
-* **Ease of use**: plugins are listed on the [AiiDA plugin registry](https://aiidateam.github.io/aiida-registry/) and can be installed with one simple command. This process is familiar to every regular Python user.
+- **Ease of use**: plugins are listed on the [AiiDA plugin registry](https://aiidateam.github.io/aiida-registry/) and can be installed with one simple command. This process is familiar to every regular Python user.
 
-* **Decouple development and update cycles of AiiDA and plugins**: since plugins are separate Python packages, they can be developed in a separate code repository and updated when the developer sees fit without a need to update AiiDA. Similarly, if AiiDA is updated, plugins may not need to release a new version.
+- **Decouple development and update cycles of AiiDA and plugins**: since plugins are separate Python packages, they can be developed in a separate code repository and updated when the developer sees fit without a need to update AiiDA. Similarly, if AiiDA is updated, plugins may not need to release a new version.
 
-* **Promote modular design in AiiDA development**: separating plugins into their own Python packages ensures that plugins cannot (easily) access parts of the AiiDA code which are not part of the public API, enabling AiiDA development to stay agile. The same applies to plugins relying on other plugins.
+- **Promote modular design in AiiDA development**: separating plugins into their own Python packages ensures that plugins cannot (easily) access parts of the AiiDA code which are not part of the public API, enabling AiiDA development to stay agile. The same applies to plugins relying on other plugins.
 
-* **Low overhead for developers**: plugin developers can write their extensions the same way they would write any Python code meant for distribution.
+- **Low overhead for developers**: plugin developers can write their extensions the same way they would write any Python code meant for distribution.
 
-* **Automatic AiiDA setup and testing of plugins**: installation of complete Python environments consisting of many packages can be automated, provided all packages use `setuptools` as a distribution tool. This enables use of AiiDA in a service-based way using, e.g., Docker images. At the same time it becomes possible to create automated tests for any combination of plugins, as long as the plugins provide test entry points.
+- **Automatic AiiDA setup and testing of plugins**: installation of complete Python environments consisting of many packages can be automated, provided all packages use `setuptools` as a distribution tool. This enables use of AiiDA in a service-based way using, e.g., Docker images. At the same time it becomes possible to create automated tests for any combination of plugins, as long as the plugins provide test entry points.
 
 The chosen approach to plugins has some limitations:
 
-* The interface for entry point objects is enforced implicitly by the way the object is used. It is the responsibility of the plugin developer to test for compliance, especially if the object is not derived from the recommended base classes provided by AiiDA.
-* The freedom of the plugin developer to name and rename classes ends where the information in question is stored in the database as, e.g., node attributes.
-* The system is designed with the possibility of plugin versioning in mind, however this is not implemented yet.
-* In principle, two different plugins can give the same name to an entry point, creating ambiguity when trying to load the associated objects. Plugin development guidelines in the documentation advise on how to avoid this problem, and this is addressed via the use of a centralized registry of known AiiDA plugins.
-* Plugins can potentially contain malicious or otherwise dangerous code. In the registry of AiiDA plugins, we try to flag plugins that we know are safe to use.
+- The interface for entry point objects is enforced implicitly by the way the object is used. It is the responsibility of the plugin developer to test for compliance, especially if the object is not derived from the recommended base classes provided by AiiDA.
+- The freedom of the plugin developer to name and rename classes ends where the information in question is stored in the database as, e.g., node attributes.
+- The system is designed with the possibility of plugin versioning in mind, however this is not implemented yet.
+- In principle, two different plugins can give the same name to an entry point, creating ambiguity when trying to load the associated objects. Plugin development guidelines in the documentation advise on how to avoid this problem, and this is addressed via the use of a centralized registry of known AiiDA plugins.
+- Plugins can potentially contain malicious or otherwise dangerous code. In the registry of AiiDA plugins, we try to flag plugins that we know are safe to use.

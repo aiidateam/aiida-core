@@ -21,7 +21,7 @@ However, proper deprecation warnings must still be provided.
 To deprecate a CLI command:
 
 1. Add a `.. deprecated:: vX.Y.Z` note in the docstring indicating the release in which the deprecation was introduced.
-2. Decorate the function with the `deprecated_command` decorator from `aiida.cmdline.utils.decorators`.
+1. Decorate the function with the `deprecated_command` decorator from `aiida.cmdline.utils.decorators`.
 
 ```python
 @verdi_database.command('version')
@@ -59,9 +59,11 @@ warnings.warn(
 
 Advantages of this approach:
 
-* PyCharm will show the method as crossed out.
-* `AiidaDeprecationWarning` does not inherit from Python's `DeprecationWarning`, so it will not be hidden by default.
-* Users can disable AiiDA deprecation warnings with:
+- PyCharm will show the method as crossed out.
+
+- `AiidaDeprecationWarning` does not inherit from Python's `DeprecationWarning`, so it will not be hidden by default.
+
+- Users can disable AiiDA deprecation warnings with:
 
   ```console
   $ verdi config set warnings.showdeprecations False
@@ -69,3 +71,7 @@ Advantages of this approach:
 
 When deprecating a method, move the code to the new function name and change the old function to call the new one with the deprecation warning.
 Add a `.. deprecated:: vX.Y.Z` note to the old function's docstring with a reference to the replacement.
+
+:::{tip}
+Set `AIIDA_WARN_v3=1` to surface deprecation warnings during development and testing.
+:::

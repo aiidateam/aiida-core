@@ -374,6 +374,21 @@ def put_object_from_filelike(self, handle: BinaryIO) -> str:
     """
 ```
 
+**Source file headers**:
+
+New source files should include the copyright header:
+
+```python
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+```
+
 **Other pre-commit hooks**:
 
 - `uv-lock` — validates lockfile consistency
@@ -388,6 +403,13 @@ def put_object_from_filelike(self, handle: BinaryIO) -> str:
 
 - In `cmdline/`: delay `aiida` imports to function level (keeps `verdi` CLI responsive — top-level imports would slow down every invocation, even `verdi --help`).
   Enforced in CI via `verdi devel check-load-time`, which fails if unexpected `aiida.*` modules (outside `aiida.brokers`, `aiida.cmdline`, `aiida.common`, `aiida.manage`, `aiida.plugins`, `aiida.restapi`) are imported at startup.
+
+**Documentation style** (when writing/editing `.md` or `.rst` files in `docs/`):
+
+- Write **one sentence per line** (no manual line wrapping) — makes diffs easy to review
+- File/directory names: alphanumeric, lowercase, underscores as separators
+- Headers in **sentence case** (e.g., "Entry points")
+- Documentation follows the [Divio documentation system](https://www.divio.com/blog/documentation/): tutorials (learning-oriented), how-to guides (goal-oriented), topics (understanding-oriented), reference (information-oriented)
 
 ### Testing
 
@@ -412,6 +434,7 @@ Test philosophy:
 - **Don't chase coverage with shallow tests**: A test that mocks everything tests nothing.
   Tests should exercise actual behavior.
 - **Test the contract, not the implementation**: Don't assert internal method calls; assert observable outcomes.
+- **Migrate `AiidaTestCase` to pytest**: Some tests still use the `AiidaTestCase` unittest class. When touching such tests, migrate them to pytest style.
 
 Test types:
 | Type | Location | Description |
@@ -538,6 +561,15 @@ They improve code quality and are checked in code review.
 - Prefer explicit keyword arguments over positional arguments, especially when a function takes multiple parameters of the same type — `node.set_attribute(key='x', value=1)` is unambiguous at the call site; `node.set_attribute('x', 1)` requires the reader to check the signature.
   Keyword-only arguments (after a bare `*`) also protect callers from silent breakage if parameter order ever changes.
 - Minimize use of `*args` and `**kwargs` where possible — explicit parameters allow static type checkers to validate arguments, improve IDE autocompletion, and make the function contract readable without opening the implementation.
+
+**Adding dependencies:**
+
+Before adding a new dependency to `pyproject.toml`, ensure it:
+
+- Fills a non-trivial feature gap not easily resolved otherwise
+- Supports all Python versions supported by aiida-core
+- Is available on both [PyPI](https://pypi.org/) and [conda-forge](https://conda-forge.org/)
+- Uses an MIT-compatible license (MIT, BSD, Apache, LGPL — **not** GPL)
 
 **Git tooling:**
 
@@ -709,6 +741,9 @@ When working on this codebase:
 - **CREATE vs RETURN links**: Calculations *create* new data nodes; workflows *return* existing data nodes.
   Workflows orchestrate but don't create data themselves.
 - **Don't break provenance**: Never circumvent the link system or modify stored nodes in ways that would break the directed acyclic graph.
+- **Daemon signal handling**: The daemon captures `SIGINT`/`SIGTERM` for graceful shutdown.
+  When creating subprocesses in daemon code, pass `start_new_session=True` to prevent the subprocess from being killed when the daemon receives a signal.
+- **Code review norms**: Technical facts overrule personal preferences. Prefix optional style suggestions with "Nit:". A PR should be approved if it improves code health overall, even if not perfect.
 
 ## Reference documentation
 

@@ -53,18 +53,15 @@ class ZmqBrokerService:
         self,
         base_path: Path | str,
         log_file: Path | str | None = None,
-        task_timeout: float = 10.0,
     ):
         """Initialize the broker service.
 
         :param base_path: Base path for broker data
         :param log_file: Path to log file (default: {base_path}/logs/broker.log)
-        :param task_timeout: Seconds before an unacked task is requeued (default: 10)
         """
         self._base_path = Path(base_path)
         self._storage_path = self._base_path / 'storage'
         self._logs_path = self._base_path / 'logs'
-        self._task_timeout = task_timeout
 
         # Sockets will be created in a temp directory (short path for IPC limit)
         self._sockets_path: Path | None = None
@@ -204,7 +201,6 @@ class ZmqBrokerService:
         self._server = ZmqBrokerServer(
             storage_path=self._storage_path,
             sockets_path=self._sockets_path,
-            task_timeout=self._task_timeout,
         )
 
         # Write PID file
@@ -274,18 +270,15 @@ class ZmqBrokerService:
 def run_broker_service(
     base_path: str | Path,
     log_file: str | Path | None = None,
-    task_timeout: float = 10.0,
 ) -> None:
     """Run the broker service as a standalone process.
 
     :param base_path: Base path for broker data
     :param log_file: Path to log file (default: {base_path}/logs/broker.log)
-    :param task_timeout: Seconds before an unacked task is requeued (default: 10)
     """
     service = ZmqBrokerService(
         base_path=base_path,
         log_file=log_file,
-        task_timeout=task_timeout,
     )
     service.run_forever()
 
@@ -296,8 +289,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ZMQ Broker Service')
     parser.add_argument('--base-path', '-b', required=True, help='Base directory for broker data')
     parser.add_argument('--log-file', '-l', help='Log file path (default: {base_path}/logs/broker.log)')
-    parser.add_argument('--task-timeout', '-t', type=float, default=10.0,
-                        help='Seconds before an unacked task is requeued (default: 10)')
     parser.add_argument('--verbose', '-v', action='store_true', help='Enable debug logging to console')
 
     args = parser.parse_args()
@@ -311,5 +302,4 @@ if __name__ == '__main__':
     run_broker_service(
         base_path=args.base_path,
         log_file=args.log_file,
-        task_timeout=args.task_timeout,
     )

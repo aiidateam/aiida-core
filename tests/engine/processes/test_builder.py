@@ -528,7 +528,9 @@ def test_get_schema_show_required():
 
     parsed = yaml.safe_load(builder.get_schema(show='required', collapse=()))
 
-    # Only x and y are required at the top level for ArithmeticAddCalculation
+    # Only x and y are required at the top level for ArithmeticAddCalculation.
+    # Note: ``code`` is not required because it can be omitted for import runs
+    # (when ``remote_folder`` is provided instead). See ``validate_calc_job``.
     assert parsed == {
         'x': 'Int | Float (required)',
         'y': 'Int | Float (required)',
@@ -576,7 +578,7 @@ def test_get_schema_max_depth():
     assert parsed_d1['metadata']['computer'] == 'Computer'
 
 
-def test_get_schema_format_verbose():
+def test_get_schema_mode_verbose():
     """Test the ``mode='verbose'`` parameter of ``get_schema``."""
     import yaml
 

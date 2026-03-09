@@ -139,6 +139,8 @@ def verdi_status(print_traceback, no_rmq):
             exit_code = ExitCode.CRITICAL
         else:
             print_status(ServiceStatus.UP, 'broker', broker)
+        finally:
+            broker.close()
     else:
         print_status(
             ServiceStatus.WARNING,

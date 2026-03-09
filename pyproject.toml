@@ -286,6 +286,7 @@ tests = [
   'pytest-rerunfailures~=12.0',
   'pytest-benchmark~=4.0',
   'pytest-regressions~=2.2',
+  'pytest-instafail~=0.5',
   'pytest-xdist~=3.6',
   'pympler~=1.0',
   'sphinx~=7.2.0',
@@ -393,7 +394,7 @@ module = [
 ]
 
 [tool.pytest.ini_options]
-addopts = '--benchmark-skip --durations=5 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append '
+addopts = '--benchmark-skip --durations=5 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append --tb=short --instafail'
 filterwarnings = [
   'ignore:.*and will be removed in NumPy 2.0.*:DeprecationWarning:ase:',
   'ignore:datetime.datetime.utcfromtimestamp:DeprecationWarning:pytz|dateutil|tqdm|aio_pika:',

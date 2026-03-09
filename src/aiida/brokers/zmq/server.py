@@ -187,10 +187,12 @@ class ZmqBrokerServer:
             self._monitor = None
 
         if self._router:
+            self._router.setsockopt(zmq.LINGER, 0)
             self._router.close()
             self._router = None
 
         if self._pub:
+            self._pub.setsockopt(zmq.LINGER, 0)
             self._pub.close()
             self._pub = None
 

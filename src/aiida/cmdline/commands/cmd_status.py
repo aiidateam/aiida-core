@@ -119,6 +119,7 @@ def verdi_status(print_traceback, no_rmq):
     else:
         message = str(storage_backend)
         print_status(ServiceStatus.UP, 'storage', message)
+        storage_backend.close()
 
     if no_rmq:
         warn_deprecation(

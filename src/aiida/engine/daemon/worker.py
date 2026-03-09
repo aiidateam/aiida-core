@@ -34,16 +34,12 @@ async def shutdown_worker(runner: Runner) -> None:
 
     await asyncio.gather(*tasks, return_exceptions=True)
 
-    runner.close()
-
     # Reset the profile so the communicator sends unsubscribe messages to
     # the broker server before disconnecting, and database connections are
     # released.  Without this, the server keeps routing tasks/RPCs to our
     # (now-dead) identity.
-    try:
-        get_manager().reset_profile()
-    except Exception:
-        pass
+    #get_manager().reset_profile()
+    runner.close()
 
     LOGGER.info('Daemon worker stopped')
 
@@ -83,6 +79,7 @@ def start_daemon_worker(foreground: bool = False, profile_name: Union[str, None]
         runner.start()
     except SystemError as exception:
         LOGGER.info('Received a SystemError: %s', exception)
+        #get_manager().reset_profile()
         runner.close()
 
     LOGGER.info('Daemon worker started')

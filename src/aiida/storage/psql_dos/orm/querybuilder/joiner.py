@@ -426,7 +426,7 @@ class SqlaJoiner:
         return JoinReturn(new_query, aliased_edge)
 
     def _join_node_descendants_recursive(
-        self, joined_entity, entity_to_join, isouterjoin: bool, filter_dict: FilterType, expand_path=False
+        self, joined_entity, entity_to_join, isouterjoin: bool, filter_dict: FilterType, edge_filter_dict=None, expand_path=False
     ):
         """Joining descendants using the recursive functionality
         :TODO: Move the filters to be done inside the recursive query (for example on depth)

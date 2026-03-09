@@ -17,7 +17,6 @@ remote HPC resources and codes, thanks to its flexible plugin interface
 and workflow engine for the automation of complex sequences of simulations.
 
 More information at http://www.aiida.net
-Some change to trigger CI?
 """
 
 from aiida.common.log import configure_logging

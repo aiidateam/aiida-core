@@ -18,18 +18,20 @@ However, contributions must reflect genuine effort and understanding from the au
 You must understand, verify, and be able to explain every line of code, every comment, and every design decision in your PR.
 If reviewers perceive a lack of understanding (from the code itself, PR descriptions, or interactions during review), we reserve the right to close the PR.
 
-Before contributing, we encourage you to engage with the project and familiarize yourself with the codebase, and to discuss proposed changes with maintainers (via a [GitHub issue](https://github.com/aiidateam/aiida-core/issues) or [Discourse](https://aiida.discourse.group/)) before opening a PR.
+Before contributing, we expect you to engage with the project and familiarize yourself with the codebase.
+Proposed changes should be discussed with maintainers (via a [GitHub issue](https://github.com/aiidateam/aiida-core/issues) or [Discourse](https://aiida.discourse.group/)) before opening a PR.
 
 ### Verify your code locally
 
 Before requesting review, contributors must ensure that all CI checks pass (`uv run pre-commit ...`, including `ruff`, `mypy`, etc.), all added/modified tests pass (`uv run pytest ...`), and documentation builds (`uv run sphinx-build ...`) without errors, if applicable.
-PRs that fail CI and show signs of being unverified AI output will be closed.
+PRs that fail CI and receive no further attention from the contributor will be closed.
+The same goes for PRs that show signs of being unverified AI output.
 
 ### Curate your PR
 
 All PRs must be thoughtfully authored, including the title, description, and commit messages.
 Copy-pasting raw LLM output into PR titles or descriptions is not acceptable.
-The PR description should clearly explain what the change does, why it is needed, and reference a related [GitHub issue](https://github.com/aiidateam/aiida-core/issues).
+The PR description should clearly explain what the change does, why it is needed, and reference the related [GitHub issue(s)](https://github.com/aiidateam/aiida-core/issues).
 If no issue exists for the problem/improvement a PR addresses, **please create one first and reference it in the PR**.
 If AI tools were used in preparing the contribution, contributors should disclose how and to what extent they were used.
 
@@ -53,7 +55,7 @@ Verbose or off-topic comments may be marked as spam.
 
 The reviewing capacity of this project is limited, and maintainer time will be prioritized toward high-quality contributions from engaged contributors.
 PRs that appear to lack understanding of the codebase may not get reviewed and will eventually be closed.
-A high volume of low-effort PRs is demoralizing and has driven many good maintainers away from open source.
+A high volume of low-effort PRs is unsustainable and has driven many good maintainers away from open source.
 We are committed to mentoring new contributors, and this dynamic threatens that commitment.
 
 ## Enforcement

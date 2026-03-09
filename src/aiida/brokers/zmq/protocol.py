@@ -17,7 +17,6 @@ class MessageType(str, Enum):
     TASK_RESPONSE = 'task_response'
     TASK_ACK = 'task_ack'
     TASK_NACK = 'task_nack'
-
     # RPC messages
     RPC = 'rpc'
     RPC_RESPONSE = 'rpc_response'
@@ -30,6 +29,9 @@ class MessageType(str, Enum):
     SUBSCRIBE_RPC = 'subscribe_rpc'
     UNSUBSCRIBE_TASK = 'unsubscribe_task'
     UNSUBSCRIBE_RPC = 'unsubscribe_rpc'
+
+    # Health check
+    PING = 'ping'
 
 
 @dataclass
@@ -147,6 +149,15 @@ def make_task_nack(task_id: str, sender: str) -> dict:
         'id': uuid.uuid4().hex,
         'sender': sender,
         'task_id': task_id,
+    }
+
+
+def make_ping(sender: str) -> dict:
+    """Create a ping message for worker liveness probing."""
+    return {
+        'type': MessageType.PING.value,
+        'id': uuid.uuid4().hex,
+        'sender': sender,
     }
 
 

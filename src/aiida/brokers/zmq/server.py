@@ -47,7 +47,6 @@ class ZmqBrokerServer:
         sockets_path: Path | str,
         encoder: Callable[[Any], str] | None = None,
         decoder: Callable[[str], Any] | None = None,
-        task_timeout: float = 10.0,
     ):
         """Initialize the broker server.
 
@@ -55,7 +54,6 @@ class ZmqBrokerServer:
         :param sockets_path: Path for IPC socket files
         :param encoder: Function to encode messages (default: yaml.dump)
         :param decoder: Function to decode messages (default: yaml.load)
-        :param task_timeout: Seconds before an unacked task is requeued (default: 10)
         """
         encoder = encoder if encoder is not None else YAML_ENCODER
         decoder = decoder if decoder is not None else YAML_DECODER
@@ -78,6 +76,7 @@ class ZmqBrokerServer:
         self._router: zmq.Socket | None = None
         self._pub: zmq.Socket | None = None
         self._poller: zmq.Poller | None = None
+        self._monitor: zmq.Socket | None = None
 
         # Task queue with persistence
         self._task_queue = PersistentQueue(self._storage_path / 'tasks')
@@ -94,9 +93,9 @@ class ZmqBrokerServer:
         self._pending_task_responses: dict[str, tuple[bytes, float]] = {}
         self._pending_rpc_responses: dict[str, tuple[bytes, float]] = {}
 
-        # Task timeout for redelivery: task_id -> dispatch_time
-        self._task_timeout = task_timeout
-        self._task_dispatch_times: dict[str, float] = {}
+        # Task-worker assignments: task_id -> worker_identity
+        # Used to requeue tasks when a worker dies
+        self._task_worker_assignments: dict[str, bytes] = {}
 
         # Server state
         self._running = False
@@ -146,6 +145,9 @@ class ZmqBrokerServer:
         # ROUTER socket for request-reply
         self._router = self._context.socket(zmq.ROUTER)
         self._router.setsockopt(zmq.ROUTER_MANDATORY, 1)
+        # ZMTP heartbeats for dead peer detection
+        self._router.setsockopt(zmq.HEARTBEAT_IVL, 2000)      # ping every 2s
+        self._router.setsockopt(zmq.HEARTBEAT_TIMEOUT, 6000)   # dead after 6s no response
         self._router.bind(self._router_endpoint)
 
         # PUB socket for broadcasts
@@ -155,6 +157,10 @@ class ZmqBrokerServer:
         # Set up poller
         self._poller = zmq.Poller()
         self._poller.register(self._router, zmq.POLLIN)
+
+        # Monitor for disconnect events (dead peer detection)
+        self._monitor = self._router.get_monitor_socket(zmq.EVENT_DISCONNECTED)
+        self._poller.register(self._monitor, zmq.POLLIN)
 
         self._running = True
         _LOGGER.info('ZMQ Broker Server started')
@@ -171,8 +177,14 @@ class ZmqBrokerServer:
         self._running = False
 
         if self._poller:
+            if self._monitor:
+                self._poller.unregister(self._monitor)
             self._poller.unregister(self._router)
             self._poller = None
+
+        if self._monitor:
+            self._monitor.close()
+            self._monitor = None
 
         if self._router:
             self._router.close()
@@ -223,16 +235,18 @@ class ZmqBrokerServer:
         except zmq.ZMQError:
             return False
 
+        handled = False
+
         if self._router in socks:
             self._handle_router_message()
-            return True
+            handled = True
 
-        # Requeue tasks stuck in processing beyond the timeout
-        self._requeue_timed_out_tasks()
+        if self._monitor in socks:
+            self._handle_disconnect_event()
 
         # Try to dispatch pending tasks to available workers
         self._dispatch_pending_tasks()
-        return False
+        return handled
 
     def _handle_router_message(self) -> None:
         """Handle a message from the ROUTER socket."""
@@ -336,7 +350,7 @@ class ZmqBrokerServer:
         task_id = msg.get('task_id')
         if task_id:
             self._task_queue.ack(task_id)
-            self._task_dispatch_times.pop(task_id, None)
+            self._task_worker_assignments.pop(task_id, None)
             _LOGGER.debug('Task acknowledged: %s', task_id)
 
         # Worker is available for more tasks
@@ -458,26 +472,6 @@ class ZmqBrokerServer:
             del self._rpc_subscribers[identifier]
             _LOGGER.info('RPC subscriber removed: %s', identifier)
 
-    def _requeue_timed_out_tasks(self) -> None:
-        """Requeue tasks that have been in processing beyond the timeout.
-
-        This handles the case where a worker received a task but crashed
-        before sending an ACK.
-        """
-        if not self._task_dispatch_times:
-            return
-
-        now = time.time()
-        timed_out = [
-            task_id for task_id, dispatch_time in self._task_dispatch_times.items()
-            if now - dispatch_time > self._task_timeout
-        ]
-
-        for task_id in timed_out:
-            self._task_dispatch_times.pop(task_id, None)
-            self._task_queue.nack(task_id, requeue=True)
-            _LOGGER.warning('Task %s timed out after %.1fs, requeued', task_id, self._task_timeout)
-
     def _dispatch_pending_tasks(self) -> None:
         """Dispatch pending tasks to available workers."""
         while self._available_workers and not self._task_queue.is_empty():
@@ -511,11 +505,22 @@ class ZmqBrokerServer:
                 self._task_queue.nack(task_id, requeue=True)
                 self._remove_dead_worker(worker_identity)
                 continue
-            self._task_dispatch_times[task_id] = time.time()
+            self._task_worker_assignments[task_id] = worker_identity
+            # Re-add worker so it can receive more tasks concurrently
+            # (matching RMQ's multi-prefetch behaviour).  The ACK only
+            # affects the PersistentQueue, not worker availability.
+            self._mark_worker_available(worker_identity)
             _LOGGER.debug('Dispatched task %s to worker', task_id)
 
     def _remove_dead_worker(self, identity: bytes) -> None:
-        """Remove a disconnected worker from all registries."""
+        """Remove a disconnected worker from all registries and requeue its tasks."""
+        # Requeue all tasks assigned to this worker
+        dead_tasks = [tid for tid, wid in self._task_worker_assignments.items() if wid == identity]
+        for task_id in dead_tasks:
+            self._task_worker_assignments.pop(task_id, None)
+            self._task_queue.nack(task_id, requeue=True)
+            _LOGGER.warning('Requeued task %s from dead worker %s', task_id, identity.hex()[:8])
+
         # Remove from task subscribers
         dead_keys = [k for k, v in self._task_subscribers.items() if v == identity]
         for key in dead_keys:
@@ -530,6 +535,49 @@ class ZmqBrokerServer:
 
         # Remove from available workers
         self._available_workers = deque(w for w in self._available_workers if w != identity)
+
+    def _handle_disconnect_event(self) -> None:
+        """Handle a disconnect event from the socket monitor.
+
+        ZMTP heartbeat detected a dead peer. We don't know which identity
+        disconnected (monitor only provides endpoint/fd), so we probe all
+        workers with in-progress tasks to find the dead one.
+        """
+        if not self._monitor:
+            return
+
+        # Read and discard the monitor event
+        try:
+            from zmq.utils.monitor import recv_monitor_message
+            recv_monitor_message(self._monitor)
+        except Exception:
+            return
+
+        _LOGGER.info('Disconnect event detected, probing workers')
+        self._probe_workers()
+
+    def _probe_workers(self) -> None:
+        """Probe workers with in-progress tasks to find dead ones.
+
+        Sends a PING to each worker identity that has tasks assigned.
+        With ROUTER_MANDATORY, sending to a dead identity raises
+        ZMQError(EHOSTUNREACH), identifying the dead worker.
+        """
+        if not self._task_worker_assignments:
+            return
+
+        from .protocol import make_ping
+
+        # Get unique worker identities with assigned tasks
+        worker_identities = set(self._task_worker_assignments.values())
+
+        for identity in worker_identities:
+            try:
+                ping_msg = make_ping('broker')
+                self._send_to_client(identity, ping_msg)
+            except zmq.ZMQError:
+                _LOGGER.warning('Worker %s is dead, removing', identity.hex()[:8])
+                self._remove_dead_worker(identity)
 
     def _mark_worker_available(self, identity: bytes) -> None:
         """Mark a worker as available for tasks."""

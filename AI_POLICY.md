@@ -22,47 +22,37 @@ Before contributing, we encourage you to engage with the project and familiarize
 
 ### Verify your code locally
 
-Before requesting review, contributors must ensure that all CI checks pass (`uv run pre-commit ...`, including `ruff`, `mypy`, etc.), all added/modified tests pass (`uv run pytest ...`), and documentation builds (`uv run sphinx-build ...`) without errors if applicable.
+Before requesting review, contributors must ensure that all CI checks pass (`uv run pre-commit ...`, including `ruff`, `mypy`, etc.), all added/modified tests pass (`uv run pytest ...`), and documentation builds (`uv run sphinx-build ...`) without errors, if applicable.
 PRs that fail CI and show signs of being unverified AI output will be closed.
 
 ### Curate your PR
 
 All PRs must be thoughtfully authored, including the title, description, and commit messages.
 Copy-pasting raw LLM output into PR titles or descriptions is not acceptable.
-The PR description should clearly explain what the change does, why it is needed, and, ideally, reference a related [GitHub issue](https://github.com/aiidateam/aiida-core/issues).
+The PR description should clearly explain what the change does, why it is needed, and reference a related [GitHub issue](https://github.com/aiidateam/aiida-core/issues).
+If no issue exists for the problem/improvement a PR addresses, **please create one first and reference it in the PR**.
+If AI tools were used in preparing the contribution, contributors should disclose how and to what extent they were used.
 
 ### Solve real problems
 
 Contributions should stem from genuine use of or engagement with AiiDA.
 Unsolicited refactors, style-only changes, or speculative features are unlikely to be accepted; if in doubt, open a [GitHub issue](https://github.com/aiidateam/aiida-core/issues) or discuss on [Discourse](https://aiida.discourse.group/) before investing time in a PR.
 
-## Legal considerations
-
-There is ongoing legal uncertainty regarding the copyright status of LLM-generated content and its provenance.
-Since this project does not have a formal [Contributor License Agreement](https://en.wikipedia.org/wiki/Contributor_license_agreement) (CLA), contributors retain copyright over their changes.
-Allowing LLM-generated code into the codebase therefore has unpredictable consequences for the project's copyright status (even setting aside possible copyright violations due to plagiarism).
-
-Every contribution must be backed by a human who holds the copyright for the changes submitted or has the legal right to contribute them under this project's license.
-By submitting a PR, you certify that you are the author of the contribution and that you understand it.
-"An LLM wrote it" is not an acceptable response to questions or critique.
-
 ## Review process and community impact
 
-With modern AI tools, large and far-reaching changes to a codebase can be produced with just a single prompt.
-The actual effort of such PRs lies in reviewing the generated output, understanding how it integrates with the rest of the codebase, and verifying its downstream effects.
-AI-generated content is easy to produce but *harder* for others to read, review, and interpret.
-The reviewing capacity of this project is limited, and maintainer time will be prioritized toward high-quality contributions from engaged contributors.
-PRs that appear to lack understanding of the codebase may not get reviewed and will eventually be closed.
-Remember that prioritizing your time over that of reviewers is not in the spirit of open source collaboration.
+With modern AI tools, large changes to a codebase can be produced with a single prompt.
+However, the real effort lies in reviewing the output, understanding how it integrates with the rest of the codebase, and verifying its downstream effects.
+AI-generated content is easy to produce but *harder* for others to read, review, and interpret;mdash&do not shift that burden onto maintainers.
 
-Code review is a collaborative, human process — not a mechanism for debugging AI-generated code.
 We expect contributors to engage meaningfully with reviewers and apply feedback thoughtfully.
 Simply feeding reviewer comments back into an LLM to regenerate a PR is not acceptable; if you cannot engage with the review yourself, open a bug report or feature request instead.
 
 Do not post AI-generated comments or summaries unless you genuinely agree with them and take full responsibility for their accuracy.
-All LLM output *looks* plausible — it is your responsibility to ensure it is also correct.
+All LLM output *looks* plausible;mdash&it is your responsibility to ensure it is also correct.
 Verbose or off-topic comments may be marked as spam.
 
+The reviewing capacity of this project is limited, and maintainer time will be prioritized toward high-quality contributions from engaged contributors.
+PRs that appear to lack understanding of the codebase may not get reviewed and will eventually be closed.
 A high volume of low-effort PRs is demoralizing and has driven many good maintainers away from open source.
 We are committed to mentoring new contributors, and this dynamic threatens that commitment.
 
@@ -73,6 +63,16 @@ Every PR must have a human author who takes responsibility for it, has actively 
 
 PRs that violate this policy may be closed without detailed review.
 Contributors who repeatedly submit low-effort AI-generated content may be restricted from future contributions.
+
+## Legal considerations
+
+There is ongoing legal uncertainty regarding the copyright status of LLM-generated content and its provenance.
+Since this project does not have a formal [Contributor License Agreement](https://en.wikipedia.org/wiki/Contributor_license_agreement) (CLA), contributors retain copyright over their changes.
+Allowing LLM-generated code into the codebase therefore has unpredictable consequences for the project's copyright status (even setting aside possible copyright violations due to plagiarism).
+
+Every contribution must be backed by a human who holds the copyright for the changes submitted or has the legal right to contribute them under this project's license.
+By submitting a PR, you certify that you are the author of the contribution and that you understand it.
+"An LLM wrote it" is not an acceptable response to questions or critique.
 
 ## Additional resources
 

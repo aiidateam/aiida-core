@@ -178,10 +178,12 @@ class ZmqCommunicator:
             self._poller = None
 
         if self._dealer:
+            self._dealer.setsockopt(zmq.LINGER, 0)
             self._dealer.close()
             self._dealer = None
 
         if self._sub:
+            self._sub.setsockopt(zmq.LINGER, 0)
             self._sub.close()
             self._sub = None
 

@@ -13,6 +13,8 @@ from __future__ import annotations
 import typing as t
 from collections.abc import Iterable
 
+from aiida import orm
+from aiida.common import timezone
 from aiida.common.lang import classproperty
 
 from .mapping import CalculationProjectionMapper, ProjectionMapper
@@ -81,7 +83,8 @@ class CalculationQueryBuilder:
         paused: bool = False,
         exit_status: str | None = None,
         failed: bool = False,
-        node_types: list[Node] | None = None,
+        node_types: list[orm.Node] | None = None,
+        only_roots: bool = False,
     ) -> dict[str, t.Any]:
         """Return a set of QueryBuilder filters based on typical command line options.
 
@@ -92,6 +95,7 @@ class CalculationQueryBuilder:
         :param paused: Boolean, if True, filter for processes that are paused.
         :param exit_status: Filter for this exit status.
         :param failed: Boolean to filter only failed processes.
+        :param only_roots: Boolean, if True, filter for root processes (those without a caller).
         :return: Dictionary of filters suitable for a QueryBuilder.append() call.
         """
         from aiida.engine import ProcessState
@@ -128,6 +132,9 @@ class CalculationQueryBuilder:
             filters[process_state_attribute] = {'==': ProcessState.FINISHED.value}
             filters[exit_status_attribute] = {'==': exit_status}
 
+        if only_roots:
+            filters['only_roots'] = True
+
         return filters
 
     def get_query_set(
@@ -151,9 +158,6 @@ class CalculationQueryBuilder:
         """
         import datetime
 
-        from aiida import orm
-        from aiida.common import timezone
-
         # Define the list of projections for the QueryBuilder, which are all valid minus the compound projections
         projected_attributes = [
             self.mapper.get_attribute(projection)
@@ -165,11 +169,23 @@ class CalculationQueryBuilder:
         if filters is None:
             filters = {}
 
+        only_roots = filters.pop('only_roots', False)
+
         if past_days is not None:
             filters['ctime'] = {'>': timezone.now() - datetime.timedelta(days=past_days)}
 
         builder = orm.QueryBuilder()
         builder.append(cls=orm.ProcessNode, filters=filters, project=unique_projections, tag='process')
+
+        if only_roots:
+            builder.append(
+                orm.Node,
+                with_outgoing='process',
+                tag='caller',
+                edge_filters={'type': {'in': (orm.LinkType.CALL_CALC.value, orm.LinkType.CALL_WORK.value)}},
+                outerjoin=True,
+            )
+            builder.add_filter('caller', {'id': {'==': None}})
 
         if relationships is not None:
             for tag, entity in relationships.items():

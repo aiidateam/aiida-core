@@ -126,7 +126,6 @@ class SqlaJoiner:
                 'with_group': self._join_group_user,
             },
         }
-
         return mapping  # type: ignore[return-value]
 
     def _join_computer_authinfo(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
@@ -346,7 +345,15 @@ class SqlaJoiner:
 
         return JoinReturn(new_query)
 
-    def _join_node_outputs(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_node_outputs(
+        self,
+        joined_entity,
+        entity_to_join,
+        isouterjoin: bool,
+        edge_filter_dict: FilterType | None = None,
+        filter_dict: FilterType | None = None,
+        **_kw,
+    ):
         """:param joined_entity: The (aliased) ORMclass that is an input
         :param entity_to_join: The (aliased) ORMClass that is an output.
 
@@ -359,13 +366,34 @@ class SqlaJoiner:
         aliased_edge = aliased(self._entities.Link)
 
         def new_query(q):
-            return q.join(aliased_edge, aliased_edge.input_id == joined_entity.id, isouter=isouterjoin).join(
-                entity_to_join, aliased_edge.output_id == entity_to_join.id, isouter=isouterjoin
+            edge_onclause = aliased_edge.input_id == joined_entity.id
+            node_onclause = entity_to_join.id == aliased_edge.output_id
+
+            if isouterjoin:
+                if edge_filter_dict:
+                    edge_filters = self._build_filters(aliased_edge, edge_filter_dict)
+                    if edge_filters is not None:
+                        edge_onclause = and_(edge_onclause, edge_filters)
+                if filter_dict:
+                    node_filters = self._build_filters(entity_to_join, filter_dict)
+                    if node_filters is not None:
+                        node_onclause = and_(node_onclause, node_filters)
+
+            return q.join(aliased_edge, edge_onclause, isouter=isouterjoin).join(
+                entity_to_join, node_onclause, isouter=isouterjoin
             )
 
         return JoinReturn(new_query, aliased_edge)
 
-    def _join_node_inputs(self, joined_entity, entity_to_join, isouterjoin: bool, **_kw):
+    def _join_node_inputs(
+        self,
+        joined_entity,
+        entity_to_join,
+        isouterjoin: bool,
+        edge_filter_dict: FilterType | None = None,
+        filter_dict: FilterType | None = None,
+        **_kw,
+    ):
         """:param joined_entity: The (aliased) ORMclass that is an output
         :param entity_to_join: The (aliased) ORMClass that is an input.
 
@@ -378,8 +406,21 @@ class SqlaJoiner:
         aliased_edge = aliased(self._entities.Link)
 
         def new_query(q):
-            return q.join(aliased_edge, aliased_edge.output_id == joined_entity.id).join(
-                entity_to_join, aliased_edge.input_id == entity_to_join.id, isouter=isouterjoin
+            edge_onclause = aliased_edge.output_id == joined_entity.id
+            node_onclause = entity_to_join.id == aliased_edge.input_id
+
+            if isouterjoin:
+                if edge_filter_dict:
+                    edge_filters = self._build_filters(aliased_edge, edge_filter_dict)
+                    if edge_filters is not None:
+                        edge_onclause = and_(edge_onclause, edge_filters)
+                if filter_dict:
+                    node_filters = self._build_filters(entity_to_join, filter_dict)
+                    if node_filters is not None:
+                        node_onclause = and_(node_onclause, node_filters)
+
+            return q.join(aliased_edge, edge_onclause, isouter=isouterjoin).join(
+                entity_to_join, node_onclause, isouter=isouterjoin
             )
 
         return JoinReturn(new_query, aliased_edge)

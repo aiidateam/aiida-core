@@ -34,7 +34,8 @@ async def shutdown_worker(runner: Runner) -> None:
 
     await asyncio.gather(*tasks, return_exceptions=True)
 
-    runner.close()
+    # Close every open connection
+    get_manager().reset_profile()
 
     LOGGER.info('Daemon worker stopped')
 
@@ -74,6 +75,6 @@ def start_daemon_worker(foreground: bool = False, profile_name: Union[str, None]
         runner.start()
     except SystemError as exception:
         LOGGER.info('Received a SystemError: %s', exception)
-        runner.close()
+        manager.reset_profile()
 
     LOGGER.info('Daemon worker started')

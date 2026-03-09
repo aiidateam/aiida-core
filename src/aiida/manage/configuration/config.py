@@ -595,11 +595,17 @@ class Config:
                     )
                 else:
                     storage = storage_cls(profile)
-                    storage.delete()
+                    try:
+                        storage.delete()
+                    finally:
+                        storage.close()
                     LOGGER.report(f'Data storage deleted, configuration was: {profile.storage_config}')
             else:
                 storage = storage_cls(profile)
-                storage.delete()
+                try:
+                    storage.delete()
+                finally:
+                    storage.close()
                 LOGGER.report(f'Data storage deleted, configuration was: {profile.storage_config}')
         else:
             LOGGER.report(f'Data storage not deleted, configuration is: {profile.storage_config}')

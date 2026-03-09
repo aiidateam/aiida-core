@@ -8,7 +8,6 @@
 ###########################################################################
 """Module to test process runners."""
 
-import asyncio
 import threading
 
 import plumpy
@@ -24,8 +23,9 @@ from aiida.orm import Int, Str, WorkflowNode
 @pytest.fixture
 def runner():
     """Construct and return a `Runner`."""
-    loop = asyncio.new_event_loop()
-    return get_manager().create_runner(poll_interval=0.5, loop=loop)
+    manager = get_manager()
+    yield manager.create_runner(poll_interval=0.5)
+    manager.reset_runner()
 
 
 class Proc(Process):

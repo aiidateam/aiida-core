@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping, MutableMapping
-from typing import TYPE_CHECKING, Any, Type
+from typing import TYPE_CHECKING, Any, Literal, Type
 from uuid import uuid4
 
 import yaml
@@ -28,176 +28,8 @@ if TYPE_CHECKING:
 
 __all__ = ('ProcessBuilder', 'ProcessBuilderNamespace')
 
-
-def _format_valid_type(valid_type) -> str:
-    """Format valid_type as a compact string with just class names.
-
-    :param valid_type: A type, tuple of types, or None.
-    :returns: Compact string representation like 'Int' or 'Int | Float'.
-    """
-    if valid_type is None:
-        return ''
-
-    if isinstance(valid_type, tuple):
-        # Filter out NoneType (automatically added for optional ports)
-        types = [t for t in valid_type if t is not type(None)]
-        if not types:
-            return ''
-        if len(types) == 1:
-            return types[0].__name__
-        return ' | '.join(t.__name__ for t in types)
-
-    return valid_type.__name__
-
-
-def _get_schema(
-    self,
-    format: str = 'compact',  # Literal['compact', 'keys', 'verbose']
-    show: str = 'all',  # Literal['all', 'required', 'set']
-    collapse: tuple[str, ...] = ('metadata',),
-    max_depth: int | None = None,
-) -> str:
-    """Return a YAML-formatted schema of all available inputs for this builder.
-
-    This method is dynamically attached to each ``ProcessBuilderNamespace`` instance
-    to provide introspection of the available input ports.
-
-    :param format: Output format. Options:
-
-        - ``'compact'`` (default): Shows type and required status inline, e.g. ``x: Int (required)``
-        - ``'keys'``: Only show input names without type information
-        - ``'verbose'``: Nested format with type, help text, and other metadata
-
-    :param show: Filter which inputs to display. Options:
-
-        - ``'all'`` (default): Show all inputs
-        - ``'required'``: Only show required inputs
-        - ``'set'``: Only show inputs that have been explicitly set on the builder
-
-    :param collapse: Tuple of namespace names to collapse to ``{...}``. Default: ``('metadata',)``.
-        Use ``()`` to expand everything, or add more like ``('metadata', 'monitors')``.
-    :param max_depth: Maximum nesting depth to display. None means unlimited.
-    :returns: YAML-formatted string of the input structure.
-
-    Example::
-
-        >>> builder = SomeProcess.get_builder()
-        >>> print(builder.get_schema())
-        code: AbstractCode
-        x: Int (required)
-        y: Int (required)
-        metadata: {...}
-
-        >>> print(builder.get_schema(format='keys'))
-        code:
-        x:
-        y:
-        metadata: {...}
-
-        >>> print(builder.get_schema(show='required'))
-        x: Int (required)
-        y: Int (required)
-
-        >>> builder.x = Int(1)
-        >>> print(builder.get_schema(show='set'))
-        x: 1
-
-    """
-    if format not in ('compact', 'keys', 'verbose'):
-        raise ValueError(f"format must be 'compact', 'keys', or 'verbose', got {format!r}")
-    if show not in ('all', 'required', 'set'):
-        raise ValueError(f"show must be 'all', 'required', or 'set', got {show!r}")
-
-    def build_schema_dict(namespace: PortNamespace, data: dict, depth: int = 0) -> dict[str, Any]:
-        """Recursively build schema dictionary from port namespace."""
-        schema: dict[str, Any] = {}
-
-        for name, port in namespace.items():
-            # Check if this input is set in the builder's data
-            is_set = name in data
-
-            if isinstance(port, PortNamespace):
-                # Skip non-required namespaces if show='required'
-                if show == 'required' and not port.required:
-                    continue
-
-                # For show='set' mode, get the nested data if it exists
-                nested_data = data.get(name, {})
-                if isinstance(nested_data, ProcessBuilderNamespace):
-                    nested_data = nested_data._data
-
-                # Skip empty namespaces in show='set' mode
-                if show == 'set' and not nested_data:
-                    continue
-
-                # For show='set' mode, check if namespace has actual values (not just empty nested dicts)
-                # by recursively building the schema and checking if it's non-empty
-                nested = build_schema_dict(port, nested_data, depth + 1)
-
-                # Collapse specified namespaces or if max_depth is reached
-                if name in collapse or (max_depth is not None and depth >= max_depth):
-                    if show == 'set' and nested:
-                        # Only show collapsed namespace if it actually has content
-                        schema[name] = '{...}'
-                    elif show != 'set':
-                        schema[name] = '{...}'
-                elif nested or show == 'all':
-                    schema[name] = nested
-            else:
-                # Skip non-required ports if show='required'
-                if show == 'required' and not port.required:
-                    continue
-
-                # Skip unset ports if show='set'
-                if show == 'set' and not is_set:
-                    continue
-
-                if show == 'set':
-                    # Show the actual value when show='set'
-                    value = data.get(name)
-                    # Try to get a nice representation
-                    if value is not None and hasattr(value, 'value'):
-                        schema[name] = value.value
-                    elif value is not None and hasattr(value, 'get_dict'):
-                        schema[name] = value.get_dict()
-                    elif value is not None:
-                        schema[name] = str(value)
-                    else:
-                        schema[name] = None
-                elif format == 'keys':
-                    schema[name] = None
-                elif format == 'verbose':
-                    # Verbose nested format with help text
-                    port_info: dict[str, Any] = {}
-                    if port.valid_type is not None:
-                        port_info['type'] = _format_valid_type(port.valid_type)
-                    if port.help:
-                        port_info['help'] = port.help
-                    if port.required:
-                        port_info['required'] = True
-                    if port.has_default():
-                        port_info['has_default'] = True
-                    schema[name] = port_info if port_info else None
-                else:
-                    # Compact inline format: "Int (required)" or just "Int"
-                    type_str = _format_valid_type(port.valid_type)
-                    if port.required and type_str:
-                        schema[name] = f'{type_str} (required)'
-                    elif type_str:
-                        schema[name] = type_str
-                    else:
-                        schema[name] = '(required)' if port.required else None
-
-        return schema
-
-    schema_dict = build_schema_dict(self._port_namespace, self._data)
-
-    # Reorder: move 'metadata' to the end if present
-    if 'metadata' in schema_dict:
-        metadata = schema_dict.pop('metadata')
-        schema_dict['metadata'] = metadata
-
-    return yaml.dump(schema_dict, default_flow_style=False, sort_keys=False)
+SchemaMode = Literal['compact', 'verbose']
+SchemaShow = Literal['all', 'required', 'set']
 
 
 class PrettyEncoder(json.JSONEncoder):
@@ -220,6 +52,14 @@ class ProcessBuilderNamespace(MutableMapping):
     Dynamically generates the getters and setters for the input ports of a given PortNamespace
     """
 
+    # Public method names that cannot be used as port names. Only methods introduced by
+    # ProcessBuilderNamespace itself need to be listed here. Inherited MutableMapping methods
+    # (get, keys, values, items, ...) are NOT included because existing processes already use
+    # some of these as port names (e.g. ``values`` in ``ExampleWorkChain`` in
+    # ``tests/engine/processes/test_builder.py``). AiiDA's own helper methods (_merge, _update,
+    # _inputs) are underscore-prefixed by convention specifically to avoid port name conflicts.
+    _RESERVED_METHOD_NAMES: frozenset[str] = frozenset({'get_schema'})
+
     def __init__(self, port_namespace: PortNamespace) -> None:
         """Dynamically construct the get and set properties for the ports of the given port namespace.
 
@@ -235,6 +75,11 @@ class ProcessBuilderNamespace(MutableMapping):
         self._data: dict[str, Any] = {}
 
         dynamic_properties: dict[str, Any] = {}
+
+        conflicts = self._RESERVED_METHOD_NAMES & port_namespace.keys()
+        if conflicts:
+            msg = f'Port name(s) {conflicts} conflict with reserved method(s) on ProcessBuilderNamespace.'
+            raise RuntimeError(msg)
 
         # The name and port objects have to be passed to the defined functions as defaults for
         # their arguments, because this way the content at the time of defining the method is
@@ -265,9 +110,6 @@ class ProcessBuilderNamespace(MutableMapping):
             getter = property(fgetter)
             getter.setter(fsetter)
             dynamic_properties[name] = getter
-
-        # Add helper methods to the dynamic properties
-        dynamic_properties['get_schema'] = _get_schema
 
         # The dynamic property can only be attached to a class and not an instance, however, we cannot attach it to
         # the ``ProcessBuilderNamespace`` class since it would interfere with other instances that may already
@@ -317,7 +159,7 @@ class ProcessBuilderNamespace(MutableMapping):
 
     def __dir__(self):
         base = set(self._valid_fields + [key for key, _ in self.__dict__.items() if key.startswith('_')])
-        return sorted(base | {'get_schema'})
+        return sorted(base | self._RESERVED_METHOD_NAMES)
 
     def __iter__(self):
         for key in self._data:
@@ -410,6 +252,186 @@ class ProcessBuilderNamespace(MutableMapping):
                 value._inputs(prune=False)
 
         return dict(self)
+
+    @staticmethod
+    def _format_valid_type(valid_type: type | tuple[type, ...] | None) -> str:
+        """Format valid_type as a compact string with just class names.
+
+        :param valid_type: A type, tuple of types, or None.
+        :returns: Compact string representation like 'Int' or 'Int | Float'.
+        """
+        if valid_type is None:
+            return ''
+
+        if isinstance(valid_type, tuple):
+            # Filter out NoneType (automatically added for optional ports) and deduplicate names.
+            # Deduplication is needed because different classes can share the same __name__,
+            # e.g. ``aiida.orm.UpfData`` and ``aiida_pseudo.data.pseudo.upf.UpfData``.
+            names = dict.fromkeys(t.__name__ for t in valid_type if t is not type(None))
+            if not names:
+                return ''
+            return ' | '.join(names)
+
+        return valid_type.__name__
+
+    def get_schema(
+        self,
+        mode: SchemaMode = 'compact',
+        show: SchemaShow = 'all',
+        collapse: tuple[str, ...] = ('metadata',),
+        max_depth: int | None = None,
+    ) -> str:
+        """Return a YAML-formatted schema of all available inputs for this builder.
+
+        :param mode: Output mode. Options:
+
+            - ``'compact'`` (default): Shows type and required status inline, e.g. ``x: Int (required)``
+            - ``'verbose'``: Nested format with type, help text, and other metadata
+
+        :param show: Filter which inputs to display. Options:
+
+            - ``'all'`` (default): Show all inputs
+            - ``'required'``: Only show required inputs
+            - ``'set'``: Only show inputs that have been explicitly set on the builder
+
+        :param collapse: Tuple of namespace names to collapse to ``{...}``. Default: ``('metadata',)``.
+            Use ``()`` to expand everything, or add more like ``('metadata', 'monitors')``.
+        :param max_depth: Maximum nesting depth to display. None means unlimited.
+        :returns: YAML-formatted string of the input structure.
+
+        Example::
+
+            >>> from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+            >>> builder = ArithmeticAddCalculation.get_builder()
+            >>> print(builder.get_schema())
+            metadata: '{...}'
+            code: AbstractCode
+            monitors: {}
+            remote_folder: RemoteData
+            x: Int | Float (required)
+            y: Int | Float (required)
+
+            >>> print(builder.get_schema(show='required'))
+            x: Int | Float (required)
+            y: Int | Float (required)
+
+            >>> builder.x = Int(1)
+            >>> print(builder.get_schema(show='set'))
+            x: 1
+
+        """
+        schema_dict = self._build_schema_dict(
+            namespace=self._port_namespace,
+            data=self._data,
+            mode=mode,
+            show=show,
+            collapse=collapse,
+            max_depth=max_depth,
+        )
+        return yaml.dump(schema_dict, default_flow_style=False, sort_keys=False)
+
+    def _build_schema_dict(
+        self,
+        namespace: PortNamespace,
+        data: dict,
+        mode: SchemaMode,
+        show: SchemaShow,
+        collapse: tuple[str, ...],
+        max_depth: int | None,
+        depth: int = 0,
+    ) -> dict[str, Any]:
+        """Recursively build schema dictionary from port namespace.
+
+        :param namespace: The port namespace to build the schema from.
+        :param data: The builder's data dict for this namespace level.
+        :param mode: Output mode (see :meth:`get_schema`).
+        :param show: Filter mode (see :meth:`get_schema`).
+        :param collapse: Namespace names to collapse.
+        :param max_depth: Maximum nesting depth.
+        :param depth: Current recursion depth.
+        :returns: Dictionary representing the schema at this level.
+        """
+        schema: dict[str, Any] = {}
+
+        for name, port in namespace.items():
+            if show == 'required' and not port.required:
+                continue
+
+            if isinstance(port, PortNamespace):
+                should_collapse = name in collapse or (max_depth is not None and depth >= max_depth)
+
+                if should_collapse:
+                    # For show='set', only show collapsed namespace if it has set values inside
+                    if show == 'set':
+                        nested_data = data.get(name, {})
+                        if isinstance(nested_data, ProcessBuilderNamespace):
+                            nested_data = nested_data._data
+                        if nested_data:
+                            schema[name] = '{...}'
+                    else:
+                        schema[name] = '{...}'
+                else:
+                    nested_data = data.get(name, {})
+                    if isinstance(nested_data, ProcessBuilderNamespace):
+                        nested_data = nested_data._data
+
+                    if show == 'set' and not nested_data:
+                        continue
+
+                    nested = self._build_schema_dict(
+                        namespace=port,
+                        data=nested_data,
+                        mode=mode,
+                        show=show,
+                        collapse=collapse,
+                        max_depth=max_depth,
+                        depth=depth + 1,
+                    )
+
+                    if nested:
+                        schema[name] = nested
+                    elif show == 'all':
+                        # Empty namespace (e.g. dynamic namespace with no static children)
+                        if mode == 'verbose':
+                            ns_info: dict[str, Any] = {'type': 'Namespace'}
+                            if port.valid_type is not None:
+                                ns_info['entry_type'] = self._format_valid_type(port.valid_type)
+                            if port.help:
+                                ns_info['help'] = port.help
+                            if port.required:
+                                ns_info['required'] = True
+                            schema[name] = ns_info
+                        else:
+                            type_str = self._format_valid_type(port.valid_type)
+                            schema[name] = f'Namespace({type_str})' if type_str else 'Namespace'
+            else:
+                if show == 'set' and name not in data:
+                    continue
+
+                if show == 'set':
+                    value = data[name]
+                    if value is not None and hasattr(value, 'value'):
+                        schema[name] = value.value
+                    elif value is not None:
+                        schema[name] = str(value)
+                    else:
+                        schema[name] = None
+                elif mode == 'verbose':
+                    port_info: dict[str, Any] = {}
+                    if port.valid_type is not None:
+                        port_info['type'] = self._format_valid_type(port.valid_type)
+                    if port.help:
+                        port_info['help'] = port.help
+                    if port.required:
+                        port_info['required'] = True
+                    if port.has_default():
+                        port_info['has_default'] = True
+                    schema[name] = port_info if port_info else None
+                else:
+                    parts = [self._format_valid_type(port.valid_type), '(required)' if port.required else '']
+                    schema[name] = ' '.join(p for p in parts if p) or None
+
+        return schema
 
 
 class ProcessBuilder(ProcessBuilderNamespace):

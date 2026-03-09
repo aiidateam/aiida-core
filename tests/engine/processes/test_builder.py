@@ -463,37 +463,33 @@ def test_pretty_repr(example_inputs):
     assert pretty(builder) == textwrap.dedent(pretty_repr.lstrip('\n'))
 
 
-def test_get_schema_basic():
-    """Test the basic ``get_schema`` method of the ``ProcessBuilder`` class."""
+def test_get_schema_compact():
+    """Test the default ``get_schema`` output (compact format, metadata collapsed)."""
     import yaml
 
     from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
     builder = ArithmeticAddCalculation.get_builder()
+    parsed = yaml.safe_load(builder.get_schema())
 
-    # Test default mode (compact with types)
-    schema = builder.get_schema()
-    assert isinstance(schema, str)
-    assert 'code:' in schema
-    assert 'x:' in schema
-    assert 'y:' in schema
+    # Assert exact type strings for known ports
+    assert parsed['x'] == 'Int | Float (required)'
+    assert parsed['y'] == 'Int | Float (required)'
+    assert parsed['code'] == 'AbstractCode'
+    assert parsed['remote_folder'] == 'RemoteData'
+    assert parsed['monitors'] == 'Namespace(Dict)'
 
-    # Default should show types in compact format
-    assert 'Int' in schema, 'Int type should appear in default output'
-    assert '(required)' in schema, 'required marker should appear'
+    # Metadata should be collapsed by default
+    assert parsed['metadata'] == '{...}'
 
-    # Test that it returns valid YAML
-    parsed = yaml.safe_load(schema)
-    assert isinstance(parsed, dict)
-    assert 'code' in parsed
-    assert 'metadata' in parsed
-
-    # Test that get_schema appears in dir()
+    # get_schema should appear in dir()
     assert 'get_schema' in dir(builder)
 
-    # Test on a nested namespace
-    nested_schema = builder.metadata.get_schema()
-    assert isinstance(nested_schema, str)
+    # Nested namespace should also have get_schema
+    nested_parsed = yaml.safe_load(builder.metadata.get_schema(collapse=()))
+    assert nested_parsed['store_provenance'] == 'bool'
+    assert isinstance(nested_parsed['options'], dict)
+    assert nested_parsed['options']['resources'] == 'dict (required)'
 
 
 def test_get_schema_collapse():
@@ -505,21 +501,21 @@ def test_get_schema_collapse():
     builder = ArithmeticAddCalculation.get_builder()
 
     # Default: metadata is collapsed
-    schema_default = builder.get_schema()
-    parsed = yaml.safe_load(schema_default)
-    assert parsed['metadata'] == '{...}', 'metadata should be collapsed by default'
+    parsed_default = yaml.safe_load(builder.get_schema())
+    assert parsed_default['metadata'] == '{...}'
 
     # Expand everything with collapse=()
-    schema_expanded = builder.get_schema(collapse=())
-    parsed_expanded = yaml.safe_load(schema_expanded)
-    assert isinstance(parsed_expanded['metadata'], dict), 'metadata should be expanded when collapse=()'
-    assert 'options' in parsed_expanded['metadata'], 'expanded metadata should contain options'
+    parsed_expanded = yaml.safe_load(builder.get_schema(collapse=()))
+    assert isinstance(parsed_expanded['metadata'], dict)
+    assert isinstance(parsed_expanded['metadata']['options'], dict)
+    assert parsed_expanded['metadata']['store_provenance'] == 'bool'
 
     # Collapse multiple namespaces
-    schema_multi = builder.get_schema(collapse=('metadata', 'monitors'))
-    parsed_multi = yaml.safe_load(schema_multi)
+    parsed_multi = yaml.safe_load(builder.get_schema(collapse=('metadata', 'monitors')))
     assert parsed_multi['metadata'] == '{...}'
     assert parsed_multi['monitors'] == '{...}'
+    # Non-collapsed ports should still show types
+    assert parsed_multi['x'] == 'Int | Float (required)'
 
 
 def test_get_schema_show_required():
@@ -530,18 +526,13 @@ def test_get_schema_show_required():
 
     builder = ArithmeticAddCalculation.get_builder()
 
-    # Get full schema and required-only schema
-    schema_all = builder.get_schema(show='all', collapse=())
-    schema_required = builder.get_schema(show='required', collapse=())
-    parsed_all = yaml.safe_load(schema_all)
-    parsed_required = yaml.safe_load(schema_required)
+    parsed = yaml.safe_load(builder.get_schema(show='required', collapse=()))
 
-    # Required schema should have fewer entries
-    assert len(parsed_required) <= len(parsed_all), 'required-only should have fewer or equal entries'
-
-    # x and y are required for ArithmeticAddCalculation
-    assert 'x' in parsed_required, 'required input x should be present'
-    assert 'y' in parsed_required, 'required input y should be present'
+    # Only x and y are required at the top level for ArithmeticAddCalculation
+    assert parsed == {
+        'x': 'Int | Float (required)',
+        'y': 'Int | Float (required)',
+    }
 
 
 def test_get_schema_show_set():
@@ -552,23 +543,15 @@ def test_get_schema_show_set():
 
     builder = ArithmeticAddCalculation.get_builder()
 
-    # Initially nothing is set
-    schema_empty = builder.get_schema(show='set')
-    parsed_empty = yaml.safe_load(schema_empty)
-    assert parsed_empty is None or parsed_empty == {}, 'should be empty when nothing is set'
+    # Nothing set yet
+    assert yaml.safe_load(builder.get_schema(show='set')) == {}
 
-    # Set some values
+    # Set some values and verify exact output
     builder.x = orm.Int(42)
     builder.y = orm.Int(7)
 
-    schema_set = builder.get_schema(show='set')
-    parsed_set = yaml.safe_load(schema_set)
-
-    assert 'x' in parsed_set, 'x should be in schema after being set'
-    assert 'y' in parsed_set, 'y should be in schema after being set'
-    assert parsed_set['x'] == 42, 'x value should be shown'
-    assert parsed_set['y'] == 7, 'y value should be shown'
-    assert 'code' not in parsed_set, 'unset inputs should not appear'
+    parsed = yaml.safe_load(builder.get_schema(show='set'))
+    assert parsed == {'x': 42, 'y': 7}
 
 
 def test_get_schema_max_depth():
@@ -579,79 +562,57 @@ def test_get_schema_max_depth():
 
     builder = ArithmeticAddCalculation.get_builder()
 
-    # With max_depth=0, all namespaces should be collapsed at first level
-    schema_depth0 = builder.get_schema(max_depth=0, collapse=())
-    parsed = yaml.safe_load(schema_depth0)
-    assert parsed['metadata'] == '{...}', 'metadata should be collapsed at depth 0'
-    assert parsed['monitors'] == '{...}', 'monitors should be collapsed at depth 0'
+    # max_depth=0: all namespaces collapsed, leaf ports remain
+    parsed_d0 = yaml.safe_load(builder.get_schema(max_depth=0, collapse=()))
+    assert parsed_d0['metadata'] == '{...}'
+    assert parsed_d0['monitors'] == '{...}'
+    assert parsed_d0['x'] == 'Int | Float (required)'
 
-    # With max_depth=1, first level is expanded, second level collapsed
-    schema_depth1 = builder.get_schema(max_depth=1, collapse=())
-    parsed = yaml.safe_load(schema_depth1)
-    assert isinstance(parsed['metadata'], dict), 'first level should be expanded'
-    assert parsed['metadata']['options'] == '{...}', 'second level should be collapsed'
+    # max_depth=1: first level of namespaces expanded, second level collapsed
+    parsed_d1 = yaml.safe_load(builder.get_schema(max_depth=1, collapse=()))
+    assert isinstance(parsed_d1['metadata'], dict)
+    assert parsed_d1['metadata']['options'] == '{...}'
+    assert parsed_d1['metadata']['store_provenance'] == 'bool'
+    assert parsed_d1['metadata']['computer'] == 'Computer'
 
 
-def test_get_schema_format_keys():
-    """Test the ``format='keys'`` parameter of ``get_schema``."""
+def test_get_schema_format_verbose():
+    """Test the ``mode='verbose'`` parameter of ``get_schema``."""
     import yaml
 
     from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 
     builder = ArithmeticAddCalculation.get_builder()
 
-    # Default (format='compact'): types are shown
-    schema_default = builder.get_schema(collapse=())
-    assert 'Int' in schema_default, 'Int type should appear in default output'
+    parsed = yaml.safe_load(builder.get_schema(mode='verbose', collapse=()))
 
-    # With format='keys': no types shown
-    schema_keys = builder.get_schema(format='keys', collapse=())
-    parsed = yaml.safe_load(schema_keys)
-    # In keys mode, values should be None (rendered as empty in YAML)
-    assert parsed['x'] is None, 'x should have no type info in format=keys mode'
-    assert parsed['y'] is None, 'y should have no type info in format=keys mode'
+    # Required port should have type, help, and required fields
+    assert parsed['x'] == {
+        'type': 'Int | Float',
+        'help': 'The left operand.',
+        'required': True,
+    }
+    assert parsed['y'] == {
+        'type': 'Int | Float',
+        'help': 'The right operand.',
+        'required': True,
+    }
 
-
-def test_get_schema_format_verbose():
-    """Test the ``format='verbose'`` parameter of ``get_schema``."""
-    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-
-    builder = ArithmeticAddCalculation.get_builder()
-
-    # With format='verbose': nested format with help text
-    schema_verbose = builder.get_schema(format='verbose', collapse=())
-    assert 'help:' in schema_verbose, 'help text should be present in format=verbose'
-    assert 'type:' in schema_verbose, 'type should also be present in verbose mode'
+    # Port with default should have has_default flag
+    assert parsed['metadata']['store_provenance']['has_default'] is True
+    assert parsed['metadata']['options']['resources']['required'] is True
+    assert parsed['metadata']['options']['resources']['has_default'] is True
 
 
-def test_get_schema_invalid_parameters():
-    """Test that invalid parameter values raise ValueError."""
-    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+def test_get_schema_port_name_conflict():
+    """Test that a port named ``get_schema`` raises a ``RuntimeError``."""
+    from aiida.engine import Process
 
-    builder = ArithmeticAddCalculation.get_builder()
+    class ConflictingProcess(Process):
+        @classmethod
+        def define(cls, spec):
+            super().define(spec)
+            spec.input('get_schema', valid_type=orm.Int)
 
-    with pytest.raises(ValueError, match='format must be'):
-        builder.get_schema(format='invalid')
-
-    with pytest.raises(ValueError, match='show must be'):
-        builder.get_schema(show='invalid')
-
-
-def test_get_schema_metadata_at_end():
-    """Test that metadata appears at the end of the schema output."""
-    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-
-    builder = ArithmeticAddCalculation.get_builder()
-
-    schema = builder.get_schema()
-    lines = schema.strip().split('\n')
-
-    # Find the line with 'metadata:'
-    metadata_line_idx = None
-    for i, line in enumerate(lines):
-        if line.startswith('metadata:'):
-            metadata_line_idx = i
-            break
-
-    assert metadata_line_idx is not None, 'metadata should be in schema'
-    assert metadata_line_idx == len(lines) - 1, 'metadata should be the last top-level entry'
+    with pytest.raises(RuntimeError, match='reserved method'):
+        ConflictingProcess.get_builder()

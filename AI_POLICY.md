@@ -75,6 +75,8 @@ Every contribution must be backed by a human who holds the copyright for the cha
 By submitting a PR, you certify that you are the author of the contribution and that you understand it.
 "An LLM wrote it" is not an acceptable response to questions or critique.
 
+This section is adapted from the [attrs AI policy](https://github.com/python-attrs/attrs/blob/main/.github/AI_POLICY.md).
+
 ## Additional resources
 
 For comprehensive guidance on contributing to AiiDA, including code quality standards, development workflows, and testing practices, please refer to our developer guide, `AGENTS.md`, and `CONTRIBUTING.md`.

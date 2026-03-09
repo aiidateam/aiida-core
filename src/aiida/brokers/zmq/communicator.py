@@ -495,7 +495,15 @@ class ZmqCommunicator:
             if error:
                 future.set_exception(Exception(error))
             else:
-                future.set_result(msg.get('result'))
+                # Wrap the result in a resolved kiwipy.Future.  Callers
+                # (e.g. revive_processes) expect task results to be Futures
+                # with a .done()/.result() interface, matching kiwipy/RMQ
+                # behaviour where the result is a Future chain.
+                import kiwipy
+
+                result_future = kiwipy.Future()
+                result_future.set_result(msg.get('result'))
+                future.set_result(result_future)
 
     def _handle_rpc(self, msg: dict) -> None:
         """Handle incoming RPC from broker."""

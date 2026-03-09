@@ -37,15 +37,6 @@ async def shutdown_worker(runner: Runner) -> None:
     # Close every open connection
     get_manager().reset_profile()
 
-    # Reset the profile so the communicator sends unsubscribe messages to
-    # the broker server before disconnecting, and database connections are
-    # released.  Without this, the server keeps routing tasks/RPCs to our
-    # (now-dead) identity.
-    try:
-        get_manager().reset_profile()
-    except Exception:
-        pass
-
     LOGGER.info('Daemon worker stopped')
 
 

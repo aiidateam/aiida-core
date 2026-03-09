@@ -54,9 +54,8 @@ All LLM output *looks* plausible;mdash&it is your responsibility to ensure it is
 Verbose or off-topic comments may be marked as spam.
 
 The reviewing capacity of this project is limited, and maintainer time will be prioritized toward high-quality contributions from engaged contributors.
+We are committed to mentoring new contributors, but a high volume of low-effort PRs makes this unsustainable.
 PRs that appear to lack understanding of the codebase may not get reviewed and will eventually be closed.
-A high volume of low-effort PRs is unsustainable and has driven many good maintainers away from open source.
-We are committed to mentoring new contributors, and this dynamic threatens that commitment.
 
 ## Enforcement
 

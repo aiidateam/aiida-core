@@ -501,40 +501,44 @@ class ZmqCommunicator:
         """Handle incoming RPC from broker."""
         rpc_id = msg['id']
         body = msg.get('body')
+        recipient = str(msg['recipient']) if 'recipient' in msg else None
 
-        _LOGGER.debug('Handling RPC: %s', rpc_id)
+        _LOGGER.debug('Handling RPC: %s (recipient=%s)', rpc_id, recipient)
 
-        # Find a subscriber to handle the RPC
-        for identifier, subscriber in self._rpc_subscribers.items():
-            try:
-                result = subscriber(self, body)
+        # Route to the specific subscriber for this recipient.  The broker
+        # already performed coarse-grained routing (by client identity), but
+        # a single communicator may serve many processes, so we must dispatch
+        # to the right one by matching the recipient identifier.
+        subscriber = self._rpc_subscribers.get(recipient) if recipient else None
 
-                # Resolve Future(s) before serializing: plumpy subscribers
-                # (via convert_to_comm) return a kiwipy.Future whose result
-                # may itself be another Future (via plum_to_kiwi_future
-                # chaining). We resolve all layers to get a concrete value.
-                # Callers use unwrap_kiwi_future to handle both nested and
-                # flat responses, so fully resolving here is correct.
-                while isinstance(result, Future):
-                    result = result.result(timeout=RPC_TIMEOUT)
+        if subscriber is None:
+            _LOGGER.warning('No subscriber for RPC recipient %s: %s', recipient, rpc_id)
+            response = make_rpc_response(rpc_id, self._client_id, error=f'No handler for {recipient}')
+            self._send(response)
+            return
 
-                # Send response
-                response = make_rpc_response(rpc_id, self._client_id, result=result)
-                self._send(response)
+        try:
+            result = subscriber(self, body)
 
-                _LOGGER.debug('RPC completed: %s', rpc_id)
-                return
+            # Resolve Future(s) before serializing: plumpy subscribers
+            # (via convert_to_comm) return a kiwipy.Future whose result
+            # may itself be another Future (via plum_to_kiwi_future
+            # chaining). We resolve all layers to get a concrete value.
+            # Callers use unwrap_kiwi_future to handle both nested and
+            # flat responses, so fully resolving here is correct.
+            while isinstance(result, Future):
+                result = result.result(timeout=RPC_TIMEOUT)
 
-            except Exception as exc:
-                _LOGGER.exception('RPC subscriber %s failed: %s', identifier, exc)
-                response = make_rpc_response(rpc_id, self._client_id, error=str(exc))
-                self._send(response)
-                return
+            # Send response
+            response = make_rpc_response(rpc_id, self._client_id, result=result)
+            self._send(response)
 
-        # No subscriber handled the RPC
-        _LOGGER.warning('No subscriber handled RPC: %s', rpc_id)
-        response = make_rpc_response(rpc_id, self._client_id, error='No handler registered')
-        self._send(response)
+            _LOGGER.debug('RPC completed: %s', rpc_id)
+
+        except Exception as exc:
+            _LOGGER.exception('RPC subscriber %s failed: %s', recipient, exc)
+            response = make_rpc_response(rpc_id, self._client_id, error=str(exc))
+            self._send(response)
 
     def _handle_rpc_response(self, msg: dict) -> None:
         """Handle RPC response from broker."""

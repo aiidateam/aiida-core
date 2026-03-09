@@ -711,10 +711,12 @@ class DaemonClient:
                     'stdout_stream': {
                         'class': 'FileStream',
                         'filename': self.daemon_log_file,
+                        'time_format': '%Y-%m-%d %H:%M:%S',
                     },
                     'stderr_stream': {
                         'class': 'FileStream',
                         'filename': self.daemon_log_file,
+                        'time_format': '%Y-%m-%d %H:%M:%S',
                     },
                     'env': self.get_env(),
                 }

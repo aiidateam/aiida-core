@@ -12,7 +12,6 @@ import zmq
 
 from aiida.brokers.utils import YAML_DECODER, YAML_ENCODER
 
-from .defaults import RPC_TIMEOUT
 from .protocol import (
     MessageType,
     decode_message,
@@ -522,6 +521,32 @@ class ZmqCommunicator:
         for task_id in completed:
             del self._in_progress_tasks[task_id]
 
+    def _send_rpc_result(self, rpc_id: str, result: Any) -> None:
+        """Send an RPC response, resolving Futures if needed.
+
+        For RPCs whose result is a Future (e.g. plumpy's ``_schedule_rpc``),
+        we cannot serialize the Future directly.  Instead we attach a callback
+        so the response is sent once the Future resolves.
+        """
+        if isinstance(result, Future):
+            def _on_done(fut: Future) -> None:
+                try:
+                    resolved = fut.result()
+                    # The resolved value may itself be a Future (chained)
+                    self._send_rpc_result(rpc_id, resolved)
+                except Exception as exc:
+                    _LOGGER.exception('RPC %s future failed: %s', rpc_id, exc)
+                    try:
+                        response = make_rpc_response(rpc_id, self._client_id, error=str(exc))
+                        self._send(response)
+                    except Exception:
+                        pass
+
+            result.add_done_callback(_on_done)
+        else:
+            response = make_rpc_response(rpc_id, self._client_id, result=result)
+            self._send(response)
+
     def _send_task_result(self, task_id: str, result: Any) -> None:
         """Send a task response, resolving Futures if needed.
 
@@ -594,21 +619,8 @@ class ZmqCommunicator:
 
         try:
             result = subscriber(self, body)
-
-            # Resolve Future(s) before serializing: plumpy subscribers
-            # (via convert_to_comm) return a kiwipy.Future whose result
-            # may itself be another Future (via plum_to_kiwi_future
-            # chaining). We resolve all layers to get a concrete value.
-            # Callers use unwrap_kiwi_future to handle both nested and
-            # flat responses, so fully resolving here is correct.
-            while isinstance(result, Future):
-                result = result.result(timeout=RPC_TIMEOUT)
-
-            # Send response
-            response = make_rpc_response(rpc_id, self._client_id, result=result)
-            self._send(response)
-
-            _LOGGER.debug('RPC completed: %s', rpc_id)
+            self._send_rpc_result(rpc_id, result)
+            _LOGGER.debug('RPC handled: %s', rpc_id)
 
         except Exception as exc:
             _LOGGER.exception('RPC subscriber %s failed: %s', recipient, exc)

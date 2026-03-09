@@ -77,6 +77,10 @@ class ZmqCommunicator:
         self._rpc_subscribers: dict[str, Callable] = {}
         self._broadcast_subscribers: dict[str, Callable] = {}
 
+        # Tasks in progress: task_id -> (Future, no_reply).  We delay the
+        # ACK until the Future resolves so the broker can redeliver if we die.
+        self._in_progress_tasks: dict[str, tuple[Future, bool]] = {}
+
         # State
         self._closed = True
         self._poll_thread: threading.Thread | None = None
@@ -402,6 +406,10 @@ class ZmqCommunicator:
                 if self._sub in socks:
                     self._handle_sub_message()
 
+                # Finalize completed in-progress tasks (send ACK + result)
+                if self._in_progress_tasks:
+                    self._process_in_progress_tasks()
+
             except zmq.ZMQError as exc:
                 if not self._closed:
                     _LOGGER.error('ZMQ error in poll loop: %s', exc)
@@ -433,6 +441,8 @@ class ZmqCommunicator:
             self._handle_rpc(msg)
         elif msg_type == MessageType.RPC_RESPONSE.value:
             self._handle_rpc_response(msg)
+        elif msg_type == MessageType.PING.value:
+            pass  # Liveness probe from broker — no action needed
         else:
             _LOGGER.warning('Unknown message type from broker: %s', msg_type)
 
@@ -460,16 +470,19 @@ class ZmqCommunicator:
             try:
                 result = subscriber(self, body)
 
-                # Send acknowledgment
-                ack_msg = make_task_ack(task_id, self._client_id)
-                self._send(ack_msg)
-
-                # Send response if expected
-                if not no_reply:
-                    response = make_task_response(task_id, self._client_id, result=result)
-                    self._send(response)
-
-                _LOGGER.debug('Task completed: %s', task_id)
+                if isinstance(result, Future):
+                    # Long-running task (e.g. continue_process).  Delay the
+                    # ACK so the broker can redeliver if we die.
+                    self._in_progress_tasks[task_id] = (result, no_reply)
+                    _LOGGER.debug('Task in progress (deferred ACK): %s', task_id)
+                else:
+                    # Immediate result — ACK right away
+                    ack_msg = make_task_ack(task_id, self._client_id)
+                    self._send(ack_msg)
+                    if not no_reply:
+                        response = make_task_response(task_id, self._client_id, result=result)
+                        self._send(response)
+                    _LOGGER.debug('Task completed: %s', task_id)
                 return
 
             except Exception as exc:
@@ -480,6 +493,58 @@ class ZmqCommunicator:
         _LOGGER.warning('No subscriber handled task: %s', task_id)
         nack_msg = make_task_nack(task_id, self._client_id)
         self._send(nack_msg)
+
+    def _process_in_progress_tasks(self) -> None:
+        """Check in-progress tasks and ACK completed ones."""
+        completed = []
+
+        for task_id, (future, no_reply) in self._in_progress_tasks.items():
+            if future.done():
+                if future.cancelled():
+                    # Task was cancelled (e.g., during shutdown).  Don't ACK —
+                    # the broker will detect our disconnect and requeue.
+                    _LOGGER.debug('Cancelled in-progress task dropped: %s', task_id)
+                    completed.append(task_id)
+                    continue
+                # Task finished — send ACK (and result if needed)
+                try:
+                    ack_msg = make_task_ack(task_id, self._client_id)
+                    self._send(ack_msg)
+                    if not no_reply:
+                        self._send_task_result(task_id, future)
+                    _LOGGER.debug('Deferred task completed, ACK sent: %s', task_id)
+                except Exception:
+                    _LOGGER.exception('Failed to finalise task %s', task_id)
+                completed.append(task_id)
+
+        for task_id in completed:
+            del self._in_progress_tasks[task_id]
+
+    def _send_task_result(self, task_id: str, result: Any) -> None:
+        """Send a task response, resolving Futures if needed.
+
+        For tasks whose result is a Future (e.g. ``continue_process``), we
+        cannot serialize the Future directly.  Instead we attach a callback
+        so the response is sent once the Future resolves.
+        """
+        if isinstance(result, Future):
+            def _on_done(fut: Future) -> None:
+                try:
+                    resolved = fut.result()
+                    # The resolved value may itself be a Future (chained)
+                    self._send_task_result(task_id, resolved)
+                except Exception as exc:
+                    _LOGGER.exception('Task %s future failed: %s', task_id, exc)
+                    try:
+                        response = make_task_response(task_id, self._client_id, error=str(exc))
+                        self._send(response)
+                    except Exception:
+                        pass
+
+            result.add_done_callback(_on_done)
+        else:
+            response = make_task_response(task_id, self._client_id, result=result)
+            self._send(response)
 
     def _handle_task_response(self, msg: dict) -> None:
         """Handle task response from broker."""

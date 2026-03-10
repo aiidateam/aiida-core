@@ -1157,6 +1157,14 @@ class AiidaDaemon:
                 old_num = config.num_workers
                 new_num = max(0, old_num - num)
 
+                # Update config atomically FIRST to prevent health monitor from restarting killed workers
+                config.num_workers = new_num
+                updated_configs = ServiceConfigMap(list(service_configs.values()))
+                fd, tmp_path = tempfile.mkstemp(dir=session_dir, suffix='.json')
+                os.close(fd)
+                updated_configs.to_file(Path(tmp_path))
+                os.replace(tmp_path, config_file)
+
                 # Kill the highest-numbered workers
                 for i in range(new_num, old_num):
                     worker_dir = session_dir / config.service_name / str(i)
@@ -1170,12 +1178,4 @@ class AiidaDaemon:
                             info.to_file(info_file)
                         except Exception as e:
                             logger.warning(f"Error stopping worker {i}: {e}")
-
-                # Update config atomically
-                config.num_workers = new_num
-                updated_configs = ServiceConfigMap(list(service_configs.values()))
-                fd, tmp_path = tempfile.mkstemp(dir=session_dir, suffix='.json')
-                os.close(fd)
-                updated_configs.to_file(Path(tmp_path))
-                os.replace(tmp_path, config_file)
                 break

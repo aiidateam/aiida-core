@@ -111,11 +111,10 @@ def process_list(
     """
     from tabulate import tabulate
 
-    from aiida.cmdline.commands.cmd_daemon import execute_client_command
     from aiida.cmdline.utils.common import print_last_process_state_change
     from aiida.common.docs import URL_NO_BROKER
     from aiida.common.exceptions import ConfigurationError
-    from aiida.engine.daemon.client import get_daemon_client
+    from aiida.engine.daemon.daemon import AiidaDaemon
     from aiida.orm import ProcessNode, QueryBuilder
     from aiida.tools.query.calculation import CalculationQueryBuilder
 
@@ -148,25 +147,19 @@ def process_list(
     print_last_process_state_change()
 
     try:
-        client = get_daemon_client()
+        daemon = AiidaDaemon()
     except ConfigurationError:
         echo.echo_warning(f'This profile does not have a broker and so it has no daemon. See {URL_NO_BROKER}')
         return
 
-    if not client.is_daemon_running:
+    if not daemon.is_daemon_running:
         echo.echo_warning('The daemon is not running', bold=True)
         return
 
     echo.echo_report('Checking daemon load... ', nl=False)
-    response = execute_client_command('get_numprocesses')
-
-    if not response:
-        # Daemon could not be reached
-        return
-
-    try:
-        active_workers = response['numprocesses']
-    except KeyError:
+    daemon_status = daemon.get_status()
+    active_workers = len(daemon_status.get('workers', []))
+    if active_workers == 0:
         echo.echo_report('No active daemon workers.')
     else:
         # Second query to get active process count. Currently this is slow but will be fixed with issue #2770. It is

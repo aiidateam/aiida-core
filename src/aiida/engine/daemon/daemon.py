@@ -994,6 +994,16 @@ class AiidaDaemon:
         """Stop the daemon and all workers."""
         ServiceSupervisorController.stop(self._daemon_dir)
 
+    def restart(self, num_workers: int | None = None, foreground: bool = False):
+        """Restart the daemon: stop then start.
+
+        :param num_workers: Number of workers for the new daemon. Defaults to config option.
+        :param foreground: If True, run the new supervisor in the foreground.
+        """
+        if self.is_daemon_running:
+            self.stop()
+        self.start(num_workers=num_workers, foreground=foreground)
+
     def get_status(self) -> dict:
         """Return structured status of the daemon and all workers."""
         return ServiceSupervisorController.status(self._daemon_dir)

@@ -23,12 +23,10 @@ from .links import *
 from .log import *
 from .progress_reporter import *
 from .utils import *
-from .workgraph import *
 
 __all__ = (
     'AIIDA_LOGGER',
     'TQDM_BAR_FORMAT',
-    'WORKGRAPH_AVAILABLE',
     'AiidaException',
     'AttributeDict',
     'CalcInfo',
@@ -85,11 +83,8 @@ __all__ = (
     'UnstashTargetMode',
     'UnsupportedSpeciesError',
     'ValidationError',
-    'WorkGraph',
-    'WorkGraphNode',
     'create_callback',
     'get_progress_reporter',
-    'is_workgraph_instance',
     'override_log_level',
     'set_progress_bar_tqdm',
     'set_progress_reporter',

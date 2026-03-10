@@ -8,14 +8,14 @@
 ###########################################################################
 """Adapter module for optional aiida-workgraph integration.
 
-This module provides a centralized location for importing and checking availability
+This module provides a centralized location for checking availability
 of aiida-workgraph components. It allows aiida-core to optionally support WorkGraph
 processes without requiring aiida-workgraph as a dependency.
 
 Usage:
-    from aiida.common.workgraph import WORKGRAPH_AVAILABLE, WorkGraph, WorkGraphNode
+    from aiida.common.workgraph import WORKGRAPH_AVAILABLE, is_workgraph_instance
 
-    if WORKGRAPH_AVAILABLE:
+    if is_workgraph_instance(process):
         # WorkGraph-specific code
         ...
 """
@@ -24,17 +24,12 @@ from __future__ import annotations
 
 import typing as t
 
-__all__ = ('WORKGRAPH_AVAILABLE', 'WorkGraph', 'WorkGraphNode', 'is_workgraph_instance')
-
-# Optional support for aiida-workgraph
+# Check if aiida-workgraph is available
 try:
-    from aiida_workgraph import WorkGraph  # type: ignore[import-not-found]
-    from aiida_workgraph.orm.workgraph import WorkGraphNode  # type: ignore[import-not-found]
+    import aiida_workgraph  # type: ignore[import-not-found]  # noqa: F401
 
     WORKGRAPH_AVAILABLE = True
 except ImportError:
-    WorkGraph = None
-    WorkGraphNode = None
     WORKGRAPH_AVAILABLE = False
 
 
@@ -47,8 +42,10 @@ def is_workgraph_instance(obj: t.Any) -> bool:
     :param obj: The object to check.
     :return: True if obj is a WorkGraph instance, False otherwise.
     """
-    if not WORKGRAPH_AVAILABLE or WorkGraph is None:
+    if not WORKGRAPH_AVAILABLE:
         return False
+    from aiida_workgraph import WorkGraph
+
     return isinstance(obj, WorkGraph)
 
 
@@ -61,6 +58,8 @@ def is_workgraph_node_instance(obj: t.Any) -> bool:
     :param obj: The object to check.
     :return: True if obj is a WorkGraphNode instance, False otherwise.
     """
-    if not WORKGRAPH_AVAILABLE or WorkGraphNode is None:
+    if not WORKGRAPH_AVAILABLE:
         return False
+    from aiida_workgraph.orm.workgraph import WorkGraphNode  # type: ignore[import-not-found]
+
     return isinstance(obj, WorkGraphNode)

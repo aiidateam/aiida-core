@@ -858,7 +858,8 @@ class ServiceSupervisorController:
 
         session_dir = ServiceSupervisorController._get_latest_session_dir(supervisor_dir)
         if session_dir is None:
-            raise ValueError(f"No session found in {supervisor_dir}")
+            from aiida.engine.daemon.client import DaemonNotRunningException
+            raise DaemonNotRunningException(f"The daemon is not running (no session found in {supervisor_dir}).")
 
         ServiceSupervisorCommon.stop(session_dir)
 
@@ -1007,6 +1008,9 @@ class AiidaDaemon:
 
         if num_workers is None:
             num_workers = self._config.get_option('daemon.default_workers', self._profile.name)
+
+        if foreground and num_workers > 1:
+            raise DaemonException('Starting the daemon in foreground with more than one worker is not supported.')
 
         if foreground:
             service_configs = ServiceConfigMap([AiidaWorkerConfig(num_workers=num_workers)])

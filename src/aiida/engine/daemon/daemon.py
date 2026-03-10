@@ -55,9 +55,13 @@ from pathlib import Path
 import enum
 import logging
 
+import shutil
+
 from aiida.common.log import AIIDA_LOGGER
 
 logger = AIIDA_LOGGER.getChild('engine.daemon.supervisor')
+
+VERDI_BIN = shutil.which('verdi')
 
 class ServiceState(enum.Enum):
     ALIVE = "ALIVE"
@@ -963,6 +967,18 @@ class AiidaDaemon:
         return self._profile
 
     @property
+    def _verdi_bin(self) -> str:
+        """Return the absolute path to the ``verdi`` binary."""
+        from aiida.common.exceptions import ConfigurationError
+
+        if VERDI_BIN is None:
+            raise ConfigurationError(
+                "Unable to find 'verdi' in the path. Make sure that you are working "
+                "in a virtual environment, or that at least the 'verdi' executable is on the PATH"
+            )
+        return VERDI_BIN
+
+    @property
     def is_daemon_running(self) -> bool:
         """Return whether the daemon is currently running."""
         session_dir = ServiceSupervisorController._get_latest_session_dir(self._daemon_dir)
@@ -981,14 +997,55 @@ class AiidaDaemon:
     def start(self, num_workers: int | None = None, foreground: bool = False):
         """Start the daemon with the given number of workers.
 
+        In background mode, spawns a subprocess running ``verdi daemon _supervisor``
+        so the calling process (verdi CLI) is not killed by the daemonize double-fork.
+
         :param num_workers: Number of workers. Defaults to ``daemon.default_workers`` config option.
         :param foreground: If True, run the supervisor in the foreground (blocking).
         """
+        from aiida.engine.daemon.client import DaemonException, DaemonTimeoutException
+
         if num_workers is None:
             num_workers = self._config.get_option('daemon.default_workers', self._profile.name)
 
-        service_configs = ServiceConfigMap([AiidaWorkerConfig(num_workers=num_workers)])
-        ServiceSupervisorController.start(self._daemon_dir, service_configs, foreground)
+        if foreground:
+            service_configs = ServiceConfigMap([AiidaWorkerConfig(num_workers=num_workers)])
+            ServiceSupervisorController.start(self._daemon_dir, service_configs, foreground=True)
+        else:
+            env = self._get_env()
+            command = [
+                self._verdi_bin, '-p', self._profile.name,
+                'daemon', '_supervisor',
+                str(num_workers),
+            ]
+            try:
+                subprocess.check_output(command, env=env, stderr=subprocess.STDOUT)
+            except subprocess.CalledProcessError as exception:
+                raise DaemonException(
+                    f'The daemon failed to start with error:\n{exception.stdout.decode()}'
+                ) from exception
+
+            # Wait for the daemon to actually be running
+            timeout = self._config.get_option('daemon.timeout', self._profile.name)
+            start_time = time.time()
+            while not self.is_daemon_running:
+                time.sleep(0.1)
+                if time.time() - start_time > timeout:
+                    raise DaemonTimeoutException(
+                        f'The daemon failed to start or is unresponsive after {timeout} seconds.'
+                    )
+
+    @staticmethod
+    def _get_env() -> dict[str, str]:
+        """Return the environment for spawning daemon subprocesses."""
+        from aiida.manage.configuration import get_config
+
+        env = os.environ.copy()
+        env['PATH'] = ':'.join([os.path.dirname(sys.executable), env.get('PATH', '')])
+        env['PYTHONPATH'] = ':'.join(sys.path)
+        env['AIIDA_PATH'] = get_config().dirpath
+        env['PYTHONUNBUFFERED'] = 'True'
+        return env
 
     def stop(self):
         """Stop the daemon and all workers."""

@@ -80,6 +80,11 @@ class ZmqCommunicator:
         # ACK until the Future resolves so the broker can redeliver if we die.
         self._in_progress_tasks: dict[str, tuple[Future, bool]] = {}
 
+        # RPCs in progress: rpc_id -> (recipient, Future).  We poll these
+        # in the poll loop so the response is sent from the poll thread
+        # (ZMQ sockets are not thread-safe).
+        self._in_progress_rpcs: dict[str, tuple[str, Future]] = {}
+
         # State
         self._closed = True
         self._poll_thread: threading.Thread | None = None
@@ -411,6 +416,10 @@ class ZmqCommunicator:
                 if self._in_progress_tasks:
                     self._process_in_progress_tasks()
 
+                # Finalize completed in-progress RPCs (send response)
+                if self._in_progress_rpcs:
+                    self._process_in_progress_rpcs()
+
             except zmq.ZMQError as exc:
                 if not self._closed:
                     _LOGGER.error('ZMQ error in poll loop: %s', exc)
@@ -521,31 +530,36 @@ class ZmqCommunicator:
         for task_id in completed:
             del self._in_progress_tasks[task_id]
 
-    def _send_rpc_result(self, rpc_id: str, result: Any) -> None:
-        """Send an RPC response, resolving Futures if needed.
+    def _process_in_progress_rpcs(self) -> None:
+        """Check in-progress RPCs and send responses for completed ones.
 
-        For RPCs whose result is a Future (e.g. plumpy's ``_schedule_rpc``),
-        we cannot serialize the Future directly.  Instead we attach a callback
-        so the response is sent once the Future resolves.
+        This runs on the poll thread so all DEALER sends are single-threaded.
         """
-        if isinstance(result, Future):
-            def _on_done(fut: Future) -> None:
-                try:
-                    resolved = fut.result()
-                    # The resolved value may itself be a Future (chained)
-                    self._send_rpc_result(rpc_id, resolved)
-                except Exception as exc:
-                    _LOGGER.exception('RPC %s future failed: %s', rpc_id, exc)
-                    try:
-                        response = make_rpc_response(rpc_id, self._client_id, error=str(exc))
-                        self._send(response)
-                    except Exception:
-                        pass
+        completed = []
 
-            result.add_done_callback(_on_done)
-        else:
-            response = make_rpc_response(rpc_id, self._client_id, result=result)
-            self._send(response)
+        for rpc_id, (recipient, future) in self._in_progress_rpcs.items():
+            if future.done():
+                if future.cancelled():
+                    completed.append(rpc_id)
+                    continue
+                try:
+                    result = future.result()
+                    # Unwrap nested done Futures (chained results)
+                    while isinstance(result, Future) and result.done():
+                        result = result.result()
+                    if isinstance(result, Future):
+                        # Still pending — swap in the inner Future and keep waiting
+                        self._in_progress_rpcs[rpc_id] = (recipient, result)
+                        continue
+                    response = make_rpc_response(rpc_id, self._client_id, result=result)
+                    self._send(response)
+                except Exception as exc:
+                    response = make_rpc_response(rpc_id, self._client_id, error=str(exc))
+                    self._send(response)
+                completed.append(rpc_id)
+
+        for rpc_id in completed:
+            del self._in_progress_rpcs[rpc_id]
 
     def _send_task_result(self, task_id: str, result: Any) -> None:
         """Send a task response, resolving Futures if needed.
@@ -619,7 +633,12 @@ class ZmqCommunicator:
 
         try:
             result = subscriber(self, body)
-            self._send_rpc_result(rpc_id, result)
+            if isinstance(result, Future):
+                self._in_progress_rpcs[rpc_id] = (recipient, result)
+                _LOGGER.debug('RPC in progress (deferred response): %s', rpc_id)
+                return
+            response = make_rpc_response(rpc_id, self._client_id, result=result)
+            self._send(response)
             _LOGGER.debug('RPC handled: %s', rpc_id)
 
         except Exception as exc:

@@ -42,6 +42,7 @@ from __future__ import annotations
 # Worker and reglar servivces are conceptual separated
 
 from dataclasses import dataclass, asdict
+import io
 import os
 import re
 import sys
@@ -507,7 +508,7 @@ class ServiceSupervisorProcess:
 
     def __init__(self, session_dir: Path, foreground: bool):
         self._session_dir = session_dir
-        self._log_fd = None
+        self._log_fd: 'io.TextIOWrapper | None' = None
 
         if not foreground:
             self._daemonize()
@@ -581,7 +582,7 @@ class ServiceSupervisorProcess:
         # Redirect stdout and stderr to log file
         sys.stdout.flush()
         sys.stderr.flush()
-        self._log_fd = open(log_file, 'a')
+        self._log_fd = open(log_file, 'a')  # noqa: SIM115
         os.dup2(self._log_fd.fileno(), sys.stdout.fileno())
         os.dup2(self._log_fd.fileno(), sys.stderr.fileno())
 
@@ -1111,6 +1112,25 @@ class AiidaDaemon:
                 updated_configs.to_file(Path(tmp_path))
                 os.replace(tmp_path, config_file)
                 break
+
+    # Backward-compatible aliases for callers using the old DaemonClient API
+
+    def start_daemon(self, number_workers: int = 1, foreground: bool = False, **kwargs) -> None:
+        """Start the daemon. Backward-compatible alias for :meth:`start`."""
+        self.start(num_workers=number_workers, foreground=foreground)
+
+    def stop_daemon(self, **kwargs) -> None:
+        """Stop the daemon. Backward-compatible alias for :meth:`stop`."""
+        self.stop()
+
+    def restart_daemon(self, **kwargs) -> None:
+        """Restart the daemon. Backward-compatible alias for :meth:`restart`."""
+        self.restart()
+
+    def get_number_of_workers(self, **kwargs) -> int:
+        """Return the number of active workers."""
+        status = self.get_status()
+        return len(status.get('workers', []))
 
     def decrease_workers(self, num: int):
         """Remove ``num`` workers from the running daemon.

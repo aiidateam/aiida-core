@@ -957,15 +957,27 @@ class AiidaDaemon:
         self._daemon_dir = self._config.get_new_daemon_dir(profile)
         self._daemon_dir.mkdir(parents=True, exist_ok=True)
 
-    def start(self, num_workers: int, foreground: bool):
-        num_workers = config.get_option("daemon.default_workers", 1) if num_workers is None else num_workers
-        #service_configs = ServiceConfigMap([AiidaWorkerConfig(num_workers=num_workers)])
-        # TODO this is just for showcasing
-        service_configs = ServiceConfigMap([AiidaWorkerConfig(num_workers=num_workers), SleepServiceConfig()])
+    @property
+    def profile(self):
+        """Return the profile this daemon is associated with."""
+        return self._profile
+
+    def start(self, num_workers: int | None = None, foreground: bool = False):
+        """Start the daemon with the given number of workers.
+
+        :param num_workers: Number of workers. Defaults to ``daemon.default_workers`` config option.
+        :param foreground: If True, run the supervisor in the foreground (blocking).
+        """
+        if num_workers is None:
+            num_workers = self._config.get_option('daemon.default_workers', self._profile.name)
+
+        service_configs = ServiceConfigMap([AiidaWorkerConfig(num_workers=num_workers)])
         ServiceSupervisorController.start(self._daemon_dir, service_configs, foreground)
 
     def stop(self):
+        """Stop the daemon and all workers."""
         ServiceSupervisorController.stop(self._daemon_dir)
 
-    def status(self):
-        ServiceSupervisorController.status(self._daemon_dir)
+    def get_status(self) -> dict:
+        """Return structured status of the daemon and all workers."""
+        return ServiceSupervisorController.status(self._daemon_dir)

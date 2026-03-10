@@ -1155,7 +1155,7 @@ class AiidaDaemon:
         for sid, config in service_configs.items():
             if isinstance(config, WorkerServiceConfig):
                 old_num = config.num_workers
-                new_num = max(1, old_num - num)  # Keep at least 1 worker
+                new_num = max(0, old_num - num)
 
                 # Kill the highest-numbered workers
                 for i in range(new_num, old_num):

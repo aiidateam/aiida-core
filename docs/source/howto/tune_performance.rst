@@ -53,7 +53,7 @@ If you are running many short tasks and notice performance bottlenecks, you can 
 
 .. code:: console
 
-    $ verdi computer configure core.ssh <COMPUTER_LABEL>
+    $ verdi computer configure core.ssh_async <COMPUTER_LABEL>
     ...
     Connection cooldown time (s) [15.0]: <lower-value>
 
@@ -61,7 +61,7 @@ Or non-interactively with ``--safe-interval``:
 
 .. code:: console
 
-    $ verdi computer configure core.ssh --safe-interval <lower-value> <COMPUTER_LABEL>
+    $ verdi computer configure core.ssh_async --safe-interval <lower-value> <COMPUTER_LABEL>
 
 Inspect the current value with:
 

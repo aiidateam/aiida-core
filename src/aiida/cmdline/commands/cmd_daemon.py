@@ -121,7 +121,6 @@ def status(ctx, all_profiles, timeout):
         echo.echo(
             f'Daemon is running as PID {daemon_status["pid"]} since {start_time}\n'
             f'Active workers [{len(workers)}]:\n{workers_info}\n'
-            f'Log file: {client.daemon_log_file}\n'
             'Use `verdi daemon [incr | decr] [num]` to increase / decrease the number of workers'
         )
 

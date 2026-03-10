@@ -35,6 +35,8 @@ Key Features:
 - Background mode: daemon detaches, use stop script to send SIGTERM
 """
 
+from __future__ import annotations
+
 # Design choices
 # Services need to be able to be started by the command line
 # Worker and reglar servivces are conceptual separated
@@ -49,7 +51,9 @@ import signal
 import threading
 import json
 import psutil
-from typing import List, Dict, Type, assert_never, Self, ClassVar
+from typing import ClassVar, Dict, List, Type
+
+from typing_extensions import Self, assert_never
 from abc import abstractmethod, ABC
 from pathlib import Path
 import enum

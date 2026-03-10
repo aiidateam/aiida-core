@@ -24,7 +24,7 @@ In particular, you can provide:
 - prepend text to the job script (e.g. if you need to load specific modules or set specific environment variables which are not already specified in the computer/code setup)
 - additional mpirun parameters (e.g. if you need to bind processes to cores, etc.)
 
-The full list of available options can be found in the `AiiDA CalcJob options documentation <https://aiida--7048.org.readthedocs.build/projects/aiida-core/en/7048/topics/calculations/usage.html#options>`__.
+For a complete overview of which options are available at which level and how they are merged, see :ref:`topics:calculations:usage:calcjobs:scheduler-and-runtime-options`.
 
 
 Basic pattern
@@ -94,7 +94,8 @@ Notes:
 
 - Keep the lines valid for your scheduler (Slurm here; adapt to PBS/LSF/etc.).
 - Use this when a directive is not covered by a dedicated option.
-- Code-level and CalcJob-level values are concatenated (code first, then CalcJob).
+- Can also be set at the **Computer** level (during ``verdi computer setup``) for directives that apply to all jobs on that machine.
+- All three levels are concatenated (Computer first, then Code, then CalcJob).
 
 
 Prepend/append shell code to the job script
@@ -118,7 +119,17 @@ Use ``prepend_text`` to add shell commands immediately before launching the code
 	echo "Run finished on $(hostname) at $(date)"
 	""".strip()
 
-.. tip:: for simple environment variables you can also use ``environment_variables`` (AiiDA will export them for you):
+Environment variables
+---------------------
+
+Use ``environment_variables`` to set environment variables that AiiDA will export for you in the submit script.
+This can be set at three levels (all are merged, with more specific levels overriding):
+
+- **Computer**: set during ``verdi computer setup`` — applies to all jobs on this machine
+- **Code**: set during ``verdi code create`` — applies to all jobs using this code
+- **CalcJob**: set via ``metadata.options`` — applies to this specific job only
+
+**On a per-job basis** via ``metadata.options``:
 
 .. code-block:: python
 
@@ -126,6 +137,17 @@ Use ``prepend_text`` to add shell commands immediately before launching the code
 		 'OMP_NUM_THREADS': '1',
 	}
 
+**On the code** (applies to all jobs using this code):
+
+.. code-block:: yaml
+
+	# In the code YAML configuration:
+	environment_variables:
+	    OMP_NUM_THREADS: '1'
+	    LD_LIBRARY_PATH: '/opt/lib'
+
+.. note::
+	``environment_variables`` is a dictionary of strings. Computer-level, code-level, and CalcJob-level values are merged (later levels override earlier ones for the same key).
 
 
 Extra parameters to mpirun (or equivalent)
@@ -176,7 +198,7 @@ Here is the full list of options that can be set in ``builder.metadata``.
       - additional_retrieve_list (list | tuple | None): Relative file paths to retrieve in addition to what the plugin specifies.
       - append_text (str): Text appended to the scheduler-job script just after the code execution.
       - custom_scheduler_commands (str): Raw scheduler directives inserted before any non-scheduler command (e.g. extra ``#SBATCH`` lines).
-      - environment_variables (dict): Environment variables to export for this calculation.
+      - environment_variables (dict): Environment variables to export for this calculation. Merged with computer-level and code-level values (CalcJob overrides Code overrides Computer).
       - environment_variables_double_quotes (bool): If True, use double quotes instead of single quotes to escape ``environment_variables``.
       - import_sys_environment (bool): If True, the submission script will load the system environment variables.
       - input_filename (str): Name of the main input file written to the remote working directory.

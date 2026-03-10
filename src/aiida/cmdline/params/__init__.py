@@ -27,6 +27,7 @@ __all__ = (
     'GroupParamType',
     'HostnameType',
     'IdentifierParamType',
+    'JSONDictParamType',
     'LabelStringType',
     'LazyChoice',
     'MpirunCommandParamType',

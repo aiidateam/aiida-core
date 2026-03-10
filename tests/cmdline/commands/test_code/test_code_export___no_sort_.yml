@@ -7,5 +7,6 @@ with_mpi: null
 prepend_text: "module load something\n    some command"
 append_text: ''
 custom_scheduler_commands: ''
+environment_variables: {}
 mpirun_extra_params: []
 filepath_executable: /bin/cat

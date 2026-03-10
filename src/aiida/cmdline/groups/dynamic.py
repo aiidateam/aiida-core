@@ -178,8 +178,10 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
             # Check if the type is a list or tuple (e.g. list[str], tuple[str, ...]) which should be handled as
             # Click ``multiple=True`` options, allowing the option to be specified multiple times on the CLI.
+            # Dict types (e.g. dict[str, str]) are handled with a custom JSON-based Click ParamType.
             origin = t.get_origin(field_info.annotation)
             is_multiple = origin in (list, tuple)
+            is_dict = origin is dict
 
             # If the annotation has the ``__args__`` attribute it is an instance of a type from ``typing`` and the real
             # type can be gotten from the arguments. For example it could be ``typing.Union[str, None]`` calling
@@ -204,6 +206,11 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
             if is_multiple:
                 options_spec[key]['multiple'] = True
+
+            if is_dict:
+                from aiida.cmdline.params.types import JSONDictParamType
+
+                options_spec[key]['type'] = JSONDictParamType()
 
             for metadata in field_info.metadata:
                 for metadata_key, metadata_value in metadata.items():

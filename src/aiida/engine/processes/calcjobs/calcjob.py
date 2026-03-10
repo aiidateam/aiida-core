@@ -1122,16 +1122,23 @@ class CalcJob(Process):
 
         ########################################################################
 
-        custom_sched_commands_parts = [code.custom_scheduler_commands for code in codes] + [
-            self.node.get_option('custom_scheduler_commands')
-        ]
+        custom_sched_commands_parts = (
+            [computer.get_custom_scheduler_commands()]
+            + [code.custom_scheduler_commands for code in codes]
+            + [self.node.get_option('custom_scheduler_commands')]
+        )
         custom_sched_commands = '\n'.join(part for part in custom_sched_commands_parts if part)
         if custom_sched_commands:
             job_tmpl.custom_scheduler_commands = custom_sched_commands
 
         job_tmpl.import_sys_environment = self.node.get_option('import_sys_environment')
 
-        job_tmpl.job_environment = self.node.get_option('environment_variables')
+        # Merge environment variables: Computer → Code(s) → CalcJob (later values override)
+        merged_env = dict(computer.get_environment_variables())
+        for code in codes:
+            merged_env.update(code.environment_variables)
+        merged_env.update(self.node.get_option('environment_variables') or {})
+        job_tmpl.job_environment = merged_env
         job_tmpl.environment_variables_double_quotes = self.node.get_option('environment_variables_double_quotes')
 
         queue_name = self.node.get_option('queue_name')

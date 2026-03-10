@@ -156,6 +156,7 @@ with_mpi: null
 prepend_text: ''
 append_text: ''
 custom_scheduler_commands: ''
+environment_variables: {{}}
 mpirun_extra_params: []
 filepath_executable: bash
 filepath_files: {tmp_path}/some-label

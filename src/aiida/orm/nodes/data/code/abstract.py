@@ -38,6 +38,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     _KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN: str = 'input_plugin'
     _KEY_ATTRIBUTE_APPEND_TEXT: str = 'append_text'
     _KEY_ATTRIBUTE_CUSTOM_SCHEDULER_COMMANDS: str = 'custom_scheduler_commands'
+    _KEY_ATTRIBUTE_ENVIRONMENT_VARIABLES: str = 'environment_variables'
     _KEY_ATTRIBUTE_MPIRUN_EXTRA_PARAMS: str = 'mpirun_extra_params'
     _KEY_ATTRIBUTE_PREPEND_TEXT: str = 'prepend_text'
     _KEY_ATTRIBUTE_USE_DOUBLE_QUOTES: str = 'use_double_quotes'
@@ -117,6 +118,12 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 footer='All lines that start with `#=`: will be ignored.',
             ),
         )
+        environment_variables: t.Dict[str, str] = MetadataField(
+            {},
+            title='Environment variables',
+            description='Environment variables to set for all jobs using this code '
+            '(e.g. {"OMP_NUM_THREADS": "1", "LD_LIBRARY_PATH": "/opt/lib"}).',
+        )
         mpirun_extra_params: t.List[str] = MetadataField(
             [],
             title='Extra mpirun params',
@@ -131,6 +138,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         append_text: str = '',
         prepend_text: str = '',
         custom_scheduler_commands: str = '',
+        environment_variables: dict[str, str] | None = None,
         mpirun_extra_params: list[str] | tuple[str, ...] = (),
         use_double_quotes: bool = False,
         with_mpi: bool | None = None,
@@ -144,6 +152,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         :param append_text: The text that should be appended to the run line in the job script.
         :param prepend_text: The text that should be prepended to the run line in the job script.
         :param custom_scheduler_commands: Custom scheduler commands to add to the submission script header.
+        :param environment_variables: Environment variables to set for all jobs using this code.
         :param mpirun_extra_params: Extra parameters to pass to the mpirun command.
         :param use_double_quotes: Whether the command line invocation of this code should be escaped with double quotes.
         :param with_mpi: Whether the command should be run as an MPI program.
@@ -156,6 +165,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         self.append_text = append_text
         self.prepend_text = prepend_text
         self.custom_scheduler_commands = custom_scheduler_commands
+        self.environment_variables = environment_variables or {}
         self.mpirun_extra_params = mpirun_extra_params
         self.use_double_quotes = use_double_quotes
         self.with_mpi = with_mpi
@@ -313,6 +323,22 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """
         type_check(value, str, allow_none=True)
         self.base.attributes.set(self._KEY_ATTRIBUTE_CUSTOM_SCHEDULER_COMMANDS, value)
+
+    @property
+    def environment_variables(self) -> dict[str, str]:
+        """Return the environment variables for this code.
+
+        :return: The environment variables to set for all jobs using this code.
+        """
+        return self.base.attributes.get(self._KEY_ATTRIBUTE_ENVIRONMENT_VARIABLES, {})
+
+    @environment_variables.setter
+    def environment_variables(self, value: dict[str, str]) -> None:
+        """Set the environment variables for this code.
+
+        :param value: The environment variables to set for all jobs using this code.
+        """
+        self.base.attributes.set(self._KEY_ATTRIBUTE_ENVIRONMENT_VARIABLES, value)
 
     @property
     def mpirun_extra_params(self) -> list[str]:

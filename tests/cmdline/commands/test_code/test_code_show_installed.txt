@@ -10,5 +10,6 @@ Run with MPI
 Prepend script              text to prepend
 Append script               text to append
 Custom scheduler commands
+Environment variables       {}
 Extra mpirun params         []
 Filepath executable         /remote/abs/path

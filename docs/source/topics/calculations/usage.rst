@@ -986,6 +986,95 @@ Best Practices and Considerations
 
    - **Error handling**: In case of custom stashing, it's your sole responsibility to manage the failures and log errors.
 
+.. _topics:calculations:usage:calcjobs:scheduler-and-runtime-options:
+
+Scheduler and runtime options
+-----------------------------
+
+Several options that control the submission script can be set at up to three levels: **Computer**, **Code**, and **CalcJob**.
+During submission, AiiDA merges them automatically — text options are concatenated (Computer first, then Code, then CalcJob), while dictionary options are merged (later levels override earlier ones for the same key).
+
+The table below shows where each option can be set and how values from different levels are combined.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 12 12 12 34
+
+   * - Option
+     - Computer
+     - Code
+     - CalcJob
+     - Merging strategy
+   * - ``prepend_text``
+     - yes
+     - yes
+     - yes
+     - Concatenated (Computer → Code → CalcJob)
+   * - ``append_text``
+     - yes
+     - yes
+     - yes
+     - Concatenated (CalcJob → Code → Computer)
+   * - ``custom_scheduler_commands``
+     - yes
+     - yes
+     - yes
+     - Concatenated (Computer → Code → CalcJob)
+   * - ``environment_variables``
+     - yes
+     - yes
+     - yes
+     - Dict merge (Computer → Code → CalcJob, later overrides same key)
+   * - ``mpirun_extra_params``
+     -
+     - yes
+     - yes
+     - Concatenated (Code → CalcJob)
+   * - ``with_mpi``
+     -
+     - yes
+     - yes (``withmpi``)
+     - Must agree if set at multiple levels; error on conflict
+   * - ``use_double_quotes``
+     - yes
+     - yes
+     -
+     - Per code-info
+   * - ``mpirun_command``
+     - yes
+     -
+     -
+     - —
+   * - ``default_mpiprocs_per_machine``
+     - yes
+     -
+     -
+     - Fallback for ``resources``
+   * - ``default_memory_per_machine``
+     - yes
+     -
+     -
+     - Fallback for ``resources``
+   * - ``resources``
+     -
+     -
+     - yes
+     - —
+   * - ``queue_name``, ``account``, ``qos``
+     -
+     -
+     - yes
+     - —
+   * - ``max_wallclock_seconds``, ``max_memory_kb``
+     -
+     -
+     - yes
+     - —
+
+Options that appear only at the CalcJob level (``resources``, ``queue_name``, ``max_wallclock_seconds``, etc.) are job-specific and do not support layered configuration.
+
+For practical examples of how to use these options, see :ref:`how-to:real-world-tricks`.
+
 .. _topics:calculations:usage:calcjobs:options:
 
 Options

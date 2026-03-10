@@ -42,6 +42,8 @@ class ComputerBuilder:
         spec['scheduler'] = computer.scheduler_type
         spec['transport'] = computer.transport_type
         spec['use_double_quotes'] = computer.get_use_double_quotes()
+        spec['custom_scheduler_commands'] = computer.get_custom_scheduler_commands()
+        spec['environment_variables'] = computer.get_environment_variables()
         spec['prepend_text'] = computer.get_prepend_text()
         spec['append_text'] = computer.get_append_text()
         spec['work_dir'] = computer.get_workdir()
@@ -84,6 +86,16 @@ class ComputerBuilder:
         computer.scheduler_type = self._get_and_count('scheduler', used)
         computer.transport_type = self._get_and_count('transport', used)
         computer.set_use_double_quotes(self._get_and_count('use_double_quotes', used))
+        custom_scheduler_commands = self._get('custom_scheduler_commands')
+        if custom_scheduler_commands is not None:
+            used.add('custom_scheduler_commands')
+            if custom_scheduler_commands:
+                computer.set_custom_scheduler_commands(custom_scheduler_commands)
+        environment_variables = self._get('environment_variables')
+        if environment_variables is not None:
+            used.add('environment_variables')
+            if environment_variables:
+                computer.set_environment_variables(environment_variables)
         computer.set_prepend_text(self._get_and_count('prepend_text', used))
         computer.set_append_text(self._get_and_count('append_text', used))
         computer.set_workdir(self._get_and_count('work_dir', used))

@@ -3,6 +3,7 @@ computer: localhost
 custom_scheduler_commands: ''
 default_calc_job_plugin: core.arithmetic.add
 description: ''
+environment_variables: {}
 filepath_executable: /bin/cat
 label: code
 mpirun_extra_params: []

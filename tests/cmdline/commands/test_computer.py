@@ -145,6 +145,7 @@ def test_mixed(run_cli_command):
     non_interactive_options_dict['scheduler'] = options_dict.pop('scheduler')
 
     options_dict['use-login-shell'] = 'y'
+    options_dict['environment-variables'] = '{}'
     # In any case, these would be managed by the visual editor
     user_input = '\n'.join(generate_setup_options_interactive(options_dict))
     options = generate_setup_options(non_interactive_options_dict)
@@ -889,7 +890,7 @@ def test_computer_duplicate_interactive(run_cli_command, aiida_localhost, non_in
     """Test 'verdi computer duplicate' in interactive mode."""
     label = 'computer_duplicate_interactive'
     computer = aiida_localhost
-    user_input = f'{label}\n\n\n\n\n\n\n\n\n\n'
+    user_input = f'{label}\n\n\n\n\n\n\n\n\n\n\n'
     result = run_cli_command(computer_duplicate, [str(computer.pk)], user_input=user_input)
     assert result.exception is None, result.output
 
@@ -904,6 +905,7 @@ def test_computer_duplicate_interactive(run_cli_command, aiida_localhost, non_in
     assert new_computer.get_default_mpiprocs_per_machine() == computer.get_default_mpiprocs_per_machine()
     assert new_computer.get_prepend_text() == computer.get_prepend_text()
     assert new_computer.get_append_text() == computer.get_append_text()
+    assert new_computer.get_environment_variables() == computer.get_environment_variables()
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
@@ -940,6 +942,7 @@ def test_direct_interactive(run_cli_command, non_interactive_editor):
     options_dict.pop('prepend-text')
     options_dict.pop('append-text')
     options_dict['use-login-shell'] = 'y'
+    options_dict['environment-variables'] = '{}'
     user_input = '\n'.join(generate_setup_options_interactive(options_dict))
 
     result = run_cli_command(computer_setup, user_input=user_input)

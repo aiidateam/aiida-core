@@ -14,7 +14,8 @@ from plumpy.futures import unwrap_kiwi_future
 from aiida.brokers import Broker
 from aiida.common.exceptions import AiidaException
 from aiida.common.log import AIIDA_LOGGER
-from aiida.engine.daemon.client import DaemonException, get_daemon_client
+from aiida.engine.daemon.client import DaemonException
+from aiida.engine.daemon.daemon import AiidaDaemon
 from aiida.manage.manager import get_manager
 from aiida.orm import ProcessNode, QueryBuilder
 from aiida.tools.query.calculation import CalculationQueryBuilder
@@ -82,7 +83,7 @@ def revive_processes(processes: list[ProcessNode], *, wait: bool = False) -> Non
     :param processes: List of processes to revive.
     :param wait: Set to ``True`` to wait for a response, for ``False`` the action is fire-and-forget.
     """
-    if not get_daemon_client().is_daemon_running:
+    if not AiidaDaemon().is_daemon_running:
         raise DaemonException('The daemon is not running.')
 
     process_controller = get_manager().get_process_controller()
@@ -115,7 +116,7 @@ def play_processes(
     :param timeout: Raise a ``ProcessTimeoutException`` if the process does not respond within this amount of seconds.
     :raises ``ProcessTimeoutException``: If the processes do not respond within the timeout.
     """
-    if not get_daemon_client().is_daemon_running:
+    if not AiidaDaemon().is_daemon_running:
         LOGGER.warning('The daemon is not running, so processes submitted to the daemon are not reachable.')
 
     if processes and all_entries:
@@ -148,7 +149,7 @@ def pause_processes(
     :param timeout: Raise a ``ProcessTimeoutException`` if the process does not respond within this amount of seconds.
     :raises ``ProcessTimeoutException``: If the processes do not respond within the timeout.
     """
-    if not get_daemon_client().is_daemon_running:
+    if not AiidaDaemon().is_daemon_running:
         LOGGER.warning('The daemon is not running, so processes submitted to the daemon are not reachable.')
 
     if processes and all_entries:
@@ -183,7 +184,7 @@ def kill_processes(
     :param timeout: Raise a ``ProcessTimeoutException`` if the process does not respond within this amount of seconds.
     :raises ``ProcessTimeoutException``: If the processes do not respond within the timeout.
     """
-    if not get_daemon_client().is_daemon_running:
+    if not AiidaDaemon().is_daemon_running:
         LOGGER.warning('The daemon is not running, so processes submitted to the daemon are not reachable.')
 
     if processes and all_entries:

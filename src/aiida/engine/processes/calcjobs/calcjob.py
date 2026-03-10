@@ -1078,7 +1078,8 @@ class CalcJob(Process):
                     with_mpi = False
 
             if with_mpi:
-                prepend_cmdline_params = code.get_prepend_cmdline_params(mpi_args, extra_mpirun_params)
+                all_extra_mpirun_params = list(code.mpirun_extra_params) + list(extra_mpirun_params or [])
+                prepend_cmdline_params = code.get_prepend_cmdline_params(mpi_args, all_extra_mpirun_params or None)
             else:
                 prepend_cmdline_params = code.get_prepend_cmdline_params()
 
@@ -1121,7 +1122,10 @@ class CalcJob(Process):
 
         ########################################################################
 
-        custom_sched_commands = self.node.get_option('custom_scheduler_commands')
+        custom_sched_commands_parts = [code.custom_scheduler_commands for code in codes] + [
+            self.node.get_option('custom_scheduler_commands')
+        ]
+        custom_sched_commands = '\n'.join(part for part in custom_sched_commands_parts if part)
         if custom_sched_commands:
             job_tmpl.custom_scheduler_commands = custom_sched_commands
 

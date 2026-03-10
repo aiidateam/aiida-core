@@ -10,7 +10,13 @@ Setting runtime configuration of a calculation job
 ==================================================
 
 When submitting a job, you can provide specific instructions which should be put in the job submission script (e.g. for the Slurm scheduler).
-They can be provided via the ``metadata.options`` dictionary of the calculation job.
+These can be configured at multiple levels, and are **additive** — they get concatenated during submission, not overridden:
+
+- **Computer level**: applies to *all* jobs on this machine (e.g. ``module load gcc``). Set during ``verdi computer setup``.
+- **Code level**: applies to all jobs using *this specific code* (e.g. ``#SBATCH --uenv=quantumespresso/...``). Set during ``verdi code create``.
+- **CalcJob level**: applies to *this specific job* only (e.g. one-off overrides). Set via the ``metadata.options`` dictionary of the calculation job.
+
+During submission, values from all three levels are joined together (computer first, then code, then CalcJob).
 
 In particular, you can provide:
 
@@ -61,7 +67,9 @@ In case you are submitting a ``PwBaseWorkChain``, these options should be set un
 Custom scheduler directives (e.g. extra ``#SBATCH``)
 ----------------------------------------------------
 
-Use ``custom_scheduler_commands`` to inject raw scheduler lines near the top of the submit script (before any non-scheduler command):
+Use ``custom_scheduler_commands`` to inject raw scheduler lines near the top of the submit script (before any non-scheduler command).
+
+**On a per-job basis** via ``metadata.options``:
 
 .. code-block:: python
 
@@ -71,16 +79,34 @@ Use ``custom_scheduler_commands`` to inject raw scheduler lines near the top of 
 	#SBATCH --hint=nomultithread
 	""".strip()
 
+**On the code** (applies to all jobs using this code):
+
+.. code-block:: yaml
+
+	# In the code YAML configuration:
+	custom_scheduler_commands: |
+	    #SBATCH --uenv=quantumespresso/v7.3.1:v1
+	    #SBATCH --view=default
+
+This is particularly useful for CSCS Alps ``uenv`` images or similar setups where the scheduler must be told to mount a specific environment before the job starts.
+
 Notes:
 
 - Keep the lines valid for your scheduler (Slurm here; adapt to PBS/LSF/etc.).
 - Use this when a directive is not covered by a dedicated option.
+- Code-level and CalcJob-level values are concatenated (code first, then CalcJob).
 
 
 Prepend/append shell code to the job script
 -------------------------------------------
 
-Use ``prepend_text`` to add shell commands immediately before launching the code, and ``append_text`` for commands executed right after the code finishes:
+Use ``prepend_text`` to add shell commands immediately before launching the code, and ``append_text`` for commands executed right after the code finishes.
+
+``prepend_text`` can be set at three levels (all are concatenated in the submission script):
+
+- **Computer**: set during ``verdi computer setup`` — applies to all jobs on this machine (e.g. ``module load gcc``)
+- **Code**: set during ``verdi code create`` — applies to all jobs using this code (e.g. ``uenv start quantumespresso/v7.3.1:v1``)
+- **CalcJob**: set via ``metadata.options`` — applies to this specific job only
 
 .. code-block:: python
 
@@ -105,7 +131,9 @@ Use ``prepend_text`` to add shell commands immediately before launching the code
 Extra parameters to mpirun (or equivalent)
 ------------------------------------------
 
-Set ``mpirun_extra_params`` to pass flags to the MPI launcher in addition to the computer's configured ``mpirun_command``:
+Set ``mpirun_extra_params`` to pass flags to the MPI launcher in addition to the computer's configured ``mpirun_command``.
+
+**On a per-job basis** via ``metadata.options``:
 
 .. code-block:: python
 
@@ -114,8 +142,17 @@ Set ``mpirun_extra_params`` to pass flags to the MPI launcher in addition to the
 		 '--bind-to', 'core', '--map-by', 'socket:PE=2',
 	]
 
+**On the code** (applies to all jobs using this code):
+
+.. code-block:: yaml
+
+	# In the code YAML configuration:
+	mpirun_extra_params:
+	    - '--uenv=quantumespresso/v7.3.1:v1'
+	    - '--view=default'
+
 .. note::
-	``mpirun_extra_params`` is a list/tuple of strings; AiiDA will join them with spaces. Keep launcher-specific flags consistent with your cluster (OpenMPI, MPICH, srun, etc.).
+	``mpirun_extra_params`` is a list of strings; AiiDA will join them with spaces. Code-level and CalcJob-level values are concatenated (code first, then CalcJob). Keep launcher-specific flags consistent with your cluster (OpenMPI, MPICH, srun, etc.).
 
 
 Full list of metadata available

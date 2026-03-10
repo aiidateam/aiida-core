@@ -176,12 +176,17 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
             default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default
 
+            # Check if the type is a list or tuple (e.g. list[str], tuple[str, ...]) which should be handled as
+            # Click ``multiple=True`` options, allowing the option to be specified multiple times on the CLI.
+            origin = t.get_origin(field_info.annotation)
+            is_multiple = origin in (list, tuple)
+
             # If the annotation has the ``__args__`` attribute it is an instance of a type from ``typing`` and the real
             # type can be gotten from the arguments. For example it could be ``typing.Union[str, None]`` calling
             # ``typing.Union[str, None].__args__`` will return the tuple ``(str, NoneType)``. So to get the real type,
             # we simply remove all ``NoneType`` and the remaining type should be the type of the option.
             if hasattr(field_info.annotation, '__args__'):
-                args = list(filter(lambda e: e is not type(None), field_info.annotation.__args__))
+                args = list(filter(lambda e: e is not type(None) and e is not Ellipsis, field_info.annotation.__args__))
                 # Click parameters only support specifying a single type, so we default to the first one even if the
                 # pydantic model defines multiple.
                 field_type = args[0]
@@ -196,6 +201,10 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
                 'default': default,
                 'help': field_info.description,
             }
+
+            if is_multiple:
+                options_spec[key]['multiple'] = True
+
             for metadata in field_info.metadata:
                 for metadata_key, metadata_value in metadata.items():
                     if metadata_key in ('priority', 'short_name', 'option_cls'):

@@ -147,8 +147,16 @@ def setup_code(ctx, non_interactive, **kwargs):
 
 @verdi_code.command('test')
 @arguments.CODE(callback=set_code_builder)
+@click.option(
+    '--run-prepend-text',
+    is_flag=True,
+    default=False,
+    help="Execute the computer's and code's prepend text on the remote computer before checking the executable. "
+    'This is useful when the executable only becomes available after running setup commands '
+    '(e.g. `module load ...` or `uenv start ...`).',
+)
 @with_dbenv()
-def code_test(code):
+def code_test(code, run_prepend_text):
     """Run tests for the given code to check whether it is usable.
 
     For remote codes the following checks are performed:
@@ -160,7 +168,7 @@ def code_test(code):
 
     if isinstance(code, InstalledCode):
         try:
-            code.validate_filepath_executable()
+            code.validate_filepath_executable(run_prepend_text=run_prepend_text)
         except exceptions.ValidationError as exception:
             echo.echo_critical(f'validation failed: {exception}')
 

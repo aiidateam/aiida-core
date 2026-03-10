@@ -1,9 +1,11 @@
 append_text: ''
 computer: localhost
+custom_scheduler_commands: ''
 default_calc_job_plugin: core.arithmetic.add
 description: ''
 filepath_executable: /bin/cat
 label: code
+mpirun_extra_params: []
 prepend_text: "module load something\n    some command"
 use_double_quotes: false
 with_mpi: null

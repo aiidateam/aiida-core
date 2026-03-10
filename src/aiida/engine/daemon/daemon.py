@@ -1007,3 +1007,90 @@ class AiidaDaemon:
     def get_status(self) -> dict:
         """Return structured status of the daemon and all workers."""
         return ServiceSupervisorController.status(self._daemon_dir)
+
+    def increase_workers(self, num: int):
+        """Add ``num`` workers to the running daemon.
+
+        Updates the session config JSON on disk and starts new worker subprocesses.
+        Uses atomic file writes (write temp + os.replace) to avoid races with the health monitor.
+
+        :param num: Number of workers to add.
+        """
+        import tempfile
+
+        from aiida.engine.daemon.client import DaemonNotRunningException
+
+        if not self.is_daemon_running:
+            raise DaemonNotRunningException('The daemon is not running.')
+
+        session_dir = ServiceSupervisorController._get_latest_session_dir(self._daemon_dir)
+        assert session_dir is not None
+
+        config_file = session_dir / ServiceSupervisorCommon.SUPERVISOR_CONFIG_FILE
+        service_configs = ServiceConfigMap.from_file(config_file)
+
+        for sid, config in service_configs.items():
+            if isinstance(config, WorkerServiceConfig):
+                old_num = config.num_workers
+                new_num = old_num + num
+
+                # Start the new worker processes
+                for i in range(old_num, new_num):
+                    ServiceSupervisorCommon._start_worker_service_process(session_dir, config, i)
+
+                # Update config atomically: write to temp file then os.replace
+                config.num_workers = new_num
+                updated_configs = ServiceConfigMap(list(service_configs.values()))
+                fd, tmp_path = tempfile.mkstemp(dir=session_dir, suffix='.json')
+                os.close(fd)
+                updated_configs.to_file(Path(tmp_path))
+                os.replace(tmp_path, config_file)
+                break
+
+    def decrease_workers(self, num: int):
+        """Remove ``num`` workers from the running daemon.
+
+        Kills the highest-numbered workers and updates the session config JSON atomically.
+
+        :param num: Number of workers to remove.
+        """
+        import tempfile
+
+        from aiida.engine.daemon.client import DaemonNotRunningException
+
+        if not self.is_daemon_running:
+            raise DaemonNotRunningException('The daemon is not running.')
+
+        session_dir = ServiceSupervisorController._get_latest_session_dir(self._daemon_dir)
+        assert session_dir is not None
+
+        config_file = session_dir / ServiceSupervisorCommon.SUPERVISOR_CONFIG_FILE
+        service_configs = ServiceConfigMap.from_file(config_file)
+
+        for sid, config in service_configs.items():
+            if isinstance(config, WorkerServiceConfig):
+                old_num = config.num_workers
+                new_num = max(1, old_num - num)  # Keep at least 1 worker
+
+                # Kill the highest-numbered workers
+                for i in range(new_num, old_num):
+                    worker_dir = session_dir / config.service_name / str(i)
+                    info_file = worker_dir / ServiceSupervisorCommon.PROCESS_INFO_FILE
+                    if info_file.exists():
+                        try:
+                            info = ServiceInfo.from_file(info_file)
+                            if ServiceSupervisorCommon._is_alive(info.pid, info.create_time):
+                                ServiceSupervisorCommon._kill_service(info.pid)
+                            info.state = ServiceState.DEAD.value
+                            info.to_file(info_file)
+                        except Exception as e:
+                            logger.warning(f"Error stopping worker {i}: {e}")
+
+                # Update config atomically
+                config.num_workers = new_num
+                updated_configs = ServiceConfigMap(list(service_configs.values()))
+                fd, tmp_path = tempfile.mkstemp(dir=session_dir, suffix='.json')
+                os.close(fd)
+                updated_configs.to_file(Path(tmp_path))
+                os.replace(tmp_path, config_file)
+                break

@@ -299,10 +299,17 @@ class ZmqCommunicator:
         :param subscriber: Callback function(communicator, msg) -> result
         :param identifier: Optional subscriber identifier
         :return: The subscriber identifier
+        :raises kiwipy.DuplicateSubscriberIdentifier: If a subscriber with this identifier already exists
         """
+        import kiwipy
+
         self._ensure_open()
 
         identifier = identifier or f'rpc-{uuid.uuid4().hex[:8]}'
+
+        if identifier in self._rpc_subscribers:
+            raise kiwipy.DuplicateSubscriberIdentifier(f"RPC identifier '{identifier}'")
+
         self._rpc_subscribers[identifier] = subscriber
 
         # Register with broker

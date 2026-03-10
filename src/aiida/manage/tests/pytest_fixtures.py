@@ -44,7 +44,8 @@ from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
 from aiida.engine import Process, ProcessBuilder, submit
-from aiida.engine.daemon.client import DaemonClient, DaemonNotRunningException, DaemonTimeoutException
+from aiida.engine.daemon.client import DaemonNotRunningException
+from aiida.engine.daemon.daemon import AiidaDaemon
 from aiida.manage import Profile, get_manager, get_profile
 from aiida.manage.manager import Manager
 from aiida.orm import Computer, ProcessNode, User
@@ -243,12 +244,13 @@ def clear_profile():
     This ensures that the contents of the profile are reset as well as the ``Manager``, which may hold references to
     data that will be destroyed. The daemon will also be stopped if it was running.
     """
-    from aiida.engine.daemon.client import get_daemon_client
+    daemon = AiidaDaemon()
 
-    daemon_client = get_daemon_client()
-
-    if daemon_client.is_daemon_running:
-        daemon_client.stop_daemon(wait=True)
+    if daemon.is_daemon_running:
+        try:
+            daemon.stop()
+        except DaemonNotRunningException:
+            pass
 
     manager = get_manager()
     manager.get_profile_storage()._clear()
@@ -676,29 +678,22 @@ def daemon_client(aiida_profile):
 
     The daemon will be automatically stopped at the end of the test session.
     """
-    daemon_client = DaemonClient(aiida_profile)
+    daemon = AiidaDaemon(aiida_profile)
 
     try:
-        yield daemon_client
+        yield daemon
     finally:
         try:
-            daemon_client.stop_daemon(wait=True)
+            daemon.stop()
         except DaemonNotRunningException:
             pass
-        # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
-        # scenarios, the built in wait time in ``daemon_client.stop_daemon`` is not sufficient and even though the
-        # daemon is stopped, ``daemon_client.is_daemon_running`` will return false for a little bit longer.
-        daemon_client._await_condition(
-            lambda: not daemon_client.is_daemon_running,
-            DaemonTimeoutException('The daemon failed to stop.'),
-        )
 
 
 @pytest.fixture()
 def started_daemon_client(daemon_client):
     """Ensure that the daemon is running for the test profile and return the associated client."""
     if not daemon_client.is_daemon_running:
-        daemon_client.start_daemon()
+        daemon_client.start()
         assert daemon_client.is_daemon_running
 
     yield daemon_client
@@ -708,14 +703,10 @@ def started_daemon_client(daemon_client):
 def stopped_daemon_client(daemon_client):
     """Ensure that the daemon is not running for the test profile and return the associated client."""
     if daemon_client.is_daemon_running:
-        daemon_client.stop_daemon(wait=True)
-        # Give an additional grace period by manually waiting for the daemon to be stopped. In certain unit test
-        # scenarios, the built in wait time in ``daemon_client.stop_daemon`` is not sufficient and even though the
-        # daemon is stopped, ``daemon_client.is_daemon_running`` will return false for a little bit longer.
-        daemon_client._await_condition(
-            lambda: not daemon_client.is_daemon_running,
-            DaemonTimeoutException('The daemon failed to stop.'),
-        )
+        try:
+            daemon_client.stop()
+        except DaemonNotRunningException:
+            pass
 
     yield daemon_client
 

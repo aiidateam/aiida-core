@@ -347,40 +347,50 @@ class ServiceSupervisorCommon:
     # TODO consider adding the create_time, then we maybe don't need do check if is alive but directly send _kill_service
     @staticmethod
     def _kill_service(pid: int) -> bool:
-        # TODO add create_time
-        # Kill the process with timeout of 5 seconds, force kill if it doesn't stop
-        logger.debug(f"Stopping process with PID {pid}")
-        kill_successful = True
-        try:
-            # Send SIGTERM for graceful shutdown
-            os.kill(pid, signal.SIGTERM)
+        """Kill a service process gracefully (SIGTERM), escalating to SIGKILL after timeout.
 
-            # Wait up to 5 seconds for the process to terminate
-            start_time = time.time()
-            while time.time() - start_time < ServiceSupervisorCommon.KILL_TIMEOUT:
-                os.kill(pid, 0)
-                time.sleep(0.1)
-            else:
-                # Timeout - force kill
-                logger.warning(f"Process {pid} did not stop gracefully, force killing...")
-                os.kill(pid, signal.SIGKILL)
-                start_time = time.time()
-                while time.time() - start_time < ServiceSupervisorCommon.KILL_TIMEOUT:
-                    os.kill(pid, 0)
-                    time.sleep(0.1)
-                kill_successful = False
-                logger.info(f"Force killing process {pid} failed.")
-        except ProcessLookupError:
-            # Process already gone
-            logger.debug(f"Process {pid} stopped.")
+        Sends SIGTERM first to allow the process to clean up (e.g. close RabbitMQ connections),
+        then waits up to KILL_TIMEOUT seconds. If the process is still alive, sends SIGKILL.
+
+        :param pid: The process ID to kill.
+        :returns: True if the process was successfully terminated, False otherwise.
+        """
+        logger.debug(f"Stopping process with PID {pid}")
+        try:
+            proc = psutil.Process(pid)
+        except psutil.NoSuchProcess:
+            logger.debug(f"Process {pid} already gone.")
+            return True
+
+        # Send SIGTERM for graceful shutdown
+        try:
+            proc.terminate()
+        except psutil.NoSuchProcess:
+            return True
+
+        # Wait for graceful shutdown
+        try:
+            proc.wait(timeout=ServiceSupervisorCommon.KILL_TIMEOUT)
+            logger.debug(f"Process {pid} stopped gracefully.")
+            return True
+        except psutil.TimeoutExpired:
             pass
-        except PermissionError:
-            kill_successful = False
-            logger.debug(f"No permission to kill process {pid}")
+
+        # Escalate to SIGKILL
+        logger.warning(f"Process {pid} did not stop gracefully, force killing...")
+        try:
+            proc.kill()
+            proc.wait(timeout=ServiceSupervisorCommon.KILL_TIMEOUT)
+            logger.debug(f"Process {pid} force killed.")
+            return True
+        except psutil.NoSuchProcess:
+            return True
+        except psutil.TimeoutExpired:
+            logger.error(f"Process {pid} could not be killed.")
+            return False
         except Exception as e:
-            kill_successful = False
-            logger.warning(f"Error stopping process {pid}: {e}") 
-        return kill_successful
+            logger.warning(f"Error killing process {pid}: {e}")
+            return False
 
     @staticmethod
     def _is_alive(pid: int, create_time: float) -> bool:

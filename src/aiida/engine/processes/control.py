@@ -237,6 +237,11 @@ def _perform_actions(
 
     _resolve_futures(futures, infinitive, present, timeout)
 
+    # End the current read transaction so that subsequent attribute reads see
+    # the state committed by the daemon.  Without this, SQLite's transaction
+    # snapshot isolation can cause stale reads after the RPC round-trip.
+    get_manager().get_profile_storage().get_session().commit()
+
 
 def _resolve_futures(
     futures: dict[concurrent.futures.Future, ProcessNode],

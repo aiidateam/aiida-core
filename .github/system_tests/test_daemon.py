@@ -163,9 +163,8 @@ def validate_workchains(expected_results):
             actual_value = calc.outputs.output
         except (exceptions.NotExistent, AttributeError) as exception:
             print(
-                '* UNABLE TO RETRIEVE VALUE for workchain pk={}: I expected {}, I got {}: {}'.format(
-                    pk, expected_value, type(exception), exception
-                )
+                f'* UNABLE TO RETRIEVE VALUE for workchain pk={pk}: '
+                f'I expected {expected_value}, I got {type(exception)}: {exception}'
             )
             valid = False
             this_valid = False
@@ -174,9 +173,8 @@ def validate_workchains(expected_results):
         # I check only if this_valid, otherwise calc could not exist
         if this_valid and not calc.is_finished_ok:
             print(
-                'Calculation<{}> not finished ok: process_state<{}> exit_status<{}>'.format(
-                    pk, calc.process_state, calc.exit_status
-                )
+                f'Calculation<{pk}> not finished ok: '
+                f'process_state<{calc.process_state}> exit_status<{calc.exit_status}>'
             )
             print_report(pk)
             valid = False
@@ -185,9 +183,8 @@ def validate_workchains(expected_results):
         # I check only if this_valid, otherwise actual_value could be unset
         if this_valid and actual_value != expected_value:
             print(
-                '* UNEXPECTED VALUE {}, type {} for workchain pk={}: I expected {}, type {}'.format(
-                    actual_value, type(actual_value), pk, expected_value, type(expected_value)
-                )
+                f'* UNEXPECTED VALUE {actual_value}, type {type(actual_value)} for workchain pk={pk}: '
+                f'I expected {expected_value}, type {type(expected_value)}'
             )
             valid = False
             this_valid = False
@@ -201,9 +198,8 @@ def validate_cached(cached_calcs):
     for calc in cached_calcs:
         if not calc.is_finished_ok:
             print(
-                'Cached calculation<{}> not finished ok: process_state<{}> exit_status<{}>'.format(
-                    calc.pk, calc.process_state, calc.exit_status
-                )
+                f'Cached calculation<{calc.pk}> not finished ok: '
+                f'process_state<{calc.process_state}> exit_status<{calc.exit_status}>'
             )
             print_report(calc.pk)
             valid = False
@@ -226,17 +222,15 @@ def validate_cached(cached_calcs):
                 valid = False
             if not files_original:
                 print(
-                    'Original calculation <{}> does not have any raw inputs files after being cached from.'.format(
-                        original_calc.pk
-                    )
+                    f'Original calculation <{original_calc.pk}> '
+                    f'does not have any raw inputs files after being cached from.'
                 )
                 valid = False
 
             if set(files_original) != set(files_cached):
                 print(
-                    'different raw input files [{}] vs [{}] for original<{}> and cached<{}> calculation'.format(
-                        set(files_original), set(files_cached), original_calc.pk, calc.pk
-                    )
+                    f'different raw input files [{set(files_original)}] vs [{set(files_cached)}] '
+                    f'for original<{original_calc.pk}> and cached<{calc.pk}> calculation'
                 )
                 valid = False
 

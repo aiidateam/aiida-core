@@ -357,7 +357,7 @@ def test_put_and_get(custom_transport, tmp_path_remote, tmp_path_local):
         transport.put(local_file_abs_path, remote_file_abs_path)
         transport.get(remote_file_abs_path, retrieved_file_abs_path)
 
-        list_of_files = transport.listdir((tmp_path_remote / directory))
+        list_of_files = transport.listdir(tmp_path_remote / directory)
         # it is False because local_file_name has the full path,
         # while list_of_files has not
         assert local_file_name not in list_of_files
@@ -408,7 +408,7 @@ def test_putfile_and_getfile(custom_transport, tmp_path_remote, tmp_path_local):
 
     with custom_transport as transport:
         (local_dir / directory).mkdir()
-        transport.mkdir((remote_dir / directory))
+        transport.mkdir(remote_dir / directory)
 
         local_file_name = 'file.txt'
         retrieved_file_name = 'file_retrieved.txt'
@@ -444,7 +444,7 @@ def test_put_get_abs_path_file(custom_transport, tmp_path_remote, tmp_path_local
 
     with custom_transport as transport:
         (local_dir / directory).mkdir()
-        transport.mkdir((remote_dir / directory))
+        transport.mkdir(remote_dir / directory)
 
         local_file_name = 'file.txt'
         retrieved_file_name = 'file_retrieved.txt'
@@ -490,7 +490,7 @@ def test_put_get_empty_string_file(custom_transport, tmp_path_remote, tmp_path_l
 
     with custom_transport as transport:
         (local_dir / directory).mkdir()
-        transport.mkdir((remote_dir / directory))
+        transport.mkdir(remote_dir / directory)
 
         local_file_name = 'file.txt'
         retrieved_file_name = 'file_retrieved.txt'
@@ -715,22 +715,22 @@ def test_copy(custom_transport, tmp_path_remote):
             transport.copy(base_dir / '*.txt', workdir / 'prova')
 
         # fifth test, copying one file into a folder
-        transport.mkdir((workdir / 'prova'))
+        transport.mkdir(workdir / 'prova')
         transport.copy((base_dir / 'a.txt'), (workdir / 'prova'))
-        assert set(transport.listdir((workdir / 'prova'))) == set(['a.txt'])
-        transport.rmtree((workdir / 'prova'))
+        assert set(transport.listdir(workdir / 'prova')) == set(['a.txt'])
+        transport.rmtree(workdir / 'prova')
 
         # sixth test, copying one file into a file
         transport.copy((base_dir / 'a.txt'), (workdir / 'prova'))
-        assert transport.isfile((workdir / 'prova'))
-        transport.remove((workdir / 'prova'))
+        assert transport.isfile(workdir / 'prova')
+        transport.remove(workdir / 'prova')
         # copy of folder into an existing folder
         # NOTE: the command cp has a different behavior on Mac vs Ubuntu
         # tests performed locally on a Mac may result in a failure.
-        transport.mkdir((workdir / 'prova'))
+        transport.mkdir(workdir / 'prova')
         transport.copy((base_dir), (workdir / 'prova'))
-        assert set(['origin']) == set(transport.listdir((workdir / 'prova')))
-        assert set(['a.txt', 'b.tmp', 'c.txt']) == set(transport.listdir((workdir / 'prova' / 'origin')))
+        assert set(['origin']) == set(transport.listdir(workdir / 'prova'))
+        assert set(['a.txt', 'b.tmp', 'c.txt']) == set(transport.listdir(workdir / 'prova' / 'origin'))
 
 
 def test_put(custom_transport, tmp_path_remote, tmp_path_local):
@@ -762,20 +762,20 @@ def test_put(custom_transport, tmp_path_remote, tmp_path_local):
 
         # first test the put. Copy of two files matching patterns, into a folder
         transport.put((local_base_dir / '*.txt'), (remote_workdir))
-        assert set(['a.txt', 'c.txt']) == set(transport.listdir((remote_workdir)))
-        transport.remove((remote_workdir / 'a.txt'))
-        transport.remove((remote_workdir / 'c.txt'))
+        assert set(['a.txt', 'c.txt']) == set(transport.listdir(remote_workdir))
+        transport.remove(remote_workdir / 'a.txt')
+        transport.remove(remote_workdir / 'c.txt')
 
         # second test put. Put of two folders
         transport.put((local_base_dir), (remote_workdir / 'prova'))
-        assert set(['prova']) == set(transport.listdir((remote_workdir)))
-        assert set(['a.txt', 'b.tmp', 'c.txt']) == set(transport.listdir((remote_workdir / 'prova')))
-        transport.rmtree((remote_workdir / 'prova'))
+        assert set(['prova']) == set(transport.listdir(remote_workdir))
+        assert set(['a.txt', 'b.tmp', 'c.txt']) == set(transport.listdir(remote_workdir / 'prova'))
+        transport.rmtree(remote_workdir / 'prova')
 
         # third test put. Can copy one file into a new file
         transport.put((local_base_dir / '*.tmp'), (remote_workdir / 'prova'))
-        assert transport.isfile((remote_workdir / 'prova'))
-        transport.remove((remote_workdir / 'prova'))
+        assert transport.isfile(remote_workdir / 'prova')
+        transport.remove(remote_workdir / 'prova')
 
         # fourth test put: can't copy more than one file to the same file,
         # i.e., the destination should be a folder
@@ -787,29 +787,29 @@ def test_put(custom_transport, tmp_path_remote, tmp_path_local):
             fhandle.write(text)
         with pytest.raises(OSError):
             transport.put((local_base_dir), (remote_workdir / 'existing.txt'))
-        transport.remove((remote_workdir / 'existing.txt'))
+        transport.remove(remote_workdir / 'existing.txt')
 
         # fifth test, copying one file into a folder
-        transport.mkdir((remote_workdir / 'prova'))
+        transport.mkdir(remote_workdir / 'prova')
         transport.put((local_base_dir / 'a.txt'), (remote_workdir / 'prova'))
-        assert set(transport.listdir((remote_workdir / 'prova'))) == set(['a.txt'])
-        transport.rmtree((remote_workdir / 'prova'))
+        assert set(transport.listdir(remote_workdir / 'prova')) == set(['a.txt'])
+        transport.rmtree(remote_workdir / 'prova')
 
         # sixth test, copying one file into a file
         transport.put((local_base_dir / 'a.txt'), (remote_workdir / 'prova'))
-        assert transport.isfile((remote_workdir / 'prova'))
-        transport.remove((remote_workdir / 'prova'))
+        assert transport.isfile(remote_workdir / 'prova')
+        transport.remove(remote_workdir / 'prova')
 
         # put of folder into an existing folder
         # NOTE: the command cp has a different behavior on Mac vs Ubuntu
         # tests performed locally on a Mac may result in a failure.
-        transport.mkdir((remote_workdir / 'prova'))
+        transport.mkdir(remote_workdir / 'prova')
         transport.put((local_base_dir), (remote_workdir / 'prova'))
-        assert set(['origin']) == set(transport.listdir((remote_workdir / 'prova')))
-        assert set(['a.txt', 'b.tmp', 'c.txt']) == set(transport.listdir((remote_workdir / 'prova' / 'origin')))
-        transport.rmtree((remote_workdir / 'prova'))
+        assert set(['origin']) == set(transport.listdir(remote_workdir / 'prova'))
+        assert set(['a.txt', 'b.tmp', 'c.txt']) == set(transport.listdir(remote_workdir / 'prova' / 'origin'))
+        transport.rmtree(remote_workdir / 'prova')
         # exit
-        transport.rmtree((remote_workdir))
+        transport.rmtree(remote_workdir)
 
 
 def test_get(custom_transport, tmp_path_remote, tmp_path_local):
@@ -1172,7 +1172,7 @@ def test_transfer_big_stdout(custom_transport, tmp_path_remote):
             # I put a file with specific content there at the right file name
             transport.putfile(tmpf.name, directory_path / fname)
 
-        python_code = r"""import sys
+        python_code = rf"""import sys
 
 # disable buffering is only allowed in binary
 #stdout = open(sys.stdout.fileno(), mode="wb", buffering=0)
@@ -1182,12 +1182,12 @@ def test_transfer_big_stdout(custom_transport, tmp_path_remote):
 stdout = open(sys.stdout.fileno(), mode="wb")
 stderr = open(sys.stderr.fileno(), mode="wb")
 
-line = '''{}'''.encode('utf-8')
+line = '''{file_line}'''.encode('utf-8')
 
-for i in range({}):
+for i in range({line_repetitions}):
     stdout.write(line)
     stderr.write(line)
-""".format(file_line, line_repetitions)
+"""
 
         with tempfile.NamedTemporaryFile(mode='w') as tmpf:
             tmpf.write(python_code)
@@ -1321,7 +1321,7 @@ def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: P
             transport.compress('unsupported_format', tmp_path_remote, tmp_path_remote / 'archive.tar', '/')
 
         # if the remotesource does not exist
-        with pytest.raises(OSError, match=f"{tmp_path_remote / 'non_existing'} does not exist"):
+        with pytest.raises(OSError, match=f'{tmp_path_remote / "non_existing"} does not exist'):
             transport.compress('tar', tmp_path_remote / 'non_existing', tmp_path_remote / 'archive.tar', '/')
 
         # if a matching pattern of the remote source is not found
@@ -1331,7 +1331,7 @@ def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: P
         # if the remotedestination already exists
         Path(tmp_path_remote / 'already_exist.tar').touch()
         with pytest.raises(
-            OSError, match=f"The remote destination {tmp_path_remote / 'already_exist.tar'} already exists."
+            OSError, match=f'The remote destination {tmp_path_remote / "already_exist.tar"} already exists.'
         ):
             transport.compress('tar', tmp_path_remote, tmp_path_remote / 'already_exist.tar', '/', overwrite=False)
 
@@ -1342,7 +1342,7 @@ def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: P
         # if the root_dir is not a directory
         with pytest.raises(
             OSError,
-            match=f"The relative root {tmp_path_remote / 'non_existing_folder'} does not exist, or is not a directory.",
+            match=f'The relative root {tmp_path_remote / "non_existing_folder"} does not exist, or is not a directory.',
         ):
             transport.compress(
                 'tar', tmp_path_remote, tmp_path_remote / 'archive.tar', tmp_path_remote / 'non_existing_folder'

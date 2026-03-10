@@ -25,8 +25,9 @@ EPS = entry_points()
 # (e.g. Python 3.14 renders ``typing.Dict`` as ``dict`` and ``typing.Optional[X]`` as
 # ``X | None``), the reference files are only valid for the Python version they were
 # generated with. Rather than maintaining two sets of reference files, we skip on
-# Python versions that don't match.
-skip_below_py314 = pytest.mark.skipif(sys.version_info < (3, 14), reason='typing repr fixtures require Python >=3.14.0')
+# Python versions that don't match. Once 3.14 becomes the baseline, regenerate the
+# reference files and update this marker.
+skip_below_py314 = pytest.mark.skipif(sys.version_info < (3, 14), reason='typing repr fixtures require Python 3.14+')
 
 
 @skip_below_py314

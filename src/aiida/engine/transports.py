@@ -13,7 +13,8 @@ import contextlib
 import contextvars
 import logging
 import traceback
-from typing import TYPE_CHECKING, AsyncIterator, Awaitable, Dict, Hashable, Optional
+from collections.abc import AsyncIterator, Awaitable, Hashable
+from typing import TYPE_CHECKING, Optional
 
 from plumpy import get_or_create_event_loop
 
@@ -48,7 +49,7 @@ class TransportQueue:
     def __init__(self, loop: Optional[asyncio.AbstractEventLoop] = None):
         """:param loop: An asyncio event, will use `get_or_create_event_loop()` if not supplied"""
         self._loop = loop if loop else get_or_create_event_loop()
-        self._transport_requests: Dict[Hashable, TransportRequest] = {}
+        self._transport_requests: dict[Hashable, TransportRequest] = {}
 
     @property
     def loop(self) -> asyncio.AbstractEventLoop:

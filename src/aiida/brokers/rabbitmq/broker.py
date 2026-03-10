@@ -30,7 +30,7 @@ class RabbitmqBroker(Broker):
         :param profile: The profile.
         """
         self._profile = profile
-        self._communicator: 'RmqThreadCommunicator' | None = None
+        self._communicator: RmqThreadCommunicator | None = None
         self._prefix = f'aiida-{self._profile.uuid}'
 
     def __str__(self):
@@ -47,10 +47,9 @@ class RabbitmqBroker(Broker):
 
     def iterate_tasks(self):
         """Return an iterator over the tasks in the launch queue."""
-        for task in self.get_communicator().task_queue(get_launch_queue_name(self._prefix)):
-            yield task
+        yield from self.get_communicator().task_queue(get_launch_queue_name(self._prefix))
 
-    def get_communicator(self) -> 'RmqThreadCommunicator':
+    def get_communicator(self) -> RmqThreadCommunicator:
         if self._communicator is None:
             self._communicator = self._create_communicator()
             # Check whether a compatible version of RabbitMQ is being used.
@@ -58,7 +57,7 @@ class RabbitmqBroker(Broker):
 
         return self._communicator
 
-    def _create_communicator(self) -> 'RmqThreadCommunicator':
+    def _create_communicator(self) -> RmqThreadCommunicator:
         """Return an instance of :class:`kiwipy.Communicator`."""
         from kiwipy.rmq import RmqThreadCommunicator
 

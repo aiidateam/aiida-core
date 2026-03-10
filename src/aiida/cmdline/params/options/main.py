@@ -188,7 +188,7 @@ def graph_traversal_rules(rules: dict[t.Any, t.Any]) -> t.Callable[[FC], FC]:
         for name, traversal_rule in sorted(rules.items(), reverse=True):
             if traversal_rule.toggleable:
                 option_name = name.replace('_', '-')
-                option_label = '--{option_name}/--no-{option_name}'.format(option_name=option_name)
+                option_label = f'--{option_name}/--no-{option_name}'
                 help_string = f'Whether to expand the node set by following {TRAVERSAL_RULE_HELP_STRING[name]}.'
                 click.option(option_label, default=traversal_rule.default, show_default=True, help=help_string)(command)
 

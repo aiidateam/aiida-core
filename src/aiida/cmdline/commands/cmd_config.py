@@ -157,7 +157,7 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
             value = list(set(current + [value]))
         else:
             value = [item for item in current if item != value]
-    elif option.valid_type == typing.List[str]:
+    elif option.valid_type == list[str]:
         value = [value]
 
     # Set the specified option

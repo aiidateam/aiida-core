@@ -11,7 +11,7 @@ import hashlib
 import io
 import pathlib
 from collections.abc import Iterable, Iterator
-from typing import Any, BinaryIO, List, Optional, Tuple, Union
+from typing import Any, BinaryIO, Optional, Union
 
 from aiida.common.hashing import chunked_file_hash
 
@@ -97,7 +97,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
             return self.put_object_from_filelike(handle)
 
     @abc.abstractmethod
-    def has_objects(self, keys: List[str]) -> List[bool]:
+    def has_objects(self, keys: list[str]) -> list[bool]:
         """Return whether the repository has an object with the given key.
 
         :param keys:
@@ -157,7 +157,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
             return handle.read()
 
     @abc.abstractmethod
-    def iter_object_streams(self, keys: Iterable[str]) -> Iterator[Tuple[str, BinaryIO]]:
+    def iter_object_streams(self, keys: Iterable[str]) -> Iterator[tuple[str, BinaryIO]]:
         """Return an iterator over the (read-only) byte streams of objects identified by key.
 
         .. note:: handles should only be read within the context of this iterator.
@@ -184,7 +184,7 @@ class AbstractRepositoryBackend(metaclass=abc.ABCMeta):
             return chunked_file_hash(handle, hashlib.sha256)
 
     @abc.abstractmethod
-    def delete_objects(self, keys: List[str]) -> None:
+    def delete_objects(self, keys: list[str]) -> None:
         """Delete the objects from the repository.
 
         :param keys: list of fully qualified identifiers for the objects within the repository.

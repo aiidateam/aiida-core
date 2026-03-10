@@ -54,7 +54,7 @@ def server_url():
     from aiida.restapi.common.config import API_CONFIG, CLI_DEFAULTS
 
     def _server_url(hostname: Optional[str] = None, port: Optional[int] = None):
-        return f"http://{hostname or CLI_DEFAULTS['HOST_NAME']}:{port or CLI_DEFAULTS['PORT']}{API_CONFIG['PREFIX']}"
+        return f'http://{hostname or CLI_DEFAULTS["HOST_NAME"]}:{port or CLI_DEFAULTS["PORT"]}{API_CONFIG["PREFIX"]}'
 
     return _server_url
 

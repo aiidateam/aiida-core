@@ -152,10 +152,8 @@ class TemplatereplacerCalculation(CalcJob):
                 remote_copy_list.append((fileobj.computer.uuid, fileobj.get_remote_path(), dest_rel_path))
             else:
                 raise exceptions.InputValidationError(
-                    'If you ask to copy a file link {}, '
-                    'it must be either a SinglefileData or a RemoteData; it is instead of type {}'.format(
-                        link_name, fileobj.__class__.__name__
-                    )
+                    f'If you ask to copy a file link {link_name}, it must be either a SinglefileData or a '
+                    f'RemoteData; it is instead of type {fileobj.__class__.__name__}'
                 )
 
         if input_file_name is not None and not input_file_template:

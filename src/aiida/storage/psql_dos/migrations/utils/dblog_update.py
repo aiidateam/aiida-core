@@ -10,7 +10,6 @@
 
 import sys
 from tempfile import NamedTemporaryFile
-from typing import Set
 
 import click
 import sqlalchemy as sa
@@ -131,8 +130,8 @@ def export_and_clean_workflow_logs(connection, profile):
 
     if not profile.is_test_profile:
         echo.echo_warning(
-            'We found {} log records that correspond to legacy workflows and {} log records to correspond '
-            'to an unknown entity.'.format(lwf_no_number, other_number)
+            f'We found {lwf_no_number} log records that correspond to legacy workflows and {other_number} log '
+            'records to correspond to an unknown entity.'
         )
         echo.echo_warning(
             'These records will be removed from the database and exported to JSON files (to the current directory).'
@@ -232,7 +231,7 @@ def set_new_uuid(connection):
     ids = []
     for (curr_id,) in id_res:
         ids.append(curr_id)
-    uuids: Set[str] = set()
+    uuids: set[str] = set()
     while len(uuids) < len(ids):
         uuids.add(get_new_uuid())
 

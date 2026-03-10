@@ -551,10 +551,10 @@ def aiida_computer(tmp_path) -> t.Callable[[], Computer]:
     """Factory to return a :class:`aiida.orm.computers.Computer` instance."""
 
     def factory(
-        label: t.Optional[str] = None,
+        label: str | None = None,
         minimum_job_poll_interval: int = 0,
         default_mpiprocs_per_machine: int = 1,
-        configuration_kwargs: t.Optional[dict[t.Any, t.Any]] = None,
+        configuration_kwargs: dict[t.Any, t.Any] | None = None,
         **kwargs,
     ) -> Computer:
         """Return a :class:`aiida.orm.computers.Computer` instance.
@@ -600,7 +600,7 @@ def aiida_computer(tmp_path) -> t.Callable[[], Computer]:
 def aiida_computer_local(aiida_computer) -> t.Callable[[], Computer]:
     """Factory to return a :class:`aiida.orm.computers.Computer` instance with ``core.local`` transport."""
 
-    def factory(label: t.Optional[str] = None, configure: bool = True) -> Computer:
+    def factory(label: str | None = None, configure: bool = True) -> Computer:
         """Return a :class:`aiida.orm.computers.Computer` instance representing localhost with ``core.local`` transport.
 
         The database is queried for an existing computer with the given label. If it exists, it is returned, otherwise a
@@ -627,7 +627,7 @@ def aiida_computer_local(aiida_computer) -> t.Callable[[], Computer]:
 def aiida_computer_ssh(aiida_computer, ssh_key) -> t.Callable[[], Computer]:
     """Factory to return a :class:`aiida.orm.computers.Computer` instance with ``core.ssh`` transport."""
 
-    def factory(label: t.Optional[str] = None, configure: bool = True) -> Computer:
+    def factory(label: str | None = None, configure: bool = True) -> Computer:
         """Return a :class:`aiida.orm.computers.Computer` instance representing localhost with ``core.ssh`` transport.
 
         The database is queried for an existing computer with the given label. If it exists, it is returned, otherwise a
@@ -865,7 +865,7 @@ class EntryPointManager:
             self.entry_points[name]
         except KeyError:
             raise KeyError(f'entry point `{name}` does not exist in group `{group}`.')
-        self.entry_points = EntryPoints((ep for ep in self.entry_points if not (ep.name == name and ep.group == group)))
+        self.entry_points = EntryPoints(ep for ep in self.entry_points if not (ep.name == name and ep.group == group))
 
 
 @pytest.fixture

@@ -170,10 +170,8 @@ def test_validate_transfer_inputs(aiida_localhost, tmp_path):
     }
     expected_list = []
     expected_list.append(
-        (
-            f' > remote node `unused_node` points to computer `{aiida_localhost}`, '
-            f'not the one being used (`{fake_localhost}`)'
-        )
+        f' > remote node `unused_node` points to computer `{aiida_localhost}`, '
+        f'not the one being used (`{fake_localhost}`)'
     )
     expected_list.append(check_node_type('local_files', 'inexistent_node', None, orm.FolderData))
     expected_list.append(check_node_type('remote_files', 'inexistent_node', None, orm.RemoteData))

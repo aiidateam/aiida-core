@@ -9,7 +9,8 @@
 """Interface to the extras of a node instance."""
 
 import copy
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Tuple, Union
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, Union
 
 if TYPE_CHECKING:
     from .groups import Group
@@ -40,7 +41,7 @@ class EntityExtras:
         return key in self._backend_entity.extras
 
     @property
-    def all(self) -> Dict[str, Any]:
+    def all(self) -> dict[str, Any]:
         """Return the complete extras dictionary.
 
         .. warning:: While the entity is unstored, this will return references of the extras on the database model,
@@ -86,7 +87,7 @@ class EntityExtras:
 
         return extra
 
-    def get_many(self, keys: List[str]) -> List[Any]:
+    def get_many(self, keys: list[str]) -> list[Any]:
         """Return the values of multiple extras.
 
         .. warning:: While the entity is unstored, this will return references of the extras on the database model,
@@ -117,7 +118,7 @@ class EntityExtras:
         """
         self._backend_entity.set_extra(key, value)
 
-    def set_many(self, extras: Dict[str, Any]) -> None:
+    def set_many(self, extras: dict[str, Any]) -> None:
         """Set multiple extras.
 
         .. note:: This will override any existing extras that are present in the new dictionary.
@@ -127,7 +128,7 @@ class EntityExtras:
         """
         self._backend_entity.set_extra_many(extras)
 
-    def reset(self, extras: Dict[str, Any]) -> None:
+    def reset(self, extras: dict[str, Any]) -> None:
         """Reset the extras.
 
         .. note:: This will completely clear any existing extras and replace them with the new dictionary.
@@ -145,7 +146,7 @@ class EntityExtras:
         """
         self._backend_entity.delete_extra(key)
 
-    def delete_many(self, keys: List[str]) -> None:
+    def delete_many(self, keys: list[str]) -> None:
         """Delete multiple extras.
 
         :param keys: names of the extras to delete
@@ -157,7 +158,7 @@ class EntityExtras:
         """Delete all extras."""
         self._backend_entity.clear_extras()
 
-    def items(self) -> Iterable[Tuple[str, Any]]:
+    def items(self) -> Iterable[tuple[str, Any]]:
         """Return an iterator over the extras.
 
         :return: an iterator with extra key value pairs

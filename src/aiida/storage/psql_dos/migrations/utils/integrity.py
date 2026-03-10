@@ -177,10 +177,12 @@ def write_database_integrity_violation(results, headers, reason_message, action_
 
     with NamedTemporaryFile(prefix='migration-', suffix='.log', dir='.', delete=False, mode='w+') as handle:
         LOGGER.warning(
-            '\n{}\nFound one or multiple records that violate the integrity of the database\nViolation reason: {}\n'
-            'Performed action: {}\nViolators written to: {}\n{}\n'.format(
-                WARNING_BORDER, reason_message, action_message, handle.name, WARNING_BORDER
-            )
+            f'\n{WARNING_BORDER}\n'
+            f'Found one or multiple records that violate the integrity of the database\n'
+            f'Violation reason: {reason_message}\n'
+            f'Performed action: {action_message}\n'
+            f'Violators written to: {handle.name}\n'
+            f'{WARNING_BORDER}\n'
         )
 
         handle.write(f'# {datetime.datetime.now(timezone.utc).isoformat()}\n')

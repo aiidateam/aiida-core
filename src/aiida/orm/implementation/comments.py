@@ -10,7 +10,7 @@
 
 import abc
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from .entities import BackendCollection, BackendEntity
 
@@ -105,7 +105,7 @@ class BackendCommentCollection(BackendCollection[BackendComment]):
         """
 
     @abc.abstractmethod
-    def delete_many(self, filters: dict) -> List[int]:
+    def delete_many(self, filters: dict) -> list[int]:
         """Delete Comments based on ``filters``
 
         :param filters: similar to QueryBuilder filter

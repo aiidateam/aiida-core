@@ -383,7 +383,7 @@ class TestProcess:
 
             @classmethod
             def define(cls, spec):
-                super(ChildProcess, cls).define(spec)
+                super().define(spec)
                 spec.input('input', valid_type=orm.Int)
                 spec.output('output', valid_type=orm.Int)
                 spec.output('name.space', valid_type=orm.Int)
@@ -395,7 +395,7 @@ class TestProcess:
 
             @classmethod
             def define(cls, spec):
-                super(ParentProcess, cls).define(spec)
+                super().define(spec)
                 spec.input('input', valid_type=orm.Int)
                 spec.expose_outputs(ChildProcess)
 
@@ -433,7 +433,7 @@ class TestProcess:
 
             @classmethod
             def define(cls, spec):
-                super(ChildProcess, cls).define(spec)
+                super().define(spec)
                 spec.input('input', valid_type=orm.Int)
                 spec.output('output', valid_type=orm.Int)
                 spec.output('name.space', valid_type=orm.Int)
@@ -445,7 +445,7 @@ class TestProcess:
 
             @classmethod
             def define(cls, spec):
-                super(ParentProcess, cls).define(spec)
+                super().define(spec)
                 spec.input('input', valid_type=orm.Int)
                 spec.expose_outputs(ChildProcess, namespace='child')
 

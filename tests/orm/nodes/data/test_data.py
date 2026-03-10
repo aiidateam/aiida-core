@@ -145,8 +145,8 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
             )
 
         raise RuntimeError(
-            'no instance generator implemented for class `{}`. If you have added a `_prepare_*` method '
-            'for this data class, add a generator of a dummy instance here'.format(data_class)
+            f'no instance generator implemented for class `{data_class}`. If you have added a `_prepare_*` method '
+            'for this data class, add a generator of a dummy instance here'
         )
 
     return _generate_class_instance

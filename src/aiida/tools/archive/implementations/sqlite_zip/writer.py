@@ -17,7 +17,7 @@ import zipfile
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from typing import Any, BinaryIO, Dict, List, Literal, Optional, Set, Union
+from typing import Any, BinaryIO, Literal, Optional, Union
 
 from archive_path import NOTSET, ZipPath, extract_file_in_zip, read_file_in_zip
 from sqlalchemy import insert
@@ -55,9 +55,9 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         self._in_context = False
         self._enforce_foreign_keys = _enforce_foreign_keys
         self._debug = _debug
-        self._metadata: Dict[str, Any] = {}
-        self._central_dir: Dict[str, Any] = {}
-        self._deleted_paths: Set[str] = set()
+        self._metadata: dict[str, Any] = {}
+        self._central_dir: dict[str, Any] = {}
+        self._deleted_paths: set[str] = set()
         self._zip_path: Optional[ZipPath] = None
         self._work_dir: Optional[Path] = None
         self._conn: Optional[Connection] = None
@@ -113,7 +113,7 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         self._zip_path = self._work_dir = self._conn = None
         self._in_context = False
 
-    def update_metadata(self, data: Dict[str, Any], overwrite: bool = False) -> None:
+    def update_metadata(self, data: dict[str, Any], overwrite: bool = False) -> None:
         if not overwrite and set(self._metadata).intersection(set(data)):
             raise ValueError(f'Cannot overwrite existing keys: {set(self._metadata).intersection(set(data))}')
         self._metadata.update(data)
@@ -121,7 +121,7 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
     def bulk_insert(
         self,
         entity_type: EntityTypes,
-        rows: List[Dict[str, Any]],
+        rows: list[dict[str, Any]],
         allow_defaults: bool = False,
     ) -> None:
         if not rows:
@@ -161,7 +161,7 @@ class ArchiveWriterSqlZip(ArchiveWriterAbstract):
         """
         self._assert_in_context()
         assert self._zip_path is not None
-        kwargs: Dict[str, Any] = {'comment': NOTSET if comment is None else comment}
+        kwargs: dict[str, Any] = {'comment': NOTSET if comment is None else comment}
         if compression is not None:
             kwargs['compression'] = zipfile.ZIP_DEFLATED if compression else zipfile.ZIP_STORED
             kwargs['level'] = compression

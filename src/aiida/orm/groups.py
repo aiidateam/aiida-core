@@ -10,9 +10,10 @@
 
 import datetime
 import warnings
+from collections.abc import Sequence
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
 
 from typing_extensions import Self
 
@@ -34,7 +35,7 @@ if TYPE_CHECKING:
 __all__ = ('AutoGroup', 'Group', 'ImportGroup', 'UpfFamily')
 
 
-def load_group_class(type_string: str) -> Type['Group']:
+def load_group_class(type_string: str) -> type['Group']:
     """Load the sub class of `Group` that corresponds to the given `type_string`.
 
     .. note:: will fall back on `aiida.orm.groups.Group` if `type_string` cannot be resolved to loadable entry point.
@@ -59,10 +60,10 @@ class GroupCollection(entities.Collection['Group']):
     """Collection of Groups"""
 
     @staticmethod
-    def _entity_base_cls() -> Type['Group']:
+    def _entity_base_cls() -> type['Group']:
         return Group
 
-    def get_or_create(self, label: Optional[str] = None, **kwargs) -> Tuple['Group', bool]:
+    def get_or_create(self, label: Optional[str] = None, **kwargs) -> tuple['Group', bool]:
         """Try to retrieve a group from the DB with the given arguments;
         create (and store) a new group if such a group was not present yet.
 
@@ -97,7 +98,7 @@ class GroupBase:
 
     def __init__(self, group: 'Group') -> None:
         """Construct a new instance of the base namespace."""
-        self._group: 'Group' = group
+        self._group: Group = group
 
     @cached_property
     def extras(self) -> extras.EntityExtras:
@@ -124,7 +125,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         )
         label: str = MetadataField(description='The group label', is_attribute=False)
         description: Optional[str] = MetadataField(description='The group description', is_attribute=False)
-        extras: Optional[Dict[str, Any]] = MetadataField(
+        extras: Optional[dict[str, Any]] = MetadataField(
             description='The group extras',
             is_attribute=False,
             is_subscriptable=True,
@@ -140,7 +141,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         description: str = '',
         type_string: Optional[str] = None,
         time: Optional[datetime.datetime] = None,
-        extras: Optional[Dict[str, Any]] = None,
+        extras: Optional[dict[str, Any]] = None,
         backend: Optional['StorageBackend'] = None,
     ):
         """Create a new group. Either pass a dbgroup parameter, to reload

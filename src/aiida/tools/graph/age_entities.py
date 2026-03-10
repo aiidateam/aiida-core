@@ -135,7 +135,7 @@ class AbstractSetContainer(metaclass=ABCMeta):
         return len(self.keyset)
 
     def __repr__(self) -> str:
-        return f"{{{','.join(map(str, self.keyset))}}}"
+        return f'{{{",".join(map(str, self.keyset))}}}'
 
     def __eq__(self, other: Any) -> Any:
         return self.keyset == other.keyset
@@ -208,9 +208,9 @@ class AiidaEntitySet(AbstractSetContainer):
             return input_for_set
 
         raise ValueError(
-            '{} is not a valid input\n'
+            f'{input_for_set} is not a valid input\n'
             'You can either pass an AiiDA instance or a key to an instance that'
-            'matches the identifier you defined ({})'.format(input_for_set, self._identifier_type)
+            f'matches the identifier you defined ({self._identifier_type})'
         )
 
     def get_template(self) -> AiidaEntitySet:
@@ -377,9 +377,9 @@ class Basket:
 
             else:
                 raise ValueError(
-                    'Input object is of type {}.\n'
+                    f'Input object is of type {input_object}.\n'
                     'Instead, it should be either None or one of:\n'
-                    ' - {}\n - {}\n - {}\n - {}\n'.format(input_object, AiidaEntitySet, list, tuple, set)
+                    f' - {AiidaEntitySet}\n - {list}\n - {tuple}\n - {set}\n'
                 )
 
         def get_check_set_directed_edge_set(
@@ -440,7 +440,7 @@ class Basket:
     def __setitem__(self, key: _BasketKeys, val: _BasketValues) -> None:
         self._dict[key] = val
 
-    def __add__(self, other: Self) -> 'Basket':
+    def __add__(self, other: Self) -> Basket:
         new_dict = {}
         for key, value in self._dict.items():
             new_dict[key] = value + other.dict[key]  # type: ignore[literal-required]
@@ -451,7 +451,7 @@ class Basket:
             self[key] += other[key]  # type: ignore[index,call-overload]
         return self
 
-    def __sub__(self, other: Self) -> 'Basket':
+    def __sub__(self, other: Self) -> Basket:
         new_dict = {}
         for key in self._dict:
             new_dict[key] = self[key] - other[key]  # type: ignore[call-overload]
@@ -489,14 +489,14 @@ class Basket:
         for set_ in self._dict.values():
             set_.empty()  # type: ignore[attr-defined]
 
-    def get_template(self) -> 'Basket':
+    def get_template(self) -> Basket:
         """Create new nasket with the same defining attributes for its internal containers."""
         new_dict = {}
         for key, val in self._dict.items():
             new_dict[key] = val.get_template()  # type: ignore[attr-defined]
         return Basket(**new_dict)
 
-    def copy(self) -> 'Basket':
+    def copy(self) -> Basket:
         """Create new instance with the same defining attributes and content."""
         new_dict = {}
         for key, val in self._dict.items():

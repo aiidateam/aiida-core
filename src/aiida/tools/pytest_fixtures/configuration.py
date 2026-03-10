@@ -104,7 +104,7 @@ def aiida_profile_factory():
 
     @contextlib.contextmanager
     def factory(
-        config: 'Config',
+        config: Config,
         *,
         storage_backend: str = 'core.sqlite_dos',
         storage_config: dict[str, t.Any] | None = None,

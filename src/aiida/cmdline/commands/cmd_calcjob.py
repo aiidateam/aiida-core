@@ -111,9 +111,9 @@ def calcjob_inputcat(calcjob, path):
     if path is None:
         # Still no path available
         echo.echo_critical(
-            '"{}" and its process class "{}" do not define a default input file '
-            '(option "input_filename" not found).\n'
-            'Please specify a path explicitly.'.format(calcjob.__class__.__name__, calcjob.process_class.__name__)
+            f'"{calcjob.__class__.__name__}" and its process class "{calcjob.process_class.__name__}" do not '
+            'define a default input file (option "input_filename" not found).\n'
+            'Please specify a path explicitly.'
         )
 
     try:
@@ -187,9 +187,9 @@ def calcjob_outputcat(calcjob, path):
     if path is None:
         # Still no path available
         echo.echo_critical(
-            '"{}" and its process class "{}" do not define a default output file '
-            '(option "output_filename" not found).\n'
-            'Please specify a path explicitly.'.format(calcjob.__class__.__name__, calcjob.process_class.__name__)
+            f'"{calcjob.__class__.__name__}" and its process class "{calcjob.process_class.__name__}" do not '
+            'define a default output file (option "output_filename" not found).\n'
+            'Please specify a path explicitly.'
         )
 
     try:

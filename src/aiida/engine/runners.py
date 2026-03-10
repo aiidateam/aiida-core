@@ -16,7 +16,7 @@ import logging
 import signal
 import threading
 import uuid
-from typing import Any, Callable, Dict, NamedTuple, Optional, Tuple, Type, Union
+from typing import Any, Callable, NamedTuple, Union
 
 import kiwipy
 from plumpy import run_until_complete
@@ -39,35 +39,35 @@ LOGGER = logging.getLogger(__name__)
 
 
 class ResultAndNode(NamedTuple):
-    result: Dict[str, Any]
+    result: dict[str, Any]
     node: ProcessNode
 
 
 class ResultAndPk(NamedTuple):
-    result: Dict[str, Any]
+    result: dict[str, Any]
     pk: int | None
 
 
-TYPE_RUN_PROCESS = Union[Process, Type[Process], ProcessBuilder]
+TYPE_RUN_PROCESS = Union[Process, type[Process], ProcessBuilder]
 # run can also be process function, but it is not clear what type this should be
-TYPE_SUBMIT_PROCESS = Union[Process, Type[Process], ProcessBuilder]
+TYPE_SUBMIT_PROCESS = Union[Process, type[Process], ProcessBuilder]
 
 
 class Runner:
     """Class that can launch processes by running in the current interpreter or by submitting them to the daemon."""
 
-    _persister: Optional[Persister] = None
-    _communicator: Optional[kiwipy.Communicator] = None
-    _controller: Optional[RemoteProcessThreadController] = None
+    _persister: Persister | None = None
+    _communicator: kiwipy.Communicator | None = None
+    _controller: RemoteProcessThreadController | None = None
     _closed: bool = False
 
     def __init__(
         self,
-        poll_interval: Union[int, float] = 0,
-        loop: Optional[asyncio.AbstractEventLoop] = None,
-        communicator: Optional[kiwipy.Communicator] = None,
+        poll_interval: int | float = 0,
+        loop: asyncio.AbstractEventLoop | None = None,
+        communicator: kiwipy.Communicator | None = None,
         broker_submit: bool = False,
-        persister: Optional[Persister] = None,
+        persister: Persister | None = None,
     ):
         """Construct a new runner.
 
@@ -97,7 +97,7 @@ class Runner:
             LOGGER.warning('Disabling broker submission, no communicator provided')
             self._broker_submit = False
 
-    def __enter__(self) -> 'Runner':
+    def __enter__(self) -> Runner:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -113,12 +113,12 @@ class Runner:
         return self._transport
 
     @property
-    def persister(self) -> Optional[Persister]:
+    def persister(self) -> Persister | None:
         """Get the persister used by this runner."""
         return self._persister
 
     @property
-    def communicator(self) -> Optional[kiwipy.Communicator]:
+    def communicator(self) -> kiwipy.Communicator | None:
         """Get the communicator used by this runner."""
         return self._communicator
 
@@ -131,7 +131,7 @@ class Runner:
         return self._job_manager
 
     @property
-    def controller(self) -> Optional[RemoteProcessThreadController]:
+    def controller(self) -> RemoteProcessThreadController | None:
         """Get the controller used by this runner."""
         return self._controller
 
@@ -224,7 +224,7 @@ class Runner:
 
     def _run(
         self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any
-    ) -> Tuple[Dict[str, Any], ProcessNode]:
+    ) -> tuple[dict[str, Any], ProcessNode]:
         """Run the process with the supplied inputs in this runner that will block until the process is completed.
 
         The return value will be the results of the completed process
@@ -265,7 +265,7 @@ class Runner:
 
             return process_inited.outputs, process_inited.node
 
-    def run(self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any) -> Dict[str, Any]:
+    def run(self, process: TYPE_RUN_PROCESS, inputs: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
         """Run the process with the supplied inputs in this runner that will block until the process is completed.
 
         The return value will be the results of the completed process

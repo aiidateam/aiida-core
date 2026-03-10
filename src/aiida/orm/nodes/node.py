@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import base64
 import datetime
+from collections.abc import Iterator
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterator, List, NoReturn, Optional, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, NoReturn, TypeVar
 from uuid import UUID
 
 from typing_extensions import Self
@@ -60,7 +61,7 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
     """The collection of nodes."""
 
     @staticmethod
-    def _entity_base_cls() -> Type['Node']:  # type: ignore[override]
+    def _entity_base_cls() -> type[Node]:  # type: ignore[override]
         return Node
 
     def delete(self, pk: int) -> None:
@@ -82,7 +83,7 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
         self._backend.nodes.delete(pk)
 
     def iter_repo_keys(
-        self, filters: Optional[dict] = None, subclassing: bool = True, batch_size: int = 100
+        self, filters: dict | None = None, subclassing: bool = True, batch_size: int = 100
     ) -> Iterator[str]:
         """Iterate over all repository object keys for this ``Node`` class
 
@@ -105,39 +106,39 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
 class NodeBase:
     """A namespace for node related functionality, that is not directly related to its user-facing properties."""
 
-    def __init__(self, node: 'Node') -> None:
+    def __init__(self, node: Node) -> None:
         """Construct a new instance of the base namespace."""
         self._node = node
 
     @cached_property
-    def repository(self) -> 'NodeRepository':
+    def repository(self) -> NodeRepository:
         """Return the repository for this node."""
         from .repository import NodeRepository
 
         return NodeRepository(self._node)
 
     @cached_property
-    def caching(self) -> 'NodeCaching':
+    def caching(self) -> NodeCaching:
         """Return an interface to interact with the caching of this node."""
         return self._node._CLS_NODE_CACHING(self._node)
 
     @cached_property
-    def comments(self) -> 'NodeComments':
+    def comments(self) -> NodeComments:
         """Return an interface to interact with the comments of this node."""
         return NodeComments(self._node)
 
     @cached_property
-    def attributes(self) -> 'NodeAttributes':
+    def attributes(self) -> NodeAttributes:
         """Return an interface to interact with the attributes of this node."""
         return NodeAttributes(self._node)
 
     @cached_property
-    def extras(self) -> 'EntityExtras':
+    def extras(self) -> EntityExtras:
         """Return an interface to interact with the extras of this node."""
         return EntityExtras(self._node)
 
     @cached_property
-    def links(self) -> 'NodeLinks':
+    def links(self) -> NodeLinks:
         """Return an interface to interact with the links of this node."""
         return self._node._CLS_NODE_LINKS(self._node)
 
@@ -183,10 +184,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     # A tuple of attribute names that can be updated even after node is stored
     # Requires Sealable mixin, but needs empty tuple for base class
-    _updatable_attributes: Tuple[str, ...] = tuple()
+    _updatable_attributes: tuple[str, ...] = tuple()
 
     # A tuple of attribute names that will be ignored when creating the hash.
-    _hash_ignored_attributes: Tuple[str, ...] = tuple()
+    _hash_ignored_attributes: tuple[str, ...] = tuple()
 
     # Flag that determines whether the class can be cached.
     _cachable = False
@@ -196,20 +197,20 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
     class Model(Entity.Model):
-        uuid: Optional[str] = MetadataField(
+        uuid: str | None = MetadataField(
             None, description='The UUID of the node', is_attribute=False, exclude_to_orm=True, exclude_from_cli=True
         )
-        node_type: Optional[str] = MetadataField(
+        node_type: str | None = MetadataField(
             None, description='The type of the node', is_attribute=False, exclude_to_orm=True, exclude_from_cli=True
         )
-        process_type: Optional[str] = MetadataField(
+        process_type: str | None = MetadataField(
             None,
             description='The process type of the node',
             is_attribute=False,
             exclude_to_orm=True,
             exclude_from_cli=True,
         )
-        repository_metadata: Optional[Dict[str, Any]] = MetadataField(
+        repository_metadata: dict[str, Any] | None = MetadataField(
             None,
             description='Virtual hierarchy of the file repository.',
             is_attribute=False,
@@ -217,27 +218,25 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             exclude_to_orm=True,
             exclude_from_cli=True,
         )
-        ctime: Optional[datetime.datetime] = MetadataField(
+        ctime: datetime.datetime | None = MetadataField(
             None,
             description='The creation time of the node',
             is_attribute=False,
             exclude_to_orm=True,
             exclude_from_cli=True,
         )
-        mtime: Optional[datetime.datetime] = MetadataField(
+        mtime: datetime.datetime | None = MetadataField(
             None,
             description='The modification time of the node',
             is_attribute=False,
             exclude_to_orm=True,
             exclude_from_cli=True,
         )
-        label: Optional[str] = MetadataField(
-            None, description='The node label', is_attribute=False, exclude_from_cli=True
-        )
-        description: Optional[str] = MetadataField(
+        label: str | None = MetadataField(None, description='The node label', is_attribute=False, exclude_from_cli=True)
+        description: str | None = MetadataField(
             None, description='The node description', is_attribute=False, exclude_from_cli=True
         )
-        attributes: Optional[Dict[str, Any]] = MetadataField(
+        attributes: dict[str, Any] | None = MetadataField(
             None,
             description='The node attributes',
             is_attribute=False,
@@ -246,7 +245,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             exclude_from_cli=True,
             exclude_to_orm=True,
         )
-        extras: Optional[Dict[str, Any]] = MetadataField(
+        extras: dict[str, Any] | None = MetadataField(
             None,
             description='The node extras',
             is_attribute=False,
@@ -255,7 +254,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             exclude_from_cli=True,
             exclude_to_orm=True,
         )
-        computer: Optional[int] = MetadataField(
+        computer: int | None = MetadataField(
             None,
             description='The PK of the computer',
             is_attribute=False,
@@ -263,7 +262,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             orm_class=Computer,
             exclude_from_cli=True,
         )
-        user: Optional[int] = MetadataField(
+        user: int | None = MetadataField(
             None,
             description='The PK of the user who owns the node',
             is_attribute=False,
@@ -271,7 +270,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             orm_class=User,
             exclude_from_cli=True,
         )
-        repository_content: Optional[dict[str, bytes]] = MetadataField(
+        repository_content: dict[str, bytes] | None = MetadataField(
             None,
             description='Dictionary of file repository content. Keys are relative filepaths and values are binary file '
             'contents encoded as base64.',
@@ -286,10 +285,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     def __init__(
         self,
-        backend: Optional['StorageBackend'] = None,
-        user: Optional[User] = None,
-        computer: Optional[Computer] = None,
-        extras: Optional[Dict[str, Any]] = None,
+        backend: StorageBackend | None = None,
+        user: User | None = None,
+        computer: Computer | None = None,
+        extras: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
         backend = backend or get_manager().get_profile_storage()
@@ -328,7 +327,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """Return the node base namespace."""
         return NodeBase(self)
 
-    def _check_mutability_attributes(self, keys: Optional[List[str]] = None) -> None:
+    def _check_mutability_attributes(self, keys: list[str] | None = None) -> None:
         """Check if the entity is mutable and raise an exception if not.
 
         This is called from `NodeAttributes` methods that modify the attributes.
@@ -401,7 +400,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return cls._plugin_type_string
 
     @classproperty
-    def entry_point(cls) -> Optional['EntryPoint']:  # noqa: N805
+    def entry_point(cls) -> EntryPoint | None:  # noqa: N805
         """Return the entry point associated this node class.
 
         :return: the associated entry point or ``None`` if it isn't known.
@@ -435,7 +434,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return self.backend_entity.node_type
 
     @property
-    def process_type(self) -> Optional[str]:
+    def process_type(self) -> str | None:
         """Return the node process type.
 
         :return: the process type
@@ -483,7 +482,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         self.backend_entity.description = value
 
     @property
-    def computer(self) -> Optional[Computer]:
+    def computer(self) -> Computer | None:
         """Return the computer of this node."""
         if self.backend_entity.computer:
             return from_backend_entity(Computer, self.backend_entity.computer)
@@ -491,7 +490,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return None
 
     @computer.setter
-    def computer(self, computer: Optional[Computer]) -> None:
+    def computer(self, computer: Computer | None) -> None:
         """Set the computer of this node.
 
         :param computer: a `Computer`
@@ -615,7 +614,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                     f'Cannot store because source node of link triple {link_triple} is not stored'
                 )
 
-    def _store_from_cache(self, cache_node: 'Node') -> None:
+    def _store_from_cache(self, cache_node: Node) -> None:
         """Store this node from an existing cache node.
 
         .. note::
@@ -648,7 +647,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         self._add_outputs_from_cache(cache_node)
         self.base.extras.set(self.base.caching.CACHED_FROM_KEY, cache_node.uuid)
 
-    def _add_outputs_from_cache(self, cache_node: 'Node') -> None:
+    def _add_outputs_from_cache(self, cache_node: Node) -> None:
         """Replicate the output links and nodes from the cached node onto this node."""
         for entry in cache_node.base.links.get_outgoing(link_type=LinkType.CREATE):
             new_node = entry.node.clone()

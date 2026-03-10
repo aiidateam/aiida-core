@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import contextlib
 import pathlib
-from typing import TYPE_CHECKING, Any, Dict, Iterator, Optional
+from collections.abc import Iterator
+from typing import TYPE_CHECKING, Any
 
 from alembic.command import downgrade, upgrade
 from alembic.config import Config
@@ -96,7 +97,7 @@ class PsqlDosMigrator:
         return self._connection
 
     @classmethod
-    def get_schema_versions(cls) -> Dict[str, str]:
+    def get_schema_versions(cls) -> dict[str, str]:
         """Return all available schema versions (oldest to latest).
 
         :return: schema version -> description
@@ -108,7 +109,7 @@ class PsqlDosMigrator:
         """Return the head schema version for this storage, i.e. the latest schema this storage can be migrated to."""
         return cls._alembic_script().revision_map.get_current_head('main')
 
-    def get_schema_version_profile(self, check_legacy=False) -> Optional[str]:
+    def get_schema_version_profile(self, check_legacy=False) -> str | None:
         """Return the schema version of the backend instance for this profile.
 
         Note, the version will be None if the database is empty or is a legacy django database.
@@ -170,7 +171,7 @@ class PsqlDosMigrator:
                 f"but the disk-objectstore's is {repository_uuid}."
             )
 
-    def get_container(self) -> 'Container':
+    def get_container(self) -> Container:
         """Return the disk-object store container.
 
         :returns: The disk-object store container configured for the repository path of the current profile.

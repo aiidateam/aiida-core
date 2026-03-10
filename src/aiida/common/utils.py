@@ -70,7 +70,7 @@ def validate_list_of_string_tuples(val: Any, tuple_length: int) -> bool:
     err_msg = (
         'the value must be a list (or tuple) '
         'of length-N list (or tuples), whose elements are strings; '
-        'N={}'.format(tuple_length)
+        f'N={tuple_length}'
     )
 
     if not isinstance(val, (list, tuple)):
@@ -255,11 +255,9 @@ def are_dir_trees_equal(dir1: str, dir2: str) -> tuple[bool, str]:
     if dirs_cmp.left_only or dirs_cmp.right_only or dirs_cmp.funny_files:
         return (
             False,
-            'Left directory: {}, right directory: {}, files only '
-            'in left directory: {}, files only in right directory: '
-            '{}, not comparable files: {}'.format(
-                dir1, dir2, dirs_cmp.left_only, dirs_cmp.right_only, dirs_cmp.funny_files
-            ),
+            f'Left directory: {dir1}, right directory: {dir2}, files only '
+            f'in left directory: {dirs_cmp.left_only}, files only in right directory: '
+            f'{dirs_cmp.right_only}, not comparable files: {dirs_cmp.funny_files}',
         )
 
     # If the directories contain the same files, compare the common files
@@ -407,7 +405,7 @@ class Prettifier:
         try:
             self._prettifier_f = self.prettifiers[format]
         except KeyError:
-            raise ValueError(f"Unknown prettifier format {format}; valid formats: {', '.join(self.get_prettifiers())}")
+            raise ValueError(f'Unknown prettifier format {format}; valid formats: {", ".join(self.get_prettifiers())}')
 
     def prettify(self, label: str) -> str:
         """Prettify a label using the format passed in the initializer

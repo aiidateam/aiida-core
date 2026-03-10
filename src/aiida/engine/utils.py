@@ -14,8 +14,9 @@ import asyncio
 import contextlib
 import inspect
 import logging
+from collections.abc import Awaitable, Iterator
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, Iterator, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Callable
 
 from plumpy import get_or_create_event_loop
 
@@ -52,9 +53,7 @@ def prepare_inputs(inputs: dict[str, Any] | None = None, **kwargs: Any) -> dict[
     return inputs or {}
 
 
-def instantiate_process(
-    runner: 'Runner', process: Union['Process', Type['Process'], 'ProcessBuilder'], **inputs
-) -> 'Process':
+def instantiate_process(runner: Runner, process: Process | type[Process] | ProcessBuilder, **inputs) -> Process:
     """Return an instance of the process with the given inputs. The function can deal with various types
     of the `process`:
 
@@ -122,7 +121,7 @@ class InterruptableFuture(asyncio.Future):
 
 
 def interruptable_task(
-    coro: Callable[[InterruptableFuture], Awaitable[Any]], loop: Optional[asyncio.AbstractEventLoop] = None
+    coro: Callable[[InterruptableFuture], Awaitable[Any]], loop: asyncio.AbstractEventLoop | None = None
 ) -> InterruptableFuture:
     """Turn the given coroutine into an interruptable task by turning it into an InterruptableFuture and returning it.
 
@@ -177,10 +176,10 @@ def ensure_coroutine(fct: Callable[..., Any]) -> Callable[..., Awaitable[Any]]:
 
 async def exponential_backoff_retry(
     fct: Callable[..., Any],
-    initial_interval: Union[int, float] = 10.0,
+    initial_interval: int | float = 10.0,
     max_attempts: int = 5,
-    logger: Optional[logging.Logger] = None,
-    ignore_exceptions: Union[None, Type[Exception], Tuple[Type[Exception], ...]] = None,
+    logger: logging.Logger | None = None,
+    ignore_exceptions: None | type[Exception] | tuple[type[Exception], ...] = None,
 ) -> Any:
     """Coroutine to call a function, recalling it with an exponential backoff in the case of an exception
 
@@ -263,7 +262,7 @@ def loop_scope(loop) -> Iterator[None]:
         asyncio.set_event_loop(current)
 
 
-def set_process_state_change_timestamp(node: 'ProcessNode') -> None:
+def set_process_state_change_timestamp(node: ProcessNode) -> None:
     """Set the global setting that reflects the last time a process changed state, for the process type
     of the given process, to the current timestamp. The process type will be determined based on
     the class of the calculation node it has as its database container.
@@ -304,7 +303,7 @@ def set_process_state_change_timestamp(node: 'ProcessNode') -> None:
         )
 
 
-def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Optional[datetime]:
+def get_process_state_change_timestamp(process_type: str | None = None) -> datetime | None:
     """Get the global setting that reflects the last time a process of the given process type changed its state.
     The returned value will be the corresponding timestamp or None if the setting does not exist.
 
@@ -318,14 +317,14 @@ def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Op
     valid_process_types = ['calculation', 'work']
 
     if process_type is not None and process_type not in valid_process_types:
-        raise ValueError(f"invalid value for process_type, valid values are {', '.join(valid_process_types)}")
+        raise ValueError(f'invalid value for process_type, valid values are {", ".join(valid_process_types)}')
 
     if process_type is None:
         process_types = valid_process_types
     else:
         process_types = [process_type]
 
-    timestamps: List[datetime] = []
+    timestamps: list[datetime] = []
 
     backend = get_manager().get_profile_storage()
 

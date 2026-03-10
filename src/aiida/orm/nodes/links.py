@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import typing as t
-from typing import Optional, cast
+from typing import cast
 
 from aiida.common import exceptions
 from aiida.common.escaping import sql_string_match
@@ -20,12 +20,12 @@ if t.TYPE_CHECKING:
 class NodeLinks:
     """Interface for links of a node instance."""
 
-    def __init__(self, node: 'Node') -> None:
+    def __init__(self, node: Node) -> None:
         """Initialize the links interface."""
         self._node = node
         self.incoming_cache: list[LinkTriple] = []
 
-    def _add_incoming_cache(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
+    def _add_incoming_cache(self, source: Node, link_type: LinkType, link_label: str) -> None:
         """Add an incoming link to the cache.
 
         .. note: the proposed link is not validated in this function, so this should not be called directly
@@ -45,7 +45,7 @@ class NodeLinks:
 
         self.incoming_cache.append(link_triple)
 
-    def add_incoming(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
+    def add_incoming(self, source: Node, link_type: LinkType, link_label: str) -> None:
         """Add a link of the given type from a given node to ourself.
 
         :param source: the node from which the link is coming
@@ -62,7 +62,7 @@ class NodeLinks:
         else:
             self._add_incoming_cache(source, link_type, link_label)
 
-    def validate_incoming(self, source: 'Node', link_type: LinkType, link_label: str) -> None:
+    def validate_incoming(self, source: Node, link_type: LinkType, link_label: str) -> None:
         """Validate adding a link of the given type from a given node to ourself.
 
         This function will first validate the types of the inputs, followed by the node and link types and validate
@@ -93,7 +93,7 @@ class NodeLinks:
             if builder.count() > 0:
                 raise ValueError('the link you are attempting to create would generate a cycle in the graph')
 
-    def validate_outgoing(self, target: 'Node', link_type: LinkType, link_label: str) -> None:
+    def validate_outgoing(self, target: Node, link_type: LinkType, link_label: str) -> None:
         """Validate adding a link of the given type from ourself to a given node.
 
         The validity of the triple (source, link, target) should be validated in the `validate_incoming` call.
@@ -113,9 +113,9 @@ class NodeLinks:
 
     def get_stored_link_triples(
         self,
-        node_class: Optional[t.Type['Node']] = None,
-        link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
-        link_label_filter: t.Optional[str] = None,
+        node_class: type[Node] | None = None,
+        link_type: LinkType | t.Sequence[LinkType] = (),
+        link_label_filter: str | None = None,
         link_direction: str = 'incoming',
         only_uuid: bool = False,
     ) -> list[LinkTriple]:
@@ -173,9 +173,9 @@ class NodeLinks:
 
     def get_incoming(
         self,
-        node_class: Optional[t.Type['Node']] = None,
-        link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
-        link_label_filter: t.Optional[str] = None,
+        node_class: type[Node] | None = None,
+        link_type: LinkType | t.Sequence[LinkType] = (),
+        link_label_filter: str | None = None,
         only_uuid: bool = False,
     ) -> LinkManager:
         """Return a list of link triples that are (directly) incoming into this node.
@@ -223,9 +223,9 @@ class NodeLinks:
 
     def get_outgoing(
         self,
-        node_class: Optional[t.Type['Node']] = None,
-        link_type: t.Union[LinkType, t.Sequence[LinkType]] = (),
-        link_label_filter: t.Optional[str] = None,
+        node_class: type[Node] | None = None,
+        link_type: LinkType | t.Sequence[LinkType] = (),
+        link_label_filter: str | None = None,
         only_uuid: bool = False,
     ) -> LinkManager:
         """Return a list of link triples that are (directly) outgoing of this node.

@@ -8,7 +8,7 @@
 ###########################################################################
 """Module for the ORM user class."""
 
-from typing import TYPE_CHECKING, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Optional
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField
@@ -27,10 +27,10 @@ class UserCollection(entities.Collection['User']):
     """The collection of users stored in a backend."""
 
     @staticmethod
-    def _entity_base_cls() -> Type['User']:
+    def _entity_base_cls() -> type['User']:
         return User
 
-    def get_or_create(self, email: str, **kwargs) -> Tuple[bool, 'User']:
+    def get_or_create(self, email: str, **kwargs) -> tuple[bool, 'User']:
         """Get the existing user with a given email address or create an unstored one
 
         :param kwargs: The properties of the user to get or create

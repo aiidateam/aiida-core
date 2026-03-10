@@ -14,7 +14,7 @@ import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Set, Type, Union
+from typing import Literal
 
 # typing.assert_never available since 3.11
 from typing_extensions import assert_never
@@ -29,7 +29,7 @@ RegistryNameType = Literal['calculations', 'workflows', 'groups']
 # Progress bar format for dump operations - wider description field to avoid truncation
 DUMP_PROGRESS_BAR_FORMAT = '{desc:60.60}{percentage:6.1f}%|{bar}| {n_fmt}/{total_fmt}'
 
-REGISTRY_TO_ORM_TYPE: dict[str, Type[Union[orm.CalculationNode, orm.WorkflowNode, orm.Group]]] = {
+REGISTRY_TO_ORM_TYPE: dict[str, type[orm.CalculationNode | orm.WorkflowNode | orm.Group]] = {
     'calculations': orm.CalculationNode,
     'workflows': orm.WorkflowNode,
     'groups': orm.Group,
@@ -54,10 +54,10 @@ class DumpTimes:
     """Holds relevant timestamps for a dump operation."""
 
     current: datetime = field(default_factory=lambda: timezone.now())
-    last: Optional[datetime] = None
+    last: datetime | None = None
 
     @classmethod
-    def from_last_log_time(cls, last_log_time: str | None) -> 'DumpTimes':
+    def from_last_log_time(cls, last_log_time: str | None) -> DumpTimes:
         """Create DumpTimes initializing `last` from an ISO time string."""
         last = None
         if last_log_time:
@@ -94,7 +94,7 @@ class GroupInfo:
 
     uuid: str
     node_count: int = 0
-    label: Optional[str] = None
+    label: str | None = None
 
 
 @dataclass
@@ -103,16 +103,16 @@ class GroupModificationInfo:
 
     uuid: str
     label: str
-    nodes_added: List[str] = field(default_factory=list)
-    nodes_removed: List[str] = field(default_factory=list)
+    nodes_added: list[str] = field(default_factory=list)
+    nodes_removed: list[str] = field(default_factory=list)
 
 
 @dataclass
 class NodeMembershipChange:
     """Details how a specific node's group membership changed."""
 
-    added_to: List[str] = field(default_factory=list)
-    removed_from: List[str] = field(default_factory=list)
+    added_to: list[str] = field(default_factory=list)
+    removed_from: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -129,11 +129,11 @@ class GroupRenameInfo:
 class GroupChanges:
     """Holds all changes related to group lifecycle and membership."""
 
-    deleted: List[GroupInfo] = field(default_factory=list)
-    new: List[GroupInfo] = field(default_factory=list)
-    modified: List[GroupModificationInfo] = field(default_factory=list)
-    renamed: List[GroupRenameInfo] = field(default_factory=list)
-    node_membership: Dict[str, NodeMembershipChange] = field(default_factory=dict)
+    deleted: list[GroupInfo] = field(default_factory=list)
+    new: list[GroupInfo] = field(default_factory=list)
+    modified: list[GroupModificationInfo] = field(default_factory=list)
+    renamed: list[GroupRenameInfo] = field(default_factory=list)
+    node_membership: dict[str, NodeMembershipChange] = field(default_factory=dict)
 
 
 @dataclass
@@ -143,7 +143,7 @@ class NodeChanges:
     # Nodes detected as new or modified that require dumping
     new_or_modified: ProcessingQueue = field(default_factory=ProcessingQueue)
     # List of UUIDs of deleted nodes
-    deleted: Set[str] = field(default_factory=set)
+    deleted: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -237,8 +237,8 @@ class DumpPaths:
     def __init__(
         self,
         base_output_path: Path,
-        config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig],
-        dump_target_entity: Union[orm.Node, orm.Group, Profile],
+        config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig,
+        dump_target_entity: orm.Node | orm.Group | Profile,
     ):
         """
         Initializes the DumpPaths object for centralized path handling during the dumping.
@@ -249,8 +249,8 @@ class DumpPaths:
             This helps in contextual path decisions.
         """
         self.base_output_path: Path = base_output_path.resolve()
-        self.config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig] = config
-        self.dump_target_entity: Union[orm.Node, orm.Group, Profile] = dump_target_entity
+        self.config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig = config
+        self.dump_target_entity: orm.Node | orm.Group | Profile = dump_target_entity
 
     @property
     def tracking_log_file_path(self) -> Path:
@@ -388,7 +388,7 @@ class DumpPaths:
             shutil.rmtree(path)
 
     @staticmethod
-    def get_directory_stats(path: Path) -> tuple[Optional[datetime], Optional[int]]:
+    def get_directory_stats(path: Path) -> tuple[datetime | None, int | None]:
         """Calculates the last modification time and total size of a directory.
 
         :param path: The directory to be analyzed
@@ -423,9 +423,9 @@ class DumpPaths:
 
     @staticmethod
     def get_default_dump_path(
-        entity: Union[orm.ProcessNode, Profile, orm.Group],
-        prefix: Optional[str] = None,
-        appendix: Optional[str] = None,
+        entity: orm.ProcessNode | Profile | orm.Group,
+        prefix: str | None = None,
+        appendix: str | None = None,
     ) -> Path:
         """Generate default dump path for any supported entity type.
         :param entity: The entity to be dumped
@@ -444,7 +444,7 @@ class DumpPaths:
             assert_never(entity)
 
     @staticmethod
-    def _get_process_node_path(process_node: orm.ProcessNode, prefix: Optional[str], appendix: Optional[str]) -> Path:
+    def _get_process_node_path(process_node: orm.ProcessNode, prefix: str | None, appendix: str | None) -> Path:
         """Generate the default dump path for ``orm.ProcessNode``.
 
         :param process_node: The ``orm.ProcessNode`` to be dumped
@@ -470,7 +470,7 @@ class DumpPaths:
         return Path('-'.join(path_entities))
 
     @staticmethod
-    def _get_profile_path(profile: Profile, prefix: Optional[str], appendix: Optional[str]) -> Path:
+    def _get_profile_path(profile: Profile, prefix: str | None, appendix: str | None) -> Path:
         """Generate the default dump path for a ``Profile``.
 
         :param profile: The ``Profile`` to be dumped
@@ -489,7 +489,7 @@ class DumpPaths:
         return Path('-'.join(label_elements))
 
     @staticmethod
-    def _get_group_path(group: orm.Group, prefix: Optional[str], appendix: Optional[str]) -> Path:
+    def _get_group_path(group: orm.Group, prefix: str | None, appendix: str | None) -> Path:
         """Generate the default dump path for an ``orm.Group``.
 
         :param group: The ``orm.Group`` to be dumped

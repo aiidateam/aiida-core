@@ -13,8 +13,9 @@ from __future__ import annotations
 import re
 import warnings
 from collections import namedtuple
+from collections.abc import Iterator
 from functools import total_ordering
-from typing import Any, Iterator
+from typing import Any
 
 from aiida import orm
 from aiida.common.exceptions import NotExistent
@@ -143,7 +144,7 @@ class GroupPath:
             )
         return None
 
-    def __truediv__(self, path: str) -> 'GroupPath':
+    def __truediv__(self, path: str) -> GroupPath:
         """Return a child ``GroupPath``, with a new path formed by appending ``path`` to the current path."""
         if not isinstance(path, str):
             raise TypeError(f'path is not a string: {path}')
@@ -155,7 +156,7 @@ class GroupPath:
         )
         return child
 
-    def __getitem__(self, path: str) -> 'GroupPath':
+    def __getitem__(self, path: str) -> GroupPath:
         """Return a child ``GroupPath``, with a new path formed by appending ``path`` to the current path."""
         return self.__truediv__(path)
 
@@ -203,7 +204,7 @@ class GroupPath:
         self.cls.collection.delete(ids[0])
 
     @property
-    def children(self) -> Iterator['GroupPath']:
+    def children(self) -> Iterator[GroupPath]:
         """Iterate through all (direct) children of this path."""
         query = orm.QueryBuilder()
         filters = {}
@@ -227,7 +228,7 @@ class GroupPath:
                     if self._warn_invalid_child:
                         warnings.warn(f'invalid path encountered: {path_string}')
 
-    def __iter__(self) -> Iterator['GroupPath']:
+    def __iter__(self) -> Iterator[GroupPath]:
         """Iterate through all (direct) children of this path."""
         return self.children
 
@@ -242,7 +243,7 @@ class GroupPath:
                 return True
         return False
 
-    def walk(self, return_virtual: bool = True) -> Iterator['GroupPath']:
+    def walk(self, return_virtual: bool = True) -> Iterator[GroupPath]:
         """Recursively iterate through all children of this path."""
         for child in self:
             if return_virtual or not child.is_virtual:
@@ -311,7 +312,7 @@ class GroupAttr:
         """Return a list of available attributes."""
         return [c.path_list[-1] for c in self._group_path.children if REGEX_ATTR.match(c.path_list[-1])]
 
-    def __getattr__(self, attr) -> 'GroupAttr':
+    def __getattr__(self, attr) -> GroupAttr:
         """Return the requested attribute name."""
         for child in self._group_path.children:
             if attr == child.path_list[-1]:

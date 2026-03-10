@@ -15,7 +15,7 @@ but redefines the SQLAlchemy models to the SQLite compatible ones.
 
 import json
 from functools import singledispatch
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 from sqlalchemy import JSON, case, func, select
 from sqlalchemy.orm.util import AliasedClass
@@ -183,7 +183,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
     def _get_projectable_entity(
         alias: AliasedClass,
         column_name: str,
-        attrpath: List[str],
+        attrpath: list[str],
         cast: Optional[str] = None,
     ) -> Union[ColumnElement, InstrumentedAttribute]:
         if not (attrpath or column_name in ('attributes', 'extras')):
@@ -209,7 +209,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
         return entity
 
     def get_filter_expr_from_jsonb(
-        self, operator: str, value, attr_key: List[str], column=None, column_name=None, alias=None
+        self, operator: str, value, attr_key: list[str], column=None, column_name=None, alias=None
     ):
         """Return a filter expression.
 
@@ -220,7 +220,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
 
         query_str = f'{alias or ""}.{column_name or ""}.{attr_key} {operator} {value}'
 
-        def _cast_json_type(comparator: JSON.Comparator, value: Any) -> Tuple[ColumnElement, JSON.Comparator]:
+        def _cast_json_type(comparator: JSON.Comparator, value: Any) -> tuple[ColumnElement, JSON.Comparator]:
             """Cast the JSON comparator to the target type."""
             if isinstance(value, bool):
                 # SQLite booleans in JSON evaluate to 0/1, see:

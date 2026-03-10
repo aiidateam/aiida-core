@@ -11,7 +11,8 @@
 import importlib
 import logging
 import traceback
-from typing import TYPE_CHECKING, Any, Hashable, Optional
+from collections.abc import Hashable
+from typing import TYPE_CHECKING, Any, Optional
 
 import plumpy.loaders
 import plumpy.persistence

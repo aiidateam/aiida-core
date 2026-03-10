@@ -173,7 +173,7 @@ class AiiDALoaderMagics(magic.Magics):
     def _repr_latex_(self):
         """Output in LaTeX format."""
         if self.is_warning:
-            latex = '\\emph{%s}\n' % self.current_state
+            latex = f'\\emph{{{self.current_state}}}\n'
         else:
             latex = f'{self.current_state}\n'
 

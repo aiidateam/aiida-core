@@ -212,21 +212,21 @@ def _(val: Decimal, **kwargs: t.Any) -> list[bytes]:
     exponent = val.as_tuple().exponent
     # This is a fallback for Decimal('NaN') and similar
     if isinstance(exponent, str):
-        return [_single_digest('str', f'{val}'.encode('utf-8'))]
+        return [_single_digest('str', f'{val}'.encode())]
     if exponent < 0:
         return [_single_digest('float', float_to_text(val, sig=AIIDA_FLOAT_PRECISION).encode('utf-8'))]
-    return [_single_digest('int', f'{val}'.encode('utf-8'))]
+    return [_single_digest('int', f'{val}'.encode())]
 
 
 @_make_hash.register(numbers.Complex)
 def _(val: numbers.Complex, **kwargs: t.Any) -> list[bytes]:
     """In case of a complex number, use the same encoding of two floats and join with a special symbol (a ! here)."""
+    real_part = float_to_text(val.real, sig=AIIDA_FLOAT_PRECISION)
+    imag_part = float_to_text(val.imag, sig=AIIDA_FLOAT_PRECISION)
     return [
         _single_digest(
             'complex',
-            '{}!{}'.format(
-                float_to_text(val.real, sig=AIIDA_FLOAT_PRECISION), float_to_text(val.imag, sig=AIIDA_FLOAT_PRECISION)
-            ).encode('utf-8'),
+            f'{real_part}!{imag_part}'.encode(),
         )
     ]
 
@@ -234,7 +234,7 @@ def _(val: numbers.Complex, **kwargs: t.Any) -> list[bytes]:
 @_make_hash.register(numbers.Integral)
 def _(val: numbers.Integral, **kwargs: t.Any) -> list[bytes]:
     """Get the hash of the little-endian signed long long representation of the integer"""
-    return [_single_digest('int', f'{val}'.encode('utf-8'))]
+    return [_single_digest('int', f'{val}'.encode())]
 
 
 @_make_hash.register(bool)
@@ -302,8 +302,7 @@ def _(folder: Folder, **kwargs: t.Any) -> list[bytes]:
                     yield _single_digest('fcontent', fhandle.read())
             else:
                 yield _single_digest('dir(', name.encode('utf-8'))
-                for digest in folder_digests(subfolder.get_subfolder(name)):
-                    yield digest
+                yield from folder_digests(subfolder.get_subfolder(name))
                 yield _END_DIGEST
 
     return [_single_digest('folder')] + list(folder_digests(folder))

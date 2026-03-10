@@ -190,7 +190,7 @@ linkcheck_ignore = [
 
 # Warnings to ignore when using the -n (nitpicky) option
 nitpicky = True
-with open('nitpick-exceptions', 'r') as handle:
+with open('nitpick-exceptions') as handle:
     nitpick_ignore = [
         tuple(line.strip().split(None, 1)) for line in handle.readlines() if line.strip() and not line.startswith('#')
     ]

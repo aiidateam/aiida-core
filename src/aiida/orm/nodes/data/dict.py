@@ -51,7 +51,7 @@ class Dict(Data):
     """
 
     class Model(Data.Model):
-        value: t.Dict[str, t.Any] = MetadataField(
+        value: dict[str, t.Any] = MetadataField(
             description='Dictionary content.',
             is_attribute=False,
             is_subscriptable=True,
@@ -141,13 +141,11 @@ class Dict(Data):
 
         :return: iterator over the keys of the current dictionary
         """
-        for key in self.base.attributes.keys():
-            yield key
+        yield from self.base.attributes.keys()
 
     def items(self):
         """Iterator of all items stored in the Dict node."""
-        for key, value in self.base.attributes.items():
-            yield key, value
+        yield from self.base.attributes.items()
 
     @property
     def value(self) -> dict[str, t.Any]:

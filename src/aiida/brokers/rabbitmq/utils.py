@@ -27,12 +27,11 @@ def get_rmq_url(protocol=None, username=None, password=None, host=None, port=Non
         kwargs['heartbeat'] = defaults.BROKER_DEFAULTS.heartbeat
 
     scheme = protocol or defaults.BROKER_DEFAULTS.protocol
-    netloc = '{username}:{password}@{host}:{port}'.format(
-        username=username or defaults.BROKER_DEFAULTS.username,
-        password=password or defaults.BROKER_DEFAULTS.password,
-        host=host or defaults.BROKER_DEFAULTS.host,
-        port=port or defaults.BROKER_DEFAULTS.port,
-    )
+    user = username or defaults.BROKER_DEFAULTS.username
+    pwd = password or defaults.BROKER_DEFAULTS.password
+    broker_host = host or defaults.BROKER_DEFAULTS.host
+    broker_port = port or defaults.BROKER_DEFAULTS.port
+    netloc = f'{user}:{pwd}@{broker_host}:{broker_port}'
     path = virtual_host or defaults.BROKER_DEFAULTS.virtual_host
     parameters = ''
     query = urlencode(kwargs)

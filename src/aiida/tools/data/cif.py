@@ -163,7 +163,7 @@ def refine_inline(node):
 
     if len(node.values.keys()) > 1:
         raise ValueError(
-            'CifData seems to contain more than one data ' 'block -- multiblock CIF files are not ' 'supported yet'
+            'CifData seems to contain more than one data block -- multiblock CIF files are not supported yet'
         )
 
     name = next(iter(node.values.keys()))
@@ -171,7 +171,7 @@ def refine_inline(node):
     original_atoms = node.get_ase(index=None)
     if len(original_atoms) > 1:
         raise ValueError(
-            'CifData seems to contain more than one crystal ' 'structure -- such refinement is not supported ' 'yet'
+            'CifData seems to contain more than one crystal structure -- such refinement is not supported yet'
         )
 
     original_atoms = original_atoms[0]

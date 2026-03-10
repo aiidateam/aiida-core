@@ -139,8 +139,8 @@ class TestBackendLog:
         with pytest.raises(exceptions.ValidationError):
             self.backend.logs.delete_many({})
         assert len(orm.Log.collection.all()) == count, (
-            'No Logs should have been deleted. There should still be {} Log(s), '
-            'however {} Log(s) was/were found.'.format(count, len(orm.Log.collection.all()))
+            f'No Logs should have been deleted. There should still be {count} Log(s), '
+            f'however {len(orm.Log.collection.all())} Log(s) was/were found.'
         )
 
     def test_delete_many_ids(self):
@@ -299,10 +299,9 @@ class TestBackendLog:
         filters = {'dbnode_id': id_}
         self.backend.logs.delete_many(filters=filters)
         log_count_after = orm.QueryBuilder().append(orm.Log).count()
-        assert log_count_after == log_count_before, (
-            'The number of logs changed after performing `delete_many`, '
-            "while filtering for a non-existing 'dbnode_id'"
-        )
+        assert (
+            log_count_after == log_count_before
+        ), "The number of logs changed after performing `delete_many`, while filtering for a non-existing 'dbnode_id'"
 
     def test_delete_many_same_twice(self):
         """Test no exception is raised when entity is filtered by both `id` and `uuid`"""

@@ -104,14 +104,14 @@ class IcsdDbImporter(DbImporter):
         for value in values:
             if not isinstance(value, int) and not isinstance(value, str):
                 raise ValueError("incorrect value for keyword '" + alias + ' only integers and strings are accepted')
-        return f"{key} IN ({', '.join(str(int(i)) for i in values)})"
+        return f'{key} IN ({", ".join(str(int(i)) for i in values)})'
 
     def _str_exact_clause(self, key, alias, values):
         """Return SQL query predicate for querying string fields."""
         for value in values:
             if not isinstance(value, int) and not isinstance(value, str):
                 raise ValueError("incorrect value for keyword '" + alias + ' only integers and strings are accepted')
-        return '{} IN ({})'.format(key, ', '.join("'{}'".format(f) for f in values))
+        return '{} IN ({})'.format(key, ', '.join(f"'{f}'" for f in values))
 
     def _formula_clause(self, key, alias, values):
         """Return SQL query predicate for querying formula fields."""
@@ -138,7 +138,7 @@ class IcsdDbImporter(DbImporter):
         # or at the end of the formula expression (no space after).
         # Be aware that one needs to check that space/beginning of line before and ideally also space/end of line
         # after, because I found that capitalization of the element name is not enforced in these queries.
-        return ' AND '.join(r'SUM_FORM REGEXP \'(^|\ ){}[0-9\.]+($|\ )\''.format(value) for value in values)
+        return ' AND '.join(rf'SUM_FORM REGEXP \'(^|\ ){value}[0-9\.]+($|\ )\'' for value in values)
 
     def _double_clause(self, key, alias, values, precision):
         """Return SQL query predicate for querying double-valued fields."""

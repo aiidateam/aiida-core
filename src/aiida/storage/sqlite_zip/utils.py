@@ -11,7 +11,7 @@
 import json
 import zipfile
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 from sqlalchemy import event
 from sqlalchemy.future.engine import Engine, create_engine
@@ -89,7 +89,7 @@ def create_sqla_engine(path: Union[str, Path], *, enforce_foreign_keys: bool = T
     return engine
 
 
-def extract_metadata(path: Union[str, Path], *, search_limit: Optional[int] = 10) -> Dict[str, Any]:
+def extract_metadata(path: Union[str, Path], *, search_limit: Optional[int] = 10) -> dict[str, Any]:
     """Extract the metadata dictionary from the archive.
 
     :param search_limit: the maximum number of records to search for the metadata file in a zip file.

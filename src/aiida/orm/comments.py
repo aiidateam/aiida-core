@@ -9,7 +9,7 @@
 """Comment objects and functions"""
 
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional, Type, cast
+from typing import TYPE_CHECKING, Optional, cast
 
 from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
@@ -29,7 +29,7 @@ class CommentCollection(entities.Collection['Comment']):
     """The collection of Comment entries."""
 
     @staticmethod
-    def _entity_base_cls() -> Type['Comment']:
+    def _entity_base_cls() -> type['Comment']:
         return Comment
 
     def delete(self, pk: int) -> None:
@@ -49,7 +49,7 @@ class CommentCollection(entities.Collection['Comment']):
         """
         self._backend.comments.delete_all()
 
-    def delete_many(self, filters: dict) -> List[int]:
+    def delete_many(self, filters: dict) -> list[int]:
         """Delete Comments from the Collection based on ``filters``
 
         :param filters: similar to QueryBuilder filter

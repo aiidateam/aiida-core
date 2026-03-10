@@ -251,10 +251,10 @@ class CifData(SinglefileData):
     _ase = None
 
     class Model(SinglefileData.Model):
-        formulae: t.Optional[t.List[str]] = MetadataField(
+        formulae: t.Optional[list[str]] = MetadataField(
             None, description='List of formulae contained in the CIF file.', exclude_to_orm=True
         )
-        spacegroup_numbers: t.Optional[t.List[str]] = MetadataField(
+        spacegroup_numbers: t.Optional[list[str]] = MetadataField(
             None, description='List of space group numbers of the structure.', exclude_to_orm=True
         )
         md5: t.Optional[str] = MetadataField(
@@ -372,7 +372,7 @@ class CifData(SinglefileData):
                 return (cifs[0], False)
 
             raise ValueError(
-                'More than one copy of a CIF file ' 'with the same MD5 has been found in ' 'the DB. pks={}'.format(
+                'More than one copy of a CIF file with the same MD5 has been found in the DB. pks={}'.format(
                     ','.join([str(i.pk) for i in cifs])
                 )
             )

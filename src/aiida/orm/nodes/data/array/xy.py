@@ -13,7 +13,8 @@ on them.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Sequence
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -74,8 +75,8 @@ class XyData(ArrayData):
 
     def __init__(
         self,
-        x_array: 'ndarray' | None = None,
-        y_arrays: 'ndarray' | list['ndarray'] | None = None,
+        x_array: ndarray | None = None,
+        y_arrays: ndarray | list[ndarray] | None = None,
         *,
         x_name: str | None = None,
         x_units: str | None = None,
@@ -101,7 +102,7 @@ class XyData(ArrayData):
             self.set_y(y_arrays, y_names, y_units)  # type: ignore[arg-type]
 
     @staticmethod
-    def _arrayandname_validator(array: 'ndarray', name: str, units: str) -> None:
+    def _arrayandname_validator(array: ndarray, name: str, units: str) -> None:
         """Validates that the array is an numpy.ndarray and that the name is
         of type str. Raises TypeError or ValueError if this not the case.
         """
@@ -117,7 +118,7 @@ class XyData(ArrayData):
         if not isinstance(units, str):
             raise TypeError('The units must always be a str.')
 
-    def set_x(self, x_array: 'ndarray', x_name: str, x_units: str) -> None:
+    def set_x(self, x_array: ndarray, x_name: str, x_units: str) -> None:
         """Sets the array and the name for the x values.
 
         :param x_array: A numpy.ndarray, containing only floats
@@ -130,7 +131,7 @@ class XyData(ArrayData):
         self.set_array('x_array', x_array)
 
     def set_y(
-        self, y_arrays: 'ndarray' | Sequence['ndarray'], y_names: str | Sequence[str], y_units: str | Sequence[str]
+        self, y_arrays: ndarray | Sequence[ndarray], y_names: str | Sequence[str], y_units: str | Sequence[str]
     ) -> None:
         """Set array(s) for the y part of the dataset. Also checks if the
         x_array has already been set, and that, the shape of the y_arrays
@@ -166,7 +167,7 @@ class XyData(ArrayData):
         self.base.attributes.set('y_names', y_names)
         self.base.attributes.set('y_units', y_units)
 
-    def get_x(self) -> tuple[str, 'ndarray', str]:
+    def get_x(self) -> tuple[str, ndarray, str]:
         """Tries to retrieve the x array and x name raises a NotExistent
         exception if no x array has been set yet.
         :return x_name: the name set for the x_array
@@ -181,7 +182,7 @@ class XyData(ArrayData):
             raise NotExistent('No x array has been set yet!')
         return x_name, x_array, x_units
 
-    def get_y(self) -> list[tuple[str, 'ndarray', str]]:
+    def get_y(self) -> list[tuple[str, ndarray, str]]:
         """Tries to retrieve the y arrays and the y names, raises a
         NotExistent exception if they have not been set yet, or cannot be
         retrieved

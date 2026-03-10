@@ -90,7 +90,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         with self._container as container:
             return container.add_streamed_object(handle)
 
-    def has_objects(self, keys: t.List[str]) -> t.List[bool]:
+    def has_objects(self, keys: list[str]) -> list[bool]:
         with self._container as container:
             return container.has_objects(keys)
 
@@ -113,13 +113,13 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             with container.get_object_stream(key) as handle:
                 yield t.cast(t.BinaryIO, handle)
 
-    def iter_object_streams(self, keys: t.Iterable[str]) -> t.Iterator[t.Tuple[str, t.BinaryIO]]:
+    def iter_object_streams(self, keys: t.Iterable[str]) -> t.Iterator[tuple[str, t.BinaryIO]]:
         with self._container.get_objects_stream_and_meta(keys) as triplets:
             for key, stream, _ in triplets:
                 assert stream is not None
                 yield key, stream  # type: ignore[misc]
 
-    def delete_objects(self, keys: t.List[str]) -> None:
+    def delete_objects(self, keys: list[str]) -> None:
         super().delete_objects(keys)
         with self._container as container:
             container.delete_objects(keys)

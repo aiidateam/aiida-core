@@ -84,9 +84,9 @@ class ProcessFunctionType(t.Protocol, t.Generic[P, R_co, N]):
 
     is_process_function: bool
 
-    node_class: t.Type[N]
+    node_class: type[N]
 
-    process_class: t.Type[Process]
+    process_class: type[Process]
 
     recreate_from: t.Callable[[N], Process]
 
@@ -145,7 +145,7 @@ def workfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, 
     return process_function(node_class=WorkFunctionNode)(function)  # type: ignore[arg-type]
 
 
-def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionType], FunctionType]:
+def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType], FunctionType]:
     """The base function decorator to create a FunctionProcess out of a normal python function.
 
     :param node_class: the ORM class to be used as the Node record for the FunctionProcess
@@ -159,7 +159,7 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
         """
         process_class = FunctionProcess.build(function, node_class=node_class)
 
-        def run_get_node(*args, **kwargs) -> tuple[dict[str, t.Any] | None, 'ProcessNode']:
+        def run_get_node(*args, **kwargs) -> tuple[dict[str, t.Any] | None, ProcessNode]:
             """Run the FunctionProcess with the supplied inputs in a local runner.
 
             :param args: input arguments to construct the FunctionProcess
@@ -256,11 +256,9 @@ def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...
         valid_type_map = {
             bool: Bool,
             dict: Dict,
-            t.Dict: Dict,
             float: Float,
             int: Int,
             list: List,
-            t.List: List,
             str: Str,
         }
 
@@ -296,7 +294,7 @@ class FunctionProcess(Process):
         return {}
 
     @staticmethod
-    def build(func: FunctionType, node_class: t.Type['ProcessNode']) -> t.Type['FunctionProcess']:
+    def build(func: FunctionType, node_class: type[ProcessNode]) -> type[FunctionProcess]:
         """Build a Process from the given function.
 
         All function arguments will be assigned as process inputs. If keyword arguments are specified then
@@ -489,7 +487,7 @@ class FunctionProcess(Process):
         return inputs
 
     @classmethod
-    def get_or_create_db_record(cls) -> 'ProcessNode':
+    def get_or_create_db_record(cls) -> ProcessNode:
         return cls._node_class()
 
     def __init__(self, *args, **kwargs) -> None:
@@ -527,7 +525,7 @@ class FunctionProcess(Process):
         self.node.store_source_info(self._func)
 
     @override
-    async def run(self) -> 'ExitCode' | None:
+    async def run(self) -> ExitCode | None:
         """Run the process."""
         from .exit_code import ExitCode
 
@@ -574,8 +572,8 @@ class FunctionProcess(Process):
                 self.out(name, value)
         else:
             raise TypeError(
-                "Function process returned an output with unsupported type '{}'\n"
-                'Must be a Data type or a mapping of {{string: Data}}'.format(result.__class__)
+                f"Function process returned an output with unsupported type '{result.__class__}'\n"
+                'Must be a Data type or a mapping of {string: Data}'
             )
 
         return ExitCode()

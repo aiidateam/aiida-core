@@ -11,8 +11,9 @@
 import os
 import shutil
 import tempfile
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Callable, Sequence
+from typing import Callable
 
 from archive_path import TarPath, ZipPath
 

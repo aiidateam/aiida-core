@@ -8,7 +8,8 @@
 ###########################################################################
 """Define the current configuration version and migrations."""
 
-from typing import Any, Dict, Iterable, Optional, Protocol, Type
+from collections.abc import Iterable
+from typing import Any, Optional, Protocol
 
 from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER
@@ -24,7 +25,7 @@ __all__ = (
     'upgrade_config',
 )
 
-ConfigType = Dict[str, Any]
+ConfigType = dict[str, Any]
 
 # The expected version of the configuration file and the oldest backwards compatible configuration version.
 # If the configuration file format is changed, the current version number should be upped and a migration added.
@@ -421,7 +422,7 @@ def get_oldest_compatible_version(config):
 
 
 def upgrade_config(
-    config: ConfigType, target: int = CURRENT_CONFIG_VERSION, migrations: Iterable[Type[SingleMigration]] = MIGRATIONS
+    config: ConfigType, target: int = CURRENT_CONFIG_VERSION, migrations: Iterable[type[SingleMigration]] = MIGRATIONS
 ) -> ConfigType:
     """Run the registered configuration migrations up to the target version.
 
@@ -449,7 +450,7 @@ def upgrade_config(
 
 
 def downgrade_config(
-    config: ConfigType, target: int, migrations: Iterable[Type[SingleMigration]] = MIGRATIONS
+    config: ConfigType, target: int, migrations: Iterable[type[SingleMigration]] = MIGRATIONS
 ) -> ConfigType:
     """Run the registered configuration migrations down to the target version.
 

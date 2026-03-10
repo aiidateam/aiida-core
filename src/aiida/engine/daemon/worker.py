@@ -15,7 +15,7 @@ import sys
 from typing import Union
 
 from aiida.common.log import configure_logging
-from aiida.engine.daemon.client import get_daemon_client
+from aiida.engine.daemon.daemon import AiidaDaemon
 from aiida.engine.runners import Runner
 from aiida.manage import get_config_option, get_manager
 
@@ -46,8 +46,8 @@ def start_daemon_worker(foreground: bool = False, profile_name: Union[str, None]
         write to the daemon log file.
     """
 
-    daemon_client = get_daemon_client(profile_name)
-    configure_logging(with_orm=True, daemon=not foreground, daemon_log_file=daemon_client.daemon_log_file)
+    daemon = AiidaDaemon(profile_name)
+    configure_logging(with_orm=True, daemon=not foreground, daemon_log_file=daemon.daemon_log_file)
 
     LOGGER.debug(f'sys.executable: {sys.executable}')
     LOGGER.debug(f'sys.path: {sys.path}')

@@ -15,7 +15,7 @@ import pytest
 
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_daemon
-from aiida.engine.daemon.client import DaemonClient
+from aiida.engine.daemon.daemon import AiidaDaemon
 
 pytestmark = pytest.mark.requires_rmq
 
@@ -37,30 +37,14 @@ def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
 def test_daemon_start(run_cli_command, stopped_daemon_client):
     """Test ``verdi daemon start``."""
     run_cli_command(cmd_daemon.start)
-
-    daemon_response = stopped_daemon_client.get_daemon_info()
-    worker_response = stopped_daemon_client.get_worker_info()
-
-    assert 'status' in daemon_response
-    assert daemon_response['status'] == 'ok'
-
-    assert 'info' in worker_response
-    assert len(worker_response['info']) == 1
+    assert stopped_daemon_client.is_daemon_running
 
 
 @pytest.mark.parametrize('options', ([], ['--reset']))
 def test_daemon_restart(run_cli_command, started_daemon_client, options):
     """Test ``verdi daemon restart`` both with and without ``--reset`` flag."""
     run_cli_command(cmd_daemon.restart, options)
-
-    daemon_response = started_daemon_client.get_daemon_info()
-    worker_response = started_daemon_client.get_worker_info()
-
-    assert 'status' in daemon_response
-    assert daemon_response['status'] == 'ok'
-
-    assert 'info' in worker_response
-    assert len(worker_response['info']) == 1
+    assert started_daemon_client.is_daemon_running
 
 
 def test_daemon_start_number(run_cli_command, stopped_daemon_client):
@@ -68,14 +52,9 @@ def test_daemon_start_number(run_cli_command, stopped_daemon_client):
     number = 4
     run_cli_command(cmd_daemon.start, [str(number)])
 
-    daemon_response = stopped_daemon_client.get_daemon_info()
-    worker_response = stopped_daemon_client.get_worker_info()
-
-    assert 'status' in daemon_response
-    assert daemon_response['status'] == 'ok'
-
-    assert 'info' in worker_response
-    assert len(worker_response['info']) == number
+    status = stopped_daemon_client.get_status()
+    assert status['status'] == 'running'
+    assert len(status['workers']) == number
 
 
 def test_daemon_start_number_config(run_cli_command, stopped_daemon_client, isolated_config):
@@ -86,14 +65,9 @@ def test_daemon_start_number_config(run_cli_command, stopped_daemon_client, isol
 
     run_cli_command(cmd_daemon.start, use_subprocess=False)
 
-    daemon_response = stopped_daemon_client.get_daemon_info()
-    worker_response = stopped_daemon_client.get_worker_info()
-
-    assert 'status' in daemon_response
-    assert daemon_response['status'] == 'ok'
-
-    assert 'info' in worker_response
-    assert len(worker_response['info']) == number
+    status = stopped_daemon_client.get_status()
+    assert status['status'] == 'running'
+    assert len(status['workers']) == number
 
 
 def test_foreground_multiple_workers(run_cli_command):
@@ -132,119 +106,71 @@ def test_daemon_status_timeout(run_cli_command):
     assert last_line == 'Use `verdi daemon [incr | decr] [num]` to increase / decrease the number of workers'
 
 
-def get_daemon_info(_):
-    """Mock replacement of :meth:`aiida.engine.daemon.client.DaemonClient.get_daemon_info`."""
+def _mock_status_with_worker():
+    """Return a mock daemon status dict with one healthy worker."""
     return {
-        'status': 'ok',
-        'time': 1576588772.459435,
-        'info': {
-            'cpu': 0.0,
-            'mem': 0.028,
-            'pid': 111015,
-            'create_time': 1576582938.75,
-        },
-        'id': 'a1c0d76c94304d62adfb36e30d335dd0',
-    }
-
-
-def get_worker_info(_):
-    """Mock replacement of :meth:`aiida.engine.daemon.client.DaemonClient.get_worker_info`."""
-    return {
-        'status': 'ok',
-        'time': 1576585659.221961,
-        'name': 'aiida-production',
-        'info': {
-            '4990': {
-                'cpu': 0.0,
-                'mem': 0.231,
+        'status': 'running',
+        'pid': 111015,
+        'started': 1576582938.75,
+        'log_file': '/tmp/supervisor.log',
+        'workers': [
+            {
                 'pid': 4990,
-                'create_time': 1576585658.730482,
+                'state': 'running',
+                'started': 1576585658.730482,
+                'failures': 0,
             }
-        },
-        'id': '4e1d768a522a44b59f85039806f9af14',
+        ],
     }
 
 
-def get_worker_info_broken(_):
-    """Mock replacement of :meth:`aiida.engine.daemon.client.DaemonClient.get_worker_info`.
-
-    This response simulations the event where the circus daemon cannot get the stats from one of the workers.
-    """
+def _mock_status_with_broken_worker():
+    """Return a mock daemon status dict with a worker in error state."""
     return {
-        'status': 'ok',
-        'time': 1576585659.221961,
-        'name': 'aiida-production',
-        'info': {'4990': 'No such process (stopped?)'},
-        'id': '4e1d768a522a44b59f85039806f9af14',
+        'status': 'running',
+        'pid': 111015,
+        'started': 1576582938.75,
+        'log_file': '/tmp/supervisor.log',
+        'workers': [
+            {
+                'pid': 4990,
+                'state': 'stopped',
+                'started': 1576585658.730482,
+                'failures': 3,
+            }
+        ],
     }
 
 
-@patch.object(DaemonClient, 'get_status', lambda *_, **__: {'status': 'running'})
-@patch.object(DaemonClient, 'get_daemon_info', get_daemon_info)
-@patch.object(DaemonClient, 'get_worker_info', get_worker_info)
+@patch.object(AiidaDaemon, 'get_status', lambda self: _mock_status_with_worker())
 @patch('aiida.cmdline.utils.common.format_local_time', format_local_time)
 def test_daemon_status_worker_info(run_cli_command):
     """Test `get_status` output if everything is working normally with a single worker."""
-    literals = []
-    literals.append(
-        textwrap.dedent(
-            """\
-        Profile:"""
-        )
-    )
-    literals.append(
-        textwrap.dedent(
-            """\
+    literal = textwrap.dedent(
+        """\
         Daemon is running as PID 111015 since 2019-12-17 11:42:18
         Active workers [1]:
-          PID    MEM %    CPU %  started
-        -----  -------  -------  -------------------
-         4990    0.231        0  2019-12-17 12:27:38
-        Log file: """
-        )
-    )
-    literals.append(
-        textwrap.dedent(
-            """\
+          PID  State    Started                Failures
+        -----  -------  -------------------  ----------
+         4990  running  2019-12-17 12:27:38           0
         Use `verdi daemon [incr | decr] [num]` to increase / decrease the number of workers"""
-        )
     )
     result = run_cli_command(cmd_daemon.status)
-    for literal in literals:
-        assert literal in result.output
+    assert literal in result.output
 
 
-@patch.object(DaemonClient, 'get_status', lambda *_, **__: {'status': 'running'})
-@patch.object(DaemonClient, 'get_daemon_info', get_daemon_info)
-@patch.object(DaemonClient, 'get_worker_info', get_worker_info_broken)
+@patch.object(AiidaDaemon, 'get_status', lambda self: _mock_status_with_broken_worker())
 @patch('aiida.cmdline.utils.common.format_local_time', format_local_time)
 def test_daemon_status_worker_timeout(run_cli_command):
-    """Test `get_status` output if a daemon worker cannot be reached by the circus daemon."""
-    literals = []
-    literals.append(
-        textwrap.dedent(
-            """\
-        Profile:"""
-        )
-    )
-    literals.append(
-        textwrap.dedent(
-            """\
+    """Test `get_status` output if a daemon worker is in error state."""
+    literal = textwrap.dedent(
+        """\
         Daemon is running as PID 111015 since 2019-12-17 11:42:18
         Active workers [1]:
-          PID  MEM %    CPU %    started
-        -----  -------  -------  ---------
-         4990  -        -        -
-        Log file: """
-        )
-    )
-
-    literals.append(
-        textwrap.dedent(
-            """\
+          PID  State    Started                Failures
+        -----  -------  -------------------  ----------
+         4990  stopped  2019-12-17 12:27:38           3
         Use `verdi daemon [incr | decr] [num]` to increase / decrease the number of workers"""
-        )
     )
     result = run_cli_command(cmd_daemon.status)
-    for literal in literals:
-        assert literal in result.output
+    assert literal in result.output

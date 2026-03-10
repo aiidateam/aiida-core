@@ -20,7 +20,7 @@ from aiida.common.lang import classproperty
 from .mapping import CalculationProjectionMapper, ProjectionMapper
 
 if t.TYPE_CHECKING:
-    from aiida.orm import Node
+    pass
 
 
 QuerySetType = Iterable[dict[str, dict[str, t.Any]]]

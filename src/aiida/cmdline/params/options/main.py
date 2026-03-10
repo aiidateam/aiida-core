@@ -644,7 +644,8 @@ ALL = OverridableOption(
     help='Include all entries, disregarding all other filter options and flags.',
 )
 ONLY_ROOTS = OverridableOption(
-    '--only-roots',
+    '-r',
+    '--roots',
     'only_roots',
     is_flag=True,
     default=False,

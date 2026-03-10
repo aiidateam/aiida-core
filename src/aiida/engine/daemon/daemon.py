@@ -1012,14 +1012,18 @@ class AiidaDaemon:
 
     @property
     def worker_log_files(self) -> list[str]:
-        """Return the paths to all worker stderr log files for the latest session."""
+        """Return the paths to all worker stdout log files for the latest session.
+
+        Worker processes log to stdout via the CLI handler, so the log output
+        ends up in the stdout.log files of each worker directory.
+        """
         session_dir = ServiceSupervisorController._get_latest_session_dir(self._daemon_dir)
         if session_dir is None:
             return []
         worker_dir = session_dir / AiidaWorkerConfig.service_name
         if not worker_dir.is_dir():
             return []
-        return sorted(str(p) for p in worker_dir.glob('*/stderr.log') if p.is_file())
+        return sorted(str(p) for p in worker_dir.glob('*/stdout.log') if p.is_file())
 
     def start(self, num_workers: int | None = None, foreground: bool = False):
         """Start the daemon with the given number of workers.

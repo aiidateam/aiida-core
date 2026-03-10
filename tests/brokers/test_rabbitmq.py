@@ -145,7 +145,8 @@ def test_duplicate_subscriber_identifier(aiida_code_installed, started_daemon_cl
     # The original node should now have finished normally and not excepted
     assert node.is_finished_ok, (node.process_state, node.exit_status)
 
-    # Verify that the receiving of the duplicate task was logged by the daemon worker
+    # Verify that the receiving of the duplicate task was logged by the daemon worker.
+    # Worker log output goes to stdout.log files in the worker directories.
     worker_logs = '\n'.join(
         pathlib.Path(log_file).read_text(encoding='utf-8') for log_file in started_daemon_client.worker_log_files
     )

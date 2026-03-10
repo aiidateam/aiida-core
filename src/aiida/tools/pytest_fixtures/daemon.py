@@ -137,12 +137,17 @@ def submit_and_await(started_daemon_client):
                 raise RuntimeError(f'The process excepted: {node.exception}')
 
             if time.time() - start_time >= timeout:
-                daemon_log_file = pathlib.Path(started_daemon_client.daemon_log_file).read_text(encoding='utf-8')
                 daemon_status = 'running' if started_daemon_client.is_daemon_running else 'stopped'
+                log_content = ''
+                if started_daemon_client.daemon_log_file:
+                    log_content += pathlib.Path(started_daemon_client.daemon_log_file).read_text(encoding='utf-8')
+                for worker_log in started_daemon_client.worker_log_files:
+                    log_content += f'\n--- {worker_log} ---\n'
+                    log_content += pathlib.Path(worker_log).read_text(encoding='utf-8')
                 raise RuntimeError(
                     f'Timed out waiting for process with state `{node.process_state}` to enter state `{state}`.\n'
-                    f'Daemon <{started_daemon_client.profile.name}|{daemon_status}> log file content: \n'
-                    f'{daemon_log_file}'
+                    f'Daemon <{started_daemon_client.profile.name}|{daemon_status}> log content: \n'
+                    f'{log_content}'
                 )
             time.sleep(0.1)
 

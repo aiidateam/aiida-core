@@ -29,12 +29,12 @@ def main(code, number, daemon):
 
     from aiida import orm
     from aiida.engine import run_get_node, submit
-    from aiida.engine.daemon.client import get_daemon_client
+    from aiida.engine.daemon.daemon import AiidaDaemon
     from aiida.manage import get_manager
     from aiida.plugins import CalculationFactory
     from aiida.tools.graph.deletions import delete_nodes
 
-    client = get_daemon_client()
+    client = AiidaDaemon()
 
     if daemon and not client.is_daemon_running:
         echo.echo_critical('The daemon is not running.')

@@ -8,15 +8,13 @@
 ###########################################################################
 """Module with resources for the daemon."""
 
-# AUTO-GENERATED
-
-# fmt: off
-
-from .client import *
+from .client import DaemonException, DaemonNotRunningException, DaemonStalePidException, DaemonTimeoutException
+from .daemon import AiidaDaemon
 
 __all__ = (
-    'DaemonClient',
-    'get_daemon_client',
+    'AiidaDaemon',
+    'DaemonException',
+    'DaemonNotRunningException',
+    'DaemonStalePidException',
+    'DaemonTimeoutException',
 )
-
-# fmt: on

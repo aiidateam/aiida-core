@@ -10,11 +10,18 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import pytest
 
 from aiida.orm import RemoteData
+
+
+def _du_size(path: Path) -> int:
+    """Return the disk usage of ``path`` in bytes using ``du -sk``, matching the implementation."""
+    result = subprocess.run(['du', '-sk', str(path)], capture_output=True, text=True, check=True)
+    return int(result.stdout.split('\t')[0]) * 1024
 
 
 @pytest.fixture
@@ -55,8 +62,6 @@ def test_clean(remote_data_factory, mode):
 @pytest.mark.parametrize(
     'setup, results',
     (
-        (('du', False), ('8.00 KB', 'du')),
-        (('du', True), (8192, 'du')),
         (('stat', False), ('12.00 B', 'stat')),
         (('stat', True), (12, 'stat')),
     ),
@@ -71,47 +76,82 @@ def test_get_size_on_disk_params(remote_data_factory, mode, setup, results):
 
 
 @pytest.mark.parametrize('mode', ('local', 'ssh'))
+@pytest.mark.parametrize('return_bytes', (True, False))
+def test_get_size_on_disk_params_du(remote_data_factory, tmp_path, mode, return_bytes):
+    """Test ``get_size_on_disk`` with the ``du`` method.
+
+    The expected ``du`` values are computed dynamically because disk block sizes differ across
+    filesystems and operating systems (e.g. Linux ext4 vs macOS APFS).
+    """
+    remote_data = remote_data_factory(mode=mode)
+
+    expected_bytes = _du_size(tmp_path)
+
+    size_on_disk, method = remote_data.get_size_on_disk(method='du', return_bytes=return_bytes)
+    assert method == 'du'
+    if return_bytes:
+        assert size_on_disk == expected_bytes
+    else:
+        from aiida.common.utils import format_directory_size
+
+        assert size_on_disk == format_directory_size(size_in_bytes=expected_bytes)
+
+
+@pytest.mark.parametrize('mode', ('local', 'ssh'))
 @pytest.mark.parametrize(
-    'content, sizes',
+    'content, stat_size',
     (
-        (b'a', {'du': 8192, 'stat': 1, 'human': '8.00 KB'}),
-        (10 * b'a', {'du': 8192, 'stat': 10, 'human': '8.00 KB'}),
-        (1000 * b'a', {'du': 8192, 'stat': 1000, 'human': '8.00 KB'}),
-        (1000000 * b'a', {'du': 1007616, 'stat': int(1e6), 'human': '984.00 KB'}),
+        (b'a', 1),
+        (10 * b'a', 10),
+        (1000 * b'a', 1000),
+        (1000000 * b'a', int(1e6)),
     ),
     ids=['1-byte', '10-bytes', '1000-bytes', '1e6-bytes'],
 )
-def test_get_size_on_disk_sizes(remote_data_factory, mode, content, sizes):
-    """Test the different implementations to obtain the size of a ``RemoteData`` on disk."""
+def test_get_size_on_disk_sizes(remote_data_factory, tmp_path, mode, content, stat_size):
+    """Test the different implementations to obtain the size of a ``RemoteData`` on disk.
+
+    The expected ``du`` values are computed dynamically because disk block sizes differ across
+    filesystems and operating systems (e.g. Linux ext4 vs macOS APFS).
+    """
+    from aiida.common.utils import format_directory_size
 
     remote_data = remote_data_factory(mode=mode, content=content)
 
     authinfo = remote_data.get_authinfo()
     full_path = Path(remote_data.get_remote_path())
 
+    expected_du = _du_size(tmp_path)
+
     with authinfo.get_transport() as transport:
         size_on_disk_du = remote_data._get_size_on_disk_du(transport=transport, full_path=full_path)
         size_on_disk_stat = remote_data._get_size_on_disk_stat(transport=transport, full_path=full_path)
         size_on_disk_human, _ = remote_data.get_size_on_disk()
 
-    assert size_on_disk_du == sizes['du']
-    assert size_on_disk_stat == sizes['stat']
-    assert size_on_disk_human == sizes['human']
+    assert size_on_disk_du == expected_du
+    assert size_on_disk_stat == stat_size
+    assert size_on_disk_human == format_directory_size(size_in_bytes=expected_du)
 
 
 @pytest.mark.parametrize(
-    'num_char, relpath, sizes',
+    'num_char, relpath',
     (
-        (1, '.', {'du': 24576, 'stat': 8195, 'human': '24.00 KB'}),
-        (100, '.', {'du': 24576, 'stat': 8492, 'human': '24.00 KB'}),
-        (int(1e6), '.', {'du': 3022848, 'stat': 3008192, 'human': '2.88 MB'}),
-        (1, 'subdir1', {'du': 16384, 'stat': 4098, 'human': '16.00 KB'}),
-        (100, 'subdir1', {'du': 16384, 'stat': 4296, 'human': '16.00 KB'}),
-        (int(1e6), 'subdir1', {'du': 2015232, 'stat': 2004096, 'human': '1.92 MB'}),
+        (1, '.'),
+        (100, '.'),
+        (int(1e6), '.'),
+        (1, 'subdir1'),
+        (100, 'subdir1'),
+        (int(1e6), 'subdir1'),
     ),
 )
-def test_get_size_on_disk_nested(aiida_localhost, tmp_path, num_char, relpath, sizes):
-    # TODO: Use create file hierarchy fixture from test_execmanager?
+def test_get_size_on_disk_nested(aiida_localhost, tmp_path, num_char, relpath):
+    """Test ``get_size_on_disk`` for nested directory structures.
+
+    The expected ``du`` values are computed dynamically because disk block sizes differ across
+    filesystems and operating systems (e.g. Linux ext4 vs macOS APFS).
+    """
+    from aiida.common.utils import format_directory_size
+
     sub_dir1 = tmp_path / 'subdir1'
     sub_dir1.mkdir()
 
@@ -133,15 +173,17 @@ def test_get_size_on_disk_nested(aiida_localhost, tmp_path, num_char, relpath, s
     authinfo = remote_data.get_authinfo()
     full_path = Path(remote_data.get_remote_path()) / relpath
 
+    expected_du = _du_size(full_path)
+
     with authinfo.get_transport() as transport:
         size_on_disk_du = remote_data._get_size_on_disk_du(transport=transport, full_path=full_path)
         size_on_disk_stat = remote_data._get_size_on_disk_stat(transport=transport, full_path=full_path)
 
         size_on_disk_human, _ = remote_data.get_size_on_disk(relpath=relpath)
 
-    assert size_on_disk_du == sizes['du']
-    assert size_on_disk_stat == sizes['stat']
-    assert size_on_disk_human == sizes['human']
+    assert size_on_disk_du == expected_du
+    assert size_on_disk_stat > 0  # stat values depend on filesystem, just verify positive
+    assert size_on_disk_human == format_directory_size(size_in_bytes=expected_du)
 
 
 @pytest.mark.parametrize('mode', ('local', 'ssh'))
@@ -160,7 +202,7 @@ def test_get_size_on_disk_excs(remote_data_factory, mode):
 
 
 @pytest.mark.parametrize('mode', ('local', 'ssh'))
-def test_get_size_on_disk_du(remote_data_factory, mode, monkeypatch):
+def test_get_size_on_disk_du(remote_data_factory, tmp_path, mode, monkeypatch):
     """Test the :meth:`aiida.orm.nodes.data.remote.base.RemoteData._get_size_on_disk_du` private method."""
     # No additional parametrization here, as already done in `test_get_size_on_disk_sizes`.
 
@@ -170,9 +212,11 @@ def test_get_size_on_disk_du(remote_data_factory, mode, monkeypatch):
     authinfo = remote_data.get_authinfo()
     full_path = Path(remote_data.get_remote_path())
 
+    expected_du = _du_size(tmp_path)
+
     with authinfo.get_transport() as transport:
         size_on_disk = remote_data._get_size_on_disk_du(transport=transport, full_path=full_path)
-    assert size_on_disk == 8192
+    assert size_on_disk == expected_du
 
     # Monkeypatch transport exec_command_wait command to simulate it not being implemented, e.g., for FirecREST plugin
     def mock_exec_command_wait(command):

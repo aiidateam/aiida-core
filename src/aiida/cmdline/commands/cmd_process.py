@@ -160,30 +160,26 @@ def process_list(
     daemon_status = daemon.get_status()
     active_workers = len(daemon_status.get('workers', []))
     if active_workers == 0:
-        echo.echo_report('No active daemon workers.')
+        echo.echo_warning('The daemon has no active workers!')
+        echo.echo_warning('Increase the number of workers with `verdi daemon incr`.')
+        return
+
+    # Second query to get active process count. Currently this is slow but will be fixed with issue #2770. It is
+    # placed at the end of the command so that the user can Ctrl+C after getting the process table.
+    slots_per_worker = ctx.obj.config.get_option('daemon.worker_process_slots', scope=ctx.obj.profile.name)
+    active_processes = (
+        QueryBuilder()
+        .append(ProcessNode, filters={'attributes.process_state': {'in': ('created', 'waiting', 'running')}})
+        .count()
+    )
+    available_slots = active_workers * slots_per_worker
+    percent_load = active_processes / available_slots
+
+    if percent_load > 0.9:  # 90%
+        echo.echo_warning(f'{percent_load * 100:.0f}% of the available daemon worker slots have been used!')
+        echo.echo_warning('Increase the number of workers with `verdi daemon incr`.')
     else:
-        # Second query to get active process count. Currently this is slow but will be fixed with issue #2770. It is
-        # placed at the end of the command so that the user can Ctrl+C after getting the process table.
-        slots_per_worker = ctx.obj.config.get_option('daemon.worker_process_slots', scope=ctx.obj.profile.name)
-        active_processes = (
-            QueryBuilder()
-            .append(ProcessNode, filters={'attributes.process_state': {'in': ('created', 'waiting', 'running')}})
-            .count()
-        )
-        available_slots = active_workers * slots_per_worker
-
-        if active_workers == 0:
-            echo.echo_warning('The daemon has no active workers!')
-            echo.echo_warning('Increase the number of workers with `verdi daemon incr`.')
-            return
-
-        percent_load = active_processes / available_slots
-
-        if percent_load > 0.9:  # 90%
-            echo.echo_warning(f'{percent_load * 100:.0f}% of the available daemon worker slots have been used!')
-            echo.echo_warning('Increase the number of workers with `verdi daemon incr`.')
-        else:
-            echo.echo_report(f'Using {percent_load * 100:.0f}% of the available daemon worker slots.')
+        echo.echo_report(f'Using {percent_load * 100:.0f}% of the available daemon worker slots.')
 
 
 @verdi_process.command('show')

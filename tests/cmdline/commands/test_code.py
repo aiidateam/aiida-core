@@ -192,7 +192,7 @@ def test_code_delete_one_force(run_cli_command, code):
         load_code('code')
 
 
-def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, hostname) -> str:
+def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, hostname, filepath_executable=None) -> str:
     """Normalize dynamic values in CLI output for stable regression testing.
 
     Args:
@@ -201,6 +201,7 @@ def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, hostnam
         code_uuid: The actual UUID to be replaced with placeholder
         computer_pk: Optional computer PK to be replaced with placeholder
         hostname: Optional hostname to be replaced with placeholder
+        filepath_executable: Optional executable path to be replaced with placeholder
 
     Returns:
         Normalized output string with placeholders
@@ -226,6 +227,10 @@ def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, hostnam
     # Replace computer PK if provided
     if computer_pk is not None:
         normalized = normalized.replace(f'pk: {computer_pk}', 'pk: <COMPUTER_PK>')
+
+    # Replace filepath executable if provided (platform-dependent path like /usr/bin/bash vs /opt/homebrew/bin/bash)
+    if filepath_executable is not None:
+        normalized = normalized.replace(filepath_executable, '<FILEPATH_EXECUTABLE>')
 
     # Replace code PK (as whole word to avoid replacing parts of other numbers)
     normalized = re.sub(rf'\b{code_pk}\b', '<PK>', normalized)
@@ -291,6 +296,9 @@ def test_code_show(run_cli_command, aiida_localhost, tmp_path, bash_path, aiida_
         code_uuid=code.uuid,
         computer_pk=computer.pk if computer else None,
         hostname=computer.hostname if computer else None,
+        filepath_executable=None
+        if code.filepath_executable is None
+        else str(pathlib.Path(code.filepath_executable).absolute()),
     )
 
     # Check against regression fixture

@@ -859,35 +859,32 @@ class ServiceSupervisorController:
         ServiceSupervisorCommon.stop(session_dir)
 
     @staticmethod
-    def status(supervisor_dir: Path):
-        # TODO this is completey generated, need to revise and move formatting to dedicated class
-        """
-        Print status of all services by reading supervisor config and service info files.
+    def status(supervisor_dir: Path) -> dict:
+        """Return structured status of the daemon and all services.
 
-        Reads the supervisor config file to discover all configured services,
-        then reads each service's info file to display current status information.
+        Returns a dict with structure::
+
+            {
+                'status': 'running' | 'stopped',
+                'pid': int | None,
+                'started': float | None,
+                'log_file': str | None,
+                'workers': [{'pid': int, 'state': str, 'started': float, 'failures': int}, ...],
+            }
         """
         ServiceSupervisorController._validate_supervisor_dir(supervisor_dir)
 
         session_dir = ServiceSupervisorController._get_latest_session_dir(supervisor_dir)
         if session_dir is None:
-            raise ValueError(f"No session found in {supervisor_dir}")
+            return {'status': 'stopped', 'pid': None, 'started': None, 'log_file': None, 'workers': []}
 
-        # Load supervisor config to get all services
-        config_file = session_dir / ServiceSupervisorCommon.SUPERVISOR_CONFIG_FILE
-        if not config_file.exists():
-            print(f"No supervisor config file found at {config_file}")
-            return
-
-        try:
-            service_configs = ServiceConfigMap.from_file(config_file)
-        except Exception as e:
-            print(f"Error reading supervisor config: {e}")
-            return
-
-        print("\n" + "="*80)
-        print(f"Daemon Status - Session: {session_dir.name}")
-        print("="*80)
+        result: dict = {
+            'status': 'stopped',
+            'pid': None,
+            'started': None,
+            'log_file': str(session_dir / ServiceSupervisorCommon.SUPERVISOR_LOG_FILE),
+            'workers': [],
+        }
 
         # Check supervisor status
         supervisor_info_file = session_dir / ServiceSupervisorCommon.SUPERVISOR_INFO_FILE
@@ -895,83 +892,43 @@ class ServiceSupervisorController:
             try:
                 supervisor_info = SupervisorInfo.from_file(supervisor_info_file)
                 is_alive = ServiceSupervisorCommon._is_alive(supervisor_info.pid, supervisor_info.create_time)
-                log_dir = session_dir / ServiceSupervisorCommon.SUPERVISOR_LOG_FILE
-                print(f"\nSupervisor Process:")
-                print(f"  PID: {supervisor_info.pid}")
-                print(f"  Status: {'RUNNING' if is_alive else 'STOPPED'}")
-                print(f"  Started: {time.ctime(supervisor_info.create_time)}")
-                print(f"  Log: {log_dir}")
+                result['status'] = 'running' if is_alive else 'stopped'
+                result['pid'] = supervisor_info.pid
+                result['started'] = supervisor_info.create_time
             except Exception as e:
-                print(f"\nSupervisor Process: Error reading info - {e}")
-        else:
-            print("\nSupervisor Process: No info file found")
+                logger.warning(f"Error reading supervisor info: {e}")
 
-        print("\n" + "-"*80)
-        print("Services:")
-        print("-"*80)
+        # Load supervisor config to get all services
+        config_file = session_dir / ServiceSupervisorCommon.SUPERVISOR_CONFIG_FILE
+        if not config_file.exists():
+            return result
 
-        # Iterate through all configured services
-        for service_identifier, config in service_configs.items():
-            if isinstance(config, NonWorkerServiceConfig):
-                # Non-worker service (single instance)
-                service_dir = session_dir / config.service_name
-                info_file = service_dir / ServiceSupervisorCommon.PROCESS_INFO_FILE
+        try:
+            service_configs = ServiceConfigMap.from_file(config_file)
+        except Exception as e:
+            logger.warning(f"Error reading supervisor config: {e}")
+            return result
 
-                print(f"\n[{config.service_name}]")
-                print(f"  Type: Service")
-                print(f"  Command: {config.command}")
-
-                if info_file.exists():
-                    try:
-                        info = ServiceInfo.from_file(info_file)
-                        is_alive = ServiceSupervisorCommon._is_alive(info.pid, info.create_time)
-                        print(f"  PID: {info.pid}")
-                        # TODO 
-                        print(f"  State: {info.state} ({'ALIVE' if is_alive else 'DEAD'})")
-                        print(f"  Started: {time.ctime(info.create_time)}")
-                        print(f"  Last Check: {time.ctime(info.last_check)}")
-                        print(f"  Failures: {info.failures}")
-                        print(f"  Logs:")
-                        print(f"    stdout: {service_dir / 'stdout.log'}")
-                        print(f"    stderr: {service_dir / 'stderr.log'}")
-                    except Exception as e:
-                        print(f"  Error: Could not read info file - {e}")
-                else:
-                    print(f"  Status: No info file found")
-
-            elif isinstance(config, WorkerServiceConfig):
-                # Worker service (multiple instances)
-                print(f"\n[{config.service_name}]")
-                print(f"  Type: Worker Service")
-                print(f"  Command: {config.command}")
-                print(f"  Workers: {config.num_workers}")
-
+        # Collect worker info
+        for config in service_configs.values():
+            if isinstance(config, WorkerServiceConfig):
                 for worker_num in range(config.num_workers):
                     worker_dir = session_dir / config.service_name / str(worker_num)
                     info_file = worker_dir / ServiceSupervisorCommon.PROCESS_INFO_FILE
-
-                    print(f"\n  Worker {worker_num}:")
-
                     if info_file.exists():
                         try:
                             info = ServiceInfo.from_file(info_file)
                             is_alive = ServiceSupervisorCommon._is_alive(info.pid, info.create_time)
-                            print(f"    PID: {info.pid}")
-                            print(f"    State: {info.state} ({'ALIVE' if is_alive else 'DEAD'})")
-                            print(f"    Started: {time.ctime(info.create_time)}")
-                            print(f"    Last Check: {time.ctime(info.last_check)}")
-                            print(f"    Failures: {info.failures}")
-                            print(f"    Logs:")
-                            print(f"      stdout: {worker_dir / 'stdout.log'}")
-                            print(f"      stderr: {worker_dir / 'stderr.log'}")
+                            result['workers'].append({
+                                'pid': info.pid,
+                                'state': 'running' if is_alive else 'stopped',
+                                'started': info.create_time,
+                                'failures': info.failures,
+                            })
                         except Exception as e:
-                            print(f"    Error: Could not read info file - {e}")
-                    else:
-                        print(f"    Status: No info file found")
-            else:
-                assert_never(config)
+                            logger.warning(f"Error reading worker {worker_num} info: {e}")
 
-        print("\n" + "="*80 + "\n")
+        return result
 
 
 # Backwards compatibility alias

@@ -55,10 +55,9 @@ from pathlib import Path
 import enum
 import logging
 
-# TODO public API
+from aiida.common.log import AIIDA_LOGGER
 
-# TODO logger as in aiida
-logger = logging.getLogger()
+logger = AIIDA_LOGGER.getChild('engine.daemon.supervisor')
 
 class ServiceState(enum.Enum):
     ALIVE = "ALIVE"
@@ -354,7 +353,7 @@ class ServiceSupervisorCommon:
                 time.sleep(0.1)
             else:
                 # Timeout - force kill
-                print(f"⚠ Process {pid} did not stop gracefully, force killing...")
+                logger.warning(f"Process {pid} did not stop gracefully, force killing...")
                 os.kill(pid, signal.SIGKILL)
                 start_time = time.time()
                 while time.time() - start_time < ServiceSupervisorCommon.KILL_TIMEOUT:
@@ -404,10 +403,10 @@ class ServiceSupervisorCommon:
 
             if time_diff > 1.0:
                 # PID has been reused by a different process!
-                print(f"WARNING: PID {pid} reused by different process!")
-                print(f"  Expected create time: {create_time}")
-                print(f"  Actual create time: {actual_create_time}")
-                print(f"  Difference: {time_diff} seconds")
+                logger.warning(
+                    f"PID {pid} reused by different process! "
+                    f"Expected create time: {create_time}, actual: {actual_create_time}, diff: {time_diff}s"
+                )
                 return False
 
             # Process exists and creation time matches
@@ -422,7 +421,7 @@ class ServiceSupervisorCommon:
             # 1. It's running as a different user
             # 2. System restrictions prevent access
             # Conservative approach: assume it's alive
-            print(f"WARNING: Cannot access PID {pid} (permission denied)")
+            logger.warning(f"Cannot access PID {pid} (permission denied)")
             return True
 
     # TODO add for _cleanup_last_session a boolean return value so we can say it worked
@@ -508,8 +507,7 @@ class ServiceSupervisorProcess:
         # Configure logger to write to supervisor log file
         self._setup_logging()
 
-        # TODO remove prints
-        print(f"[{time.ctime()}] Supervisor started (PID: {os.getpid()})")
+        logger.info(f"Supervisor started (PID: {os.getpid()})")
         self._save_supervisor_info()
 
         # Setup signal handlers for graceful shutdown
@@ -522,7 +520,7 @@ class ServiceSupervisorProcess:
         # Start health monitor thread
         self.monitor_thread = threading.Thread(target=self._health_monitor, daemon=False, name="HealthMonitor")
         self.monitor_thread.start()
-        print("✓ Health monitor started")
+        logger.info("Health monitor started")
 
     def _daemonize(self):
         # TODO add stackoverflow why double fork needed to decouple from terminal session
@@ -552,7 +550,7 @@ class ServiceSupervisorProcess:
             sys.stderr.write(f"Fork #2 failed: {e}\n")
             sys.exit(1)
 
-        print(f"[{time.ctime()}] Daemon started (PID: {os.getpid()})")
+        logger.info(f"Daemon started (PID: {os.getpid()})")
 
     def _save_supervisor_info(self):
         """Save the supervisor's PID and create time to a file for later reference."""
@@ -687,7 +685,7 @@ class ServiceSupervisorProcess:
                     self._check_service_process_health(config)
                 else:
                     assert_never(config)
-        print(f"[{time.ctime()}] Health monitor thread shutting down...")
+        logger.info("Health monitor thread shutting down...")
         self._shutdown()
 
     def _shutdown(self):
@@ -699,12 +697,12 @@ class ServiceSupervisorProcess:
                 self._log_fd.close()
             except Exception as e:
                 # Best effort - don't fail shutdown
-                print(f"Warning: Failed to close log file descriptor: {e}")
+                logger.warning(f"Failed to close log file descriptor: {e}")
 
 
     def _signal_handler(self, signum, frame):
         """Handle SIGTERM/SIGINT."""
-        print(f"\n[{time.ctime()}] Received signal {signum}, shutting down...")
+        logger.info(f"Received signal {signum}, shutting down...")
         self._shutdown()
         sys.exit(0)
 

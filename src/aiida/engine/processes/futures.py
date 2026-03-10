@@ -12,6 +12,7 @@ import asyncio
 from typing import Optional, Union
 
 import kiwipy
+from plumpy import get_or_create_event_loop
 
 from aiida.orm import Node, load_node
 
@@ -43,7 +44,7 @@ class ProcessFuture(asyncio.Future):
         from .process import ProcessState
 
         # create future in specified event loop
-        loop = loop if loop is not None else asyncio.get_event_loop()
+        loop = loop if loop is not None else get_or_create_event_loop()
         super().__init__(loop=loop)
 
         assert not (poll_interval is None and communicator is None), 'Must poll or have a communicator to use'

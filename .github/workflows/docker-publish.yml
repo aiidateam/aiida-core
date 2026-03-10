@@ -36,17 +36,17 @@ jobs:
         working-directory: .docker
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Login to GitHub Container Registry 🔑
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Login to DockerHub 🔑
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       if: inputs.registry == 'docker.io'
       with:
         registry: docker.io

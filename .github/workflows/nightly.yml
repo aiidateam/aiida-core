@@ -11,6 +11,7 @@ on:
     - .molecule/default/files/**
     - aiida/storage/psql_dos/migrations/**
     - tests/storage/psql_dos/migrations/**
+    - tests/storage/psql_dos/test_nodes.py
   workflow_dispatch:
 
 # https://docs.github.com/en/actions/using-jobs/using-concurrency
@@ -54,7 +55,7 @@ jobs:
         - 5001:22
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql
@@ -122,7 +123,7 @@ jobs:
         - 15672:15672
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - name: Install aiida-core
       id: install

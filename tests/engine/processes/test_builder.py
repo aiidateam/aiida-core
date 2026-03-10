@@ -51,16 +51,6 @@ class LazyProcessNamespace(Process):
         spec.input('namespace.c', non_db=True)
 
 
-class PopulateDefaultsProcess(Process):
-    """Process with namespaces using populate_defaults=False to test lazy namespace creation."""
-
-    @classmethod
-    def define(cls, spec):
-        super().define(spec)
-        spec.input_namespace('optional_ns', non_db=True, required=False, populate_defaults=False)
-        spec.input('optional_ns.value', valid_type=str, non_db=True, required=False)
-
-
 class SimpleProcessNamespace(Process):
     """Process with basic nested namespaces to test "pruning" of empty nested namespaces from the builder."""
 
@@ -152,25 +142,29 @@ def test_builder_inputs():
     assert builder._inputs(prune=True) == {'namespace': {'nested': {'bird': []}}}
 
 
-def test_builder_populate_defaults_false():
-    """Test that namespaces with populate_defaults=False are not added to builder until accessed."""
-    # An empty builder should not have the namespace with populate_defaults=False
-    builder = PopulateDefaultsProcess.get_builder()
-    assert 'optional_ns' not in dict(builder)
-    # Note that the 'metadata' dict does not contain 'options' here, as that is added in the
-    # CalcJob interface, while here we are testing on a `Process` only
-    assert builder._inputs(prune=False) == {'metadata': {}}
+def test_builder_lazy_namespaces():
+    """Test that dict-style access lazily creates namespaces, including through nested levels."""
+    # Dict-style access creates the namespace
+    builder = LazyProcessNamespace.get_builder()
+    _ = builder['namespace']
+    assert 'namespace' in dict(builder)
 
-    # Accessing the namespace should create it (lazy creation)
-    _ = builder.optional_ns
-    assert 'optional_ns' in dict(builder)
-    # But with prune=True, it should be removed since it's empty
-    assert builder._inputs(prune=True) == {}
+    # Nested dict-style access where both parent and child are absent
+    builder = LazyProcessNamespace.get_builder()
+    _ = builder['namespace']['nested']
+    assert 'nested' in dict(builder['namespace'])
 
-    # Setting a value in the namespace should keep it
-    builder = PopulateDefaultsProcess.get_builder()
-    builder.optional_ns.value = 'test'
-    assert builder._inputs(prune=True) == {'optional_ns': {'value': 'test'}}
+    # Setting a value through nested dict-style access
+    builder = LazyProcessNamespace.get_builder()
+    builder['namespace']['nested']['bird'] = 'robin'
+    assert builder._inputs(prune=True) == {'namespace': {'nested': {'bird': 'robin'}}}
+
+    # Invalid keys raise KeyError at any nesting level
+    builder = LazyProcessNamespace.get_builder()
+    with pytest.raises(KeyError):
+        builder['nonexistent']
+    with pytest.raises(KeyError):
+        builder['namespace']['nonexistent']
 
 
 @pytest.mark.parametrize(
@@ -213,6 +207,7 @@ def test_dynamic_setters(example_inputs):
     builder.name_spaced = example_inputs['name_spaced']
     builder.boolean = example_inputs['boolean']
     builder.dict = example_inputs['dict']
+    builder.metadata = example_inputs['metadata']
     assert builder == example_inputs
 
 

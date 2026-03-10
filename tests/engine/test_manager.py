@@ -12,6 +12,7 @@ import asyncio
 import time
 
 import pytest
+from plumpy import get_or_create_event_loop
 
 from aiida.engine.processes.calcjobs.manager import JobManager, JobsList
 from aiida.engine.transports import TransportQueue
@@ -24,7 +25,7 @@ class TestJobManager:
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        self.loop = asyncio.get_event_loop()
+        self.loop = get_or_create_event_loop()
         self.transport_queue = TransportQueue(self.loop)
         self.user = User.collection.get_default()
         self.computer = aiida_localhost
@@ -54,7 +55,7 @@ class TestJobsList:
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_localhost):
         """Initialize the profile."""
-        self.loop = asyncio.get_event_loop()
+        self.loop = get_or_create_event_loop()
         self.transport_queue = TransportQueue(self.loop)
         self.user = User.collection.get_default()
         self.computer = aiida_localhost

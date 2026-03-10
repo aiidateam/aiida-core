@@ -931,23 +931,31 @@ class ServiceSupervisorController:
         return result
 
 
-# Backwards compatibility alias
 class AiidaDaemon:
-    """Adddd-specific supervisor that automatically uses the AiiDA profile daemon directory."""
+    """AiiDA-specific daemon supervisor that manages worker processes for a profile."""
 
-    def __init__(self, profile_identifier: str| None = None):
-        """
-        Initialize AiiDA supervisor with automatic profile directory.
+    def __init__(self, profile=None):
+        """Initialize AiiDA daemon for a profile.
 
-        Args:
-            service_configs: ServiceConfigMap with all service configurations
+        :param profile: A :class:`~aiida.manage.configuration.profile.Profile` instance,
+            a profile name string, or ``None`` to use the current/default profile.
         """
-        from aiida.manage import get_manager 
+        from aiida.manage import get_manager
+        from aiida.manage.configuration.profile import Profile
+
         manager = get_manager()
-        profile = manager.load_profile() if profile_identifier is None else manager.load_profile(profile_identifier)
-        config = manager.get_config()
-        self._daemon_dir = config.get_new_daemon_dir(profile)
-        # TODO check if this is fixed by auto-register subclass
+
+        if profile is None or isinstance(profile, str):
+            profile = manager.load_profile(profile)
+        elif not isinstance(profile, Profile):
+            raise TypeError(f'profile must be None, a string, or a Profile instance, got: {type(profile)}')
+        else:
+            manager.load_profile(profile)
+
+        self._profile = profile
+        self._config = manager.get_config()
+        self._daemon_dir = self._config.get_new_daemon_dir(profile)
+        self._daemon_dir.mkdir(parents=True, exist_ok=True)
 
     def start(self, num_workers: int, foreground: bool):
         num_workers = config.get_option("daemon.default_workers", 1) if num_workers is None else num_workers

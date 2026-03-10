@@ -157,18 +157,41 @@ Although it is possible to run AiiDA without a daemon it does provide significan
 
     .. tab-item:: MacOS X
 
-        #. Install `Homebrew <https://docs.brew.sh/Installation>`__.
+        .. warning::
 
-        #. Install RabbitMQ:
+            Installing RabbitMQ via `Homebrew <https://brew.sh>`__ is **not recommended**.
+            Homebrew typically installs the latest version of Erlang alongside RabbitMQ, and the two are often incompatible, causing ``rabbitmq-server`` to crash on startup with no clear error message.
+            See the :ref:`troubleshooting section <installation:troubleshooting:installation:rabbitmq>` for more details.
+
+        The recommended approaches are to use the **generic binary build** or **Docker**.
+
+        **Using the generic binary build:**
+
+        #. Download the latest `generic binary build <https://www.rabbitmq.com/docs/install-generic-unix>`__ from the RabbitMQ website.
+        #. Extract the archive and follow the included installation instructions.
+        #. Start the server:
 
            .. code-block:: console
 
+                /path/to/rabbitmq_server-<version>/sbin/rabbitmq-server -detached
+
+        **Using Docker:**
+
+        #. Install `Docker Desktop <https://www.docker.com/products/docker-desktop/>`__.
+        #. Start a RabbitMQ container:
+
+           .. code-block:: console
+
+                docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
+
+        **Using Homebrew (not recommended):**
+
+        If you still want to use Homebrew, make sure to verify that the installed versions of Erlang and RabbitMQ are `compatible <https://www.rabbitmq.com/docs/which-erlang>`__.
+
+        .. code-block:: console
+
                 brew install rabbitmq
                 brew services start rabbitmq
-
-        .. important::
-
-            The service has to manually be started each time the machine reboots.
 
     .. tab-item:: Other
 

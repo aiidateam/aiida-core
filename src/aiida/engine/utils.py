@@ -166,7 +166,7 @@ def ensure_coroutine(fct: Callable[..., Any]) -> Callable[..., Awaitable[Any]]:
     :param fct: the function
     :returns: the coroutine
     """
-    if asyncio.iscoroutinefunction(fct):
+    if inspect.iscoroutinefunction(fct):
         return fct
 
     async def wrapper(*args, **kwargs):

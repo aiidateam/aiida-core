@@ -29,6 +29,7 @@ from aiida.orm.implementation import BackendEntity, StorageBackend
 from aiida.storage.log import STORAGE_LOGGER
 from aiida.storage.psql_dos.migrator import REPOSITORY_UUID_KEY, PsqlDosMigrator
 from aiida.storage.psql_dos.models import base
+from aiida.storage.utils import _create_smarter_in_clause
 
 from .orm import authinfos, comments, computers, convert, groups, logs, nodes, querybuilder, users
 
@@ -49,7 +50,8 @@ CONTAINER_DEFAULTS: dict = {
 def get_filepath_container(profile: Profile) -> pathlib.Path:
     """Return the filepath of the disk-object store container."""
     from urllib.parse import urlparse
-    from urllib.request import url2pathname
+
+    from aiida.common.utils import url2pathname
 
     try:
         parts = urlparse(profile.storage_config['repository_uri'])
@@ -390,13 +392,21 @@ class PsqlDosBackend(StorageBackend):
 
         session = self.get_session()
         # Delete the membership of these nodes to groups.
-        session.query(DbGroupNode).filter(DbGroupNode.dbnode_id.in_(pks)).delete(synchronize_session='fetch')
+        session.query(DbGroupNode).filter(
+            _create_smarter_in_clause(session=session, column=DbGroupNode.dbnode_id, values=pks)
+        ).delete(synchronize_session='fetch')
         # Delete the links coming out of the nodes marked for deletion.
-        session.query(DbLink).filter(DbLink.input_id.in_(pks)).delete(synchronize_session='fetch')
+        session.query(DbLink).filter(
+            _create_smarter_in_clause(session=session, column=DbLink.input_id, values=pks)
+        ).delete(synchronize_session='fetch')
         # Delete the links pointing to the nodes marked for deletion.
-        session.query(DbLink).filter(DbLink.output_id.in_(pks)).delete(synchronize_session='fetch')
+        session.query(DbLink).filter(
+            _create_smarter_in_clause(session=session, column=DbLink.output_id, values=pks)
+        ).delete(synchronize_session='fetch')
         # Delete the actual nodes
-        session.query(DbNode).filter(DbNode.id.in_(pks)).delete(synchronize_session='fetch')
+        session.query(DbNode).filter(_create_smarter_in_clause(session=session, column=DbNode.id, values=pks)).delete(
+            synchronize_session='fetch'
+        )
 
     def get_backend_entity(self, model: base.Base) -> BackendEntity:
         """Return the backend entity that corresponds to the given Model instance

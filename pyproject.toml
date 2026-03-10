@@ -31,7 +31,7 @@ classifiers = [
 dependencies = [
   'alembic~=1.8',
   'archive-path~=0.4.2',
-  "asyncssh~=2.19.0",
+  "asyncssh~=2.21.0",
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
   'click>=8.1.0,<8.3',
@@ -286,6 +286,7 @@ tests = [
   'pytest-rerunfailures~=12.0',
   'pytest-benchmark~=4.0',
   'pytest-regressions~=2.2',
+  'pytest-instafail~=0.5',
   'pytest-xdist~=3.6',
   'pympler~=1.0',
   'sphinx~=7.2.0',
@@ -393,7 +394,7 @@ module = [
 ]
 
 [tool.pytest.ini_options]
-addopts = '--benchmark-skip --durations=5 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append '
+addopts = '--benchmark-skip --durations=5 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append --tb=short --instafail'
 filterwarnings = [
   'ignore:.*and will be removed in NumPy 2.0.*:DeprecationWarning:ase:',
   'ignore:datetime.datetime.utcfromtimestamp:DeprecationWarning:pytz|dateutil|tqdm|aio_pika:',
@@ -416,6 +417,8 @@ filterwarnings = [
   'ignore:The `Code` class is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   # https://github.com/aiidateam/plumpy/issues/283
   'ignore:There is no current event loop:DeprecationWarning:plumpy',
+  "ignore:'asyncio.[sg]et_event_loop_policy' is deprecated:DeprecationWarning:pytest_asyncio",
+  "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:pytest_asyncio|kiwipy",
   # spglib deprecation
   'ignore:dict interface is deprecated:DeprecationWarning',
   # https://github.com/aiidateam/archive-path/issues/21
@@ -426,6 +429,7 @@ filterwarnings = [
   'default::ResourceWarning',
   'ignore:unclosed database:ResourceWarning',
   'ignore:unclosed event loop:ResourceWarning',
+  'ignore:<psycopg.* object at .* was deleted while still open:ResourceWarning:psycopg',
   'ignore:connection .* was deleted while still open:ResourceWarning:psycopg',
   'ignore:the server-side cursor .* was deleted while still open:ResourceWarning:psycopg'
 ]

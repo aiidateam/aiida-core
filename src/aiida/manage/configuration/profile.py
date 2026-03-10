@@ -214,8 +214,8 @@ class Profile:
         :return: absolute filepath of the profile's file repository
         """
         from urllib.parse import urlparse
-        from urllib.request import url2pathname
 
+        from aiida.common.utils import url2pathname
         from aiida.common.warnings import warn_deprecation
 
         warn_deprecation('This method has been deprecated', version=3)

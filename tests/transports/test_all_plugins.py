@@ -16,6 +16,7 @@ import os
 import re
 import shutil
 import signal
+import sys
 import tempfile
 import time
 import uuid
@@ -63,7 +64,13 @@ def tmp_path_local(tmp_path_factory):
         ('core.local', None),
         ('core.ssh', None),
         ('core.ssh_async', 'asyncssh'),
-        ('core.ssh_async', 'openssh'),
+        pytest.param(
+            ('core.ssh_async', 'openssh'),
+            marks=pytest.mark.skipif(
+                sys.platform == 'darwin',
+                reason='openssh transport uses GNU stat -c, unavailable on macOS localhost',
+            ),
+        ),
     ],
 )
 def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:

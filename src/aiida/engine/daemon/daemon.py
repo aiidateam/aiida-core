@@ -962,6 +962,22 @@ class AiidaDaemon:
         """Return the profile this daemon is associated with."""
         return self._profile
 
+    @property
+    def is_daemon_running(self) -> bool:
+        """Return whether the daemon is currently running."""
+        session_dir = ServiceSupervisorController._get_latest_session_dir(self._daemon_dir)
+        if session_dir is None:
+            return False
+        return ServiceSupervisorController._is_running(session_dir)
+
+    @property
+    def daemon_log_file(self) -> str | None:
+        """Return the path to the supervisor log file for the latest session."""
+        session_dir = ServiceSupervisorController._get_latest_session_dir(self._daemon_dir)
+        if session_dir is None:
+            return None
+        return str(session_dir / ServiceSupervisorCommon.SUPERVISOR_LOG_FILE)
+
     def start(self, num_workers: int | None = None, foreground: bool = False):
         """Start the daemon with the given number of workers.
 

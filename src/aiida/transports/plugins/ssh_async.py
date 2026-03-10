@@ -823,8 +823,10 @@ class AsyncSshTransport(AsyncTransport):
 
         copy_items = ' '.join([escape_for_bash(str(Path(item).relative_to(root_dir))) for item in copy_list])
         # note: order of the flags is important
+        # COPYFILE_DISABLE=1 prevents macOS bsdtar from including AppleDouble (._) resource fork files
+        # See https://unix.stackexchange.com/a/9865
         tar_command = (
-            f'tar -c{compression_flag!s}{"h" if dereference else ""}f '
+            f'COPYFILE_DISABLE=1 tar -c{compression_flag!s}{"h" if dereference else ""}f '
             f'{escape_for_bash(str(remotedestination))} -C {escape_for_bash(str(root_dir))} ' + copy_items
         )
 

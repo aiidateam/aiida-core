@@ -383,16 +383,16 @@ class TestVerdiProcess:
         run_cli_command = functools.partial(run_cli_command, suppress_warnings=True)
 
         # Default behavior should yield all active states (CREATED, RUNNING and WAITING)
-        # so eight in total (6 original + 2 new)
+        # so eight in total (6 original + 2 new RUNNING nodes)
         result = run_cli_command(cmd_process.process_list, ['-r'])
-        assert len(result.output_lines) == 7
+        assert len(result.output_lines) == 8
 
         # Ordering shouldn't change the number of results,
         for flag in ['-O', '--order-by']:
             for flag_value in ['id', 'ctime']:
                 result = run_cli_command(cmd_process.process_list, ['-r', flag, flag_value])
 
-                assert len(result.output_lines) == 7
+                assert len(result.output_lines) == 8
 
         # but the orders should be inverse
         for flag in ['-D', '--order-direction']:
@@ -400,13 +400,13 @@ class TestVerdiProcess:
             result = run_cli_command(cmd_process.process_list, ['-r', '-O', 'id', flag, flag_value])
 
             result_num_asc = [line.split()[0] for line in result.output_lines]
-            assert len(result_num_asc) == 7
+            assert len(result_num_asc) == 8
 
             flag_value = 'desc'
             result = run_cli_command(cmd_process.process_list, ['-r', '-O', 'id', flag, flag_value])
 
             result_num_desc = [line.split()[0] for line in result.output_lines]
-            assert len(result_num_desc) == 7
+            assert len(result_num_desc) == 8
 
             assert result_num_asc == list(reversed(result_num_desc))
 
@@ -414,7 +414,7 @@ class TestVerdiProcess:
         for flag in ['-a', '--all']:
             result = run_cli_command(cmd_process.process_list, ['-r', flag])
 
-            assert len(result.output_lines) == 14  # (12 original + 2 new)
+            assert len(result.output_lines) == 14  # 12 original + 2 new RUNNING nodes
 
         # Passing the limit option should limit the results
         for flag in ['-l', '--limit']:
@@ -425,7 +425,7 @@ class TestVerdiProcess:
         for flag in ['-S', '--process-state']:
             for flag_value in ['created', 'running', 'waiting', 'killed', 'excepted', 'finished']:
                 result = run_cli_command(cmd_process.process_list, ['-r', flag, flag_value])
-                expected = 4 if flag_value == 'running' else 2
+                expected = 4 if flag_value == 'running' else 2  # 2 original + 2 new RUNNING nodes
                 assert len(result.output_lines) == expected
 
         # Filtering for exit status should only get us one
@@ -444,7 +444,7 @@ class TestVerdiProcess:
         for flag in ['-P', '--project']:
             result = run_cli_command(cmd_process.process_list, ['-r', flag, 'pk'])
 
-            assert len(result.output_lines) == 7
+            assert len(result.output_lines) == 8
 
             for line in result.output_lines:
                 assert line.strip() in [str(calc.pk) for calc in calcs]
@@ -467,14 +467,14 @@ class TestVerdiProcess:
 
         # Test the `--roots` flag
         for flag in ['--roots']:
-            result = run_cli_command(cmd_process.process_list, [flag])
-            # The 6 original active nodes + the 1 new root_node = 7 total. The child_node should be filtered out.
+            result = run_cli_command(cmd_process.process_list, ['-r', flag])
+            # The 6 original active nodes + root_node (RUNNING) = 7. child_node is filtered out.
             assert len(result.output_lines) == 7
             assert str(root_node.pk) in result.output
             assert str(child_node.pk) not in result.output
 
             # Test interaction with `--all`
-            result = run_cli_command(cmd_process.process_list, [flag, '--all'])
+            result = run_cli_command(cmd_process.process_list, ['-r', flag, '--all'])
             # Original 12 nodes (all root) + root_node (RUNNING) = 13.
             assert len(result.output_lines) == 13
             assert str(root_node.pk) in result.output
@@ -487,7 +487,7 @@ class TestVerdiProcess:
             root_node_finished.base.attributes.set('process_label', 'root_process_finished')
             root_node_finished.store()
 
-            result = run_cli_command(cmd_process.process_list, [flag, '--all'])
+            result = run_cli_command(cmd_process.process_list, ['-r', flag, '--all'])
             # Previous 13 + 1 root_node_finished = 14.
             assert len(result.output_lines) == 14
             assert str(root_node_finished.pk) in result.output
@@ -497,26 +497,26 @@ class TestVerdiProcess:
             root_with_input = WorkChainNode()
             root_with_input.set_process_state(ProcessState.RUNNING)
             root_with_input.base.attributes.set('process_label', 'root_with_input')
+
+            # Some other node provides an input (not a CALL link, so root_with_input is still a root)
+            other_node = Int(1).store()
+            root_with_input.base.links.add_incoming(other_node, link_type=LinkType.INPUT_WORK, link_label='input_link')
             root_with_input.store()
 
-            # Some other node
-            other_node = Int(1).store()
-            root_with_input.base.links.add_incoming(other_node, link_type=LinkType.INPUT_CALC, link_label='input_link')
-
-            result = run_cli_command(cmd_process.process_list, [flag])
+            result = run_cli_command(cmd_process.process_list, ['-r', flag])
             # Previous 7 (active) + 1 root_with_input = 8.
             assert len(result.output_lines) == 8
             assert str(root_with_input.pk) in result.output
 
         # There should be exactly one paused
         for flag in ['--paused']:
-            result = run_cli_command(cmd_process.process_list, [flag])
+            result = run_cli_command(cmd_process.process_list, ['-r', flag])
 
             assert len(result.output_lines) == 1
 
         # There should be a failed WorkChain with exit status 1
         for flag in ['-P', '--project']:
-            result = run_cli_command(cmd_process.process_list, ['--only-roots', '--raw', '-X', flag, 'exit_message'])
+            result = run_cli_command(cmd_process.process_list, ['--roots', '--raw', '-X', flag, 'exit_message'])
             assert Process.exit_codes.ERROR_UNSPECIFIED.message in result.output
 
     def test_process_show(self, run_cli_command):

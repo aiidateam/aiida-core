@@ -178,14 +178,21 @@ class CalculationQueryBuilder:
         builder.append(cls=orm.ProcessNode, filters=filters, project=unique_projections, tag='process')
 
         if only_roots:
-            builder.append(
+            from aiida.common.links import LinkType
+
+            # Use a subquery to find non-root process PKs (those that have a caller).
+            # We cannot use an outer join + WHERE id IS NULL approach because generate_joins()
+            # clears all filters for outer-joined tags, moving them to the ON clause.
+            sub_qb = orm.QueryBuilder()
+            sub_qb.append(orm.ProcessNode, project=['id'], tag='child')
+            sub_qb.append(
                 orm.Node,
-                with_outgoing='process',
-                tag='caller',
-                edge_filters={'type': {'in': (orm.LinkType.CALL_CALC.value, orm.LinkType.CALL_WORK.value)}},
-                outerjoin=True,
+                with_outgoing='child',
+                edge_filters={'type': {'in': (LinkType.CALL_CALC.value, LinkType.CALL_WORK.value)}},
             )
-            builder.add_filter('caller', {'id': {'==': None}})
+            non_root_pks = [row[0] for row in sub_qb.all()]
+            if non_root_pks:
+                builder.add_filter('process', {'id': {'!in': non_root_pks}})
 
         if relationships is not None:
             for tag, entity in relationships.items():

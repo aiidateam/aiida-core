@@ -157,7 +157,7 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
     params=[
         entry_point
         for entry_point in plugins.get_entry_points('aiida.data')
-        if entry_point.name not in ('core.code', 'core.code.abstract')
+        if entry_point.name.startswith('core.') and entry_point.name not in ('core.code', 'core.code.abstract')
     ],
 )
 def data_plugin(request):

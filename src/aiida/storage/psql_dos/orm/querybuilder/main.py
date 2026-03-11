@@ -94,7 +94,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
     def __init__(self, backend):
         super().__init__(backend)
 
-        self._joiner = SqlaJoiner(self, self.build_filters)
+        self._joiner = SqlaJoiner(self)
 
         # Set conversions between the field names in the database and used by the `QueryBuilder`
         # table -> field -> field

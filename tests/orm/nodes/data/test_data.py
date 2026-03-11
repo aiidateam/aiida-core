@@ -50,7 +50,9 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
             times = stepids * 0.01
             cells = numpy.array([[[3.0, 0.0, 0.0], [0.0, 3.0, 0.0], [0.0, 0.0, 3.0]]])
             positions = numpy.array([[[0.0, 0.0, 0.0]]])
-            instance.set_trajectory(stepids=stepids, cells=cells, symbols=['H'], positions=positions, times=times)
+            instance.set_trajectory(
+                stepids=stepids, cells=cells, symbols=['H'], positions=positions, times=times, pbc=[True, True, False]
+            )
             return instance
 
         if data_class is orm.UpfData:

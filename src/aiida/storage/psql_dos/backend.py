@@ -9,7 +9,6 @@
 """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
 
 import functools
-import gc
 import pathlib
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
@@ -195,11 +194,8 @@ class PsqlDosBackend(StorageBackend):
             engine.dispose()  # type: ignore[union-attr]
         self._session_factory.expunge_all()
         self._session_factory.close()
+        self._session_factory.remove()
         self._session_factory = None
-
-        # Without this, sqlalchemy keeps a weakref to a session
-        # in sqlalchemy.orm.session._sessions
-        gc.collect()
 
     def _clear(self) -> None:
         from aiida.storage.psql_dos.models.settings import DbSetting

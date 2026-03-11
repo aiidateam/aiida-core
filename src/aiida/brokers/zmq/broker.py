@@ -100,6 +100,18 @@ class ZmqBroker(Broker):
         """Return the management client for broker service lifecycle."""
         return self._management_client
 
+    def start(self) -> None:
+        """Start the ZMQ broker service."""
+        self._management_client.start()
+
+    def stop(self) -> None:
+        """Stop the ZMQ broker service."""
+        self._management_client.stop()
+
+    def is_running(self) -> bool:
+        """Return whether the ZMQ broker service is running."""
+        return self._management_client.is_running()
+
     def get_communicator(self) -> ZmqCommunicator:
         """Return a ZMQ communicator instance.
 

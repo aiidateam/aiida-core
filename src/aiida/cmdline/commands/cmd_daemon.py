@@ -90,6 +90,13 @@ def start(foreground, number, timeout):
 
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
+    from aiida.manage.manager import get_manager
+
+    # Start the broker service (no-op for externally managed brokers like RabbitMQ)
+    broker = get_manager().get_broker()
+    if broker is not None:
+        broker.start()
+
     echo.echo(f'Starting the daemon with {number} workers... ', nl=False)
     execute_client_command('start_daemon', number_workers=number, foreground=foreground, timeout=timeout)
 
@@ -211,11 +218,18 @@ def stop(ctx, no_wait, all_profiles, timeout):
     else:
         profiles = [ctx.obj.profile]
 
+    from aiida.manage.manager import get_manager
+
     for profile in profiles:
         echo.echo('Profile: ', fg=echo.COLORS['report'], bold=True, nl=False)
         echo.echo(f'{profile.name}', bold=True)
         echo.echo('Stopping the daemon... ', nl=False)
         execute_client_command('stop_daemon', daemon_not_running_ok=True, wait=not no_wait, timeout=timeout)
+
+    # Stop the broker service (no-op for externally managed brokers like RabbitMQ)
+    broker = get_manager().get_broker()
+    if broker is not None:
+        broker.stop()
 
 
 @verdi_daemon.command()

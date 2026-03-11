@@ -4,7 +4,7 @@
 
 - Whenever you encounter a bug, add a (failing) test for it. Then fix the bug.
 - Whenever you modify or add a feature, write a test for it.
-  Writing tests [before the implementation](http://en.wikipedia.org/wiki/Test_Driven_Development) helps keep your API clean.
+  Writing tests [before the implementation](https://en.wikipedia.org/wiki/Test_Driven_Development) helps keep your API clean.
 - Make unit tests as atomic as possible. A unit test should run in the blink of an eye.
 - Document *why* you wrote your test -- developers will thank you for it once it fails.
 - **Prefer real objects over mocks**: Use fixtures to create real nodes, processes, etc.
@@ -30,30 +30,28 @@ Install all dependencies (including test extras) with:
 $ uv sync
 ```
 
-Optionally, set up a test profile for faster testing:
+Optionally, set up a dedicated test profile:
 
 ```console
-$ verdi quicksetup --profile test_profile --test-profile
+$ verdi presto --profile-name test
 ```
 
-:::{note}
-The database name and repository folder must start with `test_` to avoid accidental data loss, since tests modify the database.
-:::
+Use `--use-postgres` for a PostgreSQL-backed profile instead of SQLite.
 
 ## Running the test suite
 
 ```console
-$ uv run pytest                        # run all tests (uses pgtest for a temporary postgres cluster by default)
-$ uv run pytest -m presto              # fast tests (no PostgreSQL/RabbitMQ required)
-$ uv run pytest -n auto                # run tests in parallel (via pytest-xdist)
-$ uv run pytest tests/path/to/test     # run a subset of tests
-$ uv run pytest --cov aiida            # run with coverage
-$ AIIDA_TEST_PROFILE=test_profile uv run pytest  # run against a specific test profile
+$ uv run pytest                                    # run all tests (uses pgtest for a temporary postgres cluster by default)
+$ uv run pytest -m presto                          # tests that don't require PostgreSQL/RabbitMQ
+$ uv run pytest -n auto                            # run in parallel on all CPU cores (-n 4 for 4 cores, etc.)
+$ uv run pytest tests/path/to/test                 # run a subset of tests
+$ uv run pytest --cov aiida                        # run with coverage
+$ AIIDA_TEST_PROFILE=test uv run pytest            # run against a specific test profile
 ```
 
 ### Test markers
 
-- `presto` — fast tests that use `SqliteTempBackend` (in-memory, no external services).
+- `presto` — tests that use `SqliteTempBackend` (in-memory, no external services required).
   Add this marker to new tests that don't need PostgreSQL or RabbitMQ.
 - `requires_rmq` — requires RabbitMQ
 - `requires_psql` — requires PostgreSQL
@@ -63,12 +61,17 @@ $ AIIDA_TEST_PROFILE=test_profile uv run pytest  # run against a specific test p
 
 For transport tests, you need passwordless SSH to `localhost`:
 
-- Make sure you have an SSH server running.
+- Make sure you have an SSH server running:
+
+  ```console
+  $ sudo apt install openssh-server  # Ubuntu/Debian
+  ```
+
+  On other distributions, install the equivalent `openssh-server` package.
 
 - Configure an SSH key and add your public key to `~/.ssh/authorized_keys`:
 
   ```console
-  $ sudo apt install openssh-server  # Linux/Ubuntu
   $ ssh-copy-id localhost
   ```
 
@@ -87,8 +90,3 @@ AiiDA uses `pytest` as the testing framework.
   Tests should mirror the source structure so it is easy to find the test for any given module.
 - Write test functions starting with `test_`.
 - Reuse existing [fixtures](https://docs.pytest.org/en/latest/how-to/fixtures.html) where possible (many are available in `tests/conftest.py`), or add your own.
-
-:::{note}
-Some tests still use the `AiidaTestCase` unittest class.
-Make an effort to migrate such cases to `pytest` when you are touching them.
-:::

@@ -2,6 +2,9 @@
 
 Following semantic versioning, changes to the public-facing API of AiiDA require a bump in the major version number.
 
+As a rule of thumb, anything importable from a second-level package (e.g., `from aiida.orm import ...`, `from aiida.engine import ...`) is considered public API.
+Deeper imports (e.g., `from aiida.engine.processes.calcjobs.tasks import Waiting`) are implementation details and not covered by deprecation guarantees — though in practice the boundary is not strictly enforced, especially for workflow or plugin developers where the line between user and developer becomes blurry.
+
 ## Gathering usage information
 
 Before deprecating an API or making a change, it is often useful to know how much the API in question is used in practice.
@@ -15,62 +18,52 @@ https://github.com/search?q=%22_get_base_folder%22+aiida&type=Code
 
 ## Deprecating the CLI
 
-CLI commands can be modified or removed more freely because users should not be relying on them for automated processes.
-However, proper deprecation warnings must still be provided.
+CLI changes also require proper deprecation warnings, as users may rely on `verdi` commands in scripts and automation.
 
-To deprecate a CLI command:
-
-1. Add a `.. deprecated:: vX.Y.Z` note in the docstring indicating the release in which the deprecation was introduced.
-1. Decorate the function with the `deprecated_command` decorator from `aiida.cmdline.utils.decorators`.
+To deprecate a CLI command, use the `deprecated` argument in the Click command decorator.
+Examples from the codebase:
 
 ```python
-@verdi_database.command('version')
-@decorators.deprecated_command(
-    'This command has been deprecated and will be removed soon. '
-    'The same information is now available through `verdi status`.\n'
+@verdi.command('setup', deprecated='Please use `verdi profile setup` instead.')
+def setup():
+    ...
+
+@verdi.command(
+    'quicksetup',
+    deprecated='This command is deprecated. For a fully automated alternative, use `verdi presto --use-postgres` '
+    'or `verdi profile setup` for the interactive alternative.',
 )
-def database_version():
-    """Show the version of the database.
-
-    .. deprecated:: v2.1.0
-    """
+def quicksetup():
+    ...
 ```
-
-:::{important}
-The `@decorators.deprecated_command` decorator must go **below** the `verdi` decorator.
-It only has an effect on proper click commands, not on groups of commands.
-:::
-
-If the procedure needs to be forwarded to another command, use the `Context.forward()` method (see the [click docs](https://click.palletsprojects.com/en/5.x/advanced/#invoking-other-commands)).
 
 ## Deprecating the Python API
 
-Use `AiidaDeprecationWarning` to emit deprecation warnings:
+Use `warn_deprecation` from `aiida.common.warnings` to emit deprecation warnings.
+Examples from the codebase:
 
 ```python
-import warnings
-from aiida.common.warnings import AiidaDeprecationWarning as DeprecationWarning
+from aiida.common.warnings import warn_deprecation
 
-warnings.warn(
-    "Specific deprecation message describing what to use instead",
-    DeprecationWarning,
-)
+# Property renamed
+warn_deprecation('`objects` property is deprecated, use `collection` instead.', version=3)
+
+# Method renamed
+warn_deprecation('This method will be removed, use `get_source_code_file` instead.', version=3)
+
+# Fixture replaced
+warn_deprecation('the clear_database_after_test fixture is deprecated, use aiida_profile_clean instead', version=3)
 ```
-
-Advantages of this approach:
-
-- PyCharm will show the method as crossed out.
-
-- `AiidaDeprecationWarning` does not inherit from Python's `DeprecationWarning`, so it will not be hidden by default.
-
-- Users can disable AiiDA deprecation warnings with:
-
-  ```console
-  $ verdi config set warnings.showdeprecations False
-  ```
 
 When deprecating a method, move the code to the new function name and change the old function to call the new one with the deprecation warning.
 Add a `.. deprecated:: vX.Y.Z` note to the old function's docstring with a reference to the replacement.
+
+`AiidaDeprecationWarning` does not inherit from Python's `DeprecationWarning`, so it is not hidden by default.
+Users can disable AiiDA deprecation warnings with:
+
+```console
+$ verdi config set warnings.showdeprecations False
+```
 
 :::{tip}
 Set `AIIDA_WARN_v3=1` to surface deprecation warnings during development and testing.

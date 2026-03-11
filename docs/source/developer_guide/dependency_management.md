@@ -4,8 +4,8 @@ Dependencies for `aiida-core` are managed according to [AEP 002](https://github.
 
 ## Dependency Manager
 
-| Period | DM |
-|--------|----|
+| Since | DM |
+|-------|----|
 | 2020-02 | [@csadorf](https://github.com/csadorf) |
 | 2022-10 | [@sphuber](https://github.com/sphuber) |
 | 2024 | [@agoscinski](https://github.com/agoscinski) |
@@ -29,11 +29,11 @@ Other files that must stay in sync with `pyproject.toml`:
 
 Before adding a new dependency, ensure it meets all of the following:
 
-- [ ] Fills a non-trivial feature gap that could not be resolved easily otherwise
-- [ ] Supports all Python versions supported by aiida-core (as specified in `pyproject.toml`)
-- [ ] Is available on [PyPI](https://pypi.org/) **and** [conda-forge](https://conda-forge.org/)
-- [ ] Appears to be in a stable development stage (e.g., has reached version 1.0)
-- [ ] Uses an MIT-compatible license (MIT, BSD, Apache, LGPL, but **not** GPL)
+- Fills a non-trivial feature gap that could not be resolved easily otherwise
+- Supports all Python versions supported by aiida-core (as specified in `pyproject.toml`)
+- Is available on [PyPI](https://pypi.org/) **and** [conda-forge](https://conda-forge.org/)
+- Appears to be in a stable development stage (e.g., has reached version 1.0)
+- Uses an MIT-compatible license (MIT, BSD, Apache, LGPL, but **not** GPL)
 
 :::{note}
 If a critical dependency is not yet available on PyPI or conda-forge:
@@ -64,6 +64,10 @@ Update the lock file to reflect the new dependency specifications:
 ```console
 $ uv lock
 ```
+
+:::{note}
+This is also run automatically by the `uv-lock` pre-commit hook and in CI.
+:::
 
 ## Continuous integration
 

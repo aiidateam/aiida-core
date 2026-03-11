@@ -2,10 +2,8 @@
 
 ## Making a pull request
 
-### Step-by-step
-
-1. Ensure your bug fix or feature has a **corresponding GitHub issue**.
-   If not, [open one](https://github.com/aiidateam/aiida-core/issues).
+1. Ensure your bug fix or feature has a **corresponding [GitHub issue](https://github.com/aiidateam/aiida-core/issues)**.
+   Search first to avoid duplicates; if no issue exists, open one.
 
 1. Create a new branch using the naming convention `<prefix>/<issue>/<short_description>`:
 
@@ -26,13 +24,13 @@
    $ git push origin fix/1234/querybuilder_improvements
    ```
 
-1. [Create a pull request](https://github.com/aiidateam/aiida-core/compare) from your fork to the correct branch of `aiidateam/aiida-core`:
+1. [Create a pull request](https://github.com/aiidateam/aiida-core/compare) from your fork to `main`:
 
-   - Only open the PR when you believe your changes are ready to merge.
-     Each push to an open PR triggers email notifications and CI builds.
+   - Only open the PR when it is ready for review — each push triggers CI builds and, possibly, email notifications.
    - Use the PR title to describe its contents.
-     **Bad:** "Fix issue 1234". **Good:** "quicksetup now works without sudo".
-   - Mention the issue number in the PR *description* (use GitHub web UI for proper linking).
+     **Bad:** "Fix issue 1234". **Good:** "Fix QueryBuilder ordering for `Group` entities".
+   - If there is a related issue, link it in the PR description (e.g., write `Fixes #1234`) or use the GitHub UI sidebar to link it directly.
+   - Aim for a reasonable number of lines changed for effective review.
 
 1. Fix any failing CI checks until you get the green check mark.
 
@@ -44,6 +42,11 @@ All PRs must:
 - Pass all tests
 - Build the documentation without warnings
 
+### After opening
+
+- Address review feedback with new commits — they will be squashed on merge anyway.
+- If you need to rewrite history (e.g., rebase or amend), use `git push --force-with-lease` instead of `--force` to avoid accidentally overwriting changes pushed by others.
+
 ## Commit guidelines
 
 ### Structure
@@ -53,9 +56,6 @@ A commit:
 - Should ideally address **one issue**.
 - Should be a **self-contained** change to the code base.
 - Must **not** lump together unrelated changes.
-
-Use `git rebase` to clean up your commit history before opening a PR.
-See tutorials on [git-scm.com](https://git-scm.com/book/en/v2/Git-Branching-Rebasing) and [Atlassian](https://www.atlassian.com/git/tutorials/rewriting-history/git-rebase).
 
 ### Commit messages
 
@@ -89,15 +89,24 @@ Rules:
 - Use the body to explain *what* and *why*, not *how*
 - Merged PRs (via squash) append the PR number: `Fix bug in QueryBuilder (#1234)`
 
-## Pull request etiquette
+:::{tip}
+Some contributors use emoji prefixes as a semantic type indicator in commit messages.
+This saves characters in the subject line, gives a quick visual overview of the types of changes, and makes it easy to sort or filter commits.
+The emoji replaces the type prefix, so write `🐛 QueryBuilder crashes on empty filter`, not `🐛 Fix: QueryBuilder crashes on empty filter`.
 
-- Open a PR only when it is ready for review.
-  Each push triggers notifications and CI builds, consuming the organization's quota.
-- Aim for a reasonable number of lines changed per PR for effective review.
-- Clean up commit history before opening (use `git rebase` and `git commit --amend`).
-- Do **not** manually merge the base branch to bring your PR up to date.
-  The reviewer will handle it after the review is completed.
-- If a reviewer requests minor changes, use `git commit --amend` instead of creating new commits (unless the PR will be squashed anyway).
+| Emoji | Meaning |
+|-------|---------|
+| `✨` | New feature |
+| `🐛` | Bug fix |
+| `👌` | Improvement (no breaking changes) |
+| `‼️` | Breaking change |
+| `📚` | Documentation |
+| `🔧` | Maintenance (typos, etc.) |
+| `🧪` | Tests or CI changes only |
+| `♻️` | Refactoring |
+
+This convention follows [MyST-Parser](https://github.com/executablebooks/MyST-Parser/blob/master/AGENTS.md#commit-message-format) and is optional.
+:::
 
 ## Merging strategies (maintainers)
 
@@ -106,4 +115,5 @@ Rules:
 | **Squash and merge** | Single-issue PRs — one clean commit. Clean the commit message (title and body). |
 | **Rebase and merge** | Multi-commit PRs with individually significant commits. |
 
-If you are unsure what strategy to use, **do not merge**. Ask a maintainer.
+In practice, most PRs are squash-merged, so a clean commit history on the branch is nice to have but not required — the squash takes care of it.
+For rebase-and-merge, each commit should be self-contained and meaningful.

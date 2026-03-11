@@ -7,8 +7,8 @@ The main branch is called `main` and all development happens directly on that br
 
 In the following, we assume the following naming conventions for remotes:
 
-- `origin`: remote pointing to `aiidateam/aiida-core`
-- `fork`: remote pointing to your personal fork
+- `origin`: remote pointing to your personal fork
+- `upstream`: remote pointing to `aiidateam/aiida-core`
 
 Check your remotes with `git remote -v`.
 
@@ -31,7 +31,7 @@ The exact procedure depends on the release type and the current state of `main`.
 If the release can be made directly from `main`:
 
 ```console
-$ git checkout origin/main -b release/X.Y.Z
+$ git checkout upstream/main -b release/X.Y.Z
 ```
 
 If `main` contains changes that should not be released, create the branch from the latest relevant tag:

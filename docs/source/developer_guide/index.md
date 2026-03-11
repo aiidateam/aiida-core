@@ -1,7 +1,7 @@
 # Developer Guide
 
 This guide collects practical tips and guidelines for contributing to `aiida-core`.
-For documentation of AiiDA internals and writing AiiDA plugins, see the relevant sections of the [AiiDA documentation](https://aiida-core.readthedocs.io/en/latest/).
+For writing AiiDA plugins, see the {ref}`how-to guides <how-to:plugins-develop>` and {ref}`topics <topics:plugins>` sections of the documentation.
 
 ## Contributing
 

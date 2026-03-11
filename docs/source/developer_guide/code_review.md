@@ -3,7 +3,7 @@
 ## Standards
 
 - Technical facts and data overrule personal preferences.
-- Approve a PR once it definitely improves code health overall, even if it isn't perfect.
+- Don't block a PR over minor stylistic preferences — but do request changes for issues you are aware of.
 - Be responsive to review requests.
   AiiDA users who put in the effort of contributing back deserve our attention the most, and timely review is a big motivator.
 - Look at every line of code that is being modified.
@@ -19,18 +19,14 @@
 
 ### Scope
 
-- Are you being asked to review more than ~200 lines of code?
-  Don't be shy to ask the submitter to split the PR -- review effectiveness [drops substantially beyond 200 lines](https://www.ibm.com/developerworks/rational/library/11-proven-practices-for-peer-review/index.html).
+- Are you being asked to review more than ~400 lines of code?
+  Don't be shy to ask the submitter to split the PR -- review effectiveness [drops substantially beyond a few hundred lines](https://smartbear.com/learn/code-review/best-practices-for-peer-code-review/).
 - Are there parts of the codebase that have not been modified but *should* be adapted to the changes?
 - Does the code change require a documentation update?
 
-### Commits
-
-- Does the PR consist of self-consistent commits that each tackle a well-defined problem?
-- Do the commit messages follow {doc}`the guidelines <pull_requests>`?
-
 ### Design
 
+- Is the PR focused on a single issue?
 - Does this change belong in the codebase?
 - Is it well-integrated?
 
@@ -38,7 +34,7 @@
 
 - Does the code do what the developer intended?
 - Are there edge cases where it could break?
-- For UI changes: try it yourself -- this is difficult to assess from code alone.
+- Ideally, dogfood new features during review (check out the branch and try them) -- this is difficult to assess from code alone.
 
 ### Complexity
 
@@ -61,11 +57,11 @@
 
 ### Style and consistency
 
-- Does the contribution follow AiiDA {doc}`coding style <coding_style>` (mostly enforced automatically)?
+- Does the contribution follow AiiDA {doc}`coding style <coding_style>` (mostly enforced automatically via pre-commit hooks)?
 - Prefix style suggestions with "Nit:".
 
 ## Sources
 
 - [Google Engineering Practices](https://google.github.io/eng-practices/review/reviewer/standard.html)
-- [IBM: 11 Proven Practices for Peer Review](https://www.ibm.com/developerworks/rational/library/11-proven-practices-for-peer-review/index.html)
+- [SmartBear: Best Practices for Peer Code Review](https://smartbear.com/learn/code-review/best-practices-for-peer-code-review/)
 - [Code Review Guidelines for Humans](https://phauer.com/2018/code-review-guidelines/)

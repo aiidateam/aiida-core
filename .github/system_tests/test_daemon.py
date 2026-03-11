@@ -31,7 +31,7 @@ from workchains import (
 
 from aiida.common import StashMode, exceptions
 from aiida.engine import run, submit
-from aiida.engine.daemon.daemon import AiidaDaemon
+from aiida.engine.daemon.daemon import AiidaDaemonController
 from aiida.engine.persistence import ObjectLoader
 from aiida.engine.processes import CalcJob, Process
 from aiida.manage.caching import enable_caching
@@ -50,7 +50,7 @@ NUMBER_WORKCHAINS = 8  # Number of workchains to submit
 
 def print_daemon_log():
     """Print daemon log."""
-    daemon = AiidaDaemon()
+    daemon = AiidaDaemonController()
     daemon_log = daemon.daemon_log_file
 
     print(f"Output of 'cat {daemon_log}':")

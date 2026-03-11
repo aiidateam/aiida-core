@@ -294,7 +294,7 @@ class ServiceConfigMap:
 class SupervisorInfo(ProcessInfo, JsonSerialization):
     pass
 
-class ServiceSupervisorCommon:
+class DaemonCommon:
     SUPERVISOR_INFO_FILE = "supervisor_info.json"
     SUPERVISOR_CONFIG_FILE = "supervisor_config.json"
     # TODO split log
@@ -304,11 +304,11 @@ class ServiceSupervisorCommon:
 
     @staticmethod
     def _start_service_process(service_dir: Path, config: ServiceConfig, info: ServiceInfo | None = None):
-        ServiceSupervisorCommon._start_process(service_dir / config.service_name, config, info)
+        DaemonCommon._start_process(service_dir / config.service_name, config, info)
         
     @staticmethod
     def _start_worker_service_process(service_dir: Path, config: ServiceConfig, worker_num: int, info: ServiceInfo | None = None):
-        ServiceSupervisorCommon._start_process(service_dir / config.service_name / str(worker_num), config, info)
+        DaemonCommon._start_process(service_dir / config.service_name / str(worker_num), config, info)
 
     @staticmethod
     def _start_process(process_dir: Path, config: ServiceConfig, info: ServiceInfo | None = None):
@@ -342,7 +342,7 @@ class ServiceSupervisorCommon:
             last_check=create_time,
             failures=0 if info is None else info.failures+1
         )
-        service_info.to_file(process_dir / ServiceSupervisorCommon.PROCESS_INFO_FILE)
+        service_info.to_file(process_dir / DaemonCommon.PROCESS_INFO_FILE)
 
     # TODO consider adding the create_time, then we maybe don't need do check if is alive but directly send _kill_service
     @staticmethod
@@ -370,7 +370,7 @@ class ServiceSupervisorCommon:
 
         # Wait for graceful shutdown
         try:
-            proc.wait(timeout=ServiceSupervisorCommon.KILL_TIMEOUT)
+            proc.wait(timeout=DaemonCommon.KILL_TIMEOUT)
             logger.debug(f"Process {pid} stopped gracefully.")
             return True
         except psutil.TimeoutExpired:
@@ -380,7 +380,7 @@ class ServiceSupervisorCommon:
         logger.warning(f"Process {pid} did not stop gracefully, force killing...")
         try:
             proc.kill()
-            proc.wait(timeout=ServiceSupervisorCommon.KILL_TIMEOUT)
+            proc.wait(timeout=DaemonCommon.KILL_TIMEOUT)
             logger.debug(f"Process {pid} force killed.")
             return True
         except psutil.NoSuchProcess:
@@ -446,9 +446,9 @@ class ServiceSupervisorCommon:
     # TODO add for _cleanup_last_session a boolean return value so we can say it worked
     @staticmethod
     def stop(session_dir: Path):
-        service_configs = ServiceConfigMap.from_file(session_dir / ServiceSupervisorCommon.SUPERVISOR_CONFIG_FILE)
+        service_configs = ServiceConfigMap.from_file(session_dir / DaemonCommon.SUPERVISOR_CONFIG_FILE)
 
-        supervisor_info_file = session_dir / ServiceSupervisorCommon.SUPERVISOR_INFO_FILE
+        supervisor_info_file = session_dir / DaemonCommon.SUPERVISOR_INFO_FILE
         if (supervisor_info_file := supervisor_info_file).exists():
             service_info = None
             try:
@@ -457,8 +457,8 @@ class ServiceSupervisorCommon:
                 logger.warning(f"Skipping invalid or corrupted supervisor info file {supervisor_info_file}: {e}. ")
 
             if (service_info is not None and
-                ServiceSupervisorCommon._is_alive(service_info.pid, service_info.create_time) and
-                not ServiceSupervisorCommon._kill_service(service_info.pid)):
+                DaemonCommon._is_alive(service_info.pid, service_info.create_time) and
+                not DaemonCommon._kill_service(service_info.pid)):
                     pass
                     # TODO but need to include state to ServiceInfo   
                     #service_info.state = ServiceState.DEAD.value
@@ -467,7 +467,7 @@ class ServiceSupervisorCommon:
         for config in service_configs.values():
             if isinstance(config, NonWorkerServiceConfig):
                 process_dir = session_dir / config.service_name
-                if (info_file := process_dir / ServiceSupervisorCommon.PROCESS_INFO_FILE).exists():
+                if (info_file := process_dir / DaemonCommon.PROCESS_INFO_FILE).exists():
                     try:
                         info = ServiceInfo.from_file(info_file)
                     except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as e:
@@ -475,38 +475,38 @@ class ServiceSupervisorCommon:
                         continue
 
                     # TODO should I consider here info.state? _is_alive is safer
-                    if ServiceSupervisorCommon._is_alive(info.pid, info.create_time):
+                    if DaemonCommon._is_alive(info.pid, info.create_time):
                         logger.info(f"Terminating service {info.service_name} process with pid {info.pid}")
-                        if ServiceSupervisorCommon._kill_service(info.pid):
+                        if DaemonCommon._kill_service(info.pid):
                             info.state = ServiceState.DEAD.value
-                            info.to_file(process_dir / ServiceSupervisorCommon.PROCESS_INFO_FILE)
+                            info.to_file(process_dir / DaemonCommon.PROCESS_INFO_FILE)
                     else:
                         info.state = ServiceState.DEAD.value
-                        info.to_file(process_dir / ServiceSupervisorCommon.PROCESS_INFO_FILE)
+                        info.to_file(process_dir / DaemonCommon.PROCESS_INFO_FILE)
 
             elif isinstance(config, WorkerServiceConfig):
                 for i in range(config.num_workers): 
                     process_dir = session_dir / config.service_name / str(i)
-                    if (info_file := process_dir / ServiceSupervisorCommon.PROCESS_INFO_FILE).exists():
+                    if (info_file := process_dir / DaemonCommon.PROCESS_INFO_FILE).exists():
                         try:
                             info = ServiceInfo.from_file(info_file)
                         except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as e:
                             logger.warning(f"Skipping invalid or corrupted info file {info_file}: {e}. ")
                             continue
 
-                        if ServiceSupervisorCommon._is_alive(info.pid, info.create_time):
+                        if DaemonCommon._is_alive(info.pid, info.create_time):
                             logger.info(f"Terminating service {info.service_name} worker {i} with process with pid {info.pid}")
-                            if ServiceSupervisorCommon._kill_service(info.pid):
+                            if DaemonCommon._kill_service(info.pid):
                                 info.state = ServiceState.DEAD.value
-                                info.to_file(process_dir / ServiceSupervisorCommon.PROCESS_INFO_FILE)
+                                info.to_file(process_dir / DaemonCommon.PROCESS_INFO_FILE)
                         else:
                             info.state = ServiceState.DEAD.value
-                            info.to_file(process_dir / ServiceSupervisorCommon.PROCESS_INFO_FILE)
+                            info.to_file(process_dir / DaemonCommon.PROCESS_INFO_FILE)
             else:
                 assert_never(config)
 
 
-class ServiceSupervisorProcess:
+class DaemonProcess:
     """
     The supervisor process that manages service processes.
 
@@ -575,7 +575,7 @@ class ServiceSupervisorProcess:
         """Save the supervisor's PID and create time to a file for later reference."""
         pid = os.getpid()
         supervisor_info = SupervisorInfo(pid, psutil.Process(pid).create_time())
-        supervisor_info.to_file(self._session_dir / ServiceSupervisorCommon.SUPERVISOR_INFO_FILE)
+        supervisor_info.to_file(self._session_dir / DaemonCommon.SUPERVISOR_INFO_FILE)
 
     def _setup_logging(self):
         """
@@ -587,7 +587,7 @@ class ServiceSupervisorProcess:
 
         to the supervisor log file.
         """
-        log_file = self._session_dir / ServiceSupervisorCommon.SUPERVISOR_LOG_FILE
+        log_file = self._session_dir / DaemonCommon.SUPERVISOR_LOG_FILE
 
         # Redirect stdout and stderr to log file
         sys.stdout.flush()
@@ -652,14 +652,14 @@ class ServiceSupervisorProcess:
 
     @staticmethod
     def _check_process_health(process_dir, config: ServiceConfig):
-        info_path = process_dir / ServiceSupervisorCommon.PROCESS_INFO_FILE
+        info_path = process_dir / DaemonCommon.PROCESS_INFO_FILE
         try:
             info = ServiceInfo.from_file(info_path)
         except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as e:
             logger.warning(f"Skipping invalid or corrupted info file {info_path}: {e}. ")
             return 
 
-        is_alive = ServiceSupervisorCommon._is_alive(info.pid, info.create_time)
+        is_alive = DaemonCommon._is_alive(info.pid, info.create_time)
         info.last_check = time.time()
         if is_alive:
             info.last_check = time.time()
@@ -679,7 +679,7 @@ class ServiceSupervisorProcess:
 
             logger.info(f"Restarting service {info.service_name!r}...")
             try:
-                ServiceSupervisorCommon._start_process(process_dir, config)
+                DaemonCommon._start_process(process_dir, config)
             except:
                 logger.error(f"Unable to restart service {info.service_name}. Continueing.")
                 return
@@ -695,7 +695,7 @@ class ServiceSupervisorProcess:
             # TODO global config
             time.sleep(5)
             
-            service_configs = ServiceConfigMap.from_file(self._session_dir / ServiceSupervisorCommon.SUPERVISOR_CONFIG_FILE)
+            service_configs = ServiceConfigMap.from_file(self._session_dir / DaemonCommon.SUPERVISOR_CONFIG_FILE)
             for config in service_configs.values():
                 if isinstance(config, WorkerServiceConfig):
                     for i in range(config.num_workers):
@@ -708,7 +708,7 @@ class ServiceSupervisorProcess:
         self._shutdown()
 
     def _shutdown(self):
-        ServiceSupervisorCommon.stop(self._session_dir)
+        DaemonCommon.stop(self._session_dir)
 
         # Close log file descriptor before exiting
         if self._log_fd is not None:
@@ -725,7 +725,7 @@ class ServiceSupervisorProcess:
         self._shutdown()
         sys.exit(0)
 
-class ServiceSupervisorController:
+class DaemonController:
         
     # TODO move to common
     class SessionDirUtils:
@@ -737,17 +737,17 @@ class ServiceSupervisorController:
             from datetime import datetime
 
             now = datetime.now()
-            dirname = now.strftime(ServiceSupervisorController.SessionDirUtils.SESSION_DIR_TIMESTAMP_FORMAT) + f"-{now.microsecond:06d}"
+            dirname = now.strftime(DaemonController.SessionDirUtils.SESSION_DIR_TIMESTAMP_FORMAT) + f"-{now.microsecond:06d}"
             # NOTE: raise value for internal consistency
-            if not ServiceSupervisorController.SessionDirUtils.match_dirname(dirname):
-                raise RuntimeError(f"The created timestamp {dirname} does not match pattern {ServiceSupervisorController.SessionDirUtils.SESSION_DIR_PATTERN}. Please contact a developer.")
+            if not DaemonController.SessionDirUtils.match_dirname(dirname):
+                raise RuntimeError(f"The created timestamp {dirname} does not match pattern {DaemonController.SessionDirUtils.SESSION_DIR_PATTERN}. Please contact a developer.")
             return dirname
 
         @staticmethod
         def match_dirname(dirname: str) -> bool:
             import re
             # NOTE: The regex expression has to match the timestamp format
-            return bool(re.compile(ServiceSupervisorController.SessionDirUtils.SESSION_DIR_PATTERN).match(dirname))
+            return bool(re.compile(DaemonController.SessionDirUtils.SESSION_DIR_PATTERN).match(dirname))
     
     
     @staticmethod
@@ -761,7 +761,7 @@ class ServiceSupervisorController:
         if not session_dir.exists() or not session_dir.is_dir():
             return False
 
-        supervisor_info_file = session_dir / ServiceSupervisorCommon.SUPERVISOR_INFO_FILE
+        supervisor_info_file = session_dir / DaemonCommon.SUPERVISOR_INFO_FILE
         if not supervisor_info_file.exists():
             return False
 
@@ -771,11 +771,11 @@ class ServiceSupervisorController:
             logger.warning(f"Could not read supervisor info file {supervisor_info_file}. Assuming it is not running.")
             return False
         else:
-            return ServiceSupervisorCommon._is_alive(info.pid, info.create_time)
+            return DaemonCommon._is_alive(info.pid, info.create_time)
 
     @staticmethod
     def _create_new_session_dir(supervisor_dir: Path) -> Path:
-        timestamp = ServiceSupervisorController.SessionDirUtils.generate_dirname()
+        timestamp = DaemonController.SessionDirUtils.generate_dirname()
         daemon_current_session_dir = supervisor_dir / timestamp
         daemon_current_session_dir.mkdir(parents=False, exist_ok=False)
 
@@ -792,7 +792,7 @@ class ServiceSupervisorController:
         Returns:
             Path to the latest session directory, or None if no sessions exist
         """
-        ServiceSupervisorController._validate_supervisor_dir(supervisor_dir)
+        DaemonController._validate_supervisor_dir(supervisor_dir)
 
         # Pattern to match timestamp directories: YYYY-MM-DD_HH-MM-SS-mmmmmm
         # Example: 2025-11-30_16-46-25-324746
@@ -801,7 +801,7 @@ class ServiceSupervisorController:
 
         # Find all directories matching the timestamp pattern
         for path in supervisor_dir.iterdir():
-            if path.is_dir() and ServiceSupervisorController.SessionDirUtils.match_dirname(path.name):
+            if path.is_dir() and DaemonController.SessionDirUtils.match_dirname(path.name):
                 session_dirs.append(path)
 
         # No session directories found
@@ -836,21 +836,21 @@ class ServiceSupervisorController:
         Raises:
             RuntimeError: If daemon is already running
         """
-        ServiceSupervisorController._validate_supervisor_dir(supervisor_dir)
-        latest_session_dir = ServiceSupervisorController._get_latest_session_dir(supervisor_dir)
+        DaemonController._validate_supervisor_dir(supervisor_dir)
+        latest_session_dir = DaemonController._get_latest_session_dir(supervisor_dir)
         # TODO check if service_configs have changed
-        if latest_session_dir is not None and ServiceSupervisorController._is_running(latest_session_dir):
+        if latest_session_dir is not None and DaemonController._is_running(latest_session_dir):
             logger.info("Daemon is already running, continue with last session. If you want to start with new settings please stop and start daemon.")
             return
 
-        session_dir = ServiceSupervisorController._create_new_session_dir(supervisor_dir)
+        session_dir = DaemonController._create_new_session_dir(supervisor_dir)
 
         # Start all configured services
         for config in service_configs.values():
-            ServiceSupervisorController._start_service(session_dir, config)
+            DaemonController._start_service(session_dir, config)
 
-        service_configs.to_file(session_dir / ServiceSupervisorCommon.SUPERVISOR_CONFIG_FILE)
-        ServiceSupervisorProcess(session_dir, foreground)
+        service_configs.to_file(session_dir / DaemonCommon.SUPERVISOR_CONFIG_FILE)
+        DaemonProcess(session_dir, foreground)
 
     @staticmethod
     def _start_service(session_dir: Path, config: ServiceConfig):
@@ -859,24 +859,24 @@ class ServiceSupervisorController:
             raise RuntimeError()
         # Get config using base identifier
         if isinstance(config, NonWorkerServiceConfig):
-            ServiceSupervisorCommon._start_service_process(session_dir, config)
+            DaemonCommon._start_service_process(session_dir, config)
         elif isinstance(config, WorkerServiceConfig):
             for i in range(config.num_workers):
-                ServiceSupervisorCommon._start_worker_service_process(session_dir, config, i)
+                DaemonCommon._start_worker_service_process(session_dir, config, i)
 
         else:
             assert_never(config)
 
     @staticmethod
     def stop(supervisor_dir: Path):
-        ServiceSupervisorController._validate_supervisor_dir(supervisor_dir)
+        DaemonController._validate_supervisor_dir(supervisor_dir)
 
-        session_dir = ServiceSupervisorController._get_latest_session_dir(supervisor_dir)
+        session_dir = DaemonController._get_latest_session_dir(supervisor_dir)
         if session_dir is None:
             from aiida.engine.daemon.client import DaemonNotRunningException
             raise DaemonNotRunningException(f"The daemon is not running (no session found in {supervisor_dir}).")
 
-        ServiceSupervisorCommon.stop(session_dir)
+        DaemonCommon.stop(session_dir)
 
     @staticmethod
     def status(supervisor_dir: Path) -> dict:
@@ -892,9 +892,9 @@ class ServiceSupervisorController:
                 'workers': [{'pid': int, 'state': str, 'started': float, 'failures': int}, ...],
             }
         """
-        ServiceSupervisorController._validate_supervisor_dir(supervisor_dir)
+        DaemonController._validate_supervisor_dir(supervisor_dir)
 
-        session_dir = ServiceSupervisorController._get_latest_session_dir(supervisor_dir)
+        session_dir = DaemonController._get_latest_session_dir(supervisor_dir)
         if session_dir is None:
             return {'status': 'stopped', 'pid': None, 'started': None, 'log_file': None, 'workers': []}
 
@@ -902,16 +902,16 @@ class ServiceSupervisorController:
             'status': 'stopped',
             'pid': None,
             'started': None,
-            'log_file': str(session_dir / ServiceSupervisorCommon.SUPERVISOR_LOG_FILE),
+            'log_file': str(session_dir / DaemonCommon.SUPERVISOR_LOG_FILE),
             'workers': [],
         }
 
         # Check supervisor status
-        supervisor_info_file = session_dir / ServiceSupervisorCommon.SUPERVISOR_INFO_FILE
+        supervisor_info_file = session_dir / DaemonCommon.SUPERVISOR_INFO_FILE
         if supervisor_info_file.exists():
             try:
                 supervisor_info = SupervisorInfo.from_file(supervisor_info_file)
-                is_alive = ServiceSupervisorCommon._is_alive(supervisor_info.pid, supervisor_info.create_time)
+                is_alive = DaemonCommon._is_alive(supervisor_info.pid, supervisor_info.create_time)
                 result['status'] = 'running' if is_alive else 'stopped'
                 result['pid'] = supervisor_info.pid
                 result['started'] = supervisor_info.create_time
@@ -919,7 +919,7 @@ class ServiceSupervisorController:
                 logger.warning(f"Error reading supervisor info: {e}")
 
         # Load supervisor config to get all services
-        config_file = session_dir / ServiceSupervisorCommon.SUPERVISOR_CONFIG_FILE
+        config_file = session_dir / DaemonCommon.SUPERVISOR_CONFIG_FILE
         if not config_file.exists():
             return result
 
@@ -934,11 +934,11 @@ class ServiceSupervisorController:
             if isinstance(config, WorkerServiceConfig):
                 for worker_num in range(config.num_workers):
                     worker_dir = session_dir / config.service_name / str(worker_num)
-                    info_file = worker_dir / ServiceSupervisorCommon.PROCESS_INFO_FILE
+                    info_file = worker_dir / DaemonCommon.PROCESS_INFO_FILE
                     if info_file.exists():
                         try:
                             info = ServiceInfo.from_file(info_file)
-                            is_alive = ServiceSupervisorCommon._is_alive(info.pid, info.create_time)
+                            is_alive = DaemonCommon._is_alive(info.pid, info.create_time)
                             result['workers'].append({
                                 'pid': info.pid,
                                 'state': 'running' if is_alive else 'stopped',
@@ -951,7 +951,7 @@ class ServiceSupervisorController:
         return result
 
 
-class AiidaDaemon:
+class AiidaDaemonController:
     """AiiDA-specific daemon supervisor that manages worker processes for a profile."""
 
     def __init__(self, profile=None):
@@ -997,18 +997,18 @@ class AiidaDaemon:
     @property
     def is_daemon_running(self) -> bool:
         """Return whether the daemon is currently running."""
-        session_dir = ServiceSupervisorController._get_latest_session_dir(self._daemon_dir)
+        session_dir = DaemonController._get_latest_session_dir(self._daemon_dir)
         if session_dir is None:
             return False
-        return ServiceSupervisorController._is_running(session_dir)
+        return DaemonController._is_running(session_dir)
 
     @property
     def daemon_log_file(self) -> str | None:
         """Return the path to the supervisor log file for the latest session."""
-        session_dir = ServiceSupervisorController._get_latest_session_dir(self._daemon_dir)
+        session_dir = DaemonController._get_latest_session_dir(self._daemon_dir)
         if session_dir is None:
             return None
-        return str(session_dir / ServiceSupervisorCommon.SUPERVISOR_LOG_FILE)
+        return str(session_dir / DaemonCommon.SUPERVISOR_LOG_FILE)
 
     @property
     def worker_log_files(self) -> list[str]:
@@ -1017,7 +1017,7 @@ class AiidaDaemon:
         Worker processes log to stdout via the CLI handler, so the log output
         ends up in the stdout.log files of each worker directory.
         """
-        session_dir = ServiceSupervisorController._get_latest_session_dir(self._daemon_dir)
+        session_dir = DaemonController._get_latest_session_dir(self._daemon_dir)
         if session_dir is None:
             return []
         worker_dir = session_dir / AiidaWorkerConfig.service_name
@@ -1044,7 +1044,7 @@ class AiidaDaemon:
 
         if foreground:
             service_configs = ServiceConfigMap([AiidaWorkerConfig(num_workers=num_workers)])
-            ServiceSupervisorController.start(self._daemon_dir, service_configs, foreground=True)
+            DaemonController.start(self._daemon_dir, service_configs, foreground=True)
         else:
             env = self._get_env()
             command = [
@@ -1083,7 +1083,7 @@ class AiidaDaemon:
 
     def stop(self):
         """Stop the daemon and all workers."""
-        ServiceSupervisorController.stop(self._daemon_dir)
+        DaemonController.stop(self._daemon_dir)
 
     def restart(self, num_workers: int | None = None, foreground: bool = False):
         """Restart the daemon: stop then start.
@@ -1097,7 +1097,7 @@ class AiidaDaemon:
 
     def get_status(self) -> dict:
         """Return structured status of the daemon and all workers."""
-        return ServiceSupervisorController.status(self._daemon_dir)
+        return DaemonController.status(self._daemon_dir)
 
     def increase_workers(self, num: int):
         """Add ``num`` workers to the running daemon.
@@ -1114,10 +1114,10 @@ class AiidaDaemon:
         if not self.is_daemon_running:
             raise DaemonNotRunningException('The daemon is not running.')
 
-        session_dir = ServiceSupervisorController._get_latest_session_dir(self._daemon_dir)
+        session_dir = DaemonController._get_latest_session_dir(self._daemon_dir)
         assert session_dir is not None
 
-        config_file = session_dir / ServiceSupervisorCommon.SUPERVISOR_CONFIG_FILE
+        config_file = session_dir / DaemonCommon.SUPERVISOR_CONFIG_FILE
         service_configs = ServiceConfigMap.from_file(config_file)
 
         for sid, config in service_configs.items():
@@ -1127,7 +1127,7 @@ class AiidaDaemon:
 
                 # Start the new worker processes
                 for i in range(old_num, new_num):
-                    ServiceSupervisorCommon._start_worker_service_process(session_dir, config, i)
+                    DaemonCommon._start_worker_service_process(session_dir, config, i)
 
                 # Update config atomically: write to temp file then os.replace
                 config.num_workers = new_num
@@ -1171,10 +1171,10 @@ class AiidaDaemon:
         if not self.is_daemon_running:
             raise DaemonNotRunningException('The daemon is not running.')
 
-        session_dir = ServiceSupervisorController._get_latest_session_dir(self._daemon_dir)
+        session_dir = DaemonController._get_latest_session_dir(self._daemon_dir)
         assert session_dir is not None
 
-        config_file = session_dir / ServiceSupervisorCommon.SUPERVISOR_CONFIG_FILE
+        config_file = session_dir / DaemonCommon.SUPERVISOR_CONFIG_FILE
         service_configs = ServiceConfigMap.from_file(config_file)
 
         for sid, config in service_configs.items():
@@ -1193,12 +1193,12 @@ class AiidaDaemon:
                 # Kill the highest-numbered workers
                 for i in range(new_num, old_num):
                     worker_dir = session_dir / config.service_name / str(i)
-                    info_file = worker_dir / ServiceSupervisorCommon.PROCESS_INFO_FILE
+                    info_file = worker_dir / DaemonCommon.PROCESS_INFO_FILE
                     if info_file.exists():
                         try:
                             info = ServiceInfo.from_file(info_file)
-                            if ServiceSupervisorCommon._is_alive(info.pid, info.create_time):
-                                ServiceSupervisorCommon._kill_service(info.pid)
+                            if DaemonCommon._is_alive(info.pid, info.create_time):
+                                DaemonCommon._kill_service(info.pid)
                             info.state = ServiceState.DEAD.value
                             info.to_file(info_file)
                         except Exception as e:

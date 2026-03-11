@@ -171,9 +171,9 @@ def only_if_daemon_running(echo_function=echo.echo_critical, message=None):
     @decorator
     def wrapper(wrapped, _, args, kwargs):
         """If daemon pid file is not found / empty, echo message and call decorated function."""
-        from aiida.engine.daemon.daemon import AiidaDaemon
+        from aiida.engine.daemon.daemon import AiidaDaemonController
 
-        daemon = AiidaDaemon()
+        daemon = AiidaDaemonController()
 
         if not daemon.is_daemon_running:
             echo_function(message)
@@ -206,9 +206,9 @@ def only_if_daemon_not_running(echo_function=echo.echo_critical, message: str | 
     @decorator
     def wrapper(wrapped, _, args, kwargs):
         """If daemon pid file is not found / empty, echo message and call decorated function."""
-        from aiida.engine.daemon.daemon import AiidaDaemon
+        from aiida.engine.daemon.daemon import AiidaDaemonController
 
-        daemon = AiidaDaemon()
+        daemon = AiidaDaemonController()
 
         if daemon.is_daemon_running:
             echo_function(message)

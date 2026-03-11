@@ -150,11 +150,11 @@ def aiida_profile_factory():
             references to data that will be destroyed. The daemon will also be stopped if it was running.
             """
             from aiida.engine.daemon.client import DaemonException
-            from aiida.engine.daemon.daemon import AiidaDaemon
+            from aiida.engine.daemon.daemon import AiidaDaemonController
             from aiida.orm import User
 
             if broker_backend:
-                daemon = AiidaDaemon()
+                daemon = AiidaDaemonController()
 
                 if daemon.is_daemon_running:
                     try:

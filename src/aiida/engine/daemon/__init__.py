@@ -9,10 +9,10 @@
 """Module with resources for the daemon."""
 
 from .client import DaemonException, DaemonNotRunningException, DaemonStalePidException, DaemonTimeoutException
-from .daemon import AiidaDaemon
+from .daemon import AiidaDaemonController
 
 __all__ = (
-    'AiidaDaemon',
+    'AiidaDaemonController',
     'DaemonException',
     'DaemonNotRunningException',
     'DaemonStalePidException',

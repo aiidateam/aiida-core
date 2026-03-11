@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from plumpy.process_comms import RemoteProcessThreadController
 
     from aiida.brokers.broker import Broker
-    from aiida.engine.daemon.daemon import AiidaDaemon
+    from aiida.engine.daemon.daemon import AiidaDaemonController
     from aiida.engine.persistence import AiiDAPersister
     from aiida.engine.runners import Runner
     from aiida.manage.configuration.config import Config
@@ -74,7 +74,7 @@ class Manager:
         self._broker: Optional['Broker'] = None
         self._profile: Optional['Profile'] = None
         self._profile_storage: Optional['StorageBackend'] = None
-        self._daemon_client: Optional['AiidaDaemon'] = None
+        self._daemon_client: Optional['AiidaDaemonController'] = None
         self._process_controller: Optional['RemoteProcessThreadController'] = None
         self._persister: Optional['AiiDAPersister'] = None
         self._runner: Optional['Runner'] = None
@@ -391,16 +391,16 @@ class Manager:
 
         return broker.get_communicator()
 
-    def get_daemon_client(self) -> 'AiidaDaemon':
+    def get_daemon_client(self) -> 'AiidaDaemonController':
         """Return the daemon client for the current profile.
 
-        :return: the AiidaDaemon instance
+        :return: the AiidaDaemonController instance
 
         :raises aiida.common.MissingConfigurationError: if the configuration file cannot be found
         :raises aiida.common.ProfileConfigurationError: if the given profile does not exist
         """
         from aiida.common import ConfigurationError
-        from aiida.engine.daemon.daemon import AiidaDaemon
+        from aiida.engine.daemon.daemon import AiidaDaemonController
 
         if self._daemon_client is None:
             profile = self.get_profile()
@@ -408,7 +408,7 @@ class Manager:
                 raise ConfigurationError(
                     'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
                 )
-            self._daemon_client = AiidaDaemon(profile)
+            self._daemon_client = AiidaDaemonController(profile)
 
         return self._daemon_client
 

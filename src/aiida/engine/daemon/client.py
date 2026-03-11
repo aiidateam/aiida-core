@@ -9,7 +9,7 @@
 """Daemon exception classes.
 
 The DaemonClient and Circus code have been removed. Use
-:class:`~aiida.engine.daemon.daemon.AiidaDaemon` instead.
+:class:`~aiida.engine.daemon.daemon.AiidaDaemonController` instead.
 """
 
 from __future__ import annotations

@@ -10,7 +10,7 @@ import pytest
 
 if t.TYPE_CHECKING:
     from aiida.engine import Process, ProcessBuilder
-    from aiida.engine.daemon.daemon import AiidaDaemon
+    from aiida.engine.daemon.daemon import AiidaDaemonController
     from aiida.orm import ProcessNode
 
 
@@ -23,14 +23,14 @@ def daemon_client(aiida_profile):
     Usage::
 
         def test(daemon_client):
-            from aiida.engine.daemon.daemon import AiidaDaemon
-            assert isinstance(daemon_client, AiidaDaemon)
+            from aiida.engine.daemon.daemon import AiidaDaemonController
+            assert isinstance(daemon_client, AiidaDaemonController)
 
     """
     from aiida.engine.daemon.client import DaemonNotRunningException
-    from aiida.engine.daemon.daemon import AiidaDaemon
+    from aiida.engine.daemon.daemon import AiidaDaemonController
 
-    daemon = AiidaDaemon(aiida_profile.name)
+    daemon = AiidaDaemonController(aiida_profile.name)
 
     try:
         yield daemon
@@ -42,7 +42,7 @@ def daemon_client(aiida_profile):
 
 
 @pytest.fixture
-def started_daemon_client(daemon_client: 'AiidaDaemon'):
+def started_daemon_client(daemon_client: 'AiidaDaemonController'):
     """Ensure that the daemon is running for the test profile and return the associated client.
 
     Usage::
@@ -62,7 +62,7 @@ def started_daemon_client(daemon_client: 'AiidaDaemon'):
 
 
 @pytest.fixture
-def stopped_daemon_client(daemon_client: 'AiidaDaemon'):
+def stopped_daemon_client(daemon_client: 'AiidaDaemonController'):
     """Ensure that the daemon is not running for the test profile and return the associated client.
 
     Usage::

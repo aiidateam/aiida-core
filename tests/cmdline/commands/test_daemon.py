@@ -15,7 +15,7 @@ import pytest
 
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_daemon
-from aiida.engine.daemon.daemon import AiidaDaemon
+from aiida.engine.daemon.daemon import AiidaDaemonController
 
 pytestmark = pytest.mark.requires_rmq
 
@@ -142,7 +142,7 @@ def _mock_status_with_broken_worker():
     }
 
 
-@patch.object(AiidaDaemon, 'get_status', lambda self: _mock_status_with_worker())
+@patch.object(AiidaDaemonController, 'get_status', lambda self: _mock_status_with_worker())
 @patch('aiida.cmdline.utils.common.format_local_time', format_local_time)
 def test_daemon_status_worker_info(run_cli_command):
     """Test `get_status` output if everything is working normally with a single worker."""
@@ -159,7 +159,7 @@ def test_daemon_status_worker_info(run_cli_command):
     assert literal in result.output
 
 
-@patch.object(AiidaDaemon, 'get_status', lambda self: _mock_status_with_broken_worker())
+@patch.object(AiidaDaemonController, 'get_status', lambda self: _mock_status_with_broken_worker())
 @patch('aiida.cmdline.utils.common.format_local_time', format_local_time)
 def test_daemon_status_worker_timeout(run_cli_command):
     """Test `get_status` output if a daemon worker is in error state."""

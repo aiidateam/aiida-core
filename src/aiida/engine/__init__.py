@@ -31,7 +31,7 @@ __all__ = (
     'CalcJobImporter',
     'CalcJobOutputPort',
     'CalcJobProcessSpec',
-    'AiidaDaemon',
+    'AiidaDaemonController',
     'ExitCode',
     'ExitCodesNamespace',
     'FunctionProcess',

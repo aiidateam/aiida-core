@@ -45,7 +45,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.common.warnings import warn_deprecation
 from aiida.engine import Process, ProcessBuilder, submit
 from aiida.engine.daemon.client import DaemonNotRunningException
-from aiida.engine.daemon.daemon import AiidaDaemon
+from aiida.engine.daemon.daemon import AiidaDaemonController
 from aiida.manage import Profile, get_manager, get_profile
 from aiida.manage.manager import Manager
 from aiida.orm import Computer, ProcessNode, User
@@ -244,7 +244,7 @@ def clear_profile():
     This ensures that the contents of the profile are reset as well as the ``Manager``, which may hold references to
     data that will be destroyed. The daemon will also be stopped if it was running.
     """
-    daemon = AiidaDaemon()
+    daemon = AiidaDaemonController()
 
     if daemon.is_daemon_running:
         try:
@@ -678,7 +678,7 @@ def daemon_client(aiida_profile):
 
     The daemon will be automatically stopped at the end of the test session.
     """
-    daemon = AiidaDaemon(aiida_profile)
+    daemon = AiidaDaemonController(aiida_profile)
 
     try:
         yield daemon

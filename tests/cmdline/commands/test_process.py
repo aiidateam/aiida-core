@@ -785,7 +785,7 @@ def test_list_worker_slot_warning(run_cli_command, monkeypatch, numprocesses, pe
     """Test that the if the number of used worker process slots exceeds a threshold,
     that the warning message is displayed to the user when running `verdi process list`
     """
-    from aiida.engine.daemon.daemon import AiidaDaemon
+    from aiida.engine.daemon.daemon import AiidaDaemonController
     from aiida.manage.configuration import get_config
 
     mock_status = {
@@ -795,8 +795,8 @@ def test_list_worker_slot_warning(run_cli_command, monkeypatch, numprocesses, pe
         'log_file': None,
         'workers': [{'pid': i, 'state': 'running', 'started': 0.0, 'failures': 0} for i in range(numprocesses)],
     }
-    monkeypatch.setattr(AiidaDaemon, 'get_status', lambda self: mock_status)
-    monkeypatch.setattr(AiidaDaemon, 'is_daemon_running', property(lambda self: True))
+    monkeypatch.setattr(AiidaDaemonController, 'get_status', lambda self: mock_status)
+    monkeypatch.setattr(AiidaDaemonController, 'is_daemon_running', property(lambda self: True))
 
     # Get the number of allowed processes per worker:
     config = get_config()

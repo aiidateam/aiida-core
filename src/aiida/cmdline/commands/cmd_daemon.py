@@ -54,11 +54,11 @@ def start(foreground, number, timeout):
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
     from aiida.engine.daemon.client import DaemonException
-    from aiida.engine.daemon.daemon import AiidaDaemon
+    from aiida.engine.daemon.daemon import AiidaDaemonController
 
     echo.echo(f'Starting the daemon with {number} workers... ', nl=False)
     try:
-        AiidaDaemon().start(number, foreground)
+        AiidaDaemonController().start(number, foreground)
     except DaemonException as exception:
         echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
         echo.echo_critical(str(exception))
@@ -80,7 +80,7 @@ def status(ctx, all_profiles, timeout):
     from tabulate import tabulate
 
     from aiida.cmdline.utils.common import format_local_time
-    from aiida.engine.daemon.daemon import AiidaDaemon
+    from aiida.engine.daemon.daemon import AiidaDaemonController
 
     if all_profiles is True:
         profiles = [profile for profile in ctx.obj.config.profiles if not profile.is_test_profile]
@@ -90,7 +90,7 @@ def status(ctx, all_profiles, timeout):
     daemons_running = []
 
     for profile in profiles:
-        daemon = AiidaDaemon(profile)
+        daemon = AiidaDaemonController(profile)
         echo.echo('Profile: ', fg=echo.COLORS['report'], bold=True, nl=False)
         echo.echo(f'{profile.name}', bold=True)
 
@@ -139,11 +139,11 @@ def incr(number, timeout):
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
     from aiida.engine.daemon.client import DaemonException
-    from aiida.engine.daemon.daemon import AiidaDaemon
+    from aiida.engine.daemon.daemon import AiidaDaemonController
 
     echo.echo(f'Starting {number} daemon workers... ', nl=False)
     try:
-        AiidaDaemon().increase_workers(number)
+        AiidaDaemonController().increase_workers(number)
     except DaemonException as exception:
         echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
         echo.echo_critical(str(exception))
@@ -162,11 +162,11 @@ def decr(number, timeout):
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
     from aiida.engine.daemon.client import DaemonException
-    from aiida.engine.daemon.daemon import AiidaDaemon
+    from aiida.engine.daemon.daemon import AiidaDaemonController
 
     echo.echo(f'Stopping {number} daemon workers... ', nl=False)
     try:
-        AiidaDaemon().decrease_workers(number)
+        AiidaDaemonController().decrease_workers(number)
     except DaemonException as exception:
         echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
         echo.echo_critical(str(exception))
@@ -177,9 +177,9 @@ def decr(number, timeout):
 @verdi_daemon.command()
 def logshow():
     """Show the log of the daemon, press CTRL+C to quit."""
-    from aiida.engine.daemon.daemon import AiidaDaemon
+    from aiida.engine.daemon.daemon import AiidaDaemonController
 
-    daemon = AiidaDaemon()
+    daemon = AiidaDaemonController()
     log_file = daemon.daemon_log_file
 
     if log_file is None:
@@ -201,7 +201,7 @@ def stop(ctx, no_wait, all_profiles, timeout):
     Returns exit code 0 if the daemon was shut down successfully (or was not running), non-zero if there was an error.
     """
     from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException
-    from aiida.engine.daemon.daemon import AiidaDaemon
+    from aiida.engine.daemon.daemon import AiidaDaemonController
 
     if all_profiles is True:
         profiles = [profile for profile in ctx.obj.config.profiles if not profile.is_test_profile]
@@ -213,7 +213,7 @@ def stop(ctx, no_wait, all_profiles, timeout):
         echo.echo(f'{profile.name}', bold=True)
         echo.echo('Stopping the daemon... ', nl=False)
         try:
-            AiidaDaemon(profile).stop()
+            AiidaDaemonController(profile).stop()
         except DaemonNotRunningException:
             echo.echo('OK', fg=echo.COLORS['success'], bold=True)
         except DaemonException as exception:
@@ -258,16 +258,16 @@ def restart(ctx, reset, no_wait, timeout):
 @decorators.with_dbenv()
 @decorators.requires_broker
 def run_supervisor(number):
-    """Start the daemon supervisor process (internal, called by AiidaDaemon.start).
+    """Start the daemon supervisor process (internal, called by AiidaDaemonController.start).
 
     This is the subprocess entry point that performs the double-fork daemonization.
     It should not be called directly by users.
     """
-    from aiida.engine.daemon.daemon import AiidaDaemon, AiidaWorkerConfig, ServiceConfigMap, ServiceSupervisorController
+    from aiida.engine.daemon.daemon import AiidaDaemonController, AiidaWorkerConfig, ServiceConfigMap, DaemonController
 
-    daemon = AiidaDaemon()
+    daemon = AiidaDaemonController()
     service_configs = ServiceConfigMap([AiidaWorkerConfig(num_workers=number)])
-    ServiceSupervisorController.start(daemon._daemon_dir, service_configs, foreground=False)
+    DaemonController.start(daemon._daemon_dir, service_configs, foreground=False)
 
 
 @verdi_daemon.command('worker')

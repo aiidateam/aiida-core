@@ -23,9 +23,9 @@ from aiida.orm import Int, Str, WorkflowNode
 @pytest.fixture
 def runner():
     """Construct and return a `Runner`."""
-    manager = get_manager()
-    yield manager.create_runner(poll_interval=0.5)
-    manager.reset_runner()
+    runner = get_manager().create_runner(poll_interval=0.5)
+    yield runner
+    runner.close()
 
 
 class Proc(Process):

@@ -30,13 +30,3 @@ class Broker:
     @abc.abstractmethod
     def close(self):
         """Close the broker."""
-
-    def start(self) -> None:
-        """Start the broker service. No-op for externally managed brokers."""
-
-    def stop(self) -> None:
-        """Stop the broker service. No-op for externally managed brokers."""
-
-    def is_running(self) -> bool:
-        """Return whether the broker is running. True by default (external brokers assumed running)."""
-        return True

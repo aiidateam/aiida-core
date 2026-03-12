@@ -152,7 +152,7 @@ def status(ctx, all_profiles, timeout):
         broker_line = ''
         broker = get_manager().get_broker()
         if broker is not None and hasattr(broker, 'management_client'):
-            if broker.is_running():
+            if broker.management_client.is_running():
                 status_info = broker.management_client.get_status()
                 if status_info:
                     broker_pid = status_info.get('pid', '?')
@@ -295,3 +295,19 @@ def worker():
     from aiida.engine.daemon.worker import start_daemon_worker
 
     start_daemon_worker(foreground=True)
+
+
+@verdi_daemon.command('broker', hidden=True)
+@decorators.with_dbenv()
+@decorators.requires_broker
+def broker():
+    """Run the ZMQ broker server in the current process.
+
+    .. note:: this should not be called directly from the commandline!
+    """
+    from aiida.brokers.zmq.broker import get_broker_base_path
+    from aiida.brokers.zmq.service import run_broker_service
+    from aiida.manage.manager import get_manager
+
+    profile = get_manager().get_profile()
+    run_broker_service(base_path=get_broker_base_path(profile))

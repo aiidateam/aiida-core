@@ -150,6 +150,11 @@ class DaemonClient:
         return [self._verdi_bin, '-p', self.profile.name, 'daemon', 'worker']
 
     @property
+    def cmd_start_broker(self) -> list[str]:
+        """Return the command to start the ZMQ broker server process."""
+        return [self._verdi_bin, '-p', self.profile.name, 'daemon', 'broker']
+
+    @property
     def loglevel(self) -> str:
         return get_config_option('logging.circus_loglevel')
 
@@ -528,11 +533,6 @@ class DaemonClient:
         """
         self._clean_potentially_stale_pid_file()
 
-        # Start the broker service if needed (no-op for externally managed brokers like RabbitMQ)
-        broker = get_manager().get_broker()
-        if broker is not None:
-            broker.start()
-
         env = self.get_env()
         command = self.cmd_start_daemon(number_workers, foreground)
         timeout = timeout or self._daemon_timeout
@@ -697,6 +697,44 @@ class DaemonClient:
         if not foreground:
             logoutput = self.circus_log_file
 
+        watchers = [
+            {
+                'cmd': ' '.join(self.cmd_start_daemon_worker),
+                'name': self.daemon_name,
+                'numprocesses': number_workers,
+                'virtualenv': self.virtualenv,
+                'copy_env': True,
+                'stdout_stream': {
+                    'class': 'FileStream',
+                    'filename': self.daemon_log_file,
+                },
+                'stderr_stream': {
+                    'class': 'FileStream',
+                    'filename': self.daemon_log_file,
+                },
+                'env': self.get_env(),
+            }
+        ]
+
+        # Add ZMQ broker as a circus watcher if this profile uses the ZMQ broker
+        if self.profile.process_control_backend == 'core.zmq':
+            watchers.append({
+                'cmd': ' '.join(self.cmd_start_broker),
+                'name': f'{self.daemon_name}-broker',
+                'numprocesses': 1,
+                'virtualenv': self.virtualenv,
+                'copy_env': True,
+                'stdout_stream': {
+                    'class': 'FileStream',
+                    'filename': self.daemon_log_file,
+                },
+                'stderr_stream': {
+                    'class': 'FileStream',
+                    'filename': self.daemon_log_file,
+                },
+                'env': self.get_env(),
+            })
+
         arbiter_config = {
             'controller': self.get_controller_endpoint(),
             'pubsub_endpoint': self.get_pubsub_endpoint(),
@@ -706,24 +744,7 @@ class DaemonClient:
             'debug': False,
             'statsd': True,
             'pidfile': self.circus_pid_file,
-            'watchers': [
-                {
-                    'cmd': ' '.join(self.cmd_start_daemon_worker),
-                    'name': self.daemon_name,
-                    'numprocesses': number_workers,
-                    'virtualenv': self.virtualenv,
-                    'copy_env': True,
-                    'stdout_stream': {
-                        'class': 'FileStream',
-                        'filename': self.daemon_log_file,
-                    },
-                    'stderr_stream': {
-                        'class': 'FileStream',
-                        'filename': self.daemon_log_file,
-                    },
-                    'env': self.get_env(),
-                }
-            ],
+            'watchers': watchers,
         }
 
         if not foreground:

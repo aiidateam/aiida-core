@@ -42,9 +42,9 @@ class ZmqBroker(Broker):
         self._communicator: ZmqCommunicator | None = None
         self._broker_dir = broker_dir
         self._storage_path = broker_dir / 'storage'
-        self._pid_file = broker_dir / 'broker.pid'
-        self._status_file = broker_dir / 'broker.status'
-        self._sockets_file = broker_dir / 'broker.sockets'
+        self._service_pid_file = broker_dir / 'broker.pid'
+        self._service_status_file = broker_dir / 'broker.status'
+        self._service_sockets_file = broker_dir / 'broker.sockets'
 
     @classmethod
     def from_base_path(cls, base_path: Path | str) -> 'ZmqBroker':
@@ -56,7 +56,7 @@ class ZmqBroker(Broker):
 
     def __str__(self) -> str:
         if self.is_running():
-            status = self.get_status()
+            status = self.get_service_status()
             pid = status.get('pid', '?') if status else '?'
             return f'ZMQ Broker (PID {pid}) @ {self._broker_dir}'
         return f'ZMQ Broker @ {self._broker_dir} <not running>'
@@ -72,10 +72,10 @@ class ZmqBroker(Broker):
     # --- Status queries (read PID/status/socket files) ---
 
     def _get_sockets_path(self) -> Path | None:
-        if not self._sockets_file.exists():
+        if not self._service_sockets_file.exists():
             return None
         try:
-            return Path(self._sockets_file.read_text().strip())
+            return Path(self._service_sockets_file.read_text().strip())
         except OSError:
             return None
 
@@ -93,15 +93,17 @@ class ZmqBroker(Broker):
             return None
         return f'ipc://{sockets_path}/pub.sock'
 
-    def get_pid(self) -> int | None:
-        if not self._pid_file.exists():
+    def get_service_pid(self) -> int | None:
+        """Read the ZmqBrokerService PID from its PID file."""
+        if not self._service_pid_file.exists():
             return None
         try:
-            return int(self._pid_file.read_text().strip())
+            return int(self._service_pid_file.read_text().strip())
         except (ValueError, OSError):
             return None
 
-    def _validate_pid(self, pid: int) -> bool:
+    def _validate_service_pid(self, pid: int) -> bool:
+        """Check that a PID belongs to a running ZmqBrokerService process."""
         try:
             proc = psutil.Process(pid)
             if proc.is_running() and proc.status() != psutil.STATUS_ZOMBIE:
@@ -112,26 +114,28 @@ class ZmqBroker(Broker):
         return False
 
     def is_running(self) -> bool:
-        pid = self.get_pid()
+        """Check if the ZmqBrokerService process is running."""
+        pid = self.get_service_pid()
         if pid is None:
             return False
-        return self._validate_pid(pid)
+        return self._validate_service_pid(pid)
 
-    def get_status(self) -> dict[str, t.Any] | None:
-        if not self._status_file.exists():
+    def get_service_status(self) -> dict[str, t.Any] | None:
+        """Read the ZmqBrokerService status from its status file."""
+        if not self._service_status_file.exists():
             return None
         try:
-            return json.loads(self._status_file.read_text())
+            return json.loads(self._service_status_file.read_text())
         except (json.JSONDecodeError, OSError):
             return None
 
-    def _cleanup_stale_files(self) -> None:
-        self._pid_file.unlink(missing_ok=True)
-        self._status_file.unlink(missing_ok=True)
+    def _cleanup_stale_service_files(self) -> None:
+        self._service_pid_file.unlink(missing_ok=True)
+        self._service_status_file.unlink(missing_ok=True)
         sockets_path = self._get_sockets_path()
         if sockets_path is not None and sockets_path.exists():
             shutil.rmtree(sockets_path, ignore_errors=True)
-        self._sockets_file.unlink(missing_ok=True)
+        self._service_sockets_file.unlink(missing_ok=True)
 
     # --- Communicator ---
 

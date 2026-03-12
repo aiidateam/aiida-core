@@ -36,15 +36,15 @@ class TestZmqBrokerStatusQueries:
         broker = ZmqBroker.from_base_path(tmp_path)
         assert not broker.is_running()
 
-    def test_get_pid_no_file(self, tmp_path):
-        """Test get_pid returns None when no PID file exists."""
+    def test_get_service_pid_no_file(self, tmp_path):
+        """Test get_service_pid returns None when no PID file exists."""
         broker = ZmqBroker.from_base_path(tmp_path)
-        assert broker.get_pid() is None
+        assert broker.get_service_pid() is None
 
-    def test_get_status_no_file(self, tmp_path):
-        """Test get_status returns None when no status file exists."""
+    def test_get_service_status_no_file(self, tmp_path):
+        """Test get_service_status returns None when no status file exists."""
         broker = ZmqBroker.from_base_path(tmp_path)
-        assert broker.get_status() is None
+        assert broker.get_service_status() is None
 
     def test_endpoints_no_sockets_file(self, tmp_path):
         """Test endpoints return None when sockets file doesn't exist."""
@@ -59,7 +59,7 @@ class TestZmqBrokerStatusQueries:
 
         try:
             assert broker.is_running()
-            assert broker.get_pid() is not None
+            assert broker.get_service_pid() is not None
             assert broker.router_endpoint is not None
             assert broker.pub_endpoint is not None
         finally:
@@ -89,12 +89,12 @@ class TestZmqBrokerStatusQueries:
         _start_zmq_broker(broker)
 
         try:
-            old_pid = broker.get_pid()
+            old_pid = broker.get_service_pid()
             _stop_zmq_broker(broker)
             _start_zmq_broker(broker)
             assert broker.is_running()
 
-            new_pid = broker.get_pid()
+            new_pid = broker.get_service_pid()
             assert new_pid != old_pid
         finally:
             _stop_zmq_broker(broker)
@@ -309,7 +309,7 @@ class TestZmqBrokerIntegration:
         """Test the broker lifecycle."""
         assert zmq_broker.is_running()
 
-        status = zmq_broker.get_status()
+        status = zmq_broker.get_service_status()
         assert status is not None
         assert 'pid' in status
 

@@ -1,4 +1,52 @@
-"""Message protocol definitions for ZMQ broker."""
+"""Application-level message protocol for the ZMQ broker.
+
+This protocol implements the subset of AMQP semantics that AiiDA requires
+(via kiwipy's ``Communicator`` interface, originally designed for RabbitMQ)
+using ZMQ as the transport layer instead of raw TCP.
+
+Socket architecture:
+    ROUTER/DEALER pair — used for tasks, RPC, and all request-reply traffic.
+        The server binds a ROUTER socket; each client connects a DEALER socket.
+        ROUTER provides identity-based routing so the server can send replies
+        back to the correct client. All message types except BROADCAST flow
+        over this pair.
+    PUB/SUB pair — used for broadcast event distribution.
+        The server binds a PUB socket; each client connects a SUB socket.
+        BROADCAST messages (process state changes, etc.) are published to all
+        connected subscribers without the server needing to know who listens.
+
+What ZMQ provides (transport layer):
+    - Identity-based routing (ROUTER auto-prepends sender identity to messages)
+    - Automatic reconnection and async I/O
+    - Multicast delivery (PUB fans out to all SUB sockets)
+    - ZMTP heartbeats for dead peer detection
+    - IPC transport for same-machine communication
+
+What ZMQ does NOT provide (requiring this protocol):
+    - Request-reply correlation (matching responses to requests)
+    - Task acknowledgment and redelivery on worker death
+    - Persistent/durable queues
+    - Server-side subscription awareness (PUB doesn't know who listens)
+    - Directed RPC routing to a named recipient
+    - Message serialization
+
+AMQP concepts mapped to message types:
+    ========================  ================================
+    AMQP concept              ZMQ broker message type
+    ========================  ================================
+    ``basic.ack``             ``TASK_ACK``
+    ``basic.nack``            ``TASK_NACK``
+    consumer with prefetch    ``TASK`` dispatch to workers
+    fanout exchange           ``BROADCAST`` via PUB socket
+    direct exchange           ``RPC`` to specific recipient
+    durable queue             ``PersistentQueue`` (file-based)
+    ``basic.consume``         ``SUBSCRIBE_TASK`` / ``SUBSCRIBE_RPC``
+    ========================  ================================
+
+Why not use an AMQP library directly: the goal is to eliminate the RabbitMQ
+server dependency. ZMQ provides the transport primitives; this module adds
+only the AMQP-like semantics that ``kiwipy.Communicator`` requires.
+"""
 
 from __future__ import annotations
 

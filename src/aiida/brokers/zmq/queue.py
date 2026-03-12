@@ -100,29 +100,27 @@ class PersistentQueue:
 
         :return: Tuple of (task_id, task_data) or None if queue is empty
         """
-        if not self._pending:
-            return None
+        while self._pending:
+            filename = self._pending.popleft()
+            task_id = self._extract_task_id(filename)
 
-        filename = self._pending.popleft()
-        task_id = self._extract_task_id(filename)
+            # Move from pending to processing
+            src = self._pending_path / filename
+            dest = self._processing_path / filename
 
-        # Move from pending to processing
-        src = self._pending_path / filename
-        dest = self._processing_path / filename
+            try:
+                task = json.loads(src.read_text())
+                src.rename(dest)
+                self._processing[task_id] = filename
+                _LOGGER.debug('Dequeued task %s', task_id)
+                return task_id, task
+            except FileNotFoundError:
+                _LOGGER.warning('Task file not found: %s, skipping', filename)
+            except json.JSONDecodeError as exc:
+                _LOGGER.error('Failed to decode task %s: %s, removing', filename, exc)
+                src.unlink(missing_ok=True)
 
-        try:
-            task = json.loads(src.read_text())
-            src.rename(dest)
-            self._processing[task_id] = filename
-            _LOGGER.debug('Dequeued task %s', task_id)
-            return task_id, task
-        except FileNotFoundError:
-            _LOGGER.warning('Task file not found: %s', filename)
-            return self.pop()  # Try next task
-        except json.JSONDecodeError as exc:
-            _LOGGER.error('Failed to decode task %s: %s', filename, exc)
-            src.unlink(missing_ok=True)  # Remove corrupted file
-            return self.pop()  # Try next task
+        return None
 
     def peek(self) -> tuple[str, dict[str, Any]] | None:
         """Peek at the next task without removing it.

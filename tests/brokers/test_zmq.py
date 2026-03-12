@@ -8,12 +8,15 @@
 ###########################################################################
 """Tests for the `aiida.brokers.zmq` module."""
 
+from pathlib import Path
+
 import pytest
 
 from aiida.brokers.zmq import ZmqBrokerManagementClient, ZmqCommunicator, get_zmq_config
 from aiida.brokers.zmq.queue import PersistentQueue
 from aiida.brokers.zmq.server import ZmqBrokerServer
 from aiida.brokers.zmq.service import ZmqBrokerService
+from tests.conftest import _start_zmq_broker, _stop_zmq_broker
 
 
 class TestZmqDefaults:
@@ -57,52 +60,52 @@ class TestZmqBrokerManagementClient:
         assert controller.pub_endpoint is None
 
     def test_start_stop_cycle(self, tmp_path):
-        """Test starting and stopping the broker service."""
-        controller = ZmqBrokerManagementClient(tmp_path)
-
-        # Start the broker
-        assert controller.start(wait=True, timeout=10.0)
-        assert controller.is_running()
-        assert controller.get_pid() is not None
-        assert controller.router_endpoint is not None
-        assert controller.pub_endpoint is not None
-
-        # Stop the broker
-        assert controller.stop(timeout=5.0)
-        assert not controller.is_running()
-
-    def test_start_already_running(self, tmp_path):
-        """Test starting when already running returns True."""
-        controller = ZmqBrokerManagementClient(tmp_path)
+        """Test querying a running broker service."""
+        client = ZmqBrokerManagementClient(tmp_path)
+        _start_zmq_broker(tmp_path, client)
 
         try:
-            controller.start(wait=True, timeout=10.0)
-            # Starting again should just return True
-            assert controller.start(wait=True, timeout=10.0)
+            assert client.is_running()
+            assert client.get_pid() is not None
+            assert client.router_endpoint is not None
+            assert client.pub_endpoint is not None
         finally:
-            controller.stop()
+            _stop_zmq_broker(client)
+
+        assert not client.is_running()
+
+    def test_start_already_running(self, tmp_path):
+        """Test starting when already running is idempotent."""
+        client = ZmqBrokerManagementClient(tmp_path)
+        _start_zmq_broker(tmp_path, client)
+
+        try:
+            # Starting again should just return the same client
+            _start_zmq_broker(tmp_path, client)  # idempotent
+            assert client.is_running()
+        finally:
+            _stop_zmq_broker(client)
 
     def test_stop_not_running(self, tmp_path):
-        """Test stopping when not running returns True."""
-        controller = ZmqBrokerManagementClient(tmp_path)
-        assert controller.stop()
+        """Test stopping when not running is a no-op."""
+        client = ZmqBrokerManagementClient(tmp_path)
+        _stop_zmq_broker(client)  # Should not raise
 
     def test_restart(self, tmp_path):
         """Test restarting the broker service."""
-        controller = ZmqBrokerManagementClient(tmp_path)
+        client = ZmqBrokerManagementClient(tmp_path)
+        _start_zmq_broker(tmp_path, client)
 
         try:
-            controller.start(wait=True, timeout=10.0)
-            old_pid = controller.get_pid()
+            old_pid = client.get_pid()
+            _stop_zmq_broker(client)
+            _start_zmq_broker(tmp_path, client)
+            assert client.is_running()
 
-            assert controller.restart(timeout=5.0)
-            assert controller.is_running()
-
-            # PID should be different after restart
-            new_pid = controller.get_pid()
+            new_pid = client.get_pid()
             assert new_pid != old_pid
         finally:
-            controller.stop()
+            _stop_zmq_broker(client)
 
 
 class TestZmqBrokerServer:
@@ -123,8 +126,6 @@ class TestZmqBrokerServer:
 
         # Use short temp directory to avoid socket path length limit
         with tempfile.TemporaryDirectory(prefix='zmq') as tmp:
-            from pathlib import Path
-
             tmp_path = Path(tmp)
             storage_path = tmp_path / 's'
             sockets_path = tmp_path / 'k'
@@ -145,8 +146,6 @@ class TestZmqBrokerServer:
 
         # Use short temp directory to avoid socket path length limit
         with tempfile.TemporaryDirectory(prefix='zmq') as tmp:
-            from pathlib import Path
-
             tmp_path = Path(tmp)
             storage_path = tmp_path / 's'
             sockets_path = tmp_path / 'k'
@@ -264,14 +263,13 @@ class TestZmqCommunicator:
 
     def test_init(self, tmp_path):
         """Test communicator initialization."""
-        controller = ZmqBrokerManagementClient(tmp_path)
+        client = ZmqBrokerManagementClient(tmp_path)
+        _start_zmq_broker(tmp_path, client)
 
         try:
-            controller.start(wait=True, timeout=10.0)
-
             communicator = ZmqCommunicator(
-                router_endpoint=controller.router_endpoint,
-                pub_endpoint=controller.pub_endpoint,
+                router_endpoint=client.router_endpoint,
+                pub_endpoint=client.pub_endpoint,
             )
             communicator.start()
 
@@ -282,44 +280,38 @@ class TestZmqCommunicator:
 
             assert communicator.is_closed() is True
         finally:
-            controller.stop()
+            _stop_zmq_broker(client)
 
     def test_context_manager(self, tmp_path):
         """Test communicator as context manager."""
-        controller = ZmqBrokerManagementClient(tmp_path)
+        client = ZmqBrokerManagementClient(tmp_path)
+        _start_zmq_broker(tmp_path, client)
 
         try:
-            controller.start(wait=True, timeout=10.0)
-
             with ZmqCommunicator(
-                router_endpoint=controller.router_endpoint,
-                pub_endpoint=controller.pub_endpoint,
+                router_endpoint=client.router_endpoint,
+                pub_endpoint=client.pub_endpoint,
             ) as communicator:
-                # Context manager calls start() automatically
                 assert communicator.is_closed() is False
 
             assert communicator.is_closed() is True
         finally:
-            controller.stop()
+            _stop_zmq_broker(client)
 
 
 class TestZmqBrokerIntegration:
     """Integration tests for the ZMQ broker with AiiDA."""
 
     @pytest.fixture
-    def zmq_broker(self, tmp_path, monkeypatch):
+    def zmq_broker(self, tmp_path):
         """Create a ZMQ broker for testing."""
-
-        # Create a mock profile-like structure
         broker_dir = tmp_path / 'broker' / 'test-uuid'
-        broker_dir.mkdir(parents=True)
+        client = ZmqBrokerManagementClient(broker_dir)
+        _start_zmq_broker(broker_dir, client)
 
-        controller = ZmqBrokerManagementClient(broker_dir)
-        controller.start(wait=True, timeout=10.0)
+        yield client
 
-        yield controller
-
-        controller.stop()
+        _stop_zmq_broker(client)
 
     def test_broker_lifecycle(self, zmq_broker):
         """Test the broker lifecycle."""

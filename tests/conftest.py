@@ -18,7 +18,10 @@ import copy
 import dataclasses
 import os
 import pathlib
+import signal
 import subprocess
+import sys
+import time
 import types
 import typing as t
 import warnings
@@ -61,6 +64,61 @@ class TestBrokerBackend(Enum):
     RMQ = 'rmq'
     ZMQ = 'zmq'
     NONE = 'none'
+
+
+def _start_zmq_broker(base_path: Path, client=None, timeout: float = 10.0):
+    """Start a ZMQ broker service subprocess for testing."""
+    from aiida.brokers.zmq.client import ZmqBrokerManagementClient
+
+    base_path.mkdir(parents=True, exist_ok=True)
+    if client is None:
+        client = ZmqBrokerManagementClient(base_path)
+
+    if client.is_running():
+        return
+
+    subprocess.Popen(
+        [sys.executable, '-m', 'aiida.brokers.zmq.service', '--base-path', str(base_path)],
+        start_new_session=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        stdin=subprocess.DEVNULL,
+    )
+
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        if client.is_running():
+            return
+        time.sleep(0.1)
+
+    raise TimeoutError(f'ZMQ broker did not start within {timeout}s')
+
+
+def _stop_zmq_broker(client, timeout: float = 5.0):
+    """Stop a ZMQ broker service subprocess for testing."""
+    pid = client.get_pid()
+    if pid is None or not client._validate_pid(pid):
+        client._cleanup_stale_files()
+        return
+
+    try:
+        os.kill(pid, signal.SIGINT)
+    except OSError:
+        client._cleanup_stale_files()
+        return
+
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        if not client._validate_pid(pid):
+            client._cleanup_stale_files()
+            return
+        time.sleep(0.1)
+
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except OSError:
+        pass
+    client._cleanup_stale_files()
 
 
 @pytest.fixture(autouse=True)
@@ -220,14 +278,15 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
     with aiida_profile_factory(
         aiida_config, storage_backend=storage, storage_config=config, broker_backend=broker
     ) as profile:
-        # Start broker service if needed (no-op for RabbitMQ, starts service for ZMQ)
+        # Start ZMQ broker service if needed (tests don't use circus)
         broker_instance = get_manager().get_broker()
-        if broker_instance is not None:
-            broker_instance.start()
+        if broker_instance is not None and hasattr(broker_instance, 'management_client'):
+            mgmt = broker_instance.management_client
+            _start_zmq_broker(mgmt.base_path, mgmt)
             try:
                 yield profile
             finally:
-                broker_instance.stop()
+                _stop_zmq_broker(mgmt)
         else:
             yield profile
 

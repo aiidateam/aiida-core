@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from collections import deque
 from pathlib import Path
 from typing import Any
 
@@ -35,7 +36,7 @@ class PersistentQueue:
         self._processing_path = self._storage_path / 'processing'
 
         # In-memory tracking
-        self._pending: list[str] = []  # List of task filenames in order
+        self._pending: deque[str] = deque()  # Task filenames in FIFO order
         self._processing: dict[str, str] = {}  # task_id -> filename
 
         # Ensure directories exist
@@ -102,7 +103,7 @@ class PersistentQueue:
         if not self._pending:
             return None
 
-        filename = self._pending.pop(0)
+        filename = self._pending.popleft()
         task_id = self._extract_task_id(filename)
 
         # Move from pending to processing
@@ -178,7 +179,7 @@ class PersistentQueue:
             dest = self._pending_path / filename
             try:
                 task_file.rename(dest)
-                self._pending.insert(0, filename)
+                self._pending.appendleft(filename)
                 _LOGGER.debug('Nacked and requeued task %s', task_id)
             except FileNotFoundError:
                 _LOGGER.warning('Task file not found for nack: %s', task_id)

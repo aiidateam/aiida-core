@@ -158,7 +158,7 @@ def verdi_status(print_traceback, no_rmq):
             daemon_msg = f'Daemon is running with PID {daemon_status["pid"]}'
             # Append broker info for managed brokers (e.g., ZMQ)
             if hasattr(broker, 'management_client'):
-                if broker.is_running():
+                if broker.management_client.is_running():
                     status_info = broker.management_client.get_status()
                     if status_info:
                         broker_pid = status_info.get('pid', '?')

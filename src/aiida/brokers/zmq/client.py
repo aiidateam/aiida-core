@@ -1,7 +1,8 @@
-"""ZMQ Broker Management Client - lifecycle management for ZmqBrokerService.
+"""ZMQ Broker Management Client - read-only query interface for ZmqBrokerService.
 
-This module provides a management interface to start/stop the broker service
-and query its status via PID/status files. Analogous to RabbitmqManagementClient.
+This module provides a read-only interface to query broker service status
+via PID/status files. The broker lifecycle is managed by circus (production)
+or test helpers (testing).
 """
 
 from __future__ import annotations
@@ -9,10 +10,6 @@ from __future__ import annotations
 import json
 import os
 import shutil
-import signal
-import subprocess
-import sys
-import time
 from pathlib import Path
 from typing import Any
 
@@ -25,19 +22,17 @@ except ImportError:
 
 
 class ZmqBrokerManagementClient:
-    """Management client for ZmqBrokerService.
+    """Read-only management client for ZmqBrokerService.
 
-    Allows external code to:
-    - Start/stop the broker service
-    - Check if service is running
-    - Get service status
+    Provides:
+    - Status queries (is_running, get_status, get_pid)
+    - Endpoint discovery (router_endpoint, pub_endpoint)
 
     Interacts with the service via PID/status files, not direct IPC.
-    Analogous to RabbitmqManagementClient for the RabbitMQ broker.
     """
 
     def __init__(self, base_path: Path | str):
-        """Initialize the controller.
+        """Initialize the client.
 
         :param base_path: Base path for broker data (same as ZmqBrokerService)
         """
@@ -63,9 +58,6 @@ class ZmqBrokerManagementClient:
 
     def _get_sockets_path(self) -> Path | None:
         """Read the socket directory path from file.
-
-        The socket directory is created in a temp location by ZmqBrokerService
-        to avoid Unix domain socket path length limits.
 
         :return: Path to socket directory, or None if not available
         """
@@ -121,16 +113,12 @@ class ZmqBrokerManagementClient:
         if HAS_PSUTIL:
             try:
                 proc = psutil.Process(pid)
-                # Check if process is running and is a Python process
                 if proc.is_running() and proc.status() != psutil.STATUS_ZOMBIE:
-                    # Verify it's our broker by checking command line
                     cmdline = proc.cmdline()
                     return any('aiida.brokers.zmq' in arg for arg in cmdline)
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 return False
         else:
-            # Fallback: check if process exists and verify it's our broker
-            # via /proc on Linux, or accept the PID-reuse risk on other platforms
             try:
                 os.kill(pid, 0)
             except OSError:
@@ -151,10 +139,6 @@ class ZmqBrokerManagementClient:
 
     def is_running(self) -> bool:
         """Check if broker service is running.
-
-        Validates that:
-        1. PID file exists
-        2. PID in file corresponds to a running broker process
 
         :return: True if service is running
         """
@@ -177,161 +161,6 @@ class ZmqBrokerManagementClient:
         except (json.JSONDecodeError, OSError):
             return None
 
-    def start(
-        self,
-        foreground: bool = False,
-        wait: bool = True,
-        timeout: float = 10.0,
-    ) -> bool:
-        """Start the broker service.
-
-        :param foreground: If True, run in foreground (blocking); else daemonize
-        :param wait: If True and not foreground, wait for service to start
-        :param timeout: Timeout in seconds when waiting for service to start
-        :return: True if service started successfully
-        """
-        if self.is_running():
-            return True
-
-        # Ensure base path exists
-        self._base_path.mkdir(parents=True, exist_ok=True)
-
-        # Build command
-        cmd = [
-            sys.executable,
-            '-m',
-            'aiida.brokers.zmq.service',
-            '--base-path',
-            str(self._base_path),
-        ]
-
-        if foreground:
-            # Run in foreground (blocking)
-            subprocess.run(cmd, check=True)
-            return True
-        else:
-            # Run as daemon (detached process)
-            # Use subprocess with appropriate flags for daemon behavior
-            if sys.platform == 'win32':
-                # Windows: use CREATE_NEW_PROCESS_GROUP
-                subprocess.Popen(
-                    cmd,
-                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    stdin=subprocess.DEVNULL,
-                )
-            else:
-                # Unix: use start_new_session
-                subprocess.Popen(
-                    cmd,
-                    start_new_session=True,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    stdin=subprocess.DEVNULL,
-                )
-
-            if wait:
-                return self._wait_for_start(timeout)
-
-            return True
-
-    def _wait_for_start(self, timeout: float) -> bool:
-        """Wait for service to start.
-
-        :param timeout: Timeout in seconds
-        :return: True if service started within timeout
-        """
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            if self.is_running():
-                return True
-            time.sleep(0.1)
-        return False
-
-    def stop(self, timeout: float = 5.0) -> bool:
-        """Stop the broker service.
-
-        Uses SIGINT for cross-platform graceful shutdown.
-        Falls back to hard kill if timeout expires.
-
-        :param timeout: Seconds to wait for graceful shutdown
-        :return: True if stopped successfully
-        """
-        pid = self.get_pid()
-        if pid is None:
-            return True
-
-        if not self._validate_pid(pid):
-            # PID file exists but process is not running, clean up
-            self._cleanup_stale_files()
-            return True
-
-        # Send SIGINT for graceful shutdown (works on all platforms)
-        try:
-            os.kill(pid, signal.SIGINT)
-        except OSError:
-            # Process already gone
-            self._cleanup_stale_files()
-            return True
-
-        # Wait for graceful shutdown
-        if self._wait_for_stop(pid, timeout):
-            return True
-
-        # Graceful shutdown failed, try hard kill
-        return self._force_kill(pid)
-
-    def _wait_for_stop(self, pid: int, timeout: float) -> bool:
-        """Wait for process to stop.
-
-        :param pid: Process ID
-        :param timeout: Timeout in seconds
-        :return: True if process stopped within timeout
-        """
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            if not self._validate_pid(pid):
-                self._cleanup_stale_files()
-                return True
-            time.sleep(0.1)
-        return False
-
-    def _force_kill(self, pid: int) -> bool:
-        """Force kill a process.
-
-        :param pid: Process ID
-        :return: True if killed successfully
-        """
-        if HAS_PSUTIL:
-            try:
-                proc = psutil.Process(pid)
-                proc.terminate()  # Sends SIGTERM on Unix, TerminateProcess on Windows
-                proc.wait(timeout=2.0)
-                self._cleanup_stale_files()
-                return True
-            except (psutil.NoSuchProcess, psutil.TimeoutExpired):
-                try:
-                    proc.kill()  # SIGKILL on Unix, TerminateProcess on Windows
-                    self._cleanup_stale_files()
-                    return True
-                except psutil.NoSuchProcess:
-                    self._cleanup_stale_files()
-                    return True
-            except psutil.AccessDenied:
-                return False
-        else:
-            # Without psutil, try SIGKILL on Unix (not available on Windows)
-            if sys.platform != 'win32':
-                try:
-                    os.kill(pid, signal.SIGKILL)
-                    self._cleanup_stale_files()
-                    return True
-                except OSError:
-                    self._cleanup_stale_files()
-                    return True
-            return False  # type: ignore[unreachable]  # Windows without psutil
-
     def _cleanup_stale_files(self) -> None:
         """Clean up stale PID, status, and socket files."""
         if self._pid_file.exists():
@@ -339,7 +168,6 @@ class ZmqBrokerManagementClient:
         if self._status_file.exists():
             self._status_file.unlink(missing_ok=True)
 
-        # Clean up orphaned socket directory
         sockets_path = self._get_sockets_path()
         if sockets_path is not None and sockets_path.exists():
             try:
@@ -348,12 +176,3 @@ class ZmqBrokerManagementClient:
                 pass
         if self._sockets_file.exists():
             self._sockets_file.unlink(missing_ok=True)
-
-    def restart(self, timeout: float = 5.0) -> bool:
-        """Restart the broker service.
-
-        :param timeout: Timeout for stop operation
-        :return: True if restarted successfully
-        """
-        self.stop(timeout=timeout)
-        return self.start(wait=True)

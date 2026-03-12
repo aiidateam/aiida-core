@@ -500,7 +500,7 @@ def manager():
     """Get the ``Manager`` instance of the currently loaded profile."""
     manager = get_manager()
 
-    yield get_manager()
+    yield manager
 
     # close connections
     manager.reset_profile()

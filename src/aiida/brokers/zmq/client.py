@@ -8,17 +8,11 @@ or test helpers (testing).
 from __future__ import annotations
 
 import json
-import os
 import shutil
 from pathlib import Path
 from typing import Any
 
-try:
-    import psutil
-
-    HAS_PSUTIL = True
-except ImportError:
-    HAS_PSUTIL = False
+import psutil
 
 
 class ZmqBrokerManagementClient:
@@ -110,30 +104,13 @@ class ZmqBrokerManagementClient:
         :param pid: Process ID to validate
         :return: True if PID is valid and running
         """
-        if HAS_PSUTIL:
-            try:
-                proc = psutil.Process(pid)
-                if proc.is_running() and proc.status() != psutil.STATUS_ZOMBIE:
-                    cmdline = proc.cmdline()
-                    return any('aiida.brokers.zmq' in arg for arg in cmdline)
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                return False
-        else:
-            try:
-                os.kill(pid, 0)
-            except OSError:
-                return False
-
-            # On Linux, check /proc/<pid>/cmdline to reduce PID-reuse false positives
-            proc_cmdline = Path(f'/proc/{pid}/cmdline')
-            if proc_cmdline.exists():
-                try:
-                    cmdline = proc_cmdline.read_text()
-                    return 'aiida.brokers.zmq' in cmdline
-                except OSError:
-                    pass
-
-            return True
+        try:
+            proc = psutil.Process(pid)
+            if proc.is_running() and proc.status() != psutil.STATUS_ZOMBIE:
+                cmdline = proc.cmdline()
+                return any('aiida.brokers.zmq' in arg for arg in cmdline)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            return False
 
         return False
 

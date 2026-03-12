@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -321,11 +322,21 @@ class ZmqBrokerManagementClient:
             return False  # type: ignore[unreachable]  # Windows without psutil
 
     def _cleanup_stale_files(self) -> None:
-        """Clean up stale PID and status files."""
+        """Clean up stale PID, status, and socket files."""
         if self._pid_file.exists():
             self._pid_file.unlink(missing_ok=True)
         if self._status_file.exists():
             self._status_file.unlink(missing_ok=True)
+
+        # Clean up orphaned socket directory
+        sockets_path = self._get_sockets_path()
+        if sockets_path is not None and sockets_path.exists():
+            try:
+                shutil.rmtree(sockets_path)
+            except OSError:
+                pass
+        if self._sockets_file.exists():
+            self._sockets_file.unlink(missing_ok=True)
 
     def restart(self, timeout: float = 5.0) -> bool:
         """Restart the broker service.

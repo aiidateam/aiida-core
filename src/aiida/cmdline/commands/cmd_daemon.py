@@ -151,9 +151,9 @@ def status(ctx, all_profiles, timeout):
         # Build broker status line for managed brokers (e.g., ZMQ)
         broker_line = ''
         broker = get_manager().get_broker()
-        if broker is not None and hasattr(broker, 'management_client'):
-            if broker.management_client.is_running():
-                status_info = broker.management_client.get_status()
+        if broker is not None and hasattr(broker, 'get_status'):
+            if broker.is_running():
+                status_info = broker.get_status()
                 if status_info:
                     broker_pid = status_info.get('pid', '?')
                     pending = status_info.get('pending_tasks', 0)

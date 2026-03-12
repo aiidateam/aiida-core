@@ -1,13 +1,25 @@
 #!/usr/bin/env python
 """Script to benchmark the performance of the AiiDA workflow engine on a given installation."""
 
+import shutil
+import sys
+import tempfile
+import time
+import uuid
+
 import click
 
+from aiida import __version__ as aiida_version
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
 
 
-@click.command()
+def print_version_info():
+    print(f'Python {sys.version}')
+    print(f'AiiDA {aiida_version}')
+
+
+@click.command(context_settings={'help_option_names': ['-h', '--help']})
 @options.CODE(required=False, help='A code that can run the ``ArithmeticAddCalculation``, for example bash.')
 @click.option('-n', 'number', type=int, default=10, show_default=True, help='The number of processes to launch.')
 @click.option('--daemon/--without-daemon', default=False, is_flag=True, help='Submit to daemon or run synchronously.')
@@ -22,11 +34,6 @@ def main(code, number, daemon):
     be run on the localhost, which is automatically created and configured. At the end of the script, the created nodes
     will be deleted, as well as the code and computer, if they were automatically setup.
     """
-    import shutil
-    import tempfile
-    import time
-    import uuid
-
     from aiida import orm
     from aiida.engine import run_get_node, submit
     from aiida.engine.daemon.client import get_daemon_client
@@ -34,9 +41,9 @@ def main(code, number, daemon):
     from aiida.plugins import CalculationFactory
     from aiida.tools.graph.deletions import delete_nodes
 
-    client = get_daemon_client()
+    print_version_info()
 
-    if daemon and not client.is_daemon_running:
+    if daemon and not get_daemon_client().is_daemon_running:
         echo.echo_critical('The daemon is not running.')
 
     computer_created = False
@@ -119,15 +126,15 @@ def main(code, number, daemon):
 
     if code_created:
         code_label = code.full_label
-        orm.Node.objects.delete(code.pk)
+        orm.Node.collection.delete(code.pk)
         echo.echo_success(f'Deleted the created code {code_label}.')
 
     if computer_created:
         computer_label = computer.label
-        user = orm.User.objects.get_default()
+        user = orm.User.collection.get_default()
         auth_info = computer.get_authinfo(user)
-        orm.AuthInfo.objects.delete(auth_info.pk)
-        orm.Computer.objects.delete(computer.pk)
+        orm.AuthInfo.collection.delete(auth_info.pk)
+        orm.Computer.collection.delete(computer.pk)
         echo.echo_success(f'Deleted the created computer {computer_label}.')
 
     echo.echo(f'Performance: {(time_end - time_start) / number:.2f} s / process')

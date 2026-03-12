@@ -1,5 +1,480 @@
 # Changelog
 
+## v2.8.0 - 2026-03-12
+
+This release brings important improvements to the `BaseRestartWorkChain`, the engine, stashing, typing coverage, and dependency updates.
+It also includes several fixes for connection and resource leaks (with further improvements planned for upcoming releases).
+
+Highlights:
+- [BaseRestartWorkChain enhancements](#baserestartworkchain-enhancements)
+- [Replaced `nest_asyncio` with `greenback`](#replaced-nest_asyncio-with-greenback)
+- [Unstashing](#unstashing-support)
+- [`TrajectoryData`: periodic boundary conditions support](#trajectorydata-periodic-boundary-conditions-support)
+- [Typing improvements](#typing-improvements)
+- [Dependency updates: numpy 2.x and click 8.2](#dependency-updates)
+- [Deprecation of `core.ssh` transport](#deprecation-of-coressh-transport)
+
+**Behavior changes:** The following changes may affect existing workflows but do not constitute API breaking changes that would warrant a major version bump. See the [Behavior changes](#behavior-changes) section for details.
+- [`BaseRestartWorkChain`: default `on_unhandled_failure` changed to `abort`](#baserestartworkchain-enhancements)
+- [`StructureData.cell_angles`: returns `None` instead of `nan` for zero-length vectors](#behavior-changes)
+- [`TrajectoryData`: new `.pbc` property; `set_trajectory()` emits deprecation warning when `pbc` not specified](#trajectorydata-periodic-boundary-conditions-support)
+- [Portable codes: job scripts now include `./` prefix](#behavior-changes)
+- [Stashing: rejects `RemoteData` from still-running calculations](#behavior-changes)
+- [`core.ssh_async`: `glob` returns empty list instead of raising error](#behavior-changes)
+- [Transport: `--safe-interval` default changed from 30s to 15s](#behavior-changes)
+- [SQLite storage: database lock warning downgraded to INFO level](#behavior-changes)
+- [`ProcessBuilder`: improved representation](#behavior-changes)
+
+
+### BaseRestartWorkChain enhancements
+
+Two new inputs have been added to `BaseRestartWorkChain` to give users more control over failure handling:
+
+**`on_unhandled_failure` (breaking change)**
+
+Previously, `BaseRestartWorkChain` would automatically restart once on unhandled failures.
+This behavior has changed: **the default is now to abort immediately** to save computational resources.
+To restore the previous behavior, explicitly set `on_unhandled_failure='restart_once'`.
+
+The available options are:
+- `abort` (default): Abort immediately with `ERROR_UNHANDLED_FAILURE`
+- `pause`: Pause for user inspection
+- `restart_once`: Restart once, then abort (previous default behavior)
+- `restart_and_pause`: Restart once, then pause if it fails again
+
+```python
+from aiida.engine import submit
+
+inputs = {
+    'on_unhandled_failure': 'restart_once',  # Restore v2.7 behavior
+    # ... other inputs
+}
+submit(MyRestartWorkChain, **inputs)
+```
+
+**`pause_on_max_iterations`**
+
+A new `pause_on_max_iterations` input allows the work chain to pause instead of aborting when the maximum iteration limit is reached.
+This is useful when you want to inspect the calculation state before deciding whether to continue or abort:
+
+```python
+inputs = {
+    'max_iterations': 3,
+    'pause_on_max_iterations': True,
+    # ... other inputs
+}
+```
+
+When paused, use `verdi process play <PK>` to resume or `verdi process kill <PK>` to abort.
+
+
+### Replaced `nest_asyncio` with `greenback`
+
+The internal async event loop handling has been refactored to use `greenback` instead of `nest_asyncio` ([#7206](https://github.com/aiidateam/aiida-core/pull/7206)).
+This change brings several benefits:
+
+- **Drops the deprecated `nest_asyncio` dependency** (the package is no longer maintained)
+- **Clearer tracebacks** when debugging engine code
+- **Ability to add breakpoints** in engine modules during development
+
+**Important change for Jupyter notebook users:** When using AiiDA in a Jupyter notebook, `load_profile()` must now be called in a **separate cell** before running engine processes:
+
+```python
+# Cell 1: Load the profile
+from aiida import load_profile
+load_profile()
+```
+
+```python
+# Cell 2: Now you can run processes
+from aiida.engine import run
+from aiida.plugins import CalculationFactory
+# ...
+```
+
+This is required because the greenback context is established after the cell containing `load_profile()` completes.
+
+
+### Unstashing support
+
+Building on the stashing feature introduced in v2.7.0, this release adds **unstashing**—the ability to retrieve previously stashed data back to the remote working directory ([#6826](https://github.com/aiidateam/aiida-core/pull/6826)).
+
+The new `UnstashCalculation` allows you to restore stashed files before running a calculation that needs them:
+
+```python
+from aiida.plugins import CalculationFactory
+from aiida.engine import run
+from aiida.orm import load_node
+
+UnstashCalculation = CalculationFactory('core.unstash')
+
+# Load the stashed data from a previous calculation
+stash_node = load_node(<STASH_NODE_PK>)
+
+inputs = {
+    'stash': stash_node,
+    'metadata': {
+        'computer': stash_node.computer,
+        'options': {
+            'resources': {'num_machines': 1},
+        },
+    },
+}
+
+result = run(UnstashCalculation, **inputs)
+# The unstashed files are now available in result['remote_folder']
+```
+
+Additionally, `RemoteStashCustomData` ([#6777](https://github.com/aiidateam/aiida-core/pull/6777)) enables stashing via custom scripts for specialized data handling needs.
+
+
+### `TrajectoryData`: periodic boundary conditions support
+
+The `TrajectoryData` class now properly stores and retrieves periodic boundary conditions (PBC) ([#7079](https://github.com/aiidateam/aiida-core/pull/7079)).
+Previously, when creating a trajectory from `StructureData` instances with specific PBC settings (e.g., periodic in x and y but not z), this information was lost and the structures retrieved from a `TrajectoryData` would always default to `(True, True, True)`.
+
+Now the periodic boundary conditions are stored in the attributes and can be retrieved using the `.pbc` property:
+
+```python
+from aiida import orm
+
+structure = orm.StructureData(
+    cell=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+    pbc=(True, True, False)
+)
+structure.append_atom(position=(0.0, 0.0, 0.0), symbols='H')
+
+trajectory = orm.TrajectoryData([structure])
+
+trajectory.pbc
+# (True, True, False)
+```
+
+Structures retrieved from the `TrajectoryData` also have the correct boundary conditions:
+
+```python
+trajectory.get_step_structure(0).pbc
+# (True, True, False)
+```
+
+**Backward compatibility:** For `TrajectoryData` created before v2.8, `trajectory.pbc` returns `None`.
+
+**Deprecation:** Providing `cells` without explicit `pbc` to `set_trajectory()` now issues a deprecation warning and defaults to `(True, True, True)`. This will raise a `ValueError` in v3.0.
+
+
+### Typing improvements
+
+This release significantly expands type annotation coverage across the codebase.
+The following modules now have strict typing enabled:
+
+- `aiida.common`
+- `aiida.repository`
+- `aiida.schedulers`
+- `aiida.tools.graph`
+- `aiida.tools.query`
+- `aiida.cmdline.utils`
+- `aiida.cmdline.params`
+- `aiida.cmdline.commands`
+- `aiida.engine.processes`
+
+These improvements enable better IDE support, catch more bugs at development time, and make the codebase more maintainable.
+Plugin developers will benefit from improved autocompletion and type checking when using the AiiDA API.
+
+
+### Dependency updates
+
+**numpy 2.x support** ([#6899](https://github.com/aiidateam/aiida-core/pull/6899)): AiiDA now supports numpy 2.x, allowing use of the latest numpy features and performance improvements.
+
+**click 8.2 support** ([#6959](https://github.com/aiidateam/aiida-core/pull/6959)): The CLI is now compatible with click 8.2, which includes various improvements to command-line parsing.
+
+### Deprecation of `core.ssh` transport
+
+The `core.ssh` transport plugin is now deprecated in favor of `core.ssh_async` ([#7175](https://github.com/aiidateam/aiida-core/pull/7175)).
+The async transport, introduced in v2.7.0, offers better performance for concurrent operations and improved configuration through `~/.ssh/config`.
+
+When configuring new computers, you will see a deprecation warning if selecting `core.ssh`.
+We recommend migrating existing computers to `core.ssh_async`.
+
+This release also adds **2FA support** for `core.ssh_async` with improved authentication script handling ([#7184](https://github.com/aiidateam/aiida-core/pull/7184)).
+
+
+### Behavior changes
+
+**`StructureData.cell_angles`: returns `None` instead of `nan`** ([#6820](https://github.com/aiidateam/aiida-core/pull/6820))
+
+The `StructureData.cell_angles` property now handles zero-length cell vectors differently:
+
+- **Returns `None`** for angles that cannot be computed due to zero-length vectors (previously returned `nan`)
+- **Raises `ValueError`** when all cell vectors have zero length
+- **Handles numerical edge cases** by clamping cosine values to `[-1, 1]`, preventing `nan` results for nearly-parallel vectors
+
+If your code checks for `nan` values in `cell_angles`, update it to check for `None` instead:
+
+```python
+# Before (v2.7 and earlier)
+angles = structure.cell_angles
+if any(math.isnan(a) for a in angles):
+    # handle undefined angles
+
+# After (v2.8+)
+angles = structure.cell_angles
+if any(a is None for a in angles):
+    # handle undefined angles
+```
+
+**Portable codes: job scripts now include `./` prefix** ([#7080](https://github.com/aiidateam/aiida-core/pull/7080))
+
+Portable code executables located in the top-level directory are now invoked with a `./` prefix (e.g., `./mycode.py` instead of `mycode.py`).
+This fixes execution on systems where the current directory is not in `PATH`.
+If you parse job scripts, be aware that the executable line will look different.
+
+**Stashing: rejects `RemoteData` from still-running calculations** ([#7147](https://github.com/aiidateam/aiida-core/pull/7147))
+
+`StashCalculation` now validates that the source `RemoteData` node comes from a sealed (finished) calculation.
+Attempting to stash from a still-running calculation will raise an error, preventing incomplete stashes.
+Use the direct stashing method (`metadata.options.stash`) or wrap `StashCalculation` in a workflow to ensure proper sequencing.
+
+**`core.ssh_async`: `glob` now returns empty list instead of raising error** ([#6950](https://github.com/aiidateam/aiida-core/pull/6950))
+
+The `glob` method of `core.ssh_async` transport now returns an empty list when no files match the pattern, instead of raising `OSError`.
+This aligns the behavior with `core.ssh` transport.
+
+**Transport: `--safe-interval` default changed from 30s to 15s** ([#6943](https://github.com/aiidateam/aiida-core/pull/6943))
+
+The default value for `--safe-interval` (connection cooldown time) has been reduced from 30 seconds to 15 seconds.
+Additionally, this option now has a non-interactive default, so scripted computer setup (`verdi computer configure`) will no longer hang waiting for input.
+
+**SQLite storage: database lock warning downgraded to INFO level** ([#7121](https://github.com/aiidateam/aiida-core/pull/7121))
+
+The warning about failed writes due to SQLite database locks (common with `core.sqlite_dos` storage) has been downgraded from WARNING to INFO level.
+This reduces log noise for SQLite-based profiles where these transient locks are expected and harmless.
+
+**Improved `ProcessBuilder` representation** ([#7285](https://github.com/aiidateam/aiida-core/pull/7285))
+
+The `ProcessBuilder` now has a proper `__repr__` method, so its clean YAML-like representation is available in all Python environments, not just IPython and Jupyter.
+The existing `_repr_pretty_` method (used by IPython/Jupyter) has also been improved to prune empty namespaces (e.g. `stash`, `metadata.options`) from the output, reducing noise when inspecting builder contents.
+Note that this also affects the `print()` output for a `ProcessBuilder`:
+
+```python
+from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+builder = ArithmeticAddCalculation.get_builder()
+print(builder)
+
+# Process class: ArithmeticAddCalculation
+# Inputs:
+# {}
+```
+
+In case the old string representation is still desired, you can wrap the builder in a `dict`:
+
+```python
+print(dict(builder))
+
+# {'metadata': {'options': {'unstash': {}, 'stash': {}}}, 'monitors': {}}
+```
+
+
+### Features
+
+#### Engine
+
+- `ProcessBuilder`: add `__repr__` (#7285) [[c79d22a5f]](https://github.com/aiidateam/aiida-core/commit/c79d22a5f8b24aa3d31a23208ae29ef7fc40bfa6)
+- `ProcessBuilder`: prune empty namespaces in `_repr_pretty` (#7285) [[3be99a61a]](https://github.com/aiidateam/aiida-core/commit/3be99a61a62b1c552e7a3e190305c053d9d643ba)
+- Add timestamp and PID to worker log (#7271) [[dacaa47c5]](https://github.com/aiidateam/aiida-core/commit/dacaa47c5fa87286ecba322fe90327cc2cc6fdc9)
+- Revert workaround of increasing maximum stack size (#7230) [[4c6bba90c]](https://github.com/aiidateam/aiida-core/commit/4c6bba90c0bc4899ebcc4634b67a7fca816500ab)
+- Replace `nest_asyncio` with `greenback` support (#7206) [[2c010c6dc]](https://github.com/aiidateam/aiida-core/commit/2c010c6dc8e59f192bea3c779ecdd666f6658e93)
+- `BaseRestartWorkChain`: add `pause_on_max_iterations` input (#7139) [[24e840cd0]](https://github.com/aiidateam/aiida-core/commit/24e840cd03665025f0f2708c5fd04e43957a7d2c)
+- Asyncify `request_transport` context manager (#7209) [[41acc86c6]](https://github.com/aiidateam/aiida-core/commit/41acc86c6512b82f693e4b2ce2f063fdd6f902b3)
+- `BaseRestartWorkChain`: add `on_unhandled_failure` input (#7116) [[a770d7a6e]](https://github.com/aiidateam/aiida-core/commit/a770d7a6e7a727ef1d0bb09cd3e5ae4f3b1d4eb4)
+
+#### Stashing
+
+- Add `fail_on_missing` option to control stashing behavior for missing files (#7140) [[c10fef19c]](https://github.com/aiidateam/aiida-core/commit/c10fef19c1bf8c671f243f1e0239cb2476f94a41)
+- Add warning when deleting `StashCalculation` nodes with `--clean-workdir` (#7187) [[381d3932b]](https://github.com/aiidateam/aiida-core/commit/381d3932b1c60a2bd440d1e5194f115a52bb97a9)
+- Add validation to reject stashing via `StashCalculation` from unsealed calculations (#7147) [[cddeba201]](https://github.com/aiidateam/aiida-core/commit/cddeba201d8ef1d4b711120f42769a44550d3400)
+- Add support for unstashing (#6826) [[6ab3ed1bd]](https://github.com/aiidateam/aiida-core/commit/6ab3ed1bd1c9befdebaad6937c876d06b81ccc4a)
+- Extend check of stash options when they are specified as empty dict (#6942) [[cbbdedb13]](https://github.com/aiidateam/aiida-core/commit/cbbdedb138c76c5d1114688da6d044641ad86d58)
+- `RemoteStashCustomData`: stashing via custom script (#6777) [[b2a6e2132]](https://github.com/aiidateam/aiida-core/commit/b2a6e213224628ac53bd29b4fadc763c3b152d5d)
+
+#### CLI
+
+- Print worker logfile location in daemon status (#7271) [[feb5e80f8]](https://github.com/aiidateam/aiida-core/commit/feb5e80f810603b22eff03f91be0c1d186b58649)
+- Improve error message clarity for import violations in verdi CLI (#7211) [[d1e7778b6]](https://github.com/aiidateam/aiida-core/commit/d1e7778b60d59880cf0620ac9e1b630c4a43d128)
+- Add orphaned database connection cleanup to `verdi process repair` (#7207) [[1deba397d]](https://github.com/aiidateam/aiida-core/commit/1deba397de8cd611a73721be46639296e3835ade)
+- Show plugin descriptions in interactive prompt help (#7210) [[ff7eec237]](https://github.com/aiidateam/aiida-core/commit/ff7eec23764373ac66305fc4c16295fe5aad85bc)
+- Add `verdi computer goto` command (#7124) [[ca78477af]](https://github.com/aiidateam/aiida-core/commit/ca78477af293a545ba7b1d6e844227a1c174e182)
+- Truncate `verdi archive info` output node list (#7097) [[5b89d1c05]](https://github.com/aiidateam/aiida-core/commit/5b89d1c0597b79789fa43cea231ca732e8ebd41a)
+- Show first and last node `ctime` for `verdi storage info --detailed` (#6829) [[f9566a4d4]](https://github.com/aiidateam/aiida-core/commit/f9566a4d4ef73e33c6286945e60d5ae9a5faceff)
+
+#### Transport
+
+- Support 2FA with improved authentication script handling in `core.ssh_async` transport (#7184) [[dc034b146]](https://github.com/aiidateam/aiida-core/commit/dc034b1468e4574f31466f0c63db154076f494a6)
+- `core.ssh_async`: move a technical message from warning to debug (#7024) [[8b1943ef3]](https://github.com/aiidateam/aiida-core/commit/8b1943ef319198b07316e88acb7b6a8fb3e61eec)
+- Set non-interactive default for `--safe-interval` (#6943) [[d0dedc171]](https://github.com/aiidateam/aiida-core/commit/d0dedc171790903350f0b8ecdc25421a6636516f)
+
+#### ORM
+
+- Support legacy `scheduler_state` (#7202) [[eeb42355b]](https://github.com/aiidateam/aiida-core/commit/eeb42355bc8f1a2e418e12a3b6680ed9a1dcb991)
+- Add `offset` to `entities.Collection.find` (#7125) [[d123ac255]](https://github.com/aiidateam/aiida-core/commit/d123ac255c2d84f1e7b1907aaf575658995b2b9d)
+- Improve typing of `QueryBuilder.all()` (#6966) [[ee87cec5e]](https://github.com/aiidateam/aiida-core/commit/ee87cec5ec7c1d2f9a904d75d4b5eab8ad335c84)
+
+#### Repository
+
+- Make `AbstractRepositoryBackend.open()` abstract (#7216) [[0904796e0]](https://github.com/aiidateam/aiida-core/commit/0904796e06ddb7b537add5bb0df7ad7599da5a3b)
+- Implement repo methods to extract object size and objects as a zipfile (bytes) (#7126) [[d53330c04]](https://github.com/aiidateam/aiida-core/commit/d53330c046ed90a6b1bbd31f784c679e933a1dfa)
+- Use `TextIOWrapper` for opening file from repository in text mode (#6847) [[761764d81]](https://github.com/aiidateam/aiida-core/commit/761764d8156af3cb364e21e47f1d5868066be9f3)
+
+#### Storage
+
+- Downgrade SQLite database lock warning to info level (#7121) [[1c6c5ac0a]](https://github.com/aiidateam/aiida-core/commit/1c6c5ac0ab821f120503bd8c87b0975c018e77bd)
+- Prior check if migration needed on `SqliteZipBackend` initialisation (#6963) [[7255f01c7]](https://github.com/aiidateam/aiida-core/commit/7255f01c7e4e12d65d2a7ffa356552b737c58cb3)
+
+### Fixes
+
+#### CLI
+
+- `verdi status`: close broker connection after check (#7269) [[b8b77cc7d]](https://github.com/aiidateam/aiida-core/commit/b8b77cc7d5dcb2e5804028e0d3c0bc7f314c1c94)
+- Add Discourse and GitHub links to deprecation warnings (#7123) [[8aae1b689]](https://github.com/aiidateam/aiida-core/commit/8aae1b689fc0fe896440c96689894d17f6704210)
+- Drop dump-related message when relabeling a group (#7033) [[239cbf91c]](https://github.com/aiidateam/aiida-core/commit/239cbf91c34e8ddfef7358c81bde2772d211645a)
+
+#### Engine
+
+- `asyncio.iscoroutinefunction` -> `inspect.iscoroutinefunction` (#7256) [[c4d4a003f]](https://github.com/aiidateam/aiida-core/commit/c4d4a003fa76209aad98a89434b3687e3988e24e)
+- Fix missing return of exit code 0 in `inspect_process` when not paused (#7247) [[2545cb276]](https://github.com/aiidateam/aiida-core/commit/2545cb2767af6fb4d873ddb350b55fe1e4efba28)
+- Replace deprecated `asyncio.get_event_loop()` with `plumpy.get_or_create_event_loop()` (#7206) [[f762ecf99]](https://github.com/aiidateam/aiida-core/commit/f762ecf999a1e2ee84b58fc6a5af1d0acc6fee69)
+
+#### ORM
+
+- Fix SD `cell_angles` for zero-length vectors (#6820) [[f0a8ce764]](https://github.com/aiidateam/aiida-core/commit/f0a8ce764e29ea4f17ee78193bb059d804ca5bb1)
+- `TrajectoryData`: Fix `pbc` handling for non-periodic structures (#7079) [[08c58ffc0]](https://github.com/aiidateam/aiida-core/commit/08c58ffc0eae5f89d4f1e7923d62af30f418f3d7)
+- Fix `ResourceWarning` from unclosed `TextIOWrapper` (#7220) [[3a061d06e]](https://github.com/aiidateam/aiida-core/commit/3a061d06e26f91ba8e1079a728d7c95d7f7cc33c)
+
+#### Transport
+
+- Update error message for SSH transport plugin (#7110) [[b2f442276]](https://github.com/aiidateam/aiida-core/commit/b2f44227604cf7565a9d1f8bea75777c7efc5f5c)
+- Fix `whoami_async` call in sync context (#7083) [[16c6ad38e]](https://github.com/aiidateam/aiida-core/commit/16c6ad38ef592318f729741e6baff258a288f0bc)
+- Unify behavior of `core.ssh_async::glob` with `core.ssh::glob` (#6950) [[da3e42567]](https://github.com/aiidateam/aiida-core/commit/da3e425674821d8c207e435b8ecd038f56f71542)
+
+#### Storage
+
+- Apply SQLA param-limit fix to all IN clauses (#7237) [[be0d6b5de]](https://github.com/aiidateam/aiida-core/commit/be0d6b5de66d2a7607187c6f3fb880a1dd69f830)
+- Remove migration output capturing for `SqliteZipBackend` initialisation (#6964) [[016d049ef]](https://github.com/aiidateam/aiida-core/commit/016d049ef9547672681b3466c42223b445f15a5f)
+
+### Deprecations
+
+- Transport: deprecate `chown` method (#7178) [[be364adfa]](https://github.com/aiidateam/aiida-core/commit/be364adfa7ae19b27eccf09b5a035dcdf55af05d)
+- Deprecate `core.ssh` transport plugin in favor of `core.ssh_async` (#7175) [[f9453e738]](https://github.com/aiidateam/aiida-core/commit/f9453e7381e56834ffae641b98f58104647a78a1)
+- `SshTransport`: drop deprecation warnings (#7130) [[4a98ec50c]](https://github.com/aiidateam/aiida-core/commit/4a98ec50cb45d3d022b7f2b7e773a54855c5b25b)
+- Remove dead code supporting old pymatgen versions (#7066) [[17b484fb7]](https://github.com/aiidateam/aiida-core/commit/17b484fb7fb4f71586d2d80557834122ca1db1b3)
+- Remove deprecated `aiida.common.json` module (#7017) [[dc702f074]](https://github.com/aiidateam/aiida-core/commit/dc702f0748542f5baaa2dd94a4763813e40e407d)
+- Remove deprecated IPython support (#7013) [[2d0a0ed94]](https://github.com/aiidateam/aiida-core/commit/2d0a0ed9497f8343b352990c0fd5d263950f23d3)
+- Replace `aiida.common.assert_never` with `typing.assert_never` (#6856) [[494179ddb]](https://github.com/aiidateam/aiida-core/commit/494179ddb379804e039f26c6e3522e8424a1a97c)
+
+### Documentation
+
+- Extend `XyData` documentation (#6736) [[f4c205d67]](https://github.com/aiidateam/aiida-core/commit/f4c205d676aad1a38dcc39a2998beab53a4bc79f)
+- Fix reference to `base` in `put_object_from_file` (#7108) [[5014979b9]](https://github.com/aiidateam/aiida-core/commit/5014979b9657512a7d720f77d404df45fd226fd0)
+- Add how-to page for real-world workflows (#7048) [[49af7f0a6]](https://github.com/aiidateam/aiida-core/commit/49af7f0a6908250ee93fb65ba9bb67bc0c055829)
+- Enhance documentation on process types in AiiDA (#7068) [[d50cf17df]](https://github.com/aiidateam/aiida-core/commit/d50cf17dfbff05d3b3e58f8f65491ca5189d3102)
+- Rename section 'Monitoring processes' to 'Inspect processes' (#7075) [[00f082fb3]](https://github.com/aiidateam/aiida-core/commit/00f082fb3a33930984a82bf897ee345229c16354)
+- Remove outdated installation troubleshooting section (#7015) [[413b9bd6e]](https://github.com/aiidateam/aiida-core/commit/413b9bd6e3ce6f6628aaf5eecff65862ef06fda6)
+- Add unstashing documentation (#6999) [[669f249e8]](https://github.com/aiidateam/aiida-core/commit/669f249e895623c1edcdb9cca4195baa4baa3ecc)
+- Improve docstring of transport `chmod` method (#6988) [[0eb8fc35f]](https://github.com/aiidateam/aiida-core/commit/0eb8fc35fc3d87ad099522d0f96a1f1fa352c196)
+- Full documentation for stashing (#6936) [[81dd4df5d]](https://github.com/aiidateam/aiida-core/commit/81dd4df5d655a857d693c9c14fd9a64216921b4c)
+- Remove note on unsupported `contains` and `get_creation_statistics` (#6930) [[a392f5c5c]](https://github.com/aiidateam/aiida-core/commit/a392f5c5cc2babddb2c5152989db7009bb53b87d)
+
+### Dependencies
+
+- Bump the gha-dependencies group across 1 directory with 4 updates (#7253) [[e987f7e32]](https://github.com/aiidateam/aiida-core/commit/e987f7e32bae71ebb3d04e3074f33d06e7e64162)
+- Update uv.lock (#7258) [[03df44acc]](https://github.com/aiidateam/aiida-core/commit/03df44accd23a753ed967e5d53b5ef4a27d4a090)
+- Bump asyncssh from ~=2.19.0 to ~=2.21.0 (#7240) [[93d98ed6e]](https://github.com/aiidateam/aiida-core/commit/93d98ed6e78cc0a41bda824345fb9b08b0205223)
+- Bump disk-objectstore to ~=1.5.0 (#7206) [[e3217c0fe]](https://github.com/aiidateam/aiida-core/commit/e3217c0fe4359d80097605b7c348c3bf6cce028e)
+- Bump the gha-dependencies group across 1 directory with 3 updates (#7194) [[16ebbc5d7]](https://github.com/aiidateam/aiida-core/commit/16ebbc5d7873be8d1ddf724a2c92000dce022334)
+- Pin mamba version to fix arm64 docker build (#7168) [[ca143ca29]](https://github.com/aiidateam/aiida-core/commit/ca143ca29879bc4d5fcbae211272d0b94879eca5)
+- uv.lock upgrade (#7077) [[7b59996cd]](https://github.com/aiidateam/aiida-core/commit/7b59996cdea2caf49a09997d724f3da1559ae620)
+- Don't re-export `common.typing`, install `typing_extensions` for all Python versions (#7096) [[5c1b2f4cc]](https://github.com/aiidateam/aiida-core/commit/5c1b2f4ccb94dead73a4037e6978eebc5d933862)
+- Unpin and update bpython (#7031) [[f01c70e22]](https://github.com/aiidateam/aiida-core/commit/f01c70e22c1d5a34fb3804515ccbf3f39268c599)
+- Bump psutil to v7.x (#7012) [[c0e3c826d]](https://github.com/aiidateam/aiida-core/commit/c0e3c826ddc3bd728eba3426040c2bb73f73effc)
+- Support click 8.2 (#6959) [[44ef2a17e]](https://github.com/aiidateam/aiida-core/commit/44ef2a17edf77ee38f7b1712ee3bdcf475f5301b)
+- Support numpy 2.x (#6899) [[1e8cd0b3c]](https://github.com/aiidateam/aiida-core/commit/1e8cd0b3ccfe03f84b7803c3c6e6f09edd507412)
+
+### Devops
+
+#### Typing
+
+- Add typing to `trajectory.py` (#7234) [[9a6465172]](https://github.com/aiidateam/aiida-core/commit/9a6465172f24fdf428615b3fb76bf5bc4abb8cbc)
+- Strict typing for `aiida.schedulers` module (#7136) [[396792b21]](https://github.com/aiidateam/aiida-core/commit/396792b2168f5b5a6c06cb7850ae4549a0e227e7)
+- Run type checking on `engine.processes` module (#7114) [[a547ea026]](https://github.com/aiidateam/aiida-core/commit/a547ea0265674038451d427e32c549a91e01efc6)
+- Strict typing for `aiida.common` module (#7085) [[289cdd518]](https://github.com/aiidateam/aiida-core/commit/289cdd51856e898b4f58713b7fc444e6a7de97ea)
+- Strict typing for `aiida.repository` module (#7049) [[3999e849d]](https://github.com/aiidateam/aiida-core/commit/3999e849dcbe04aaea19a245107d293364bf1d07)
+- Type check `storage.psql_dos.orm.querybuilder.main` module (#7065) [[baefa764b]](https://github.com/aiidateam/aiida-core/commit/baefa764b7502dbbdf6049d8a3bee44f7893afb4)
+- Pydantic mypy plugin (#7064) [[4455a0bd1]](https://github.com/aiidateam/aiida-core/commit/4455a0bd1435ede6cc4c82d3e2cb9e728d8be148)
+- Add typing to `aiida.tools.graph` module (#7036) [[13cb318f1]](https://github.com/aiidateam/aiida-core/commit/13cb318f1b7e3f31e73a38f720bdc8c47737a52e)
+- Add strict typing to `aiida.tools.query` module (#7041) [[34dada2ca]](https://github.com/aiidateam/aiida-core/commit/34dada2ca68215d1b488e163200dda61a5e191fe)
+- Add typing to `aiida/common/{utils,extendeddicts}.py` (#6706) [[3bae2724b]](https://github.com/aiidateam/aiida-core/commit/3bae2724b47adde4522dfc2986da159bb4575218)
+- Run typing on `orm/{comments,computers}.py` and `orm/implementation/storage_backend.py` (#6704) [[f6cdb91d8]](https://github.com/aiidateam/aiida-core/commit/f6cdb91d8ab200ed32e74d90d04d7aadff3866c5)
+- Mark `orm.entities.Entity`/`Comment` classes as generic in ruff config (#7019) [[ebc9d4ab9]](https://github.com/aiidateam/aiida-core/commit/ebc9d4ab942279e4d5e2c0390a15ae3f02597645)
+- Add more stub packages for type checking 3rd party libs (#7021) [[51f0ed718]](https://github.com/aiidateam/aiida-core/commit/51f0ed7183217ef0a577a393c3ae0380940635e1)
+- More typing for `cmdline.params` module (#7009) [[0d5c4d4df]](https://github.com/aiidateam/aiida-core/commit/0d5c4d4dfb1d0a4636b68b936bfd0bf6129b58e4)
+- Add typing to `cmdline/commands` module (#6987) [[594cf563c]](https://github.com/aiidateam/aiida-core/commit/594cf563ce174896e378b08de74b56834bc54cf6)
+- Typecheck `aiida.cmdline.utils` module (#6954) [[76f776a49]](https://github.com/aiidateam/aiida-core/commit/76f776a494fdba2a9f03f89694270b4b0deb3dc4)
+- Add typing to `aiida.cmdline.params` module (#6952) [[cfb7fd153]](https://github.com/aiidateam/aiida-core/commit/cfb7fd153da8df219c661e6ec071446bcfb70fb3)
+- Run type checking on `multiply_add.py` (#6833) [[1229ddd38]](https://github.com/aiidateam/aiida-core/commit/1229ddd385a33d37825aede224e526a17ce4d5ec)
+- Bump mypy to 1.16.1 (#6858) [[210684420]](https://github.com/aiidateam/aiida-core/commit/2106844200ef8e77fcd3dd93c1bab07702f10a2c)
+
+#### Autogenerated code
+
+- Fix script to autogenerate module re-imports and `__all__` attributes (#7091) [[b3cf7b4c7]](https://github.com/aiidateam/aiida-core/commit/b3cf7b4c715bb84cde5caae13004fb28d2d996e2)
+- Autogenerate `aiida.brokers` `__init__` files, make `RabbitmqBroker` public (#7127) [[f25fc2bea]](https://github.com/aiidateam/aiida-core/commit/f25fc2beac1a7054adffd3a975f4624f0bf0f297)
+- Autogenerate `__all__` in `tools` module (#7142) [[b720897c8]](https://github.com/aiidateam/aiida-core/commit/b720897c8ead983dcba1f1f5ea0cbb531f8d1e3e)
+- Autogenerate `__init__.py` re-exports in `aiida.transports` module (#7137) [[4f28b78ba]](https://github.com/aiidateam/aiida-core/commit/4f28b78ba2e04f9bee3933a9bc19b5d8e7f1778a)
+
+#### CI
+
+- Ignore some new DeprecationWarnings in py3.14 (#7256) [[4f96f8888]](https://github.com/aiidateam/aiida-core/commit/4f96f8888a45a5bc67084d5a3f97357501812f39)
+- Add experimental Python 3.14 support in CI (not yet officially supported; known performance regressions under investigation) (#7240) [[e8f39b649]](https://github.com/aiidateam/aiida-core/commit/e8f39b64933ac186758bf6d4dc22bd6ab06ffa02)
+- Pin orm field regression tests to only run for py3.14 (#7240) [[ff1871441]](https://github.com/aiidateam/aiida-core/commit/ff18714419e8f3238f0767448b9b4d04abfea37d)
+- Replace `urllib.request.url2pathname` with local shim for Python 3.14 (#7240) [[1607da454]](https://github.com/aiidateam/aiida-core/commit/1607da454428da25544f100d1306cc57a91301b9)
+- CI: Upload coverage data as GHA artifacts (#7224) [[af9d1f600]](https://github.com/aiidateam/aiida-core/commit/af9d1f600dc1b341a0047abdfad55e0b8fe7bfff)
+- CI: Change test-install schedule from nightly to weekly (#7179) [[bc53c9e31]](https://github.com/aiidateam/aiida-core/commit/bc53c9e3157354d6af696a714f0d573abe2055f6)
+- Refactor bake metadata extraction from shell to JavaScript (#6582) (#7161) [[fcf709bc0]](https://github.com/aiidateam/aiida-core/commit/fcf709bc0d4604b688a5522475adef6670864ade)
+- Update coveragepy and use `sys.monitoring` interface (#7042) [[1f2cb47cf]](https://github.com/aiidateam/aiida-core/commit/1f2cb47cfe1821af170170be451506977cf1348a)
+- CI: Test minimum package versions (#6940) [[577d7c92a]](https://github.com/aiidateam/aiida-core/commit/577d7c92af8eb45040b0547ac9fad287f24a22a4)
+- Send Slack notification if `test-install.yml` fails (#6897) [[b235b3aab]](https://github.com/aiidateam/aiida-core/commit/b235b3aabee45f2c6c208af69310364046f2875f)
+
+#### Tests
+
+- `TrajectoryData`: add `pbc` to existing tests and increase coverage (#7234) [[e3987509f]](https://github.com/aiidateam/aiida-core/commit/e3987509f12048347a790ff3ba59f7a144e5c688)
+- `test_data`: restrict `data_plugin` fixture to `core.*` entry points (#7234) [[2a3875fa9]](https://github.com/aiidateam/aiida-core/commit/2a3875fa9af8251df3cf7500eab722b368f7bfc7)
+- Add pytest-instafail; `--instafail` to addopts (#7203) [[605755867]](https://github.com/aiidateam/aiida-core/commit/6057558676d69fd6d2d9d04d730d602a494a526a)
+- Add `--tb=short` to default pytest addopts (#7203) [[aa6f15e91]](https://github.com/aiidateam/aiida-core/commit/aa6f15e911b8ff97b6c6526963b8c970f528ee2e)
+- Make `test_graph_recurse_spot_highlight_classes` more robust (#7219) [[14f63cd35]](https://github.com/aiidateam/aiida-core/commit/14f63cd35cdd044894313354d069416439e9d365)
+- Avoid unwanted files in repo during tests (#6977) [[00003e3b1]](https://github.com/aiidateam/aiida-core/commit/00003e3b1ae11774b8be74c1c6f9b84b114668e4)
+- Remove unused code of json-contains tests (#7204) [[7536ec298]](https://github.com/aiidateam/aiida-core/commit/7536ec298b4a5fc432700d146636ff286d70fd06)
+- Fix test isolation in manager fixture by resetting `_profile_storage` (#7187) [[6ee838a4f]](https://github.com/aiidateam/aiida-core/commit/6ee838a4fa79cabf04b698f9542926822077186b)
+- Overwrite and sealed unit tests for `Group.dump` (#7160) [[8755758ec]](https://github.com/aiidateam/aiida-core/commit/8755758ec69768873882a3f724fabd875f258d7f)
+- Drop flaky `test_json_contains.py` benchmarks (#7047) [[cd11f08b6]](https://github.com/aiidateam/aiida-core/commit/cd11f08b6a6860181050885e472cd3b04665c743)
+- Better coverage for subprocesses (#7070) [[ce11608a5]](https://github.com/aiidateam/aiida-core/commit/ce11608a55ff33b4a31f85f1abfa6eada5820a74)
+- Fix flaky test (#7055) [[a843052ac]](https://github.com/aiidateam/aiida-core/commit/a843052ac49d6f2df3727c67156d018f28178b03)
+- Tests for `orm/utils/node.py` + remove dead code (#6983) [[ebc49134c]](https://github.com/aiidateam/aiida-core/commit/ebc49134c3a3a09df58e13acee32c83c62a922ac)
+- Add more pytest fixture tests (#6882) [[6afd3f53d]](https://github.com/aiidateam/aiida-core/commit/6afd3f53db02caa8c54f2986a8da59c5a676510f)
+- Cleanup (almost) all warnings in the test suite (#6967) [[0eb794e1d]](https://github.com/aiidateam/aiida-core/commit/0eb794e1d1f584c78f7a6eddf908158b2f3848ce)
+- Cleanup verdi tests (#6951) [[f99571350]](https://github.com/aiidateam/aiida-core/commit/f99571350e8b302e62a2e447a25d987285a05b13)
+- Cleanup warnings in tests (#6911) [[cb5348e04]](https://github.com/aiidateam/aiida-core/commit/cb5348e04eeb1acdbdc89b2547e7731d84365a70)
+- Remove `click.Editor.edit_file` monkeypatch (#6939) [[b4e1c8b83]](https://github.com/aiidateam/aiida-core/commit/b4e1c8b83805fa564776f41a20f8092ebdbf9ef3)
+
+#### Misc
+
+- Run `pyparsing.tools.cvt_pyparsing_pep8_names` (#7264) [[21f48a4f1]](https://github.com/aiidateam/aiida-core/commit/21f48a4f13749dbb7af71c26e25de7b303ca9a2b)
+- Do not autoformat `uv.lock` (#7274) [[1d2366df5]](https://github.com/aiidateam/aiida-core/commit/1d2366df5d0c93d96d3e8078a4dfe52f951959a2)
+- Drop api-auto-docs for now (#7056) [[0d002ad9f]](https://github.com/aiidateam/aiida-core/commit/0d002ad9f076a2cfb017909510daffaee84b9c83)
+- Add dev dependency group (#7040) [[cf690e4e9]](https://github.com/aiidateam/aiida-core/commit/cf690e4e9935e857e9bd16104132bec8ef0eedbc)
+- Add check-added-large-files pre-commit hook (#7038) [[ae65e2d45]](https://github.com/aiidateam/aiida-core/commit/ae65e2d454875ea66fc2370e7b3fa11f9ae62dda)
+- Add `.git-blame-ignore-revs` file (#7029) [[d09c92884]](https://github.com/aiidateam/aiida-core/commit/d09c92884d10176c611f7ee9fc00d249e0882432)
+- Remove `flynt` hook from pre-commit (#7022) [[090390a15]](https://github.com/aiidateam/aiida-core/commit/090390a153cf071f9f34b4310bfe5212dc79827c)
+- Remove `ci` section in `.pre-commit-config.yaml` (#6985) [[b8df58dd2]](https://github.com/aiidateam/aiida-core/commit/b8df58dd224648d4daf3eedcccb0a7396967092e)
+
+
 ## v2.7.3 - 2026-01-23
 
 ### Fixes
@@ -13,7 +488,7 @@
 - Fix: Avoid mutating `_polling_jobs` inside slurm scheduler ([#7155](https://github.com/aiidateam/aiida-core/pull/7155)) [[9f03a8e4c]](https://github.com/aiidateam/aiida-core/commit/9f03a8e4cad4764ac99a39b12677036eefe1a2ca)
 
 ### Devops
-- Switch PyPI publishing to OIDC trusted publishing ([#7173](https://github.com/aiidateam/aiida-core/pull/7173)) [[c4e320816]](https://github.com/aiidateam/aiida-core/commit/c4e3208165cf2e090d711fd892cf47cb55181783)
+- Switch from token-based to OIDC trusted publishing [[c4e320816]](https://github.com/aiidateam/aiida-core/commit/c4e3208165cf2e090d711fd892cf47cb55181783)
 
 
 ## v2.7.2 - 2025-12-10

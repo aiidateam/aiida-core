@@ -528,6 +528,11 @@ class DaemonClient:
         """
         self._clean_potentially_stale_pid_file()
 
+        # Start the broker service if needed (no-op for externally managed brokers like RabbitMQ)
+        broker = get_manager().get_broker()
+        if broker is not None:
+            broker.start()
+
         env = self.get_env()
         command = self.cmd_start_daemon(number_workers, foreground)
         timeout = timeout or self._daemon_timeout

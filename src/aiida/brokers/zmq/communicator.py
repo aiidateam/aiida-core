@@ -8,6 +8,7 @@ import uuid
 from concurrent.futures import Future
 from typing import Any, Callable
 
+import kiwipy
 import zmq
 
 from aiida.brokers.utils import YAML_DECODER, YAML_ENCODER
@@ -29,7 +30,7 @@ from .protocol import (
 _LOGGER = logging.getLogger(__name__)
 
 
-class ZmqCommunicator:
+class ZmqCommunicator(kiwipy.Communicator):
     """ZMQ client implementing kiwipy Communicator interface.
 
     Connects to a ZmqBrokerService to send/receive messages.

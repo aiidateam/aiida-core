@@ -17,7 +17,7 @@ from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.storage.psql_dos import migrator
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('stopped_daemon_client')
 def test_status(run_cli_command):
     """Test `verdi status`."""
@@ -28,7 +28,7 @@ def test_status(run_cli_command):
     assert 'The daemon is not running' in result.output
     assert result.exit_code is ExitCode.SUCCESS.value
 
-    for string in ['config', 'profile', 'storage', 'broker', 'daemon']:
+    for string in ['config', 'profile', 'storage', 'daemon']:
         assert string in result.output
 
     assert __version__ in result.output

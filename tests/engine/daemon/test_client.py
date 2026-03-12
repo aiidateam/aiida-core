@@ -20,7 +20,7 @@ from aiida.engine.daemon.client import (
     get_daemon_client,
 )
 
-pytestmark = pytest.mark.requires_rmq
+pytestmark = pytest.mark.requires_broker
 
 
 def test_ipc_socket_file_length_limit():

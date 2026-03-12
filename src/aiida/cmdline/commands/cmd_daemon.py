@@ -109,6 +109,7 @@ def status(ctx, all_profiles, timeout):
 
     from aiida.cmdline.utils.common import format_local_time
     from aiida.engine.daemon.client import DaemonException, get_daemon_client
+    from aiida.manage.manager import get_manager
 
     if all_profiles is True:
         profiles = [profile for profile in ctx.obj.config.profiles if not profile.is_test_profile]
@@ -146,8 +147,24 @@ def status(ctx, all_profiles, timeout):
             workers_info = '--> No workers are running. Use `verdi daemon incr` to start some!\n'
 
         start_time = format_local_time(daemon_response['info']['create_time'])
+
+        # Build broker status line for managed brokers (e.g., ZMQ)
+        broker_line = ''
+        broker = get_manager().get_broker()
+        if broker is not None and hasattr(broker, 'management_client'):
+            if broker.is_running():
+                status_info = broker.management_client.get_status()
+                if status_info:
+                    broker_pid = status_info.get('pid', '?')
+                    pending = status_info.get('pending_tasks', 0)
+                    processing = status_info.get('processing_tasks', 0)
+                    broker_line = f'Broker is running as PID {broker_pid} [{pending} pending, {processing} processing]\n'
+            else:
+                broker_line = 'Broker is NOT running\n'
+
         echo.echo(
             f'Daemon is running as PID {daemon_response["info"]["pid"]} since {start_time}\n'
+            f'{broker_line}'
             f'Active workers [{len(workers)}]:\n{workers_info}\n'
             'Use `verdi daemon [incr | decr] [num]` to increase / decrease the number of workers'
         )

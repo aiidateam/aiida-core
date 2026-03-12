@@ -96,23 +96,23 @@ def _start_zmq_broker(broker, timeout: float = 10.0):
 def _stop_zmq_broker(broker, timeout: float = 5.0):
     """Stop a ZMQ broker service subprocess for testing.
 
-    :param broker: A ``ZmqBroker`` instance (has ``get_pid()``, ``_validate_pid()``, etc.)
+    :param broker: A ``ZmqBroker`` instance
     """
-    pid = broker.get_pid()
-    if pid is None or not broker._validate_pid(pid):
-        broker._cleanup_stale_files()
+    pid = broker.get_service_pid()
+    if pid is None or not broker._validate_service_pid(pid):
+        broker._cleanup_stale_service_files()
         return
 
     try:
         os.kill(pid, signal.SIGINT)
     except OSError:
-        broker._cleanup_stale_files()
+        broker._cleanup_stale_service_files()
         return
 
     start_time = time.time()
     while time.time() - start_time < timeout:
-        if not broker._validate_pid(pid):
-            broker._cleanup_stale_files()
+        if not broker._validate_service_pid(pid):
+            broker._cleanup_stale_service_files()
             return
         time.sleep(0.1)
 
@@ -120,7 +120,7 @@ def _stop_zmq_broker(broker, timeout: float = 5.0):
         os.kill(pid, signal.SIGKILL)
     except OSError:
         pass
-    broker._cleanup_stale_files()
+    broker._cleanup_stale_service_files()
 
 
 @pytest.fixture(autouse=True)

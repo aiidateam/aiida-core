@@ -36,7 +36,7 @@ DEFAULT_DESCRIPTION = 'Default description'
 CUSTOM_LABEL = 'Custom label'
 CUSTOM_DESCRIPTION = 'Custom description'
 
-pytest.mark.requires_broker
+pytestmark = pytest.mark.requires_broker
 
 
 @workfunction

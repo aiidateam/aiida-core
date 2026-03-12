@@ -129,12 +129,23 @@ class ZmqBrokerManagementClient:
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 return False
         else:
-            # Fallback: just check if process exists
+            # Fallback: check if process exists and verify it's our broker
+            # via /proc on Linux, or accept the PID-reuse risk on other platforms
             try:
                 os.kill(pid, 0)
-                return True
             except OSError:
                 return False
+
+            # On Linux, check /proc/<pid>/cmdline to reduce PID-reuse false positives
+            proc_cmdline = Path(f'/proc/{pid}/cmdline')
+            if proc_cmdline.exists():
+                try:
+                    cmdline = proc_cmdline.read_text()
+                    return 'aiida.brokers.zmq' in cmdline
+                except OSError:
+                    pass
+
+            return True
 
         return False
 

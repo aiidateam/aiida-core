@@ -174,7 +174,7 @@ class TrajectoryData(ArrayData):
             pbc = pbc or (False, False, False)
         elif pbc is None:
             warn_deprecation(
-                "When 'cells' is not None, the periodic boundary conditions should be explicitly specified via"
+                "When 'cells' is not None, the periodic boundary conditions should be explicitly specified via "
                 "the 'pbc' keyword argument. Defaulting to '[True, True, True]', but this will raise in v3.0.0.",
                 version=3,
             )

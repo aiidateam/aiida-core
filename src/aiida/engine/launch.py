@@ -44,8 +44,8 @@ def run(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwa
     if isinstance(process, Process):
         runner = process.runner
     elif is_workgraph_instance(process):
-        return engine_run_workgraph(process, inputs, kwargs)
-
+        result, _ = engine_run_workgraph(workgraph=process, inputs=inputs, kwargs=kwargs)
+        return result
     else:
         runner = manager.get_manager().get_runner()
 
@@ -64,10 +64,7 @@ def run_get_node(
     if isinstance(process, Process):
         runner = process.runner
     elif is_workgraph_instance(process):
-        wg = t.cast(t.Any, process)
-        result = engine_run_workgraph(wg, inputs, kwargs)
-        return result, wg.process
-
+        return engine_run_workgraph(workgraph=process, inputs=inputs, kwargs=kwargs)
     else:
         runner = manager.get_manager().get_runner()
 
@@ -84,9 +81,8 @@ def run_get_pk(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None
     if isinstance(process, Process):
         runner = process.runner
     elif is_workgraph_instance(process):
-        wg = t.cast(t.Any, process)
-        result = engine_run_workgraph(wg, inputs, kwargs)
-        return ResultAndPk(result, wg.process.pk)
+        result, node = engine_run_workgraph(workgraph=process, inputs=inputs, kwargs=kwargs)
+        return ResultAndPk(result, node.pk)
     else:
         runner = manager.get_manager().get_runner()
 
@@ -137,7 +133,9 @@ def submit(
     assert runner.persister is not None, 'runner does not have a persister'
 
     if is_workgraph_instance(process):
-        return engine_submit_workgraph(process, inputs, kwargs, wait=wait, wait_interval=wait_interval)
+        return engine_submit_workgraph(
+            workgraph=process, inputs=inputs, kwargs=kwargs, wait=wait, wait_interval=wait_interval
+        )
 
     inputs = prepare_inputs(inputs, **kwargs)
 

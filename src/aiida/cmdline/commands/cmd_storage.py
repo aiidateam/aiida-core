@@ -66,7 +66,7 @@ def storage_version():
 @options.FORCE()
 def storage_migrate(force):
     """Migrate the storage to the latest schema version."""
-    from aiida.engine.daemon.client import get_daemon_client
+    from aiida.engine.daemon.daemon import AiidaDaemonController
     from aiida.manage import get_manager
 
     manager = get_manager()
@@ -75,8 +75,8 @@ def storage_migrate(force):
         echo.echo_critical('Could not load default profile')
 
     if profile.process_control_backend:
-        client = get_daemon_client()
-        if client.is_daemon_running:
+        daemon = AiidaDaemonController(profile)
+        if daemon.is_daemon_running:
             echo.echo_critical('Migration aborted, the daemon for the profile is still running.')
 
     storage_cls = profile.storage_cls

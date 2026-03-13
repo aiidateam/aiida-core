@@ -171,11 +171,11 @@ def only_if_daemon_running(echo_function=echo.echo_critical, message=None):
     @decorator
     def wrapper(wrapped, _, args, kwargs):
         """If daemon pid file is not found / empty, echo message and call decorated function."""
-        from aiida.engine.daemon.client import get_daemon_client
+        from aiida.engine.daemon.daemon import AiidaDaemonController
 
-        daemon_client = get_daemon_client()
+        daemon = AiidaDaemonController()
 
-        if not daemon_client.is_daemon_running:
+        if not daemon.is_daemon_running:
             echo_function(message)
 
         return wrapped(*args, **kwargs)
@@ -206,42 +206,16 @@ def only_if_daemon_not_running(echo_function=echo.echo_critical, message: str | 
     @decorator
     def wrapper(wrapped, _, args, kwargs):
         """If daemon pid file is not found / empty, echo message and call decorated function."""
-        from aiida.engine.daemon.client import get_daemon_client
+        from aiida.engine.daemon.daemon import AiidaDaemonController
 
-        daemon_client = get_daemon_client()
+        daemon = AiidaDaemonController()
 
-        if daemon_client.is_daemon_running:
+        if daemon.is_daemon_running:
             echo_function(message)
 
         return wrapped(*args, **kwargs)
 
     return wrapper
-
-
-@decorator
-def check_circus_zmq_version(wrapped, _, args, kwargs):
-    """Function decorator to check for the right ZMQ version before trying to run circus.
-
-    Example::
-
-        @click.command()
-        @check_circus_zmq_version
-        def do_circus_stuff():
-            pass
-    """
-    import zmq
-
-    try:
-        zmq_version = [int(part) for part in zmq.__version__.split('.')[:2]]
-        if len(zmq_version) < 2:
-            raise ValueError()
-    except (AttributeError, ValueError):
-        echo.echo_critical('Unknown PyZQM version - aborting...')
-
-    if zmq_version[0] < 13 or (zmq_version[0] == 13 and zmq_version[1] < 1):
-        echo.echo_critical('AiiDA daemon needs PyZMQ >= 13.1.0 to run - aborting...')
-
-    return wrapped(*args, **kwargs)
 
 
 def deprecated_command(message: str):

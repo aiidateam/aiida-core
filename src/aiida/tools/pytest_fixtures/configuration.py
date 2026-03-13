@@ -149,15 +149,16 @@ def aiida_profile_factory():
             This ensures that the contents of the profile are reset as well as the ``Manager``, which may hold
             references to data that will be destroyed. The daemon will also be stopped if it was running.
             """
-            from aiida.engine.daemon.client import DaemonException, get_daemon_client
+            from aiida.engine.daemon.client import DaemonException
+            from aiida.engine.daemon.daemon import AiidaDaemonController
             from aiida.orm import User
 
             if broker_backend:
-                daemon_client = get_daemon_client()
+                daemon = AiidaDaemonController()
 
-                if daemon_client.is_daemon_running:
+                if daemon.is_daemon_running:
                     try:
-                        daemon_client.stop_daemon(wait=True)
+                        daemon.stop()
                     except DaemonException:
                         pass
 

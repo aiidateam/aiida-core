@@ -388,7 +388,7 @@ def empty_config(tmp_path) -> Config:
         configuration.CONFIG = current_config
 
         # This sets important global constants that are based on the location of the config folder. Without it, things
-        # like the :class:`aiida.engine.daemon.client.DaemonClient` will not function properly after a test that uses
+        # like the :class:`aiida.engine.daemon.daemon.AiidaDaemonController` will not function properly after a test that uses
         # this fixture because the paths of the daemon files would still point to the path of the temporary config
         # folder created by this fixture.
         AiiDAConfigDir.set(pathlib.Path(current_config_path))

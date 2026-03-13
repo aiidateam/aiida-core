@@ -1,16 +1,12 @@
 # Dependency management
 
-Dependencies for `aiida-core` are managed according to [AEP 002](https://github.com/aiidateam/AEP/tree/master/002_dependency_management).
+Dependencies for `aiida-core` are managed according to the principles of [AEP 002](https://github.com/aiidateam/AEP/tree/master/002_dependency_management).
+The key principles are:
 
-## Dependency Manager
-
-| Since | DM |
-|-------|----|
-| 2020-02 | [@csadorf](https://github.com/csadorf) |
-| 2022-10 | [@sphuber](https://github.com/sphuber) |
-| 2024 | [@agoscinski](https://github.com/agoscinski) |
-
-The current Dependency Manager should be a member of the [dependency-manager](https://github.com/orgs/aiidateam/teams/dependency-manager) team.
+- **Loose constraints in `pyproject.toml`**: use the compatible release operator (`~=`) or wide version ranges to allow flexibility when installing aiida-core alongside other packages.
+- **Pinned lock file (`uv.lock`)**: records exact versions of a tested, reproducible environment for development and CI.
+- **Dual CI testing**: tests run against both loose constraints (to catch new incompatibilities early) and the pinned lock file (to ensure reproducibility).
+- **Proactive monitoring**: when a dependency releases a new version, incompatibilities should be addressed promptly — via hotfix, patch release, or by constraining the dependency until a fix is available.
 
 ## Specification
 
@@ -22,8 +18,8 @@ Dependencies are divided into:
 
 Other files that must stay in sync with `pyproject.toml`:
 
-- `environment.yml` -- conda environment specification
-- `uv.lock` -- lock file used for development and CI
+- `uv.lock` -- lock file used for development and CI (kept in sync via the `uv-lock` pre-commit hook)
+- `environment.yml` -- conda environment specification (kept in sync via the `generate-conda-environment` pre-commit hook)
 
 ## Prerequisites for adding a dependency
 
@@ -40,42 +36,25 @@ If a critical dependency is not yet available on PyPI or conda-forge:
 
 1. For lightweight packages, consider vendoring if the license permits.
 1. Request the maintainer to publish to PyPI/conda-forge.
-1. As a last resort, maintain the PyPI project and conda-forge recipes ourselves.
    :::
 
 ## Updating dependencies
 
-### 1. Update `pyproject.toml`
+1. Modify the affected entries in `pyproject.toml`.
+1. Update `uv.lock` by running `uv lock` (alternatively, done automatically by the `uv-lock` pre-commit hook).
+1. The `environment.yml` will be regenerated automatically by the `generate-conda-environment` pre-commit hook.
 
-Modify the affected entries, then regenerate all dependent files:
-
-```console
-$ ./utils/dependency_management.py generate-all
-```
-
-This command is also executed by the pre-commit hook (if installed).
-
-For packages named differently between PyPI and conda-forge, add an entry to the `SETUPTOOLS_CONDA_MAPPINGS` variable in the same script.
-
-### 2. Update `uv.lock`
-
-Update the lock file to reflect the new dependency specifications:
-
-```console
-$ uv lock
-```
-
-:::{note}
-This is also run automatically by the `uv-lock` pre-commit hook and in CI.
-:::
+For packages named differently between PyPI and conda-forge, add an entry to the `SETUPTOOLS_CONDA_MAPPINGS` variable in `utils/dependency_management.py`.
 
 ## Continuous integration
 
-Consistency of the various files with `pyproject.toml` is checked by a pre-commit hook that executes the `generate-all` and `validate-*` commands of `utils/dependency_management.py`.
-This hook also runs for all commits as part of the CI workflow.
+Consistency of `environment.yml` with `pyproject.toml` is checked by the `generate-conda-environment` and `validate-conda-environment` pre-commit hooks.
+These also run in CI.
 
 Changes to `pyproject.toml` trigger the `test-install` workflow, which checks whether the package can be installed with pip and conda.
-The `test-install` workflow also runs nightly to catch issues from changes in the Python ecosystem.
+The `test-install` workflow also runs weekly to catch issues from changes in the Python ecosystem.
+
+[Dependabot](https://docs.github.com/en/code-security/dependabot) is configured to automatically open PRs for dependency updates (see `.github/dependabot.yml`).
 
 ## Constrained dependencies
 

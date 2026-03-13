@@ -36,8 +36,6 @@ class PrettyEncoder(json.JSONEncoder):
     """JSON encoder for returning a pretty representation of an AiiDA ``ProcessBuilder``."""
 
     def default(self, o):
-        if isinstance(o, (ProcessBuilder, ProcessBuilderNamespace)):
-            return dict(o)
         if isinstance(o, Dict):
             return o.get_dict()
         if isinstance(o, BaseType):
@@ -74,12 +72,7 @@ class ProcessBuilderNamespace(MutableMapping):
         self._valid_fields = []
         self._data: dict[str, Any] = {}
 
-        dynamic_properties: dict[str, Any] = {}
-
-        conflicts = self._RESERVED_METHOD_NAMES & port_namespace.keys()
-        if conflicts:
-            msg = f'Port name(s) {conflicts} conflict with reserved method(s) on ProcessBuilderNamespace.'
-            raise RuntimeError(msg)
+        dynamic_properties = {}
 
         # The name and port objects have to be passed to the defined functions as defaults for
         # their arguments, because this way the content at the time of defining the method is
@@ -89,18 +82,17 @@ class ProcessBuilderNamespace(MutableMapping):
             self._valid_fields.append(name)
 
             if isinstance(port, PortNamespace):
+                self._data[name] = ProcessBuilderNamespace(port)
 
-                def fgetter(self, name=name, port=port, default=None):
-                    if name not in self._data:
-                        self._data[name] = ProcessBuilderNamespace(port)
-                    return self._data[name]
+                def fgetter(self, name=name):
+                    return self._data.get(name)
             elif port.has_default():
 
-                def fgetter(self, name=name, port=None, default=port.default):
+                def fgetter(self, name=name, default=port.default):  # type: ignore[misc]
                     return self._data.get(name, default)
             else:
 
-                def fgetter(self, name=name, port=None, default=None):
+                def fgetter(self, name=name):
                     return self._data.get(name, None)
 
             def fsetter(self, value, name=name):
@@ -169,10 +161,6 @@ class ProcessBuilderNamespace(MutableMapping):
         return len(self._data)
 
     def __getitem__(self, item):
-        if item not in self._data and item in self._valid_fields:
-            port = self._port_namespace.get(item)
-            if isinstance(port, PortNamespace):
-                self._data[item] = ProcessBuilderNamespace(port)
         return self._data[item]
 
     def __setitem__(self, item, value):
@@ -244,12 +232,6 @@ class ProcessBuilderNamespace(MutableMapping):
         """
         if prune:
             return prune_mapping(dict(self))
-
-        # Materialize all lazy namespaces so the full port structure is visible
-        for field in self._valid_fields:
-            value = getattr(self, field)
-            if isinstance(value, ProcessBuilderNamespace):
-                value._inputs(prune=False)
 
         return dict(self)
 
@@ -451,9 +433,15 @@ class ProcessBuilder(ProcessBuilderNamespace):
         """Return the process class for which this builder is constructed."""
         return self._process_class
 
-    def _repr_pretty_(self, p, _) -> str:
-        """Pretty representation for in the IPython console and notebooks."""
-        return p.text(
+    def __repr__(self) -> str:
+        """Return a string representation showing the process class and its current inputs."""
+        import yaml
+
+        return (
             f'Process class: {self._process_class.__name__}\n'
-            f'Inputs:\n{yaml.safe_dump(json.JSONDecoder().decode(PrettyEncoder().encode(self)))}'
+            f'Inputs:\n{yaml.safe_dump(json.JSONDecoder().decode(PrettyEncoder().encode(self._inputs(prune=True))))}'
         )
+
+    def _repr_pretty_(self, p, _) -> None:
+        """Pretty representation hook for IPython and Jupyter environments."""
+        p.text(repr(self))

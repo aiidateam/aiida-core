@@ -237,8 +237,8 @@ class ProcessBuilder(ProcessBuilderNamespace):
         """Return the process class for which this builder is constructed."""
         return self._process_class
 
-    def __repr__(self) -> str:
-        """Return a string representation showing the process class and its current inputs."""
+    def __str__(self) -> str:
+        """Return a readable string showing the process class and its current inputs."""
         import yaml
 
         return (
@@ -248,4 +248,4 @@ class ProcessBuilder(ProcessBuilderNamespace):
 
     def _repr_pretty_(self, p, _) -> None:
         """Pretty representation hook for IPython and Jupyter environments."""
-        p.text(repr(self))
+        p.text(str(self))

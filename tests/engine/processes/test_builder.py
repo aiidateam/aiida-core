@@ -573,10 +573,13 @@ def test_get_schema_mode_verbose():
         'required': True,
     }
 
-    # Port with default should have has_default flag
-    assert parsed['metadata']['store_provenance']['has_default'] is True
+    # Port with default should show actual default value
+    assert parsed['metadata']['store_provenance']['default'] is True
     assert parsed['metadata']['options']['resources']['required'] is True
-    assert parsed['metadata']['options']['resources']['has_default'] is True
+    assert parsed['metadata']['options']['resources']['default'] == {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
+
+    # Callable defaults are shown as '<callable>'
+    assert parsed['metadata']['options']['mpirun_extra_params']['default'] == '<callable>'
 
 
 def test_get_schema_port_name_conflict():

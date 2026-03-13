@@ -74,6 +74,11 @@ class ProcessBuilderNamespace(MutableMapping):
 
         dynamic_properties = {}
 
+        conflicts = self._RESERVED_METHOD_NAMES & port_namespace.keys()
+        if conflicts:
+            msg = f'Port name(s) {conflicts} conflict with reserved method(s) on ProcessBuilderNamespace.'
+            raise RuntimeError(msg)
+
         # The name and port objects have to be passed to the defined functions as defaults for
         # their arguments, because this way the content at the time of defining the method is
         # saved. If they are used directly in the body, it will try to capture the value from
@@ -150,6 +155,8 @@ class ProcessBuilderNamespace(MutableMapping):
         return self._data.__repr__()
 
     def __dir__(self):
+        # Override needed because port names live as properties on a dynamically created
+        # subclass, so the default ``dir()`` would not reliably surface them for tab-completion.
         base = set(self._valid_fields + [key for key, _ in self.__dict__.items() if key.startswith('_')])
         return sorted(base | self._RESERVED_METHOD_NAMES)
 
@@ -246,7 +253,8 @@ class ProcessBuilderNamespace(MutableMapping):
             return ''
 
         if isinstance(valid_type, tuple):
-            # Filter out NoneType (automatically added for optional ports) and deduplicate names.
+            # Filter out NoneType (automatically added for optional ports) and deduplicate names
+            # using ``dict.fromkeys`` (preserves insertion order, unlike ``set``).
             # Deduplication is needed because different classes can share the same __name__,
             # e.g. ``aiida.orm.UpfData`` and ``aiida_pseudo.data.pseudo.upf.UpfData``.
             names = dict.fromkeys(t.__name__ for t in valid_type if t is not type(None))
@@ -343,12 +351,22 @@ class ProcessBuilderNamespace(MutableMapping):
                 should_collapse = name in collapse or (max_depth is not None and depth >= max_depth)
 
                 if should_collapse:
-                    # For show='set', only show collapsed namespace if it has set values inside
+                    # For show='set', recurse to check if any values are actually set inside,
+                    # since nested_data can contain empty sub-namespaces (e.g. stash, unstash)
+                    # that look non-empty but have no user-set values.
                     if show == 'set':
                         nested_data = data.get(name, {})
                         if isinstance(nested_data, ProcessBuilderNamespace):
                             nested_data = nested_data._data
-                        if nested_data:
+                        if nested_data and self._build_schema_dict(
+                            namespace=port,
+                            data=nested_data,
+                            mode=mode,
+                            show=show,
+                            collapse=(),
+                            max_depth=None,
+                            depth=0,
+                        ):
                             schema[name] = '{...}'
                     else:
                         schema[name] = '{...}'
@@ -373,7 +391,9 @@ class ProcessBuilderNamespace(MutableMapping):
                     if nested:
                         schema[name] = nested
                     elif show == 'all':
-                        # Empty namespace (e.g. dynamic namespace with no static children)
+                        # Empty dynamic namespace with no static children (e.g. ``monitors``,
+                        # ``pseudos``). Skipped for show='required'/'set' since they have no
+                        # concrete content to display.
                         if mode == 'verbose':
                             ns_info: dict[str, Any] = {'type': 'Namespace'}
                             if port.valid_type is not None:
@@ -391,6 +411,8 @@ class ProcessBuilderNamespace(MutableMapping):
                     continue
 
                 if show == 'set':
+                    # Use ``.value`` to unwrap AiiDA data types (Int, Float, Str, etc.)
+                    # to their Python equivalents for readable output.
                     value = data[name]
                     if value is not None and hasattr(value, 'value'):
                         schema[name] = value.value
@@ -407,7 +429,11 @@ class ProcessBuilderNamespace(MutableMapping):
                     if port.required:
                         port_info['required'] = True
                     if port.has_default():
-                        port_info['has_default'] = True
+                        default = port.default
+                        if callable(default):
+                            port_info['default'] = '<callable>'
+                        else:
+                            port_info['default'] = default
                     schema[name] = port_info if port_info else None
                 else:
                     parts = [self._format_valid_type(port.valid_type), '(required)' if port.required else '']

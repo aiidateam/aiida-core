@@ -39,8 +39,14 @@ except ImportError:
 
 LOGGER = AIIDA_LOGGER.getChild('engine.launch')
 
-_WORKGRAPH_RUN_RESERVED_KEYS = {'metadata'}
-_WORKGRAPH_SUBMIT_RESERVED_KEYS = {'metadata', 'timeout'}
+_KEY_METADATA = 'metadata'
+_KEY_TIMEOUT = 'timeout'
+_KEY_DRY_RUN = 'dry_run'
+_KEY_WAIT = 'wait'
+_KEY_INTERVAL = 'interval'
+
+_WORKGRAPH_RUN_RESERVED_KEYS = {_KEY_METADATA}
+_WORKGRAPH_SUBMIT_RESERVED_KEYS = {_KEY_METADATA, _KEY_TIMEOUT, _KEY_WAIT, _KEY_INTERVAL}
 
 
 def is_workgraph_instance(obj: t.Any) -> bool:
@@ -96,32 +102,65 @@ def _check_reserved_key_collisions(workgraph: t.Any, reserved_keys: set[str], po
         )
 
 
+def _prepare_workgraph_inputs(
+    workgraph: t.Any,
+    inputs: dict[str, t.Any] | None,
+    kwargs: dict[str, t.Any],
+    reserved_keys: set[str],
+) -> tuple[dict[str, t.Any], dict[str, t.Any]]:
+    """Merge and validate inputs for a WorkGraph launch, popping reserved keys.
+
+    :param workgraph: the WorkGraph instance
+    :param inputs: the input dictionary
+    :param kwargs: additional keyword arguments to be merged with inputs
+    :param reserved_keys: set of keys to pop from inputs and return separately
+    :raises ValueError: if the same key appears in both ``inputs`` and ``kwargs``
+    :raises InvalidOperation: if reserved keys collide with task names
+    :return: tuple of (task inputs, popped reserved key values)
+    """
+    wg_inputs = prepare_inputs(inputs, **kwargs).copy()  # copy: reserved keys are popped below
+    popped: dict[str, t.Any] = {}
+    for key in reserved_keys:
+        value = wg_inputs.pop(key, None)
+        if value is not None:
+            popped[key] = value
+    _check_reserved_key_collisions(workgraph=workgraph, reserved_keys=reserved_keys, popped_keys=set(popped))
+    return wg_inputs, popped
+
+
 def engine_run_workgraph(
     workgraph: t.Any,
     inputs: dict[str, t.Any] | None,
     kwargs: dict[str, t.Any],
 ) -> tuple[dict[str, t.Any], t.Any]:
-    """Run a WorkGraph, returning its outputs and process node.
+    """Run a WorkGraph locally, returning its outputs and process node.
+
+    Inlines the logic of ``WorkGraph.run()`` so that aiida-core owns the launch path.
 
     :param workgraph: the WorkGraph instance
-    :param inputs: the input dictionary
-    :param kwargs: additional keyword arguments to be merged with inputs
-    :raises ValueError: if the same key appears in both ``inputs`` and ``kwargs``
+    :param inputs: the input dictionary (task name → value)
+    :param kwargs: alternative to ``inputs``
+    :raises ValueError: if both ``inputs`` and ``kwargs`` are specified, or if the WorkGraph
+        has already been submitted
     :return: tuple of the outputs and the process node
     """
-    wg_inputs = prepare_inputs(inputs, **kwargs).copy()  # copy: reserved keys are popped below
-    popped_keys: set[str] = set()
-    metadata = wg_inputs.pop('metadata', None)
-    if metadata is not None:
-        popped_keys.add('metadata')
-    _check_reserved_key_collisions(
-        workgraph=workgraph, reserved_keys=_WORKGRAPH_RUN_RESERVED_KEYS, popped_keys=popped_keys
+    from aiida.engine.launch import run_get_node
+
+    wg_inputs, popped = _prepare_workgraph_inputs(
+        workgraph=workgraph, inputs=inputs, kwargs=kwargs, reserved_keys=_WORKGRAPH_RUN_RESERVED_KEYS
     )
-    result: dict[str, t.Any] = workgraph.run(
-        inputs=wg_inputs or None,
-        metadata=metadata,
-    )
-    return result, workgraph.process
+
+    if wg_inputs:
+        workgraph.set_inputs(wg_inputs)
+    workgraph.check_before_run()
+
+    from aiida_workgraph.engine.workgraph import WorkGraphEngine  # type: ignore[import-untyped]
+
+    engine_inputs = workgraph.to_engine_inputs(metadata=popped.get(_KEY_METADATA))
+    _, node = run_get_node(WorkGraphEngine, inputs=engine_inputs)
+    workgraph.process = node
+    workgraph.update()
+    return workgraph.outputs._value, node
 
 
 def engine_submit_workgraph(
@@ -132,47 +171,74 @@ def engine_submit_workgraph(
     wait: bool,
     wait_interval: int,
 ) -> t.Any:
-    """Submit a WorkGraph, returning its process node.
+    """Submit a WorkGraph to the daemon, returning its process node.
+
+    Inlines the logic of ``WorkGraph.save()`` + ``WorkGraph.continue_process()``
+    so that aiida-core owns the launch path.
 
     :param workgraph: the WorkGraph instance
-    :param inputs: the input dictionary
-    :param kwargs: additional keyword arguments to be merged with inputs
+    :param inputs: the input dictionary (task name → value)
+    :param kwargs: alternative to ``inputs``
     :param wait: whether to block until the process completes
     :param wait_interval: seconds between status checks when ``wait=True``
-    :raises ValueError: if the same key appears in both ``inputs`` and ``kwargs``
+    :raises ValueError: if both ``inputs`` and ``kwargs`` are specified, or if the WorkGraph
+        has already been submitted
     :raises InvalidOperation: if ``dry_run`` is requested (not supported by WorkGraph)
     :return: the process node
     """
-    wg_inputs = prepare_inputs(inputs, **kwargs).copy()  # copy: reserved keys are popped below
-    popped_keys: set[str] = set()
-    metadata = wg_inputs.pop('metadata', None)
-    if metadata is not None:
-        popped_keys.add('metadata')
-    timeout = wg_inputs.pop('timeout', None)
-    if timeout is not None:
-        popped_keys.add('timeout')
-    _check_reserved_key_collisions(
-        workgraph=workgraph, reserved_keys=_WORKGRAPH_SUBMIT_RESERVED_KEYS, popped_keys=popped_keys
-    )
+    import time
 
-    if metadata and metadata.get('dry_run', False):
+    from aiida.engine.utils import instantiate_process
+    from aiida.manage import manager
+
+    wg_inputs, popped = _prepare_workgraph_inputs(
+        workgraph=workgraph, inputs=inputs, kwargs=kwargs, reserved_keys=_WORKGRAPH_SUBMIT_RESERVED_KEYS
+    )
+    metadata = popped.get(_KEY_METADATA)
+    timeout = popped.get(_KEY_TIMEOUT)
+    wait = popped.get(_KEY_WAIT, wait)
+    wait_interval = popped.get(_KEY_INTERVAL, wait_interval)
+
+    if metadata and metadata.get(_KEY_DRY_RUN, False):
         raise InvalidOperation('WorkGraph does not support `dry_run`.')
 
-    # Warn if execution option names are found in task inputs (likely user error)
     if wg_inputs:
-        suspicious_keys = [k for k in ('wait', 'interval') if k in wg_inputs]
-        if suspicious_keys:
-            LOGGER.warning(
-                f'Found {suspicious_keys} in inputs dict. If these are meant as execution options, '
-                f'pass them as function arguments: submit(wg, wait=..., wait_interval=...)'
-            )
+        workgraph.set_inputs(wg_inputs)
 
-    submit_kwargs: dict[str, t.Any] = {
-        'inputs': wg_inputs or None,
-        'wait': wait,
-        'interval': wait_interval,
-        'metadata': metadata,
-    }
-    if timeout is not None:
-        submit_kwargs['timeout'] = timeout
-    return workgraph.submit(**submit_kwargs)
+    # save() logic: check, build engine inputs, instantiate & persist
+    workgraph.check_before_run()
+    engine_inputs = workgraph.to_engine_inputs(metadata=metadata)
+
+    from aiida_workgraph.engine.workgraph import WorkGraphEngine
+
+    runner = manager.get_manager().get_runner()
+    process_inited = instantiate_process(runner, WorkGraphEngine, **engine_inputs)
+    if process_inited.runner.persister is None:
+        raise InvalidOperation('Cannot submit because the runner does not have a persister.')
+    process_inited.runner.persister.save_checkpoint(process_inited)
+    workgraph.process = process_inited.node
+    process_inited.close()
+    LOGGER.report('WorkGraph process created, PK: %s', workgraph.process.pk)
+
+    # continue_process(): tell the daemon to pick it up
+    process_controller = manager.get_manager().get_process_controller()
+    process_controller.continue_process(workgraph.pk)
+    workgraph.restart_process = None
+    workgraph.update()
+
+    node = workgraph.process
+    if not wait:
+        return node
+
+    # Wait loop with optional timeout
+    start_time = time.time()
+    while not node.is_terminated:
+        if timeout is not None and (time.time() - start_time) > timeout:
+            raise TimeoutError(f'WorkGraph process<{node.pk}> did not finish within {timeout} seconds.')
+        LOGGER.report(
+            f'Process<{node.pk}> has not yet terminated, current state is `{node.process_state}`. '
+            f'Waiting for {wait_interval} seconds.'
+        )
+        time.sleep(wait_interval)
+
+    return node

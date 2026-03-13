@@ -25,7 +25,7 @@ from alembic.config import Config
 from alembic.runtime.environment import EnvironmentContext
 from alembic.runtime.migration import MigrationContext, MigrationInfo
 from alembic.script import ScriptDirectory
-from sqlalchemy import MetaData, String, column, desc, insert, inspect, select, table
+from sqlalchemy import Connection, Engine, MetaData, String, column, desc, insert, inspect, select, table
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
@@ -65,16 +65,16 @@ class PsqlDosMigrator:
 
     def __init__(self, profile: Profile) -> None:
         self.profile = profile
-        self._engine = create_sqlalchemy_engine(self.profile.storage_config)
-        self._connection = None
+        self._engine: Engine | None = create_sqlalchemy_engine(self.profile.storage_config)  # type: ignore[arg-type]
+        self._connection: Connection | None = None
 
     def close(self) -> None:
         """Close the connection if it was opened and dispose of the engine."""
-        if self._connection:
+        if self._connection is not None:
             self._connection.close()
             self._connection = None
 
-        if self._engine:
+        if self._engine is not None:
             self._engine.dispose()
             self._engine = None
 
@@ -94,6 +94,8 @@ class PsqlDosMigrator:
         :raises: :class:`aiida.common.exceptions.UnreachableStorage` if connecting to the database fails.
         """
         if self._connection is None:
+            if self._engine is None:
+                self._engine = create_sqlalchemy_engine(self.profile.storage_config)  # type: ignore[arg-type]
             try:
                 self._connection = self._engine.connect()
             except OperationalError as exception:
@@ -296,6 +298,7 @@ class PsqlDosMigrator:
         # setup the database
         # see: https://alembic.sqlalchemy.org/en/latest/cookbook.html#building-an-up-to-date-database-from-scratch
         MIGRATE_LOGGER.report('initialising empty storage schema')
+        assert self._engine is not None
         get_orm_metadata().create_all(self._engine)
 
         repository_uuid = self.get_repository_uuid()
@@ -308,6 +311,7 @@ class PsqlDosMigrator:
 
         # finally, generate the version table, "stamping" it with the most recent revision
         with self._migration_context() as context:
+            assert context.script is not None
             context.stamp(context.script, 'main@head')
             self.connection.commit()
 
@@ -347,7 +351,9 @@ class PsqlDosMigrator:
         #    reset the revision as one on the main branch, and then migrate to the head of the main branch
         # 3. Already on the main branch -> we migrate to the head of the main branch
 
-        if not inspect(self.connection).has_table(self.alembic_version_tbl_name):
+        if inspect(self.connection).has_table(self.alembic_version_tbl_name):
+            version = self.get_schema_version_profile()
+        else:
             if not inspect(self.connection).has_table(self.django_version_table.name):
                 raise exceptions.StorageMigrationError('storage is uninitialised, cannot migrate.')
             # the database is a legacy django one,
@@ -362,11 +368,10 @@ class PsqlDosMigrator:
             # the version should be of the format '00XX_description'
             version = f'django_{legacy_version[:4]}'
             with self._migration_context() as context:
+                assert context.script is not None
                 context.stamp(context.script, version)
                 self.connection.commit()
             # now we can continue with the migration as normal
-        else:
-            version = self.get_schema_version_profile()
 
         # find what branch the current version is on
         branches = self._alembic_script().revision_map.get_revision(version).branch_labels
@@ -382,6 +387,7 @@ class PsqlDosMigrator:
             # now re-stamp with the comparable revision on the main branch
             with self._migration_context() as context:
                 context._ensure_version_table(purge=True)
+                assert context.script is not None
                 context.stamp(context.script, 'main_0001')
                 self.connection.commit()
 

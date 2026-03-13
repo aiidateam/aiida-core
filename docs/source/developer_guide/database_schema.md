@@ -107,3 +107,16 @@ For `sqlite_dos` profiles, simply copy the `.sqlite` database file before testin
 :::{tip}
 You can use `verdi devel run-sql "SQL_TEXT"` to run arbitrary SQL against the profile's database.
 :::
+
+## Configuration migrations
+
+Changes to the AiiDA configuration file (`config.json`) also require migrations, following a similar pattern to database schema migrations.
+
+1. In `aiida/manage/configuration/migrations/migrations.py`, increment `CURRENT_CONFIG_VERSION`.
+   If the change is **not** backwards-compatible, also set `OLDEST_COMPATIBLE_CONFIG_VERSION` to the new value.
+
+1. Write a migration function that transforms the old config dict into the new version.
+
+1. Add an entry to `MIGRATIONS` with the version **before** the migration and **hard-coded** version numbers (not references to the constants, as these will change with future migrations).
+
+1. Add tests using `check_and_migrate_config` (with `store=False` to avoid overwriting your actual config).

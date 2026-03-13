@@ -38,6 +38,10 @@ pip-wheel-metadata
 docs/build
 docs/source/reference/apidoc
 _sandbox
+_build/
+docs/html/
+docs/jupyter_execute/
+sphinx.log
 
 pplot_out/
 

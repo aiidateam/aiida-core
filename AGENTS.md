@@ -43,14 +43,14 @@ When navigating the codebase, these are the most important files to navigate:
 
 | Area | Key file(s) | Purpose |
 |------|------------|---------|
-| Broker ABC | `src/aiida/brokers/broker.py` | `Broker` — message broker interface |
+| Broker ABC | `src/aiida/brokers/broker.py` | `Broker`—message broker interface |
 | CalcJob | `src/aiida/engine/processes/calcjobs/calcjob.py` | `CalcJob` implementation |
 | CalcJob file ops | `src/aiida/engine/daemon/execmanager.py` | File copying, job submission, retrieval implementation |
 | CalcJob lifecycle | `src/aiida/engine/processes/calcjobs/tasks.py` | Upload, submit, retrieve, stash, kill tasks |
-| CLI entry point | `src/aiida/cmdline/groups/verdi.py` | `VerdiCommandGroup` — top-level `verdi` command group |
+| CLI entry point | `src/aiida/cmdline/groups/verdi.py` | `VerdiCommandGroup`—top-level `verdi` command group |
 | Computer | `src/aiida/orm/computers.py` | `Computer` entity (represents a computational resource) |
-| Configuration | `src/aiida/manage/configuration/config.py` | `Config` — global AiiDA configuration |
-| Daemon | `src/aiida/engine/daemon/client.py` | `DaemonClient` — daemon communication |
+| Configuration | `src/aiida/manage/configuration/config.py` | `Config`—global AiiDA configuration |
+| Daemon | `src/aiida/engine/daemon/client.py` | `DaemonClient`—daemon communication |
 | Engine core | `src/aiida/engine/processes/process.py` | Base `Process` class |
 | Manager | `src/aiida/manage/manager.py` | Global singleton managing profiles, backends, runners |
 | ORM entities | `src/aiida/orm/entities.py` | Base `Entity` and `Collection` classes |
@@ -59,11 +59,11 @@ When navigating the codebase, these are the most important files to navigate:
 | Plugin factories | `src/aiida/plugins/factories.py` | `DataFactory`, `CalculationFactory`, etc. |
 | Process builder | `src/aiida/engine/processes/builder.py` | `ProcessBuilder` used to construct process inputs |
 | Process runner | `src/aiida/engine/runners.py` | `Runner` executes and submits processes |
-| Profile | `src/aiida/manage/configuration/profile.py` | `Profile` — configuration for a single profile |
+| Profile | `src/aiida/manage/configuration/profile.py` | `Profile`—configuration for a single profile |
 | psql_dos backend | `src/aiida/storage/psql_dos/backend.py` | PostgreSQL + disk-objectstore implementation |
 | QueryBuilder | `src/aiida/orm/querybuilder.py` | Query interface for the provenance graph |
 | RabbitMQ broker | `src/aiida/brokers/rabbitmq/broker.py` | `RabbitmqBroker` implementation |
-| Repository | `src/aiida/repository/repository.py` | `Repository` — file storage interface per node |
+| Repository | `src/aiida/repository/repository.py` | `Repository`—file storage interface per node |
 | Repository backend | `src/aiida/repository/backend/abstract.py` | `AbstractRepositoryBackend` ABC |
 | Scheduler ABC | `src/aiida/schedulers/scheduler.py` | `Scheduler` base class |
 | Scheduler data | `src/aiida/schedulers/datastructures.py` | `JobTemplate`, `JobInfo`, `JobResource` |
@@ -350,11 +350,11 @@ Run `uv run pre-commit run` to check staged files, or `uv run pre-commit run --a
 - Enabled lint rule sets (see `[tool.ruff.lint]` in `pyproject.toml`):
   `E`/`W` (pycodestyle), `F` (pyflakes), `I` (isort), `N` (pep8-naming),
   `PLC`/`PLE`/`PLR`/`PLW` (pylint), `RUF` (ruff-specific), `FLY` (f-string enforcement), `NPY201` (NumPy 2.0 compatibility)
-- Prefer `pathlib` over `os.path` — not currently enforced; legacy `os.path` usage exists throughout the codebase
+- Prefer `pathlib` over `os.path`—not currently enforced; legacy `os.path` usage exists throughout the codebase
 
 **Type checking** (`mypy`):
 
-- Add type hints to new code — checked by `mypy` in pre-commit (CI runs the same pre-commit hooks, so it catches anything missed locally)
+- Add type hints to new code—checked by `mypy` in pre-commit (CI runs the same pre-commit hooks, so it catches anything missed locally)
 - Enables static analysis, IDE autocompletion, and serves as machine-verified documentation
 
 **Docstrings**:
@@ -374,20 +374,42 @@ def put_object_from_filelike(self, handle: BinaryIO) -> str:
     """
 ```
 
+**Source file headers**:
+
+New source files should include the copyright header:
+
+```python
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida_core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+```
+
 **Other pre-commit hooks**:
 
-- `uv-lock` — validates lockfile consistency
-- `check-yaml`, `check-merge-conflict` — basic file checks
-- `pretty-format-toml`, `pretty-format-yaml` — auto-format TOML/YAML files
-- `nbstripout` — strips output from Jupyter notebooks
-- `imports` — auto-generates `__all__` imports for `src/aiida/`
-- `generate-conda-environment`, `validate-conda-environment` — keeps `environment.yml` in sync with `pyproject.toml`
-- `verdi-autodocs` — auto-generates verdi CLI documentation
+- `uv-lock`—validates lockfile consistency
+- `check-yaml`, `check-merge-conflict`—basic file checks
+- `pretty-format-toml`, `pretty-format-yaml`—auto-format TOML/YAML files
+- `nbstripout`—strips output from Jupyter notebooks
+- `imports`—auto-generates `__all__` imports for `src/aiida/`
+- `generate-conda-environment`, `validate-conda-environment`—keeps `environment.yml` in sync with `pyproject.toml`
+- `verdi-autodocs`—auto-generates verdi CLI documentation
 
 **Special cases**:
 
-- In `cmdline/`: delay `aiida` imports to function level (keeps `verdi` CLI responsive — top-level imports would slow down every invocation, even `verdi --help`).
+- In `cmdline/`: delay `aiida` imports to function level (keeps `verdi` CLI responsive—top-level imports would slow down every invocation, even `verdi --help`).
   Enforced in CI via `verdi devel check-load-time`, which fails if unexpected `aiida.*` modules (outside `aiida.brokers`, `aiida.cmdline`, `aiida.common`, `aiida.manage`, `aiida.plugins`, `aiida.restapi`) are imported at startup.
+
+**Documentation style** (when writing/editing `.md` or `.rst` files in `docs/`):
+
+- Write **one sentence per line** (no manual line wrapping)—makes diffs easy to review
+- File/directory names: alphanumeric, lowercase, underscores as separators
+- Headers in **sentence case** (e.g., "Entry points")
+- Documentation follows the [Divio documentation system](https://www.divio.com/blog/documentation/): tutorials (learning-oriented), how-to guides (goal-oriented), topics (understanding-oriented), reference (information-oriented)
 
 ### Testing
 
@@ -412,6 +434,25 @@ Test philosophy:
 - **Don't chase coverage with shallow tests**: A test that mocks everything tests nothing.
   Tests should exercise actual behavior.
 - **Test the contract, not the implementation**: Don't assert internal method calls; assert observable outcomes.
+- **Make assertions as strong as possible**: Use the most specific assertion available.
+  For example, use `assert result == expected_value` instead of `assert result is not None` or `assert result`.
+  Check exact values, types, and lengths rather than just truthiness.
+  Weak assertions can let bugs slip through by passing even when the result is wrong.
+- **Test isolation**: Each test must be independent—never rely on execution order or state left by other tests.
+- **One behavior per test**: A test should verify a single logical behavior.
+  If a test name needs "and", it's likely testing too much.
+- **Regression tests for bugs**: When fixing a bug, first write a test that reproduces it, then fix the code.
+  This prevents regressions.
+- **Use `pytest.mark.parametrize` for variations**: Instead of duplicating test logic for different inputs, parametrize.
+  Keeps tests DRY and makes coverage of edge cases explicit.
+- **Test edge cases and failure paths**: Don't just test the happy path.
+  Test boundary values, empty inputs, invalid arguments, and expected exceptions.
+- **Use existing fixtures**: Check `tests/conftest.py` for reusable fixtures before writing ad-hoc setup.
+  Duplicated setup is a maintenance burden.
+- **Deterministic tests**: Tests must not depend on timing, randomness, or external state.
+  Flaky tests erode trust in the suite.
+- **Don't test framework behavior**: Don't write tests that just verify that Python, SQLAlchemy, or Click work correctly.
+  Only test your own logic.
 
 Test types:
 | Type | Location | Description |
@@ -499,8 +540,8 @@ Set `AIIDA_WARN_v3=1` to surface deprecation warnings.
 
 Follow the **50/72 rule**:
 
-- Subject line: max 50 characters, imperative mood ("Add feature", not "Added feature"), capitalized, no period — 50 chars keeps `git log --oneline` output readable without truncation; imperative mood reads as an instruction applied to the codebase ("if applied, this commit will…")
-- Body: wrap at 72 characters, explain *what* and *why* (the code shows *how*) — 72 chars matches the traditional terminal width for `git log` output
+- Subject line: max 50 characters, imperative mood ("Add feature", not "Added feature"), capitalized, no period—50 chars keeps `git log --oneline` output readable without truncation; imperative mood reads as an instruction applied to the codebase ("if applied, this commit will…")
+- Body: wrap at 72 characters, explain *what* and *why* (the code shows *how*)—72 chars matches the traditional terminal width for `git log` output
 - Merged PRs (via squash) append the PR number: `Fix bug in QueryBuilder (#1234)`
 - Some contributors use emoji prefixes as a semantic type indicator (see [Up for discussion](#up-for-discussion) for details)
 
@@ -513,7 +554,7 @@ why the change was made, not how (the code shows that).
 
 Guidelines:
 
-- One issue per commit, self-contained changes — makes bisecting and reverting safe
+- One issue per commit, self-contained changes—makes bisecting and reverting safe
 - Link GitHub issues via PR description (use GitHub web UI for proper linking, not commit messages)
 
 ### Best practices (not enforced)
@@ -523,11 +564,11 @@ They improve code quality and are checked in code review.
 
 **Code quality:**
 
-- **Type annotations**: Add type hints to new function signatures — unannotated public API is harder to use correctly and harder to refactor safely.
+- **Type annotations**: Add type hints to new function signatures—unannotated public API is harder to use correctly and harder to refactor safely.
   Note: `mypy` runs in pre-commit/CI but many files are currently excluded.
 - **Docstrings**: Use Sphinx-style docstrings (`:param:`, `:return:`, `:raises:`).
-  Types are not required in docstrings as they should be in type hints — keeping them only in annotations avoids duplication that goes stale.
-- **Pure functions**: Where possible, write pure functions without side effects — they are easier to test in isolation, reason about, and parallelize.
+  Types are not required in docstrings as they should be in type hints—keeping them only in annotations avoids duplication that goes stale.
+- **Pure functions**: Where possible, write pure functions without side effects—they are easier to test in isolation, reason about, and parallelize.
 - **Error handling**: Use `aiida.common.exceptions` for AiiDA-specific exceptions so callers can catch predictable, typed errors.
   Use `aiida.common.warnings` for non-fatal issues so users can selectively filter them.
 - **Testing**: Write tests for all new functionality.
@@ -535,9 +576,18 @@ They improve code quality and are checked in code review.
 
 **API design:**
 
-- Prefer explicit keyword arguments over positional arguments, especially when a function takes multiple parameters of the same type — `node.set_attribute(key='x', value=1)` is unambiguous at the call site; `node.set_attribute('x', 1)` requires the reader to check the signature.
+- Prefer explicit keyword arguments over positional arguments, especially when a function takes multiple parameters of the same type—`node.set_attribute(key='x', value=1)` is unambiguous at the call site; `node.set_attribute('x', 1)` requires the reader to check the signature.
   Keyword-only arguments (after a bare `*`) also protect callers from silent breakage if parameter order ever changes.
-- Minimize use of `*args` and `**kwargs` where possible — explicit parameters allow static type checkers to validate arguments, improve IDE autocompletion, and make the function contract readable without opening the implementation.
+- Minimize use of `*args` and `**kwargs` where possible—explicit parameters allow static type checkers to validate arguments, improve IDE autocompletion, and make the function contract readable without opening the implementation.
+
+**Adding dependencies:**
+
+Before adding a new dependency to `pyproject.toml`, ensure it:
+
+- Fills a non-trivial feature gap not easily resolved otherwise
+- Supports all Python versions supported by aiida-core
+- Is available on both [PyPI](https://pypi.org/) and [conda-forge](https://conda-forge.org/)
+- Uses an MIT-compatible license (MIT, BSD, Apache, LGPLmdash&**not** GPL)
 
 **Git tooling:**
 
@@ -709,6 +759,9 @@ When working on this codebase:
 - **CREATE vs RETURN links**: Calculations *create* new data nodes; workflows *return* existing data nodes.
   Workflows orchestrate but don't create data themselves.
 - **Don't break provenance**: Never circumvent the link system or modify stored nodes in ways that would break the directed acyclic graph.
+- **Daemon signal handling**: The daemon captures `SIGINT`/`SIGTERM` for graceful shutdown.
+  When creating subprocesses in daemon code, pass `start_new_session=True` to prevent the subprocess from being killed when the daemon receives a signal.
+- **Code review norms**: Technical facts overrule personal preferences. Prefix optional style suggestions with "Nit:". A PR should be approved if it improves code health overall, even if not perfect.
 
 ## Reference documentation
 

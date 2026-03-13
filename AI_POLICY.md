@@ -77,10 +77,6 @@ By submitting a PR, you certify that you are the author of the contribution and 
 
 This section is adapted from the [attrs AI policy](https://github.com/python-attrs/attrs/blob/main/.github/AI_POLICY.md).
 
-## Additional resources
-
-For comprehensive guidance on contributing to AiiDA, including code quality standards, development workflows, and testing practices, please refer to our developer guide, `AGENTS.md`, and `CONTRIBUTING.md`.
-
 ## Acknowledgements
 
 This document draws on and adapts text from the [Kornia AI policy](https://github.com/kornia/kornia/blob/main/AI_POLICY.md), the [MDAnalysis AI policy](https://github.com/MDAnalysis/mdanalysis/blob/develop/AI_POLICY.md), and the [attrs AI policy](https://github.com/python-attrs/attrs/blob/main/.github/AI_POLICY.md).

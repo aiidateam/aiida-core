@@ -75,7 +75,7 @@ Below is a list with all available subcommands.
       create     Create a new code.
       delete     Delete a code.
       duplicate  Duplicate a code allowing to change some parameters.
-      export     Export code to a yaml file.
+      export     Export code(s) to yaml file(s).
       hide       Hide one or more codes from `verdi code list`.
       list       List the available codes.
       relabel    Relabel a code.
@@ -101,18 +101,19 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      configure  Configure the transport for a computer and user.
-      delete     Delete a computer.
-      disable    Disable the computer for the given user.
-      duplicate  Duplicate a computer allowing to change some parameters.
-      enable     Enable the computer for the given user.
-      export     Export the setup or configuration of a computer.
-      goto       Open a shell connecting to the remote computer.
-      list       List all available computers.
-      relabel    Relabel a computer.
-      setup      Create a new computer.
-      show       Show detailed information for a computer.
-      test       Test the connection to a computer.
+      configure   Configure the transport for a computer and user.
+      delete      Delete a computer.
+      disable     Disable the computer for the given user.
+      duplicate   Duplicate a computer allowing to change some parameters.
+      enable      Enable the computer for the given user.
+      export      Export the setup or configuration of a computer.
+      goto        Open a shell connecting to the remote computer.
+      list        List all available computers.
+      relabel     Relabel a computer.
+      setup       Create a new computer.
+      setup-many  Create multiple computers from YAML configuration files.
+      show        Show detailed information for a computer.
+      test        Test the connection to a computer.
 
 
 .. _reference:command-line:verdi-config:

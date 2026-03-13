@@ -12,9 +12,11 @@ import textwrap
 from collections.abc import Mapping, MutableMapping
 
 import pytest
+import yaml
 from IPython.lib.pretty import pretty
 
 from aiida import orm
+from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.common import LinkType
 from aiida.engine import Process, WorkChain, run_get_node
 from aiida.engine.processes.builder import ProcessBuilderNamespace
@@ -436,13 +438,15 @@ def test_pretty_repr(example_inputs):
     assert pretty(builder) == textwrap.dedent(pretty_repr.lstrip('\n'))
 
 
-def test_get_schema_compact():
+@pytest.fixture()
+def add_builder():
+    return ArithmeticAddCalculation.get_builder()
+
+
+def test_get_schema_default(add_builder):
     """Test the default ``get_schema`` output (compact format, metadata collapsed)."""
-    import yaml
 
-    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-
-    builder = ArithmeticAddCalculation.get_builder()
+    builder = add_builder
     parsed = yaml.safe_load(builder.get_schema())
 
     # Assert exact type strings for known ports
@@ -465,13 +469,10 @@ def test_get_schema_compact():
     assert nested_parsed['options']['resources'] == 'dict (required)'
 
 
-def test_get_schema_collapse():
+def test_get_schema_collapse(add_builder):
     """Test the ``collapse`` parameter of ``get_schema``."""
-    import yaml
 
-    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-
-    builder = ArithmeticAddCalculation.get_builder()
+    builder = add_builder
 
     # Default: metadata is collapsed
     parsed_default = yaml.safe_load(builder.get_schema())
@@ -491,13 +492,10 @@ def test_get_schema_collapse():
     assert parsed_multi['x'] == 'Int | Float (required)'
 
 
-def test_get_schema_show_required():
+def test_get_schema_show_required(add_builder):
     """Test the ``show='required'`` parameter of ``get_schema``."""
-    import yaml
 
-    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-
-    builder = ArithmeticAddCalculation.get_builder()
+    builder = add_builder
 
     parsed = yaml.safe_load(builder.get_schema(show='required', collapse=()))
 
@@ -510,13 +508,10 @@ def test_get_schema_show_required():
     }
 
 
-def test_get_schema_show_set():
+def test_get_schema_show_set(add_builder):
     """Test the ``show='set'`` parameter of ``get_schema``."""
-    import yaml
 
-    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-
-    builder = ArithmeticAddCalculation.get_builder()
+    builder = add_builder
 
     # Nothing set yet
     assert yaml.safe_load(builder.get_schema(show='set')) == {}
@@ -529,13 +524,10 @@ def test_get_schema_show_set():
     assert parsed == {'x': 42, 'y': 7}
 
 
-def test_get_schema_max_depth():
+def test_get_schema_max_depth(add_builder):
     """Test the ``max_depth`` parameter of ``get_schema``."""
-    import yaml
 
-    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-
-    builder = ArithmeticAddCalculation.get_builder()
+    builder = add_builder
 
     # max_depth=0: all namespaces collapsed, leaf ports remain
     parsed_d0 = yaml.safe_load(builder.get_schema(max_depth=0, collapse=()))
@@ -551,13 +543,10 @@ def test_get_schema_max_depth():
     assert parsed_d1['metadata']['computer'] == 'Computer'
 
 
-def test_get_schema_mode_verbose():
+def test_get_schema_mode_verbose(add_builder):
     """Test the ``mode='verbose'`` parameter of ``get_schema``."""
-    import yaml
 
-    from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-
-    builder = ArithmeticAddCalculation.get_builder()
+    builder = add_builder
 
     parsed = yaml.safe_load(builder.get_schema(mode='verbose', collapse=()))
 
@@ -580,6 +569,31 @@ def test_get_schema_mode_verbose():
 
     # Callable defaults are shown as '<callable>'
     assert parsed['metadata']['options']['mpirun_extra_params']['default'] == '<callable>'
+
+    # Empty dynamic namespace (monitors) should show structured info in verbose mode
+    assert parsed['monitors'] == {
+        'type': 'Namespace',
+        'entry_type': 'Dict',
+        'help': (
+            'Add monitoring functions that can inspect output files while the job is running'
+            ' and decide to prematurely terminate the job.'
+        ),
+    }
+
+
+def test_get_schema_show_set_collapsed(add_builder):
+    """Test ``show='set'`` with values inside a collapsed namespace."""
+
+    builder = add_builder
+    builder.metadata.description = 'test'
+
+    # Default collapse includes metadata, so it should show as '{...}' since it has a set value
+    parsed = yaml.safe_load(builder.get_schema(show='set'))
+    assert parsed == {'metadata': '{...}'}
+
+    # With collapse=(), it should show the actual set value
+    parsed_expanded = yaml.safe_load(builder.get_schema(show='set', collapse=()))
+    assert parsed_expanded == {'metadata': {'description': 'test'}}
 
 
 def test_get_schema_port_name_conflict():

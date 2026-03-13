@@ -38,6 +38,7 @@ repos:
   hooks:
   - id: pretty-format-toml
     args: [--autofix]
+    exclude: uv.lock
   - id: pretty-format-yaml
     args: [--autofix]
     exclude: >-
@@ -96,7 +97,6 @@ repos:
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
         src/aiida/manage/external/rmq/launcher.py|
-        src/aiida/orm/nodes/data/array/trajectory.py|
         src/aiida/orm/nodes/data/cif.py|
         src/aiida/orm/nodes/data/remote/base.py|
         src/aiida/orm/nodes/data/structure.py|

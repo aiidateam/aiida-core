@@ -514,10 +514,17 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
                 [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, -0.5, -0.5]],
             ]
         )
+        pbc = [True, True, False]
 
         # I set the node
         traj.set_trajectory(
-            stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times, velocities=velocities
+            stepids=stepids,
+            cells=cells,
+            symbols=symbols,
+            positions=positions,
+            times=times,
+            velocities=velocities,
+            pbc=pbc,
         )
 
         traj.store()

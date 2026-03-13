@@ -93,6 +93,7 @@ class SqliteDosMigrator(PsqlDosMigrator):
         This assumes that the database has no schema whatsoever and so the initial schema is created directly from the
         models at the current head version without migrating through all of them one by one.
         """
+        assert self._engine is not None
         models.SqliteBase.metadata.create_all(self._engine)
 
         repository_uuid = self.get_repository_uuid()

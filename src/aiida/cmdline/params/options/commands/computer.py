@@ -164,6 +164,32 @@ USE_DOUBLE_QUOTES = OverridableOption(
     'escaped with single or double quotes.',
 )
 
+CUSTOM_SCHEDULER_COMMANDS = OverridableOption(
+    '--custom-scheduler-commands',
+    cls=TemplateInteractiveOption,
+    prompt='Custom scheduler commands',
+    type=click.STRING,
+    default='',
+    help='Custom scheduler commands to add to the submission script header for all jobs on this computer '
+    '(e.g. extra #SBATCH lines).',
+    extension='.bash',
+    header='CUSTOM_SCHEDULER_COMMANDS: if there are any scheduler-specific commands that should be added '
+    'to the submission script header for all jobs on this computer, type that between the equal signs below '
+    'and save the file.',
+    footer='All lines that start with `#=` will be ignored.',
+)
+
+ENVIRONMENT_VARIABLES = OverridableOption(
+    '--environment-variables',
+    cls=InteractiveOption,
+    prompt='Environment variables (JSON)',
+    type=types.JSONDictParamType(),
+    default={},
+    required=False,
+    help='Environment variables to set for all jobs on this computer, as a JSON object '
+    '(e.g. \'{"OMP_NUM_THREADS": "1"}\').',
+)
+
 PREPEND_TEXT = OverridableOption(
     '--prepend-text',
     cls=TemplateInteractiveOption,

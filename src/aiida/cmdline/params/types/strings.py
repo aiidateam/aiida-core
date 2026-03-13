@@ -16,7 +16,42 @@ import typing as t
 import click
 from click.types import StringParamType
 
-__all__ = ('EmailType', 'EntryPointType', 'HostnameType', 'LabelStringType', 'NonEmptyStringParamType')
+__all__ = (
+    'EmailType',
+    'EntryPointType',
+    'HostnameType',
+    'JSONDictParamType',
+    'LabelStringType',
+    'NonEmptyStringParamType',
+)
+
+
+class JSONDictParamType(click.ParamType):
+    """Click parameter type that accepts a JSON object string or a Python dict.
+
+    On the CLI, pass a JSON string: ``--option '{"KEY": "VALUE"}'``.
+    From a YAML config file, the value is already parsed as a dict and passed through.
+    """
+
+    name = 'JSON_DICT'
+
+    def convert(self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None) -> dict[str, str]:
+        import json
+
+        if isinstance(value, dict):
+            return value
+        if value is None:
+            return {}
+        try:
+            result = json.loads(value)
+        except (json.JSONDecodeError, TypeError) as exc:
+            self.fail(f'Invalid JSON: {exc}', param, ctx)
+        if not isinstance(result, dict):
+            self.fail(f'Expected a JSON object, got {type(result).__name__}', param, ctx)
+        return result
+
+    def __repr__(self) -> str:
+        return 'JSON_DICT'
 
 
 class NonEmptyStringParamType(StringParamType):

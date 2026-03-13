@@ -434,6 +434,25 @@ Test philosophy:
 - **Don't chase coverage with shallow tests**: A test that mocks everything tests nothing.
   Tests should exercise actual behavior.
 - **Test the contract, not the implementation**: Don't assert internal method calls; assert observable outcomes.
+- **Make assertions as strong as possible**: Use the most specific assertion available.
+  For example, use `assert result == expected_value` instead of `assert result is not None` or `assert result`.
+  Check exact values, types, and lengths rather than just truthiness.
+  Weak assertions can let bugs slip through by passing even when the result is wrong.
+- **Test isolation**: Each test must be independent—never rely on execution order or state left by other tests.
+- **One behavior per test**: A test should verify a single logical behavior.
+  If a test name needs "and", it's likely testing too much.
+- **Regression tests for bugs**: When fixing a bug, first write a test that reproduces it, then fix the code.
+  This prevents regressions.
+- **Use `pytest.mark.parametrize` for variations**: Instead of duplicating test logic for different inputs, parametrize.
+  Keeps tests DRY and makes coverage of edge cases explicit.
+- **Test edge cases and failure paths**: Don't just test the happy path.
+  Test boundary values, empty inputs, invalid arguments, and expected exceptions.
+- **Use existing fixtures**: Check `tests/conftest.py` for reusable fixtures before writing ad-hoc setup.
+  Duplicated setup is a maintenance burden.
+- **Deterministic tests**: Tests must not depend on timing, randomness, or external state.
+  Flaky tests erode trust in the suite.
+- **Don't test framework behavior**: Don't write tests that just verify that Python, SQLAlchemy, or Click work correctly.
+  Only test your own logic.
 
 Test types:
 | Type | Location | Description |

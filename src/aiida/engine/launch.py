@@ -16,6 +16,7 @@ import typing as t
 from aiida.common import InvalidOperation
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.workgraph import engine_run_workgraph, engine_submit_workgraph, is_workgraph_instance
 from aiida.manage import manager
 from aiida.orm import ProcessNode
 
@@ -42,6 +43,9 @@ def run(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwa
     """
     if isinstance(process, Process):
         runner = process.runner
+    elif is_workgraph_instance(process):
+        result, _ = engine_run_workgraph(workgraph=process, inputs=inputs, kwargs=kwargs)
+        return result
     else:
         runner = manager.get_manager().get_runner()
 
@@ -59,6 +63,8 @@ def run_get_node(
     """
     if isinstance(process, Process):
         runner = process.runner
+    elif is_workgraph_instance(process):
+        return engine_run_workgraph(workgraph=process, inputs=inputs, kwargs=kwargs)
     else:
         runner = manager.get_manager().get_runner()
 
@@ -74,6 +80,9 @@ def run_get_pk(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None
     """
     if isinstance(process, Process):
         runner = process.runner
+    elif is_workgraph_instance(process):
+        result, node = engine_run_workgraph(workgraph=process, inputs=inputs, kwargs=kwargs)
+        return ResultAndPk(result, node.pk)
     else:
         runner = manager.get_manager().get_runner()
 
@@ -105,9 +114,7 @@ def submit(
     """
     from aiida.common.docs import URL_NO_BROKER
 
-    inputs = prepare_inputs(inputs, **kwargs)
-
-    # Submitting from within another process requires ``self.submit``` unless it is a work function, in which case the
+    # Submitting from within another process requires ``self.submit`` unless it is a work function, in which case the
     # current process in the scope should be an instance of ``FunctionProcess``.
     if is_process_scoped() and not isinstance(Process.current(), FunctionProcess):
         raise InvalidOperation('Cannot use top-level `submit` from within another process, use `self.submit` instead')
@@ -124,6 +131,13 @@ def submit(
         )
 
     assert runner.persister is not None, 'runner does not have a persister'
+
+    if is_workgraph_instance(process):
+        return engine_submit_workgraph(
+            workgraph=process, inputs=inputs, kwargs=kwargs, wait=wait, wait_interval=wait_interval
+        )
+
+    inputs = prepare_inputs(inputs, **kwargs)
 
     process_inited = instantiate_process(runner, process, **inputs)
 

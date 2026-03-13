@@ -571,6 +571,11 @@ They improve code quality and are checked in code review.
 - **Pure functions**: Where possible, write pure functions without side effects—they are easier to test in isolation, reason about, and parallelize.
 - **Error handling**: Use `aiida.common.exceptions` for AiiDA-specific exceptions so callers can catch predictable, typed errors.
   Use `aiida.common.warnings` for non-fatal issues so users can selectively filter them.
+  Assign exception messages to a local variable before raising—this keeps `raise` statements short and avoids duplicating the message string in the traceback:
+  ```python
+  msg = f'WorkGraph process<{workgraph.process.pk}> already created. Use submit() instead.'
+  raise ValueError(msg)
+  ```
 - **Testing**: Write tests for all new functionality.
   Tests should mirror the source structure so it is easy to find the test for any given module.
 

@@ -7,7 +7,7 @@ Thanks for your interest in contributing to AiiDA!
 1. Fork and clone the repository
 1. Install development dependencies: `uv sync` (creates a `.venv` and installs all dependencies)
 1. Create a branch: `git switch -c feature/123/short-description`
-1. Make your changes and ensure pre-commit passes: `uv run pre-commit run`
+1. Make your changes and ensure pre-commit passes: `uv run pre-commit run -a` (runs on all files, safer for mypy since changes in one file can cause errors in others)
 1. Run relevant tests: `uv run pytest tests/path/to/test_file.py` (use `-n auto` for parallel execution, `-m presto` to run only tests marked with `@pytest.mark.presto` — these require no external services; add this marker to new tests that don't need PostgreSQL or RabbitMQ)
 1. Push and open a pull request against `main`
 
@@ -27,9 +27,10 @@ See [`AGENTS.md`](AGENTS.md) for comprehensive development documentation, includ
 | Task | Command |
 |------|---------|
 | Install dependencies | `uv sync` |
-| Run quick tests | `uv run pytest -m presto` |
+| Run quick tests | `uv run pytest -m presto -n auto` |
 | Run full test suite | `uv run pytest` |
-| Run pre-commit | `uv run pre-commit run` |
+| Run pre-commit (staged files) | `uv run pre-commit run` |
+| Run pre-commit (all files) | `uv run pre-commit run -a` |
 | Build docs | `uv run sphinx-build -b html docs/source docs/build/html` |
 
 ## Reporting issues

@@ -8,7 +8,6 @@
 ###########################################################################
 """Test data-related verdi commands."""
 
-import asyncio
 import io
 import os
 import subprocess as sp
@@ -240,12 +239,8 @@ class TestVerdiDataBands(DummyVerdiDataListable):
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_profile_clean, run_cli_command):
         """Initialize the profile."""
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
         self.pks = self.create_structure_bands()
         self.cli_runner = run_cli_command
-        yield
-        self.loop.close()
 
     @staticmethod
     def create_structure_bands():

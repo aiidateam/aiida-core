@@ -45,6 +45,13 @@ class RabbitmqBroker(Broker):
             self._communicator.close()
             self._communicator = None
 
+    def __del__(self):
+        if self._communicator is not None:
+            import warnings
+
+            warnings.warn(f'RabbitmqBroker was not closed explicitly: {self!r}', ResourceWarning, stacklevel=1)
+            self.close()
+
     def iterate_tasks(self):
         """Return an iterator over the tasks in the launch queue."""
         for task in self.get_communicator().task_queue(get_launch_queue_name(self._prefix)):

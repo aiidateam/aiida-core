@@ -135,6 +135,18 @@ class StorageBackend(abc.ABC):
     def close(self) -> None:
         """Close the storage access."""
 
+    def __del__(self):
+        try:
+            closed = self.is_closed
+        except AttributeError:
+            # covers cases where the backend implementation is not yet initialized but object is deleted
+            return
+        if not closed:
+            import warnings
+
+            warnings.warn(f'StorageBackend was not closed explicitly: {self!r}', ResourceWarning, stacklevel=1)
+            self.close()
+
     @property
     @abc.abstractmethod
     def is_closed(self) -> bool:

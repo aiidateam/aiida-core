@@ -1,6 +1,117 @@
 # Design evolution
 
 This document records the evolution of the design and architecture of AiiDA, including the underlying reasoning.
+Versions are listed newest to oldest.
+
+## Version 2.8.0
+
+### Replacing `nest_asyncio` with `greenback`
+
+The internal async event loop handling was refactored to use `greenback` instead of `nest_asyncio`.
+The `nest_asyncio` package, which patched Python's asyncio event loop to allow nesting, had been deprecated and was no longer maintained.
+The `greenback` approach provides cleaner tracebacks and the ability to use breakpoints in engine modules during development.
+
+## Version 2.7.0
+
+### Asynchronous SSH transport
+
+A new `core.ssh_async` transport plugin was introduced, enabling concurrent SSH operations rather than blocking.
+It uses the OS's OpenSSH client and reads `~/.ssh/config` automatically, simplifying configuration.
+For workloads involving many file transfers, this provides dramatic speedups.
+
+### ORM serialization via pydantic models
+
+Each ORM entity now has a pydantic `Model`, enabling programmatic schema introspection and (de)serialization to/from JSON.
+This was formalized in [AEP 010](https://github.com/aiidateam/AEP/blob/master/010_orm_schema/readme.md).
+
+### Extended dumping
+
+`verdi profile dump` and `verdi group dump` were introduced for exporting entire profiles or groups into human-readable folder structures, with incremental updates and extensive filtering options.
+
+## Version 2.6.0
+
+Version 2.6 (April 2024) focused on lowering the barrier to entry.
+
+### RabbitMQ made optional
+
+Profiles can now be configured without RabbitMQ.
+Without a message broker, the daemon cannot be used and all processes must be run locally, but for many use cases (testing, data analysis, interactive exploration) this is sufficient.
+
+### `verdi presto`
+
+Combined with the serverless `sqlite_dos` storage and optional RabbitMQ, the new `verdi presto` command creates a fully functional profile with sensible defaults in a single command.
+The vision: `pip install aiida-core && verdi presto` gives a working installation on any OS, with localhost configured as a computer — no PostgreSQL, no RabbitMQ, no manual setup.
+
+### Caching overhaul
+
+Node hashing was redesigned to be more stable: package version information was removed from hashes (previously causing cache invalidation on every upgrade), and a `CACHE_VERSION` attribute was added to `CalcJob` and `Parser` to give plugin developers explicit control over when to invalidate caches.
+
+### Message broker abstraction
+
+The message broker was abstracted behind a `Broker` interface, decoupling the engine from the hard RabbitMQ dependency and opening the door for alternative broker implementations.
+
+## Version 2.5.0
+
+### The `sqlite_dos` storage backend
+
+A new lightweight storage backend using SQLite instead of PostgreSQL was introduced, paired with disk-objectstore.
+Unlike `sqlite_temp` (in-memory, transient), `sqlite_dos` is persistent and suitable for real work — especially testing, demos, and single-user workflows where PostgreSQL's setup overhead is not justified.
+
+This was a stepping stone toward making AiiDA usable without any external services.
+
+### Configuration validation with pydantic
+
+The configuration system was migrated from `jsonschema` to `pydantic`, providing better validation, type checking, and serialization.
+
+## Version 2.1.0
+
+### The Code class hierarchy
+
+The monolithic `Code` class was split into a hierarchy reflecting the two fundamentally different ways codes are used:
+
+- **`InstalledCode`**: represents a code pre-installed on the compute resource (e.g., a system-wide MPI build of Quantum ESPRESSO)
+- **`PortableCode`**: represents a code stored within AiiDA and uploaded to the remote machine before execution
+
+Both inherit from `AbstractCode`.
+A third variant, **`ContainerizedCode`**, was introduced for running calculations inside Singularity or Docker containers.
+
+### Process control API
+
+Daemon and process control (start/stop/play/pause/kill) became accessible through the Python API (`DaemonClient`, `aiida.engine.processes.control`), rather than only through `verdi`.
+
+## Version 2.0.0
+
+Version 2.0 (April 2022) was the most architecturally significant release since v1.0, focused on a complete overhaul of data storage.
+
+### The storage redesign
+
+AiiDA's original storage layer had two problems.
+First, it maintained two separate backends (Django and SQLAlchemy) for the same purpose, doubling the maintenance burden and causing subtle behavioral differences.
+Second, node files were stored as individual files on the filesystem, leading to millions of small files in large databases — causing performance issues and making backups slow and fragile.
+
+Version 2.0 addressed both problems:
+
+- **Unified `psql_dos` backend**: The Django and SQLAlchemy backends were merged into a single `psql_dos` backend (PostgreSQL + disk-objectstore), eliminating the Django dependency entirely.
+- **`disk-objectstore` for file storage**: The flat-file node repository was replaced with the [disk-objectstore](https://github.com/aiidateam/disk-objectstore) library, which automatically deduplicates files and packs many objects into single files, reducing filesystem usage by orders of magnitude.
+- **`sqlite_zip` archive format**: The AiiDA archive was reimplemented as a storage backend (`sqlite_zip`), enabling archives to be opened directly as read-only profiles without importing.
+- **`SqliteTempBackend`**: An in-memory SQLite backend for testing and demos, requiring no external services.
+- **Pluggable storage**: The `StorageBackend` abstract base class was introduced, enabling custom storage backends to be registered as plugins via the `aiida.storage` entry point group.
+
+The storage redesign also enabled **profile switching** within a single Python process and accessing profiles through context managers.
+
+### The Node namespace restructuring
+
+The `Node` class had accumulated a large number of methods over the years, making its namespace unwieldy and auto-completion difficult.
+Version 2.0 partitioned the node interface into sub-namespaces: `Node.base.attributes`, `Node.base.caching`, `Node.base.comments`, `Node.base.extras`, `Node.base.links`, and `Node.base.repository`.
+
+### Entry point prefix convention
+
+All entry points shipped with `aiida-core` were prefixed with `core.` to avoid naming collisions with plugins (e.g., `int` became `core.int`, `local` became `core.local`).
+
+### Build system modernization
+
+The package migrated from `setuptools` to `flit`, with all metadata specified in `pyproject.toml` (PEP 621).
+The `reentry` package for entry point caching was replaced with the standard library's `importlib.metadata`.
 
 ## Version 1.0.0
 

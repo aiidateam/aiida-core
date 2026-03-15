@@ -328,6 +328,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         for tag, filter_specs in data['filters'].items():
             if not filter_specs:
                 continue
+
             alias = tag_to_alias.get(tag)
             if not alias:
                 raise ValueError(f'Unknown tag {tag!r} in filters, known: {list(tag_to_alias)}')
@@ -998,20 +999,33 @@ def generate_joins(
 
         # if verticespec['joining_keyword'] in ('with_ancestors', 'with_descendants'):
         # These require a filter_dict, to help the recursive function find a good starting point.
-        filter_dict = data['filters'].get(verticespec['joining_value'], {})
+        filter_dict = data['filters'].get(verticespec['tag'], {})
         # Also find out whether the path is used in a filter or a project and, if so,
         # instruct the recursive function to build the path on the fly.
         # The default is False, because it's super expensive
-        expand_path = (data['filters'][edge_tag].get('path', None) is not None) or any(
-            'path' in d.keys() for d in data['project'][edge_tag]
+        expand_path = (data['filters'].get(edge_tag, {}).get('path', None) is not None) or any(
+            'path' in d.keys() for d in data['project'].get(edge_tag, [])
         )
+
+        edge_filter_dict = data['filters'].get(edge_tag, {})
+        isouterjoin = verticespec.get('outerjoin')
+
         join = join_func(
             join_tag,
             join_to,
-            isouterjoin=verticespec.get('outerjoin'),  # type: ignore[call-arg]
+            isouterjoin=isouterjoin,  # type: ignore[call-arg]
             filter_dict=filter_dict,
+            edge_filter_dict=edge_filter_dict,
             expand_path=expand_path,
         )
+
+        # If it's an outer join, we've moved the filters to the ON clause, so we remove them from the filters
+        # that would otherwise be applied in the WHERE clause.
+        if isouterjoin:
+            data['filters'][verticespec['tag']] = {}
+            if edge_tag in data['filters']:
+                data['filters'][edge_tag] = {}
+
         join.edge_tag = edge_tag
         joins.append(join)
     return joins

@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.8.0 - 2026-03-12
+## v2.8.0 - 2026-03-16
 
 This release brings important improvements to the `BaseRestartWorkChain`, the engine, stashing, typing coverage, and dependency updates.
 It also includes several fixes for connection and resource leaks (with further improvements planned for upcoming releases).

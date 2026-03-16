@@ -278,6 +278,7 @@ print(dict(builder))
 
 #### Engine
 
+- `ProcessBuilder`: use `__str__` instead of `__repr__` (#7290) [[4311f04c9]](https://github.com/aiidateam/aiida-core/commit/4311f04c96b9599f4b1565582a53ac31c3888584)
 - `ProcessBuilder`: add `__repr__` (#7285) [[c79d22a5f]](https://github.com/aiidateam/aiida-core/commit/c79d22a5f8b24aa3d31a23208ae29ef7fc40bfa6)
 - `ProcessBuilder`: prune empty namespaces in `_repr_pretty` (#7285) [[3be99a61a]](https://github.com/aiidateam/aiida-core/commit/3be99a61a62b1c552e7a3e190305c053d9d643ba)
 - Add timestamp and PID to worker log (#7271) [[dacaa47c5]](https://github.com/aiidateam/aiida-core/commit/dacaa47c5fa87286ecba322fe90327cc2cc6fdc9)
@@ -347,6 +348,7 @@ print(dict(builder))
 
 - Fix SD `cell_angles` for zero-length vectors (#6820) [[f0a8ce764]](https://github.com/aiidateam/aiida-core/commit/f0a8ce764e29ea4f17ee78193bb059d804ca5bb1)
 - `TrajectoryData`: Fix `pbc` handling for non-periodic structures (#7079) [[08c58ffc0]](https://github.com/aiidateam/aiida-core/commit/08c58ffc0eae5f89d4f1e7923d62af30f418f3d7)
+- `TrajectoryData`: fix missing space in `pbc` deprecation warning (#7287) [[c39cbfe72]](https://github.com/aiidateam/aiida-core/commit/c39cbfe72c98bd600323bdc25edbeb6b32b01813)
 - Fix `ResourceWarning` from unclosed `TextIOWrapper` (#7220) [[3a061d06e]](https://github.com/aiidateam/aiida-core/commit/3a061d06e26f91ba8e1079a728d7c95d7f7cc33c)
 
 #### Transport
@@ -465,6 +467,7 @@ print(dict(builder))
 
 #### Misc
 
+- Add `AI_POLICY.md` (#7229) [[a5e78ca96]](https://github.com/aiidateam/aiida-core/commit/a5e78ca9663321d4b3d86d5161c1d0b7639e6774)
 - Run `pyparsing.tools.cvt_pyparsing_pep8_names` (#7264) [[21f48a4f1]](https://github.com/aiidateam/aiida-core/commit/21f48a4f13749dbb7af71c26e25de7b303ca9a2b)
 - Do not autoformat `uv.lock` (#7274) [[1d2366df5]](https://github.com/aiidateam/aiida-core/commit/1d2366df5d0c93d96d3e8078a4dfe52f951959a2)
 - Drop api-auto-docs for now (#7056) [[0d002ad9f]](https://github.com/aiidateam/aiida-core/commit/0d002ad9f076a2cfb017909510daffaee84b9c83)

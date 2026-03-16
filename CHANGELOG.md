@@ -12,6 +12,7 @@ Highlights:
 - [`TrajectoryData`: periodic boundary conditions support](#trajectorydata-periodic-boundary-conditions-support)
 - [Typing improvements](#typing-improvements)
 - [Dependency updates: numpy 2.x and click 8.2](#dependency-updates)
+- [`verdi process repair`: orphaned database connection cleanup](#verdi-process-repair-orphaned-database-connection-cleanup)
 - [Deprecation of `core.ssh` transport](#deprecation-of-coressh-transport)
 
 **Behavior changes:** The following changes may affect existing workflows but do not constitute API breaking changes that would warrant a major version bump. See the [Behavior changes](#behavior-changes) section for details.
@@ -186,6 +187,17 @@ Plugin developers will benefit from improved autocompletion and type checking wh
 **numpy 2.x support** ([#6899](https://github.com/aiidateam/aiida-core/pull/6899)): AiiDA now supports numpy 2.x, allowing use of the latest numpy features and performance improvements.
 
 **click 8.2 support** ([#6959](https://github.com/aiidateam/aiida-core/pull/6959)): The CLI is now compatible with click 8.2, which includes various improvements to command-line parsing.
+
+### `verdi process repair`: orphaned database connection cleanup
+
+When daemon workers crash or are killed without proper cleanup, their PostgreSQL connections can remain open.
+These connections hold locks that can block other processes indefinitely, causing workchains and calcjobs to hang.
+
+The `verdi process repair` command now detects and terminates these orphaned connections ([#7207](https://github.com/aiidateam/aiida-core/pull/7207)).
+Since the command requires the daemon to be stopped, any remaining PostgreSQL connections (other than the current session) are likely from crashed processes.
+A confirmation prompt is shown before terminating connections, as legitimate connections (e.g. from Jupyter notebooks) may also be affected.
+Use `--force` to skip the prompt.
+
 
 ### Deprecation of `core.ssh` transport
 

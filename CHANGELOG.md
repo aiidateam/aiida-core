@@ -30,7 +30,7 @@ Highlights:
 
 Two new inputs have been added to `BaseRestartWorkChain` to give users more control over failure handling:
 
-**`on_unhandled_failure` (breaking change)**
+**`on_unhandled_failure` (behavior change)**
 
 Previously, `BaseRestartWorkChain` would automatically restart once on unhandled failures.
 This behavior has changed: **the default is now to abort immediately** to save computational resources.
@@ -249,11 +249,11 @@ Additionally, this option now has a non-interactive default, so scripted compute
 The warning about failed writes due to SQLite database locks (common with `core.sqlite_dos` storage) has been downgraded from WARNING to INFO level.
 This reduces log noise for SQLite-based profiles where these transient locks are expected and harmless.
 
-**Improved `ProcessBuilder` representation** ([#7285](https://github.com/aiidateam/aiida-core/pull/7285))
+**Improved `ProcessBuilder` representation** ([#7285](https://github.com/aiidateam/aiida-core/pull/7285), [#7290](https://github.com/aiidateam/aiida-core/pull/7290))
 
-The `ProcessBuilder` now has a proper `__repr__` method, so its clean YAML-like representation is available in all Python environments, not just IPython and Jupyter.
+The `ProcessBuilder` now has a proper `__str__` method, so its clean YAML-like representation is available in all Python environments via `print()`, not just IPython and Jupyter.
 The existing `_repr_pretty_` method (used by IPython/Jupyter) has also been improved to prune empty namespaces (e.g. `stash`, `metadata.options`) from the output, reducing noise when inspecting builder contents.
-Note that this also affects the `print()` output for a `ProcessBuilder`:
+Note that this affects the `print()` output for a `ProcessBuilder`:
 
 ```python
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
@@ -346,9 +346,9 @@ print(dict(builder))
 
 #### ORM
 
+- `TrajectoryData`: fix missing space in `pbc` deprecation warning (#7287) [[c39cbfe72]](https://github.com/aiidateam/aiida-core/commit/c39cbfe72c98bd600323bdc25edbeb6b32b01813)
 - Fix SD `cell_angles` for zero-length vectors (#6820) [[f0a8ce764]](https://github.com/aiidateam/aiida-core/commit/f0a8ce764e29ea4f17ee78193bb059d804ca5bb1)
 - `TrajectoryData`: Fix `pbc` handling for non-periodic structures (#7079) [[08c58ffc0]](https://github.com/aiidateam/aiida-core/commit/08c58ffc0eae5f89d4f1e7923d62af30f418f3d7)
-- `TrajectoryData`: fix missing space in `pbc` deprecation warning (#7287) [[c39cbfe72]](https://github.com/aiidateam/aiida-core/commit/c39cbfe72c98bd600323bdc25edbeb6b32b01813)
 - Fix `ResourceWarning` from unclosed `TextIOWrapper` (#7220) [[3a061d06e]](https://github.com/aiidateam/aiida-core/commit/3a061d06e26f91ba8e1079a728d7c95d7f7cc33c)
 
 #### Transport
@@ -434,9 +434,9 @@ print(dict(builder))
 #### CI
 
 - Ignore some new DeprecationWarnings in py3.14 (#7256) [[4f96f8888]](https://github.com/aiidateam/aiida-core/commit/4f96f8888a45a5bc67084d5a3f97357501812f39)
-- Add experimental Python 3.14 support in CI (not yet officially supported; known performance regressions under investigation) (#7240) [[e8f39b649]](https://github.com/aiidateam/aiida-core/commit/e8f39b64933ac186758bf6d4dc22bd6ab06ffa02)
-- Pin orm field regression tests to only run for py3.14 (#7240) [[ff1871441]](https://github.com/aiidateam/aiida-core/commit/ff18714419e8f3238f0767448b9b4d04abfea37d)
 - Replace `urllib.request.url2pathname` with local shim for Python 3.14 (#7240) [[1607da454]](https://github.com/aiidateam/aiida-core/commit/1607da454428da25544f100d1306cc57a91301b9)
+- Pin orm field regression tests to only run for py3.14 (#7240) [[ff1871441]](https://github.com/aiidateam/aiida-core/commit/ff18714419e8f3238f0767448b9b4d04abfea37d)
+- Add experimental Python 3.14 support in CI (not yet officially supported; known performance regressions under investigation) (#7240) [[e8f39b649]](https://github.com/aiidateam/aiida-core/commit/e8f39b64933ac186758bf6d4dc22bd6ab06ffa02)
 - CI: Upload coverage data as GHA artifacts (#7224) [[af9d1f600]](https://github.com/aiidateam/aiida-core/commit/af9d1f600dc1b341a0047abdfad55e0b8fe7bfff)
 - CI: Change test-install schedule from nightly to weekly (#7179) [[bc53c9e31]](https://github.com/aiidateam/aiida-core/commit/bc53c9e3157354d6af696a714f0d573abe2055f6)
 - Refactor bake metadata extraction from shell to JavaScript (#6582) (#7161) [[fcf709bc0]](https://github.com/aiidateam/aiida-core/commit/fcf709bc0d4604b688a5522475adef6670864ade)

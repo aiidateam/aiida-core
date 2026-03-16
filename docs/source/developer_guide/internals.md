@@ -1,7 +1,7 @@
 # Architecture overview
 
 This page provides a high-level overview of AiiDA's internal architecture for developers working on `aiida-core`.
-For user-facing documentation, see the {ref}`topics <topics:index>` section.
+For user-facing documentation, see the {doc}`topics </topics/index>` section.
 
 ## Package structure
 

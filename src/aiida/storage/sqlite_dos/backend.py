@@ -281,7 +281,7 @@ class SqliteDosStorage(PsqlDosBackend):
 
     @classmethod
     def version_profile(cls, profile: Profile) -> Optional[str]:
-        with cls.migrator_context(profile) as migrator:
+        with cls.migrator(profile) as migrator:
             return migrator.get_schema_version_profile()
 
     def query(self) -> orm.SqliteQueryBuilder:

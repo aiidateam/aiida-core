@@ -17,6 +17,8 @@ import string
 import time
 import typing as t
 
+from typing_extensions import override
+
 from aiida.common import AttributeDict, FeatureNotAvailable
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import SchedulerError, SchedulerParsingError
@@ -77,6 +79,7 @@ _MAP_STATUS_PBS_COMMON = {
 class PbsJobResource(NodeNumberJobResource):
     """Class for PBS job resources."""
 
+    @override
     @classmethod
     def validate_resources(cls, **kwargs: t.Any) -> AttributeDict:
         """Validate the resources against the job resource class of this scheduler.

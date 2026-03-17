@@ -17,6 +17,8 @@ import re
 import string
 import typing as t
 
+from typing_extensions import override
+
 import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import ConfigurationError, FeatureNotAvailable
@@ -119,6 +121,7 @@ class LsfJobResource(JobResource):
         default_mpiprocs_per_machine: int
         num_machines: int
 
+    @override
     @classmethod
     def validate_resources(cls, **kwargs: t.Any) -> AttributeDict:
         """Validate the resources against the job resource class of this scheduler.

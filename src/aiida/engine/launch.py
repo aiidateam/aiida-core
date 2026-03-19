@@ -114,6 +114,12 @@ def submit(
     """
     from aiida.common.docs import URL_NO_BROKER
 
+    # WorkGraph owns its own runner/persister/controller setup, so branch early
+    if is_workgraph_instance(process):
+        return engine_submit_workgraph(
+            workgraph=process, inputs=inputs, kwargs=kwargs, wait=wait, wait_interval=wait_interval
+        )
+
     # Submitting from within another process requires ``self.submit`` unless it is a work function, in which case the
     # current process in the scope should be an instance of ``FunctionProcess``.
     if is_process_scoped() and not isinstance(Process.current(), FunctionProcess):
@@ -131,11 +137,6 @@ def submit(
         )
 
     assert runner.persister is not None, 'runner does not have a persister'
-
-    if is_workgraph_instance(process):
-        return engine_submit_workgraph(
-            workgraph=process, inputs=inputs, kwargs=kwargs, wait=wait, wait_interval=wait_interval
-        )
 
     inputs = prepare_inputs(inputs, **kwargs)
 

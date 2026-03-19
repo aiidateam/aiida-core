@@ -56,8 +56,7 @@ _WORKGRAPH_SUBMIT_RESERVED_KEYS = {_KEY_METADATA, _KEY_TIMEOUT, _KEY_WAIT, _KEY_
 def is_workgraph_instance(obj: t.Any) -> bool:
     """Check if an object is a WorkGraph instance.
 
-    This helper function safely checks if an object is a WorkGraph instance,
-    returning False if aiida-workgraph is not installed.
+    Returns False if aiida-workgraph is not installed.
 
     :param obj: The object to check.
     :return: True if obj is a WorkGraph instance, False otherwise.
@@ -67,43 +66,6 @@ def is_workgraph_instance(obj: t.Any) -> bool:
     from aiida_workgraph import WorkGraph  # type: ignore[import-not-found,import-untyped]
 
     return isinstance(obj, WorkGraph)
-
-
-def is_workgraph_node_instance(obj: t.Any) -> bool:
-    """Check if an object is a WorkGraphNode instance.
-
-    This helper function safely checks if an object is a WorkGraphNode instance,
-    returning False if aiida-workgraph is not installed.
-
-    :param obj: The object to check.
-    :return: True if obj is a WorkGraphNode instance, False otherwise.
-    """
-    if not WORKGRAPH_AVAILABLE:
-        return False
-    from aiida_workgraph.orm.workgraph import WorkGraphNode  # type: ignore[import-not-found,import-untyped]
-
-    return isinstance(obj, WorkGraphNode)
-
-
-def _check_reserved_key_collisions(workgraph: t.Any, reserved_keys: set[str], popped_keys: set[str]) -> None:
-    """Raise if any popped reserved keys also match a task name on the WorkGraph.
-
-    :param workgraph: the WorkGraph instance
-    :param reserved_keys: the set of reserved key names
-    :param popped_keys: the reserved keys that were actually present in the inputs
-    :raises InvalidOperation: if any reserved keys collide with task names
-    """
-    try:
-        task_names = set(workgraph.get_task_names())
-    except (AttributeError, TypeError):
-        LOGGER.warning('Could not retrieve task names from WorkGraph instance; skipping reserved-key collision check.')
-        return
-    collisions = popped_keys & task_names
-    if collisions:
-        raise InvalidOperation(
-            f'Keys {collisions} are reserved execution parameters but also match task names '
-            f'on this WorkGraph. Rename the tasks to avoid colliding with reserved keys: {reserved_keys}.'
-        )
 
 
 def _prepare_workgraph_inputs(
@@ -118,7 +80,7 @@ def _prepare_workgraph_inputs(
     :param inputs: the input dictionary
     :param kwargs: additional keyword arguments to be merged with inputs
     :param reserved_keys: set of keys to pop from inputs and return separately
-    :raises ValueError: if the same key appears in both ``inputs`` and ``kwargs``
+    :raises ValueError: if both ``inputs`` and ``kwargs`` are specified
     :raises InvalidOperation: if reserved keys collide with task names
     :return: tuple of (task inputs, popped reserved key values)
     """
@@ -128,7 +90,14 @@ def _prepare_workgraph_inputs(
         value = wg_inputs.pop(key, None)
         if value is not None:
             popped[key] = value
-    _check_reserved_key_collisions(workgraph=workgraph, reserved_keys=reserved_keys, popped_keys=set(popped))
+
+    collisions = set(popped) & set(workgraph.get_task_names())
+    if collisions:
+        raise InvalidOperation(
+            f'Keys {collisions} are reserved execution parameters but also match task names '
+            f'on this WorkGraph. Rename the tasks to avoid colliding with reserved keys: {reserved_keys}.'
+        )
+
     return wg_inputs, popped
 
 
@@ -142,10 +111,9 @@ def engine_run_workgraph(
     Inlines the logic of ``WorkGraph.run()`` so that aiida-core owns the launch path.
 
     :param workgraph: the WorkGraph instance
-    :param inputs: the input dictionary (task name → value)
+    :param inputs: the input dictionary (task name -> value)
     :param kwargs: alternative to ``inputs``
-    :raises ValueError: if both ``inputs`` and ``kwargs`` are specified, or if the WorkGraph
-        has already been submitted
+    :raises ValueError: if both ``inputs`` and ``kwargs`` are specified
     :return: tuple of the outputs and the process node
     """
     from aiida.engine.launch import run_get_node
@@ -181,12 +149,11 @@ def engine_submit_workgraph(
     so that aiida-core owns the launch path.
 
     :param workgraph: the WorkGraph instance
-    :param inputs: the input dictionary (task name → value)
+    :param inputs: the input dictionary (task name -> value)
     :param kwargs: alternative to ``inputs``
     :param wait: whether to block until the process completes
     :param wait_interval: seconds between status checks when ``wait=True``
-    :raises ValueError: if both ``inputs`` and ``kwargs`` are specified, or if the WorkGraph
-        has already been submitted
+    :raises ValueError: if both ``inputs`` and ``kwargs`` are specified
     :raises InvalidOperation: if ``dry_run`` is requested (not supported by WorkGraph)
     :return: the process node
     """

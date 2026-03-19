@@ -407,14 +407,6 @@ class TestWorkGraphHelpers:
         assert is_workgraph_instance(42) is False
         assert is_workgraph_instance(orm.Int(1)) is False
 
-    def test_is_workgraph_node_instance_returns_false_for_non_workgraph_node(self):
-        """Test is_workgraph_node_instance returns False for non-WorkGraphNode objects."""
-        from aiida.common.workgraph import is_workgraph_node_instance
-
-        assert is_workgraph_node_instance(None) is False
-        assert is_workgraph_node_instance('string') is False
-        assert is_workgraph_node_instance(orm.WorkChainNode()) is False
-
     def test_prepare_workgraph_inputs_pops_reserved_keys(self):
         """Test that _prepare_workgraph_inputs separates reserved keys from task inputs."""
         from unittest.mock import MagicMock

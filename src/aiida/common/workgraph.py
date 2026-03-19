@@ -30,7 +30,7 @@ from aiida.engine.utils import prepare_inputs
 
 # Check if aiida-workgraph is available
 try:
-    import aiida_workgraph  # type: ignore[import-untyped]  # noqa: F401
+    import aiida_workgraph  # type: ignore[import-not-found,import-untyped]  # noqa: F401
 
     WORKGRAPH_AVAILABLE = True
 except ImportError:
@@ -60,7 +60,7 @@ def is_workgraph_instance(obj: t.Any) -> bool:
     """
     if not WORKGRAPH_AVAILABLE:
         return False
-    from aiida_workgraph import WorkGraph
+    from aiida_workgraph import WorkGraph  # type: ignore[import-not-found,import-untyped]
 
     return isinstance(obj, WorkGraph)
 
@@ -76,7 +76,7 @@ def is_workgraph_node_instance(obj: t.Any) -> bool:
     """
     if not WORKGRAPH_AVAILABLE:
         return False
-    from aiida_workgraph.orm.workgraph import WorkGraphNode  # type: ignore[import-untyped]
+    from aiida_workgraph.orm.workgraph import WorkGraphNode  # type: ignore[import-not-found,import-untyped]
 
     return isinstance(obj, WorkGraphNode)
 
@@ -154,7 +154,7 @@ def engine_run_workgraph(
         workgraph.set_inputs(wg_inputs)
     workgraph.check_before_run()
 
-    from aiida_workgraph.engine.workgraph import WorkGraphEngine  # type: ignore[import-untyped]
+    from aiida_workgraph.engine.workgraph import WorkGraphEngine  # type: ignore[import-not-found,import-untyped]
 
     engine_inputs = workgraph.to_engine_inputs(metadata=popped.get(_KEY_METADATA))
     _, node = run_get_node(WorkGraphEngine, inputs=engine_inputs)
@@ -209,7 +209,7 @@ def engine_submit_workgraph(
     workgraph.check_before_run()
     engine_inputs = workgraph.to_engine_inputs(metadata=metadata)
 
-    from aiida_workgraph.engine.workgraph import WorkGraphEngine
+    from aiida_workgraph.engine.workgraph import WorkGraphEngine  # type: ignore[import-not-found,import-untyped]
 
     runner = manager.get_manager().get_runner()
     process_inited = instantiate_process(runner, WorkGraphEngine, **engine_inputs)

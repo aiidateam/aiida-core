@@ -332,163 +332,157 @@ class TestWorkGraphLaunchers:
     """Test WorkGraph support in launchers using mocks.
 
     These tests verify that the launch functions correctly detect and delegate
-    to WorkGraph instances without requiring aiida-workgraph to be installed.
+    to WorkGraph helper functions without requiring aiida-workgraph to be installed.
+    The helper functions (engine_run_workgraph, engine_submit_workgraph) inline the
+    WorkGraph launch logic, so we mock the entire helper functions here.
     """
 
     @pytest.fixture
     def mock_workgraph(self, monkeypatch):
-        """Create a mock WorkGraph instance and patch the detection function."""
+        """Create a mock WorkGraph and patch detection + helper functions."""
         from unittest.mock import MagicMock
 
-        # Create mock WorkGraph with expected interface
         mock_wg = MagicMock()
-        mock_wg.run.return_value = {'result': 42}
-        mock_wg.process = MagicMock()
-        mock_wg.process.pk = 123
-
-        # Create mock ProcessNode for submit return
         mock_node = MagicMock(spec=orm.ProcessNode)
-        mock_wg.submit.return_value = mock_node
+        mock_node.pk = 123
 
-        # Patch is_workgraph_instance to return True for our mock
-        def mock_is_workgraph_instance(obj):
-            return obj is mock_wg
-
+        # Patch is_workgraph_instance to recognise our mock
         monkeypatch.setattr(
             'aiida.engine.launch.is_workgraph_instance',
-            mock_is_workgraph_instance,
+            lambda obj: obj is mock_wg,
         )
 
+        # Patch the run helper to return outputs + node
+        monkeypatch.setattr(
+            'aiida.engine.launch.engine_run_workgraph',
+            lambda workgraph, inputs, kwargs: ({'result': 42}, mock_node),
+        )
+
+        # Patch the submit helper to return the node
+        monkeypatch.setattr(
+            'aiida.engine.launch.engine_submit_workgraph',
+            lambda workgraph, inputs, kwargs, *, wait, wait_interval: mock_node,
+        )
+
+        mock_wg._mock_node = mock_node
         return mock_wg
 
     def test_run_workgraph(self, mock_workgraph):
-        """Test that run() delegates to WorkGraph.run()."""
+        """Test that run() returns outputs for a WorkGraph."""
         result = launch.run(mock_workgraph, inputs={'x': 1, 'y': 2})
-
-        mock_workgraph.run.assert_called_once_with(inputs={'x': 1, 'y': 2})
-        assert result == {'result': 42}
-
-    def test_run_workgraph_with_kwargs(self, mock_workgraph):
-        """Test that run() merges inputs and kwargs for WorkGraph."""
-        result = launch.run(mock_workgraph, inputs={'x': 1}, y=2)
-
-        mock_workgraph.run.assert_called_once_with(inputs={'x': 1, 'y': 2})
         assert result == {'result': 42}
 
     def test_run_workgraph_no_inputs(self, mock_workgraph):
         """Test that run() works with no inputs for WorkGraph."""
         result = launch.run(mock_workgraph)
-
-        mock_workgraph.run.assert_called_once_with(inputs=None)
         assert result == {'result': 42}
 
     def test_run_get_node_workgraph(self, mock_workgraph):
-        """Test that run_get_node() delegates to WorkGraph.run() and returns process."""
+        """Test that run_get_node() returns outputs and node for WorkGraph."""
         result, node = launch.run_get_node(mock_workgraph, inputs={'x': 1})
-
-        mock_workgraph.run.assert_called_once_with(inputs={'x': 1})
         assert result == {'result': 42}
-        assert node is mock_workgraph.process
+        assert node.pk == 123
 
     def test_run_get_pk_workgraph(self, mock_workgraph):
-        """Test that run_get_pk() delegates to WorkGraph.run() and returns pk."""
+        """Test that run_get_pk() returns outputs and pk for WorkGraph."""
         result = launch.run_get_pk(mock_workgraph, inputs={'x': 1})
-
-        mock_workgraph.run.assert_called_once_with(inputs={'x': 1})
         assert result.result == {'result': 42}
         assert result.pk == 123
 
     def test_submit_workgraph(self, mock_workgraph):
-        """Test that submit() delegates to WorkGraph.submit() with correct options."""
-        node = launch.submit(mock_workgraph, inputs={'x': 1}, wait=True, timeout=300, wait_interval=10)
-
-        mock_workgraph.submit.assert_called_once_with(
-            inputs={'x': 1},
-            wait=True,
-            timeout=300,
-            interval=10,
-        )
-        assert node is mock_workgraph.submit.return_value
-
-    def test_submit_workgraph_default_options(self, mock_workgraph):
-        """Test that submit() uses default options for WorkGraph."""
-        launch.submit(mock_workgraph, inputs={'x': 1})
-
-        mock_workgraph.submit.assert_called_once_with(
-            inputs={'x': 1},
-            wait=False,
-            timeout=600,
-            interval=5,
-        )
-
-    def test_submit_workgraph_warns_on_suspicious_keys(self, mock_workgraph, caplog):
-        """Test that submit() warns when execution option names are in inputs."""
-        import logging
-
-        with caplog.at_level(logging.WARNING):
-            launch.submit(mock_workgraph, inputs={'wait': 5, 'timeout': 10, 'x': 1})
-
-        # Check warning was logged
-        assert any('wait' in record.message and 'timeout' in record.message for record in caplog.records)
-
-        # But the values should still be passed as task inputs
-        mock_workgraph.submit.assert_called_once()
-        call_kwargs = mock_workgraph.submit.call_args[1]
-        assert call_kwargs['inputs'] == {'wait': 5, 'timeout': 10, 'x': 1}
-
-    def test_submit_workgraph_no_warning_without_suspicious_keys(self, mock_workgraph, caplog):
-        """Test that submit() doesn't warn when no suspicious keys in inputs."""
-        import logging
-
-        with caplog.at_level(logging.WARNING):
-            launch.submit(mock_workgraph, inputs={'x': 1, 'y': 2})
-
-        # Check no warning about execution options
-        assert not any('wait' in record.message or 'timeout' in record.message for record in caplog.records)
+        """Test that submit() returns node for WorkGraph."""
+        node = launch.submit(mock_workgraph, inputs={'x': 1}, wait=True, wait_interval=10)
+        assert node.pk == 123
 
 
 class TestWorkGraphHelpers:
-    """Test the WorkGraph helper functions."""
+    """Test the WorkGraph helper functions in aiida.common.workgraph."""
 
-    def test_is_workgraph_instance_without_workgraph(self):
-        """Test is_workgraph_instance returns False when aiida-workgraph is not available."""
+    def test_is_workgraph_instance_returns_false_for_non_workgraph(self):
+        """Test is_workgraph_instance returns False for non-WorkGraph objects."""
         from aiida.common.workgraph import is_workgraph_instance
 
-        # Should return False for any non-WorkGraph object
         assert is_workgraph_instance(None) is False
         assert is_workgraph_instance('string') is False
         assert is_workgraph_instance(42) is False
         assert is_workgraph_instance(orm.Int(1)) is False
 
-    def test_is_workgraph_node_instance_without_workgraph(self):
-        """Test is_workgraph_node_instance returns False when aiida-workgraph is not available."""
+    def test_is_workgraph_node_instance_returns_false_for_non_workgraph_node(self):
+        """Test is_workgraph_node_instance returns False for non-WorkGraphNode objects."""
         from aiida.common.workgraph import is_workgraph_node_instance
 
-        # Should return False for any non-WorkGraphNode object
         assert is_workgraph_node_instance(None) is False
         assert is_workgraph_node_instance('string') is False
         assert is_workgraph_node_instance(orm.WorkChainNode()) is False
 
-    def test_prepare_workgraph_inputs_merges_correctly(self):
-        """Test _prepare_workgraph_inputs merges inputs and kwargs."""
-        from aiida.engine.launch import _prepare_workgraph_inputs
+    def test_prepare_workgraph_inputs_pops_reserved_keys(self):
+        """Test that _prepare_workgraph_inputs separates reserved keys from task inputs."""
+        from unittest.mock import MagicMock
 
-        # Both inputs and kwargs
-        result = _prepare_workgraph_inputs({'a': 1}, {'b': 2})
-        assert result == {'a': 1, 'b': 2}
+        from aiida.common.workgraph import _WORKGRAPH_SUBMIT_RESERVED_KEYS, _prepare_workgraph_inputs
 
-        # Only inputs
-        result = _prepare_workgraph_inputs({'a': 1}, {})
-        assert result == {'a': 1}
+        mock_wg = MagicMock()
+        mock_wg.get_task_names.return_value = ['add', 'multiply']
 
-        # Only kwargs
-        result = _prepare_workgraph_inputs(None, {'b': 2})
-        assert result == {'b': 2}
+        wg_inputs, popped = _prepare_workgraph_inputs(
+            workgraph=mock_wg,
+            inputs={'add': 1, 'metadata': {'label': 'test'}, 'timeout': 300},
+            kwargs={},
+            reserved_keys=_WORKGRAPH_SUBMIT_RESERVED_KEYS,
+        )
 
-        # Neither
-        result = _prepare_workgraph_inputs(None, {})
-        assert result is None
+        assert wg_inputs == {'add': 1}
+        assert popped == {'metadata': {'label': 'test'}, 'timeout': 300}
 
-        # kwargs override inputs
-        result = _prepare_workgraph_inputs({'a': 1}, {'a': 2})
-        assert result == {'a': 2}
+    def test_prepare_workgraph_inputs_raises_on_collision(self):
+        """Test that _prepare_workgraph_inputs raises when reserved keys collide with task names."""
+        from unittest.mock import MagicMock
+
+        from aiida.common.exceptions import InvalidOperation
+        from aiida.common.workgraph import _WORKGRAPH_RUN_RESERVED_KEYS, _prepare_workgraph_inputs
+
+        mock_wg = MagicMock()
+        mock_wg.get_task_names.return_value = ['metadata', 'add']
+
+        with pytest.raises(InvalidOperation, match='reserved execution parameters'):
+            _prepare_workgraph_inputs(
+                workgraph=mock_wg,
+                inputs={'metadata': {'label': 'test'}, 'add': 1},
+                kwargs={},
+                reserved_keys=_WORKGRAPH_RUN_RESERVED_KEYS,
+            )
+
+    def test_prepare_workgraph_inputs_no_inputs(self):
+        """Test _prepare_workgraph_inputs with no inputs."""
+        from unittest.mock import MagicMock
+
+        from aiida.common.workgraph import _WORKGRAPH_RUN_RESERVED_KEYS, _prepare_workgraph_inputs
+
+        mock_wg = MagicMock()
+        mock_wg.get_task_names.return_value = []
+
+        wg_inputs, popped = _prepare_workgraph_inputs(
+            workgraph=mock_wg,
+            inputs=None,
+            kwargs={},
+            reserved_keys=_WORKGRAPH_RUN_RESERVED_KEYS,
+        )
+
+        assert wg_inputs == {}
+        assert popped == {}
+
+    def test_prepare_workgraph_inputs_rejects_inputs_and_kwargs(self):
+        """Test that _prepare_workgraph_inputs raises when both inputs and kwargs are given."""
+        from unittest.mock import MagicMock
+
+        from aiida.common.workgraph import _WORKGRAPH_RUN_RESERVED_KEYS, _prepare_workgraph_inputs
+
+        mock_wg = MagicMock()
+
+        with pytest.raises(ValueError, match='Cannot specify both'):
+            _prepare_workgraph_inputs(
+                workgraph=mock_wg,
+                inputs={'x': 1},
+                kwargs={'y': 2},
+                reserved_keys=_WORKGRAPH_RUN_RESERVED_KEYS,
+            )

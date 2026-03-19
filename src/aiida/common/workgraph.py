@@ -20,6 +20,10 @@ Usage:
         ...
 """
 
+# mypy: disable-error-code="unused-ignore"
+# aiida-workgraph is an optional dependency: mypy raises import-not-found when
+# it is absent and import-untyped when it is present.  Both codes are needed in
+# type-ignore comments, but one will always be unused, so we suppress that check.
 from __future__ import annotations
 
 import typing as t

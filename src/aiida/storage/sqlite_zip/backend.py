@@ -484,7 +484,8 @@ class ZipfileBackendRepository(_RoBackendRepository):
         self.__zipfile: None | ZipFile = None
 
     def close(self) -> None:
-        self._zipfile.close()
+        if self.__zipfile:
+            self._zipfile.close()
         super().close()
 
     @property

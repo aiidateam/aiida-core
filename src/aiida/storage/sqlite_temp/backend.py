@@ -215,12 +215,12 @@ class SqliteTempBackend(StorageBackend):
 
     @staticmethod
     @functools.lru_cache(maxsize=18)
-    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool) -> tuple:
+    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool) -> tuple[Any, set[Any]]:
         """Return the Sqlalchemy mapper and fields corresponding to the given entity.
 
         :param with_pk: if True, the fields returned will include the primary key
         """
-        from sqlalchemy import inspect
+        from sqlalchemy import inspect as sqla_inspect
 
         from aiida.storage.sqlite_zip.models import (
             DbAuthInfo,
@@ -245,7 +245,7 @@ class SqliteTempBackend(StorageBackend):
             EntityTypes.LINK: DbLink,
             EntityTypes.GROUP_NODE: DbGroupNodes,
         }[entity_type]
-        mapper = inspect(model).mapper  # type: ignore[union-attr]
+        mapper = sqla_inspect(model).mapper  # type: ignore[union-attr]
         keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
         return mapper, keys
 

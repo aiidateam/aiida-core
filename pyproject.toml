@@ -367,6 +367,8 @@ module = [
   'aiida.common.*',
   'aiida.repository.*',
   'aiida.schedulers.*',
+  'aiida.storage.psql_dos.migrator',
+  'aiida.storage.psql_dos.utils',
   'aiida.tools.graph.*',
   'aiida.tools.query.*'
 ]

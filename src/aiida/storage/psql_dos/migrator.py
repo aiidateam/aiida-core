@@ -85,7 +85,7 @@ class PsqlDosMigrator:
         self.close()
 
     @property
-    def connection(self):
+    def connection(self) -> Connection:
         """Return the connection to the database.
 
         Will automatically create the engine and open an connection if not already opened in a previous call.
@@ -114,9 +114,11 @@ class PsqlDosMigrator:
     @classmethod
     def get_schema_version_head(cls) -> str:
         """Return the head schema version for this storage, i.e. the latest schema this storage can be migrated to."""
-        return cls._alembic_script().revision_map.get_current_head('main')
+        version = cls._alembic_script().revision_map.get_current_head('main')
+        assert version is not None
+        return version
 
-    def get_schema_version_profile(self, check_legacy=False) -> Optional[str]:
+    def get_schema_version_profile(self, check_legacy: bool = False) -> Optional[str]:
         """Return the schema version of the backend instance for this profile.
 
         Note, the version will be None if the database is empty or is a legacy django database.
@@ -374,7 +376,8 @@ class PsqlDosMigrator:
             # now we can continue with the migration as normal
 
         # find what branch the current version is on
-        branches = self._alembic_script().revision_map.get_revision(version).branch_labels
+        revisions = self._alembic_script().revision_map.get_revision(version)
+  branches = revisions.branch_labels if revisions is not None else set()
 
         if 'django' in branches or 'sqlalchemy' in branches:
             # migrate up to the top of the respective legacy branches
@@ -413,7 +416,7 @@ class PsqlDosMigrator:
             downgrade(config, version)
 
     @staticmethod
-    def _alembic_config():
+    def _alembic_config() -> Config:
         """Return an instance of an Alembic `Config`."""
         dirpath = pathlib.Path(__file__).resolve().parent
         config = Config()
@@ -421,7 +424,7 @@ class PsqlDosMigrator:
         return config
 
     @classmethod
-    def _alembic_script(cls):
+    def _alembic_script(cls) -> ScriptDirectory:
         """Return an instance of an Alembic `ScriptDirectory`."""
         return ScriptDirectory.from_config(cls._alembic_config())
 
@@ -436,7 +439,7 @@ class PsqlDosMigrator:
         config.attributes['connection'] = self.connection
         config.attributes['aiida_profile'] = self.profile
 
-        def _callback(step: MigrationInfo, **kwargs):
+        def _callback(step: MigrationInfo, **kwargs: Any) -> None:
             """Callback to be called after a migration step is executed."""
             from_rev = step.down_revision_ids[0] if step.down_revision_ids else '<base>'
             MIGRATE_LOGGER.report(f'- {from_rev} -> {step.up_revision_id}')

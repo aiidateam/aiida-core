@@ -28,7 +28,7 @@ class PsqlConfig(TypedDict, total=False):
     database_password: str
     database_name: str
 
-    engine_kwargs: dict
+    engine_kwargs: dict[str, Any]
     """keyword argument that will be passed on to the SQLAlchemy engine."""
 
 
@@ -65,7 +65,7 @@ def create_sqlalchemy_engine(config: PsqlConfig) -> Engine:
     )
 
 
-def create_scoped_session_factory(engine: Engine, **kwargs: Any) -> scoped_session:
+def create_scoped_session_factory(engine: Engine, **kwargs: Any) -> scoped_session[Session]:
     """Create scoped SQLAlchemy session factory"""
     from sqlalchemy.orm import scoped_session, sessionmaker
 

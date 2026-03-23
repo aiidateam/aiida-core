@@ -20,11 +20,14 @@ from aiida.orm.nodes.data.code.installed import InstalledCode
 
 def test_constructor_raises(aiida_localhost, bash_path):
     """Test the constructor when it is supposed to raise."""
-    with pytest.raises(ValueError, match=r'The `filepath_executable` parameter must be provided.'):
-        InstalledCode(computer=aiida_localhost)
+    with pytest.raises(TypeError, match=r'missing .* required positional arguments'):
+        InstalledCode()
 
     with pytest.raises(TypeError, match=r'Got object of type .*'):
         InstalledCode(computer=aiida_localhost, filepath_executable=bash_path)
+
+    with pytest.raises(TypeError, match=r'Got object of type .*'):
+        InstalledCode(computer='computer', filepath_executable='/usr/bin/bash')
 
 
 def test_constructor(aiida_localhost, bash_path):

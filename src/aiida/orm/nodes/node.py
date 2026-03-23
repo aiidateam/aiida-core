@@ -1186,17 +1186,21 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         context: dict[str, Any] | None = None,
         minimal: bool = False,
         schema: type[BaseOrmModel] | None = None,
+        use_field_alias_as_key: bool = True,
     ) -> dict[str, Any]:
         """Collect values for the model fields from this node.
 
         For constructor-based schemas, this also reconstructs the `args` payload from
         `ConstructorArgsModel` fields.
         """
-        fields = super()._orm_to_model_field_values(context=context, minimal=minimal, schema=schema)
+        fields = super()._orm_to_model_field_values(
+            context=context, minimal=minimal, schema=schema, use_field_alias_as_key=use_field_alias_as_key
+        )
         if self.has_constructor_model and schema is self.ConstructorModel:
             fields['args'] = self._orm_to_model_field_values(
                 context=context or {},
                 minimal=minimal,
                 schema=self.ConstructorArgsModel,
+                use_field_alias_as_key=use_field_alias_as_key,
             )
         return fields

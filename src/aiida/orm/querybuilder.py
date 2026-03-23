@@ -426,11 +426,11 @@ class QueryBuilder:
             # So for those cases we need to construct the correct filters,
             # corresponding to the provided classes and value of `subclassing`.
             if ormclass == EntityTypes.NODE:
-                self._add_node_type_filter(tag, classifiers, subclassing, outerjoin=outerjoin)
-                self._add_process_type_filter(tag, classifiers, subclassing, outerjoin=outerjoin)
+                self._add_node_type_filter(tag, classifiers, subclassing)
+                self._add_process_type_filter(tag, classifiers, subclassing)
 
             elif ormclass == EntityTypes.GROUP:
-                self._add_group_type_filter(tag, classifiers, subclassing, outerjoin=outerjoin)
+                self._add_group_type_filter(tag, classifiers, subclassing)
 
             # The order has to be first _add_node_type_filter and then add_filter.
             # If the user adds a query on the type column, it overwrites what I did
@@ -733,15 +733,12 @@ class QueryBuilder:
 
         return processed_filters
 
-    def _add_node_type_filter(
-        self, tagspec: str, classifiers: List[Classifier], subclassing: bool, outerjoin: bool = False
-    ):
+    def _add_node_type_filter(self, tagspec: str, classifiers: List[Classifier], subclassing: bool):
         """Add a filter based on node type.
 
         :param tagspec: The tag, which has to exist already as a key in self._filters
         :param classifiers: a dictionary with classifiers
         :param subclassing: if True, allow for subclasses of the ormclass
-        :param outerjoin: if True, wrap the filter with OR id IS NULL
         """
         if len(classifiers) > 1:
             # If a list was passed to QueryBuilder.append, this propagates to a list in the classifiers
@@ -751,21 +748,14 @@ class QueryBuilder:
         else:
             entity_type_filter = _get_node_type_filter(classifiers[0], subclassing)
 
-        filters: dict = {'node_type': entity_type_filter}
-        if outerjoin:
-            filters = {'or': [filters, {'id': None}]}
+        self.add_filter(tagspec, {'node_type': entity_type_filter})
 
-        self.add_filter(tagspec, filters)
-
-    def _add_process_type_filter(
-        self, tagspec: str, classifiers: List[Classifier], subclassing: bool, outerjoin: bool = False
-    ) -> None:
+    def _add_process_type_filter(self, tagspec: str, classifiers: List[Classifier], subclassing: bool) -> None:
         """Add a filter based on process type.
 
         :param tagspec: The tag, which has to exist already as a key in self._filters
         :param classifiers: a dictionary with classifiers
         :param subclassing: if True, allow for subclasses of the process type
-        :param outerjoin: if True, wrap the filter with OR id IS NULL
 
         Note: This function handles the case when process_type_string is None.
         """
@@ -777,41 +767,28 @@ class QueryBuilder:
                     process_type_filter['or'].append(_get_process_type_filter(classifier, subclassing))
 
             if len(process_type_filter['or']) > 0:
-                filters: dict = {'process_type': process_type_filter}
-                if outerjoin:
-                    filters = {'or': [filters, {'id': None}]}
-                self.add_filter(tagspec, filters)
+                self.add_filter(tagspec, {'process_type': process_type_filter})
 
         elif classifiers[0].process_type_string is not None:
             process_type_filter = _get_process_type_filter(classifiers[0], subclassing)
-            filters = {'process_type': process_type_filter}
-            if outerjoin:
-                filters = {'or': [filters, {'id': None}]}
-            self.add_filter(tagspec, filters)
+            self.add_filter(tagspec, {'process_type': process_type_filter})
 
-    def _add_group_type_filter(
-        self, tagspec: str, classifiers: List[Classifier], subclassing: bool, outerjoin: bool = False
-    ) -> None:
+    def _add_group_type_filter(self, tagspec: str, classifiers: List[Classifier], subclassing: bool) -> None:
         """Add a filter based on group type.
 
         :param tagspec: The tag, which has to exist already as a key in self._filters
         :param classifiers: a dictionary with classifiers
         :param subclassing: if True, allow for subclasses of the ormclass
-        :param outerjoin: if True, wrap the filter with OR id IS NULL
         """
         if len(classifiers) > 1:
             # If a list was passed to QueryBuilder.append, this propagates to a list in the classifiers
-            entity_type_filter: dict = {'or': []}
+            type_string_filter: dict = {'or': []}
             for classifier in classifiers:
-                entity_type_filter['or'].append(_get_group_type_filter(classifier, subclassing))
+                type_string_filter['or'].append(_get_group_type_filter(classifier, subclassing))
         else:
-            entity_type_filter = _get_group_type_filter(classifiers[0], subclassing)
+            type_string_filter = _get_group_type_filter(classifiers[0], subclassing)
 
-        filters: dict = {'type_string': entity_type_filter}
-        if outerjoin:
-            filters = {'or': [filters, {'id': None}]}
-
-        self.add_filter(tagspec, filters)
+        self.add_filter(tagspec, {'type_string': type_string_filter})
 
     def add_projection(self, tag_spec: Union[str, EntityClsType], projection_spec: ProjectType) -> None:
         r"""Adds a projection

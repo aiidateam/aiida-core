@@ -1261,29 +1261,3 @@ def test_process_most_recent_node_exclusive(run_cli_command, process_nodes, comm
     """Test command raises if ``-M`` is specified as well as explicit process nodes."""
     result = run_cli_command(command, ['-M', str(process_nodes[0].pk)], raises=True)
     assert 'cannot specify individual processes and the `-M/--most-recent-node` flag at the same time.' in result.output
-
-
-def test_node_sql_generation(aiida_profile_clean):
-    """Test the SQL generation for root processes to ensure CORRECT handling of outer joins.
-
-    This test verifies that using `orm.ProcessNode` for the caller does not result in
-    incorrect filtering when root processes are requested via outer joins.
-    """
-    from aiida import orm
-
-    qb = orm.QueryBuilder()
-    qb.append(orm.ProcessNode, tag='process')
-    qb.append(
-        orm.ProcessNode,
-        with_outgoing='process',
-        tag='caller',
-        outerjoin=True,
-    )
-    qb.add_filter('caller', {'id': {'==': None}})
-    sql = qb.as_sql()
-
-    # Check that 'process.' is present for both nodes (redundant but correct with the outer join wrap)
-    assert sql.count('process.') == 2
-    # Check for the outer join wrap logic: "OR ... IS NULL"
-    # The specific syntax might vary by backend, but for PSQL/SQLA it should be there.
-    assert 'IS NULL' in sql

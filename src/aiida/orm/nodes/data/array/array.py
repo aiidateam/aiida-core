@@ -250,15 +250,7 @@ class ArrayData(Data):
         # Store the array name and shape for querying purposes
         self.base.attributes.set(f'{self.array_prefix}{name}', list(array.shape))
 
-    def set_array_from_file(self, name: str, fileobj: io.IOBase) -> None:
-        """Store a new numpy array inside the node, reading it from a filelike object."
-
-        :param name: The name of the array.
-        :param fileobj: A filelike object containing the array in .npy format.
-        """
-        if not isinstance(fileobj, io.IOBase):
-            raise TypeError('`fileobj` should be a file-like object')
-
+    def attach_file(self, name: str, fileobj: io.BufferedReader) -> None:
         array = np.load(fileobj, allow_pickle=False)
         self.set_array(name, array)
 

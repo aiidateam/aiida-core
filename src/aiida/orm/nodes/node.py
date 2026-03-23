@@ -36,7 +36,6 @@ from uuid import UUID
 from pydantic import create_model, field_serializer
 from typing_extensions import Self
 
-from aiida import orm
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
@@ -475,6 +474,17 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         else:
             raise ValueError('the serialized data does not contain the required `attributes` or `args` field')
         return cls.from_model(Model(**serialized), files=files)
+
+    def attach_file(self, filepath: str, fileobj: io.BufferedReader) -> None:
+        """Attach a file to the repository of this node.
+
+        Subclasses of `Node` may override this method, providing custom file handling that includes validation
+        and/or attribute derivation, e.g., `ArrayData.set_array`, `SinglefileData.set_file`, etc.
+
+        :param filepath: the path within the repository to store the file at
+        :param fileobj: the file-like object to store
+        """
+        self.base.repository.put_object_from_filelike(fileobj, filepath)
 
     def _check_mutability_attributes(self, keys: Optional[List[str]] = None) -> None:
         """Check if the entity is mutable and raise an exception if not.
@@ -1154,16 +1164,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                             f'File hash mismatch for `{filepath}`: expected {expected_hash}, computed {actual_hash}'
                         )
 
-            # Though all node types CAN have files, we limit support here to those that SHOULD
-            # TODO explicitly define file support per node type
-            if isinstance(instance, orm.ArrayData):
-                instance.set_array_from_file(filepath, fileobj)
-            elif isinstance(instance, orm.FolderData):
-                instance.put_object_from_filelike(fileobj, filepath)
-            elif isinstance(instance, orm.SinglefileData):
-                instance.set_file(fileobj, filepath)
-            else:
-                raise exceptions.ValidationError(f'`{cls.__name__}` does not support file repository contents')
+            instance.attach_file(filepath, fileobj)
             seen.add(filepath)
 
         return instance

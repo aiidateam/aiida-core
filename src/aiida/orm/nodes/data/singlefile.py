@@ -225,6 +225,9 @@ class SinglefileData(Data):
 
         self.filename = key
 
+    def attach_file(self, filepath: str, fileobj: io.BufferedReader) -> None:
+        self.set_file(fileobj, filepath)
+
     def _validate(self):
         """Validate the node before storing.
 

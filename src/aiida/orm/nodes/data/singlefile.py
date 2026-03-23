@@ -99,9 +99,6 @@ class SinglefileData(Data):
 
         if file is not None:
             self.set_file(file, filename=filename)
-            return
-
-        raise ValueError('either `file` or `content` must be specified.')
 
     @property
     def content(self) -> bytes:

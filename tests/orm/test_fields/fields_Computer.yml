@@ -2,8 +2,8 @@ description: QbStrField('description', dtype=<class 'str'>, doc='Description of 
   computer')
 hostname: QbStrField('hostname', dtype=<class 'str'>, doc='Hostname of the computer')
 label: QbStrField('label', dtype=<class 'str'>, doc='Label for the computer')
-metadata: QbDictField('metadata', dtype=typing.Dict[str, typing.Any], doc='Metadata
-  of the computer')
+metadata: QbDictField('metadata', dtype=dict[str, typing.Any], doc='Metadata of the
+  computer')
 pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
 scheduler_type: QbStrField('scheduler_type', dtype=<class 'str'>, doc='Scheduler type
   of the computer')

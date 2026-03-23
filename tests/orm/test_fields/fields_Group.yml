@@ -1,5 +1,5 @@
 description: QbStrField('description', dtype=<class 'str'>, doc='The group description')
-extras: QbDictField('extras', dtype=typing.Dict[str, typing.Any], doc='The group extras')
+extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The group extras')
 label: QbStrField('label', dtype=<class 'str'>, doc='The group label')
 pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
 time: QbNumericField('time', dtype=<class 'datetime.datetime'>, doc='The creation

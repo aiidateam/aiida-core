@@ -216,31 +216,6 @@ def test_from_bytes():
     assert node.filename == filename
 
 
-def test_write_model_filename_optional():
-    """Test that `filename` can be omitted from `SinglefileData.WriteModel`."""
-    model = SinglefileData.WriteModel(
-        node_type=SinglefileData.class_node_type,
-        attributes={},
-    )
-    assert model.attributes.filename is None
-    assert model.attributes.model_dump(exclude_none=True) == {}
-
-
-def test_store_infers_filename_when_omitted_in_write_model():
-    """Test that storing infers `filename` from the repository object when omitted in write model."""
-    model = SinglefileData.WriteModel(
-        node_type=SinglefileData.class_node_type,
-        attributes={},
-    )
-
-    node = SinglefileData.from_model(model)
-    node.base.repository.put_object_from_filelike(io.BytesIO(b'content'), 'uploaded.txt')
-    node.store()
-
-    assert node.filename == 'uploaded.txt'
-    assert node.base.repository.list_object_names() == ['uploaded.txt']
-
-
 def test_get_content():
     """Test the :meth:`aiida.orm.nodes.data.singlefile.SinglefileData.get_content` method."""
     content = 'some\ncontent'

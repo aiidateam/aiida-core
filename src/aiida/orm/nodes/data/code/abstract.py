@@ -390,9 +390,10 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             | ({'computer': self.computer.label} if self.computer else {})
             | {
                 key: value
+                for schema in (self.AttributesModel, self.ConstructorArgsModel)
                 for key, value in self._orm_to_model_field_values(
                     context={'repository_path': pathlib.Path.cwd() / f'{self.label}'},
-                    schema=self.AttributesModel,
+                    schema=schema,
                     use_field_alias_as_key=False,
                 ).items()
                 if value is not None

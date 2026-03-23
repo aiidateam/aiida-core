@@ -2739,10 +2739,17 @@ class TestTrajectoryData:
                 [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, -0.5, -0.5]],
             ]
         )
+        pbc = [True, True, False]
 
         # I set the node
         n.set_trajectory(
-            stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times, velocities=velocities
+            stepids=stepids,
+            cells=cells,
+            symbols=symbols,
+            positions=positions,
+            times=times,
+            velocities=velocities,
+            pbc=pbc,
         )
 
         # Generic checks
@@ -2772,7 +2779,7 @@ class TestTrajectoryData:
 
         ########################################################
         # I set the node, this time without times or velocities (the same node)
-        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions)
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, pbc=pbc)
         # Generic checks
         assert n.numsites == 3
         assert n.numsteps == 2
@@ -2785,7 +2792,7 @@ class TestTrajectoryData:
 
         # Same thing, but for a new node
         n = TrajectoryData()
-        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions)
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, pbc=pbc)
         # Generic checks
         assert n.numsites == 3
         assert n.numsteps == 2
@@ -2798,7 +2805,7 @@ class TestTrajectoryData:
 
         ########################################################
         # I set the node, this time without velocities (the same node)
-        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times)
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times, pbc=pbc)
         # Generic checks
         assert n.numsites == 3
         assert n.numsteps == 2
@@ -2811,7 +2818,7 @@ class TestTrajectoryData:
 
         # Same thing, but for a new node
         n = TrajectoryData()
-        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times)
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times, pbc=pbc)
         # Generic checks
         assert n.numsites == 3
         assert n.numsteps == 2
@@ -2935,10 +2942,17 @@ class TestTrajectoryData:
                 [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, -0.5, -0.5]],
             ]
         )
+        pbc = [True, True, False]
 
         # I set the node
         n.set_trajectory(
-            stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times, velocities=velocities
+            stepids=stepids,
+            cells=cells,
+            symbols=symbols,
+            positions=positions,
+            times=times,
+            velocities=velocities,
+            pbc=pbc,
         )
 
         from_step = n.get_step_structure(1)
@@ -3116,10 +3130,17 @@ class TestTrajectoryData:
                 [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, -0.5, -0.5]],
             ]
         )
+        pbc = [True, True, False]
 
         # I set the node
         n.set_trajectory(
-            stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times, velocities=velocities
+            stepids=stepids,
+            cells=cells,
+            symbols=symbols,
+            positions=positions,
+            times=times,
+            velocities=velocities,
+            pbc=pbc,
         )
 
         # It is not obvious how to check that the bands are correct.

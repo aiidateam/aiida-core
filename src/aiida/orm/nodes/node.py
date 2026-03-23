@@ -413,7 +413,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         context: dict[str, Any] | None = None,
         minimal: bool = False,
         schema: type[OrmModel] | None = None,
-        mode: Literal['json', 'python'] | None = None,
+        mode: Literal['json', 'python'] = 'python',
         dump_repo: bool = False,
     ) -> dict[str, Any]:
         """Serialize the entity instance to JSON.
@@ -466,11 +466,11 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         :return: The constructed node instance.
         """
         if 'attributes' in serialized:
-            Model = cls.WriteModel
+            Model = cls.WriteModel  # noqa: N806
         elif 'args' in serialized:
             if not cls.__ConstructorModel:
                 raise ValueError(f'{cls.__name__} does not support constructor-based creation')
-            Model = cls.ConstructorModel
+            Model = cls.ConstructorModel  # noqa: N806
         else:
             raise ValueError('the serialized data does not contain the required `attributes` or `args` field')
         return cls.from_model(Model(**serialized), files=files)
@@ -1055,7 +1055,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
         exceptions = ('RemoteData', 'InstalledCode')
 
-        BaseReadModel: type[Node.ReadModel] = cls.ReadModel
+        BaseReadModel: type[Node.ReadModel] = cls.ReadModel  # noqa: N806
         model_fields: dict[str, Any] = {}
 
         if 'ReadModel' in cls.__dict__:
@@ -1066,7 +1066,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 )
             # For the exception classes that override `ReadModel`, we need to copy the overridden fields.
             # We don't know a priori which fields are overridden, so we copy all.
-            BaseReadModel = cls.ReadModel.__bases__[0]
+            BaseReadModel = cls.ReadModel.__bases__[0]  # noqa: N806
             model_fields = {
                 key: (field.annotation, deepcopy(field)) for key, field in cls.ReadModel.model_fields.items()
             }

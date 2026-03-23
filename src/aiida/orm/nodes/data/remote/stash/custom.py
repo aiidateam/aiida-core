@@ -8,6 +8,8 @@
 ###########################################################################
 """Data plugin that models a stashed folder on a remote computer."""
 
+from __future__ import annotations
+
 from typing import List, Tuple, Union
 
 from aiida.common.datastructures import StashMode
@@ -24,21 +26,28 @@ class RemoteStashCustomData(RemoteStashData):
 
     _storable = True
 
-    class Model(RemoteStashData.Model):
-        target_basepath: str = MetadataField(description='The the target basepath')
-        source_list: List[str] = MetadataField(description='The list of source files that were stashed')
+    class AttributesModel(RemoteStashData.AttributesModel):
+        target_basepath: str = MetadataField(
+            description='The the target basepath',
+        )
+        source_list: list[str] = MetadataField(
+            description='The list of source files that were stashed',
+        )
 
     def __init__(
         self,
         stash_mode: StashMode,
         target_basepath: str,
-        source_list: List,
+        source_list: List[str],
         **kwargs,
     ):
         """Construct a new instance
 
         :param stash_mode: the stashing mode with which the data was stashed on the remote.
+        :param target_basepath: the target basepath.
+        :param source_list: the list of source files.
         """
+
         super().__init__(stash_mode, **kwargs)
 
         self.target_basepath = target_basepath

@@ -8,6 +8,8 @@
 ###########################################################################
 """Module with `Node` sub class for processes."""
 
+from __future__ import annotations
+
 import enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
@@ -21,7 +23,8 @@ from aiida.common.pydantic import MetadataField
 from aiida.orm.utils.mixins import Sealable
 
 from ..caching import NodeCaching
-from ..node import Node, NodeLinks
+from ..links import NodeLinks
+from ..node import Node
 
 if TYPE_CHECKING:
     from aiida.engine.processes import ExitCode, Process
@@ -188,14 +191,35 @@ class ProcessNode(Sealable, Node):
             cls.PROCESS_STATUS_KEY,
         )
 
-    class Model(Node.Model, Sealable.Model):
-        process_label: Optional[str] = MetadataField(description='The process label')
-        process_state: Optional[str] = MetadataField(description='The process state enum')
-        process_status: Optional[str] = MetadataField(description='The process status is a generic status message')
-        exit_status: Optional[int] = MetadataField(description='The process exit status')
-        exit_message: Optional[str] = MetadataField(description='The process exit message')
-        exception: Optional[str] = MetadataField(description='The process exception message')
-        paused: bool = MetadataField(description='Whether the process is paused')
+    class AttributesModel(Node.AttributesModel, Sealable.AttributesModel):
+        process_label: Optional[str] = MetadataField(
+            None,
+            description='The process label',
+        )
+        process_state: Optional[str] = MetadataField(
+            None,
+            description='The process state enum',
+        )
+        process_status: Optional[str] = MetadataField(
+            None,
+            description='The process status is a generic status message',
+        )
+        exit_status: Optional[int] = MetadataField(
+            None,
+            description='The process exit status',
+        )
+        exit_message: Optional[str] = MetadataField(
+            None,
+            description='The process exit message',
+        )
+        exception: Optional[str] = MetadataField(
+            None,
+            description='The process exception message',
+        )
+        paused: Optional[bool] = MetadataField(
+            None,
+            description='Whether the process is paused',
+        )
 
     def set_metadata_inputs(self, value: Dict[str, Any]) -> None:
         """Set the mapping of inputs corresponding to ``metadata`` ports that were passed to the process."""
@@ -237,7 +261,7 @@ class ProcessNode(Sealable, Node):
             else:
                 left[key] = value
 
-    def get_builder_restart(self) -> 'ProcessBuilder':
+    def get_builder_restart(self) -> ProcessBuilder:
         """Return a `ProcessBuilder` that is ready to relaunch the process that created this node.
 
         The process class will be set based on the `process_type` of this node and the inputs of the builder will be
@@ -253,7 +277,7 @@ class ProcessNode(Sealable, Node):
         return builder
 
     @property
-    def process_class(self) -> Type['Process']:
+    def process_class(self) -> Type[Process]:
         """Return the process class that was used to create this node.
 
         :return: `Process` class
@@ -437,7 +461,7 @@ class ProcessNode(Sealable, Node):
         return self.is_finished and self.exit_status != 0
 
     @property
-    def exit_code(self) -> Optional['ExitCode']:
+    def exit_code(self) -> Optional[ExitCode]:
         """Return the exit code of the process.
 
         It is reconstituted from the ``exit_status`` and ``exit_message`` attributes if both of those are defined.
@@ -462,10 +486,10 @@ class ProcessNode(Sealable, Node):
         """
         return self.base.attributes.get(self.EXIT_STATUS_KEY, None)
 
-    def set_exit_status(self, status: Union[None, enum.Enum, int]) -> None:
+    def set_exit_status(self, status: Optional[Union[enum.Enum, int]] = None) -> None:
         """Set the exit status of the process
 
-        :param state: an integer exit code or None, which will be interpreted as zero
+        :param status: the exit status, an integer exit code, or None
         """
         if status is None:
             status = 0
@@ -572,7 +596,7 @@ class ProcessNode(Sealable, Node):
             pass
 
     @property
-    def called(self) -> List['ProcessNode']:
+    def called(self) -> List[ProcessNode]:
         """Return a list of nodes that the process called
 
         :returns: list of process nodes called by this process
@@ -580,7 +604,7 @@ class ProcessNode(Sealable, Node):
         return self.base.links.get_outgoing(link_type=(LinkType.CALL_CALC, LinkType.CALL_WORK)).all_nodes()
 
     @property
-    def called_descendants(self) -> List['ProcessNode']:
+    def called_descendants(self) -> List[ProcessNode]:
         """Return a list of all nodes that have been called downstream of this process
 
         This will recursively find all the called processes for this process and its children.
@@ -594,7 +618,7 @@ class ProcessNode(Sealable, Node):
         return descendants
 
     @property
-    def caller(self) -> Optional['ProcessNode']:
+    def caller(self) -> Optional[ProcessNode]:
         """Return the process node that called this process node, or None if it does not have a caller
 
         :returns: process node that called this process node instance or None

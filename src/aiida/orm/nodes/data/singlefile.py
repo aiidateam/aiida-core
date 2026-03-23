@@ -17,7 +17,7 @@ import pathlib
 import typing as t
 
 from aiida.common import exceptions
-from aiida.common.pydantic import MetadataField
+from aiida.common.pydantic import BaseOrmModel, MetadataField
 from aiida.common.typing import FilePath
 
 from .data import Data
@@ -30,15 +30,34 @@ class SinglefileData(Data):
 
     DEFAULT_FILENAME = 'file.txt'
 
-    class Model(Data.Model):
-        content: bytes = MetadataField(
-            description='The file content.',
-            model_to_orm=lambda model: io.BytesIO(model.content),  # type: ignore[attr-defined]
+    class AttributesModel(Data.AttributesModel):
+        filename: str = MetadataField(
+            description='The name of the stored file',
+            orm_to_model=lambda node: t.cast(SinglefileData, node).filename,
+            read_only=True,
         )
-        filename: t.Optional[str] = MetadataField(None, description='The filename. Defaults to `file.txt`.')
+
+    class ConstructorArgsModel(BaseOrmModel):
+        filename: str = MetadataField(
+            'file.txt',
+            description='The name of the stored file',
+        )
+        content: str = MetadataField(
+            description='The file content',
+            model_to_orm=lambda model: t.cast(SinglefileData.ConstructorArgsModel, model).content_as_bytes(),
+            write_only=True,
+        )
+
+        def content_as_bytes(self) -> t.IO | None:
+            """Return the content as bytes.
+
+            :return: the content as bytes
+            :raises ValueError: if the content is not set
+            """
+            return io.StringIO(self.content) if self.content else None
 
     @classmethod
-    def from_string(cls, content: str, filename: str | pathlib.Path | None = None, **kwargs: t.Any) -> 'SinglefileData':
+    def from_string(cls, content: str, filename: str | pathlib.Path | None = None, **kwargs: t.Any) -> SinglefileData:
         """Construct a new instance and set ``content`` as its contents.
 
         :param content: The content as a string.
@@ -47,9 +66,7 @@ class SinglefileData(Data):
         return cls(io.StringIO(content), filename, **kwargs)
 
     @classmethod
-    def from_bytes(
-        cls, content: bytes, filename: str | pathlib.Path | None = None, **kwargs: t.Any
-    ) -> 'SinglefileData':
+    def from_bytes(cls, content: bytes, filename: str | pathlib.Path | None = None, **kwargs: t.Any) -> SinglefileData:
         """Construct a new instance and set ``content`` as its contents.
 
         :param content: The content as bytes.
@@ -76,10 +93,15 @@ class SinglefileData(Data):
             raise ValueError('cannot specify both `file` and `content`.')
 
         if content is not None:
+            if isinstance(content, (str, pathlib.Path)):
+                content = io.StringIO(content)
             file = content
 
         if file is not None:
             self.set_file(file, filename=filename)
+            return
+
+        raise ValueError('either `file` or `content` must be specified.')
 
     @property
     def content(self) -> bytes:
@@ -92,6 +114,14 @@ class SinglefileData(Data):
         :return: the filename under which the file is stored in the repository
         """
         return self.base.attributes.get('filename')
+
+    @filename.setter
+    def filename(self, value: str) -> None:
+        """Set the name of the file stored.
+
+        :param value: the filename under which the file is stored in the repository
+        """
+        self.base.attributes.set('filename', value)
 
     @t.overload
     @contextlib.contextmanager
@@ -193,22 +223,27 @@ class SinglefileData(Data):
         for existing_key in existing_object_names:
             self.base.repository.delete_object(existing_key)
 
-        self.base.attributes.set('filename', key)
+        self.filename = key
 
-    def _validate(self) -> bool:
-        """Ensure that there is one object stored in the repository, whose key matches value set for `filename` attr."""
+    def _validate(self):
+        """Validate the node before storing.
+
+        This check ensures that there is exactly one file object stored in the repository,
+        and that the filename attribute is set to the name of that object (forced).
+
+        :return: True if the node is valid
+        :raises ValidationError: if the node is not valid
+        """
         super()._validate()
-
-        try:
-            filename = self.filename
-        except AttributeError:
-            raise exceptions.ValidationError('the `filename` attribute is not set.')
 
         objects = self.base.repository.list_object_names()
 
-        if [filename] != objects:
-            raise exceptions.ValidationError(
-                f'respository files {objects} do not match the `filename` attribute `{filename}`.'
-            )
+        if len(objects) != 1:
+            raise exceptions.ValidationError(f'expected exactly one repository file, found {len(objects)}: {objects}')
 
-        return True
+        filename = objects[0]
+        fileobj = self.base.repository.get_object(filename)
+        if fileobj.is_dir():
+            raise exceptions.ValidationError('expected a file, found a directory')
+
+        self.filename = filename

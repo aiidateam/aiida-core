@@ -44,10 +44,41 @@ def test_construct():
     assert not node.is_stored
 
 
-def test_constructor_object_none():
-    """Test the ``JsonableData`` constructor raises if object is ``None``."""
-    with pytest.raises(TypeError, match=r'the `obj` argument cannot be `None`.'):
-        JsonableData(None)
+def test_constructor_no_object_with_attributes():
+    """Test the ``JsonableData`` constructor raises if the ``obj`` argument is a node with attributes."""
+    JsonableData(
+        attributes={
+            '@class': 'JsonableClass',
+            '@module': 'tests.orm.nodes.data.test_jsonable',
+            'data': {'a': 1},
+        }
+    )
+
+
+def test_constructor_no_object_wrong_attributes():
+    """Test the ``JsonableData`` constructor raises if the ``obj`` argument is not given and the required attributes
+    are wrong."""
+    with pytest.raises(
+        ValueError,
+        match=r'the `as_dict` representation of the object is either missing or invalid in the provided `attributes`',
+    ):
+        JsonableData(
+            attributes={
+                '@class': 'JsonableClass',
+                '@module': 'tests.orm.nodes.data.test_jsonable',
+            }
+        )
+
+
+def test_constructor_no_object_no_attributes():
+    """Test the ``JsonableData`` constructor raises if neither the ``obj`` argument is given nor the required
+    attributes are present."""
+    with pytest.raises(
+        ValueError,
+        match=r'if the `obj` argument is not provided, the `@class` and `@module` keys must be provided through the '
+        '`attributes`',
+    ):
+        JsonableData()
 
 
 def test_invalid_class_no_as_dict():

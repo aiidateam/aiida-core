@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import logging
 import pathlib
+import warnings
+from typing import cast
 
 from aiida.common import exceptions
 from aiida.common.folders import Folder
@@ -36,7 +38,7 @@ __all__ = ('PortableCode',)
 _LOGGER = logging.getLogger(__name__)
 
 
-def _export_filpath_files_from_repo(portable_code: PortableCode, repository_path: pathlib.Path) -> str:
+def _export_filepath_files_from_repo(portable_code: PortableCode, repository_path: pathlib.Path) -> str:
     for root, _, filenames in portable_code.base.repository.walk():
         for filename in filenames:
             rel_path = str(root / filename)
@@ -54,31 +56,34 @@ class PortableCode(Code):
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
     _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
-    class Model(AbstractCode.Model):
-        """Model describing required information to create an instance."""
-
+    class CommonFieldsModel(AbstractCode.CommonFieldsModel):
         filepath_executable: str = MetadataField(
-            ...,
             title='Filepath executable',
-            description='Relative filepath of executable with directory of code files.',
+            description='Relative filepath of executable with directory of code files',
             short_name='-X',
             priority=1,
-            orm_to_model=lambda node, _: str(node.filepath_executable),  # type: ignore[attr-defined]
+            orm_to_model=lambda node: str(cast(PortableCode, node).filepath_executable),
         )
+
+    class AttributesModel(AbstractCode.AttributesModel, CommonFieldsModel): ...
+
+    class ConstructorArgsModel(AbstractCode.ConstructorArgsModel, CommonFieldsModel):
         filepath_files: str = MetadataField(
-            ...,
             title='Code directory',
-            description='Filepath to directory containing code files.',
+            description='Filepath to directory containing code files',
             short_name='-F',
-            is_attribute=False,
             priority=2,
-            orm_to_model=_export_filpath_files_from_repo,  # type: ignore[arg-type]
+            write_only=True,
+            orm_to_model=lambda node, ctx: _export_filepath_files_from_repo(
+                cast(PortableCode, node),
+                ctx.get('repository_path', pathlib.Path.cwd() / f'{cast(PortableCode, node).label}'),
+            ),
         )
 
     def __init__(
         self,
         filepath_executable: FilePath,
-        filepath_files: FilePath,
+        filepath_files: FilePath | None = None,
         **kwargs,
     ):
         """Construct a new instance.
@@ -97,15 +102,30 @@ class PortableCode(Code):
         :param filepath_files: The filepath to the directory containing all the files of the code.
         """
         super().__init__(**kwargs)
-        type_check(filepath_files, (pathlib.PurePath, str))
-        filepath_files_path = pathlib.Path(filepath_files)
-        if not filepath_files_path.exists():
-            raise ValueError(f'The filepath `{filepath_files}` does not exist.')
-        if not filepath_files_path.is_dir():
-            raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
 
         self.filepath_executable = filepath_executable
-        self.base.repository.put_object_from_tree(str(filepath_files))
+
+        if filepath_files is not None:
+            type_check(filepath_files, (pathlib.PurePath, str))
+
+            filepath_files_path = pathlib.Path(filepath_files)
+            if not filepath_files_path.exists():
+                raise ValueError(f'The filepath `{filepath_files}` does not exist.')
+
+            if not filepath_files_path.is_dir():
+                raise ValueError(f'The filepath `{filepath_files}` is not a directory.')
+
+            self.base.repository.put_object_from_tree(str(filepath_files))
+        else:
+            warnings.warn(
+                '\n'
+                'No `filepath_files` provided. Before storing the portable code, please upload the necessary files '
+                'using one of the following `node.base.repository` methods: '
+                '\n    `put_object_from_file(...)`'
+                '\n    `put_object_from_filelike(...)`'
+                '\n    `put_object_from_tree(...)`',
+                stacklevel=2,
+            )
 
     def _validate(self):
         """Validate the instance by checking that an executable is defined and it is part of the repository files.
@@ -201,7 +221,7 @@ class PortableCode(Code):
         """Export code to a YAML file."""
         result = super()._prepare_yaml(*args, **kwargs)[0]
         target = pathlib.Path().cwd() / f'{self.label}'
-        _export_filpath_files_from_repo(self, target)
+        _export_filepath_files_from_repo(self, target)
         _LOGGER.info(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
         return result, {}
 

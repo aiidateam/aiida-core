@@ -30,14 +30,13 @@ class TrajectoryData(ArrayData):
     possibly with velocities).
     """
 
-    class Model(ArrayData.Model):
-        units_positions: str = MetadataField(alias='units|positions', description='Unit of positions')
-        units_times: str = MetadataField(alias='units|times', description='Unit of time')
-        symbols: t.List[str] = MetadataField(description='List of symbols')
-        pbc: t.Optional[t.Tuple[bool, bool, bool]] = MetadataField(description='Periodic boundary conditions')
+    class AttributesModel(ArrayData.AttributesModel):
+        symbols: list[str] = MetadataField(description='List of symbols')
+        pbc: t.Optional[tuple[bool, bool, bool]] = MetadataField(description='Periodic boundary conditions')
 
     def __init__(self, structurelist: list[StructureData] | None = None, **kwargs: t.Any) -> None:
         super().__init__(**kwargs)
+
         if structurelist is not None:
             self.set_structurelist(structurelist)
 
@@ -87,7 +86,7 @@ class TrajectoryData(ArrayData):
         numatoms = len(symbols)
         if positions.shape != (numsteps, numatoms, 3):
             raise ValueError(
-                'TrajectoryData.positions must have shape (s,n,3), ' 'with s=number of steps and n=number of symbols'
+                'TrajectoryData.positions must have shape (s,n,3), with s=number of steps and n=number of symbols'
             )
         if times is not None:
             if times.shape != (numsteps,):
@@ -439,7 +438,7 @@ class TrajectoryData(ArrayData):
             for k in custom_kinds:
                 if not isinstance(k, Kind):
                     raise TypeError(
-                        'Each element of the custom_kinds list must ' 'be a aiida.orm.nodes.data.structure.Kind object'
+                        'Each element of the custom_kinds list must be a aiida.orm.nodes.data.structure.Kind object'
                     )
                 kind_names.append(k.name)
             if len(kind_names) != len(set(kind_names)):

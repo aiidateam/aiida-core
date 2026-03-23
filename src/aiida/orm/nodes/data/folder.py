@@ -15,6 +15,8 @@ import io
 import pathlib
 import typing as t
 
+from aiida.common.pydantic import BaseOrmModel, MetadataField
+
 from .data import Data
 
 if t.TYPE_CHECKING:
@@ -25,10 +27,26 @@ if t.TYPE_CHECKING:
 __all__ = ('FolderData',)
 
 
+def _export_tree_from_repo(folder_data: FolderData, repository_path: pathlib.Path) -> str:
+    """Export repository contents to a directory for roundtrip."""
+    folder_data.base.repository.copy_tree(repository_path)
+    return str(repository_path)
+
+
 class FolderData(Data):
     """`Data` sub class to represent a folder on a file system."""
 
-    def __init__(self, **kwargs):
+    class ConstructorArgsModel(BaseOrmModel):
+        tree: pathlib.Path = MetadataField(
+            title='Tree',
+            description='Absolute path to a folder to wrap',
+            orm_to_model=lambda node, ctx: _export_tree_from_repo(
+                t.cast(FolderData, node),
+                ctx.get('repository_path', pathlib.Path.cwd() / f'{t.cast(FolderData, node).label}'),
+            ),
+        )
+
+    def __init__(self, tree: pathlib.Path | None = None, **kwargs):
         """Construct a new `FolderData` to which any files and folders can be added.
 
         Use the `tree` keyword to simply wrap a directory:
@@ -45,7 +63,6 @@ class FolderData(Data):
         :param tree: absolute path to a folder to wrap
         :type tree: str
         """
-        tree = kwargs.pop('tree', None)
         super().__init__(**kwargs)
         if tree:
             self.base.repository.put_object_from_tree(tree)

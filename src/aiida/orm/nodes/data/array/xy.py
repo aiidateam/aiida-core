@@ -13,7 +13,7 @@ on them.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Sequence, Union
+from typing import TYPE_CHECKING, Any, Sequence
 
 import numpy as np
 from pydantic import field_validator

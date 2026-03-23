@@ -20,8 +20,6 @@ from .verdi import VerdiCommandGroup
 if t.TYPE_CHECKING:
     from click.decorators import FC
 
-    from aiida.orm import Code
-
 __all__ = ('DynamicEntryPointCommandGroup',)
 
 
@@ -94,7 +92,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             command = super().get_command(ctx, cmd_name)
         return command
 
-    def call_command(self, ctx: click.Context, cls: type[Code], non_interactive: bool, **kwargs: t.Any) -> t.Any:
+    def call_command(self, ctx: click.Context, cls, non_interactive: bool, **kwargs: t.Any) -> t.Any:
         """Call the ``command`` after validating the provided inputs."""
         from pydantic import ValidationError
 
@@ -164,7 +162,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         """
         from pydantic_core import PydanticUndefined
 
-        cls: type[Code] = self.factory(entry_point)
+        cls = self.factory(entry_point)
 
         try:
             Model = cls.ConstructorModel  # noqa: N806

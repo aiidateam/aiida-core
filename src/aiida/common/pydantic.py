@@ -32,6 +32,8 @@ class BaseOrmModel(BaseModel, defer_build=True):
     model_config = ConfigDict(
         extra='forbid',
         serialize_by_alias=True,
+        validate_by_alias=True,
+        validate_by_name=True,
     )
 
     @classmethod

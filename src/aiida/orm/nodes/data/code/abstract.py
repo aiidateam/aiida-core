@@ -128,6 +128,15 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             form a single string. This is required to enable support for Docker with the ``ContainerizedCode``.
         :param is_hidden: Whether the code is hidden.
         """
+        input_plugin = kwargs.pop(self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, None)
+        if input_plugin is not None:
+            if default_calc_job_plugin is not None:
+                raise ValueError(
+                    f'Got both `{self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN}` and its replacement '
+                    '`default_calc_job_plugin` as input, which is not allowed'
+                )
+            default_calc_job_plugin = input_plugin
+
         super().__init__(**kwargs)
         self.default_calc_job_plugin = default_calc_job_plugin
         self.append_text = append_text

@@ -463,18 +463,21 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         *,
         context: dict[str, Any],
         minimal: bool,
+        use_field_alias_as_key: bool = True,
     ) -> dict[str, Any]:
         """Collect field values for a model class.
 
         :param model_cls: The model class to extract field values for.
         :param context: Optional context dictionary to pass to `orm_to_model` callables.
         :param minimal: Whether to exclude potentially large value fields.
+        :param use_field_alias_as_key: Whether to use the field alias as the key in the resulting dictionary,
+            or the actual attribute name. Defaults to `True`.
         :return: Mapping of ORM field name to value.
         """
         fields: dict[str, Any] = {}
 
         for key, field in model_cls.model_fields.items():
-            field_name = field.alias or key
+            field_name = field.alias or key if use_field_alias_as_key else key
             if get_metadata(field, 'may_be_large') and minimal:
                 continue
 
@@ -497,6 +500,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         context: dict[str, Any] | None = None,
         minimal: bool = False,
         schema: type[BaseOrmModel] | None = None,
+        use_field_alias_as_key: bool = True,
     ) -> dict[str, Any]:
         """Collect values for the `Model`'s fields from this entity.
 
@@ -507,9 +511,16 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         :param context: Optional context dictionary to pass to `orm_to_model` callables.
         :param minimal: Whether to exclude potentially large value fields.
         :param schema: The schema model to collect field values for. If not provided, defaults to the entity's `Model`.
+        :param use_field_alias_as_key: Whether to use the field alias as the key in the resulting dictionary,
+            or the actual attribute name. Defaults to `True`.
         :return: Mapping of ORM field name to value.
         """
-        return self._get_model_field_values(schema or self.ReadModel, context=context or {}, minimal=minimal)
+        return self._get_model_field_values(
+            schema or self.ReadModel,
+            context=context or {},
+            minimal=minimal,
+            use_field_alias_as_key=use_field_alias_as_key,
+        )
 
 
 def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntity) -> EntityType:

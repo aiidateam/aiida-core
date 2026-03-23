@@ -13,10 +13,11 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Union
+from typing import Optional, cast
 
 from aiida.common.pydantic import MetadataField
 from aiida.orm import AuthInfo
+from aiida.orm.computers import Computer
 from aiida.transports import Transport
 
 from ..data import Data
@@ -34,14 +35,23 @@ class RemoteData(Data):
 
     KEY_EXTRA_CLEANED = 'cleaned'
 
-    class Model(Data.Model):
-        remote_path: Union[str, None] = MetadataField(
+    class AttributesModel(Data.AttributesModel):
+        remote_path: Optional[str] = MetadataField(
+            None,
             title='Remote path',
-            description='Filepath on the remote computer.',
-            orm_to_model=lambda node, _: node.get_remote_path(),
+            description='Filepath on the remote computer',
+            orm_to_model=lambda node: node.get_remote_path(),
         )
 
-    def __init__(self, remote_path: Union[str, None] = None, **kwargs):
+    class ReadModel(Data.ReadModel):
+        computer: int = MetadataField(
+            title='Computer',
+            description='The pk of the remote computer on which the data resides',
+            orm_to_model=lambda node: cast(RemoteData, node).computer.pk,
+            orm_class=Computer,
+        )
+
+    def __init__(self, remote_path: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
         if remote_path is not None:
             self.set_remote_path(remote_path)

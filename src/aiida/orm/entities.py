@@ -11,20 +11,31 @@
 from __future__ import annotations
 
 import abc
-import pathlib
+import inspect
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Generic, List, NoReturn, Optional, Type, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Generic,
+    List,
+    Literal,
+    NoReturn,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from plumpy.base.utils import call_with_super_check, super_check
-from pydantic import BaseModel
-from pydantic.fields import FieldInfo
 from typing_extensions import Self
 
 from aiida.common import exceptions, log
 from aiida.common.exceptions import EntryPointError, InvalidOperation, NotExistent
 from aiida.common.lang import classproperty, type_check
-from aiida.common.pydantic import MetadataField, get_metadata
+from aiida.common.pydantic import BaseOrmModel, MetadataField, OrmModel, get_metadata
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
@@ -57,6 +68,8 @@ class EntityTypes(Enum):
 
 class Collection(abc.ABC, Generic[EntityType]):
     """Container class that represents the collection of objects of a particular entity type."""
+
+    collection_type: ClassVar[str] = 'entities'
 
     @staticmethod
     @abc.abstractmethod
@@ -184,101 +197,101 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
     _logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
-    class Model(BaseModel, defer_build=True):
-        pk: Optional[int] = MetadataField(
-            None,
-            description='The primary key of the entity. Can be `None` if the entity is not yet stored.',
-            is_attribute=False,
-            exclude_to_orm=True,
-            exclude_from_cli=True,
+    identity_field = 'pk'
+
+    class ReadModel(OrmModel):
+        pk: int = MetadataField(
+            description='The primary key of the entity',
+            read_only=True,
+            examples=[42],
         )
-
-    @classmethod
-    def model_to_orm_fields(cls) -> dict[str, FieldInfo]:
-        return {
-            key: field for key, field in cls.Model.model_fields.items() if not get_metadata(field, 'exclude_to_orm')
-        }
-
-    @classmethod
-    def model_to_orm_field_values(cls, model: Model) -> dict[str, Any]:
-        from aiida.plugins.factories import BaseFactory
-
-        fields = {}
-
-        for key, field in cls.model_to_orm_fields().items():
-            field_value = getattr(model, key)
-
-            if field_value is None:
-                continue
-
-            if orm_class := get_metadata(field, 'orm_class'):
-                if isinstance(orm_class, str):
-                    try:
-                        orm_class = BaseFactory('aiida.orm', orm_class)
-                    except EntryPointError as exception:
-                        raise EntryPointError(
-                            f'The `orm_class` of `{cls.__name__}.Model.{key} is invalid: {exception}'
-                        ) from exception
-                try:
-                    fields[key] = orm_class.collection.get(id=field_value)
-                except NotExistent as exception:
-                    raise NotExistent(f'No `{orm_class}` found with pk={field_value}') from exception
-            elif model_to_orm := get_metadata(field, 'model_to_orm'):
-                fields[key] = model_to_orm(model)
-            else:
-                fields[key] = field_value
-
-        return fields
-
-    def _to_model(self, repository_path: pathlib.Path) -> Model:
-        """Return the entity instance as an instance of its model."""
-        fields = {}
-
-        for key, field in self.Model.model_fields.items():
-            if orm_to_model := get_metadata(field, 'orm_to_model'):
-                fields[key] = orm_to_model(self, repository_path)
-            else:
-                fields[key] = getattr(self, key)
-
-        return self.Model(**fields)
-
-    @classmethod
-    def _from_model(cls, model: Model) -> Self:
-        """Return an entity instance from an instance of its model."""
-        fields = cls.model_to_orm_field_values(model)
-        return cls(**fields)
-
-    def serialize(self, repository_path: Union[pathlib.Path, None] = None) -> dict[str, Any]:
-        """Serialize the entity instance to JSON.
-
-        :param repository_path: If the orm node has files in the repository, this path is used to dump the repostiory
-            files to. If no path is specified a temporary path is created using the entities pk.
-        """
-        self.logger.warning(
-            'Serialization through pydantic is still an experimental feature and might break in future releases.'
-        )
-        if repository_path is None:
-            import tempfile
-
-            repository_path = pathlib.Path(tempfile.mkdtemp()) / f'./aiida_serialization/{self.pk}/'
-            repository_path.mkdir(parents=True)
-        else:
-            if not repository_path.exists():
-                raise ValueError(f'The repository_path `{repository_path}` does not exist.')
-            if not repository_path.is_dir():
-                raise ValueError(f'The repository_path `{repository_path}` is not a directory.')
-        return self._to_model(repository_path).model_dump()
-
-    @classmethod
-    def from_serialized(cls, **kwargs: dict[str, Any]) -> Self:
-        """Construct an entity instance from JSON serialized data."""
-        cls._logger.warning(
-            'Serialization through pydantic is still an experimental feature and might break in future releases.'
-        )
-        return cls._from_model(cls.Model(**kwargs))
 
     @classproperty
-    def objects(cls: EntityType) -> CollectionType:  # noqa: N805
+    def WriteModel(cls) -> Type[OrmModel]:  # noqa: N802, N805
+        """Return the attributes-based creation version of the model class for this entity.
+
+        :return: The attributes-based creation model class, with read-only fields removed.
+        """
+        return cls.ReadModel._as_write_model()
+
+    def to_model(
+        self,
+        *,
+        context: dict[str, Any] | None = None,
+        minimal: bool = False,
+        schema: type[OrmModel] | None = None,
+    ) -> OrmModel:
+        """Return the entity instance as an instance of its model.
+
+        :param context: Optional context dictionary to pass to `orm_to_model` callables.
+        :param minimal: Whether to exclude potentially large value fields.
+        :param schema: The schema model to use for the instance.
+            If not provided, defaults to the entity's `ReadModel` if the entity is stored, `WriteModel` otherwise.
+        :return: An instance of the entity's model class.
+        :raises UnsupportedSchemaError: if the provided schema is not supported for this entity.
+        """
+        if schema is not None:
+            entity = schema.__qualname__.split('.')[0]
+            if entity != self.__class__.__name__:
+                raise exceptions.UnsupportedSchemaError(
+                    f'Cannot serialize `{type(self).__name__}` against a schema of `{entity}`'
+                )
+            if schema is self.ReadModel and not self.is_stored:
+                raise exceptions.UnsupportedSchemaError(
+                    'Cannot serialize an unstored entity using the ReadModel schema'
+                )
+        Model = schema or (self.ReadModel if self.is_stored else self.WriteModel)  # noqa: N806
+        fields = self._orm_to_model_field_values(context=context, minimal=minimal, schema=Model)
+        if minimal:
+            Model = Model._as_minimal_model()  # noqa: N806
+        return Model(**fields)
+
+    @classmethod
+    def from_model(cls, model: OrmModel) -> Self:
+        """Return an entity instance from an instance of its model.
+
+        :param model: An instance of the entity's model class.
+        :return: An instance of the entity class.
+        """
+        fields = cls._model_to_orm_field_values(model, cls.WriteModel)
+        return cls(**fields)
+
+    def serialize(
+        self,
+        *,
+        context: dict[str, Any] | None = None,
+        minimal: bool = False,
+        schema: type[OrmModel] | None = None,
+        mode: Literal['json', 'python'] = 'python',
+    ) -> dict[str, Any]:
+        """Serialize the entity instance to JSON.
+
+        :param context: Optional context dictionary to pass to `orm_to_model` callables.
+        :param minimal: Whether to exclude potentially large value fields.
+        :param schema: The schema model to use for serialization.
+            If not provided, defaults to the entity's `ReadModel` if the entity is stored, `WriteModel` otherwise.
+        :param mode: The serialization mode, either 'json' or 'python' (default). JSON-based clients (e.g., REST APIs)
+            should use 'json' mode.
+        :return: A dictionary that can be serialized to JSON.
+        :raises UnsupportedSchemaError: if the provided schema is not supported for this entity.
+        """
+        return self.to_model(context=context, minimal=minimal, schema=schema).model_dump(
+            mode=mode,
+            exclude_none=True,
+            exclude_unset=minimal,
+        )
+
+    @classmethod
+    def from_serialized(cls, serialized: dict[str, Any]) -> Self:
+        """Construct an entity instance from JSON serialized data.
+
+        :param serialized: The serialized data.
+        :return: The constructed entity instance.
+        """
+        return cls.from_model(cls.WriteModel(**serialized))
+
+    @classproperty
+    def objects(cls) -> CollectionType:  # noqa: N805
         """Get a collection for objects of this type, with the default backend.
 
         .. deprecated:: This will be removed in v3, use ``collection`` instead.
@@ -398,8 +411,108 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         """Get the implementing class for this object"""
         return self._backend_entity
 
+    @classmethod
+    def _model_to_orm_field_values(
+        cls,
+        valid_model: BaseOrmModel,
+        schema: type[BaseOrmModel],
+    ) -> dict[str, Any]:
+        """Collect values for the ORM entity's fields from the given model instance and schema.
 
-def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntityType) -> EntityType:
+        :param valid_model: A validated model instance.
+        :param schema: The schema model that defines which fields to map.
+        :return: Mapping of model field name to validated value.
+        :raises EntryPointError: if an `orm_class` entry point could not be loaded.
+        :raises NotExistent: if a referenced ORM entity could not be found.
+        """
+        from aiida.plugins.factories import BaseFactory
+
+        fields: dict[str, Any] = {}
+        for key, field in schema.model_fields.items():
+            field_name = field.alias or key
+            field_value = getattr(valid_model, key, field.default)
+
+            if field_value is None:
+                continue
+
+            annotation = field.annotation
+            if isinstance(annotation, type) and issubclass(annotation, BaseOrmModel):
+                fields[field_name] = cls._model_to_orm_field_values(field_value, annotation)
+            elif orm_class := get_metadata(field, 'orm_class'):
+                if isinstance(orm_class, str):
+                    try:
+                        orm_class = cast(Entity, BaseFactory('aiida.orm', orm_class))
+                    except EntryPointError as exception:
+                        raise EntryPointError(
+                            f'The `orm_class` of `{cls.__name__}.Model.{key}` is invalid: {exception}'
+                        ) from exception
+                try:
+                    fields[field_name] = orm_class.collection.get(id=field_value)
+                except NotExistent as exception:
+                    raise NotExistent(f'No `{orm_class}` found with pk={field_value}') from exception
+            elif model_to_orm := get_metadata(field, 'model_to_orm'):
+                fields[field_name] = model_to_orm(valid_model)
+            else:
+                fields[field_name] = field_value
+
+        return fields
+
+    def _get_model_field_values(
+        self,
+        model_cls: type[BaseOrmModel],
+        *,
+        context: dict[str, Any],
+        minimal: bool,
+    ) -> dict[str, Any]:
+        """Collect field values for a model class.
+
+        :param model_cls: The model class to extract field values for.
+        :param context: Optional context dictionary to pass to `orm_to_model` callables.
+        :param minimal: Whether to exclude potentially large value fields.
+        :return: Mapping of ORM field name to value.
+        """
+        fields: dict[str, Any] = {}
+
+        for key, field in model_cls.model_fields.items():
+            field_name = field.alias or key
+            if get_metadata(field, 'may_be_large') and minimal:
+                continue
+
+            if orm_to_model := get_metadata(field, 'orm_to_model'):
+                signature = inspect.signature(orm_to_model)
+                parameters = list(signature.parameters.values())
+                fields[field_name] = orm_to_model(self) if len(parameters) == 1 else orm_to_model(self, context)
+            else:
+                annotation = field.annotation
+                if isinstance(annotation, type) and issubclass(annotation, BaseOrmModel):
+                    fields[field_name] = self._get_model_field_values(annotation, context=context, minimal=minimal)
+                else:
+                    fields[field_name] = getattr(self, key, field.default)
+
+        return fields
+
+    def _orm_to_model_field_values(
+        self,
+        *,
+        context: dict[str, Any] | None = None,
+        minimal: bool = False,
+        schema: type[BaseOrmModel] | None = None,
+    ) -> dict[str, Any]:
+        """Collect values for the `Model`'s fields from this entity.
+
+        Centralizes mapping of ORM -> Model values, including handling of `orm_to_model`
+        functions and optional filtering based on field metadata (e.g., excluding CLI-only fields).
+        The process is recursive, applying metadata field rules to nested models as well.
+
+        :param context: Optional context dictionary to pass to `orm_to_model` callables.
+        :param minimal: Whether to exclude potentially large value fields.
+        :param schema: The schema model to collect field values for. If not provided, defaults to the entity's `Model`.
+        :return: Mapping of ORM field name to value.
+        """
+        return self._get_model_field_values(schema or self.ReadModel, context=context or {}, minimal=minimal)
+
+
+def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntity) -> EntityType:
     """Construct an entity from a backend entity instance
 
     :param backend_entity: the backend entity

@@ -17,7 +17,7 @@ from __future__ import annotations
 import pathlib
 
 from aiida.common.lang import type_check
-from aiida.common.pydantic import MetadataField
+from aiida.common.pydantic import BaseOrmModel, MetadataField
 
 from .installed import InstalledCode
 
@@ -30,34 +30,40 @@ class ContainerizedCode(InstalledCode):
     _KEY_ATTRIBUTE_ENGINE_COMMAND: str = 'engine_command'
     _KEY_ATTRIBUTE_IMAGE_NAME: str = 'image_name'
 
-    class Model(InstalledCode.Model):
-        """Model describing required information to create an instance."""
-
+    class CommonFieldsModel(BaseOrmModel):
         engine_command: str = MetadataField(
-            ...,
             title='Engine command',
             description='The command to run the container. It must contain the placeholder {image_name} that will be '
-            'replaced with the `image_name`.',
+            'replaced with the `image_name`',
             short_name='-E',
-            priority=3,
         )
         image_name: str = MetadataField(
-            ...,
             title='Image name',
-            description='Name of the image container in which to the run the executable.',
+            description='Name of the image container in which to the run the executable',
             short_name='-I',
-            priority=2,
         )
         wrap_cmdline_params: bool = MetadataField(
             False,
             title='Wrap command line parameters',
             description='Whether all command line parameters to be passed to the engine command should be wrapped in '
-            'a double quotes to form a single argument. This should be set to `True` for Docker.',
-            priority=1,
+            'a double quotes to form a single argument. This should be set to `True` for Docker',
         )
 
-    def __init__(self, engine_command: str, image_name: str, **kwargs):
+    class AttributesModel(InstalledCode.AttributesModel, CommonFieldsModel): ...
+
+    class ConstructorArgsModel(InstalledCode.ConstructorArgsModel, CommonFieldsModel): ...
+
+    def __init__(
+        self,
+        engine_command: str | None = None,
+        image_name: str | None = None,
+        **kwargs,
+    ):
+        if engine_command is None or image_name is None:
+            raise ValueError('Both `engine_command` and `image_name` must be provided.')
+
         super().__init__(**kwargs)
+
         self.engine_command = engine_command
         self.image_name = image_name
 

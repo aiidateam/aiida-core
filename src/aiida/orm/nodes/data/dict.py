@@ -198,11 +198,13 @@ class Dict(Data):
         context: dict[str, t.Any] | None = None,
         minimal: bool = False,
         schema: type[BaseOrmModel] | None = None,
+        use_field_alias_as_key: bool = True,
     ) -> dict[str, t.Any]:
         fields = super()._orm_to_model_field_values(
             context=context,
             minimal=minimal,
             schema=schema,
+            use_field_alias_as_key=use_field_alias_as_key,
         )
         if schema in (self.ReadModel, self.WriteModel):
             # `Dict.AttributesModel` doesn't explicitly define any fields.

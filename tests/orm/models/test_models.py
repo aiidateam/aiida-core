@@ -184,7 +184,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
         return orm.InstalledCode, {
             'computer': aiida_localhost.pk,
             'attributes': {
-                'input_plugin': 'core.arithmetic.add',
+                'default_calc_job_plugin': 'core.arithmetic.add',
                 'filepath_executable': '/bin/echo',
             },
             'args': {

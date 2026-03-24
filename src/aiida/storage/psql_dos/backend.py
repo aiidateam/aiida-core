@@ -79,7 +79,7 @@ class PsqlDosBackend(StorageBackend):
     The `django` backend was removed, to consolidate access to this storage.
     """
 
-    class Model(BaseModel, defer_build=True):
+    class CliModel(BaseModel, defer_build=True):
         """Model describing required information to configure an instance of the storage."""
 
         database_engine: str = Field(

@@ -3,7 +3,6 @@
 import datetime
 import enum
 import io
-import typing as t
 
 import numpy as np
 import pytest
@@ -108,13 +107,21 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             assert node.get_array('test_array').tolist() == [1, 0, 0]
 
         return orm.ArrayData, {
-            'attributes': {},
-            'files': {'test_array': buffered_array},
-            'assert_derived': assert_derived_array_properties,
-            'args': {'arrays': {'test_array': [1, 0, 0]}},
+            'attributes-based': {
+                'attributes': {},
+                'files': {'test_array': buffered_array},
+                'assert_derived': assert_derived_array_properties,
+            },
+            'constructor-based': {
+                'args': {'arrays': {'test_array': [1, 0, 0]}},
+            },
         }
     if request.param is orm.Bool:
-        return orm.Bool, {'attributes': {'value': True}}
+        return orm.Bool, {
+            'attributes-based': {
+                'attributes': {'value': True},
+            },
+        }
     if request.param is orm.CifData:
 
         def assert_derived_cif_properties(node: orm.CifData):
@@ -123,46 +130,72 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             assert node.get_content(mode='r') == 'data_test\nloop_\n_atom_site_label\nH1\n'
 
         return orm.CifData, {
-            'attributes': {},
-            'files': {'structure.cif': io.StringIO('data_test\nloop_\n_atom_site_label\nH1\n')},
-            'assert_derived': assert_derived_cif_properties,
-            'args': {'filename': 'structure.cif', 'content': 'data_test\nloop_\n_atom_site_label\nH1\n'},
+            'attributes-based': {
+                'attributes': {},
+                'files': {'structure.cif': io.StringIO('data_test\nloop_\n_atom_site_label\nH1\n')},
+                'assert_derived': assert_derived_cif_properties,
+            },
+            'constructor-based': {
+                'args': {'filename': 'structure.cif', 'content': 'data_test\nloop_\n_atom_site_label\nH1\n'},
+            },
         }
     if request.param is orm.ContainerizedCode:
         return orm.ContainerizedCode, {
-            'computer': aiida_localhost.pk,
-            'attributes': {
-                'filepath_executable': '/bin/echo',
-                'image_name': 'docker://alpine:3',
-                'engine_command': 'docker run {image_name}',
-            },
-            'args': {
+            'attributes-based': {
                 'label': 'containerized_echo',
-                'description': 'Containerized echo code',
-                'computer': aiida_localhost.label,
-                'filepath_executable': '/bin/echo',
-                'image_name': 'docker://alpine:3',
-                'engine_command': 'docker run {image_name}',
+                'computer': aiida_localhost.pk,
+                'attributes': {
+                    'filepath_executable': '/bin/echo',
+                    'image_name': 'docker://alpine:3',
+                    'engine_command': 'docker run {image_name}',
+                },
+            },
+            'constructor-based': {
+                'label': 'containerized_echo',
+                'args': {
+                    'computer': aiida_localhost.label,
+                    'filepath_executable': '/bin/echo',
+                    'image_name': 'docker://alpine:3',
+                    'engine_command': 'docker run {image_name}',
+                },
             },
         }
     if request.param is orm.Data:
-        return orm.Data, {'attributes': {'source': {'uri': 'http://127.0.0.1'}}}
+        return orm.Data, {
+            'attributes-based': {
+                'attributes': {
+                    'source': {'uri': 'http://127.0.0.1'},
+                },
+            }
+        }
     if request.param is orm.Dict:
         return orm.Dict, {
-            'attributes': {'a': 1, 'b': 2},
-            'args': {'value': {'a': 1, 'b': 2}},
+            'attributes-based': {
+                'attributes': {'a': 1, 'b': 2},
+            },
+            'constructor-based': {
+                'args': {'value': {'a': 1, 'b': 2}},
+            },
         }
     if request.param is orm.EnumData:
         return orm.EnumData, {
-            'attributes': {
-                'name': 'OPTION_A',
-                'value': 'a',
-                'identifier': get_object_loader().identify_object(DummyEnum),
+            'attributes-based': {
+                'attributes': {
+                    'name': 'OPTION_A',
+                    'value': 'a',
+                    'identifier': get_object_loader().identify_object(DummyEnum),
+                },
             },
-            'args': {'member': DummyEnum.OPTION_A},
+            'constructor-based': {
+                'args': {'member': DummyEnum.OPTION_A},
+            },
         }
     if request.param is orm.Float:
-        return orm.Float, {'attributes': {'value': 1.0}}
+        return orm.Float, {
+            'attributes-based': {
+                'attributes': {'value': 1.0},
+            }
+        }
     if request.param is orm.FolderData:
         (tmp_path / 'binary_file').write_bytes(b'byte content')
         (tmp_path / 'text_file').write_text('text content')
@@ -172,54 +205,80 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             assert node.get_object_content('text_file', mode='r') == 'text content'
 
         return orm.FolderData, {
-            'attributes': {},
-            'files': {
-                'binary_file': io.BytesIO(b'byte content'),
-                'text_file': io.StringIO('text content'),
+            'attributes-based': {
+                'attributes': {},
+                'files': {
+                    'binary_file': io.BytesIO(b'byte content'),
+                    'text_file': io.StringIO('text content'),
+                },
+                'assert_derived': assert_derived_folder_properties,
             },
-            'assert_derived': assert_derived_folder_properties,
-            'args': {'tree': tmp_path},
+            'constructor-based': {
+                'args': {'tree': tmp_path},
+            },
         }
     if request.param is orm.InstalledCode:
         return orm.InstalledCode, {
-            'computer': aiida_localhost.pk,
-            'attributes': {
-                'default_calc_job_plugin': 'core.arithmetic.add',
-                'filepath_executable': '/bin/echo',
-            },
-            'args': {
+            'attributes-based': {
                 'label': 'echo',
-                'description': 'Installed echo code',
-                'computer': aiida_localhost.label,
-                'filepath_executable': '/bin/echo',
+                'computer': aiida_localhost.pk,
+                'attributes': {
+                    'default_calc_job_plugin': 'core.arithmetic.add',
+                    'filepath_executable': '/bin/echo',
+                },
+            },
+            'constructor-based': {
+                'label': 'echo',
+                'args': {
+                    'computer': aiida_localhost.label,
+                    'filepath_executable': '/bin/echo',
+                },
             },
         }
     if request.param is orm.Int:
-        return orm.Int, {'attributes': {'value': 1}}
+        return orm.Int, {
+            'attributes-based': {
+                'attributes': {'value': 1},
+            },
+        }
     if request.param is orm.JsonableData:
         return orm.JsonableData, {
-            'attributes': {
-                'data': 1,
-                '@class': 'JsonableClass',
-                '@module': 'tests.orm.models.test_models',
+            'attributes-based': {
+                'attributes': {
+                    'data': 1,
+                    '@class': 'JsonableClass',
+                    '@module': 'tests.orm.models.test_models',
+                },
             },
-            'args': {
-                'obj': JsonableClass(1),
+            'constructor-based': {
+                'args': {
+                    'obj': JsonableClass(1),
+                }
             },
         }
     if request.param is orm.List:
-        return orm.List, {'attributes': {'list': [1, 2, 3]}}
+        return orm.List, {
+            'attributes-based': {
+                'attributes': {
+                    'list': [1, 2, 3],
+                },
+            }
+        }
     if request.param is orm.PortableCode:
         (tmp_path / 'code.sh').write_text('#!/bin/bash\necho "$@"\n')
         return orm.PortableCode, {
-            'attributes': {
-                'filepath_executable': 'code.sh',
-            },
-            'args': {
+            'attributes-based': {
                 'label': 'portable_code',
-                'description': 'Portable code',
-                'filepath_executable': 'code.sh',
-                'filepath_files': str(tmp_path),
+                'attributes': {
+                    'filepath_executable': 'code.sh',
+                },
+            },
+            'constructor-based': {
+                'label': 'portable_code',
+                'args': {
+                    'filepath_executable': 'code.sh',
+                    'filepath_files': str(tmp_path),
+                },
             },
         }
     if request.param is orm.SinglefileData:
@@ -229,38 +288,63 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             assert node.get_content(mode='r') == 'singlefile-content'
 
         return orm.SinglefileData, {
-            'attributes': {},
-            'files': {'file.txt': io.StringIO('singlefile-content')},
-            'assert_derived': assert_derived_singlefile_properties,
-            'args': {'filename': 'file.txt', 'content': 'some-content'},
+            'attributes-based': {
+                'attributes': {},
+                'files': {'file.txt': io.StringIO('singlefile-content')},
+                'assert_derived': assert_derived_singlefile_properties,
+            },
+            'constructor-based': {
+                'args': {
+                    'filename': 'file.txt',
+                    'content': 'some-content',
+                },
+            },
         }
     if request.param is orm.Str:
-        return orm.Str, {'attributes': {'value': 'string'}}
+        return orm.Str, {
+            'attributes-based': {
+                'attributes': {'value': 'string'},
+            }
+        }
     if request.param is orm.StructureData:
         return orm.StructureData, {
-            'attributes': {
-                'cell': [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
-                'pbc1': True,
-                'pbc2': True,
-                'pbc3': True,
-                'sites': [{'kind_name': 'H', 'position': (0.0, 0.0, 0.0)}],
-                'kinds': [{'name': 'H', 'mass': 1.0, 'symbols': ('H',), 'weights': (1.0,)}],
+            'attributes-based': {
+                'attributes': {
+                    'cell': [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+                    'pbc1': True,
+                    'pbc2': True,
+                    'pbc3': True,
+                    'sites': [{'kind_name': 'H', 'position': (0.0, 0.0, 0.0)}],
+                    'kinds': [{'name': 'H', 'mass': 1.0, 'symbols': ('H',), 'weights': (1.0,)}],
+                }
             }
         }
     if request.param is orm.RemoteData:
         return orm.RemoteData, {
-            'computer': aiida_localhost.pk,
-            'attributes': {'remote_path': '/some/path'},
+            'attributes-based': {
+                'computer': aiida_localhost.pk,
+                'attributes': {
+                    'remote_path': '/some/path',
+                },
+            },
         }
     if request.param is orm.RemoteStashData:
-        return orm.RemoteStashData, {'attributes': {'stash_mode': StashMode.COMPRESS_TAR}}
+        return orm.RemoteStashData, {
+            'attributes-based': {
+                'attributes': {
+                    'stash_mode': StashMode.COMPRESS_TAR,
+                },
+            }
+        }
     if request.param is orm.RemoteStashCompressedData:
         return orm.RemoteStashCompressedData, {
-            'attributes': {
-                'stash_mode': StashMode.COMPRESS_TAR,
-                'target_basepath': '/some/path',
-                'source_list': ['/some/file'],
-                'dereference': True,
+            'attributes-based': {
+                'attributes': {
+                    'stash_mode': StashMode.COMPRESS_TAR,
+                    'target_basepath': '/some/path',
+                    'source_list': ['/some/file'],
+                    'dereference': True,
+                }
             }
         }
     raise NotImplementedError()
@@ -378,13 +462,11 @@ def _assert_roundtrip_field_values_equal(
 def test_roundtrip_node_from_model_attributes(required_arguments, tmp_path):
     cls: type[orm.Node] = required_arguments[0]
     payload: dict = required_arguments[1]
-    attributes: dict = payload['attributes']
-    files: dict[str, t.IO] = payload.get('files', {})
-    assert_derived = t.cast(t.Callable[[orm.Node], None], payload.get('assert_derived', lambda _: None))
-    computer: str | None = payload.get('computer')
+    attributes_payload: dict = payload['attributes-based']
+    files = attributes_payload.pop('files', {})
+    assert_derived = attributes_payload.pop('assert_derived', lambda _: None)
 
-    kwargs = {'attributes': attributes} | ({} if computer is None else {'computer': computer})
-    model = cls.WriteModel(node_type=cls.class_node_type, **kwargs)
+    model = cls.WriteModel(node_type=cls.class_node_type, **attributes_payload)
     new = cls.from_model(model, files=files)
     assert isinstance(new, cls)
     assert_derived(new)
@@ -398,15 +480,15 @@ def test_roundtrip_node_from_model_attributes(required_arguments, tmp_path):
 )
 def test_roundtrip_node_from_model_constructor(required_arguments, tmp_path):
     cls: type[orm.Node] = required_arguments[0]
-    args: dict | None = required_arguments[1].get('args')
+    payload: dict = required_arguments[1]
+    constructor_payload: dict | None = payload.get('constructor-based')
 
-    if args is None:
+    if constructor_payload is None:
         with pytest.raises(UnsupportedConstructorModelError):
             cls.ConstructorModel
         return
 
-    kwargs = {'args': args}
-    model = cls.ConstructorModel(node_type=cls.class_node_type, **kwargs)
+    model = cls.ConstructorModel(node_type=cls.class_node_type, **constructor_payload)
     new = cls.from_model(model)
     assert isinstance(new, cls)
     _assert_roundtrip_field_values_equal(cls, model, new, cls.ConstructorModel, tmp_path)
@@ -419,14 +501,11 @@ def test_roundtrip_node_from_model_constructor(required_arguments, tmp_path):
 )
 def test_roundtrip_node_from_serialized_attributes(required_arguments, tmp_path):
     cls: type[orm.Node] = required_arguments[0]
-    payload: dict = required_arguments[1]
-    attributes: dict = payload['attributes']
-    files: dict[str, t.IO] = payload.get('files', {})
-    assert_derived = t.cast(t.Callable[[orm.Node], None], payload.get('assert_derived', lambda _: None))
-    computer: str | None = payload.get('computer')
+    attributes_payload: dict = required_arguments[1]['attributes-based']
+    files = attributes_payload.pop('files', {})
+    assert_derived = attributes_payload.pop('assert_derived', lambda _: None)
 
-    kwargs = {'attributes': attributes} | ({} if computer is None else {'computer': computer})
-    model = cls.WriteModel(node_type=cls.class_node_type, **kwargs)
+    model = cls.WriteModel(node_type=cls.class_node_type, **attributes_payload)
     serialized = model.model_dump(exclude_none=True)
     new = cls.from_serialized(serialized, files=files)
     assert isinstance(new, cls)
@@ -441,15 +520,15 @@ def test_roundtrip_node_from_serialized_attributes(required_arguments, tmp_path)
 )
 def test_roundtrip_node_from_serialized_constructor(required_arguments, tmp_path):
     cls: type[orm.Node] = required_arguments[0]
-    args: dict | None = required_arguments[1].get('args')
+    payload: dict = required_arguments[1]
+    constructor_payload: dict | None = payload.get('constructor-based')
 
-    if args is None:
+    if constructor_payload is None:
         with pytest.raises(UnsupportedConstructorModelError):
             cls.ConstructorModel
         return
 
-    kwargs = {'args': args}
-    model = cls.ConstructorModel(node_type=cls.class_node_type, **kwargs)
+    model = cls.ConstructorModel(node_type=cls.class_node_type, **constructor_payload)
     serialized = model.model_dump(exclude_none=True)
     new = cls.from_serialized(serialized)
     assert isinstance(new, cls)

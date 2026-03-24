@@ -50,6 +50,7 @@ __all__ = (
     'TestsNotAllowedError',
     'TransportTaskException',
     'UniquenessError',
+    'UnsupportedCliModelError',
     'UnsupportedConstructorModelError',
     'UnsupportedSchemaError',
     'UnsupportedSpeciesError',
@@ -307,3 +308,10 @@ class UnsupportedConstructorModelError(UnsupportedSchemaError):
 
     def __init__(self, node_type: str) -> None:
         super().__init__(f'{node_type} does not support creation via a constructor model')
+
+
+class UnsupportedCliModelError(UnsupportedSchemaError):
+    """Raised when a node class does not support creation via a CLI model."""
+
+    def __init__(self, node_type: str) -> None:
+        super().__init__(f'{node_type} does not support creation via a CLI model')

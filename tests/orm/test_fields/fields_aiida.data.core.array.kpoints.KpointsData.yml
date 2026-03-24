@@ -6,7 +6,7 @@ computer: QbNumericField('computer', dtype=int | None, doc='The PK of the comput
 ctime: QbNumericField('ctime', dtype=<class 'datetime.datetime'>, doc='The creation
   time of the node')
 description: QbStrField('description', dtype=<class 'str'>, doc='The node description')
-extras: QbDictField('extras', dtype=typing.Dict[str, typing.Any], doc='The node extras')
+extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The node extras')
 label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
 label_numbers: QbArrayField('attributes.label_numbers', dtype=list[int] | None, doc='Index
   of the labels in the list of kpoints')

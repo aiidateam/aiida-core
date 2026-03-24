@@ -11,9 +11,7 @@ from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
 class CustomClass:
     """Test plugin class."""
 
-    class Model(BaseModel):
-        """Model configuration."""
-
+    class CliModel(BaseModel):
         optional_type: t.Union[int, float] = Field(title='Optional type')
         union_type: t.Union[int, float] = Field(title='Union type')
         without_default: str = Field(title='Without default')
@@ -22,13 +20,13 @@ class CustomClass:
 
 
 def test_list_options(entry_points):
-    """Test :meth:`aiida.cmdline.groups.dynamic.DyanmicEntryPointCommandGroup.list_options`."""
+    """Test :meth:`aiida.cmdline.groups.dynamic.DynamicEntryPointCommandGroup.list_options`."""
     entry_points.add(CustomClass, 'aiida.custom:custom')
 
     group = DynamicEntryPointCommandGroup(lambda *args, **kwargs: True, entry_point_group='aiida.custom')
 
     for option_decorators in group.list_options('custom'):
         option = option_decorators(lambda x: True).__click_params__[0]
-        field = CustomClass.Model.model_fields[option.name]
+        field = CustomClass.CliModel.model_fields[option.name]
         assert option.default == field.default_factory if field.default is PydanticUndefined else field.default
         assert option.type == t.get_args(field.annotation) or field.annotation

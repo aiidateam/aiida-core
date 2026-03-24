@@ -16,7 +16,8 @@ from functools import singledispatchmethod
 from pprint import pformat
 
 from aiida.common.lang import isidentifier
-from aiida.common.pydantic import OrmModel
+
+from .model import OrmModel
 
 __all__ = (
     'QbField',

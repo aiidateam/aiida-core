@@ -17,7 +17,7 @@ from typing import Any, Union
 import numpy as np
 from pydantic import ConfigDict, field_validator
 
-from aiida.common.pydantic import BaseOrmModel, MetadataField
+from aiida.common.pydantic import AiiDABaseModel, MetadataField
 
 from ..base import to_aiida_type
 from ..data import Data
@@ -63,7 +63,7 @@ class ArrayData(Data):
             },
         )
 
-    class ConstructorArgsModel(BaseOrmModel):
+    class ConstructorArgsModel(AiiDABaseModel):
         model_config = ConfigDict(arbitrary_types_allowed=True)
 
         arrays: Union[Sequence, dict[str, Sequence]] = MetadataField(

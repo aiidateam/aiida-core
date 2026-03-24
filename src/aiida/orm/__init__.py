@@ -20,6 +20,7 @@ from .extras import *
 from .fields import *
 from .groups import *
 from .logs import *
+from .model import *
 from .nodes import *
 from .querybuilder import *
 from .users import *
@@ -80,6 +81,7 @@ __all__ = (
     'OrbitalData',
     'OrderSpecifier',
     'OrmEntityLoader',
+    'OrmModel',
     'PortableCode',
     'ProcessNode',
     'ProjectionData',

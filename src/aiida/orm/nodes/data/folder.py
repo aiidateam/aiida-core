@@ -15,7 +15,7 @@ import io
 import pathlib
 import typing as t
 
-from aiida.common.pydantic import BaseOrmModel, MetadataField
+from aiida.common.pydantic import AiiDABaseModel, MetadataField
 
 from .data import Data
 
@@ -36,7 +36,7 @@ def _export_tree_from_repo(folder_data: FolderData, repository_path: pathlib.Pat
 class FolderData(Data):
     """`Data` sub class to represent a folder on a file system."""
 
-    class ConstructorArgsModel(BaseOrmModel):
+    class ConstructorArgsModel(AiiDABaseModel):
         tree: pathlib.Path = MetadataField(
             title='Tree',
             description='Absolute path to a folder to wrap',

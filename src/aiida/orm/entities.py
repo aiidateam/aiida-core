@@ -35,11 +35,12 @@ from typing_extensions import Self
 from aiida.common import exceptions, log
 from aiida.common.exceptions import EntryPointError, InvalidOperation, NotExistent
 from aiida.common.lang import classproperty, type_check
-from aiida.common.pydantic import BaseOrmModel, MetadataField, OrmModel, get_metadata
+from aiida.common.pydantic import AiiDABaseModel, MetadataField, get_metadata
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
 from .fields import EntityFieldMeta
+from .model import OrmModel
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import BackendEntity, StorageBackend
@@ -414,8 +415,8 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     @classmethod
     def _model_to_orm_field_values(
         cls,
-        valid_model: BaseOrmModel,
-        schema: type[BaseOrmModel],
+        valid_model: AiiDABaseModel,
+        schema: type[AiiDABaseModel],
     ) -> dict[str, Any]:
         """Collect values for the ORM entity's fields from the given model instance and schema.
 
@@ -436,16 +437,14 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
                 continue
 
             annotation = field.annotation
-            if isinstance(annotation, type) and issubclass(annotation, BaseOrmModel):
+            if isinstance(annotation, type) and issubclass(annotation, AiiDABaseModel):
                 fields[field_name] = cls._model_to_orm_field_values(field_value, annotation)
             elif orm_class := get_metadata(field, 'orm_class'):
                 if isinstance(orm_class, str):
                     try:
                         orm_class = cast(Entity, BaseFactory('aiida.orm', orm_class))
                     except EntryPointError as exception:
-                        raise EntryPointError(
-                            f'The `orm_class` of `{cls.__name__}.Model.{key}` is invalid: {exception}'
-                        ) from exception
+                        raise EntryPointError(f'The `orm_class` of `{key}` is invalid: {exception}') from exception
                 try:
                     fields[field_name] = orm_class.collection.get(id=field_value)
                 except NotExistent as exception:
@@ -459,7 +458,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
     def _get_model_field_values(
         self,
-        model_cls: type[BaseOrmModel],
+        model_cls: type[AiiDABaseModel],
         *,
         context: dict[str, Any],
         minimal: bool,
@@ -487,7 +486,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
                 fields[field_name] = orm_to_model(self) if len(parameters) == 1 else orm_to_model(self, context)
             else:
                 annotation = field.annotation
-                if isinstance(annotation, type) and issubclass(annotation, BaseOrmModel):
+                if isinstance(annotation, type) and issubclass(annotation, AiiDABaseModel):
                     fields[field_name] = self._get_model_field_values(annotation, context=context, minimal=minimal)
                 else:
                     fields[field_name] = getattr(self, key, field.default)
@@ -499,7 +498,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         *,
         context: dict[str, Any] | None = None,
         minimal: bool = False,
-        schema: type[BaseOrmModel] | None = None,
+        schema: type[AiiDABaseModel] | None = None,
         use_field_alias_as_key: bool = True,
     ) -> dict[str, Any]:
         """Collect values for the `Model`'s fields from this entity.

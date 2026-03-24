@@ -33,14 +33,14 @@ from typing import (
 )
 from uuid import UUID
 
-from pydantic import create_model, field_serializer
+import pydantic as pdt
 from typing_extensions import Self
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.pydantic import BaseOrmModel, MetadataField, OrmModel
+from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 from aiida.orm.utils.node import (
@@ -53,6 +53,7 @@ from ..computers import Computer
 from ..entities import Collection as EntityCollection
 from ..entities import Entity, from_backend_entity
 from ..extras import EntityExtras
+from ..model import OrmModel
 from ..querybuilder import QueryBuilder
 from ..users import User
 from .attributes import NodeAttributes
@@ -228,7 +229,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             description='The node description',
             examples=['This is my node description.'],
         )
-        extras: Dict[str, Any] = MetadataField(
+        extras: dict[str, Any] = MetadataField(
             default_factory=dict,
             description='The node extras',
             orm_to_model=lambda node: cast(Node, node).base.extras.all,
@@ -293,7 +294,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             examples=[{'o': {'file.txt': {'k': '<file_hash>'}}}],
         )
 
-        @field_serializer('uuid')
+        @pdt.field_serializer('uuid')
         def serialize_uuid(self, value: UUID) -> str:
             """Serialize UUID to string."""
             return str(value)
@@ -306,9 +307,9 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
         return cast(type[Node.BaseNodeModel], cls.ReadModel._as_write_model())
 
-    ConstructorArgsModel: type[BaseOrmModel] | None = None
+    ConstructorArgsModel: type[AiiDABaseModel] | None = None
 
-    __ConstructorModel: ClassVar[type[BaseNodeModel] | None] = None
+    _ConstructorModel: ClassVar[type[BaseNodeModel] | None] = None
 
     @classproperty
     def ConstructorModel(cls) -> type[Node.BaseNodeModel]:  # noqa: N802, N805
@@ -317,9 +318,22 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         :raises UnsupportedConstructorModelError: if this node type does not support creation via a constructor model.
         :return: The constructor-based creation model class.
         """
-        if cls.__ConstructorModel is None:
+        if cls._ConstructorModel is None:
             raise exceptions.UnsupportedConstructorModelError(cls.class_node_type)
-        return cls.__ConstructorModel
+        return cls._ConstructorModel
+
+    _CliModel: ClassVar[type[BaseNodeModel] | None] = None
+
+    @classproperty
+    def CliModel(cls) -> type[pdt.BaseModel]:  # noqa: N802, N805
+        """Return the CLI model class for this entity.
+
+        :return: The CLI model class.
+        :raises UnsupportedCliModelError: if this node type does not support creation via a CLI model.
+        """
+        if cls._CliModel is None:
+            raise exceptions.UnsupportedCliModelError(cls.class_node_type)
+        return cls._CliModel
 
     def __init__(
         self,
@@ -354,7 +368,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def __init_subclass__(cls, **kwargs) -> None:
         """Patch subclass models."""
         super().__init_subclass__(**kwargs)
-        cls._patch_base_model()
         cls._patch_attributes_model()
         cls._patch_read_model()
         cls._patch_constructor_model()
@@ -384,7 +397,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     @classmethod
     def from_model(
         cls,
-        model: Node.WriteModel | Node.ConstructorModel,
+        model: pdt.BaseModel,
         files: dict[str, io.BufferedReader] | None = None,
     ) -> Self:
         """Create a node instance from a model instance.
@@ -392,20 +405,19 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         The creation branch is determined by the model type:
         - `WriteModel`: attributes-based creation (expects `attributes`)
         - `ConstructorModel`: constructor-based creation (expects `args`)
+        - `CliModel`: CLI-based creation (expects flat fields that are passed as CLI options)
 
         :param model: The model instance to create the node from.
         :param files: A dictionary of file-like objects representing the files in the repository.
         :return: The created node instance.
         """
-        node_type = model.node_type
-        if node_type != cls.class_node_type:
-            raise ValueError(f"expected '{cls.class_node_type}', got `{node_type}`")
         if isinstance(model, cls.WriteModel):
             return cls._from_write_model(model, files=files)
-        elif cls.__ConstructorModel is not None and isinstance(model, cls.ConstructorModel):
+        if cls._ConstructorModel is not None and isinstance(model, cls.ConstructorModel):
             return cls._from_constructor_model(model)
-        else:
-            raise ValueError(f'cannot create `{cls.__name__}` from model of type `{type(model).__name__}`')
+        if cls._CliModel is not None and isinstance(model, cls.CliModel):
+            return cls._from_cli_model(model)
+        raise ValueError(f'cannot create `{cls.__name__}` from model of type `{type(model).__name__}`')
 
     def serialize(
         self,
@@ -468,7 +480,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if 'attributes' in serialized:
             Model = cls.WriteModel  # noqa: N806
         elif 'args' in serialized:
-            if not cls.__ConstructorModel:
+            if not cls._ConstructorModel:
                 raise ValueError(f'{cls.__name__} does not support constructor-based creation')
             Model = cls.ConstructorModel  # noqa: N806
         else:
@@ -556,7 +568,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     @classproperty
     def has_constructor_model(cls) -> bool:  # noqa: N805
         """Return whether this node class supports constructor-based creation."""
-        return cls.__ConstructorModel is not None
+        return cls._ConstructorModel is not None
 
     @classproperty
     def class_node_type(cls) -> str:  # noqa: N805
@@ -1011,33 +1023,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         raise AttributeError(name)
 
     @classmethod
-    def _patch_base_model(cls):
-        """Patch `BaseNodeModel` by wiring the subclass-specific `node_type` field."""
-        if 'BaseNodeModel' in cls.__dict__:
-            raise TypeError(
-                f'`{cls.__name__}` should not define `BaseNodeModel`; '
-                'only define `AttributesModel` and optionally `ConstructorArgsModel`'
-            )
-        node_type_field = deepcopy(cls.BaseNodeModel.model_fields['node_type'])
-        cls.BaseNodeModel = cast(
-            type[Node.BaseNodeModel],
-            create_model(
-                'BaseNodeModel',
-                __base__=cls.BaseNodeModel,
-                __module__=cls.__module__,
-                __qualname__=f'{cls.__qualname__}.BaseNodeModel',
-                node_type=(Literal[cls.class_node_type], node_type_field),
-            ),
-        )
-        cls.BaseNodeModel.model_rebuild(force=True)
-
-    @classmethod
     def _patch_attributes_model(cls):
         """Patch `AttributesModel` as a subclass-specific version if not explicitly defined."""
         if 'AttributesModel' not in cls.__dict__:
             cls.AttributesModel = cast(
                 type[Node.AttributesModel],
-                create_model(
+                pdt.create_model(
                     'AttributesModel',
                     __base__=cls.AttributesModel,
                     __module__=cls.__module__,
@@ -1050,21 +1041,28 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def _patch_read_model(cls):
         """Patch `ReadModel` by wiring the subclass-specific `attributes` model.
 
-        Only `RemoteData` and `InstalledCode` are allowed to override `ReadModel` due to
-        their *required* computer field.
+        Only `RemoteData` and `AbstractCode` are allowed to override `ReadModel`
+        due to required read-only fields, (e.g., computer).
         """
-        exceptions = ('RemoteData', 'InstalledCode')
 
         BaseReadModel: type[Node.ReadModel] = cls.ReadModel  # noqa: N806
         model_fields: dict[str, Any] = {}
 
         if 'ReadModel' in cls.__dict__:
-            if cls.__name__ not in exceptions:
+            # TODO ideally we should do this check with issubclass, but we can't import
+            # the exception classes here without creating a circular import.
+            # Best to move all model-related logic to a separate module!
+            exceptions = ('RemoteData', 'AbstractCode')
+            is_exception = next(
+                (mro.__name__ for mro in cls.mro() if mro.__name__ in exceptions),
+                None,
+            )
+            if not is_exception:
                 raise TypeError(
                     f'`{cls.__name__}` should not define `ReadModel`; '
                     'only define `AttributesModel` and optionally `ConstructorArgsModel`'
                 )
-            # For the exception classes that override `ReadModel`, we need to copy the overridden fields.
+            # For exceptions that override `ReadModel`, we need to copy the overridden fields.
             # We don't know a priori which fields are overridden, so we copy all.
             BaseReadModel = cls.ReadModel.__bases__[0]  # noqa: N806
             model_fields = {
@@ -1072,14 +1070,13 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             }
 
         attributes_field = deepcopy(cls.ReadModel.model_fields['attributes'])
-        attributes_field.annotation = cls.AttributesModel
         node_type_field = deepcopy(cls.BaseNodeModel.model_fields['node_type'])
         model_fields['node_type'] = (Literal[cls.class_node_type], node_type_field)
         model_fields['attributes'] = (cls.AttributesModel, attributes_field)
 
         cls.ReadModel = cast(
             type[Node.ReadModel],
-            create_model(
+            pdt.create_model(
                 'ReadModel',
                 __base__=BaseReadModel,
                 __module__=cls.__module__,
@@ -1094,22 +1091,23 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """Patch `ConstructorModel` by synthesizing it from `BaseNodeModel` and `ConstructorArgsModel`."""
         if cls.ConstructorArgsModel is None:
             return
+        node_type_field = deepcopy(cls.BaseNodeModel.model_fields['node_type'])
         args_field = MetadataField(
             description='The constructor arguments.',
             write_only=True,
         )
-        args_field.annotation = cls.ConstructorArgsModel
-        cls.__ConstructorModel = cast(
+        ConstructorModel = cast(  # noqa: N806
             type[Node.BaseNodeModel],
-            create_model(
+            pdt.create_model(
                 'ConstructorModel',
                 __base__=cls.BaseNodeModel,
                 __module__=cls.__module__,
                 __qualname__=f'{cls.__qualname__}.ConstructorModel',
+                node_type=(Literal[cls.class_node_type], node_type_field),
                 args=(cls.ConstructorArgsModel, args_field),
             ),
         )
-        cls.__ConstructorModel.model_rebuild(force=True)
+        cls._ConstructorModel = ConstructorModel  # type: ignore[assignment]
 
     @classmethod
     def _from_write_model(cls, model: Node.WriteModel, files: dict[str, io.BufferedReader] | None = None) -> Self:
@@ -1181,12 +1179,22 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         fields.pop('node_type')
         return cls(**fields)
 
+    @classmethod
+    def _from_cli_model(cls, model: Node.CliModel) -> Self:
+        """Construct a node instance from the CLI-based creation model.
+
+        :param model: the model instance to construct from
+        :return: the constructed node instance
+        """
+        fields = cls._model_to_orm_field_values(model, cls.CliModel)
+        return cls(**fields)
+
     def _orm_to_model_field_values(
         self,
         *,
         context: dict[str, Any] | None = None,
         minimal: bool = False,
-        schema: type[BaseOrmModel] | None = None,
+        schema: type[AiiDABaseModel] | None = None,
         use_field_alias_as_key: bool = True,
     ) -> dict[str, Any]:
         """Collect values for the model fields from this node.

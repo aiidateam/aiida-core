@@ -10,9 +10,9 @@ from aiida.storage.sqlite_dos.backend import FILENAME_CONTAINER, FILENAME_DATABA
 
 @pytest.mark.usefixtures('chdir_tmp_path')
 def test_model():
-    """Test :class:`aiida.storage.sqlite_dos.backend.SqliteDosStorage.Model`."""
+    """Test :class:`aiida.storage.sqlite_dos.backend.SqliteDosStorage.CliModel`."""
     filepath = pathlib.Path.cwd() / 'archive.aiida'
-    model = SqliteDosStorage.Model(filepath=filepath.name)
+    model = SqliteDosStorage.CliModel(filepath=filepath.name)
     assert pathlib.Path(model.filepath).is_absolute()
 
 

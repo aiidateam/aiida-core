@@ -17,7 +17,7 @@ import pathlib
 import typing as t
 
 from aiida.common import exceptions
-from aiida.common.pydantic import BaseOrmModel, MetadataField
+from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.common.typing import FilePath
 
 from .data import Data
@@ -37,7 +37,7 @@ class SinglefileData(Data):
             read_only=True,
         )
 
-    class ConstructorArgsModel(BaseOrmModel):
+    class ConstructorArgsModel(AiiDABaseModel):
         filename: str = MetadataField(
             'file.txt',
             description='The name of the stored file',

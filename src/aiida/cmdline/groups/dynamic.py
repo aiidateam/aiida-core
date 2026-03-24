@@ -9,7 +9,6 @@ import typing as t
 import click
 
 from aiida.common import exceptions
-from aiida.common.pydantic import BaseOrmModel
 from aiida.plugins.entry_point import ENTRY_POINT_GROUP_FACTORY_MAPPING, get_entry_point_names
 from aiida.plugins.factories import BaseFactory
 
@@ -92,22 +91,17 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             command = super().get_command(ctx, cmd_name)
         return command
 
-    def call_command(self, ctx: click.Context, cls, non_interactive: bool, **kwargs: t.Any) -> t.Any:
+    def call_command(self, ctx: click.Context, cls: t.Any, non_interactive: bool, **kwargs: t.Any) -> t.Any:
         """Call the ``command`` after validating the provided inputs."""
         from pydantic import ValidationError
 
-        # TODO wire non-interactive?
-
         try:
-            Model = cls.ConstructorModel  # noqa: N806
+            CliModel = cls.CliModel  # noqa: N806
         except exceptions.UnsupportedConstructorModelError:
             return self._command(ctx, cls, **kwargs)
 
         try:
-            args_field = Model.model_fields['args']
-            ConstructorArgsModel = t.cast(type[BaseOrmModel], args_field.annotation)  # noqa: N806
-            kwargs['args'] = {key: kwargs.pop(key) for key in ConstructorArgsModel.model_fields.keys() if key in kwargs}
-            Model(node_type=cls.class_node_type, **kwargs)
+            CliModel(**kwargs)
         except ValidationError as exception:
             param_hint = [
                 f'--{loc.replace("_", "-")}'  # type: ignore[union-attr]
@@ -165,7 +159,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         cls = self.factory(entry_point)
 
         try:
-            Model = cls.ConstructorModel  # noqa: N806
+            CliModel = cls.CliModel  # noqa: N806
         except exceptions.UnsupportedConstructorModelError:
             from aiida.common.warnings import warn_deprecation
 
@@ -179,17 +173,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         options_spec = {}
 
-        fields = dict(Model.model_fields)
-        args_field = fields.pop('args')
-        if args_field is not None:
-            ConstructorArgsModel = t.cast(type[BaseOrmModel], args_field.annotation)  # noqa: N806
-            fields |= ConstructorArgsModel.model_fields
-
-        exclude_fields = {'node_type', 'extras'}
-        for key, field_info in fields.items():
-            if key in exclude_fields:
-                continue
-
+        for key, field_info in CliModel.model_fields.items():
             default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default
 
             # If the annotation has the ``__args__`` attribute it is an instance of a type from ``typing`` and the real

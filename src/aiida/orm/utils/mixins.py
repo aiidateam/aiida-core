@@ -14,8 +14,10 @@ import inspect
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, override, type_check
-from aiida.common.pydantic import MetadataField, OrmModel
+from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
+
+from ..model import OrmModel
 
 
 class FunctionCalculationMixin:

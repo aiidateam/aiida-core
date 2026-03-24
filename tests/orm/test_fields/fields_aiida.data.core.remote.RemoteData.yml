@@ -5,7 +5,7 @@ computer: QbNumericField('computer', dtype=<class 'int'>, doc='The pk of the rem
 ctime: QbNumericField('ctime', dtype=<class 'datetime.datetime'>, doc='The creation
   time of the node')
 description: QbStrField('description', dtype=<class 'str'>, doc='The node description')
-extras: QbDictField('extras', dtype=typing.Dict[str, typing.Any], doc='The node extras')
+extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The node extras')
 label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
 mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
   time of the node')

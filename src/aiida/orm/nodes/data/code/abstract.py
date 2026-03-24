@@ -14,12 +14,15 @@ import abc
 import functools
 import pathlib
 import typing as t
+from copy import deepcopy
+
+import pydantic as pdt
 
 from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
-from aiida.common.pydantic import BaseOrmModel, MetadataField
+from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.orm import Computer
 from aiida.plugins import CalculationFactory
 
@@ -43,7 +46,22 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     _KEY_ATTRIBUTE_WRAP_CMDLINE_PARAMS: str = 'wrap_cmdline_params'
     _KEY_EXTRA_IS_HIDDEN: str = 'hidden'  # Should become ``is_hidden`` once ``Code`` is dropped
 
-    class CommonFieldsModel(BaseOrmModel):
+    class BaseNodeModel(Data.BaseNodeModel):
+        label: str = MetadataField(
+            title='Label',
+            description='A unique label to identify the code by',
+            short_name='-L',
+            priority=4,
+        )
+        description: t.Optional[str] = MetadataField(
+            '',
+            title='Description',
+            description='Human-readable description, ideally including version and compilation environment',
+            short_name='-D',
+            priority=3,
+        )
+
+    class CommonFieldsModel(AiiDABaseModel):
         default_calc_job_plugin: t.Optional[str] = MetadataField(
             None,
             alias='input_plugin',
@@ -91,20 +109,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
 
     class AttributesModel(Data.AttributesModel, CommonFieldsModel): ...
 
-    class ConstructorArgsModel(CommonFieldsModel):
-        label: str = MetadataField(
-            title='Label',
-            description='A unique label to identify the code by',
-            short_name='-L',
-            priority=4,
-        )
-        description: t.Optional[str] = MetadataField(
-            '',
-            title='Description',
-            description='Human-readable description, ideally including version and compilation environment',
-            short_name='-D',
-            priority=3,
-        )
+    class ConstructorArgsModel(CommonFieldsModel): ...
 
     def __init__(
         self,
@@ -145,6 +150,38 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         self.with_mpi = with_mpi
         self.wrap_cmdline_params = wrap_cmdline_params
         self.is_hidden = is_hidden
+
+    def __init_subclass__(cls, **kwargs) -> None:
+        super().__init_subclass__(**kwargs)
+
+        model_fields: dict[str, t.Any] = {
+            'label': (
+                cls.BaseNodeModel.model_fields['label'].annotation,
+                deepcopy(cls.BaseNodeModel.model_fields['label']),
+            ),
+            'description': (
+                cls.BaseNodeModel.model_fields['description'].annotation,
+                deepcopy(cls.BaseNodeModel.model_fields['description']),
+            ),
+            **{
+                key: (field_info.annotation, deepcopy(field_info))
+                for key, field_info in cls.ConstructorArgsModel.model_fields.items()
+            },
+        }
+
+        CliModel = t.cast(  # noqa: N806
+            type[pdt.BaseModel],
+            pdt.create_model(
+                'CliModel',
+                __base__=AiiDABaseModel,
+                __module__=cls.__module__,
+                __qualname__=f'{cls.__qualname__}.CliModel',
+                **model_fields,
+            ),
+        )
+        CliModel.model_config['arbitrary_types_allowed'] = True
+        CliModel.model_rebuild(force=True)
+        cls._CliModel = CliModel  # type: ignore[assignment]
 
     @abc.abstractmethod
     def can_run_on_computer(self, computer: Computer) -> bool:
@@ -382,23 +419,15 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """Export code to a YAML file."""
         import yaml
 
-        code_data = (
-            {
-                'label': self.label,
-                'description': self.description,
-            }
-            | ({'computer': self.computer.label} if self.computer else {})
-            | {
-                key: value
-                for schema in (self.AttributesModel, self.ConstructorArgsModel)
-                for key, value in self._orm_to_model_field_values(
-                    context={'repository_path': pathlib.Path.cwd() / f'{self.label}'},
-                    schema=schema,
-                    use_field_alias_as_key=False,
-                ).items()
-                if value is not None
-            }
-        )
+        code_data = {
+            key: value
+            for key, value in self._orm_to_model_field_values(
+                context={'repository_path': pathlib.Path.cwd() / f'{self.label}'},
+                schema=self.CliModel,
+                use_field_alias_as_key=False,
+            ).items()
+            if value is not None
+        }
 
         return yaml.dump(code_data, sort_keys=kwargs.get('sort', False), encoding='utf-8'), {}
 

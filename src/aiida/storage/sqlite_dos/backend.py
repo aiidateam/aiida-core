@@ -199,7 +199,7 @@ class SqliteDosStorage(PsqlDosBackend):
 
     migrator = SqliteDosMigrator
 
-    class Model(BaseModel, defer_build=True):
+    class CliModel(BaseModel, defer_build=True):
         """Model describing required information to configure an instance of the storage."""
 
         filepath: str = Field(

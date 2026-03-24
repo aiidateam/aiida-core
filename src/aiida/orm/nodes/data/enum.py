@@ -23,7 +23,7 @@ from enum import Enum
 from plumpy.loaders import get_object_loader
 
 from aiida.common.lang import type_check
-from aiida.common.pydantic import BaseOrmModel, MetadataField
+from aiida.common.pydantic import AiiDABaseModel, MetadataField
 
 from .base import to_aiida_type
 from .data import Data
@@ -66,7 +66,7 @@ class EnumData(Data):
             orm_to_model=lambda node: t.cast(EnumData, node).identifier,
         )
 
-    class ConstructorArgsModel(BaseOrmModel):
+    class ConstructorArgsModel(AiiDABaseModel):
         member: Enum = MetadataField(
             description='The enum member to wrap',
             write_only=True,

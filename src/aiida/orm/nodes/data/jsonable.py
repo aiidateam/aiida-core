@@ -8,7 +8,8 @@ import typing
 
 from pydantic import ConfigDict, WithJsonSchema
 
-from aiida.common.pydantic import BaseOrmModel, MetadataField, OrmModel
+from aiida.common.pydantic import AiiDABaseModel, MetadataField
+from aiida.orm import OrmModel
 
 from .data import Data
 
@@ -74,7 +75,7 @@ class JsonableData(Data):
             orm_to_model=lambda node: typing.cast(JsonableData, node).the_class,
         )
 
-    class ConstructorArgsModel(BaseOrmModel):
+    class ConstructorArgsModel(AiiDABaseModel):
         model_config = ConfigDict(arbitrary_types_allowed=True)
 
         obj: typing.Annotated[
@@ -221,7 +222,7 @@ class JsonableData(Data):
         *,
         context: dict[str, typing.Any] | None = None,
         minimal: bool = False,
-        schema: type[BaseOrmModel] | None = None,
+        schema: type[AiiDABaseModel] | None = None,
         use_field_alias_as_key: bool = True,
     ) -> dict[str, typing.Any]:
         fields = super()._orm_to_model_field_values(

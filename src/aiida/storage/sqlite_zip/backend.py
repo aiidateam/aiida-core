@@ -92,7 +92,7 @@ class SqliteZipBackend(StorageBackend):
     read_only = True
     """This plugin is read only and data cannot be created or mutated."""
 
-    class Model(BaseModel, defer_build=True):
+    class CliModel(BaseModel, defer_build=True):
         """Model describing required information to configure an instance of the storage."""
 
         filepath: str = Field(title='Filepath of the archive', description='Filepath of the archive.')

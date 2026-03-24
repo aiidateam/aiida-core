@@ -13,7 +13,7 @@ description: QbStrField('description', dtype=<class 'str'>, doc='The node descri
 engine_command: QbStrField('attributes.engine_command', dtype=<class 'str'>, doc='The
   command to run the container. It must contain the placeholder {image_name} that
   will be replaced with the `image_name`')
-extras: QbDictField('extras', dtype=typing.Dict[str, typing.Any], doc='The node extras')
+extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The node extras')
 filepath_executable: QbStrField('attributes.filepath_executable', dtype=<class 'str'>,
   doc='Filepath of the executable on the remote computer')
 image_name: QbStrField('attributes.image_name', dtype=<class 'str'>, doc='Name of

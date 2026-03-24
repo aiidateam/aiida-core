@@ -16,7 +16,8 @@ import typing as t
 import pydantic as pdt
 
 from aiida.common import exceptions
-from aiida.common.pydantic import BaseOrmModel, MetadataField, OrmModel
+from aiida.common.pydantic import AiiDABaseModel, MetadataField
+from aiida.orm import OrmModel
 
 from .base import to_aiida_type
 from .data import Data
@@ -61,7 +62,7 @@ class Dict(Data):
             extra='allow',
         )
 
-    class ConstructorArgsModel(BaseOrmModel):
+    class ConstructorArgsModel(AiiDABaseModel):
         value: dict[str, t.Any] = MetadataField(
             description='The dictionary content',
             write_only=True,
@@ -197,7 +198,7 @@ class Dict(Data):
         *,
         context: dict[str, t.Any] | None = None,
         minimal: bool = False,
-        schema: type[BaseOrmModel] | None = None,
+        schema: type[AiiDABaseModel] | None = None,
         use_field_alias_as_key: bool = True,
     ) -> dict[str, t.Any]:
         fields = super()._orm_to_model_field_values(

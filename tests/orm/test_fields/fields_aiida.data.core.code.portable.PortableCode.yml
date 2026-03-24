@@ -9,7 +9,7 @@ default_calc_job_plugin: QbStrField('attributes.input_plugin', 'input_plugin', d
   | None, doc='Entry point name of the default plugin (as listed in `verdi plugin
   list aiida.calculations`)')
 description: QbStrField('description', dtype=<class 'str'>, doc='The node description')
-extras: QbDictField('extras', dtype=typing.Dict[str, typing.Any], doc='The node extras')
+extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The node extras')
 filepath_executable: QbStrField('attributes.filepath_executable', dtype=<class 'str'>,
   doc='Relative filepath of executable with directory of code files')
 label: QbStrField('label', dtype=<class 'str'>, doc='The node label')

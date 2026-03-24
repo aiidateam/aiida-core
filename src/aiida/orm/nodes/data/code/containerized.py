@@ -17,7 +17,7 @@ from __future__ import annotations
 import pathlib
 
 from aiida.common.lang import type_check
-from aiida.common.pydantic import BaseOrmModel, MetadataField
+from aiida.common.pydantic import AiiDABaseModel, MetadataField
 
 from .installed import InstalledCode
 
@@ -30,7 +30,7 @@ class ContainerizedCode(InstalledCode):
     _KEY_ATTRIBUTE_ENGINE_COMMAND: str = 'engine_command'
     _KEY_ATTRIBUTE_IMAGE_NAME: str = 'image_name'
 
-    class CommonFieldsModel(BaseOrmModel):
+    class CommonFieldsModel(AiiDABaseModel):
         engine_command: str = MetadataField(
             title='Engine command',
             description='The command to run the container. It must contain the placeholder {image_name} that will be '

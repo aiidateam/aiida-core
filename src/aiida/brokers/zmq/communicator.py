@@ -1,15 +1,23 @@
-"""ZeroMQ Communicator - client implementing kiwipy Communicator interface."""
+"""ZeroMQ Communicator - client implementing kiwipy Communicator interface.
+
+Uses an internal asyncio event loop on a background thread for all ZMQ I/O.
+Public methods schedule work onto the loop via ``call_soon_threadsafe``,
+eliminating the need for locks around shared state.  This follows the same
+pattern as kiwipy's ``RmqThreadCommunicator``.
+"""
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import threading
 import uuid
 from concurrent.futures import Future
-from typing import Any, Callable
+from typing import Any, Callable, TypeVar
 
 import kiwipy
 import zmq
+import zmq.asyncio
 
 from aiida.brokers.utils import YAML_DECODER, YAML_ENCODER
 
@@ -28,6 +36,12 @@ from .protocol import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+_T = TypeVar('_T')
+
+# Timeout (seconds) for scheduling work onto the event loop from the main
+# thread.  If the loop is blocked or dead for longer than this, callers get
+# a TimeoutError.
+_LOOP_TIMEOUT = 5.0
 
 
 class ZmqCommunicator(kiwipy.Communicator):
@@ -38,6 +52,12 @@ class ZmqCommunicator(kiwipy.Communicator):
     Socket architecture:
         DEALER - Connects to broker ROUTER for request-reply
         SUB    - Connects to broker PUB for broadcasts
+
+    Threading model:
+        A private asyncio event loop runs on a dedicated background thread.
+        All ZMQ socket I/O and mutable-state access happen exclusively on
+        that loop, so no locks are needed.  Public methods schedule work
+        onto the loop and block until the result is ready.
     """
 
     def __init__(
@@ -48,31 +68,21 @@ class ZmqCommunicator(kiwipy.Communicator):
         decoder: Callable[[str], Any] | None = None,
         client_id: str | None = None,
     ):
-        """Initialize the communicator.
-
-        :param router_endpoint: ZMQ endpoint for ROUTER socket (broker)
-        :param pub_endpoint: ZMQ endpoint for PUB socket (broker)
-        :param encoder: Function to encode messages
-        :param decoder: Function to decode messages
-        :param client_id: Optional client identifier
-        """
         self._router_endpoint = router_endpoint
         self._pub_endpoint = pub_endpoint
         self._encoder = encoder if encoder is not None else YAML_ENCODER
         self._decoder = decoder if decoder is not None else YAML_DECODER
         self._client_id = client_id or f'client-{uuid.uuid4().hex[:8]}'
 
-        # ZMQ sockets
-        self._context: zmq.Context | None = None
-        self._dealer: zmq.Socket | None = None
-        self._sub: zmq.Socket | None = None
-        self._poller: zmq.Poller | None = None
+        # ZMQ sockets (created on the event loop thread)
+        self._context: zmq.asyncio.Context | None = None
+        self._dealer: zmq.asyncio.Socket | None = None
+        self._sub: zmq.asyncio.Socket | None = None
 
-        # Pending futures for responses
+        # Pending futures for responses (only accessed from the loop thread)
         self._pending_futures: dict[str, Future] = {}
-        self._futures_lock = threading.Lock()
 
-        # Subscribers
+        # Subscribers (only accessed from the loop thread)
         self._task_subscribers: dict[str, Callable] = {}
         self._rpc_subscribers: dict[str, Callable] = {}
         self._broadcast_subscribers: dict[str, Callable] = {}
@@ -81,79 +91,148 @@ class ZmqCommunicator(kiwipy.Communicator):
         # ACK until the Future resolves so the broker can redeliver if we die.
         self._in_progress_tasks: dict[str, tuple[Future, bool]] = {}
 
-        # RPCs in progress: rpc_id -> (recipient, Future).  We poll these
-        # in the poll loop so the response is sent from the poll thread
-        # (ZMQ sockets are not thread-safe).
+        # RPCs in progress: rpc_id -> (recipient, Future).
         self._in_progress_rpcs: dict[str, tuple[str, Future]] = {}
 
-        # State
+        # Event loop thread
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._loop_thread: threading.Thread | None = None
+        self._dealer_poll_task: asyncio.Task | None = None
+        self._sub_poll_task: asyncio.Task | None = None
+
         self._closed = True
-        self._poll_thread: threading.Thread | None = None
-        self._stop_event = threading.Event()
 
     @property
     def client_id(self) -> str:
-        """Return the client identifier."""
         return self._client_id
 
     def is_closed(self) -> bool:
-        """Check if communicator is closed."""
         return self._closed
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
 
     def start(self) -> None:
         """Start the communicator.
 
-        Connects to broker and starts background polling thread.
+        Creates a background thread running an asyncio event loop, connects
+        ZMQ sockets, and starts polling coroutines.
         """
         if not self._closed:
             return
 
         _LOGGER.info('Starting ZMQ Communicator: %s', self._client_id)
 
-        # Create ZMQ context
-        self._context = zmq.Context()
+        self._loop = asyncio.new_event_loop()
+        ready: Future[bool] = Future()
 
-        # DEALER socket for request-reply with broker
+        self._loop_thread = threading.Thread(
+            target=self._run_loop, args=(ready,), daemon=True
+        )
+        self._loop_thread.start()
+
+        # Block until the loop thread has set up sockets and is polling.
+        ready.result(timeout=_LOOP_TIMEOUT)
+        _LOGGER.info('ZMQ Communicator started')
+
+    def _run_loop(self, ready: Future[bool]) -> None:
+        """Entry point for the background thread."""
+        asyncio.set_event_loop(self._loop)
+        try:
+            self._loop.run_until_complete(self._async_start(ready))
+            self._loop.run_forever()
+        except Exception:
+            _LOGGER.exception('Event loop crashed')
+            if not ready.done():
+                ready.set_exception(RuntimeError('Event loop failed to start'))
+        finally:
+            self._loop.run_until_complete(self._async_cleanup())
+            self._loop.close()
+            asyncio.set_event_loop(None)
+
+    async def _async_start(self, ready: Future[bool]) -> None:
+        """Set up sockets and start polling (runs on the loop thread)."""
+        self._context = zmq.asyncio.Context()
+
         self._dealer = self._context.socket(zmq.DEALER)
         self._dealer.setsockopt_string(zmq.IDENTITY, self._client_id)
         self._dealer.connect(self._router_endpoint)
 
-        # SUB socket for broadcasts
         self._sub = self._context.socket(zmq.SUB)
         self._sub.connect(self._pub_endpoint)
-        self._sub.setsockopt_string(zmq.SUBSCRIBE, '')  # Subscribe to all
-
-        # Set up poller
-        self._poller = zmq.Poller()
-        self._poller.register(self._dealer, zmq.POLLIN)
-        self._poller.register(self._sub, zmq.POLLIN)
+        self._sub.setsockopt_string(zmq.SUBSCRIBE, '')
 
         self._closed = False
-        self._stop_event.clear()
 
-        # Start background polling thread
-        self._poll_thread = threading.Thread(target=self._poll_loop, daemon=True)
-        self._poll_thread.start()
+        self._dealer_poll_task = asyncio.ensure_future(self._poll_dealer())
+        self._sub_poll_task = asyncio.ensure_future(self._poll_sub())
 
-        _LOGGER.info('ZMQ Communicator started')
+        ready.set_result(True)
+
+    async def _async_cleanup(self) -> None:
+        """Close sockets and context (runs on the loop thread)."""
+        if self._dealer:
+            self._dealer.setsockopt(zmq.LINGER, 0)
+            self._dealer.close()
+            self._dealer = None
+        if self._sub:
+            self._sub.setsockopt(zmq.LINGER, 0)
+            self._sub.close()
+            self._sub = None
+        if self._context:
+            self._context.term()
+            self._context = None
 
     def close(self) -> None:
-        """Close the communicator.
-
-        Stops polling thread and closes sockets.
-        """
         if self._closed:
             return
 
         _LOGGER.info('Closing ZMQ Communicator: %s', self._client_id)
+        self._closed = True
 
-        # Unsubscribe all subscribers before closing so the broker server
-        # removes our identity from its routing tables.  Without this, the
-        # broker may dispatch tasks/RPCs to our dead identity, silently
-        # dropping the messages.
+        if self._loop is not None and self._loop.is_running():
+            if threading.current_thread() is self._loop_thread:
+                # Called from a subscriber callback on the loop thread.
+                self._do_close_on_loop()
+                self._loop.call_soon(self._loop.stop)
+            else:
+                gate: Future[bool] = Future()
+
+                def _on_loop():
+                    try:
+                        self._do_close_on_loop()
+                    finally:
+                        gate.set_result(True)
+
+                self._loop.call_soon_threadsafe(_on_loop)
+                gate.result(timeout=_LOOP_TIMEOUT)
+                self._loop.call_soon_threadsafe(self._loop.stop)
+
+        if self._loop_thread and self._loop_thread.is_alive():
+            if threading.current_thread() is not self._loop_thread:
+                self._loop_thread.join(timeout=3.0)
+
+        self._loop = None
+        self._loop_thread = None
+
+        _LOGGER.info('ZMQ Communicator closed')
+
+    def _do_close_on_loop(self) -> None:
+        """Cleanup that must run on the event loop thread."""
+        # Cancel poll tasks
+        for task in (self._dealer_poll_task, self._sub_poll_task):
+            if task and not task.done():
+                task.cancel()
+        self._dealer_poll_task = None
+        self._sub_poll_task = None
+
+        # Send unsubscribe messages
         for identifier in list(self._task_subscribers):
             try:
-                msg = make_subscribe_message(MessageType.UNSUBSCRIBE_TASK, self._client_id, identifier)
+                msg = make_subscribe_message(
+                    MessageType.UNSUBSCRIBE_TASK, self._client_id, identifier
+                )
                 self._send(msg)
             except Exception:
                 pass
@@ -161,49 +240,19 @@ class ZmqCommunicator(kiwipy.Communicator):
 
         for identifier in list(self._rpc_subscribers):
             try:
-                msg = make_subscribe_message(MessageType.UNSUBSCRIBE_RPC, self._client_id, identifier)
+                msg = make_subscribe_message(
+                    MessageType.UNSUBSCRIBE_RPC, self._client_id, identifier
+                )
                 self._send(msg)
             except Exception:
                 pass
         self._rpc_subscribers.clear()
 
-        self._closed = True
-        self._stop_event.set()
-
-        # Wait for poll thread to stop
-        if self._poll_thread and self._poll_thread.is_alive():
-            self._poll_thread.join(timeout=2.0)
-
-        # Clean up sockets
-        if self._poller:
-            if self._dealer:
-                self._poller.unregister(self._dealer)
-            if self._sub:
-                self._poller.unregister(self._sub)
-            self._poller = None
-
-        if self._dealer:
-            self._dealer.setsockopt(zmq.LINGER, 0)
-            self._dealer.close()
-            self._dealer = None
-
-        if self._sub:
-            self._sub.setsockopt(zmq.LINGER, 0)
-            self._sub.close()
-            self._sub = None
-
-        if self._context:
-            self._context.term()
-            self._context = None
-
         # Cancel pending futures
-        with self._futures_lock:
-            for future in self._pending_futures.values():
-                if not future.done():
-                    future.cancel()
-            self._pending_futures.clear()
-
-        _LOGGER.info('ZMQ Communicator closed')
+        for future in self._pending_futures.values():
+            if not future.done():
+                future.cancel()
+        self._pending_futures.clear()
 
     def __enter__(self):
         self.start()
@@ -213,128 +262,133 @@ class ZmqCommunicator(kiwipy.Communicator):
         self.close()
         return False
 
-    # === Task operations (kiwipy interface) ===
+    # ------------------------------------------------------------------
+    # Thread-safe scheduling helper
+    # ------------------------------------------------------------------
+
+    def _run_on_loop(self, fn: Callable[[], _T]) -> _T:
+        """Schedule *fn* on the event loop thread and block for the result.
+
+        If already on the loop thread (e.g. inside a subscriber callback),
+        execute directly to avoid deadlock.
+        """
+        if threading.current_thread() is self._loop_thread:
+            return fn()
+
+        gate: Future[_T] = Future()
+
+        def _callback():
+            try:
+                result = fn()
+                gate.set_result(result)
+            except Exception as exc:
+                if not gate.done():
+                    gate.set_exception(exc)
+
+        self._loop.call_soon_threadsafe(_callback)
+        return gate.result(timeout=_LOOP_TIMEOUT)
+
+    # ------------------------------------------------------------------
+    # Task operations (kiwipy interface)
+    # ------------------------------------------------------------------
 
     def task_send(self, task: Any, no_reply: bool = False) -> Future | None:
-        """Send a task to the broker for processing.
-
-        :param task: Task payload
-        :param no_reply: If True, don't wait for response
-        :return: Future for the task result, or None if no_reply=True
-        """
         self._ensure_open()
 
-        msg = make_task_message(task, self._client_id, no_reply)
-        task_id = msg['id']
+        def _do():
+            msg = make_task_message(task, self._client_id, no_reply)
+            task_id = msg['id']
+            pending: Future[Any] | None = None
+            if not no_reply:
+                pending = Future()
+                self._pending_futures[task_id] = pending
+            self._send(msg)
+            _LOGGER.debug('Sent task: %s', task_id)
+            return pending
 
-        future: Future[Any] | None = None
-        if not no_reply:
-            future = Future()
-            with self._futures_lock:
-                self._pending_futures[task_id] = future
-
-        self._send(msg)
-        _LOGGER.debug('Sent task: %s', task_id)
-
-        return future
+        return self._run_on_loop(_do)
 
     def add_task_subscriber(self, subscriber: Callable, identifier: str | None = None) -> str:
-        """Register as a task subscriber.
-
-        :param subscriber: Callback function(communicator, task) -> result
-        :param identifier: Optional subscriber identifier
-        :return: The subscriber identifier
-        """
         self._ensure_open()
 
-        identifier = identifier or f'task-{uuid.uuid4().hex[:8]}'
-        self._task_subscribers[identifier] = subscriber
+        def _do():
+            ident = identifier or f'task-{uuid.uuid4().hex[:8]}'
+            self._task_subscribers[ident] = subscriber
+            msg = make_subscribe_message(
+                MessageType.SUBSCRIBE_TASK, self._client_id, ident
+            )
+            self._send(msg)
+            _LOGGER.info('Added task subscriber: %s', ident)
+            return ident
 
-        # Register with broker
-        msg = make_subscribe_message(MessageType.SUBSCRIBE_TASK, self._client_id, identifier)
-        self._send(msg)
-
-        _LOGGER.info('Added task subscriber: %s', identifier)
-        return identifier
+        return self._run_on_loop(_do)
 
     def remove_task_subscriber(self, identifier: str) -> None:
-        """Remove a task subscriber.
+        def _do():
+            if identifier in self._task_subscribers:
+                del self._task_subscribers[identifier]
+                if not self._closed:
+                    msg = make_subscribe_message(
+                        MessageType.UNSUBSCRIBE_TASK, self._client_id, identifier
+                    )
+                    self._send(msg)
+                _LOGGER.info('Removed task subscriber: %s', identifier)
 
-        :param identifier: Subscriber identifier
-        """
-        if identifier in self._task_subscribers:
-            del self._task_subscribers[identifier]
+        self._run_on_loop(_do)
 
-            if not self._closed:
-                msg = make_subscribe_message(MessageType.UNSUBSCRIBE_TASK, self._client_id, identifier)
-                self._send(msg)
-
-            _LOGGER.info('Removed task subscriber: %s', identifier)
-
-    # === RPC operations (kiwipy interface) ===
+    # ------------------------------------------------------------------
+    # RPC operations (kiwipy interface)
+    # ------------------------------------------------------------------
 
     def rpc_send(self, recipient_id: str, msg: Any) -> Future:
-        """Send an RPC message to a specific recipient.
-
-        :param recipient_id: Target recipient identifier
-        :param msg: Message payload
-        :return: Future for the RPC result
-        """
         self._ensure_open()
 
-        rpc_msg = make_rpc_message(recipient_id, msg, self._client_id)
-        rpc_id = rpc_msg['id']
-
-        future: Future[Any] = Future()
-        with self._futures_lock:
+        def _do():
+            rpc_msg = make_rpc_message(recipient_id, msg, self._client_id)
+            rpc_id = rpc_msg['id']
+            future: Future[Any] = Future()
             self._pending_futures[rpc_id] = future
+            self._send(rpc_msg)
+            _LOGGER.debug('Sent RPC to %s: %s', recipient_id, rpc_id)
+            return future
 
-        self._send(rpc_msg)
-        _LOGGER.debug('Sent RPC to %s: %s', recipient_id, rpc_id)
-
-        return future
+        return self._run_on_loop(_do)
 
     def add_rpc_subscriber(self, subscriber: Callable, identifier: str | None = None) -> str:
-        """Register as an RPC subscriber.
-
-        :param subscriber: Callback function(communicator, msg) -> result
-        :param identifier: Optional subscriber identifier
-        :return: The subscriber identifier
-        :raises kiwipy.DuplicateSubscriberIdentifier: If a subscriber with this identifier already exists
-        """
-        import kiwipy
-
         self._ensure_open()
 
-        identifier = identifier or f'rpc-{uuid.uuid4().hex[:8]}'
+        def _do():
+            ident = identifier or f'rpc-{uuid.uuid4().hex[:8]}'
+            if ident in self._rpc_subscribers:
+                raise kiwipy.DuplicateSubscriberIdentifier(
+                    f"RPC identifier '{ident}'"
+                )
+            self._rpc_subscribers[ident] = subscriber
+            msg = make_subscribe_message(
+                MessageType.SUBSCRIBE_RPC, self._client_id, ident
+            )
+            self._send(msg)
+            _LOGGER.info('Added RPC subscriber: %s', ident)
+            return ident
 
-        if identifier in self._rpc_subscribers:
-            raise kiwipy.DuplicateSubscriberIdentifier(f"RPC identifier '{identifier}'")
-
-        self._rpc_subscribers[identifier] = subscriber
-
-        # Register with broker
-        msg = make_subscribe_message(MessageType.SUBSCRIBE_RPC, self._client_id, identifier)
-        self._send(msg)
-
-        _LOGGER.info('Added RPC subscriber: %s', identifier)
-        return identifier
+        return self._run_on_loop(_do)
 
     def remove_rpc_subscriber(self, identifier: str) -> None:
-        """Remove an RPC subscriber.
+        def _do():
+            if identifier in self._rpc_subscribers:
+                del self._rpc_subscribers[identifier]
+                if not self._closed:
+                    msg = make_subscribe_message(
+                        MessageType.UNSUBSCRIBE_RPC, self._client_id, identifier
+                    )
+                    self._send(msg)
+                _LOGGER.info('Removed RPC subscriber: %s', identifier)
 
-        :param identifier: Subscriber identifier
-        """
-        if identifier in self._rpc_subscribers:
-            del self._rpc_subscribers[identifier]
+        self._run_on_loop(_do)
 
-            if not self._closed:
-                msg = make_subscribe_message(MessageType.UNSUBSCRIBE_RPC, self._client_id, identifier)
-                self._send(msg)
-
-            _LOGGER.info('Removed RPC subscriber: %s', identifier)
-
-    # === Broadcast operations (kiwipy interface) ===
+    # ------------------------------------------------------------------
+    # Broadcast operations (kiwipy interface)
+    # ------------------------------------------------------------------
 
     def broadcast_send(
         self,
@@ -343,112 +397,96 @@ class ZmqCommunicator(kiwipy.Communicator):
         subject: str | None = None,
         correlation_id: str | None = None,
     ) -> bool:
-        """Send a broadcast message.
-
-        :param body: Message body
-        :param sender: Optional sender identifier
-        :param subject: Optional message subject
-        :param correlation_id: Optional correlation ID
-        :return: True if sent successfully
-        """
         self._ensure_open()
 
-        msg = make_broadcast_message(
-            body,
-            sender or self._client_id,
-            subject,
-            correlation_id,
-        )
-        self._send(msg)
-        _LOGGER.debug('Sent broadcast: %s', subject)
-        return True
+        def _do():
+            msg = make_broadcast_message(
+                body, sender or self._client_id, subject, correlation_id
+            )
+            self._send(msg)
+            _LOGGER.debug('Sent broadcast: %s', subject)
+            return True
+
+        return self._run_on_loop(_do)
 
     def add_broadcast_subscriber(
         self,
         subscriber: Callable,
         identifier: str | None = None,
     ) -> str:
-        """Register as a broadcast subscriber.
-
-        :param subscriber: Callback function(communicator, body, sender, subject, correlation_id)
-        :param identifier: Optional subscriber identifier
-        :return: The subscriber identifier
-        """
         identifier = identifier or f'broadcast-{uuid.uuid4().hex[:8]}'
         self._broadcast_subscribers[identifier] = subscriber
         _LOGGER.info('Added broadcast subscriber: %s', identifier)
         return identifier
 
     def remove_broadcast_subscriber(self, identifier: str) -> None:
-        """Remove a broadcast subscriber.
-
-        :param identifier: Subscriber identifier
-        """
         if identifier in self._broadcast_subscribers:
             del self._broadcast_subscribers[identifier]
             _LOGGER.info('Removed broadcast subscriber: %s', identifier)
 
-    # === Internal methods ===
+    # ------------------------------------------------------------------
+    # Internal — sending
+    # ------------------------------------------------------------------
 
     def _ensure_open(self) -> None:
-        """Ensure communicator is open."""
         if self._closed:
             raise RuntimeError('Communicator is closed')
 
     def _send(self, msg: dict) -> None:
-        """Send a message to the broker."""
+        """Send a message to the broker.  MUST be called from the loop thread."""
         if not self._dealer:
             raise RuntimeError('Communicator not connected')
-
         encoded = encode_message(msg, self._encoder)
-        self._dealer.send_multipart([b'', encoded])
+        self._dealer.send_multipart([b'', encoded], zmq.NOBLOCK)
 
-    def _poll_loop(self) -> None:
-        """Background thread polling for messages."""
-        _LOGGER.debug('Poll loop started')
+    # ------------------------------------------------------------------
+    # Internal — polling coroutines
+    # ------------------------------------------------------------------
 
-        while not self._stop_event.is_set() and not self._closed:
+    async def _poll_dealer(self) -> None:
+        """Receive messages from the DEALER socket."""
+        while not self._closed:
             try:
-                if not self._poller:
-                    break
-
-                socks = dict(self._poller.poll(100))  # 100ms timeout
-
-                if self._dealer in socks:
-                    self._handle_dealer_message()
-
-                if self._sub in socks:
-                    self._handle_sub_message()
-
-                # Finalize completed in-progress tasks (send ACK + result)
-                if self._in_progress_tasks:
-                    self._process_in_progress_tasks()
-
-                # Finalize completed in-progress RPCs (send response)
-                if self._in_progress_rpcs:
-                    self._process_in_progress_rpcs()
-
-            except zmq.ZMQError as exc:
+                frames = await self._dealer.recv_multipart()
+                msg_frame = (
+                    frames[1]
+                    if len(frames) > 1 and frames[0] == b''
+                    else frames[0]
+                )
+                msg = decode_message(msg_frame, self._decoder)
+                self._dispatch_dealer_message(msg)
+            except zmq.ZMQError:
                 if not self._closed:
-                    _LOGGER.error('ZMQ error in poll loop: %s', exc)
+                    _LOGGER.error('ZMQ error in dealer poll')
                 break
-            except Exception as exc:
-                _LOGGER.exception('Error in poll loop: %s', exc)
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                _LOGGER.exception('Error in dealer poll')
 
-        _LOGGER.debug('Poll loop stopped')
+    async def _poll_sub(self) -> None:
+        """Receive messages from the SUB socket."""
+        while not self._closed:
+            try:
+                data = await self._sub.recv()
+                msg = decode_message(data, self._decoder)
+                if msg.get('type') == MessageType.BROADCAST.value:
+                    self._handle_broadcast(msg)
+            except zmq.ZMQError:
+                if not self._closed:
+                    _LOGGER.error('ZMQ error in sub poll')
+                break
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                _LOGGER.exception('Error in sub poll')
 
-    def _handle_dealer_message(self) -> None:
-        """Handle message from DEALER socket."""
-        if not self._dealer:
-            return
+    # ------------------------------------------------------------------
+    # Internal — message dispatch
+    # ------------------------------------------------------------------
 
-        frames = self._dealer.recv_multipart()
-        # Skip empty delimiter
-        msg_frame = frames[1] if len(frames) > 1 and frames[0] == b'' else frames[0]
-
-        msg = decode_message(msg_frame, self._decoder)
+    def _dispatch_dealer_message(self, msg: dict) -> None:
         msg_type = msg.get('type')
-
         _LOGGER.debug('Received from broker: %s', msg_type)
 
         if msg_type == MessageType.TASK.value:
@@ -464,178 +502,121 @@ class ZmqCommunicator(kiwipy.Communicator):
         else:
             _LOGGER.warning('Unknown message type from broker: %s', msg_type)
 
-    def _handle_sub_message(self) -> None:
-        """Handle message from SUB socket (broadcasts)."""
-        if not self._sub:
-            return
-
-        data = self._sub.recv()
-        msg = decode_message(data, self._decoder)
-
-        if msg.get('type') == MessageType.BROADCAST.value:
-            self._handle_broadcast(msg)
+    # --- Tasks ---
 
     def _handle_task(self, msg: dict) -> None:
-        """Handle incoming task from broker."""
         task_id = msg['id']
         body = msg.get('body')
         no_reply = msg.get('no_reply', False)
 
         _LOGGER.debug('Handling task: %s', task_id)
 
-        # Find a subscriber to handle the task
         for identifier, subscriber in self._task_subscribers.items():
             try:
                 result = subscriber(self, body)
 
                 if isinstance(result, Future):
-                    # Long-running task (e.g. continue_process).  Delay the
-                    # ACK so the broker can redeliver if we die.
                     self._in_progress_tasks[task_id] = (result, no_reply)
+                    result.add_done_callback(
+                        lambda fut, tid=task_id, nr=no_reply: (
+                            self._loop.call_soon_threadsafe(
+                                self._finalize_task, tid, fut, nr
+                            )
+                        )
+                    )
                     _LOGGER.debug('Task in progress (deferred ACK): %s', task_id)
                 else:
-                    # Immediate result — ACK right away
                     ack_msg = make_task_ack(task_id, self._client_id)
                     self._send(ack_msg)
                     if not no_reply:
-                        response = make_task_response(task_id, self._client_id, result=result)
+                        response = make_task_response(
+                            task_id, self._client_id, result=result
+                        )
                         self._send(response)
                     _LOGGER.debug('Task completed: %s', task_id)
                 return
 
             except Exception as exc:
                 _LOGGER.exception('Task subscriber %s failed: %s', identifier, exc)
-                # Try next subscriber
 
-        # No subscriber handled the task, nack it
         _LOGGER.warning('No subscriber handled task: %s', task_id)
         nack_msg = make_task_nack(task_id, self._client_id)
         self._send(nack_msg)
 
-    def _process_in_progress_tasks(self) -> None:
-        """Check in-progress tasks and ACK completed ones."""
-        completed = []
+    def _finalize_task(self, task_id: str, future: Future, no_reply: bool) -> None:
+        """Called on the loop thread when a deferred task completes."""
+        if task_id not in self._in_progress_tasks:
+            return
+        del self._in_progress_tasks[task_id]
 
-        for task_id, (future, no_reply) in self._in_progress_tasks.items():
-            if future.done():
-                if future.cancelled():
-                    # Task was cancelled (e.g., during shutdown).  Don't ACK —
-                    # the broker will detect our disconnect and requeue.
-                    _LOGGER.debug('Cancelled in-progress task dropped: %s', task_id)
-                    completed.append(task_id)
-                    continue
-                # Task finished — send ACK (and result if needed)
-                try:
-                    ack_msg = make_task_ack(task_id, self._client_id)
-                    self._send(ack_msg)
-                    if not no_reply:
-                        self._send_task_result(task_id, future)
-                    _LOGGER.debug('Deferred task completed, ACK sent: %s', task_id)
-                except Exception:
-                    _LOGGER.exception('Failed to finalise task %s', task_id)
-                completed.append(task_id)
+        if future.cancelled():
+            _LOGGER.debug('Cancelled in-progress task dropped: %s', task_id)
+            return
 
-        for task_id in completed:
-            del self._in_progress_tasks[task_id]
-
-    def _process_in_progress_rpcs(self) -> None:
-        """Check in-progress RPCs and send responses for completed ones.
-
-        This runs on the poll thread so all DEALER sends are single-threaded.
-        """
-        completed = []
-
-        for rpc_id, (recipient, future) in self._in_progress_rpcs.items():
-            if future.done():
-                if future.cancelled():
-                    completed.append(rpc_id)
-                    continue
-                try:
-                    result = future.result()
-                    # Unwrap nested done Futures (chained results)
-                    while isinstance(result, Future) and result.done():
-                        result = result.result()
-                    if isinstance(result, Future):
-                        # Still pending — swap in the inner Future and keep waiting
-                        self._in_progress_rpcs[rpc_id] = (recipient, result)
-                        continue
-                    response = make_rpc_response(rpc_id, self._client_id, result=result)
-                    self._send(response)
-                except Exception as exc:
-                    response = make_rpc_response(rpc_id, self._client_id, error=str(exc))
-                    self._send(response)
-                completed.append(rpc_id)
-
-        for rpc_id in completed:
-            del self._in_progress_rpcs[rpc_id]
+        try:
+            ack_msg = make_task_ack(task_id, self._client_id)
+            self._send(ack_msg)
+            if not no_reply:
+                self._send_task_result(task_id, future)
+            _LOGGER.debug('Deferred task completed, ACK sent: %s', task_id)
+        except Exception:
+            _LOGGER.exception('Failed to finalise task %s', task_id)
 
     def _send_task_result(self, task_id: str, result: Any) -> None:
-        """Send a task response, resolving Futures if needed.
-
-        For tasks whose result is a Future (e.g. ``continue_process``), we
-        cannot serialize the Future directly.  Instead we attach a callback
-        so the response is sent once the Future resolves.
-        """
+        """Send a task response, resolving chained Futures if needed."""
         if isinstance(result, Future):
-            def _on_done(fut: Future) -> None:
+            if result.done():
                 try:
-                    resolved = fut.result()
-                    # The resolved value may itself be a Future (chained)
-                    self._send_task_result(task_id, resolved)
+                    self._send_task_result(task_id, result.result())
                 except Exception as exc:
-                    _LOGGER.exception('Task %s future failed: %s', task_id, exc)
-                    try:
-                        response = make_task_response(task_id, self._client_id, error=str(exc))
-                        self._send(response)
-                    except Exception:
-                        pass
-
-            result.add_done_callback(_on_done)
+                    response = make_task_response(
+                        task_id, self._client_id, error=str(exc)
+                    )
+                    self._send(response)
+            else:
+                result.add_done_callback(
+                    lambda fut, tid=task_id: (
+                        self._loop.call_soon_threadsafe(
+                            self._send_task_result, tid, fut
+                        )
+                    )
+                )
         else:
             response = make_task_response(task_id, self._client_id, result=result)
             self._send(response)
 
     def _handle_task_response(self, msg: dict) -> None:
-        """Handle task response from broker."""
         task_id = msg.get('task_id')
         if not task_id:
             return
 
-        with self._futures_lock:
-            future = self._pending_futures.pop(task_id, None)
+        future = self._pending_futures.pop(task_id, None)
 
         if future and not future.done():
             error = msg.get('error')
             if error:
                 future.set_exception(Exception(error))
             else:
-                # Wrap the result in a resolved kiwipy.Future.  Callers
-                # (e.g. revive_processes) expect task results to be Futures
-                # with a .done()/.result() interface, matching kiwipy/RMQ
-                # behaviour where the result is a Future chain.
-                import kiwipy
-
                 result_future = kiwipy.Future()
                 result_future.set_result(msg.get('result'))
                 future.set_result(result_future)
 
+    # --- RPCs ---
+
     def _handle_rpc(self, msg: dict) -> None:
-        """Handle incoming RPC from broker."""
         rpc_id = msg['id']
         body = msg.get('body')
         recipient = str(msg['recipient']) if 'recipient' in msg else None
 
         _LOGGER.debug('Handling RPC: %s (recipient=%s)', rpc_id, recipient)
 
-        # Route to the specific subscriber for this recipient.  The broker
-        # already performed coarse-grained routing (by client identity), but
-        # a single communicator may serve many processes, so we must dispatch
-        # to the right one by matching the recipient identifier.
         subscriber = self._rpc_subscribers.get(recipient) if recipient else None
 
         if subscriber is None:
             _LOGGER.warning('No subscriber for RPC recipient %s: %s', recipient, rpc_id)
-            response = make_rpc_response(rpc_id, self._client_id, error=f'No handler for {recipient}')
+            response = make_rpc_response(
+                rpc_id, self._client_id, error=f'No handler for {recipient}'
+            )
             self._send(response)
             return
 
@@ -643,6 +624,13 @@ class ZmqCommunicator(kiwipy.Communicator):
             result = subscriber(self, body)
             if isinstance(result, Future):
                 self._in_progress_rpcs[rpc_id] = (recipient, result)
+                result.add_done_callback(
+                    lambda fut, rid=rpc_id, rec=recipient: (
+                        self._loop.call_soon_threadsafe(
+                            self._finalize_rpc, rid, rec, fut
+                        )
+                    )
+                )
                 _LOGGER.debug('RPC in progress (deferred response): %s', rpc_id)
                 return
             response = make_rpc_response(rpc_id, self._client_id, result=result)
@@ -654,14 +642,43 @@ class ZmqCommunicator(kiwipy.Communicator):
             response = make_rpc_response(rpc_id, self._client_id, error=str(exc))
             self._send(response)
 
+    def _finalize_rpc(self, rpc_id: str, recipient: str, future: Future) -> None:
+        """Called on the loop thread when a deferred RPC completes."""
+        if rpc_id not in self._in_progress_rpcs:
+            return
+        del self._in_progress_rpcs[rpc_id]
+
+        if future.cancelled():
+            return
+
+        try:
+            result = future.result()
+            # Unwrap nested done Futures
+            while isinstance(result, Future) and result.done():
+                result = result.result()
+            if isinstance(result, Future):
+                # Still pending — re-register
+                self._in_progress_rpcs[rpc_id] = (recipient, result)
+                result.add_done_callback(
+                    lambda fut, rid=rpc_id, rec=recipient: (
+                        self._loop.call_soon_threadsafe(
+                            self._finalize_rpc, rid, rec, fut
+                        )
+                    )
+                )
+                return
+            response = make_rpc_response(rpc_id, self._client_id, result=result)
+            self._send(response)
+        except Exception as exc:
+            response = make_rpc_response(rpc_id, self._client_id, error=str(exc))
+            self._send(response)
+
     def _handle_rpc_response(self, msg: dict) -> None:
-        """Handle RPC response from broker."""
         rpc_id = msg.get('rpc_id')
         if not rpc_id:
             return
 
-        with self._futures_lock:
-            future = self._pending_futures.pop(rpc_id, None)
+        future = self._pending_futures.pop(rpc_id, None)
 
         if future and not future.done():
             error = msg.get('error')
@@ -670,8 +687,9 @@ class ZmqCommunicator(kiwipy.Communicator):
             else:
                 future.set_result(msg.get('result'))
 
+    # --- Broadcasts ---
+
     def _handle_broadcast(self, msg: dict) -> None:
-        """Handle broadcast message."""
         body = msg.get('body')
         sender = msg.get('sender')
         subject = msg.get('subject')
@@ -681,4 +699,6 @@ class ZmqCommunicator(kiwipy.Communicator):
             try:
                 subscriber(self, body, sender, subject, correlation_id)
             except Exception as exc:
-                _LOGGER.exception('Broadcast subscriber %s failed: %s', identifier, exc)
+                _LOGGER.exception(
+                    'Broadcast subscriber %s failed: %s', identifier, exc
+                )

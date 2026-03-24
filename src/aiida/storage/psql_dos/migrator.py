@@ -78,6 +78,12 @@ class PsqlDosMigrator:
             self._engine.dispose()
             self._engine = None
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.close()
+
     @property
     def connection(self):
         """Return the connection to the database.

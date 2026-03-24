@@ -18,7 +18,7 @@ Socket architecture:
 What ZMQ provides (transport layer):
     - Identity-based routing (ROUTER auto-prepends sender identity to messages)
     - Automatic reconnection and async I/O
-    - Multicast delivery (PUB fans out to all SUB sockets)
+    - PUB/SUB fan-out (PUB delivers to all connected SUB sockets over IPC)
     - ZMTP heartbeats for dead peer detection
     - IPC transport for same-machine communication
 

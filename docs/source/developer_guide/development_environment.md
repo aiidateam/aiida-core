@@ -27,7 +27,8 @@
    $ uv sync
    ```
 
-   This creates a `.venv` and installs all dependencies (including test and development extras) from the lock file `uv.lock`.
+   This creates a `.venv` and installs all dependencies from the lock file `uv.lock`.
+   The `dev` dependency group (installed by default) pulls in all optional extras — `tests`, `docs`, `pre-commit`, `rest`, and `atomic_tools` — so everything needed for development is available out of the box.
 
 1. Create a branch for your development using the naming convention `<prefix>/<issue>/<short_description>`:
 

@@ -44,7 +44,7 @@ The following hooks run automatically on staged files (see `.pre-commit-config.y
 ### File operations
 
 - When opening a general file for reading or writing, use [`open()`](https://docs.python.org/3/library/functions.html#open) as a context manager with UTF-8 encoding for formatted files, e.g., `with open(path, 'w', encoding='utf8') as handle:`.
-- When opening a file from the AiiDA repository, use `aiida.common.folders.Folder.open()`.
+- When opening a file from a node's file repository, use the `Node.base.repository` interface (e.g., `node.base.repository.open('filename')`).
 
 ### Source file headers
 

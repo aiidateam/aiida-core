@@ -80,7 +80,7 @@ For transport tests, you need passwordless SSH to `localhost`:
 
 ### RabbitMQ tests
 
-For tests that require the RabbitMQ message broker, set up RabbitMQ locally or use the Docker configuration in `.docker/docker-rabbitmq.yml`.
+For tests that require the RabbitMQ message broker, set up RabbitMQ locally or use the `aiida-core-with-services` Docker image, which includes RabbitMQ and PostgreSQL pre-configured (see `.docker/docker-compose.aiida-core-with-services.yml`).
 
 ## Writing new tests
 

@@ -4,13 +4,16 @@ AiiDA uses [Sphinx](https://www.sphinx-doc.org) with [MyST Markdown](https://mys
 
 ## Building docs locally
 
+Documentation dependencies (Sphinx, MyST, themes, etc.) are declared in the `docs` optional extra in `pyproject.toml`.
+The `dev` dependency group includes `docs`, so `uv sync` installs everything needed — no separate install step is required.
+
 Build the documentation with:
 
 ```console
 $ uv run sphinx-build -b html docs/source docs/build/html
 ```
 
-For live rebuilds during editing, you can use `sphinx-autobuild` (included in the development dependencies):
+For live rebuilds during editing:
 
 ```console
 $ uv run sphinx-autobuild docs/source docs/build/html
@@ -22,14 +25,11 @@ To check for broken links:
 $ uv run sphinx-build -b linkcheck docs/source docs/build/linkcheck
 ```
 
-:::{warning}
-The CI tests on your PR will fail if warnings are encountered while building the documentation.
+:::{note}
+The `docs-build.yml` CI workflow builds the docs and runs a link checker.
+It runs on every push, but on PRs it only triggers when files under `docs/` are changed.
+The build uses `-nW` (nitpicky mode, warnings as errors), so broken cross-references will fail the build.
 :::
-
-## Useful resources
-
-- [The Documentation System](https://docs.divio.com/documentation-system/) -- the framework AiiDA's docs are modeled after.
-- [Google developer documentation style guide](https://developers.google.com/style) -- especially the notes about [tone](https://developers.google.com/style/tone).
 
 ## How the AiiDA documentation is organized
 
@@ -46,12 +46,21 @@ The documentation follows the [Divio documentation system](https://docs.divio.co
 
 ## Style guide
 
+### Tone
+
+- Aim for a **conversational, friendly tone** — like a knowledgeable colleague, not a textbook.
+- Prioritize **clarity over cleverness**. Many readers are not native English speakers.
+- Don't say "simply", "just", or "it's easy" — if the reader is struggling, these words make it worse.
+- Avoid buzzwords, jargon, and unnecessary filler. Say what you mean directly.
+
+### Formatting
+
 1. Write **one sentence per line** and otherwise no manual line wrapping.
    This makes it easy to create and review diffs.
 1. File and directory names should be **alphanumeric, lowercase, with underscores** as separators (e.g., `entry_points.md`).
 1. Headers must be set in **sentence case** (e.g., "Entry points").
 1. Separate paragraphs by one empty line, not more.
-1. Use `-` or `*` for itemized lists.
+1. Use `-` for itemized lists.
 
 ### Markdown (MyST) files
 
@@ -76,7 +85,8 @@ When editing these, follow the existing RST conventions:
    - `=` for sections
    - `-` for subsections
    - `^` for subsubsections
-1. Use the `code-block` directive instead of double-colon for code segments.
+1. Prefer the `.. code-block:: <language>` directive over double-colon (`::`) for code segments, as it enables syntax highlighting.
+   Double-colon is acceptable for short, language-agnostic output snippets.
 
 ## Cross-references
 
@@ -116,8 +126,7 @@ def put_object_from_filelike(self, handle: BinaryIO) -> str:
     """
 ```
 
-## Naming conventions
+## Further reading
 
-- *setup*: one word, not "set up"
-- *Python*: capitalized
-- *UUID*: block capitalized
+- [The Documentation System (Divio)](https://docs.divio.com/documentation-system/) — the framework AiiDA's docs are modeled after.
+- [Google developer documentation style guide](https://developers.google.com/style) — comprehensive reference on tone, formatting, and word choice.

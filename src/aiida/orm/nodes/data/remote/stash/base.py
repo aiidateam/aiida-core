@@ -8,7 +8,6 @@
 ###########################################################################
 """Data plugin that models an archived folder on a remote computer."""
 
-from typing import Optional
 
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check

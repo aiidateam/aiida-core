@@ -95,9 +95,8 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         """Call the ``command`` after validating the provided inputs."""
         from pydantic import ValidationError
 
-        try:
-            CliModel = cls.CliModel  # noqa: N806
-        except exceptions.UnsupportedConstructorModelError:
+        CliModel = getattr(cls, 'CliModel', None)  # noqa: N806
+        if not CliModel:
             return self._command(ctx, cls, **kwargs)
 
         try:
@@ -158,9 +157,8 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         cls = self.factory(entry_point)
 
-        try:
-            CliModel = cls.CliModel  # noqa: N806
-        except exceptions.UnsupportedConstructorModelError:
+        CliModel = getattr(cls, 'CliModel', None)  # noqa: N806
+        if not CliModel:
             from aiida.common.warnings import warn_deprecation
 
             warn_deprecation(

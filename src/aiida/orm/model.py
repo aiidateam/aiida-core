@@ -17,11 +17,13 @@ class OrmModel(AiiDABaseModel):
         if isinstance(cached, type) and issubclass(cached, OrmModel):
             return cached
 
+        orm_class_name, model_name = cls.__qualname__.split('.')
         MinimalModel = create_model(  # noqa: N806
-            'Minimal' + cls.__name__,
+            f'Minimal{model_name}',
             __base__=OrmModel,
             __module__=cls.__module__,
         )
+        MinimalModel.__qualname__ = f'{orm_class_name}.Minimal{model_name}'
         MinimalModel.model_config['extra'] = 'ignore'
 
         for key, field in cls.model_fields.items():
@@ -35,10 +37,11 @@ class OrmModel(AiiDABaseModel):
                     field.default_factory = None
             MinimalModel.model_fields[key] = field
 
+        MinimalModel.model_rebuild(force=True)
+
         # Make subsequent calls idempotent for this specific class
         cls._AIIDA_MINIMAL_MODEL = MinimalModel  # type: ignore[attr-defined]
 
-        MinimalModel.model_rebuild(force=True)
         return MinimalModel
 
     @classmethod
@@ -59,8 +62,8 @@ class OrmModel(AiiDABaseModel):
             qualname.split('.')[-1],
             __base__=cls,
             __module__=cls.__module__,
-            __qualname__=qualname,
         )
+        WriteModel.__qualname__ = qualname
 
         # Convert nested models to their 'write' variants
         for field in WriteModel.model_fields.values():
@@ -92,9 +95,9 @@ class OrmModel(AiiDABaseModel):
         decorators.field_validators = prune_field_decorators(decorators.field_validators)
         decorators.field_serializers = prune_field_decorators(decorators.field_serializers)
 
+        WriteModel.model_rebuild(force=True)
+
         # Make subsequent calls idempotent for this specific class
         cls._AIIDA_WRITE_MODEL = WriteModel  # type: ignore[attr-defined]
-
-        WriteModel.model_rebuild(force=True)
 
         return WriteModel

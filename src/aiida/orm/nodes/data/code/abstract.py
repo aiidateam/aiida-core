@@ -175,13 +175,13 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 'CliModel',
                 __base__=AiiDABaseModel,
                 __module__=cls.__module__,
-                __qualname__=f'{cls.__qualname__}.CliModel',
                 **model_fields,
             ),
         )
+        CliModel.__qualname__ = f'{cls.__name__}.CliModel'
         CliModel.model_config['arbitrary_types_allowed'] = True
-        CliModel.model_rebuild(force=True)
         cls._CliModel = CliModel  # type: ignore[assignment]
+        cls._CliModel.model_rebuild(force=True)
 
     @abc.abstractmethod
     def can_run_on_computer(self, computer: Computer) -> bool:

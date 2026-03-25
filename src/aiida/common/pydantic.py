@@ -37,12 +37,12 @@ class AiiDABaseModel(BaseModel, defer_build=True):
     )
 
     @classmethod
-    def __pydantic_init_subclass__(cls, **kwargs: t.Any) -> None:
+    def __pydantic_on_complete__(cls, **kwargs: t.Any) -> None:
         """Derives the JSON schema title of the model from the qualified name.
 
         `Int.Model` -> `IntModel`
         """
-        super().__pydantic_init_subclass__(**kwargs)
+        super().__pydantic_on_complete__(**kwargs)
         cls.model_config['title'] = cls.__qualname__.replace('.', '')
 
 

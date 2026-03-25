@@ -1026,15 +1026,16 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def _patch_attributes_model(cls):
         """Patch `AttributesModel` as a subclass-specific version if not explicitly defined."""
         if 'AttributesModel' not in cls.__dict__:
-            cls.AttributesModel = cast(
+            AttributesModel = cast(  # noqa: N806
                 type[Node.AttributesModel],
                 pdt.create_model(
                     'AttributesModel',
                     __base__=cls.AttributesModel,
                     __module__=cls.__module__,
-                    __qualname__=f'{cls.__qualname__}.AttributesModel',
                 ),
             )
+            AttributesModel.__qualname__ = f'{cls.__name__}.AttributesModel'
+            cls.AttributesModel = AttributesModel  # type: ignore[assignment]
         cls.AttributesModel.model_rebuild(force=True)
 
     @classmethod
@@ -1074,16 +1075,17 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         model_fields['node_type'] = (Literal[cls.class_node_type], node_type_field)
         model_fields['attributes'] = (cls.AttributesModel, attributes_field)
 
-        cls.ReadModel = cast(
+        ReadModel = cast(  # noqa: N806
             type[Node.ReadModel],
             pdt.create_model(
                 'ReadModel',
                 __base__=BaseReadModel,
                 __module__=cls.__module__,
-                __qualname__=f'{cls.__qualname__}.ReadModel',
                 **model_fields,
             ),
         )
+        ReadModel.__qualname__ = f'{cls.__name__}.ReadModel'
+        cls.ReadModel = ReadModel  # type: ignore[assignment]
         cls.ReadModel.model_rebuild(force=True)
 
     @classmethod
@@ -1102,12 +1104,13 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 'ConstructorModel',
                 __base__=cls.BaseNodeModel,
                 __module__=cls.__module__,
-                __qualname__=f'{cls.__qualname__}.ConstructorModel',
                 node_type=(Literal[cls.class_node_type], node_type_field),
                 args=(cls.ConstructorArgsModel, args_field),
             ),
         )
+        ConstructorModel.__qualname__ = f'{cls.__name__}.ConstructorModel'
         cls._ConstructorModel = ConstructorModel  # type: ignore[assignment]
+        cls._ConstructorModel.model_rebuild(force=True)
 
     @classmethod
     def _from_write_model(cls, model: Node.WriteModel, files: dict[str, io.BufferedReader] | None = None) -> Self:

@@ -1085,8 +1085,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             ),
         )
         ReadModel.__qualname__ = f'{cls.__name__}.ReadModel'
+        ReadModel.model_rebuild(force=True)
         cls.ReadModel = ReadModel  # type: ignore[assignment]
-        cls.ReadModel.model_rebuild(force=True)
 
     @classmethod
     def _patch_constructor_model(cls):
@@ -1109,8 +1109,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             ),
         )
         ConstructorModel.__qualname__ = f'{cls.__name__}.ConstructorModel'
+        ConstructorModel.model_rebuild(force=True)
         cls._ConstructorModel = ConstructorModel  # type: ignore[assignment]
-        cls._ConstructorModel.model_rebuild(force=True)
 
     @classmethod
     def _from_write_model(cls, model: Node.WriteModel, files: dict[str, io.BufferedReader] | None = None) -> Self:

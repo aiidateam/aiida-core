@@ -17,7 +17,6 @@ import pydantic as pdt
 
 from aiida.common import exceptions
 from aiida.common.pydantic import AiiDABaseModel, MetadataField
-from aiida.orm import OrmModel
 
 from .base import to_aiida_type
 from .data import Data
@@ -185,9 +184,9 @@ class Dict(Data):
     @classmethod
     def _model_to_orm_field_values(
         cls,
-        valid_model: OrmModel,
-        schema: type[OrmModel] | None = None,
-    ) -> dict[str, t.Any]:
+        valid_model: AiiDABaseModel,
+        schema: type[AiiDABaseModel] | None = None,
+    ) -> t.Dict[str, t.Any]:
         # `Dict.AttributesModel` doesn't explicitly define any fields.
         # `_model_to_orm_field_values` will return an empty `attributes` dict.
         # We dump the model directly.
@@ -196,11 +195,11 @@ class Dict(Data):
     def _orm_to_model_field_values(
         self,
         *,
-        context: dict[str, t.Any] | None = None,
+        context: t.Dict[str, t.Any] | None = None,
         minimal: bool = False,
         schema: type[AiiDABaseModel] | None = None,
         use_field_alias_as_key: bool = True,
-    ) -> dict[str, t.Any]:
+    ) -> t.Dict[str, t.Any]:
         fields = super()._orm_to_model_field_values(
             context=context,
             minimal=minimal,

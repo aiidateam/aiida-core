@@ -65,7 +65,7 @@ class FolderData(Data):
         """
         super().__init__(**kwargs)
         if tree:
-            self.base.repository.put_object_from_tree(tree)
+            self.base.repository.put_object_from_tree(str(tree))
 
     def list_objects(self, path: str | None = None) -> list[File]:
         """Return a list of the objects contained in this repository sorted by name, optionally in given sub directory.

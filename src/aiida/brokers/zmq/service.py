@@ -66,9 +66,13 @@ class ZmqBrokerService:
         self._sockets_path = Path(tempfile.mkdtemp(prefix='aiida_zmq_'))
         self._sockets_file.write_text(str(self._sockets_path))
 
+        from aiida.brokers.utils import YAML_DECODER, YAML_ENCODER
+
         self._server = ZmqBrokerServer(
             storage_path=self._storage_path,
             sockets_path=self._sockets_path,
+            encoder=YAML_ENCODER,
+            decoder=YAML_DECODER,
         )
 
         self._pid_file.write_text(str(os.getpid()))

@@ -156,7 +156,9 @@ def verdi_status(print_traceback, no_rmq):
         else:
             daemon_msg = f'Daemon is running with PID {daemon_status["pid"]}'
             # Append broker info for managed brokers (e.g., ZMQ)
-            if hasattr(broker, 'get_service_status'):
+            from aiida.brokers.zmq.broker import ZmqBroker
+
+            if isinstance(broker, ZmqBroker):
                 if broker.is_running():
                     status_info = broker.get_service_status()
                     if status_info:

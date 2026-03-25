@@ -20,11 +20,11 @@ from pathlib import Path
 from tempfile import mkdtemp
 from typing import TYPE_CHECKING, Any, BinaryIO
 
-from pydantic import BaseModel, Field
 from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session
 
 from aiida.common.exceptions import ClosedStorage, IntegrityError
+from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage.configuration import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
@@ -47,8 +47,8 @@ class SqliteTempBackend(StorageBackend):
     and destroys it when it is garbage collected.
     """
 
-    class CliModel(BaseModel, defer_build=True):
-        filepath: str = Field(
+    class CliModel(AiiDABaseModel):
+        filepath: str = MetadataField(
             title='Temporary directory',
             description='Temporary directory in which to store data for this backend.',
             default_factory=mkdtemp,

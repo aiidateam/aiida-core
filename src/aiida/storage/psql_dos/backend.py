@@ -17,13 +17,13 @@ from contextlib import contextmanager, nullcontext
 from typing import TYPE_CHECKING, Any, List, Optional, Set, Union
 
 from disk_objectstore import Container, backup_utils
-from pydantic import BaseModel, Field
 from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from aiida.common import exceptions
 from aiida.common.exceptions import ClosedStorage, ConfigurationError, IntegrityError
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage.configuration.profile import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
@@ -79,30 +79,30 @@ class PsqlDosBackend(StorageBackend):
     The `django` backend was removed, to consolidate access to this storage.
     """
 
-    class CliModel(BaseModel, defer_build=True):
+    class CliModel(AiiDABaseModel):
         """Model describing required information to configure an instance of the storage."""
 
-        database_engine: str = Field(
+        database_engine: str = MetadataField(
             title='PostgreSQL engine',
             description='The engine to use to connect to the database.',
             default='postgresql_psycopg',
         )
-        database_hostname: str = Field(
+        database_hostname: str = MetadataField(
             title='PostgreSQL hostname', description='The hostname of the PostgreSQL server.', default='localhost'
         )
-        database_port: int = Field(
+        database_port: int = MetadataField(
             title='PostgreSQL port', description='The port of the PostgreSQL server.', default=5432
         )
-        database_username: str = Field(
+        database_username: str = MetadataField(
             title='PostgreSQL username', description='The username with which to connect to the PostgreSQL server.'
         )
-        database_password: str = Field(
+        database_password: str = MetadataField(
             title='PostgreSQL password', description='The password with which to connect to the PostgreSQL server.'
         )
-        database_name: str = Field(
+        database_name: str = MetadataField(
             title='PostgreSQL database name', description='The name of the database in the PostgreSQL server.'
         )
-        repository_uri: str = Field(
+        repository_uri: str = MetadataField(
             title='File repository URI',
             description='URI to the file repository.',
         )

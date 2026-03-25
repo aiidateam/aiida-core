@@ -170,7 +170,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         }
 
         CliModel = t.cast(  # noqa: N806
-            type[pdt.BaseModel],
+            type[AiiDABaseModel],
             pdt.create_model(
                 'CliModel',
                 __base__=AiiDABaseModel,

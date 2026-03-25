@@ -368,10 +368,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     def __init_subclass__(cls, **kwargs) -> None:
         """Patch subclass models."""
-        super().__init_subclass__(**kwargs)
         cls._patch_attributes_model()
         cls._patch_read_model()
         cls._patch_constructor_model()
+        super().__init_subclass__(**kwargs)
 
     @cached_property
     def base(self) -> NodeBase:

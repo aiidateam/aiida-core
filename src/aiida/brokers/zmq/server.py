@@ -29,7 +29,7 @@ _LOGGER = logging.getLogger(__name__)
 class ZmqBrokerServer:
     """Standalone ZMQ message broker server.
 
-    Uses ROUTER socket for request-reply routing and PUB socket for broadcasts.
+    Uses a single ROUTER socket for all communication (tasks, RPC, broadcasts).
 
     The server maintains:
     - A persistent task queue for reliable task delivery
@@ -37,8 +37,7 @@ class ZmqBrokerServer:
     - Task subscriber registry for distributing tasks
 
     Socket architecture:
-        ROUTER (frontend) - Receives all client messages, routes replies
-        PUB (broadcast)   - Publishes broadcast messages to all subscribers
+        ROUTER - Receives all client messages, routes replies and broadcasts
     """
 
     def __init__(
@@ -64,9 +63,8 @@ class ZmqBrokerServer:
         self._storage_path.mkdir(parents=True, exist_ok=True)
         self._sockets_path.mkdir(parents=True, exist_ok=True)
 
-        # Derive endpoints from sockets_path
+        # Derive endpoint from sockets_path
         self._router_endpoint = f'ipc://{self._sockets_path}/router.sock'
-        self._pub_endpoint = f'ipc://{self._sockets_path}/pub.sock'
 
         self._encoder = encoder
         self._decoder = decoder
@@ -74,7 +72,6 @@ class ZmqBrokerServer:
         # ZMQ context and sockets
         self._context: zmq.Context | None = None
         self._router: zmq.Socket | None = None
-        self._pub: zmq.Socket | None = None
         self._poller: zmq.Poller | None = None
         self._monitor: zmq.Socket | None = None
 
@@ -117,11 +114,6 @@ class ZmqBrokerServer:
         return self._router_endpoint
 
     @property
-    def pub_endpoint(self) -> str:
-        """Return the PUB socket endpoint."""
-        return self._pub_endpoint
-
-    @property
     def is_running(self) -> bool:
         """Return whether the server is running."""
         return self._running
@@ -137,7 +129,6 @@ class ZmqBrokerServer:
         _LOGGER.info('Starting ZMQ Broker Server')
         _LOGGER.info('Storage path: %s', self._storage_path)
         _LOGGER.info('ROUTER endpoint: %s', self._router_endpoint)
-        _LOGGER.info('PUB endpoint: %s', self._pub_endpoint)
 
         # Create ZMQ context
         self._context = zmq.Context()
@@ -149,10 +140,6 @@ class ZmqBrokerServer:
         self._router.setsockopt(zmq.HEARTBEAT_IVL, 2000)      # ping every 2s
         self._router.setsockopt(zmq.HEARTBEAT_TIMEOUT, 6000)   # dead after 6s no response
         self._router.bind(self._router_endpoint)
-
-        # PUB socket for broadcasts
-        self._pub = self._context.socket(zmq.PUB)
-        self._pub.bind(self._pub_endpoint)
 
         # Set up poller
         self._poller = zmq.Poller()
@@ -190,11 +177,6 @@ class ZmqBrokerServer:
             self._router.setsockopt(zmq.LINGER, 0)
             self._router.close()
             self._router = None
-
-        if self._pub:
-            self._pub.setsockopt(zmq.LINGER, 0)
-            self._pub.close()
-            self._pub = None
 
         if self._context:
             self._context.term()
@@ -426,15 +408,19 @@ class ZmqBrokerServer:
     def _handle_broadcast(self, identity: bytes, msg: dict) -> None:
         """Handle broadcast message.
 
-        Publish to all subscribers via PUB socket.
+        Forward to all connected clients via ROUTER socket.
+        Connected clients are derived from the task and RPC subscriber registries.
         """
-        if not self._pub:
-            return
+        # Collect unique client identities from all subscriber registries
+        client_identities = set(self._task_subscribers.values()) | set(self._rpc_subscribers.values())
 
-        # Publish on PUB socket
-        encoded = encode_message(msg, self._encoder)
-        self._pub.send(encoded)
-        _LOGGER.debug('Broadcast sent: %s', msg.get('subject', 'no subject'))
+        for client_identity in client_identities:
+            try:
+                self._send_to_client(client_identity, msg)
+            except zmq.ZMQError:
+                _LOGGER.warning('Failed to send broadcast to %s', client_identity.hex()[:8])
+
+        _LOGGER.debug('Broadcast sent to %d clients: %s', len(client_identities), msg.get('subject', 'no subject'))
 
     def _handle_subscribe_task(self, identity: bytes, msg: dict) -> None:
         """Handle task subscriber registration."""

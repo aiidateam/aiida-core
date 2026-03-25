@@ -50,8 +50,8 @@ class ZmqCommunicator(kiwipy.Communicator):
     Connects to a ZmqBrokerService to send/receive messages.
 
     Socket architecture:
-        DEALER - Connects to broker ROUTER for request-reply
-        SUB    - Connects to broker PUB for broadcasts
+        DEALER - Connects to broker ROUTER for all communication
+                 (tasks, RPC, broadcasts)
 
     Threading model:
         A private asyncio event loop runs on a dedicated background thread.
@@ -63,13 +63,11 @@ class ZmqCommunicator(kiwipy.Communicator):
     def __init__(
         self,
         router_endpoint: str,
-        pub_endpoint: str,
         encoder: Callable[[Any], str] | None = None,
         decoder: Callable[[str], Any] | None = None,
         client_id: str | None = None,
     ):
         self._router_endpoint = router_endpoint
-        self._pub_endpoint = pub_endpoint
         self._encoder = encoder if encoder is not None else YAML_ENCODER
         self._decoder = decoder if decoder is not None else YAML_DECODER
         self._client_id = client_id or f'client-{uuid.uuid4().hex[:8]}'
@@ -77,7 +75,6 @@ class ZmqCommunicator(kiwipy.Communicator):
         # ZMQ sockets (created on the event loop thread)
         self._context: zmq.asyncio.Context | None = None
         self._dealer: zmq.asyncio.Socket | None = None
-        self._sub: zmq.asyncio.Socket | None = None
 
         # Pending futures for responses (only accessed from the loop thread)
         self._pending_futures: dict[str, Future] = {}
@@ -98,7 +95,6 @@ class ZmqCommunicator(kiwipy.Communicator):
         self._loop: asyncio.AbstractEventLoop | None = None
         self._loop_thread: threading.Thread | None = None
         self._dealer_poll_task: asyncio.Task | None = None
-        self._sub_poll_task: asyncio.Task | None = None
 
         self._closed = True
 
@@ -159,14 +155,9 @@ class ZmqCommunicator(kiwipy.Communicator):
         self._dealer.setsockopt_string(zmq.IDENTITY, self._client_id)
         self._dealer.connect(self._router_endpoint)
 
-        self._sub = self._context.socket(zmq.SUB)
-        self._sub.connect(self._pub_endpoint)
-        self._sub.setsockopt_string(zmq.SUBSCRIBE, '')
-
         self._closed = False
 
         self._dealer_poll_task = asyncio.ensure_future(self._poll_dealer())
-        self._sub_poll_task = asyncio.ensure_future(self._poll_sub())
 
         ready.set_result(True)
 
@@ -176,10 +167,6 @@ class ZmqCommunicator(kiwipy.Communicator):
             self._dealer.setsockopt(zmq.LINGER, 0)
             self._dealer.close()
             self._dealer = None
-        if self._sub:
-            self._sub.setsockopt(zmq.LINGER, 0)
-            self._sub.close()
-            self._sub = None
         if self._context:
             self._context.term()
             self._context = None
@@ -220,12 +207,10 @@ class ZmqCommunicator(kiwipy.Communicator):
 
     def _do_close_on_loop(self) -> None:
         """Cleanup that must run on the event loop thread."""
-        # Cancel poll tasks
-        for task in (self._dealer_poll_task, self._sub_poll_task):
-            if task and not task.done():
-                task.cancel()
+        # Cancel poll task
+        if self._dealer_poll_task and not self._dealer_poll_task.done():
+            self._dealer_poll_task.cancel()
         self._dealer_poll_task = None
-        self._sub_poll_task = None
 
         # Send unsubscribe messages
         for identifier in list(self._task_subscribers):
@@ -464,23 +449,6 @@ class ZmqCommunicator(kiwipy.Communicator):
             except Exception:
                 _LOGGER.exception('Error in dealer poll')
 
-    async def _poll_sub(self) -> None:
-        """Receive messages from the SUB socket."""
-        while not self._closed:
-            try:
-                data = await self._sub.recv()
-                msg = decode_message(data, self._decoder)
-                if msg.get('type') == MessageType.BROADCAST.value:
-                    self._handle_broadcast(msg)
-            except zmq.ZMQError:
-                if not self._closed:
-                    _LOGGER.error('ZMQ error in sub poll')
-                break
-            except asyncio.CancelledError:
-                break
-            except Exception:
-                _LOGGER.exception('Error in sub poll')
-
     # ------------------------------------------------------------------
     # Internal — message dispatch
     # ------------------------------------------------------------------
@@ -497,6 +465,8 @@ class ZmqCommunicator(kiwipy.Communicator):
             self._handle_rpc(msg)
         elif msg_type == MessageType.RPC_RESPONSE.value:
             self._handle_rpc_response(msg)
+        elif msg_type == MessageType.BROADCAST.value:
+            self._handle_broadcast(msg)
         elif msg_type == MessageType.PING.value:
             pass  # Liveness probe from broker — no action needed
         else:

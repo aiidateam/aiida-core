@@ -61,4 +61,4 @@ def test_version_profile(aiida_config, aiida_profile_factory):
     """
     with aiida_profile_factory(aiida_config, storage_backend='core.sqlite_dos') as profile:
         version = SqliteDosStorage.version_profile(profile)
-        assert version is not None
+        assert version == SqliteDosStorage.version_head()

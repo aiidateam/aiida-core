@@ -19,12 +19,13 @@ from uuid import uuid4
 
 from alembic.config import Config
 from disk_objectstore import Container, backup_utils
-from pydantic import BaseModel, Field, field_validator
+from pydantic import field_validator
 from sqlalchemy import insert, inspect, select
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage.configuration.profile import Profile
 from aiida.manage.configuration.settings import AiiDAConfigDir
 from aiida.orm.implementation import BackendEntity
@@ -199,10 +200,10 @@ class SqliteDosStorage(PsqlDosBackend):
 
     migrator = SqliteDosMigrator
 
-    class CliModel(BaseModel, defer_build=True):
+    class CliModel(AiiDABaseModel):
         """Model describing required information to configure an instance of the storage."""
 
-        filepath: str = Field(
+        filepath: str = MetadataField(
             title='Directory of the backend',
             description='Filepath of the directory in which to store data for this backend.',
             default_factory=lambda: str(AiiDAConfigDir.get() / 'repository' / f'sqlite_dos_{uuid4().hex}'),

@@ -2,21 +2,21 @@
 
 import typing as t
 
-from pydantic import BaseModel, Field
 from pydantic_core import PydanticUndefined
 
 from aiida.cmdline.groups.dynamic import DynamicEntryPointCommandGroup
+from aiida.common.pydantic import AiiDABaseModel, MetadataField
 
 
 class CustomClass:
     """Test plugin class."""
 
-    class CliModel(BaseModel):
-        optional_type: t.Union[int, float] = Field(title='Optional type')
-        union_type: t.Union[int, float] = Field(title='Union type')
-        without_default: str = Field(title='Without default')
-        with_default: str = Field(title='With default', default='default')
-        with_default_factory: str = Field(title='With default factory', default_factory=lambda: True)  # type: ignore[assignment]
+    class CliModel(AiiDABaseModel):
+        optional_type: t.Union[int, float] = MetadataField(title='Optional type')
+        union_type: t.Union[int, float] = MetadataField(title='Union type')
+        without_default: str = MetadataField(title='Without default')
+        with_default: str = MetadataField(title='With default', default='default')
+        with_default_factory: str = MetadataField(title='With default factory', default_factory=lambda: True)
 
 
 def test_list_options(entry_points):

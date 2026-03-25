@@ -325,7 +325,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     _CliModel: ClassVar[type[BaseNodeModel] | None] = None
 
     @classproperty
-    def CliModel(cls) -> type[pdt.BaseModel]:  # noqa: N802, N805
+    def CliModel(cls) -> type[AiiDABaseModel]:  # noqa: N802, N805
         """Return the CLI model class for this entity.
 
         :return: The CLI model class.
@@ -397,7 +397,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     @classmethod
     def from_model(
         cls,
-        model: pdt.BaseModel,
+        model: AiiDABaseModel,
         files: dict[str, io.BufferedReader] | None = None,
     ) -> Self:
         """Create a node instance from a model instance.

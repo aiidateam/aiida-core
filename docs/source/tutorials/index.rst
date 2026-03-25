@@ -168,6 +168,7 @@ Main Tutorial Modules
    :hidden:
 
    intro
+   basic
    module1
    module2
    module3

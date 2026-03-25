@@ -341,28 +341,11 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         backend: Optional['StorageBackend'] = None,
         user: Optional[User] = None,
         computer: Optional[Computer] = None,
-        extras: Optional[Dict[str, Any]] = None,
+        extras: Optional[dict[str, Any]] = None,
         **kwargs: Any,
     ) -> None:
-        backend = backend or get_manager().get_profile_storage()
-
-        if computer and not computer.is_stored:
-            raise ValueError('the computer is not stored')
-
-        backend_computer = computer.backend_entity if computer else None
-        user = user if user else backend.default_user
-
-        if user is None:
-            raise ValueError('the user cannot be None')
-
-        backend_entity = backend.nodes.create(
-            node_type=self.class_node_type,
-            user=user.backend_entity,
-            computer=backend_computer,
-            **kwargs,
-        )
+        backend_entity = create_backend_node(self.class_node_type, backend, user, computer, **kwargs)
         super().__init__(backend_entity)
-
         if extras:
             self.base.extras.set_many(extras)
 
@@ -1161,22 +1144,21 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             raise ValueError(f'expected `{cls.WriteModel.__name__}` model, got `{type(model).__name__}`')
 
         fields = cls._model_to_orm_field_values(model)
+
         repository_metadata = fields.pop('repository_metadata', {})
+
         attributes = fields.pop('attributes', None)
-        computer: Computer | None = fields.pop('computer', None)
         if attributes is None:
             raise ValueError('the model is missing the required `attributes` field')
 
         extras = fields.pop('extras', None)
 
-        backend = get_manager().get_profile_storage()
-        backend_entity = backend.nodes.create(
-            user=backend.default_user.backend_entity,
-            computer=computer.backend_entity if computer else None,
-            **fields,
-        )
-        instance = from_backend_entity(cls, backend_entity)
+        backend_node = create_backend_node(**fields)
+
+        instance = from_backend_entity(cls, backend_node)
+
         instance.base.attributes.set_many(attributes)
+
         if extras:
             instance.base.extras.set_many(extras)
 
@@ -1255,3 +1237,31 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 use_field_alias_as_key=use_field_alias_as_key,
             )
         return fields
+
+
+def create_backend_node(
+    node_type: str,
+    backend: Optional['StorageBackend'] = None,
+    user: Optional[User] = None,
+    computer: Optional[Computer] = None,
+    **kwargs: Any,
+) -> BackendNode:
+    backend = backend or get_manager().get_profile_storage()
+
+    if computer and not computer.is_stored:
+        raise ValueError('the computer is not stored')
+
+    backend_computer = computer.backend_entity if computer else None
+    user = user if user else backend.default_user
+
+    if user is None:
+        raise ValueError('the user cannot be None')
+
+    backend_entity = backend.nodes.create(
+        node_type=node_type,
+        user=user.backend_entity,
+        computer=backend_computer,
+        **kwargs,
+    )
+
+    return backend_entity

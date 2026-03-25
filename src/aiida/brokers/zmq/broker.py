@@ -87,36 +87,35 @@ class ZmqBroker(Broker):
             return None
         return f'ipc://{sockets_path}/router.sock'
 
+    _PID_SENTINEL = 'aiida-zmq-broker'
+
     def get_service_pid(self) -> int | None:
-        """Read the ZmqBrokerService PID from its PID file."""
+        """Read the ZmqBrokerService PID from its PID file.
+
+        The PID file contains ``aiida-zmq-broker <pid>`` as a sentinel so we
+        can validate ownership without fragile command-line string matching.
+        """
         if not self._service_pid_file.exists():
             return None
         try:
-            return int(self._service_pid_file.read_text().strip())
+            content = self._service_pid_file.read_text().strip()
+            if content.startswith(self._PID_SENTINEL):
+                return int(content.split()[-1])
+            # Fallback: bare PID (old format)
+            return int(content)
         except (ValueError, OSError):
             return None
-
-    def _validate_service_pid(self, pid: int) -> bool:
-        """Check that a PID belongs to a running ZmqBrokerService process.
-
-        Matches both direct invocation (``python -m aiida.brokers.zmq.service``)
-        and the circus-started path (``verdi … daemon broker``).
-        """
-        try:
-            proc = psutil.Process(pid)
-            if proc.is_running() and proc.status() != psutil.STATUS_ZOMBIE:
-                cmdline_str = ' '.join(proc.cmdline())
-                return 'aiida.brokers.zmq' in cmdline_str or 'daemon broker' in cmdline_str
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            return False
-        return False
 
     def is_running(self) -> bool:
         """Check if the ZmqBrokerService process is running."""
         pid = self.get_service_pid()
         if pid is None:
             return False
-        return self._validate_service_pid(pid)
+        try:
+            proc = psutil.Process(pid)
+            return proc.is_running() and proc.status() != psutil.STATUS_ZOMBIE
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            return False
 
     def get_service_status(self) -> dict[str, t.Any] | None:
         """Read the ZmqBrokerService status from its status file."""

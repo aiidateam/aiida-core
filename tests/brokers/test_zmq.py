@@ -16,7 +16,7 @@ from aiida.brokers.zmq import ZmqBroker, ZmqCommunicator, get_zmq_config
 from aiida.brokers.zmq.queue import PersistentQueue
 from aiida.brokers.zmq.server import ZmqBrokerServer
 from aiida.brokers.zmq.service import ZmqBrokerService
-from tests.conftest import _start_zmq_broker, _stop_zmq_broker
+from tests.conftest import start_zmq_broker, stop_zmq_broker
 
 
 class TestZmqDefaults:
@@ -54,48 +54,48 @@ class TestZmqBrokerStatusQueries:
     def test_start_stop_cycle(self, tmp_path):
         """Test querying a running broker service."""
         broker = ZmqBroker.from_base_path(tmp_path)
-        _start_zmq_broker(broker)
+        start_zmq_broker(broker)
 
         try:
             assert broker.is_running()
             assert broker.get_service_pid() is not None
             assert broker.router_endpoint is not None
         finally:
-            _stop_zmq_broker(broker)
+            stop_zmq_broker(broker)
 
         assert not broker.is_running()
 
     def test_start_already_running(self, tmp_path):
         """Test starting when already running is idempotent."""
         broker = ZmqBroker.from_base_path(tmp_path)
-        _start_zmq_broker(broker)
+        start_zmq_broker(broker)
 
         try:
-            _start_zmq_broker(broker)  # idempotent
+            start_zmq_broker(broker)  # idempotent
             assert broker.is_running()
         finally:
-            _stop_zmq_broker(broker)
+            stop_zmq_broker(broker)
 
     def test_stop_not_running(self, tmp_path):
         """Test stopping when not running is a no-op."""
         broker = ZmqBroker.from_base_path(tmp_path)
-        _stop_zmq_broker(broker)  # Should not raise
+        stop_zmq_broker(broker)  # Should not raise
 
     def test_restart(self, tmp_path):
         """Test restarting the broker service."""
         broker = ZmqBroker.from_base_path(tmp_path)
-        _start_zmq_broker(broker)
+        start_zmq_broker(broker)
 
         try:
             old_pid = broker.get_service_pid()
-            _stop_zmq_broker(broker)
-            _start_zmq_broker(broker)
+            stop_zmq_broker(broker)
+            start_zmq_broker(broker)
             assert broker.is_running()
 
             new_pid = broker.get_service_pid()
             assert new_pid != old_pid
         finally:
-            _stop_zmq_broker(broker)
+            stop_zmq_broker(broker)
 
 
 class TestZmqBrokerServer:
@@ -254,7 +254,7 @@ class TestZmqCommunicator:
     def test_init(self, tmp_path):
         """Test communicator initialization."""
         broker = ZmqBroker.from_base_path(tmp_path)
-        _start_zmq_broker(broker)
+        start_zmq_broker(broker)
 
         try:
             communicator = ZmqCommunicator(
@@ -269,12 +269,12 @@ class TestZmqCommunicator:
 
             assert communicator.is_closed() is True
         finally:
-            _stop_zmq_broker(broker)
+            stop_zmq_broker(broker)
 
     def test_context_manager(self, tmp_path):
         """Test communicator as context manager."""
         broker = ZmqBroker.from_base_path(tmp_path)
-        _start_zmq_broker(broker)
+        start_zmq_broker(broker)
 
         try:
             with ZmqCommunicator(
@@ -284,7 +284,7 @@ class TestZmqCommunicator:
 
             assert communicator.is_closed() is True
         finally:
-            _stop_zmq_broker(broker)
+            stop_zmq_broker(broker)
 
 
 class TestZmqBrokerIntegration:
@@ -295,11 +295,11 @@ class TestZmqBrokerIntegration:
         """Create a ZMQ broker for testing."""
         broker_dir = tmp_path / 'broker' / 'test-uuid'
         broker = ZmqBroker.from_base_path(broker_dir)
-        _start_zmq_broker(broker)
+        start_zmq_broker(broker)
 
         yield broker
 
-        _stop_zmq_broker(broker)
+        stop_zmq_broker(broker)
 
     def test_broker_lifecycle(self, zmq_broker):
         """Test the broker lifecycle."""

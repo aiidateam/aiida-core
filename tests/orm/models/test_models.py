@@ -355,8 +355,8 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
     ['_as_write_model', '_as_minimal_model'],
 )
 def test_dynamic_model_idempotency(dynamic_method):
-    DynamicModel = getattr(orm.Int.ReadModel, dynamic_method)()
-    RepeatedDynamicModel = getattr(orm.Int.ReadModel, dynamic_method)()
+    DynamicModel = getattr(orm.Int.ReadModel, dynamic_method)()  # noqa: N806
+    RepeatedDynamicModel = getattr(orm.Int.ReadModel, dynamic_method)()  # noqa: N806
     assert RepeatedDynamicModel is DynamicModel
 
 

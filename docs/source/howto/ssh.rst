@@ -10,6 +10,11 @@ There are two ways of setting up an SSH connection for AiiDA:
 #. Using a passwordless SSH key (easier, less safe)
 #. Using a password-protected SSH key through ``ssh-agent`` (one more step, safer)
 
+For additional troubleshooting and setup examples, see also:
+
+* `Fixing a failing SSH connection to a remote computer <https://aiida.net/news/posts/2025-04-04-debug-ssh.html>`__
+* `Under the Hood of the Materys Platform: Secure SSH Agent Forwarding for AiiDA <https://aiida.net/news/posts/2026-02-18-materys-ssh-agent-forwarding.html>`__
+
 .. _how-to:ssh:passwordless:
 
 Using a passwordless SSH key

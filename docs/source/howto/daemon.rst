@@ -11,3 +11,6 @@ The AiiDA daemon is controlled using three simple commands:
 * ``verdi daemon start``: start the daemon
 * ``verdi daemon status``: check the status of the daemon
 * ``verdi daemon stop``: stop the daemon
+
+For a practical debugging walkthrough with common failure scenarios, see also
+`Debugging AiiDA Daemon (a practical guide) <https://aiida.net/news/posts/2025-02-21-how-to-debug-aiida-daemon.html>`__.

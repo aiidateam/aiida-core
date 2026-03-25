@@ -29,6 +29,7 @@ from typing import (
     cast,
 )
 
+import pydantic as pdt
 from plumpy.base.utils import call_with_super_check, super_check
 from typing_extensions import Self
 
@@ -39,7 +40,7 @@ from aiida.common.pydantic import AiiDABaseModel, MetadataField, get_metadata
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
-from .fields import EntityFieldMeta
+from .fields import QbFields, add_field
 from .model import OrmModel
 
 if TYPE_CHECKING:
@@ -192,7 +193,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         return self.query(filters=filters).count()
 
 
-class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=EntityFieldMeta):
+class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
     """An AiiDA entity"""
 
     _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
@@ -400,6 +401,9 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         self._backend_entity = backend_entity
         call_with_super_check(self.initialize)
 
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        cls._patch_qb_fields()
+
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, self.__class__):
             return False
@@ -470,6 +474,72 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     def backend_entity(self) -> BackendEntityType:
         """Get the implementing class for this object"""
         return self._backend_entity
+
+    @classmethod
+    def _patch_qb_fields(cls) -> None:
+        """Patch the `fields` attribute of the class based on the `ReadModel` definition."""
+        current_fields = getattr(cls, 'fields', None)
+        if current_fields is not None and not isinstance(current_fields, QbFields):
+            raise ValueError(f"class '{cls}' already has a `fields` attribute set")
+
+        fields: dict[str, Any] = {}
+
+        if 'ReadModel' in cls.__dict__:
+            cls._validate_model_inheritance('ReadModel')
+
+        for key, field in cls.ReadModel.model_fields.items():
+            fields[key] = add_field(
+                key,
+                alias=field.alias,
+                dtype=field.annotation,
+                doc=field.description,
+            )
+
+        cls.fields = QbFields(fields)
+
+    @classmethod
+    def _validate_model_inheritance(cls, model_name: str = 'ReadModel') -> None:
+        """Validate that model class inherits from all necessary base classes.
+
+        :param model_name: The name of the model class to validate, e.g., 'ReadModel' or 'WriteModel'.
+        :raises RuntimeError: if the model class does not inherit from all necessary base classes.
+        """
+        if getattr(cls, '_SKIP_MODEL_INHERITANCE_CHECK', False):
+            return
+
+        expected_inheritance: set[type[OrmModel]] = set()
+        for entity_class in cls.mro():
+            if (
+                # We skip ourselves
+                entity_class is not cls
+                # and only care if we have the requested model
+                and (expected_model := getattr(entity_class, model_name, None))
+                # and that the model is not extended by one we already picked
+                and not any(issubclass(other_class, expected_model) for other_class in expected_inheritance)
+            ):
+                expected_inheritance.add(expected_model)
+
+        actual_model: type[OrmModel] = getattr(cls, model_name)
+        actual_inheritance: set[type[OrmModel]] = set()
+        for model_class in actual_model.mro():
+            if (
+                # We skip ourselves
+                model_class is not actual_model
+                # and only care about ORM models
+                and issubclass(model_class, OrmModel)
+                # and only if we are expected
+                and model_class in expected_inheritance
+                # and that the model is not extended by one we already picked
+                and not any(issubclass(other_class, model_class) for other_class in actual_inheritance)
+            ):
+                actual_inheritance.add(model_class)
+
+        if actual_inheritance != expected_inheritance:
+            bases = [f'{e.__module__}.{e.__qualname__}' for e in expected_inheritance]
+            raise RuntimeError(
+                f'`{cls.__name__}.{model_name}` does not subclass all necessary base classes. It should be: '
+                f'`class {model_name}({", ".join(sorted(bases))}):`'
+            )
 
     @classmethod
     def _model_to_orm_field_values(

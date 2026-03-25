@@ -105,6 +105,7 @@ __all__ = (
     'WorkChainNode',
     'WorkFunctionNode',
     'WorkflowNode',
+    'WritableOrmModel',
     'XyData',
     'cif_from_ase',
     'find_bandgap',

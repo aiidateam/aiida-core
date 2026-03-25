@@ -8,16 +8,15 @@
 ###########################################################################
 """Module which provides decorators for AiiDA ORM entity -> DB field mappings."""
 
+from __future__ import annotations
+
 import datetime
 import typing as t
-from abc import ABCMeta
 from copy import deepcopy
 from functools import singledispatchmethod
 from pprint import pformat
 
 from aiida.common.lang import isidentifier
-
-from .model import OrmModel
 
 __all__ = (
     'QbField',
@@ -262,7 +261,7 @@ class QbFieldFilters:
 
     def __init__(
         self,
-        filters: t.Union[t.Sequence[t.Tuple[QbField, str, t.Any]], dict],
+        filters: t.Union[t.Sequence[tuple[QbField, str, t.Any]], dict],
     ):
         self.filters: t.Dict[str, t.Any] = {}
         self.add_filters(filters)
@@ -364,7 +363,7 @@ class QbFields:
 
     __isabstractmethod__ = False
 
-    def __init__(self, fields: t.Optional[t.Dict[str, QbField]] = None):
+    def __init__(self, fields: t.Optional[dict[str, QbField]] = None):
         self._fields = fields or {}
 
     def keys(self) -> list[str]:
@@ -408,94 +407,6 @@ class QbFields:
     def _dict(self):
         """Return a copy of the internal mapping"""
         return deepcopy(self._fields)
-
-
-class EntityFieldMeta(ABCMeta):
-    """A metaclass for entity fields, which adds a `fields` class attribute."""
-
-    def __init__(cls, name, bases, classdict):
-        super().__init__(name, bases, classdict)
-
-        # Only allow an existing fields attribute if generated from a subclass
-        current_fields = getattr(cls, 'fields', None)
-        if current_fields is not None and not isinstance(current_fields, QbFields):
-            raise ValueError(f"class '{cls}' already has a `fields` attribute set")
-
-        fields: dict[str, t.Any] = {}
-
-        if 'ReadModel' in cls.__dict__:
-            cls._validate_model_inheritance('ReadModel')
-
-        Model = cls.ReadModel  # type: ignore[attr-defined] # noqa N806
-        for key, field in Model.model_fields.items():
-            fields[key] = add_field(
-                key,
-                alias=field.alias,
-                dtype=field.annotation,
-                doc=field.description,
-            )
-
-        # TODO should this be done more generally/recursively for all nested models?
-        if cls._has_model('AttributesModel'):
-            if 'AttributesModel' in cls.__dict__:
-                cls._validate_model_inheritance('AttributesModel')
-
-            try:
-                container_field = fields['attributes']
-            except KeyError:
-                raise KeyError(f"class '{cls}' was expected to have a `Model` with an 'attributes' field")
-
-            container_field._typed_children = {}
-
-            Model = cls.AttributesModel  # type: ignore[attr-defined] # noqa N806
-            for key, field in Model.model_fields.items():
-                typed_field = add_field(
-                    key,
-                    alias=field.alias,
-                    dtype=field.annotation,
-                    doc=field.description,
-                    is_attribute=True,
-                )
-
-                container_field._typed_children[key] = typed_field
-                fields[key] = typed_field  # BACKWARDS COMPATIBILITY
-
-        # Finalize
-        cls.fields = QbFields({key: fields[key] for key in sorted(fields)})
-
-    def _has_model(cls, model_name: str = 'ReadModel') -> bool:
-        """Return whether the class has a model defined."""
-        return hasattr(cls, model_name) and issubclass(getattr(cls, model_name), OrmModel)
-
-    def _validate_model_inheritance(cls, model_name: str = 'ReadModel') -> None:
-        """Validate that model class inherits from all necessary base classes."""
-
-        cls_bases_with_model = [
-            base
-            for base in cls.__mro__
-            if base is not cls and model_name in base.__dict__ and issubclass(getattr(base, model_name), OrmModel)
-        ]
-
-        cls_bases_with_model_leaves = {
-            base
-            for base in cls_bases_with_model
-            if all(
-                not issubclass(getattr(b, model_name), getattr(base, model_name))
-                for b in cls_bases_with_model
-                if b is not base
-            )
-        }
-
-        cls_model_bases = {getattr(base, model_name) for base in cls_bases_with_model_leaves} or {OrmModel}
-
-        model_bases = {base for base in getattr(cls, model_name).__mro__ if issubclass(base, OrmModel)}
-
-        if not cls_model_bases.issubset(model_bases) and not getattr(cls, '_SKIP_MODEL_INHERITANCE_CHECK', False):
-            bases = [f'{e.__module__}.{e.__name__}.{model_name}' for e in cls_bases_with_model_leaves]
-            raise RuntimeError(
-                f'`{cls.__name__}.{model_name}` does not subclass all necessary base classes. It should be: '
-                f'`class {model_name}({", ".join(sorted(bases))}):`'
-            )
 
 
 class QbFieldArguments(t.TypedDict):

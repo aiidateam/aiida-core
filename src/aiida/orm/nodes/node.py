@@ -43,6 +43,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
+from aiida.orm.fields import QbFields, add_field
 from aiida.orm.utils.node import (
     AbstractNodeMeta,
     get_query_type_from_type_string,
@@ -300,7 +301,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             return str(value)
 
     @classproperty
-    def WriteModel(cls) -> type[Node.BaseNodeModel]:  # noqa: N802, N805
+    def WriteModel(cls) -> type[BaseNodeModel]:  # noqa: N802, N805
         """Return the attributes-based creation version of the model class for this entity.
 
         :return: The attributes-based creation model class, with read-only fields removed.
@@ -312,7 +313,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     _ConstructorModel: ClassVar[type[BaseNodeModel] | None] = None
 
     @classproperty
-    def ConstructorModel(cls) -> type[Node.BaseNodeModel]:  # noqa: N802, N805
+    def ConstructorModel(cls) -> type[BaseNodeModel]:  # noqa: N802, N805
         """Return the constructor-based creation model class for this entity.
 
         :raises UnsupportedConstructorModelError: if this node type does not support creation via a constructor model.
@@ -1023,6 +1024,36 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         raise AttributeError(name)
 
     @classmethod
+    def _patch_qb_fields(cls) -> None:
+        super()._patch_qb_fields()
+
+        fields = cls.fields._fields
+
+        if 'AttributesModel' in cls.__dict__:
+            cls._validate_model_inheritance('AttributesModel')
+
+        try:
+            container_field = fields['attributes']
+        except KeyError:
+            raise KeyError(f"class '{cls}' was expected to have a `Model` with an 'attributes' field")
+
+        container_field._typed_children = {}
+
+        for key, field in cls.AttributesModel.model_fields.items():
+            typed_field = add_field(
+                key,
+                alias=field.alias,
+                dtype=field.annotation,
+                doc=field.description,
+                is_attribute=True,
+            )
+
+            container_field._typed_children[key] = typed_field
+            fields[key] = typed_field  # BACKWARDS COMPATIBILITY
+
+        cls.fields = QbFields(fields)
+
+    @classmethod
     def _patch_attributes_model(cls):
         """Patch `AttributesModel` as a subclass-specific version if not explicitly defined."""
         if 'AttributesModel' not in cls.__dict__:
@@ -1035,7 +1066,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 ),
             )
             AttributesModel.__qualname__ = f'{cls.__name__}.AttributesModel'
-            cls.AttributesModel = AttributesModel  # type: ignore[assignment]
+            cls.AttributesModel = AttributesModel
         cls.AttributesModel.model_rebuild(force=True)
 
     @classmethod
@@ -1086,7 +1117,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         )
         ReadModel.__qualname__ = f'{cls.__name__}.ReadModel'
         ReadModel.model_rebuild(force=True)
-        cls.ReadModel = ReadModel  # type: ignore[assignment]
+
+        cls.ReadModel = ReadModel
 
     @classmethod
     def _patch_constructor_model(cls):
@@ -1110,10 +1142,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         )
         ConstructorModel.__qualname__ = f'{cls.__name__}.ConstructorModel'
         ConstructorModel.model_rebuild(force=True)
-        cls._ConstructorModel = ConstructorModel  # type: ignore[assignment]
+        cls._ConstructorModel = ConstructorModel
 
     @classmethod
-    def _from_write_model(cls, model: Node.WriteModel, files: dict[str, io.BufferedReader] | None = None) -> Self:
+    def _from_write_model(cls, model: BaseNodeModel, files: dict[str, io.BufferedReader] | None = None) -> Self:
         """Construct a node instance from the attributes-based creation model.
 
         :param model: the model instance to construct from
@@ -1125,7 +1157,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         from aiida.common.hashing import chunked_file_hash
         from aiida.repository import Repository
 
-        fields = cls._model_to_orm_field_values(model, cls.WriteModel)
+        if not isinstance(model, cls.WriteModel):
+            raise ValueError(f'expected `{cls.WriteModel.__name__}` model, got `{type(model).__name__}`')
+
+        fields = cls._model_to_orm_field_values(model)
         repository_metadata = fields.pop('repository_metadata', {})
         attributes = fields.pop('attributes', None)
         computer: Computer | None = fields.pop('computer', None)
@@ -1171,24 +1206,28 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return instance
 
     @classmethod
-    def _from_constructor_model(cls, model: Node.ConstructorModel) -> Self:
+    def _from_constructor_model(cls, model: BaseNodeModel) -> Self:
         """Construct a node instance from the constructor-based creation model.
 
         :param model: the model instance to construct from
         :return: the constructed node instance
         """
+        if not isinstance(model, cls.ConstructorModel):
+            raise ValueError(f'expected `{cls.ConstructorModel.__name__}` model, got `{type(model).__name__}`')
         fields = cls._model_to_orm_field_values(model)
         fields.update(**fields.pop('args'))
         fields.pop('node_type')
         return cls(**fields)
 
     @classmethod
-    def _from_cli_model(cls, model: Node.CliModel) -> Self:
+    def _from_cli_model(cls, model: BaseNodeModel) -> Self:
         """Construct a node instance from the CLI-based creation model.
 
         :param model: the model instance to construct from
         :return: the constructed node instance
         """
+        if not isinstance(model, cls.CliModel):
+            raise ValueError(f'expected `{cls.CliModel.__name__}` model, got `{type(model).__name__}`')
         fields = cls._model_to_orm_field_values(model)
         return cls(**fields)
 

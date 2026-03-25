@@ -75,7 +75,7 @@ class ZmqBrokerService:
             decoder=YAML_DECODER,
         )
 
-        self._pid_file.write_text(str(os.getpid()))
+        self._pid_file.write_text(f'aiida-zmq-broker {os.getpid()}')
 
         # SIGINT (ctrl-c / circus graceful) + SIGTERM (circus stop)
         signal.signal(signal.SIGINT, self._handle_shutdown)

@@ -66,7 +66,7 @@ class TestBrokerBackend(Enum):
     NONE = 'none'
 
 
-def _start_zmq_broker(broker, timeout: float = 10.0):
+def start_zmq_broker(broker, timeout: float = 10.0):
     """Start a ZMQ broker service subprocess for testing.
 
     :param broker: A ``ZmqBroker`` instance (has ``base_path``, ``is_running()``, etc.)
@@ -93,13 +93,13 @@ def _start_zmq_broker(broker, timeout: float = 10.0):
     raise TimeoutError(f'ZMQ broker did not start within {timeout}s')
 
 
-def _stop_zmq_broker(broker, timeout: float = 5.0):
+def stop_zmq_broker(broker, timeout: float = 5.0):
     """Stop a ZMQ broker service subprocess for testing.
 
     :param broker: A ``ZmqBroker`` instance
     """
     pid = broker.get_service_pid()
-    if pid is None or not broker._validate_service_pid(pid):
+    if pid is None or not broker.is_running():
         broker._cleanup_stale_service_files()
         return
 
@@ -111,7 +111,7 @@ def _stop_zmq_broker(broker, timeout: float = 5.0):
 
     start_time = time.time()
     while time.time() - start_time < timeout:
-        if not broker._validate_service_pid(pid):
+        if not broker.is_running():
             broker._cleanup_stale_service_files()
             return
         time.sleep(0.1)
@@ -283,11 +283,11 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
         # Start ZMQ broker service if needed (tests don't use circus)
         broker_instance = get_manager().get_broker()
         if broker_instance is not None and hasattr(broker_instance, 'is_running'):
-            _start_zmq_broker(broker_instance)
+            start_zmq_broker(broker_instance)
             try:
                 yield profile
             finally:
-                _stop_zmq_broker(broker_instance)
+                stop_zmq_broker(broker_instance)
         else:
             yield profile
 

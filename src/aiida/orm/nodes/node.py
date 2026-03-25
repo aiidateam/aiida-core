@@ -382,8 +382,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         *,
         context: Dict[str, Any] | None = None,
         minimal: bool = False,
-        schema: type[Node.BaseNodeModel] | None = None,
-    ) -> Node.BaseNodeModel:
+        schema: type[BaseNodeModel] | None = None,
+    ) -> BaseNodeModel:
         supported = ('ReadModel', 'WriteModel', 'ConstructorModel')
         if schema is self.ConstructorArgsModel:
             raise exceptions.UnsupportedSchemaError(
@@ -1177,7 +1177,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         :param model: the model instance to construct from
         :return: the constructed node instance
         """
-        fields = cls._model_to_orm_field_values(model, cls.ConstructorModel)
+        fields = cls._model_to_orm_field_values(model)
         fields.update(**fields.pop('args'))
         fields.pop('node_type')
         return cls(**fields)
@@ -1189,7 +1189,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         :param model: the model instance to construct from
         :return: the constructed node instance
         """
-        fields = cls._model_to_orm_field_values(model, cls.CliModel)
+        fields = cls._model_to_orm_field_values(model)
         return cls(**fields)
 
     def _orm_to_model_field_values(

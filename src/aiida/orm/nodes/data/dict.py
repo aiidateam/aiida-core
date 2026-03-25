@@ -186,7 +186,7 @@ class Dict(Data):
     def _model_to_orm_field_values(
         cls,
         valid_model: OrmModel,
-        schema: type[OrmModel],
+        schema: type[OrmModel] | None = None,
     ) -> dict[str, t.Any]:
         # `Dict.AttributesModel` doesn't explicitly define any fields.
         # `_model_to_orm_field_values` will return an empty `attributes` dict.

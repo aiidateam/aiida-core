@@ -254,7 +254,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         :param model: An instance of the entity's model class.
         :return: An instance of the entity class.
         """
-        fields = cls._model_to_orm_field_values(model, cls.WriteModel)
+        fields = cls._model_to_orm_field_values(model)
         return cls(**fields)
 
     def serialize(
@@ -416,7 +416,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     def _model_to_orm_field_values(
         cls,
         valid_model: AiiDABaseModel,
-        schema: type[AiiDABaseModel],
+        schema: type[AiiDABaseModel] | None = None,
     ) -> dict[str, Any]:
         """Collect values for the ORM entity's fields from the given model instance and schema.
 
@@ -429,7 +429,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         from aiida.plugins.factories import BaseFactory
 
         fields: dict[str, Any] = {}
-        for key, field in schema.model_fields.items():
+        for key, field in (schema or type(valid_model)).model_fields.items():
             field_name = field.alias or key
             field_value = getattr(valid_model, key, field.default)
 
@@ -438,7 +438,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
             annotation = field.annotation
             if isinstance(annotation, type) and issubclass(annotation, AiiDABaseModel):
-                fields[field_name] = cls._model_to_orm_field_values(field_value, annotation)
+                fields[field_name] = cls._model_to_orm_field_values(valid_model=field_value, schema=annotation)
             elif orm_class := get_metadata(field, 'orm_class'):
                 if isinstance(orm_class, str):
                     try:
@@ -458,7 +458,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
 
     def _get_model_field_values(
         self,
-        model_cls: type[AiiDABaseModel],
+        schema: type[AiiDABaseModel],
         *,
         context: dict[str, Any],
         minimal: bool,
@@ -466,7 +466,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
     ) -> dict[str, Any]:
         """Collect field values for a model class.
 
-        :param model_cls: The model class to extract field values for.
+        :param schema: The model class to collect field values for.
         :param context: Optional context dictionary to pass to `orm_to_model` callables.
         :param minimal: Whether to exclude potentially large value fields.
         :param use_field_alias_as_key: Whether to use the field alias as the key in the resulting dictionary,
@@ -475,7 +475,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         """
         fields: dict[str, Any] = {}
 
-        for key, field in model_cls.model_fields.items():
+        for key, field in schema.model_fields.items():
             field_name = field.alias or key if use_field_alias_as_key else key
             if get_metadata(field, 'may_be_large') and minimal:
                 continue
@@ -487,7 +487,11 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
             else:
                 annotation = field.annotation
                 if isinstance(annotation, type) and issubclass(annotation, AiiDABaseModel):
-                    fields[field_name] = self._get_model_field_values(annotation, context=context, minimal=minimal)
+                    fields[field_name] = self._get_model_field_values(
+                        schema=annotation,
+                        context=context,
+                        minimal=minimal,
+                    )
                 else:
                     fields[field_name] = getattr(self, key, field.default)
 
@@ -515,7 +519,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType], metaclass=Enti
         :return: Mapping of ORM field name to value.
         """
         return self._get_model_field_values(
-            schema or self.ReadModel,
+            schema=schema or self.ReadModel,
             context=context or {},
             minimal=minimal,
             use_field_alias_as_key=use_field_alias_as_key,

@@ -29,7 +29,6 @@ from typing import (
     cast,
 )
 
-import pydantic as pdt
 from plumpy.base.utils import call_with_super_check, super_check
 from typing_extensions import Self
 
@@ -41,7 +40,7 @@ from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
 from .fields import QbFields, add_field
-from .model import OrmModel
+from .model import OrmModel, WritableOrmModel
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import BackendEntity, StorageBackend
@@ -201,74 +200,15 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
 
     identity_field = 'pk'
 
-    class ReadModel(OrmModel):
+    class ReadModel(WritableOrmModel):
         pk: int = MetadataField(
             description='The primary key of the entity',
             read_only=True,
             examples=[42],
         )
 
-        @classmethod
-        def _as_write_model(cls: type[OrmModel], suffix: str = 'ReadModel') -> type[OrmModel]:
-            """Return a derived creation model class with read-only fields removed.
-
-            This also removes any serializers/validators defined on those fields.
-
-            :return: The derived creation model class.
-            """
-
-            cached = cls.__dict__.get('_AIIDA_WRITE_MODEL')
-            if isinstance(cached, type) and issubclass(cached, OrmModel):
-                return cached
-
-            qualname = cls.__qualname__.replace(suffix, 'WriteModel')
-            WriteModel = pdt.create_model(  # noqa: N806
-                qualname.split('.')[-1],
-                __base__=cls,
-                __module__=cls.__module__,
-            )
-            WriteModel.__qualname__ = qualname
-
-            # Convert nested models to their 'write' variants
-            for field in WriteModel.model_fields.values():
-                annotation = field.annotation
-                if isinstance(annotation, type) and issubclass(annotation, OrmModel):
-                    field.annotation = annotation._as_write_model(suffix='Model')
-
-            readonly_fields: list[str] = []
-            for key, field in WriteModel.model_fields.items():
-                if get_metadata(field, 'read_only'):
-                    readonly_fields.append(key)
-
-            # Remove read-only fields
-            for key in readonly_fields:
-                WriteModel.model_fields.pop(key, None)
-                if hasattr(WriteModel, key):
-                    delattr(WriteModel, key)
-
-            # Prune field validators/serializers referring to read-only fields
-            decorators = WriteModel.__pydantic_decorators__
-
-            def prune_field_decorators(field_decorators: dict[str, Any]) -> dict[str, Any]:
-                return {
-                    key: decorator
-                    for key, decorator in field_decorators.items()
-                    if all(field not in readonly_fields for field in decorator.info.fields)
-                }
-
-            decorators.field_validators = prune_field_decorators(decorators.field_validators)
-            decorators.field_serializers = prune_field_decorators(decorators.field_serializers)
-
-            WriteModel.model_rebuild(force=True)
-
-            # Make subsequent calls idempotent for this specific class and the derived model
-            cls._AIIDA_WRITE_MODEL = WriteModel  # type: ignore[attr-defined]
-            WriteModel._AIIDA_WRITE_MODEL = WriteModel  # type: ignore[attr-defined]
-
-            return WriteModel
-
     @classproperty
-    def WriteModel(cls) -> Type[OrmModel]:  # noqa: N802, N805
+    def WriteModel(cls) -> type[WritableOrmModel]:  # noqa: N802, N805
         """Return the attributes-based creation version of the model class for this entity.
 
         :return: The attributes-based creation model class, with read-only fields removed.

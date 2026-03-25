@@ -54,7 +54,7 @@ from ..computers import Computer
 from ..entities import Collection as EntityCollection
 from ..entities import Entity, from_backend_entity
 from ..extras import EntityExtras
-from ..model import OrmModel
+from ..model import OrmModel, WritableOrmModel
 from ..querybuilder import QueryBuilder
 from ..users import User
 from .attributes import NodeAttributes
@@ -239,13 +239,13 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         )
         node_type: str = MetadataField(description='The type of the node.')
 
-    class AttributesModel(OrmModel):
+    class AttributesModel(WritableOrmModel):
         """The node attributes.
 
         Extended by `Node` subclasses with specific attributes.
         """
 
-    class ReadModel(Entity.ReadModel, BaseNodeModel):
+    class ReadModel(Entity.ReadModel, BaseNodeModel, WritableOrmModel):
         uuid: UUID = MetadataField(
             description='The UUID of the node',
             read_only=True,

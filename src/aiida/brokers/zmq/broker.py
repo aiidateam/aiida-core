@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import time
 import typing as t
 from contextlib import contextmanager
 from pathlib import Path
@@ -103,12 +104,16 @@ class ZmqBroker(Broker):
             return None
 
     def _validate_service_pid(self, pid: int) -> bool:
-        """Check that a PID belongs to a running ZmqBrokerService process."""
+        """Check that a PID belongs to a running ZmqBrokerService process.
+
+        Matches both direct invocation (``python -m aiida.brokers.zmq.service``)
+        and the circus-started path (``verdi … daemon broker``).
+        """
         try:
             proc = psutil.Process(pid)
             if proc.is_running() and proc.status() != psutil.STATUS_ZOMBIE:
-                cmdline = proc.cmdline()
-                return any('aiida.brokers.zmq' in arg for arg in cmdline)
+                cmdline_str = ' '.join(proc.cmdline())
+                return 'aiida.brokers.zmq' in cmdline_str or 'daemon broker' in cmdline_str
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             return False
         return False
@@ -139,13 +144,31 @@ class ZmqBroker(Broker):
 
     # --- Communicator ---
 
-    def get_communicator(self) -> ZmqCommunicator:
+    def get_communicator(self, wait_for_broker: float = 30.0) -> ZmqCommunicator:
+        """Get or create a communicator connected to the broker.
+
+        :param wait_for_broker: Seconds to wait for the broker to become ready.
+            When the broker and workers are started concurrently (e.g. by circus),
+            the broker may not have written its socket files yet. This parameter
+            controls how long to poll before giving up.
+        """
         if self._communicator is None:
             router_endpoint = self.router_endpoint
             pub_endpoint = self.pub_endpoint
 
             if router_endpoint is None or pub_endpoint is None:
-                raise ConnectionError(f'{self}')
+                # Broker may still be starting — poll until endpoints appear.
+                deadline = time.monotonic() + wait_for_broker
+                while time.monotonic() < deadline:
+                    time.sleep(0.2)
+                    router_endpoint = self.router_endpoint
+                    pub_endpoint = self.pub_endpoint
+                    if router_endpoint is not None and pub_endpoint is not None:
+                        break
+                else:
+                    raise ConnectionError(
+                        f'Broker did not become ready within {wait_for_broker}s: {self}'
+                    )
 
             self._communicator = ZmqCommunicator(
                 router_endpoint=router_endpoint,

@@ -31,8 +31,7 @@ class ZmqBrokerService:
         └── broker.sockets  # Path to temp socket directory
 
         {temp_dir}/         # Short path for IPC socket limit
-        ├── router.sock
-        └── pub.sock
+        └── router.sock
     """
 
     def __init__(self, base_path: Path | str):

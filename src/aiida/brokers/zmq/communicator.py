@@ -399,15 +399,21 @@ class ZmqCommunicator(kiwipy.Communicator):
         subscriber: Callable,
         identifier: str | None = None,
     ) -> str:
-        identifier = identifier or f'broadcast-{uuid.uuid4().hex[:8]}'
-        self._broadcast_subscribers[identifier] = subscriber
-        _LOGGER.info('Added broadcast subscriber: %s', identifier)
-        return identifier
+        def _do():
+            ident = identifier or f'broadcast-{uuid.uuid4().hex[:8]}'
+            self._broadcast_subscribers[ident] = subscriber
+            _LOGGER.info('Added broadcast subscriber: %s', ident)
+            return ident
+
+        return self._run_on_loop(_do)
 
     def remove_broadcast_subscriber(self, identifier: str) -> None:
-        if identifier in self._broadcast_subscribers:
-            del self._broadcast_subscribers[identifier]
-            _LOGGER.info('Removed broadcast subscriber: %s', identifier)
+        def _do():
+            if identifier in self._broadcast_subscribers:
+                del self._broadcast_subscribers[identifier]
+                _LOGGER.info('Removed broadcast subscriber: %s', identifier)
+
+        self._run_on_loop(_do)
 
     # ------------------------------------------------------------------
     # Internal — sending

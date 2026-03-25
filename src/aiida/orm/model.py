@@ -17,7 +17,13 @@ class OrmModel(AiiDABaseModel):
         if isinstance(cached, type) and issubclass(cached, OrmModel):
             return cached
 
-        orm_class_name, model_name = cls.__qualname__.split('.')
+        try:
+            orm_class_name, model_name = cls.__qualname__.split('.')
+        except ValueError as exception:
+            raise ValueError(
+                f'Expected class name in format "OrmClass.ModelName", got "{cls.__qualname__}"; '
+                'It is likely the ORM model was not correctly nested within its ORM class.'
+            ) from exception
         MinimalModel = create_model(  # noqa: N806
             f'Minimal{model_name}',
             __base__=OrmModel,
@@ -39,8 +45,9 @@ class OrmModel(AiiDABaseModel):
 
         MinimalModel.model_rebuild(force=True)
 
-        # Make subsequent calls idempotent for this specific class
+        # Make subsequent calls idempotent for this specific class and the derived model
         cls._AIIDA_MINIMAL_MODEL = MinimalModel  # type: ignore[attr-defined]
+        MinimalModel._AIIDA_MINIMAL_MODEL = MinimalModel  # type: ignore[attr-defined]
 
         return MinimalModel
 
@@ -97,7 +104,8 @@ class OrmModel(AiiDABaseModel):
 
         WriteModel.model_rebuild(force=True)
 
-        # Make subsequent calls idempotent for this specific class
+        # Make subsequent calls idempotent for this specific class and the derived model
         cls._AIIDA_WRITE_MODEL = WriteModel  # type: ignore[attr-defined]
+        WriteModel._AIIDA_WRITE_MODEL = WriteModel  # type: ignore[attr-defined]
 
         return WriteModel

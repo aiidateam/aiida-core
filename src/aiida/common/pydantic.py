@@ -37,12 +37,24 @@ class AiiDABaseModel(BaseModel, defer_build=True):
     )
 
     @classmethod
-    def __pydantic_on_complete__(cls, **kwargs: t.Any) -> None:
-        """Derives the JSON schema title of the model from the qualified name.
+    def __pydantic_init_subclass__(cls, **kwargs: t.Any) -> None:
+        super().__pydantic_init_subclass__(**kwargs)
+        cls._set_json_schema_title()
 
-        `Int.Model` -> `IntModel`
-        """
+    @classmethod
+    def __pydantic_on_complete__(cls, **kwargs: t.Any) -> None:
+        # For Node subclasses, `__pydantic_init_subclass__` is run too early due to patching.
+        # However, we can't only use `__pydantic_on_complete__` due to `defer_build=True`.
+        # Therefore, we set the JSON schema title in both to guarantee the title is set correctly.
         super().__pydantic_on_complete__(**kwargs)
+        cls._set_json_schema_title()
+
+    @classmethod
+    def _set_json_schema_title(cls) -> None:
+        """Derive the JSON schema title.
+
+        The title is derived from the `__qualname__`, for example, `Int.Model` -> `IntModel`
+        """
         cls.model_config['title'] = cls.__qualname__.replace('.', '')
 
 

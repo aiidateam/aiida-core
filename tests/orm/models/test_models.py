@@ -351,6 +351,16 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
 
 
 @pytest.mark.parametrize(
+    'dynamic_method',
+    ['_as_write_model', '_as_minimal_model'],
+)
+def test_dynamic_model_idempotency(dynamic_method):
+    DynamicModel = getattr(orm.Int.ReadModel, dynamic_method)()
+    RepeatedDynamicModel = getattr(orm.Int.ReadModel, dynamic_method)()
+    assert RepeatedDynamicModel is DynamicModel
+
+
+@pytest.mark.parametrize(
     'required_arguments',
     orm_to_test,
     indirect=True,

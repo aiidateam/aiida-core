@@ -53,7 +53,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             short_name='-L',
             priority=4,
         )
-        description: t.Optional[str] = MetadataField(
+        description: str = MetadataField(
             '',
             title='Description',
             description='Human-readable description, ideally including version and compilation environment',
@@ -116,10 +116,10 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         default_calc_job_plugin: str | None = None,
         append_text: str = '',
         prepend_text: str = '',
-        use_double_quotes: bool | None = False,
+        use_double_quotes: bool = False,
         with_mpi: bool | None = None,
-        is_hidden: bool | None = False,
-        wrap_cmdline_params: bool | None = False,
+        is_hidden: bool = False,
+        wrap_cmdline_params: bool = False,
         **kwargs,
     ):
         """Construct a new instance.
@@ -180,8 +180,8 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         )
         CliModel.__qualname__ = f'{cls.__name__}.CliModel'
         CliModel.model_config['arbitrary_types_allowed'] = True
+        CliModel.model_rebuild(force=True)
         cls._CliModel = CliModel  # type: ignore[assignment]
-        cls._CliModel.model_rebuild(force=True)
 
     @abc.abstractmethod
     def can_run_on_computer(self, computer: Computer) -> bool:

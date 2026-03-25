@@ -6,6 +6,8 @@ from pydantic import create_model
 
 from aiida.common.pydantic import AiiDABaseModel, get_metadata
 
+__all__ = ('OrmModel',)
+
 
 class OrmModel(AiiDABaseModel):
     """Base class for Read/Write/Attributes models."""

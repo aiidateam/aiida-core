@@ -47,7 +47,6 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
@@ -75,71 +74,6 @@ class MessageType(str, Enum):
 
     # Health check
     PING = 'ping'
-
-
-@dataclass
-class Message:
-    """Base message structure."""
-
-    type: MessageType
-    id: str = field(default_factory=lambda: uuid.uuid4().hex)
-    sender: str = ''
-
-
-@dataclass
-class TaskMessage(Message):
-    """Task message sent to the broker for processing."""
-
-    type: MessageType = field(default=MessageType.TASK, init=False)
-    body: Any = None
-    no_reply: bool = False
-
-
-@dataclass
-class TaskResponse(Message):
-    """Response to a task message."""
-
-    type: MessageType = field(default=MessageType.TASK_RESPONSE, init=False)
-    task_id: str = ''
-    result: Any = None
-    error: str | None = None
-
-
-@dataclass
-class RpcMessage(Message):
-    """RPC message sent to a specific recipient."""
-
-    type: MessageType = field(default=MessageType.RPC, init=False)
-    recipient: str = ''
-    body: Any = None
-
-
-@dataclass
-class RpcResponse(Message):
-    """Response to an RPC message."""
-
-    type: MessageType = field(default=MessageType.RPC_RESPONSE, init=False)
-    rpc_id: str = ''
-    result: Any = None
-    error: str | None = None
-
-
-@dataclass
-class BroadcastMessage(Message):
-    """Broadcast message sent to all subscribers."""
-
-    type: MessageType = field(default=MessageType.BROADCAST, init=False)
-    body: Any = None
-    subject: str | None = None
-    correlation_id: str | None = None
-
-
-@dataclass
-class SubscribeMessage(Message):
-    """Subscription request message."""
-
-    type: MessageType = MessageType.SUBSCRIBE_TASK
-    identifier: str | None = None
 
 
 def encode_message(msg: dict, encoder=json.dumps) -> bytes:

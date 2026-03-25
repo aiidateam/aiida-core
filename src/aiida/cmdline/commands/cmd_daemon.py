@@ -151,7 +151,9 @@ def status(ctx, all_profiles, timeout):
         # Build broker status line for managed brokers (e.g., ZMQ)
         broker_line = ''
         broker = get_manager().get_broker()
-        if broker is not None and hasattr(broker, 'get_service_status'):
+        from aiida.brokers.zmq.broker import ZmqBroker
+
+        if isinstance(broker, ZmqBroker):
             if broker.is_running():
                 status_info = broker.get_service_status()
                 if status_info:

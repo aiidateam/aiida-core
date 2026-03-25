@@ -50,7 +50,6 @@ class TestZmqBrokerStatusQueries:
         """Test endpoints return None when sockets file doesn't exist."""
         broker = ZmqBroker.from_base_path(tmp_path)
         assert broker.router_endpoint is None
-        assert broker.pub_endpoint is None
 
     def test_start_stop_cycle(self, tmp_path):
         """Test querying a running broker service."""
@@ -61,7 +60,6 @@ class TestZmqBrokerStatusQueries:
             assert broker.is_running()
             assert broker.get_service_pid() is not None
             assert broker.router_endpoint is not None
-            assert broker.pub_endpoint is not None
         finally:
             _stop_zmq_broker(broker)
 
@@ -261,7 +259,6 @@ class TestZmqCommunicator:
         try:
             communicator = ZmqCommunicator(
                 router_endpoint=broker.router_endpoint,
-                pub_endpoint=broker.pub_endpoint,
             )
             communicator.start()
 
@@ -282,7 +279,6 @@ class TestZmqCommunicator:
         try:
             with ZmqCommunicator(
                 router_endpoint=broker.router_endpoint,
-                pub_endpoint=broker.pub_endpoint,
             ) as communicator:
                 assert communicator.is_closed() is False
 
@@ -317,7 +313,6 @@ class TestZmqBrokerIntegration:
         """Test connecting a communicator to the broker."""
         communicator = ZmqCommunicator(
             router_endpoint=zmq_broker.router_endpoint,
-            pub_endpoint=zmq_broker.pub_endpoint,
         )
         communicator.start()
 

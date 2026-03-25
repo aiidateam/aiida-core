@@ -87,13 +87,6 @@ class ZmqBroker(Broker):
             return None
         return f'ipc://{sockets_path}/router.sock'
 
-    @property
-    def pub_endpoint(self) -> str | None:
-        sockets_path = self._get_sockets_path()
-        if sockets_path is None:
-            return None
-        return f'ipc://{sockets_path}/pub.sock'
-
     def get_service_pid(self) -> int | None:
         """Read the ZmqBrokerService PID from its PID file."""
         if not self._service_pid_file.exists():
@@ -154,16 +147,14 @@ class ZmqBroker(Broker):
         """
         if self._communicator is None:
             router_endpoint = self.router_endpoint
-            pub_endpoint = self.pub_endpoint
 
-            if router_endpoint is None or pub_endpoint is None:
-                # Broker may still be starting — poll until endpoints appear.
+            if router_endpoint is None:
+                # Broker may still be starting — poll until endpoint appears.
                 deadline = time.monotonic() + wait_for_broker
                 while time.monotonic() < deadline:
                     time.sleep(0.2)
                     router_endpoint = self.router_endpoint
-                    pub_endpoint = self.pub_endpoint
-                    if router_endpoint is not None and pub_endpoint is not None:
+                    if router_endpoint is not None:
                         break
                 else:
                     raise ConnectionError(
@@ -172,7 +163,6 @@ class ZmqBroker(Broker):
 
             self._communicator = ZmqCommunicator(
                 router_endpoint=router_endpoint,
-                pub_endpoint=pub_endpoint,
             )
             self._communicator.start()
 

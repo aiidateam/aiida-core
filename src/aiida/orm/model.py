@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
+import pydantic as pdt
 from pydantic import create_model
 
 from aiida.common.pydantic import AiiDABaseModel, get_metadata
@@ -11,6 +12,8 @@ __all__ = ('OrmModel',)
 
 class OrmModel(AiiDABaseModel):
     """Base class for Read/Write/Attributes models."""
+
+    model_config = pdt.ConfigDict(extra='forbid')
 
     @classmethod
     def _as_minimal_model(cls: t.Type[OrmModel]) -> t.Type[OrmModel]:

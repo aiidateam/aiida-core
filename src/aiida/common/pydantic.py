@@ -30,7 +30,6 @@ class AiiDABaseModel(BaseModel, defer_build=True):
     """Base class for all AiiDA pydantic models."""
 
     model_config = ConfigDict(
-        extra='forbid',
         serialize_by_alias=True,
         validate_by_alias=True,
         validate_by_name=True,

@@ -9,7 +9,6 @@ import typing
 from pydantic import ConfigDict, WithJsonSchema
 
 from aiida.common.pydantic import AiiDABaseModel, MetadataField
-from aiida.orm import OrmModel
 
 from .data import Data
 
@@ -209,8 +208,8 @@ class JsonableData(Data):
     @classmethod
     def _model_to_orm_field_values(
         cls,
-        valid_model: OrmModel,
-        schema: type[OrmModel] | None = None,
+        valid_model: AiiDABaseModel,
+        schema: type[AiiDABaseModel] | None = None,
     ) -> dict[str, typing.Any]:
         # `Dict.AttributesModel` doesn't explicitly define any fields.
         # `_model_to_orm_field_values` will return an empty `attributes` dict.

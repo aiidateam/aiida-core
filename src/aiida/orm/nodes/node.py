@@ -43,7 +43,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
-from aiida.orm.fields import QbFields, add_field
+from aiida.orm.fields import QbAttributesField, QbFields, add_field
 from aiida.orm.utils.node import (
     AbstractNodeMeta,
     get_query_type_from_type_string,
@@ -300,14 +300,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             """Serialize UUID to string."""
             return str(value)
 
-    @classproperty
-    def WriteModel(cls) -> type[BaseNodeModel]:  # noqa: N802, N805
-        """Return the attributes-based creation version of the model class for this entity.
-
-        :return: The attributes-based creation model class, with read-only fields removed.
-        """
-        return cast(type[Node.BaseNodeModel], cls.ReadModel._as_write_model())
-
     ConstructorArgsModel: type[AiiDABaseModel] | None = None
 
     _ConstructorModel: ClassVar[type[BaseNodeModel] | None] = None
@@ -366,17 +358,14 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         *,
         context: Dict[str, Any] | None = None,
         minimal: bool = False,
-        schema: type[BaseNodeModel] | None = None,
-    ) -> BaseNodeModel:
+        schema: type[OrmModel] | None = None,
+    ) -> OrmModel:
         supported = ('ReadModel', 'WriteModel', 'ConstructorModel')
-        if schema is self.ConstructorArgsModel:
+        if schema and schema is self.ConstructorArgsModel:
             raise exceptions.UnsupportedSchemaError(
                 f"Cannot serialize against '{schema.__name__}'; supported serialization schemas: {supported}"
             )
-        return cast(
-            Node.BaseNodeModel,
-            super().to_model(context=context, minimal=minimal, schema=schema),
-        )
+        return super().to_model(context=context, minimal=minimal, schema=schema)
 
     @classmethod
     def from_model(
@@ -462,14 +451,13 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         :return: The constructed node instance.
         """
         if 'attributes' in serialized:
-            Model = cls.WriteModel  # noqa: N806
+            return cls.from_model(cls.WriteModel(**serialized), files=files)
         elif 'args' in serialized:
             if not cls._ConstructorModel:
                 raise ValueError(f'{cls.__name__} does not support constructor-based creation')
-            Model = cls.ConstructorModel  # noqa: N806
+            return cls.from_model(cls.ConstructorModel(**serialized), files=files)
         else:
             raise ValueError('the serialized data does not contain the required `attributes` or `args` field')
-        return cls.from_model(Model(**serialized), files=files)
 
     def attach_file(self, filepath: str, fileobj: io.BufferedReader) -> None:
         """Attach a file to the repository of this node.
@@ -1016,7 +1004,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             cls._validate_model_inheritance('AttributesModel')
 
         try:
-            container_field = fields['attributes']
+            container_field = cast(QbAttributesField, fields['attributes'])
         except KeyError:
             raise KeyError(f"class '{cls}' was expected to have a `Model` with an 'attributes' field")
 
@@ -1027,7 +1015,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 key,
                 alias=field.alias,
                 dtype=field.annotation,
-                doc=field.description,
+                doc=field.description or '',
                 is_attribute=True,
             )
 
@@ -1049,7 +1037,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 ),
             )
             AttributesModel.__qualname__ = f'{cls.__name__}.AttributesModel'
-            cls.AttributesModel = AttributesModel
+            cls.AttributesModel = AttributesModel  # type: ignore[misc]
         cls.AttributesModel.model_rebuild(force=True)
 
     @classmethod
@@ -1101,7 +1089,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         ReadModel.__qualname__ = f'{cls.__name__}.ReadModel'
         ReadModel.model_rebuild(force=True)
 
-        cls.ReadModel = ReadModel
+        cls.ReadModel = ReadModel  # type: ignore[misc]
 
     @classmethod
     def _patch_constructor_model(cls):
@@ -1128,7 +1116,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         cls._ConstructorModel = ConstructorModel
 
     @classmethod
-    def _from_write_model(cls, model: BaseNodeModel, files: dict[str, io.BufferedReader] | None = None) -> Self:
+    def _from_write_model(cls, model: AiiDABaseModel, files: dict[str, io.BufferedReader] | None = None) -> Self:
         """Construct a node instance from the attributes-based creation model.
 
         :param model: the model instance to construct from
@@ -1188,7 +1176,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return instance
 
     @classmethod
-    def _from_constructor_model(cls, model: BaseNodeModel) -> Self:
+    def _from_constructor_model(cls, model: AiiDABaseModel) -> Self:
         """Construct a node instance from the constructor-based creation model.
 
         :param model: the model instance to construct from
@@ -1202,7 +1190,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return cls(**fields)
 
     @classmethod
-    def _from_cli_model(cls, model: BaseNodeModel) -> Self:
+    def _from_cli_model(cls, model: AiiDABaseModel) -> Self:
         """Construct a node instance from the CLI-based creation model.
 
         :param model: the model instance to construct from

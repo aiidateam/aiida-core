@@ -200,6 +200,8 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
 
     identity_field = 'pk'
 
+    fields: ClassVar[QbFields]
+
     class ReadModel(WritableOrmModel):
         pk: int = MetadataField(
             description='The primary key of the entity',
@@ -209,11 +211,19 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
 
     @classproperty
     def WriteModel(cls) -> type[WritableOrmModel]:  # noqa: N802, N805
-        """Return the attributes-based creation version of the model class for this entity.
+        """Derive the creation version of the model class for this entity.
 
-        :return: The attributes-based creation model class, with read-only fields removed.
+        :return: The creation model class, with read-only fields removed.
         """
         return cls.ReadModel._as_write_model()
+
+    def __init__(self, backend_entity: BackendEntityType) -> None:
+        """:param backend_entity: the backend model supporting this entity"""
+        self._backend_entity = backend_entity
+        call_with_super_check(self.initialize)
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        cls._patch_qb_fields()
 
     def to_model(
         self,
@@ -336,14 +346,6 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         )
         return cls.collection.get(**kwargs)
 
-    def __init__(self, backend_entity: BackendEntityType) -> None:
-        """:param backend_entity: the backend model supporting this entity"""
-        self._backend_entity = backend_entity
-        call_with_super_check(self.initialize)
-
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        cls._patch_qb_fields()
-
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, self.__class__):
             return False
@@ -432,7 +434,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
                 key,
                 alias=field.alias,
                 dtype=field.annotation,
-                doc=field.description,
+                doc=field.description or '',
             )
 
         cls.fields = QbFields(fields)

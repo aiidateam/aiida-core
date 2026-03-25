@@ -117,12 +117,12 @@ class XyData(ArrayData):
             cls,
             value: Sequence | np.ndarray | list[np.ndarray],
         ) -> Sequence:
-            if isinstance(value, Sequence):
-                return value
+            if isinstance(value, list) and all(isinstance(v, np.ndarray) for v in value):
+                return [v.tolist() for v in value]
             if isinstance(value, np.ndarray):
                 return value.tolist()
-            elif isinstance(value, list) and all(isinstance(v, np.ndarray) for v in value):
-                return [v.tolist() for v in value]
+            if isinstance(value, Sequence):
+                return value
             else:
                 raise TypeError(f'`y_arrays` should be an iterable but got: {value}')
 
@@ -151,7 +151,8 @@ class XyData(ArrayData):
         super().__init__(**kwargs)
 
         if x_array is not None:
-            self.set_x(x_array, x_name, x_units)
+            # TODO we shouldn't ignore the arg-type problem, but rather ensure that there are proper names!
+            self.set_x(x_array, x_name, x_units)  # type: ignore[arg-type]
             self.set_y(y_arrays, y_names, y_units)  # type: ignore[arg-type]
 
     @staticmethod

@@ -94,7 +94,7 @@ class SinglefileData(Data):
 
         if content is not None:
             if isinstance(content, (str, pathlib.Path)):
-                content = io.StringIO(content)
+                content = io.StringIO(str(content))
             file = content
 
         if file is not None:

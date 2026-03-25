@@ -1,7 +1,6 @@
-"""ZeroMQ Broker Server - standalone message broker.
+"""ZeroMQ Broker Server.
 
-This module is completely independent of AiiDA and can be used as a standalone
-message broker server. It handles:
+Can be started as a standalone message broker process. It handles:
 - Task queue management with persistence
 - Request/reply routing for RPC
 - Broadcast distribution
@@ -9,16 +8,14 @@ message broker server. It handles:
 
 from __future__ import annotations
 
+import json
 import logging
-import threading
 import time
 from collections import deque
 from pathlib import Path
 from typing import Any, Callable
 
 import zmq
-
-from aiida.brokers.utils import YAML_DECODER, YAML_ENCODER
 
 from .protocol import MessageType, decode_message, encode_message
 from .queue import PersistentQueue
@@ -54,8 +51,8 @@ class ZmqBrokerServer:
         :param encoder: Function to encode messages (default: yaml.dump)
         :param decoder: Function to decode messages (default: yaml.load)
         """
-        encoder = encoder if encoder is not None else YAML_ENCODER
-        decoder = decoder if decoder is not None else YAML_DECODER
+        encoder = encoder if encoder is not None else json.dumps
+        decoder = decoder if decoder is not None else json.loads
         self._storage_path = Path(storage_path)
         self._sockets_path = Path(sockets_path)
 
@@ -96,7 +93,21 @@ class ZmqBrokerServer:
 
         # Server state
         self._running = False
-        self._lock = threading.Lock()
+
+        # Message type -> handler mapping (built once, not per message)
+        self._handlers: dict[str, Callable] = {
+            MessageType.TASK.value: self._handle_task,
+            MessageType.TASK_RESPONSE.value: self._handle_task_response,
+            MessageType.TASK_ACK.value: self._handle_task_ack,
+            MessageType.TASK_NACK.value: self._handle_task_nack,
+            MessageType.RPC.value: self._handle_rpc,
+            MessageType.RPC_RESPONSE.value: self._handle_rpc_response,
+            MessageType.BROADCAST.value: self._handle_broadcast,
+            MessageType.SUBSCRIBE_TASK.value: self._handle_subscribe_task,
+            MessageType.SUBSCRIBE_RPC.value: self._handle_subscribe_rpc,
+            MessageType.UNSUBSCRIBE_TASK.value: self._handle_unsubscribe_task,
+            MessageType.UNSUBSCRIBE_RPC.value: self._handle_unsubscribe_rpc,
+        }
 
     @property
     def storage_path(self) -> Path:
@@ -257,22 +268,7 @@ class ZmqBrokerServer:
                 _LOGGER.warning('Message missing type field')
                 return
 
-            # Route by message type
-            handlers: dict[str, Any] = {
-                MessageType.TASK.value: self._handle_task,
-                MessageType.TASK_RESPONSE.value: self._handle_task_response,
-                MessageType.TASK_ACK.value: self._handle_task_ack,
-                MessageType.TASK_NACK.value: self._handle_task_nack,
-                MessageType.RPC.value: self._handle_rpc,
-                MessageType.RPC_RESPONSE.value: self._handle_rpc_response,
-                MessageType.BROADCAST.value: self._handle_broadcast,
-                MessageType.SUBSCRIBE_TASK.value: self._handle_subscribe_task,
-                MessageType.SUBSCRIBE_RPC.value: self._handle_subscribe_rpc,
-                MessageType.UNSUBSCRIBE_TASK.value: self._handle_unsubscribe_task,
-                MessageType.UNSUBSCRIBE_RPC.value: self._handle_unsubscribe_rpc,
-            }
-
-            handler = handlers.get(msg_type)
+            handler = self._handlers.get(msg_type)
             if handler:
                 handler(identity, msg)
             else:

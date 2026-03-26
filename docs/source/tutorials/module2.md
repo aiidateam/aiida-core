@@ -20,18 +20,24 @@ execution:
 
 After this module, you will be able to:
 
+- Understand what a CalcJob is and how it differs from a `calcfunction`
 - Run an external code through AiiDA using `aiida-shell`
-- Understand the Computer, Code, and CalcJob concepts
-- Inspect calculation inputs and outputs with `verdi calcjob inputcat` / `outputcat`
-- Write a custom parser to extract structured data from output files
-- Handle different exit codes for failure modes
+- Understand the Computer and Code concepts
+- Inspect calculations with `verdi process show`
+- Parse output files into structured AiiDA nodes
+- Handle calculation failures
 
 ## What you will not learn yet
 
 You cannot yet query the database, organize data into groups, or export archives — those capabilities come in {ref}`Module 3 <tutorial:module3>`.
 
 The cell below loads the shared tutorial profile.
-If you are running locally with your own profile (e.g. from `verdi presto`), replace it with `from aiida import load_profile; load_profile()`.
+If you are running locally with your own profile (e.g. from `verdi presto`), replace it with:
+
+```python
+from aiida import load_profile
+load_profile()
+```
 
 ```{code-cell} ipython3
 :tags: ["hide-cell"]
@@ -72,7 +78,7 @@ os.environ['AIIDA_PROFILE'] = profile_name
 In {ref}`Module 1 <tutorial:module1>`, we ran a simulation directly inside Python using a `calcfunction`.
 But real scientific codes — Quantum ESPRESSO, VASP, LAMMPS — are **external executables** that read input files and produce output files.
 
-For this module, we have a reaction–diffusion simulation script that mimics this pattern:
+For this module, we use a reaction–diffusion simulation script that mimics this pattern:
 
 - **Input**: a YAML file with simulation parameters
 - **Output**: a `.npz` file containing the final fields and scalar diagnostics
@@ -85,137 +91,35 @@ $ python3 reaction-diffusion.py input.yaml --output results.npz
 JOB DONE
 ```
 
-The cell below writes the simulation script to disk.
-Click the toggle to inspect it — or just move on.
+The script is provided as {download}`gp/reaction-diffusion.py` — expand the box below to inspect it, or just move on.
+
+:::{dropdown} Inspect the simulation script
+```{literalinclude} gp/reaction-diffusion.py
+:language: python
+```
+:::
 
 ```{code-cell} ipython3
-:tags: ["hide-cell"]
-
-# Write the external simulation code to a temporary directory.
-# Treat this as a pre-existing scientific code — you don't need to read it.
-
-import tempfile
 from pathlib import Path
 
-tutorial_dir = Path(tempfile.mkdtemp())
-
-SCRIPT = r'''
-import argparse
-import json
-import sys
-from pathlib import Path
-
-import numpy as np
-import yaml
-
-
-def fail(code, message):
-    print(f"ERROR[{code}]: {message}", file=sys.stderr)
-    sys.exit(code)
-
-
-def laplacian(Z):
-    return (
-        -4 * Z
-        + np.roll(Z, 1, axis=0)
-        + np.roll(Z, -1, axis=0)
-        + np.roll(Z, 1, axis=1)
-        + np.roll(Z, -1, axis=1)
-    )
-
-
-def simulate(params):
-    n = params["grid_size"]
-    du, dv = params["du"], params["dv"]
-    F, k = params["F"], params["k"]
-    dt, steps = params["dt"], params["n_steps"]
-    seed = params.get("seed", None)
-
-    if du <= 0 or dv <= 0:
-        fail(10, "Diffusion constants must be positive")
-    if dt <= 0:
-        fail(11, "Time step must be positive")
-    if seed is not None:
-        np.random.seed(seed)
-
-    U = np.ones((n, n))
-    V = np.zeros((n, n))
-    r = n // 10
-    c = n // 2
-    U[c - r:c + r, c - r:c + r] = 0.50
-    V[c - r:c + r, c - r:c + r] = 0.25
-
-    for step in range(steps):
-        Lu, Lv = laplacian(U), laplacian(V)
-        uvv = U * V * V
-        U += dt * (du * Lu - uvv + F * (1 - U))
-        V += dt * (dv * Lv + uvv - (F + k) * V)
-        if not np.isfinite(U).all() or not np.isfinite(V).all():
-            fail(20, f"Numerical instability detected at step {step}")
-
-    var_v = float(np.var(V))
-    mean_v = float(np.mean(V))
-    if var_v < 1e-8:
-        fail(30, "Trivial steady state (no pattern formed)")
-
-    return U, V, var_v, mean_v
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("input", help="Input YAML file")
-    parser.add_argument("--output", required=True, help="Output .npz file")
-    parser.add_argument("--dt", type=float, help="Override time step")
-    args = parser.parse_args()
-
-    try:
-        with open(args.input) as f:
-            params = yaml.safe_load(f)
-    except Exception as e:
-        fail(1, f"Failed to read input file: {e}")
-
-    if args.dt is not None:
-        params["dt"] = args.dt
-
-    for key in ["grid_size", "du", "dv", "F", "k", "dt", "n_steps"]:
-        if key not in params:
-            fail(2, f"Missing required parameter '{key}'")
-
-    try:
-        U, V, var_v, mean_v = simulate(params)
-    except SystemExit:
-        raise
-    except Exception as e:
-        fail(99, f"Unexpected error: {e}")
-
-    np.savez(
-        Path(args.output),
-        U_final=U, V_final=V,
-        variance_V=var_v, mean_V=mean_v,
-        params=json.dumps(params),
-    )
-    print("JOB DONE")
-    sys.exit(0)
-
-
-if __name__ == "__main__":
-    main()
-'''
-
-script_path = tutorial_dir / 'reaction-diffusion.py'
-script_path.write_text(SCRIPT)
-print(f"Script written to {script_path}")
+script_path = Path('gp/reaction-diffusion.py').resolve()
 ```
 
 ## Running with `aiida-shell`
 
-The fastest way to run any external code through AiiDA is with [`aiida-shell`](https://aiida-shell.readthedocs.io).
-It wraps any shell command as an AiiDA CalcJob — no plugin code required.
+In {ref}`Module 1 <tutorial:module1>`, we used a `calcfunction` — a Python function decorated to record provenance.
+But external codes can't run inside Python like that.
+AiiDA uses a **{ref}`CalcJob <topics:calculations:concepts:calcjobs>`** for this: a process that manages the full lifecycle of running an external executable — preparing input files, executing the code (locally or on a remote cluster), retrieving output files, and optionally parsing the results.
+
+The fastest way to run a CalcJob is with [`aiida-shell`](https://aiida-shell.readthedocs.io), which wraps any shell command — no plugin code required.
 
 Let's prepare the input file and run the simulation:
 
 ```{code-cell} ipython3
+import tempfile
 import yaml
+
+work_dir = Path(tempfile.mkdtemp())
 
 input_params = {
     'grid_size': 64,
@@ -225,8 +129,8 @@ input_params = {
     'seed': 42,
 }
 
-input_path = tutorial_dir / 'input.yaml'
-input_path.write_text(yaml.dump(input_params))
+input_path = work_dir / 'input.yaml'
+input_path.write_text(yaml.dump(input_params));
 ```
 
 ```{code-cell} ipython3
@@ -256,13 +160,16 @@ for label, output_node in sorted(results.items()):
     print(f"  {label}: {output_node.__class__.__name__} (PK={output_node.pk})")
 ```
 
-The output file is stored as a `SinglefileData` node.
-We can load the raw data from it:
+The output file is stored as a `SinglefileData` node in AiiDA's provenance graph.
+We can access it through the calculation node's outputs:
 
 ```{code-cell} ipython3
 import numpy as np
 
-with results['results_npz'].open(mode='rb') as f:
+output_node = node.outputs.results_npz
+print(f"Output node: {output_node.__class__.__name__} (PK={output_node.pk})")
+
+with output_node.open(mode='rb') as f:
     data = np.load(f)
     print(f"variance(V) = {float(data['variance_V']):.4e}")
     print(f"mean(V)     = {float(data['mean_V']):.4e}")
@@ -270,21 +177,21 @@ with results['results_npz'].open(mode='rb') as f:
 
 ## What just happened?
 
-When you called `launch_shell_job(...)`, AiiDA ran a **CalcJob** behind the scenes.
-Here's what happened:
+When you called `launch_shell_job(...)`, AiiDA ran a CalcJob (specifically, a `ShellJob` — aiida-shell's built-in CalcJob implementation).
+Here is the {ref}`lifecycle <topics:calculations:concepts:calcjobs_transport_tasks>` it went through:
 
-1. **Prepare**: AiiDA copied your input files into a working directory and generated a run script
-2. **Run**: The script was executed on a **Computer** (your local machine)
+1. **Upload**: AiiDA copied your input files into a working directory and generated a run script
+2. **Submit**: The script was executed on a **Computer** (your local machine)
 3. **Retrieve**: AiiDA collected the output files from the working directory
 4. **Parse**: The outputs were registered as AiiDA nodes with full provenance
 
-AiiDA automatically set up two things behind the scenes:
+Every CalcJob needs two things to run:
 
-- A **Computer** (`localhost`) — defines *where* calculations run (hostname, scheduler, transport protocol)
-- A **Code** — defines *what* runs (the Python executable on that computer)
+- A **{ref}`Computer <how-to:run-codes:computer>`** — defines *where* calculations run (hostname, scheduler, transport). When you set up a profile with `verdi presto`, a `localhost` Computer is created automatically.
+- A **{ref}`Code <how-to:run-codes:code>`** — defines *what* executable runs on that computer. `aiida-shell` creates this automatically from the command you pass to `launch_shell_job`.
 
-When you use `aiida-shell`, these are created automatically.
-For production use with remote HPC clusters, you would set them up explicitly with `verdi computer setup` and `verdi code create` — see the {ref}`how-to guide <how-to:run-codes>`.
+For remote HPC clusters, you would set these up explicitly — see the {ref}`how-to guide <how-to:run-codes>`.
+For writing your own CalcJob plugin (with custom input preparation, exit codes, and parsing), see {ref}`how to write a plugin for an external code <how-to:plugin-codes>`.
 
 ## Inspecting the calculation
 
@@ -322,9 +229,12 @@ Notice how AiiDA tracked the full data flow — from the input files and paramet
 The simulation produced a `.npz` file, but we had to manually load and extract the numbers.
 A **parser** automates this: it reads the raw output files and stores the results as structured AiiDA nodes.
 
-With `aiida-shell`, you can pass a custom parser function:
+With `aiida-shell`, you can pass a custom parser function.
+Expand the cell below to see the implementation:
 
 ```{code-cell} ipython3
+:tags: ["hide-cell"]
+
 def parse_gray_scott(dirpath):
     """Extract structured data from the simulation output."""
     import numpy as np
@@ -367,15 +277,15 @@ print(f"mean(V)     = {results_parsed['mean_V'].value:.4e}")
 
 ## Handling failures
 
-What happens when the simulation fails?
-Let's try parameters that produce a trivial steady state (the simulation's exit code 30):
+What happens when a simulation fails?
+Let's try parameters that produce no pattern — the simulation detects a trivial steady state and exits with an error:
 
 ```{code-cell} ipython3
 bad_params = input_params.copy()
 bad_params['F'] = 0.1  # Too high — no pattern forms
 
-bad_input_path = tutorial_dir / 'input_bad.yaml'
-bad_input_path.write_text(yaml.dump(bad_params))
+bad_input_path = work_dir / 'input_bad.yaml'
+bad_input_path.write_text(yaml.dump(bad_params));
 
 results_bad, node_bad = launch_shell_job(
     sys.executable,
@@ -384,8 +294,6 @@ results_bad, node_bad = launch_shell_job(
         'script': script_path,
         'input': bad_input_path,
     },
-    outputs=['results.npz'],
-    parser=parse_gray_scott,
 )
 
 print(f"Success: {node_bad.is_finished_ok}")
@@ -393,8 +301,8 @@ print(f"Exit status: {node_bad.exit_status}")
 print(f"Exit message: {node_bad.exit_message}")
 ```
 
-The calculation **failed** — AiiDA detected the non-zero exit code from the simulation.
-We can read the error message from stderr:
+The calculation **failed** — `aiida-shell` detected the non-zero exit status from the simulation.
+The error details are in stderr:
 
 ```{code-cell} ipython3
 print(results_bad['stderr'].get_content())
@@ -405,6 +313,7 @@ print(results_bad['stderr'].get_content())
 ```
 
 AiiDA recorded the failure with full context: the exit status, the inputs that caused it, and the error output.
+In a full CalcJob plugin, you would define your own exit codes that map directly to the simulation's failure modes — see the {ref}`how-to guide <how-to:run-codes>`.
 In {ref}`Module 5 <tutorial:module5>`, you'll learn how to write **error handlers** that automatically respond to these failures — for example, by adjusting parameters and retrying.
 
 ## `submit()` vs `run()` and the daemon
@@ -448,15 +357,17 @@ Then submit calculations to that computer — AiiDA handles file transfer, job s
 
 In this module you learned to:
 
+- **Understand** the CalcJob concept and its lifecycle: upload → submit → retrieve → parse
 - **Run external codes** with `aiida-shell` — no plugin code needed
-- **Understand** the CalcJob cycle: prepare → run → retrieve → parse
-- **Inspect** calculations with `verdi process show` and `verdi calcjob outputcat`
+- **Inspect** calculations with `verdi process show`
 - **Parse** raw output files into structured AiiDA nodes
 - **Handle failures** through exit codes and error messages
 - **Distinguish** `run()` (synchronous) from `submit()` (asynchronous via daemon)
 
 :::{seealso}
-- {ref}`How-to: run external codes <how-to:run-codes>` — for writing custom CalcJob plugins
+- {ref}`Topic: calculation jobs <topics:calculations:concepts:calcjobs>` — concepts in depth
+- {ref}`How-to: run external codes <how-to:run-codes>` — setting up Computers and Codes
+- {ref}`How-to: write a CalcJob plugin <how-to:plugin-codes>` — for custom input preparation, exit codes, and parsing
 - [`aiida-shell` documentation](https://aiida-shell.readthedocs.io) — full reference for `launch_shell_job`
 :::
 

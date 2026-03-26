@@ -73,9 +73,19 @@ The simulation code (`reaction-diffusion.py`) is a standalone Python script that
 | 20 | Numerical instability (NaN/Inf detected) |
 | 30 | Trivial steady state (no pattern formed) |
 
+## Teaser: what you'll be able to do
+
+<!-- TODO: Add executable teaser cells that showcase key features from later modules:
+     - Run a CalcJob with aiida-shell
+     - Build and run a WorkGraph workflow (chain simulate → parse → post-process)
+     - Error handling: workflow that detects a failure and retries with adjusted parameters
+     - Query the database for results across multiple runs
+     - Visualize a parameter sweep (pattern gallery)
+     The teaser should give users a taste of each major capability before they dive into the modules. -->
+
 ## Tutorial structure
 
-The tutorial is organized in six modules that progressively introduce AiiDA concepts:
+The tutorial is organized in seven modules that progressively introduce AiiDA concepts:
 
 | Module | Topic | Key concepts |
 |--------|-------|-------------|

@@ -314,6 +314,10 @@ In the graph:
 
 This graph answers questions like *"Where did this number come from?"* and *"What parameters produced this result?"* — even months later.
 
+:::{tip}
+You can also generate provenance graphs from the command line with `verdi node graph generate <PK>`.
+:::
+
 ## Running a second simulation
 
 Let's run with a different feed rate to see how the pattern changes:

@@ -311,3 +311,6 @@ The :meth:`~aiida.engine.processes.process.Process.out_many` method takes this d
 
     Besides avoiding code duplication and errors, using the methods for exposing inputs and outputs also has the advantage that our parent work chain doesn't have to be adjusted in case the inputs or outputs of the child work chain change.
     This makes the code much easier to maintain.
+
+For a guide on designing work chains that pause mid-execution and wait for human input before resuming, see also
+`Putting the human back in the loop: Interactive workflows with AiiDA <https://aiida.net/news/posts/2025-11-21-human-in-the-loop.html>`__.

@@ -1063,3 +1063,6 @@ You can do this by looking at your available computers running ``verdi computer 
 Both when uploading or retrieving, you can copy multiple files by appending them to the list of the ``local_files`` or ``symlink_files`` keys in the instructions input, respectively.
 It is also possible to copy files from any number of nodes by providing several ``source_node`` s, each with a different ``'node_keyname'``.
 The target node will always be one (so you can *"gather"* files in a single call, but not *"distribute"* them).
+
+For a walkthrough on dumping process data to disk and querying with the improved ``QueryBuilder`` syntax, see also
+`Improvements in the ways to get your data out of AiiDA <https://aiida.net/news/posts/2024-10-04-data-access.html>`__.

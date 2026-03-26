@@ -181,7 +181,7 @@
    :class: title-icon-lightbulb-o
 
    Discover the latest AiiDA release notes, practical tutorials and user stories on the
-   `AiiDA news and blog page <https://aiida.net/news/>`__.
+   `AiiDA news and blogs page <https://aiida.net/news/>`__.
 
 
 .. admonition:: Development Contributions

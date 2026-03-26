@@ -21,4 +21,4 @@ AiiDA is built to support and streamline the four core pillars of the ADES model
 *  **Open science:** AiiDA allows to export both full databases and selected subsets, to be shared with collaborators or made available and browsable online on the `Archive <https://archive.materialscloud.org/>`__ and `Explore <https://www.materialscloud.org/explore>`__ sections of `Materials Cloud <https://www.materialscloud.org>`__.
 *  **Open source:** AiiDA is released under the `MIT open-source license <https://github.com/aiidateam/aiida-core/blob/main/LICENSE.txt>`__.
 
-See also the `list of AiiDA-powered scientific publications <http://www.aiida.net/science/>`__, `testimonials from AiiDA users <http://www.aiida.net/testimonials/>`__, and the `AiiDA news and blog <https://aiida.net/news/>`__.
+See also the `list of AiiDA-powered scientific publications <https://aiida.net/science/>`__, `testimonials from AiiDA users <https://aiida.net/testimonials/>`__, and the `AiiDA news and blog posts <https://aiida.net/news/>`__.

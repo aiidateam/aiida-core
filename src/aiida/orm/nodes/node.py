@@ -304,8 +304,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     class WriteModel(WritableFields, BaseNodeModel):
         """The write schema for this node."""
 
-    ConstructorArgsModel: type[AiiDABaseModel] | None = None
-
     _ConstructorModel: ClassVar[type[BaseNodeModel] | None] = None
 
     @classproperty
@@ -365,7 +363,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         schema: type[OrmModel] | None = None,
     ) -> OrmModel:
         supported = ('ReadModel', 'WriteModel', 'ConstructorModel')
-        if schema and schema is self.ConstructorArgsModel:
+        if self.supports_constructor_model and schema is self.ConstructorArgsModel:
             raise exceptions.UnsupportedSchemaError(
                 f"Cannot serialize against '{schema.__name__}'; supported serialization schemas: {supported}"
             )
@@ -542,9 +540,9 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             )
 
     @classproperty
-    def has_constructor_model(cls) -> bool:  # noqa: N805
+    def supports_constructor_model(cls) -> bool:  # noqa: N805
         """Return whether this node class supports constructor-based creation."""
-        return cls._ConstructorModel is not None
+        return hasattr(cls, 'ConstructorArgsModel')
 
     @classproperty
     def class_node_type(cls) -> str:  # noqa: N805
@@ -1098,7 +1096,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     @classmethod
     def _patch_constructor_model(cls):
         """Patch `ConstructorModel` by synthesizing it from `BaseNodeModel` and `ConstructorArgsModel`."""
-        if cls.ConstructorArgsModel is None:
+        if not cls.supports_constructor_model:
             return
         node_type_field = deepcopy(cls.BaseNodeModel.model_fields['node_type'])
         args_field = MetadataField(
@@ -1112,7 +1110,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 __base__=cls.BaseNodeModel,
                 __module__=cls.__module__,
                 node_type=(Literal[cls.class_node_type], node_type_field),
-                args=(cls.ConstructorArgsModel, args_field),
+                args=(cls.ConstructorArgsModel, args_field),  # type: ignore[attr-defined]
             ),
         )
         ConstructorModel.__qualname__ = f'{cls.__name__}.ConstructorModel'
@@ -1221,7 +1219,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         fields = super()._orm_to_model_field_values(
             context=context, minimal=minimal, schema=schema, use_field_alias_as_key=use_field_alias_as_key
         )
-        if self.has_constructor_model and schema is self.ConstructorModel:
+        if self.supports_constructor_model and schema is self.ConstructorModel:
             fields['args'] = self._orm_to_model_field_values(
                 context=context or {},
                 minimal=minimal,

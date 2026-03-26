@@ -32,6 +32,26 @@ Below is a list with all available subcommands.
       version  Print the current version of an archive's schema.
 
 
+.. _reference:command-line:verdi-bug-report:
+
+``verdi bug-report``
+--------------------
+
+.. code:: console
+
+    Usage:  [OPTIONS]
+
+      Create a zip file with diagnostic information for bug reports.
+
+      Bundles profile configuration, service status, and log files into a zip archive that can
+      be attached to a GitHub issue.
+
+    Options:
+      -o, --output PATH  Output zip file path. Default: aiida-bug-report-<timestamp>.zip in
+                         current directory.
+      --help             Show this message and exit.
+
+
 .. _reference:command-line:verdi-calcjob:
 
 ``verdi calcjob``

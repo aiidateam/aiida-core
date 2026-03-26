@@ -28,7 +28,7 @@ After this module, you will be able to:
 
 ## What you will not learn yet
 
-You cannot yet automatically extract structured data from external code outputs or handle errors — these capabilities will be introduced in {ref}`Module 2 <tutorial:module2>` and {ref}`Module 5 <tutorial:module5>`.
+You cannot yet run external codes as CalcJobs or parse their output files — these capabilities will be introduced in {ref}`Module 2 <tutorial:module2>`.
 
 ## Setting up your AiiDA profile
 
@@ -181,7 +181,11 @@ print(f"variance(V) = {result_raw['variance_V']:.4e}")
 print(f"mean(V)     = {result_raw['mean_V']:.4e}")
 ```
 
+Plotting the resulting patterns:
+
 ```{code-cell} ipython3
+:tags: ["hide-cell"]
+
 import matplotlib.pyplot as plt
 
 fig, axes = plt.subplots(1, 2, figsize=(8, 4))
@@ -215,7 +219,7 @@ The node now has a **PK** (primary key, unique within this database) and a **UUI
 We can inspect it with the `verdi` CLI:
 
 ```{code-cell} ipython3
-!verdi node show {parameters.pk}
+%verdi node show {parameters.pk}
 ```
 
 We can also retrieve the stored dictionary contents through the Python API:
@@ -269,13 +273,13 @@ We can get more detail on the calculation, including all its inputs and outputs:
 
 ```{code-cell} ipython3
 calc_pk = result['variance_V'].creator.pk
-!verdi process show {calc_pk}
+%verdi process show {calc_pk}
 ```
 
 We can also inspect individual output nodes:
 
 ```{code-cell} ipython3
-!verdi node show {result['variance_V'].pk}
+%verdi node show {result['variance_V'].pk}
 ```
 
 Other useful inspection commands include `verdi calcjob inputcat <PK>` and `verdi calcjob outputcat <PK>` for viewing the input and output files of CalcJob calculations.
@@ -348,4 +352,4 @@ CalcJobs will be introduced in later modules.
 ## Next steps
 
 We've run a simulation and stored scalar results with full provenance.
-In {ref}`Module 2 <tutorial:module2>`, you'll learn how to write a **parser** to automatically extract structured data from simulation outputs and handle different exit codes.
+In {ref}`Module 2 <tutorial:module2>`, you'll learn how to run **external codes** through AiiDA using `aiida-shell` and CalcJobs, and write parsers to extract structured data from their outputs.

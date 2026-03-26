@@ -49,11 +49,11 @@ Reaction-Diffusion Tutorial
 
          Go to Module 1
 
-   .. grid-item-card:: :fa:`code;mr-1` Module 2: Parsing Outputs
+   .. grid-item-card:: :fa:`code;mr-1` Module 2: Running External Codes
       :text-align: center
       :shadow: md
 
-      Extract structured results from output files and handle exit codes.
+      Run codes with aiida-shell and CalcJobs, write parsers, and handle exit codes.
 
       +++
 
@@ -66,11 +66,11 @@ Reaction-Diffusion Tutorial
 
          Go to Module 2
 
-   .. grid-item-card:: :fa:`cubes;mr-1` Module 3: Data Types
+   .. grid-item-card:: :fa:`cubes;mr-1` Module 3: Working with Your Data
       :text-align: center
       :shadow: md
 
-      Store arrays, scalars, and parameters using AiiDA's native data types.
+      Store data, query with QueryBuilder, organize with Groups, and export archives.
 
       +++
 
@@ -83,11 +83,11 @@ Reaction-Diffusion Tutorial
 
          Go to Module 3
 
-   .. grid-item-card:: :fa:`diagram-project;mr-1` Module 4: Workflow Basics
+   .. grid-item-card:: :fa:`diagram-project;mr-1` Module 4: Building Workflows
       :text-align: center
       :shadow: md
 
-      Build automated workflows with WorkGraph and chain calculations together.
+      Chain calculations into automated workflows with WorkGraph.
 
       +++
 
@@ -117,11 +117,11 @@ Reaction-Diffusion Tutorial
 
          Go to Module 5
 
-   .. grid-item-card:: :fa:`chart-bar;mr-1` Module 6: High-Throughput Scans
+   .. grid-item-card:: :fa:`chart-bar;mr-1` Module 6: High-Throughput & Post-Processing
       :text-align: center
       :shadow: md
 
-      Run parameter sweeps, query results with QueryBuilder, and organize with Groups.
+      Run parameter sweeps, analyze trends, and create publication-quality plots.
 
       +++
 
@@ -134,11 +134,11 @@ Reaction-Diffusion Tutorial
 
          Go to Module 6
 
-   .. grid-item-card:: :fa:`chart-line;mr-1` Module 7: Post-Processing
+   .. grid-item-card:: :fa:`flask;mr-1` Module 7: Advanced Topics
       :text-align: center
       :shadow: md
 
-      Analyze trends across simulations, create plots, and export archives.
+      Multi-parameter sweeps, remote HPC execution, daemon, and more (optional).
 
       +++
 
@@ -150,23 +150,6 @@ Reaction-Diffusion Tutorial
          :outline:
 
          Go to Module 7
-
-   .. grid-item-card:: :fa:`flask;mr-1` Module 8: Advanced Topics
-      :text-align: center
-      :shadow: md
-
-      Multi-parameter sweeps, MPI execution, FFT analysis, and more (optional).
-
-      +++
-
-      .. button-ref:: module8
-         :ref-type: doc
-         :click-parent:
-         :expand:
-         :color: primary
-         :outline:
-
-         Go to Module 8
 
 Classic Tutorial
 ================
@@ -205,4 +188,3 @@ Classic Tutorial
    module5
    module6
    module7
-   module8

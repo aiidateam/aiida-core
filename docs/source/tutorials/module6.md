@@ -12,35 +12,26 @@ kernelspec:
 ---
 
 (tutorial:module6)=
-# Module 6: High-Throughput Scans and Querying
+# Module 6: High-Throughput and Post-Processing
 
 ## What you will learn
 
-After this module, you will be able to execute parameter sweeps over many values of F, collect all results, query the database for specific calculations, and organize your work using Groups.
+After this module, you will be able to:
 
-**Key concepts introduced:**
-
-- Loops in WorkGraphs for parameter sweeps
-- Storing multiple calculation outputs
-- Querying the AiiDA database (QueryBuilder)
-- Groups for organization
-- Provenance visualization for multi-calculation workflows
+- Run parameter sweeps over F using loops in WorkGraph
+- Collect and analyze results across many calculations
+- Create plots showing how pattern characteristics vary with parameters
+- Build a representative pattern gallery
 
 ## What you will not learn yet
 
-You cannot yet analyze trends across your parameter sweep or create publication-quality figures — post-processing is {ref}`Module 7 <tutorial:module7>`.
+This module completes the core tutorial. For advanced extensions, see {ref}`Module 7 <tutorial:module7>`.
 
-## Parameter scan over F
-
-In `driver.py`, the parameter scan is a simple Python loop that calls `subprocess.run()` for each value of F. With AiiDA, we replace this with a WorkGraph that:
-
-1. Iterates over F values (~20 values in the range 0.035–0.05)
-2. Submits a calculation for each F
-3. Collects results with full provenance
+## Parameter sweeps over F
 
 ### Setting up the scan
 
-<!-- TODO: define the range of F values -->
+<!-- TODO: define the range of F values (~20 values in 0.035–0.05) -->
 <!-- TODO: create a WorkGraph with a loop over F -->
 <!-- TODO: submit the scan workflow -->
 
@@ -49,27 +40,39 @@ In `driver.py`, the parameter scan is a simple Python loop that calls `subproces
 <!-- TODO: verdi process status to see all child calculations -->
 <!-- TODO: verdi process list to see progress -->
 
-## Querying results with QueryBuilder
+## Collecting and analyzing results
 
-Once the scan is complete, we need to find and extract results across all calculations.
+<!-- TODO: use QueryBuilder to collect F, variance_V, mean_V from the scan -->
+<!-- TODO: organize results into arrays for plotting -->
 
-### Finding calculations by parameter
+## Variance vs F plot
 
-<!-- TODO: QueryBuilder to find all finished calculations -->
-<!-- TODO: filter by input parameter F -->
-<!-- TODO: project variance_V and mean_V outputs -->
+<!-- TODO: plot variance_V as a function of F -->
+<!-- TODO: identify the pattern-forming regime -->
+<!-- TODO: explain what the plot tells us about the system -->
 
-### Extracting results into a table
+## Mean vs F plot
 
-<!-- TODO: collect F, variance_V, mean_V into a table -->
-<!-- TODO: show how to use QueryBuilder projections efficiently -->
+<!-- TODO: plot mean_V as a function of F -->
+<!-- TODO: discuss the relationship between mean concentration and feed rate -->
 
-## Organizing with Groups
+## Representative pattern gallery
 
-<!-- TODO: create a Group for this parameter scan -->
-<!-- TODO: add calculations to the Group -->
-<!-- TODO: query within a Group -->
+<!-- TODO: select a few representative F values (low, medium, high variance) -->
+<!-- TODO: load V_final arrays from ArrayData -->
+<!-- TODO: display patterns side by side as a figure -->
+
+## Summary
+
+In this module you learned to:
+
+- **Run** parameter sweeps using WorkGraph loops
+- **Collect** results across many calculations with the QueryBuilder
+- **Plot** trends (variance vs F, mean vs F)
+- **Visualize** representative patterns
+
+At this point, you have completed the core tutorial and understand the full AiiDA workflow cycle: from running a single calculation, to parsing and storing results, to building workflows with error handling, to running parameter sweeps and analyzing the results.
 
 ## Next steps
 
-We have a complete parameter scan with organized, queryable results. In {ref}`Module 7 <tutorial:module7>`, you'll learn how to analyze these results, create plots, and export data for sharing.
+If you want to go further, {ref}`Module 7 <tutorial:module7>` covers advanced topics like multi-parameter sweeps, remote HPC execution, and more.

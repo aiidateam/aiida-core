@@ -12,52 +12,24 @@ kernelspec:
 ---
 
 (tutorial:module7)=
-# Module 7: Post-Processing and Visualization
+# Module 7: Advanced Topics (Optional)
 
-## What you will learn
+:::{note}
+This module covers extensions and advanced topics. It is not required for core tutorial completion — the main tutorial ends with {ref}`Module 6 <tutorial:module6>`.
+:::
 
-After this module, you will be able to analyze results across parameter sweeps, create plots showing how pattern characteristics vary with parameters, and export representative pattern images.
+## Multi-parameter sweeps
 
-**Key concepts introduced:**
+<!-- TODO: 2D parameter scan over F and k to map the full phase diagram -->
+<!-- TODO: visualize the phase diagram as a heatmap of variance_V -->
+<!-- TODO: identify different pattern regimes (spots, stripes, labyrinthine) -->
 
-- Collecting results from multiple calculations
-- Plotting variance vs F, mean vs F
-- Selecting and exporting representative patterns
-- Exporting `.aiida` archives for reproducibility
+## FFT analysis
 
-## Collecting results across the scan
+<!-- TODO: write a calcfunction that computes the 2D FFT of V_final -->
+<!-- TODO: extract the dominant wavelength -->
+<!-- TODO: plot wavelength vs F -->
 
-<!-- TODO: use QueryBuilder to collect F, variance_V, mean_V from all calculations in the Group -->
-<!-- TODO: sort and organize into arrays for plotting -->
+## Interactive exploration
 
-## Variance vs F plot
-
-<!-- TODO: plot variance_V as a function of F -->
-<!-- TODO: identify the pattern-forming regime -->
-<!-- TODO: explain what the plot tells us about the system -->
-
-## Mean vs F plot
-
-<!-- TODO: plot mean_V as a function of F -->
-<!-- TODO: discuss the relationship between mean concentration and feed rate -->
-
-## Representative pattern gallery
-
-<!-- TODO: select a few representative F values (low, medium, high variance) -->
-<!-- TODO: load V_final arrays from ArrayData -->
-<!-- TODO: display patterns side by side as a figure -->
-
-## Exporting results
-
-### Exporting an `.aiida` archive
-
-<!-- TODO: export the Group as a portable archive -->
-<!-- TODO: explain how archives enable reproducibility and sharing -->
-
-## What you have learned
-
-At this point, you have completed the core tutorial and understand the full AiiDA workflow cycle: from running a single calculation, to parsing and storing results, to building workflows with error handling, to running parameter sweeps and analyzing the results.
-
-## Next steps
-
-If you want to go further, {ref}`Module 8 <tutorial:module8>` covers advanced topics like multi-parameter sweeps and larger-scale simulations.
+<!-- TODO: optional: build a simple dashboard for exploring results -->

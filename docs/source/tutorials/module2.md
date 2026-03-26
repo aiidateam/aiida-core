@@ -12,60 +12,74 @@ kernelspec:
 ---
 
 (tutorial:module2)=
-# Module 2: Parsing Outputs
+# Module 2: Running External Codes
 
 ## What you will learn
 
-After this module, you will be able to extract meaningful numerical results (`variance_V`, `mean_V`) from raw output files and understand how AiiDA determines job success or failure.
+After this module, you will be able to:
 
-**Key concepts introduced:**
-
-- Parser concept and implementation
-- Exit codes (success = 0, various failure modes)
-- Linking parsed outputs to the calculation node in the provenance graph
+- Run an external code through AiiDA using `aiida-shell`
+- Set up a Computer and Code in AiiDA
+- Understand the CalcJob concept (input files → scheduler → output files)
+- Run calculations on a remote computer
+- Use `submit()` and the daemon for asynchronous execution
+- Inspect calculation inputs and outputs with `verdi calcjob inputcat` / `outputcat`
+- Write a parser to extract structured data from output files
+- Handle exit codes for different failure modes
 
 ## What you will not learn yet
 
-You cannot yet store arrays or generate visualizations — that comes in {ref}`Module 3 <tutorial:module3>`.
+You cannot yet query the database, organize data into groups, or export archives — those capabilities come in {ref}`Module 3 <tutorial:module3>`.
 
-## Why do we need a parser?
+## Running external codes with `aiida-shell`
 
-In {ref}`Module 1 <tutorial:module1>`, we ran a calculation and looked at raw output files. But to use those results programmatically — query them, feed them into workflows, or compare across runs — we need to extract structured data.
+<!-- TODO: introduce aiida-shell / ShellJob as the quickest way to run an external code -->
+<!-- TODO: run reaction-diffusion.py via ShellJob -->
+<!-- TODO: inspect the results -->
 
-A **parser** reads the output files of a calculation and:
-1. Extracts relevant quantities as AiiDA data nodes
-2. Checks for errors and sets appropriate exit codes
-3. Links the parsed outputs to the calculation in the provenance graph
+## Setting up a Computer and Code
 
-## Exit codes
+<!-- TODO: explain the Computer + Code abstraction -->
+<!-- TODO: verdi computer setup (or verdi presto) -->
+<!-- TODO: verdi code setup -->
 
-Our simulation has well-defined failure modes:
+## The CalcJob concept
 
-| Exit code | Meaning | What to do |
-|-----------|---------|-----------|
-| 0 | Success (`JOB DONE`) | Parse outputs normally |
-| 10 | Diffusion constants not positive | Fix input parameters |
-| 11 | Time step not positive | Fix input parameters |
-| 20 | Numerical instability | Reduce time step or change parameters |
-| 30 | Trivial steady state | Change F or k to a pattern-forming regime |
+<!-- TODO: explain input files → scheduler → output files cycle -->
+<!-- TODO: run the reaction-diffusion simulation as a CalcJob -->
+<!-- TODO: verdi calcjob inputcat / outputcat to inspect files -->
+
+## Remote execution
+
+<!-- TODO: set up a remote Computer and Code -->
+<!-- TODO: submit a calculation to a remote machine -->
+<!-- TODO: explain submit() vs run() and the daemon (verdi daemon start) -->
+<!-- TODO: monitor with verdi process list, retrieve results -->
 
 ## Writing a parser
 
+<!-- TODO: why we need a parser: raw output files → structured AiiDA nodes -->
 <!-- TODO: define exit codes on the CalcJob spec -->
-<!-- TODO: implement parser that reads .npz and extracts variance_V, mean_V as Float nodes -->
-<!-- TODO: handle the various error exit codes -->
+<!-- TODO: implement parser that reads output and extracts variance_V, mean_V as Float nodes -->
+<!-- TODO: handle the various error exit codes (0, 10, 11, 20, 30) -->
 
 ## Running with the parser
 
 <!-- TODO: run a calculation that uses the custom parser -->
 <!-- TODO: show the parsed outputs in verdi process show -->
+<!-- TODO: trigger different exit codes with bad parameters -->
 
-## Triggering different exit codes
+## Summary
 
-<!-- TODO: run with bad parameters to trigger exit code 30 (trivial solution) -->
-<!-- TODO: run with bad dt to trigger numerical instability (exit code 20) -->
-<!-- TODO: inspect the failed calculations -->
+In this module you learned to:
+
+- **Run external codes** with `aiida-shell` and as CalcJobs
+- **Set up** a Computer and Code in AiiDA
+- **Run remotely** using `submit()` and the daemon
+- **Inspect** calculation files with `verdi calcjob inputcat` / `outputcat`
+- **Parse** output files into structured AiiDA nodes
+- **Handle failures** with exit codes
 
 ## Next steps
 
-We can now extract scalars from our outputs and detect failures. In {ref}`Module 3 <tutorial:module3>`, you'll learn how to store richer data types — arrays, dictionaries, and visualizations — in AiiDA's provenance graph.
+We can now run external codes and parse their outputs. In {ref}`Module 3 <tutorial:module3>`, you'll learn how to work with AiiDA's data types, query the database, and organize your results.

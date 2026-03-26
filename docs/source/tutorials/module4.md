@@ -12,18 +12,16 @@ kernelspec:
 ---
 
 (tutorial:module4)=
-# Module 4: Workflow Basics
+# Module 4: Building Workflows
 
 ## What you will learn
 
-After this module, you will be able to wrap a single calculation in a WorkGraph, understand workflow logic, and use context variables to pass data between steps.
+After this module, you will be able to:
 
-**Key concepts introduced:**
-
-- WorkGraph basics
-- Adding tasks (CalcJob, calcfunction) to a graph
-- Context (`ctx`) variables for data flow between tasks
-- Simple workflow logic: run, then post-process
+- Build a workflow as a graph of tasks using WorkGraph
+- Chain calculations together (simulate → parse → post-process)
+- Pass data between tasks using context variables
+- Add simple branching logic to a workflow
 
 ## What you will not learn yet
 
@@ -31,40 +29,45 @@ You cannot yet handle failures gracefully or debug complex workflow issues — e
 
 ## Why workflows?
 
-In the previous modules, we ran each step manually:
-1. Submit a calculation
-2. Wait for it to finish
-3. Run post-processing
+<!-- TODO: motivate: manual step-by-step is tedious and error-prone -->
+<!-- TODO: a workflow automates the sequence, passes data, records provenance -->
 
-A **workflow** automates this: it defines the sequence of steps, passes data between them, and records the entire process in the provenance graph.
+## WorkGraph basics
 
-## WorkGraph: building a workflow as a graph
+<!-- TODO: introduce WorkGraph: tasks (CalcJob, calcfunction) + links -->
+<!-- TODO: create a minimal WorkGraph with one task -->
+<!-- TODO: run it and inspect the result -->
 
-AiiDA's `WorkGraph` lets you define workflows as directed graphs where:
-- **Tasks** are the computational steps (CalcJobs, calcfunctions)
-- **Links** connect outputs of one task to inputs of another
+## Chaining calculations
 
-### A minimal workflow
+<!-- TODO: build a workflow: simulate → parse → post-process (visualize) -->
+<!-- TODO: link outputs of one task to inputs of the next -->
+<!-- TODO: run the multi-step workflow -->
+<!-- TODO: inspect the hierarchical provenance graph -->
 
-<!-- TODO: create a WorkGraph that runs the reaction-diffusion CalcJob -->
-<!-- TODO: add a post-processing task that visualizes the result -->
-<!-- TODO: link the CalcJob output to the visualization input -->
+## Context variables for data flow
 
-### Running the workflow
+<!-- TODO: show how context variables pass data between tasks -->
+<!-- TODO: explain when to use context vs direct links -->
 
-<!-- TODO: submit the WorkGraph -->
-<!-- TODO: verdi process status to see the hierarchical execution -->
-<!-- TODO: inspect the workflow's provenance graph -->
+## Simple branching
 
-### Context variables
-
-<!-- TODO: show how context variables pass data between steps -->
-<!-- TODO: explain how this differs from direct node links -->
+<!-- TODO: add conditional logic: skip visualization if variance is below threshold -->
+<!-- TODO: run and inspect the branching workflow -->
 
 ## Comparing: with and without a workflow
 
-<!-- TODO: side-by-side comparison of the provenance graph -->
+<!-- TODO: side-by-side provenance graph comparison -->
 <!-- TODO: show how the workflow groups related steps together -->
+
+## Summary
+
+In this module you learned to:
+
+- **Build** workflows with WorkGraph
+- **Chain** calculations together
+- **Pass data** between tasks using context variables
+- **Branch** workflow logic based on conditions
 
 ## Next steps
 

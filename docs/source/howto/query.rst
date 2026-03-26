@@ -507,5 +507,4 @@ If you type ``node.res.`` followed by the tab key twice, a list of the available
     For example, if the default output node link label is ``output_parameters``, then ``node.res.some_key`` is exactly equivalent to ``node.outputs.output_parameters.dict.some_key``.
     That is to say, when using ``res``, one is accessing attributes of one of the output nodes, and not of the calculation job node itself.
 
-For an end-to-end example of querying an AiiDA database published on the Materials Cloud Archive, see also
-`Exploring AiiDA Databases <https://aiida.net/news/posts/2024-10-18-exploring-aiida-databases.html>`__.
+For an end-to-end example of querying an AiiDA database published on the Materials Cloud Archive, see also `Exploring AiiDA Databases <https://aiida.net/news/posts/2024-10-18-exploring-aiida-databases.html>`__.

@@ -492,8 +492,7 @@ If the remote machine requires authentication through a Kerberos token (that you
 
 If you provide all necessary ``GSSAPI`` options in your ``~/.ssh/config`` file, ``verdi computer configure`` should already pick up the appropriate values for all the gss-related options.
 
-For a real-world SSH troubleshooting walkthrough and a deep dive into secure SSH agent
-forwarding for cloud-based AiiDA deployments, see also these blog posts:
+For a real-world SSH troubleshooting walkthrough and a deep dive into secure SSH agent forwarding for cloud-based AiiDA deployments, see also these blog posts:
 
 * `Fixing a failing SSH connection to a remote computer <https://aiida.net/news/posts/2025-04-04-debug-ssh.html>`__
 * `Under the Hood of the Materys Platform: Secure SSH Agent Forwarding for AiiDA <https://aiida.net/news/posts/2026-02-18-materys-ssh-agent-forwarding.html>`__

@@ -674,8 +674,7 @@ Data can be shared between private AiiDA profiles through :ref:`AiiDA's export a
 
 Note that while the configuration file of an AiiDA instance contains access credentials (e.g. for the postgresql database or the rabbitmq service), AiiDA does not store sensitive data in the database or file repository, and AiiDA export archives never contain such data.
 
-For an overview of how ``verdi presto``, optional RabbitMQ, and SQLite support have simplified setting up AiiDA, see also
-`Simplifications to the installation of AiiDA since v2.0 <https://aiida.net/news/posts/2024-09-20-simpler-installation.html>`__.
+For an overview of how ``verdi presto``, optional RabbitMQ, and SQLite support have simplified setting up AiiDA, see also `Simplifications to the installation of AiiDA since v2.0 <https://aiida.net/news/posts/2024-09-20-simpler-installation.html>`__.
 
 .. _#4122: https://github.com/aiidateam/aiida-core/issues/4122
 .. |Computer| replace:: :py:class:`~aiida.orm.Computer`

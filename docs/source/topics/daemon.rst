@@ -66,8 +66,7 @@ The default for the ``timeout`` is taken from the ``daemon.timeout`` configurati
 
     The ``DaemonClient`` only directly interacts with the main daemon process, not with any of the daemon workers that it manages.
 
-For step-by-step guides on diagnosing common daemon failures and debugging
-AiiDA's asynchronous engine, see also these blog posts:
+For step-by-step guides on diagnosing common daemon failures and debugging AiiDA's asynchronous engine, see also these blog posts:
 
 * `Debugging AiiDA Daemon (a practical guide) <https://aiida.net/news/posts/2025-02-21-how-to-debug-aiida-daemon.html>`__
 * `Debugging Asynchronous Programming in AiiDA <https://aiida.net/news/posts/2025-01-31-how-to-debug-async-in-aiida.html>`__

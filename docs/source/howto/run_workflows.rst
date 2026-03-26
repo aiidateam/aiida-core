@@ -187,5 +187,4 @@ Once the *required* inputs of the workflow have been provided to the builder, yo
 
 Now that you know how to run a pre-defined workflow, you may want to start :ref:`writing your own<how-to:write-workflows>`.
 
-For a tutorial on using submission controllers to orchestrate high-throughput workloads, see also
-`Setting up a high-throughput infrastructure with AiiDA <https://aiida.net/news/posts/2025-01-10-high-throughput.html>`__.
+For a tutorial on using submission controllers to orchestrate high-throughput workloads, see also `Setting up a high-throughput infrastructure with AiiDA <https://aiida.net/news/posts/2025-01-10-high-throughput.html>`__.

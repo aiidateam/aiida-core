@@ -96,5 +96,4 @@ Instead of installing AiiDA manually, there are also solutions that provide an e
 
          To the Quantum Mobile website
 
-For an overview of how ``verdi presto``, optional RabbitMQ, and SQLite support have simplified setting up AiiDA, see also
-`Simplifications to the installation of AiiDA since v2.0 <https://aiida.net/news/posts/2024-09-20-simpler-installation.html>`__.
+For an overview of how ``verdi presto``, optional RabbitMQ, and SQLite support have simplified setting up AiiDA, see also `Simplifications to the installation of AiiDA since v2.0 <https://aiida.net/news/posts/2024-09-20-simpler-installation.html>`__.

@@ -387,10 +387,9 @@ def test_node_attributes_model_overrides(required_arguments):
     assert AttributesModel.__qualname__ == f'{name}.AttributesModel'
     assert AttributesModel.model_config.get('title') == f'{name}AttributesModel'
 
-    # AttributesWriteModel = cls.WriteModel.model_fields['attributes'].annotation  # noqa: N806
-    # assert AttributesWriteModel is cls.AttributesModel._as_write_model()
-    # assert AttributesWriteModel.__qualname__ == f'{name}.AttributesWriteModel'
-    # assert AttributesWriteModel.model_config.get('title') == f'{name}AttributesWriteModel'
+    AttributesWriteModel = cls.WriteModel.model_fields['attributes'].annotation  # noqa: N806
+    assert AttributesWriteModel.__qualname__ == f'{name}.AttributesWriteModel'
+    assert AttributesWriteModel.model_config.get('title') == f'{name}AttributesWriteModel'
 
 
 def _validate_value(value):

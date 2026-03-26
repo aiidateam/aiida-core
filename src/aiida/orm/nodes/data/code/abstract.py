@@ -61,7 +61,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             priority=3,
         )
 
-    class CommonFieldsModel(AiiDABaseModel):
+    class CommonFields(AiiDABaseModel):
         default_calc_job_plugin: t.Optional[str] = MetadataField(
             None,
             alias='input_plugin',
@@ -107,9 +107,9 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             ),
         )
 
-    class AttributesModel(Data.AttributesModel, CommonFieldsModel): ...
+    class AttributesModel(CommonFields, Data.AttributesModel): ...
 
-    class ConstructorArgsModel(CommonFieldsModel): ...
+    class ConstructorArgsModel(CommonFields): ...
 
     def __init__(
         self,

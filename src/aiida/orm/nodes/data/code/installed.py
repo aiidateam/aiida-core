@@ -40,7 +40,7 @@ class InstalledCode(Code):
     _KEY_ATTRIBUTE_FILEPATH_EXECUTABLE: str = 'filepath_executable'
     _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
-    class CommonFieldsModel(AbstractCode.CommonFieldsModel):
+    class CommonField(AbstractCode.CommonFields):
         filepath_executable: str = MetadataField(
             title='Filepath executable',
             description='Filepath of the executable on the remote computer',
@@ -49,9 +49,9 @@ class InstalledCode(Code):
             priority=1,
         )
 
-    class AttributesModel(AbstractCode.AttributesModel, CommonFieldsModel): ...
+    class AttributesModel(CommonField, AbstractCode.AttributesModel): ...
 
-    class ConstructorArgsModel(AbstractCode.ConstructorArgsModel, CommonFieldsModel):
+    class ConstructorArgsModel(CommonField, AbstractCode.ConstructorArgsModel):
         computer: str = MetadataField(
             title='Computer',
             description='The label of the remote computer on which the executable resides',

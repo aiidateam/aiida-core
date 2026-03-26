@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import abc
 import inspect
+from copy import deepcopy
 from enum import Enum
 from functools import lru_cache
 from typing import (
@@ -29,6 +30,7 @@ from typing import (
     cast,
 )
 
+import pydantic as pdt
 from plumpy.base.utils import call_with_super_check, super_check
 from typing_extensions import Self
 
@@ -40,7 +42,7 @@ from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
 from .fields import QbFields, add_field
-from .model import OrmModel, WritableOrmModel
+from .model import OrmModel
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import BackendEntity, StorageBackend
@@ -202,20 +204,17 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
 
     fields: ClassVar[QbFields]
 
-    class ReadModel(WritableOrmModel):
+    class ReadModel(OrmModel):
+        """The absolute schema of the entity."""
+
         pk: int = MetadataField(
             description='The primary key of the entity',
             read_only=True,
             examples=[42],
         )
 
-    @classproperty
-    def WriteModel(cls) -> type[WritableOrmModel]:  # noqa: N802, N805
-        """Derive the creation version of the model class for this entity.
-
-        :return: The creation model class, with read-only fields removed.
-        """
-        return cls.ReadModel._as_write_model()
+    class WriteModel(OrmModel):
+        """The write schema of this entity, derived from the absolute schema."""
 
     def __init__(self, backend_entity: BackendEntityType) -> None:
         """:param backend_entity: the backend model supporting this entity"""
@@ -223,7 +222,9 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         call_with_super_check(self.initialize)
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
+        cls._patch_write_model()
         cls._patch_qb_fields()
+        super().__init_subclass__(**kwargs)
 
     def to_model(
         self,
@@ -416,6 +417,72 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
     def backend_entity(self) -> BackendEntityType:
         """Get the implementing class for this object"""
         return self._backend_entity
+
+    @classmethod
+    def _patch_write_model(cls) -> None:
+        """Patch the entity's `WriteModel` by deriving it from the entity's `ReadModel`.
+
+        Recurse through nested models.
+        """
+
+        def as_write_model(
+            model_cls: type[OrmModel],
+            base_cls: type[OrmModel] = cls.WriteModel,
+            suffix: str = 'ReadModel',
+        ) -> type[OrmModel]:
+            """Derive the write-version of a read model by recursively discarding read-only fields.
+
+            This also discards any serializers/validators defined on read-only fields.
+
+            :param model_cls: The read model class to derive the write model from.
+            :param base_cls: The base class to use for the write model.
+            :param suffix: The model name suffix to replace with 'WriteModel'.
+            :return: The derived creation model class.
+            """
+
+            def get_model_field(field: pdt.FieldInfo) -> tuple[Any, pdt.FieldInfo]:
+                annotation = field.annotation
+                if isinstance(annotation, type) and issubclass(annotation, OrmModel):
+                    annotation = as_write_model(annotation, base_cls=OrmModel, suffix='Model')
+                return annotation, deepcopy(field)
+
+            model_fields: dict[str, Any] = {
+                key: get_model_field(field)
+                for key, field in model_cls.model_fields.items()
+                if not get_metadata(field, 'read_only', False)
+            }
+
+            serializers = {
+                key: deepcopy(serializer)
+                for key, serializer in model_cls.__pydantic_decorators__.field_serializers.items()
+                if all(serializer_key in model_fields for serializer_key in serializer.info.fields)
+            }
+
+            validators = {
+                key: deepcopy(validator)
+                for key, validator in model_cls.__pydantic_decorators__.field_validators.items()
+                if all(validator_key in model_fields for validator_key in validator.info.fields)
+            }
+
+            WriteModel = cast(  # noqa: N806
+                type[OrmModel],
+                pdt.create_model(
+                    'WriteModel',
+                    __base__=base_cls,
+                    __module__=model_cls.__module__,
+                    **model_fields,
+                ),
+            )
+            WriteModel.__qualname__ = model_cls.__qualname__.replace(suffix, 'WriteModel')
+            WriteModel.__pydantic_decorators__.field_serializers = serializers
+            WriteModel.__pydantic_decorators__.field_validators = validators
+            WriteModel.model_config = deepcopy(model_cls.model_config)
+
+            WriteModel.model_rebuild(force=True, raise_errors=False)
+
+            return WriteModel
+
+        cls.WriteModel = as_write_model(cls.ReadModel)  # type: ignore[assignment]
 
     @classmethod
     def _patch_qb_fields(cls) -> None:

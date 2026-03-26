@@ -26,6 +26,8 @@ class ZmqBrokerService:
     Directory structure:
         {base_path}/
         ├── storage/        # Task queue persistence
+        ├── logs/
+        │   └── broker.log  # Broker service log
         ├── broker.pid      # PID file
         ├── broker.status   # Status JSON file
         └── broker.sockets  # Path to temp socket directory
@@ -41,6 +43,7 @@ class ZmqBrokerService:
         self._sockets_file = self._base_path / 'broker.sockets'
         self._pid_file = self._base_path / 'broker.pid'
         self._status_file = self._base_path / 'broker.status'
+        self._log_file = self._base_path / 'logs' / 'broker.log'
         self._server: ZmqBrokerServer | None = None
         self._running = False
 
@@ -56,11 +59,23 @@ class ZmqBrokerService:
     def status_file(self) -> Path:
         return self._status_file
 
+    def _setup_logging(self) -> None:
+        """Set up file logging for the broker service."""
+        self._log_file.parent.mkdir(parents=True, exist_ok=True)
+        handler = logging.FileHandler(self._log_file)
+        handler.setLevel(logging.INFO)
+        handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        for name in [__name__, 'aiida.brokers.zmq.server', 'aiida.brokers.zmq.queue']:
+            logger = logging.getLogger(name)
+            logger.addHandler(handler)
+            logger.setLevel(logging.INFO)
+
     def start(self) -> None:
         if self._running:
             return
 
         self._base_path.mkdir(parents=True, exist_ok=True)
+        self._setup_logging()
 
         # Use temp directory for sockets (Unix IPC path limit ~107 bytes)
         self._sockets_path = Path(tempfile.mkdtemp(prefix='aiida_zmq_'))

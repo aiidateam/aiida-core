@@ -54,7 +54,7 @@ from ..computers import Computer
 from ..entities import Collection as EntityCollection
 from ..entities import Entity, from_backend_entity
 from ..extras import EntityExtras
-from ..model import OrmModel, WritableOrmModel
+from ..model import OrmModel
 from ..querybuilder import QueryBuilder
 from ..users import User
 from .attributes import NodeAttributes
@@ -239,13 +239,26 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         )
         node_type: str = MetadataField(description='The type of the node.')
 
-    class AttributesModel(WritableOrmModel):
-        """The node attributes.
+    class AttributesModel(OrmModel):
+        """The attributes schema for this node."""
 
-        Extended by `Node` subclasses with specific attributes.
-        """
+    class WritableFields(OrmModel):
+        attributes: Node.AttributesModel = MetadataField(
+            description='The node attributes',
+            may_be_large=True,
+            examples=[{'attr_key': 'attr_value'}],
+        )
+        repository_metadata: dict[str, Any] = MetadataField(
+            default_factory=dict,
+            description='Virtual hierarchy of the file repository',
+            orm_to_model=lambda node: cast(Node, node).base.repository.metadata,
+            may_be_large=True,
+            examples=[{'o': {'file.txt': {'k': '<file_hash>'}}}],
+        )
 
-    class ReadModel(Entity.ReadModel, BaseNodeModel, WritableOrmModel):
+    class ReadModel(WritableFields, BaseNodeModel, Entity.ReadModel):
+        """The absolute schema for this node."""
+
         uuid: UUID = MetadataField(
             description='The UUID of the node',
             read_only=True,
@@ -282,23 +295,14 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             read_only=True,
             examples=[7],
         )
-        attributes: Node.AttributesModel = MetadataField(
-            description='The node attributes',
-            may_be_large=True,
-            examples=[{'attr_key': 'attr_value'}],
-        )
-        repository_metadata: dict[str, Any] = MetadataField(
-            default_factory=dict,
-            description='Virtual hierarchy of the file repository',
-            orm_to_model=lambda node: cast(Node, node).base.repository.metadata,
-            may_be_large=True,
-            examples=[{'o': {'file.txt': {'k': '<file_hash>'}}}],
-        )
 
         @pdt.field_serializer('uuid')
         def serialize_uuid(self, value: UUID) -> str:
             """Serialize UUID to string."""
             return str(value)
+
+    class WriteModel(WritableFields, BaseNodeModel):
+        """The write schema for this node."""
 
     ConstructorArgsModel: type[AiiDABaseModel] | None = None
 
@@ -1116,7 +1120,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         cls._ConstructorModel = ConstructorModel
 
     @classmethod
-    def _from_write_model(cls, model: AiiDABaseModel, files: dict[str, io.BufferedReader] | None = None) -> Self:
+    def _from_write_model(cls, model: WriteModel, files: dict[str, io.BufferedReader] | None = None) -> Self:
         """Construct a node instance from the attributes-based creation model.
 
         :param model: the model instance to construct from

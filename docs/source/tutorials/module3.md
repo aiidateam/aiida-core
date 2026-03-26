@@ -19,7 +19,7 @@ kernelspec:
 After this module, you will be able to:
 
 - Use AiiDA's data types (`ArrayData`, `Float`, `Dict`) to store scientific data
-- Visualize stored data (pattern images from arrays)
+- Visualize stored data
 - Find and filter data with the QueryBuilder
 - Organize calculations and data using Groups
 - Dump calculation data to disk with `verdi process dump`

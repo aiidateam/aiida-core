@@ -16,6 +16,10 @@ execution:
 (tutorial:module1)=
 # Module 1: Running a Simulation in AiiDA
 
+:::{tip}
+This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module1.ipynb` {octicon}`download`
+:::
+
 ## What you will learn
 
 After this module, you will be able to:
@@ -97,6 +101,16 @@ load_profile(profile_name, allow_switch=True)
 os.environ['AIIDA_PROFILE'] = profile_name
 ```
 
+:::{admonition} About the code cells in this tutorial
+:class: note
+
+This tutorial uses [IPython magic commands](https://ipython.readthedocs.io/en/stable/interactive/magics.html) that you will see throughout:
+
+- **`%run -i script.py`** — executes a Python file in the current namespace (like pasting its contents into the cell). If you are working locally, you can instead `import` from the file or copy the code directly.
+- **`%verdi ...`** — runs a `verdi` CLI command from within the notebook. In a terminal, you would run the same command without the `%` prefix, e.g. `verdi process list -a`.
+- **`%load_ext aiida`** — loads the AiiDA IPython extension, which enables the `%verdi` magic.
+:::
+
 ## The simulation code
 
 Throughout this tutorial we use a **reaction–diffusion simulation** (Gray–Scott model) as our running example — see the {ref}`introduction <tutorial:intro>` for the scientific background.
@@ -107,56 +121,17 @@ You don't need to understand its internals — only its interface:
 - **Input**: a dictionary of parameters (`grid_size`, `F`, `k`, `du`, `dv`, `dt`, `n_steps`, `seed`)
 - **Output**: a dictionary with the final fields (`U_final`, `V_final`) and scalar diagnostics (`variance_V`, `mean_V`)
 
-The cell below defines the `simulate()` function that we treat as our black-box code.
-Click the toggle to inspect it if you are curious — otherwise just move on.
+The `simulate()` function below is our black-box code ({download}`include/simulate.py`).
+Expand the box to inspect it if you are curious — otherwise just move on.
+
+:::{dropdown} Inspect the simulation function
+```{literalinclude} include/simulate.py
+:language: python
+```
+:::
 
 ```{code-cell} ipython3
-:tags: ["hide-cell"]
-
-# Gray-Scott reaction-diffusion simulation.
-# Treat this as a black-box binary — you only need to know its inputs and outputs.
-
-import numpy as np
-
-
-def _laplacian(Z):
-    return (
-        -4 * Z
-        + np.roll(Z, 1, axis=0)
-        + np.roll(Z, -1, axis=0)
-        + np.roll(Z, 1, axis=1)
-        + np.roll(Z, -1, axis=1)
-    )
-
-
-def simulate(params):
-    """Run a Gray-Scott reaction-diffusion simulation."""
-    n = params['grid_size']
-    du, dv = params['du'], params['dv']
-    F, k = params['F'], params['k']
-    dt, steps = params['dt'], params['n_steps']
-
-    rng = np.random.default_rng(params.get('seed'))
-
-    U = np.ones((n, n))
-    V = np.zeros((n, n))
-    r = n // 10
-    c = n // 2
-    U[c - r : c + r, c - r : c + r] = 0.50
-    V[c - r : c + r, c - r : c + r] = 0.25
-
-    for _ in range(steps):
-        Lu, Lv = _laplacian(U), _laplacian(V)
-        uvv = U * V * V
-        U += dt * (du * Lu - uvv + F * (1 - U))
-        V += dt * (dv * Lv + uvv - (F + k) * V)
-
-    return {
-        'U_final': U,
-        'V_final': V,
-        'variance_V': float(np.var(V)),
-        'mean_V': float(np.mean(V)),
-    }
+%run -i include/simulate.py
 ```
 
 ## Running the simulation without AiiDA
@@ -287,13 +262,8 @@ mystnb:
         caption: "Provenance graph of the `run_simulation` calcfunction."
         name: fig_module1_provenance
 ---
-from aiida.tools.visualization import Graph
-
-graph = Graph()
-calc_node = orm.load_node(calc_pk)
-graph.add_incoming(calc_node, annotate_links="both")
-graph.add_outgoing(calc_node, annotate_links="both")
-graph.graphviz
+%run -i include/plot_provenance.py
+plot_provenance(orm.load_node(calc_pk))
 ```
 
 In the graph:

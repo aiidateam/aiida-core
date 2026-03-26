@@ -12,9 +12,9 @@ kernelspec:
 ---
 
 (tutorial:intro)=
-# Introduction: Reaction-Diffusion Tutorial
+# Introduction
 
-## What this tutorial is about
+## The running example
 
 This tutorial teaches you the core concepts of AiiDA through a single, running example: a **reaction-diffusion simulation** based on the Gray-Scott model.
 
@@ -75,13 +75,8 @@ The simulation code (`reaction-diffusion.py`) is a standalone Python script that
 
 ## Teaser: what you'll be able to do
 
-<!-- TODO: Add executable teaser cells that showcase key features from later modules:
-     - Run a CalcJob with aiida-shell
-     - Build and run a WorkGraph workflow (chain simulate → parse → post-process)
-     - Error handling: workflow that detects a failure and retries with adjusted parameters
-     - Query the database for results across multiple runs
-     - Visualize a parameter sweep (pattern gallery)
-     The teaser should give users a taste of each major capability before they dive into the modules. -->
+Want to see the end result before diving in?
+Check out the {ref}`AiiDA in Action <tutorial:teaser>` page for a preview of process monitoring, automatic error recovery, querying, provenance, and more.
 
 ## Tutorial structure
 
@@ -94,7 +89,7 @@ The tutorial is organized in seven modules that progressively introduce AiiDA co
 | {ref}`Module 3 <tutorial:module3>` | Working with your data | `ArrayData`, QueryBuilder, Groups, archives |
 | {ref}`Module 4 <tutorial:module4>` | Building workflows | WorkGraph, chaining, context variables |
 | {ref}`Module 5 <tutorial:module5>` | Error handling & debugging | Handlers, `verdi process dump`, retries |
-| {ref}`Module 6 <tutorial:module6>` | High-throughput & post-processing | Parameter sweeps, plots, pattern gallery |
-| {ref}`Module 7 <tutorial:module7>` | Advanced topics (optional) | Multi-param sweeps, remote HPC, FFT |
+| {ref}`Module 6 <tutorial:module6>` | High-throughput & post-processing | Parameter sweeps, analysis, visualization |
+| {ref}`Module 7 <tutorial:module7>` | Advanced topics (optional) | Multi-param sweeps, remote HPC, extending workflows |
 
 Each module builds on the previous one, gradually replacing manual steps with AiiDA automation.

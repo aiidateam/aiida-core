@@ -18,21 +18,20 @@ kernelspec:
 
 After this module, you will be able to:
 
-- Run parameter sweeps over F using loops in WorkGraph
+- Run sweeps over input parameters using loops in WorkGraph
 - Collect and analyze results across many calculations
-- Create plots showing how pattern characteristics vary with parameters
-- Build a representative pattern gallery
+- Visualize trends across parameter scans
 
 ## What you will not learn yet
 
 This module completes the core tutorial. For advanced extensions, see {ref}`Module 7 <tutorial:module7>`.
 
-## Parameter sweeps over F
+## Running a parameter sweep
 
 ### Setting up the scan
 
-<!-- TODO: define the range of F values (~20 values in 0.035–0.05) -->
-<!-- TODO: create a WorkGraph with a loop over F -->
+<!-- TODO: define the parameter range to sweep over -->
+<!-- TODO: create a WorkGraph with a loop over the parameter -->
 <!-- TODO: submit the scan workflow -->
 
 ### Monitoring the scan
@@ -40,27 +39,21 @@ This module completes the core tutorial. For advanced extensions, see {ref}`Modu
 <!-- TODO: verdi process status to see all child calculations -->
 <!-- TODO: verdi process list to see progress -->
 
-## Collecting and analyzing results
+## Collecting results with the QueryBuilder
 
-<!-- TODO: use QueryBuilder to collect F, variance_V, mean_V from the scan -->
-<!-- TODO: organize results into arrays for plotting -->
+<!-- TODO: use QueryBuilder to collect inputs and outputs from the scan -->
+<!-- TODO: organize results into arrays for analysis -->
 
-## Variance vs F plot
+## Visualizing trends
 
-<!-- TODO: plot variance_V as a function of F -->
-<!-- TODO: identify the pattern-forming regime -->
-<!-- TODO: explain what the plot tells us about the system -->
+<!-- TODO: plot output quantities as a function of the scanned parameter -->
+<!-- TODO: interpret the results -->
 
-## Mean vs F plot
+## Visualizing representative outputs
 
-<!-- TODO: plot mean_V as a function of F -->
-<!-- TODO: discuss the relationship between mean concentration and feed rate -->
-
-## Representative pattern gallery
-
-<!-- TODO: select a few representative F values (low, medium, high variance) -->
-<!-- TODO: load V_final arrays from ArrayData -->
-<!-- TODO: display patterns side by side as a figure -->
+<!-- TODO: select a few representative parameter values -->
+<!-- TODO: load output data from the database -->
+<!-- TODO: display results side by side -->
 
 ## Summary
 
@@ -68,8 +61,7 @@ In this module you learned to:
 
 - **Run** parameter sweeps using WorkGraph loops
 - **Collect** results across many calculations with the QueryBuilder
-- **Plot** trends (variance vs F, mean vs F)
-- **Visualize** representative patterns
+- **Visualize** trends and analyze how outputs vary with inputs
 
 At this point, you have completed the core tutorial and understand the full AiiDA workflow cycle: from running a single calculation, to parsing and storing results, to building workflows with error handling, to running parameter sweeps and analyzing the results.
 

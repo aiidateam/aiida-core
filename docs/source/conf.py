@@ -7,8 +7,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import os
+import sys
+from pathlib import Path
 
 import aiida
+
+# Make local extensions importable
+sys.path.insert(0, str(Path(__file__).parent / '_ext'))
 
 # imports required for docs/source/reference/api/public.rst
 from aiida import (  # noqa: F401
@@ -78,6 +83,7 @@ extensions = [
     'sphinx_copybutton',
     'sphinxext.rediraffe',
     'notfound.extension',
+    'inline_downloads',
 ]
 
 intersphinx_mapping = {

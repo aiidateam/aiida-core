@@ -16,6 +16,10 @@ execution:
 (tutorial:module2)=
 # Module 2: Running External Codes
 
+:::{tip}
+This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module2.ipynb` {octicon}`download`
+:::
+
 ## What you will learn
 
 After this module, you will be able to:
@@ -71,6 +75,23 @@ from aiida import load_profile
 
 load_profile(profile_name, allow_switch=True)
 os.environ['AIIDA_PROFILE'] = profile_name
+
+# Pre-register a Code with a short label so that `verdi process list`
+# shows "python3@localhost" instead of the full virtualenv path.
+import sys
+
+from aiida.common.exceptions import NotExistent
+from aiida.orm import InstalledCode, load_code, load_computer
+
+try:
+    python_code = load_code('python3@localhost')
+except NotExistent:
+    python_code = InstalledCode(
+        label='python3',
+        computer=load_computer('localhost'),
+        filepath_executable=sys.executable,
+        default_calc_job_plugin='core.shell',
+    ).store()
 ```
 
 ## The simulation as an external code
@@ -134,11 +155,10 @@ input_path.write_text(yaml.dump(input_params));
 ```
 
 ```{code-cell} ipython3
-import sys
 from aiida_shell import launch_shell_job
 
 results, node = launch_shell_job(
-    sys.executable,
+    python_code,
     arguments='{script} {input} --output results.npz',
     nodes={
         'script': script_path,
@@ -213,13 +233,8 @@ mystnb:
         caption: "Provenance graph of the ShellJob calculation."
         name: fig_module2_shelljob
 ---
-from aiida import orm
-from aiida.tools.visualization import Graph
-
-graph = Graph()
-graph.add_incoming(node, annotate_links="both")
-graph.add_outgoing(node, annotate_links="both")
-graph.graphviz
+%run -i include/plot_provenance.py
+plot_provenance(node)
 ```
 
 Notice how AiiDA tracked the full data flow — from the input files and parameters, through the calculation, to the output files.
@@ -246,7 +261,7 @@ Now let's run the simulation again, this time with the parser:
 
 ```{code-cell} ipython3
 results_parsed, node_parsed = launch_shell_job(
-    sys.executable,
+    python_code,
     arguments='{script} {input} --output results.npz',
     nodes={
         'script': script_path,
@@ -279,7 +294,7 @@ bad_input_path = work_dir / 'input_bad.yaml'
 bad_input_path.write_text(yaml.dump(bad_params));
 
 results_bad, node_bad = launch_shell_job(
-    sys.executable,
+    python_code,
     arguments='{script} {input} --output results.npz',
     nodes={
         'script': script_path,

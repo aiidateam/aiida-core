@@ -126,6 +126,12 @@ def detect_postgres_config(
     'the PostgreSQL server can be configured with the relevant options. The command attempts to automatically create a '
     'user and database to use for the profile, but this can fail depending on the configuration of the server.',
 )
+@click.option(
+    '--use-rabbitmq',
+    is_flag=True,
+    help='When toggled on, the profile uses RabbitMQ as the broker instead of ZMQ. The command attempts to connect to '
+    'a RabbitMQ server on localhost. If it cannot connect, the command exits with an error.',
+)
 @click.option('--postgres-hostname', type=str, default='localhost', help='The hostname of the PostgreSQL server.')
 @click.option('--postgres-port', type=int, default=5432, help='The port of the PostgreSQL server.')
 @click.option(
@@ -147,6 +153,7 @@ def verdi_presto(
     profile_name,
     email,
     use_postgres,
+    use_rabbitmq,
     postgres_hostname,
     postgres_port,
     postgres_username,
@@ -169,14 +176,17 @@ def verdi_presto(
     * Set up the localhost as a `Computer` and configure it
     * Set a number of configuration options with sensible defaults
 
-    By default the command creates a profile that uses SQLite for the database. It automatically checks for RabbitMQ
-    running on the localhost, and, if it can connect, configures that as the broker for the profile. Otherwise, it
-    falls back to the ZMQ broker which requires no external services and is started automatically with the daemon.
+    By default the command creates a profile that uses SQLite for the database and ZMQ for the broker. The ZMQ broker
+    requires no external services and is started automatically with the daemon.
 
     When the `--use-postgres` flag is toggled, the command tries to connect to the PostgreSQL server with connection
     paramaters taken from the `--postgres-hostname`, `--postgres-port`, `--postgres-username` and `--postgres-password`
     options. It uses these credentials to try and automatically create a user and database. If successful, the newly
     created profile uses the new PostgreSQL database instead of SQLite.
+
+    When the `--use-rabbitmq` flag is toggled, the command tries to connect to a RabbitMQ server on localhost. If
+    successful, it configures RabbitMQ as the broker instead of ZMQ. If it cannot connect, the command exits with
+    an error.
     """
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
     from aiida.brokers.zmq.defaults import get_zmq_config
@@ -212,19 +222,18 @@ def verdi_presto(
     else:
         echo.echo_report('Option `--use-postgres` not enabled: configuring the profile to use SQLite.')
 
-    broker_backend = None
-    broker_config = None
-
-    try:
-        broker_config = detect_rabbitmq_config()
-    except ConnectionError as exception:
-        echo.echo_report(f'RabbitMQ server not found ({exception}): falling back to ZMQ broker.')
-        echo.echo_report('ZMQ broker requires no external services and will be started automatically with the daemon.')
+    if use_rabbitmq:
+        try:
+            broker_config = detect_rabbitmq_config()
+        except ConnectionError as exception:
+            echo.echo_critical(f'`--use-rabbitmq` enabled but RabbitMQ server not found: {exception}')
+        else:
+            echo.echo_report('`--use-rabbitmq` enabled: configuring the profile with RabbitMQ broker.')
+            broker_backend = 'core.rabbitmq'
+    else:
+        echo.echo_report('Using ZMQ broker (no external service required, started automatically with the daemon).')
         broker_backend = 'core.zmq'
         broker_config = get_zmq_config()
-    else:
-        echo.echo_report('RabbitMQ server detected: configuring the profile with RabbitMQ broker.')
-        broker_backend = 'core.rabbitmq'
 
     try:
         profile = create_profile(

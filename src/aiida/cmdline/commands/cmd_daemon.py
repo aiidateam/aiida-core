@@ -160,7 +160,10 @@ def status(ctx, all_profiles, timeout):
                     broker_pid = status_info.get('pid', '?')
                     pending = status_info.get('pending_tasks', 0)
                     processing = status_info.get('processing_tasks', 0)
-                    broker_line = f'Broker is running as PID {broker_pid} [{pending} pending, {processing} processing]\n'
+                    broker_line = (
+                        f'Broker is running as PID {broker_pid} [{pending} pending, {processing} processing]\n'
+                        f'Broker directory: {broker.base_path}\n'
+                    )
             else:
                 broker_line = 'Broker is NOT running\n'
 

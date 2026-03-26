@@ -162,8 +162,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
             from aiida.common.warnings import warn_deprecation
 
             warn_deprecation(
-                'Relying on `_get_cli_options` is deprecated. The options should be defined through a '
-                '`ConstructorArgsModel` that is dynamically assigned to the `ConstructorModel`.',
+                'Relying on `_get_cli_options` is deprecated. The options should be defined through a `CliModel`.',
                 version=3,
             )
             options_spec = self.factory(entry_point).get_cli_options()  # type: ignore[union-attr]

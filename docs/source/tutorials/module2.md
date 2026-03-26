@@ -91,10 +91,10 @@ $ python3 reaction-diffusion.py input.yaml --output results.npz
 JOB DONE
 ```
 
-The script is provided as {download}`gp/reaction-diffusion.py` — expand the box below to inspect it, or just move on.
+The script is provided as {download}`include/reaction-diffusion.py` — expand the box below to inspect it, or just move on.
 
 :::{dropdown} Inspect the simulation script
-```{literalinclude} gp/reaction-diffusion.py
+```{literalinclude} include/reaction-diffusion.py
 :language: python
 ```
 :::
@@ -102,7 +102,7 @@ The script is provided as {download}`gp/reaction-diffusion.py` — expand the bo
 ```{code-cell} ipython3
 from pathlib import Path
 
-script_path = Path('gp/reaction-diffusion.py').resolve()
+script_path = Path('include/reaction-diffusion.py').resolve()
 ```
 
 ## Running with `aiida-shell`
@@ -230,25 +230,16 @@ The simulation produced a `.npz` file, but we had to manually load and extract t
 A **parser** automates this: it reads the raw output files and stores the results as structured AiiDA nodes.
 
 With `aiida-shell`, you can pass a custom parser function.
-Expand the cell below to see the implementation:
+Ours reads the `.npz` output and returns `Float` nodes ({download}`include/parse_gray_scott.py`):
+
+:::{dropdown} Inspect the parser function
+```{literalinclude} include/parse_gray_scott.py
+:language: python
+```
+:::
 
 ```{code-cell} ipython3
-:tags: ["hide-cell"]
-
-def parse_gray_scott(dirpath):
-    """Extract structured data from the simulation output."""
-    import numpy as np
-    from aiida.orm import Float
-
-    output_file = dirpath / 'results.npz'
-    if not output_file.exists():
-        return None
-
-    data = np.load(output_file)
-    return {
-        'variance_V': Float(float(data['variance_V'])),
-        'mean_V': Float(float(data['mean_V'])),
-    }
+%run -i include/parse_gray_scott.py
 ```
 
 Now let's run the simulation again, this time with the parser:

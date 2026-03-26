@@ -184,19 +184,8 @@ print(f"mean(V)     = {result_raw['mean_V']:.4e}")
 Plotting the resulting patterns:
 
 ```{code-cell} ipython3
-:tags: ["hide-cell"]
-
-import matplotlib.pyplot as plt
-
-fig, axes = plt.subplots(1, 2, figsize=(8, 4))
-axes[0].imshow(result_raw['U_final'], cmap='viridis', origin='lower')
-axes[0].set_title('U (substrate)')
-axes[0].axis('off')
-axes[1].imshow(result_raw['V_final'], cmap='inferno', origin='lower')
-axes[1].set_title('V (activator)')
-axes[1].axis('off')
-plt.tight_layout()
-plt.show()
+%run -i include/plot_fields.py
+plot_uv_fields(u_field=result_raw['U_final'], v_field=result_raw['V_final'])
 ```
 
 The simulation works — but the result lives only in local Python variables.

@@ -54,13 +54,13 @@ For production use or more advanced setups, see the {ref}`installation guide <in
 Use `verdi profile list` to see all your profiles and `verdi profile show` to inspect the active one.
 :::
 
-The cell below creates a **temporary in-memory profile** for automated execution of this tutorial.
+The cell below creates a tutorial profile for automated execution of this tutorial.
 If you are running locally with your own profile, you can skip it.
 
 ```{code-cell} ipython3
 :tags: ["hide-cell"]
 
-# Auto-generated temporary profile for docs build.
+# Auto-generated tutorial profile for docs build.
 # If running locally with your own profile (e.g. from ``verdi presto``),
 # replace this cell with:
 #
@@ -69,29 +69,32 @@ If you are running locally with your own profile, you can skip it.
 
 import os
 
-from aiida import load_profile
-from aiida.manage.configuration import get_config
-from aiida.storage.sqlite_temp import SqliteTempBackend
+from aiida.manage.configuration import create_profile, get_config
 
 %load_ext aiida
 
-profile = load_profile(
-    SqliteTempBackend.create_profile(
-        'tutorial-module1',
-        options={
-            'warnings.development_version': False,
-            'runner.poll.interval': 1,
-        },
-        debug=False,
-    ),
-    allow_switch=True,
-)
+profile_name = 'tutorial'
 config = get_config()
-config.add_profile(profile)
-config.set_default_profile(profile.name)
 
-# Ensure ``!verdi`` subprocesses use this profile
-os.environ['AIIDA_PROFILE'] = profile.name
+if profile_name not in config.profile_names:
+    create_profile(
+        config,
+        name=profile_name,
+        email='tutorial@aiida.net',
+        storage_backend='core.sqlite_dos',
+        storage_config={},
+        broker_backend=None,
+        broker_config=None,
+    )
+    config.set_option('runner.poll.interval', 1, scope=profile_name)
+    config.set_option('warnings.development_version', False, scope=profile_name)
+    config.set_default_profile(profile_name, overwrite=True)
+    config.store()
+
+from aiida import load_profile
+
+load_profile(profile_name, allow_switch=True)
+os.environ['AIIDA_PROFILE'] = profile_name
 ```
 
 ## The simulation code
@@ -212,13 +215,8 @@ The node now has a **PK** (primary key, unique within this database) and a **UUI
 We can inspect it with the `verdi` CLI:
 
 ```{code-cell} ipython3
-%verdi node show 1
+!verdi node show {parameters.pk}
 ```
-
-:::{note}
-The PK numbers in this tutorial assume a fresh, empty database.
-If you are running locally with an existing profile, your PKs may differ — use `verdi node list` or `verdi process list -a` to find the correct ones.
-:::
 
 We can also retrieve the stored dictionary contents through the Python API:
 
@@ -270,13 +268,14 @@ Let's see what processes have been run:
 We can get more detail on the calculation, including all its inputs and outputs:
 
 ```{code-cell} ipython3
-%verdi process show 3
+calc_pk = result['variance_V'].creator.pk
+!verdi process show {calc_pk}
 ```
 
 We can also inspect individual output nodes:
 
 ```{code-cell} ipython3
-%verdi node show 4
+!verdi node show {result['variance_V'].pk}
 ```
 
 Other useful inspection commands include `verdi calcjob inputcat <PK>` and `verdi calcjob outputcat <PK>` for viewing the input and output files of CalcJob calculations.
@@ -297,8 +296,8 @@ mystnb:
 ---
 from aiida.tools.visualization import Graph
 
-calc_node = result['variance_V'].creator
 graph = Graph()
+calc_node = orm.load_node(calc_pk)
 graph.add_incoming(calc_node, annotate_links="both")
 graph.add_outgoing(calc_node, annotate_links="both")
 graph.graphviz

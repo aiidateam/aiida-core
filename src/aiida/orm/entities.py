@@ -440,7 +440,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
             :return: The derived creation model class.
             """
 
-            def get_model_field(field: pdt.FieldInfo) -> tuple[Any, pdt.FieldInfo]:
+            def get_model_field(field: pdt.fields.FieldInfo) -> tuple[Any, pdt.fields.FieldInfo]:
                 annotation = field.annotation
                 if isinstance(annotation, type) and issubclass(annotation, OrmModel):
                     annotation = as_write_model(annotation, base_cls=OrmModel, suffix='Model')
@@ -482,7 +482,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
 
             return WriteModel
 
-        cls.WriteModel = as_write_model(cls.ReadModel)  # type: ignore[assignment]
+        cls.WriteModel = as_write_model(cls.ReadModel)  # type: ignore[assignment, misc]
 
     @classmethod
     def _patch_qb_fields(cls) -> None:

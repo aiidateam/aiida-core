@@ -88,6 +88,7 @@ bpython = [
     { name = "bpython" },
 ]
 docs = [
+    { name = "aiida-shell" },
     { name = "myst-nb" },
     { name = "pydata-sphinx-theme" },
     { name = "sphinx" },
@@ -220,6 +221,7 @@ requires-dist = [
     { name = "aiida-core", extras = ["atomic-tools", "rest"], marker = "extra == 'tests'" },
     { name = "aiida-core", extras = ["tests"], marker = "extra == 'pre-commit'" },
     { name = "aiida-export-migration-tests", marker = "extra == 'tests'", specifier = "==0.9.0" },
+    { name = "aiida-shell", marker = "extra == 'docs'", specifier = "~=0.8.0" },
     { name = "alembic", specifier = "~=1.8" },
     { name = "archive-path", specifier = "~=0.4.2" },
     { name = "ase", marker = "extra == 'atomic-tools'", specifier = "~=3.21" },
@@ -323,6 +325,19 @@ name = "aiida-export-migration-tests"
 version = "0.9.0"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ea/90/1c9c13f2fdfa96602c8d72732f1c52d22c352e42e710981d7fb0b6dbe7bf/aiida-export-migration-tests-0.9.0.tar.gz", hash = "sha256:d2564c14eb06a221dc1f06fb24a4f5fba6143ac01087adba6be02aa7f86b5e63", size = 10153336, upload-time = "2020-04-11T17:33:28.902Z" }
+
+[[package]]
+name = "aiida-shell"
+version = "0.8.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiida-core" },
+    { name = "dill" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/23/f5/4c809364d363f90d4b726eac3df85cc60b75cba69a4837cf808aa68d9fe9/aiida_shell-0.8.2.tar.gz", hash = "sha256:7efd2e67cbabe709585fa9c9aaf455bb7da249f2ef9eed2ae0b048a66737e0fd", size = 1474349, upload-time = "2026-01-14T17:55:49.17Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1d/9f/d61ba43b01b79881c910b93d8ac05cea741f437541fa7d43d01bd96a1bd2/aiida_shell-0.8.2-py3-none-any.whl", hash = "sha256:59feffa45c17c7de1161651601b566cf599ca0b2ec0177fff8328f28adfec85f", size = 20383, upload-time = "2026-01-14T17:55:47.636Z" },
+]
 
 [[package]]
 name = "aio-pika"
@@ -2023,6 +2038,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5a/d3/8ae2869247df154b64c1884d7346d412fed0c49df84db635aab2d1c40e62/deprecation-2.1.0.tar.gz", hash = "sha256:72b3bde64e5d778694b0cf68178aed03d15e15477116add3fb773e581f9518ff", size = 173788, upload-time = "2020-04-20T14:23:38.738Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/02/c3/253a89ee03fc9b9682f1541728eb66db7db22148cd94f89ab22528cd1e1b/deprecation-2.1.0-py2.py3-none-any.whl", hash = "sha256:a10811591210e1fb0e768a8c25517cabeabcba6f0bf96564f8ff45189f90b14a", size = 11178, upload-time = "2020-04-20T14:23:36.581Z" },
+]
+
+[[package]]
+name = "dill"
+version = "0.4.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/81/e1/56027a71e31b02ddc53c7d65b01e68edf64dea2932122fe7746a516f75d5/dill-0.4.1.tar.gz", hash = "sha256:423092df4182177d4d8ba8290c8a5b640c66ab35ec7da59ccfa00f6fa3eea5fa", size = 187315, upload-time = "2026-01-19T02:36:56.85Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1e/77/dc8c558f7593132cf8fefec57c4f60c83b16941c574ac5f619abb3ae7933/dill-0.4.1-py3-none-any.whl", hash = "sha256:1e1ce33e978ae97fcfcff5638477032b801c46c7c65cf717f95fbc2248f79a9d", size = 120019, upload-time = "2026-01-19T02:36:55.663Z" },
 ]
 
 [[package]]
@@ -5150,7 +5174,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess" },
+    { name = "ptyprocess", marker = "python_full_version < '3.10' or sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [

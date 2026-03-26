@@ -212,8 +212,13 @@ The node now has a **PK** (primary key, unique within this database) and a **UUI
 We can inspect it with the `verdi` CLI:
 
 ```{code-cell} ipython3
-!verdi node show {parameters.pk}
+%verdi node show 1
 ```
+
+:::{note}
+The PK numbers in this tutorial assume a fresh, empty database.
+If you are running locally with an existing profile, your PKs may differ — use `verdi node list` or `verdi process list -a` to find the correct ones.
+:::
 
 We can also retrieve the stored dictionary contents through the Python API:
 
@@ -265,27 +270,16 @@ Let's see what processes have been run:
 We can get more detail on the calculation, including all its inputs and outputs:
 
 ```{code-cell} ipython3
-calc_pk = result['variance_V'].creator.pk
-!verdi process show {calc_pk}
+%verdi process show 3
 ```
 
 We can also inspect individual output nodes:
 
 ```{code-cell} ipython3
-!verdi node show {result['variance_V'].pk}
+%verdi node show 4
 ```
 
-:::{admonition} `verdi calcjob` commands for external codes
-:class: note
-
-In this module we used a `@calcfunction`, which runs Python code directly inside the AiiDA process.
-For **CalcJobs** — AiiDA's mechanism for running external executables (e.g. Quantum ESPRESSO, VASP) on remote computers — additional inspection commands are available:
-
-- `verdi calcjob inputcat <PK>` — show the input files sent to the code
-- `verdi calcjob outputcat <PK>` — show the raw output files retrieved from the code
-
-CalcJobs will be introduced in later modules.
-:::
+Other useful inspection commands include `verdi calcjob inputcat <PK>` and `verdi calcjob outputcat <PK>` for viewing the input and output files of CalcJob calculations.
 
 ## Exploring the provenance graph
 
@@ -303,8 +297,8 @@ mystnb:
 ---
 from aiida.tools.visualization import Graph
 
+calc_node = result['variance_V'].creator
 graph = Graph()
-calc_node = orm.load_node(calc_pk)
 graph.add_incoming(calc_node, annotate_links="both")
 graph.add_outgoing(calc_node, annotate_links="both")
 graph.graphviz
@@ -349,7 +343,6 @@ In this module you learned to:
 Here we ran the simulation *inside* the AiiDA Python process using a `calcfunction`.
 This is fine for lightweight computations, but real scientific codes (Quantum ESPRESSO, VASP, LAMMPS, …) run as **external executables** on remote computers.
 For those, AiiDA provides **CalcJobs** — a mechanism to prepare input files, submit to a scheduler, and retrieve the results.
-You can then use `verdi calcjob inputcat` and `verdi calcjob outputcat` to inspect the input and output files of these jobs.
 CalcJobs will be introduced in later modules.
 :::
 

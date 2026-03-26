@@ -15,11 +15,11 @@ Reaction-Diffusion Tutorial
 .. grid:: 1 2 2 3
    :gutter: 3
 
-   .. grid-item-card:: :fa:`map;mr-1` Introduction
+   .. grid-item-card:: :fa:`bolt;mr-1` AiiDA in Action
       :text-align: center
       :shadow: md
 
-      The Gray-Scott model, simulation inputs and outputs, and the full tutorial roadmap.
+      See the full power of AiiDA in a quick demo — then learn to build it yourself.
 
       +++
 
@@ -30,7 +30,7 @@ Reaction-Diffusion Tutorial
          :color: primary
          :outline:
 
-         Get started
+         See the demo
 
    .. grid-item-card:: :fa:`circle-play;mr-1` Module 1: Running a Simulation
       :text-align: center

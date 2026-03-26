@@ -79,13 +79,12 @@ The tutorial is organized in six modules that progressively introduce AiiDA conc
 
 | Module | Topic | Key concepts |
 |--------|-------|-------------|
-| {ref}`Module 1 <tutorial:module1>` | Running a simulation | ShellJob, `verdi calcjob`, inputs/outputs |
-| {ref}`Module 2 <tutorial:module2>` | Parsing outputs | Parser, exit codes, structured output |
-| {ref}`Module 3 <tutorial:module3>` | Using data types | `ArrayData`, `Float`, `Dict`, visualization |
-| {ref}`Module 4 <tutorial:module4>` | Workflow basics | WorkGraph, context variables, chaining |
+| {ref}`Module 1 <tutorial:module1>` | Running a simulation | `calcfunction`, `verdi`, provenance |
+| {ref}`Module 2 <tutorial:module2>` | Running external codes | `aiida-shell`, CalcJob, parser, exit codes |
+| {ref}`Module 3 <tutorial:module3>` | Working with your data | `ArrayData`, QueryBuilder, Groups, archives |
+| {ref}`Module 4 <tutorial:module4>` | Building workflows | WorkGraph, chaining, context variables |
 | {ref}`Module 5 <tutorial:module5>` | Error handling & debugging | Handlers, `verdi process dump`, retries |
-| {ref}`Module 6 <tutorial:module6>` | High-throughput scans & querying | Parameter sweeps, QueryBuilder, Groups |
-| {ref}`Module 7 <tutorial:module7>` | Post-processing & visualization | Plots, pattern gallery, archive export |
-| {ref}`Module 8 <tutorial:module8>` | Optional & advanced topics | Multi-param sweeps, MPI, FFT analysis |
+| {ref}`Module 6 <tutorial:module6>` | High-throughput & post-processing | Parameter sweeps, plots, pattern gallery |
+| {ref}`Module 7 <tutorial:module7>` | Advanced topics (optional) | Multi-param sweeps, remote HPC, FFT |
 
 Each module builds on the previous one, gradually replacing manual steps with AiiDA automation.

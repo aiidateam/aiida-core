@@ -38,7 +38,10 @@ from aiida.storage.psql_dos.models.settings import DbSetting
 from aiida.storage.psql_dos.utils import create_sqlalchemy_engine
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     from disk_objectstore import Container
+    from typing_extensions import Self
 
 TEMPLATE_LEGACY_DJANGO_SCHEMA = """
 Database schema is using the legacy Django schema.
@@ -78,10 +81,12 @@ class PsqlDosMigrator:
             self._engine.dispose()
             self._engine = None
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, exc_type, exc, tb):
+    def __exit__(
+        self, exc_type: type[BaseException] | None, exc_value: BaseException | None, traceback: TracebackType | None
+    ) -> None:
         self.close()
 
     @property

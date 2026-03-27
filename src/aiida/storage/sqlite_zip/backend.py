@@ -37,7 +37,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
-from aiida.repository.backend.abstract import AbstractRepositoryBackend
+from aiida.repository.backend.abstract import AbstractRepositoryBackend, InfoDictType
 
 from . import orm
 from .utils import (
@@ -467,7 +467,7 @@ class _RoBackendRepository(AbstractRepositoryBackend):
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
         pass
 
-    def get_info(self, detailed: bool = False, **kwargs) -> dict:
+    def get_info(self, detailed: bool = False, **kwargs) -> InfoDictType:
         return {'objects': {'count': len(list(self.list_objects()))}}
 
 

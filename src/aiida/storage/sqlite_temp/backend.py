@@ -18,7 +18,7 @@ from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Any, BinaryIO
+from typing import TYPE_CHECKING, Any, BinaryIO
 
 from pydantic import BaseModel, Field
 from sqlalchemy import column, insert, update
@@ -32,6 +32,9 @@ from aiida.repository.backend.sandbox import SandboxRepositoryBackend
 from aiida.storage.sqlite_zip import models, orm
 from aiida.storage.sqlite_zip.migrator import get_schema_version_head
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
+
+if TYPE_CHECKING:
+    from aiida.repository.backend.abstract import InfoDictType
 
 __all__ = ('SqliteTempBackend',)
 
@@ -332,7 +335,7 @@ class SandboxShaRepositoryBackend(SandboxRepositoryBackend):
 
         return key
 
-    def get_info(self, detailed: bool = False, **kwargs: Any) -> dict:
+    def get_info(self, detailed: bool = False, **kwargs: Any) -> InfoDictType:
         return {'objects': {'count': len(list(self.list_objects()))}}
 
     def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> None:

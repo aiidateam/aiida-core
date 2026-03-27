@@ -25,14 +25,15 @@ def print_version_info():
 @click.option('--daemon/--without-daemon', default=False, is_flag=True, help='Submit to daemon or run synchronously.')
 @decorators.with_dbenv()
 def main(code, number, daemon):
-    """Submit a number of ``ArithmeticAddCalculation`` to the daemon and record time to completion.
-
-    This command requires the daemon to be running.
+    """Run a number of ``ArithmeticAddCalculation`` and record time to completion.
 
     The script will submit a configurable number of ``ArithmeticAddCalculation`` jobs. By default, the jobs are executed
     using the ``bash`` executable of the system. If this executable cannot be found the script will exit. The jobs will
     be run on the localhost, which is automatically created and configured. At the end of the script, the created nodes
     will be deleted, as well as the code and computer, if they were automatically setup.
+
+    By default, the jobs run in the current python process, unless the `--daemon` flag is provided,
+    in which case they are submitted to the daemon.
     """
     from aiida import orm
     from aiida.engine import run_get_node, submit
@@ -89,7 +90,7 @@ def main(code, number, daemon):
                 nodes.append(node)
 
         time_end = time.time()
-        echo.echo(f'Submission completed in {(time_end - time_start):.2f} seconds.')
+        echo.echo(f'Submission to the daemon completed in {(time_end - time_start):.2f} seconds.')
 
         completed = 0
 

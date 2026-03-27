@@ -305,32 +305,49 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """The write schema for this node."""
 
     _ConstructorModel: ClassVar[type[BaseNodeModel] | None] = None
-
-    @classproperty
-    def ConstructorModel(cls) -> type[BaseNodeModel]:  # noqa: N802, N805
-        """Return the constructor-based creation model class for this entity.
-
-        :raises UnsupportedSchemaError: if this node type does not support creation via a constructor model.
-        :return: The constructor-based creation model class.
-        """
-        if cls._ConstructorModel is None:
-            raise exceptions.UnsupportedSchemaError(
-                f"'{cls.class_node_type}' does not support constructor-based creation."
-            )
-        return cls._ConstructorModel
-
     _CliModel: ClassVar[type[BaseNodeModel] | None] = None
 
-    @classproperty
-    def CliModel(cls) -> type[AiiDABaseModel]:  # noqa: N802, N805
-        """Return the CLI model class for this entity.
+    if TYPE_CHECKING:
+        # Not all nodes support constructor-based and/or CLI-based creation (yet!).
+        # As such, we don't want to define these models on the base class, as they
+        # would be inherited by all nodes. Instead, we define them here for type
+        # checking purposes, and provide below (else) the runtime properties.
 
-        :return: The CLI model class.
-        :raises UnsupportedSchemaError: if this node type does not support creation via a CLI model.
-        """
-        if cls._CliModel is None:
-            raise exceptions.UnsupportedSchemaError(f"'{cls.class_node_type}' does not support CLI-based creation.")
-        return cls._CliModel
+        class ConstructorModel(BaseNodeModel):
+            args: Any = MetadataField(
+                description='The arguments to create the node with',
+                write_only=True,
+            )
+
+        class CliModel(BaseNodeModel):
+            """The CLI schema for this node."""
+
+    else:
+        # Runtime model properties. If not supported by the subclass, access will raise an exception.
+
+        @classproperty
+        def ConstructorModel(cls) -> type[BaseNodeModel]:  # noqa: N802, N805
+            """Return the constructor-based creation model class for this entity.
+
+            :raises UnsupportedSchemaError: if this node type does not support creation via a constructor model.
+            :return: The constructor-based creation model class.
+            """
+            if cls._ConstructorModel is None:
+                raise exceptions.UnsupportedSchemaError(
+                    f"'{cls.class_node_type}' does not support constructor-based creation."
+                )
+            return cls._ConstructorModel
+
+        @classproperty
+        def CliModel(cls) -> type[AiiDABaseModel]:  # noqa: N802, N805
+            """Return the CLI model class for this entity.
+
+            :return: The CLI model class.
+            :raises UnsupportedSchemaError: if this node type does not support creation via a CLI model.
+            """
+            if cls._CliModel is None:
+                raise exceptions.UnsupportedSchemaError(f"'{cls.class_node_type}' does not support CLI-based creation.")
+            return cls._CliModel
 
     def __init__(
         self,
@@ -1180,7 +1197,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return instance
 
     @classmethod
-    def _from_constructor_model(cls, model: AiiDABaseModel) -> Self:
+    def _from_constructor_model(cls, model: ConstructorModel) -> Self:
         """Construct a node instance from the constructor-based creation model.
 
         :param model: the model instance to construct from
@@ -1194,7 +1211,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return cls(**fields)
 
     @classmethod
-    def _from_cli_model(cls, model: AiiDABaseModel) -> Self:
+    def _from_cli_model(cls, model: CliModel) -> Self:
         """Construct a node instance from the CLI-based creation model.
 
         :param model: the model instance to construct from

@@ -301,7 +301,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             """Serialize UUID to string."""
             return str(value)
 
-    class WriteModel(WritableFields, BaseNodeModel):
+    class WriteModel(WritableFields, BaseNodeModel, Entity.WriteModel):
         """The write schema for this node."""
 
     _ConstructorModel: ClassVar[type[BaseNodeModel] | None] = None

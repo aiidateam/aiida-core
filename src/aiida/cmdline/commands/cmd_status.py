@@ -156,7 +156,7 @@ def verdi_status(print_traceback, no_rmq):
         print_status(
             ServiceStatus.WARNING,
             'daemon',
-            'No broker defined for this profile: daemon is not available. See {URL_NO_BROKER}',
+            'No broker defined for this profile: daemon is not available.',
         )
     except DaemonNotRunningException as exception:
         print_status(ServiceStatus.WARNING, 'daemon', str(exception))

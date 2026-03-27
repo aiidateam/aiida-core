@@ -153,7 +153,11 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
+        cls._patch_cli_model()
 
+    @classmethod
+    def _patch_cli_model(cls):
+        """Patch `CliModel` by synthesizing it from the base and constructor models."""
         model_fields: dict[str, t.Any] = {
             'label': (
                 cls.BaseNodeModel.model_fields['label'].annotation,
@@ -168,7 +172,6 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 for key, field_info in cls.ConstructorArgsModel.model_fields.items()
             },
         }
-
         CliModel = t.cast(  # noqa: N806
             type[AiiDABaseModel],
             pdt.create_model(

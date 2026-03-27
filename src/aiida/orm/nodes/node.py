@@ -310,11 +310,13 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def ConstructorModel(cls) -> type[BaseNodeModel]:  # noqa: N802, N805
         """Return the constructor-based creation model class for this entity.
 
-        :raises UnsupportedConstructorModelError: if this node type does not support creation via a constructor model.
+        :raises UnsupportedSchemaError: if this node type does not support creation via a constructor model.
         :return: The constructor-based creation model class.
         """
         if cls._ConstructorModel is None:
-            raise exceptions.UnsupportedConstructorModelError(cls.class_node_type)
+            raise exceptions.UnsupportedSchemaError(
+                f"'{cls.class_node_type}' does not support constructor-based creation."
+            )
         return cls._ConstructorModel
 
     _CliModel: ClassVar[type[BaseNodeModel] | None] = None
@@ -324,10 +326,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """Return the CLI model class for this entity.
 
         :return: The CLI model class.
-        :raises UnsupportedCliModelError: if this node type does not support creation via a CLI model.
+        :raises UnsupportedSchemaError: if this node type does not support creation via a CLI model.
         """
         if cls._CliModel is None:
-            raise exceptions.UnsupportedCliModelError(cls.class_node_type)
+            raise exceptions.UnsupportedSchemaError(f"'{cls.class_node_type}' does not support CLI-based creation.")
         return cls._CliModel
 
     def __init__(

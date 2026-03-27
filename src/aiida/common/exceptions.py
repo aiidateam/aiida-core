@@ -50,8 +50,6 @@ __all__ = (
     'TestsNotAllowedError',
     'TransportTaskException',
     'UniquenessError',
-    'UnsupportedCliModelError',
-    'UnsupportedConstructorModelError',
     'UnsupportedSchemaError',
     'UnsupportedSpeciesError',
     'ValidationError',
@@ -301,17 +299,3 @@ class LockingProfileError(AiidaException):
 
 class UnsupportedSchemaError(AiidaException):
     """Raised when a schema (model) is not supported by the entity."""
-
-
-class UnsupportedConstructorModelError(UnsupportedSchemaError):
-    """Raised when a node class does not support creation via a constructor model."""
-
-    def __init__(self, node_type: str) -> None:
-        super().__init__(f'{node_type} does not support creation via a constructor model')
-
-
-class UnsupportedCliModelError(UnsupportedSchemaError):
-    """Raised when a node class does not support creation via a CLI model."""
-
-    def __init__(self, node_type: str) -> None:
-        super().__init__(f'{node_type} does not support creation via a CLI model')

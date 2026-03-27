@@ -201,7 +201,7 @@ class SqliteZipBackend(StorageBackend):
         return True
 
     @classmethod
-    def migrate(cls, profile: Profile):
+    def migrate(cls, profile: Profile) -> NoReturn:
         raise NotImplementedError('use the :func:`aiida.storage.sqlite_zip.migrator.migrate` function directly.')
 
     def __init__(self, profile: Profile):
@@ -280,38 +280,38 @@ class SqliteZipBackend(StorageBackend):
         return orm.get_backend_entity(model, self)
 
     @cached_property
-    def authinfos(self):
+    def authinfos(self) -> orm.SqliteAuthInfoCollection:
         return orm.SqliteAuthInfoCollection(self)
 
     @cached_property
-    def comments(self):
+    def comments(self) -> orm.SqliteCommentCollection:
         return orm.SqliteCommentCollection(self)
 
     @cached_property
-    def computers(self):
+    def computers(self) -> orm.SqliteComputerCollection:
         return orm.SqliteComputerCollection(self)
 
     @cached_property
-    def groups(self):
+    def groups(self) -> orm.SqliteGroupCollection:
         return orm.SqliteGroupCollection(self)
 
     @cached_property
-    def logs(self):
+    def logs(self) -> orm.SqliteLogCollection:
         return orm.SqliteLogCollection(self)
 
     @cached_property
-    def nodes(self):
+    def nodes(self) -> orm.SqliteNodeCollection:
         return orm.SqliteNodeCollection(self)
 
     @cached_property
-    def users(self):
+    def users(self) -> orm.SqliteUserCollection:
         return orm.SqliteUserCollection(self)
 
     def _clear(self) -> None:
         raise ReadOnlyError()
 
     @contextmanager
-    def transaction(self):
+    def transaction(self) -> Iterator[Session]:
         session = self.get_session()
         if session.in_transaction():
             with session.begin_nested() as savepoint:
@@ -344,16 +344,18 @@ class SqliteZipBackend(StorageBackend):
     def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
         raise ReadOnlyError()
 
-    def get_global_variable(self, key: str):
+    def get_global_variable(self, key: str) -> NoReturn:
         raise NotImplementedError
 
-    def set_global_variable(self, key: str, value, description: Optional[str] = None, overwrite=True) -> None:
+    def set_global_variable(
+        self, key: str, value: Any, description: Optional[str] = None, overwrite: bool = True
+    ) -> NoReturn:
         raise ReadOnlyError()
 
     def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> NoReturn:
         raise NotImplementedError
 
-    def get_info(self, detailed: bool = False) -> dict:
+    def get_info(self, detailed: bool = False) -> dict[str, Any]:
         # since extracting the database file is expensive, we only do it if detailed is True
         results = {'metadata': extract_metadata(self._path)}
 
@@ -437,7 +439,7 @@ class _RoBackendRepository(AbstractRepositoryBackend):
     def key_format(self) -> Optional[str]:
         return 'sha256'
 
-    def initialise(self, **kwargs) -> None:
+    def initialise(self, **kwargs: Any) -> None:
         pass
 
     @property
@@ -464,10 +466,10 @@ class _RoBackendRepository(AbstractRepositoryBackend):
     def get_object_hash(self, key: str) -> str:
         return key
 
-    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
+    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs: Any) -> None:
         pass
 
-    def get_info(self, detailed: bool = False, **kwargs) -> InfoDictType:
+    def get_info(self, detailed: bool = False, **kwargs: Any) -> InfoDictType:
         return {'objects': {'count': len(list(self.list_objects()))}}
 
 

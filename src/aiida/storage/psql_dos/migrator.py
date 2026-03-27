@@ -382,7 +382,7 @@ class PsqlDosMigrator:
 
         # find what branch the current version is on
         revisions = self._alembic_script().revision_map.get_revision(version)
-  branches = revisions.branch_labels if revisions is not None else set()
+        branches = revisions.branch_labels if revisions else set()
 
         if 'django' in branches or 'sqlalchemy' in branches:
             # migrate up to the top of the respective legacy branches

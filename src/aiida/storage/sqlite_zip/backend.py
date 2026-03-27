@@ -20,7 +20,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import BinaryIO, NoReturn, Optional, Tuple, Union, cast
+from typing import Any, BinaryIO, NoReturn, Optional, Tuple, Union, cast
 from zipfile import ZipFile, is_zipfile
 
 from pydantic import BaseModel, Field, field_validator
@@ -59,7 +59,7 @@ SUPPORTED_VERSION = '3.35.0'  # minimum supported version of sqlite
 COMPRESSION_LEVEL = 6
 
 
-def validate_sqlite_version():
+def validate_sqlite_version() -> None:
     import sqlite3
 
     from packaging.version import parse
@@ -225,7 +225,7 @@ class SqliteZipBackend(StorageBackend):
     def is_closed(self) -> bool:
         return self._closed
 
-    def close(self):
+    def close(self) -> None:
         """Close the backend"""
         if self._session:
             self._session.close()
@@ -485,7 +485,7 @@ class ZipfileBackendRepository(_RoBackendRepository):
 
     def close(self) -> None:
         if self.__zipfile:
-            self._zipfile.close()
+            self.__zipfile.close()
         super().close()
 
     @property

@@ -148,7 +148,7 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
         print_status(
             ServiceStatus.WARNING,
             'broker',
-            ('No broker defined for this profile: certain functionality not available.', f'See {URL_NO_BROKER}'),
+            f'No broker defined for this profile: certain functionality not available.\nSee {URL_NO_BROKER}',
         )
 
     # Getting the daemon status
@@ -179,7 +179,7 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
 def print_status(
     status: ServiceStatus,
     service: str,
-    msg: str | tuple[str, ...] = '',
+    msg: str = '',
     exception: Exception | None = None,
     print_traceback: bool = False,
 ) -> None:
@@ -194,12 +194,10 @@ def print_status(
     symbol = STATUS_SYMBOLS[status]
     echo.echo(f" {symbol['string']} ", fg=symbol['color'], nl=False)
     echo.echo(f"{service + ':':12s} ", nl=False)
-    if isinstance(msg, tuple):
-        echo.echo(msg[0])
-        for s in msg[1:]:
-            echo.echo(f"{'':15s} {s}")
-    else:
-        echo.echo(msg)
+    lines = msg.split('\n')
+    echo.echo(lines[0])
+    for line in lines[1:]:
+        echo.echo(f"{'':15s} {line}")
 
     if exception is not None:
         echo.echo_error(f'{type(exception).__name__}: {exception}')

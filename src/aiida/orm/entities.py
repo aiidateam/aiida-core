@@ -243,14 +243,13 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         :raises UnsupportedSchemaError: if the provided schema is not supported for this entity.
         """
         if schema is not None:
-            entity = schema.__qualname__.split('.')[0]
-            if entity != self.__class__.__name__:
-                raise exceptions.UnsupportedSchemaError(
-                    f'Cannot serialize `{type(self).__name__}` against a schema of `{entity}`'
-                )
+            this_object = type(self).__name__
+            that_schema = schema.__qualname__
+            if this_object not in that_schema:
+                raise exceptions.UnsupportedSchemaError(f'Cannot serialize `{this_object}` against `{that_schema}`')
             if schema is self.ReadModel and not self.is_stored:
                 raise exceptions.UnsupportedSchemaError(
-                    'Cannot serialize an unstored entity using the ReadModel schema'
+                    'Cannot serialize an unstored entity using its `ReadModel` schema'
                 )
         Model = schema or (self.ReadModel if self.is_stored else self.WriteModel)  # noqa: N806
         fields = self._orm_to_model_field_values(context=context, minimal=minimal, schema=Model)

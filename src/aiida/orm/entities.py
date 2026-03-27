@@ -440,14 +440,15 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
             :return: The derived creation model class.
             """
 
-            def get_model_field(field: pdt.fields.FieldInfo) -> tuple[Any, pdt.fields.FieldInfo]:
+            def copy_model_field(field: pdt.fields.FieldInfo) -> tuple[Any, pdt.fields.FieldInfo]:
+                """Copy a model field, replacing any nested read models with their write model equivalent."""
                 annotation = field.annotation
                 if isinstance(annotation, type) and issubclass(annotation, OrmModel):
                     annotation = as_write_model(annotation, base_cls=OrmModel, suffix='Model')
                 return annotation, deepcopy(field)
 
             model_fields: dict[str, Any] = {
-                key: get_model_field(field)
+                key: copy_model_field(field)
                 for key, field in model_cls.model_fields.items()
                 if not get_metadata(field, 'read_only', False)
             }
@@ -464,25 +465,23 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
                 if all(validator_key in model_fields for validator_key in validator.info.fields)
             }
 
-            WriteModel = cast(  # noqa: N806
-                type[OrmModel],
-                pdt.create_model(
-                    'WriteModel',
-                    __base__=base_cls,
-                    __module__=model_cls.__module__,
-                    **model_fields,
-                ),
+            WriteModel = pdt.create_model(  # noqa: N806
+                'WriteModel',
+                __base__=base_cls,
+                __module__=model_cls.__module__,
+                **model_fields,
             )
             WriteModel.__qualname__ = model_cls.__qualname__.replace(suffix, 'WriteModel')
             WriteModel.__pydantic_decorators__.field_serializers = serializers
             WriteModel.__pydantic_decorators__.field_validators = validators
             WriteModel.model_config = deepcopy(model_cls.model_config)
 
-            WriteModel.model_rebuild(force=True, raise_errors=False)
+            WriteModel.model_rebuild(force=True)
 
             return WriteModel
 
-        cls.WriteModel = as_write_model(cls.ReadModel)  # type: ignore[assignment, misc]
+        if 'WriteModel' not in cls.__dict__:
+            cls.WriteModel = as_write_model(cls.ReadModel)  # type: ignore[assignment, misc]
 
     @classmethod
     def _patch_qb_fields(cls) -> None:

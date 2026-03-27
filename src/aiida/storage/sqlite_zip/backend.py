@@ -350,7 +350,7 @@ class SqliteZipBackend(StorageBackend):
     def set_global_variable(self, key: str, value, description: Optional[str] = None, overwrite=True) -> None:
         raise ReadOnlyError()
 
-    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs) -> NoReturn:
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> NoReturn:
         raise NotImplementedError
 
     def get_info(self, detailed: bool = False) -> dict:

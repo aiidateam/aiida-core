@@ -13,15 +13,25 @@ Plugin originally written by Marco Dorigo.
 Email: marco(DOT)dorigo(AT)rub(DOT)de
 """
 
+from __future__ import annotations
+
+import datetime
+import re
+import string
+import time
+import typing as t
 import xml.dom.minidom
 import xml.parsers.expat
 
 import aiida.schedulers
 from aiida.common.escaping import escape_for_bash
 from aiida.schedulers import SchedulerError, SchedulerParsingError
-from aiida.schedulers.datastructures import JobInfo, JobState, ParEnvJobResource
+from aiida.schedulers.datastructures import JobInfo, JobState, JobTemplate, ParEnvJobResource
 
 from .bash import BashCliScheduler
+
+if t.TYPE_CHECKING:
+    from aiida.engine.processes.exit_code import ExitCode
 
 # 'http://www.loni.ucla.edu/twiki/bin/view/Infrastructure/GridComputing?skin=plain':
 # Jobs Status:
@@ -104,7 +114,7 @@ class SgeScheduler(BashCliScheduler):
     # The class to be used for the job resource.
     _job_resource_class = SgeJobResource
 
-    def _get_joblist_command(self, jobs=None, user=None):
+    def _get_joblist_command(self, jobs: list[str] | None = None, user: str | None = None) -> str:
         """The command to report full information on existing jobs.
 
         TODO: in the case of job arrays, decide what to do (i.e., if we want
@@ -131,11 +141,10 @@ class SgeScheduler(BashCliScheduler):
         return command
         # raise NotImplementedError
 
-    def _get_detailed_job_info_command(self, job_id):
-        command = f'qacct -j {escape_for_bash(job_id)}'
-        return command
+    def _get_detailed_job_info_command(self, job_id: str) -> str:
+        return f'qacct -j {escape_for_bash(job_id)}'
 
-    def _get_submit_script_header(self, job_tmpl):
+    def _get_submit_script_header(self, job_tmpl: JobTemplate) -> str:
         """Return the submit script header, using the parameters from the
         job_tmpl.
 
@@ -145,8 +154,6 @@ class SgeScheduler(BashCliScheduler):
 
         TODO: truncate the title if too long
         """
-        import re
-        import string
 
         lines = []
 
@@ -263,7 +270,7 @@ class SgeScheduler(BashCliScheduler):
 
         return '\n'.join(lines)
 
-    def _get_submit_command(self, submit_script):
+    def _get_submit_command(self, submit_script: str) -> str:
         """Return the string to execute to submit a given script.
 
         Args:
@@ -278,7 +285,7 @@ class SgeScheduler(BashCliScheduler):
 
         return submit_command
 
-    def _parse_joblist_output(self, retval, stdout, stderr):
+    def _parse_joblist_output(self, retval: int, stdout: str, stderr: str) -> list[JobInfo]:
         if retval != 0:
             self.logger.error(f'Error in _parse_joblist_output: retval={retval}; stdout={stdout}; stderr={stderr}')
             raise SchedulerError(f'Error during joblist retrieval, retval={retval}')
@@ -300,6 +307,8 @@ class SgeScheduler(BashCliScheduler):
 
         try:
             first_child = xmldata.firstChild
+            if first_child is None:
+                raise SchedulerError
             second_childs = first_child.childNodes
             tag_names_sec = [elem.tagName for elem in second_childs if elem.nodeType == 1]
             if 'queue_info' not in tag_names_sec:
@@ -320,7 +329,7 @@ class SgeScheduler(BashCliScheduler):
             self.logger.error(f'Error in sge._parse_joblist_output: stdout={stdout}')
             raise SchedulerError('Error during xml processing, of stdout')
 
-        jobs = list(first_child.getElementsByTagName('job_list'))
+        jobs = list(first_child.getElementsByTagName('job_list'))  # type: ignore[union-attr]
         # jobs = [i for i in jobinfo.getElementsByTagName('job_list')]
         # print [i[0].childNodes[0].data for i in job_numbers if i]
         joblist = []
@@ -410,15 +419,15 @@ class SgeScheduler(BashCliScheduler):
                 try:
                     job_element = job.getElementsByTagName('slots').pop(0)
                     element_child = job_element.childNodes.pop(0)
-                    this_job.num_mpiprocs = str(element_child.data).strip()
+                    this_job.num_mpiprocs = int(str(element_child.data).strip())
                 except IndexError:
                     self.logger.warning(f"No 'slots' field for job id {this_job.job_id}")
 
             joblist.append(this_job)
-        # self.logger.debug("joblist final: {}".format(joblist))
+
         return joblist
 
-    def _parse_submit_output(self, retval, stdout, stderr):
+    def _parse_submit_output(self, retval: int, stdout: str, stderr: str) -> str | ExitCode:
         """Parse the output of the submit command, as returned by executing the
         command returned by _get_submit_command command.
 
@@ -437,13 +446,11 @@ class SgeScheduler(BashCliScheduler):
 
         return stdout.strip()
 
-    def _parse_time_string(self, string, fmt='%Y-%m-%dT%H:%M:%S'):
+    def _parse_time_string(self, string: str, fmt: str = '%Y-%m-%dT%H:%M:%S') -> datetime.datetime:
         """Parse a time string in the format returned from qstat -xml -ext and
         returns a datetime object.
         Example format: 2013-06-13T11:53:11
         """
-        import datetime
-        import time
 
         try:
             time_struct = time.strptime(string, fmt)
@@ -456,7 +463,7 @@ class SgeScheduler(BashCliScheduler):
         # http://stackoverflow.com/questions/1697815
         return datetime.datetime.fromtimestamp(time.mktime(time_struct))
 
-    def _get_kill_command(self, jobid):
+    def _get_kill_command(self, jobid: str) -> str:
         """Return the command to kill the job with specified jobid."""
         submit_command = f'qdel {jobid}'
 
@@ -464,7 +471,7 @@ class SgeScheduler(BashCliScheduler):
 
         return submit_command
 
-    def _parse_kill_output(self, retval, stdout, stderr):
+    def _parse_kill_output(self, retval: int, stdout: str, stderr: str) -> bool:
         """Parse the output of the kill command.
 
         To be implemented by the plugin.

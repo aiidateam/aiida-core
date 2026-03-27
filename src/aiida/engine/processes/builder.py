@@ -29,8 +29,6 @@ class PrettyEncoder(json.JSONEncoder):
     """JSON encoder for returning a pretty representation of an AiiDA ``ProcessBuilder``."""
 
     def default(self, o):
-        if isinstance(o, (ProcessBuilder, ProcessBuilderNamespace)):
-            return dict(o)
         if isinstance(o, Dict):
             return o.get_dict()
         if isinstance(o, BaseType):
@@ -239,11 +237,15 @@ class ProcessBuilder(ProcessBuilderNamespace):
         """Return the process class for which this builder is constructed."""
         return self._process_class
 
-    def _repr_pretty_(self, p, _) -> str:
-        """Pretty representation for in the IPython console and notebooks."""
+    def __str__(self) -> str:
+        """Return a readable string showing the process class and its current inputs."""
         import yaml
 
-        return p.text(
+        return (
             f'Process class: {self._process_class.__name__}\n'
-            f'Inputs:\n{yaml.safe_dump(json.JSONDecoder().decode(PrettyEncoder().encode(self)))}'
+            f'Inputs:\n{yaml.safe_dump(json.JSONDecoder().decode(PrettyEncoder().encode(self._inputs(prune=True))))}'
         )
+
+    def _repr_pretty_(self, p, _) -> None:
+        """Pretty representation hook for IPython and Jupyter environments."""
+        p.text(str(self))

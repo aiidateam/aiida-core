@@ -429,7 +429,6 @@ def test_pretty_repr(example_inputs):
     dynamic:
       namespace:
         alp: 1
-    metadata: {}
     name:
       spaced: 1
     name_spaced: underscored

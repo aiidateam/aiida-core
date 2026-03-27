@@ -8,7 +8,6 @@
 ###########################################################################
 """Test data-related verdi commands."""
 
-import asyncio
 import io
 import os
 import subprocess as sp
@@ -240,12 +239,8 @@ class TestVerdiDataBands(DummyVerdiDataListable):
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_profile_clean, run_cli_command):
         """Initialize the profile."""
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
         self.pks = self.create_structure_bands()
         self.cli_runner = run_cli_command
-        yield
-        self.loop.close()
 
     @staticmethod
     def create_structure_bands():
@@ -588,18 +583,6 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
             # function but not the actual commands through a sub process. Note that this mock needs to happen only for
             # these specific formats, because ``matplotlib`` used in the others _also_ calls ``subprocess.check_output``
             monkeypatch.setattr(sp, 'check_output', mock_check_output)
-
-        if fmt in ['mpl_pos']:
-            # This has to be mocked because ``plot_positions_xyz`` imports ``matplotlib.pyplot`` and for some completely
-            # unknown reason, causes ``tests/storage/psql_dos/test_backend.py::test_unload_profile`` to fail. For some
-            # reason, merely importing ``matplotlib`` (even here directly in the test) will cause that test to claim
-            # that there still is something holding on to a reference of an sqlalchemy session that it keeps track of
-            # in the ``sqlalchemy.orm.session._sessions`` weak ref dictionary. Since it is impossible to figure out why
-            # the hell importing matplotlib would interact with sqlalchemy sessions, the function that does the import
-            # is simply mocked out for now.
-            from aiida.orm.nodes.data.array import trajectory
-
-            monkeypatch.setattr(trajectory, 'plot_positions_XYZ', lambda *args, **kwargs: None)
 
         run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
 

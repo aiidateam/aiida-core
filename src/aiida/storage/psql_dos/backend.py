@@ -9,7 +9,6 @@
 """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
 
 import functools
-import gc
 import pathlib
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
@@ -114,33 +113,24 @@ class PsqlDosBackend(StorageBackend):
 
     @classmethod
     def version_profile(cls, profile: Profile) -> Optional[str]:
-        with cls.migrator_context(profile) as migrator:
+        with cls.migrator(profile) as migrator:
             return migrator.get_schema_version_profile(check_legacy=True)
 
     @classmethod
     def initialise(cls, profile: Profile, reset: bool = False) -> bool:
-        with cls.migrator_context(profile) as migrator:
+        with cls.migrator(profile) as migrator:
             return migrator.initialise(reset=reset)
 
     @classmethod
     def migrate(cls, profile: Profile) -> None:
-        with cls.migrator_context(profile) as migrator:
+        with cls.migrator(profile) as migrator:
             migrator.migrate()
-
-    @classmethod
-    @contextmanager
-    def migrator_context(cls, profile: Profile):
-        migrator = cls.migrator(profile)
-        try:
-            yield migrator
-        finally:
-            migrator.close()
 
     def __init__(self, profile: Profile) -> None:
         super().__init__(profile)
 
         # check that the storage is reachable and at the correct version
-        with self.migrator_context(profile) as migrator:
+        with self.migrator(profile) as migrator:
             migrator.validate_storage()
 
         self._session_factory: Optional[scoped_session] = None
@@ -194,19 +184,15 @@ class PsqlDosBackend(StorageBackend):
         if engine is not None:
             engine.dispose()  # type: ignore[union-attr]
         self._session_factory.expunge_all()
-        self._session_factory.close()
+        self._session_factory.remove()
         self._session_factory = None
-
-        # Without this, sqlalchemy keeps a weakref to a session
-        # in sqlalchemy.orm.session._sessions
-        gc.collect()
 
     def _clear(self) -> None:
         from aiida.storage.psql_dos.models.settings import DbSetting
 
         super()._clear()
 
-        with self.migrator_context(self._profile) as migrator:
+        with self.migrator(self._profile) as migrator:
             # Close the session otherwise the ``delete_tables`` call will hang as there will be an open connection
             # to the PostgreSQL server and it will block the deletion and the command will hang.
             self.get_session().close()

@@ -10,7 +10,7 @@ from plumpy import get_object_loader
 
 from aiida import orm
 from aiida.common.datastructures import StashMode
-from aiida.common.exceptions import UnsupportedConstructorModelError
+from aiida.common.exceptions import UnsupportedSchemaError
 
 orm_to_test = (
     orm.AuthInfo,
@@ -489,7 +489,7 @@ def test_roundtrip_node_from_model_constructor(required_arguments, tmp_path):
     constructor_payload: dict | None = payload.get('constructor-based')
 
     if constructor_payload is None:
-        with pytest.raises(UnsupportedConstructorModelError):
+        with pytest.raises(UnsupportedSchemaError):
             cls.ConstructorModel
         return
 
@@ -529,7 +529,7 @@ def test_roundtrip_node_from_serialized_constructor(required_arguments, tmp_path
     constructor_payload: dict | None = payload.get('constructor-based')
 
     if constructor_payload is None:
-        with pytest.raises(UnsupportedConstructorModelError):
+        with pytest.raises(UnsupportedSchemaError):
             cls.ConstructorModel
         return
 

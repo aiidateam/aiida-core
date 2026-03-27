@@ -81,8 +81,6 @@ __all__ = (
     'TransportTaskException',
     'UniquenessError',
     'UnstashTargetMode',
-    'UnsupportedCliModelError',
-    'UnsupportedConstructorModelError',
     'UnsupportedSchemaError',
     'UnsupportedSpeciesError',
     'ValidationError',

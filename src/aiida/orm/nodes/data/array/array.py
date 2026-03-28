@@ -49,6 +49,7 @@ class ArrayData(Data):
 
     class AttributesModel(Data.AttributesModel):
         model_config = ConfigDict(
+            extra='allow',
             arbitrary_types_allowed=True,
             json_schema_extra={
                 'patternProperties': {
@@ -251,8 +252,11 @@ class ArrayData(Data):
         self.base.attributes.set(f'{self.array_prefix}{name}', list(array.shape))
 
     def attach_file(self, name: str, fileobj: io.BufferedReader) -> None:
+        if not name.lower().endswith('.npy'):
+            raise ValueError(f'expected .npy file: {name}')
+        base = name.removesuffix('.npy')
         array = np.load(fileobj, allow_pickle=False)
-        self.set_array(name, array)
+        self.set_array(base, array)
 
     def _validate_array_name(self, name: str) -> None:
         """Validate the array name.
@@ -273,10 +277,6 @@ class ArrayData(Data):
         list of properties match. Just a name check, no check on the size
         since this would require to reload all arrays and this may take time
         and memory.
-
-        In case of mismatch, try to fix it by loading the arrays from files
-        and updating the properties accordingly. If no files are found,
-        raise a ValidationError.
         """
         from aiida.common.exceptions import ValidationError
 
@@ -284,21 +284,9 @@ class ArrayData(Data):
         properties = self._arraynames_from_properties()
 
         if set(files) != set(properties):
-            if not files:
-                raise ValidationError(
-                    f'Mismatch of files and properties for ArrayData node (pk= {self.pk}): {files} vs. {properties}'
-                )
-            for file in files:
-                self._validate_array_name(file)
-                try:
-                    content = self.base.repository.get_object_content(f'{file}.npy', 'rb')
-                    array = np.load(io.BytesIO(content), allow_pickle=False)
-                    self.base.attributes.set(f'{self.array_prefix}{file}', list(array.shape))
-                except Exception as exc:
-                    raise ValidationError(
-                        f'ArrayData node (pk= {self.pk}): could not load array `{file}` from file to fix mismatch.'
-                    ) from exc
-
+            raise ValidationError(
+                f'Mismatch of files and properties for ArrayData node (pk= {self.pk}): {files} vs. {properties}'
+            )
         return super()._validate()
 
     def _get_array_entries(self) -> dict[str, Any]:

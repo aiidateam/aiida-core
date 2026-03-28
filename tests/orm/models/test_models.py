@@ -109,7 +109,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
         return orm.ArrayData, {
             'attributes-based': {
                 'attributes': {},
-                'files': {'test_array': buffered_array},
+                'files': {'test_array.npy': buffered_array},
                 'assert_derived': assert_derived_array_properties,
             },
             'constructor-based': {

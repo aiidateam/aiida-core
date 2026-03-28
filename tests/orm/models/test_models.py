@@ -416,11 +416,11 @@ def test_roundtrip_entity_from_model(required_arguments):
     kwargs: dict = required_arguments[1]
 
     entity = cls(**kwargs)
-    model = entity.to_model(schema=cls.WriteModel)
+    model = entity.to_model(schema='write')
     assert isinstance(model, cls.WriteModel)
     new = cls.from_model(model)
     assert isinstance(new, cls)
-    new_model = new.to_model(schema=cls.WriteModel)
+    new_model = new.to_model(schema='write')
     assert isinstance(new_model, cls.WriteModel)
     assert _validate_value(new_model) == _validate_value(model)
 
@@ -435,11 +435,11 @@ def test_roundtrip_entity_from_serialized(required_arguments):
     kwargs: dict = required_arguments[1]
 
     entity = cls(**kwargs)
-    serialized_entity = entity.serialize(schema=cls.WriteModel)
+    serialized_entity = entity.serialize(schema='write')
     assert set(serialized_entity.keys()) == set(cls.WriteModel.model_fields.keys())
     new = cls.from_serialized(serialized_entity)
     assert isinstance(new, cls)
-    serialized_new = new.serialize(schema=cls.WriteModel)
+    serialized_new = new.serialize(schema='write')
     assert serialized_new == serialized_entity
 
 
@@ -447,7 +447,7 @@ def _assert_roundtrip_field_values_equal(
     cls: type[orm.Node],
     original_model: orm.Node.BaseNodeModel,
     new_entity: orm.Node,
-    schema: type[orm.Node.BaseNodeModel],
+    schema: str,
     tmp_path,
 ):
     context = {'repository_path': tmp_path}
@@ -475,7 +475,7 @@ def test_roundtrip_node_from_model_attributes(required_arguments, tmp_path):
     new = cls.from_model(model, files=files)
     assert isinstance(new, cls)
     assert_derived(new)
-    _assert_roundtrip_field_values_equal(cls, model, new, cls.WriteModel, tmp_path)
+    _assert_roundtrip_field_values_equal(cls, model, new, 'write', tmp_path)
 
 
 @pytest.mark.parametrize(
@@ -496,7 +496,7 @@ def test_roundtrip_node_from_model_constructor(required_arguments, tmp_path):
     model = cls.ConstructorModel(node_type=cls.class_node_type, **constructor_payload)
     new = cls.from_model(model)
     assert isinstance(new, cls)
-    _assert_roundtrip_field_values_equal(cls, model, new, cls.ConstructorModel, tmp_path)
+    _assert_roundtrip_field_values_equal(cls, model, new, 'constructor', tmp_path)
 
 
 @pytest.mark.parametrize(
@@ -515,7 +515,7 @@ def test_roundtrip_node_from_serialized_attributes(required_arguments, tmp_path)
     new = cls.from_serialized(serialized, files=files)
     assert isinstance(new, cls)
     assert_derived(new)
-    _assert_roundtrip_field_values_equal(cls, model, new, cls.WriteModel, tmp_path)
+    _assert_roundtrip_field_values_equal(cls, model, new, 'write', tmp_path)
 
 
 @pytest.mark.parametrize(
@@ -537,4 +537,4 @@ def test_roundtrip_node_from_serialized_constructor(required_arguments, tmp_path
     serialized = model.model_dump(exclude_none=True)
     new = cls.from_serialized(serialized)
     assert isinstance(new, cls)
-    _assert_roundtrip_field_values_equal(cls, model, new, cls.ConstructorModel, tmp_path)
+    _assert_roundtrip_field_values_equal(cls, model, new, 'constructor', tmp_path)

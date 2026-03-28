@@ -246,10 +246,10 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
             this_object = type(self).__name__
             that_schema = schema.__qualname__
             if this_object not in that_schema:
-                raise exceptions.UnsupportedSchemaError(f'Cannot serialize `{this_object}` against `{that_schema}`')
+                raise exceptions.UnsupportedSchemaError(f'cannot serialize `{this_object}` against `{that_schema}`')
             if schema is self.ReadModel and not self.is_stored:
                 raise exceptions.UnsupportedSchemaError(
-                    'Cannot serialize an unstored entity using its `ReadModel` schema'
+                    'cannot serialize an unstored entity using its `ReadModel` schema'
                 )
         Model = schema or (self.ReadModel if self.is_stored else self.WriteModel)  # noqa: N806
         fields = self._orm_to_model_field_values(context=context, minimal=minimal, schema=Model)
@@ -487,7 +487,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         """Patch the `fields` attribute of the class based on the `ReadModel` definition."""
         current_fields = getattr(cls, 'fields', None)
         if current_fields is not None and not isinstance(current_fields, QbFields):
-            raise ValueError(f"class '{cls}' already has a `fields` attribute set")
+            raise ValueError(f'fields already set on `{cls}`')
 
         fields: dict[str, Any] = {}
 
@@ -580,11 +580,11 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
                     try:
                         orm_class = cast(Entity, BaseFactory('aiida.orm', orm_class))
                     except EntryPointError as exception:
-                        raise EntryPointError(f'The `orm_class` of `{key}` is invalid: {exception}') from exception
+                        raise EntryPointError(f'invalid `orm_class` on `{key}`: {exception}') from exception
                 try:
                     fields[field_name] = orm_class.collection.get(id=field_value)
                 except NotExistent as exception:
-                    raise NotExistent(f'No `{orm_class}` found with pk={field_value}') from exception
+                    raise NotExistent(f'no `{orm_class}` found with pk={field_value}') from exception
             elif model_to_orm := get_metadata(field, 'model_to_orm'):
                 fields[field_name] = model_to_orm(valid_model)
             else:

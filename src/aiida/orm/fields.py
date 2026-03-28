@@ -304,7 +304,7 @@ class QbFieldFilters:
     def __eq__(self, other: object) -> bool:
         """``a == b`` checks if `a.filters == b.filters`."""
         if not isinstance(other, QbFieldFilters):
-            raise TypeError(f'Cannot compare QbFieldFilters to {type(other)}')
+            raise TypeError(f'cannot compare QbFieldFilters to {type(other)}')
         return self.filters == other.filters
 
     def __and__(self, other: 'QbFieldFilters') -> 'QbFieldFilters':
@@ -337,7 +337,7 @@ class QbFieldFilters:
         """Resolve redundant filters and nested logical operators."""
 
         if not isinstance(other, QbFieldFilters):
-            raise TypeError(f'Cannot combine QbFieldFilters and {type(other)}')
+            raise TypeError(f'cannot combine QbFieldFilters and {type(other)}')
 
         # same filters
         if other == self:

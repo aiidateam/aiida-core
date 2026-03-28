@@ -187,9 +187,6 @@ class Dict(Data):
         valid_model: AiiDABaseModel,
         schema: type[AiiDABaseModel] | None = None,
     ) -> t.Dict[str, t.Any]:
-        # `Dict.AttributesModel` doesn't explicitly define any fields.
-        # `_model_to_orm_field_values` will return an empty `attributes` dict.
-        # We dump the model directly.
         return valid_model.model_dump(exclude_none=True)
 
     def _orm_to_model_field_values(
@@ -207,9 +204,6 @@ class Dict(Data):
             use_field_alias_as_key=use_field_alias_as_key,
         )
         if schema in (self.ReadModel, self.WriteModel):
-            # `Dict.AttributesModel` doesn't explicitly define any fields.
-            # `_orm_to_model_field_values` will return an empty `attributes` dict.
-            # We wire it in here manually.
             return fields | {'attributes': self.get_dict()}
         return fields
 

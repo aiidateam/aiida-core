@@ -313,7 +313,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         # would be inherited by all nodes. Instead, we define them here for type
         # checking purposes, and provide below (else) the runtime properties.
 
+        class ConstructorArgsModel(AiiDABaseModel):
+            """The constructor arguments schema for this node."""
+
         class ConstructorModel(BaseNodeModel):
+            """The constructor-based creation schema for this node."""
+
             args: Any = MetadataField(
                 description='The arguments to create the node with',
                 write_only=True,
@@ -384,7 +389,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         supported = ('ReadModel', 'WriteModel', 'ConstructorModel')
         if self.supports_constructor_model and schema is self.ConstructorArgsModel:
             raise exceptions.UnsupportedSchemaError(
-                f"Cannot serialize against '{schema.__name__}'; supported serialization schemas: {supported}"
+                f"cannot serialize against '{schema.__name__}'; supported serialization schemas: {supported}"
             )
         return super().to_model(context=context, minimal=minimal, schema=schema)
 
@@ -433,6 +438,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         :param dump_repo: Whether to dump the repository contents to the serialization directory.
         :return: A dictionary that can be serialized to JSON.
         :raises UnsupportedSchemaError: if the provided schema is not supported for this entity.
+        :raises ValueError: if `dump_repo` is True but the repository cannot be dumped due to missing or invalid files.
         """
         if dump_repo:
             repository_path = (context or {}).get('repository_path')
@@ -443,9 +449,9 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 repository_path.mkdir(parents=True)
             else:
                 if not repository_path.exists():
-                    raise ValueError(f'The repository_path `{repository_path}` does not exist.')
+                    raise ValueError(f'`{repository_path}` does not exist')
                 if not repository_path.is_dir():
-                    raise ValueError(f'The repository_path `{repository_path}` is not a directory.')
+                    raise ValueError(f'`{repository_path}` is not a directory')
 
             self.base.repository.copy_tree(repository_path)
 
@@ -474,11 +480,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if 'attributes' in serialized:
             return cls.from_model(cls.WriteModel(**serialized), files=files)
         elif 'args' in serialized:
-            if not cls._ConstructorModel:
-                raise ValueError(f'{cls.__name__} does not support constructor-based creation')
             return cls.from_model(cls.ConstructorModel(**serialized), files=files)
-        else:
-            raise ValueError('the serialized data does not contain the required `attributes` or `args` field')
+        raise ValueError('missing required `attributes` or `args` field')
 
     def attach_file(self, filepath: str, fileobj: io.BufferedReader) -> None:
         """Attach a file to the repository of this node.
@@ -1024,11 +1027,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if 'AttributesModel' in cls.__dict__:
             cls._validate_model_inheritance('AttributesModel')
 
-        try:
-            container_field = cast(QbAttributesField, fields['attributes'])
-        except KeyError:
-            raise KeyError(f"class '{cls}' was expected to have a `Model` with an 'attributes' field")
-
+        container_field = cast(QbAttributesField, fields['attributes'])
         container_field._typed_children = {}
 
         for key, field in cls.AttributesModel.model_fields.items():
@@ -1173,13 +1172,13 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
         if repository_metadata:
             if not files:
-                raise exceptions.ValidationError('No files were provided from which to reconstruct the repository.')
+                raise exceptions.ValidationError('no files provided')
             flattened_repo = Repository.flatten(repository_metadata)
 
         seen = set()
         for filepath, fileobj in (files or {}).items():
             if filepath in seen:
-                raise exceptions.ValidationError(f'File `{filepath}` already exists in the repository.')
+                raise exceptions.ValidationError(f'duplicate file: {filepath}')
 
             if repository_metadata:
                 expected_hash = flattened_repo.get(filepath)
@@ -1188,7 +1187,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                     fileobj.seek(0)
                     if expected_hash != actual_hash:
                         raise exceptions.ValidationError(
-                            f'File hash mismatch for `{filepath}`: expected {expected_hash}, computed {actual_hash}'
+                            f'file hash mismatch for `{filepath}`; expected {expected_hash}, computed {actual_hash}'
                         )
 
             instance.attach_file(filepath, fileobj)
@@ -1204,7 +1203,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         :return: the constructed node instance
         """
         if not isinstance(model, cls.ConstructorModel):
-            raise ValueError(f'expected `{cls.ConstructorModel.__name__}` model, got `{type(model).__name__}`')
+            raise ValueError(f'expected `ConstructorModel`, got `{type(model).__name__}`')
         fields = cls._model_to_orm_field_values(model)
         fields.update(**fields.pop('args'))
         fields.pop('node_type')
@@ -1230,13 +1229,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         schema: type[AiiDABaseModel] | None = None,
         use_field_alias_as_key: bool = True,
     ) -> dict[str, Any]:
-        """Collect values for the model fields from this node.
-
-        For constructor-based schemas, this also reconstructs the `args` payload from
-        `ConstructorArgsModel` fields.
-        """
+        """Collect values for the model fields from this node."""
         fields = super()._orm_to_model_field_values(
-            context=context, minimal=minimal, schema=schema, use_field_alias_as_key=use_field_alias_as_key
+            context=context,
+            minimal=minimal,
+            schema=schema,
+            use_field_alias_as_key=use_field_alias_as_key,
         )
         if self.supports_constructor_model and schema is self.ConstructorModel:
             fields['args'] = self._orm_to_model_field_values(

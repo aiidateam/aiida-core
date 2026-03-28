@@ -24,10 +24,7 @@ class OrmModel(AiiDABaseModel):
         try:
             orm_class_name, model_name = cls.__qualname__.split('.')
         except ValueError as exception:
-            raise ValueError(
-                f'Expected class name in format "OrmClass.ModelName", got "{cls.__qualname__}"; '
-                'It is likely the ORM model was not correctly nested within its ORM class.'
-            ) from exception
+            raise ValueError(f"expected 'OrmClass.ModelName' format, got '{cls.__qualname__}'") from exception
         MinimalModel = create_model(  # noqa: N806
             f'Minimal{model_name}',
             __base__=OrmModel,

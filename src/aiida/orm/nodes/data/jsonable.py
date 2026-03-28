@@ -211,9 +211,6 @@ class JsonableData(Data):
         valid_model: AiiDABaseModel,
         schema: type[AiiDABaseModel] | None = None,
     ) -> dict[str, typing.Any]:
-        # `Dict.AttributesModel` doesn't explicitly define any fields.
-        # `_model_to_orm_field_values` will return an empty `attributes` dict.
-        # We dump the model directly.
         return valid_model.model_dump(exclude_none=True)
 
     def _orm_to_model_field_values(
@@ -230,10 +227,6 @@ class JsonableData(Data):
             schema=schema,
             use_field_alias_as_key=use_field_alias_as_key,
         )
-        if schema in (self.ReadModel, self.WriteModel):
-            # The object's data can be anything and is not explicitly defined on the schema.
-            # `_orm_to_model_field_values` will not pick it up.
-            # We wire it in here manually.
+        if issubclass(schema, self.WritableFields):
             fields['attributes'] |= self.obj.as_dict()
-            return fields
         return fields

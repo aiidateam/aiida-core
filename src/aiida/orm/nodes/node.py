@@ -386,8 +386,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         minimal: bool = False,
         schema: type[OrmModel] | None = None,
     ) -> OrmModel:
-        supported = ('ReadModel', 'WriteModel', 'ConstructorModel')
-        if self.supports_constructor_model and schema is self.ConstructorArgsModel:
+        supported = {'ReadModel', 'WriteModel', 'ConstructorModel'}
+        if schema and schema.__name__ not in supported:
             raise exceptions.UnsupportedSchemaError(
                 f"cannot serialize against '{schema.__name__}'; supported serialization schemas: {supported}"
             )
@@ -1128,7 +1128,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 __base__=cls.BaseNodeModel,
                 __module__=cls.__module__,
                 node_type=(Literal[cls.class_node_type], node_type_field),
-                args=(cls.ConstructorArgsModel, args_field),  # type: ignore[attr-defined]
+                args=(cls.ConstructorArgsModel, args_field),
             ),
         )
         ConstructorModel.__qualname__ = f'{cls.__name__}.ConstructorModel'

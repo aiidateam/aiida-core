@@ -384,13 +384,24 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         *,
         context: Dict[str, Any] | None = None,
         minimal: bool = False,
-        schema: type[OrmModel] | None = None,
+        schema: Literal['read', 'write', 'constructor'] | None = None,
     ) -> OrmModel:
-        supported = {'ReadModel', 'WriteModel', 'ConstructorModel'}
-        if schema and schema.__name__ not in supported:
-            raise exceptions.UnsupportedSchemaError(
-                f"cannot serialize against '{schema.__name__}'; supported serialization schemas: {supported}"
-            )
+        """Return the node instance as an instance of its model.
+
+        :param context: Optional context dictionary to pass to `orm_to_model` callables.
+        :param minimal: Whether to exclude potentially large value fields.
+        :param schema: The schema to use for serialization. Defaults to 'read' if stored, 'write' otherwise.
+            The 'constructor' schema can be used to serialize the node for constructor-based creation, if supported.
+        :raises UnsupportedSchemaError: if the provided schema is not supported for this entity.
+        """
+        if schema == 'constructor':
+            if not self.supports_constructor_model:
+                raise exceptions.UnsupportedSchemaError(
+                    f"'{self.class_node_type}' does not provide a constructor schema"
+                )
+            Model = self.ConstructorModel  # noqa: N806
+            fields = self._orm_to_model_field_values(context=context, minimal=minimal, schema=Model)
+            return Model(**fields)
         return super().to_model(context=context, minimal=minimal, schema=schema)
 
     @classmethod
@@ -423,7 +434,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         *,
         context: dict[str, Any] | None = None,
         minimal: bool = False,
-        schema: type[OrmModel] | None = None,
+        schema: Literal['read', 'write', 'constructor'] | None = None,
         mode: Literal['json', 'python'] = 'python',
         dump_repo: bool = False,
     ) -> dict[str, Any]:
@@ -431,8 +442,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
         :param context: Optional context dictionary to pass to `orm_to_model` callables.
         :param minimal: Whether to exclude potentially large value fields.
-        :param schema: The schema model to use for serialization.
-            If not provided, defaults to the entity's `ReadModel` if the entity is stored, `WriteModel` otherwise.
+        :param schema: The schema to use for serialization. Defaults to 'read' if stored, 'write' otherwise.
+            The 'constructor' schema can be used to serialize the node for constructor-based creation, if supported.
         :param mode: The serialization mode, either 'json' or 'python' (default). JSON-based clients (e.g., REST APIs)
             should use 'json' mode.
         :param dump_repo: Whether to dump the repository contents to the serialization directory.

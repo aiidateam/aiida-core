@@ -216,6 +216,8 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
     class WriteModel(OrmModel):
         """The write schema of this entity, derived from the absolute schema."""
 
+    _MODEL_MAP: ClassVar[dict[str, type[OrmModel]]]
+
     def __init__(self, backend_entity: BackendEntityType) -> None:
         """:param backend_entity: the backend model supporting this entity"""
         self._backend_entity = backend_entity
@@ -225,33 +227,32 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         cls._patch_write_model()
         cls._patch_qb_fields()
         super().__init_subclass__(**kwargs)
+        cls._MODEL_MAP = {
+            'read': cls.ReadModel,
+            'write': cls.WriteModel,
+        }
 
     def to_model(
         self,
         *,
         context: dict[str, Any] | None = None,
         minimal: bool = False,
-        schema: type[OrmModel] | None = None,
+        schema: Literal['read', 'write'] | None = None,
     ) -> OrmModel:
         """Return the entity instance as an instance of its model.
 
         :param context: Optional context dictionary to pass to `orm_to_model` callables.
         :param minimal: Whether to exclude potentially large value fields.
-        :param schema: The schema model to use for the instance.
-            If not provided, defaults to the entity's `ReadModel` if the entity is stored, `WriteModel` otherwise.
+        :param schema: The schema to use for the instance. Defaults to 'read' if stored, 'write' otherwise.
         :return: An instance of the entity's model class.
         :raises UnsupportedSchemaError: if the provided schema is not supported for this entity.
         """
-        if schema is not None:
-            this_object = type(self).__name__
-            that_schema = schema.__qualname__
-            if this_object not in that_schema:
-                raise exceptions.UnsupportedSchemaError(f'cannot serialize `{this_object}` against `{that_schema}`')
-            if schema is self.ReadModel and not self.is_stored:
-                raise exceptions.UnsupportedSchemaError(
-                    'cannot serialize an unstored entity using its `ReadModel` schema'
-                )
-        Model = schema or (self.ReadModel if self.is_stored else self.WriteModel)  # noqa: N806
+        schema = schema or ('read' if self.is_stored else 'write')
+        if schema not in self._MODEL_MAP:
+            raise exceptions.UnsupportedSchemaError(f"expected one of {list(self._MODEL_MAP)} schemas, got '{schema}'")
+        if schema == 'read' and not self.is_stored:
+            raise exceptions.UnsupportedSchemaError("cannot use 'read' schema for an unstored entity")
+        Model = self._MODEL_MAP[schema]  # noqa: N806
         fields = self._orm_to_model_field_values(context=context, minimal=minimal, schema=Model)
         if minimal:
             Model = Model._as_minimal_model()  # noqa: N806
@@ -272,15 +273,14 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         *,
         context: dict[str, Any] | None = None,
         minimal: bool = False,
-        schema: type[OrmModel] | None = None,
+        schema: Literal['read', 'write'] | None = None,
         mode: Literal['json', 'python'] = 'python',
     ) -> dict[str, Any]:
         """Serialize the entity instance to JSON.
 
         :param context: Optional context dictionary to pass to `orm_to_model` callables.
         :param minimal: Whether to exclude potentially large value fields.
-        :param schema: The schema model to use for serialization.
-            If not provided, defaults to the entity's `ReadModel` if the entity is stored, `WriteModel` otherwise.
+        :param schema: The schema to use for serialization. Defaults to 'read' if stored, 'write' otherwise.
         :param mode: The serialization mode, either 'json' or 'python' (default). JSON-based clients (e.g., REST APIs)
             should use 'json' mode.
         :return: A dictionary that can be serialized to JSON.

@@ -227,6 +227,6 @@ class JsonableData(Data):
             schema=schema,
             use_field_alias_as_key=use_field_alias_as_key,
         )
-        if issubclass(schema, self.WritableFields):
+        if schema and issubclass(schema, self.WritableFields):
             fields['attributes'] |= self.obj.as_dict()
         return fields

@@ -155,6 +155,46 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         super().__init_subclass__(**kwargs)
         cls._patch_cli_model()
 
+    def to_model(
+        self,
+        *,
+        context: dict[str, t.Any] | None = None,
+        minimal: bool = False,
+        schema: t.Literal['read', 'write', 'constructor', 'cli'] | None = None,
+    ):
+        if schema == 'cli':
+            Model = self.CliModel  # noqa: N806
+            fields = self._orm_to_model_field_values(context=context, minimal=minimal, schema=schema)
+            return Model(**fields)
+        return super().to_model(context=context, minimal=minimal, schema=schema)
+
+    def serialize(
+        self,
+        *,
+        context: dict[str, t.Any] | None = None,
+        minimal: bool = False,
+        schema: t.Literal['read', 'write', 'constructor', 'cli'] | None = None,
+        mode: str = 'python',
+        dump_repo: bool = False,
+    ):
+        if schema == 'cli':
+            return self.to_model(
+                context=context,
+                minimal=minimal,
+                schema=schema,
+            ).model_dump(
+                mode=mode,
+                exclude_none=True,
+                exclude_unset=minimal,
+            )
+        return super().serialize(
+            context=context,
+            minimal=minimal,
+            schema=schema,
+            mode=mode,
+            dump_repo=dump_repo,
+        )
+
     @classmethod
     def _patch_cli_model(cls):
         """Patch `CliModel` by synthesizing it from the base and constructor models."""

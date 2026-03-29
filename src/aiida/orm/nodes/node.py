@@ -1154,37 +1154,35 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         :param files: A dictionary of file-like objects representing the files in the repository.
         :return: the constructed node instance
         """
-        import hashlib
-
-        from aiida.common.hashing import chunked_file_hash
-        from aiida.repository import Repository
 
         if not isinstance(model, cls.WriteModel):
             raise ValueError(f'expected `{cls.WriteModel.__name__}` model, got `{type(model).__name__}`')
 
         fields = cls._model_to_orm_field_values(model)
 
-        repository_metadata = fields.pop('repository_metadata', {})
+        extras = fields.pop('extras', None)
 
         attributes = fields.pop('attributes', None)
         if attributes is None:
-            raise ValueError('the model is missing the required `attributes` field')
+            raise ValueError('missing required `attributes` field')
 
-        extras = fields.pop('extras', None)
+        repository_metadata = fields.pop('repository_metadata', {})
+        if repository_metadata:
+            import hashlib
+
+            from aiida.common.hashing import chunked_file_hash
+            from aiida.repository import Repository
+
+            if not files:
+                raise exceptions.ValidationError('got `repository_metadata` but no files provided')
+
+            flattened_repo = Repository.flatten(repository_metadata)
 
         backend_node = create_backend_node(**fields)
-
         instance = from_backend_entity(cls, backend_node)
-
         instance.base.attributes.set_many(attributes)
-
         if extras:
             instance.base.extras.set_many(extras)
-
-        if repository_metadata:
-            if not files:
-                raise exceptions.ValidationError('no files provided')
-            flattened_repo = Repository.flatten(repository_metadata)
 
         seen = set()
         for filepath, fileobj in (files or {}).items():

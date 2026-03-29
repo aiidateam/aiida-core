@@ -10,9 +10,8 @@
 
 from __future__ import annotations
 
-import io
 from collections.abc import Iterable, Iterator, Sequence
-from typing import Any, Union
+from typing import Any, BinaryIO, Union
 
 import numpy as np
 from pydantic import ConfigDict, field_validator
@@ -251,7 +250,7 @@ class ArrayData(Data):
         # Store the array name and shape for querying purposes
         self.base.attributes.set(f'{self.array_prefix}{name}', list(array.shape))
 
-    def attach_file(self, name: str, fileobj: io.BufferedReader) -> None:
+    def attach_file(self, name: str, fileobj: BinaryIO) -> None:
         if not name.lower().endswith('.npy'):
             raise ValueError(f'expected .npy file: {name}')
         base = name.removesuffix('.npy')

@@ -222,7 +222,7 @@ class SinglefileData(Data):
 
         self.filename = key
 
-    def attach_file(self, filepath: str, fileobj: io.BufferedReader) -> None:
+    def attach_file(self, filepath: str, fileobj: t.BinaryIO) -> None:
         self.set_file(fileobj, filepath)
 
     def _validate(self):

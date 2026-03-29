@@ -11,13 +11,14 @@
 from __future__ import annotations
 
 import datetime
-import io
 import pathlib
 from copy import deepcopy
 from functools import cached_property
 from typing import (
     TYPE_CHECKING,
     Any,
+    BinaryIO,
+    Callable,
     ClassVar,
     Dict,
     Generic,
@@ -408,7 +409,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def from_model(
         cls,
         model: AiiDABaseModel,
-        files: dict[str, io.BufferedReader] | None = None,
+        files: dict[str, Callable[[], BinaryIO]] | None = None,
     ) -> Self:
         """Create a node instance from a model instance.
 
@@ -418,7 +419,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         - `CliModel`: CLI-based creation (expects flat fields that are passed as CLI options)
 
         :param model: The model instance to create the node from.
-        :param files: A dictionary of file-like objects representing the files in the repository.
+        :param files: A mapping of target repository paths to file-like object callables (for efficient streaming).
         :return: The created node instance.
         """
         if isinstance(model, cls.WriteModel):
@@ -480,12 +481,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def from_serialized(
         cls,
         serialized: dict[str, Any],
-        files: dict[str, io.BufferedReader] | None = None,
+        files: dict[str, Callable[[], BinaryIO]] | None = None,
     ) -> Self:
         """Construct an entity instance from JSON serialized data and optional files.
 
         :param serialized: The serialized data.
-        :param files: A dictionary of file-like objects representing the files in the repository.
+        :param files: A mapping of target repository paths to file-like object callables (for efficient streaming).
         :return: The constructed node instance.
         """
         if 'attributes' in serialized:
@@ -494,7 +495,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             return cls.from_model(cls.ConstructorModel(**serialized), files=files)
         raise ValueError('missing required `attributes` or `args` field')
 
-    def attach_file(self, filepath: str, fileobj: io.BufferedReader) -> None:
+    def attach_file(self, filepath: str, fileobj: BinaryIO) -> None:
         """Attach a file to the repository of this node.
 
         Subclasses of `Node` may override this method, providing custom file handling that includes validation
@@ -1147,11 +1148,11 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         cls._ConstructorModel = ConstructorModel
 
     @classmethod
-    def _from_write_model(cls, model: WriteModel, files: dict[str, io.BufferedReader] | None = None) -> Self:
+    def _from_write_model(cls, model: WriteModel, files: dict[str, Callable[[], BinaryIO]] | None = None) -> Self:
         """Construct a node instance from the attributes-based creation model.
 
         :param model: the model instance to construct from
-        :param files: A dictionary of file-like objects representing the files in the repository.
+        :param files: A mapping of target repository paths to file-like object callables (for efficient streaming).
         :return: the constructed node instance
         """
 
@@ -1185,9 +1186,11 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             instance.base.extras.set_many(extras)
 
         seen = set()
-        for filepath, fileobj in (files or {}).items():
+        for filepath, fileobj_callable in (files or {}).items():
             if filepath in seen:
                 raise exceptions.ValidationError(f'duplicate file: {filepath}')
+
+            fileobj = fileobj_callable()
 
             if repository_metadata:
                 expected_hash = flattened_repo.get(filepath)

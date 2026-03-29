@@ -20,7 +20,6 @@ from typing import (
     BinaryIO,
     Callable,
     ClassVar,
-    Dict,
     Generic,
     Iterator,
     List,
@@ -383,7 +382,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def to_model(
         self,
         *,
-        context: Dict[str, Any] | None = None,
+        context: dict[str, Any] | None = None,
         minimal: bool = False,
         schema: Literal['read', 'write', 'constructor'] | None = None,
     ) -> OrmModel:
@@ -504,7 +503,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         :param filepath: the path within the repository to store the file at
         :param fileobj: the file-like object to store
         """
-        self.base.repository.put_object_from_filelike(fileobj, filepath)
+        self.base.repository.put_object_from_filelike(fileobj, filepath)  # type: ignore[arg-type]
 
     def _check_mutability_attributes(self, keys: Optional[List[str]] = None) -> None:
         """Check if the entity is mutable and raise an exception if not.

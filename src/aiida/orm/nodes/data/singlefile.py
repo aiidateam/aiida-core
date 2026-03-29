@@ -17,8 +17,8 @@ import pathlib
 import typing as t
 
 from aiida.common import exceptions
-from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.common.typing import FilePath
+from aiida.orm.pydantic import OrmMetadataField, OrmModel
 
 from .data import Data
 
@@ -31,18 +31,18 @@ class SinglefileData(Data):
     DEFAULT_FILENAME = 'file.txt'
 
     class AttributesModel(Data.AttributesModel):
-        filename: str = MetadataField(
+        filename: str = OrmMetadataField(
             description='The name of the stored file',
             orm_to_model=lambda node: t.cast(SinglefileData, node).filename,
             read_only=True,
         )
 
-    class ConstructorArgsModel(AiiDABaseModel):
-        filename: str = MetadataField(
+    class ConstructorArgsModel(OrmModel):
+        filename: str = OrmMetadataField(
             'file.txt',
             description='The name of the stored file',
         )
-        content: str = MetadataField(
+        content: str = OrmMetadataField(
             description='The file content',
             model_to_orm=lambda model: t.cast(SinglefileData.ConstructorArgsModel, model).content_as_bytes(),
             write_only=True,

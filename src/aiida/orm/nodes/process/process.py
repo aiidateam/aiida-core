@@ -19,7 +19,7 @@ from plumpy.process_states import ProcessState
 from aiida.common import exceptions
 from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
-from aiida.common.pydantic import MetadataField
+from aiida.orm.pydantic import OrmMetadataField
 from aiida.orm.utils.mixins import Sealable
 
 from ..caching import NodeCaching
@@ -192,31 +192,31 @@ class ProcessNode(Sealable, Node):
         )
 
     class AttributesModel(Node.AttributesModel, Sealable.AttributesModel):
-        process_label: Optional[str] = MetadataField(
+        process_label: Optional[str] = OrmMetadataField(
             None,
             description='The process label',
         )
-        process_state: Optional[str] = MetadataField(
+        process_state: Optional[str] = OrmMetadataField(
             None,
             description='The process state enum',
         )
-        process_status: Optional[str] = MetadataField(
+        process_status: Optional[str] = OrmMetadataField(
             None,
             description='The process status is a generic status message',
         )
-        exit_status: Optional[int] = MetadataField(
+        exit_status: Optional[int] = OrmMetadataField(
             None,
             description='The process exit status',
         )
-        exit_message: Optional[str] = MetadataField(
+        exit_message: Optional[str] = OrmMetadataField(
             None,
             description='The process exit message',
         )
-        exception: Optional[str] = MetadataField(
+        exception: Optional[str] = OrmMetadataField(
             None,
             description='The process exception message',
         )
-        paused: Optional[bool] = MetadataField(
+        paused: Optional[bool] = OrmMetadataField(
             None,
             description='Whether the process is paused',
         )

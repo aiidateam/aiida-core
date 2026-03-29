@@ -10,7 +10,7 @@
 
 import numpy
 
-from aiida.common.pydantic import MetadataField
+from aiida.orm.pydantic import OrmMetadataField
 
 from .base import BaseType, to_aiida_type
 
@@ -23,7 +23,7 @@ class Bool(BaseType):
     _type = bool
 
     class AttributesModel(BaseType.AttributesModel):
-        value: bool = MetadataField(
+        value: bool = OrmMetadataField(
             title='Boolean value',
             description='The value of the boolean',
         )

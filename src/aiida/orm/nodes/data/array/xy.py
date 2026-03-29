@@ -19,7 +19,7 @@ import numpy as np
 from pydantic import field_validator
 
 from aiida.common.exceptions import NotExistent
-from aiida.common.pydantic import MetadataField
+from aiida.orm.pydantic import OrmMetadataField
 
 from .array import ArrayData
 
@@ -75,25 +75,25 @@ class XyData(ArrayData):
     """
 
     class AttributesModel(ArrayData.AttributesModel):
-        x_name: str = MetadataField(
+        x_name: str = OrmMetadataField(
             description='The name of the x array',
         )
-        x_units: str = MetadataField(
+        x_units: str = OrmMetadataField(
             description='The units of the x array',
         )
-        y_names: Sequence[str] = MetadataField(
+        y_names: Sequence[str] = OrmMetadataField(
             description='The names of the y arrays',
         )
-        y_units: Sequence[str] = MetadataField(
+        y_units: Sequence[str] = OrmMetadataField(
             description='The units of the y arrays',
         )
 
     class ConstructorArgsModel(ArrayData.ConstructorArgsModel):
-        x_array: Sequence = MetadataField(
+        x_array: Sequence = OrmMetadataField(
             description='The x array, which must be a 1D numpy array of floats.',
             write_only=True,
         )
-        y_arrays: Sequence = MetadataField(
+        y_arrays: Sequence = OrmMetadataField(
             description='The y array(s), which must be 1D numpy arrays of floats with the same shape as the x array.',
             write_only=True,
         )

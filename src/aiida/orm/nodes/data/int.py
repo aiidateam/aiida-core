@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import numbers
 
-from aiida.common.pydantic import MetadataField
+from aiida.orm.pydantic import OrmMetadataField
 
 from .base import to_aiida_type
 from .numeric import NumericType
@@ -26,7 +26,7 @@ class Int(NumericType):
     _type = int
 
     class AttributesModel(NumericType.AttributesModel):
-        value: int = MetadataField(
+        value: int = OrmMetadataField(
             title='Integer value',
             description='The value of the integer',
         )

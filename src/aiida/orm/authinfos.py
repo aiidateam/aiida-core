@@ -13,12 +13,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Type, cast
 
 from aiida.common import exceptions
-from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
 from aiida.plugins import TransportFactory
 
 from . import entities, users
 from .computers import Computer
+from .pydantic import OrmMetadataField
 from .users import User
 
 if TYPE_CHECKING:
@@ -53,25 +53,25 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
     PROPERTY_WORKDIR = 'workdir'
 
     class ReadModel(entities.Entity.ReadModel):
-        computer: int = MetadataField(
+        computer: int = OrmMetadataField(
             description='The PK of the computer',
             orm_class=Computer,
             orm_to_model=lambda auth_info: cast(AuthInfo, auth_info).computer.pk,
         )
-        user: int = MetadataField(
+        user: int = OrmMetadataField(
             description='The PK of the user',
             orm_class=User,
             orm_to_model=lambda auth_info: cast(AuthInfo, auth_info).user.pk,
         )
-        enabled: bool = MetadataField(
+        enabled: bool = OrmMetadataField(
             True,
             description='Whether the instance is enabled',
         )
-        auth_params: dict[str, Any] = MetadataField(
+        auth_params: dict[str, Any] = OrmMetadataField(
             default_factory=dict,
             description='Dictionary of authentication parameters',
         )
-        metadata: dict[str, Any] = MetadataField(
+        metadata: dict[str, Any] = OrmMetadataField(
             default_factory=dict,
             description='Dictionary of metadata',
         )

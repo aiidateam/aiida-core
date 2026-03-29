@@ -14,10 +14,10 @@ import inspect
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, override, type_check
-from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
+from aiida.orm.pydantic import OrmMetadataField
 
-from ..model import OrmModel
+from ..pydantic import OrmModel
 
 
 class FunctionCalculationMixin:
@@ -184,7 +184,7 @@ class Sealable:
     SEALED_KEY = 'sealed'
 
     class AttributesModel(OrmModel):
-        sealed: bool = MetadataField(
+        sealed: bool = OrmMetadataField(
             description='Whether the node is sealed',
         )
 

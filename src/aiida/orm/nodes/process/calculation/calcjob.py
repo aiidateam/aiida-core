@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Sequence, T
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
-from aiida.common.pydantic import MetadataField
+from aiida.orm.pydantic import OrmMetadataField
 
 from ..process import ProcessNodeCaching
 from .calculation import CalculationNode
@@ -67,52 +67,52 @@ class CalcJobNode(CalculationNode):
     SCHEDULER_DETAILED_JOB_INFO_KEY = 'detailed_job_info'
 
     class AttributesModel(CalculationNode.AttributesModel):
-        scheduler_state: Optional[str] = MetadataField(
+        scheduler_state: Optional[str] = OrmMetadataField(
             None,
             description='The state of the scheduler',
             orm_to_model=lambda node: cast(CalcJobNode, node).get_scheduler_state(),
         )
-        state: Optional[str] = MetadataField(
+        state: Optional[str] = OrmMetadataField(
             None,
             description='The active state of the calculation job',
             orm_to_model=lambda node: cast(CalcJobNode, node).get_state(),
         )
-        remote_workdir: Optional[str] = MetadataField(
+        remote_workdir: Optional[str] = OrmMetadataField(
             None,
             description='The path to the remote (on cluster) scratch folder',
             orm_to_model=lambda node: cast(CalcJobNode, node).get_remote_workdir(),
         )
-        job_id: Optional[str] = MetadataField(
+        job_id: Optional[str] = OrmMetadataField(
             None,
             description='The scheduler job id',
             orm_to_model=lambda node: cast(CalcJobNode, node).get_job_id(),
         )
-        scheduler_lastchecktime: Optional[datetime.datetime] = MetadataField(
+        scheduler_lastchecktime: Optional[datetime.datetime] = OrmMetadataField(
             None,
             description='The last time the scheduler was checked, in isoformat',
             orm_to_model=lambda node: cast(CalcJobNode, node).get_scheduler_lastchecktime(),
         )
-        last_job_info: Optional[dict] = MetadataField(
+        last_job_info: Optional[dict] = OrmMetadataField(
             None,
             description='The last job info returned by the scheduler',
             orm_to_model=lambda node: dict(cast(CalcJobNode, node).get_last_job_info() or {}),
         )
-        detailed_job_info: Optional[dict] = MetadataField(
+        detailed_job_info: Optional[dict] = OrmMetadataField(
             None,
             description='The detailed job info returned by the scheduler',
             orm_to_model=lambda node: cast(CalcJobNode, node).get_detailed_job_info(),
         )
-        retrieve_list: Optional[Sequence[Union[str, tuple[str, str, int]]]] = MetadataField(
+        retrieve_list: Optional[Sequence[Union[str, tuple[str, str, int]]]] = OrmMetadataField(
             None,
             description='The list of files to retrieve from the remote cluster',
             orm_to_model=lambda node: cast(CalcJobNode, node).get_retrieve_list(),
         )
-        retrieve_temporary_list: Optional[Sequence[Union[str, tuple[str, str, int]]]] = MetadataField(
+        retrieve_temporary_list: Optional[Sequence[Union[str, tuple[str, str, int]]]] = OrmMetadataField(
             None,
             description='The list of temporary files to retrieve from the remote cluster',
             orm_to_model=lambda node: cast(CalcJobNode, node).get_retrieve_temporary_list(),
         )
-        imported: Optional[bool] = MetadataField(
+        imported: Optional[bool] = OrmMetadataField(
             None,
             description='Whether the node has been migrated',
             orm_to_model=lambda node: cast(CalcJobNode, node).is_imported,

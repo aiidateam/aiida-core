@@ -18,10 +18,10 @@ from uuid import UUID
 from pydantic import field_serializer
 
 from aiida.common import timezone
-from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
 
 from . import entities
+from .pydantic import OrmMetadataField
 
 if TYPE_CHECKING:
     from aiida.orm import Node
@@ -139,33 +139,33 @@ class Log(entities.Entity['BackendLog', LogCollection]):
     identity_field = 'uuid'
 
     class ReadModel(entities.Entity.ReadModel):
-        uuid: UUID = MetadataField(
+        uuid: UUID = OrmMetadataField(
             description='The UUID of the node',
             read_only=True,
             examples=['123e4567-e89b-12d3-a456-426614174000'],
         )
-        loggername: str = MetadataField(
+        loggername: str = OrmMetadataField(
             description='The name of the logger',
             examples=['aiida.node'],
         )
-        levelname: str = MetadataField(
+        levelname: str = OrmMetadataField(
             description='The name of the log level',
             examples=['INFO', 'ERROR'],
         )
-        message: str = MetadataField(
+        message: str = OrmMetadataField(
             description='The message of the log',
             examples=['This is a log message.'],
         )
-        time: datetime = MetadataField(
+        time: datetime = OrmMetadataField(
             description='The time at which the log was created',
             examples=['2024-01-01T12:00:00+00:00'],
         )
-        metadata: dict[str, Any] = MetadataField(
+        metadata: dict[str, Any] = OrmMetadataField(
             default_factory=dict,
             description='The metadata of the log',
             examples=[{'key': 'value'}],
         )
-        node: int = MetadataField(
+        node: int = OrmMetadataField(
             description='Associated node',
             orm_class='core.node',
             orm_to_model=lambda log: cast(Log, log).dbnode_id,

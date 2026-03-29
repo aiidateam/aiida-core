@@ -17,7 +17,7 @@ from __future__ import annotations
 import pathlib
 
 from aiida.common.lang import type_check
-from aiida.common.pydantic import MetadataField
+from aiida.orm.pydantic import OrmMetadataField
 
 from .installed import InstalledCode
 
@@ -31,18 +31,18 @@ class ContainerizedCode(InstalledCode):
     _KEY_ATTRIBUTE_IMAGE_NAME: str = 'image_name'
 
     class CommonFields(InstalledCode.CommonFields):
-        engine_command: str = MetadataField(
+        engine_command: str = OrmMetadataField(
             title='Engine command',
             description='The command to run the container. It must contain the placeholder {image_name} that will be '
             'replaced with the `image_name`',
             short_name='-E',
         )
-        image_name: str = MetadataField(
+        image_name: str = OrmMetadataField(
             title='Image name',
             description='Name of the image container in which to the run the executable',
             short_name='-I',
         )
-        wrap_cmdline_params: bool = MetadataField(
+        wrap_cmdline_params: bool = OrmMetadataField(
             False,
             title='Wrap command line parameters',
             description='Whether all command line parameters to be passed to the engine command should be wrapped in '

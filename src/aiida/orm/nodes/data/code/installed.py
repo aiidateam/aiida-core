@@ -22,9 +22,9 @@ from typing import cast
 from aiida.common import exceptions
 from aiida.common.lang import type_check
 from aiida.common.log import override_log_level
-from aiida.common.pydantic import MetadataField
 from aiida.orm import Computer
 from aiida.orm.entities import from_backend_entity
+from aiida.orm.pydantic import OrmMetadataField
 
 from ....utils.loaders import load_computer
 from .abstract import AbstractCode
@@ -41,7 +41,7 @@ class InstalledCode(Code):
     _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
     class CommonField(AbstractCode.CommonFields):
-        filepath_executable: str = MetadataField(
+        filepath_executable: str = OrmMetadataField(
             title='Filepath executable',
             description='Filepath of the executable on the remote computer',
             orm_to_model=lambda node: str(cast(InstalledCode, node).filepath_executable),
@@ -52,7 +52,7 @@ class InstalledCode(Code):
     class AttributesModel(CommonField, AbstractCode.AttributesModel): ...
 
     class ConstructorArgsModel(CommonField, AbstractCode.ConstructorArgsModel):
-        computer: str = MetadataField(
+        computer: str = OrmMetadataField(
             title='Computer',
             description='The label of the remote computer on which the executable resides',
             short_name='-Y',
@@ -63,7 +63,7 @@ class InstalledCode(Code):
         )
 
     class ReadModel(AbstractCode.ReadModel):
-        computer: int = MetadataField(
+        computer: int = OrmMetadataField(
             title='Computer',
             description='The pk of the remote computer on which the executable resides',
             orm_to_model=lambda node: cast(InstalledCode, node).computer.pk,

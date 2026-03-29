@@ -8,7 +8,7 @@ import typing
 
 from pydantic import ConfigDict, WithJsonSchema
 
-from aiida.common.pydantic import AiiDABaseModel, MetadataField
+from aiida.orm.pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
 
 from .data import Data
 
@@ -52,7 +52,7 @@ class JsonableData(Data):
     environment, or an ``ImportError`` will be raised.
     """
 
-    class AttributesModel(Data.AttributesModel):
+    class AttributesModel(OrmFieldsAsModelDump, Data.AttributesModel):
         model_config = ConfigDict(
             arbitrary_types_allowed=True,
             extra='allow',
@@ -61,20 +61,20 @@ class JsonableData(Data):
             },
         )
 
-        the_module: str = MetadataField(
+        the_module: str = OrmMetadataField(
             title='Module name',
             alias='@module',
             description='The module name of the wrapped object',
             orm_to_model=lambda node: typing.cast(JsonableData, node).the_module,
         )
-        the_class: str = MetadataField(
+        the_class: str = OrmMetadataField(
             title='Class name',
             alias='@class',
             description='The class name of the wrapped object',
             orm_to_model=lambda node: typing.cast(JsonableData, node).the_class,
         )
 
-    class ConstructorArgsModel(AiiDABaseModel):
+    class ConstructorArgsModel(OrmModel):
         model_config = ConfigDict(arbitrary_types_allowed=True)
 
         obj: typing.Annotated[
@@ -86,7 +86,7 @@ class JsonableData(Data):
                     'description': 'The JSON-serializable object',
                 }
             ),
-            MetadataField(
+            OrmMetadataField(
                 description='The JSON-serializable object',
                 write_only=True,
             ),
@@ -205,22 +205,14 @@ class JsonableData(Data):
 
             return self._obj
 
-    @classmethod
-    def _model_to_orm_field_values(
-        cls,
-        valid_model: AiiDABaseModel,
-        schema: type[AiiDABaseModel] | None = None,
-    ) -> dict[str, typing.Any]:
-        return valid_model.model_dump(exclude_none=True)
-
-    def _orm_to_model_field_values(
+    def _to_model_field_values(
         self,
         *,
         context: dict[str, typing.Any] | None = None,
         minimal: bool = False,
-        schema: type[AiiDABaseModel] | None = None,
+        schema: type[OrmModel] | None = None,
     ) -> dict[str, typing.Any]:
-        fields = super()._orm_to_model_field_values(
+        fields = super()._to_model_field_values(
             context=context,
             minimal=minimal,
             schema=schema,

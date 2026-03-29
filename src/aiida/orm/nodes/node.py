@@ -40,7 +40,6 @@ from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 from aiida.orm.fields import QbAttributesField, QbFields, add_field
@@ -54,7 +53,7 @@ from ..computers import Computer
 from ..entities import Collection as EntityCollection
 from ..entities import Entity, from_backend_entity
 from ..extras import EntityExtras
-from ..model import OrmModel
+from ..pydantic import OrmMetadataField, OrmModel
 from ..querybuilder import QueryBuilder
 from ..users import User
 from .attributes import NodeAttributes
@@ -220,35 +219,35 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     identity_field = 'uuid'
 
     class BaseNodeModel(OrmModel):
-        label: str = MetadataField(
+        label: str = OrmMetadataField(
             '',
             description='The node label',
             examples=['my_node'],
         )
-        description: str = MetadataField(
+        description: str = OrmMetadataField(
             '',
             description='The node description',
             examples=['This is my node description.'],
         )
-        extras: dict[str, Any] = MetadataField(
+        extras: dict[str, Any] = OrmMetadataField(
             default_factory=dict,
             description='The node extras',
             orm_to_model=lambda node: cast(Node, node).base.extras.all,
             may_be_large=True,
             examples=[{'extra_key': 'extra_value'}],
         )
-        node_type: str = MetadataField(description='The type of the node.')
+        node_type: str = OrmMetadataField(description='The type of the node.')
 
     class AttributesModel(OrmModel):
         """The attributes schema for this node."""
 
     class WritableFields(OrmModel):
-        attributes: Node.AttributesModel = MetadataField(
+        attributes: Node.AttributesModel = OrmMetadataField(
             description='The node attributes',
             may_be_large=True,
             examples=[{'attr_key': 'attr_value'}],
         )
-        repository_metadata: dict[str, Any] = MetadataField(
+        repository_metadata: dict[str, Any] = OrmMetadataField(
             default_factory=dict,
             description='Virtual hierarchy of the file repository',
             orm_to_model=lambda node: cast(Node, node).base.repository.metadata,
@@ -259,28 +258,28 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     class ReadModel(WritableFields, BaseNodeModel, Entity.ReadModel):
         """The absolute schema for this node."""
 
-        uuid: UUID = MetadataField(
+        uuid: UUID = OrmMetadataField(
             description='The UUID of the node',
             read_only=True,
             examples=['123e4567-e89b-12d3-a456-426614174000'],
         )
-        process_type: Optional[str] = MetadataField(
+        process_type: Optional[str] = OrmMetadataField(
             None,
             description='The process type of the node',
             read_only=True,
             examples=['aiida.calculations:arithmetic.add.'],
         )
-        ctime: datetime.datetime = MetadataField(
+        ctime: datetime.datetime = OrmMetadataField(
             description='The creation time of the node',
             read_only=True,
             examples=['2024-01-01T12:00:00+00:00'],
         )
-        mtime: datetime.datetime = MetadataField(
+        mtime: datetime.datetime = OrmMetadataField(
             description='The modification time of the node',
             read_only=True,
             examples=['2024-01-02T12:00:00+00:00'],
         )
-        computer: Optional[int] = MetadataField(
+        computer: Optional[int] = OrmMetadataField(
             None,
             description='The PK of the computer',
             orm_to_model=lambda node: cast(Node, node).get_computer_pk(),
@@ -288,7 +287,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             read_only=True,
             examples=[42],
         )
-        user: int = MetadataField(
+        user: int = OrmMetadataField(
             description='The PK of the user who owns the node',
             orm_to_model=lambda node: cast(Node, node).user.pk,
             orm_class=User,
@@ -305,7 +304,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """The write schema for this node."""
 
     _ConstructorModel: ClassVar[type[BaseNodeModel] | None] = None
-    _CliModel: ClassVar[type[BaseNodeModel] | None] = None
+    _CliModel: ClassVar[type[OrmModel] | None] = None
 
     if TYPE_CHECKING:
         # Not all nodes support constructor-based and/or CLI-based creation (yet!).
@@ -313,18 +312,18 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         # would be inherited by all nodes. Instead, we define them here for type
         # checking purposes, and provide below (else) the runtime properties.
 
-        class ConstructorArgsModel(AiiDABaseModel):
+        class ConstructorArgsModel(OrmModel):
             """The constructor arguments schema for this node."""
 
         class ConstructorModel(BaseNodeModel):
             """The constructor-based creation schema for this node."""
 
-            args: Any = MetadataField(
+            args: Any = OrmMetadataField(
                 description='The arguments to create the node with',
                 write_only=True,
             )
 
-        class CliModel(BaseNodeModel):
+        class CliModel(OrmModel):
             """The CLI schema for this node."""
 
     else:
@@ -344,7 +343,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             return cls._ConstructorModel
 
         @classproperty
-        def CliModel(cls) -> type[AiiDABaseModel]:  # noqa: N802, N805
+        def CliModel(cls) -> type[OrmModel]:  # noqa: N802, N805
             """Return the CLI model class for this entity.
 
             :return: The CLI model class.
@@ -400,14 +399,14 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                     f"'{self.class_node_type}' does not provide a constructor schema"
                 )
             Model = self.ConstructorModel  # noqa: N806
-            fields = self._orm_to_model_field_values(context=context, minimal=minimal, schema=Model)
+            fields = self._to_model_field_values(context=context, minimal=minimal, schema=Model)
             return Model(**fields)
         return super().to_model(context=context, minimal=minimal, schema=schema)
 
     @classmethod
     def from_model(
         cls,
-        model: AiiDABaseModel,
+        model: OrmModel,
         files: dict[str, Callable[[], BinaryIO]] | None = None,
     ) -> Self:
         """Create a node instance from a model instance.
@@ -1128,7 +1127,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if not cls.supports_constructor_model:
             return
         node_type_field = deepcopy(cls.BaseNodeModel.model_fields['node_type'])
-        args_field = MetadataField(
+        args_field = OrmMetadataField(
             description='The constructor arguments.',
             write_only=True,
         )
@@ -1158,7 +1157,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if not isinstance(model, cls.WriteModel):
             raise ValueError(f'expected `{cls.WriteModel.__name__}` model, got `{type(model).__name__}`')
 
-        fields = cls._model_to_orm_field_values(model)
+        fields = model._to_orm_field_values()
 
         extras = fields.pop('extras', None)
 
@@ -1215,7 +1214,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
         if not isinstance(model, cls.ConstructorModel):
             raise ValueError(f'expected `ConstructorModel`, got `{type(model).__name__}`')
-        fields = cls._model_to_orm_field_values(model)
+        fields = model._to_orm_field_values()
         fields.update(**fields.pop('args'))
         fields.pop('node_type')
         return cls(**fields)
@@ -1229,24 +1228,24 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
         if not isinstance(model, cls.CliModel):
             raise ValueError(f'expected `{cls.CliModel.__name__}` model, got `{type(model).__name__}`')
-        fields = cls._model_to_orm_field_values(model)
+        fields = model._to_orm_field_values()
         return cls(**fields)
 
-    def _orm_to_model_field_values(
+    def _to_model_field_values(
         self,
         *,
         context: dict[str, Any] | None = None,
         minimal: bool = False,
-        schema: type[AiiDABaseModel] | None = None,
+        schema: type[OrmModel] | None = None,
     ) -> dict[str, Any]:
         """Collect values for the model fields from this node."""
-        fields = super()._orm_to_model_field_values(
+        fields = super()._to_model_field_values(
             context=context,
             minimal=minimal,
             schema=schema,
         )
         if self.supports_constructor_model and schema is self.ConstructorModel:
-            fields['args'] = self._orm_to_model_field_values(
+            fields['args'] = self._to_model_field_values(
                 context=context or {},
                 minimal=minimal,
                 schema=self.ConstructorArgsModel,

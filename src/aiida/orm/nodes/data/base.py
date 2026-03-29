@@ -13,7 +13,7 @@ from __future__ import annotations
 import typing as t
 from functools import singledispatch
 
-from aiida.common.pydantic import MetadataField
+from aiida.orm.pydantic import OrmMetadataField
 
 from .data import Data
 
@@ -30,7 +30,7 @@ class BaseType(Data):
     """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
     class AttributesModel(Data.AttributesModel):
-        value: t.Any = MetadataField(
+        value: t.Any = OrmMetadataField(
             title='Data value',
             description='The value of the data',
         )

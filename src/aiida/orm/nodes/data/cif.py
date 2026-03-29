@@ -13,8 +13,8 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from aiida.common.pydantic import MetadataField
 from aiida.common.utils import Capturing
+from aiida.orm.pydantic import OrmMetadataField
 
 from .singlefile import SinglefileData
 
@@ -253,15 +253,15 @@ class CifData(SinglefileData):
     _ase = None
 
     class AttributesModel(SinglefileData.AttributesModel):
-        formulae: Optional[list[str]] = MetadataField(
+        formulae: Optional[list[str]] = OrmMetadataField(
             None,
             description='List of formulae contained in the CIF file',
         )
-        spacegroup_numbers: Optional[list[str]] = MetadataField(
+        spacegroup_numbers: Optional[list[str]] = OrmMetadataField(
             None,
             description='List of space group numbers of the structure',
         )
-        md5: Optional[str] = MetadataField(
+        md5: Optional[str] = OrmMetadataField(
             None,
             description='MD5 checksum of the file contents',
             read_only=True,

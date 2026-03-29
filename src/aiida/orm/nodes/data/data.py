@@ -15,8 +15,8 @@ from typing import Dict, Optional
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
-from aiida.common.pydantic import MetadataField
 from aiida.orm.entities import from_backend_entity
+from aiida.orm.pydantic import OrmMetadataField
 
 from ..node import Node
 
@@ -49,7 +49,7 @@ class Data(Node):
     _unstorable_message = 'storing for this node has been disabled'
 
     class AttributesModel(Node.AttributesModel):
-        source: Optional[dict] = MetadataField(
+        source: Optional[dict] = OrmMetadataField(
             None,
             description='Source of the data',
         )

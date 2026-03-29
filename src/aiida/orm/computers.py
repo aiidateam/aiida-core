@@ -18,11 +18,11 @@ from pydantic import field_serializer
 
 from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER, AiidaLoggerType
-from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
 from aiida.plugins import SchedulerFactory, TransportFactory
 
 from . import entities, users
+from .pydantic import OrmMetadataField
 
 if TYPE_CHECKING:
     from aiida.orm import AuthInfo, User
@@ -81,33 +81,33 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
     _CLS_COLLECTION = ComputerCollection
 
     class ReadModel(entities.Entity.ReadModel):
-        uuid: UUID = MetadataField(
+        uuid: UUID = OrmMetadataField(
             description='The UUID of the computer',
             read_only=True,
             examples=['123e4567-e89b-12d3-a456-426614174000'],
         )
-        label: str = MetadataField(
+        label: str = OrmMetadataField(
             description='Label for the computer',
             examples=['localhost'],
         )
-        description: str = MetadataField(
+        description: str = OrmMetadataField(
             '',
             description='Description of the computer',
             examples=['My local machine'],
         )
-        hostname: str = MetadataField(
+        hostname: str = OrmMetadataField(
             description='Hostname of the computer',
             examples=['localhost'],
         )
-        transport_type: str = MetadataField(
+        transport_type: str = OrmMetadataField(
             description='Transport type of the computer',
             examples=['core.local'],
         )
-        scheduler_type: str = MetadataField(
+        scheduler_type: str = OrmMetadataField(
             description='Scheduler type of the computer',
             examples=['core.direct'],
         )
-        metadata: dict[str, Any] = MetadataField(
+        metadata: dict[str, Any] = OrmMetadataField(
             default_factory=dict,
             description='Metadata of the computer',
             may_be_large=True,

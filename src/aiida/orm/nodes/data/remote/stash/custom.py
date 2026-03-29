@@ -14,7 +14,7 @@ from typing import List, Tuple, Union
 
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
-from aiida.common.pydantic import MetadataField
+from aiida.orm.pydantic import OrmMetadataField
 
 from .base import RemoteStashData
 
@@ -27,10 +27,10 @@ class RemoteStashCustomData(RemoteStashData):
     _storable = True
 
     class AttributesModel(RemoteStashData.AttributesModel):
-        target_basepath: str = MetadataField(
+        target_basepath: str = OrmMetadataField(
             description='The the target basepath',
         )
-        source_list: list[str] = MetadataField(
+        source_list: list[str] = OrmMetadataField(
             description='The list of source files that were stashed',
         )
 

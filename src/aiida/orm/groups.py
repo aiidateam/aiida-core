@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, Union, cast
 from uuid import UUID
 
-from pydantic import field_serializer
 from typing_extensions import Self
 
 from aiida.common import exceptions
@@ -157,11 +156,6 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             may_be_large=True,
             examples=[{'key': 'value'}],
         )
-
-        @field_serializer('uuid')
-        def serialize_uuid(self, value: UUID) -> str:
-            """Serialize UUID to string."""
-            return str(value)
 
     _CLS_COLLECTION = GroupCollection
 

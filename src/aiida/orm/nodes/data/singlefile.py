@@ -199,7 +199,7 @@ class SinglefileData(Data):
             is_filelike = True
             try:
                 key = os.path.basename(file.name)
-            except AttributeError:
+            except (AttributeError, TypeError):
                 key = self.DEFAULT_FILENAME
 
         key = str(filename) if filename is not None else key

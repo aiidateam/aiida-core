@@ -13,10 +13,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, Optional, Tuple, Type
 
 from aiida.common import exceptions
-from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
 
 from . import entities
+from .pydantic import OrmMetadataField
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
@@ -58,21 +58,21 @@ class User(entities.Entity['BackendUser', UserCollection]):
     _CLS_COLLECTION = UserCollection
 
     class ReadModel(entities.Entity.ReadModel):
-        email: str = MetadataField(
+        email: str = OrmMetadataField(
             description='The user email',
             examples=['verdi@opera.net'],
         )
-        first_name: str = MetadataField(
+        first_name: str = OrmMetadataField(
             '',
             description='The user first name',
             examples=['Giuseppe'],
         )
-        last_name: str = MetadataField(
+        last_name: str = OrmMetadataField(
             '',
             description='The user last name',
             examples=['Verdi'],
         )
-        institution: str = MetadataField(
+        institution: str = OrmMetadataField(
             '',
             description='The user institution',
             examples=['Opera National de Paris'],

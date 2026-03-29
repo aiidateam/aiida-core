@@ -15,9 +15,9 @@ import os
 from pathlib import Path
 from typing import Optional, cast
 
-from aiida.common.pydantic import MetadataField
 from aiida.orm import AuthInfo
 from aiida.orm.computers import Computer
+from aiida.orm.pydantic import OrmMetadataField
 from aiida.transports import Transport
 
 from ..data import Data
@@ -36,7 +36,7 @@ class RemoteData(Data):
     KEY_EXTRA_CLEANED = 'cleaned'
 
     class AttributesModel(Data.AttributesModel):
-        remote_path: Optional[str] = MetadataField(
+        remote_path: Optional[str] = OrmMetadataField(
             None,
             title='Remote path',
             description='Filepath on the remote computer',
@@ -44,7 +44,7 @@ class RemoteData(Data):
         )
 
     class ReadModel(Data.ReadModel):
-        computer: int = MetadataField(
+        computer: int = OrmMetadataField(
             title='Computer',
             description='The pk of the remote computer on which the data resides',
             orm_to_model=lambda node: cast(RemoteData, node).computer.pk,

@@ -22,7 +22,7 @@ from pydantic import field_validator
 
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
-from aiida.common.pydantic import MetadataField
+from aiida.orm.pydantic import OrmMetadataField
 
 from .data import Data
 
@@ -689,26 +689,26 @@ class StructureData(Data):
     _internal_kind_tags = None
 
     class AttributesModel(Data.AttributesModel):
-        pbc1: bool = MetadataField(
+        pbc1: bool = OrmMetadataField(
             False,
             description='Whether periodic in the a direction',
         )
-        pbc2: bool = MetadataField(
+        pbc2: bool = OrmMetadataField(
             False,
             description='Whether periodic in the b direction',
         )
-        pbc3: bool = MetadataField(
+        pbc3: bool = OrmMetadataField(
             False,
             description='Whether periodic in the c direction',
         )
-        cell: t.Optional[list[list[float]]] = MetadataField(
+        cell: t.Optional[list[list[float]]] = OrmMetadataField(
             None,
             description='The cell parameters',
         )
-        kinds: list[dict] = MetadataField(
+        kinds: list[dict] = OrmMetadataField(
             description='The kinds of atoms',
         )
-        sites: list[dict] = MetadataField(
+        sites: list[dict] = OrmMetadataField(
             description='The atomic sites',
         )
 
@@ -987,7 +987,7 @@ class StructureData(Data):
             return_string += ' '.join([f'{i:18.10f}' for i in cell_vector])
             return_string += '\n'
         return_string += 'PRIMCOORD 1\n'
-        return_string += f'{int(len(sites))} 1\n'
+        return_string += f'{len(sites)} 1\n'
         for site in sites:
             # I checked above that it is not an alloy, therefore I take the
             # first symbol

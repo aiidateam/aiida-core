@@ -20,8 +20,8 @@ from string import Template
 import numpy
 
 from aiida.common.exceptions import ValidationError
-from aiida.common.pydantic import MetadataField
 from aiida.common.utils import join_labels, prettify_labels
+from aiida.orm.pydantic import OrmMetadataField
 
 from .kpoints import KpointsData
 
@@ -217,11 +217,11 @@ class BandsData(KpointsData):
     """Class to handle bands data"""
 
     class AttributesModel(KpointsData.AttributesModel):
-        array_labels: t.Optional[t.List[str]] = MetadataField(
+        array_labels: t.Optional[t.List[str]] = OrmMetadataField(
             None,
             description='Labels associated with the band arrays',
         )
-        units: t.Optional[str] = MetadataField(
+        units: t.Optional[str] = OrmMetadataField(
             None,
             description='Units in which the data in bands were stored',
             orm_to_model=lambda node: t.cast(BandsData, node).base.attributes.get('units', None),

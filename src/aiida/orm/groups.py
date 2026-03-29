@@ -22,11 +22,11 @@ from typing_extensions import Self
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
-from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
 from . import convert, entities, extras, users
+from .pydantic import OrmMetadataField
 
 if TYPE_CHECKING:
     from importlib.metadata import EntryPoint
@@ -119,38 +119,38 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
     identity_field = 'uuid'
 
     class ReadModel(entities.Entity.ReadModel):
-        uuid: UUID = MetadataField(
+        uuid: UUID = OrmMetadataField(
             description='The UUID of the group',
             read_only=True,
             examples=['123e4567-e89b-12d3-a456-426614174000'],
         )
-        type_string: str = MetadataField(
+        type_string: str = OrmMetadataField(
             description='The type of the group',
             read_only=True,
             examples=['my_custom_group_type'],
         )
-        user: int = MetadataField(
+        user: int = OrmMetadataField(
             description='The PK of the group owner',
             orm_class='core.user',
             orm_to_model=lambda group: cast(Group, group).user.pk,
             read_only=True,
             examples=[1],
         )
-        time: datetime.datetime = MetadataField(
+        time: datetime.datetime = OrmMetadataField(
             description='The creation time of the node, defaults to now (timezone-aware)',
             read_only=True,
             examples=['2024-01-01T12:00:00+00:00'],
         )
-        label: str = MetadataField(
+        label: str = OrmMetadataField(
             description='The group label',
             examples=['my_group_label'],
         )
-        description: str = MetadataField(
+        description: str = OrmMetadataField(
             '',
             description='The group description',
             examples=['This is my group description.'],
         )
-        extras: dict[str, Any] = MetadataField(
+        extras: dict[str, Any] = OrmMetadataField(
             default_factory=dict,
             description='The group extras',
             orm_to_model=lambda group: cast(Group, group).base.extras.all,

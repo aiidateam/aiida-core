@@ -14,8 +14,8 @@ from importlib.metadata import entry_points
 import pytest
 
 from aiida import orm
-from aiida.common.pydantic import MetadataField
 from aiida.orm.fields import add_field
+from aiida.orm.pydantic import OrmMetadataField
 from aiida.plugins import load_entry_point
 
 EPS = entry_points()
@@ -67,7 +67,7 @@ def test_add_field():
 
     class NewNode(orm.Data):
         class AttributesModel(orm.Data.AttributesModel):
-            key1: str = MetadataField()
+            key1: str = OrmMetadataField()
 
     node = NewNode()
 
@@ -113,8 +113,8 @@ def test_query_new_class(monkeypatch):
 
     class NewNode(orm.Data):
         class AttributesModel(orm.Data.AttributesModel):
-            some_label: str = MetadataField()  # type: ignore[annotation-unchecked]
-            some_value: int = MetadataField()  # type: ignore[annotation-unchecked]
+            some_label: str = OrmMetadataField()  # type: ignore[annotation-unchecked]
+            some_value: int = OrmMetadataField()  # type: ignore[annotation-unchecked]
 
     node = NewNode()
     node.base.attributes.set_many({'some_label': 'A', 'some_value': 1})

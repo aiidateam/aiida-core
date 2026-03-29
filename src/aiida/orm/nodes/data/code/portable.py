@@ -27,9 +27,9 @@ from typing import cast
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
-from aiida.common.pydantic import MetadataField
 from aiida.common.typing import FilePath
 from aiida.orm import Computer
+from aiida.orm.pydantic import OrmMetadataField
 
 from .abstract import AbstractCode
 from .legacy import Code
@@ -57,7 +57,7 @@ class PortableCode(Code):
     _SKIP_MODEL_INHERITANCE_CHECK: bool = True
 
     class CommonFields(AbstractCode.CommonFields):
-        filepath_executable: str = MetadataField(
+        filepath_executable: str = OrmMetadataField(
             title='Filepath executable',
             description='Relative filepath of executable with directory of code files',
             short_name='-X',
@@ -68,7 +68,7 @@ class PortableCode(Code):
     class AttributesModel(CommonFields, AbstractCode.AttributesModel): ...
 
     class ConstructorArgsModel(CommonFields, AbstractCode.ConstructorArgsModel):
-        filepath_files: str = MetadataField(
+        filepath_files: str = OrmMetadataField(
             title='Code directory',
             description='Filepath to directory containing code files',
             short_name='-F',

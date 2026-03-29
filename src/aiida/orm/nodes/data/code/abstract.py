@@ -22,8 +22,8 @@ from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
-from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.orm import Computer
+from aiida.orm.pydantic import OrmMetadataField, OrmModel
 from aiida.plugins import CalculationFactory
 
 from ..data import Data
@@ -47,13 +47,13 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     _KEY_EXTRA_IS_HIDDEN: str = 'hidden'  # Should become ``is_hidden`` once ``Code`` is dropped
 
     class BaseNodeModel(Data.BaseNodeModel):
-        label: str = MetadataField(
+        label: str = OrmMetadataField(
             title='Label',
             description='A unique label to identify the code by',
             short_name='-L',
             priority=4,
         )
-        description: str = MetadataField(
+        description: str = OrmMetadataField(
             '',
             title='Description',
             description='Human-readable description, ideally including version and compilation environment',
@@ -61,28 +61,28 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             priority=3,
         )
 
-    class CommonFields(AiiDABaseModel):
-        default_calc_job_plugin: t.Optional[str] = MetadataField(
+    class CommonFields(OrmModel):
+        default_calc_job_plugin: t.Optional[str] = OrmMetadataField(
             None,
             alias='input_plugin',
             title='Default `CalcJob` plugin',
             description='Entry point name of the default plugin (as listed in `verdi plugin list aiida.calculations`)',
             short_name='-P',
         )
-        use_double_quotes: bool = MetadataField(
+        use_double_quotes: bool = OrmMetadataField(
             False,
             title='Escape using double quotes',
             description='Whether the executable and arguments of the code in the submission script should be escaped '
             'with single or double quotes',
         )
-        with_mpi: t.Optional[bool] = MetadataField(
+        with_mpi: t.Optional[bool] = OrmMetadataField(
             None,
             title='Run with MPI',
             description='Whether the executable should be run as an MPI program. This option can be left unspecified '
             'in which case `None` will be set and it is left up to the calculation job plugin or inputs '
             'whether to run with MPI',
         )
-        prepend_text: str = MetadataField(
+        prepend_text: str = OrmMetadataField(
             '',
             title='Prepend script',
             description='Bash commands that should be prepended to the run line in all submit scripts for this code',
@@ -94,7 +94,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 footer='All lines that start with `#=`: will be ignored.',
             ),
         )
-        append_text: str = MetadataField(
+        append_text: str = OrmMetadataField(
             '',
             title='Append script',
             description='Bash commands that should be appended to the run line in all submit scripts for this code',
@@ -164,7 +164,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     ):
         if schema == 'cli':
             Model = self.CliModel  # noqa: N806
-            fields = self._orm_to_model_field_values(context=context, minimal=minimal, schema=Model)
+            fields = self._to_model_field_values(context=context, minimal=minimal, schema=Model)
             return Model(**fields)
         return super().to_model(context=context, minimal=minimal, schema=schema)
 
@@ -213,10 +213,10 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             },
         }
         CliModel = t.cast(  # noqa: N806
-            type[AiiDABaseModel],
+            type[OrmModel],
             pdt.create_model(
                 'CliModel',
-                __base__=AiiDABaseModel,
+                __base__=OrmModel,
                 __module__=cls.__module__,
                 **model_fields,
             ),
@@ -224,7 +224,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         CliModel.__qualname__ = f'{cls.__name__}.CliModel'
         CliModel.model_config['arbitrary_types_allowed'] = True
         CliModel.model_rebuild(force=True)
-        cls._CliModel = CliModel  # type: ignore[assignment]
+        cls._CliModel = CliModel
 
     @abc.abstractmethod
     def can_run_on_computer(self, computer: Computer) -> bool:

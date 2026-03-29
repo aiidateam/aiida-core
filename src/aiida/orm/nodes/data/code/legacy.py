@@ -14,9 +14,9 @@ import typing as t
 
 from aiida.common import exceptions
 from aiida.common.log import override_log_level
-from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
 from aiida.orm import Computer
+from aiida.orm.pydantic import OrmMetadataField
 
 from .abstract import AbstractCode
 
@@ -40,24 +40,24 @@ class Code(AbstractCode):
     """
 
     class AttributesModel(AbstractCode.AttributesModel):
-        prepend_text: str = MetadataField(
+        prepend_text: str = OrmMetadataField(
             '',
             description='The code that will be put in the scheduler script before the execution of the code',
         )
-        append_text: str = MetadataField(
+        append_text: str = OrmMetadataField(
             '',
             description='The code that will be put in the scheduler script after the execution of the code',
         )
-        input_plugin: t.Optional[str] = MetadataField(
+        input_plugin: t.Optional[str] = OrmMetadataField(
             description='The name of the input plugin to be used for this code'
         )
-        local_executable: t.Optional[str] = MetadataField(
+        local_executable: t.Optional[str] = OrmMetadataField(
             description='Path to a local executable',
         )
-        remote_exec_path: t.Optional[str] = MetadataField(
+        remote_exec_path: t.Optional[str] = OrmMetadataField(
             description='Remote path to executable',
         )
-        is_local: t.Optional[bool] = MetadataField(
+        is_local: t.Optional[bool] = OrmMetadataField(
             description='Whether the code is local or remote',
         )
 

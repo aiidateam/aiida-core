@@ -16,7 +16,7 @@ import typing as t
 import pydantic as pdt
 
 from aiida.common import exceptions
-from aiida.common.pydantic import AiiDABaseModel, MetadataField
+from aiida.orm.pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
 
 from .base import to_aiida_type
 from .data import Data
@@ -52,7 +52,7 @@ class Dict(Data):
     Finally, all dictionary mutations will be forbidden once the node is stored.
     """
 
-    class AttributesModel(Data.AttributesModel):
+    class AttributesModel(OrmFieldsAsModelDump, Data.AttributesModel):
         model_config = pdt.ConfigDict(
             arbitrary_types_allowed=True,
             json_schema_extra={
@@ -61,8 +61,8 @@ class Dict(Data):
             extra='allow',
         )
 
-    class ConstructorArgsModel(AiiDABaseModel):
-        value: dict[str, t.Any] = MetadataField(
+    class ConstructorArgsModel(OrmModel):
+        value: dict[str, t.Any] = OrmMetadataField(
             description='The dictionary content',
             write_only=True,
         )
@@ -181,22 +181,14 @@ class Dict(Data):
 
         return AttributeManager(self)
 
-    @classmethod
-    def _model_to_orm_field_values(
-        cls,
-        valid_model: AiiDABaseModel,
-        schema: type[AiiDABaseModel] | None = None,
-    ) -> t.Dict[str, t.Any]:
-        return valid_model.model_dump(exclude_none=True)
-
-    def _orm_to_model_field_values(
+    def _to_model_field_values(
         self,
         *,
         context: t.Dict[str, t.Any] | None = None,
         minimal: bool = False,
-        schema: type[AiiDABaseModel] | None = None,
+        schema: type[OrmModel] | None = None,
     ) -> t.Dict[str, t.Any]:
-        fields = super()._orm_to_model_field_values(
+        fields = super()._to_model_field_values(
             context=context,
             minimal=minimal,
             schema=schema,

@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import typing as t
 
-from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
+from aiida.orm.pydantic import OrmMetadataField
 
 from .array import ArrayData
 
@@ -31,8 +31,8 @@ class TrajectoryData(ArrayData):
     """
 
     class AttributesModel(ArrayData.AttributesModel):
-        symbols: list[str] = MetadataField(description='List of symbols')
-        pbc: t.Optional[tuple[bool, bool, bool]] = MetadataField(description='Periodic boundary conditions')
+        symbols: list[str] = OrmMetadataField(description='List of symbols')
+        pbc: t.Optional[tuple[bool, bool, bool]] = OrmMetadataField(description='Periodic boundary conditions')
 
     def __init__(self, structurelist: list[StructureData] | None = None, **kwargs: t.Any) -> None:
         super().__init__(**kwargs)

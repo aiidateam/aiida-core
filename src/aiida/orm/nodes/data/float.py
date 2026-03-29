@@ -10,7 +10,7 @@
 
 import numbers
 
-from aiida.common.pydantic import MetadataField
+from aiida.orm.pydantic import OrmMetadataField
 
 from .base import to_aiida_type
 from .numeric import NumericType
@@ -24,7 +24,7 @@ class Float(NumericType):
     _type = float
 
     class AttributesModel(NumericType.AttributesModel):
-        value: float = MetadataField(
+        value: float = OrmMetadataField(
             title='Float value',
             description='The value of the float',
         )

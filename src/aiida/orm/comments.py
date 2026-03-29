@@ -16,10 +16,10 @@ from uuid import UUID
 
 from pydantic import field_serializer
 
-from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
 
 from . import entities
+from .pydantic import OrmMetadataField
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import BackendComment, BackendNode, StorageBackend
@@ -77,34 +77,34 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
     identity_field = 'uuid'
 
     class ReadModel(entities.Entity.ReadModel):
-        uuid: UUID = MetadataField(
+        uuid: UUID = OrmMetadataField(
             description='The UUID of the comment',
             read_only=True,
             examples=['123e4567-e89b-12d3-a456-426614174000'],
         )
-        ctime: datetime = MetadataField(
+        ctime: datetime = OrmMetadataField(
             description='Creation time of the comment',
             read_only=True,
             examples=['2024-01-01T12:00:00+00:00'],
         )
-        mtime: datetime = MetadataField(
+        mtime: datetime = OrmMetadataField(
             description='Modified time of the comment',
             read_only=True,
             examples=['2024-01-02T12:00:00+00:00'],
         )
-        node: int = MetadataField(
+        node: int = OrmMetadataField(
             description='Node PK that the comment is attached to',
             orm_class='core.node',
             orm_to_model=lambda comment: cast(Comment, comment).node.pk,
             examples=[42],
         )
-        user: int = MetadataField(
+        user: int = OrmMetadataField(
             description='User PK that created the comment',
             orm_class='core.user',
             orm_to_model=lambda comment: cast(Comment, comment).user.pk,
             examples=[7],
         )
-        content: str = MetadataField(
+        content: str = OrmMetadataField(
             description='Content of the comment',
             examples=['This is a comment.'],
         )

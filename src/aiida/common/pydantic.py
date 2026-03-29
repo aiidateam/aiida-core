@@ -8,9 +8,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
-if t.TYPE_CHECKING:
-    from aiida.orm import Entity
-
 
 def get_metadata(field_info: FieldInfo, key: str, default: t.Any | None = None) -> t.Any:
     """Return a the metadata of the given field for a particular key.
@@ -63,11 +60,6 @@ def MetadataField(  # noqa: N802
     priority: int = 0,
     short_name: str | None = None,
     option_cls: t.Any | None = None,
-    orm_class: type[Entity[t.Any, t.Any]] | str | None = None,
-    orm_to_model: (
-        t.Callable[[Entity[t.Any, t.Any]], t.Any] | t.Callable[[Entity[t.Any, t.Any], dict[str, t.Any]], t.Any] | None
-    ) = None,
-    model_to_orm: t.Callable[[AiiDABaseModel], t.Any] | None = None,
     read_only: bool = False,
     write_only: bool = False,
     may_be_large: bool = False,
@@ -95,16 +87,6 @@ def MetadataField(  # noqa: N802
     :param priority: Used to order the list of all fields in the model. Ordering is done from small to large priority.
     :param short_name: Optional short name to use for an option on a command line interface.
     :param option_cls: The :class:`click.Option` class to use to construct the option.
-    :param orm_class: The class, or entry point name thereof, to which the field should be converted. If this field is
-        defined, the value of this field should accept an integer which will automatically be converted to an instance
-        of said ORM class using ``orm_class.collection.get(id={field_value})``. This is useful, for example, where a
-        field represents an instance of a different entity, such as an instance of ``User``. The serialized data would
-        store the ``pk`` of the user, but the ORM entity instance would receive the actual ``User`` instance with that
-        primary key.
-    :param orm_to_model: Optional callable to convert the value of a field from an ORM instance to a model instance.
-        It optionally accepts a second argument, which is a dictionary of context values that may be used during the
-        conversion.
-    :param model_to_orm: Optional callable to convert the value of a field from a model instance to an ORM instance.
     :param read_only: When set to ``True``, this field value will not be passed to the ORM entity constructor
         through ``Entity.from_model``.
     :param write_only: When set to ``True``, this field value will not be populated when constructing the model from an
@@ -132,9 +114,6 @@ def MetadataField(  # noqa: N802
         ('priority', priority),
         ('short_name', short_name),
         ('option_cls', option_cls),
-        ('orm_class', orm_class),
-        ('orm_to_model', orm_to_model),
-        ('model_to_orm', model_to_orm),
         ('read_only', read_only),
         ('write_only', write_only),
         ('may_be_large', may_be_large),

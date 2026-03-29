@@ -109,7 +109,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
         return orm.ArrayData, {
             'attributes-based': {
                 'attributes': {},
-                'files': {'test_array.npy': buffered_array},
+                'files': {'test_array.npy': lambda: buffered_array},
                 'assert_derived': assert_derived_array_properties,
             },
             'constructor-based': {
@@ -132,7 +132,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
         return orm.CifData, {
             'attributes-based': {
                 'attributes': {},
-                'files': {'structure.cif': io.StringIO('data_test\nloop_\n_atom_site_label\nH1\n')},
+                'files': {'structure.cif': lambda: io.StringIO('data_test\nloop_\n_atom_site_label\nH1\n')},
                 'assert_derived': assert_derived_cif_properties,
             },
             'constructor-based': {
@@ -208,8 +208,8 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             'attributes-based': {
                 'attributes': {},
                 'files': {
-                    'binary_file': io.BytesIO(b'byte content'),
-                    'text_file': io.StringIO('text content'),
+                    'binary_file': lambda: io.BytesIO(b'byte content'),
+                    'text_file': lambda: io.StringIO('text content'),
                 },
                 'assert_derived': assert_derived_folder_properties,
             },
@@ -290,7 +290,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
         return orm.SinglefileData, {
             'attributes-based': {
                 'attributes': {},
-                'files': {'file.txt': io.StringIO('singlefile-content')},
+                'files': {'file.txt': lambda: io.StringIO('singlefile-content')},
                 'assert_derived': assert_derived_singlefile_properties,
             },
             'constructor-based': {

@@ -14,8 +14,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, List, Optional, Type, cast
 from uuid import UUID
 
-from pydantic import field_serializer
-
 from aiida.manage import get_manager
 
 from . import entities
@@ -108,11 +106,6 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
             description='Content of the comment',
             examples=['This is a comment.'],
         )
-
-        @field_serializer('uuid')
-        def serialize_uuid(self, value: UUID) -> str:
-            """Serialize UUID to string."""
-            return str(value)
 
     def __init__(
         self, node: 'Node', user: 'User', content: Optional[str] = None, backend: Optional['StorageBackend'] = None

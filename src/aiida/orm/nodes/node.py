@@ -295,11 +295,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             examples=[7],
         )
 
-        @pdt.field_serializer('uuid')
-        def serialize_uuid(self, value: UUID) -> str:
-            """Serialize UUID to string."""
-            return str(value)
-
     class WriteModel(WritableFields, BaseNodeModel, Entity.WriteModel):
         """The write schema for this node."""
 

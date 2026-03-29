@@ -466,7 +466,9 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
 
         # NOTE: remove this in v3 when the deprecated `input_plugin` is removed
         # Until then, we serialize by the alias (`input_plugin`), so we must rewire
-        code_data['default_calc_job_plugin'] = code_data.pop(self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, None)
+        default_calc_job_plugin = code_data.pop(self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, None)
+        if default_calc_job_plugin is not None:
+            code_data['default_calc_job_plugin'] = default_calc_job_plugin
 
         return yaml.dump(code_data, sort_keys=kwargs.get('sort', False), encoding='utf-8'), {}
 

@@ -164,7 +164,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     ):
         if schema == 'cli':
             Model = self.CliModel  # noqa: N806
-            fields = self._orm_to_model_field_values(context=context, minimal=minimal, schema=schema)
+            fields = self._orm_to_model_field_values(context=context, minimal=minimal, schema=Model)
             return Model(**fields)
         return super().to_model(context=context, minimal=minimal, schema=schema)
 
@@ -174,7 +174,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         context: dict[str, t.Any] | None = None,
         minimal: bool = False,
         schema: t.Literal['read', 'write', 'constructor', 'cli'] | None = None,
-        mode: str = 'python',
+        mode: t.Literal['json', 'python'] = 'python',
         dump_repo: bool = False,
     ):
         if schema == 'cli':

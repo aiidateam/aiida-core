@@ -464,8 +464,9 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
                 if all(validator_key in model_fields for validator_key in validator.info.fields)
             }
 
+            name = model_cls.__name__.replace(suffix, 'WriteModel')
             WriteModel = pdt.create_model(  # noqa: N806
-                'WriteModel',
+                name,
                 __base__=base_cls,
                 __module__=model_cls.__module__,
                 **model_fields,

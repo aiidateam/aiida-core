@@ -462,15 +462,11 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """Export code to a YAML file."""
         import yaml
 
-        code_data = {
-            key: value
-            for key, value in self._orm_to_model_field_values(
-                context={'repository_path': pathlib.Path.cwd() / f'{self.label}'},
-                schema=self.CliModel,
-                use_field_alias_as_key=False,
-            ).items()
-            if value is not None
-        }
+        code_data = self.serialize(schema='cli', context={'repository_path': pathlib.Path.cwd() / f'{self.label}'})
+
+        # NOTE: remove this in v3 when the deprecated `input_plugin` is removed
+        # Until then, we serialize by the alias (`input_plugin`), so we must rewire
+        code_data['default_calc_job_plugin'] = code_data.pop(self._KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN, None)
 
         return yaml.dump(code_data, sort_keys=kwargs.get('sort', False), encoding='utf-8'), {}
 

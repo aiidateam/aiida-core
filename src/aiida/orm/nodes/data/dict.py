@@ -195,13 +195,11 @@ class Dict(Data):
         context: t.Dict[str, t.Any] | None = None,
         minimal: bool = False,
         schema: type[AiiDABaseModel] | None = None,
-        use_field_alias_as_key: bool = True,
     ) -> t.Dict[str, t.Any]:
         fields = super()._orm_to_model_field_values(
             context=context,
             minimal=minimal,
             schema=schema,
-            use_field_alias_as_key=use_field_alias_as_key,
         )
         if schema in (self.ReadModel, self.WriteModel):
             return fields | {'attributes': self.get_dict()}

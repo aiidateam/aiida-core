@@ -175,14 +175,10 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         minimal: bool = False,
         schema: t.Literal['read', 'write', 'constructor', 'cli'] | None = None,
         mode: t.Literal['json', 'python'] = 'python',
-        dump_repo: bool = False,
+        repository_dump_path: pathlib.Path | None = None,
     ):
         if schema == 'cli':
-            return self.to_model(
-                context=context,
-                minimal=minimal,
-                schema=schema,
-            ).model_dump(
+            return self.to_model(context=context, minimal=minimal, schema=schema).model_dump(
                 mode=mode,
                 exclude_none=True,
                 exclude_unset=minimal,
@@ -192,7 +188,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             minimal=minimal,
             schema=schema,
             mode=mode,
-            dump_repo=dump_repo,
+            repository_dump_path=repository_dump_path,
         )
 
     @classmethod
@@ -462,7 +458,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """Export code to a YAML file."""
         import yaml
 
-        code_data = self.serialize(schema='cli', context={'repository_path': pathlib.Path.cwd() / f'{self.label}'})
+        code_data = self.serialize(schema='cli', context={'repository_dump_path': pathlib.Path.cwd() / f'{self.label}'})
 
         # NOTE: remove this in v3 when the deprecated `input_plugin` is removed
         # Until then, we serialize by the alias (`input_plugin`), so we must rewire

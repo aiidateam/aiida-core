@@ -582,8 +582,8 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
 
                 if orm_to_model := get_metadata(field, 'orm_to_model'):
                     signature = inspect.signature(orm_to_model)
-                    parameters = list(signature.parameters.values())
-                    fields[field_name] = orm_to_model(self) if len(parameters) == 1 else orm_to_model(self, context)
+                    needs_context = len(list(signature.parameters.values())) > 1
+                    fields[field_name] = orm_to_model(self, context or {}) if needs_context else orm_to_model(self)
                 else:
                     annotation = field.annotation
                     if isinstance(annotation, type) and issubclass(annotation, OrmModel):

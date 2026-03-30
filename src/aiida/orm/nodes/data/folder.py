@@ -27,26 +27,20 @@ if t.TYPE_CHECKING:
 __all__ = ('FolderData',)
 
 
-def _export_tree_from_repo(folder_data: FolderData, repository_path: pathlib.Path) -> str:
-    """Export repository contents to a directory for roundtrip."""
-    folder_data.base.repository.copy_tree(repository_path)
-    return str(repository_path)
-
-
 class FolderData(Data):
     """`Data` sub class to represent a folder on a file system."""
 
     class ConstructorArgsModel(OrmModel):
-        tree: pathlib.Path = OrmMetadataField(
+        tree: str = OrmMetadataField(
             title='Tree',
             description='Absolute path to a folder to wrap',
-            orm_to_model=lambda node, ctx: _export_tree_from_repo(
-                t.cast(FolderData, node),
-                ctx.get('repository_path', pathlib.Path.cwd() / f'{t.cast(FolderData, node).label}'),
+            orm_to_model=lambda node, ctx: t.cast(FolderData, node)._export_tree_from_repo(
+                ctx.get('repository_dump_path'),
+                ctx.get('written', False),
             ),
         )
 
-    def __init__(self, tree: pathlib.Path | None = None, **kwargs):
+    def __init__(self, tree: str | pathlib.Path | None = None, **kwargs):
         """Construct a new `FolderData` to which any files and folders can be added.
 
         Use the `tree` keyword to simply wrap a directory:
@@ -236,3 +230,23 @@ class FolderData(Data):
         :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
         """
         self.base.repository.erase()
+
+    def _export_tree_from_repo(
+        self,
+        repository_dump_path: pathlib.Path | None = None,
+        written: bool = False,
+    ) -> str:
+        """Export repository contents to a directory.
+
+        :param repository_dump_path: the path to which the repository contents should be dumped. If not provided,
+            a temporary directory will be created and used.
+        :param written: whether the repository content was already written, e.g., by `node.serialize(dump_repo_path)`.
+        """
+        import tempfile
+
+        if not written:
+            if repository_dump_path is None:
+                repository_dump_path = pathlib.Path(tempfile.mkdtemp()) / self.uuid
+            repository_dump_path.mkdir(parents=True, exist_ok=True)
+            self.base.repository.copy_tree(repository_dump_path)
+        return str(repository_dump_path)

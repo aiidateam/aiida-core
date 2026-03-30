@@ -430,7 +430,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         minimal: bool = False,
         schema: Literal['read', 'write', 'constructor'] | None = None,
         mode: Literal['json', 'python'] = 'python',
-        dump_repo: bool = False,
+        repository_dump_path: pathlib.Path | None = None,
     ) -> dict[str, Any]:
         """Serialize the entity instance to JSON.
 
@@ -440,31 +440,26 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             The 'constructor' schema can be used to serialize the node for constructor-based creation, if supported.
         :param mode: The serialization mode, either 'json' or 'python' (default). JSON-based clients (e.g., REST APIs)
             should use 'json' mode.
-        :param dump_repo: Whether to dump the repository contents to the serialization directory.
+        :param repository_dump_path: The path to which to dump the repository contents.
         :return: A dictionary that can be serialized to JSON.
         :raises UnsupportedSchemaError: if the provided schema is not supported for this entity.
-        :raises ValueError: if `dump_repo` is True but the repository cannot be dumped due to missing or invalid files.
+        :raises ValueError: if `repository_dump_path` is invalid.
         """
-        if dump_repo:
-            repository_path = (context or {}).get('repository_path')
-            if repository_path is None:
-                import tempfile
+        context = context or {}
+        if repository_dump_path is not None and context.get('repository_dump_path') is not None:
+            raise ValueError('`repository_dump_path` should be given either as an argument or in the context, not both')
+        repository_dump_path = repository_dump_path or context.get('repository_dump_path')
 
-                repository_path = pathlib.Path(tempfile.mkdtemp()) / f'./aiida_serialization/{self.pk}/'
-                repository_path.mkdir(parents=True)
-            else:
-                if not repository_path.exists():
-                    raise ValueError(f'`{repository_path}` does not exist')
-                if not repository_path.is_dir():
-                    raise ValueError(f'`{repository_path}` is not a directory')
+        if repository_dump_path is not None:
+            if not repository_dump_path.exists():
+                raise ValueError(f'`{repository_dump_path}` does not exist')
+            if not repository_dump_path.is_dir():
+                raise ValueError(f'`{repository_dump_path}` is not a directory')
 
-            self.base.repository.copy_tree(repository_path)
+            self.base.repository.copy_tree(repository_dump_path)
+            context = {**context, 'repository_dump_path': repository_dump_path, 'written': True}
 
-        return self.to_model(
-            context=context,
-            minimal=minimal,
-            schema=schema,
-        ).model_dump(
+        return self.to_model(context=context, minimal=minimal, schema=schema).model_dump(
             mode=mode,
             exclude_none=True,
             exclude_unset=minimal,
@@ -1234,14 +1229,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         schema: type[OrmModel] | None = None,
     ) -> dict[str, Any]:
         """Collect values for the model fields from this node."""
-        fields = super()._to_model_field_values(
-            context=context,
-            minimal=minimal,
-            schema=schema,
-        )
+        fields = super()._to_model_field_values(context=context, minimal=minimal, schema=schema)
         if self.supports_constructor_model and schema is self.ConstructorModel:
             fields['args'] = self._to_model_field_values(
-                context=context or {},
+                context=context,
                 minimal=minimal,
                 schema=self.ConstructorArgsModel,
             )

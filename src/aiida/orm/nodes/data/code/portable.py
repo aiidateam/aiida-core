@@ -38,17 +38,6 @@ __all__ = ('PortableCode',)
 _LOGGER = logging.getLogger(__name__)
 
 
-def _export_filepath_files_from_repo(portable_code: PortableCode, repository_path: pathlib.Path) -> str:
-    for root, _, filenames in portable_code.base.repository.walk():
-        for filename in filenames:
-            rel_path = str(root / filename)
-            # we need to create parents as we have no guarantee how we walk through the repo
-            (repository_path / root).mkdir(parents=True, exist_ok=True)
-            export_path = repository_path / root / filename
-            export_path.write_bytes(portable_code.base.repository.get_object_content(str(rel_path), mode='rb'))
-    return str(repository_path)
-
-
 class PortableCode(Code):
     """Data plugin representing an executable code stored in AiiDA's storage."""
 
@@ -74,16 +63,16 @@ class PortableCode(Code):
             short_name='-F',
             priority=2,
             write_only=True,
-            orm_to_model=lambda node, ctx: _export_filepath_files_from_repo(
-                cast(PortableCode, node),
-                ctx.get('repository_path', pathlib.Path.cwd() / f'{cast(PortableCode, node).label}'),
+            orm_to_model=lambda node, ctx: cast(PortableCode, node)._export_filepath_files_from_repo(
+                ctx.get('repository_dump_path'),
+                ctx.get('written', False),
             ),
         )
 
     def __init__(
         self,
         filepath_executable: FilePath,
-        filepath_files: FilePath | None = None,
+        filepath_files: str | FilePath | None = None,
         **kwargs,
     ):
         """Construct a new instance.
@@ -217,11 +206,36 @@ class PortableCode(Code):
 
         self.base.attributes.set(self._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, str(value))
 
+    def _export_filepath_files_from_repo(
+        self,
+        repository_dump_path: pathlib.Path | None = None,
+        written: bool = False,
+    ) -> str:
+        """Export repository contents to a directory.
+
+        :param repository_dump_path: the path to which the repository contents should be dumped. If not provided,
+            a temporary directory will be created and used.
+        :param written: whether the repository content was already written, e.g., by `node.serialize(dump_repo_path)`.
+        """
+        import tempfile
+
+        if not written:
+            if repository_dump_path is None:
+                repository_dump_path = pathlib.Path(tempfile.mkdtemp()) / self.label
+            repository_dump_path.mkdir(parents=True, exist_ok=True)
+            for root, _, filenames in self.base.repository.walk():
+                for filename in filenames:
+                    rel_path = str(root / filename)
+                    (repository_dump_path / root).mkdir(parents=True, exist_ok=True)
+                    export_path = repository_dump_path / root / filename
+                    export_path.write_bytes(self.base.repository.get_object_content(str(rel_path), mode='rb'))
+        return str(repository_dump_path)
+
     def _prepare_yaml(self, *args, **kwargs):
         """Export code to a YAML file."""
         result = super()._prepare_yaml(*args, **kwargs)[0]
         target = pathlib.Path().cwd() / f'{self.label}'
-        _export_filepath_files_from_repo(self, target)
+        self._export_filepath_files_from_repo(target)
         _LOGGER.info(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
         return result, {}
 

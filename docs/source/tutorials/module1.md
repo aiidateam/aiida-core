@@ -71,34 +71,8 @@ If you are running locally with your own profile, you can skip it.
 #     from aiida import load_profile
 #     load_profile()
 
-import os
-
-from aiida.manage.configuration import create_profile, get_config
-
 %load_ext aiida
-
-profile_name = 'tutorial'
-config = get_config()
-
-if profile_name not in config.profile_names:
-    create_profile(
-        config,
-        name=profile_name,
-        email='tutorial@aiida.net',
-        storage_backend='core.sqlite_dos',
-        storage_config={},
-        broker_backend=None,
-        broker_config=None,
-    )
-    config.set_option('runner.poll.interval', 1, scope=profile_name)
-    config.set_option('warnings.development_version', False, scope=profile_name)
-    config.set_default_profile(profile_name, overwrite=True)
-    config.store()
-
-from aiida import load_profile
-
-load_profile(profile_name, allow_switch=True)
-os.environ['AIIDA_PROFILE'] = profile_name
+%run -i include/setup_tutorial.py
 ```
 
 :::{admonition} About the code cells in this tutorial

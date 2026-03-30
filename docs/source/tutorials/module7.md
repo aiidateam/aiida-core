@@ -18,6 +18,18 @@ kernelspec:
 This module covers extensions and advanced topics. It is not required for core tutorial completion — the main tutorial ends with {ref}`Module 6 <tutorial:module6>`.
 :::
 
+:::{admonition} WorkGraph vs WorkChain
+:class: tip
+
+Modules 4–6 used **WorkGraph** to build workflows — a declarative, graph-based approach where you wire tasks together.
+AiiDA also supports **WorkChains**, the traditional imperative approach where you define an outline of steps, submit child processes, and pass data through a context dictionary.
+
+Both are first-class AiiDA citizens: they use the same `engine.run()` / `engine.submit()` API, produce the same provenance, and work with all `verdi process` commands.
+The difference is in *how you author* the workflow, not in *how you run or inspect* it.
+
+This module introduces WorkChains and shows how the same workflows from earlier modules look in the WorkChain style.
+:::
+
 ## Multi-parameter sweeps
 
 <!-- TODO: 2D parameter scan over F and k to map the full phase diagram -->

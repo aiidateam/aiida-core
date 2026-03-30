@@ -34,6 +34,15 @@ You cannot yet handle failures gracefully or debug complex workflow issues — e
 
 ## WorkGraph basics
 
+:::{tip}
+Any function decorated with `@calcfunction` (from {ref}`Module 1 <tutorial:module1>`) can be used directly as a WorkGraph task — just pass it to `wg.add_task()`.
+No additional decorator is needed.
+
+You may see `@task.calcfunction` in aiida-workgraph documentation.
+This is only needed when you want extra features like custom socket specs or attaching error handlers directly in the decorator.
+For most use cases, a plain `@calcfunction` works.
+:::
+
 <!-- TODO: introduce WorkGraph: tasks (CalcJob, calcfunction) + links -->
 <!-- TODO: create a minimal WorkGraph with one task -->
 <!-- TODO: run it and inspect the result -->

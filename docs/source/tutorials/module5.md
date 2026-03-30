@@ -52,6 +52,13 @@ You cannot yet run systematic parameter sweeps or analyze trends across many run
 
 ## Implementing error handlers
 
+:::{note}
+This module shows error handlers using the **WorkGraph** API, where handlers are standalone functions attached to tasks.
+The traditional **WorkChain** approach uses a different pattern: handler methods on the class, discovered automatically via a `@process_handler` decorator.
+{ref}`Module 7 <tutorial:module7>` covers the WorkChain approach.
+The concepts (matching exit codes, adjusting inputs, retrying) are the same — only the registration syntax differs.
+:::
+
 ### Handler for numerical instability (exit code 20)
 
 <!-- TODO: implement handler that catches exit code 20, reduces dt, resubmits -->

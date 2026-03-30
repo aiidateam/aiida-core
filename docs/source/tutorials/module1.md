@@ -216,6 +216,14 @@ def run_simulation(parameters):
     }
 ```
 
+:::{note}
+Inside a `calcfunction`, all parameters are AiiDA data nodes — not plain Python types.
+That is why the function calls `parameters.get_dict()` to extract the dictionary, and returns `orm.Float(...)` rather than a bare float.
+
+When *calling* the function, however, AiiDA auto-serializes plain Python types for you: `run_simulation(orm.Dict(params))` and `run_simulation(params)` both work — AiiDA wraps the plain `dict` into an `orm.Dict` automatically.
+We use `orm.Dict` explicitly here to make the conversion visible.
+:::
+
 Now let's run it:
 
 ```{code-cell} ipython3

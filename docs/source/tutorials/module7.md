@@ -30,6 +30,11 @@ The difference is in *how you author* the workflow, not in *how you run or inspe
 This module introduces WorkChains and shows how the same workflows from earlier modules look in the WorkChain style.
 :::
 
+:::{seealso}
+If you are developing an AiiDA **plugin** that other people will install and use, WorkChains are the established convention — most existing plugins (aiida-quantumespresso, aiida-cp2k, etc.) use them.
+WorkGraph is better suited for composing and customizing workflows as a user.
+:::
+
 ## Multi-parameter sweeps
 
 <!-- TODO: 2D parameter scan over F and k to map the full phase diagram -->

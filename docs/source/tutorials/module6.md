@@ -28,6 +28,11 @@ This module completes the core tutorial. For advanced extensions, see {ref}`Modu
 
 ## Running a parameter sweep
 
+:::{note}
+You could run a parameter sweep with a Python `for` loop and `engine.submit()`, but WorkGraph's `Map` handles this declaratively: it parallelizes the tasks, tracks which parameter produced which result, and groups everything under a single workflow node.
+If some runs fail, only those are affected — the rest complete normally.
+:::
+
 ### Setting up the scan
 
 <!-- TODO: define the parameter range to sweep over -->
@@ -40,6 +45,11 @@ This module completes the core tutorial. For advanced extensions, see {ref}`Modu
 <!-- TODO: verdi process list to see progress -->
 
 ## Collecting results with the QueryBuilder
+
+:::{tip}
+This is where the QueryBuilder from {ref}`Module 3 <tutorial:module3>` becomes essential.
+Instead of manually tracking which output file corresponds to which parameter value, you query the database: "give me all variance values from calculations inside this workflow, along with their input parameters."
+:::
 
 <!-- TODO: use QueryBuilder to collect inputs and outputs from the scan -->
 <!-- TODO: organize results into arrays for analysis -->

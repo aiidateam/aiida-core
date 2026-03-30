@@ -73,6 +73,11 @@ You cannot yet chain multiple steps into automated workflows — that comes in {
 
 ### Exporting `.aiida` archives
 
+:::{tip}
+Archives include full provenance — not just the data, but how it was produced, with which inputs, by which code version.
+A colleague importing your archive can trace every result back to its origin.
+:::
+
 <!-- TODO: export a Group as a portable archive -->
 <!-- TODO: explain how archives enable reproducibility and sharing -->
 

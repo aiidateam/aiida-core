@@ -29,6 +29,11 @@ You cannot yet handle failures gracefully or debug complex workflow issues — e
 
 ## Why workflows?
 
+:::{note}
+In Modules 1–2, you ran each step manually: call the simulation, parse the output, store the results.
+A workflow automates this sequence: you define the steps and their connections once, and AiiDA handles execution, data passing, and provenance tracking.
+:::
+
 <!-- TODO: motivate: manual step-by-step is tedious and error-prone -->
 <!-- TODO: a workflow automates the sequence, passes data, records provenance -->
 
@@ -48,6 +53,12 @@ For most use cases, a plain `@calcfunction` works.
 <!-- TODO: run it and inspect the result -->
 
 ## Chaining calculations
+
+:::{tip}
+When tasks are chained inside a WorkGraph, AiiDA records the entire workflow as a single provenance tree.
+Compare this to running each step manually (Modules 1–2), where the provenance is flat and disconnected.
+Use `verdi process status` to see the full task hierarchy.
+:::
 
 <!-- TODO: build a workflow: simulate → parse → post-process (visualize) -->
 <!-- TODO: link outputs of one task to inputs of the next -->

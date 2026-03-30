@@ -213,6 +213,11 @@ Every CalcJob needs two things to run:
 For remote HPC clusters, you would set these up explicitly — see the {ref}`how-to guide <how-to:run-codes>`.
 For writing your own CalcJob plugin (with custom input preparation, exit codes, and parsing), see {ref}`how to write a plugin for an external code <how-to:plugin-codes>`.
 
+:::{note}
+When you use `launch_shell_job()`, aiida-shell creates a temporary Code behind the scenes.
+For production work on remote HPC clusters, you would register a Computer and Code explicitly with `verdi computer setup` and `verdi code create`.
+:::
+
 ## Inspecting the calculation
 
 AiiDA records the full lifecycle of every CalcJob. Let's inspect what happened:
@@ -319,8 +324,12 @@ print(results_bad['stderr'].get_content())
 ```
 
 AiiDA recorded the failure with full context: the exit status, the inputs that caused it, and the error output.
-In a full CalcJob plugin, you would define your own exit codes that map directly to the simulation's failure modes — see the {ref}`how-to guide <how-to:run-codes>`.
-In {ref}`Module 5 <tutorial:module5>`, you'll learn how to write **error handlers** that automatically respond to these failures — for example, by adjusting parameters and retrying.
+In a full CalcJob plugin, you would define your own exit codes with semantic meaning (e.g., `ERROR_TRIVIAL_STEADY_STATE = 30`) — see the {ref}`how-to guide <how-to:run-codes>`.
+
+:::{tip}
+The exit codes here are detected by aiida-shell from the script's non-zero exit status.
+In {ref}`Module 5 <tutorial:module5>`, you'll learn how to write **error handlers** that automatically respond to specific exit codes — for example, by adjusting parameters and retrying.
+:::
 
 ## `submit()` vs `run()` and the daemon
 

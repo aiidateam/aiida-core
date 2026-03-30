@@ -56,6 +56,7 @@ exclude_patterns = [
     'import_export/**',
     'internals/global_design.rst',
     'reference/apidoc/**',
+    'tutorials/_notes/**',
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.

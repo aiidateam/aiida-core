@@ -458,7 +458,8 @@ xfail_strict = true
 [tool.ruff]
 exclude = [
   'docs/source/topics/processes/include/snippets/functions/parse_docstring_expose_ipython.py',
-  'docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py'
+  'docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py',
+  'docs/source/tutorials/_notes/**'
 ]
 line-length = 120
 

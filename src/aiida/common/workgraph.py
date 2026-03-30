@@ -212,4 +212,5 @@ def engine_submit_workgraph(
         )
         time.sleep(wait_interval)
 
+    workgraph.update()
     return node

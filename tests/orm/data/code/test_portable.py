@@ -165,8 +165,8 @@ filepath_files: {tmp_path}/some-label
 
     assert extra_args == {}
     assert result.decode() == ref_result
-    repo_dump_path = tmp_path / code.label
+    repository_dump_path = tmp_path / code.label
     # In this case portablecode takes care of the dumping
-    dumped_files = {f.relative_to(repo_dump_path) for f in repo_dump_path.rglob('*')}
+    dumped_files = {f.relative_to(repository_dump_path) for f in repository_dump_path.rglob('*')}
     inserted_files = {f.relative_to(filepath_files) for f in filepath_files.rglob('*')}
     assert dumped_files == inserted_files

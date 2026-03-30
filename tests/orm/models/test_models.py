@@ -214,7 +214,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
                 'assert_derived': assert_derived_folder_properties,
             },
             'constructor-based': {
-                'args': {'tree': tmp_path},
+                'args': {'tree': str(tmp_path)},
             },
         }
     if request.param is orm.InstalledCode:
@@ -450,7 +450,7 @@ def _assert_roundtrip_field_values_equal(
     schema: str,
     tmp_path,
 ):
-    context = {'repository_path': tmp_path}
+    context = {'repository_dump_path': tmp_path}
     new_model = new_entity.to_model(context=context, schema=schema)
     assert new_model.node_type == original_model.node_type
     if isinstance(original_model, cls.WriteModel):

@@ -7,6 +7,8 @@ example that progressively grows in complexity.
 Each module builds on the previous one; start with Module 0 and work
 through the modules in order.
 
+<!-- AiiDA in Action teaser — commented out until content is finalized
+
 ::::{grid} 1
 :gutter: 3
 
@@ -29,6 +31,8 @@ See the demo
 ```
 :::
 ::::
+
+-->
 
 ## Modules
 

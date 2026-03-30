@@ -12,69 +12,71 @@ kernelspec:
 ---
 
 (tutorial:module6)=
-# Module 6: High-Throughput and Post-Processing
+# Module 6: Querying and Organizing Data (Coming Soon)
+
+:::{note}
+This module is under development. Planned topics:
+
+- Finding data with the QueryBuilder (filter, project, join)
+- Organizing calculations and data with Groups
+- Exporting and sharing data as `.aiida` archives
+- `verdi process dump` for inspection and debugging
+
+See {ref}`Module 3 <tutorial:module3>` for the latest completed module.
+:::
+
+<!-- Original content commented out for future development
 
 ## What you will learn
 
 After this module, you will be able to:
 
-- Run sweeps over input parameters using loops in WorkGraph
-- Collect and analyze results across many calculations
-- Visualize trends across parameter scans
+- Use the QueryBuilder to find, filter, and project data
+- Organize data with Groups
+- Export and share data as `.aiida` archives
 
-## What you will not learn yet
+## Finding data with the QueryBuilder
 
-This module completes the core tutorial. For advanced extensions, see {ref}`Module 7 <tutorial:module7>`.
+### Basic queries: find, filter, project
 
-## Running a parameter sweep
+TODO: introduce QueryBuilder
+TODO: find all CalcJobs, filter by state or input parameters
+TODO: project specific output values (variance_V, mean_V)
 
-:::{note}
-You could run a parameter sweep with a Python `for` loop and `engine.submit()`, but WorkGraph's `Map` handles this declaratively: it parallelizes the tasks, tracks which parameter produced which result, and groups everything under a single workflow node.
-If some runs fail, only those are affected — the rest complete normally.
-:::
+### Combining filters
 
-### Setting up the scan
+TODO: filter by multiple criteria (e.g., F value AND successful exit code)
+TODO: show how to extract results into a table
 
-<!-- TODO: define the parameter range to sweep over -->
-<!-- TODO: create a WorkGraph with a loop over the parameter -->
-<!-- TODO: submit the scan workflow -->
+## Organizing data with Groups
 
-### Monitoring the scan
+TODO: create a Group
+TODO: add calculations/data to the Group
+TODO: query within a Group
 
-<!-- TODO: verdi process status to see all child calculations -->
-<!-- TODO: verdi process list to see progress -->
+## Inspecting and exporting data
 
-## Collecting results with the QueryBuilder
+### `verdi process dump`
 
-:::{tip}
-This is where the QueryBuilder from {ref}`Module 3 <tutorial:module3>` becomes essential.
-Instead of manually tracking which output file corresponds to which parameter value, you query the database: "give me all variance values from calculations inside this workflow, along with their input parameters."
-:::
+TODO: dump a calculation's full directory to disk
+TODO: inspect the dumped files
 
-<!-- TODO: use QueryBuilder to collect inputs and outputs from the scan -->
-<!-- TODO: organize results into arrays for analysis -->
+### Exporting `.aiida` archives
 
-## Visualizing trends
+Archives include full provenance — not just the data, but how it was produced,
+with which inputs, by which code version.
+A colleague importing your archive can trace every result back to its origin.
 
-<!-- TODO: plot output quantities as a function of the scanned parameter -->
-<!-- TODO: interpret the results -->
-
-## Visualizing representative outputs
-
-<!-- TODO: select a few representative parameter values -->
-<!-- TODO: load output data from the database -->
-<!-- TODO: display results side by side -->
+TODO: export a Group as a portable archive
+TODO: explain how archives enable reproducibility and sharing
 
 ## Summary
 
 In this module you learned to:
 
-- **Run** parameter sweeps using WorkGraph loops
-- **Collect** results across many calculations with the QueryBuilder
-- **Visualize** trends and analyze how outputs vary with inputs
+- **Query** the database with the QueryBuilder
+- **Organize** data with Groups
+- **Dump** calculation data to disk
+- **Export** data as `.aiida` archives
 
-At this point, you have completed the core tutorial and understand the full AiiDA workflow cycle: from running a single calculation, to parsing and storing results, to building workflows with error handling, to running parameter sweeps and analyzing the results.
-
-## Next steps
-
-If you want to go further, {ref}`Module 7 <tutorial:module7>` covers advanced topics like multi-parameter sweeps, remote HPC execution, and more.
+-->

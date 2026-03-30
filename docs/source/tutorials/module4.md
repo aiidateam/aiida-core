@@ -12,83 +12,92 @@ kernelspec:
 ---
 
 (tutorial:module4)=
-# Module 4: Building Workflows
+# Module 4: Error Handling and Debugging (Coming Soon)
+
+:::{note}
+This module is under development. Planned topics:
+
+- Inspecting failed calculations (`verdi process report`, `verdi process dump`)
+- Understanding failure modes and exit codes
+- Implementing error handlers with WorkGraph
+- Building resilient workflows with automatic retries
+
+See {ref}`Module 3 <tutorial:module3>` for the latest completed module.
+:::
+
+<!-- Original content commented out for future development
 
 ## What you will learn
 
 After this module, you will be able to:
 
-- Build a workflow as a graph of tasks using WorkGraph
-- Chain calculations together (simulate → parse → post-process)
-- Pass data between tasks using context variables
-- Add simple branching logic to a workflow
+- Diagnose failed calculations using `verdi process report` and `verdi process dump`
+- Inspect failed jobs (exit codes, stderr, output files)
+- Implement error handlers that automatically retry or adjust parameters
+- Build resilient workflows with re-submission strategies
 
 ## What you will not learn yet
 
-You cannot yet handle failures gracefully or debug complex workflow issues — error handling is covered in {ref}`Module 5 <tutorial:module5>`.
+You cannot yet run systematic parameter sweeps or analyze trends across many runs.
 
-## Why workflows?
+## Inspecting failed calculations
 
-:::{note}
-In Modules 1–2, you ran each step manually: call the simulation, parse the output, store the results.
-A workflow automates this sequence: you define the steps and their connections once, and AiiDA handles execution, data passing, and provenance tracking.
-:::
+### Using `verdi process report`
 
-<!-- TODO: motivate: manual step-by-step is tedious and error-prone -->
-<!-- TODO: a workflow automates the sequence, passes data, records provenance -->
+TODO: run a calculation with parameters that cause exit code 30 (trivial solution)
+TODO: verdi process report <PK> to see the error message
 
-## WorkGraph basics
+### Using `verdi process dump`
 
-:::{tip}
-Any function decorated with `@calcfunction` (from {ref}`Module 1 <tutorial:module1>`) can be used directly as a WorkGraph task — just pass it to `wg.add_task()`.
-No additional decorator is needed.
+TODO: verdi process dump <PK> to inspect the full calculation directory
+TODO: examine stderr and output files
 
-You may see `@task.calcfunction` in aiida-workgraph documentation.
-This is only needed when you want extra features like custom socket specs or attaching error handlers directly in the decorator.
-For most use cases, a plain `@calcfunction` works.
-:::
+### Reading logs and outputs
 
-<!-- TODO: introduce WorkGraph: tasks (CalcJob, calcfunction) + links -->
-<!-- TODO: create a minimal WorkGraph with one task -->
-<!-- TODO: run it and inspect the result -->
+TODO: verdi calcjob outputcat <PK> to see stdout
+TODO: show how exit codes appear in verdi process list
 
-## Chaining calculations
+## Understanding failure modes
 
-:::{tip}
-When tasks are chained inside a WorkGraph, AiiDA records the entire workflow as a single provenance tree.
-Compare this to running each step manually (Modules 1–2), where the provenance is flat and disconnected.
-Use `verdi process status` to see the full task hierarchy.
-:::
+TODO: recap exit codes from Module 1 (10, 11, 20, 30)
+TODO: run examples that trigger each failure mode
+TODO: discuss what each failure means and how to respond
 
-<!-- TODO: build a workflow: simulate → parse → post-process (visualize) -->
-<!-- TODO: link outputs of one task to inputs of the next -->
-<!-- TODO: run the multi-step workflow -->
-<!-- TODO: inspect the hierarchical provenance graph -->
+## Implementing error handlers
 
-## Context variables for data flow
+Note: This module shows error handlers using the **WorkGraph** API, where handlers
+are standalone functions attached to tasks.
+The traditional **WorkChain** approach uses a different pattern: handler methods on the
+class, discovered automatically via a `@process_handler` decorator.
+Module 7 covers the WorkChain approach.
+The concepts (matching exit codes, adjusting inputs, retrying) are the same — only
+the registration syntax differs.
 
-<!-- TODO: show how context variables pass data between tasks -->
-<!-- TODO: explain when to use context vs direct links -->
+### Handler for numerical instability (exit code 20)
 
-## Simple branching
+TODO: implement handler that catches exit code 20, reduces dt, resubmits
 
-<!-- TODO: add conditional logic: skip visualization if variance is below threshold -->
-<!-- TODO: run and inspect the branching workflow -->
+### Handler for trivial solutions (exit code 30)
 
-## Comparing: with and without a workflow
+TODO: implement handler that catches exit code 30, adjusts F, resubmits
 
-<!-- TODO: side-by-side provenance graph comparison -->
-<!-- TODO: show how the workflow groups related steps together -->
+### Adding handlers to a workflow
+
+TODO: extend the WorkGraph from Module 3 with error handlers
+TODO: run the workflow with parameters that trigger the handler
+TODO: inspect the workflow to see the retry in the provenance graph
 
 ## Summary
 
 In this module you learned to:
 
-- **Build** workflows with WorkGraph
-- **Chain** calculations together
-- **Pass data** between tasks using context variables
-- **Branch** workflow logic based on conditions
+- **Diagnose** failures with `verdi process report` and `verdi process dump`
+- **Inspect** failed jobs' exit codes and output files
+- **Implement** error handlers for automatic recovery
+- **Build** resilient workflows that retry with adjusted parameters
 
 ## Next steps
 
-We have a working workflow, but what happens when a calculation fails? In {ref}`Module 5 <tutorial:module5>`, you'll learn how to diagnose failures and build resilient workflows with error handlers.
+With robust error handling in place, we're ready to scale up.
+
+-->

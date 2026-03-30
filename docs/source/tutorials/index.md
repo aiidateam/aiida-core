@@ -4,7 +4,7 @@
 These tutorials teach you the core concepts of AiiDA -- from running a single
 calculation to building automated, error-resilient workflows -- using a running
 example that progressively grows in complexity.
-Each module builds on the previous one; start with the Introduction and work
+Each module builds on the previous one; start with Module 0 and work
 through the modules in order.
 
 ::::{grid} 1
@@ -35,11 +35,30 @@ See the demo
 ::::{grid} 1 2 2 3
 :gutter: 3
 
-:::{grid-item-card} {fa}`circle-play;mr-1` Module 1: Running a Simulation
+:::{grid-item-card} {fa}`flask;mr-1` Module 0: The Running Example
 :text-align: center
 :shadow: md
 
-Store data, run a tracked calculation, and explore the provenance graph.
+Meet the Gray-Scott simulation, run it directly, and see what's missing without AiiDA.
+
++++
+
+```{button-ref} module0
+:ref-type: doc
+:click-parent:
+:expand:
+:color: primary
+:outline:
+
+Go to Module 0
+```
+:::
+
+:::{grid-item-card} {fa}`circle-play;mr-1` Module 1: Running with AiiDA
+:text-align: center
+:shadow: md
+
+Run tracked calculations with aiida-shell, inspect provenance, and handle failures.
 
 +++
 
@@ -54,11 +73,11 @@ Go to Module 1
 ```
 :::
 
-:::{grid-item-card} {fa}`code;mr-1` Module 2: Running External Codes
+:::{grid-item-card} {fa}`cubes;mr-1` Module 2: Interacting with Data
 :text-align: center
 :shadow: md
 
-Run codes with aiida-shell and CalcJobs, write parsers, and handle exit codes.
+Data types, calcfunctions, and parameter sweeps with full provenance tracking.
 
 +++
 
@@ -73,11 +92,11 @@ Go to Module 2
 ```
 :::
 
-:::{grid-item-card} {fa}`cubes;mr-1` Module 3: Working with Your Data
+:::{grid-item-card} {fa}`diagram-project;mr-1` Module 3: Writing Simple Workflows
 :text-align: center
 :shadow: md
 
-Store data, query with QueryBuilder, organize with Groups, and export archives.
+Chain calculations into automated workflows with WorkGraph, including parameter sweeps with Map.
 
 +++
 
@@ -92,11 +111,11 @@ Go to Module 3
 ```
 :::
 
-:::{grid-item-card} {fa}`diagram-project;mr-1` Module 4: Building Workflows
+:::{grid-item-card} {fa}`wrench;mr-1` Modules 4--7: Coming Soon
 :text-align: center
 :shadow: md
 
-Chain calculations into automated workflows with WorkGraph.
+Error handling, remote HPC submission, querying data, and advanced topics.
 
 +++
 
@@ -104,67 +123,10 @@ Chain calculations into automated workflows with WorkGraph.
 :ref-type: doc
 :click-parent:
 :expand:
-:color: primary
+:color: secondary
 :outline:
 
-Go to Module 4
-```
-:::
-
-:::{grid-item-card} {fa}`wrench;mr-1` Module 5: Error Handling
-:text-align: center
-:shadow: md
-
-Debug failed calculations and implement automatic error recovery handlers.
-
-+++
-
-```{button-ref} module5
-:ref-type: doc
-:click-parent:
-:expand:
-:color: primary
-:outline:
-
-Go to Module 5
-```
-:::
-
-:::{grid-item-card} {fa}`chart-bar;mr-1` Module 6: High-Throughput & Post-Processing
-:text-align: center
-:shadow: md
-
-Run parameter sweeps, analyze trends, and create publication-quality plots.
-
-+++
-
-```{button-ref} module6
-:ref-type: doc
-:click-parent:
-:expand:
-:color: primary
-:outline:
-
-Go to Module 6
-```
-:::
-
-:::{grid-item-card} {fa}`flask;mr-1` Module 7: Advanced Topics
-:text-align: center
-:shadow: md
-
-Multi-parameter sweeps, remote HPC execution, daemon, and more (optional).
-
-+++
-
-```{button-ref} module7
-:ref-type: doc
-:click-parent:
-:expand:
-:color: primary
-:outline:
-
-Go to Module 7
+See what's planned
 ```
 :::
 ::::
@@ -199,8 +161,7 @@ Go to Basic Tutorial
 :hidden:
 
 teaser
-intro
-basic
+module0
 module1
 module2
 module3
@@ -208,4 +169,5 @@ module4
 module5
 module6
 module7
+basic
 ```

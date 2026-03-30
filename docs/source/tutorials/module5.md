@@ -12,76 +12,63 @@ kernelspec:
 ---
 
 (tutorial:module5)=
-# Module 5: Error Handling and Debugging
+# Module 5: Remote Submission and the Daemon (Coming Soon)
+
+:::{note}
+This module is under development. Planned topics:
+
+- `submit()` vs `run()` and the AiiDA daemon
+- Setting up remote HPC computers (SSH transport, SLURM/PBS schedulers)
+- Submitting calculations to remote clusters
+- Monitoring and retrieving results
+
+See {ref}`Module 3 <tutorial:module3>` for the latest completed module.
+:::
+
+<!-- Original content commented out for future development
 
 ## What you will learn
 
 After this module, you will be able to:
 
-- Diagnose failed calculations using `verdi process report` and `verdi process dump`
-- Inspect failed jobs (exit codes, stderr, output files)
-- Implement error handlers that automatically retry or adjust parameters
-- Build resilient workflows with re-submission strategies
+- Understand the difference between `run()` (synchronous) and `submit()` (asynchronous)
+- Start and manage the AiiDA daemon
+- Set up a remote Computer with SSH transport and a job scheduler
+- Submit calculations to remote HPC clusters
+- Monitor running calculations and retrieve results
 
-## What you will not learn yet
+## submit() vs run() and the daemon
 
-You cannot yet run systematic parameter sweeps or analyze trends across many runs — high-throughput capabilities come in {ref}`Module 6 <tutorial:module6>`.
+So far, every calculation has been **synchronous** — `launch_shell_job(...)` blocks until
+the calculation finishes. This is fine for quick local runs, but for production use on
+HPC clusters you'll want **asynchronous** execution:
 
-## Inspecting failed calculations
+- **`run()`** — blocks until the calculation completes. Simple, but ties up your Python session.
+- **`submit()`** — sends the calculation to the AiiDA **daemon** and returns immediately.
+  The daemon manages the calculation lifecycle in the background.
 
-### Using `verdi process report`
+TODO: show submit() example
+TODO: explain daemon start/stop/status
+TODO: verdi daemon start, verdi daemon status
 
-<!-- TODO: run a calculation with parameters that cause exit code 30 (trivial solution) -->
-<!-- TODO: verdi process report <PK> to see the error message -->
+## Setting up remote computers
 
-### Using `verdi process dump`
+TODO: verdi computer setup with SSH transport and SLURM scheduler
+TODO: verdi computer configure core.ssh
+TODO: verdi computer test
 
-<!-- TODO: verdi process dump <PK> to inspect the full calculation directory -->
-<!-- TODO: examine stderr and output files -->
+## Submitting to remote clusters
 
-### Reading logs and outputs
-
-<!-- TODO: verdi calcjob outputcat <PK> to see stdout -->
-<!-- TODO: show how exit codes appear in verdi process list -->
-
-## Understanding failure modes
-
-<!-- TODO: recap exit codes from Module 2 (10, 11, 20, 30) -->
-<!-- TODO: run examples that trigger each failure mode -->
-<!-- TODO: discuss what each failure means and how to respond -->
-
-## Implementing error handlers
-
-:::{note}
-This module shows error handlers using the **WorkGraph** API, where handlers are standalone functions attached to tasks.
-The traditional **WorkChain** approach uses a different pattern: handler methods on the class, discovered automatically via a `@process_handler` decorator.
-{ref}`Module 7 <tutorial:module7>` covers the WorkChain approach.
-The concepts (matching exit codes, adjusting inputs, retrying) are the same — only the registration syntax differs.
-:::
-
-### Handler for numerical instability (exit code 20)
-
-<!-- TODO: implement handler that catches exit code 20, reduces dt, resubmits -->
-
-### Handler for trivial solutions (exit code 30)
-
-<!-- TODO: implement handler that catches exit code 30, adjusts F, resubmits -->
-
-### Adding handlers to a workflow
-
-<!-- TODO: extend the WorkGraph from Module 4 with error handlers -->
-<!-- TODO: run the workflow with parameters that trigger the handler -->
-<!-- TODO: inspect the workflow to see the retry in the provenance graph -->
+TODO: submit a calculation to the remote computer
+TODO: monitor with verdi process list
+TODO: retrieve results
 
 ## Summary
 
 In this module you learned to:
 
-- **Diagnose** failures with `verdi process report` and `verdi process dump`
-- **Inspect** failed jobs' exit codes and output files
-- **Implement** error handlers for automatic recovery
-- **Build** resilient workflows that retry with adjusted parameters
+- **Distinguish** `run()` (synchronous) from `submit()` (asynchronous via daemon)
+- **Set up** remote HPC computers
+- **Submit** and monitor calculations on clusters
 
-## Next steps
-
-With robust error handling in place, we're ready to scale up. In {ref}`Module 6 <tutorial:module6>`, you'll learn how to run parameter sweeps, collect results, and create publication-quality plots.
+-->

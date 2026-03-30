@@ -165,11 +165,10 @@ The modules below will take you from zero to everything shown on this page:
 
 | What you saw above | Where you'll learn it |
 |---|---|
-| Running and tracking a simulation | {ref}`Module 1 <tutorial:module1>` |
-| Running external codes, parsers, exit codes | {ref}`Module 2 <tutorial:module2>` |
-| Querying, grouping, and exporting data | {ref}`Module 3 <tutorial:module3>` |
-| Building and extending workflows | {ref}`Module 4 <tutorial:module4>` |
-| Error handlers and automatic retries | {ref}`Module 5 <tutorial:module5>` |
-| Parameter sweeps and post-processing | {ref}`Module 6 <tutorial:module6>` |
+| The simulation code and its interface | {ref}`Module 0 <tutorial:module0>` |
+| Running and tracking simulations | {ref}`Module 1 <tutorial:module1>` |
+| Richer data types, calcfunctions, parameter sweeps | {ref}`Module 2 <tutorial:module2>` |
+| Building workflows | {ref}`Module 3 <tutorial:module3>` |
+| Error handlers, remote HPC, and more | Coming soon |
 
-Ready? Start with the {ref}`Introduction <tutorial:intro>` to learn about the example we'll use throughout, then head to {ref}`Module 1 <tutorial:module1>`.
+Ready? Start with {ref}`Module 0 <tutorial:module0>` to meet the running example, then head to {ref}`Module 1 <tutorial:module1>`.

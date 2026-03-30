@@ -14,7 +14,7 @@ execution:
 ---
 
 (tutorial:module1)=
-# Module 1: Running a Simulation in AiiDA
+# Module 1: Running with AiiDA
 
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module1.ipynb` {octicon}`download`
@@ -25,14 +25,15 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 After this module, you will be able to:
 
 - Set up an AiiDA profile for storing your data and provenance
-- Store data in the AiiDA database and retrieve it
-- Wrap a computation as an AiiDA `calcfunction`
-- Run and monitor the status of processes
+- Run an external code through AiiDA using `aiida-shell` and CalcJobs
+- Inspect calculations with `verdi` CLI commands
 - Explore and visualize the provenance graph
+- Dump calculation data to disk with `verdi process dump`
+- Handle calculation failures
 
 ## What you will not learn yet
 
-You cannot yet run external codes as CalcJobs or parse their output files — these capabilities will be introduced in {ref}`Module 2 <tutorial:module2>`.
+You cannot yet store structured data types, write calcfunctions, or run parameter sweeps -- those capabilities come in {ref}`Module 2 <tutorial:module2>`.
 
 ## Setting up your AiiDA profile
 
@@ -45,7 +46,7 @@ If you are working on your own machine, the easiest way is:
 $ verdi presto
 ```
 
-This creates a lightweight local profile using SQLite storage — no PostgreSQL or other external services required.
+This creates a lightweight local profile using SQLite storage -- no PostgreSQL or other external services required.
 You can verify that your profile is set up correctly with:
 
 ```console
@@ -80,155 +81,120 @@ If you are running locally with your own profile, you can skip it.
 
 This tutorial uses [IPython magic commands](https://ipython.readthedocs.io/en/stable/interactive/magics.html) that you will see throughout:
 
-- **`%run -i script.py`** — executes a Python file in the current namespace (like pasting its contents into the cell). If you are working locally, you can instead `import` from the file or copy the code directly.
-- **`%verdi ...`** — runs a `verdi` CLI command from within the notebook. In a terminal, you would run the same command without the `%` prefix, e.g. `verdi process list -a`.
-- **`%load_ext aiida`** — loads the AiiDA IPython extension, which enables the `%verdi` magic.
+- **`%run -i script.py`** -- executes a Python file in the current namespace (like pasting its contents into the cell). If you are working locally, you can instead `import` from the file or copy the code directly.
+- **`%verdi ...`** -- runs a `verdi` CLI command from within the notebook. In a terminal, you would run the same command without the `%` prefix, e.g. `verdi process list -a`.
+- **`%load_ext aiida`** -- loads the AiiDA IPython extension, which enables the `%verdi` magic.
 :::
 
-## The simulation code
+## Running the simulation with `aiida-shell`
 
-Throughout this tutorial we use a **reaction–diffusion simulation** (Gray–Scott model) as our running example — see the {ref}`introduction <tutorial:intro>` for the scientific background.
+In {ref}`Module 0 <tutorial:module0>`, we ran the simulation directly with `subprocess`.
+Now let's run it through AiiDA, which will automatically track everything.
 
-Think of the simulation code as an **external binary** that you would normally run on an HPC cluster (like Quantum ESPRESSO, VASP, or LAMMPS).
-You don't need to understand its internals — only its interface:
+AiiDA uses a **{ref}`CalcJob <topics:calculations:concepts:calcjobs>`** to manage external executables -- preparing input files, executing the code (locally or on a remote cluster), retrieving output files, and optionally parsing the results.
 
-- **Input**: a dictionary of parameters (`grid_size`, `F`, `k`, `du`, `dv`, `dt`, `n_steps`, `seed`)
-- **Output**: a dictionary with the final fields (`U_final`, `V_final`) and scalar diagnostics (`variance_V`, `mean_V`)
+The fastest way to run a CalcJob is with [`aiida-shell`](https://aiida-shell.readthedocs.io), which wraps any shell command -- no plugin code required.
 
-The `simulate()` function below is our black-box code ({download}`include/simulate.py`).
-Expand the box to inspect it if you are curious — otherwise just move on.
-
-:::{dropdown} Inspect the simulation function
-```{literalinclude} include/simulate.py
-:language: python
-```
-:::
+Let's prepare the input file and run the simulation:
 
 ```{code-cell} ipython3
-%run -i include/simulate.py
-```
+import tempfile
+from pathlib import Path
 
-## Running the simulation without AiiDA
+import yaml
 
-Let's call the simulation and look at the result:
+work_dir = Path(tempfile.mkdtemp())
+script_path = Path('include/reaction-diffusion.py').resolve()
 
-```{code-cell} ipython3
-params = {
+input_params = {
     'grid_size': 64,
-    'du': 0.16,
-    'dv': 0.08,
-    'F': 0.04,
-    'k': 0.065,
-    'dt': 1.0,
-    'n_steps': 3000,
+    'du': 0.16, 'dv': 0.08,
+    'F': 0.04, 'k': 0.065,
+    'dt': 1.0, 'n_steps': 3000,
     'seed': 42,
 }
 
-result_raw = simulate(params)
-
-print(f"variance(V) = {result_raw['variance_V']:.4e}")
-print(f"mean(V)     = {result_raw['mean_V']:.4e}")
+input_path = work_dir / 'input.yaml'
+input_path.write_text(yaml.dump(input_params));
 ```
-
-Plotting the resulting patterns:
 
 ```{code-cell} ipython3
-%run -i include/plot_fields.py
-plot_uv_fields(u_field=result_raw['U_final'], v_field=result_raw['V_final'])
+from aiida_shell import launch_shell_job
+
+results, node = launch_shell_job(
+    python_code,
+    arguments='{script} {input} --output results.npz',
+    nodes={
+        'script': script_path,
+        'input': input_path,
+    },
+    outputs=['results.npz'],
+)
+
+print(f"Process PK: {node.pk}")
+print(f"Exit status: {node.exit_status}")
+print(f"Stdout: {results['stdout'].get_content()}")
 ```
 
-The simulation works — but the result lives only in local Python variables.
-If we close this session, everything is lost: there is no record of *what* parameters were used, *what* code was run, or *what* results were obtained.
-
-## Storing data in AiiDA
-
-AiiDA stores all data as **nodes** in a database.
-Let's store our simulation parameters as a {py:class}`~aiida.orm.Dict` node:
+The simulation ran successfully and AiiDA recorded everything.
+Let's check what outputs we got:
 
 ```{code-cell} ipython3
-from aiida import orm
-
-parameters = orm.Dict(params)
-parameters.store()
-parameters
+for label, output_node in sorted(results.items()):
+    print(f"  {label}: {output_node.__class__.__name__} (PK={output_node.pk})")
 ```
 
-The node now has a **PK** (primary key, unique within this database) and a **UUID** (universally unique identifier).
-We can inspect it with the `verdi` CLI:
+The output file is stored as a `SinglefileData` node in AiiDA's provenance graph.
+We can access it through the calculation node's outputs:
 
 ```{code-cell} ipython3
-%verdi node show {parameters.pk}
+import numpy as np
+
+output_node = node.outputs.results_npz
+print(f"Output node: {output_node.__class__.__name__} (PK={output_node.pk})")
+
+with output_node.open(mode='rb') as f:
+    data = np.load(f)
+    print(f"variance(V) = {float(data['variance_V']):.4e}")
+    print(f"mean(V)     = {float(data['mean_V']):.4e}")
 ```
 
-We can also retrieve the stored dictionary contents through the Python API:
+## What just happened?
 
-```{code-cell} ipython3
-parameters.get_dict()
-```
+When you called `launch_shell_job(...)`, AiiDA ran a CalcJob (specifically, a `ShellJob` -- aiida-shell's built-in CalcJob implementation).
+Here is the {ref}`lifecycle <topics:calculations:concepts:calcjobs_transport_tasks>` it went through:
 
-## Wrapping the simulation as a `calcfunction`
+1. **Upload**: AiiDA copied your input files into a working directory and generated a run script
+2. **Submit**: The script was executed on a **Computer** (your local machine)
+3. **Retrieve**: AiiDA collected the output files from the working directory
+4. **Parse**: The outputs were registered as AiiDA nodes with full provenance
 
-A plain Python function produces results, but AiiDA cannot track it.
-By adding the {func}`@calcfunction <aiida.engine.processes.functions.calcfunction>` decorator, AiiDA automatically:
+Every CalcJob needs two things to run:
 
-1. Stores all input nodes (if not already stored)
-2. Creates a **process node** that records the computation
-3. Stores all output nodes
-4. Links everything in a **provenance graph**
+- A **{ref}`Computer <how-to:run-codes:computer>`** -- defines *where* calculations run (hostname, scheduler, transport). When you set up a profile with `verdi presto`, a `localhost` Computer is created automatically.
+- A **{ref}`Code <how-to:run-codes:code>`** -- defines *what* executable runs on that computer. `aiida-shell` creates this automatically from the command you pass to `launch_shell_job`.
 
-```{code-cell} ipython3
-from aiida import engine
-
-
-@engine.calcfunction
-def run_simulation(parameters):
-    """Run the Gray-Scott simulation, tracked by AiiDA."""
-    result = simulate(parameters.get_dict())
-    return {
-        'variance_V': orm.Float(result['variance_V']),
-        'mean_V': orm.Float(result['mean_V']),
-    }
-```
+For remote HPC clusters, you would set these up explicitly -- see the {ref}`how-to guide <how-to:run-codes>`.
+For writing your own CalcJob plugin (with custom input preparation, exit codes, and parsing), see {ref}`how to write a plugin for an external code <how-to:plugin-codes>`.
 
 :::{note}
-Inside a `calcfunction`, all parameters are AiiDA data nodes — not plain Python types.
-That is why the function calls `parameters.get_dict()` to extract the dictionary, and returns `orm.Float(...)` rather than a bare float.
-
-When *calling* the function, however, AiiDA auto-serializes plain Python types for you: `run_simulation(orm.Dict(params))` and `run_simulation(params)` both work — AiiDA wraps the plain `dict` into an `orm.Dict` automatically.
-We use `orm.Dict` explicitly here to make the conversion visible.
+When you use `launch_shell_job()`, aiida-shell creates a temporary Code behind the scenes.
+For production work on remote HPC clusters, you would register a Computer and Code explicitly with `verdi computer setup` and `verdi code create`.
 :::
 
-Now let's run it:
+## Inspecting the calculation
+
+AiiDA records the full lifecycle of every CalcJob. Let's inspect what happened:
 
 ```{code-cell} ipython3
-result = run_simulation(orm.Dict(params))
-print(f"variance(V) = {result['variance_V'].value:.4e}")
-print(f"mean(V)     = {result['mean_V'].value:.4e}")
+%verdi process show {node.pk}
 ```
 
-## Inspecting the process with `verdi`
-
-Unlike a plain function call, AiiDA has recorded everything.
-Let's see what processes have been run:
+We can see all processes that have been run so far:
 
 ```{code-cell} ipython3
 %verdi process list -a
 ```
-
-We can get more detail on the calculation, including all its inputs and outputs:
-
-```{code-cell} ipython3
-calc_pk = result['variance_V'].creator.pk
-%verdi process show {calc_pk}
-```
-
-We can also inspect individual output nodes:
-
-```{code-cell} ipython3
-%verdi node show {result['variance_V'].pk}
-```
-
-Other useful inspection commands include `verdi calcjob inputcat <PK>` and `verdi calcjob outputcat <PK>` for viewing the input and output files of CalcJob calculations.
 
 ## Exploring the provenance graph
 
@@ -239,13 +205,13 @@ AiiDA automatically builds a **provenance graph** that records exactly how each 
 mystnb:
     image:
         align: center
-        width: 400px
+        width: 500px
     figure:
-        caption: "Provenance graph of the `run_simulation` calcfunction."
-        name: fig_module1_provenance
+        caption: "Provenance graph of the ShellJob calculation."
+        name: fig_module1_shelljob
 ---
 %run -i include/plot_provenance.py
-plot_provenance(orm.load_node(calc_pk))
+plot_provenance(node)
 ```
 
 In the graph:
@@ -253,48 +219,95 @@ In the graph:
 - **Rectangles** are process nodes (the computation)
 - **Arrows** show the data flow
 
-This graph answers questions like *"Where did this number come from?"* and *"What parameters produced this result?"* — even months later.
+This graph answers questions like *"Where did this number come from?"* and *"What parameters produced this result?"* -- even months later.
 
 :::{tip}
 You can also generate provenance graphs from the command line with `verdi node graph generate <PK>`.
 :::
 
-## Running a second simulation
+## Dumping calculation data
 
-Let's run with a different feed rate to see how the pattern changes:
+You can export the full calculation -- inputs, outputs, logs -- to a directory on disk:
 
 ```{code-cell} ipython3
-params_2 = params.copy()
-params_2['F'] = 0.055
-
-result_2 = run_simulation(orm.Dict(params_2))
-print(f"F = 0.055: variance(V) = {result_2['variance_V'].value:.4e}")
+%verdi process dump {node.pk} -o /tmp/tutorial_dump -O
 ```
 
 ```{code-cell} ipython3
-%verdi process list -a
+import os
+
+dump_path = Path('/tmp/tutorial_dump')
+for root, dirs, files in os.walk(dump_path):
+    level = root.replace(str(dump_path), '').count(os.sep)
+    indent = ' ' * 2 * level
+    print(f"{indent}{Path(root).name}/")
+    sub_indent = ' ' * 2 * (level + 1)
+    for file in files:
+        print(f"{sub_indent}{file}")
 ```
 
-Both calculations are recorded in the database, with full provenance.
+This is useful for debugging, archival, or sharing calculation data outside of AiiDA.
+
+## Handling failures
+
+What happens when a simulation fails?
+Let's try parameters that produce no pattern -- the simulation detects a trivial steady state and exits with an error:
+
+```{code-cell} ipython3
+bad_params = input_params.copy()
+bad_params['F'] = 0.1  # Too high — no pattern forms
+
+bad_input_path = work_dir / 'input_bad.yaml'
+bad_input_path.write_text(yaml.dump(bad_params));
+
+results_bad, node_bad = launch_shell_job(
+    python_code,
+    arguments='{script} {input} --output results.npz',
+    nodes={
+        'script': script_path,
+        'input': bad_input_path,
+    },
+)
+
+print(f"Success: {node_bad.is_finished_ok}")
+print(f"Exit status: {node_bad.exit_status}")
+print(f"Exit message: {node_bad.exit_message}")
+```
+
+The calculation **failed** -- `aiida-shell` detected the non-zero exit status from the simulation.
+The error details are in stderr:
+
+```{code-cell} ipython3
+print(results_bad['stderr'].get_content())
+```
+
+```{code-cell} ipython3
+%verdi process show {node_bad.pk}
+```
+
+AiiDA recorded the failure with full context: the exit status, the inputs that caused it, and the error output.
+In a full CalcJob plugin, you would define your own exit codes with semantic meaning (e.g., `ERROR_TRIVIAL_STEADY_STATE = 30`) -- see the {ref}`how-to guide <how-to:run-codes>`.
 
 ## Summary
 
 In this module you learned to:
 
 - **Set up a profile** using `verdi presto` (or a temporary profile for testing)
-- **Store data** as AiiDA nodes (`Dict`, `Float`)
-- **Track computations** using `@calcfunction`
-- **Inspect results** with `verdi process list`, `verdi process show`, `verdi node show`
+- **Run external codes** with `aiida-shell` -- no plugin code needed
+- **Inspect results** with `verdi process list`, `verdi process show`
 - **Visualize provenance** to understand how data was produced
+- **Dump calculation data** to disk with `verdi process dump`
+- **Handle failures** through exit codes and error messages
 
-:::{important}
-Here we ran the simulation *inside* the AiiDA Python process using a `calcfunction`.
-This is fine for lightweight computations, but real scientific codes (Quantum ESPRESSO, VASP, LAMMPS, …) run as **external executables** on remote computers.
-For those, AiiDA provides **CalcJobs** — a mechanism to prepare input files, submit to a scheduler, and retrieve the results.
-CalcJobs will be introduced in later modules.
+:::{seealso}
+- {ref}`Topic: calculation jobs <topics:calculations:concepts:calcjobs>` -- concepts in depth
+- {ref}`How-to: run external codes <how-to:run-codes>` -- setting up Computers and Codes
+- {ref}`How-to: write a CalcJob plugin <how-to:plugin-codes>` -- for custom input preparation, exit codes, and parsing
+- [`aiida-shell` documentation](https://aiida-shell.readthedocs.io) -- full reference for `launch_shell_job`
 :::
 
 ## Next steps
 
-We've run a simulation and stored scalar results with full provenance.
-In {ref}`Module 2 <tutorial:module2>`, you'll learn how to run **external codes** through AiiDA using `aiida-shell` and CalcJobs, and write parsers to extract structured data from their outputs.
+We can now run simulations through AiiDA with full provenance tracking.
+But the outputs are opaque files -- we can't search or query individual values.
+In {ref}`Module 2 <tutorial:module2>`, you'll learn how to work with AiiDA's data types, write calcfunctions, and run parameter sweeps with structured, queryable results.

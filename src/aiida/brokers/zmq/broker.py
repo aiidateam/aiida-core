@@ -156,9 +156,7 @@ class ZmqBroker(Broker):
                     if router_endpoint is not None:
                         break
                 else:
-                    raise ConnectionError(
-                        f'Broker did not become ready within {wait_for_broker}s: {self}'
-                    )
+                    raise ConnectionError(f'Broker did not become ready within {wait_for_broker}s: {self}')
 
             self._communicator = ZmqCommunicator(
                 router_endpoint=router_endpoint,

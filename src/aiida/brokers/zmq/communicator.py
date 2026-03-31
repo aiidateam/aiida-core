@@ -123,9 +123,7 @@ class ZmqCommunicator(kiwipy.Communicator):
         self._loop = asyncio.new_event_loop()
         ready: Future[bool] = Future()
 
-        self._loop_thread = threading.Thread(
-            target=self._run_loop, args=(ready,), daemon=True
-        )
+        self._loop_thread = threading.Thread(target=self._run_loop, args=(ready,), daemon=True)
         self._loop_thread.start()
 
         # Block until the loop thread has set up sockets and is polling.
@@ -215,9 +213,7 @@ class ZmqCommunicator(kiwipy.Communicator):
         # Send unsubscribe messages
         for identifier in list(self._task_subscribers):
             try:
-                msg = make_subscribe_message(
-                    MessageType.UNSUBSCRIBE_TASK, self._client_id, identifier
-                )
+                msg = make_subscribe_message(MessageType.UNSUBSCRIBE_TASK, self._client_id, identifier)
                 self._send(msg)
             except Exception:
                 pass
@@ -225,9 +221,7 @@ class ZmqCommunicator(kiwipy.Communicator):
 
         for identifier in list(self._rpc_subscribers):
             try:
-                msg = make_subscribe_message(
-                    MessageType.UNSUBSCRIBE_RPC, self._client_id, identifier
-                )
+                msg = make_subscribe_message(MessageType.UNSUBSCRIBE_RPC, self._client_id, identifier)
                 self._send(msg)
             except Exception:
                 pass
@@ -299,9 +293,7 @@ class ZmqCommunicator(kiwipy.Communicator):
         def _do():
             ident = identifier or f'task-{uuid.uuid4().hex[:8]}'
             self._task_subscribers[ident] = subscriber
-            msg = make_subscribe_message(
-                MessageType.SUBSCRIBE_TASK, self._client_id, ident
-            )
+            msg = make_subscribe_message(MessageType.SUBSCRIBE_TASK, self._client_id, ident)
             self._send(msg)
             _LOGGER.info('Added task subscriber: %s', ident)
             return ident
@@ -313,9 +305,7 @@ class ZmqCommunicator(kiwipy.Communicator):
             if identifier in self._task_subscribers:
                 del self._task_subscribers[identifier]
                 if not self._closed:
-                    msg = make_subscribe_message(
-                        MessageType.UNSUBSCRIBE_TASK, self._client_id, identifier
-                    )
+                    msg = make_subscribe_message(MessageType.UNSUBSCRIBE_TASK, self._client_id, identifier)
                     self._send(msg)
                 _LOGGER.info('Removed task subscriber: %s', identifier)
 
@@ -345,13 +335,9 @@ class ZmqCommunicator(kiwipy.Communicator):
         def _do():
             ident = identifier or f'rpc-{uuid.uuid4().hex[:8]}'
             if ident in self._rpc_subscribers:
-                raise kiwipy.DuplicateSubscriberIdentifier(
-                    f"RPC identifier '{ident}'"
-                )
+                raise kiwipy.DuplicateSubscriberIdentifier(f"RPC identifier '{ident}'")
             self._rpc_subscribers[ident] = subscriber
-            msg = make_subscribe_message(
-                MessageType.SUBSCRIBE_RPC, self._client_id, ident
-            )
+            msg = make_subscribe_message(MessageType.SUBSCRIBE_RPC, self._client_id, ident)
             self._send(msg)
             _LOGGER.info('Added RPC subscriber: %s', ident)
             return ident
@@ -363,9 +349,7 @@ class ZmqCommunicator(kiwipy.Communicator):
             if identifier in self._rpc_subscribers:
                 del self._rpc_subscribers[identifier]
                 if not self._closed:
-                    msg = make_subscribe_message(
-                        MessageType.UNSUBSCRIBE_RPC, self._client_id, identifier
-                    )
+                    msg = make_subscribe_message(MessageType.UNSUBSCRIBE_RPC, self._client_id, identifier)
                     self._send(msg)
                 _LOGGER.info('Removed RPC subscriber: %s', identifier)
 
@@ -385,9 +369,7 @@ class ZmqCommunicator(kiwipy.Communicator):
         self._ensure_open()
 
         def _do():
-            msg = make_broadcast_message(
-                body, sender or self._client_id, subject, correlation_id
-            )
+            msg = make_broadcast_message(body, sender or self._client_id, subject, correlation_id)
             self._send(msg)
             _LOGGER.debug('Sent broadcast: %s', subject)
             return True
@@ -439,11 +421,7 @@ class ZmqCommunicator(kiwipy.Communicator):
         while not self._closed:
             try:
                 frames = await self._dealer.recv_multipart()
-                msg_frame = (
-                    frames[1]
-                    if len(frames) > 1 and frames[0] == b''
-                    else frames[0]
-                )
+                msg_frame = frames[1] if len(frames) > 1 and frames[0] == b'' else frames[0]
                 msg = decode_message(msg_frame, self._decoder)
                 self._dispatch_dealer_message(msg)
             except zmq.ZMQError:
@@ -495,9 +473,7 @@ class ZmqCommunicator(kiwipy.Communicator):
                     self._in_progress_tasks[task_id] = (result, no_reply)
                     result.add_done_callback(
                         lambda fut, tid=task_id, nr=no_reply: (
-                            self._loop.call_soon_threadsafe(
-                                self._finalize_task, tid, fut, nr
-                            )
+                            self._loop.call_soon_threadsafe(self._finalize_task, tid, fut, nr)
                         )
                     )
                     _LOGGER.debug('Task in progress (deferred ACK): %s', task_id)
@@ -505,9 +481,7 @@ class ZmqCommunicator(kiwipy.Communicator):
                     ack_msg = make_task_ack(task_id, self._client_id)
                     self._send(ack_msg)
                     if not no_reply:
-                        response = make_task_response(
-                            task_id, self._client_id, result=result
-                        )
+                        response = make_task_response(task_id, self._client_id, result=result)
                         self._send(response)
                     _LOGGER.debug('Task completed: %s', task_id)
                 return
@@ -545,17 +519,11 @@ class ZmqCommunicator(kiwipy.Communicator):
                 try:
                     self._send_task_result(task_id, result.result())
                 except Exception as exc:
-                    response = make_task_response(
-                        task_id, self._client_id, error=str(exc)
-                    )
+                    response = make_task_response(task_id, self._client_id, error=str(exc))
                     self._send(response)
             else:
                 result.add_done_callback(
-                    lambda fut, tid=task_id: (
-                        self._loop.call_soon_threadsafe(
-                            self._send_task_result, tid, fut
-                        )
-                    )
+                    lambda fut, tid=task_id: (self._loop.call_soon_threadsafe(self._send_task_result, tid, fut))
                 )
         else:
             response = make_task_response(task_id, self._client_id, result=result)
@@ -590,9 +558,7 @@ class ZmqCommunicator(kiwipy.Communicator):
 
         if subscriber is None:
             _LOGGER.warning('No subscriber for RPC recipient %s: %s', recipient, rpc_id)
-            response = make_rpc_response(
-                rpc_id, self._client_id, error=f'No handler for {recipient}'
-            )
+            response = make_rpc_response(rpc_id, self._client_id, error=f'No handler for {recipient}')
             self._send(response)
             return
 
@@ -602,9 +568,7 @@ class ZmqCommunicator(kiwipy.Communicator):
                 self._in_progress_rpcs[rpc_id] = (recipient, result)
                 result.add_done_callback(
                     lambda fut, rid=rpc_id, rec=recipient: (
-                        self._loop.call_soon_threadsafe(
-                            self._finalize_rpc, rid, rec, fut
-                        )
+                        self._loop.call_soon_threadsafe(self._finalize_rpc, rid, rec, fut)
                     )
                 )
                 _LOGGER.debug('RPC in progress (deferred response): %s', rpc_id)
@@ -637,9 +601,7 @@ class ZmqCommunicator(kiwipy.Communicator):
                 self._in_progress_rpcs[rpc_id] = (recipient, result)
                 result.add_done_callback(
                     lambda fut, rid=rpc_id, rec=recipient: (
-                        self._loop.call_soon_threadsafe(
-                            self._finalize_rpc, rid, rec, fut
-                        )
+                        self._loop.call_soon_threadsafe(self._finalize_rpc, rid, rec, fut)
                     )
                 )
                 return
@@ -675,6 +637,4 @@ class ZmqCommunicator(kiwipy.Communicator):
             try:
                 subscriber(self, body, sender, subject, correlation_id)
             except Exception as exc:
-                _LOGGER.exception(
-                    'Broadcast subscriber %s failed: %s', identifier, exc
-                )
+                _LOGGER.exception('Broadcast subscriber %s failed: %s', identifier, exc)

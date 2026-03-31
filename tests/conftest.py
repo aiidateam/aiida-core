@@ -186,11 +186,7 @@ def pytest_collection_modifyitems(items, config):
         # Tests with requires_broker ARE included (ZMQ broker needs no external service).
         # Tests with requires_rmq, requires_psql, or nightly are excluded.
         markers = [marker.name for marker in item.iter_markers()]
-        if (
-            'requires_rmq' not in markers
-            and 'requires_psql' not in markers
-            and 'nightly' not in markers
-        ):
+        if 'requires_rmq' not in markers and 'requires_psql' not in markers and 'nightly' not in markers:
             item.add_marker('presto')
 
 

@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for ``verdi daemon``."""
 
-import textwrap
 from unittest.mock import patch
 
 import pytest

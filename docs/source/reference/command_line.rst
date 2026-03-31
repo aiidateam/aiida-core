@@ -32,31 +32,6 @@ Below is a list with all available subcommands.
       version  Print the current version of an archive's schema.
 
 
-.. _reference:command-line:verdi-broker:
-
-``verdi broker``
-----------------
-
-.. code:: console
-
-    Usage:  [OPTIONS] COMMAND [ARGS]...
-
-      Manage the message broker service.
-
-      The message broker is required for daemon operation and process control. RabbitMQ is an
-      external service managed by your system's service manager. ZMQ is a built-in broker
-      service that is managed by these commands.
-
-    Options:
-      --help  Show this message and exit.
-
-    Commands:
-      restart  Restart the broker service.
-      start    Start the broker service.
-      status   Show the broker service status.
-      stop     Stop the broker service.
-
-
 .. _reference:command-line:verdi-calcjob:
 
 ``verdi calcjob``
@@ -105,8 +80,7 @@ Below is a list with all available subcommands.
       list       List the available codes.
       relabel    Relabel a code.
       reveal     Reveal one or more hidden codes in `verdi code list`.
-      setup      Setup a new code (use `verdi code create`). (DEPRECATED: Please use `verdi
-                 code create` instead.)
+      setup      (Deprecated) Setup a new code (use `verdi code create`).
       show       Display detailed information for a code.
       test       Run tests for the given code to check whether it is usable.
 
@@ -345,16 +319,19 @@ Below is a list with all available subcommands.
       * Set up the localhost as a `Computer` and configure it
       * Set a number of configuration options with sensible defaults
 
-      By default the command creates a profile that uses SQLite for the database. It
-      automatically checks for RabbitMQ running on the localhost, and, if it can connect,
-      configures that as the broker for the profile. Otherwise, it falls back to the ZMQ
-      broker which requires no external services and is started automatically with the daemon.
+      By default the command creates a profile that uses SQLite for the database and ZMQ for
+      the broker. The ZMQ broker requires no external services and is started automatically
+      with the daemon.
 
       When the `--use-postgres` flag is toggled, the command tries to connect to the
       PostgreSQL server with connection paramaters taken from the `--postgres-hostname`,
       `--postgres-port`, `--postgres-username` and `--postgres-password` options. It uses
       these credentials to try and automatically create a user and database. If successful,
       the newly created profile uses the new PostgreSQL database instead of SQLite.
+
+      When the `--use-rabbitmq` flag is toggled, the command tries to connect to a RabbitMQ
+      server on localhost. If successful, it configures RabbitMQ as the broker instead of ZMQ.
+      If it cannot connect, the command exits with an error.
 
     Options:
       -p, --profile-name TEXT         Name of the profile. By default, a unique name starting
@@ -367,6 +344,10 @@ Below is a list with all available subcommands.
                                       options. The command attempts to automatically create a
                                       user and database to use for the profile, but this can
                                       fail depending on the configuration of the server.
+      --use-rabbitmq                  When toggled on, the profile uses RabbitMQ as the broker
+                                      instead of ZMQ. The command attempts to connect to a
+                                      RabbitMQ server on localhost. If it cannot connect, the
+                                      command exits with an error.
       --postgres-hostname TEXT        The hostname of the PostgreSQL server.
       --postgres-port INTEGER         The port of the PostgreSQL server.
       --postgres-username TEXT        The username of the PostgreSQL user that is authorized
@@ -427,8 +408,7 @@ Below is a list with all available subcommands.
       dump                Dump all data in an AiiDA profile's storage to disk.
       list                Display a list of all available profiles.
       set-default         Set a profile as the default profile.
-      setdefault          Set a profile as the default profile. (DEPRECATED: Please use `verdi
-                          profile set-default` instead.)
+      setdefault          (Deprecated) Set a profile as the default profile.
       setup               Set up a new profile.
       show                Show details for a profile.
 
@@ -442,9 +422,7 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS]
 
-      Setup a new profile in a fully automated fashion. (DEPRECATED: This command is
-      deprecated. For a fully automated alternative, use `verdi presto --use-postgres`
-      instead. For full control, use `verdi profile setup core.psql_dos`.)
+      (Deprecated) Setup a new profile in a fully automated fashion.
 
     Options:
       -n, --non-interactive / -I, --interactive
@@ -548,10 +526,10 @@ Below is a list with all available subcommands.
 
     Usage:  [OPTIONS]
 
-      Setup a new profile (use `verdi profile setup`).
+      (Deprecated) Setup a new profile (use `verdi profile setup`).
 
       This method assumes that an empty PSQL database has been created and that the database
-      user has been created. (DEPRECATED: Please use `verdi profile setup` instead.)
+      user has been created.
 
     Options:
       -n, --non-interactive / -I, --interactive

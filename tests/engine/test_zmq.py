@@ -156,6 +156,7 @@ class TestProcessControl:
         result = await with_timeout(future, timeout)
         return result
 
+
 async def with_timeout(what, timeout=5.0):
     """Wait for a coroutine with timeout."""
     result = await asyncio.wait_for(what, timeout)

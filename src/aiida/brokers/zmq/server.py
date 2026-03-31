@@ -148,8 +148,8 @@ class ZmqBrokerServer:
         self._router = self._context.socket(zmq.ROUTER)
         self._router.setsockopt(zmq.ROUTER_MANDATORY, 1)
         # ZMTP heartbeats for dead peer detection
-        self._router.setsockopt(zmq.HEARTBEAT_IVL, 2000)      # ping every 2s
-        self._router.setsockopt(zmq.HEARTBEAT_TIMEOUT, 6000)   # dead after 6s no response
+        self._router.setsockopt(zmq.HEARTBEAT_IVL, 2000)  # ping every 2s
+        self._router.setsockopt(zmq.HEARTBEAT_TIMEOUT, 6000)  # dead after 6s no response
         self._router.bind(self._router_endpoint)
 
         # Set up poller
@@ -533,6 +533,7 @@ class ZmqBrokerServer:
         # Read and discard the monitor event
         try:
             from zmq.utils.monitor import recv_monitor_message
+
             recv_monitor_message(self._monitor)
         except Exception:
             return

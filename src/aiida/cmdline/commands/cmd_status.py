@@ -135,7 +135,7 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
 
     if broker:
         try:
-            broker.get_communicator()  # type: ignore[no-untyped-call]
+            broker.get_communicator()
         except Exception as exc:
             message = f'Unable to connect to broker: {broker}'
             print_status(ServiceStatus.ERROR, 'broker', message, exception=exc, print_traceback=print_traceback)
@@ -143,7 +143,7 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
         else:
             print_status(ServiceStatus.UP, 'broker', str(broker))
         finally:
-            broker.close()  # type: ignore[no-untyped-call]
+            broker.close()
     else:
         print_status(
             ServiceStatus.WARNING,

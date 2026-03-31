@@ -1173,24 +1173,23 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if extras:
             instance.base.extras.set_many(extras)
 
-        seen = set()
+        seen: set[str] = set()
         for filepath, fileobj_callable in (files or {}).items():
             if filepath in seen:
                 raise exceptions.ValidationError(f'duplicate file: {filepath}')
 
-            fileobj = fileobj_callable()
+            with fileobj_callable() as fileobj:
+                if repository_metadata:
+                    expected_hash = flattened_repo.get(filepath)
+                    if expected_hash:
+                        actual_hash = chunked_file_hash(fileobj, hashlib.sha256)
+                        fileobj.seek(0)
+                        if expected_hash != actual_hash:
+                            raise exceptions.ValidationError(
+                                f'file hash mismatch for `{filepath}`; expected {expected_hash}, computed {actual_hash}'
+                            )
+                instance.attach_file(filepath, fileobj)
 
-            if repository_metadata:
-                expected_hash = flattened_repo.get(filepath)
-                if expected_hash:
-                    actual_hash = chunked_file_hash(fileobj, hashlib.sha256)
-                    fileobj.seek(0)
-                    if expected_hash != actual_hash:
-                        raise exceptions.ValidationError(
-                            f'file hash mismatch for `{filepath}`; expected {expected_hash}, computed {actual_hash}'
-                        )
-
-            instance.attach_file(filepath, fileobj)
             seen.add(filepath)
 
         return instance

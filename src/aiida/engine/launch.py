@@ -16,7 +16,12 @@ import typing as t
 from aiida.common import InvalidOperation
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.workgraph import engine_run_workgraph, engine_submit_workgraph, is_workgraph_instance
+from aiida.common.workgraph import (
+    _WORKGRAPH_RUN_RESERVED_KEYS,
+    _WORKGRAPH_SUBMIT_RESERVED_KEYS,
+    is_workgraph_instance,
+    prepare_workgraph_inputs,
+)
 from aiida.manage import manager
 from aiida.orm import ProcessNode
 
@@ -34,6 +39,26 @@ TYPE_SUBMIT_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
 LOGGER = AIIDA_LOGGER.getChild('engine.launch')
 
 
+def _resolve_workgraph_for_run(
+    workgraph: t.Any, inputs: dict[str, t.Any] | None, kwargs: dict[str, t.Any]
+) -> tuple[t.Type[Process], dict[str, t.Any], t.Any]:
+    """Convert a WorkGraph into a Process class + inputs for the standard run path.
+
+    :param workgraph: the WorkGraph instance
+    :param inputs: the input dictionary
+    :param kwargs: additional keyword arguments
+    :return: tuple of (process_class, engine_inputs, workgraph) — workgraph is passed
+        through so the caller can do post-launch bookkeeping.
+    """
+    task_inputs, popped = prepare_workgraph_inputs(
+        workgraph=workgraph, inputs=inputs, kwargs=kwargs, reserved_keys=_WORKGRAPH_RUN_RESERVED_KEYS
+    )
+    process_class, engine_inputs = workgraph.prepare_for_launch(
+        task_inputs=task_inputs or None, metadata=popped.get('metadata')
+    )
+    return process_class, engine_inputs, workgraph
+
+
 def run(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any) -> dict[str, t.Any]:
     """Run the process with the supplied inputs in a local runner that will block until the process is completed.
 
@@ -41,13 +66,22 @@ def run(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwa
     :param inputs: the inputs to be passed to the process
     :return: the outputs of the process
     """
+    workgraph: t.Any = None
+
     if isinstance(process, Process):
         runner = process.runner
     elif is_workgraph_instance(process):
-        result, _ = engine_run_workgraph(workgraph=process, inputs=inputs, kwargs=kwargs)
-        return result
+        workgraph = process
+        process, inputs, workgraph = _resolve_workgraph_for_run(workgraph, inputs, kwargs)
+        kwargs = {}
+        runner = manager.get_manager().get_runner()
     else:
         runner = manager.get_manager().get_runner()
+
+    if workgraph is not None:
+        result, node = runner.run_get_node(process, inputs, **kwargs)
+        workgraph.update_after_launch(node)
+        return result
 
     return runner.run(process, inputs, **kwargs)
 
@@ -61,14 +95,24 @@ def run_get_node(
     :param inputs: the inputs to be passed to the process
     :return: tuple of the outputs of the process and the process node
     """
+    workgraph: t.Any = None
+
     if isinstance(process, Process):
         runner = process.runner
     elif is_workgraph_instance(process):
-        return engine_run_workgraph(workgraph=process, inputs=inputs, kwargs=kwargs)
+        workgraph = process
+        process, inputs, workgraph = _resolve_workgraph_for_run(workgraph, inputs, kwargs)
+        kwargs = {}
+        runner = manager.get_manager().get_runner()
     else:
         runner = manager.get_manager().get_runner()
 
-    return runner.run_get_node(process, inputs, **kwargs)
+    result, node = runner.run_get_node(process, inputs, **kwargs)
+
+    if workgraph is not None:
+        workgraph.update_after_launch(node)
+
+    return result, node
 
 
 def run_get_pk(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any) -> ResultAndPk:
@@ -78,13 +122,22 @@ def run_get_pk(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None
     :param inputs: the inputs to be passed to the process
     :return: tuple of the outputs of the process and process node pk
     """
+    workgraph: t.Any = None
+
     if isinstance(process, Process):
         runner = process.runner
     elif is_workgraph_instance(process):
-        result, node = engine_run_workgraph(workgraph=process, inputs=inputs, kwargs=kwargs)
-        return ResultAndPk(result, node.pk)
+        workgraph = process
+        process, inputs, workgraph = _resolve_workgraph_for_run(workgraph, inputs, kwargs)
+        kwargs = {}
+        runner = manager.get_manager().get_runner()
     else:
         runner = manager.get_manager().get_runner()
+
+    if workgraph is not None:
+        result, node = runner.run_get_node(process, inputs, **kwargs)
+        workgraph.update_after_launch(node)
+        return ResultAndPk(result, node.pk)
 
     return runner.run_get_pk(process, inputs, **kwargs)
 
@@ -114,11 +167,15 @@ def submit(
     """
     from aiida.common.docs import URL_NO_BROKER
 
-    # WorkGraph owns its own runner/persister/controller setup, so branch early
+    workgraph: t.Any = None
+
     if is_workgraph_instance(process):
-        return engine_submit_workgraph(
-            workgraph=process, inputs=inputs, kwargs=kwargs, wait=wait, wait_interval=wait_interval
+        workgraph = process
+        task_inputs, popped = prepare_workgraph_inputs(
+            workgraph=workgraph, inputs=inputs, kwargs=kwargs, reserved_keys=_WORKGRAPH_SUBMIT_RESERVED_KEYS
         )
+        process, inputs = workgraph.prepare_for_launch(task_inputs=task_inputs or None, metadata=popped.get('metadata'))
+        kwargs = {}
 
     # Submitting from within another process requires ``self.submit`` unless it is a work function, in which case the
     # current process in the scope should be an instance of ``FunctionProcess``.
@@ -158,6 +215,9 @@ def submit(
     # Do not wait for the future's result, because in the case of a single worker this would cock-block itself
     runner.controller.continue_process(process_inited.pid, nowait=False, no_reply=True)
     node = process_inited.node
+
+    if workgraph is not None:
+        workgraph.update_after_launch(node)
 
     if not wait:
         return node

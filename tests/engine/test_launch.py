@@ -331,20 +331,31 @@ class TestLaunchersDryRun:
 class TestWorkGraphLaunchers:
     """Test WorkGraph support in launchers using mocks.
 
-    These tests verify that the launch functions correctly detect and delegate
-    to WorkGraph helper functions without requiring aiida-workgraph to be installed.
-    The helper functions (engine_run_workgraph, engine_submit_workgraph) inline the
-    WorkGraph launch logic, so we mock the entire helper functions here.
+    These tests verify that the launch functions correctly detect WorkGraph instances,
+    call ``prepare_for_launch`` to convert them, and then use the standard Process
+    launch path. All WorkGraph internals are mocked.
     """
 
     @pytest.fixture
     def mock_workgraph(self, monkeypatch):
-        """Create a mock WorkGraph and patch detection + helper functions."""
+        """Create a mock WorkGraph and patch detection + runner."""
         from unittest.mock import MagicMock
 
+        from aiida.engine.processes.process import Process as _Process
+        from aiida.engine.runners import ResultAndPk
+
         mock_wg = MagicMock()
+        mock_wg.get_task_names.return_value = ['add', 'multiply']
+
+        # prepare_for_launch returns a (process_class, inputs) pair
+        mock_process_class = MagicMock(spec=_Process)
+        mock_engine_inputs = {'workgraph_data': {}, 'tasks': {}, 'graph_inputs': {}, 'metadata': {}}
+        mock_wg.prepare_for_launch.return_value = (mock_process_class, mock_engine_inputs)
+
         mock_node = MagicMock(spec=orm.ProcessNode)
         mock_node.pk = 123
+        mock_node.is_terminated = True
+        mock_node.process_state = 'finished'
 
         # Patch is_workgraph_instance to recognise our mock
         monkeypatch.setattr(
@@ -352,47 +363,52 @@ class TestWorkGraphLaunchers:
             lambda obj: obj is mock_wg,
         )
 
-        # Patch the run helper to return outputs + node
+        # Patch the runner methods to return our mock results
+        mock_runner = MagicMock()
+        mock_runner.run.return_value = {'result': 42}
+        mock_runner.run_get_node.return_value = ({'result': 42}, mock_node)
+        mock_runner.run_get_pk.return_value = ResultAndPk({'result': 42}, mock_node.pk)
         monkeypatch.setattr(
-            'aiida.engine.launch.engine_run_workgraph',
-            lambda workgraph, inputs, kwargs: ({'result': 42}, mock_node),
-        )
-
-        # Patch the submit helper to return the node
-        monkeypatch.setattr(
-            'aiida.engine.launch.engine_submit_workgraph',
-            lambda workgraph, inputs, kwargs, *, wait, wait_interval: mock_node,
+            'aiida.engine.launch.manager.get_manager', lambda: MagicMock(get_runner=lambda: mock_runner)
         )
 
         mock_wg._mock_node = mock_node
+        mock_wg.process = mock_node
         return mock_wg
 
     def test_run_workgraph(self, mock_workgraph):
-        """Test that run() returns outputs for a WorkGraph."""
-        result = launch.run(mock_workgraph, inputs={'x': 1, 'y': 2})
+        """Test that run() calls prepare_for_launch and returns outputs."""
+        result = launch.run(mock_workgraph, inputs={'add': 1})
+        mock_workgraph.prepare_for_launch.assert_called_once()
+        mock_workgraph.update_after_launch.assert_called_once()
         assert result == {'result': 42}
+
+    def test_run_get_node_workgraph(self, mock_workgraph):
+        """Test that run_get_node() returns outputs and node for WorkGraph."""
+        result, node = launch.run_get_node(mock_workgraph, inputs={'add': 1})
+        mock_workgraph.prepare_for_launch.assert_called_once()
+        mock_workgraph.update_after_launch.assert_called_once()
+        assert result == {'result': 42}
+        assert node.pk == 123
+
+    def test_run_get_pk_workgraph(self, mock_workgraph):
+        """Test that run_get_pk() returns outputs and pk for WorkGraph."""
+        result = launch.run_get_pk(mock_workgraph, inputs={'add': 1})
+        mock_workgraph.prepare_for_launch.assert_called_once()
+        assert result.result == {'result': 42}
+        assert result.pk == 123
 
     def test_run_workgraph_no_inputs(self, mock_workgraph):
         """Test that run() works with no inputs for WorkGraph."""
         result = launch.run(mock_workgraph)
         assert result == {'result': 42}
 
-    def test_run_get_node_workgraph(self, mock_workgraph):
-        """Test that run_get_node() returns outputs and node for WorkGraph."""
-        result, node = launch.run_get_node(mock_workgraph, inputs={'x': 1})
-        assert result == {'result': 42}
-        assert node.pk == 123
-
-    def test_run_get_pk_workgraph(self, mock_workgraph):
-        """Test that run_get_pk() returns outputs and pk for WorkGraph."""
-        result = launch.run_get_pk(mock_workgraph, inputs={'x': 1})
-        assert result.result == {'result': 42}
-        assert result.pk == 123
-
-    def test_submit_workgraph(self, mock_workgraph):
-        """Test that submit() returns node for WorkGraph."""
-        node = launch.submit(mock_workgraph, inputs={'x': 1}, wait=True, wait_interval=10)
-        assert node.pk == 123
+    def test_run_workgraph_pops_metadata(self, mock_workgraph):
+        """Test that metadata is separated from task inputs and passed to prepare_for_launch."""
+        launch.run(mock_workgraph, inputs={'add': 1, 'metadata': {'label': 'test'}})
+        _, call_kwargs = mock_workgraph.prepare_for_launch.call_args
+        assert call_kwargs['metadata'] == {'label': 'test'}
+        assert call_kwargs['task_inputs'] == {'add': 1}
 
 
 class TestWorkGraphHelpers:
@@ -408,36 +424,36 @@ class TestWorkGraphHelpers:
         assert is_workgraph_instance(orm.Int(1)) is False
 
     def test_prepare_workgraph_inputs_pops_reserved_keys(self):
-        """Test that _prepare_workgraph_inputs separates reserved keys from task inputs."""
+        """Test that prepare_workgraph_inputs separates reserved keys from task inputs."""
         from unittest.mock import MagicMock
 
-        from aiida.common.workgraph import _WORKGRAPH_SUBMIT_RESERVED_KEYS, _prepare_workgraph_inputs
+        from aiida.common.workgraph import _WORKGRAPH_SUBMIT_RESERVED_KEYS, prepare_workgraph_inputs
 
         mock_wg = MagicMock()
         mock_wg.get_task_names.return_value = ['add', 'multiply']
 
-        wg_inputs, popped = _prepare_workgraph_inputs(
+        wg_inputs, popped = prepare_workgraph_inputs(
             workgraph=mock_wg,
-            inputs={'add': 1, 'metadata': {'label': 'test'}, 'timeout': 300},
+            inputs={'add': 1, 'metadata': {'label': 'test'}},
             kwargs={},
             reserved_keys=_WORKGRAPH_SUBMIT_RESERVED_KEYS,
         )
 
         assert wg_inputs == {'add': 1}
-        assert popped == {'metadata': {'label': 'test'}, 'timeout': 300}
+        assert popped == {'metadata': {'label': 'test'}}
 
     def test_prepare_workgraph_inputs_raises_on_collision(self):
-        """Test that _prepare_workgraph_inputs raises when reserved keys collide with task names."""
+        """Test that prepare_workgraph_inputs raises when reserved keys collide with task names."""
         from unittest.mock import MagicMock
 
         from aiida.common.exceptions import InvalidOperation
-        from aiida.common.workgraph import _WORKGRAPH_RUN_RESERVED_KEYS, _prepare_workgraph_inputs
+        from aiida.common.workgraph import _WORKGRAPH_RUN_RESERVED_KEYS, prepare_workgraph_inputs
 
         mock_wg = MagicMock()
         mock_wg.get_task_names.return_value = ['metadata', 'add']
 
         with pytest.raises(InvalidOperation, match='reserved execution parameters'):
-            _prepare_workgraph_inputs(
+            prepare_workgraph_inputs(
                 workgraph=mock_wg,
                 inputs={'metadata': {'label': 'test'}, 'add': 1},
                 kwargs={},
@@ -445,15 +461,15 @@ class TestWorkGraphHelpers:
             )
 
     def test_prepare_workgraph_inputs_no_inputs(self):
-        """Test _prepare_workgraph_inputs with no inputs."""
+        """Test prepare_workgraph_inputs with no inputs."""
         from unittest.mock import MagicMock
 
-        from aiida.common.workgraph import _WORKGRAPH_RUN_RESERVED_KEYS, _prepare_workgraph_inputs
+        from aiida.common.workgraph import _WORKGRAPH_RUN_RESERVED_KEYS, prepare_workgraph_inputs
 
         mock_wg = MagicMock()
         mock_wg.get_task_names.return_value = []
 
-        wg_inputs, popped = _prepare_workgraph_inputs(
+        wg_inputs, popped = prepare_workgraph_inputs(
             workgraph=mock_wg,
             inputs=None,
             kwargs={},
@@ -464,15 +480,15 @@ class TestWorkGraphHelpers:
         assert popped == {}
 
     def test_prepare_workgraph_inputs_rejects_inputs_and_kwargs(self):
-        """Test that _prepare_workgraph_inputs raises when both inputs and kwargs are given."""
+        """Test that prepare_workgraph_inputs raises when both inputs and kwargs are given."""
         from unittest.mock import MagicMock
 
-        from aiida.common.workgraph import _WORKGRAPH_RUN_RESERVED_KEYS, _prepare_workgraph_inputs
+        from aiida.common.workgraph import _WORKGRAPH_RUN_RESERVED_KEYS, prepare_workgraph_inputs
 
         mock_wg = MagicMock()
 
         with pytest.raises(ValueError, match='Cannot specify both'):
-            _prepare_workgraph_inputs(
+            prepare_workgraph_inputs(
                 workgraph=mock_wg,
                 inputs={'x': 1},
                 kwargs={'y': 2},

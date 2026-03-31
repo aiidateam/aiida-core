@@ -13,7 +13,7 @@ if t.TYPE_CHECKING:
 __all__ = ('Broker',)
 
 
-class Broker:
+class Broker(abc.ABC):
     """Interface for a message broker that facilitates communication with and between process runners."""
 
     def __init__(self, profile: 'Profile') -> None:

@@ -65,3 +65,22 @@ The default for the ``timeout`` is taken from the ``daemon.timeout`` configurati
 .. note::
 
     The ``DaemonClient`` only directly interacts with the main daemon process, not with any of the daemon workers that it manages.
+
+
+.. _topics:daemon:signals:
+
+===============
+Signal handling
+===============
+
+While the daemon is running, interrupt signals (``SIGINT`` and ``SIGTERM``) are captured so the daemon can shut down gracefully.
+This is important to be aware of when writing code that runs inside the daemon, particularly when creating subprocesses.
+
+When a signal is sent to the daemon, the entire process group receives it.
+This means a subprocess can be killed even though the Python main process captures the signal.
+To prevent this, create a new process group for the subprocess by passing ``start_new_session=True``:
+
+.. code-block:: python
+
+    import subprocess
+    subprocess.check_output('sleep 3; echo bar', start_new_session=True)

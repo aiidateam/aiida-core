@@ -8,6 +8,7 @@
 ###########################################################################
 """Tests for the `aiida.brokers.rabbitmq` module."""
 
+import gc
 import pathlib
 import uuid
 
@@ -16,7 +17,7 @@ import requests
 from kiwipy.rmq import RmqThreadCommunicator
 from packaging.version import parse
 
-from aiida.brokers.rabbitmq import client, utils
+from aiida.brokers.rabbitmq import RabbitmqBroker, client, utils
 from aiida.engine.processes import ProcessState, control
 from aiida.orm import Int
 
@@ -34,6 +35,27 @@ def test_str_method(monkeypatch, manager):
 
     monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
     assert 'RabbitMQ @' in str(broker)
+
+
+def test_del_closes_communicator_when_not_finalizing(aiida_profile):
+    """Test `__del__` closes the communicator when Python is not finalizing."""
+
+    class DummyCommunicator:
+        def __init__(self):
+            self.closed = False
+
+        def close(self):
+            self.closed = True
+
+    communicator = DummyCommunicator()
+    broker = RabbitmqBroker(aiida_profile)
+    broker._communicator = communicator
+
+    with pytest.warns(ResourceWarning, match='RabbitmqBroker was not closed explicitly'):
+        del broker
+        gc.collect()
+
+    assert communicator.closed is True
 
 
 @pytest.mark.parametrize(

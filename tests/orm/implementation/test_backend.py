@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import gc
 import json
 import pathlib
 import uuid
@@ -20,6 +21,7 @@ from aiida import orm
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.orm.entities import EntityTypes
+from aiida.orm.implementation.storage_backend import StorageBackend
 
 
 class TestBackend:
@@ -166,6 +168,32 @@ class TestBackend:
             orm.Node.collection.get(id=node_pk)
         assert len(calc_node.base.links.get_outgoing().all()) == 0
         assert len(group.nodes) == 0
+
+
+def test_del_closes_backend_when_not_finalizing():
+    """Test ``__del__`` closes the backend when Python is not finalizing."""
+
+    class DummyStorageBackend:
+        __del__ = StorageBackend.__del__
+
+        def __init__(self, state):
+            self._state = state
+
+        def close(self):
+            self._state['closed'] = True
+
+        @property
+        def is_closed(self):
+            return self._state['closed']
+
+    state = {'closed': False}
+    backend = DummyStorageBackend(state)
+
+    with pytest.warns(ResourceWarning, match='StorageBackend was not closed explicitly'):
+        del backend
+        gc.collect()
+
+    assert state['closed'] is True
 
 
 def test_backup_not_implemented(aiida_config, backend, monkeypatch, tmp_path):

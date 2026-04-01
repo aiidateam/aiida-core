@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import subprocess
 import sys
-import typing as t
 
 import click
 
@@ -40,48 +39,12 @@ def verdi_daemon():
     """Inspect and manage the daemon."""
 
 
-def execute_client_command(command: str, daemon_not_running_ok: bool = False, **kwargs) -> dict[str, t.Any] | None:
-    """Execute a command of the :class:`aiida.engine.daemon.client.DaemonClient` and echo whether it failed or not.
-
-    :param command: The name of hte method.
-    :param daemon_not_running_ok: If ``True``, the command raising an exception because the daemon was not running is
-        not treated as a failure.
-    :param kwargs: Keyword arguments that are passed to the client method.
-    """
-    from aiida.common.exceptions import ConfigurationError
-    from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException, get_daemon_client
-
-    try:
-        client = get_daemon_client()
-    except ConfigurationError:
-        echo.echo('WARNING', fg=echo.COLORS['warning'], bold=True)
-        return None
-
-    try:
-        response = getattr(client, command)(**kwargs)
-    except DaemonNotRunningException as exception:
-        if daemon_not_running_ok:
-            echo.echo('OK', fg=echo.COLORS['success'], bold=True)
-        else:
-            echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
-            echo.echo_critical(str(exception))
-    except DaemonException as exception:
-        echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
-        echo.echo_critical(str(exception))
-    else:
-        echo.echo('OK', fg=echo.COLORS['success'], bold=True)
-        return response
-
-    return None
-
-
 @verdi_daemon.command()
 @click.option('--foreground', is_flag=True, help='Run in foreground.')
 @click.argument('number', required=False, type=int, callback=validate_daemon_workers)
 @options.TIMEOUT(default=None, required=False, type=int)
 @decorators.with_dbenv()
 @decorators.requires_broker
-@decorators.check_circus_zmq_version
 def start(foreground, number, timeout):
     """Start the daemon with NUMBER workers.
 
@@ -90,8 +53,17 @@ def start(foreground, number, timeout):
 
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
+    from aiida.engine.daemon.client import DaemonException
+    from aiida.engine.daemon.daemon import AiidaDaemonController
+
     echo.echo(f'Starting the daemon with {number} workers... ', nl=False)
-    execute_client_command('start_daemon', number_workers=number, foreground=foreground, timeout=timeout)
+    try:
+        AiidaDaemonController().start(number, foreground)
+    except DaemonException as exception:
+        echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
+        echo.echo_critical(str(exception))
+    else:
+        echo.echo('OK', fg=echo.COLORS['success'], bold=True)
 
 
 @verdi_daemon.command()
@@ -108,7 +80,7 @@ def status(ctx, all_profiles, timeout):
     from tabulate import tabulate
 
     from aiida.cmdline.utils.common import format_local_time
-    from aiida.engine.daemon.client import DaemonException, get_daemon_client
+    from aiida.engine.daemon.daemon import AiidaDaemonController
 
     if all_profiles is True:
         profiles = [profile for profile in ctx.obj.config.profiles if not profile.is_test_profile]
@@ -118,38 +90,37 @@ def status(ctx, all_profiles, timeout):
     daemons_running = []
 
     for profile in profiles:
-        client = get_daemon_client(profile.name)
+        daemon = AiidaDaemonController(profile)
         echo.echo('Profile: ', fg=echo.COLORS['report'], bold=True, nl=False)
         echo.echo(f'{profile.name}', bold=True)
 
-        try:
-            client.get_status(timeout=timeout)
-        except DaemonException as exception:
-            echo.echo_error(str(exception))
+        daemon_status = daemon.get_status()
+
+        if daemon_status['status'] != 'running':
+            echo.echo_error('The daemon is not running.')
             daemons_running.append(False)
             continue
 
-        worker_response = client.get_worker_info()
-        daemon_response = client.get_daemon_info()
+        daemons_running.append(True)
 
         workers = []
-        for pid, info in worker_response['info'].items():
-            if isinstance(info, dict):
-                row = [pid, info['mem'], info['cpu'], format_local_time(info['create_time'])]
-            else:
-                row = [pid, '-', '-', '-']
-            workers.append(row)
+        for worker_info in daemon_status['workers']:
+            workers.append([
+                worker_info['pid'],
+                worker_info['state'],
+                format_local_time(worker_info['started']),
+                worker_info['failures'],
+            ])
 
         if workers:
-            workers_info = tabulate(workers, headers=['PID', 'MEM %', 'CPU %', 'started'], tablefmt='simple')
+            workers_info = tabulate(workers, headers=['PID', 'State', 'Started', 'Failures'], tablefmt='simple')
         else:
             workers_info = '--> No workers are running. Use `verdi daemon incr` to start some!\n'
 
-        start_time = format_local_time(daemon_response['info']['create_time'])
+        start_time = format_local_time(daemon_status['started'])
         echo.echo(
-            f'Daemon is running as PID {daemon_response["info"]["pid"]} since {start_time}\n'
+            f'Daemon is running as PID {daemon_status["pid"]} since {start_time}\n'
             f'Active workers [{len(workers)}]:\n{workers_info}\n'
-            f'Log file: {client.daemon_log_file}\n'
             'Use `verdi daemon [incr | decr] [num]` to increase / decrease the number of workers'
         )
 
@@ -167,8 +138,17 @@ def incr(number, timeout):
 
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
+    from aiida.engine.daemon.client import DaemonException
+    from aiida.engine.daemon.daemon import AiidaDaemonController
+
     echo.echo(f'Starting {number} daemon workers... ', nl=False)
-    execute_client_command('increase_workers', number=number, timeout=timeout)
+    try:
+        AiidaDaemonController().increase_workers(number)
+    except DaemonException as exception:
+        echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
+        echo.echo_critical(str(exception))
+    else:
+        echo.echo('OK', fg=echo.COLORS['success'], bold=True)
 
 
 @verdi_daemon.command()
@@ -181,18 +161,31 @@ def decr(number, timeout):
 
     Returns exit code 0 if the daemon is OK, non-zero if there was an error.
     """
+    from aiida.engine.daemon.client import DaemonException
+    from aiida.engine.daemon.daemon import AiidaDaemonController
+
     echo.echo(f'Stopping {number} daemon workers... ', nl=False)
-    execute_client_command('decrease_workers', number=number, timeout=timeout)
+    try:
+        AiidaDaemonController().decrease_workers(number)
+    except DaemonException as exception:
+        echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
+        echo.echo_critical(str(exception))
+    else:
+        echo.echo('OK', fg=echo.COLORS['success'], bold=True)
 
 
 @verdi_daemon.command()
 def logshow():
     """Show the log of the daemon, press CTRL+C to quit."""
-    from aiida.engine.daemon.client import get_daemon_client
+    from aiida.engine.daemon.daemon import AiidaDaemonController
 
-    client = get_daemon_client()
+    daemon = AiidaDaemonController()
+    log_file = daemon.daemon_log_file
 
-    with subprocess.Popen(['tail', '-f', client.daemon_log_file], env=client.get_env()) as process:
+    if log_file is None:
+        echo.echo_critical('No daemon log file found. Has the daemon been started?')
+
+    with subprocess.Popen(['tail', '-f', log_file]) as process:
         process.wait()
 
 
@@ -207,6 +200,9 @@ def stop(ctx, no_wait, all_profiles, timeout):
 
     Returns exit code 0 if the daemon was shut down successfully (or was not running), non-zero if there was an error.
     """
+    from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException
+    from aiida.engine.daemon.daemon import AiidaDaemonController
+
     if all_profiles is True:
         profiles = [profile for profile in ctx.obj.config.profiles if not profile.is_test_profile]
     else:
@@ -216,7 +212,15 @@ def stop(ctx, no_wait, all_profiles, timeout):
         echo.echo('Profile: ', fg=echo.COLORS['report'], bold=True, nl=False)
         echo.echo(f'{profile.name}', bold=True)
         echo.echo('Stopping the daemon... ', nl=False)
-        execute_client_command('stop_daemon', daemon_not_running_ok=True, wait=not no_wait, timeout=timeout)
+        try:
+            AiidaDaemonController(profile).stop()
+        except DaemonNotRunningException:
+            echo.echo('OK', fg=echo.COLORS['success'], bold=True)
+        except DaemonException as exception:
+            echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
+            echo.echo_critical(str(exception))
+        else:
+            echo.echo('OK', fg=echo.COLORS['success'], bold=True)
 
 
 @verdi_daemon.command()
@@ -244,31 +248,26 @@ def restart(ctx, reset, no_wait, timeout):
     if timeout is not None:
         echo.echo_deprecated('The `--timeout` option is deprecated and no longer has any effect.')
 
-    # These two lines can be simplified to `ctx.invoke(start)` once issue #950 in `click` is resolved.
-    # Due to that bug, the `callback` of the `number` argument the `start` command is not being called, which is
-    # responsible for settting the default value, which causes `None` to be passed and that triggers an exception.
-    # As a temporary workaround, we fetch the default here manually and pass that in explicitly.
     number = ctx.obj.config.get_option('daemon.default_workers', ctx.obj.profile.name)
     ctx.invoke(stop)
     ctx.invoke(start, number=number)
 
 
-@verdi_daemon.command(hidden=True)
-@click.option('--foreground', is_flag=True, help='Run in foreground.')
-@click.argument('number', required=False, type=int, callback=validate_daemon_workers)
+@verdi_daemon.command('_supervisor', hidden=True)
+@click.argument('number', required=True, type=int)
 @decorators.with_dbenv()
 @decorators.requires_broker
-@decorators.check_circus_zmq_version
-def start_circus(foreground, number):
-    """This will actually launch the circus daemon, either daemonized in the background or in the foreground.
+def run_supervisor(number):
+    """Start the daemon supervisor process (internal, called by AiidaDaemonController.start).
 
-    If run in the foreground all logs are redirected to stdout.
-
-    .. note:: this should not be called directly from the commandline!
+    This is the subprocess entry point that performs the double-fork daemonization.
+    It should not be called directly by users.
     """
-    from aiida.engine.daemon.client import get_daemon_client
+    from aiida.engine.daemon.daemon import AiidaDaemonController, AiidaWorkerConfig, ServiceConfigMap, DaemonController
 
-    get_daemon_client()._start_daemon(number_workers=number, foreground=foreground)
+    daemon = AiidaDaemonController()
+    service_configs = ServiceConfigMap([AiidaWorkerConfig(num_workers=number)])
+    DaemonController.start(daemon._daemon_dir, service_configs, foreground=False)
 
 
 @verdi_daemon.command('worker')

@@ -1,0 +1,1206 @@
+"""
+Service Daemon - Generic process manager for services with health monitoring.
+
+Directory Structure:
+```
+daemon/
+├── profile-<aiida_profile_name>/<session_timestamp>
+│   ├── <worker_service_name>/
+│   │   ├── worker_service_config.json     # config how to start the worker service
+│   │   ├── 1/
+│   │   │   ├── info.json          # PID, state, timestamps, failure count
+│   │   │   ├── stdout.log         # Service stdout
+│   │   │   └── stderr.log         # Service stderr
+│   │   └── 2/   
+│   │       ├── info.json  # PID, state, timestamps, failure count
+│   │       ├── stdout.log         # Service stdout
+│   │       └── stderr.log         # Service stderr
+│   └── <service_name>/
+│       ├── service_config.json    # config how to start the service
+│       ├── info.json      # PID, state, timestamps, failure count
+│       ├── stdout.log             # Service stdout
+│       └── stderr.log             # Service stderr
+├── supervisor_info.json           # Single daemon PID file
+├── supervisor_config.json         # Single daemon PID file
+└── supervisor.log                 # Daemon output (background mode only)
+```
+
+Key Features:
+- Generic daemon works with any service type
+- Single daemon.pid file
+- Health monitor runs as thread (not separate process)
+- Services are children of daemon (proper parent-child relationship)
+- When daemon terminates, all children are cleaned up automatically
+- Foreground mode: daemon runs in terminal, Ctrl+C stops everything
+- Background mode: daemon detaches, use stop script to send SIGTERM
+"""
+
+from __future__ import annotations
+
+# Design choices
+# Services need to be able to be started by the command line
+# Worker and reglar servivces are conceptual separated
+
+from dataclasses import dataclass, asdict
+import io
+import os
+import re
+import sys
+import subprocess
+import time
+import signal
+import threading
+import json
+import psutil
+from typing import ClassVar, Dict, List, Type
+
+from typing_extensions import Self, assert_never
+from abc import abstractmethod, ABC
+from pathlib import Path
+import enum
+import logging
+
+import shutil
+
+from aiida.common.log import AIIDA_LOGGER
+
+logger = AIIDA_LOGGER.getChild('engine.daemon.supervisor')
+
+VERDI_BIN = shutil.which('verdi')
+
+class ServiceState(enum.Enum):
+    ALIVE = "ALIVE"
+    DEAD = "DEAD"
+
+class FolderIdentifier(ABC):
+
+    def __init__(self, identifier: str):
+        if not self.is_valid_identifier(identifier):
+            #TODO polish error msg
+            raise ValueError(
+                f"Invalid service identifier {identifier}. May only contain alphanumeric characters, underscores, hyphens"
+                  "Must start with a letter or number"
+                  "Length: 1-255 characters"
+            )
+        self._identifier = identifier
+
+    @property
+    def identifier(self) -> str:
+        return self._identifier
+
+    def __str__(self) -> str:
+        """String representation returns full identifier."""
+        return self._identifier
+
+    def __repr__(self) -> str:
+        """Developer-friendly representation."""
+        return f"ServiceIdentifier('{self._identifier}')"
+
+    def __hash__(self) -> int:
+        """Hash based on the full identifier string."""
+        return hash(self._identifier)
+
+    def __eq__(self, other) -> bool:
+        """Equality based on the full identifier string."""
+        if not isinstance(other, ServiceIdentifier):
+            return False
+        return self._identifier == other._identifier
+
+    @staticmethod
+    def is_valid_identifier(name: str) -> bool:
+        """
+        Check if a string is a valid service identifier name.
+        
+        Allows: alphanumeric characters, underscores, hyphens
+        Must start with a letter or number
+        Length: 1-255 characters
+        """
+        if not name:
+            return False
+
+        # Only allow safe characters: letters, numbers, underscore, hyphen
+        # Must start with alphanumeric
+        pattern = r'^[a-zA-Z0-9][a-zA-Z0-9_-]{0,254}$'
+
+        return bool(re.match(pattern, name))
+
+# TODO needed? kind of it checks if it is a folder identifier 
+class ServiceIdentifier(FolderIdentifier):
+    pass
+
+@dataclass
+class JsonSerialization:
+    @classmethod
+    def from_file(cls, path: Path) -> Self:
+        with open(path, 'r') as f:
+            return cls(**json.load(f))
+
+    def to_file(self, path: Path):
+        with open(path, 'w') as f:
+            json.dump(asdict(self), f)
+
+@dataclass
+class ProcessInfo:
+    pid: int
+    create_time: float
+
+# TODO MonitoredProcessInfo -> WorkerInfo
+
+@dataclass
+class ServiceInfo(ProcessInfo, JsonSerialization):
+    service_name: str
+    command: str
+    state: str
+    last_check: float
+    failures: int
+
+# TODO replace with auto-register subclasses
+# We need such a pattern because we need to be able to load the the specialized ServiceConfigs from the json file, so we potentially need to be able to create a ServiceConfig just from the service_name
+
+SERVICE_CONFIG_REGISTRY: Dict[str, Type["ServiceConfig"]] = {}
+
+@dataclass
+class ServiceConfig(ABC):
+    # TODO rename to service_identifier?
+    service_name: ClassVar[str] 
+    command: ClassVar[str]
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        # Auto-register any subclass that defines service_name
+        name = getattr(cls, "service_name", None)
+        if name is not None:
+            SERVICE_CONFIG_REGISTRY[name] = cls
+
+    @abstractmethod
+    def create_unique_env(self) -> dict[str, str]:
+        raise NotImplementedError()
+
+    def to_dict(self):
+        values = asdict(self)
+        # adding class attributes that are not included
+        values["service_name"] = self.service_name
+        values["command"] = self.command
+        return values
+
+@dataclass
+class NonWorkerServiceConfig(ServiceConfig):
+    pass
+
+@dataclass
+class WorkerServiceConfig(ServiceConfig):
+    num_workers: int
+
+@dataclass
+class AiidaWorkerConfig(WorkerServiceConfig):
+    service_name: ClassVar[str] = "aiida_worker"
+    command: ClassVar[str] = "verdi daemon worker"
+
+    def create_unique_env(self) -> dict[str, str]:
+        aiida_path = os.environ.get("AIIDA_PATH")
+        return {} if aiida_path is None else {"AIIDA_PATH": aiida_path}
+
+# TODO make commands tunable, not sure how without complicated interface, maybe just comamnd_base and args
+@dataclass
+class SleepServiceConfig(NonWorkerServiceConfig):
+    service_name: ClassVar[str] = "sleep10"
+    command: ClassVar[str] = "sleep 10"
+
+    def create_unique_env(self) -> dict[str, str]:
+        return {}
+
+class ServiceConfigFactory:
+
+    @staticmethod
+    def from_file(path: Path) -> ServiceConfig:
+        with open(path, "r") as f:
+            values = json.load(f)
+        return ServiceConfigFactory.from_dict(values)
+
+    @staticmethod
+    def from_dict(values: dict) -> ServiceConfig:
+        if not (service_name := values.pop("service_name")):
+            raise ValueError("Missing 'service_name' in config")
+        if not (cls := SERVICE_CONFIG_REGISTRY.get(service_name)):
+            raise ValueError(f"Unknown service_name {service_name!r}")
+
+        # have to remove class variables before init
+        values.pop("command")
+        return cls(**values)
+
+class ServiceConfigMap:
+    """
+    Collection of service configurations with dict-like access.
+
+    This class manages multiple ServiceConfig instances and provides
+    methods to query and access them by ServiceIdentifier.
+
+    Supports dict-like access: collection[service_id] returns the ServiceConfig.
+    """
+
+    def __init__(self, configs: List[ServiceConfig]):
+        # enforce uniqueness
+        configs_counts = {}
+        configs_counts = {config.service_name: 1 + configs_counts.get(config.service_name, 0) for config in configs}
+        duplicate_configs = list(filter(lambda key: configs_counts[key] > 1 , configs_counts.keys()))
+        if len(duplicate_configs) > 0:
+            raise ValueError(f"Found serivce names {duplicate_configs} multiple times in the list of service configs")
+        self._configs = {ServiceIdentifier(config.service_name): config for config in configs}
+
+    def __getitem__(self, identifier: str | ServiceIdentifier) -> ServiceConfig:
+        # Convert string to ServiceIdentifier if needed
+        if isinstance(identifier, str):
+            identifier = ServiceIdentifier(identifier)
+
+        if identifier not in self._configs:
+            available = [sid for sid in self._configs.keys()]
+            raise KeyError(
+                f"Service '{identifier}' not found. "
+                f"Available services: {available}"
+            )
+        return self._configs[identifier]
+
+    def __contains__(self, identifier: str | ServiceIdentifier) -> bool:
+        if isinstance(identifier, str):
+            identifier = ServiceIdentifier(identifier)
+        return identifier in self._configs
+
+    def __len__(self) -> int:
+        return len(self._configs)
+
+    def __iter__(self):
+        return iter(self._configs)
+
+    def keys(self):
+        return self._configs.keys()
+
+    def values(self):
+        return self._configs.values()
+
+    def items(self):
+        return self._configs.items()
+
+    def to_file(self, path: Path):
+        with open(path, "w") as f:
+            json.dump({key.identifier: config.to_dict() for key, config in self._configs.items()}, f)
+
+    @classmethod
+    def from_file(cls, path: Path) -> Self:
+        with open(path, "r") as f:
+            values = json.load(f)
+        return cls([ServiceConfigFactory.from_dict(value) for value in values.values()])
+
+@dataclass
+class SupervisorInfo(ProcessInfo, JsonSerialization):
+    pass
+
+class DaemonCommon:
+    SUPERVISOR_INFO_FILE = "supervisor_info.json"
+    SUPERVISOR_CONFIG_FILE = "supervisor_config.json"
+    # TODO split log
+    SUPERVISOR_LOG_FILE = "supervisor.log"
+    PROCESS_INFO_FILE = "info.json"
+    KILL_TIMEOUT = 10.0
+
+    @staticmethod
+    def _start_service_process(service_dir: Path, config: ServiceConfig, info: ServiceInfo | None = None):
+        DaemonCommon._start_process(service_dir / config.service_name, config, info)
+        
+    @staticmethod
+    def _start_worker_service_process(service_dir: Path, config: ServiceConfig, worker_num: int, info: ServiceInfo | None = None):
+        DaemonCommon._start_process(service_dir / config.service_name / str(worker_num), config, info)
+
+    @staticmethod
+    def _start_process(process_dir: Path, config: ServiceConfig, info: ServiceInfo | None = None):
+        process_dir.mkdir(parents=True, exist_ok=True)
+
+        # Open log files in service directory
+        stdout_log = process_dir / "stdout.log"
+        stderr_log = process_dir / "stderr.log"
+
+        stdout_file = open(stdout_log, 'a', buffering=1)
+        stderr_file = open(stderr_log, 'a', buffering=1)
+
+        # Get unique environment for this service
+        service_env = config.create_unique_env()
+
+        process = subprocess.Popen(
+            config.command.split(),
+            stdout=stdout_file,
+            stderr=stderr_file,
+            env=os.environ | service_env,
+            start_new_session=True  # Create new process group
+        )
+        create_time = psutil.Process(process.pid).create_time()
+
+        service_info = ServiceInfo(
+            service_name=config.service_name,
+            command=config.command,
+            pid=process.pid,
+            state=ServiceState.ALIVE.value,
+            create_time=create_time,
+            last_check=create_time,
+            failures=0 if info is None else info.failures+1
+        )
+        service_info.to_file(process_dir / DaemonCommon.PROCESS_INFO_FILE)
+
+    # TODO consider adding the create_time, then we maybe don't need do check if is alive but directly send _kill_service
+    @staticmethod
+    def _kill_service(pid: int) -> bool:
+        """Kill a service process gracefully (SIGTERM), escalating to SIGKILL after timeout.
+
+        Sends SIGTERM first to allow the process to clean up (e.g. close RabbitMQ connections),
+        then waits up to KILL_TIMEOUT seconds. If the process is still alive, sends SIGKILL.
+
+        :param pid: The process ID to kill.
+        :returns: True if the process was successfully terminated, False otherwise.
+        """
+        logger.debug(f"Stopping process with PID {pid}")
+        try:
+            proc = psutil.Process(pid)
+        except psutil.NoSuchProcess:
+            logger.debug(f"Process {pid} already gone.")
+            return True
+
+        # Send SIGTERM for graceful shutdown
+        try:
+            proc.terminate()
+        except psutil.NoSuchProcess:
+            return True
+
+        # Wait for graceful shutdown
+        try:
+            proc.wait(timeout=DaemonCommon.KILL_TIMEOUT)
+            logger.debug(f"Process {pid} stopped gracefully.")
+            return True
+        except psutil.TimeoutExpired:
+            pass
+
+        # Escalate to SIGKILL
+        logger.warning(f"Process {pid} did not stop gracefully, force killing...")
+        try:
+            proc.kill()
+            proc.wait(timeout=DaemonCommon.KILL_TIMEOUT)
+            logger.debug(f"Process {pid} force killed.")
+            return True
+        except psutil.NoSuchProcess:
+            return True
+        except psutil.TimeoutExpired:
+            logger.error(f"Process {pid} could not be killed.")
+            return False
+        except Exception as e:
+            logger.warning(f"Error killing process {pid}: {e}")
+            return False
+
+    @staticmethod
+    def _is_alive(pid: int, create_time: float) -> bool:
+        """
+        Check if process is alive with PID reuse protection.
+
+        This function verifies:
+        1. Process with the PID exists
+        2. Process creation time matches what we stored
+
+        This prevents accidentally treating a different process
+        (that reused the PID) as our service.
+
+        Args:
+            service_info: Service information from state file
+
+        Returns:
+            True if process exists and is confirmed to be our service
+        """
+        try:
+            process = psutil.Process(pid)
+
+            # Get actual process creation time
+            actual_create_time = process.create_time()
+
+            # Compare with stored creation time
+            # Allow 1 second tolerance for timing differences
+            time_diff = abs(actual_create_time - create_time)
+
+            if time_diff > 1.0:
+                # PID has been reused by a different process!
+                logger.warning(
+                    f"PID {pid} reused by different process! "
+                    f"Expected create time: {create_time}, actual: {actual_create_time}, diff: {time_diff}s"
+                )
+                return False
+
+            # Process exists and creation time matches
+            return True
+
+        except psutil.NoSuchProcess:
+            # Process doesn't exist
+            return False
+        except psutil.AccessDenied:
+            # Process exists but we don't have permission to access it
+            # This could mean:
+            # 1. It's running as a different user
+            # 2. System restrictions prevent access
+            # Conservative approach: assume it's alive
+            logger.warning(f"Cannot access PID {pid} (permission denied)")
+            return True
+
+    # TODO add for _cleanup_last_session a boolean return value so we can say it worked
+    @staticmethod
+    def stop(session_dir: Path):
+        service_configs = ServiceConfigMap.from_file(session_dir / DaemonCommon.SUPERVISOR_CONFIG_FILE)
+
+        supervisor_info_file = session_dir / DaemonCommon.SUPERVISOR_INFO_FILE
+        if (supervisor_info_file := supervisor_info_file).exists():
+            service_info = None
+            try:
+                service_info = SupervisorInfo.from_file(supervisor_info_file)
+            except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as e:
+                logger.warning(f"Skipping invalid or corrupted supervisor info file {supervisor_info_file}: {e}. ")
+
+            if (service_info is not None and
+                DaemonCommon._is_alive(service_info.pid, service_info.create_time) and
+                not DaemonCommon._kill_service(service_info.pid)):
+                    pass
+                    # TODO but need to include state to ServiceInfo   
+                    #service_info.state = ServiceState.DEAD.value
+                    #service_info.to_file(supervisor_info_file)
+
+        for config in service_configs.values():
+            if isinstance(config, NonWorkerServiceConfig):
+                process_dir = session_dir / config.service_name
+                if (info_file := process_dir / DaemonCommon.PROCESS_INFO_FILE).exists():
+                    try:
+                        info = ServiceInfo.from_file(info_file)
+                    except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as e:
+                        logger.warning(f"Skipping invalid or corrupted info file {info_file}: {e}.")
+                        continue
+
+                    # TODO should I consider here info.state? _is_alive is safer
+                    if DaemonCommon._is_alive(info.pid, info.create_time):
+                        logger.info(f"Terminating service {info.service_name} process with pid {info.pid}")
+                        if DaemonCommon._kill_service(info.pid):
+                            info.state = ServiceState.DEAD.value
+                            info.to_file(process_dir / DaemonCommon.PROCESS_INFO_FILE)
+                    else:
+                        info.state = ServiceState.DEAD.value
+                        info.to_file(process_dir / DaemonCommon.PROCESS_INFO_FILE)
+
+            elif isinstance(config, WorkerServiceConfig):
+                for i in range(config.num_workers): 
+                    process_dir = session_dir / config.service_name / str(i)
+                    if (info_file := process_dir / DaemonCommon.PROCESS_INFO_FILE).exists():
+                        try:
+                            info = ServiceInfo.from_file(info_file)
+                        except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as e:
+                            logger.warning(f"Skipping invalid or corrupted info file {info_file}: {e}. ")
+                            continue
+
+                        if DaemonCommon._is_alive(info.pid, info.create_time):
+                            logger.info(f"Terminating service {info.service_name} worker {i} with process with pid {info.pid}")
+                            if DaemonCommon._kill_service(info.pid):
+                                info.state = ServiceState.DEAD.value
+                                info.to_file(process_dir / DaemonCommon.PROCESS_INFO_FILE)
+                        else:
+                            info.state = ServiceState.DEAD.value
+                            info.to_file(process_dir / DaemonCommon.PROCESS_INFO_FILE)
+            else:
+                assert_never(config)
+
+
+class DaemonProcess:
+    """
+    The supervisor process that manages service processes.
+
+    This class runs as the main daemon process and:
+    - Monitors child service processes via a health monitor thread
+    - Restarts failed services automatically
+    - Handles graceful shutdown on SIGTERM/SIGINT
+    """
+
+    def __init__(self, session_dir: Path, foreground: bool):
+        self._session_dir = session_dir
+        self._log_fd: 'io.TextIOWrapper | None' = None
+
+        if not foreground:
+            self._daemonize()
+
+        # Configure logger to write to supervisor log file
+        self._setup_logging()
+
+        logger.info(f"Supervisor started (PID: {os.getpid()})")
+        self._save_supervisor_info()
+
+        # Setup signal handlers for graceful shutdown
+        signal.signal(signal.SIGTERM, self._signal_handler)
+        signal.signal(signal.SIGINT, self._signal_handler)
+
+        # Setup zombie reaper BEFORE starting any child processes
+        self._setup_child_reaper()
+
+        # Start health monitor thread
+        self.monitor_thread = threading.Thread(target=self._health_monitor, daemon=False, name="HealthMonitor")
+        self.monitor_thread.start()
+        logger.info("Health monitor started")
+
+    def _daemonize(self):
+        # TODO add stackoverflow why double fork needed to decouple from terminal session
+        """Double fork to become a daemon process."""
+        # First fork
+        try:
+            pid = os.fork()
+            if pid > 0:
+                # Exit first parent
+                sys.exit(0)
+        except OSError as e:
+            sys.stderr.write(f"Fork #1 failed: {e}\n")
+            sys.exit(1)
+
+        # Decouple from parent environment
+        os.chdir("/")
+        os.setsid()
+        os.umask(0)
+
+        # Second fork
+        try:
+            pid = os.fork()
+            if pid > 0:
+                # Exit second parent
+                sys.exit(0)
+        except OSError as e:
+            sys.stderr.write(f"Fork #2 failed: {e}\n")
+            sys.exit(1)
+
+        logger.info(f"Daemon started (PID: {os.getpid()})")
+
+    def _save_supervisor_info(self):
+        """Save the supervisor's PID and create time to a file for later reference."""
+        pid = os.getpid()
+        supervisor_info = SupervisorInfo(pid, psutil.Process(pid).create_time())
+        supervisor_info.to_file(self._session_dir / DaemonCommon.SUPERVISOR_INFO_FILE)
+
+    def _setup_logging(self):
+        """
+        Configure logging to write to the supervisor log file.
+
+        This redirects both:
+        1. stdout/stderr (for print() statements)
+        2. Python logging (for logger.* calls)
+
+        to the supervisor log file.
+        """
+        log_file = self._session_dir / DaemonCommon.SUPERVISOR_LOG_FILE
+
+        # Redirect stdout and stderr to log file
+        sys.stdout.flush()
+        sys.stderr.flush()
+        self._log_fd = open(log_file, 'a')  # noqa: SIM115
+        os.dup2(self._log_fd.fileno(), sys.stdout.fileno())
+        os.dup2(self._log_fd.fileno(), sys.stderr.fileno())
+
+        # Configure Python logging to also write to the same file
+        file_handler = logging.FileHandler(log_file, mode='a')
+        file_handler.setLevel(logging.DEBUG)
+
+        # Create formatter with timestamp
+        formatter = logging.Formatter(
+            fmt='[%(asctime)s] %(levelname)s: %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+        file_handler.setFormatter(formatter)
+
+        # Add handler to the logger
+        logger.addHandler(file_handler)
+        logger.setLevel(logging.DEBUG)
+
+        logger.info("Logger configured to write to supervisor log file")
+
+    def _setup_child_reaper(self):
+        """
+        Setup SIGCHLD handler to automatically reap zombie processes.
+
+        When child processes terminate, they become zombies until the parent
+        calls wait(). This handler automatically reaps terminated children
+        to prevent zombie accumulation.
+        """
+        def handle_sigchld(signum, frame):
+            """Non-blocking reaper for terminated child processes."""
+            while True:
+                try:
+                    # Reap any terminated children (non-blocking with WNOHANG)
+                    pid, status = os.waitpid(-1, os.WNOHANG)
+                    if pid == 0:  # No more children to reap
+                        break
+                    logger.debug(f"Reaped child process {pid} with exit status {status}")
+                except ChildProcessError:
+                    # No more children exist
+                    break
+                except Exception as e:
+                    # Log unexpected errors but don't crash
+                    logger.warning(f"Error in SIGCHLD handler: {e}")
+                    break
+
+        # Register the handler
+        signal.signal(signal.SIGCHLD, handle_sigchld)
+        logger.debug("SIGCHLD handler installed for zombie reaping")
+
+    def _check_service_process_health(self, config: ServiceConfig):
+        process_dir = self._session_dir / config.service_name
+        self._check_process_health(process_dir, config)
+
+    def _check_worker_process_health(self, config: ServiceConfig, worker_num: int):
+        process_dir = self._session_dir / config.service_name / str(worker_num)
+        self._check_process_health(process_dir, config)
+
+    @staticmethod
+    def _check_process_health(process_dir, config: ServiceConfig):
+        info_path = process_dir / DaemonCommon.PROCESS_INFO_FILE
+        try:
+            info = ServiceInfo.from_file(info_path)
+        except (FileNotFoundError, json.JSONDecodeError, KeyError, TypeError) as e:
+            logger.warning(f"Skipping invalid or corrupted info file {info_path}: {e}. ")
+            return 
+
+        is_alive = DaemonCommon._is_alive(info.pid, info.create_time)
+        info.last_check = time.time()
+        if is_alive:
+            info.last_check = time.time()
+            info.state = ServiceState.ALIVE.value
+            try:
+                info.to_file(info_path)
+            except:
+                logger.error(f"Unable to update service {info.service_name} info with PID {info.pid} after restart. Continueing.")
+        else:
+            # TODO add traceback into logger errors
+            logger.info(f"[{time.ctime(info.last_check)}] Service {info.service_name!r} died with PID {info.pid} died")
+            info.state = ServiceState.DEAD.value
+            try:
+                info.to_file(info_path)
+            except:
+                logger.error(f"Unable to update service {info.service_name} info with PID {info.pid} after it died. Continueing.")
+
+            logger.info(f"Restarting service {info.service_name!r}...")
+            try:
+                DaemonCommon._start_process(process_dir, config)
+            except:
+                logger.error(f"Unable to restart service {info.service_name}. Continueing.")
+                return
+            else:
+                logger.info(f"Restarting service {info.service_name!r} was successful.")
+
+    # TODO rename to keep_alive_monitor
+    def _health_monitor(self):
+        """Health monitor thread - checks child processes every 5s."""
+        logger.info(f"[{time.ctime()}] Health monitor thread started")
+        self.running = True
+        while self.running:
+            # TODO global config
+            time.sleep(5)
+            
+            service_configs = ServiceConfigMap.from_file(self._session_dir / DaemonCommon.SUPERVISOR_CONFIG_FILE)
+            for config in service_configs.values():
+                if isinstance(config, WorkerServiceConfig):
+                    for i in range(config.num_workers):
+                        self._check_worker_process_health(config, i)
+                elif isinstance(config, NonWorkerServiceConfig):
+                    self._check_service_process_health(config)
+                else:
+                    assert_never(config)
+        logger.info("Health monitor thread shutting down...")
+        self._shutdown()
+
+    def _shutdown(self):
+        DaemonCommon.stop(self._session_dir)
+
+        # Close log file descriptor before exiting
+        if self._log_fd is not None:
+            try:
+                self._log_fd.close()
+            except Exception as e:
+                # Best effort - don't fail shutdown
+                logger.warning(f"Failed to close log file descriptor: {e}")
+
+
+    def _signal_handler(self, signum, frame):
+        """Handle SIGTERM/SIGINT."""
+        logger.info(f"Received signal {signum}, shutting down...")
+        self._shutdown()
+        sys.exit(0)
+
+class DaemonController:
+        
+    # TODO move to common
+    class SessionDirUtils:
+        SESSION_DIR_TIMESTAMP_FORMAT = "%Y-%m-%d_%H-%M-%S"
+        SESSION_DIR_PATTERN = r'^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{6}$'
+
+        @staticmethod
+        def generate_dirname() -> str:
+            from datetime import datetime
+
+            now = datetime.now()
+            dirname = now.strftime(DaemonController.SessionDirUtils.SESSION_DIR_TIMESTAMP_FORMAT) + f"-{now.microsecond:06d}"
+            # NOTE: raise value for internal consistency
+            if not DaemonController.SessionDirUtils.match_dirname(dirname):
+                raise RuntimeError(f"The created timestamp {dirname} does not match pattern {DaemonController.SessionDirUtils.SESSION_DIR_PATTERN}. Please contact a developer.")
+            return dirname
+
+        @staticmethod
+        def match_dirname(dirname: str) -> bool:
+            import re
+            # NOTE: The regex expression has to match the timestamp format
+            return bool(re.compile(DaemonController.SessionDirUtils.SESSION_DIR_PATTERN).match(dirname))
+    
+    
+    @staticmethod
+    def _is_running(session_dir: Path) -> bool:
+        """
+        Check if daemon is running by checking PID file.
+
+        Returns:
+            True if daemon is running, False otherwise
+        """
+        if not session_dir.exists() or not session_dir.is_dir():
+            return False
+
+        supervisor_info_file = session_dir / DaemonCommon.SUPERVISOR_INFO_FILE
+        if not supervisor_info_file.exists():
+            return False
+
+        try:
+            info = SupervisorInfo.from_file(supervisor_info_file)
+        except:
+            logger.warning(f"Could not read supervisor info file {supervisor_info_file}. Assuming it is not running.")
+            return False
+        else:
+            return DaemonCommon._is_alive(info.pid, info.create_time)
+
+    @staticmethod
+    def _create_new_session_dir(supervisor_dir: Path) -> Path:
+        timestamp = DaemonController.SessionDirUtils.generate_dirname()
+        daemon_current_session_dir = supervisor_dir / timestamp
+        daemon_current_session_dir.mkdir(parents=False, exist_ok=False)
+
+        return daemon_current_session_dir
+
+    @staticmethod
+    def _get_latest_session_dir(supervisor_dir: Path) -> Path | None:
+        """
+        Get the most recent daemon session directory based on timestamp.
+
+        Scans the daemon base directory for session directories with
+        timestamp format YYYY-MM-DD_HH-MM-SS-mmmmmm and returns the most recent one.
+
+        Returns:
+            Path to the latest session directory, or None if no sessions exist
+        """
+        DaemonController._validate_supervisor_dir(supervisor_dir)
+
+        # Pattern to match timestamp directories: YYYY-MM-DD_HH-MM-SS-mmmmmm
+        # Example: 2025-11-30_16-46-25-324746
+
+        session_dirs = []
+
+        # Find all directories matching the timestamp pattern
+        for path in supervisor_dir.iterdir():
+            if path.is_dir() and DaemonController.SessionDirUtils.match_dirname(path.name):
+                session_dirs.append(path)
+
+        # No session directories found
+        if not session_dirs:
+            return None
+
+        # Sort by directory name (timestamp) - latest will be last
+        # Because YYYY-MM-DD_HH-MM-SS-mmmmmm is lexicographically sortable
+        session_dirs.sort(key=lambda p: p.name)
+
+        return session_dirs[-1]  # Return most recent
+
+    @staticmethod
+    def _validate_supervisor_dir(supervisor_dir: Path):
+        # Check if base directory exists
+        if not supervisor_dir.exists():
+            # TODO error msg
+            raise ValueError()
+        elif not supervisor_dir.is_dir(): 
+            # TODO error msg
+            raise ValueError()
+
+    @staticmethod
+    def start(supervisor_dir: Path, service_configs: ServiceConfigMap, foreground: bool = False):
+        """
+        Start the daemon.
+
+        Args:
+            service_configs: Configuration for all services to manage
+            foreground: If True, run in foreground. If False, detach to run in background.
+
+        Raises:
+            RuntimeError: If daemon is already running
+        """
+        DaemonController._validate_supervisor_dir(supervisor_dir)
+        latest_session_dir = DaemonController._get_latest_session_dir(supervisor_dir)
+        # TODO check if service_configs have changed
+        if latest_session_dir is not None and DaemonController._is_running(latest_session_dir):
+            logger.info("Daemon is already running, continue with last session. If you want to start with new settings please stop and start daemon.")
+            return
+
+        session_dir = DaemonController._create_new_session_dir(supervisor_dir)
+
+        # Start all configured services
+        for config in service_configs.values():
+            DaemonController._start_service(session_dir, config)
+
+        service_configs.to_file(session_dir / DaemonCommon.SUPERVISOR_CONFIG_FILE)
+        DaemonProcess(session_dir, foreground)
+
+    @staticmethod
+    def _start_service(session_dir: Path, config: ServiceConfig):
+        if session_dir is None:
+            # TODO error message, should not happen so dev error
+            raise RuntimeError()
+        # Get config using base identifier
+        if isinstance(config, NonWorkerServiceConfig):
+            DaemonCommon._start_service_process(session_dir, config)
+        elif isinstance(config, WorkerServiceConfig):
+            for i in range(config.num_workers):
+                DaemonCommon._start_worker_service_process(session_dir, config, i)
+
+        else:
+            assert_never(config)
+
+    @staticmethod
+    def stop(supervisor_dir: Path):
+        DaemonController._validate_supervisor_dir(supervisor_dir)
+
+        session_dir = DaemonController._get_latest_session_dir(supervisor_dir)
+        if session_dir is None:
+            from aiida.engine.daemon.client import DaemonNotRunningException
+            raise DaemonNotRunningException(f"The daemon is not running (no session found in {supervisor_dir}).")
+
+        DaemonCommon.stop(session_dir)
+
+    @staticmethod
+    def status(supervisor_dir: Path) -> dict:
+        """Return structured status of the daemon and all services.
+
+        Returns a dict with structure::
+
+            {
+                'status': 'running' | 'stopped',
+                'pid': int | None,
+                'started': float | None,
+                'log_file': str | None,
+                'workers': [{'pid': int, 'state': str, 'started': float, 'failures': int}, ...],
+            }
+        """
+        DaemonController._validate_supervisor_dir(supervisor_dir)
+
+        session_dir = DaemonController._get_latest_session_dir(supervisor_dir)
+        if session_dir is None:
+            return {'status': 'stopped', 'pid': None, 'started': None, 'log_file': None, 'workers': []}
+
+        result: dict = {
+            'status': 'stopped',
+            'pid': None,
+            'started': None,
+            'log_file': str(session_dir / DaemonCommon.SUPERVISOR_LOG_FILE),
+            'workers': [],
+        }
+
+        # Check supervisor status
+        supervisor_info_file = session_dir / DaemonCommon.SUPERVISOR_INFO_FILE
+        if supervisor_info_file.exists():
+            try:
+                supervisor_info = SupervisorInfo.from_file(supervisor_info_file)
+                is_alive = DaemonCommon._is_alive(supervisor_info.pid, supervisor_info.create_time)
+                result['status'] = 'running' if is_alive else 'stopped'
+                result['pid'] = supervisor_info.pid
+                result['started'] = supervisor_info.create_time
+            except Exception as e:
+                logger.warning(f"Error reading supervisor info: {e}")
+
+        # Load supervisor config to get all services
+        config_file = session_dir / DaemonCommon.SUPERVISOR_CONFIG_FILE
+        if not config_file.exists():
+            return result
+
+        try:
+            service_configs = ServiceConfigMap.from_file(config_file)
+        except Exception as e:
+            logger.warning(f"Error reading supervisor config: {e}")
+            return result
+
+        # Collect worker info
+        for config in service_configs.values():
+            if isinstance(config, WorkerServiceConfig):
+                for worker_num in range(config.num_workers):
+                    worker_dir = session_dir / config.service_name / str(worker_num)
+                    info_file = worker_dir / DaemonCommon.PROCESS_INFO_FILE
+                    if info_file.exists():
+                        try:
+                            info = ServiceInfo.from_file(info_file)
+                            is_alive = DaemonCommon._is_alive(info.pid, info.create_time)
+                            result['workers'].append({
+                                'pid': info.pid,
+                                'state': 'running' if is_alive else 'stopped',
+                                'started': info.create_time,
+                                'failures': info.failures,
+                            })
+                        except Exception as e:
+                            logger.warning(f"Error reading worker {worker_num} info: {e}")
+
+        return result
+
+
+class AiidaDaemonController:
+    """AiiDA-specific daemon supervisor that manages worker processes for a profile."""
+
+    def __init__(self, profile=None):
+        """Initialize AiiDA daemon for a profile.
+
+        :param profile: A :class:`~aiida.manage.configuration.profile.Profile` instance,
+            a profile name string, or ``None`` to use the current/default profile.
+        """
+        from aiida.manage import get_manager
+        from aiida.manage.configuration.profile import Profile
+
+        manager = get_manager()
+
+        if profile is None or isinstance(profile, str):
+            profile = manager.load_profile(profile)
+        elif not isinstance(profile, Profile):
+            raise TypeError(f'profile must be None, a string, or a Profile instance, got: {type(profile)}')
+        else:
+            manager.load_profile(profile)
+
+        self._profile = profile
+        self._config = manager.get_config()
+        self._daemon_dir = self._config.get_new_daemon_dir(profile)
+        self._daemon_dir.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def profile(self):
+        """Return the profile this daemon is associated with."""
+        return self._profile
+
+    @property
+    def _verdi_bin(self) -> str:
+        """Return the absolute path to the ``verdi`` binary."""
+        from aiida.common.exceptions import ConfigurationError
+
+        if VERDI_BIN is None:
+            raise ConfigurationError(
+                "Unable to find 'verdi' in the path. Make sure that you are working "
+                "in a virtual environment, or that at least the 'verdi' executable is on the PATH"
+            )
+        return VERDI_BIN
+
+    @property
+    def is_daemon_running(self) -> bool:
+        """Return whether the daemon is currently running."""
+        session_dir = DaemonController._get_latest_session_dir(self._daemon_dir)
+        if session_dir is None:
+            return False
+        return DaemonController._is_running(session_dir)
+
+    @property
+    def daemon_log_file(self) -> str | None:
+        """Return the path to the supervisor log file for the latest session."""
+        session_dir = DaemonController._get_latest_session_dir(self._daemon_dir)
+        if session_dir is None:
+            return None
+        return str(session_dir / DaemonCommon.SUPERVISOR_LOG_FILE)
+
+    @property
+    def worker_log_files(self) -> list[str]:
+        """Return the paths to all worker stdout log files for the latest session.
+
+        Worker processes log to stdout via the CLI handler, so the log output
+        ends up in the stdout.log files of each worker directory.
+        """
+        session_dir = DaemonController._get_latest_session_dir(self._daemon_dir)
+        if session_dir is None:
+            return []
+        worker_dir = session_dir / AiidaWorkerConfig.service_name
+        if not worker_dir.is_dir():
+            return []
+        return sorted(str(p) for p in worker_dir.glob('*/stdout.log') if p.is_file())
+
+    def start(self, num_workers: int | None = None, foreground: bool = False):
+        """Start the daemon with the given number of workers.
+
+        In background mode, spawns a subprocess running ``verdi daemon _supervisor``
+        so the calling process (verdi CLI) is not killed by the daemonize double-fork.
+
+        :param num_workers: Number of workers. Defaults to ``daemon.default_workers`` config option.
+        :param foreground: If True, run the supervisor in the foreground (blocking).
+        """
+        from aiida.engine.daemon.client import DaemonException, DaemonTimeoutException
+
+        if num_workers is None:
+            num_workers = self._config.get_option('daemon.default_workers', self._profile.name)
+
+        if foreground and num_workers > 1:
+            raise DaemonException('Starting the daemon in foreground with more than one worker is not supported.')
+
+        if foreground:
+            service_configs = ServiceConfigMap([AiidaWorkerConfig(num_workers=num_workers)])
+            DaemonController.start(self._daemon_dir, service_configs, foreground=True)
+        else:
+            env = self._get_env()
+            command = [
+                self._verdi_bin, '-p', self._profile.name,
+                'daemon', '_supervisor',
+                str(num_workers),
+            ]
+            try:
+                subprocess.check_output(command, env=env, stderr=subprocess.STDOUT)
+            except subprocess.CalledProcessError as exception:
+                raise DaemonException(
+                    f'The daemon failed to start with error:\n{exception.stdout.decode()}'
+                ) from exception
+
+            # Wait for the daemon to actually be running
+            timeout = self._config.get_option('daemon.timeout', self._profile.name)
+            start_time = time.time()
+            while not self.is_daemon_running:
+                time.sleep(0.1)
+                if time.time() - start_time > timeout:
+                    raise DaemonTimeoutException(
+                        f'The daemon failed to start or is unresponsive after {timeout} seconds.'
+                    )
+
+    @staticmethod
+    def _get_env() -> dict[str, str]:
+        """Return the environment for spawning daemon subprocesses."""
+        from aiida.manage.configuration import get_config
+
+        env = os.environ.copy()
+        env['PATH'] = ':'.join([os.path.dirname(sys.executable), env.get('PATH', '')])
+        env['PYTHONPATH'] = ':'.join(sys.path)
+        env['AIIDA_PATH'] = get_config().dirpath
+        env['PYTHONUNBUFFERED'] = 'True'
+        return env
+
+    def stop(self):
+        """Stop the daemon and all workers."""
+        DaemonController.stop(self._daemon_dir)
+
+    def restart(self, num_workers: int | None = None, foreground: bool = False):
+        """Restart the daemon: stop then start.
+
+        :param num_workers: Number of workers for the new daemon. Defaults to config option.
+        :param foreground: If True, run the new supervisor in the foreground.
+        """
+        if self.is_daemon_running:
+            self.stop()
+        self.start(num_workers=num_workers, foreground=foreground)
+
+    def get_status(self) -> dict:
+        """Return structured status of the daemon and all workers."""
+        return DaemonController.status(self._daemon_dir)
+
+    def increase_workers(self, num: int):
+        """Add ``num`` workers to the running daemon.
+
+        Updates the session config JSON on disk and starts new worker subprocesses.
+        Uses atomic file writes (write temp + os.replace) to avoid races with the health monitor.
+
+        :param num: Number of workers to add.
+        """
+        import tempfile
+
+        from aiida.engine.daemon.client import DaemonNotRunningException
+
+        if not self.is_daemon_running:
+            raise DaemonNotRunningException('The daemon is not running.')
+
+        session_dir = DaemonController._get_latest_session_dir(self._daemon_dir)
+        assert session_dir is not None
+
+        config_file = session_dir / DaemonCommon.SUPERVISOR_CONFIG_FILE
+        service_configs = ServiceConfigMap.from_file(config_file)
+
+        for sid, config in service_configs.items():
+            if isinstance(config, WorkerServiceConfig):
+                old_num = config.num_workers
+                new_num = old_num + num
+
+                # Start the new worker processes
+                for i in range(old_num, new_num):
+                    DaemonCommon._start_worker_service_process(session_dir, config, i)
+
+                # Update config atomically: write to temp file then os.replace
+                config.num_workers = new_num
+                updated_configs = ServiceConfigMap(list(service_configs.values()))
+                fd, tmp_path = tempfile.mkstemp(dir=session_dir, suffix='.json')
+                os.close(fd)
+                updated_configs.to_file(Path(tmp_path))
+                os.replace(tmp_path, config_file)
+                break
+
+    # Backward-compatible aliases for callers using the old DaemonClient API
+
+    def start_daemon(self, number_workers: int = 1, foreground: bool = False, **kwargs) -> None:
+        """Start the daemon. Backward-compatible alias for :meth:`start`."""
+        self.start(num_workers=number_workers, foreground=foreground)
+
+    def stop_daemon(self, **kwargs) -> None:
+        """Stop the daemon. Backward-compatible alias for :meth:`stop`."""
+        self.stop()
+
+    def restart_daemon(self, **kwargs) -> None:
+        """Restart the daemon. Backward-compatible alias for :meth:`restart`."""
+        self.restart()
+
+    def get_number_of_workers(self, **kwargs) -> int:
+        """Return the number of active workers."""
+        status = self.get_status()
+        return len(status.get('workers', []))
+
+    def decrease_workers(self, num: int):
+        """Remove ``num`` workers from the running daemon.
+
+        Kills the highest-numbered workers and updates the session config JSON atomically.
+
+        :param num: Number of workers to remove.
+        """
+        import tempfile
+
+        from aiida.engine.daemon.client import DaemonNotRunningException
+
+        if not self.is_daemon_running:
+            raise DaemonNotRunningException('The daemon is not running.')
+
+        session_dir = DaemonController._get_latest_session_dir(self._daemon_dir)
+        assert session_dir is not None
+
+        config_file = session_dir / DaemonCommon.SUPERVISOR_CONFIG_FILE
+        service_configs = ServiceConfigMap.from_file(config_file)
+
+        for sid, config in service_configs.items():
+            if isinstance(config, WorkerServiceConfig):
+                old_num = config.num_workers
+                new_num = max(0, old_num - num)
+
+                # Update config atomically FIRST to prevent health monitor from restarting killed workers
+                config.num_workers = new_num
+                updated_configs = ServiceConfigMap(list(service_configs.values()))
+                fd, tmp_path = tempfile.mkstemp(dir=session_dir, suffix='.json')
+                os.close(fd)
+                updated_configs.to_file(Path(tmp_path))
+                os.replace(tmp_path, config_file)
+
+                # Kill the highest-numbered workers
+                for i in range(new_num, old_num):
+                    worker_dir = session_dir / config.service_name / str(i)
+                    info_file = worker_dir / DaemonCommon.PROCESS_INFO_FILE
+                    if info_file.exists():
+                        try:
+                            info = ServiceInfo.from_file(info_file)
+                            if DaemonCommon._is_alive(info.pid, info.create_time):
+                                DaemonCommon._kill_service(info.pid)
+                            info.state = ServiceState.DEAD.value
+                            info.to_file(info_file)
+                        except Exception as e:
+                            logger.warning(f"Error stopping worker {i}: {e}")
+                break

@@ -62,7 +62,6 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     from aiida import __version__
     from aiida.common.docs import URL_NO_BROKER
     from aiida.common.exceptions import ConfigurationError
-    from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException
     from aiida.manage.configuration.settings import AiiDAConfigDir
     from aiida.manage.manager import get_manager
 
@@ -153,23 +152,23 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
 
     # Getting the daemon status
     try:
-        status = manager.get_daemon_client().get_status()
+        daemon = manager.get_daemon_client()
+        status = daemon.get_status()
     except ConfigurationError:
         print_status(
             ServiceStatus.WARNING,
             'daemon',
             'No broker defined for this profile: daemon is not available.',
         )
-    except DaemonNotRunningException as exception:
-        print_status(ServiceStatus.WARNING, 'daemon', str(exception))
-    except DaemonException as exception:
-        print_status(ServiceStatus.ERROR, 'daemon', str(exception))
     except Exception as exception:
         message = 'Error getting daemon status'
         print_status(ServiceStatus.ERROR, 'daemon', message, exception=exception, print_traceback=print_traceback)
         exit_code = ExitCode.CRITICAL
     else:
-        print_status(ServiceStatus.UP, 'daemon', f'Daemon is running with PID {status["pid"]}')
+        if status['status'] == 'running':
+            print_status(ServiceStatus.UP, 'daemon', f'Daemon is running with PID {status["pid"]}')
+        else:
+            print_status(ServiceStatus.WARNING, 'daemon', 'The daemon is not running.')
 
     # Note: click does not forward return values to the exit code, see https://github.com/pallets/click/issues/747
     if exit_code != ExitCode.SUCCESS:

@@ -403,12 +403,21 @@ class TestWorkGraphLaunchers:
         result = launch.run(mock_workgraph)
         assert result == {'result': 42}
 
-    def test_run_workgraph_pops_metadata(self, mock_workgraph):
-        """Test that metadata is separated from task inputs and passed to prepare_for_launch."""
+    def test_run_workgraph_passes_inputs_through(self, mock_workgraph):
+        """Test that inputs (including metadata) are passed directly to prepare_for_launch."""
         launch.run(mock_workgraph, inputs={'add': 1, 'metadata': {'label': 'test'}})
-        _, call_kwargs = mock_workgraph.prepare_for_launch.call_args
-        assert call_kwargs['metadata'] == {'label': 'test'}
-        assert call_kwargs['task_inputs'] == {'add': 1}
+        mock_workgraph.prepare_for_launch.assert_called_once_with(
+            inputs={'add': 1, 'metadata': {'label': 'test'}},
+        )
+
+    def test_run_workgraph_with_kwargs(self, mock_workgraph):
+        """Test that kwargs are forwarded to prepare_for_launch."""
+        launch.run(mock_workgraph, add=1, metadata={'label': 'test'})
+        mock_workgraph.prepare_for_launch.assert_called_once_with(
+            inputs=None,
+            add=1,
+            metadata={'label': 'test'},
+        )
 
 
 class TestWorkGraphHelpers:
@@ -422,75 +431,3 @@ class TestWorkGraphHelpers:
         assert is_workgraph_instance('string') is False
         assert is_workgraph_instance(42) is False
         assert is_workgraph_instance(orm.Int(1)) is False
-
-    def test_prepare_workgraph_inputs_pops_reserved_keys(self):
-        """Test that prepare_workgraph_inputs separates reserved keys from task inputs."""
-        from unittest.mock import MagicMock
-
-        from aiida.common.workgraph import _WORKGRAPH_SUBMIT_RESERVED_KEYS, prepare_workgraph_inputs
-
-        mock_wg = MagicMock()
-        mock_wg.get_task_names.return_value = ['add', 'multiply']
-
-        wg_inputs, popped = prepare_workgraph_inputs(
-            workgraph=mock_wg,
-            inputs={'add': 1, 'metadata': {'label': 'test'}},
-            kwargs={},
-            reserved_keys=_WORKGRAPH_SUBMIT_RESERVED_KEYS,
-        )
-
-        assert wg_inputs == {'add': 1}
-        assert popped == {'metadata': {'label': 'test'}}
-
-    def test_prepare_workgraph_inputs_raises_on_collision(self):
-        """Test that prepare_workgraph_inputs raises when reserved keys collide with task names."""
-        from unittest.mock import MagicMock
-
-        from aiida.common.exceptions import InvalidOperation
-        from aiida.common.workgraph import _WORKGRAPH_RUN_RESERVED_KEYS, prepare_workgraph_inputs
-
-        mock_wg = MagicMock()
-        mock_wg.get_task_names.return_value = ['metadata', 'add']
-
-        with pytest.raises(InvalidOperation, match='reserved execution parameters'):
-            prepare_workgraph_inputs(
-                workgraph=mock_wg,
-                inputs={'metadata': {'label': 'test'}, 'add': 1},
-                kwargs={},
-                reserved_keys=_WORKGRAPH_RUN_RESERVED_KEYS,
-            )
-
-    def test_prepare_workgraph_inputs_no_inputs(self):
-        """Test prepare_workgraph_inputs with no inputs."""
-        from unittest.mock import MagicMock
-
-        from aiida.common.workgraph import _WORKGRAPH_RUN_RESERVED_KEYS, prepare_workgraph_inputs
-
-        mock_wg = MagicMock()
-        mock_wg.get_task_names.return_value = []
-
-        wg_inputs, popped = prepare_workgraph_inputs(
-            workgraph=mock_wg,
-            inputs=None,
-            kwargs={},
-            reserved_keys=_WORKGRAPH_RUN_RESERVED_KEYS,
-        )
-
-        assert wg_inputs == {}
-        assert popped == {}
-
-    def test_prepare_workgraph_inputs_rejects_inputs_and_kwargs(self):
-        """Test that prepare_workgraph_inputs raises when both inputs and kwargs are given."""
-        from unittest.mock import MagicMock
-
-        from aiida.common.workgraph import _WORKGRAPH_RUN_RESERVED_KEYS, prepare_workgraph_inputs
-
-        mock_wg = MagicMock()
-
-        with pytest.raises(ValueError, match='Cannot specify both'):
-            prepare_workgraph_inputs(
-                workgraph=mock_wg,
-                inputs={'x': 1},
-                kwargs={'y': 2},
-                reserved_keys=_WORKGRAPH_RUN_RESERVED_KEYS,
-            )

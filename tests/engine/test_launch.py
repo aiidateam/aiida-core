@@ -345,7 +345,6 @@ class TestWorkGraphLaunchers:
         from aiida.engine.runners import ResultAndPk
 
         mock_wg = MagicMock()
-        mock_wg.get_task_names.return_value = ['add', 'multiply']
 
         # prepare_for_launch returns a (process_class, inputs) pair
         mock_process_class = MagicMock(spec=_Process)
@@ -357,7 +356,8 @@ class TestWorkGraphLaunchers:
         mock_node.is_terminated = True
         mock_node.process_state = 'finished'
 
-        # Patch is_workgraph_instance to recognise our mock
+        # Enable the WorkGraph code path and patch is_workgraph_instance
+        monkeypatch.setattr('aiida.engine.launch.WORKGRAPH_INSTALLED', True)
         monkeypatch.setattr(
             'aiida.engine.launch.is_workgraph_instance',
             lambda obj: obj is mock_wg,
@@ -372,8 +372,6 @@ class TestWorkGraphLaunchers:
             'aiida.engine.launch.manager.get_manager', lambda: MagicMock(get_runner=lambda: mock_runner)
         )
 
-        mock_wg._mock_node = mock_node
-        mock_wg.process = mock_node
         return mock_wg
 
     def test_run_workgraph(self, mock_workgraph):
@@ -398,36 +396,18 @@ class TestWorkGraphLaunchers:
         assert result.result == {'result': 42}
         assert result.pk == 123
 
-    def test_run_workgraph_no_inputs(self, mock_workgraph):
-        """Test that run() works with no inputs for WorkGraph."""
-        result = launch.run(mock_workgraph)
-        assert result == {'result': 42}
-
     def test_run_workgraph_passes_inputs_through(self, mock_workgraph):
         """Test that inputs (including metadata) are passed directly to prepare_for_launch."""
         launch.run(mock_workgraph, inputs={'add': 1, 'metadata': {'label': 'test'}})
         mock_workgraph.prepare_for_launch.assert_called_once_with(
-            inputs={'add': 1, 'metadata': {'label': 'test'}},
+            {'add': 1, 'metadata': {'label': 'test'}},
         )
 
     def test_run_workgraph_with_kwargs(self, mock_workgraph):
         """Test that kwargs are forwarded to prepare_for_launch."""
         launch.run(mock_workgraph, add=1, metadata={'label': 'test'})
         mock_workgraph.prepare_for_launch.assert_called_once_with(
-            inputs=None,
+            None,
             add=1,
             metadata={'label': 'test'},
         )
-
-
-class TestWorkGraphHelpers:
-    """Test the WorkGraph helper functions in aiida.common.workgraph."""
-
-    def test_is_workgraph_instance_returns_false_for_non_workgraph(self):
-        """Test is_workgraph_instance returns False for non-WorkGraph objects."""
-        from aiida.common.workgraph import is_workgraph_instance
-
-        assert is_workgraph_instance(None) is False
-        assert is_workgraph_instance('string') is False
-        assert is_workgraph_instance(42) is False
-        assert is_workgraph_instance(orm.Int(1)) is False

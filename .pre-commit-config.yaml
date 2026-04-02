@@ -122,14 +122,10 @@ repos:
         src/aiida/storage/psql_dos/migrations/utils/reflect.py|
         src/aiida/storage/psql_dos/migrations/utils/utils.py|
         src/aiida/storage/psql_dos/migrations/versions/1de112340b16_django_parity_1.py|
-        src/aiida/storage/psql_dos/migrator.py|
         src/aiida/storage/psql_dos/models/.*|
         src/aiida/storage/psql_dos/orm/.*.py|
         src/aiida/storage/psql_dos/orm/querybuilder/joiner.py|
-        src/aiida/storage/sqlite_temp/backend.py|
-        src/aiida/storage/sqlite_zip/backend.py|
         src/aiida/storage/sqlite_zip/migrations/legacy_to_main.py|
-        src/aiida/storage/sqlite_zip/migrator.py|
         src/aiida/storage/sqlite_zip/models.py|
         src/aiida/storage/sqlite_zip/orm.py|
         src/aiida/tools/data/array/kpoints/legacy.py|

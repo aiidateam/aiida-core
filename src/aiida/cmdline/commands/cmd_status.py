@@ -8,6 +8,8 @@
 ###########################################################################
 """`verdi status` command."""
 
+from __future__ import annotations
+
 import enum
 import sys
 
@@ -55,7 +57,7 @@ STATUS_SYMBOLS = {
 @verdi.command('status')
 @options.PRINT_TRACEBACK()
 @click.option('--no-rmq', is_flag=True, help='Do not check RabbitMQ status')
-def verdi_status(print_traceback, no_rmq):
+def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     """Print status of AiiDA services."""
     from aiida import __version__
     from aiida.common.docs import URL_NO_BROKER
@@ -68,7 +70,7 @@ def verdi_status(print_traceback, no_rmq):
     configure_directory = AiiDAConfigDir.get()
 
     print_status(ServiceStatus.UP, 'version', f'AiiDA v{__version__}')
-    print_status(ServiceStatus.UP, 'config', configure_directory)
+    print_status(ServiceStatus.UP, 'config', str(configure_directory))
 
     manager = get_manager()
 
@@ -139,14 +141,14 @@ def verdi_status(print_traceback, no_rmq):
             print_status(ServiceStatus.ERROR, 'broker', message, exception=exc, print_traceback=print_traceback)
             exit_code = ExitCode.CRITICAL
         else:
-            print_status(ServiceStatus.UP, 'broker', broker)
+            print_status(ServiceStatus.UP, 'broker', str(broker))
         finally:
             broker.close()
     else:
         print_status(
             ServiceStatus.WARNING,
             'broker',
-            f'No broker defined for this profile: certain functionality not available. See {URL_NO_BROKER}',
+            f'No broker defined for this profile: certain functionality not available.\nSee {URL_NO_BROKER}',
         )
 
     # Getting the daemon status
@@ -156,7 +158,7 @@ def verdi_status(print_traceback, no_rmq):
         print_status(
             ServiceStatus.WARNING,
             'daemon',
-            'No broker defined for this profile: daemon is not available. See {URL_NO_BROKER}',
+            'No broker defined for this profile: daemon is not available.',
         )
     except DaemonNotRunningException as exception:
         print_status(ServiceStatus.WARNING, 'daemon', str(exception))
@@ -174,7 +176,13 @@ def verdi_status(print_traceback, no_rmq):
         sys.exit(exit_code)
 
 
-def print_status(status, service, msg='', exception=None, print_traceback=False):
+def print_status(
+    status: ServiceStatus,
+    service: str,
+    msg: str = '',
+    exception: Exception | None = None,
+    print_traceback: bool = False,
+) -> None:
     """Print status message.
 
     Includes colored indicator.
@@ -185,7 +193,11 @@ def print_status(status, service, msg='', exception=None, print_traceback=False)
     """
     symbol = STATUS_SYMBOLS[status]
     echo.echo(f" {symbol['string']} ", fg=symbol['color'], nl=False)
-    echo.echo(f"{service + ':':12s} {msg}")
+    echo.echo(f"{service + ':':12s} ", nl=False)
+    lines = msg.split('\n')
+    echo.echo(lines[0])
+    for line in lines[1:]:
+        echo.echo(f"{'':15s} {line}")
 
     if exception is not None:
         echo.echo_error(f'{type(exception).__name__}: {exception}')

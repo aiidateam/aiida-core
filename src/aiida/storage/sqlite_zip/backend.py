@@ -20,7 +20,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import BinaryIO, Optional, Tuple, Union, cast
+from typing import Any, BinaryIO, NoReturn, Optional, Tuple, Union, cast
 from zipfile import ZipFile, is_zipfile
 
 from pydantic import BaseModel, Field, field_validator
@@ -37,7 +37,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
-from aiida.repository.backend.abstract import AbstractRepositoryBackend
+from aiida.repository.backend.abstract import AbstractRepositoryBackend, InfoDictType
 
 from . import orm
 from .utils import (
@@ -55,8 +55,11 @@ __all__ = ('SqliteZipBackend',)
 LOGGER = AIIDA_LOGGER.getChild(__file__)
 SUPPORTED_VERSION = '3.35.0'  # minimum supported version of sqlite
 
+# Hardcoded zip compression level
+COMPRESSION_LEVEL = 6
 
-def validate_sqlite_version():
+
+def validate_sqlite_version() -> None:
     import sqlite3
 
     from packaging.version import parse
@@ -160,7 +163,7 @@ class SqliteZipBackend(StorageBackend):
                     f'Migrating existing {cls.__name__} from version {current_version} to version {target_version}'
                 )
                 migrate(filepath_archive, filepath_migrated, target_version)
-                shutil.move(filepath_migrated, filepath_archive)  # type: ignore[arg-type]
+                shutil.move(filepath_migrated, filepath_archive)
                 return False
 
         # Here the original archive either doesn't exist or ``reset == True`` so we simply create an empty base archive
@@ -180,7 +183,7 @@ class SqliteZipBackend(StorageBackend):
                 'export_version': cls.version_head(),
                 'aiida_version': __version__,
                 'key_format': 'sha256',
-                'compression': 6,
+                'compression': COMPRESSION_LEVEL,
                 'ctime': datetime.now().isoformat(),
             }
 
@@ -188,17 +191,17 @@ class SqliteZipBackend(StorageBackend):
             SqliteBase.metadata.create_all(create_sqla_engine(filepath_database))
 
             with ZipPath(
-                filepath_zip, mode='w', compresslevel=metadata['compression'], info_order=(META_FILENAME, DB_FILENAME)
+                filepath_zip, mode='w', compresslevel=COMPRESSION_LEVEL, info_order=(META_FILENAME, DB_FILENAME)
             ) as zip_handle:
                 (zip_handle / META_FILENAME).write_text(json.dumps(metadata))
                 (zip_handle / DB_FILENAME).putfile(filepath_database)
 
-            shutil.move(filepath_zip, filepath_archive)  # type: ignore[arg-type]
+            shutil.move(filepath_zip, filepath_archive)
 
         return True
 
     @classmethod
-    def migrate(cls, profile: Profile):
+    def migrate(cls, profile: Profile) -> NoReturn:
         raise NotImplementedError('use the :func:`aiida.storage.sqlite_zip.migrator.migrate` function directly.')
 
     def __init__(self, profile: Profile):
@@ -222,7 +225,7 @@ class SqliteZipBackend(StorageBackend):
     def is_closed(self) -> bool:
         return self._closed
 
-    def close(self):
+    def close(self) -> None:
         """Close the backend"""
         if self._session:
             self._session.close()
@@ -277,38 +280,38 @@ class SqliteZipBackend(StorageBackend):
         return orm.get_backend_entity(model, self)
 
     @cached_property
-    def authinfos(self):
+    def authinfos(self) -> orm.SqliteAuthInfoCollection:
         return orm.SqliteAuthInfoCollection(self)
 
     @cached_property
-    def comments(self):
+    def comments(self) -> orm.SqliteCommentCollection:
         return orm.SqliteCommentCollection(self)
 
     @cached_property
-    def computers(self):
+    def computers(self) -> orm.SqliteComputerCollection:
         return orm.SqliteComputerCollection(self)
 
     @cached_property
-    def groups(self):
+    def groups(self) -> orm.SqliteGroupCollection:
         return orm.SqliteGroupCollection(self)
 
     @cached_property
-    def logs(self):
+    def logs(self) -> orm.SqliteLogCollection:
         return orm.SqliteLogCollection(self)
 
     @cached_property
-    def nodes(self):
+    def nodes(self) -> orm.SqliteNodeCollection:
         return orm.SqliteNodeCollection(self)
 
     @cached_property
-    def users(self):
+    def users(self) -> orm.SqliteUserCollection:
         return orm.SqliteUserCollection(self)
 
     def _clear(self) -> None:
         raise ReadOnlyError()
 
     @contextmanager
-    def transaction(self):
+    def transaction(self) -> Iterator[Session]:
         session = self.get_session()
         if session.in_transaction():
             with session.begin_nested() as savepoint:
@@ -341,16 +344,18 @@ class SqliteZipBackend(StorageBackend):
     def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
         raise ReadOnlyError()
 
-    def get_global_variable(self, key: str):
+    def get_global_variable(self, key: str) -> NoReturn:
         raise NotImplementedError
 
-    def set_global_variable(self, key: str, value, description: Optional[str] = None, overwrite=True) -> None:
+    def set_global_variable(
+        self, key: str, value: Any, description: Optional[str] = None, overwrite: bool = True
+    ) -> NoReturn:
         raise ReadOnlyError()
 
-    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> NoReturn:
         raise NotImplementedError
 
-    def get_info(self, detailed: bool = False) -> dict:
+    def get_info(self, detailed: bool = False) -> dict[str, Any]:
         # since extracting the database file is expensive, we only do it if detailed is True
         results = {'metadata': extract_metadata(self._path)}
 
@@ -434,7 +439,7 @@ class _RoBackendRepository(AbstractRepositoryBackend):
     def key_format(self) -> Optional[str]:
         return 'sha256'
 
-    def initialise(self, **kwargs) -> None:
+    def initialise(self, **kwargs: Any) -> None:
         pass
 
     @property
@@ -450,7 +455,7 @@ class _RoBackendRepository(AbstractRepositoryBackend):
     def has_objects(self, keys: list[str]) -> list[bool]:
         return [self.has_object(key) for key in keys]
 
-    def iter_object_streams(self, keys: list[str]) -> Iterator[Tuple[str, BinaryIO]]:
+    def iter_object_streams(self, keys: Iterable[str]) -> Iterator[Tuple[str, BinaryIO]]:
         for key in keys:
             with self.open(key) as handle:
                 yield key, handle
@@ -461,10 +466,10 @@ class _RoBackendRepository(AbstractRepositoryBackend):
     def get_object_hash(self, key: str) -> str:
         return key
 
-    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
+    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs: Any) -> None:
         pass
 
-    def get_info(self, detailed: bool = False, **kwargs) -> dict:
+    def get_info(self, detailed: bool = False, **kwargs: Any) -> InfoDictType:
         return {'objects': {'count': len(list(self.list_objects()))}}
 
 
@@ -481,8 +486,8 @@ class ZipfileBackendRepository(_RoBackendRepository):
         self.__zipfile: None | ZipFile = None
 
     def close(self) -> None:
-        if self._zipfile:
-            self._zipfile.close()
+        if self.__zipfile:
+            self.__zipfile.close()
         super().close()
 
     @property
@@ -543,4 +548,4 @@ class FolderBackendRepository(_RoBackendRepository):
         if not self._path.joinpath(key).is_file():
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
         with self._path.joinpath(key).open('rb', encoding='utf-8') as handle:
-            yield handle
+            yield cast(BinaryIO, handle)

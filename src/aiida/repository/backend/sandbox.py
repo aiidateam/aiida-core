@@ -11,7 +11,7 @@ import uuid
 
 from aiida.common.folders import SandboxFolder
 
-from .abstract import AbstractRepositoryBackend
+from .abstract import AbstractRepositoryBackend, InfoDictType
 
 __all__ = ('SandboxRepositoryBackend',)
 
@@ -125,5 +125,5 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
     def list_objects(self) -> t.Iterable[str]:
         return self.sandbox.get_content_list()
 
-    def get_info(self, detailed: bool = False) -> t.NoReturn:
+    def get_info(self, detailed: bool = False, **kwargs: t.Any) -> InfoDictType:
         raise NotImplementedError

@@ -362,11 +362,15 @@ disallow_subclassing_any = true
 disallow_untyped_calls = true
 disallow_untyped_defs = true
 module = [
+  'aiida.brokers.*',
   'aiida.cmdline.groups.*',
   'aiida.cmdline.params.*',
+  'aiida.cmdline.commands.cmd_status',
   'aiida.common.*',
   'aiida.repository.*',
   'aiida.schedulers.*',
+  'aiida.storage.psql_dos.migrator',
+  'aiida.storage.psql_dos.utils',
   'aiida.tools.graph.*',
   'aiida.tools.query.*'
 ]

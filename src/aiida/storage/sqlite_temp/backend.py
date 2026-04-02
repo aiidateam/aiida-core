@@ -338,5 +338,5 @@ class SandboxShaRepositoryBackend(SandboxRepositoryBackend):
     def get_info(self, detailed: bool = False, **kwargs: Any) -> InfoDictType:
         return {'objects': {'count': len(list(self.list_objects()))}}
 
-    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> None:
+    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs: Any) -> None:
         pass

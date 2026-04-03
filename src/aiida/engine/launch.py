@@ -178,10 +178,9 @@ def submit(
     runner.controller.continue_process(process_inited.pid, nowait=False, no_reply=True)
     node = process_inited.node
 
-    if workgraph is not None:
-        workgraph.update_after_launch(node)
-
     if not wait:
+        if workgraph is not None:
+            workgraph.update_after_launch(node)
         return node
 
     while not node.is_terminated:
@@ -190,6 +189,9 @@ def submit(
             f'Waiting for {wait_interval} seconds.'
         )
         time.sleep(wait_interval)
+
+    if workgraph is not None:
+        workgraph.update_after_launch(node)
 
     return node
 

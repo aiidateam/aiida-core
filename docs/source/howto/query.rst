@@ -506,3 +506,5 @@ If you type ``node.res.`` followed by the tab key twice, a list of the available
     The :meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.res` property is really just a shortcut to quickly and easily access an attribute of the default output node of a calculation job.
     For example, if the default output node link label is ``output_parameters``, then ``node.res.some_key`` is exactly equivalent to ``node.outputs.output_parameters.dict.some_key``.
     That is to say, when using ``res``, one is accessing attributes of one of the output nodes, and not of the calculation job node itself.
+
+For an end-to-end example of querying an AiiDA database published on the Materials Cloud Archive, see also `Exploring AiiDA Databases <https://aiida.net/news/posts/2024-10-18-exploring-aiida-databases.html>`__.

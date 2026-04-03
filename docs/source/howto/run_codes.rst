@@ -982,3 +982,8 @@ This approach, therefore, is mostly useful when submitting processes to the daem
 
 .. |Computer| replace:: :py:class:`~aiida.orm.Computer`
 .. |CalcJob| replace:: :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob`
+
+For a guide on running external codes without writing a dedicated plugin, and on monitoring calculations while they are running, see also these blog posts:
+
+* `aiida-shell: Make running programs through AiiDA a piece of cake <https://aiida.net/news/posts/2024-11-01-aiida-shell.html>`__
+* `Live monitoring of running simulations with AiiDA <https://aiida.net/news/posts/2026-01-23-monitors.html>`__

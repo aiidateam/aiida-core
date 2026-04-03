@@ -24,3 +24,7 @@ How-To Guides
    cookbook
    tricks_real_world_runs
    faq
+
+
+We regularly publish `AiiDA blog posts <https://aiida.net/news/>`__ with practical examples, tutorials, and deeper dives.
+Related blog posts are linked at the bottom of each how-to guide.

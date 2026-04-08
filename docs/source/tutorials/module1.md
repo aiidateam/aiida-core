@@ -228,7 +228,7 @@ You can export the full calculation -- inputs, outputs, logs -- to a directory o
 
 ```{code-cell} ipython3
 # Export the full calculation (inputs, outputs, logs) to a directory.
-%verdi process dump {node.pk} -o /tmp/tutorial_dump -O
+%verdi process dump {node.pk} --path /tmp/tutorial_dump -o
 ```
 
 ```{code-cell} ipython3

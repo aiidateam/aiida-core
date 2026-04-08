@@ -39,6 +39,10 @@ See [`AGENTS.md`](AGENTS.md) for comprehensive development documentation, includ
 - Check existing issues before creating a new one
 - Include a minimal reproducible example when reporting bugs
 
+## AI policy
+
+See [`AI_POLICY.md`](AI_POLICY.md) for our policy on the use of AI-generated contributions.
+
 ## Code of conduct
 
 Please be respectful and constructive in all interactions.

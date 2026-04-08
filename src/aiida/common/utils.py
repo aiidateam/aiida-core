@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+__all__ = ('url2pathname',)
+
 import filecmp
 import inspect
 import io
@@ -659,3 +661,25 @@ DEFAULT_FILTER_SIZE: int = 999
 # balance between memory efficiency and database round-trip overhead. Setting it too low increases
 # the number of database queries needed, while setting it too high increases memory consumption.
 DEFAULT_BATCH_SIZE: int = 1000
+
+# To obtain pre py3.14 behavior of url2pathname we copied the code to here
+# https://github.com/python/cpython/blob/1a2b0fb3e5eac4e767e6bbb0b2c3cedaedafc07b/Lib/urllib/request.py#L1664-L1679
+# Only minor changes were applied to conform with mypy
+if os.name == 'nt':
+    from nturl2path import url2pathname
+else:
+    from urllib.parse import unquote
+
+    def url2pathname(url: str) -> str:
+        """OS-specific conversion from a relative URL of the 'file' scheme
+        to a file system path; not recommended for general use."""
+        if url[:3] == '///':
+            # URL has an empty authority section, so the path begins on the
+            # third character.
+            url = url[2:]
+        elif url[:12] == '//localhost/':
+            # Skip past 'localhost' authority.
+            url = url[11:]
+        encoding = sys.getfilesystemencoding()
+        errors = sys.getfilesystemencodeerrors()
+        return unquote(url, encoding=encoding, errors=errors)

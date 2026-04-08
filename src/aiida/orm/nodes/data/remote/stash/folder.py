@@ -30,17 +30,24 @@ class RemoteStashFolderData(RemoteStashData):
     class Model(RemoteStashData.Model):
         target_basepath: str = MetadataField(description='The the target basepath')
         source_list: List[str] = MetadataField(description='The list of source files that were stashed')
+        fail_on_missing: bool = MetadataField(
+            description='Whether stashing should fail if any files are missing', default=False
+        )
 
-    def __init__(self, stash_mode: StashMode, target_basepath: str, source_list: List, **kwargs):
+    def __init__(
+        self, stash_mode: StashMode, target_basepath: str, source_list: List, fail_on_missing: bool = False, **kwargs
+    ):
         """Construct a new instance
 
         :param stash_mode: the stashing mode with which the data was stashed on the remote.
         :param target_basepath: the target basepath.
         :param source_list: the list of source files.
+        :param fail_on_missing: whether stashing should fail if any files are missing.
         """
         super().__init__(stash_mode, **kwargs)
         self.target_basepath = target_basepath
         self.source_list = source_list
+        self.fail_on_missing = fail_on_missing
 
         if stash_mode != StashMode.COPY:
             raise ValueError('`RemoteStashFolderData` can only be used with `stash_mode == StashMode.COPY`.')
@@ -78,3 +85,21 @@ class RemoteStashFolderData(RemoteStashData):
         """
         type_check(value, (list, tuple))
         self.base.attributes.set('source_list', value)
+
+    @property
+    def fail_on_missing(self) -> bool:
+        """Return whether stashing should fail if any files are missing.
+
+        :return: the fail_on_missing flag.
+        """
+        # The default is set for backward compatibility
+        return self.base.attributes.get('fail_on_missing', False)
+
+    @fail_on_missing.setter
+    def fail_on_missing(self, value: bool):
+        """Set whether stashing should fail if any files are missing.
+
+        :param value: the fail_on_missing flag.
+        """
+        type_check(value, bool)
+        self.base.attributes.set('fail_on_missing', value)

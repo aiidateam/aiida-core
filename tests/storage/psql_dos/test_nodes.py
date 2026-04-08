@@ -113,3 +113,26 @@ class TestNodeBasicSQLA:
         # Check again that the node is in the db
         res = session.query(DbNode.uuid).filter(DbNode.uuid == node_uuid).all()
         assert len(res) == 1, f'There should be a node in the session/DB with the UUID {node_uuid}'
+
+
+@pytest.mark.requires_psql
+@pytest.mark.nightly
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_bulk_delete_nodes():
+    """Regression test for the PostgreSQL 65535 parameter limit in delete_nodes_and_connections.
+
+    Without the fix, DELETE statements using plain `.in_(pks)` generate one SQL parameter per PK,
+    hitting PostgreSQL's wire-protocol limit of 65535 parameters for any num_nodes > 65535.
+    """
+    from aiida.manage import get_manager
+    from aiida.tools.graph.deletions import delete_nodes
+    from tests.utils.nodes import create_int_nodes
+
+    num_nodes = 65_536  # Minimum number to exceed PostgreSQL's 65535 parameter limit
+
+    node_pks = create_int_nodes(num_nodes)
+    assert len(node_pks) == num_nodes
+
+    storage_backend = get_manager().get_profile_storage()
+    delete_nodes(pks=node_pks, dry_run=False, backend=storage_backend)
+    assert orm.QueryBuilder().append(orm.Int).count() == 0

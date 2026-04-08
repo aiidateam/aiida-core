@@ -38,6 +38,7 @@ repos:
   hooks:
   - id: pretty-format-toml
     args: [--autofix]
+    exclude: uv.lock
   - id: pretty-format-yaml
     args: [--autofix]
     exclude: >-
@@ -52,13 +53,19 @@ repos:
     # Check and update the uv lockfile
   - id: uv-lock
 
+- repo: https://github.com/kynan/nbstripout
+  rev: 0.8.1
+  hooks:
+  - id: nbstripout
+    files: \.ipynb$
+
 - repo: local
 
   hooks:
 
   - id: imports
     name: imports
-    entry: python utils/make_all.py
+    entry: python utils/autogenerate_all_imports.py
     language: python
     types: [python]
     require_serial: true
@@ -87,15 +94,9 @@ repos:
         src/aiida/calculations/templatereplacer.py|
         src/aiida/calculations/transfer.py|
         src/aiida/engine/daemon/execmanager.py|
-        src/aiida/engine/processes/calcjobs/manager.py|
-        src/aiida/engine/processes/calcjobs/monitors.py|
-        src/aiida/engine/processes/calcjobs/tasks.py|
-        src/aiida/engine/processes/control.py|
-        src/aiida/engine/processes/ports.py|
         src/aiida/manage/configuration/__init__.py|
         src/aiida/manage/configuration/config.py|
         src/aiida/manage/external/rmq/launcher.py|
-        src/aiida/orm/nodes/data/array/trajectory.py|
         src/aiida/orm/nodes/data/cif.py|
         src/aiida/orm/nodes/data/remote/base.py|
         src/aiida/orm/nodes/data/structure.py|
@@ -114,11 +115,6 @@ repos:
         src/aiida/restapi/translator/group.py|
         src/aiida/restapi/translator/nodes/.*|
         src/aiida/restapi/translator/user.py|
-        src/aiida/schedulers/plugins/direct.py|
-        src/aiida/schedulers/plugins/lsf.py|
-        src/aiida/schedulers/plugins/pbsbaseclasses.py|
-        src/aiida/schedulers/plugins/sge.py|
-        src/aiida/schedulers/plugins/slurm.py|
         src/aiida/storage/psql_dos/migrations/utils/integrity.py|
         src/aiida/storage/psql_dos/migrations/utils/legacy_workflows.py|
         src/aiida/storage/psql_dos/migrations/utils/migrate_repository.py|
@@ -126,14 +122,10 @@ repos:
         src/aiida/storage/psql_dos/migrations/utils/reflect.py|
         src/aiida/storage/psql_dos/migrations/utils/utils.py|
         src/aiida/storage/psql_dos/migrations/versions/1de112340b16_django_parity_1.py|
-        src/aiida/storage/psql_dos/migrator.py|
         src/aiida/storage/psql_dos/models/.*|
         src/aiida/storage/psql_dos/orm/.*.py|
         src/aiida/storage/psql_dos/orm/querybuilder/joiner.py|
-        src/aiida/storage/sqlite_temp/backend.py|
-        src/aiida/storage/sqlite_zip/backend.py|
         src/aiida/storage/sqlite_zip/migrations/legacy_to_main.py|
-        src/aiida/storage/sqlite_zip/migrator.py|
         src/aiida/storage/sqlite_zip/models.py|
         src/aiida/storage/sqlite_zip/orm.py|
         src/aiida/tools/data/array/kpoints/legacy.py|

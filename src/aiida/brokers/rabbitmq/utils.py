@@ -1,11 +1,21 @@
 """Utilites for RabbitMQ."""
 
+from __future__ import annotations
+
+from typing import Any
+
 from . import defaults
 
-__all__ = ('get_launch_queue_name', 'get_message_exchange_name', 'get_rmq_url', 'get_task_exchange_name')
 
-
-def get_rmq_url(protocol=None, username=None, password=None, host=None, port=None, virtual_host=None, **kwargs):
+def get_rmq_url(
+    protocol: str | None = None,
+    username: str | None = None,
+    password: str | None = None,
+    host: str | None = None,
+    port: str | None = None,
+    virtual_host: str | None = None,
+    **kwargs: Any,
+) -> str:
     """Return the URL to connect to RabbitMQ.
 
     .. note::
@@ -45,10 +55,10 @@ def get_rmq_url(protocol=None, username=None, password=None, host=None, port=Non
     if path and not path.startswith('/'):
         path = f'/{path}'
 
-    return urlunparse((scheme, netloc, path, parameters, query, fragment))
+    return urlunparse((scheme, netloc, path, parameters, query, fragment))  # type: ignore[no-any-return]
 
 
-def get_launch_queue_name(prefix=None):
+def get_launch_queue_name(prefix: str | None = None) -> str:
     """Return the launch queue name with an optional prefix.
 
     :returns: launch queue name
@@ -59,7 +69,7 @@ def get_launch_queue_name(prefix=None):
     return defaults.LAUNCH_QUEUE
 
 
-def get_message_exchange_name(prefix):
+def get_message_exchange_name(prefix: str) -> str:
     """Return the message exchange name for a given prefix.
 
     :returns: message exchange name
@@ -67,7 +77,7 @@ def get_message_exchange_name(prefix):
     return f'{prefix}.{defaults.MESSAGE_EXCHANGE}'
 
 
-def get_task_exchange_name(prefix):
+def get_task_exchange_name(prefix: str) -> str:
     """Return the task exchange name for a given prefix.
 
     :returns: task exchange name

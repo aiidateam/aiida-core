@@ -22,6 +22,7 @@ from .extendeddicts import *
 from .links import *
 from .log import *
 from .progress_reporter import *
+from .utils import *
 
 __all__ = (
     'AIIDA_LOGGER',
@@ -73,6 +74,7 @@ __all__ = (
     'ProgressReporterAbstract',
     'RemoteOperationError',
     'StashMode',
+    'StorageBackupError',
     'StorageMigrationError',
     'StoringNotAllowed',
     'TestsNotAllowedError',
@@ -86,6 +88,7 @@ __all__ = (
     'override_log_level',
     'set_progress_bar_tqdm',
     'set_progress_reporter',
+    'url2pathname',
     'validate_link_label',
 )
 

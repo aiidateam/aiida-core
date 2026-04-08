@@ -55,6 +55,12 @@ class TestDbBackend(Enum):
     PSQL = 'psql'
 
 
+@pytest.fixture(autouse=True)
+def _reset_runner(request):
+    yield
+    get_manager().reset_runner()
+
+
 def pytest_collection_modifyitems(items, config):
     """Automatically generate markers for certain tests.
 
@@ -492,8 +498,12 @@ def config_with_profile(config_with_profile_factory):
 @pytest.fixture
 def manager():
     """Get the ``Manager`` instance of the currently loaded profile."""
+    manager = get_manager()
 
-    return get_manager()
+    yield manager
+
+    # close connections
+    manager.reset_profile()
 
 
 @pytest.fixture

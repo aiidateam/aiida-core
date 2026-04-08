@@ -8,8 +8,15 @@
 ###########################################################################
 """Utility functions specific to the SqlAlchemy backend."""
 
+from __future__ import annotations
+
 import json
-from typing import TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
+
+if TYPE_CHECKING:
+    from sqlalchemy import Engine
+    from sqlalchemy.orm import scoped_session
+    from sqlalchemy.orm.session import Session
 
 
 class PsqlConfig(TypedDict, total=False):
@@ -21,7 +28,7 @@ class PsqlConfig(TypedDict, total=False):
     database_password: str
     database_name: str
 
-    engine_kwargs: dict
+    engine_kwargs: dict[str, Any]
     """keyword argument that will be passed on to the SQLAlchemy engine."""
 
 
@@ -65,7 +72,7 @@ $$;
 """.strip()
 
 
-def create_sqlalchemy_engine(config: PsqlConfig):
+def create_sqlalchemy_engine(config: PsqlConfig) -> Engine:
     """Create SQLAlchemy engine (to be used for QueryBuilder queries)
 
     :param kwargs: keyword arguments that will be passed on to `sqlalchemy.create_engine`.
@@ -98,14 +105,14 @@ def create_sqlalchemy_engine(config: PsqlConfig):
     )
 
 
-def create_scoped_session_factory(engine, **kwargs):
+def create_scoped_session_factory(engine: Engine, **kwargs: Any) -> scoped_session[Session]:
     """Create scoped SQLAlchemy session factory"""
     from sqlalchemy.orm import scoped_session, sessionmaker
 
     return scoped_session(sessionmaker(bind=engine, **kwargs))
 
 
-def flag_modified(instance, key):
+def flag_modified(instance: object, key: str) -> None:
     """Wrapper around `sqlalchemy.orm.attributes.flag_modified` to correctly dereference utils.ModelWrapper
 
     Since SqlAlchemy 1.2.12 (and maybe earlier but not in 1.0.19) the flag_modified function will check that the
@@ -123,7 +130,7 @@ def flag_modified(instance, key):
     flag_modified_sqla(instance, key)
 
 
-def install_tc(session):
+def install_tc(session: Session) -> None:
     """Install the transitive closure table with SqlAlchemy."""
     from sqlalchemy import text
 
@@ -149,13 +156,13 @@ def install_tc(session):
 
 
 def get_pg_tc(
-    links_table_name,
-    links_table_input_field,
-    links_table_output_field,
-    closure_table_name,
-    closure_table_parent_field,
-    closure_table_child_field,
-):
+    links_table_name: str,
+    links_table_input_field: str,
+    links_table_output_field: str,
+    closure_table_name: str,
+    closure_table_parent_field: str,
+    closure_table_child_field: str,
+) -> str:
     """Return the transitive closure table template"""
     from string import Template
 

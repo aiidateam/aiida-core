@@ -9,8 +9,6 @@ from aiida.common.exceptions import AiidaException
 if t.TYPE_CHECKING:
     import requests
 
-__all__ = ('ManagementApiConnectionError', 'RabbitmqManagementClient')
-
 
 class ManagementApiConnectionError(AiidaException):
     """Raised when no connection can be made to the management HTTP API."""
@@ -31,7 +29,7 @@ class RabbitmqManagementClient:
         :param hostname: The hostname of the RabbitMQ server.
         :param virtual_host: The virtual host.
         """
-        import requests
+        import requests.auth
 
         self._username = username
         self._password = password

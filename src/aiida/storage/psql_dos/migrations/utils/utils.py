@@ -8,6 +8,7 @@
 ###########################################################################
 """Various utils that should be used during migrations and migrations tests because the AiiDA ORM cannot be used."""
 
+import contextlib
 import datetime
 import functools
 import io
@@ -15,14 +16,14 @@ import json
 import os
 import pathlib
 import re
-from typing import Dict, Iterable, List, Optional, Union
+from typing import Dict, Iterable, Iterator, List, Optional, Union
 
 import numpy
 from disk_objectstore import Container
 from disk_objectstore.utils import LazyOpener
 
 from aiida.common import exceptions
-from aiida.repository.backend import AbstractRepositoryBackend
+from aiida.repository.backend.abstract import AbstractRepositoryBackend, InfoDictType
 from aiida.repository.common import File, FileType
 from aiida.repository.repository import Repository
 from aiida.storage.psql_dos.backend import get_filepath_container
@@ -125,8 +126,12 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
         raise NotImplementedError
 
-    def get_info(self, detailed: bool = False, **kwargs) -> dict:
+    def get_info(self, detailed: bool = False, **kwargs) -> InfoDictType:
         raise NotImplementedError
+
+    @contextlib.contextmanager
+    def open(self, key: str) -> Iterator[io.BufferedIOBase]:
+        raise NotImplementedError()
 
 
 def migrate_legacy_repository(profile, shard=None):

@@ -8,7 +8,10 @@
 ###########################################################################
 """Implementation of StashCalculation."""
 
+from __future__ import annotations
+
 import json
+from typing import Any, Optional
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
@@ -16,6 +19,32 @@ from aiida.common.datastructures import CalcInfo, CodeInfo, StashMode
 from aiida.engine import CalcJob
 
 EXEC_LOGGER = AIIDA_LOGGER.getChild('StashCalculation')
+
+
+def validate_source_node(source_node: Any, _: Any) -> Optional[str]:
+    """Validate the ``source_node`` input.
+
+    Checks that the creator of the source_node (i.e., the CalcJob that produced this RemoteData)
+    is sealed. If it's not sealed, the calculation is still running and the stash operation
+    might skip files that are not yet written to the remote folder.
+
+    :param source_node: the source_node input value
+    :return: error message if validation fails, None otherwise
+    """
+    if not isinstance(source_node, orm.RemoteData):
+        return None  # Let the valid_type check handle this
+
+    creator = source_node.creator
+    if creator is not None and not creator.is_sealed:
+        return (
+            'The source_node is an expected output of an active calculation. '
+            'Stashing files from running calculations is not possible, '
+            'as it may skip files that are not yet written to the remote folder. '
+            'Please use either the direct stashing method (via metadata.options.stash), '
+            'or package the StashCalculation in a workflow to ensure proper sequencing.'
+        )
+
+    return None
 
 
 class StashCalculation(CalcJob):
@@ -80,7 +109,8 @@ class StashCalculation(CalcJob):
             'source_node',
             valid_type=orm.RemoteData,
             required=True,
-            help='',
+            validator=validate_source_node,
+            help='The RemoteData node containing the files to stash.',
         )
 
         spec.inputs['metadata']['computer'].required = True

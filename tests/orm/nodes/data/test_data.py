@@ -50,7 +50,9 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
             times = stepids * 0.01
             cells = numpy.array([[[3.0, 0.0, 0.0], [0.0, 3.0, 0.0], [0.0, 0.0, 3.0]]])
             positions = numpy.array([[[0.0, 0.0, 0.0]]])
-            instance.set_trajectory(stepids=stepids, cells=cells, symbols=['H'], positions=positions, times=times)
+            instance.set_trajectory(
+                stepids=stepids, cells=cells, symbols=['H'], positions=positions, times=times, pbc=[True, True, False]
+            )
             return instance
 
         if data_class is orm.UpfData:
@@ -157,7 +159,7 @@ def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
     params=[
         entry_point
         for entry_point in plugins.get_entry_points('aiida.data')
-        if entry_point.name not in ('core.code', 'core.code.abstract')
+        if entry_point.name.startswith('core.') and entry_point.name not in ('core.code', 'core.code.abstract')
     ],
 )
 def data_plugin(request):
@@ -176,19 +178,17 @@ def test_constructor():
     assert node.source == source
 
 
-def test_data_exporters(data_plugin, generate_class_instance):
-    """Verify that the return value of the export methods of all `Data` sub classes have the correct type.
-
-    It should be a tuple where the first should be a byte string and the second a dictionary.
-    """
+def test_data_exporters(data_plugin, generate_class_instance, tmp_path):
+    """Verify that the return value of the export methods of all `Data` sub classes have the correct type."""
     export_formats = data_plugin.get_export_formats()
 
     if not export_formats:
-        return
+        pytest.skip('no formats available')
 
     instance = generate_class_instance(data_plugin)
 
     for fileformat in export_formats:
-        content, dictionary = instance._exportcontent(fileformat)
+        temp_file = tmp_path / f'test.{fileformat}'
+        content, dictionary = instance._exportcontent(fileformat, main_file_name=str(temp_file))
         assert isinstance(content, bytes)
         assert isinstance(dictionary, dict)

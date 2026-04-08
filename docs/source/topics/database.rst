@@ -482,3 +482,8 @@ Limits and offset can be set directly like this::
     }
 
 That ``query_dict`` would tell the QueryBuilder to return 10 rows after the first 20 have been skipped.
+
+For an end-to-end querying example using a Materials Cloud Archive dataset and a deep dive into AiiDA's ORM layer design, see also these blog posts:
+
+* `Exploring AiiDA Databases <https://aiida.net/news/posts/2024-10-18-exploring-aiida-databases.html>`__
+* `Exploring AiiDA's ORM architecture <https://aiida.net/news/posts/2025-09-05-orm.html>`__

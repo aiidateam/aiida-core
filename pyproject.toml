@@ -31,19 +31,19 @@ classifiers = [
 dependencies = [
   'alembic~=1.8',
   'archive-path~=0.4.2',
-  "asyncssh~=2.19.0",
+  "asyncssh~=2.21.0",
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
   'click>=8.1.0,<8.3',
-  'disk-objectstore~=1.4.0',
+  'disk-objectstore~=1.5.0',
   'docstring-parser',
   'get-annotations~=0.1;python_version<"3.10"',
   'graphviz~=0.19',
-  'plumpy~=0.25.0',
+  'plumpy~=0.26.0',
   'ipython>=7.6',
   'jedi<0.19',
   'jinja2~=3.0',
-  'kiwipy[rmq]~=0.8.4',
+  'kiwipy[rmq]~=0.9.0',
   'importlib-metadata~=6.0',
   'numpy>=1.21,<3',
   'paramiko~=3.0',
@@ -244,7 +244,7 @@ notebook = [
 # https://github.com/python/typeshed?tab=readme-ov-file#package-versioning-for-third-party-stubs
 pre-commit = [
   'aiida-core[tests]',
-  'mypy~=1.18.0',
+  'mypy~=1.19.0',
   'packaging~=23.0',
   'pre-commit~=3.5',
   'sqlalchemy[mypy]~=2.0',
@@ -274,6 +274,9 @@ ssh_kerberos = [
 tests = [
   'aiida-core[atomic_tools,rest]',
   'aiida-export-migration-tests==0.9.0',
+  'ipykernel~=6.9',
+  'nbclient~=0.10',
+  'nbformat~=5.10',
   'pg8000~=1.13',
   'pgtest~=1.3,>=1.3.1',
   'pytest~=7.0',
@@ -283,6 +286,7 @@ tests = [
   'pytest-rerunfailures~=12.0',
   'pytest-benchmark~=4.0',
   'pytest-regressions~=2.2',
+  'pytest-instafail~=0.5',
   'pytest-xdist~=3.6',
   'pympler~=1.0',
   'sphinx~=7.2.0',
@@ -308,6 +312,7 @@ omit = [
   "src/aiida/tools/_dumping/**/*"
 ]
 patch = ['subprocess']
+relative_files = true
 
 [tool.flit.module]
 name = 'aiida'
@@ -357,10 +362,15 @@ disallow_subclassing_any = true
 disallow_untyped_calls = true
 disallow_untyped_defs = true
 module = [
+  'aiida.brokers.*',
   'aiida.cmdline.groups.*',
   'aiida.cmdline.params.*',
+  'aiida.cmdline.commands.cmd_status',
   'aiida.common.*',
   'aiida.repository.*',
+  'aiida.schedulers.*',
+  'aiida.storage.psql_dos.migrator',
+  'aiida.storage.psql_dos.utils',
   'aiida.tools.graph.*',
   'aiida.tools.query.*'
 ]
@@ -388,7 +398,7 @@ module = [
 ]
 
 [tool.pytest.ini_options]
-addopts = '--benchmark-skip --durations=5 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append '
+addopts = '--benchmark-skip --durations=5 --durations-min=1 --strict-config --strict-markers -ra --cov-report xml --cov-append --tb=short --instafail'
 filterwarnings = [
   'ignore:.*and will be removed in NumPy 2.0.*:DeprecationWarning:ase:',
   'ignore:datetime.datetime.utcfromtimestamp:DeprecationWarning:pytz|dateutil|tqdm|aio_pika:',
@@ -411,7 +421,8 @@ filterwarnings = [
   'ignore:The `Code` class is deprecated.*:aiida.common.warnings.AiidaDeprecationWarning',
   # https://github.com/aiidateam/plumpy/issues/283
   'ignore:There is no current event loop:DeprecationWarning:plumpy',
-  'ignore:There is no current event loop:DeprecationWarning:nest_asyncio',
+  "ignore:'asyncio.[sg]et_event_loop_policy' is deprecated:DeprecationWarning:pytest_asyncio",
+  "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning:pytest_asyncio|kiwipy",
   # spglib deprecation
   'ignore:dict interface is deprecated:DeprecationWarning',
   # https://github.com/aiidateam/archive-path/issues/21
@@ -422,6 +433,7 @@ filterwarnings = [
   'default::ResourceWarning',
   'ignore:unclosed database:ResourceWarning',
   'ignore:unclosed event loop:ResourceWarning',
+  'ignore:<psycopg.* object at .* was deleted while still open:ResourceWarning:psycopg',
   'ignore:connection .* was deleted while still open:ResourceWarning:psycopg',
   'ignore:the server-side cursor .* was deleted while still open:ResourceWarning:psycopg'
 ]

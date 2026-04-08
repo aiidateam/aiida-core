@@ -18,7 +18,7 @@ from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Any, BinaryIO
+from typing import TYPE_CHECKING, Any, BinaryIO
 
 from pydantic import BaseModel, Field
 from sqlalchemy import column, insert, update
@@ -32,6 +32,9 @@ from aiida.repository.backend.sandbox import SandboxRepositoryBackend
 from aiida.storage.sqlite_zip import models, orm
 from aiida.storage.sqlite_zip.migrator import get_schema_version_head
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
+
+if TYPE_CHECKING:
+    from aiida.repository.backend.abstract import InfoDictType
 
 __all__ = ('SqliteTempBackend',)
 
@@ -57,7 +60,7 @@ class SqliteTempBackend(StorageBackend):
     @staticmethod
     def create_profile(
         name: str = 'temp',
-        default_user_email='user@email.com',
+        default_user_email: str = 'user@email.com',
         options: dict | None = None,
         debug: bool = False,
         filepath: str | Path | None = None,
@@ -92,13 +95,13 @@ class SqliteTempBackend(StorageBackend):
         return False
 
     @classmethod
-    def migrate(cls, profile: Profile):
+    def migrate(cls, profile: Profile) -> None:
         pass
 
     def __init__(self, profile: Profile):
         super().__init__(profile)
         self._session: Session | None = None
-        self._repo: SandboxShaRepositoryBackend = SandboxShaRepositoryBackend(profile.storage_config['filepath'])
+        self._repo: SandboxShaRepositoryBackend | None = SandboxShaRepositoryBackend(profile.storage_config['filepath'])
         self._globals: dict[str, tuple[Any, str | None]] = {}
         self._closed = False
         self.get_session()  # load the database on initialization
@@ -111,7 +114,7 @@ class SqliteTempBackend(StorageBackend):
     def is_closed(self) -> bool:
         return self._closed
 
-    def close(self):
+    def close(self) -> None:
         if self._session:
             self._session.close()
         if self._repo:
@@ -121,10 +124,10 @@ class SqliteTempBackend(StorageBackend):
         self._globals = {}
         self._closed = True
 
-    def get_global_variable(self, key: str):
+    def get_global_variable(self, key: str) -> Any:
         return self._globals[key][0]
 
-    def set_global_variable(self, key: str, value, description: str | None = None, overwrite=True) -> None:
+    def set_global_variable(self, key: str, value: Any, description: str | None = None, overwrite: bool = True) -> None:
         if not overwrite and key in self._globals:
             raise ValueError(f'global variable {key} already exists')
         self._globals[key] = (value, description)
@@ -137,12 +140,12 @@ class SqliteTempBackend(StorageBackend):
             engine = create_sqla_engine(':memory:', echo=self.profile.storage_config.get('debug', False))
             models.SqliteBase.metadata.create_all(engine)
             self._session = Session(engine, future=True)
-            self._session.add(models.DbUser(email=self.profile.default_user_email or 'user@email.com'))
+            self._session.add(models.DbUser(email=self.profile.default_user_email or 'user@email.com'))  # type: ignore[operator]
             self._session.commit()
         return self._session
 
     def get_repository(self) -> SandboxShaRepositoryBackend:
-        if self._closed:
+        if self._closed or not self._repo:
             raise ClosedStorage(str(self))
         return self._repo
 
@@ -170,7 +173,7 @@ class SqliteTempBackend(StorageBackend):
     def _clear(self) -> None:
         raise NotImplementedError
 
-    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> None:
         pass
 
     def query(self) -> orm.SqliteQueryBuilder:
@@ -181,31 +184,31 @@ class SqliteTempBackend(StorageBackend):
         return orm.get_backend_entity(model, self)
 
     @functools.cached_property
-    def authinfos(self):
+    def authinfos(self) -> orm.SqliteAuthInfoCollection:
         return orm.SqliteAuthInfoCollection(self)
 
     @functools.cached_property
-    def comments(self):
+    def comments(self) -> orm.SqliteCommentCollection:
         return orm.SqliteCommentCollection(self)
 
     @functools.cached_property
-    def computers(self):
+    def computers(self) -> orm.SqliteComputerCollection:
         return orm.SqliteComputerCollection(self)
 
     @functools.cached_property
-    def groups(self):
+    def groups(self) -> orm.SqliteGroupCollection:
         return orm.SqliteGroupCollection(self)
 
     @functools.cached_property
-    def logs(self):
+    def logs(self) -> orm.SqliteLogCollection:
         return orm.SqliteLogCollection(self)
 
     @functools.cached_property
-    def nodes(self):
+    def nodes(self) -> orm.SqliteNodeCollection:
         return orm.SqliteNodeCollection(self)
 
     @functools.cached_property
-    def users(self):
+    def users(self) -> orm.SqliteUserCollection:
         return orm.SqliteUserCollection(self)
 
     def get_info(self, detailed: bool = False) -> dict:
@@ -215,12 +218,12 @@ class SqliteTempBackend(StorageBackend):
 
     @staticmethod
     @functools.lru_cache(maxsize=18)
-    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool):
+    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool) -> tuple[Any, set[Any]]:
         """Return the Sqlalchemy mapper and fields corresponding to the given entity.
 
         :param with_pk: if True, the fields returned will include the primary key
         """
-        from sqlalchemy import inspect
+        from sqlalchemy import inspect as sqla_inspect
 
         from aiida.storage.sqlite_zip.models import (
             DbAuthInfo,
@@ -245,7 +248,7 @@ class SqliteTempBackend(StorageBackend):
             EntityTypes.LINK: DbLink,
             EntityTypes.GROUP_NODE: DbGroupNodes,
         }[entity_type]
-        mapper = inspect(model).mapper
+        mapper = sqla_inspect(model).mapper  # type: ignore[union-attr]
         keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
         return mapper, keys
 
@@ -319,6 +322,7 @@ class SqliteTempBackend(StorageBackend):
 
     def delete(self) -> None:
         """Delete the storage and all the data."""
+        assert self._repo
         self._repo.erase()
 
     def delete_nodes_and_connections(self, pks_to_delete: Iterable[int]) -> None:
@@ -366,8 +370,8 @@ class SandboxShaRepositoryBackend(SandboxRepositoryBackend):
 
         return key
 
-    def get_info(self, detailed: bool = False, **kwargs) -> dict:
+    def get_info(self, detailed: bool = False, **kwargs: Any) -> InfoDictType:
         return {'objects': {'count': len(list(self.list_objects()))}}
 
-    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
+    def maintain(self, dry_run: bool = False, live: bool = True, **kwargs: Any) -> None:
         pass

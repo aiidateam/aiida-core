@@ -149,5 +149,5 @@ def read_version(path: Union[str, Path], *, search_limit: Optional[int] = None) 
 class ReadOnlyError(AiidaException):
     """Raised when a write operation is called on a read-only archive."""
 
-    def __init__(self, msg='sqlite_zip storage is read-only'):
+    def __init__(self, msg: str = 'sqlite_zip storage is read-only'):
         super().__init__(msg)

@@ -177,6 +177,13 @@
    For any questions, discussions and requests for support, please visit the `Discourse forum <https://aiida.discourse.group>`__.
 
 
+.. admonition:: Want updates and practical guides?
+   :class: title-icon-lightbulb-o
+
+   Discover the latest AiiDA release notes, practical tutorials and user stories on the
+   `AiiDA news and blogs page <https://aiida.net/news/>`__.
+
+
 .. admonition:: Development Contributions
    :class: title-icon-code-fork
 

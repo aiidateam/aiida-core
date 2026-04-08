@@ -158,24 +158,20 @@ def test_unload_profile():
 
     This is a regression test for #5506.
     """
-    import gc
-
     from sqlalchemy.orm.session import _sessions
-
-    # Run the garbage collector to ensure any lingering unrelated sessions do not cause the test to fail.
-    gc.collect()
-
-    # Just running the test suite itself should have opened at least one session
-    current_sessions = len(_sessions)
-    assert current_sessions != 0, str(_sessions)
 
     manager = get_manager()
     profile_name = manager.get_profile().name
 
+    # Ensure at least one session exists by accessing the storage
+    manager.get_profile_storage().get_session()
+
+    current_sessions = len(_sessions)
+    assert current_sessions != 0, f'Expected at least one session, got: {_sessions}'
+
     try:
         manager.unload_profile()
-        # After unloading, the session should have been cleared, so we should have one less
-        assert len(_sessions) == current_sessions - 1, str(_sessions)
+        assert len(_sessions) == current_sessions - 1, f'Expected {current_sessions - 1} sessions, got: {_sessions}'
     finally:
         manager.load_profile(profile_name)
 
@@ -195,3 +191,63 @@ def test_backup(tmp_path):
     contents = [c.name for c in last_backup.iterdir()]
     for name in ['container', 'db.psql']:
         assert name in contents
+
+
+def test_get_and_terminate_unreferenced_connections():
+    """Test that ``get_unreferenced_connections`` detects external database connections.
+
+    This test creates a real database connection outside of the AiiDA session and verifies
+    it appears in the unreferenced connections list. It also tests terminating that connection.
+    """
+    import psycopg
+
+    storage = get_manager().get_profile_storage()
+
+    # Get connection parameters from the storage engine
+    engine = storage.get_session().get_bind()
+    url = engine.url
+
+    # Create an external connection that simulates an orphaned connection
+    external_conn = psycopg.connect(
+        host=url.host,
+        port=url.port,
+        user=url.username,
+        password=url.password,
+        dbname=url.database,
+    )
+
+    try:
+        # Start a transaction to simulate "idle in transaction" state
+        cursor = external_conn.cursor()
+        cursor.execute('SELECT 1')
+
+        # Get the client port and pid of our external connection for verification
+        cursor.execute('SELECT inet_client_port(), pg_backend_pid()')
+        external_port, external_pid = cursor.fetchone()
+
+        # Verify the external connection appears in unreferenced connections
+        unreferenced = storage.get_unreferenced_connections()
+        unreferenced_ports = [port for _, _, port in unreferenced]
+        assert (
+            external_port in unreferenced_ports
+        ), f'External connection port {external_port} not found in {unreferenced_ports}'
+
+        # Terminate only our specific connection (not all unreferenced ones)
+        # This prevents killing connections from parallel tests
+        count = storage.terminate_connections([external_pid])
+        assert count == 1, 'Expected exactly one connection to be terminated'
+
+        # Verify the external connection was actually terminated
+        # The connection should be closed/broken now
+        try:
+            cursor.execute('SELECT 1')
+            pytest.fail('Connection should have been terminated')
+        except psycopg.OperationalError:
+            pass  # Expected - connection was terminated
+
+    finally:
+        # Clean up - close the connection if it's still open
+        try:
+            external_conn.close()
+        except Exception:
+            pass  # Connection may already be terminated

@@ -34,6 +34,7 @@ from aiida.storage.psql_dos.orm.querybuilder.main import (
     String,
     get_column,
 )
+from aiida.storage.utils import _create_smarter_in_clause
 
 from . import models
 from .utils import ReadOnlyError
@@ -207,9 +208,8 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             raise ValueError(f'Unknown casting key {cast}')
         return entity
 
-    @staticmethod
     def get_filter_expr_from_jsonb(
-        operator: str, value, attr_key: List[str], column=None, column_name=None, alias=None
+        self, operator: str, value, attr_key: List[str], column=None, column_name=None, alias=None
     ):
         """Return a filter expression.
 
@@ -310,7 +310,13 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
 
         if operator == 'in':
             type_filter, casted_entity = _cast_json_type(database_entity, value[0])
-            return case((type_filter, casted_entity.in_(value)), else_=False)
+            return case(
+                (
+                    type_filter,
+                    _create_smarter_in_clause(session=self.get_session(), column=casted_entity, values=value),
+                ),
+                else_=False,
+            )
 
         if operator == 'of_length':
             return case(
@@ -362,8 +368,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
         elif operator == 'ilike':
             expr = database_entity.ilike(value, escape='\\')
         elif operator == 'in':
-            # Use the smarter IN clause implementation from parent class
-            expr = self._create_smarter_in_clause(column, value)
+            expr = _create_smarter_in_clause(session=self.get_session(), column=column, values=value)
         else:
             raise ValueError(f'Unknown operator {operator} for filters on columns')
         return expr

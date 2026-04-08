@@ -8,12 +8,19 @@
 ###########################################################################
 """AiiDA class to deal with crystal structure trajectories."""
 
-import collections.abc
-from typing import List
+from __future__ import annotations
+
+import typing as t
 
 from aiida.common.pydantic import MetadataField
+from aiida.common.warnings import warn_deprecation
 
 from .array import ArrayData
+
+if t.TYPE_CHECKING:
+    import numpy as np
+
+    from aiida.orm.nodes.data.structure import Kind, StructureData
 
 __all__ = ('TrajectoryData',)
 
@@ -26,37 +33,47 @@ class TrajectoryData(ArrayData):
     class Model(ArrayData.Model):
         units_positions: str = MetadataField(alias='units|positions', description='Unit of positions')
         units_times: str = MetadataField(alias='units|times', description='Unit of time')
-        symbols: List[str] = MetadataField(description='List of symbols')
+        symbols: t.List[str] = MetadataField(description='List of symbols')
+        pbc: t.Optional[t.Tuple[bool, bool, bool]] = MetadataField(description='Periodic boundary conditions')
 
-    def __init__(self, structurelist=None, **kwargs):
+    def __init__(self, structurelist: list[StructureData] | None = None, **kwargs: t.Any) -> None:
         super().__init__(**kwargs)
         if structurelist is not None:
             self.set_structurelist(structurelist)
 
-    def _internal_validate(self, stepids, cells, symbols, positions, times, velocities):
+    def _internal_validate(
+        self,
+        stepids: np.ndarray | None,
+        cells: np.ndarray | None,
+        symbols: list[str],
+        positions: np.ndarray,
+        times: np.ndarray | None,
+        velocities: np.ndarray | None,
+        pbc: tuple[bool, bool, bool] | list[bool] | None,
+    ) -> None:
         """Internal function to validate the type and shape of the arrays. See
         the documentation of py:meth:`.set_trajectory` for a description of the
         valid shape and type of the parameters.
         """
         import numpy
 
-        if not isinstance(symbols, collections.abc.Iterable):
+        if not isinstance(symbols, (list, tuple)):
             raise TypeError('TrajectoryData.symbols must be of type list')
         if any(not isinstance(i, str) for i in symbols):
             raise TypeError('TrajectoryData.symbols must be a 1d list of strings')
-        if not isinstance(positions, numpy.ndarray) or positions.dtype != float:
+        if not isinstance(positions, numpy.ndarray) or positions.dtype != float:  # type: ignore[redundant-expr]
             raise TypeError('TrajectoryData.positions must be a numpy array of floats')
         if stepids is not None:
-            if not isinstance(stepids, numpy.ndarray) or stepids.dtype != int:
+            if not isinstance(stepids, numpy.ndarray) or stepids.dtype != int:  # type: ignore[redundant-expr]
                 raise TypeError('TrajectoryData.stepids must be a numpy array of integers')
         if cells is not None:
-            if not isinstance(cells, numpy.ndarray) or cells.dtype != float:
+            if not isinstance(cells, numpy.ndarray) or cells.dtype != float:  # type: ignore[redundant-expr]
                 raise TypeError('TrajectoryData.cells must be a numpy array of floats')
         if times is not None:
-            if not isinstance(times, numpy.ndarray) or times.dtype != float:
+            if not isinstance(times, numpy.ndarray) or times.dtype != float:  # type: ignore[redundant-expr]
                 raise TypeError('TrajectoryData.times must be a numpy array of floats')
         if velocities is not None:
-            if not isinstance(velocities, numpy.ndarray) or velocities.dtype != float:
+            if not isinstance(velocities, numpy.ndarray) or velocities.dtype != float:  # type: ignore[redundant-expr]
                 raise TypeError('TrajectoryData.velocities must be a numpy array of floats, or None')
         if stepids is not None:
             numsteps = stepids.size
@@ -82,8 +99,22 @@ class TrajectoryData(ArrayData):
                     'have shape (s,n,3), '
                     'with s=number of steps and n=number of symbols'
                 )
+        if pbc is not None:
+            if not (len(pbc) == 3 and all(isinstance(val, bool) for val in pbc)):
+                raise ValueError('`pbc` must be a list/tuple of length three with boolean values.')
+            if cells is None and any(pbc):
+                raise ValueError('Periodic boundary conditions are only possible when a cell is defined.')
 
-    def set_trajectory(self, symbols, positions, stepids=None, cells=None, times=None, velocities=None):
+    def set_trajectory(
+        self,
+        symbols: list[str],
+        positions: np.ndarray,
+        stepids: np.ndarray | None = None,
+        cells: np.ndarray | None = None,
+        times: np.ndarray | None = None,
+        velocities: np.ndarray | None = None,
+        pbc: tuple[bool, bool, bool] | list[bool] | None = None,
+    ) -> None:
         r"""Store the whole trajectory, after checking that types and dimensions
         are correct.
 
@@ -131,14 +162,28 @@ class TrajectoryData(ArrayData):
         :param velocities: if specified, must be a float array with the same
                       dimensions of the ``positions`` array.
                       The array contains the velocities in the atoms.
+        :param pbc: periodic boundary conditions of the structure. Should be a list of
+            length three with booleans indicating if the structure is periodic in that
+            direction. The same periodic boundary conditions are set for each step.
 
         .. todo :: Choose suitable units for velocities
         """
         import numpy
 
-        self._internal_validate(stepids, cells, symbols, positions, times, velocities)
-        # set symbols as attribute for easier querying
+        if cells is None:
+            pbc = pbc or (False, False, False)
+        elif pbc is None:
+            warn_deprecation(
+                "When 'cells' is not None, the periodic boundary conditions should be explicitly specified via "
+                "the 'pbc' keyword argument. Defaulting to '[True, True, True]', but this will raise in v3.0.0.",
+                version=3,
+            )
+            pbc = (True, True, True)
+
+        self._internal_validate(stepids, cells, symbols, positions, times, velocities, pbc)
+        # set symbols/pbc as attributes for easier querying
         self.base.attributes.set('symbols', list(symbols))
+        self.base.attributes.set('pbc', tuple(pbc))
         self.set_array('positions', positions)
         if stepids is not None:  # use input stepids
             self.set_array('steps', stepids)
@@ -169,7 +214,7 @@ class TrajectoryData(ArrayData):
             except KeyError:
                 pass
 
-    def set_structurelist(self, structurelist):
+    def set_structurelist(self, structurelist: list[StructureData]) -> None:
         """Create trajectory from the list of
         :py:class:`aiida.orm.nodes.data.structure.StructureData` instances.
 
@@ -189,9 +234,14 @@ class TrajectoryData(ArrayData):
                 raise ValueError('Symbol lists have to be the same for all of the supplied structures')
         symbols = list(symbols_first)
         positions = numpy.array([[list(s.position) for s in x.sites] for x in structurelist])
-        self.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions)
+        pbc_set = {structure.pbc for structure in structurelist}
+        if len(pbc_set) == 1:
+            pbc = pbc_set.pop()
+        else:
+            raise ValueError(f'All structures should have the same `pbc`, found: {pbc_set}')
+        self.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, pbc=pbc)
 
-    def _validate(self):
+    def _validate(self) -> bool:
         """Verify that the required arrays are present and that their type and
         dimension are correct.
         """
@@ -206,15 +256,17 @@ class TrajectoryData(ArrayData):
                 self.get_positions(),
                 self.get_times(),
                 self.get_velocities(),
+                self.pbc,
             )
         # Should catch TypeErrors, ValueErrors, and KeyErrors for missing arrays
         except Exception as exception:
             raise ValidationError(
                 f'The TrajectoryData did not validate. Error: {type(exception).__name__} with message {exception}'
             )
+        return True
 
     @property
-    def numsteps(self):
+    def numsteps(self) -> int:
         """Return the number of stored steps, or zero if nothing has been stored yet."""
         try:
             return self.get_shape('steps')[0]
@@ -222,21 +274,21 @@ class TrajectoryData(ArrayData):
             return 0
 
     @property
-    def numsites(self):
+    def numsites(self) -> int:
         """Return the number of stored sites, or zero if nothing has been stored yet."""
         try:
             return len(self.symbols)
         except (AttributeError, KeyError, IndexError):
             return 0
 
-    def get_stepids(self):
+    def get_stepids(self) -> np.ndarray:
         """Return the array of steps, if it has already been set.
 
         :raises KeyError: if the trajectory has not been set yet.
         """
         return self.get_array('steps')
 
-    def get_times(self):
+    def get_times(self) -> np.ndarray | None:
         """Return the array of times (in ps), if it has already been set.
 
         :raises KeyError: if the trajectory has not been set yet.
@@ -246,7 +298,7 @@ class TrajectoryData(ArrayData):
         except (AttributeError, KeyError):
             return None
 
-    def get_cells(self):
+    def get_cells(self) -> np.ndarray | None:
         """Return the array of cells, if it has already been set.
 
         :raises KeyError: if the trajectory has not been set yet.
@@ -257,21 +309,35 @@ class TrajectoryData(ArrayData):
             return None
 
     @property
-    def symbols(self) -> List[str]:
+    def symbols(self) -> list[str]:
         """Return the array of symbols, if it has already been set.
 
         :raises KeyError: if the trajectory has not been set yet.
         """
         return self.base.attributes.get('symbols')
 
-    def get_positions(self):
+    @property
+    def pbc(self) -> tuple[bool, bool, bool] | None:
+        """Return the tuple of periodic boundary conditions.
+
+        Returns a tuple of length three with booleans indicating if the structure is
+        periodic in that direction.
+
+        .. versionadded:: 2.8
+
+            For ``TrajectoryData`` created with earliers versions than v2.8 this property will return None.
+
+        """
+        return self.base.attributes.get('pbc', None)
+
+    def get_positions(self) -> np.ndarray:
         """Return the array of positions, if it has already been set.
 
         :raises KeyError: if the trajectory has not been set yet.
         """
         return self.get_array('positions')
 
-    def get_velocities(self):
+    def get_velocities(self) -> np.ndarray | None:
         """Return the array of velocities, if it has already been set.
 
         .. note :: This function (differently from all other ``get_*``
@@ -284,7 +350,7 @@ class TrajectoryData(ArrayData):
         except (AttributeError, KeyError):
             return None
 
-    def get_index_from_stepid(self, stepid):
+    def get_index_from_stepid(self, stepid: int) -> int:
         """Given a value for the stepid (i.e., a value among those of the ``steps``
         array), return the array index of that stepid, that can be used in other
         methods such as :py:meth:`.get_step_data` or
@@ -299,11 +365,13 @@ class TrajectoryData(ArrayData):
         import numpy
 
         try:
-            return numpy.where(self.get_stepids() == stepid)[0][0]
+            return int(numpy.where(self.get_stepids() == stepid)[0][0])
         except IndexError:
             raise ValueError(f'{stepid} not among the stepids')
 
-    def get_step_data(self, index):
+    def get_step_data(
+        self, index: int
+    ) -> tuple[int, float | None, np.ndarray | None, list[str], np.ndarray, np.ndarray | None]:
         """Return a tuple with all information concerning the stepid with given
         index (0 is the first step, 1 the second step and so on). If you know
         only the step value, use the :py:meth:`.get_index_from_stepid` method
@@ -330,17 +398,17 @@ class TrajectoryData(ArrayData):
         vel = self.get_velocities()
         if vel is not None:
             vel = vel[index, :, :]
-        time = self.get_times()
-        if time is not None:
-            time = time[index]
+        time_array = self.get_times()
+        time: float | None = None
+        if time_array is not None:
+            time = float(time_array[index])
         cells = self.get_cells()
+        cell: np.ndarray | None = None
         if cells is not None:
             cell = cells[index, :, :]
-        else:
-            cell = None
-        return (self.get_stepids()[index], time, cell, self.symbols, self.get_positions()[index, :, :], vel)
+        return (int(self.get_stepids()[index]), time, cell, self.symbols, self.get_positions()[index, :, :], vel)
 
-    def get_step_structure(self, index, custom_kinds=None):
+    def get_step_structure(self, index: int, custom_kinds: list[Kind] | None = None) -> StructureData:
         """Return an AiiDA :py:class:`aiida.orm.nodes.data.structure.StructureData` node
         (not stored yet!) with the coordinates of the given step, identified by
         its index. If you know only the step value, use the
@@ -384,7 +452,7 @@ class TrajectoryData(ArrayData):
                     'passed {}, but the symbols are {}'.format(sorted(kind_names), sorted(symbols))
                 )
 
-        struc = StructureData(cell=cell)
+        struc = StructureData(cell=cell, pbc=self.pbc)
         if custom_kinds is not None:
             for _k in custom_kinds:
                 struc.append_kind(_k)
@@ -397,7 +465,7 @@ class TrajectoryData(ArrayData):
 
         return struc
 
-    def _prepare_xsf(self, index=None, main_file_name=''):
+    def _prepare_xsf(self, index: int | None = None, main_file_name: str = '') -> tuple[bytes, dict[str, t.Any]]:
         """Write the given trajectory to a string of format XSF (for XCrySDen)."""
         from aiida.common.constants import elements
 
@@ -434,7 +502,9 @@ class TrajectoryData(ArrayData):
                     raise
         return return_string.encode('utf-8'), {}
 
-    def _prepare_cif(self, trajectory_index=None, main_file_name=''):
+    def _prepare_cif(
+        self, trajectory_index: int | None = None, main_file_name: str = ''
+    ) -> tuple[bytes, dict[str, t.Any]]:
         """Write the given trajectory to a string of format CIF."""
         from aiida.common.utils import Capturing
         from aiida.orm.nodes.data.cif import ase_loops, cif_from_ase, pycifrw_from_cif
@@ -450,7 +520,7 @@ class TrajectoryData(ArrayData):
                 cif = cif + ciffile.WriteOut()
         return cif.encode('utf-8'), {}
 
-    def get_structure(self, store=False, **kwargs):
+    def get_structure(self, store: bool = False, **kwargs: t.Any) -> StructureData:
         """Creates :py:class:`aiida.orm.nodes.data.structure.StructureData`.
 
         :param store: If True, intermediate calculation gets stored in the
@@ -477,16 +547,16 @@ class TrajectoryData(ArrayData):
 
         param = Dict(kwargs)
 
-        ret_dict = _get_aiida_structure_inline(trajectory=self, parameters=param, metadata={'store_provenance': store})
+        ret_dict = _get_aiida_structure_inline(trajectory=self, parameters=param, metadata={'store_provenance': store})  # type: ignore[call-arg]
         return ret_dict['structure']
 
-    def get_cif(self, index=None, **kwargs):
+    def get_cif(self, index: int | None = None, **kwargs: t.Any) -> t.Any:
         """Creates :py:class:`aiida.orm.nodes.data.cif.CifData`"""
         struct = self.get_structure(index=index, **kwargs)
         cif = struct.get_cif(**kwargs)
         return cif
 
-    def _parse_xyz_pos(self, inputstring):
+    def _parse_xyz_pos(self, inputstring: str) -> None:
         """Load positions from a XYZ file.
 
         .. note:: The steps and symbols must be set manually before calling this
@@ -533,7 +603,7 @@ class TrajectoryData(ArrayData):
 
         self.set_array('positions', positions)
 
-    def _parse_xyz_vel(self, inputstring):
+    def _parse_xyz_vel(self, inputstring: str) -> None:
         """Load velocities from a XYZ file.
 
         .. note:: The steps and symbols must be set manually before calling this
@@ -586,6 +656,8 @@ class TrajectoryData(ArrayData):
         # Reading the arrays I need:
         positions = self.get_positions()
         times = self.get_times()
+        if times is None:
+            raise ValueError('This trajectory does not contain time information')
         symbols = self.symbols
 
         # Try to get the units.
@@ -608,13 +680,13 @@ class TrajectoryData(ArrayData):
         label = kwargs.pop('label', None) or self.label or self.__repr__()
         # Choosing the color scheme
 
-        colors = kwargs.pop('colors', 'jmol')
-        if colors == 'jmol':
+        color_scheme = kwargs.pop('colors', 'jmol')
+        if color_scheme == 'jmol':
             from ase.data.colors import jmol_colors as colors
-        elif colors == 'cpk':
+        elif color_scheme == 'cpk':
             from ase.data.colors import cpk_colors as colors
         else:
-            raise ValueError(f'Unknown color spec {colors}')
+            raise ValueError(f'Unknown color spec {color_scheme}')
 
         if element_list is None:
             # If not all elements are allowed
@@ -657,7 +729,7 @@ class TrajectoryData(ArrayData):
     def show_mpl_heatmap(self, **kwargs):
         """Show a heatmap of the trajectory with matplotlib."""
         import numpy as np
-        from scipy import stats
+        from scipy import stats  # type: ignore[import-untyped]
 
         try:
             from mayavi import mlab
@@ -691,14 +763,16 @@ class TrajectoryData(ArrayData):
         sampling_stepsize = int(kwargs.pop('sampling_stepsize', None) or 0)
 
         times = self.get_times()
+        if times is None:
+            raise ValueError('This trajectory does not contain time information')
         if mintime is None:
             minindex = 0
         else:
-            minindex = np.argmax(times > mintime)
+            minindex = int(np.argmax(times > mintime))
         if maxtime is None:
             maxindex = len(times)
         else:
-            maxindex = np.argmin(times < maxtime)
+            maxindex = int(np.argmin(times < maxtime))
         positions = self.get_positions()[minindex:maxindex:stepsize]
 
         try:
@@ -717,7 +791,7 @@ class TrajectoryData(ArrayData):
             raise ValueError('No cell parameters have been supplied for TrajectoryData')
         else:
             cell = np.array(cells[0])
-        storage_dict = {s: {} for s in elements}
+        storage_dict: dict[str, t.Any] = {s: {} for s in elements}
         for ele in elements:
             storage_dict[ele] = [np.array([]), np.array([]), np.array([])]
         for iat, ele in enumerate(symbols):
@@ -752,7 +826,7 @@ class TrajectoryData(ArrayData):
             xmin, ymin, zmin = _x.min(), _y.min(), _z.min()
             xmax, ymax, zmax = _x.max(), _y.max(), _z.max()
 
-            _xi, _yi, _zi = np.mgrid[xmin:xmax:60j, ymin:ymax:30j, zmin:zmax:30j]
+            _xi, _yi, _zi = np.mgrid[xmin:xmax:60j, ymin:ymax:30j, zmin:zmax:30j]  # type: ignore[misc]
             coords = np.vstack([item.ravel() for item in [_xi, _yi, _zi]])
             density = kde(coords).reshape(_xi.shape)
 
@@ -826,10 +900,10 @@ def plot_positions_XYZ(  # noqa: N802
     index_range = [0, len(times) - 1]
     if mintime is not None:
         tlim[0] = mintime
-        index_range[0] = np.argmax(times > mintime)
+        index_range[0] = int(np.argmax(times > mintime))
     if maxtime is not None:
         tlim[1] = maxtime
-        index_range[1] = np.argmin(times < maxtime)
+        index_range[1] = int(np.argmin(times < maxtime))
 
     trajectories = zip(*positions.tolist())  # only used in enumerate() below
     fig = plt.figure(figsize=(12, 7))
@@ -851,7 +925,7 @@ def plot_positions_XYZ(  # noqa: N802
     plt.xlabel(f'Time [{times_unit}]')
     plt.xlim(*tlim)
     n_labels = np.minimum(n_labels, len(times))  # don't need more labels than times
-    sparse_indices = np.linspace(*index_range, num=n_labels, dtype=int)
+    sparse_indices = np.linspace(index_range[0], index_range[1], num=n_labels, dtype=int)
 
     for index, traj in enumerate(trajectories):
         if index not in indices_to_show:

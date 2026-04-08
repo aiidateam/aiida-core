@@ -1,32 +1,40 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Script to benchmark the performance of the AiiDA workflow engine on a given installation."""
+
+import shutil
+import sys
+import tempfile
+import time
+import uuid
 
 import click
 
+from aiida import __version__ as aiida_version
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
 
 
-@click.command()
+def print_version_info():
+    print(f'Python {sys.version}')
+    print(f'AiiDA {aiida_version}')
+
+
+@click.command(context_settings={'help_option_names': ['-h', '--help']})
 @options.CODE(required=False, help='A code that can run the ``ArithmeticAddCalculation``, for example bash.')
 @click.option('-n', 'number', type=int, default=10, show_default=True, help='The number of processes to launch.')
 @click.option('--daemon/--without-daemon', default=False, is_flag=True, help='Submit to daemon or run synchronously.')
 @decorators.with_dbenv()
 def main(code, number, daemon):
-    """Submit a number of ``ArithmeticAddCalculation`` to the daemon and record time to completion.
-
-    This command requires the daemon to be running.
+    """Run a number of ``ArithmeticAddCalculation`` and record time to completion.
 
     The script will submit a configurable number of ``ArithmeticAddCalculation`` jobs. By default, the jobs are executed
     using the ``bash`` executable of the system. If this executable cannot be found the script will exit. The jobs will
     be run on the localhost, which is automatically created and configured. At the end of the script, the created nodes
     will be deleted, as well as the code and computer, if they were automatically setup.
-    """
-    import shutil
-    import tempfile
-    import time
-    import uuid
 
+    By default, the jobs run in the current python process, unless the `--daemon` flag is provided,
+    in which case they are submitted to the daemon.
+    """
     from aiida import orm
     from aiida.engine import run_get_node, submit
     from aiida.engine.daemon.client import get_daemon_client
@@ -34,9 +42,9 @@ def main(code, number, daemon):
     from aiida.plugins import CalculationFactory
     from aiida.tools.graph.deletions import delete_nodes
 
-    client = get_daemon_client()
+    print_version_info()
 
-    if daemon and not client.is_daemon_running:
+    if daemon and not get_daemon_client().is_daemon_running:
         echo.echo_critical('The daemon is not running.')
 
     computer_created = False
@@ -82,7 +90,7 @@ def main(code, number, daemon):
                 nodes.append(node)
 
         time_end = time.time()
-        echo.echo(f'Submission completed in {(time_end - time_start):.2f} seconds.')
+        echo.echo(f'Submission to the daemon completed in {(time_end - time_start):.2f} seconds.')
 
         completed = 0
 
@@ -119,15 +127,15 @@ def main(code, number, daemon):
 
     if code_created:
         code_label = code.full_label
-        orm.Node.objects.delete(code.pk)
+        orm.Node.collection.delete(code.pk)
         echo.echo_success(f'Deleted the created code {code_label}.')
 
     if computer_created:
         computer_label = computer.label
-        user = orm.User.objects.get_default()
+        user = orm.User.collection.get_default()
         auth_info = computer.get_authinfo(user)
-        orm.AuthInfo.objects.delete(auth_info.pk)
-        orm.Computer.objects.delete(computer.pk)
+        orm.AuthInfo.collection.delete(auth_info.pk)
+        orm.Computer.collection.delete(computer.pk)
         echo.echo_success(f'Deleted the created computer {computer_label}.')
 
     echo.echo(f'Performance: {(time_end - time_start) / number:.2f} s / process')

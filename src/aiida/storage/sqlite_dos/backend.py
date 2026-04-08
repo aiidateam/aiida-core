@@ -14,7 +14,7 @@ import pathlib
 from functools import cached_property, lru_cache
 from pathlib import Path
 from shutil import rmtree
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 from uuid import uuid4
 
 from alembic.config import Config
@@ -93,6 +93,7 @@ class SqliteDosMigrator(PsqlDosMigrator):
         This assumes that the database has no schema whatsoever and so the initial schema is created directly from the
         models at the current head version without migrating through all of them one by one.
         """
+        assert self._engine is not None
         models.SqliteBase.metadata.create_all(self._engine)
 
         repository_uuid = self.get_repository_uuid()
@@ -117,7 +118,7 @@ class SqliteDosMigrator(PsqlDosMigrator):
             return context.get_current_revision()
 
     @staticmethod
-    def _alembic_config():
+    def _alembic_config() -> Config:
         """Return an instance of an Alembic `Config`."""
         dirpath = pathlib.Path(__file__).resolve().parent
         config = Config()
@@ -252,7 +253,7 @@ class SqliteDosStorage(PsqlDosBackend):
         state = 'closed' if self.is_closed else 'open'
         return f'SqliteDosStorage[{self.filepath_root}]: {state},'
 
-    def _initialise_session(self):
+    def _initialise_session(self) -> None:
         """Initialise the SQLAlchemy session factory.
 
         Only one session factory is ever associated with a given class instance,
@@ -292,36 +293,36 @@ class SqliteDosStorage(PsqlDosBackend):
         return orm.get_backend_entity(model, self)
 
     @cached_property
-    def authinfos(self):
+    def authinfos(self) -> orm.SqliteAuthInfoCollection:
         return orm.SqliteAuthInfoCollection(self)
 
     @cached_property
-    def comments(self):
+    def comments(self) -> orm.SqliteCommentCollection:
         return orm.SqliteCommentCollection(self)
 
     @cached_property
-    def computers(self):
+    def computers(self) -> orm.SqliteComputerCollection:
         return orm.SqliteComputerCollection(self)
 
     @cached_property
-    def groups(self):
+    def groups(self) -> orm.SqliteGroupCollection:
         return orm.SqliteGroupCollection(self)
 
     @cached_property
-    def logs(self):
+    def logs(self) -> orm.SqliteLogCollection:
         return orm.SqliteLogCollection(self)
 
     @cached_property
-    def nodes(self):
+    def nodes(self) -> orm.SqliteNodeCollection:
         return orm.SqliteNodeCollection(self)
 
     @cached_property
-    def users(self):
+    def users(self) -> orm.SqliteUserCollection:
         return orm.SqliteUserCollection(self)
 
     @staticmethod
     @lru_cache(maxsize=18)
-    def _get_mapper_from_entity(entity_type: 'EntityTypes', with_pk: bool):
+    def _get_mapper_from_entity(entity_type: 'EntityTypes', with_pk: bool) -> tuple[Any, set[Any]]:
         """Return the Sqlalchemy mapper and fields corresponding to the given entity.
 
         :param with_pk: if True, the fields returned will include the primary key
@@ -339,7 +340,7 @@ class SqliteDosStorage(PsqlDosBackend):
         self,
         dest: str,
         keep: Optional[int] = None,
-    ):
+    ) -> None:
         """Create a backup of the storage.
 
         :param dest: Path to where the backup will be created. Can be a path on the local file system, or a path on a

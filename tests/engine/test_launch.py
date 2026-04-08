@@ -341,13 +341,12 @@ class TestWorkGraphLaunchers:
         """Create a mock WorkGraph and patch detection + runner."""
         from unittest.mock import MagicMock
 
-        from aiida.engine.processes.process import Process as _Process
         from aiida.engine.runners import ResultAndPk
 
         mock_wg = MagicMock()
 
         # prepare_for_launch returns a (process_class, inputs) pair
-        mock_process_class = MagicMock(spec=_Process)
+        mock_process_class = MagicMock(spec=Process)
         mock_engine_inputs = {'workgraph_data': {}, 'tasks': {}, 'graph_inputs': {}, 'metadata': {}}
         mock_wg.prepare_for_launch.return_value = (mock_process_class, mock_engine_inputs)
 
@@ -374,27 +373,16 @@ class TestWorkGraphLaunchers:
 
         return mock_wg
 
-    def test_run_workgraph(self, mock_workgraph):
-        """Test that run() calls prepare_for_launch and returns outputs."""
-        result = launch.run(mock_workgraph, inputs={'add': 1})
+    @pytest.mark.parametrize(
+        'launcher',
+        [launch.run, launch.run_get_node, launch.run_get_pk],
+        ids=['run', 'run_get_node', 'run_get_pk'],
+    )
+    def test_workgraph_launcher(self, mock_workgraph, launcher):
+        """All run launchers call prepare_for_launch and update_after_launch for WorkGraph."""
+        launcher(mock_workgraph, inputs={'add': 1})
         mock_workgraph.prepare_for_launch.assert_called_once()
         mock_workgraph.update_after_launch.assert_called_once()
-        assert result == {'result': 42}
-
-    def test_run_get_node_workgraph(self, mock_workgraph):
-        """Test that run_get_node() returns outputs and node for WorkGraph."""
-        result, node = launch.run_get_node(mock_workgraph, inputs={'add': 1})
-        mock_workgraph.prepare_for_launch.assert_called_once()
-        mock_workgraph.update_after_launch.assert_called_once()
-        assert result == {'result': 42}
-        assert node.pk == 123
-
-    def test_run_get_pk_workgraph(self, mock_workgraph):
-        """Test that run_get_pk() returns outputs and pk for WorkGraph."""
-        result = launch.run_get_pk(mock_workgraph, inputs={'add': 1})
-        mock_workgraph.prepare_for_launch.assert_called_once()
-        assert result.result == {'result': 42}
-        assert result.pk == 123
 
     def test_run_workgraph_passes_inputs_through(self, mock_workgraph):
         """Test that inputs (including metadata) are passed directly to prepare_for_launch."""

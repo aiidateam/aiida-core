@@ -50,8 +50,11 @@ def run(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwa
     if WORKGRAPH_INSTALLED and is_workgraph_instance(process):
         # Typed as Any because WorkGraph is an optional dependency that cannot appear in TYPE_RUN_PROCESS.
         workgraph: t.Any = process
+        # WorkGraph converts itself into a (ProcessClass, inputs) pair via the adapter pattern.
         process_class, engine_inputs = workgraph.prepare_for_launch(inputs, **kwargs)
+        # Use run_get_node (not run) because we need the node for update_after_launch.
         result, node = runner.run_get_node(process_class, engine_inputs)
+        # Store the process node reference on the WorkGraph so it can track the launched process.
         workgraph.update_after_launch(node)
         return result
 
@@ -76,7 +79,7 @@ def run_get_node(
         workgraph: t.Any = process
         process_class, engine_inputs = workgraph.prepare_for_launch(inputs, **kwargs)
         result, node = runner.run_get_node(process_class, engine_inputs)
-        workgraph.update_after_launch(node)
+        workgraph.update_after_launch(node)  # Store process node reference on the WorkGraph
         return result, node
 
     return runner.run_get_node(process, inputs, **kwargs)
@@ -98,7 +101,7 @@ def run_get_pk(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None
         workgraph: t.Any = process
         process_class, engine_inputs = workgraph.prepare_for_launch(inputs, **kwargs)
         result, node = runner.run_get_node(process_class, engine_inputs)
-        workgraph.update_after_launch(node)
+        workgraph.update_after_launch(node)  # Store process node reference on the WorkGraph
         return ResultAndPk(result, node.pk)
 
     return runner.run_get_pk(process, inputs, **kwargs)
@@ -110,6 +113,7 @@ def submit(
     *,
     wait: bool = False,
     wait_interval: int = 5,
+    timeout: int | None = None,
     **kwargs: t.Any,
 ) -> ProcessNode:
     """Submit the process with the supplied inputs to the daemon immediately returning control to the interpreter.
@@ -124,8 +128,11 @@ def submit(
     :param wait: when set to ``True``, the submission will be blocking and wait for the process to complete at which
         point the function returns the calculation node.
     :param wait_interval: the number of seconds to wait between checking the state of the process when ``wait=True``.
+    :param timeout: optional timeout in seconds when ``wait=True``. If the process does not terminate within this time,
+        a ``TimeoutError`` is raised. If ``None`` (default), waits indefinitely.
     :param kwargs: inputs to be passed to the process. This is an alternative to the positional ``inputs`` argument.
     :return: the calculation node of the process
+    :raises TimeoutError: if ``wait=True`` and the process does not terminate within ``timeout`` seconds.
     """
     from aiida.common.docs import URL_NO_BROKER
 
@@ -137,6 +144,7 @@ def submit(
     if WORKGRAPH_INSTALLED and is_workgraph_instance(process):
         workgraph = process
         process, inputs = workgraph.prepare_for_launch(inputs, **kwargs)
+        # Clear kwargs since they were already consumed by prepare_for_launch.
         kwargs = {}
 
     # Submitting from within another process requires ``self.submit`` unless it is a work function, in which case the
@@ -157,6 +165,8 @@ def submit(
 
     assert runner.persister is not None, 'runner does not have a persister'
 
+    # Moved below the WorkGraph guard: prepare_for_launch already consumes both inputs and kwargs,
+    # so prepare_inputs must run after to avoid double-merging.
     inputs = prepare_inputs(inputs, **kwargs)
 
     process_inited = instantiate_process(runner, process, **inputs)
@@ -183,7 +193,13 @@ def submit(
             workgraph.update_after_launch(node)
         return node
 
+    start_time = time.time()
+
     while not node.is_terminated:
+        if timeout is not None and (time.time() - start_time) >= timeout:
+            msg = f'Process<{node.pk}> did not terminate within {timeout} seconds.'
+            raise TimeoutError(msg)
+
         LOGGER.report(
             f'Process<{node.pk}> has not yet terminated, current state is `{node.process_state}`. '
             f'Waiting for {wait_interval} seconds.'

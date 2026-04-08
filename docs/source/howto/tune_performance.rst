@@ -18,7 +18,7 @@ Quick settings to consider for high-throughput workloads:
 - Reduce the SSH connection cooldown time for remote Computers (default 15s)
 - Enable caching: ``verdi config set caching.default_enabled True``
 - Increase worker slots: ``verdi config set daemon.worker_process_slots X`` (e.g., ``X=1000``)
-
+- If you're spawning too many daemon workers, consider reduce number of concurrent I/O tasks: ``verdi computer configure core.ssh_async --max-io-allowed <lower-value> <COMPUTER_LABEL>``
 To see all available configuration options and their current values, run ``verdi config list``.
 
 Daemon configuration
@@ -41,7 +41,8 @@ If ``verdi daemon status`` constantly warns about a high percentage of the avail
 .. code:: console
 
     $ verdi config set daemon.worker_process_slots X
-
+.. important::
+<Or place the info here>, the current default number is 8, blah balh
 Remote connections
 ==================
 

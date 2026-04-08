@@ -612,17 +612,19 @@ They may be formalized or dropped in the future.
   The emoji *is* the type indicator, so the message after it should be just the description: write `🐛 QueryBuilder crashes on empty filter`, not `🐛 Fix: QueryBuilder crashes on empty filter`.
   Emoji selection follows the conventions from [MyST-Parser](https://github.com/executablebooks/MyST-Parser/blob/master/AGENTS.md#commit-message-format):
 
-  | Emoji | Meaning |
-  |-------|---------|
-  | `✨` | New feature |
-  | `🐛` | Bug fix |
-  | `👌` | Improvement (no breaking changes) |
-  | `‼️` | Breaking change |
-  | `📚` | Documentation |
-  | `🔧` | Maintenance (typos, etc.) |
-  | `🧪` | Tests or CI changes only |
-  | `♻️` | Refactoring |
-  | `⬆️` | Dependency upgrade |
+  | Emoji | Meaning | Branch Prefix |
+  |-------|---------|---------------|
+  | `✨` | New feature | `feature/` |
+  | `🐛` | Bug fix | `fix/` |
+  | `🚑` | Hotfix (urgent production fix) | `hotfix/` |
+  | `👌` | Improvement (no breaking changes) | `improve/` |
+  | `‼️` | Breaking change | `breaking/` |
+  | `📚` | Documentation | `docs/` |
+  | `🔧` | Maintenance (typos, etc.) | `chore/` |
+  | `🧪` | Tests or CI changes only | `test/` |
+  | `♻️` | Refactoring | `refactor/` |
+  | `⬆️` | Dependency upgrade | `deps/` |
+  | `🔖` | Release | `release/` |
 
 ### Pull request requirements
 

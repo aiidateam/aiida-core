@@ -29,7 +29,6 @@ After this module, you will be able to:
 - Inspect calculations with `verdi` CLI commands
 - Explore and visualize the provenance graph
 - Dump calculation data to disk with `verdi process dump`
-- Handle calculation failures
 
 ## What you will not learn yet
 
@@ -59,7 +58,8 @@ For production use or more advanced setups, see the {ref}`installation guide <in
 Use `verdi profile list` to see all your profiles and `verdi profile show` to inspect the active one.
 :::
 
-The cell below creates a tutorial profile for automated execution of this tutorial.
+The cell below creates a tutorial profile for automated execution of this tutorial ({download}`include/setup_tutorial.py`).
+It loads the AiiDA profile and makes a `python_code` variable available -- an AiiDA `Code` object pointing to the Python interpreter on `localhost`, which we use with `aiida-shell` throughout.
 If you are running locally with your own profile, you can skip it.
 
 ```{code-cell} ipython3
@@ -84,6 +84,7 @@ This tutorial uses [IPython magic commands](https://ipython.readthedocs.io/en/st
 - **`%run -i script.py`** -- executes a Python file in the current namespace (like pasting its contents into the cell). If you are working locally, you can instead `import` from the file or copy the code directly.
 - **`%verdi ...`** -- runs a `verdi` CLI command from within the notebook. In a terminal, you would run the same command without the `%` prefix, e.g. `verdi process list -a`.
 - **`%load_ext aiida`** -- loads the AiiDA IPython extension, which enables the `%verdi` magic.
+- **`from include.constants import ...`** -- shared constants (`BASE_PARAMS`, `F_VALUES`, `SCRIPT_PATH`) are defined in {download}`include/constants.py` to keep code cells focused on AiiDA concepts rather than parameter definitions.
 :::
 
 ## Running the simulation with `aiida-shell`
@@ -98,36 +99,27 @@ The fastest way to run a CalcJob is with [`aiida-shell`](https://aiida-shell.rea
 Let's prepare the input file and run the simulation:
 
 ```{code-cell} ipython3
+# Write the simulation input parameters to a YAML file on disk.
 import tempfile
 from pathlib import Path
 
 import yaml
 
+from include.constants import BASE_PARAMS, SCRIPT_PATH
+
 work_dir = Path(tempfile.mkdtemp())
-script_path = Path('include/reaction-diffusion.py').resolve()
-
-input_params = {
-    'grid_size': 64,
-    'du': 0.16, 'dv': 0.08,
-    'F': 0.04, 'k': 0.065,
-    'dt': 1.0, 'n_steps': 3000,
-    'seed': 42,
-}
-
 input_path = work_dir / 'input.yaml'
-input_path.write_text(yaml.dump(input_params));
+input_path.write_text(yaml.dump(BASE_PARAMS));
 ```
 
 ```{code-cell} ipython3
+# Run the simulation through AiiDA using aiida-shell's launch_shell_job.
 from aiida_shell import launch_shell_job
 
 results, node = launch_shell_job(
     python_code,
     arguments='{script} {input} --output results.npz',
-    nodes={
-        'script': script_path,
-        'input': input_path,
-    },
+    nodes={'script': SCRIPT_PATH, 'input': input_path},
     outputs=['results.npz'],
 )
 
@@ -140,6 +132,7 @@ The simulation ran successfully and AiiDA recorded everything.
 Let's check what outputs we got:
 
 ```{code-cell} ipython3
+# List all output nodes returned by the CalcJob.
 for label, output_node in sorted(results.items()):
     print(f"  {label}: {output_node.__class__.__name__} (PK={output_node.pk})")
 ```
@@ -148,6 +141,7 @@ The output file is stored as a `SinglefileData` node in AiiDA's provenance graph
 We can access it through the calculation node's outputs:
 
 ```{code-cell} ipython3
+# Open the .npz output node and extract scalar results.
 import numpy as np
 
 output_node = node.outputs.results_npz
@@ -187,12 +181,14 @@ For production work on remote HPC clusters, you would register a Computer and Co
 AiiDA records the full lifecycle of every CalcJob. Let's inspect what happened:
 
 ```{code-cell} ipython3
+# Show detailed information about the calculation node.
 %verdi process show {node.pk}
 ```
 
 We can see all processes that have been run so far:
 
 ```{code-cell} ipython3
+# List all processes that have been run in this profile.
 %verdi process list -a
 ```
 
@@ -210,6 +206,7 @@ mystnb:
         caption: "Provenance graph of the ShellJob calculation."
         name: fig_module1_shelljob
 ---
+# Generate and display the provenance graph for this calculation.
 %run -i include/plot_provenance.py
 plot_provenance(node)
 ```
@@ -230,10 +227,12 @@ You can also generate provenance graphs from the command line with `verdi node g
 You can export the full calculation -- inputs, outputs, logs -- to a directory on disk:
 
 ```{code-cell} ipython3
+# Export the full calculation (inputs, outputs, logs) to a directory.
 %verdi process dump {node.pk} -o /tmp/tutorial_dump -O
 ```
 
 ```{code-cell} ipython3
+# Print the directory tree of the dumped calculation data.
 import os
 
 dump_path = Path('/tmp/tutorial_dump')
@@ -248,46 +247,6 @@ for root, dirs, files in os.walk(dump_path):
 
 This is useful for debugging, archival, or sharing calculation data outside of AiiDA.
 
-## Handling failures
-
-What happens when a simulation fails?
-Let's try parameters that produce no pattern -- the simulation detects a trivial steady state and exits with an error:
-
-```{code-cell} ipython3
-bad_params = input_params.copy()
-bad_params['F'] = 0.1  # Too high — no pattern forms
-
-bad_input_path = work_dir / 'input_bad.yaml'
-bad_input_path.write_text(yaml.dump(bad_params));
-
-results_bad, node_bad = launch_shell_job(
-    python_code,
-    arguments='{script} {input} --output results.npz',
-    nodes={
-        'script': script_path,
-        'input': bad_input_path,
-    },
-)
-
-print(f"Success: {node_bad.is_finished_ok}")
-print(f"Exit status: {node_bad.exit_status}")
-print(f"Exit message: {node_bad.exit_message}")
-```
-
-The calculation **failed** -- `aiida-shell` detected the non-zero exit status from the simulation.
-The error details are in stderr:
-
-```{code-cell} ipython3
-print(results_bad['stderr'].get_content())
-```
-
-```{code-cell} ipython3
-%verdi process show {node_bad.pk}
-```
-
-AiiDA recorded the failure with full context: the exit status, the inputs that caused it, and the error output.
-In a full CalcJob plugin, you would define your own exit codes with semantic meaning (e.g., `ERROR_TRIVIAL_STEADY_STATE = 30`) -- see the {ref}`how-to guide <how-to:run-codes>`.
-
 ## Summary
 
 In this module you learned to:
@@ -297,7 +256,6 @@ In this module you learned to:
 - **Inspect results** with `verdi process list`, `verdi process show`
 - **Visualize provenance** to understand how data was produced
 - **Dump calculation data** to disk with `verdi process dump`
-- **Handle failures** through exit codes and error messages
 
 :::{seealso}
 - {ref}`Topic: calculation jobs <topics:calculations:concepts:calcjobs>` -- concepts in depth

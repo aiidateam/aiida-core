@@ -24,15 +24,19 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 
 After this module, you will be able to:
 
-- Understand AiiDA's built-in data types and when to use each one
-- Store data explicitly in the AiiDA database
-- Write `@calcfunction`-decorated functions for tracked in-process computations
-- Build a multi-step pipeline: prepare inputs, run a simulation, parse outputs
-- Run a parameter sweep with full provenance tracking
+- Run a parameter sweep using `aiida-shell` in a loop
+- Understand the limitation of file-only provenance
+- Write `@calcfunction`-decorated functions for input preparation and output parsing
+- Use AiiDA's structured data types (`Dict`, `Float`) for queryable results
+- Run a parameter sweep with richer provenance
 
 ## What you will not learn yet
 
 You cannot yet chain steps into automated workflows or run them in parallel -- that comes in {ref}`Module 3 <tutorial:module3>`.
+
+## Setup
+
+This module requires an AiiDA profile and the `python_code` variable (see {ref}`Module 1 <tutorial:module1>` for details on the setup cell).
 
 ```{code-cell} ipython3
 :tags: ["hide-cell"]
@@ -48,204 +52,132 @@ You cannot yet chain steps into automated workflows or run them in parallel -- t
 %run -i include/setup_tutorial.py
 ```
 
-## Part A: Data types
+## Parameter sweep with `aiida-shell`
 
-### What Module 1 produced
+In {ref}`Module 1 <tutorial:module1>`, you ran a single simulation through `aiida-shell` and got back `SinglefileData` nodes -- the raw input and output files, tracked with provenance.
 
-In {ref}`Module 1 <tutorial:module1>`, you ran the simulation through `aiida-shell` and got back `SinglefileData` nodes -- opaque binary files stored in AiiDA's repository.
-This is fine for archival, but AiiDA can't search *inside* a `.npz` file.
-
-To make results **queryable** and **reusable**, we need to extract the relevant quantities into structured AiiDA data types.
-
-### AiiDA's built-in data types
-
-AiiDA provides several data types for different kinds of scientific data:
-
-| Data type | Python equivalent | Use for |
-|-----------|-------------------|---------|
-| {py:class}`~aiida.orm.Int` | `int` | Integer parameters |
-| {py:class}`~aiida.orm.Float` | `float` | Scalar results (e.g., `variance_V`) |
-| {py:class}`~aiida.orm.Str` | `str` | Labels, identifiers |
-| {py:class}`~aiida.orm.Bool` | `bool` | Flags |
-| {py:class}`~aiida.orm.List` | `list` | Ordered collections |
-| {py:class}`~aiida.orm.Dict` | `dict` | Parameter sets, metadata |
-| {py:class}`~aiida.orm.ArrayData` | `numpy.ndarray` | Grids, spectra, trajectories |
-| {py:class}`~aiida.orm.SinglefileData` | file on disk | Raw files (any format) |
-
-:::{tip}
-**Rule of thumb**: Use the most specific type that fits.
-`Float` for a single number, `Dict` for a parameter set, `ArrayData` for grids or spectra.
-Reserve `SinglefileData` for files whose internal structure you don't need to query.
-:::
-
-### Storing data explicitly
-
-Let's store simulation parameters as AiiDA nodes:
+Now let's scale that up: scan the feed rate `F` and see how the pattern strength (`variance_V`) changes across a range of parameters.
 
 ```{code-cell} ipython3
-from aiida import orm
-
-params = {
-    'grid_size': 64,
-    'du': 0.16,
-    'dv': 0.08,
-    'F': 0.04,
-    'k': 0.065,
-    'dt': 1.0,
-    'n_steps': 3000,
-    'seed': 42,
-}
-
-parameters = orm.Dict(params)
-parameters.store()
-parameters
-```
-
-The node now has a **PK** (primary key, unique within this database) and a **UUID** (universally unique identifier).
-We can inspect it with the `verdi` CLI:
-
-```{code-cell} ipython3
-%verdi node show {parameters.pk}
-```
-
-We can also retrieve the stored dictionary contents through the Python API:
-
-```{code-cell} ipython3
-parameters.get_dict()
-```
-
-Similarly, we can store individual scalar values:
-
-```{code-cell} ipython3
-feed_rate = orm.Float(0.04)
-feed_rate.store()
-print(f"Stored Float node: PK={feed_rate.pk}, value={feed_rate.value}")
-```
-
-## Part B: Calcfunctions and parameter sweep
-
-### Parameter sweep without AiiDA
-
-Before introducing AiiDA tools, let's see what a parameter sweep looks like with plain Python.
-We want to scan the feed rate `F` and see how the pattern strength (`variance_V`) changes:
-
-```{code-cell} ipython3
-import subprocess
+# Sweep the feed rate F using aiida-shell, collecting results from each run.
 import tempfile
 from pathlib import Path
 
 import numpy as np
 import yaml
 
-script_path = Path('include/reaction-diffusion.py').resolve()
+from aiida_shell import launch_shell_job
+
+from include.constants import BASE_PARAMS, F_VALUES, SCRIPT_PATH
+
 work_dir = Path(tempfile.mkdtemp())
+sweep_results = []
 
-f_values = [0.02, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06]
-variances = []
-
-for f_val in f_values:
-    sweep_params = params.copy()
-    sweep_params['F'] = f_val
-
+for f_val in F_VALUES:
     input_path = work_dir / f'input_F{f_val}.yaml'
-    input_path.write_text(yaml.dump(sweep_params))
-    output_path = work_dir / f'results_F{f_val}.npz'
+    input_path.write_text(yaml.dump(BASE_PARAMS | {'F': f_val}))
 
-    result = subprocess.run(
-        ['python3', str(script_path), str(input_path), '--output', str(output_path)],
-        capture_output=True,
-        text=True,
+    results, calc_node = launch_shell_job(
+        python_code,
+        arguments='{script} {input} --output results.npz',
+        nodes={'script': SCRIPT_PATH, 'input': input_path},
+        outputs=['results.npz'],
     )
 
-    if result.returncode == 0:
-        data = np.load(output_path)
-        variances.append(float(data['variance_V']))
-    else:
-        variances.append(0.0)  # Failed — no pattern
+    with results['results_npz'].open(mode='rb') as fh:
+        data = np.load(fh)
+        sweep_results.append({
+            'F': f_val,
+            'variance_V': float(data['variance_V']),
+            'U_final': data['U_final'],
+            'V_final': data['V_final'],
+        })
 
-print("F values:  ", [f"{v:.3f}" for v in f_values])
-print("Variances: ", [f"{v:.4e}" for v in variances])
+for r in sweep_results:
+    print(f"F={r['F']:.3f}  variance(V)={r['variance_V']:.4e}")
 ```
 
 ```{code-cell} ipython3
+# Plot variance_V vs F to show the phase transition.
 %run -i include/plot_sweep.py
-plot_transition_curve(f_values, variances)
+plot_transition_curve(
+    [r['F'] for r in sweep_results],
+    [r['variance_V'] for r in sweep_results],
+)
 ```
 
-This works, but the results are just Python variables.
-There is no record of which parameters produced which result, no provenance, and no way to query or reproduce it later.
-
-### Introducing `@calcfunction`
-
-A {func}`@calcfunction <aiida.engine.processes.functions.calcfunction>` is the simplest way to make a Python function tracked by AiiDA.
-By adding the decorator, AiiDA automatically:
-
-1. Stores all input nodes (if not already stored)
-2. Creates a **process node** that records the computation
-3. Stores all output nodes
-4. Links everything in a **provenance graph**
-
-Let's start with a simple in-process version using the `simulate()` function:
+The sharp drop in `variance_V` marks a **phase transition**: below it, the system forms rich spatial patterns; above it, the patterns dissolve.
+Let's visualize representative fields from each side:
 
 ```{code-cell} ipython3
-%run -i include/simulate.py
+# Show U/V fields before and after the transition for visual comparison.
+%run -i include/plot_fields.py
+
+before = sweep_results[0]   # F = 0.040 — strong patterns
+after = sweep_results[-1]   # F = 0.060 — weak patterns
+
+print(f"Before transition (F={before['F']})")
+plot_uv_fields(before['U_final'], before['V_final'])
+
+print(f"After transition (F={after['F']})")
+plot_uv_fields(after['U_final'], after['V_final'])
 ```
 
-```{code-cell} ipython3
-from aiida import engine
+Every simulation is tracked by AiiDA -- we can inspect any of them with `verdi process show <PK>`.
+But notice what we had to do to get the `variance_V` values: manually open each `.npz` file and extract the number.
 
+The provenance looks like this for each run: **file in -> ShellJob -> file out**.
+AiiDA knows *that* a result file was produced, but it can't see *what's inside* it.
+If we wanted to find "all runs where `variance_V > 0.001`", we'd have to open every output file ourselves -- AiiDA's database can't help.
 
-@engine.calcfunction
-def run_simulation(parameters):
-    """Run the Gray-Scott simulation, tracked by AiiDA."""
-    result = simulate(parameters.get_dict())
-    return {
-        'variance_V': orm.Float(result['variance_V']),
-        'mean_V': orm.Float(result['mean_V']),
-    }
-```
+## Richer provenance with calcfunctions
 
-:::{note}
-Inside a `calcfunction`, all parameters are AiiDA data nodes -- not plain Python types.
-That is why the function calls `parameters.get_dict()` to extract the dictionary, and returns `orm.Float(...)` rather than a bare float.
+### The idea
 
-When *calling* the function, however, AiiDA auto-serializes plain Python types for you: `run_simulation(orm.Dict(params))` and `run_simulation(params)` both work -- AiiDA wraps the plain `dict` into an `orm.Dict` automatically.
-:::
+What if, instead of just files in and files out, we could register the simulation's inputs and outputs as **structured AiiDA data nodes**?
 
-```{code-cell} ipython3
-result = run_simulation(orm.Dict(params))
-print(f"variance(V) = {result['variance_V'].value:.4e}")
-print(f"mean(V)     = {result['mean_V'].value:.4e}")
-```
+- The input parameters as a {py:class}`~aiida.orm.Dict` (queryable key-value pairs in the database)
+- The output scalars as {py:class}`~aiida.orm.Float` nodes (directly searchable)
 
-The result values are now stored as `Float` nodes in AiiDA -- queryable, with full provenance.
+A {func}`@calcfunction <aiida.engine.processes.functions.calcfunction>` is the simplest way to do this.
+It's a regular Python function with a decorator that makes AiiDA automatically:
+
+1. Store all input nodes
+2. Create a **process node** recording the computation
+3. Store all output nodes
+4. Link everything in the provenance graph
 
 ### Writing `prepare_input`
 
-To use the command-line script (as we did in Module 1 with `aiida-shell`), we need to convert our `Dict` parameters into a YAML file.
-Let's write a calcfunction for this:
+This calcfunction takes a `Dict` of parameters and produces the YAML input file that our simulation script expects:
 
 ```{code-cell} ipython3
+# Define prepare_input: a calcfunction that converts a Dict to a YAML file.
+import io
+
+from aiida import engine, orm
+
+
 @engine.calcfunction
 def prepare_input(parameters):
     """Convert a Dict of parameters into a SinglefileData YAML file."""
-    import io
-
     content = yaml.dump(parameters.get_dict())
     return orm.SinglefileData(io.BytesIO(content.encode()), filename='input.yaml')
 ```
 
-```{code-cell} ipython3
-input_file = prepare_input(orm.Dict(params))
-print(f"Created: {input_file.__class__.__name__} (PK={input_file.pk})")
-print(f"Content preview:\n{input_file.get_content()[:200]}")
-```
+:::{note}
+Inside a `calcfunction`, all parameters are AiiDA data nodes -- not plain Python types.
+That is why the function calls `parameters.get_dict()` to extract the dictionary.
+
+When *calling* the function, AiiDA auto-serializes plain Python types for you: `prepare_input(orm.Dict(params))` and `prepare_input(params)` both work.
+:::
 
 ### Writing `parse_output`
 
-After the simulation runs, we need to extract the structured data from the `.npz` output file:
+This calcfunction reads the `.npz` output file and extracts the scalar results as `Float` nodes:
 
 ```{code-cell} ipython3
+# Define parse_output: a calcfunction that extracts scalars from the .npz file.
 @engine.calcfunction
 def parse_output(output_file):
     """Extract variance_V and mean_V from a SinglefileData .npz file."""
@@ -259,35 +191,26 @@ def parse_output(output_file):
 
 ### Running the enriched pipeline
 
-Now we can combine all the pieces: prepare the input, run via `aiida-shell`, and parse the output.
-Each step is tracked by AiiDA:
+Now we chain the three steps: `prepare_input` -> `launch_shell_job` -> `parse_output`.
+Each step is tracked, and the inputs/outputs are stored as structured, queryable nodes:
 
 ```{code-cell} ipython3
-from aiida_shell import launch_shell_job
+# Run the enriched pipeline: prepare_input → ShellJob → parse_output.
+input_file = prepare_input(orm.Dict(BASE_PARAMS))
 
-# Step 1: Prepare input file
-input_file = prepare_input(orm.Dict(params))
-
-# Step 2: Run the simulation via aiida-shell
 results, node = launch_shell_job(
     python_code,
     arguments='{script} {input} --output results.npz',
-    nodes={
-        'script': script_path,
-        'input': input_file,
-    },
+    nodes={'script': SCRIPT_PATH, 'input': input_file},
     outputs=['results.npz'],
 )
 
-print(f"ShellJob PK: {node.pk}, exit status: {node.exit_status}")
-
-# Step 3: Parse the output
 parsed = parse_output(results['results_npz'])
 print(f"variance(V) = {parsed['variance_V'].value:.4e}")
 print(f"mean(V)     = {parsed['mean_V'].value:.4e}")
 ```
 
-Let's look at the provenance graph of the full pipeline:
+Let's look at the provenance graph:
 
 ```{code-cell} ipython3
 ---
@@ -299,66 +222,52 @@ mystnb:
         caption: "Provenance graph of the enriched pipeline: prepare_input -> ShellJob -> parse_output."
         name: fig_module2_pipeline
 ---
+# Provenance graph now shows Dict in and Float out, not just opaque files.
 %run -i include/plot_provenance.py
 plot_provenance(node)
 ```
 
-### Parameter sweep with calcfunctions
+Compare this to the first sweep: the provenance now shows **Dict** going in and **Float** values coming out, not just opaque files.
+AiiDA's database can now search these values directly.
 
-Now let's run the parameter sweep with the full tracked pipeline.
-Every step is recorded by AiiDA:
+### Parameter sweep with the enriched pipeline
+
+Let's run the full sweep again, this time with structured data at every step:
 
 ```{code-cell} ipython3
-f_values_sweep = [0.02, 0.03, 0.035, 0.04, 0.045, 0.05, 0.06]
-sweep_results = []
+# Re-run the full sweep with the enriched pipeline (structured data at every step).
+enriched_results = []
 
-for f_val in f_values_sweep:
-    sweep_params = params.copy()
-    sweep_params['F'] = f_val
+for f_val in F_VALUES:
+    input_file = prepare_input(BASE_PARAMS | {'F': f_val})
 
-    # Full pipeline: prepare -> run -> parse
-    input_file = prepare_input(orm.Dict(sweep_params))
     results, calc_node = launch_shell_job(
         python_code,
         arguments='{script} {input} --output results.npz',
-        nodes={
-            'script': script_path,
-            'input': input_file,
-        },
+        nodes={'script': SCRIPT_PATH, 'input': input_file},
         outputs=['results.npz'],
     )
 
-    if calc_node.is_finished_ok:
-        parsed = parse_output(results['results_npz'])
-        sweep_results.append({
-            'F': f_val,
-            'variance_V': parsed['variance_V'].value,
-            'pk': calc_node.pk,
-        })
-    else:
-        sweep_results.append({
-            'F': f_val,
-            'variance_V': 0.0,
-            'pk': calc_node.pk,
-        })
-        print(f"F={f_val}: failed with exit status {calc_node.exit_status}")
+    parsed = parse_output(results['results_npz'])
+    enriched_results.append({'F': f_val, 'variance_V': parsed['variance_V'].value})
 
-for r in sweep_results:
-    print(f"F={r['F']:.3f}  variance(V)={r['variance_V']:.4e}  (PK={r['pk']})")
+for r in enriched_results:
+    print(f"F={r['F']:.3f}  variance(V)={r['variance_V']:.4e}")
 ```
 
-Now plot the transition curve -- this time built from AiiDA-tracked data:
-
 ```{code-cell} ipython3
+# Same transition curve — but now every point is backed by queryable AiiDA nodes.
 plot_transition_curve(
-    [r['F'] for r in sweep_results],
-    [r['variance_V'] for r in sweep_results],
+    [r['F'] for r in enriched_results],
+    [r['variance_V'] for r in enriched_results],
 )
 ```
 
-Every data point in this plot is connected to a full provenance chain in AiiDA: which parameters were used, which script ran, what the raw output was, and how the parsed values were extracted.
+The plot looks the same -- but now every data point is backed by structured AiiDA nodes.
+The `Dict` inputs and `Float` outputs live in the database, queryable and with full provenance linking them to the simulation that produced them.
 
 ```{code-cell} ipython3
+# List all processes run in the last day.
 %verdi process list -a -p 1
 ```
 
@@ -366,10 +275,10 @@ Every data point in this plot is connected to a full provenance chain in AiiDA: 
 
 In this module you learned to:
 
-- **Use AiiDA data types** (`Dict`, `Float`, `SinglefileData`) to store scientific data with provenance
-- **Write calcfunctions** to make Python functions tracked by AiiDA
-- **Build a multi-step pipeline**: `prepare_input` -> `launch_shell_job` -> `parse_output`
-- **Run a parameter sweep** with full provenance tracking for every data point
+- **Run a parameter sweep** with `aiida-shell` in a loop (file in -> file out)
+- **Recognize the limitation**: AiiDA can't query inside opaque files
+- **Write calcfunctions** (`prepare_input`, `parse_output`) to convert between files and structured data
+- **Build an enriched pipeline** with queryable `Dict` inputs and `Float` outputs
 
 :::{seealso}
 - {ref}`Topic: data types <topics:data_types>` -- full reference on AiiDA's data model
@@ -378,4 +287,6 @@ In this module you learned to:
 
 ## Next steps
 
-We can now run tracked simulations and extract structured data. But our sweep is still a Python `for` loop -- if one step fails, we lose everything. In {ref}`Module 3 <tutorial:module3>`, you'll learn how to wrap this pipeline into a **WorkGraph workflow** that handles data flow, parallelism, and provenance hierarchy automatically.
+We now have a tracked pipeline with structured data -- but it's still a Python `for` loop.
+If one step fails, the loop stops. There's no single "sweep" object to query, and no way to parallelize.
+In {ref}`Module 3 <tutorial:module3>`, you'll wrap the pipeline into a **WorkGraph workflow** and turn the loop into a mapped workflow too.

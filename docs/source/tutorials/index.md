@@ -114,25 +114,6 @@ Chain calculations into automated workflows with WorkGraph, including parameter 
 Go to Module 3
 ```
 :::
-
-:::{grid-item-card} {fa}`wrench;mr-1` Modules 4--7: Coming Soon
-:text-align: center
-:shadow: md
-
-Error handling, remote HPC submission, querying data, and advanced topics.
-
-+++
-
-```{button-ref} module4
-:ref-type: doc
-:click-parent:
-:expand:
-:color: secondary
-:outline:
-
-See what's planned
-```
-:::
 ::::
 
 ## Classic Tutorial
@@ -169,9 +150,5 @@ module0
 module1
 module2
 module3
-module4
-module5
-module6
-module7
 basic
 ```

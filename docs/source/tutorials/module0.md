@@ -70,17 +70,19 @@ The script is provided as {download}`include/reaction-diffusion.py` -- expand th
 Let's run the simulation directly -- no AiiDA involved yet.
 
 ```{code-cell} ipython3
+# Run the simulation script directly via subprocess.
 import subprocess
 import tempfile
 from pathlib import Path
 
-script_path = Path('include/reaction-diffusion.py').resolve()
+from include.constants import BASE_PARAMS, SCRIPT_PATH
+
 input_path = Path('include/input.yaml').resolve()
 work_dir = Path(tempfile.mkdtemp())
 output_path = work_dir / 'results.npz'
 
 result = subprocess.run(
-    ['python3', str(script_path), str(input_path), '--output', str(output_path)],
+    ['python3', str(SCRIPT_PATH), str(input_path), '--output', str(output_path)],
     capture_output=True,
     text=True,
 )
@@ -92,6 +94,7 @@ print(f"Stdout: {result.stdout.strip()}")
 The simulation succeeded. Let's load and inspect the output:
 
 ```{code-cell} ipython3
+# Load the .npz output and print scalar results.
 import numpy as np
 
 data = np.load(output_path)
@@ -104,6 +107,7 @@ print(f"Fields shape: {data['U_final'].shape}")
 ## Visualizing the results
 
 ```{code-cell} ipython3
+# Visualize the 2D concentration fields (U and V).
 %run -i include/plot_fields.py
 plot_uv_fields(u_field=data['U_final'], v_field=data['V_final'])
 ```
@@ -117,27 +121,17 @@ Not all parameter combinations produce interesting patterns.
 Let's try with `F=0.1` (too high -- the feed rate overwhelms the reaction):
 
 ```{code-cell} ipython3
-import tempfile
-
+# Re-run with a bad parameter (F=0.1) to demonstrate failure handling.
 import yaml
 
-work_dir = Path(tempfile.mkdtemp())
-
-bad_params = {
-    'grid_size': 64,
-    'du': 0.16, 'dv': 0.08,
-    'F': 0.1,  # Too high — no pattern forms
-    'k': 0.065,
-    'dt': 1.0, 'n_steps': 3000,
-    'seed': 42,
-}
+bad_params = BASE_PARAMS | {'F': 0.1}  # Too high — no pattern forms
 
 bad_input_path = work_dir / 'input_bad.yaml'
 bad_input_path.write_text(yaml.dump(bad_params))
 bad_output_path = work_dir / 'results_bad.npz'
 
 result_bad = subprocess.run(
-    ['python3', str(script_path), str(bad_input_path), '--output', str(bad_output_path)],
+    ['python3', str(SCRIPT_PATH), str(bad_input_path), '--output', str(bad_output_path)],
     capture_output=True,
     text=True,
 )

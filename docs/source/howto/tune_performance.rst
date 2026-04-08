@@ -14,11 +14,16 @@ TL;DR
 
 Quick settings to consider for high-throughput workloads:
 
-- Start the daemon with multiple workers: ``verdi daemon start X`` (e.g., ``X=4``)
-- Reduce the SSH connection cooldown time for remote Computers (default 15s)
+- Start the daemon with multiple workers: ``verdi daemon start X`` (e.g., ``X=4``), or add workers to a running daemon: ``verdi daemon incr X``
+- Reduce the SSH connection cooldown time for remote computers (default 15s)
 - Enable caching: ``verdi config set caching.default_enabled True``
 - Increase worker slots: ``verdi config set daemon.worker_process_slots X`` (e.g., ``X=1000``)
-- If you're spawning too many daemon workers, consider reduce number of concurrent I/O tasks: ``verdi computer configure core.ssh_async --max-io-allowed <lower-value> <COMPUTER_LABEL>``
+
+.. note::
+
+   When scaling to many daemon workers and/or lowering the SSH cooldown, you may need to reduce the per-computer I/O concurrency limit to avoid overloading the remote machine.
+   This applies to computers configured with the ``core.ssh_async`` transport (see :ref:`max_io_allowed <max-io-allowed-note>` below).
+
 To see all available configuration options and their current values, run ``verdi config list``.
 
 Daemon configuration
@@ -41,16 +46,28 @@ If ``verdi daemon status`` constantly warns about a high percentage of the avail
 .. code:: console
 
     $ verdi config set daemon.worker_process_slots X
+
+.. _max-io-allowed-note:
+
 .. important::
-<Or place the info here>, the current default number is 8, blah balh
+
+   When running many daemon workers, each worker may issue concurrent I/O operations (file transfers, command executions) to remote computers.
+   The ``max_io_allowed`` setting (default: 8) limits how many concurrent I/O operations are allowed per SSH connection.
+   If you notice connection instability or remote server overload, consider lowering this value:
+
+   .. code:: console
+
+       $ verdi computer configure core.ssh_async --max-io-allowed <value> <COMPUTER_LABEL>
+
 Remote connections
 ==================
 
 **Tune SSH connection interval** --
-By default, AiiDA enforces a 15-second delay between consecutive SSH connections to the same remote machine.
-This cooldown prevents overloading remote systems with too many connection requests, which could get you blocked by HPC center firewalls or violate their usage policies.
+Within a single daemon worker, multiple tasks targeting the same computer share a single SSH connection.
+Before opening a new connection, AiiDA enforces a cooldown (default: 15 seconds) to avoid overwhelming the remote machine.
+Since each daemon worker is a separate OS process, running multiple workers can result in multiple concurrent connections to the same machine.
 
-If you are running many short tasks and notice performance bottlenecks, you can adjust this value via the interactive configuration:
+If you are running many short tasks and notice performance bottlenecks from the cooldown, you can lower it via the interactive configuration:
 
 .. code:: console
 
@@ -90,6 +107,13 @@ Enable it globally:
 
     $ verdi config set caching.default_enabled True
 
+Or enable it only for specific calculation types via ``caching.enabled_for``.
+
+.. note::
+
+   Caching operates at the calculation level, not the workflow level.
+   When caching is enabled for a workflow, the workflow itself still runs through all its steps, but each individual calculation whose inputs match a previous run will have its outputs filled in from the cache instead of being resubmitted.
+
 See :ref:`how-to:run-codes:caching` for details on how caching works and how to configure it per calculation type.
 
 System and storage
@@ -118,12 +142,26 @@ Download the :download:`benchmark script <include/scripts/performance_benchmark_
 
 .. code:: console
 
-    $ python performance_benchmark_base.py -n 100
-    ...
-    Elapsed time: 24.90 seconds.
-    Performance: 0.25 s / process
+    $ python performance_benchmark_base.py -n 10
 
-This runs 100 ``ArithmeticAddCalculation`` processes and reports the time per process.
-The example above was obtained on an AMD Ryzen 5 3600 (3.6 GHz) with AiiDA v2.2.0.
-If you observe significantly higher runtimes, check whether any relevant component (CPU, disk, PostgreSQL, RabbitMQ) is congested.
+.. dropdown:: Example output
+
+    .. code:: console
+
+        Python 3.12.5 (main, Aug 14 2024, 05:08:31) [Clang 18.1.8 ]
+        AiiDA 2.8.0.post0
+        Running on profile `dev`
+        Success: Created and configured temporary `Computer` benchmark-108a7372 for localhost.
+        Success: Created temporary `Code` bash for localhost.
+        Running 10 calculations.
+        Success: All calculations finished successfully.
+        Elapsed time: 9.29 seconds.
+        Cleaning up...
+        Success: Deleted all calculations.
+        Success: Deleted the created code bash@benchmark-108a7372.
+        Success: Deleted the created computer benchmark-108a7372.
+        Performance: 0.93 s / process
+
+This runs ``ArithmeticAddCalculation`` processes and reports the time per process.
 Results may vary depending on your hardware and AiiDA version.
+If you observe unexpectedly high runtimes, check whether any relevant component (CPU, disk, PostgreSQL, RabbitMQ) is congested.

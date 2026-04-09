@@ -32,11 +32,11 @@ After this module, you will be able to:
 
 ## What you will not learn yet
 
-You cannot yet store structured data types, write calcfunctions, or run parameter sweeps -- those capabilities come in {ref}`Module 2 <tutorial:module2>`.
+Structured data types, calcfunctions, and queryable parameter sweeps come in {ref}`Module 2 <tutorial:module2>`.
 
 ## Setting up your AiiDA profile
 
-An AiiDA **profile** is where all your data, calculations, and provenance are stored.
+An AiiDA **profile** defines the configuration for a self-contained AiiDA environment: which database stores the provenance graph, where the file repository lives, and how to connect to the process broker.
 Before running any calculations, you need one.
 
 If you are working on your own machine, the easiest way is:
@@ -45,13 +45,7 @@ If you are working on your own machine, the easiest way is:
 $ verdi presto
 ```
 
-This creates a lightweight local profile using SQLite storage -- no PostgreSQL or other external services required.
-You can verify that your profile is set up correctly with:
-
-```console
-$ verdi status
-```
-
+This creates a lightweight local profile using an SQLite database and a [disk-objectstore](https://github.com/aiidateam/disk-objectstore) for file storage.
 For production use or more advanced setups, see the {ref}`installation guide <installation>`.
 
 :::{tip}
@@ -76,6 +70,13 @@ If you are running locally with your own profile, you can skip it.
 %run -i include/setup_tutorial.py
 ```
 
+You can verify that the profile is set up correctly with `verdi status`:
+
+```{code-cell} ipython3
+# Check that the AiiDA profile is configured and all services are reachable.
+%verdi status
+```
+
 :::{admonition} About the code cells in this tutorial
 :class: note
 
@@ -96,29 +97,21 @@ AiiDA uses a **{ref}`CalcJob <topics:calculations:concepts:calcjobs>`** to manag
 
 The fastest way to run a CalcJob is with [`aiida-shell`](https://aiida-shell.readthedocs.io), which wraps any shell command -- no plugin code required.
 
-Let's prepare the input file and run the simulation:
-
-```{code-cell} ipython3
-# Write the simulation input parameters to a YAML file on disk.
-import tempfile
-from pathlib import Path
-
-import yaml
-
-from include.constants import BASE_PARAMS, SCRIPT_PATH
-
-work_dir = Path(tempfile.mkdtemp())
-input_path = work_dir / 'input.yaml'
-input_path.write_text(yaml.dump(BASE_PARAMS));
-```
+We use the same input file as in Module 0:
 
 ```{code-cell} ipython3
 # Run the simulation through AiiDA using aiida-shell's launch_shell_job.
+from pathlib import Path
+
 from aiida_shell import launch_shell_job
+
+from include.constants import SCRIPT_PATH
+
+input_path = Path('include/input.yaml').resolve()
 
 results, node = launch_shell_job(
     python_code,
-    arguments='{script} {input} --output results.npz',
+    arguments='{script} --input {input} --output results.npz',
     nodes={'script': SCRIPT_PATH, 'input': input_path},
     outputs=['results.npz'],
 )
@@ -127,6 +120,26 @@ print(f"Process PK: {node.pk}")
 print(f"Exit status: {node.exit_status}")
 print(f"Stdout: {results['stdout'].get_content()}")
 ```
+
+### What just happened?
+
+When you called `launch_shell_job(...)`, AiiDA ran a CalcJob (specifically, a `ShellJob` -- aiida-shell's built-in CalcJob implementation).
+Here is the {ref}`lifecycle <topics:calculations:concepts:calcjobs_transport_tasks>` it went through:
+
+1. **Upload**: AiiDA copied your input files into a working directory and generated a run script
+2. **Submit**: The script was executed on a **Computer** (your local machine)
+3. **Retrieve**: AiiDA collected the output files from the working directory
+4. **Parse**: The outputs were registered as AiiDA nodes with full provenance
+
+Every CalcJob needs two things to run:
+
+- A **{ref}`Computer <how-to:run-codes:computer>`** -- defines *where* calculations run (hostname, scheduler, transport). When you set up a profile with `verdi presto`, a `localhost` Computer is created automatically.
+- A **{ref}`Code <how-to:run-codes:code>`** -- defines *what* executable runs on that computer. `aiida-shell` creates this automatically from the command you pass to `launch_shell_job`.
+
+For remote HPC clusters, you would set these up explicitly -- see the {ref}`how-to guide <how-to:run-codes>`.
+For writing your own CalcJob plugin (with custom input preparation, exit codes, and parsing), see {ref}`how to write a plugin for an external code <how-to:plugin-codes>`.
+
+### Exploring the outputs
 
 The simulation ran successfully and AiiDA recorded everything.
 Let's check what outputs we got:
@@ -153,29 +166,6 @@ with output_node.open(mode='rb') as f:
     print(f"mean(V)     = {float(data['mean_V']):.4e}")
 ```
 
-## What just happened?
-
-When you called `launch_shell_job(...)`, AiiDA ran a CalcJob (specifically, a `ShellJob` -- aiida-shell's built-in CalcJob implementation).
-Here is the {ref}`lifecycle <topics:calculations:concepts:calcjobs_transport_tasks>` it went through:
-
-1. **Upload**: AiiDA copied your input files into a working directory and generated a run script
-2. **Submit**: The script was executed on a **Computer** (your local machine)
-3. **Retrieve**: AiiDA collected the output files from the working directory
-4. **Parse**: The outputs were registered as AiiDA nodes with full provenance
-
-Every CalcJob needs two things to run:
-
-- A **{ref}`Computer <how-to:run-codes:computer>`** -- defines *where* calculations run (hostname, scheduler, transport). When you set up a profile with `verdi presto`, a `localhost` Computer is created automatically.
-- A **{ref}`Code <how-to:run-codes:code>`** -- defines *what* executable runs on that computer. `aiida-shell` creates this automatically from the command you pass to `launch_shell_job`.
-
-For remote HPC clusters, you would set these up explicitly -- see the {ref}`how-to guide <how-to:run-codes>`.
-For writing your own CalcJob plugin (with custom input preparation, exit codes, and parsing), see {ref}`how to write a plugin for an external code <how-to:plugin-codes>`.
-
-:::{note}
-When you use `launch_shell_job()`, aiida-shell creates a temporary Code behind the scenes.
-For production work on remote HPC clusters, you would register a Computer and Code explicitly with `verdi computer setup` and `verdi code create`.
-:::
-
 ## Inspecting the calculation
 
 AiiDA records the full lifecycle of every CalcJob. Let's inspect what happened:
@@ -200,11 +190,7 @@ AiiDA automatically builds a **provenance graph** that records exactly how each 
 ---
 mystnb:
     image:
-        align: center
-        width: 500px
-    figure:
-        caption: "Provenance graph of the ShellJob calculation."
-        name: fig_module1_shelljob
+        width: 100%
 ---
 # Generate and display the provenance graph for this calculation.
 %run -i include/plot_provenance.py
@@ -227,24 +213,21 @@ You can also generate provenance graphs from the command line with `verdi node g
 You can export the full calculation -- inputs, outputs, logs -- to a directory on disk:
 
 ```{code-cell} ipython3
+:tags: ["hide-output"]
+
 # Export the full calculation (inputs, outputs, logs) to a directory.
-%verdi process dump {node.pk} --path /tmp/tutorial_dump -o
+import tempfile
+
+dump_path = tempfile.mkdtemp(prefix='aiida_tut_dump_')
+%verdi process dump {node.pk} --path {dump_path} -o
 ```
 
 ```{code-cell} ipython3
-# Print the directory tree of the dumped calculation data.
-import os
-
-dump_path = Path('/tmp/tutorial_dump')
-for root, dirs, files in os.walk(dump_path):
-    level = root.replace(str(dump_path), '').count(os.sep)
-    indent = ' ' * 2 * level
-    print(f"{indent}{Path(root).name}/")
-    sub_indent = ' ' * 2 * (level + 1)
-    for file in files:
-        print(f"{sub_indent}{file}")
+# Show the directory tree of the dumped calculation data.
+!tree {dump_path}
 ```
 
+All the relevant entities of the calculation are there: the input file, the simulation script, the submission script, captured stdout and stderr, and AiiDA metadata.
 This is useful for debugging, archival, or sharing calculation data outside of AiiDA.
 
 ## Summary

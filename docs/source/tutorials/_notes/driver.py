@@ -68,6 +68,7 @@ def run_reaction_diffusion_scan():
                 sys.executable,
                 str(script_dir / 'reaction-diffusion.py'),
                 # "./reaction-diffusion.py",
+                '--input',
                 str(input_file),
                 '--output',
                 str(output_file),

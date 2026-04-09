@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # ruff: noqa: N803, N806 - uppercase variable names (U, V, F, Lu, Lv) follow standard mathematical notation
 # pyright: reportConstantRedefinition=false
 """Reaction-diffusion simulation (Gray-Scott model).
@@ -22,7 +23,10 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import NoReturn, NotRequired, TypedDict, cast
+from typing import TYPE_CHECKING, NoReturn, TypedDict, cast
+
+if TYPE_CHECKING:
+    from typing import NotRequired
 
 import numpy as np
 import yaml
@@ -114,7 +118,7 @@ def main() -> None:
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
         description='Reaction-diffusion simulation (Gray-Scott model)',
     )
-    _ = parser.add_argument('input', help='Input YAML file')
+    _ = parser.add_argument('--input', required=True, help='Input YAML file')
     _ = parser.add_argument('--output', required=True, help='Output .npz file')
     _ = parser.add_argument('--dt', type=float, help='Override time step')
     args: argparse.Namespace = parser.parse_args()

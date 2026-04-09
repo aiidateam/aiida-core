@@ -125,7 +125,7 @@ sim_task = wg.add_task(
     'aiida_shell.launch_shell_job',
     name='simulate',
     command=python_code,
-    arguments='{script} {input} --output results.npz',
+    arguments='{script} --input {input} --output results.npz',
     nodes={'script': SCRIPT_PATH},
     outputs=['results.npz'],
 )

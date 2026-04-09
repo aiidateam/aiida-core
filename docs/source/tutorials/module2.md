@@ -79,7 +79,7 @@ for f_val in F_VALUES:
 
     results, calc_node = launch_shell_job(
         python_code,
-        arguments='{script} {input} --output results.npz',
+        arguments='{script} --input {input} --output results.npz',
         nodes={'script': SCRIPT_PATH, 'input': input_path},
         outputs=['results.npz'],
     )
@@ -200,7 +200,7 @@ input_file = prepare_input(orm.Dict(BASE_PARAMS))
 
 results, node = launch_shell_job(
     python_code,
-    arguments='{script} {input} --output results.npz',
+    arguments='{script} --input {input} --output results.npz',
     nodes={'script': SCRIPT_PATH, 'input': input_file},
     outputs=['results.npz'],
 )
@@ -216,11 +216,7 @@ Let's look at the provenance graph:
 ---
 mystnb:
     image:
-        align: center
-        width: 500px
-    figure:
-        caption: "Provenance graph of the enriched pipeline: prepare_input -> ShellJob -> parse_output."
-        name: fig_module2_pipeline
+        width: 100%
 ---
 # Provenance graph now shows Dict in and Float out, not just opaque files.
 %run -i include/plot_provenance.py
@@ -243,7 +239,7 @@ for f_val in F_VALUES:
 
     results, calc_node = launch_shell_job(
         python_code,
-        arguments='{script} {input} --output results.npz',
+        arguments='{script} --input {input} --output results.npz',
         nodes={'script': SCRIPT_PATH, 'input': input_file},
         outputs=['results.npz'],
     )

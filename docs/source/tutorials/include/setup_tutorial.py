@@ -28,23 +28,20 @@ from aiida.orm import Computer, InstalledCode, load_code, load_computer
 profile_name = 'tutorial'
 config = get_config()
 
-# Delete any existing tutorial profile so each docs build starts fresh.
-if profile_name in config.profile_names:
-    config.delete_profile(profile_name, delete_storage=True)
-
-create_profile(
-    config,
-    name=profile_name,
-    email='tutorial@aiida.net',
-    storage_backend='core.sqlite_dos',
-    storage_config={},
-    broker_backend=None,
-    broker_config=None,
-)
-config.set_option('runner.poll.interval', 1, scope=profile_name)
-config.set_option('warnings.development_version', False, scope=profile_name)
-config.set_default_profile(profile_name, overwrite=True)
-config.store()
+if profile_name not in config.profile_names:
+    create_profile(
+        config,
+        name=profile_name,
+        email='tutorial@aiida.net',
+        storage_backend='core.sqlite_dos',
+        storage_config={},
+        broker_backend=None,
+        broker_config=None,
+    )
+    config.set_option('runner.poll.interval', 1, scope=profile_name)
+    config.set_option('warnings.development_version', False, scope=profile_name)
+    config.set_default_profile(profile_name, overwrite=True)
+    config.store()
 
 load_profile(profile_name, allow_switch=True)
 os.environ['AIIDA_PROFILE'] = profile_name

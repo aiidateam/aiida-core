@@ -12,7 +12,6 @@
 ## Agreed Module Layout
 
 ### Module 0: The Running Example
-- Current "Introduction" absorbed here
 - Run the script once directly (no AiiDA)
 - Keep it to the minimum: only required inputs shown
 - Show what's missing without a management layer
@@ -41,6 +40,10 @@
 - **Part 2**: Wrap the for-loop as a workflow (Map)
   - Single "sweep" workflow node containing all runs
 - Branching teaser (If control flow)
+
+[MBx]:
+- Getting started modules, truly linear (Current Modules)
+- Further ones
 
 ### Modules 4–7: Future (Coming Soon)
 - Error handling & debugging (exit codes, error handlers, retries)

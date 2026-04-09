@@ -24,10 +24,9 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 
 After this module, you will be able to:
 
-- Understand why workflows matter for reproducible science
-- Build a linear workflow with WorkGraph (grouping the pipeline from Module 2 into one process)
-- Turn a Python for-loop into a mapped workflow
-- Inspect hierarchical provenance graphs
+- Define a reusable workflow with `@task.graph` and `shelljob`
+- Run the workflow and inspect hierarchical provenance
+- Turn a Python for-loop into a mapped workflow with `Map`
 
 ## What you will not learn yet
 
@@ -53,12 +52,12 @@ This module requires an AiiDA profile and the `python_code` variable (see {ref}`
 
 ## Why workflows?
 
-In {ref}`Module 2 <tutorial:module2>`, you built a three-step pipeline (`prepare_input` -> ShellJob -> `parse_output`) and ran it in a Python `for` loop.
+In {ref}`Module 2 <tutorial:module2>`, you built a three-step pipeline (`prepare_input` &rarr; ShellJob &rarr; `parse_output`) and ran it in a Python `for` loop.
 This has important limitations:
 
-- **No grouping**: each step is a separate process in AiiDA -- there's no single "simulation pipeline" object
+- **No grouping**: each step is a separate process in AiiDA -- there is no single "simulation pipeline" object
 - **No hierarchy**: the provenance graph is flat; you can't tell which steps belong together
-- **No parallelism**: the loop runs sequentially; one failure stops everything
+- **No parallelism**: the loop runs each iteration sequentially and blocks until completion
 - **No single entry point**: you can't re-run "the same workflow" with different parameters
 
 A **workflow** solves all of these.
@@ -66,90 +65,78 @@ You define the steps and their connections once, and AiiDA handles execution, da
 
 :::{note}
 AiiDA offers two workflow systems: **WorkGraph** (declarative, graph-based) and **WorkChain** (imperative, class-based).
-This tutorial uses WorkGraph -- it's more intuitive for composing tasks and scales naturally to complex graphs.
+This tutorial uses WorkGraph -- it is more intuitive for composing tasks and scales naturally to complex graphs.
 :::
 
-## Wrapping the pipeline as a workflow
+<!-- TODO: Add a comparison table between AiiDA core concepts and WorkGraph concepts:
+     CalcJob / WorkChain ↔ WorkGraph task / graph, process nodes, etc.
+     From meeting notes: "comparison table between core and WG, make analogous". -->
 
-### Defining the tasks
-
-These are the same calcfunctions from Module 2 -- they convert between files and structured AiiDA data:
+## Setup
 
 ```{code-cell} ipython3
-# Re-define the calcfunctions from Module 2 (prepare_input and parse_output).
-import io
+from aiida import orm
 
-import numpy as np
-import yaml
-
-from aiida import engine, orm
+from aiida_workgraph import WorkGraph, task, shelljob, spec, Map
 
 from include.constants import BASE_PARAMS, F_VALUES, SCRIPT_PATH
-
-
-@engine.calcfunction
-def prepare_input(parameters):
-    """Convert a Dict of parameters into a SinglefileData YAML file."""
-    content = yaml.dump(parameters.get_dict())
-    return orm.SinglefileData(io.BytesIO(content.encode()), filename='input.yaml')
-
-
-@engine.calcfunction
-def parse_output(output_file):
-    """Extract variance_V and mean_V from a SinglefileData .npz file."""
-    with output_file.open(mode='rb') as f:
-        data = np.load(f)
-        return {
-            'variance_V': orm.Float(float(data['variance_V'])),
-            'mean_V': orm.Float(float(data['mean_V'])),
-        }
+from include.tasks import prepare_input, parse_output
 ```
 
-### Building the WorkGraph
+We reuse the `prepare_input` and `parse_output` calcfunctions from {ref}`Module 2 <tutorial:module2>` ({download}`include/tasks.py`).
 
-A {class}`~aiida_workgraph.WorkGraph` is a directed graph of **tasks** connected by **links**.
-Let's wire our three steps into a single workflow:
+To use them inside a `@task.graph` definition, we wrap them with `task()`.
+This turns them into WorkGraph task handles that return output sockets (e.g., `.result`) instead of AiiDA nodes directly, which is how WorkGraph wires tasks together:
 
 ```{code-cell} ipython3
-:tags: ["skip-execution"]
+# Wrap the calcfunctions so they return task handles inside @task.graph().
+prepare_input = task(prepare_input)
+parse_output = task(parse_output)
 
-from aiida_workgraph import WorkGraph
-
-wg = WorkGraph('gray_scott_pipeline')
-
-# Task 1: prepare the input file (Dict -> SinglefileData)
-prepare_task = wg.add_task(prepare_input, name='prepare_input')
-
-# Task 2: run the simulation via aiida-shell's ShellJob
-sim_task = wg.add_task(
-    'aiida_shell.launch_shell_job',
-    name='simulate',
-    command=python_code,
-    arguments='{script} --input {input} --output results.npz',
-    nodes={'script': SCRIPT_PATH},
-    outputs=['results.npz'],
-)
-
-# Task 3: parse the output (SinglefileData -> Float, Float)
-parse_task = wg.add_task(parse_output, name='parse_output')
-
-# Link the tasks together
-wg.add_link(prepare_task.outputs.result, sim_task.inputs.nodes__input)
-wg.add_link(sim_task.outputs.results_npz, parse_task.inputs.output_file)
+# Convert the script path to a SinglefileData node.
+# WorkGraph serializes all inputs, so plain Path objects must be wrapped.
+script_node = orm.SinglefileData(SCRIPT_PATH)
 ```
 
-:::{note}
-The exact API for adding `shelljob` tasks and linking them in WorkGraph may differ depending on the `aiida-workgraph` version.
-Consult the [aiida-workgraph documentation](https://aiida-workgraph.readthedocs.io) for the latest syntax.
-:::
+## Building the workflow
+
+A {class}`~aiida_workgraph.WorkGraph` is a directed graph of **tasks** connected by **links**.
+We use the `@task.graph` decorator to define our three-step pipeline as a reusable workflow:
+
+```{code-cell} ipython3
+
+@task.graph()
+def gray_scott_pipeline(
+    parameters: orm.Dict,
+    command: orm.AbstractCode,
+    script: orm.SinglefileData,
+) -> spec.namespace(variance_V=float, mean_V=float):
+    """Prepare input, run simulation, parse output."""
+    input_file = prepare_input(parameters=parameters).result
+    sim = shelljob(
+        command=command,
+        arguments=['{script}', '--input', '{input}', '--output', 'results.npz'],
+        nodes={'script': script, 'input': input_file},
+        outputs=['results.npz'],
+    )
+    return parse_output(output_file=sim.results_npz)
+```
+
+The `@task.graph` decorator turns `gray_scott_pipeline` into a reusable sub-workflow.
+Calling it inside a `with WorkGraph()` block registers a task; calling `.build()` creates a standalone WorkGraph.
 
 ### Running and inspecting
 
-```{code-cell} ipython3
-:tags: ["skip-execution"]
+Let's build and run the workflow with a single set of parameters:
 
-# Run the WorkGraph and inspect its state.
-wg.run(inputs={'prepare_input': {'parameters': orm.Dict(BASE_PARAMS)}})
+```{code-cell} ipython3
+
+wg = gray_scott_pipeline.build(
+    parameters=orm.Dict(BASE_PARAMS),
+    command=python_code,
+    script=script_node,
+)
+wg.run()
 
 print(f"WorkGraph PK: {wg.process.pk}")
 print(f"State: {wg.state}")
@@ -159,7 +146,6 @@ The three steps are now grouped under a single workflow node.
 Let's inspect the hierarchy:
 
 ```{code-cell} ipython3
-:tags: ["skip-execution"]
 
 # Show the hierarchical process tree of the workflow.
 %verdi process status {wg.process.pk}
@@ -168,14 +154,17 @@ Let's inspect the hierarchy:
 The provenance graph now shows a **hierarchical** structure -- the workflow contains the individual steps:
 
 ```{code-cell} ipython3
-:tags: ["skip-execution"]
-
+---
+mystnb:
+    image:
+        width: 100%
+---
 # Visualize the hierarchical provenance graph of the workflow.
 %run -i include/plot_provenance.py
 plot_provenance(wg.process)
 ```
 
-Compare this to Module 2's flat provenance: instead of disconnected steps, the workflow clearly shows that `prepare_input`, `simulate`, and `parse_output` are part of a single logical operation.
+Compare this to Module 2's flat provenance: instead of disconnected steps, the workflow clearly shows that `prepare_input`, the simulation, and `parse_output` are part of a single logical operation.
 
 ## Turning the for-loop into a workflow
 
@@ -186,72 +175,79 @@ But a `for` loop is not an AiiDA process -- it doesn't show up in the provenance
 
 ### Using Map
 
-WorkGraph's `Map` feature lets you run the same sub-workflow over multiple input values -- like a parallel `for` loop, but as a single AiiDA workflow with full provenance:
+WorkGraph's {class}`~aiida_workgraph.Map` lets you run the same sub-workflow over multiple input values -- like a parallel `for` loop, but as a single AiiDA workflow with full provenance:
 
 ```{code-cell} ipython3
-:tags: ["skip-execution"]
 
-wg_sweep = WorkGraph('gray_scott_sweep')
+# Create a Dict node for each F value.
+param_nodes = {f'F_{f_val}': orm.Dict(BASE_PARAMS | {'F': f_val}) for f_val in F_VALUES}
 
-param_nodes = [orm.Dict(BASE_PARAMS | {'F': f_val}) for f_val in F_VALUES]
+with WorkGraph('gray_scott_sweep') as wg_sweep:
+    # Generate the parameter nodes as a dynamic namespace.
+    with Map(param_nodes) as map_zone:
+        result = gray_scott_pipeline(
+            parameters=map_zone.item.value,
+            command=python_code,
+            script=script_node,
+        )
+        map_zone.gather({'variance_V': result.variance_V, 'mean_V': result.mean_V})
 
-# TODO: The exact Map API depends on the aiida-workgraph version.
-# The concept: map the pipeline (prepare_input -> simulate -> parse_output)
-# over the list of parameter sets.
-# Consult https://aiida-workgraph.readthedocs.io for the current Map syntax.
+wg_sweep.run()
 ```
 
-:::{admonition} Implementation note
-:class: warning
-
-The exact `Map` API in `aiida-workgraph` is under active development.
-The concept is stable: you define a sub-workflow and map it over a list of inputs.
-The code above shows the *intent* -- check the [aiida-workgraph documentation](https://aiida-workgraph.readthedocs.io) for the current syntax.
+:::{note}
+`Map` iterates over a dictionary of inputs. For each entry, it runs the sub-workflow with that entry's value, then gathers the specified outputs into collections accessible via `map_zone.outputs`.
 :::
 
 ### Running and inspecting the sweep
 
 ```{code-cell} ipython3
-:tags: ["skip-execution"]
 
-# Once the Map is set up:
-# wg_sweep.run()
-# print(f"Sweep WorkGraph PK: {wg_sweep.process.pk}")
-# %verdi process status {wg_sweep.process.pk}
+print(f"Sweep WorkGraph PK: {wg_sweep.process.pk}")
+%verdi process status {wg_sweep.process.pk}
 ```
 
 The sweep is now a single workflow node containing all individual pipeline runs.
-You can query it, inspect it, and see the full hierarchical provenance:
+The provenance graph shows the full hierarchy:
 
 ```{code-cell} ipython3
-:tags: ["skip-execution"]
-
-# %run -i include/plot_provenance.py
-# plot_provenance(wg_sweep.process)
+---
+mystnb:
+    image:
+        width: 100%
+---
+%run -i include/plot_provenance.py
+plot_provenance(wg_sweep.process)
 ```
 
 ### Analyzing results
 
 ```{code-cell} ipython3
-:tags: ["skip-execution"]
 
-# Extract results from the workflow outputs and plot:
-# %run -i include/plot_sweep.py
-# plot_transition_curve(f_values, variances)
+# Extract results from the Map outputs and plot.
+%run -i include/plot_sweep.py
+
+variances = map_zone.outputs.variance_V
+plot_transition_curve(
+    list(F_VALUES),
+    [variances[key].value for key in sorted(variances)],
+)
 ```
 
 The key advantage: the entire sweep -- every pipeline run, every input, every output -- lives under a single workflow node in AiiDA's provenance graph.
 
-## Branching (teaser)
+## Control flow (teaser)
 
-WorkGraph also supports **conditional logic** -- running different tasks based on intermediate results.
-For example, you could skip the parse step if the simulation failed, or run additional analysis only for interesting parameter values.
+WorkGraph also supports **conditional logic** and **loops** -- running different tasks based on intermediate results.
+For example, you could skip the parse step if the simulation failed, or repeat a simulation with refined parameters:
 
 ```python
-# Conceptual example — syntax may differ
-if_task = wg.add_task(If, condition=lambda result: result['variance_V'] > 1e-6)
-if_task.then(detailed_analysis_task)
-if_task.otherwise(log_failure_task)
+from aiida_workgraph import If, While
+
+with WorkGraph('conditional_example') as wg:
+    result = some_task(x=x)
+    with If(result.converged) as if_zone:
+        detailed_analysis(data=result.output)
 ```
 
 More advanced workflow patterns (If/While control flow, error handlers) will be covered in future modules.
@@ -260,9 +256,9 @@ More advanced workflow patterns (If/While control flow, error handlers) will be 
 
 In this module you learned to:
 
-- **Wrap a multi-step pipeline** into a single WorkGraph workflow
+- **Define a reusable workflow** with `@task.graph` and `shelljob`
+- **Run and inspect** hierarchical provenance -- workflows grouping their child processes
 - **Turn a Python for-loop** into a mapped workflow with `Map`
-- **Inspect hierarchical provenance** -- workflows grouping their child processes
 - **Compare** flat (Module 2) vs hierarchical (Module 3) provenance
 
 :::{seealso}

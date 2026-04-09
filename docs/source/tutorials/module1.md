@@ -67,6 +67,14 @@ If you are running locally with your own profile, you can skip it.
 #     load_profile()
 
 %load_ext aiida
+
+# Delete any existing tutorial profile so each docs build starts fresh.
+# Modules 2+ reuse the profile created here.
+from aiida.manage.configuration import get_config
+_config = get_config()
+if 'tutorial' in _config.profile_names:
+    _config.delete_profile('tutorial', delete_storage=True)
+
 %run -i include/setup_tutorial.py
 ```
 
@@ -182,6 +190,9 @@ We can see all processes that have been run so far:
 %verdi process list -a
 ```
 
+<!-- TODO: Add `verdi shell` subsection — interactive exploration of the database
+     (load nodes, inspect attributes, follow links). From meeting notes. -->
+
 ## Exploring the provenance graph
 
 AiiDA automatically builds a **provenance graph** that records exactly how each piece of data was produced:
@@ -205,7 +216,7 @@ In the graph:
 This graph answers questions like *"Where did this number come from?"* and *"What parameters produced this result?"* -- even months later.
 
 :::{tip}
-You can also generate provenance graphs from the command line with `verdi node graph generate <PK>`.
+Open the image in a new tab for a larger view. You can also generate provenance graphs from the command line with `verdi node graph generate <PK>`.
 :::
 
 ## Dumping calculation data
@@ -229,6 +240,10 @@ dump_path = tempfile.mkdtemp(prefix='aiida_tut_dump_')
 
 All the relevant entities of the calculation are there: the input file, the simulation script, the submission script, captured stdout and stderr, and AiiDA metadata.
 This is useful for debugging, archival, or sharing calculation data outside of AiiDA.
+
+<!-- TODO: Add "Handling failures" section — re-run with bad params (F=0.1),
+     show how AiiDA records the failed CalcJob (exit code, stderr in provenance),
+     contrast with Module 0 where the failure left no trace. From meeting notes. -->
 
 ## Summary
 

@@ -53,7 +53,7 @@ If ``verdi daemon status`` constantly warns about a high percentage of the avail
 
    When running many daemon workers, each worker may issue concurrent I/O operations (file transfers, command executions) to remote computers.
    The ``max_io_allowed`` setting (default: 8) limits how many concurrent I/O operations are allowed per SSH connection.
-   If you notice connection instability or remote server overload, consider lowering this value:
+   If you notice performance degradation or remote server overload, consider lowering this value:
 
    .. code:: console
 

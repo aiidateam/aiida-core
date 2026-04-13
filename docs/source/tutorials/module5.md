@@ -12,14 +12,14 @@ kernelspec:
 ---
 
 (tutorial:module5)=
-# Module 5: Remote Submission and the Daemon (Coming Soon)
+# Module 5: Remote submission (coming soon)
 
 :::{note}
 This module is under development. Planned topics:
 
 - `submit()` vs `run()` and the AiiDA daemon
 - Setting up remote HPC computers (SSH transport, SLURM/PBS schedulers)
-- Submitting calculations to remote clusters
+- Submitting calculations to remote clusters and managing the queue
 - Monitoring and retrieving results
 
 See {ref}`Module 3 <tutorial:module3>` for the latest completed module.

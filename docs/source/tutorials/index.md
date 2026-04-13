@@ -32,7 +32,7 @@ See the demo
 
 -->
 
-## Introductory Modules
+## Introductory modules
 
 :::{note}
 These four modules are designed to be worked through in order.
@@ -42,7 +42,7 @@ Each builds on the previous one, so start with Module 0 if you are new to AiiDA.
 ::::{grid} 2 2 2 2
 :gutter: 3
 
-:::{grid-item-card} {fa}`flask;mr-1` Module 0: The Running Example
+:::{grid-item-card} {fa}`flask;mr-1` Module 0: The running example
 :text-align: center
 :shadow: md
 
@@ -80,7 +80,7 @@ Go to Module 1
 ```
 :::
 
-:::{grid-item-card} {fa}`cubes;mr-1` Module 2: Interacting with Data
+:::{grid-item-card} {fa}`cubes;mr-1` Module 2: Structured data and calcfunctions
 :text-align: center
 :shadow: md
 
@@ -99,7 +99,7 @@ Go to Module 2
 ```
 :::
 
-:::{grid-item-card} {fa}`diagram-project;mr-1` Module 3: Writing Simple Workflows
+:::{grid-item-card} {fa}`diagram-project;mr-1` Module 3: Writing simple workflows
 :text-align: center
 :shadow: md
 
@@ -119,7 +119,7 @@ Go to Module 3
 :::
 ::::
 
-## Advanced Modules
+## Advanced modules
 
 :::{note}
 These modules can be worked through in any order, depending on your needs.
@@ -129,7 +129,7 @@ They assume familiarity with the introductory modules above.
 ::::{grid} 2 2 2 2
 :gutter: 3
 
-:::{grid-item-card} {fa}`code-branch;mr-1` Module 4: Complex Workflows
+:::{grid-item-card} {fa}`code-branch;mr-1` Module 4: Complex workflows
 :text-align: center
 :shadow: md
 
@@ -140,7 +140,7 @@ Conditional logic (If/While), nested sub-workflows, and dynamic workflow constru
 *Coming soon*
 :::
 
-:::{grid-item-card} {fa}`server;mr-1` Module 5: Remote Submission
+:::{grid-item-card} {fa}`server;mr-1` Module 5: Remote submission
 :text-align: center
 :shadow: md
 
@@ -151,7 +151,7 @@ Run calculations on remote HPC clusters with schedulers, transports, and queue m
 *Coming soon*
 :::
 
-:::{grid-item-card} {fa}`magnifying-glass-chart;mr-1` Module 6: Querying and Analysis
+:::{grid-item-card} {fa}`magnifying-glass-chart;mr-1` Module 6: Querying and analysis
 :text-align: center
 :shadow: md
 
@@ -162,7 +162,7 @@ Use the QueryBuilder to search, filter, and analyze your provenance graph at sca
 *Coming soon*
 :::
 
-:::{grid-item-card} {fa}`shield-halved;mr-1` Module 7: Error Handling
+:::{grid-item-card} {fa}`shield-halved;mr-1` Module 7: Error handling
 :text-align: center
 :shadow: md
 
@@ -174,7 +174,7 @@ Exit code checking, error handlers, and automatic retries in your workflows.
 :::
 ::::
 
-## Classic Tutorial
+## Classic tutorial
 
 ::::{grid} 1 2 2 3
 :gutter: 3

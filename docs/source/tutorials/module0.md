@@ -15,7 +15,7 @@ execution:
 
 (tutorial:module0)=
 (tutorial:intro)=
-# Module 0: The Running Example
+# Module 0: The running example
 
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module0.ipynb` {octicon}`download`

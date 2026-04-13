@@ -41,10 +41,6 @@
   - Single "sweep" workflow node containing all runs
 - Branching teaser (If control flow)
 
-[MBx]:
-- Getting started modules, truly linear (Current Modules)
-- Further ones
-
 ### Modules 4–7: Future (Coming Soon)
 - Error handling & debugging (exit codes, error handlers, retries)
 - Remote HPC submission (`submit()` vs `run()`, daemon, SSH computers)

@@ -14,7 +14,7 @@ execution:
 ---
 
 (tutorial:module2)=
-# Module 2: Interacting with Data
+# Module 2: Structured data and calcfunctions
 
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module2.ipynb` {octicon}`download`

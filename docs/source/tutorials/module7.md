@@ -12,15 +12,15 @@ kernelspec:
 ---
 
 (tutorial:module7)=
-# Module 7: Advanced Topics (Coming Soon)
+# Module 7: Error handling (coming soon)
 
 :::{note}
 This module is under development. Planned topics:
 
-- Multi-parameter sweeps (2D phase diagrams)
-- WorkGraph vs WorkChain comparison
-- FFT analysis and advanced post-processing
-- Interactive exploration of results
+- Inspecting failed calculations (`verdi process report`, `verdi process dump`)
+- Understanding failure modes and exit codes
+- Implementing error handlers with WorkGraph
+- Building resilient workflows with automatic retries
 
 See {ref}`Module 3 <tutorial:module3>` for the latest completed module.
 :::

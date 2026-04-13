@@ -12,15 +12,15 @@ kernelspec:
 ---
 
 (tutorial:module4)=
-# Module 4: Error Handling and Debugging (Coming Soon)
+# Module 4: Complex workflows (coming soon)
 
 :::{note}
 This module is under development. Planned topics:
 
-- Inspecting failed calculations (`verdi process report`, `verdi process dump`)
-- Understanding failure modes and exit codes
-- Implementing error handlers with WorkGraph
-- Building resilient workflows with automatic retries
+- Conditional logic with `If` / `While` control-flow zones
+- Nested sub-workflows built from `@task.graph` factories
+- Dynamic workflow construction based on intermediate results
+- Branching patterns for parameter-dependent pipelines
 
 See {ref}`Module 3 <tutorial:module3>` for the latest completed module.
 :::

@@ -12,15 +12,15 @@ kernelspec:
 ---
 
 (tutorial:module6)=
-# Module 6: Querying and Organizing Data (Coming Soon)
+# Module 6: Querying and analysis (coming soon)
 
 :::{note}
 This module is under development. Planned topics:
 
-- Finding data with the QueryBuilder (filter, project, join)
+- Searching the provenance graph with the QueryBuilder (filter, project, join)
+- Analyzing trends across many runs at scale
 - Organizing calculations and data with Groups
 - Exporting and sharing data as `.aiida` archives
-- `verdi process dump` for inspection and debugging
 
 See {ref}`Module 3 <tutorial:module3>` for the latest completed module.
 :::

@@ -1,0 +1,19 @@
+---
+name: writing-docs
+description: Use when writing or editing documentation files (`.md`, `.rst`) under `docs/`. Covers one-sentence-per-line style, file naming conventions, header case, and the Divio documentation system.
+---
+
+# Writing documentation for aiida-core
+
+When writing or editing `.md` or `.rst` files under `docs/`:
+
+- Write **one sentence per line** (no manual line wrapping) &mdash; makes diffs easy to review.
+- File/directory names: alphanumeric, lowercase, underscores as separators.
+- Headers in **sentence case** (e.g., "Entry points", not "Entry Points").
+- Documentation follows the [Divio documentation system](https://www.divio.com/blog/documentation/): tutorials (learning-oriented), how-to guides (goal-oriented), topics (understanding-oriented), reference (information-oriented).
+
+## Building the docs
+
+```bash
+uv run sphinx-build -b html docs/source docs/build/html
+```

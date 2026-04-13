@@ -41,6 +41,28 @@ verdi process repair            # requeue processes stuck after a daemon crash
 - **`presto`-marked test failures** &mdash; these use an in-memory `SqliteTempBackend`, so the bug is in the code, not in service configuration.
 - **Daemon subprocess killed on shutdown** &mdash; daemon-launched subprocesses must pass `start_new_session=True` or they inherit the daemon's signal handling and die with it.
 
+## Interactive inspection
+
+```bash
+verdi devel run-sql "SELECT ..."  # run raw SQL against the profile database
+verdi shell                       # interactive IPython shell with AiiDA loaded
+```
+
+Useful patterns inside `verdi shell`:
+
+```python
+from aiida.orm import QueryBuilder, Node, load_node
+
+# Find nodes by type
+qb = QueryBuilder().append(Node, filters={'node_type': {'like': 'data.core.dict.%'}})
+
+# Inspect a specific node
+node = load_node(<PK>)
+node.base.attributes.all   # all stored attributes
+node.base.extras.all        # all extras (mutable even after storing)
+node.base.repository.list_object_names()  # files in the node's repository
+```
+
 ## Related source
 
 - Process runner: `src/aiida/engine/runners.py`

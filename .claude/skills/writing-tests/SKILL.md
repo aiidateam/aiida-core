@@ -17,12 +17,16 @@ Reusable fixtures live in `tests/conftest.py` and per-subtree `conftest.py` file
 - **Make assertions as strong as possible.** `assert result == expected_value`, not `assert result is not None`.
   Check exact values, types, and lengths.
 - **Regression tests for bugs.** First write a test that reproduces the bug, then fix the code.
+- **Test edge cases and failure paths.** Don't just test the happy path. Test boundary values, empty inputs, invalid arguments, and expected exceptions.
 - **One behavior per test.** Each test must be independent, deterministic, and must not test framework behavior (Python, SQLAlchemy, Click).
 
 ## Marker conventions
 
 - `@pytest.mark.presto` &mdash; runs against `SqliteTempBackend` (in-memory, no PostgreSQL / RabbitMQ).
   Prefer `presto`-compatible tests where possible: they are much faster and runnable in any environment.
+- `@pytest.mark.requires_rmq` &mdash; requires a running RabbitMQ instance.
+- `@pytest.mark.requires_psql` &mdash; requires a running PostgreSQL instance.
+- `@pytest.mark.nightly` &mdash; long-running tests, only executed in nightly CI.
 - Transport tests require passwordless SSH to localhost.
 
 ## Parametrization

@@ -1,6 +1,6 @@
 ---
 name: writing-tests
-description: Use when writing new pytest tests, fixtures, or regression tests for aiida-core. Covers the preference for real objects over mocks, `presto` marker semantics, assertion strength, parametrization, and fixture reuse.
+description: Use when writing new pytest tests, fixtures, or regression tests for aiida-core.
 ---
 
 # Writing tests for aiida-core

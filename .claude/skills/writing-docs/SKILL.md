@@ -1,6 +1,6 @@
 ---
 name: writing-docs
-description: Use when writing or editing documentation files (`.md`, `.rst`) under `docs/`. Covers one-sentence-per-line style, file naming conventions, header case, and the Divio documentation system.
+description: Use when writing or editing documentation files (`.md`, `.rst`) under `docs/`.
 ---
 
 # Writing documentation for aiida-core
@@ -16,4 +16,11 @@ When writing or editing `.md` or `.rst` files under `docs/`:
 
 ```bash
 uv run sphinx-build -b html docs/source docs/build/html
+```
+
+For live-reloading during development, use `sphinx-autobuild` (not a project dependency, install manually):
+
+```bash
+uv pip install sphinx-autobuild
+uv run sphinx-autobuild docs/source docs/build/html
 ```

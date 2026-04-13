@@ -1,6 +1,6 @@
 ---
 name: commit-conventions
-description: Use when making commits, creating branches, or preparing pull requests for aiida-core. Covers the 50/72 commit style, emoji prefixes (optional), branch naming, versioning, and PR requirements including squash vs rebase merging.
+description: Use when making commits, creating branches, or preparing pull requests for aiida-core.
 ---
 
 # Commit and PR conventions for aiida-core
@@ -63,8 +63,8 @@ Emoji selection is adapted from [MyST-Parser](https://github.com/executablebooks
 When submitting changes:
 
 1. **Description**: Include a meaningful description explaining the change and link to related issues
-1. **Tests**: Include test cases for new functionality or bug fixes
-1. **Documentation**: Update docs if behavior changes or new features are added
-1. **Code quality**: Ensure `uv run pre-commit` passes
+2. **Tests**: Include test cases for new functionality or bug fixes
+3. **Documentation**: Update docs if behavior changes or new features are added
+4. **Code quality**: Ensure `uv run pre-commit` passes
 
 Merging (maintainers): **Squash and merge** for single-issue PRs, **rebase and merge** for multi-commit PRs with individually significant commits.

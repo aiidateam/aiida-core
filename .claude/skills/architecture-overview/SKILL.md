@@ -1,6 +1,6 @@
 ---
 name: architecture-overview
-description: Use when exploring the aiida-core codebase structure, looking for key files, or understanding how packages relate to each other. Contains the source layout table, key entry points, abstract base classes, and database/storage architecture.
+description: Use when exploring the aiida-core codebase structure, looking for key files, or understanding how packages relate to each other.
 ---
 
 # AiiDA Core Architecture
@@ -64,6 +64,18 @@ To create a plugin, implement the corresponding ABC and register it as an entry 
 | `StorageBackend` | `aiida.orm.implementation.storage_backend` | Database and file storage | `aiida.storage` |
 | `AbstractCode` | `aiida.orm.nodes.data.code.abstract` | Code/executable representation | `aiida.data` |
 | `CalcJobImporter` | `aiida.engine.processes.calcjobs.importer` | Import existing calculation results | `aiida.calculations.importers` |
+
+## Quick API overview via stubs
+
+To get a compact view of a module's public API without reading the full source (which can pollute context), generate type stubs:
+
+```bash
+uv run stubgen -p aiida.orm -o /tmp/stubs             # public API only
+uv run stubgen -p aiida.orm -o /tmp/stubs --include-private  # include _private members
+```
+
+The generated `.pyi` files show only signatures, classes, and type annotations, useful for understanding an API surface quickly.
+`stubgen` ships with `mypy`, which is part of the `pre-commit` optional dependencies (`uv sync --extra pre-commit` or just `uv sync` if already installed).
 
 ## Project configuration
 

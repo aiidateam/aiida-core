@@ -1,6 +1,6 @@
 ---
 name: deprecating-api
-description: Use when deprecating a public Python API or `verdi` CLI command in aiida-core. Covers `AiidaDeprecationWarning` with `stacklevel=2`, the `deprecated_command` decorator, docstring notes, and the removal timeline convention.
+description: Use when deprecating a public Python API or `verdi` CLI command in aiida-core.
 ---
 
 # Deprecating API in aiida-core
@@ -10,15 +10,13 @@ Public API must go through a deprecation cycle before removal.
 
 ## Python API
 
-Emit `AiidaDeprecationWarning` at the call site with `stacklevel=2` so the warning points at the user's code, not at `aiida-core` itself:
+Use the `warn_deprecation` helper, which handles `stacklevel=2` and respects the user's deprecation-visibility config:
 
 ```python
-import warnings
-from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.common.warnings import warn_deprecation
 
 def old_function(x):
-    msg = '`old_function` is deprecated, use `new_function` instead.'
-    warnings.warn(msg, AiidaDeprecationWarning, stacklevel=2)
+    warn_deprecation('`old_function` is deprecated, use `new_function` instead.', version=3)
     return new_function(x)
 ```
 

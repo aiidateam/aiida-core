@@ -41,9 +41,10 @@ Each process class has a corresponding node class that records its execution:
 
 All code style is enforced via **pre-commit hooks** (configured in `.pre-commit-config.yaml`).
 Run `uv run pre-commit` to check staged files, or `uv run pre-commit run --all-files` to check everything.
+Always run pre-commit before pushing or opening a pull request.
 
-- Formatting/linting: `ruff` (single quotes, see `[tool.ruff.lint]` in `pyproject.toml` for enabled rule sets)
-- Type checking: `mypy` (runs in pre-commit; add type hints to new code)
+- Formatting/linting: `ruff` (see `[tool.ruff.lint]` in `pyproject.toml` for enabled rule sets). Write new Python code following ruff conventions so it ideally passes without reformatting.
+- Type checking: `mypy` (runs in pre-commit). Add proper type hints to new and modified code.
 - Prefer `pathlib` over `os.path` &mdash; not currently enforced; legacy `os.path` usage exists throughout the codebase
 - Docstrings: Sphinx-style (reST) (`:param:`, `:return:`, `:raises:`). Types belong in type hints, not docstrings.
 - New source files should include the standard copyright header (copy from any existing source file).
@@ -51,8 +52,7 @@ Run `uv run pre-commit` to check staged files, or `uv run pre-commit run --all-f
 
 **Special cases**:
 
-- In `cmdline/`: delay `aiida` imports to function level (keeps `verdi` CLI responsive &mdash; top-level imports would slow down every invocation, even `verdi --help`).
-  Enforced in CI via `verdi devel check-load-time`, which fails if unexpected `aiida.*` modules (outside `aiida.brokers`, `aiida.cmdline`, `aiida.common`, `aiida.manage`, `aiida.plugins`, `aiida.restapi`) are imported at startup.
+- In `cmdline/`: delay `aiida` imports to function level (keeps `verdi` CLI responsive). See the `adding-a-cli-command` skill for details.
 
 ### Error handling
 
@@ -61,8 +61,8 @@ Use `aiida.common.warnings` for non-fatal issues so users can selectively filter
 Assign exception messages to a local variable before raising:
 
 ```python
-msg = f'WorkGraph process<{workgraph.process.pk}> already created. Use submit() instead.'
-raise ValueError(msg)
+msg = f"Got object of type '{type(what)}', expecting '{of_type}'"
+raise TypeError(msg)
 ```
 
 ### Best practices (not enforced)
@@ -75,32 +75,20 @@ raise ValueError(msg)
 The `.git-blame-ignore-revs` file lists commits that should be ignored by `git blame` (e.g., bulk reformatting or whitespace-only changes).
 When landing a large-scale formatting-only commit, add its SHA to this file so that future `git blame` output stays meaningful.
 
-## Common patterns
+## Claude Code skills
 
-> **Note:** New data types, calculations, parsers, and other plugins are typically developed in **external plugin packages** rather than in `aiida-core` itself.
-> Use the [aiida-plugin-cutter](https://github.com/aiidateam/aiida-plugin-cutter) cookiecutter template to quickly scaffold a new plugin package with best practices, testing setup, and CI configuration.
-> The patterns below apply to both external plugins and core contributions.
-> In all cases, add tests and documentation alongside the new code.
+The following skills (under `.claude/skills/`) provide task-specific guidance:
 
-### Adding a new Node type
-
-1. Create a new class inheriting from appropriate base (e.g., `Data`, `ArrayData`)
-1. Register as entry point in `pyproject.toml` under `[project.entry-points."aiida.data"]`
-
-### Adding a new CalcJob plugin
-
-1. Create class inheriting from `CalcJob`
-1. Implement `define()` method with inputs/outputs spec
-1. Implement `prepare_for_submission()` method
-1. Register as entry point under `[project.entry-points."aiida.calculations"]`
-1. Add corresponding parser if needed
-
-### Adding a new WorkChain plugin
-
-1. Create class inheriting from `WorkChain`
-1. Implement `define()` method with inputs/outputs spec and the `outline`
-1. Implement outline step methods (each step can submit calculations, inspect results, and return to context)
-1. Register as entry point under `[project.entry-points."aiida.workflows"]`
+- `architecture-overview` &mdash; codebase structure, key files, ABCs
+- `running-tests` &mdash; pytest cheatsheet, plugins, fixtures
+- `writing-tests` &mdash; test philosophy, markers, parametrization
+- `linting-and-ci` &mdash; pre-commit, docs build, CI checks
+- `commit-conventions` &mdash; branching, commit style, PR requirements
+- `writing-docs` &mdash; documentation style and building
+- `adding-a-cli-command` &mdash; `verdi` subcommands and import-time constraints
+- `adding-dependencies` &mdash; third-party dependency checklist
+- `deprecating-api` &mdash; deprecation warnings and removal timeline
+- `debugging-processes` &mdash; diagnosing failed or stuck processes and the daemon
 
 ## AI assistant guidelines
 

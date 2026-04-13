@@ -1,6 +1,6 @@
 ---
 name: adding-a-cli-command
-description: Use when adding a new `verdi` subcommand in `src/aiida/cmdline/`. Covers Click decorators, AiiDA's custom decorators, and the CRITICAL import-time constraint enforced by `verdi devel check-load-time` in CI.
+description: Use when adding a new `verdi` subcommand in `src/aiida/cmdline/`.
 ---
 
 # Adding a new verdi CLI command
@@ -37,8 +37,29 @@ CI enforces this via `verdi devel check-load-time`, which fails if any module ou
 
 At the top level of a `cmd_*.py` file, only `click`, standard library, and the whitelisted `aiida.*` submodules listed above may be imported.
 
+## Reusable arguments and options
+
+AiiDA provides a library of reusable, ALL_CAPS Click parameters in `src/aiida/cmdline/params/`: `arguments` (positional) and `options` (flags).
+Always check for an existing one before defining ad-hoc `click.argument()` / `click.option()` calls.
+
+```python
+from aiida.cmdline.params import arguments, options
+
+@verdi_process.command('show')
+@arguments.PROCESSES()
+@options.RAW()
+def process_show(processes, raw):
+    ...
+```
+
+Both are wrapped in `OverridableArgument` / `OverridableOption` classes that store defaults but allow per-command customization via `.clone()`.
+
 ## Relevant source
 
 - Decorators: `src/aiida/cmdline/utils/decorators.py`
 - Existing commands: `src/aiida/cmdline/commands/cmd_*.py`
+- Reusable arguments: `src/aiida/cmdline/params/arguments/main.py`
+- Reusable options: `src/aiida/cmdline/params/options/main.py`
+- Custom option types: `src/aiida/cmdline/params/options/{callable,conditional,interactive,multivalue,config}.py`
+- Parameter types (ParamType subclasses): `src/aiida/cmdline/params/types/`
 - Load-time check implementation: `src/aiida/cmdline/commands/cmd_devel.py` (`check-load-time`)

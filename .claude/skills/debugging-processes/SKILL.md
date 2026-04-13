@@ -1,6 +1,6 @@
 ---
 name: debugging-processes
-description: Use when diagnosing failed, stuck, or misbehaving AiiDA processes or the daemon. Covers `verdi process status/report/show`, daemon log inspection, `verdi process repair`, and common failure modes like processes stuck in `waiting`.
+description: Use when diagnosing failed, stuck, or misbehaving AiiDA processes or the daemon.
 ---
 
 # Debugging processes and the daemon
@@ -20,7 +20,7 @@ For a full provenance dump including input/output files:
 verdi process dump <PK>         # dump a process and its provenance
 ```
 
-For CalcJobs specifically, jump to the remote working directory on the HPC:
+For CalcJobs specifically, jump to the remote working directory on the HPC (requires SSH access, which may not be available for sandboxed agents):
 
 ```bash
 verdi calcjob gotocomputer <PK>
@@ -29,9 +29,13 @@ verdi calcjob gotocomputer <PK>
 ## Inspecting the daemon
 
 ```bash
-verdi status                    # daemon + PostgreSQL + RabbitMQ status
-verdi daemon logshow            # tail daemon logs in real-time
-verdi process repair            # requeue processes stuck after a daemon crash
+# storage (PostgreSQL or SQLite) + daemon & broker (RabbitMQ, if configured):
+verdi status
+# tail daemon logs in real-time
+# best with a single daemon worker, multiple workers garble output:
+verdi daemon logshow
+# requeue processes stuck after a daemon crash (stop the daemon first):
+verdi process repair
 ```
 
 ## Common failure modes
@@ -44,8 +48,8 @@ verdi process repair            # requeue processes stuck after a daemon crash
 ## Interactive inspection
 
 ```bash
-verdi devel run-sql "SELECT ..."  # run raw SQL against the profile database
 verdi shell                       # interactive IPython shell with AiiDA loaded
+verdi devel run-sql "SELECT ..."  # run raw SQL against the profile database (USE WITH CAUTION)
 ```
 
 Useful patterns inside `verdi shell`:
@@ -68,3 +72,4 @@ node.base.repository.list_object_names()  # files in the node's repository
 - Process runner: `src/aiida/engine/runners.py`
 - Daemon client: `src/aiida/engine/daemon/client.py`
 - CalcJob exec manager (file copying, job submission, retrieval): `src/aiida/engine/daemon/execmanager.py`
+- Transport tasks (submit, update, retrieve): `src/aiida/engine/processes/calcjobs/tasks.py`

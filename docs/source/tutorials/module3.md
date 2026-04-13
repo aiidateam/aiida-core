@@ -98,7 +98,7 @@ A few more WorkGraph building blocks we will use:
 - **`spec`** -- a small module of helpers to declare socket types explicitly (for example `spec.namespace(variance_V=float, mean_V=float)` to declare that a task has two named outputs). You only need it when WorkGraph cannot infer the outputs from the function signature alone.
 
 :::{note}
-WorkGraph also ships context managers for runtime control flow: `If`/`While` for conditional and iterative logic, and `Map` for sub-workflows that run once per entry of a collection. We will revisit these in future modules -- for the parameter sweep below, a plain Python loop is actually the simpler and more robust option, as we'll see.
+WorkGraph also ships context managers for runtime control flow: `If`/`While` for conditional and iterative logic, and `Map` for sub-workflows that run once per entry of a collection. We use `Map` for the parameter sweep below; a plain for-loop alternative is shown as well.
 :::
 
 ## Building the workflow
@@ -110,7 +110,7 @@ With the mental model in place, we can now assemble the three-step pipeline (`pr
 ```{code-cell} ipython3
 from aiida import orm
 
-from aiida_workgraph import WorkGraph, task, shelljob, spec
+from aiida_workgraph import Map, WorkGraph, task, shelljob, spec
 
 from include.constants import BASE_PARAMS, F_VALUES, SCRIPT_PATH
 from include.tasks import prepare_input, parse_output
@@ -464,6 +464,34 @@ plot_transition_curve(
 ```
 
 The key advantage: the entire sweep -- every pipeline run, every input, every output -- lives under a single workflow node in AiiDA's provenance graph.
+
+:::{dropdown} Alternative: for-loop over `@task.graph`
+:icon: code
+
+If you prefer a simpler approach (or if `Map` is not available in your version of `aiida-workgraph`), you can sweep with a plain Python loop that builds and runs a separate `WorkGraph` per parameter set. Because `gray_scott_pipeline` is a `@task.graph`, each iteration is still a full workflow with hierarchical provenance.
+
+```python
+sweep_results = {}
+for label, params in param_sweep.items():
+    wg_iter = gray_scott_pipeline.build(
+        parameters=orm.Dict(params),
+        command=python_code,
+        script=script_node,
+    )
+    wg_iter.name = f'gray_scott_{label}'
+    wg_iter.run()
+    sweep_results[label] = {
+        'pk': wg_iter.process.pk,
+        'variance_V': wg_iter.outputs.variance_V.value,
+        'mean_V': wg_iter.outputs.mean_V.value,
+    }
+
+for label, res in sweep_results.items():
+    print(f"  {label:<10}  variance_V = {res['variance_V']:.4f}")
+```
+
+The trade-off: each iteration becomes its own top-level workflow node (no single parent grouping them all), and iterations run sequentially. With `Map`, the entire sweep is one workflow and iterations can run in parallel when a daemon is available.
+:::
 
 ## Control flow (teaser)
 

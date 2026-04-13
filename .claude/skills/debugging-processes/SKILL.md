@@ -40,10 +40,10 @@ verdi process repair
 
 ## Common failure modes
 
-- **Process stuck in `waiting`** &mdash; usually means the daemon lost track of it after a crash or restart. Run `verdi process repair` to requeue.
-- **Process state inconsistent with node attributes** &mdash; check whether `seal()` has been called; only `_updatable_attributes` can change on a stored `ProcessNode` before sealing.
-- **`presto`-marked test failures** &mdash; these use an in-memory `SqliteTempBackend`, so the bug is in the code, not in service configuration.
-- **Daemon subprocess killed on shutdown** &mdash; daemon-launched subprocesses must pass `start_new_session=True` or they inherit the daemon's signal handling and die with it.
+- **Process stuck in `waiting`** : usually means the daemon lost track of it after a crash or restart. Run `verdi process repair` to requeue.
+- **Process state inconsistent with node attributes** : check whether `seal()` has been called; only `_updatable_attributes` can change on a stored `ProcessNode` before sealing.
+- **`presto`-marked test failures** : these use an in-memory `SqliteTempBackend`, so the bug is in the code, not in service configuration.
+- **Daemon subprocess killed on shutdown** : daemon-launched subprocesses must pass `start_new_session=True` or they inherit the daemon's signal handling and die with it.
 
 ## Interactive inspection
 

@@ -7,6 +7,7 @@ description: Use when deprecating a public Python API or `verdi` CLI command in 
 
 Public API is anything importable from a second-level package (`from aiida.orm import ...`, `from aiida.engine import ...`).
 Public API must go through a deprecation cycle before removal.
+Data created with older AiiDA versions is guaranteed to work with newer versions (database migrations are applied automatically), so backwards compatibility matters.
 
 ## Python API
 

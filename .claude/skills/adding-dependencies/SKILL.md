@@ -11,7 +11,7 @@ Before adding a new dependency to `pyproject.toml`, ensure it:
 - Is actively maintained
 - Supports all Python versions supported by aiida-core
 - Is available on both [PyPI](https://pypi.org/) and [conda-forge](https://conda-forge.org/)
-- Uses an MIT-compatible license (MIT, BSD, Apache, LGPL &mdash; **not** GPL)
+- Uses an MIT-compatible license (MIT, BSD, Apache, LGPL — **not** GPL)
 
 After modifying `pyproject.toml`, the `uv-lock` and `generate-conda-environment` pre-commit hooks will automatically update `uv.lock` and `environment.yml` to stay in sync.
 Run `uv run pre-commit` to trigger them.

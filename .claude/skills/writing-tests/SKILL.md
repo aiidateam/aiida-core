@@ -22,11 +22,11 @@ Reusable fixtures live in `tests/conftest.py` and per-subtree `conftest.py` file
 
 ## Marker conventions
 
-- `@pytest.mark.presto` &mdash; runs against `SqliteTempBackend` (in-memory, no PostgreSQL / RabbitMQ).
+- `@pytest.mark.presto`: runs against `SqliteTempBackend` (in-memory, no PostgreSQL / RabbitMQ).
   Prefer `presto`-compatible tests where possible: they are much faster and runnable in any environment.
-- `@pytest.mark.requires_rmq` &mdash; requires a running RabbitMQ instance.
-- `@pytest.mark.requires_psql` &mdash; requires a running PostgreSQL instance.
-- `@pytest.mark.nightly` &mdash; long-running tests, only executed in nightly CI.
+- `@pytest.mark.requires_rmq`: requires a running RabbitMQ instance.
+- `@pytest.mark.requires_psql`: requires a running PostgreSQL instance.
+- `@pytest.mark.nightly`: long-running tests, only executed in nightly CI.
 - Transport tests require passwordless SSH to localhost.
 
 ## Parametrization
@@ -52,4 +52,4 @@ If you find yourself reinventing a fixture, it probably already exists.
 
 ## Running the tests
 
-See the `running-tests-and-tooling` skill for the full `uv run pytest` cheatsheet.
+See the `running-tests` skill for the full `uv run pytest` cheatsheet.

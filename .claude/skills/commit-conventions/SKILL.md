@@ -32,7 +32,7 @@ why the change was made, not how.
 
 Guidelines:
 
-- One issue per commit, self-contained changes &mdash; makes bisecting and reverting safe
+- One issue per commit, self-contained changes: makes bisecting and reverting safe
 - Link GitHub issues either via the PR description or the GH web UI.
 
 ## Emoji prefixes (up for discussion)
@@ -68,3 +68,8 @@ When submitting changes:
 4. **Code quality**: Ensure `uv run pre-commit` passes
 
 Merging (maintainers): **Squash and merge** for single-issue PRs, **rebase and merge** for multi-commit PRs with individually significant commits.
+
+## Git tooling
+
+The `.git-blame-ignore-revs` file lists commits that should be ignored by `git blame` (e.g., bulk reformatting).
+When landing a large-scale formatting-only commit, add its SHA to this file.

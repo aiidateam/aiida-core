@@ -1,6 +1,6 @@
 ---
 name: linting-and-ci
-description: Use when running pre-commit, linting, type checking, building docs, or fixing CI failures in aiida-core.
+description: Use when running pre-commit, linting, type checking, or fixing CI failures in aiida-core.
 ---
 
 # Linting, pre-commit, and CI in aiida-core
@@ -22,14 +22,6 @@ uv run pre-commit run --from-ref $(git merge-base main HEAD) --to-ref HEAD  # sa
 Hooks worth knowing about: `uv-lock` (lockfile consistency), `imports` (auto-generates `__all__`), `nbstripout`, `generate-conda-environment`, `verdi-autodocs`.
 
 CI enforces import-time constraints on `src/aiida/cmdline/`; see the `adding-a-cli-command` skill for details.
-
-## Building documentation
-
-```bash
-uv run sphinx-build -b html docs/source docs/build/html
-```
-
-See the `writing-docs` skill for style conventions.
 
 ## Other verdi development helpers
 

@@ -86,6 +86,7 @@ def submit(
     *,
     wait: bool = False,
     wait_interval: int = 5,
+    timeout: int | None = None,
     **kwargs: t.Any,
 ) -> ProcessNode:
     """Submit the process with the supplied inputs to the daemon immediately returning control to the interpreter.
@@ -100,8 +101,11 @@ def submit(
     :param wait: when set to ``True``, the submission will be blocking and wait for the process to complete at which
         point the function returns the calculation node.
     :param wait_interval: the number of seconds to wait between checking the state of the process when ``wait=True``.
+    :param timeout: optional timeout in seconds when ``wait=True``. If the process does not terminate within this time,
+        a ``TimeoutError`` is raised. If ``None`` (default), waits indefinitely.
     :param kwargs: inputs to be passed to the process. This is an alternative to the positional ``inputs`` argument.
     :return: the calculation node of the process
+    :raises TimeoutError: if ``wait=True`` and the process does not terminate within ``timeout`` seconds.
     """
     from aiida.common.docs import URL_NO_BROKER
 
@@ -147,7 +151,13 @@ def submit(
     if not wait:
         return node
 
+    start_time = time.monotonic()
+
     while not node.is_terminated:
+        if timeout is not None and (time.monotonic() - start_time) >= timeout:
+            msg = f'Process<{node.pk}> did not terminate within {timeout} seconds.'
+            raise TimeoutError(msg)
+
         LOGGER.report(
             f'Process<{node.pk}> has not yet terminated, current state is `{node.process_state}`. '
             f'Waiting for {wait_interval} seconds.'

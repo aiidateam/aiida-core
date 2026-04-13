@@ -1418,7 +1418,7 @@ class SshTransport(BlockingTransport):
         channel.set_combine_stderr(combine_stderr)
 
         if workdir is not None:
-            command_to_execute = f'cd {workdir} &&  ( {command} )'
+            command_to_execute = f'cd {escape_for_bash(workdir)} &&  ( {command} )'
         elif (cwd := self.getcwd()) is not None:
             escaped_folder = escape_for_bash(cwd)
             command_to_execute = f'cd {escaped_folder} && ( {command} )'

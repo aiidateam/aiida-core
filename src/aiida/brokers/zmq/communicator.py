@@ -19,8 +19,6 @@ import kiwipy
 import zmq
 import zmq.asyncio
 
-from aiida.brokers.utils import YAML_DECODER, YAML_ENCODER
-
 from .protocol import (
     MessageType,
     decode_message,
@@ -63,13 +61,9 @@ class ZmqCommunicator(kiwipy.Communicator):
     def __init__(
         self,
         router_endpoint: str,
-        encoder: Callable[[Any], str] | None = None,
-        decoder: Callable[[str], Any] | None = None,
         client_id: str | None = None,
     ):
         self._router_endpoint = router_endpoint
-        self._encoder = encoder if encoder is not None else YAML_ENCODER
-        self._decoder = decoder if decoder is not None else YAML_DECODER
         self._client_id = client_id or f'client-{uuid.uuid4().hex[:8]}'
 
         # ZMQ sockets (created on the event loop thread)
@@ -409,7 +403,8 @@ class ZmqCommunicator(kiwipy.Communicator):
         """Send a message to the broker.  MUST be called from the loop thread."""
         if not self._dealer:
             raise RuntimeError('Communicator not connected')
-        encoded = encode_message(msg, self._encoder)
+
+        encoded = encode_message(msg)
         self._dealer.send_multipart([b'', encoded], zmq.NOBLOCK)
 
     # ------------------------------------------------------------------
@@ -422,7 +417,7 @@ class ZmqCommunicator(kiwipy.Communicator):
             try:
                 frames = await self._dealer.recv_multipart()
                 msg_frame = frames[1] if len(frames) > 1 and frames[0] == b'' else frames[0]
-                msg = decode_message(msg_frame, self._decoder)
+                msg = decode_message(msg_frame)
                 self._dispatch_dealer_message(msg)
             except zmq.ZMQError:
                 if not self._closed:

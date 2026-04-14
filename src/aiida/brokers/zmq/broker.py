@@ -193,6 +193,7 @@ class ZmqIncomingTask:
         self._task_id = task_id
         self._task_data = task_data
         self._queue = queue
+
         self.body = task_data.get('body')
 
     @contextmanager

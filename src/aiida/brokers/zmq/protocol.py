@@ -76,14 +76,23 @@ class MessageType(str, Enum):
     PING = 'ping'
 
 
-def encode_message(msg: dict, encoder=json.dumps) -> bytes:
-    """Encode a message dictionary to bytes."""
-    return encoder(msg).encode('utf-8')
+class _UUIDEncoder(json.JSONEncoder):
+    """JSON encoder that converts uuid.UUID to string."""
+
+    def default(self, obj):
+        if isinstance(obj, uuid.UUID):
+            return str(obj)
+        return super().default(obj)
 
 
-def decode_message(data: bytes, decoder=json.loads) -> dict:
-    """Decode bytes to a message dictionary."""
-    return decoder(data.decode('utf-8'))
+def encode_message(msg: dict) -> bytes:
+    """Encode a message dictionary to bytes using JSON."""
+    return json.dumps(msg, cls=_UUIDEncoder).encode('utf-8')
+
+
+def decode_message(data: bytes) -> dict:
+    """Decode bytes to a message dictionary using JSON."""
+    return json.loads(data.decode('utf-8'))
 
 
 def make_task_message(body: Any, sender: str, no_reply: bool = False) -> dict:

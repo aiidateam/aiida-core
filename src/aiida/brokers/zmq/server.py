@@ -41,18 +41,15 @@ class ZmqBrokerServer:
         self,
         storage_path: Path | str,
         sockets_path: Path | str,
-        encoder: Callable[[Any], str] | None = None,
-        decoder: Callable[[str], Any] | None = None,
     ):
         """Initialize the broker server.
 
         :param storage_path: Path for task queue persistence
         :param sockets_path: Path for IPC socket files
-        :param encoder: Function to encode messages (default: yaml.dump)
-        :param decoder: Function to decode messages (default: yaml.load)
+
+        Note: The server uses JSON for the message envelope. Payload fields (body, result)
+        are pre-encoded as YAML strings by the sender and remain opaque to the server.
         """
-        encoder = encoder if encoder is not None else json.dumps
-        decoder = decoder if decoder is not None else json.loads
         self._storage_path = Path(storage_path)
         self._sockets_path = Path(sockets_path)
 
@@ -62,9 +59,6 @@ class ZmqBrokerServer:
 
         # Derive endpoint from sockets_path
         self._router_endpoint = f'ipc://{self._sockets_path}/router.sock'
-
-        self._encoder = encoder
-        self._decoder = decoder
 
         # ZMQ context and sockets
         self._context: zmq.Context | None = None
@@ -259,7 +253,7 @@ class ZmqBrokerServer:
             # Skip empty delimiter frame if present
             msg_frame = frames[2] if len(frames) > 2 and frames[1] == b'' else frames[1]
 
-            msg = decode_message(msg_frame, self._decoder)
+            msg = decode_message(msg_frame)
             msg_type: str | None = msg.get('type')
 
             _LOGGER.debug('Received %s from %s', msg_type, identity.hex()[:8])
@@ -577,7 +571,7 @@ class ZmqBrokerServer:
         if not self._router:
             return
 
-        encoded = encode_message(msg, self._encoder)
+        encoded = encode_message(msg)
         self._router.send_multipart([identity, b'', encoded])
 
     def _send_rpc_error(self, identity: bytes, rpc_id: str, error: str) -> None:

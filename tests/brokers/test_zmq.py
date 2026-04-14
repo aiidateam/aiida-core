@@ -12,7 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from aiida.brokers.zmq import ZmqBroker, ZmqCommunicator, get_zmq_config
+from aiida.brokers.zmq import ZmqBroker, get_zmq_config
+from aiida.brokers.zmq.communicator import ZmqCommunicator
 from aiida.brokers.zmq.queue import PersistentQueue
 from aiida.brokers.zmq.server import ZmqBrokerServer
 from aiida.brokers.zmq.service import ZmqBrokerService

@@ -77,7 +77,7 @@ class PersistentQueue:
     def push(self, task_id: str, task: dict[str, Any]) -> None:
         """Add a task to the queue.
 
-        The task is immediately persisted to disk.
+        The task is immediately persisted to disk using minified JSON for efficiency.
 
         :param task_id: Unique identifier for the task
         :param task: Task data dictionary
@@ -86,8 +86,9 @@ class PersistentQueue:
         task_file = self._pending_path / filename
 
         # Write atomically by writing to temp file then renaming
+        # Use minified JSON (no indentation) to reduce file size and serialization time
         temp_file = task_file.with_suffix('.tmp')
-        temp_file.write_text(json.dumps(task, indent=2))
+        temp_file.write_text(json.dumps(task))
         temp_file.rename(task_file)
 
         self._pending.append(filename)

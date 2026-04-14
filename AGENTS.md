@@ -7,7 +7,7 @@ This file provides context for AI coding assistants (Claude Code, GitHub Copilot
 ## Project overview
 
 AiiDA is a workflow manager for computational science with a strong focus on provenance, performance, and extensibility.
-It is written in Python (3.9–3.13) and uses PostgreSQL/SQLite for metadata storage, [`disk-objectstore`](https://github.com/aiidateam/disk-objectstore) for file storage, and RabbitMQ as a message broker.
+It is written in Python (see `pyproject.toml` for supported versions) and uses PostgreSQL/SQLite for metadata storage, [`disk-objectstore`](https://github.com/aiidateam/disk-objectstore) for file storage, and RabbitMQ as a message broker.
 
 ## Key design concepts
 
@@ -57,7 +57,7 @@ Assign exception messages to a variable before raising: `msg = f'...'; raise Typ
 
 ## Claude Code skills
 
-The following skills (under `.claude/skills/`) provide task-specific guidance:
+The following Claude Code skills (under `.claude/skills/`) provide task-specific guidance. Listed here as a reference for all agents:
 
 - `adding-a-cli-command`: `verdi` subcommands and import-time constraints
 - `adding-dependencies`: third-party dependency checklist

@@ -7,8 +7,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import os
+import sys
+from pathlib import Path
 
 import aiida
+
+# Make local extensions importable
+sys.path.insert(0, str(Path(__file__).parent / '_ext'))
 
 # imports required for docs/source/reference/api/public.rst
 from aiida import (  # noqa: F401
@@ -51,6 +56,7 @@ exclude_patterns = [
     'import_export/**',
     'internals/global_design.rst',
     'reference/apidoc/**',
+    'tutorials/_notes/**',
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -78,6 +84,7 @@ extensions = [
     'sphinx_copybutton',
     'sphinxext.rediraffe',
     'notfound.extension',
+    'inline_downloads',
 ]
 
 intersphinx_mapping = {
@@ -97,6 +104,7 @@ ipython_mplbackend = ''
 
 myst_enable_extensions = ['colon_fence', 'deflist']
 myst_heading_anchors = 4
+
 nb_execution_show_tb = 'READTHEDOCS' in os.environ
 nb_merge_streams = True
 nb_mime_priority_overrides = [

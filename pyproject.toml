@@ -232,7 +232,8 @@ docs = [
   'sphinxext-rediraffe~=0.2.4',
   'sphinx-sqlalchemy~=0.2.0',
   'sphinx-intl~=2.1.0',
-  'myst-nb~=1.0.0'
+  'myst-nb~=1.0.0',
+  'sphinx-autobuild'
 ]
 notebook = [
   'jupyter-client~=8.0',
@@ -294,6 +295,9 @@ tests = [
 ]
 tui = [
   'trogon'
+]
+tutorials = [
+  'aiida-shell~=0.8.0'
 ]
 
 [project.scripts]
@@ -455,7 +459,8 @@ xfail_strict = true
 [tool.ruff]
 exclude = [
   'docs/source/topics/processes/include/snippets/functions/parse_docstring_expose_ipython.py',
-  'docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py'
+  'docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py',
+  'docs/source/tutorials/_notes/**'
 ]
 line-length = 120
 

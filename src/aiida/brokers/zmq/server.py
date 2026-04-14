@@ -8,7 +8,6 @@ Can be started as a standalone message broker process. It handles:
 
 from __future__ import annotations
 
-import json
 import logging
 import time
 from collections import deque
@@ -61,10 +60,10 @@ class ZmqBrokerServer:
         self._router_endpoint = f'ipc://{self._sockets_path}/router.sock'
 
         # ZMQ context and sockets
-        self._context: zmq.Context | None = None
-        self._router: zmq.Socket | None = None
+        self._context: zmq.Context | None = None  # type: ignore[type-arg]
+        self._router: zmq.Socket | None = None  # type: ignore[type-arg]
         self._poller: zmq.Poller | None = None
-        self._monitor: zmq.Socket | None = None
+        self._monitor: zmq.Socket | None = None  # type: ignore[type-arg]
 
         # Task queue with persistence
         self._task_queue = PersistentQueue(self._storage_path / 'tasks')
@@ -89,7 +88,7 @@ class ZmqBrokerServer:
         self._running = False
 
         # Message type -> handler mapping (built once, not per message)
-        self._handlers: dict[str, Callable] = {
+        self._handlers: dict[str, Callable[[bytes, dict[str, Any]], None]] = {
             MessageType.TASK.value: self._handle_task,
             MessageType.TASK_RESPONSE.value: self._handle_task_response,
             MessageType.TASK_ACK.value: self._handle_task_ack,
@@ -271,7 +270,7 @@ class ZmqBrokerServer:
         except Exception as exc:
             _LOGGER.exception('Error handling router message: %s', exc)
 
-    def _handle_task(self, identity: bytes, msg: dict) -> None:
+    def _handle_task(self, identity: bytes, msg: dict[str, Any]) -> None:
         """Handle incoming task message.
 
         Queue the task and try to dispatch to an available worker.
@@ -298,7 +297,7 @@ class ZmqBrokerServer:
         # Try to dispatch immediately
         self._dispatch_pending_tasks()
 
-    def _handle_task_response(self, identity: bytes, msg: dict) -> None:
+    def _handle_task_response(self, identity: bytes, msg: dict[str, Any]) -> None:
         """Handle task response from worker.
 
         Route the response back to the original task sender.
@@ -319,7 +318,7 @@ class ZmqBrokerServer:
         # Forward response to original sender
         self._send_to_client(original_sender, msg)
 
-    def _handle_task_ack(self, identity: bytes, msg: dict) -> None:
+    def _handle_task_ack(self, identity: bytes, msg: dict[str, Any]) -> None:
         """Handle task acknowledgment from worker."""
         task_id = msg.get('task_id')
         if task_id:
@@ -330,7 +329,7 @@ class ZmqBrokerServer:
         # Worker is available for more tasks
         self._mark_worker_available(identity)
 
-    def _handle_task_nack(self, identity: bytes, msg: dict) -> None:
+    def _handle_task_nack(self, identity: bytes, msg: dict[str, Any]) -> None:
         """Handle task negative acknowledgment from worker."""
         task_id = msg.get('task_id')
         if task_id:
@@ -340,7 +339,7 @@ class ZmqBrokerServer:
         # Worker is available for more tasks
         self._mark_worker_available(identity)
 
-    def _handle_rpc(self, identity: bytes, msg: dict) -> None:
+    def _handle_rpc(self, identity: bytes, msg: dict[str, Any]) -> None:
         """Handle RPC message.
 
         Route to the specified recipient.
@@ -374,7 +373,7 @@ class ZmqBrokerServer:
             self._send_rpc_error(identity, rpc_id, f'Recipient not found: {recipient}')
             return
 
-    def _handle_rpc_response(self, identity: bytes, msg: dict) -> None:
+    def _handle_rpc_response(self, identity: bytes, msg: dict[str, Any]) -> None:
         """Handle RPC response.
 
         Route back to original caller.
@@ -395,7 +394,7 @@ class ZmqBrokerServer:
         # Forward response to original sender
         self._send_to_client(original_sender, msg)
 
-    def _handle_broadcast(self, identity: bytes, msg: dict) -> None:
+    def _handle_broadcast(self, identity: bytes, msg: dict[str, Any]) -> None:
         """Handle broadcast message.
 
         Forward to all connected clients via ROUTER socket.
@@ -412,7 +411,7 @@ class ZmqBrokerServer:
 
         _LOGGER.debug('Broadcast sent to %d clients: %s', len(client_identities), msg.get('subject', 'no subject'))
 
-    def _handle_subscribe_task(self, identity: bytes, msg: dict) -> None:
+    def _handle_subscribe_task(self, identity: bytes, msg: dict[str, Any]) -> None:
         """Handle task subscriber registration."""
         identifier = msg.get('identifier') or msg.get('sender')
         if not identifier:
@@ -426,7 +425,7 @@ class ZmqBrokerServer:
         # Try to dispatch any pending tasks
         self._dispatch_pending_tasks()
 
-    def _handle_subscribe_rpc(self, identity: bytes, msg: dict) -> None:
+    def _handle_subscribe_rpc(self, identity: bytes, msg: dict[str, Any]) -> None:
         """Handle RPC subscriber registration."""
         identifier = msg.get('identifier') or msg.get('sender')
         if not identifier:
@@ -436,14 +435,14 @@ class ZmqBrokerServer:
         self._rpc_subscribers[identifier] = identity
         _LOGGER.info('RPC subscriber registered: %s', identifier)
 
-    def _handle_unsubscribe_task(self, identity: bytes, msg: dict) -> None:
+    def _handle_unsubscribe_task(self, identity: bytes, msg: dict[str, Any]) -> None:
         """Handle task subscriber removal."""
         identifier = msg.get('identifier') or msg.get('sender')
         if identifier and identifier in self._task_subscribers:
             del self._task_subscribers[identifier]
             _LOGGER.info('Task subscriber removed: %s', identifier)
 
-    def _handle_unsubscribe_rpc(self, identity: bytes, msg: dict) -> None:
+    def _handle_unsubscribe_rpc(self, identity: bytes, msg: dict[str, Any]) -> None:
         """Handle RPC subscriber removal."""
         identifier = msg.get('identifier') or msg.get('sender')
         if identifier and identifier in self._rpc_subscribers:
@@ -563,7 +562,7 @@ class ZmqBrokerServer:
         if identity not in self._available_workers:
             self._available_workers.append(identity)
 
-    def _send_to_client(self, identity: bytes, msg: dict) -> None:
+    def _send_to_client(self, identity: bytes, msg: dict[str, Any]) -> None:
         """Send a message to a specific client.
 
         :raises zmq.ZMQError: If the client is disconnected (ROUTER_MANDATORY).
@@ -585,7 +584,7 @@ class ZmqBrokerServer:
 
     # === Status and monitoring ===
 
-    def get_status(self) -> dict:
+    def get_status(self) -> dict[str, Any]:
         """Get current broker status."""
         return {
             'running': self._running,
@@ -598,10 +597,10 @@ class ZmqBrokerServer:
             'pending_rpc_responses': len(self._pending_rpc_responses),
         }
 
-    def get_pending_tasks(self) -> list[tuple[str, dict]]:
+    def get_pending_tasks(self) -> list[tuple[str, dict[str, Any]]]:
         """Get all pending tasks."""
         return self._task_queue.get_all_pending()
 
-    def get_processing_tasks(self) -> list[tuple[str, dict]]:
+    def get_processing_tasks(self) -> list[tuple[str, dict[str, Any]]]:
         """Get all tasks currently being processed."""
         return self._task_queue.get_all_processing()

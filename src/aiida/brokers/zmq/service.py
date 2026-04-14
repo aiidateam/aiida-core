@@ -13,6 +13,7 @@ import shutil
 import signal
 import tempfile
 import time
+import typing as t
 from pathlib import Path
 
 from .server import ZmqBrokerServer
@@ -111,11 +112,11 @@ class ZmqBrokerService:
         finally:
             self.stop()
 
-    def _handle_shutdown(self, signum: int, frame) -> None:
+    def _handle_shutdown(self, signum: int, frame: t.Any) -> None:
         _LOGGER.info('Received signal %s, shutting down', signum)
         self._running = False
 
-    def _write_status(self, status: dict) -> None:
+    def _write_status(self, status: dict[str, t.Any]) -> None:
         status['timestamp'] = time.time()
         status['pid'] = os.getpid()
         temp_file = self._status_file.with_suffix('.tmp')

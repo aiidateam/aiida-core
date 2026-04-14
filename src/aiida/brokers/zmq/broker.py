@@ -114,7 +114,7 @@ class ZmqBroker(Broker):
         if not self._service_status_file.exists():
             return None
         try:
-            return json.loads(self._service_status_file.read_text())
+            return json.loads(self._service_status_file.read_text())  # type: ignore[no-any-return]
         except (json.JSONDecodeError, OSError):
             return None
 
@@ -174,14 +174,14 @@ class ZmqBroker(Broker):
     def __enter__(self) -> 'ZmqBroker':
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: t.Any) -> None:
         self.close()
 
 
 class ZmqIncomingTask:
     """Wrapper providing an interface compatible with RabbitMQ incoming tasks."""
 
-    def __init__(self, task_id: str, task_data: dict, queue: PersistentQueue) -> None:
+    def __init__(self, task_id: str, task_data: dict[str, t.Any], queue: PersistentQueue) -> None:
         self._task_id = task_id
         self._task_data = task_data
         self._queue = queue
@@ -189,9 +189,9 @@ class ZmqIncomingTask:
         self.body = task_data.get('body')
 
     @contextmanager
-    def processing(self):
+    def processing(self) -> t.Iterator[t.Any]:
         class _Outcome:
-            def set_result(self, result):
+            def set_result(self, result: t.Any) -> None:
                 pass
 
         yield _Outcome()
@@ -201,5 +201,5 @@ class ZmqIncomingTask:
 def get_broker_base_path(profile: 'Profile') -> Path:
     from aiida.manage.configuration import get_config_path
 
-    config_dir = Path(get_config_path()).parent
+    config_dir = Path(get_config_path()).parent  # type: ignore[no-untyped-call]
     return config_dir / 'broker' / profile.uuid

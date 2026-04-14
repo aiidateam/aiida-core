@@ -47,14 +47,6 @@ class ZmqBroker(Broker):
         self._service_status_file = broker_dir / 'broker.status'
         self._service_sockets_file = broker_dir / 'broker.sockets'
 
-    @classmethod
-    def from_base_path(cls, base_path: Path | str) -> 'ZmqBroker':
-        """Create a broker from a base path without a profile (for testing)."""
-        instance = cls.__new__(cls)
-        instance._profile = None
-        instance._init_paths(Path(base_path))
-        return instance
-
     def __str__(self) -> str:
         if self.is_running():
             status = self.get_service_status()

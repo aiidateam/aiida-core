@@ -126,6 +126,7 @@ class ZmqCommunicator(kiwipy.Communicator):
 
     def _run_loop(self, ready: Future[bool]) -> None:
         """Entry point for the background thread."""
+        assert self._loop is not None
         asyncio.set_event_loop(self._loop)
         try:
             self._loop.run_until_complete(self._async_start(ready))
@@ -258,6 +259,7 @@ class ZmqCommunicator(kiwipy.Communicator):
                 if not gate.done():
                     gate.set_exception(exc)
 
+        assert self._loop is not None
         self._loop.call_soon_threadsafe(_callback)
         return gate.result(timeout=_LOOP_TIMEOUT)
 
@@ -413,6 +415,7 @@ class ZmqCommunicator(kiwipy.Communicator):
 
     async def _poll_dealer(self) -> None:
         """Receive messages from the DEALER socket."""
+        assert self._dealer is not None
         while not self._closed:
             try:
                 frames = await self._dealer.recv_multipart()
@@ -466,11 +469,13 @@ class ZmqCommunicator(kiwipy.Communicator):
 
                 if isinstance(result, Future):
                     self._in_progress_tasks[task_id] = (result, no_reply)
-                    result.add_done_callback(
-                        lambda fut, tid=task_id, nr=no_reply: (
-                            self._loop.call_soon_threadsafe(self._finalize_task, tid, fut, nr)
-                        )
-                    )
+                    loop = self._loop
+                    assert loop is not None
+
+                    def _on_task_done(fut: Future, _tid: str = task_id, _nr: bool = no_reply) -> None:
+                        loop.call_soon_threadsafe(self._finalize_task, _tid, fut, _nr)
+
+                    result.add_done_callback(_on_task_done)
                     _LOGGER.debug('Task in progress (deferred ACK): %s', task_id)
                 else:
                     ack_msg = make_task_ack(task_id, self._client_id)
@@ -517,9 +522,13 @@ class ZmqCommunicator(kiwipy.Communicator):
                     response = make_task_response(task_id, self._client_id, error=str(exc))
                     self._send(response)
             else:
-                result.add_done_callback(
-                    lambda fut, tid=task_id: (self._loop.call_soon_threadsafe(self._send_task_result, tid, fut))
-                )
+                loop = self._loop
+                assert loop is not None
+
+                def _on_result_done(fut: Future, _tid: str = task_id) -> None:
+                    loop.call_soon_threadsafe(self._send_task_result, _tid, fut)
+
+                result.add_done_callback(_on_result_done)
         else:
             response = make_task_response(task_id, self._client_id, result=result)
             self._send(response)
@@ -557,15 +566,19 @@ class ZmqCommunicator(kiwipy.Communicator):
             self._send(response)
             return
 
+        assert recipient is not None  # guaranteed by subscriber lookup above
+        rpc_recipient: str = recipient
         try:
             result = subscriber(self, body)
             if isinstance(result, Future):
-                self._in_progress_rpcs[rpc_id] = (recipient, result)
-                result.add_done_callback(
-                    lambda fut, rid=rpc_id, rec=recipient: (
-                        self._loop.call_soon_threadsafe(self._finalize_rpc, rid, rec, fut)
-                    )
-                )
+                self._in_progress_rpcs[rpc_id] = (rpc_recipient, result)
+                loop = self._loop
+                assert loop is not None
+
+                def _on_rpc_done(fut: Future, _rid: str = rpc_id, _rec: str = rpc_recipient) -> None:
+                    loop.call_soon_threadsafe(self._finalize_rpc, _rid, _rec, fut)
+
+                result.add_done_callback(_on_rpc_done)
                 _LOGGER.debug('RPC in progress (deferred response): %s', rpc_id)
                 return
             response = make_rpc_response(rpc_id, self._client_id, result=result)
@@ -594,11 +607,13 @@ class ZmqCommunicator(kiwipy.Communicator):
             if isinstance(result, Future):
                 # Still pending — re-register
                 self._in_progress_rpcs[rpc_id] = (recipient, result)
-                result.add_done_callback(
-                    lambda fut, rid=rpc_id, rec=recipient: (
-                        self._loop.call_soon_threadsafe(self._finalize_rpc, rid, rec, fut)
-                    )
-                )
+                loop = self._loop
+                assert loop is not None
+
+                def _on_rpc_retry(fut: Future, _rid: str = rpc_id, _rec: str = recipient) -> None:
+                    loop.call_soon_threadsafe(self._finalize_rpc, _rid, _rec, fut)
+
+                result.add_done_callback(_on_rpc_retry)
                 return
             response = make_rpc_response(rpc_id, self._client_id, result=result)
             self._send(response)

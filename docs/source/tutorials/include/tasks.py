@@ -2,7 +2,6 @@
 
 import io
 
-import numpy as np
 import yaml
 
 from aiida import engine, orm
@@ -17,10 +16,10 @@ def prepare_input(parameters: orm.Dict) -> orm.SinglefileData:
 
 @engine.calcfunction
 def parse_output(output_file: orm.SinglefileData) -> dict[str, orm.Float]:
-    """Extract variance_V and mean_V from a SinglefileData .npz file."""
-    with output_file.open(mode='rb') as f:
-        data = np.load(f)
+    """Extract variance_V and mean_V from a SinglefileData YAML results file."""
+    with output_file.open(mode='r') as f:
+        data = yaml.safe_load(f)
         return {
-            'variance_V': orm.Float(float(data['variance_V'])),
-            'mean_V': orm.Float(float(data['mean_V'])),
+            'variance_V': orm.Float(data['variance_V']),
+            'mean_V': orm.Float(data['mean_V']),
         }

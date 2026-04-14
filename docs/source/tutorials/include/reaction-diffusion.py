@@ -4,7 +4,7 @@
 """Reaction-diffusion simulation (Gray-Scott model).
 
 A standalone CLI script that reads a YAML input file, runs a 2D Gray-Scott
-reaction-diffusion simulation, and writes the results to a ``.npz`` file.
+reaction-diffusion simulation, and writes the scalar results to a YAML file.
 
 Exit codes:
     0  -- success
@@ -20,9 +20,7 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
-import json
 import sys
-from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn, TypedDict, cast
 
 if TYPE_CHECKING:
@@ -119,7 +117,7 @@ def main() -> None:
         description='Reaction-diffusion simulation (Gray-Scott model)',
     )
     _ = parser.add_argument('--input', required=True, help='Input YAML file')
-    _ = parser.add_argument('--output', required=True, help='Output .npz file')
+    _ = parser.add_argument('--output', required=True, help='Output YAML file')
     _ = parser.add_argument('--dt', type=float, help='Override time step')
     args: argparse.Namespace = parser.parse_args()
 
@@ -144,20 +142,15 @@ def main() -> None:
     params: SimParams = cast(SimParams, cast(object, raw_params))
 
     try:
-        U, V, var_v, mean_v = simulate(params=params)
+        _U, _V, var_v, mean_v = simulate(params=params)
     except SystemExit:
         raise
     except Exception as e:
         fail(code=99, message=f'Unexpected error: {e}')
 
-    np.savez(
-        Path(output_path),
-        U_final=U,
-        V_final=V,
-        variance_V=var_v,
-        mean_V=mean_v,
-        params=json.dumps(raw_params),
-    )
+    results = {'variance_V': var_v, 'mean_V': mean_v}
+    with open(output_path, 'w') as f:
+        yaml.dump(results, f, default_flow_style=False)
 
     print('JOB DONE')
     sys.exit(0)

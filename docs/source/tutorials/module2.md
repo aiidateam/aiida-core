@@ -78,27 +78,25 @@ for f_val in F_VALUES:
 
     results, calc_node = launch_shell_job(
         python_code,
-        arguments='{script} --input {input} --output results.npz',
+        arguments='{script} --input {input} --output results.yaml',
         nodes={'script': SCRIPT_PATH, 'input': input_path},
-        outputs=['results.npz'],
+        outputs=['results.yaml'],
     )
     calc_nodes.append((f_val, calc_node))
 ```
 
 ```{code-cell} ipython3
 # Extract and print results from each run.
-import numpy as np
+import yaml
 
 sweep_results = []
 
 for f_val, calc_node in calc_nodes:
-    with calc_node.outputs.results_npz.open(mode='rb') as fh:
-        data = np.load(fh)
+    with calc_node.outputs.results_yaml.open(mode='r') as fh:
+        data = yaml.safe_load(fh)
         sweep_results.append({
             'F': f_val,
-            'variance_V': float(data['variance_V']),
-            'U_final': data['U_final'],
-            'V_final': data['V_final'],
+            'variance_V': data['variance_V'],
         })
 
 for r in sweep_results:
@@ -114,22 +112,7 @@ plot_transition_curve(
 )
 ```
 
-The sharp drop in `variance_V` marks a **phase transition**: below it, the system forms rich spatial patterns; above it, the patterns dissolve.
-As in {ref}`Module 0 <tutorial:module0>`, let's visualize representative fields from each side:
-
-```{code-cell} ipython3
-# Show U/V fields before and after the transition for visual comparison.
-%run -i include/plot_fields.py
-
-before = sweep_results[0]   # F = 0.040 — strong patterns
-after = sweep_results[-1]   # F = 0.060 — weak patterns
-
-print(f"Before transition (F={before['F']})")
-plot_uv_fields(before['U_final'], before['V_final'])
-
-print(f"After transition (F={after['F']})")
-plot_uv_fields(after['U_final'], after['V_final'])
-```
+The sharp drop in `variance_V` marks a **phase transition**: below it, the system forms rich spatial patterns; above it, the patterns dissolve (recall the two images in {ref}`Module 0 <tutorial:module0>`).
 
 Every simulation is tracked by AiiDA -- we can inspect any of them:
 
@@ -139,7 +122,7 @@ Every simulation is tracked by AiiDA -- we can inspect any of them:
 ```
 
 :::{important}
-Notice what we had to do to get the `variance_V` values: manually open each `.npz` file and extract the number.
+Notice what we had to do to get the `variance_V` values: manually open each YAML output file and extract the number.
 
 The provenance looks like this for each run: **file in &rarr; ShellJob &rarr; file out**.
 AiiDA knows *that* a result file was produced, but it can't see *what's inside* it.
@@ -206,18 +189,18 @@ You could also pass each parameter as a separate `orm.Float`/`orm.Int` node for 
 
 ### Writing `parse_output`
 
-This calcfunction reads the `.npz` output file and extracts the scalar results as `Float` nodes:
+This calcfunction reads the YAML output file and extracts the scalar results as `Float` nodes:
 
 ```{code-cell} ipython3
-# Define parse_output: a calcfunction that extracts scalars from the .npz file.
+# Define parse_output: a calcfunction that extracts scalars from the YAML results file.
 @engine.calcfunction
 def parse_output(output_file: orm.SinglefileData) -> dict[str, orm.Float]:
-    """Extract variance_V and mean_V from a SinglefileData .npz file."""
-    with output_file.open(mode='rb') as f:
-        data = np.load(f)
+    """Extract variance_V and mean_V from a SinglefileData YAML results file."""
+    with output_file.open(mode='r') as f:
+        data = yaml.safe_load(f)
         return {
-            'variance_V': orm.Float(float(data['variance_V'])),
-            'mean_V': orm.Float(float(data['mean_V'])),
+            'variance_V': orm.Float(data['variance_V']),
+            'mean_V': orm.Float(data['mean_V']),
         }
 ```
 
@@ -237,12 +220,12 @@ input_file = prepare_input(orm.Dict(BASE_PARAMS))
 
 results, node = launch_shell_job(
     python_code,
-    arguments='{script} --input {input} --output results.npz',
+    arguments='{script} --input {input} --output results.yaml',
     nodes={'script': SCRIPT_PATH, 'input': input_file},
-    outputs=['results.npz'],
+    outputs=['results.yaml'],
 )
 
-parsed = parse_output(results['results_npz'])
+parsed = parse_output(results['results_yaml'])
 print(f"variance(V) = {parsed['variance_V'].value:.4e}")
 print(f"mean(V)     = {parsed['mean_V'].value:.4e}")
 ```
@@ -276,16 +259,16 @@ for f_val in F_VALUES:
 
     results, calc_node = launch_shell_job(
         python_code,
-        arguments='{script} --input {input} --output results.npz',
+        arguments='{script} --input {input} --output results.yaml',
         nodes={'script': SCRIPT_PATH, 'input': input_file},
-        outputs=['results.npz'],
+        outputs=['results.yaml'],
     )
 
-    parsed = parse_output(results['results_npz'])
+    parsed = parse_output(results['results_yaml'])
     enriched_nodes.append((f_val, parsed))
 ```
 
-Now the payoff: instead of manually opening `.npz` files, the results are stored as `Float` nodes that we can access directly through the provenance graph:
+Now the payoff: instead of manually opening YAML files, the results are stored as `Float` nodes that we can access directly through the provenance graph:
 
 ```{code-cell} ipython3
 # Access the structured results directly -- no file handling needed.
@@ -301,7 +284,7 @@ plot_transition_curve(
 )
 ```
 
-Compare this to the first sweep where we had to manually open every `.npz` file.
+Compare this to the first sweep where we had to manually open every YAML file.
 Now the `Dict` inputs and `Float` outputs live in the database with full provenance.
 
 <!-- TODO: Add "Grouping results" subsection — collect all sweep runs into an AiiDA Group,
@@ -310,7 +293,7 @@ Now the `Dict` inputs and `Float` outputs live in the database with full provena
      From meeting notes: "groups; AiiDA manages your FS". -->
 
 <!-- TODO: Consider adding a benchmark/speed note on *result retrieval* at scale.
-     E.g. for 1k parameter values: without AiiDA you'd need 1k file opens + numpy loads
+     E.g. for 1k parameter values: without AiiDA you'd need 1k file opens + YAML loads
      just to find interesting runs. With AiiDA, the parsed Float values live in the database
      and can be queried instantly via QueryBuilder.
      (The file I/O during parse_output still happens, but in real-world scenarios

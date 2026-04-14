@@ -119,9 +119,9 @@ input_path = Path('include/input.yaml').resolve()
 
 results, node = launch_shell_job(
     python_code,
-    arguments='{script} --input {input} --output results.npz',
+    arguments='{script} --input {input} --output results.yaml',
     nodes={'script': SCRIPT_PATH, 'input': input_path},
-    outputs=['results.npz'],
+    outputs=['results.yaml'],
 )
 
 print(f"Process PK: {node.pk}")
@@ -162,16 +162,16 @@ The output file is stored as a `SinglefileData` node in AiiDA's provenance graph
 We can access it through the calculation node's outputs:
 
 ```{code-cell} ipython3
-# Open the .npz output node and extract scalar results.
-import numpy as np
+# Open the YAML output node and extract scalar results.
+import yaml
 
-output_node = node.outputs.results_npz
+output_node = node.outputs.results_yaml
 print(f"Output node: {output_node.__class__.__name__} (PK={output_node.pk})")
 
-with output_node.open(mode='rb') as f:
-    data = np.load(f)
-    print(f"variance(V) = {float(data['variance_V']):.4e}")
-    print(f"mean(V)     = {float(data['mean_V']):.4e}")
+with output_node.open(mode='r') as f:
+    data = yaml.safe_load(f)
+    print(f"variance(V) = {data['variance_V']:.4e}")
+    print(f"mean(V)     = {data['mean_V']:.4e}")
 ```
 
 ## Inspecting the calculation

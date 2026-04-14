@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import traceback
 from typing import TYPE_CHECKING, NoReturn, TypedDict, cast
 
 if TYPE_CHECKING:
@@ -49,7 +50,11 @@ REQUIRED_KEYS: list[str] = ['grid_size', 'du', 'dv', 'F', 'k', 'dt', 'n_steps']
 
 def fail(code: int, message: str) -> NoReturn:
     """Print an error message to stderr and exit with the given code."""
-    print(f'ERROR[{code}]: {message}', file=sys.stderr)
+    # Emulate the kind of cryptic output real scientific codes produce:
+    # a partial traceback, an internal reference, and a terse error code.
+    traceback.print_stack(limit=3, file=sys.stderr)
+    print(f'\n*** FATAL ERROR in _check_convergence(): {message}', file=sys.stderr)
+    print(f'*** error code {code} -- aborting simulation', file=sys.stderr)
     sys.exit(code)
 
 
@@ -148,7 +153,7 @@ def main() -> None:
     except Exception as e:
         fail(code=99, message=f'Unexpected error: {e}')
 
-    results = {'variance_V': var_v, 'mean_V': mean_v}
+    results = {'variance_V': round(var_v, 3), 'mean_V': round(mean_v, 3)}
     with open(output_path, 'w') as f:
         yaml.dump(results, f, default_flow_style=False)
 

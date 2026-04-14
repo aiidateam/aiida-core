@@ -41,7 +41,7 @@ Error handling, automatic retries, and remote HPC submission are covered in futu
 This module requires an AiiDA profile and the `python_code` variable (see {ref}`Module 1 <tutorial:module1>` for details on the setup cell).
 
 ```{code-cell} ipython3
-:tags: ["hide-cell"]
+:tags: ["remove-cell"]
 
 # Auto-generated tutorial profile for docs build.
 # If running locally with your own profile (e.g. from ``verdi presto``),
@@ -427,7 +427,7 @@ print(f"Sweep WorkGraph PK: {wg_sweep.process.pk}")
 ```
 
 :::{tip}
-The provenance graph for the full sweep is quite large (11 sub-workflows with 3 steps each).
+The provenance graph for the full sweep is quite large (5 sub-workflows with 3 steps each).
 To explore it interactively, download this notebook via the link at the top and run `plot_provenance(wg_sweep.process)` locally, or use `verdi node graph generate {wg_sweep.process.pk}` from the command line.
 :::
 

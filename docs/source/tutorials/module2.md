@@ -39,7 +39,7 @@ You cannot yet chain steps into automated workflows or run them in parallel -- t
 This module requires an AiiDA profile and the `python_code` variable (see {ref}`Module 1 <tutorial:module1>` for details on the setup cell).
 
 ```{code-cell} ipython3
-:tags: ["hide-cell"]
+:tags: ["remove-cell"]
 
 # Auto-generated tutorial profile for docs build.
 # If running locally with your own profile (e.g. from ``verdi presto``),

@@ -42,11 +42,11 @@ Each builds on the previous one, so start with Module 0 if you are new to AiiDA.
 ::::{grid} 2 2 2 2
 :gutter: 3
 
-:::{grid-item-card} {fa}`flask;mr-1` Module 0: The running example
+:::{grid-item-card} {fa}`flask;mr-1` Module 0: Life without AiiDA
 :text-align: center
 :shadow: md
 
-Meet the Gray-Scott simulation, run it directly, and see what's missing without AiiDA.
+Run a simulation the traditional way and discover the pain points AiiDA is built to solve.
 
 +++
 
@@ -61,7 +61,7 @@ Go to Module 0
 ```
 :::
 
-:::{grid-item-card} {fa}`circle-play;mr-1` Module 1: Running with AiiDA
+:::{grid-item-card} {fa}`circle-play;mr-1` Module 1: Your first AiiDA-tracked calculation
 :text-align: center
 :shadow: md
 

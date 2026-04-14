@@ -15,5 +15,5 @@ BASE_PARAMS: dict = {
     'seed': 42,
 }
 
-F_VALUES: list[float] = [round(0.04 + i * 0.002, 3) for i in range(11)]
-"""Feed rate scan: 0.040, 0.042, ..., 0.060."""
+F_VALUES: list[float] = [round(0.04 + i * 0.005, 3) for i in range(5)]
+"""Feed rate scan: 0.040, 0.045, 0.050, 0.055, 0.060."""

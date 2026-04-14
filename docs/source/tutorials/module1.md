@@ -14,7 +14,7 @@ execution:
 ---
 
 (tutorial:module1)=
-# Module 1: Running with AiiDA
+# Module 1: Your first AiiDA-tracked calculation
 
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module1.ipynb` {octicon}`download`
@@ -48,16 +48,12 @@ $ verdi presto
 This creates a lightweight local profile using an SQLite database and a [disk-objectstore](https://github.com/aiidateam/disk-objectstore) for file storage.
 For production use or more advanced setups, see the {ref}`installation guide <installation>`.
 
-:::{tip}
-Use `verdi profile list` to see all your profiles and `verdi profile show` to inspect the active one.
-:::
-
 The cell below creates a tutorial profile for automated execution of this tutorial ({download}`include/setup_tutorial.py`).
 It loads the AiiDA profile and makes a `python_code` variable available -- an AiiDA `Code` object pointing to the Python interpreter on `localhost`, which we use with `aiida-shell` throughout.
 If you are running locally with your own profile, you can skip it.
 
 ```{code-cell} ipython3
-:tags: ["hide-cell"]
+:tags: ["remove-cell"]
 
 # Auto-generated tutorial profile for docs build.
 # If running locally with your own profile (e.g. from ``verdi presto``),

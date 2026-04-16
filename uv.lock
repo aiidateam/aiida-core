@@ -202,7 +202,7 @@ requires-dist = [
     { name = "bpython", marker = "extra == 'bpython'", specifier = "~=0.20" },
     { name = "chardet", marker = "sys_platform == 'win32'", specifier = "~=5.2.0" },
     { name = "circus", specifier = "~=0.19.0" },
-    { name = "click", specifier = ">=8.1.0,<8.3" },
+    { name = "click", specifier = ">=8.1.0,<8.4" },
     { name = "click-spinner", specifier = "~=0.1.8" },
     { name = "disk-objectstore", specifier = "~=1.5.0" },
     { name = "docstring-parser" },

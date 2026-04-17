@@ -88,11 +88,19 @@ def interactive_default(key, also_non_interactive=False):
         """Determine the default value from the context."""
         from aiida import orm
 
-        if not also_non_interactive and ctx.params['non_interactive']:
+        # ``click >= 8.3`` pre-populates ``ctx.params`` with an ``UNSET`` sentinel for parameters that have not yet
+        # been processed. The sentinel is truthy, so guard against it by normalising it (and any other non-matching
+        # value) to ``None`` via an explicit type check.
+        def _param(name, expected_type):
+            value = ctx.params.get(name)
+            return value if isinstance(value, expected_type) else None
+
+        non_interactive = bool(_param('non_interactive', bool))
+        if not also_non_interactive and non_interactive:
             raise click.MissingParameter()
 
-        user = ctx.params.get('user', None) or orm.User.collection.get_default()
-        computer = ctx.params.get('computer', None)
+        user = _param('user', orm.User) or orm.User.collection.get_default()
+        computer = _param('computer', orm.Computer)
 
         if computer is None:
             return None

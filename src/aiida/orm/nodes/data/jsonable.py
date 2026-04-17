@@ -56,9 +56,6 @@ class JsonableData(Data):
         model_config = ConfigDict(
             arbitrary_types_allowed=True,
             extra='allow',
-            json_schema_extra={
-                'additionalProperties': True,
-            },
         )
 
         the_module: str = OrmMetadataField(

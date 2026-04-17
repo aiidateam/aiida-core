@@ -16,7 +16,7 @@ from typing import Any, BinaryIO, Union
 import numpy as np
 from pydantic import ConfigDict, field_validator
 
-from aiida.orm.pydantic import OrmMetadataField, OrmModel
+from aiida.orm.pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
 
 from ..base import to_aiida_type
 from ..data import Data
@@ -46,7 +46,7 @@ class ArrayData(Data):
 
     """
 
-    class AttributesModel(Data.AttributesModel):
+    class AttributesModel(OrmFieldsAsModelDump, Data.AttributesModel):
         model_config = ConfigDict(
             extra='allow',
             arbitrary_types_allowed=True,
@@ -316,6 +316,18 @@ class ArrayData(Data):
             json_dict['comments'] = get_file_header(comment_char='')
 
         return json.dumps(json_dict).encode('utf-8'), {}
+
+    def _to_model_field_values(
+        self,
+        *,
+        context: dict[str, Any] | None = None,
+        minimal: bool = False,
+        schema: type[OrmModel] | None = None,
+    ) -> dict[str, Any]:
+        fields = super()._to_model_field_values(context=context, minimal=minimal, schema=schema)
+        if schema in (self.ReadModel, self.WriteModel):
+            return fields | {'attributes': self.base.attributes.all}
+        return fields
 
 
 def clean_array(array: np.ndarray) -> list:

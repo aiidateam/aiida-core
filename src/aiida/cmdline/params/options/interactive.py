@@ -83,13 +83,18 @@ class InteractiveOption(ConditionalOption):
     def prompt_for_value(self, ctx: click.Context) -> t.Any:
         """Prompt for a value printing a generic help message if this is the first invocation of the command.
 
-        If the command is invoked in non-interactive mode, meaning one should never prompt for a value, the default is
-        returned instead of prompting.
+        If the command is invoked in non-interactive mode, meaning one should never prompt for a value, the value from
+        the context's ``default_map`` is returned if present (e.g. when provided via ``--config``), otherwise the
+        default is returned instead of prompting. The explicit ``default_map`` lookup is required because as of
+        ``click >= 8.3``, :meth:`click.Option.consume_value` re-prompts for options whose value is sourced from the
+        default map, which would otherwise cause config-file values to be silently replaced by the contextual default.
 
         If the help message is printed, the ``prompt_loop_info_printed`` variable is set in the context which is used
         to check whether the message has already been printed as to only print it once at the first prompt.
         """
         if not self.is_interactive(ctx):
+            if ctx.default_map is not None and self.name in ctx.default_map:
+                return ctx.lookup_default(self.name)  # type: ignore[arg-type]
             return self.get_default(ctx)
 
         if self._prompt_fn is not None and self._prompt_fn(ctx) is False:

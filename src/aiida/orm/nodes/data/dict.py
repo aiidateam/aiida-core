@@ -55,9 +55,6 @@ class Dict(Data):
     class AttributesModel(OrmFieldsAsModelDump, Data.AttributesModel):
         model_config = pdt.ConfigDict(
             arbitrary_types_allowed=True,
-            json_schema_extra={
-                'additionalProperties': True,
-            },
             extra='allow',
         )
 

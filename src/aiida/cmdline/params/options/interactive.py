@@ -92,9 +92,10 @@ class InteractiveOption(ConditionalOption):
         If the help message is printed, the ``prompt_loop_info_printed`` variable is set in the context which is used
         to check whether the message has already been printed as to only print it once at the first prompt.
         """
+        if ctx.default_map is not None and self.name in ctx.default_map:
+            return ctx.lookup_default(self.name)  # type: ignore[arg-type]
+
         if not self.is_interactive(ctx):
-            if ctx.default_map is not None and self.name in ctx.default_map:
-                return ctx.lookup_default(self.name)  # type: ignore[arg-type]
             return self.get_default(ctx)
 
         if self._prompt_fn is not None and self._prompt_fn(ctx) is False:

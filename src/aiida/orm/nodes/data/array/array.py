@@ -114,7 +114,7 @@ class ArrayData(Data):
             raise TypeError(f'`arrays` should be a single sequence or dictionary of sequences but got: {arrays}')
 
         for key, value in arrays.items():
-            self.set_array(key, np.array(value))
+            self.set_array(key, np.asarray(value))
 
     @property
     def arrays(self) -> dict[str, np.ndarray]:

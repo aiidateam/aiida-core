@@ -39,6 +39,7 @@ orm_to_test = (
     orm.RemoteData,
     orm.RemoteStashData,
     orm.RemoteStashCompressedData,
+    orm.XyData,
 )
 
 entities_to_test = tuple(orm_class for orm_class in orm_to_test if not issubclass(orm_class, orm.Node))
@@ -108,7 +109,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
 
         return orm.ArrayData, {
             'attributes-based': {
-                'attributes': {},
+                'attributes': {'array|test_array': [3]},
                 'files': {'test_array.npy': lambda: buffered_array},
                 'assert_derived': assert_derived_array_properties,
             },
@@ -346,6 +347,62 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
                     'dereference': True,
                 }
             }
+        }
+    if request.param is orm.XyData:
+        buffered_x_array = io.BytesIO()
+        np.save(buffered_x_array, np.array([1, 2, 3]), allow_pickle=False)
+        buffered_x_array.seek(0)
+
+        buffered_y_array0 = io.BytesIO()
+        np.save(buffered_y_array0, np.array([4, 5, 6]), allow_pickle=False)
+        buffered_y_array0.seek(0)
+
+        buffered_y_array1 = io.BytesIO()
+        np.save(buffered_y_array1, np.array([7, 8, 9]), allow_pickle=False)
+        buffered_y_array1.seek(0)
+
+        def assert_derived_array_properties(node: orm.ArrayData):
+            assert node.base.attributes.all == {
+                'x_name': 'test_x',
+                'x_units': 'm',
+                'y_names': ['test_1', 'test_2'],
+                'y_units': ['m', 'm'],
+                'array|x_array': [3],
+                'array|y_array_0': [3],
+                'array|y_array_1': [3],
+            }
+            assert node.get_array('x_array').tolist() == [1, 2, 3]
+            assert node.get_array('y_array_0').tolist() == [4, 5, 6]
+            assert node.get_array('y_array_1').tolist() == [7, 8, 9]
+
+        return orm.XyData, {
+            'attributes-based': {
+                'attributes': {
+                    'x_name': 'test_x',
+                    'x_units': 'm',
+                    'y_names': ['test_1', 'test_2'],
+                    'y_units': ['m', 'm'],
+                    'array|x_array': [3],
+                    'array|y_array_0': [3],
+                    'array|y_array_1': [3],
+                },
+                'files': {
+                    'x_array.npy': lambda: buffered_x_array,
+                    'y_array_0.npy': lambda: buffered_y_array0,
+                    'y_array_1.npy': lambda: buffered_y_array1,
+                },
+                'assert_derived': assert_derived_array_properties,
+            },
+            'constructor-based': {
+                'args': {
+                    'x_name': 'test_x',
+                    'x_units': 'm',
+                    'y_names': ['test_1', 'test_2'],
+                    'y_units': ['m', 'm'],
+                    'x_array': [1, 2, 3],
+                    'y_arrays': [[4, 5, 6], [7, 8, 9]],
+                }
+            },
         }
     raise NotImplementedError()
 

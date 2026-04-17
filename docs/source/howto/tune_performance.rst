@@ -14,24 +14,32 @@ TL;DR
 
 Quick settings to consider for high-throughput workloads:
 
-- Start the daemon with multiple workers: ``verdi daemon start X`` (e.g., ``X=4``), or add workers to a running daemon: ``verdi daemon incr X``
-- Reduce the SSH connection cooldown time for remote computers (default 15s)
-- Enable caching: ``verdi config set caching.default_enabled True``
-- Increase worker slots: ``verdi config set daemon.worker_process_slots X`` (e.g., ``X=1000``)
+- Start the daemon with multiple workers: ``verdi daemon start 4``, or add workers to a running daemon: ``verdi daemon incr 2`` (see :ref:`how-to:tune-performance:daemon`).
+- Enable caching: ``verdi config set caching.default_enabled True`` (see :ref:`how-to:tune-performance:caching`).
+- Increase worker slots: ``verdi config set daemon.worker_process_slots 1000`` (see :ref:`how-to:tune-performance:daemon`).
+- If short tasks are bottlenecked by the SSH connection cooldown, consider lowering it (default 15s), but check your HPC center's policies first to avoid rate limiting (see :ref:`how-to:tune-performance:remote`).
 
 .. note::
 
-   When scaling to many daemon workers and/or lowering the SSH cooldown, you may need to reduce the per-computer I/O concurrency limit to avoid overloading the remote machine.
+   Each daemon worker opens its own SSH connection, and the ``max_io_allowed`` setting (default: 8) limits the concurrent I/O operations *per connection*.
+   The total concurrent I/O against a given remote computer is therefore roughly ``number_of_workers × max_io_allowed``.
+   When scaling to many daemon workers and/or lowering the SSH cooldown, you may need to reduce ``max_io_allowed`` to keep the total in check and avoid overloading the remote machine.
    This applies to computers configured with the ``core.ssh_async`` transport (see :ref:`max_io_allowed <max-io-allowed-note>` below).
 
 To see all available configuration options and their current values, run ``verdi config list``.
+
+.. _how-to:tune-performance:daemon:
 
 Daemon configuration
 ====================
 
 **Increase the number of daemon workers** --
 By default, the AiiDA daemon only uses a single worker, i.e. a single operating system process.
-If ``verdi daemon status`` shows the daemon worker constantly at high CPU usage, use ``verdi daemon start X`` to run with ``X`` workers, or ``verdi daemon incr X`` to add ``X`` workers to a running daemon.
+If ``verdi daemon status`` shows the daemon worker constantly at high CPU usage, scale up:
+
+- ``verdi daemon start X`` boots a fresh daemon with ``X`` workers (use this when the daemon is stopped).
+- ``verdi daemon incr X`` adds ``X`` workers to an already-running daemon.
+
 Keep in mind that other processes need to run on your computer, so it's a good idea to stop increasing the number of workers before you reach the number of cores of your CPU.
 To set the default value for your profile:
 
@@ -58,6 +66,30 @@ If ``verdi daemon status`` constantly warns about a high percentage of the avail
    .. code:: console
 
        $ verdi computer configure core.ssh_async --max-io-allowed <value> <COMPUTER_LABEL>
+
+.. _how-to:tune-performance:caching:
+
+Caching
+=======
+
+AiiDA can skip redundant calculations entirely by reusing cached results from identical previous runs.
+This can dramatically improve throughput when running similar calculations.
+Enable it globally:
+
+.. code:: console
+
+    $ verdi config set caching.default_enabled True
+
+Or enable it only for specific calculation types via ``caching.enabled_for``.
+
+.. note::
+
+   Caching operates at the calculation level, not the workflow level.
+   When caching is enabled for a workflow, the workflow itself still runs through all its steps, but each individual calculation whose inputs match a previous run will have its outputs filled in from the cache instead of being resubmitted.
+
+See :ref:`how-to:run-codes:caching` for details on how caching works and how to configure it per calculation type.
+
+.. _how-to:tune-performance:remote:
 
 Remote connections
 ==================
@@ -89,32 +121,15 @@ Inspect the current value with:
 
 .. warning::
 
-    Setting the interval too low -- especially with many daemon workers active -- can trigger
+    Setting the interval too low, especially with many daemon workers active, can trigger
     rate limiting or IP bans from HPC centers. Check your center's policies before reducing this value.
+
+Scheduling
+==========
 
 **Consider using aiida-hyperqueue for many short calculations** --
 When running many small calculations on HPC systems, you may hit limits on the number of active jobs allowed, or face long total queueing times.
 The `aiida-hyperqueue <https://aiida-hyperqueue.readthedocs.io/>`_ plugin allows you to submit many AiiDA calculations to the `HyperQueue <https://github.com/It4innovations/hyperqueue>`_ metascheduler, which runs them within a single job allocation.
-
-Caching
-=======
-
-AiiDA can skip redundant calculations entirely by reusing cached results from identical previous runs.
-This can dramatically improve throughput when running similar calculations.
-Enable it globally:
-
-.. code:: console
-
-    $ verdi config set caching.default_enabled True
-
-Or enable it only for specific calculation types via ``caching.enabled_for``.
-
-.. note::
-
-   Caching operates at the calculation level, not the workflow level.
-   When caching is enabled for a workflow, the workflow itself still runs through all its steps, but each individual calculation whose inputs match a previous run will have its outputs filled in from the cache instead of being resubmitted.
-
-See :ref:`how-to:run-codes:caching` for details on how caching works and how to configure it per calculation type.
 
 System and storage
 ==================
@@ -145,6 +160,9 @@ Download the :download:`benchmark script <include/scripts/performance_benchmark_
     $ python performance_benchmark_base.py -n 10
 
 .. dropdown:: Example output
+
+    The output below was produced on *<CPU_MODEL>* with AiiDA 2.8.0.post0,
+    with RabbitMQ and PostgreSQL running on the same machine:
 
     .. code:: console
 

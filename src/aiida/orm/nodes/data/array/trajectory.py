@@ -31,8 +31,13 @@ class TrajectoryData(ArrayData):
     """
 
     class AttributesModel(ArrayData.AttributesModel):
-        symbols: list[str] = OrmMetadataField(description='List of symbols')
-        pbc: t.Optional[tuple[bool, bool, bool]] = OrmMetadataField(description='Periodic boundary conditions')
+        symbols: list[str] = OrmMetadataField(
+            description='List of symbols',
+        )
+        pbc: t.Optional[tuple[bool, bool, bool]] = OrmMetadataField(
+            None,
+            description='Periodic boundary conditions',
+        )
 
     def __init__(self, structurelist: list[StructureData] | None = None, **kwargs: t.Any) -> None:
         super().__init__(**kwargs)

@@ -82,6 +82,12 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             'in which case `None` will be set and it is left up to the calculation job plugin or inputs '
             'whether to run with MPI',
         )
+        wrap_cmdline_params: bool = OrmMetadataField(
+            False,
+            title='Wrap command line parameters',
+            description='Whether all command line parameters to be passed to the engine command should be wrapped in '
+            'a double quotes to form a single argument. This should be set to `True` for Docker',
+        )
         prepend_text: str = OrmMetadataField(
             '',
             title='Prepend script',

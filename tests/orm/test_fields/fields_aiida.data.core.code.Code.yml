@@ -41,3 +41,7 @@ with_mpi: QbAnyField('attributes.with_mpi', dtype=bool | None, doc='Whether the 
   should be run as an MPI program. This option can be left unspecified in which case
   `None` will be set and it is left up to the calculation job plugin or inputs whether
   to run with MPI')
+wrap_cmdline_params: QbAnyField('attributes.wrap_cmdline_params', dtype=<class 'bool'>,
+  doc='Whether all command line parameters to be passed to the engine command should
+  be wrapped in a double quotes to form a single argument. This should be set to `True`
+  for Docker')

@@ -86,7 +86,7 @@ class LogCollection(entities.Collection['Log']):
             backend=self.backend,
         )
 
-    def get_logs_for(self, entity: 'Node', order_by: Optional['OrderByType'] = None) -> List[Log]:
+    def get_logs_for(self, entity: Node, order_by: Optional[OrderByType] = None) -> List[Log]:
         """Get all the log messages for a given node and optionally sort
 
         :param entity: the entity to get logs for
@@ -117,7 +117,7 @@ class LogCollection(entities.Collection['Log']):
         """
         return self._backend.logs.delete_all()
 
-    def delete_many(self, filters: 'FilterType') -> List[int]:
+    def delete_many(self, filters: FilterType) -> List[int]:
         """Delete Logs based on ``filters``
 
         :param filters: filters to pass to the QueryBuilder
@@ -256,6 +256,12 @@ class Log(entities.Entity['BackendLog', LogCollection]):
         :return: The id of the object that created the log entry
         """
         return self._backend_entity.dbnode_id
+
+    @property
+    def node(self) -> Node:
+        from .utils.loaders import load_node
+
+        return load_node(self.dbnode_id)
 
     @property
     def message(self) -> str:

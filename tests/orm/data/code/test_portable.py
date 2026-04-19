@@ -157,6 +157,7 @@ def test_portablecode_extra_files(tmp_path, chdir_tmp_path):
     ref_result = f"""label: some-label
 description: ''
 use_double_quotes: false
+wrap_cmdline_params: false
 prepend_text: ''
 append_text: ''
 filepath_executable: bash

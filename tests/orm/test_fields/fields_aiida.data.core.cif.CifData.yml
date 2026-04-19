@@ -16,11 +16,15 @@ mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modif
   time of the node')
 node_type: QbStrField('node_type', dtype=typing.Literal['data.core.cif.CifData.'],
   doc='The type of the node.')
+parse_policy: QbStrField('attributes.parse_policy', dtype=typing.Literal['eager',
+  'lazy'], doc='Parse policy for parsing with PyCIFRW')
 pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
 process_type: QbStrField('process_type', dtype=str | None, doc='The process type of
   the node')
 repository_metadata: QbDictField('repository_metadata', dtype=dict[str, typing.Any],
   doc='Virtual hierarchy of the file repository')
+scan_type: QbStrField('attributes.scan_type', dtype=typing.Literal['standard', 'flex'],
+  doc='Scan type for parsing with PyCIFRW')
 source: QbDictField('attributes.source', dtype=dict | None, doc='Source of the data')
 spacegroup_numbers: QbArrayField('attributes.spacegroup_numbers', dtype=list[str]
   | None, doc='List of space group numbers of the structure')

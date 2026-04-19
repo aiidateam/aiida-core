@@ -37,7 +37,6 @@ orm_to_test = (
     orm.Str,
     orm.StructureData,
     orm.RemoteData,
-    orm.RemoteStashData,
     orm.RemoteStashCompressedData,
     orm.XyData,
 )
@@ -132,7 +131,10 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
 
         return orm.CifData, {
             'attributes-based': {
-                'attributes': {},
+                'attributes': {
+                    'scan_type': 'standard',
+                    'parse_policy': 'eager',
+                },
                 'files': {'structure.cif': lambda: io.StringIO('data_test\nloop_\n_atom_site_label\nH1\n')},
                 'assert_derived': assert_derived_cif_properties,
             },
@@ -328,14 +330,6 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
                     'remote_path': '/some/path',
                 },
             },
-        }
-    if request.param is orm.RemoteStashData:
-        return orm.RemoteStashData, {
-            'attributes-based': {
-                'attributes': {
-                    'stash_mode': StashMode.COMPRESS_TAR,
-                },
-            }
         }
     if request.param is orm.RemoteStashCompressedData:
         return orm.RemoteStashCompressedData, {

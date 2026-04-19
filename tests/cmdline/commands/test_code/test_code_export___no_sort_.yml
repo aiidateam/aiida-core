@@ -1,6 +1,7 @@
 label: code
 description: ''
 use_double_quotes: false
+wrap_cmdline_params: false
 prepend_text: "module load something\n    some command"
 append_text: ''
 filepath_executable: /bin/cat

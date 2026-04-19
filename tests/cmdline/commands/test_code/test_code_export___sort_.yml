@@ -6,3 +6,4 @@ filepath_executable: /bin/cat
 label: code
 prepend_text: "module load something\n    some command"
 use_double_quotes: false
+wrap_cmdline_params: false

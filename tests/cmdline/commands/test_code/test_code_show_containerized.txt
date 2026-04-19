@@ -7,9 +7,9 @@ Computer                      <hostname> (<hostname>), pk: <COMPUTER_PK>
 Default `CalcJob` plugin      core.arithmetic.add
 Escape using double quotes    False
 Run with MPI
+Wrap command line parameters  False
 Prepend script                text to prepend
 Append script                 text to append
 Filepath executable           /usr/bin/bash
 Engine command                singularity exec --bind $PWD:$PWD {image_name}
 Image name                    ubuntu
-Wrap command line parameters  False

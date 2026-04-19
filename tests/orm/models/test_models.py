@@ -80,23 +80,58 @@ class JsonableClass:
 @pytest.fixture
 def required_arguments(request, default_user, aiida_localhost, tmp_path):
     if request.param is orm.AuthInfo:
-        return orm.AuthInfo, {'user': default_user, 'computer': aiida_localhost}
+        random_email = f'user{orm.User.collection.count() + 1}@aiida'
+        return (
+            orm.AuthInfo,
+            {
+                'user': orm.User(email=random_email).store(),
+                'computer': aiida_localhost,
+            },
+            {
+                'user': lambda user: user.pk,
+                'computer': lambda computer: computer.pk,
+            },
+        )
     if request.param is orm.Comment:
-        return orm.Comment, {'user': default_user, 'node': orm.Data().store(), 'content': ''}
+        return (
+            orm.Comment,
+            {'user': default_user, 'node': orm.Data().store(), 'content': ''},
+            {
+                'user': lambda user: user.pk,
+                'node': lambda node: node.pk,
+            },
+        )
     if request.param is orm.Computer:
-        return orm.Computer, {'label': 'localhost'}
+        return (
+            orm.Computer,
+            {
+                'label': 'test_localhost',
+                'hostname': 'test_localhost',
+                'transport_type': 'core.local',
+                'scheduler_type': 'core.direct',
+            },
+            {},
+        )
     if request.param is orm.Group:
-        return orm.Group, {'label': 'group'}
+        return (
+            orm.Group,
+            {'label': 'group'},
+            {'user': lambda user: user.pk},
+        )
     if request.param is orm.Log:
-        return orm.Log, {
-            'time': datetime.datetime.now(),
-            'loggername': 'logger',
-            'levelname': 'REPORT',
-            'message': 'message',
-            'dbnode_id': orm.Data().store().pk,
-        }
+        return (
+            orm.Log,
+            {
+                'time': datetime.datetime.now(),
+                'loggername': 'logger',
+                'levelname': 'REPORT',
+                'message': 'message',
+                'node': orm.Data().store(),
+            },
+            {'node': lambda node: node.pk},
+        )
     if request.param is orm.User:
-        return orm.User, {'email': 'test@localhost'}
+        return orm.User, {'email': 'user42@aiida'}, {}
     if request.param is orm.ArrayData:
         buffered_array = io.BytesIO()
         np.save(buffered_array, np.array([1, 0, 0]), allow_pickle=False)
@@ -121,6 +156,9 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             'attributes-based': {
                 'attributes': {'value': True},
             },
+            'constructor-based': {
+                'args': {'value': True},
+            },
         }
     if request.param is orm.CifData:
 
@@ -139,7 +177,10 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
                 'assert_derived': assert_derived_cif_properties,
             },
             'constructor-based': {
-                'args': {'filename': 'structure.cif', 'content': 'data_test\nloop_\n_atom_site_label\nH1\n'},
+                'args': {
+                    'filename': 'structure.cif',
+                    'content': 'data_test\nloop_\n_atom_site_label\nH1\n',
+                },
             },
         }
     if request.param is orm.ContainerizedCode:
@@ -169,7 +210,10 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
                 'attributes': {
                     'source': {'uri': 'http://127.0.0.1'},
                 },
-            }
+            },
+            'constructor-based': {
+                'args': {'source': {'uri': 'http://127.0.0.1'}},
+            },
         }
     if request.param is orm.Dict:
         return orm.Dict, {
@@ -197,7 +241,10 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
         return orm.Float, {
             'attributes-based': {
                 'attributes': {'value': 1.0},
-            }
+            },
+            'constructor-based': {
+                'args': {'value': 1.0},
+            },
         }
     if request.param is orm.FolderData:
         (tmp_path / 'binary_file').write_bytes(b'byte content')
@@ -243,6 +290,9 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             'attributes-based': {
                 'attributes': {'value': 1},
             },
+            'constructor-based': {
+                'args': {'value': 1},
+            },
         }
     if request.param is orm.JsonableData:
         return orm.JsonableData, {
@@ -265,7 +315,10 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
                 'attributes': {
                     'list': [1, 2, 3],
                 },
-            }
+            },
+            'constructor-based': {
+                'args': {'list': [1, 2, 3]},
+            },
         }
     if request.param is orm.PortableCode:
         (tmp_path / 'code.sh').write_text('#!/bin/bash\necho "$@"\n')
@@ -307,7 +360,10 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
         return orm.Str, {
             'attributes-based': {
                 'attributes': {'value': 'string'},
-            }
+            },
+            'constructor-based': {
+                'args': {'value': 'string'},
+            },
         }
     if request.param is orm.StructureData:
         return orm.StructureData, {
@@ -320,7 +376,17 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
                     'sites': [{'kind_name': 'H', 'position': (0.0, 0.0, 0.0)}],
                     'kinds': [{'name': 'H', 'mass': 1.0, 'symbols': ('H',), 'weights': (1.0,)}],
                 }
-            }
+            },
+            'constructor-based': {
+                'args': {
+                    'cell': [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+                    'pbc1': True,
+                    'pbc2': True,
+                    'pbc3': True,
+                    'sites': [{'kind_name': 'H', 'position': (0.0, 0.0, 0.0)}],
+                    'kinds': [{'name': 'H', 'mass': 1.0, 'symbols': ('H',), 'weights': (1.0,)}],
+                }
+            },
         }
     if request.param is orm.RemoteData:
         return orm.RemoteData, {
@@ -329,6 +395,12 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
                 'attributes': {
                     'remote_path': '/some/path',
                 },
+            },
+            'constructor-based': {
+                'args': {
+                    'computer': aiida_localhost,
+                    'remote_path': '/some/path',
+                }
             },
         }
     if request.param is orm.RemoteStashCompressedData:
@@ -340,7 +412,15 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
                     'source_list': ['/some/file'],
                     'dereference': True,
                 }
-            }
+            },
+            'constructor-based': {
+                'args': {
+                    'stash_mode': StashMode.COMPRESS_TAR,
+                    'target_basepath': '/some/path',
+                    'source_list': ['/some/file'],
+                    'dereference': True,
+                }
+            },
         }
     if request.param is orm.XyData:
         buffered_x_array = io.BytesIO()
@@ -537,9 +617,9 @@ def test_roundtrip_node_from_model_attributes(required_arguments, tmp_path):
 def test_roundtrip_node_from_model_constructor(required_arguments, tmp_path):
     cls: type[orm.Node] = required_arguments[0]
     payload: dict = required_arguments[1]
-    constructor_payload: dict | None = payload.get('constructor-based')
+    constructor_payload: dict = payload['constructor-based']
 
-    if constructor_payload is None:
+    if not cls.supports_constructor_model:
         with pytest.raises(UnsupportedSchemaError):
             cls.ConstructorModel
         return
@@ -577,9 +657,9 @@ def test_roundtrip_node_from_serialized_attributes(required_arguments, tmp_path)
 def test_roundtrip_node_from_serialized_constructor(required_arguments, tmp_path):
     cls: type[orm.Node] = required_arguments[0]
     payload: dict = required_arguments[1]
-    constructor_payload: dict | None = payload.get('constructor-based')
+    constructor_payload: dict = payload['constructor-based']
 
-    if constructor_payload is None:
+    if not cls.supports_constructor_model:
         with pytest.raises(UnsupportedSchemaError):
             cls.ConstructorModel
         return
@@ -589,3 +669,59 @@ def test_roundtrip_node_from_serialized_constructor(required_arguments, tmp_path
     new = cls.from_serialized(serialized)
     assert isinstance(new, cls)
     _assert_roundtrip_field_values_equal(cls, model, new, 'constructor', tmp_path)
+
+
+def _get_sorted_dict(dictionary: dict) -> dict:
+    return {
+        key: _get_sorted_dict(value) if isinstance(value, dict) else value
+        for key, value in sorted(dictionary.items())
+        if value is not None
+        and key != '_aiida_hash'  # the hash is derived from the node uuid, which is expected to be different
+    }
+
+
+def _check(in1, in2):
+    if isinstance(in1, dict) and isinstance(in2, dict):
+        in1 = _get_sorted_dict(in1)
+        in2 = _get_sorted_dict(in2)
+    assert in1 == in2, f'{in1!r}\n{in2!r}'
+
+
+@pytest.mark.parametrize(
+    'required_arguments',
+    entities_to_test,
+    indirect=True,
+)
+def test_stored_entity_serialization(required_arguments):
+    cls: type[orm.Entity] = required_arguments[0]
+    kwargs: dict = required_arguments[1]
+    serializers: dict = required_arguments[2]
+    entity = cls(**kwargs)
+    entity.store()
+    serialized = entity.serialize(schema='read', mode='json')
+    for key in serialized:
+        field = getattr(entity, key)
+        if isinstance(field, datetime.datetime):
+            field = field.isoformat().replace('+00:00', 'Z')
+        if key in serializers:
+            field = serializers[key](field)
+        _check(serialized[key], field)
+
+
+@pytest.mark.parametrize(
+    'required_arguments',
+    nodes_to_test,
+    indirect=True,
+)
+def test_stored_node_serialization(required_arguments):
+    cls: type[orm.Node] = required_arguments[0]
+    payload: dict = required_arguments[1]
+    args = payload['constructor-based']['args']
+    node = cls(**args)
+    node.store()
+    serialized = node.serialize(schema='read', mode='json')
+    _check(serialized['pk'], node.pk)
+    _check(serialized['uuid'], node.uuid)
+    _check(serialized['extras'], node.base.extras.all)
+    _check(serialized['attributes'], node.base.attributes.all)
+    _check(serialized['repository_metadata'], node.base.repository.metadata)

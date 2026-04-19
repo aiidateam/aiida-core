@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import re
-from typing import Optional
+from typing import Literal, Optional
 
 from aiida.common.utils import Capturing
 from aiida.orm.pydantic import OrmMetadataField
@@ -266,6 +266,12 @@ class CifData(SinglefileData):
             description='MD5 checksum of the file contents',
             read_only=True,
         )
+        scan_type: Literal['standard', 'flex'] = OrmMetadataField(
+            description='Scan type for parsing with PyCIFRW',
+        )
+        parse_policy: Literal['eager', 'lazy'] = OrmMetadataField(
+            description='Parse policy for parsing with PyCIFRW',
+        )
 
     def __init__(self, ase=None, file=None, filename=None, values=None, scan_type=None, parse_policy=None, **kwargs):
         """Construct a new instance and set the contents to that of the file.
@@ -406,6 +412,14 @@ class CifData(SinglefileData):
         if self._ase is None:
             self._ase = self.get_ase()
         return self._ase
+
+    @property
+    def scan_type(self) -> Literal['standard', 'flex']:
+        return self.base.attributes.get('scan_type')
+
+    @property
+    def parse_policy(self) -> Literal['eager', 'lazy']:
+        return self.base.attributes.get('parse_policy')
 
     def get_ase(self, **kwargs):
         """Returns ASE object, representing the CIF. This function differs

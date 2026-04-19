@@ -70,13 +70,15 @@ class InstalledCode(Code):
             orm_class=Computer,
         )
 
-    def __init__(self, computer: Computer, filepath_executable: str, **kwargs):
+    def __init__(self, computer: Computer | str, filepath_executable: str, **kwargs):
         """Construct a new instance.
 
         :param computer: The remote computer on which the executable is located.
         :param filepath_executable: The absolute filepath of the executable on the remote computer.
         """
         super().__init__(**kwargs)
+        if isinstance(computer, str):
+            computer = load_computer(computer)
         self.computer = computer
         self.filepath_executable = filepath_executable
 

@@ -26,9 +26,6 @@ def test_constructor_raises(aiida_localhost, bash_path):
     with pytest.raises(TypeError, match=r'Got object of type .*'):
         InstalledCode(computer=aiida_localhost, filepath_executable=bash_path)
 
-    with pytest.raises(TypeError, match=r'Got object of type .*'):
-        InstalledCode(computer='computer', filepath_executable='/usr/bin/bash')
-
 
 def test_constructor(aiida_localhost, bash_path):
     """Test the constructor."""

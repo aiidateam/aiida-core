@@ -302,15 +302,17 @@ class RemoteData(Data):
             # Linux's ext4, as well as macOS, we assume for now that it is a reasonable assumption and default value.
 
             # Lastly, the `-s` (`--summarize`) option yields only a single total file size value.
-            retval, stdout, stderr = transport.exec_command_wait(f'du -s --block-size=1 {full_path}')
+            # We use `-sk` for cross-platform compatibility (GNU and BSD/macOS `du`), as `--block-size=1`
+            # is a GNU extension not available on macOS. The `-k` flag outputs in KiB on both platforms.
+            retval, stdout, stderr = transport.exec_command_wait(f'du -sk {full_path}')
         except NotImplementedError as exc:
             raise NotImplementedError('`exec_command_wait` not implemented for the current transport plugin.') from exc
 
         if stderr or retval != 0:
             raise RuntimeError(f'Error executing `du` command: {stderr}')
         else:
-            total_size: int = int(stdout.split('\t')[0])
-            return total_size
+            total_size_kib: int = int(stdout.split('\t')[0])
+            return total_size_kib * 1024
 
     def _get_size_on_disk_stat(self, full_path: Path, transport: Transport) -> int:
         """Returns the total size of a file/directory at the given ``full_path`` on the remote Computer in bytes using

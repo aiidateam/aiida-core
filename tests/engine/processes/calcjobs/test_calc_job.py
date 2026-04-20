@@ -1315,7 +1315,7 @@ def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, c
     entry_points.add(monitor_disable_self, group='aiida.calculations.monitors', name='core.disable_self')
 
     builder = get_calcjob_builder()
-    builder.metadata.options.sleep = 1
+    builder.metadata.options.sleep = 5
     builder.monitors = {'disable_self': orm.Dict({'entry_point': 'core.disable_self'})}
     _, node = launch.run_get_node(builder)
     assert node.is_finished_ok

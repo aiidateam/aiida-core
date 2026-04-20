@@ -170,6 +170,33 @@ Although it is possible to run AiiDA without a daemon it does provide significan
 
             The service has to manually be started each time the machine reboots.
 
+        .. warning::
+
+            The ``brew install`` can sometimes install a version of Erlang that is incompatible with the installed version of RabbitMQ, causing ``rabbitmq-server`` to crash on startup with no clear error message.
+            If you run into this issue, verify that your installed versions of Erlang and RabbitMQ are `compatible <https://www.rabbitmq.com/docs/which-erlang>`__, or consider one of the alternative installation methods below.
+            See the :ref:`troubleshooting section <installation:troubleshooting:installation:rabbitmq>` for more details.
+
+        **Alternative installation methods:**
+
+        *Using the generic binary build:*
+
+        #. Download the latest `generic binary build <https://www.rabbitmq.com/docs/install-generic-unix>`__ from the RabbitMQ website.
+        #. Extract the archive and follow the included installation instructions.
+        #. Start the server:
+
+           .. code-block:: console
+
+                /path/to/rabbitmq_server-<version>/sbin/rabbitmq-server -detached
+
+        *Using Docker:*
+
+        #. Install `Docker Desktop <https://www.docker.com/products/docker-desktop/>`__.
+        #. Start a RabbitMQ container:
+
+           .. code-block:: console
+
+                docker run -d --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:3-management
+
     .. tab-item:: Other
 
         For all other cases, please refer to the `official documentation <https://www.rabbitmq.com/docs/download>`_ of RabbitMQ.

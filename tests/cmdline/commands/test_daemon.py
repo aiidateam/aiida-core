@@ -96,6 +96,14 @@ def test_daemon_start_number_config(run_cli_command, stopped_daemon_client, isol
     assert len(worker_response['info']) == number
 
 
+def test_daemon_stop(run_cli_command, started_daemon_client):
+    """Test ``verdi daemon stop``."""
+    result = run_cli_command(cmd_daemon.stop)
+
+    assert 'Stopping the daemon' in result.output
+    assert not started_daemon_client.is_daemon_running
+
+
 def test_foreground_multiple_workers(run_cli_command):
     """Test `verdi daemon start` in foreground with more than one worker will fail."""
     run_cli_command(cmd_daemon.start, ['--foreground', str(4)], raises=True)
@@ -248,3 +256,25 @@ def test_daemon_status_worker_timeout(run_cli_command):
     result = run_cli_command(cmd_daemon.status)
     for literal in literals:
         assert literal in result.output
+
+
+def test_execute_client_command_profile_name(monkeypatch):
+    """Test that ``execute_client_command`` passes ``profile_name`` to ``get_daemon_client``."""
+    received_profile_names = []
+
+    def mock_get_daemon_client(profile_name=None):
+        received_profile_names.append(profile_name)
+
+        class MockClient:
+            def stop_daemon(self, **kwargs):
+                return None
+
+        return MockClient()
+
+    monkeypatch.setattr('aiida.engine.daemon.client.get_daemon_client', mock_get_daemon_client)
+
+    cmd_daemon.execute_client_command('stop_daemon', profile_name='test-profile')
+    assert received_profile_names == ['test-profile']
+
+    cmd_daemon.execute_client_command('stop_daemon')
+    assert received_profile_names == ['test-profile', None]

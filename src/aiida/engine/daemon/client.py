@@ -68,15 +68,27 @@ class DaemonStalePidException(DaemonException):
 
 
 def get_daemon_client(profile_name: str | None = None) -> 'DaemonClient':
-    """Return the daemon client for the given profile or the current profile if not specified.
+    """Return the daemon client for the given profile or the currently loaded profile if not specified.
 
-    :param profile_name: Optional profile name to load.
+    :param profile_name: Optional profile name.
     :return: The daemon client.
 
     :raises aiida.common.MissingConfigurationError: if the configuration file cannot be found.
     :raises aiida.common.ProfileConfigurationError: if the given profile does not exist.
+    :raises aiida.common.ConfigurationError: if no profile is loaded and ``profile_name`` is not specified.
     """
-    profile = get_manager().load_profile(profile_name)
+    manager = get_manager()
+
+    if profile_name is None:
+        profile = manager.get_profile()
+
+        if profile is None:
+            raise ConfigurationError(
+                'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
+            )
+    else:
+        profile = get_config().get_profile(profile_name)
+
     return DaemonClient(profile)
 
 

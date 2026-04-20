@@ -16,6 +16,8 @@ import uuid
 import pytest
 
 from aiida.common import exceptions
+from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.engine.daemon.client import DaemonException, DaemonTimeoutException
 from aiida.manage.configuration import Profile, settings
 from aiida.manage.configuration.config import Config
 from aiida.manage.configuration.migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
@@ -420,8 +422,12 @@ def test_store(config_with_profile):
         assert config.dictionary == config_recreated.dictionary
 
 
-def test_delete_profile(config_with_profile, profile_factory):
+def test_delete_profile(config_with_profile, profile_factory, monkeypatch, caplog):
     """Test the ``delete_profile`` method."""
+    import logging
+
+    from aiida.engine.daemon.client import DaemonClient
+
     config = config_with_profile
     profile_name = 'to-be-deleted'
     profile = profile_factory(name=profile_name)
@@ -432,12 +438,61 @@ def test_delete_profile(config_with_profile, profile_factory):
     # Write the contents to disk so that the to-be-deleted profile is in the config file on disk
     config.store()
 
-    config.delete_profile(profile_name, delete_storage=False)
+    monkeypatch.setattr(DaemonClient, 'stop_daemon', lambda self, **kwargs: {'status': 'ok'})
+
+    logger = logging.getLogger('aiida.manage.configuration.config')
+    logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level(LOG_LEVEL_REPORT, logger='aiida.manage.configuration.config'):
+            config.delete_profile(profile_name, delete_storage=False)
+    finally:
+        logger.removeHandler(caplog.handler)
+
+    assert any(f'Daemon for profile `{profile_name}` stopped.' in record.message for record in caplog.records)
     assert profile_name not in config.profile_names
 
     # Now reload the config from disk to make sure the changes after deletion were persisted to disk
     config_on_disk = Config.from_file(config.filepath)
     assert profile_name not in config_on_disk.profile_names
+
+
+@pytest.mark.parametrize(
+    ('profile_name', 'exception_cls', 'message'),
+    [
+        ('to-be-deleted-timeout', DaemonTimeoutException, 'Connection to the daemon timed out.'),
+        ('to-be-deleted-failure', DaemonException, 'Connection failed.'),
+    ],
+)
+def test_delete_profile_warns_with_daemon_pid(
+    config_with_profile, profile_factory, monkeypatch, caplog, profile_name, exception_cls, message
+):
+    """Test that ``delete_profile`` warns if daemon shutdown does not complete cleanly."""
+    import logging
+
+    from aiida.engine.daemon.client import DaemonClient
+
+    config = config_with_profile
+    profile = profile_factory(name=profile_name)
+
+    config.add_profile(profile)
+    config.store()
+
+    def stop_daemon_raise(self, **kwargs):
+        raise exception_cls(message)
+
+    monkeypatch.setattr(DaemonClient, 'stop_daemon', stop_daemon_raise)
+    monkeypatch.setattr(DaemonClient, 'get_daemon_pid', lambda self: 1234)
+
+    logger = logging.getLogger('aiida.manage.configuration.config')
+    logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level(logging.WARNING, logger='aiida.manage.configuration.config'):
+            config.delete_profile(profile_name, delete_storage=False)
+    finally:
+        logger.removeHandler(caplog.handler)
+
+    assert any('The daemon with PID `1234` may still be running.' in record.message for record in caplog.records)
+    assert profile_name not in config.profile_names
 
 
 @pytest.mark.parametrize(
@@ -479,8 +534,13 @@ def test_delete_profile_sqlite_zip(
 
     caplog.clear()
 
-    with caplog.at_level(logging.INFO):
-        config.delete_profile(profile_name, delete_storage=delete_storage)
+    logger = logging.getLogger('aiida.manage.configuration.config')
+    logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level(LOG_LEVEL_REPORT, logger='aiida.manage.configuration.config'):
+            config.delete_profile(profile_name, delete_storage=delete_storage)
+    finally:
+        logger.removeHandler(caplog.handler)
 
     # Verify file handling
     if delete_storage and file_exists:

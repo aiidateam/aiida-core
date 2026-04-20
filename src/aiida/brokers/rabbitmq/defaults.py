@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import typing as t
 
@@ -40,23 +41,50 @@ def detect_rabbitmq_config(
     :raises ConnectionError: If the connection failed with the provided connection parameters
     :returns: The connection parameters if the RabbitMQ server was successfully connected to, or ``None`` otherwise.
     """
-    from kiwipy.rmq.threadcomms import connect
+    import aio_pika
+
+    from .utils import get_rmq_url
+
+    async def probe_rabbitmq_connection(url: str) -> None:
+        """Open and close a temporary RabbitMQ connection."""
+        connection = await aio_pika.connect_robust(url=url)
+        await connection.close()
+
+    protocol = protocol or os.getenv('AIIDA_BROKER_PROTOCOL', BROKER_DEFAULTS['protocol'])
+    username = username or os.getenv('AIIDA_BROKER_USERNAME', BROKER_DEFAULTS['username'])
+    password = password or os.getenv('AIIDA_BROKER_PASSWORD', BROKER_DEFAULTS['password'])
+    host = host or os.getenv('AIIDA_BROKER_HOST', BROKER_DEFAULTS['host'])
+    port = port or int(os.getenv('AIIDA_BROKER_PORT', BROKER_DEFAULTS['port']))
+    virtual_host = virtual_host or os.getenv('AIIDA_BROKER_VIRTUAL_HOST', BROKER_DEFAULTS['virtual_host'])
 
     connection_params = {
-        'protocol': protocol or os.getenv('AIIDA_BROKER_PROTOCOL', BROKER_DEFAULTS['protocol']),
-        'username': username or os.getenv('AIIDA_BROKER_USERNAME', BROKER_DEFAULTS['username']),
-        'password': password or os.getenv('AIIDA_BROKER_PASSWORD', BROKER_DEFAULTS['password']),
-        'host': host or os.getenv('AIIDA_BROKER_HOST', BROKER_DEFAULTS['host']),
-        'port': port or int(os.getenv('AIIDA_BROKER_PORT', BROKER_DEFAULTS['port'])),
-        'virtual_host': virtual_host or os.getenv('AIIDA_BROKER_VIRTUAL_HOST', BROKER_DEFAULTS['virtual_host']),
+        'protocol': protocol,
+        'username': username,
+        'password': password,
+        'host': host,
+        'port': port,
+        'virtual_host': virtual_host,
     }
+    url = get_rmq_url(
+        protocol=protocol,
+        username=username,
+        password=password,
+        host=host,
+        port=str(port),
+        virtual_host=virtual_host,
+    )
 
     LOGGER.info(f'Attempting to connect to RabbitMQ with parameters: {connection_params}')
 
     try:
-        connect(connection_params=connection_params)
+        # Use a direct temporary connection instead of a ``kiwipy`` communicator.
+        # The communicator stack can leave ``aio_pika`` connection objects to be garbage-collected after the event
+        # loop has already been closed, which then surfaces as an unraisable ``Connection.__del__`` exception in the
+        # test suite.
+        asyncio.run(probe_rabbitmq_connection(url))
     except ConnectionError:
-        raise ConnectionError(f'Failed to connect with following connection parameters: {connection_params}')
+        msg = f'Failed to connect with following connection parameters: {connection_params}'
+        raise ConnectionError(msg)
 
     # The profile configuration expects the keys of the broker config to be prefixed with ``broker_``.
     return {f'broker_{key}': value for key, value in connection_params.items()}

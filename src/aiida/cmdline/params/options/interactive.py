@@ -132,9 +132,13 @@ class InteractiveOption(ConditionalOption):
             return self.prompt_for_value(ctx)
 
         if value == self.CHARACTER_IGNORE_DEFAULT and source is click.core.ParameterSource.PROMPT:
-            # This means the user does not want to set a specific value for this option, so the ``!`` character is
-            # translated to ``None`` and processed as normal. If the option is required, a validation error will be
-            # raised further down below, forcing the user to specify a valid value.
+            # The user does not want to set a specific value for this option, so ``!`` is translated to ``None``.
+            # If the option is required, re-prompt immediately. We cannot rely on ``super().process_value`` to
+            # raise ``MissingParameter`` because click >= 8.3 changed ``value_is_missing`` to only flag the
+            # ``UNSET`` sentinel, not ``None``.
+            if self.required and self.is_interactive(ctx):
+                click.echo(f'Error: {self._prompt} has to be specified')
+                return self.prompt_for_value(ctx)
             value = None
 
         try:

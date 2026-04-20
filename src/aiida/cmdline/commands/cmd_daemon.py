@@ -40,19 +40,22 @@ def verdi_daemon():
     """Inspect and manage the daemon."""
 
 
-def execute_client_command(command: str, daemon_not_running_ok: bool = False, **kwargs) -> dict[str, t.Any] | None:
+def execute_client_command(
+    command: str, daemon_not_running_ok: bool = False, profile_name: str | None = None, **kwargs
+) -> dict[str, t.Any] | None:
     """Execute a command of the :class:`aiida.engine.daemon.client.DaemonClient` and echo whether it failed or not.
 
-    :param command: The name of hte method.
+    :param command: The name of the method.
     :param daemon_not_running_ok: If ``True``, the command raising an exception because the daemon was not running is
         not treated as a failure.
+    :param profile_name: Optional profile name. If not provided, the current profile is used.
     :param kwargs: Keyword arguments that are passed to the client method.
     """
     from aiida.common.exceptions import ConfigurationError
     from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException, get_daemon_client
 
     try:
-        client = get_daemon_client()
+        client = get_daemon_client(profile_name)
     except ConfigurationError:
         echo.echo('WARNING', fg=echo.COLORS['warning'], bold=True)
         return None
@@ -216,7 +219,9 @@ def stop(ctx, no_wait, all_profiles, timeout):
         echo.echo('Profile: ', fg=echo.COLORS['report'], bold=True, nl=False)
         echo.echo(f'{profile.name}', bold=True)
         echo.echo('Stopping the daemon... ', nl=False)
-        execute_client_command('stop_daemon', daemon_not_running_ok=True, wait=not no_wait, timeout=timeout)
+        execute_client_command(
+            'stop_daemon', daemon_not_running_ok=True, profile_name=profile.name, wait=not no_wait, timeout=timeout
+        )
 
 
 @verdi_daemon.command()

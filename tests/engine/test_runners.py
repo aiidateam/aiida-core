@@ -15,15 +15,18 @@ import pytest
 
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.engine import Process, launch
-from aiida.manage import get_manager
 from aiida.manage.caching import enable_caching
 from aiida.orm import Int, Str, WorkflowNode
 
 
 @pytest.fixture
-def runner():
-    """Construct and return a `Runner`."""
-    runner = get_manager().create_runner(poll_interval=0.5)
+def runner(manager):
+    """Construct and return a ``Runner``.
+
+    This fixture depends on ``manager`` so that the manager teardown resets the global profile state after the test,
+    clearing any shared runner state before later tests run.
+    """
+    runner = manager.create_runner(poll_interval=0.5)
     yield runner
     runner.close()
 

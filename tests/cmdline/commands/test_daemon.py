@@ -15,7 +15,7 @@ import pytest
 
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_daemon
-from aiida.engine.daemon.client import DaemonClient
+from aiida.engine.daemon.client import DaemonClient, DaemonTimeoutException
 
 pytestmark = pytest.mark.requires_rmq
 
@@ -99,6 +99,11 @@ def test_daemon_start_number_config(run_cli_command, stopped_daemon_client, isol
 def test_daemon_stop(run_cli_command, started_daemon_client):
     """Test ``verdi daemon stop``."""
     result = run_cli_command(cmd_daemon.stop)
+
+    started_daemon_client._await_condition(
+        lambda: not started_daemon_client.is_daemon_running,
+        DaemonTimeoutException('The daemon failed to stop.'),
+    )
 
     assert 'Stopping the daemon' in result.output
     assert not started_daemon_client.is_daemon_running

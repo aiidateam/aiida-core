@@ -55,7 +55,7 @@ The :download:`benchmark script <../howto/include/scripts/performance_benchmark_
 It launches ``ArithmeticAddCalculation``s on the localhost and measures the time until completion.
 Since the workload of the ``ArithmeticAddCalculation`` (summing two numbers) completes instantly, the time per process is a reasonable measure of the overhead incurred from the workflow engine.
 
-The numbers reported in the :ref:`howto section<how-to:installation:performance>` were obtained by running the processes in the current shell, which is the default.
+The numbers reported in the :ref:`howto section<how-to:tune-performance>` were obtained by running the processes in the current shell, which is the default.
 The ``--daemon`` option can be used to run the calculations through the AiiDA daemon instead, and to look at parallelizing over multiple daemon workers:
 
 .. table::

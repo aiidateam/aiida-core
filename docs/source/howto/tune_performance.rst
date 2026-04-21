@@ -161,7 +161,7 @@ Download the :download:`benchmark script <include/scripts/performance_benchmark_
 
 .. dropdown:: Example output
 
-    The output below was produced on *<CPU_MODEL>* with AiiDA 2.8.0.post0,
+    The output below was produced on *11th Gen Intel Core i7-1165G7 @ 2.80 GHz* with AiiDA 2.8.0.post0,
     with RabbitMQ and PostgreSQL running on the same machine:
 
     .. code:: console

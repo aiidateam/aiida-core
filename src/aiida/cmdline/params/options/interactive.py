@@ -83,11 +83,12 @@ class InteractiveOption(ConditionalOption):
     def prompt_for_value(self, ctx: click.Context) -> t.Any:
         """Prompt for a value printing a generic help message if this is the first invocation of the command.
 
-        If the command is invoked in non-interactive mode, meaning one should never prompt for a value, the value from
-        the context's ``default_map`` is returned if present (e.g. when provided via ``--config``), otherwise the
-        default is returned instead of prompting. The explicit ``default_map`` lookup is required because as of
-        ``click >= 8.3``, :meth:`click.Option.consume_value` re-prompts for options whose value is sourced from the
-        default map, which would otherwise cause config-file values to be silently replaced by the contextual default.
+        If the command is invoked in non-interactive mode, meaning one should never prompt for a value, the default is
+        returned instead of prompting.
+
+        As of ``click >= 8.3``, :meth:`click.Option.consume_value` re-prompts for options whose value is sourced from
+        the ``default_map`` (e.g. provided via ``--config``). To restore pre-8.3 behaviour, values present in the
+        ``default_map`` are returned immediately, before any interactive/non-interactive branching.
 
         If the help message is printed, the ``prompt_loop_info_printed`` variable is set in the context which is used
         to check whether the message has already been printed as to only print it once at the first prompt.
@@ -132,11 +133,10 @@ class InteractiveOption(ConditionalOption):
             return self.prompt_for_value(ctx)
 
         if value == self.CHARACTER_IGNORE_DEFAULT and source is click.core.ParameterSource.PROMPT:
-            # The user does not want to set a specific value for this option, so ``!`` is translated to ``None``.
-            # If the option is required, re-prompt immediately. We cannot rely on ``super().process_value`` to
-            # raise ``MissingParameter`` because click >= 8.3 changed ``value_is_missing`` to only flag the
-            # ``UNSET`` sentinel, not ``None``.
-            if self.required and self.is_interactive(ctx):
+            # This means the user does not want to set a specific value for this option, so the ``!`` character is
+            # translated to ``None`` and processed as normal. If the option is required, re-prompt immediately;
+            # click >= 8.3 no longer raises ``MissingParameter`` for ``None`` (only for the ``UNSET`` sentinel).
+            if self.is_required(ctx) and self.is_interactive(ctx):
                 click.echo(f'Error: {self._prompt} has to be specified')
                 return self.prompt_for_value(ctx)
             value = None
@@ -228,6 +228,9 @@ class TemplateInteractiveOption(InteractiveOption):
     def prompt_for_value(self, ctx: click.Context) -> t.Any:
         """Replace the basic prompt with a method that opens a template file in an editor."""
         from aiida.cmdline.utils.multi_line_input import edit_multiline_template
+
+        if ctx.default_map is not None and self.name in ctx.default_map:
+            return ctx.lookup_default(self.name)  # type: ignore[arg-type]
 
         if not self.is_interactive(ctx):
             return self.get_default(ctx)

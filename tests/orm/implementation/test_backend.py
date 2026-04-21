@@ -10,10 +10,10 @@
 
 from __future__ import annotations
 
-import gc
 import json
 import pathlib
 import uuid
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -21,7 +21,6 @@ from aiida import orm
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.orm.entities import EntityTypes
-from aiida.orm.implementation.storage_backend import StorageBackend
 
 
 class TestBackend:
@@ -170,30 +169,29 @@ class TestBackend:
         assert len(group.nodes) == 0
 
 
-def test_del_closes_backend_when_not_finalizing():
+def test_del_closes_backend_when_not_finalizing(aiida_profile, monkeypatch):
     """Test ``__del__`` closes the backend when Python is not finalizing."""
-
-    class DummyStorageBackend:
-        __del__ = StorageBackend.__del__
-
-        def __init__(self, state):
-            self._state = state
-
-        def close(self):
-            self._state['closed'] = True
-
-        @property
-        def is_closed(self):
-            return self._state['closed']
-
-    state = {'closed': False}
-    backend = DummyStorageBackend(state)
+    backend = aiida_profile.storage_cls(aiida_profile)
+    close = MagicMock()
+    monkeypatch.setattr(backend, 'close', close)
 
     with pytest.warns(ResourceWarning, match='StorageBackend was not closed explicitly'):
-        del backend
-        gc.collect()
+        backend.__del__()
 
-    assert state['closed'] is True
+    close.assert_called_once_with()
+
+
+def test_del_skips_close_when_finalizing(aiida_profile, monkeypatch):
+    """Test ``__del__`` skips close when Python is finalizing."""
+    backend = aiida_profile.storage_cls(aiida_profile)
+    close = MagicMock()
+    monkeypatch.setattr(backend, 'close', close)
+    monkeypatch.setattr('sys.is_finalizing', lambda: True)
+
+    with pytest.warns(ResourceWarning, match='StorageBackend was not closed explicitly'):
+        backend.__del__()
+
+    close.assert_not_called()
 
 
 def test_backup_not_implemented(aiida_config, backend, monkeypatch, tmp_path):

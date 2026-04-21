@@ -8,6 +8,7 @@
 ###########################################################################
 """Common cli utilities for transport plugins."""
 
+import typing as t
 from functools import partial
 
 import click
@@ -74,6 +75,17 @@ def transport_option_default(name, computer):
     return default
 
 
+def _get_processed_param(ctx: click.Context, name: str, default: t.Any = None) -> t.Any:
+    """Return a parameter value only if it has been processed by click.
+
+    In click >= 8.3, unprocessed parameters are pre-populated in ``ctx.params``
+    with a truthy ``UNSET`` sentinel that would break downstream checks.
+    """
+    if ctx.get_parameter_source(name) is not None:
+        return ctx.params[name]
+    return default
+
+
 def interactive_default(key, also_non_interactive=False):
     """Create a contextual_default value callback for an auth_param key.
 
@@ -88,19 +100,12 @@ def interactive_default(key, also_non_interactive=False):
         """Determine the default value from the context."""
         from aiida import orm
 
-        # ``click >= 8.3`` pre-populates ``ctx.params`` with an ``UNSET`` sentinel for parameters that have not yet
-        # been processed. The sentinel is truthy, so guard against it by normalising it (and any other non-matching
-        # value) to ``None`` via an explicit type check.
-        def _param(name, expected_type):
-            value = ctx.params.get(name)
-            return value if isinstance(value, expected_type) else None
-
-        non_interactive = bool(_param('non_interactive', bool))
+        non_interactive = _get_processed_param(ctx, 'non_interactive', default=False)
         if not also_non_interactive and non_interactive:
             raise click.MissingParameter()
 
-        user = _param('user', orm.User) or orm.User.collection.get_default()
-        computer = _param('computer', orm.Computer)
+        user = _get_processed_param(ctx, 'user') or orm.User.collection.get_default()
+        computer = _get_processed_param(ctx, 'computer')
 
         if computer is None:
             return None

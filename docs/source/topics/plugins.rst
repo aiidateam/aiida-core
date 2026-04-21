@@ -9,7 +9,7 @@ Plugins
 What a plugin can do
 ====================
 
-* Add a new class to AiiDA's :ref:`entry point groups <topics:plugins:entrypointgroups>`, including:: calculations, parsers, workflows, data types, verdi commands, schedulers, transports and importers/exporters from external databases.
+* Add a new class to AiiDA's :ref:`entry point groups <topics:plugins:entrypointgroups>`, including calculations, parsers, workflows, calculation tools, workflow tools, data types, verdi commands, schedulers, transports and importers/exporters from external databases.
   This typically involves subclassing the respective base class AiiDA provides for that purpose.
 * Install new commandline and/or GUI executables
 * Depend on, and build on top of any number of other plugins (as long as their requirements do not clash)
@@ -192,6 +192,49 @@ Usage::
    Therefore one cannot load these workflows with the ``WorkflowFactory``.
    The only way to run these, is to store their source code in the ``aiida/workflows/user`` directory and use normal python imports to load the classes.
 
+.. _topics:plugins:entrypointgroups:aiida.tools.calculations:
+
+``aiida.tools.calculations``
+----------------------------
+
+Plugins can ship helper methods for post-processing or analysing ``CalcJobNode`` outputs by registering a :py:class:`~aiida.tools.calculations.base.CalculationTools` subclass here.
+AiiDA automatically loads the right tools class based on the node's process type, so after loading a node users can call ``node.tools`` to access the plugin-specific helpers.
+The entry point name should match the corresponding ``aiida.calculations`` entry point.
+
+Spec::
+
+   [project.entry-points."aiida.tools.calculations"]
+   "mycode.mycode" = "aiida_mycode.tools.calculations:MycodeCalculationTools"
+
+``aiida_mycode/tools/calculations.py``::
+
+   from aiida.tools.calculations import CalculationTools
+
+   class MycodeCalculationTools(CalculationTools):
+      ...
+
+.. _topics:plugins:entrypointgroups:aiida.tools.workflows:
+
+``aiida.tools.workflows``
+-------------------------
+
+.. versionadded:: 2.9
+
+Plugins can ship helper methods for post-processing or analysing ``WorkChainNode`` outputs by registering a :py:class:`~aiida.tools.workflows.base.WorkflowTools` subclass here.
+AiiDA automatically loads the right tools class based on the node's process type, so after loading a node users can call ``node.tools`` to access the plugin-specific helpers.
+The entry point name should match the corresponding ``aiida.workflows`` entry point.
+
+Spec::
+
+   [project.entry-points."aiida.tools.workflows"]
+   "mycode.mywf" = "aiida_mycode.tools.workflows:MyWorkflowTools"
+
+``aiida_mycode/tools/workflows.py``::
+
+   from aiida.tools.workflows import WorkflowTools
+
+   class MyWorkflowTools(WorkflowTools):
+      ...
 
 ``aiida.cmdline``
 -----------------

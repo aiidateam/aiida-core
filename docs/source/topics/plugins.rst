@@ -9,7 +9,7 @@ Plugins
 What a plugin can do
 ====================
 
-* Add a new class to AiiDA's :ref:`entry point groups <topics:plugins:entrypointgroups>`, including:: calculations, parsers, workflows, data types, verdi commands, schedulers, transports and importers/exporters from external databases.
+* Add a new class to AiiDA's :ref:`entry point groups <topics:plugins:entrypointgroups>`, including calculations, parsers, workflows, calculation tools, workflow tools, data types, verdi commands, schedulers, transports and importers/exporters from external databases.
   This typically involves subclassing the respective base class AiiDA provides for that purpose.
 * Install new commandline and/or GUI executables
 * Depend on, and build on top of any number of other plugins (as long as their requirements do not clash)
@@ -192,6 +192,47 @@ Usage::
    Therefore one cannot load these workflows with the ``WorkflowFactory``.
    The only way to run these, is to store their source code in the ``aiida/workflows/user`` directory and use normal python imports to load the classes.
 
+``aiida.tools.calculations``
+----------------------------
+
+Package helper classes for ``CalcJobNode`` instances as follows:
+
+Spec::
+
+   [project.entry-points."aiida.tools.calculations"]
+   "mycode.mycode" = "aiida_mycode.tools.calculations:MycodeCalculationTools"
+
+``aiida_mycode/tools/calculations.py``::
+
+   from aiida.tools.calculations import CalculationTools
+
+   class MycodeCalculationTools(CalculationTools):
+      ...
+
+If a ``CalcJobNode`` has the process type ``aiida.calculations:mycode.mycode``, AiiDA will load the matching helper class through ``node.tools``.
+The tools entry point name should match the calculation entry point name.
+If no matching tools entry point is registered, ``node.tools`` falls back to the base :py:class:`~aiida.tools.calculations.base.CalculationTools` implementation.
+
+``aiida.tools.workflows``
+-------------------------
+
+Package helper classes for ``WorkChainNode`` instances as follows:
+
+Spec::
+
+   [project.entry-points."aiida.tools.workflows"]
+   "mycode.mywf" = "aiida_mycode.tools.workflows:MyWorkflowTools"
+
+``aiida_mycode/tools/workflows.py``::
+
+   from aiida.tools.workflows import WorkflowTools
+
+   class MyWorkflowTools(WorkflowTools):
+      ...
+
+If a ``WorkChainNode`` has the process type ``aiida.workflows:mycode.mywf``, AiiDA will load the matching helper class through ``node.tools``.
+The tools entry point name should match the workflow entry point name.
+If no matching tools entry point is registered, ``node.tools`` falls back to the base :py:class:`~aiida.tools.workflows.base.WorkflowTools` implementation.
 
 ``aiida.cmdline``
 -----------------

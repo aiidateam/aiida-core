@@ -340,15 +340,21 @@ class TestVerdiGroup:
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_show_limit(self, run_cli_command):
         """Test `--limit` option of the `verdi group show` command."""
+        import re
+
         label = 'test_group_limit'
         nodes = [orm.Data().store(), orm.Data().store()]
         group = orm.Group(label=label).store()
         group.add_nodes(nodes)
 
+        def _pk_in_output(pk, output):
+            """Check if a PK is preceded by whitespace or string start and followed by whitespace."""
+            return bool(re.search(rf'(^|\s){pk}\s', output))
+
         # Default should include all nodes in the output
         result = run_cli_command(cmd_group.group_show, [label], use_subprocess=True)
         for node in nodes:
-            assert str(node.pk) in result.output
+            assert _pk_in_output(node.pk, result.output)
 
         # Repeat test with `limit=1`, use also the `--raw` option to only display nodes
         result = run_cli_command(
@@ -358,14 +364,20 @@ class TestVerdiGroup:
         # The current `verdi group show` does not support ordering so we cannot rely on that for now to test if only
         # one of the nodes is shown
         assert len(result.output.strip().split('\n')) == 1
-        assert str(nodes[0].pk) in result.output or str(nodes[1].pk) in result.output
+        assert _pk_in_output(nodes[0].pk, result.output) or _pk_in_output(
+            nodes[1].pk, result.output
+        ), f'Neither found PK {nodes[0].pk} nor {nodes[1].pk} in expression {result.output!r}'
 
         # Repeat test with `limit=1` but without the `--raw` flag as it has a different code path that is affected
         result = run_cli_command(cmd_group.group_show, [label, '--limit', '1'], use_subprocess=True)
 
         # Check that one, and only one pk appears in the output
-        assert str(nodes[0].pk) in result.output or str(nodes[1].pk) in result.output
-        assert not (str(nodes[0].pk) in result.output and str(nodes[1].pk) in result.output)
+        assert _pk_in_output(nodes[0].pk, result.output) or _pk_in_output(
+            nodes[1].pk, result.output
+        ), f'Neither found PK {nodes[0].pk} nor PK {nodes[1].pk} in expression {result.output!r}'
+        assert not (
+            _pk_in_output(nodes[0].pk, result.output) and _pk_in_output(nodes[1].pk, result.output)
+        ), f'Found both PKs {nodes[0].pk} and {nodes[1].pk} (but only one is allowed) in expression {result.output!r}'
 
     def test_description(self, run_cli_command):
         """Test `verdi group description` command."""

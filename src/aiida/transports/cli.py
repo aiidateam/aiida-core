@@ -8,7 +8,6 @@
 ###########################################################################
 """Common cli utilities for transport plugins."""
 
-import typing as t
 from functools import partial
 
 import click
@@ -16,6 +15,7 @@ import click
 from aiida.cmdline.params import arguments, options
 from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.common import resolve_param
 from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.common.exceptions import NotExistent
 
@@ -75,28 +75,6 @@ def transport_option_default(name, computer):
     return default
 
 
-try:
-    from click.core import UNSET as _CLICK_UNSET
-except ImportError:
-    _CLICK_UNSET = None  # click < 8.3 has no sentinel
-
-
-def _get_processed_param(ctx: click.Context, name: str, default: t.Any = None) -> t.Any:
-    """Return a parameter value only if it has been fully resolved by click.
-
-    In click >= 8.3, ``ctx.params`` may contain the truthy ``UNSET`` sentinel
-    for parameters whose value could not be resolved (e.g. ``default=UNSET``).
-    The parameter source is still set to ``DEFAULT`` in that case, so checking
-    ``get_parameter_source`` alone is not sufficient.
-    """
-    if ctx.get_parameter_source(name) is None:
-        return default
-    value = ctx.params[name]
-    if _CLICK_UNSET is not None and value is _CLICK_UNSET:
-        return default
-    return value
-
-
 def interactive_default(key, also_non_interactive=False):
     """Create a contextual_default value callback for an auth_param key.
 
@@ -111,12 +89,12 @@ def interactive_default(key, also_non_interactive=False):
         """Determine the default value from the context."""
         from aiida import orm
 
-        non_interactive = _get_processed_param(ctx, 'non_interactive', default=False)
+        non_interactive = resolve_param(ctx, 'non_interactive', default=False)
         if not also_non_interactive and non_interactive:
             raise click.MissingParameter()
 
-        user = _get_processed_param(ctx, 'user') or orm.User.collection.get_default()
-        computer = _get_processed_param(ctx, 'computer')
+        user = resolve_param(ctx, 'user') or orm.User.collection.get_default()
+        computer = resolve_param(ctx, 'computer')
 
         if computer is None:
             return None

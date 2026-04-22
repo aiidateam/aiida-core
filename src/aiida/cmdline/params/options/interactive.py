@@ -16,6 +16,7 @@ import click
 from click.shell_completion import CompletionItem
 
 from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.common import resolve_param
 
 from .conditional import ConditionalOption
 
@@ -201,7 +202,7 @@ class InteractiveOption(ConditionalOption):
 
         :return: ``True`` if being run interactively, ``False`` otherwise.
         """
-        return not ctx.params.get('non_interactive', False)
+        return not resolve_param(ctx, 'non_interactive', default=False)
 
 
 class TemplateInteractiveOption(InteractiveOption):

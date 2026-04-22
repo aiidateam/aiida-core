@@ -1,6 +1,7 @@
 name: test-install
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
     - environment.yml

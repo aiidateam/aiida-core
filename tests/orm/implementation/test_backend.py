@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import pathlib
 import uuid
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -166,6 +167,31 @@ class TestBackend:
             orm.Node.collection.get(id=node_pk)
         assert len(calc_node.base.links.get_outgoing().all()) == 0
         assert len(group.nodes) == 0
+
+
+def test_del_closes_backend_when_not_finalizing(aiida_profile, monkeypatch):
+    """Test ``__del__`` closes the backend when Python is not finalizing."""
+    backend = aiida_profile.storage_cls(aiida_profile)
+    close = MagicMock()
+    monkeypatch.setattr(backend, 'close', close)
+
+    with pytest.warns(ResourceWarning, match='StorageBackend was not closed explicitly'):
+        backend.__del__()
+
+    close.assert_called_once_with()
+
+
+def test_del_skips_close_when_finalizing(aiida_profile, monkeypatch):
+    """Test ``__del__`` skips close when Python is finalizing."""
+    backend = aiida_profile.storage_cls(aiida_profile)
+    close = MagicMock()
+    monkeypatch.setattr(backend, 'close', close)
+    monkeypatch.setattr('sys.is_finalizing', lambda: True)
+
+    with pytest.warns(ResourceWarning, match='StorageBackend was not closed explicitly'):
+        backend.__del__()
+
+    close.assert_not_called()
 
 
 def test_backup_not_implemented(aiida_config, backend, monkeypatch, tmp_path):

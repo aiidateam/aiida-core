@@ -75,15 +75,26 @@ def transport_option_default(name, computer):
     return default
 
 
-def _get_processed_param(ctx: click.Context, name: str, default: t.Any = None) -> t.Any:
-    """Return a parameter value only if it has been processed by click.
+try:
+    from click.core import UNSET as _CLICK_UNSET
+except ImportError:
+    _CLICK_UNSET = None  # click < 8.3 has no sentinel
 
-    In click >= 8.3, unprocessed parameters are pre-populated in ``ctx.params``
-    with a truthy ``UNSET`` sentinel that would break downstream checks.
+
+def _get_processed_param(ctx: click.Context, name: str, default: t.Any = None) -> t.Any:
+    """Return a parameter value only if it has been fully resolved by click.
+
+    In click >= 8.3, ``ctx.params`` may contain the truthy ``UNSET`` sentinel
+    for parameters whose value could not be resolved (e.g. ``default=UNSET``).
+    The parameter source is still set to ``DEFAULT`` in that case, so checking
+    ``get_parameter_source`` alone is not sufficient.
     """
-    if ctx.get_parameter_source(name) is not None:
-        return ctx.params[name]
-    return default
+    if ctx.get_parameter_source(name) is None:
+        return default
+    value = ctx.params[name]
+    if _CLICK_UNSET is not None and value is _CLICK_UNSET:
+        return default
+    return value
 
 
 def interactive_default(key, also_non_interactive=False):

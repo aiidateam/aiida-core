@@ -16,6 +16,8 @@ import typing as t
 from aiida.common import InvalidOperation
 from aiida.common.lang import type_check
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.workgraph import WORKGRAPH_INSTALLED, is_workgraph_instance
+from aiida.engine.runners import Runner
 from aiida.manage import manager
 from aiida.orm import ProcessNode
 
@@ -41,9 +43,20 @@ def run(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwa
     :return: the outputs of the process
     """
     if isinstance(process, Process):
-        runner = process.runner
-    else:
-        runner = manager.get_manager().get_runner()
+        return process.runner.run(process, inputs, **kwargs)
+
+    runner: Runner = manager.get_manager().get_runner()
+
+    if WORKGRAPH_INSTALLED and is_workgraph_instance(process):
+        # Typed as Any because WorkGraph is an optional dependency that cannot appear in TYPE_RUN_PROCESS.
+        workgraph: t.Any = process
+        # WorkGraph converts itself into a (ProcessClass, inputs) pair via the adapter pattern.
+        process_class, engine_inputs = workgraph.prepare_for_launch(inputs, **kwargs)
+        # Use run_get_node (not run) because we need the node for update_after_launch.
+        result, node = runner.run_get_node(process_class, engine_inputs)
+        # Store the process node reference on the WorkGraph so it can track the launched process.
+        workgraph.update_after_launch(node)
+        return result
 
     return runner.run(process, inputs, **kwargs)
 
@@ -58,9 +71,16 @@ def run_get_node(
     :return: tuple of the outputs of the process and the process node
     """
     if isinstance(process, Process):
-        runner = process.runner
-    else:
-        runner = manager.get_manager().get_runner()
+        return process.runner.run_get_node(process, inputs, **kwargs)
+
+    runner: Runner = manager.get_manager().get_runner()
+
+    if WORKGRAPH_INSTALLED and is_workgraph_instance(process):
+        workgraph: t.Any = process
+        process_class, engine_inputs = workgraph.prepare_for_launch(inputs, **kwargs)
+        result, node = runner.run_get_node(process_class, engine_inputs)
+        workgraph.update_after_launch(node)  # Store process node reference on the WorkGraph
+        return result, node
 
     return runner.run_get_node(process, inputs, **kwargs)
 
@@ -73,9 +93,16 @@ def run_get_pk(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None
     :return: tuple of the outputs of the process and process node pk
     """
     if isinstance(process, Process):
-        runner = process.runner
-    else:
-        runner = manager.get_manager().get_runner()
+        return process.runner.run_get_pk(process, inputs, **kwargs)
+
+    runner: Runner = manager.get_manager().get_runner()
+
+    if WORKGRAPH_INSTALLED and is_workgraph_instance(process):
+        workgraph: t.Any = process
+        process_class, engine_inputs = workgraph.prepare_for_launch(inputs, **kwargs)
+        result, node = runner.run_get_node(process_class, engine_inputs)
+        workgraph.update_after_launch(node)  # Store process node reference on the WorkGraph
+        return ResultAndPk(result, node.pk)
 
     return runner.run_get_pk(process, inputs, **kwargs)
 
@@ -86,6 +113,7 @@ def submit(
     *,
     wait: bool = False,
     wait_interval: int = 5,
+    timeout: int | None = None,
     **kwargs: t.Any,
 ) -> ProcessNode:
     """Submit the process with the supplied inputs to the daemon immediately returning control to the interpreter.
@@ -100,14 +128,26 @@ def submit(
     :param wait: when set to ``True``, the submission will be blocking and wait for the process to complete at which
         point the function returns the calculation node.
     :param wait_interval: the number of seconds to wait between checking the state of the process when ``wait=True``.
+    :param timeout: optional timeout in seconds when ``wait=True``. If the process does not terminate within this time,
+        a ``TimeoutError`` is raised. If ``None`` (default), waits indefinitely.
     :param kwargs: inputs to be passed to the process. This is an alternative to the positional ``inputs`` argument.
     :return: the calculation node of the process
+    :raises TimeoutError: if ``wait=True`` and the process does not terminate within ``timeout`` seconds.
     """
     from aiida.common.docs import URL_NO_BROKER
 
-    inputs = prepare_inputs(inputs, **kwargs)
+    # Unlike the run functions, submit cannot early-return after prepare_for_launch because the workgraph
+    # post-processing (update_after_launch) must happen after the standard submit flow completes.
+    # Typed as Any because WorkGraph is an optional dependency that cannot appear in TYPE_SUBMIT_PROCESS.
+    workgraph: t.Any = None
 
-    # Submitting from within another process requires ``self.submit``` unless it is a work function, in which case the
+    if WORKGRAPH_INSTALLED and is_workgraph_instance(process):
+        workgraph = process
+        process, inputs = workgraph.prepare_for_launch(inputs, **kwargs)
+        # Clear kwargs since they were already consumed by prepare_for_launch.
+        kwargs = {}
+
+    # Submitting from within another process requires ``self.submit`` unless it is a work function, in which case the
     # current process in the scope should be an instance of ``FunctionProcess``.
     if is_process_scoped() and not isinstance(Process.current(), FunctionProcess):
         raise InvalidOperation('Cannot use top-level `submit` from within another process, use `self.submit` instead')
@@ -124,6 +164,10 @@ def submit(
         )
 
     assert runner.persister is not None, 'runner does not have a persister'
+
+    # Moved below the WorkGraph guard: prepare_for_launch already consumes both inputs and kwargs,
+    # so prepare_inputs must run after to avoid double-merging.
+    inputs = prepare_inputs(inputs, **kwargs)
 
     process_inited = instantiate_process(runner, process, **inputs)
 
@@ -145,14 +189,25 @@ def submit(
     node = process_inited.node
 
     if not wait:
+        if workgraph is not None:
+            workgraph.update_after_launch(node)
         return node
 
+    start_time = time.time()
+
     while not node.is_terminated:
+        if timeout is not None and (time.time() - start_time) >= timeout:
+            msg = f'Process<{node.pk}> did not terminate within {timeout} seconds.'
+            raise TimeoutError(msg)
+
         LOGGER.report(
             f'Process<{node.pk}> has not yet terminated, current state is `{node.process_state}`. '
             f'Waiting for {wait_interval} seconds.'
         )
         time.sleep(wait_interval)
+
+    if workgraph is not None:
+        workgraph.update_after_launch(node)
 
     return node
 

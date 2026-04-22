@@ -326,3 +326,76 @@ class TestLaunchersDryRun:
         assert 'folder' in node.dry_run_info
         for filename in ['path', 'file_one', 'file_two']:
             assert filename in os.listdir(node.dry_run_info['folder'])
+
+
+class TestWorkGraphLaunchers:
+    """Test WorkGraph support in launchers using mocks.
+
+    These tests verify that the launch functions correctly detect WorkGraph instances,
+    call ``prepare_for_launch`` to convert them, and then use the standard Process
+    launch path. All WorkGraph internals are mocked.
+    """
+
+    @pytest.fixture
+    def mock_workgraph(self, monkeypatch):
+        """Create a mock WorkGraph and patch detection + runner."""
+        from unittest.mock import MagicMock
+
+        from aiida.engine.runners import ResultAndPk
+
+        mock_wg = MagicMock()
+
+        # prepare_for_launch returns a (process_class, inputs) pair
+        mock_process_class = MagicMock(spec=Process)
+        mock_engine_inputs = {'workgraph_data': {}, 'tasks': {}, 'graph_inputs': {}, 'metadata': {}}
+        mock_wg.prepare_for_launch.return_value = (mock_process_class, mock_engine_inputs)
+
+        mock_node = MagicMock(spec=orm.ProcessNode)
+        mock_node.pk = 123
+        mock_node.is_terminated = True
+        mock_node.process_state = 'finished'
+
+        # Enable the WorkGraph code path and patch is_workgraph_instance
+        monkeypatch.setattr('aiida.engine.launch.WORKGRAPH_INSTALLED', True)
+        monkeypatch.setattr(
+            'aiida.engine.launch.is_workgraph_instance',
+            lambda obj: obj is mock_wg,
+        )
+
+        # Patch the runner methods to return our mock results
+        mock_runner = MagicMock()
+        mock_runner.run.return_value = {'result': 42}
+        mock_runner.run_get_node.return_value = ({'result': 42}, mock_node)
+        mock_runner.run_get_pk.return_value = ResultAndPk({'result': 42}, mock_node.pk)
+        monkeypatch.setattr(
+            'aiida.engine.launch.manager.get_manager', lambda: MagicMock(get_runner=lambda: mock_runner)
+        )
+
+        return mock_wg
+
+    @pytest.mark.parametrize(
+        'launcher',
+        [launch.run, launch.run_get_node, launch.run_get_pk],
+        ids=['run', 'run_get_node', 'run_get_pk'],
+    )
+    def test_workgraph_launcher(self, mock_workgraph, launcher):
+        """All run launchers call prepare_for_launch and update_after_launch for WorkGraph."""
+        launcher(mock_workgraph, inputs={'add': 1})
+        mock_workgraph.prepare_for_launch.assert_called_once()
+        mock_workgraph.update_after_launch.assert_called_once()
+
+    def test_run_workgraph_passes_inputs_through(self, mock_workgraph):
+        """Test that inputs (including metadata) are passed directly to prepare_for_launch."""
+        launch.run(mock_workgraph, inputs={'add': 1, 'metadata': {'label': 'test'}})
+        mock_workgraph.prepare_for_launch.assert_called_once_with(
+            {'add': 1, 'metadata': {'label': 'test'}},
+        )
+
+    def test_run_workgraph_with_kwargs(self, mock_workgraph):
+        """Test that kwargs are forwarded to prepare_for_launch."""
+        launch.run(mock_workgraph, add=1, metadata={'label': 'test'})
+        mock_workgraph.prepare_for_launch.assert_called_once_with(
+            None,
+            add=1,
+            metadata={'label': 'test'},
+        )

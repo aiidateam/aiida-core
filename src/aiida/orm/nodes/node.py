@@ -402,7 +402,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def from_model(
         cls,
         model: OrmModel,
-        files: dict[str, Callable[[], BinaryIO]] | None = None,
+        files: dict[str, Callable[[], BinaryIO | None]] | None = None,
     ) -> Self:
         """Create a node instance from a model instance.
 
@@ -479,7 +479,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def from_serialized(
         cls,
         serialized: dict[str, Any],
-        files: dict[str, Callable[[], BinaryIO]] | None = None,
+        files: dict[str, Callable[[], BinaryIO | None]] | None = None,
     ) -> Self:
         """Construct an entity instance from JSON serialized data and optional files.
 
@@ -1146,7 +1146,11 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         cls._ConstructorModel = ConstructorModel
 
     @classmethod
-    def _from_write_model(cls, model: WriteModel, files: dict[str, Callable[[], BinaryIO]] | None = None) -> Self:
+    def _from_write_model(
+        cls,
+        model: WriteModel,
+        files: dict[str, Callable[[], BinaryIO | None]] | None = None,
+    ) -> Self:
         """Construct a node instance from the attributes-based creation model.
 
         :param model: the model instance to construct from
@@ -1188,7 +1192,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             if filepath in seen:
                 raise exceptions.ValidationError(f'duplicate file: {filepath}')
 
-            with fileobj_callable() as fileobj:
+            fileobj = fileobj_callable()
+            if fileobj is None:
+                instance.base.repository._repository.create_directory(filepath)  # empty directory
+            else:
                 if repository_metadata:
                     expected_hash = flattened_repo.get(filepath)
                     if expected_hash:
@@ -1199,6 +1206,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                                 f'file hash mismatch for `{filepath}`; expected {expected_hash}, computed {actual_hash}'
                             )
                 instance.attach_file(filepath, fileobj)
+                fileobj.close()
 
             seen.add(filepath)
 

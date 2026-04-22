@@ -17,6 +17,7 @@ import textwrap
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Sequence
 
+import click
 from click import style
 
 from . import echo
@@ -29,7 +30,28 @@ if TYPE_CHECKING:
 
     from aiida import engine, orm
 
-__all__ = ('is_verbose',)
+__all__ = ('is_verbose', 'resolve_param')
+
+try:
+    from click.core import UNSET as _CLICK_UNSET
+except ImportError:
+    _CLICK_UNSET = None  # click < 8.3 has no sentinel
+
+
+def resolve_param(ctx: click.Context, name: str, default: Any = None) -> Any:
+    """Return a parameter's value if click has fully resolved it, otherwise *default*.
+
+    In click >= 8.3, ``ctx.params`` may contain a truthy ``UNSET`` sentinel for
+    parameters that have not been resolved yet or whose default could not be
+    determined.  The parameter source can still be set (e.g. to ``DEFAULT``) in
+    that situation, so checking ``get_parameter_source`` alone is not sufficient.
+    """
+    if ctx.get_parameter_source(name) is None:
+        return default
+    value = ctx.params[name]
+    if _CLICK_UNSET is not None and value is _CLICK_UNSET:
+        return default
+    return value
 
 
 def tabulate(table, **kwargs):

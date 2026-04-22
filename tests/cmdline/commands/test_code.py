@@ -651,12 +651,15 @@ def test_validate_label_uniqueness(monkeypatch, aiida_localhost):
 
     ctx = click.Context(cmd_code.setup_code)
     ctx.params = {'on_computer': False}
+    ctx.set_parameter_source('on_computer', click.core.ParameterSource.COMMANDLINE)
 
     with pytest.raises(click.BadParameter, match=r'multiple copies of the remote code `.*` already exist.'):
         validate_label_uniqueness(ctx, None, 'some-code')
 
     ctx = click.Context(cmd_code.setup_code)
     ctx.params = {'on_computer': None, 'computer': aiida_localhost}
+    ctx.set_parameter_source('on_computer', click.core.ParameterSource.COMMANDLINE)
+    ctx.set_parameter_source('computer', click.core.ParameterSource.COMMANDLINE)
 
     with pytest.raises(click.BadParameter, match=r'multiple copies of the local code `.*` already exist.'):
         validate_label_uniqueness(ctx, None, 'some-code')

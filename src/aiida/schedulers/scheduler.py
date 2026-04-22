@@ -147,7 +147,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         self,
         jobs: list[str] | None = None,
         user: str | None = None,
-        as_dict: t.Literal[True] = True,
+        as_dict: t.Literal[True] = ...,
     ) -> dict[str, JobInfo]: ...
 
     @abc.abstractmethod

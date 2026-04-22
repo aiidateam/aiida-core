@@ -41,10 +41,15 @@ def test_pause_processes(submit_and_await):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
-def test_pause_processes_all_entries(submit_and_await):
-    """Test :func:`aiida.engine.processes.control.pause_processes` with ``all_entries=True``."""
+def test_pause_processes_all_entries(submit_and_await, monkeypatch):
+    """Test :func:`aiida.engine.processes.control.pause_processes` with ``all_entries=True``.
+
+    Patch ``get_active_processes`` to keep the test isolated from other concurrently running tests.
+    """
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
+
+    monkeypatch.setattr(control, 'get_active_processes', lambda paused=False, project='*': [node])
 
     control.pause_processes(all_entries=True, timeout=float('inf'))
     assert node.paused
@@ -64,13 +69,18 @@ def test_play_processes(submit_and_await):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
-def test_play_processes_all_entries(submit_and_await):
-    """Test :func:`aiida.engine.processes.control.play_processes` with ``all_entries=True``."""
+def test_play_processes_all_entries(submit_and_await, monkeypatch):
+    """Test :func:`aiida.engine.processes.control.play_processes` with ``all_entries=True``.
+
+    Patch ``get_active_processes`` to keep the test isolated from other concurrently running tests.
+    """
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
     control.pause_processes([node], timeout=float('inf'))
     assert node.paused
+
+    monkeypatch.setattr(control, 'get_active_processes', lambda paused=False, project='*': [node] if paused else [])
 
     control.play_processes(all_entries=True, timeout=float('inf'))
     assert not node.paused
@@ -88,9 +98,14 @@ def test_kill_processes(submit_and_await):
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
-def test_kill_processes_all_entries(submit_and_await):
-    """Test :func:`aiida.engine.processes.control.kill_processes` with ``all_entries=True``."""
+def test_kill_processes_all_entries(submit_and_await, monkeypatch):
+    """Test :func:`aiida.engine.processes.control.kill_processes` with ``all_entries=True``.
+
+    Patch ``get_active_processes`` to keep the test isolated from other concurrently running tests.
+    """
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
+
+    monkeypatch.setattr(control, 'get_active_processes', lambda paused=False, project='*': [node])
 
     control.kill_processes(all_entries=True, timeout=float('inf'))
     assert node.is_terminated

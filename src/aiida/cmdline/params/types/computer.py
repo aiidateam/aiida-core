@@ -20,6 +20,7 @@ from click.shell_completion import CompletionItem
 from click.types import StringParamType
 
 from ...utils import decorators
+from ...utils.common import resolve_param
 from .identifier import IdentifierParamType
 
 __all__ = ('ComputerParamType', 'MpirunCommandParamType', 'ShebangParamType')
@@ -86,7 +87,7 @@ class MpirunCommandParamType(StringParamType):
         newval = t.cast(str, super().convert(value, param, ctx))
 
         # TODO: Handle case when ctx is None
-        scheduler_ep = ctx.params.get('scheduler', None)  # type: ignore[union-attr]
+        scheduler_ep = resolve_param(ctx, 'scheduler')  # type: ignore[arg-type]
         if scheduler_ep is not None:
             try:
                 job_resource_keys = scheduler_ep.load().job_resource_class.get_valid_keys()

@@ -56,6 +56,7 @@ __all__ = (
     'format_call_graph',
     'is_verbose',
     'only_if_daemon_running',
+    'resolve_param',
     'with_dbenv',
 )
 

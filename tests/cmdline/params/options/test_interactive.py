@@ -529,6 +529,22 @@ def test_default_map_overrides_contextual_default(run_cli_command):
     assert result.output.strip() == 'from-config'
 
 
+@pytest.mark.parametrize('non_interactive', [False, True])
+def test_template_option_default_map(run_cli_command, non_interactive):
+    """Test that ``default_map`` is respected by ``TemplateInteractiveOption.prompt_for_value``."""
+    from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
+
+    @click.command(context_settings={'default_map': {'opt': 'from-config'}})
+    @click.option('--opt', prompt='Opt', cls=TemplateInteractiveOption)
+    @NON_INTERACTIVE()
+    def cmd(opt, non_interactive):
+        click.echo(str(opt))
+
+    options = ['--non-interactive'] if non_interactive else []
+    result = run_cli_command(cmd, options)
+    assert result.output.strip() == 'from-config'
+
+
 def test_get_help_message():
     """Test the :meth:`aiida.cmdline.params.options.interactive.InteractiveOption.get_help_message`."""
     option = InteractiveOption('-s', type=click.STRING)

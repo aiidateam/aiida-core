@@ -430,6 +430,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         minimal: bool = False,
         schema: Literal['read', 'write', 'constructor'] | None = None,
         mode: Literal['json', 'python'] = 'python',
+        exclude_none: bool = False,
         repository_dump_path: pathlib.Path | None = None,
     ) -> dict[str, Any]:
         """Serialize the entity instance to JSON.
@@ -440,6 +441,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             The 'constructor' schema can be used to serialize the node for constructor-based creation, if supported.
         :param mode: The serialization mode, either 'json' or 'python' (default). JSON-based clients (e.g., REST APIs)
             should use 'json' mode.
+        :param exclude_none: Whether to exclude fields with a value of `None`.
         :param repository_dump_path: The path to which to dump the repository contents.
         :return: A dictionary that can be serialized to JSON.
         :raises UnsupportedSchemaError: if the provided schema is not supported for this entity.
@@ -461,8 +463,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
         serialized = self.to_model(context=context, minimal=minimal, schema=schema).model_dump(
             mode=mode,
-            exclude_none=True,
             exclude_unset=minimal,
+            exclude_none=exclude_none,
         )
 
         # To support plugins that have not yet implemented a model for serialization/validation,

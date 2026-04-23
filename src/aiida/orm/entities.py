@@ -274,6 +274,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         minimal: bool = False,
         schema: Literal['read', 'write'] | None = None,
         mode: Literal['json', 'python'] = 'python',
+        exclude_none: bool = False,
     ) -> dict[str, Any]:
         """Serialize the entity instance to JSON.
 
@@ -282,13 +283,14 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         :param schema: The schema to use for serialization. Defaults to 'read' if stored, 'write' otherwise.
         :param mode: The serialization mode, either 'json' or 'python' (default). JSON-based clients (e.g., REST APIs)
             should use 'json' mode.
+        :param exclude_none: Whether to exclude fields with a value of `None`.
         :return: A dictionary that can be serialized to JSON.
         :raises UnsupportedSchemaError: if the provided schema is not supported for this entity.
         """
         return self.to_model(context=context, minimal=minimal, schema=schema).model_dump(
             mode=mode,
-            exclude_none=True,
             exclude_unset=minimal,
+            exclude_none=exclude_none,
         )
 
     @classmethod

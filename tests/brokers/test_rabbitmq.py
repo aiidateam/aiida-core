@@ -233,3 +233,46 @@ class TestRabbitmqManagementClient:
         assert isinstance(response, requests.Response)
         assert response.ok
         assert response.status_code == 204
+
+    def test_get_log_file(self, rabbitmq_client, monkeypatch, tmp_path):
+        """Test the :meth:`aiida.brokers.rabbitmq.client.RabbitmqManagementClient.get_log_file`."""
+        log_file = tmp_path / 'rabbitmq.log'
+        log_file.write_text('content', encoding='utf-8')
+
+        response = MagicMock(status_code=200)
+        response.json.return_value = [{'log_files': [str(tmp_path / 'missing.log'), str(log_file)]}]
+
+        monkeypatch.setattr(rabbitmq_client, 'request', lambda *args, **kwargs: response)
+
+        assert rabbitmq_client.get_log_file() == log_file
+
+    def test_get_log_file_non_existing(self, rabbitmq_client, monkeypatch, tmp_path):
+        """Test the :meth:`aiida.brokers.rabbitmq.client.RabbitmqManagementClient.get_log_file` if no file exists."""
+        response = MagicMock(status_code=200)
+        response.json.return_value = [{'log_files': [str(tmp_path / 'missing.log')]}]
+
+        monkeypatch.setattr(rabbitmq_client, 'request', lambda *args, **kwargs: response)
+
+        assert rabbitmq_client.get_log_file() is None
+
+
+def test_broker_get_log_file(monkeypatch, tmp_path):
+    """Test the :meth:`aiida.brokers.rabbitmq.RabbitmqBroker.get_log_file`."""
+    log_file = tmp_path / 'rabbitmq.log'
+    log_file.write_text('content', encoding='utf-8')
+
+    profile = MagicMock()
+    profile.process_control_config = {
+        'broker_username': 'guest',
+        'broker_password': 'guest',
+        'broker_host': '127.0.0.1',
+        'broker_virtual_host': '',
+    }
+    profile.uuid = 'uuid'
+    profile.is_test_profile = False
+
+    monkeypatch.setattr(client.RabbitmqManagementClient, 'get_log_file', lambda self: log_file)
+
+    broker = RabbitmqBroker(profile)
+
+    assert broker.get_log_file() == log_file

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import functools
+import pathlib
 import sys
 import typing as t
 from collections.abc import Iterator
@@ -47,6 +48,23 @@ class RabbitmqBroker(Broker):
         if self._communicator is not None:
             self._communicator.close()
             self._communicator = None
+
+    def get_log_file(self) -> pathlib.Path | None:
+        """Return the RabbitMQ log file path, if available."""
+        from .client import RabbitmqManagementClient
+
+        config = self._profile.process_control_config
+        client = RabbitmqManagementClient(
+            username=config.get('broker_username', 'guest'),
+            password=config.get('broker_password', 'guest'),
+            hostname=config.get('broker_host', 'localhost'),
+            virtual_host=config.get('broker_virtual_host', ''),
+        )
+
+        try:
+            return client.get_log_file()
+        except Exception:
+            return None
 
     def __del__(self) -> None:
         if self._communicator is None:

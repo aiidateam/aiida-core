@@ -507,12 +507,16 @@ class _OpenSSH(_AsynchronousSSHBackend):
         Note: escape_for_bash() does NOT work here because scp's RCP protocol
         expects backslash-escaped paths, not quote-wrapped strings.
 
+        Important: We do NOT escape glob characters (*, ?, []) because the RCP
+        protocol passes these to the remote shell for glob expansion. Escaping
+        them would prevent proper file pattern matching.
+
         :param path: The path to escape
         :return: The escaped path with backslashes before special characters
         """
 
         result = []
-        special = set(' \t\n"\'`$\\!#&*?;<>|(){}[]')
+        special = set(' \t\n"\'`$\\!#&;<>|(){}')
         for char in path:
             if char in special:
                 result.append('\\')
@@ -522,11 +526,20 @@ class _OpenSSH(_AsynchronousSSHBackend):
     def _escape_for_scp(self, path: str) -> str:
         """Prepare a path for use in scp commands.
 
-        In OpenSSH < 9.0, scp uses the RCP protocol which passes paths through
-        the remote shell. We must escape shell metacharacters with backslashes
-        to prevent shell expansion/injection.
+        Version-specific behavior:
 
-        OpenSSH 9.0+, however, uses SFTP mode by default - paths are binary data, no shell quoting needed.
+        - OpenSSH 9.0+ (SFTP mode):
+          Uses SFTP protocol where paths are treated as binary data.
+          No escaping needed - glob characters are not expanded.
+          Direct return of the path.
+
+        - OpenSSH < 9.0 (RCP mode):
+          Uses RCP protocol where paths are passed to remote shell.
+          Must escape shell metacharacters to prevent injection,
+          but MUST preserve glob characters (*, ?, []) for proper
+          file pattern matching.
+
+        Version detection is based on `is_openssh_9_or_higher` flag set in __init__.
         """
 
         if self.is_openssh_9_or_higher:

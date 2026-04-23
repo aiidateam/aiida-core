@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pathlib
 import typing as t
 
 from aiida.common.exceptions import AiidaException
@@ -81,6 +82,21 @@ class RabbitmqManagementClient:
                 'Could not connect to the management API. Make sure RabbitMQ is running and the management plugin is '
                 'installed using `sudo rabbitmq-plugins enable rabbitmq_management`.'
             ) from exception
+
+    def get_log_file(self) -> pathlib.Path | None:
+        """Return the first existing RabbitMQ log file path reported by the management API."""
+        response = self.request('nodes')
+
+        if response.status_code != 200:
+            return None
+
+        for node in response.json():
+            for log_file in node.get('log_files', []):
+                path = pathlib.Path(log_file)
+                if path.exists():
+                    return path
+
+        return None
 
     @property
     def is_connected(self) -> bool:

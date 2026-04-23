@@ -140,7 +140,7 @@ class Manager:
         # Reconfigure the logging to make sure that profile specific logging config options are taken into account.
         # Note that we do not configure with `with_orm=True` because that will force the backend to be loaded.
         # This should instead be done lazily in `Manager.get_profile_storage`.
-        configure_logging()
+        configure_logging(daemon_log_file=self.get_config().filepaths(self._profile)['profile']['log'])
 
         # Check whether a development version is being run. Note that needs to be called after ``configure_logging``
         # because this function relies on the logging being properly configured for the warning to show.
@@ -335,7 +335,7 @@ class Manager:
 
         # Reconfigure the logging with `with_orm=True` to make sure that profile specific logging configuration options
         # are taken into account and the `DbLogHandler` is configured.
-        configure_logging(with_orm=True)
+        configure_logging(daemon_log_file=self.get_config().filepaths(profile)['profile']['log'], with_orm=True)
 
         return self._profile_storage
 

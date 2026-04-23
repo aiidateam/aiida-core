@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
+import logging
 import os
 import pathlib
 import subprocess
@@ -116,6 +117,51 @@ def pytest_addoption(parser):
         help=f'Database backend to be used for tests {tuple(db.value for db in TestDbBackend)}',
         type=db_backend_type,
     )
+
+
+@pytest.fixture(autouse=True)
+def capture_aiida_and_verdi_logs(request, monkeypatch):
+    """Forward AiiDA and verdi log records to ``caplog`` despite ``propagate=False``.
+
+    The production logging configuration disables propagation for the top-level ``aiida`` and ``verdi`` loggers.
+    For tests that use ``caplog``, attach the pytest log capture handler directly to those loggers and re-attach it
+    after any logging reconfiguration so existing ``caplog``-based assertions keep observing their records.
+    """
+    if 'caplog' not in request.fixturenames:
+        yield
+        return
+
+    from aiida.common import log as common_log
+
+    caplog = request.getfixturevalue('caplog')
+
+    def attach_handler() -> None:
+        for logger_name in ('aiida', 'verdi'):
+            logger = logging.getLogger(logger_name)
+            if caplog.handler not in logger.handlers:
+                logger.addHandler(caplog.handler)
+
+    original_configure_logging = common_log.configure_logging
+
+    def configure_logging(*args, **kwargs):
+        result = original_configure_logging(*args, **kwargs)
+        attach_handler()
+        return result
+
+    monkeypatch.setattr(common_log, 'configure_logging', configure_logging)
+    monkeypatch.setattr('aiida.configure_logging', configure_logging, raising=False)
+    monkeypatch.setattr('aiida.engine.daemon.worker.configure_logging', configure_logging, raising=False)
+    monkeypatch.setattr('aiida.cmdline.params.options.main.configure_logging', configure_logging, raising=False)
+
+    attach_handler()
+
+    try:
+        yield
+    finally:
+        for logger_name in ('aiida', 'verdi'):
+            logger = logging.getLogger(logger_name)
+            if caplog.handler in logger.handlers:
+                logger.removeHandler(caplog.handler)
 
 
 @pytest.fixture(scope='session')

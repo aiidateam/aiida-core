@@ -5,7 +5,6 @@ from __future__ import annotations
 import functools
 import sys
 import typing as t
-import warnings
 from collections.abc import Iterator
 
 from aiida.brokers.broker import Broker
@@ -51,7 +50,7 @@ class RabbitmqBroker(Broker):
 
     def __del__(self) -> None:
         if self._communicator is not None:
-            warnings.warn(f'RabbitmqBroker was not closed explicitly: {self!r}', ResourceWarning, stacklevel=1)
+            LOGGER.warning(f'RabbitmqBroker {self!r} was not closed explicitly.')
             if not sys.is_finalizing():
                 self.close()
 

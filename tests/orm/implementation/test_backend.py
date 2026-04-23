@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import pathlib
 import uuid
 from unittest.mock import MagicMock
@@ -21,6 +22,7 @@ from aiida import orm
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.orm.entities import EntityTypes
+from aiida.orm.implementation import storage_backend as storage_backend_module
 
 
 class TestBackend:
@@ -169,28 +171,34 @@ class TestBackend:
         assert len(group.nodes) == 0
 
 
-def test_del_closes_backend_when_not_finalizing(aiida_profile, monkeypatch):
+def test_del_closes_backend_when_not_finalizing(aiida_profile, monkeypatch, caplog):
     """Test ``__del__`` closes the backend when Python is not finalizing."""
     backend = aiida_profile.storage_cls(aiida_profile)
     close = MagicMock()
     monkeypatch.setattr(backend, 'close', close)
 
-    with pytest.warns(ResourceWarning, match='StorageBackend was not closed explicitly'):
+    with caplog.at_level(logging.INFO, logger=storage_backend_module.LOGGER.name):
         backend.__del__()
 
+    assert caplog.record_tuples == [
+        (storage_backend_module.LOGGER.name, logging.INFO, f'StorageBackend was not closed explicitly: {backend!r}')
+    ]
     close.assert_called_once_with()
 
 
-def test_del_skips_close_when_finalizing(aiida_profile, monkeypatch):
-    """Test ``__del__`` skips close when Python is finalizing."""
+def test_del_logs_but_skips_close_when_finalizing(aiida_profile, monkeypatch, caplog):
+    """Test ``__del__`` logs but skips close when Python is finalizing."""
     backend = aiida_profile.storage_cls(aiida_profile)
     close = MagicMock()
     monkeypatch.setattr(backend, 'close', close)
     monkeypatch.setattr('sys.is_finalizing', lambda: True)
 
-    with pytest.warns(ResourceWarning, match='StorageBackend was not closed explicitly'):
+    with caplog.at_level(logging.INFO, logger=storage_backend_module.LOGGER.name):
         backend.__del__()
 
+    assert caplog.record_tuples == [
+        (storage_backend_module.LOGGER.name, logging.INFO, f'StorageBackend was not closed explicitly: {backend!r}')
+    ]
     close.assert_not_called()
 
 

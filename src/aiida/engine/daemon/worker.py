@@ -43,8 +43,7 @@ async def shutdown_worker(runner: Runner) -> None:
 def start_daemon_worker(foreground: bool = False, profile_name: Union[str, None] = None) -> None:
     """Start a daemon worker for the given profile or the currently configured profile.
 
-    :param foreground: If true, the logging will be configured to write to stdout, otherwise it will be configured to
-        write to the daemon log file.
+    :param foreground: If true, the logging will be also configured to write to stdout, and not only to log file.
     :param profile_name: Optional profile name.
     """
     manager = get_manager()

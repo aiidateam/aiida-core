@@ -189,34 +189,34 @@ def configure_logging(with_orm: bool = False, daemon: bool = False, daemon_log_f
     # Evaluate the `LOGGING` configuration to resolve the lambdas that will retrieve the correct values based on the
     # currently configured profile.
     config = evaluate_logging_configuration(get_logging_config())
-    daemon_handler_name = 'daemon_log_file'
 
-    # Add the daemon file handler to all loggers if daemon=True
     if daemon is True:
-        # Daemon always needs to run with ORM enabled
-        with_orm = True
-
         if daemon_log_file is None:
-            raise ValueError('daemon_log_file has to be defined when configuring for the daemon')
+            msg = 'daemon_log_file has to be defined when configuring logging for the daemon'
+            raise ValueError(msg)
 
+        # Remove the `console` stdout stream handler to prevent messages being duplicated in the daemon log file
+        for logger in config.get('loggers', {}).values():
+            try:
+                logger['handlers'].remove('console')
+            except ValueError:
+                pass
+
+    if daemon_log_file is not None:
+        handler_name = 'log_file'
         config.setdefault('handlers', {})
-        config['handlers'][daemon_handler_name] = {
+        config['handlers'][handler_name] = {
             'level': 'DEBUG',
             'formatter': 'halfverbose',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': daemon_log_file,
+            'filename': str(daemon_log_file),
             'encoding': 'utf8',
             'maxBytes': 10000000,  # 10 MB
             'backupCount': 10,
         }
 
         for logger in config.get('loggers', {}).values():
-            logger.setdefault('handlers', []).append(daemon_handler_name)
-            try:
-                # Remove the `console` stdout stream handler to prevent messages being duplicated in the daemon log file
-                logger['handlers'].remove('console')
-            except ValueError:
-                pass
+            logger.setdefault('handlers', []).append(handler_name)
 
     # If the ``CLI_ACTIVE`` is set, a ``verdi`` command is being executed, so we replace the ``console`` handler with
     # the ``cli`` one for all loggers.

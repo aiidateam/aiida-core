@@ -918,8 +918,12 @@ class Config:
         _config_path_resolver: AiiDAConfigPathResolver = AiiDAConfigPathResolver(Path(self.dirpath))
         daemon_dir = _config_path_resolver.daemon_dir
         daemon_log_dir = _config_path_resolver.daemon_log_dir
+        profile_log_dir = _config_path_resolver.profile_log_dir
 
         return {
+            'profile': {
+                'log': str(profile_log_dir / f'aiida-{profile.name}.log'),
+            },
             'circus': {
                 'log': str(daemon_log_dir / f'circus-{profile.name}.log'),
                 'pid': str(daemon_dir / f'circus-{profile.name}.pid'),

@@ -25,6 +25,7 @@ DEFAULT_CONFIG_FILE_NAME = 'config.json'
 DEFAULT_CONFIG_INDENT_SIZE = 4
 DEFAULT_DAEMON_DIR_NAME = 'daemon'
 DEFAULT_DAEMON_LOG_DIR_NAME = 'log'
+DEFAULT_LOG_DIR_NAME = 'log'
 DEFAULT_ACCESS_CONTROL_DIR_NAME = 'access'
 
 __all__ = ('AiiDAConfigDir', 'AiiDAConfigPathResolver')
@@ -80,6 +81,10 @@ class AiiDAConfigPathResolver:
         return self._aiida_path / DEFAULT_DAEMON_DIR_NAME / DEFAULT_DAEMON_LOG_DIR_NAME
 
     @property
+    def log_dir(self) -> pathlib.Path:
+        return self._aiida_path / DEFAULT_LOG_DIR_NAME
+
+    @property
     def access_control_dir(self) -> pathlib.Path:
         return self._aiida_path / DEFAULT_ACCESS_CONTROL_DIR_NAME
 
@@ -99,6 +104,7 @@ def _create_instance_directories(aiida_config_folder: pathlib.Path | None) -> No
         path_resolver.aiida_path,
         path_resolver.daemon_dir,
         path_resolver.daemon_log_dir,
+        path_resolver.log_dir,
         path_resolver.access_control_dir,
     ]
 

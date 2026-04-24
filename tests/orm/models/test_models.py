@@ -702,7 +702,7 @@ def test_stored_entity_serialization(required_arguments):
     for key in serialized:
         field = getattr(entity, key)
         if isinstance(field, datetime.datetime):
-            field = field.isoformat().replace('+00:00', 'Z')
+            field = field.isoformat()
         if key in serializers:
             field = serializers[key](field)
         _check(serialized[key], field)

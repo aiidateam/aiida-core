@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from aiida.brokers.zmq import ZmqBroker, get_zmq_config
+from aiida.brokers.zmq import ZmqBroker
 from aiida.brokers.zmq.communicator import ZmqCommunicator
 from aiida.brokers.zmq.queue import PersistentQueue
 from aiida.brokers.zmq.server import ZmqBrokerServer
@@ -27,22 +27,13 @@ def _create_broker_with_base_path(base_path: Path) -> ZmqBroker:
         return ZmqBroker(MagicMock())
 
 
-class TestZmqDefaults:
-    """Tests for the ZMQ defaults module."""
-
-    def test_get_zmq_config(self):
-        """Test that get_zmq_config returns an empty dict."""
-        config = get_zmq_config()
-        assert config == {}
-
-
 class TestZmqBrokerStatusQueries:
     """Tests for ZmqBroker status queries (file-based)."""
 
     def test_is_running_no_pid_file(self, tmp_path):
         """Test is_running returns False when no PID file exists."""
         broker = _create_broker_with_base_path(tmp_path)
-        assert not broker.is_running()
+        assert not broker.is_running
 
     def test_get_service_pid_no_file(self, tmp_path):
         """Test get_service_pid returns None when no PID file exists."""
@@ -65,13 +56,13 @@ class TestZmqBrokerStatusQueries:
         start_zmq_broker(broker)
 
         try:
-            assert broker.is_running()
+            assert broker.is_running
             assert broker.get_service_pid() is not None
             assert broker.router_endpoint is not None
         finally:
             stop_zmq_broker(broker)
 
-        assert not broker.is_running()
+        assert not broker.is_running
 
     def test_start_already_running(self, tmp_path):
         """Test starting when already running is idempotent."""
@@ -80,7 +71,7 @@ class TestZmqBrokerStatusQueries:
 
         try:
             start_zmq_broker(broker)  # idempotent
-            assert broker.is_running()
+            assert broker.is_running
         finally:
             stop_zmq_broker(broker)
 
@@ -98,7 +89,7 @@ class TestZmqBrokerStatusQueries:
             old_pid = broker.get_service_pid()
             stop_zmq_broker(broker)
             start_zmq_broker(broker)
-            assert broker.is_running()
+            assert broker.is_running
 
             new_pid = broker.get_service_pid()
             assert new_pid != old_pid
@@ -311,7 +302,7 @@ class TestZmqBrokerIntegration:
 
     def test_broker_lifecycle(self, zmq_broker):
         """Test the broker lifecycle."""
-        assert zmq_broker.is_running()
+        assert zmq_broker.is_running
 
         status = zmq_broker.get_service_status()
         assert status is not None

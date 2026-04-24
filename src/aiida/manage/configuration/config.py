@@ -74,19 +74,28 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         ':',
         description='Additional modules/functions/classes to be automatically loaded in `verdi shell`, split by `:`.',
     )
+    logging__terminal_handler: LogLevels = Field(
+        'REPORT',
+        description=(
+            'Minimum log level needed for outputting a log into the terminal. '
+            'This only filters log messages and does not change the actual emitted log messages. '
+            'To take effect you need to also change one of the log levels to the same or higher verbosity '
+            '(e.g. `logging.aiida_loglevel`).'
+        ),
+    )
     logging__aiida_loglevel: LogLevels = Field(
         'REPORT',
-        description='Minimum level to log to daemon log and the `DbLog` table for the `aiida` logger.',
+        description='Minimum level for the `aiida` logger.',
         json_schema_extra={'advanced': False},
     )
     logging__verdi_loglevel: LogLevels = Field(
         'REPORT',
-        description='Minimum level to log to console when running a `verdi` command.',
+        description='Minimum level for the `verdi` command logger.',
         json_schema_extra={'advanced': True},
     )
     logging__disk_objectstore_loglevel: LogLevels = Field(
         'INFO',
-        description='Minimum level to log to daemon log and the `DbLog` table for `disk_objectstore` logger.',
+        description='Minimum level for the `disk_objectstore` logger.',
         json_schema_extra={'advanced': True},
     )
     logging__db_loglevel: LogLevels = Field(
@@ -96,37 +105,37 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
     )
     logging__plumpy_loglevel: LogLevels = Field(
         'WARNING',
-        description='Minimum level to log to daemon log and the `DbLog` table for the `plumpy` logger.',
+        description='Minimum level for the `plumpy` logger.',
         json_schema_extra={'advanced': True},
     )
     logging__kiwipy_loglevel: LogLevels = Field(
         'WARNING',
-        description='Minimum level to log to daemon log and the `DbLog` table for the `kiwipy` logger',
+        description='Minimum level for the `kiwipy` logger.',
         json_schema_extra={'advanced': True},
     )
     logging__paramiko_loglevel: LogLevels = Field(
         'WARNING',
-        description='Minimum level to log to daemon log and the `DbLog` table for the `paramiko` logger',
+        description='Minimum level for the `paramiko` logger.',
         json_schema_extra={'advanced': True},
     )
     logging__alembic_loglevel: LogLevels = Field(
         'WARNING',
-        description='Minimum level to log to daemon log and the `DbLog` table for the `alembic` logger',
+        description='Minimum level for the `alembic` logger.',
         json_schema_extra={'advanced': True},
     )
     logging__sqlalchemy_loglevel: LogLevels = Field(
         'WARNING',
-        description='Minimum level to log to daemon log and the `DbLog` table for the `sqlalchemy` logger',
+        description='Minimum level for the `sqlalchemy` logger.',
         json_schema_extra={'advanced': True},
     )
     logging__circus_loglevel: LogLevels = Field(
         'INFO',
-        description='Minimum level to log to daemon log and the `DbLog` table for the `circus` logger',
+        description='Minimum level for the `circus` logger.',
         json_schema_extra={'advanced': True},
     )
     logging__aiopika_loglevel: LogLevels = Field(
         'WARNING',
-        description='Minimum level to log to daemon log and the `DbLog` table for the `aiopika` logger',
+        description='Minimum level for the `aio_pika` logger.',
         json_schema_extra={'advanced': True},
     )
     warnings__showdeprecations: bool = Field(True, description='Whether to print AiiDA deprecation warnings.')

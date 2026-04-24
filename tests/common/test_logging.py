@@ -9,7 +9,11 @@
 """Tests for the :mod:`aiida.common.log` module."""
 
 import logging
+import logging.config
 
+import pytest
+
+from aiida.common import log
 from aiida.common.log import capture_logging
 
 
@@ -47,3 +51,60 @@ def test_capture_logging():
     with capture_logging(logger) as stream:
         logging.getLogger().error(message)
         assert stream.getvalue().strip() == message
+
+
+@pytest.mark.presto
+class TestVerbosityOverridesCliHandler:
+    """Tests for ``--verbosity`` also overriding the ``cli`` handler level."""
+
+    def test_cli_log_level_overrides_cli_handler(self):
+        """When ``CLI_LOG_LEVEL`` is set, the ``cli`` handler level should also be overridden."""
+        captured_config = {}
+
+        def capture_dict_config(config):
+            captured_config.update(config)
+
+        import logging.config
+
+        original_dict_config = logging.config.dictConfig
+        original_cli_active = log.CLI_ACTIVE
+        original_cli_log_level = log.CLI_LOG_LEVEL
+
+        try:
+            log.CLI_ACTIVE = True
+            log.CLI_LOG_LEVEL = 'DEBUG'
+            logging.config.dictConfig = capture_dict_config
+            log.configure_logging()
+        finally:
+            logging.config.dictConfig = original_dict_config
+            log.CLI_ACTIVE = original_cli_active
+            log.CLI_LOG_LEVEL = original_cli_log_level
+
+        # The cli handler level should be overridden to DEBUG
+        assert captured_config['handlers']['cli']['level'] == 'DEBUG'
+
+    def test_cli_log_level_none_keeps_default(self):
+        """When ``CLI_LOG_LEVEL`` is None, the ``cli`` handler level should remain the default."""
+        captured_config = {}
+
+        def capture_dict_config(config):
+            captured_config.update(config)
+
+        import logging.config
+
+        original_dict_config = logging.config.dictConfig
+        original_cli_active = log.CLI_ACTIVE
+        original_cli_log_level = log.CLI_LOG_LEVEL
+
+        try:
+            log.CLI_ACTIVE = True
+            log.CLI_LOG_LEVEL = None
+            logging.config.dictConfig = capture_dict_config
+            log.configure_logging()
+        finally:
+            logging.config.dictConfig = original_dict_config
+            log.CLI_ACTIVE = original_cli_active
+            log.CLI_LOG_LEVEL = original_cli_log_level
+
+        # The cli handler level should remain REPORT (from terminal_handler default)
+        assert captured_config['handlers']['cli']['level'] == 'REPORT'

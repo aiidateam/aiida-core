@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import typing as t
 
 import pydantic as pdt
@@ -18,7 +19,12 @@ __all__ = ('OrmModel',)
 class OrmModel(AiiDABaseModel):
     """Base class for Read/Write/Attributes models."""
 
-    model_config = pdt.ConfigDict(extra='forbid')
+    model_config = pdt.ConfigDict(
+        extra='forbid',
+        json_encoders={
+            datetime.datetime: lambda dt: dt.isoformat().replace('Z', '+00:00'),
+        },
+    )
 
     def _to_orm_field_values(self) -> dict[str, t.Any]:
         """Return the field values for ORM instantiation."""

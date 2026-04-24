@@ -112,6 +112,7 @@ def status(ctx, all_profiles, timeout):
 
     from aiida.cmdline.utils.common import format_local_time
     from aiida.engine.daemon.client import DaemonException, get_daemon_client
+    from aiida.manage.manager import get_manager
 
     if all_profiles is True:
         profiles = [profile for profile in ctx.obj.config.profiles if not profile.is_test_profile]
@@ -149,8 +150,29 @@ def status(ctx, all_profiles, timeout):
             workers_info = '--> No workers are running. Use `verdi daemon incr` to start some!\n'
 
         start_time = format_local_time(daemon_response['info']['create_time'])
+
+        # Build broker status line for managed brokers (e.g., ZMQ)
+        broker_line = ''
+        broker = get_manager().get_broker()
+        from aiida.brokers.zmq.broker import ZmqBroker
+
+        if isinstance(broker, ZmqBroker):
+            if broker.is_running:
+                status_info = broker.get_service_status()
+                if status_info:
+                    broker_pid = status_info.get('pid', '?')
+                    pending = status_info.get('pending_tasks', 0)
+                    processing = status_info.get('processing_tasks', 0)
+                    broker_line = (
+                        f'Broker is running as PID {broker_pid} [{pending} pending, {processing} processing]\n'
+                        f'Broker directory: {broker.base_path}\n'
+                    )
+            else:
+                broker_line = 'Broker is NOT running\n'
+
         echo.echo(
             f'Daemon is running as PID {daemon_response["info"]["pid"]} since {start_time}\n'
+            f'{broker_line}'
             f'Active workers [{len(workers)}]:\n{workers_info}\n'
             f'Log file: {client.daemon_log_file}\n'
             'Use `verdi daemon [incr | decr] [num]` to increase / decrease the number of workers'
@@ -284,3 +306,21 @@ def worker():
     from aiida.engine.daemon.worker import start_daemon_worker
 
     start_daemon_worker(foreground=True)
+
+
+@verdi_daemon.command('broker', hidden=True)
+@decorators.with_dbenv()
+@decorators.requires_broker
+def broker():
+    """Run the ZMQ broker server in the current process.
+
+    .. note:: this should not be called directly from the commandline!
+    """
+    from aiida.brokers.zmq.broker import get_broker_base_path
+    from aiida.brokers.zmq.service import run_broker_service
+    from aiida.manage.manager import get_manager
+
+    profile = get_manager().get_profile()
+    if profile is None:
+        echo.echo_critical('No profile loaded.')
+    run_broker_service(base_path=get_broker_base_path(profile))

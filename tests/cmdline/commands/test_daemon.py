@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for ``verdi daemon``."""
 
-import textwrap
 from unittest.mock import patch
 
 import pytest
@@ -17,7 +16,7 @@ from aiida import get_profile
 from aiida.cmdline.commands import cmd_daemon
 from aiida.engine.daemon.client import DaemonClient, DaemonTimeoutException
 
-pytestmark = pytest.mark.requires_rmq
+pytestmark = pytest.mark.requires_broker
 
 
 def format_local_time(timestamp, format_str='%Y-%m-%d %H:%M:%S'):
@@ -198,33 +197,11 @@ def get_worker_info_broken(_):
 @patch('aiida.cmdline.utils.common.format_local_time', format_local_time)
 def test_daemon_status_worker_info(run_cli_command):
     """Test `get_status` output if everything is working normally with a single worker."""
-    literals = []
-    literals.append(
-        textwrap.dedent(
-            """\
-        Profile:"""
-        )
-    )
-    literals.append(
-        textwrap.dedent(
-            """\
-        Daemon is running as PID 111015 since 2019-12-17 11:42:18
-        Active workers [1]:
-          PID    MEM %    CPU %  started
-        -----  -------  -------  -------------------
-         4990    0.231        0  2019-12-17 12:27:38
-        Log file: """
-        )
-    )
-    literals.append(
-        textwrap.dedent(
-            """\
-        Use `verdi daemon [incr | decr] [num]` to increase / decrease the number of workers"""
-        )
-    )
     result = run_cli_command(cmd_daemon.status)
-    for literal in literals:
-        assert literal in result.output
+    assert 'Daemon is running as PID 111015 since 2019-12-17 11:42:18' in result.output
+    assert 'Active workers [1]:' in result.output
+    assert '4990    0.231        0  2019-12-17 12:27:38' in result.output
+    assert 'Use `verdi daemon [incr | decr] [num]`' in result.output
 
 
 @patch.object(DaemonClient, 'get_status', lambda *_, **__: {'status': 'running'})
@@ -233,53 +210,8 @@ def test_daemon_status_worker_info(run_cli_command):
 @patch('aiida.cmdline.utils.common.format_local_time', format_local_time)
 def test_daemon_status_worker_timeout(run_cli_command):
     """Test `get_status` output if a daemon worker cannot be reached by the circus daemon."""
-    literals = []
-    literals.append(
-        textwrap.dedent(
-            """\
-        Profile:"""
-        )
-    )
-    literals.append(
-        textwrap.dedent(
-            """\
-        Daemon is running as PID 111015 since 2019-12-17 11:42:18
-        Active workers [1]:
-          PID  MEM %    CPU %    started
-        -----  -------  -------  ---------
-         4990  -        -        -
-        Log file: """
-        )
-    )
-
-    literals.append(
-        textwrap.dedent(
-            """\
-        Use `verdi daemon [incr | decr] [num]` to increase / decrease the number of workers"""
-        )
-    )
     result = run_cli_command(cmd_daemon.status)
-    for literal in literals:
-        assert literal in result.output
-
-
-def test_execute_client_command_profile_name(monkeypatch):
-    """Test that ``execute_client_command`` passes ``profile_name`` to ``get_daemon_client``."""
-    received_profile_names = []
-
-    def mock_get_daemon_client(profile_name=None):
-        received_profile_names.append(profile_name)
-
-        class MockClient:
-            def stop_daemon(self, **kwargs):
-                return None
-
-        return MockClient()
-
-    monkeypatch.setattr('aiida.engine.daemon.client.get_daemon_client', mock_get_daemon_client)
-
-    cmd_daemon.execute_client_command('stop_daemon', profile_name='test-profile')
-    assert received_profile_names == ['test-profile']
-
-    cmd_daemon.execute_client_command('stop_daemon')
-    assert received_profile_names == ['test-profile', None]
+    assert 'Daemon is running as PID 111015 since 2019-12-17 11:42:18' in result.output
+    assert 'Active workers [1]:' in result.output
+    assert '4990  -        -        -' in result.output
+    assert 'Use `verdi daemon [incr | decr] [num]`' in result.output

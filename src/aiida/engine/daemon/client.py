@@ -162,6 +162,11 @@ class DaemonClient:
         return [self._verdi_bin, '-p', self.profile.name, 'daemon', 'worker']
 
     @property
+    def cmd_start_broker(self) -> list[str]:
+        """Return the command to start the ZMQ broker server process."""
+        return [self._verdi_bin, '-p', self.profile.name, 'daemon', 'broker']
+
+    @property
     def loglevel(self) -> str:
         return get_config_option('logging.circus_loglevel')
 
@@ -704,6 +709,61 @@ class DaemonClient:
         if not foreground:
             logoutput = self.circus_log_file
 
+        watchers = []
+
+        # Start ZMQ broker before workers so its sockets are ready when workers connect.
+        # Skip if a broker is already running (e.g. started by the test fixture).
+        if self.profile.process_control_backend == 'core.zmq':
+            from aiida.manage.manager import get_manager
+
+            broker_instance = get_manager().get_broker()
+            broker_already_running = (
+                broker_instance is not None and hasattr(broker_instance, 'is_running') and broker_instance.is_running
+            )
+
+            if not broker_already_running:
+                watchers.append(
+                    {
+                        'cmd': ' '.join(self.cmd_start_broker),
+                        'name': f'{self.daemon_name}-broker',
+                        'numprocesses': 1,
+                        'virtualenv': self.virtualenv,
+                        'copy_env': True,
+                        'stdout_stream': {
+                            'class': 'FileStream',
+                            'filename': self.daemon_log_file,
+                            'time_format': '%Y-%m-%d %H:%M:%S',
+                        },
+                        'stderr_stream': {
+                            'class': 'FileStream',
+                            'filename': self.daemon_log_file,
+                            'time_format': '%Y-%m-%d %H:%M:%S',
+                        },
+                        'env': self.get_env(),
+                    }
+                )
+
+        watchers.append(
+            {
+                'cmd': ' '.join(self.cmd_start_daemon_worker),
+                'name': self.daemon_name,
+                'numprocesses': number_workers,
+                'virtualenv': self.virtualenv,
+                'copy_env': True,
+                'stdout_stream': {
+                    'class': 'FileStream',
+                    'filename': self.daemon_log_file,
+                    'time_format': '%Y-%m-%d %H:%M:%S',
+                },
+                'stderr_stream': {
+                    'class': 'FileStream',
+                    'filename': self.daemon_log_file,
+                    'time_format': '%Y-%m-%d %H:%M:%S',
+                },
+                'env': self.get_env(),
+            }
+        )
+
         arbiter_config = {
             'controller': self.get_controller_endpoint(),
             'pubsub_endpoint': self.get_pubsub_endpoint(),
@@ -713,26 +773,7 @@ class DaemonClient:
             'debug': False,
             'statsd': True,
             'pidfile': self.circus_pid_file,
-            'watchers': [
-                {
-                    'cmd': ' '.join(self.cmd_start_daemon_worker),
-                    'name': self.daemon_name,
-                    'numprocesses': number_workers,
-                    'virtualenv': self.virtualenv,
-                    'copy_env': True,
-                    'stdout_stream': {
-                        'class': 'FileStream',
-                        'filename': self.daemon_log_file,
-                        'time_format': '%Y-%m-%d %H:%M:%S',
-                    },
-                    'stderr_stream': {
-                        'class': 'FileStream',
-                        'filename': self.daemon_log_file,
-                        'time_format': '%Y-%m-%d %H:%M:%S',
-                    },
-                    'env': self.get_env(),
-                }
-            ],
+            'watchers': watchers,
         }
 
         if not foreground:

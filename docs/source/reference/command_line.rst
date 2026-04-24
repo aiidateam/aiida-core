@@ -352,6 +352,10 @@ Below is a list with all available subcommands.
                                       command automatically tries RabbitMQ first and falls
                                       back to ZMQ if unavailable. To switch to RabbitMQ later,
                                       use `verdi profile configure-rabbitmq`.
+      --no-broker                     When toggled on, no message broker is configured. This
+                                      means the daemon cannot be started and processes cannot
+                                      be submitted. Useful for profiles used only for data
+                                      exploration and querying.
       --postgres-hostname TEXT        The hostname of the PostgreSQL server.
       --postgres-port INTEGER         The port of the PostgreSQL server.
       --postgres-username TEXT        The username of the PostgreSQL user that is authorized

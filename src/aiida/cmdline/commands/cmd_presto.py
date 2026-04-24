@@ -133,6 +133,12 @@ def detect_postgres_config(
     'automatically with the daemon. When not specified, the command automatically tries RabbitMQ first and falls back '
     'to ZMQ if unavailable. To switch to RabbitMQ later, use `verdi profile configure-rabbitmq`.',
 )
+@click.option(
+    '--no-broker',
+    is_flag=True,
+    help='When toggled on, no message broker is configured. This means the daemon cannot be started and processes '
+    'cannot be submitted. Useful for profiles used only for data exploration and querying.',
+)
 @click.option('--postgres-hostname', type=str, default='localhost', help='The hostname of the PostgreSQL server.')
 @click.option('--postgres-port', type=int, default=5432, help='The port of the PostgreSQL server.')
 @click.option(
@@ -155,6 +161,7 @@ def verdi_presto(
     email,
     use_postgres,
     use_zmq,
+    no_broker,
     postgres_hostname,
     postgres_port,
     postgres_username,
@@ -222,7 +229,11 @@ def verdi_presto(
     else:
         echo.echo_report('Option `--use-postgres` not enabled: configuring the profile to use SQLite.')
 
-    if use_zmq:
+    if no_broker:
+        echo.echo_report('`--no-broker` enabled: configuring the profile without a broker.')
+        broker_backend = None
+        broker_config = None
+    elif use_zmq:
         echo.echo_report('`--use-zmq` enabled: configuring the profile with ZMQ broker.')
         broker_backend = 'core.zmq'
         broker_config = {}
@@ -231,6 +242,10 @@ def verdi_presto(
             broker_config = detect_rabbitmq_config()
         except ConnectionError:
             echo.echo_report('RabbitMQ server not found: falling back to ZMQ broker.')
+            echo.echo_warning(
+                'The ZMQ broker is a new feature. If you experience issues, '
+                'recreate the profile with `verdi presto --no-broker`.'
+            )
             broker_backend = 'core.zmq'
             broker_config = {}
         else:

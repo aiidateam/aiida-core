@@ -101,7 +101,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
             return skip_submit
 
     try:
-        logger.info(f'scheduled request to upload CalcJob<{node.pk}>')
+        logger.debug(f'scheduled request to upload CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.futures.CancelledError, PreSubmitException, plumpy.process_states.Interruption)
         skip_submit = await utils.exponential_backoff_retry(
             do_upload, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
@@ -114,7 +114,7 @@ async def task_upload_job(process: 'CalcJob', transport_queue: TransportQueue, c
         logger.warning(f'uploading CalcJob<{node.pk}> failed')
         raise TransportTaskException(f'upload_calculation failed {max_attempts} times consecutively') from exception
     else:
-        logger.info(f'uploading CalcJob<{node.pk}> successful')
+        logger.debug(f'uploading CalcJob<{node.pk}> successful')
         node.set_state(CalcJobState.UNSTASHING)
         return skip_submit
 
@@ -149,7 +149,7 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
             return execmanager.submit_calculation(node, transport)
 
     try:
-        logger.info(f'scheduled request to submit CalcJob<{node.pk}>')
+        logger.debug(f'scheduled request to submit CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
         result = await utils.exponential_backoff_retry(
             do_submit, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
@@ -160,7 +160,7 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
         logger.warning(f'submitting CalcJob<{node.pk}> failed')
         raise TransportTaskException(f'submit_calculation failed {max_attempts} times consecutively') from exception
     else:
-        logger.info(f'submitting CalcJob<{node.pk}> successful')
+        logger.debug(f'submitting CalcJob<{node.pk}> successful')
         node.set_state(CalcJobState.WITHSCHEDULER)
         return result
 
@@ -207,7 +207,7 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
         return job_done
 
     try:
-        logger.info(f'scheduled request to update CalcJob<{node.pk}>')
+        logger.debug(f'scheduled request to update CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
         job_done = await utils.exponential_backoff_retry(
             do_update, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
@@ -218,7 +218,7 @@ async def task_update_job(node: CalcJobNode, job_manager, cancellable: Interrupt
         logger.warning(f'updating CalcJob<{node.pk}> failed')
         raise TransportTaskException(f'update_calculation failed {max_attempts} times consecutively') from exception
     else:
-        logger.info(f'updating CalcJob<{node.pk}> successful')
+        logger.debug(f'updating CalcJob<{node.pk}> successful')
         if job_done:
             node.set_state(CalcJobState.STASHING)
 
@@ -257,7 +257,7 @@ async def task_monitor_job(
             return monitors.process(node, transport)
 
     try:
-        logger.info(f'scheduled request to monitor CalcJob<{node.pk}>')
+        logger.debug(f'scheduled request to monitor CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
         monitor_result = await utils.exponential_backoff_retry(
             do_monitor, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
@@ -268,7 +268,7 @@ async def task_monitor_job(
         logger.warning(f'monitoring CalcJob<{node.pk}> failed')
         raise TransportTaskException(f'monitor_calculation failed {max_attempts} times consecutively') from exception
     else:
-        logger.info(f'monitoring CalcJob<{node.pk}> successful')
+        logger.debug(f'monitoring CalcJob<{node.pk}> successful')
         return monitor_result
 
 
@@ -314,7 +314,7 @@ async def task_retrieve_job(
                 try:
                     detailed_job_info = scheduler.get_detailed_job_info(job_id)
                 except FeatureNotAvailable:
-                    logger.info(f'detailed job info not available for scheduler of CalcJob<{node.pk}>')
+                    logger.debug(f'detailed job info not available for scheduler of CalcJob<{node.pk}>')
                     node.set_detailed_job_info(None)
                 else:
                     node.set_detailed_job_info(detailed_job_info)
@@ -326,7 +326,7 @@ async def task_retrieve_job(
             return retrieved
 
     try:
-        logger.info(f'scheduled request to retrieve CalcJob<{node.pk}>')
+        logger.debug(f'scheduled request to retrieve CalcJob<{node.pk}>')
         ignore_exceptions = (plumpy.futures.CancelledError, plumpy.process_states.Interruption)
         result = await utils.exponential_backoff_retry(
             do_retrieve, initial_interval, max_attempts, logger=node.logger, ignore_exceptions=ignore_exceptions
@@ -338,7 +338,7 @@ async def task_retrieve_job(
         raise TransportTaskException(f'retrieve_calculation failed {max_attempts} times consecutively') from exception
     else:
         node.set_state(CalcJobState.PARSING)
-        logger.info(f'retrieving CalcJob<{node.pk}> successful')
+        logger.debug(f'retrieving CalcJob<{node.pk}> successful')
         return result
 
 
@@ -369,7 +369,7 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
         async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
 
-            logger.info(f'stashing calculation<{node.pk}>')
+            logger.debug(f'stashing calculation<{node.pk}>')
             return await execmanager.stash_calculation(node, transport)
 
     try:
@@ -390,7 +390,7 @@ async def task_stash_job(node: CalcJobNode, transport_queue: TransportQueue, can
         raise TransportTaskException(f'stash_calculation failed {max_attempts} times consecutively') from exception
     else:
         node.set_state(CalcJobState.RETRIEVING)
-        logger.info(f'stashing calculation<{node.pk}> successful')
+        logger.debug(f'stashing calculation<{node.pk}> successful')
         return
 
 
@@ -408,7 +408,7 @@ async def task_unstash_job(node: CalcJobNode, transport_queue: TransportQueue, c
         async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
 
-            logger.info(f'unstashing calculation<{node.pk}>')
+            logger.debug(f'unstashing calculation<{node.pk}>')
             return await execmanager.unstash_calculation(node, transport)
 
     try:
@@ -426,7 +426,7 @@ async def task_unstash_job(node: CalcJobNode, transport_queue: TransportQueue, c
         raise TransportTaskException(f'unstash_calculation failed {max_attempts} times consecutively') from exception
     else:
         node.set_state(CalcJobState.SUBMITTING)
-        logger.info(f'unstashing calculation<{node.pk}> successful')
+        logger.debug(f'unstashing calculation<{node.pk}> successful')
         return
 
 
@@ -459,7 +459,7 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
             return execmanager.kill_calculation(node, transport)
 
     try:
-        logger.info(f'scheduled request to kill CalcJob<{node.pk}>')
+        logger.debug(f'scheduled request to kill CalcJob<{node.pk}>')
         result = await utils.exponential_backoff_retry(do_kill, initial_interval, max_attempts, logger=node.logger)
     except plumpy.process_states.Interruption:
         raise
@@ -467,7 +467,7 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
         logger.warning(f'killing CalcJob<{node.pk}> failed')
         raise TransportTaskException(f'kill_calculation failed {max_attempts} times consecutively') from exception
     else:
-        logger.info(f'killing CalcJob<{node.pk}> successful')
+        logger.debug(f'killing CalcJob<{node.pk}> successful')
         node.set_scheduler_state(JobState.DONE)
         return result
 
@@ -674,7 +674,7 @@ class Waiting(plumpy.process_states.Waiting):
         if self._killing is not None:
             self._killing.set_result(True)
         else:
-            logger.info(f'killed CalcJob<{node.pk}> but async future was None')
+            logger.debug(f'killed CalcJob<{node.pk}> but async future was None')
 
     async def _launch_task(self, coro, *args, **kwargs):
         """Launch a coroutine as a task, making sure to make it interruptable."""

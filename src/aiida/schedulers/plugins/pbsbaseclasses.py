@@ -223,7 +223,7 @@ class PbsBaseClass(BashCliScheduler):
         if email_events:
             lines.append(f'#PBS -m {email_events}')
             if not job_tmpl.email:
-                _LOGGER.info(
+                _LOGGER.debug(
                     'Email triggers provided to PBSPro script for job,'
                     'but no email field set; will send emails to '
                     'the job owner as set in the scheduler'
@@ -270,7 +270,7 @@ class PbsBaseClass(BashCliScheduler):
             # 'n' : Standard error and standard output are not merged (default)
             lines.append('#PBS -j oe')
             if job_tmpl.sched_error_path:
-                _LOGGER.info(
+                _LOGGER.debug(
                     'sched_join_files is True, but sched_error_path is set in '
                     'PBSPro script; ignoring sched_error_path'
                 )
@@ -325,7 +325,7 @@ class PbsBaseClass(BashCliScheduler):
         """
         submit_command = f'qsub {submit_script}'
 
-        _LOGGER.info(f'submitting with: {submit_command}')
+        _LOGGER.debug(f'submitting with: {submit_command}')
 
         return submit_command
 
@@ -697,7 +697,7 @@ class PbsBaseClass(BashCliScheduler):
         """Return the command to kill the job with specified jobid."""
         submit_command = f'qdel {jobid}'
 
-        _LOGGER.info(f'killing job {jobid}')
+        _LOGGER.debug(f'killing job {jobid}')
 
         return submit_command
 

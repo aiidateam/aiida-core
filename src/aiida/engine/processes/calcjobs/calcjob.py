@@ -838,7 +838,7 @@ class CalcJob(Process):
         computer = self.node.computer
 
         if computer is None:
-            self.logger.info(
+            self.logger.debug(
                 'no computer is defined for this calculation job which suggest that it is an imported job and so '
                 'scheduler output probably is not available or not in a format that can be reliably parsed, skipping..'
             )

@@ -89,8 +89,13 @@ def get_logging_config() -> dict[str, t.Any]:
             'console': {
                 'class': 'logging.StreamHandler',
                 'formatter': 'halfverbose',
+                'level': lambda: get_config_option('logging.terminal_handler'),
             },
-            'cli': {'class': 'aiida.cmdline.utils.log.CliHandler', 'formatter': 'cli'},
+            'cli': {
+                'class': 'aiida.cmdline.utils.log.CliHandler',
+                'formatter': 'cli',
+                'level': lambda: get_config_option('logging.terminal_handler'),
+            },
         },
         'loggers': {
             'aiida': {
@@ -218,18 +223,19 @@ def configure_logging(with_orm: bool = False, daemon: bool = False, daemon_log_f
     if CLI_ACTIVE is True and not daemon:
         for logger in config['loggers'].values():
             handlers = logger['handlers']
-            if 'console' in handlers:
+            try:
                 handlers.remove('console')
+            except ValueError:
+                pass
             handlers.append('cli')
-
-    # If ``CLI_LOG_LEVEL`` is set, a ``verdi`` command is being executed with the ``--verbosity`` option. In this case
-    # we override the log levels of the ``aiida`` and ``verdi`` loggers with the specified log level. The other loggers
-    # are left untouched as they can become very noisy for lower log levels and drown out the useful information. Users
-    # can still configure those manually beforehand through the config options.
-    if CLI_LOG_LEVEL is not None:
-        for name, logger in config['loggers'].items():
-            if name in ['aiida', 'verdi', 'disk_objectstore']:
-                logger['level'] = CLI_LOG_LEVEL
+        # If ``CLI_LOG_LEVEL`` is set, a ``verdi`` command is being executed with the ``--verbosity`` option. In this
+        # case we override the aiida_loglevel and the cli to be sure it outputed to terminal.
+        # Note: One has to also ensure that when reading from the corresponding config options while CLI is active are
+        #       also updated. This should be in ``src.aiida.manage.configuration.get_config_option``
+        if CLI_LOG_LEVEL is not None:
+            config['loggers']['aiida']['level'] = CLI_LOG_LEVEL
+            config['handlers']['cli']['level'] = CLI_LOG_LEVEL
+            config['handlers']['console']['level'] = CLI_LOG_LEVEL
 
     # Add the `DbLogHandler` if `with_orm` is `True`
     if with_orm:

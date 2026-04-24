@@ -209,3 +209,16 @@ def test_config_downgrade(run_cli_command, config_with_profile_factory):
     options = ['config', 'downgrade', '1']
     result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
     assert 'Success: Downgraded' in result.output.strip()
+
+
+@pytest.mark.presto
+def test_config_list_advanced_flag(run_cli_command, config_with_profile_factory):
+    """Test that ``verdi config list --advanced`` flag is accepted and footer hint is shown."""
+    config_with_profile_factory()
+
+    result_default = run_cli_command(cmd_verdi.verdi, ['config', 'list'], use_subprocess=False)
+    assert '--advanced' in result_default.output
+    assert 'logging.sqlalchemy_loglevel' not in result_default.output
+
+    result_advanced = run_cli_command(cmd_verdi.verdi, ['config', 'list', '--advanced'], use_subprocess=False)
+    assert 'Use `verdi config list --advanced`' not in result_advanced.output

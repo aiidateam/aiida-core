@@ -52,6 +52,11 @@ class Option:
 
         return self._name.replace('.', '__') not in ProfileOptionsSchema.model_fields
 
+    @property
+    def advanced(self) -> bool:
+        """Return True if this option should be hidden from default ``verdi config list`` output."""
+        return self._schema.get('advanced', False)
+
     def validate(self, value: Any) -> Any:
         """Validate a value
 

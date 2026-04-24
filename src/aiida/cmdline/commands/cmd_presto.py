@@ -190,7 +190,6 @@ def verdi_presto(
     broker. To switch to RabbitMQ later, use `verdi profile configure-rabbitmq`.
     """
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
-    from aiida.brokers.zmq.defaults import get_zmq_config
     from aiida.common import exceptions
     from aiida.manage.configuration import create_profile, load_profile
     from aiida.orm import Computer
@@ -226,14 +225,14 @@ def verdi_presto(
     if use_zmq:
         echo.echo_report('`--use-zmq` enabled: configuring the profile with ZMQ broker.')
         broker_backend = 'core.zmq'
-        broker_config = get_zmq_config()
+        broker_config = {}
     else:
         try:
             broker_config = detect_rabbitmq_config()
         except ConnectionError:
             echo.echo_report('RabbitMQ server not found: falling back to ZMQ broker.')
             broker_backend = 'core.zmq'
-            broker_config = get_zmq_config()
+            broker_config = {}
         else:
             echo.echo_report('RabbitMQ server detected: configuring the profile with RabbitMQ broker.')
             broker_backend = 'core.rabbitmq'

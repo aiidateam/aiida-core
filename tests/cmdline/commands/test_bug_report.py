@@ -87,7 +87,15 @@ def _patch_config(monkeypatch, dirpath, client_log=None):
 def test_collect_diagnostics(monkeypatch, tmp_path):
     """Test ``_collect_diagnostics`` returns structured JSON-serializable data."""
     profile = SimpleNamespace(name='default', storage_cls=DummyStorageBackend)
-    config_data = {'profiles': {'default': {'storage': {'backend': 'core.sqlite_dos'}}}}
+    config_data = {
+        'profiles': {
+            'default': {
+                'storage': {'backend': 'core.sqlite_dos', 'config': {'database_password': 'secret'}},
+                'process_control': {'config': {'broker_password': 'guest'}},
+                'AIIDADB_PASS': 'legacy-secret',
+            }
+        }
+    }
     (tmp_path / 'config.json').write_text(json.dumps(config_data), encoding='utf-8')
 
     monkeypatch.setattr(aiida, '__version__', '1.2.3')
@@ -98,7 +106,9 @@ def test_collect_diagnostics(monkeypatch, tmp_path):
 
     assert diagnostics['aiida_version'] == '1.2.3'
     assert diagnostics['profile'] == {'name': 'default'}
-    assert diagnostics['config'] == config_data
+    assert diagnostics['config']['profiles']['default']['storage']['config']['database_password'] == '***'
+    assert diagnostics['config']['profiles']['default']['process_control']['config']['broker_password'] == '***'
+    assert diagnostics['config']['profiles']['default']['AIIDADB_PASS'] == '***'
     assert {key: diagnostics['python'][key] for key in ('major', 'minor', 'micro')} == {
         'major': sys.version_info.major,
         'minor': sys.version_info.minor,
@@ -154,12 +164,30 @@ def test_collect_diagnostics_services(monkeypatch, tmp_path, storage_cls, broker
 
 def test_get_config_data(monkeypatch, tmp_path):
     """Test ``_get_config_data`` returns the contents of ``config.json``."""
-    config_data = {'profiles': {'default': {'test_profile': False}}}
+    config_data = {
+        'profiles': {
+            'default': {
+                'test_profile': False,
+                'storage': {'config': {'database_password': 'secret'}},
+                'process_control': {'config': {'broker_password': 'guest'}},
+                'AIIDADB_PASS': 'legacy-secret',
+            }
+        }
+    }
     (tmp_path / 'config.json').write_text(json.dumps(config_data), encoding='utf-8')
 
     _patch_config(monkeypatch, tmp_path)
 
-    assert cmd_bug_report._get_config_data() == config_data
+    assert cmd_bug_report._get_config_data() == {
+        'profiles': {
+            'default': {
+                'test_profile': False,
+                'storage': {'config': {'database_password': '***'}},
+                'process_control': {'config': {'broker_password': '***'}},
+                'AIIDADB_PASS': '***',
+            }
+        }
+    }
 
 
 def test_get_log_files_uses_broker_interface(monkeypatch, tmp_path):

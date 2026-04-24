@@ -21,6 +21,35 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.utils import echo
 
+SENSITIVE_KEY_FRAGMENTS = ('password', 'passphrase', 'secret', 'token')
+SENSITIVE_CONFIG_KEYS = ('AIIDADB_PASS',)
+REDACTED_VALUE = '***'
+
+
+def _is_sensitive_key(key: str) -> bool:
+    """Return whether the key likely contains a sensitive value."""
+    lowercase = key.lower()
+    return key in SENSITIVE_CONFIG_KEYS or any(fragment in lowercase for fragment in SENSITIVE_KEY_FRAGMENTS)
+
+
+def _redact_sensitive_values(value: Any) -> Any:
+    """Redact values that are likely to contain secrets."""
+    if isinstance(value, dict):
+        redacted = {}
+
+        for key, subvalue in value.items():
+            if _is_sensitive_key(key) and subvalue is not None:
+                redacted[key] = REDACTED_VALUE
+            else:
+                redacted[key] = _redact_sensitive_values(subvalue)
+
+        return redacted
+
+    if isinstance(value, list):
+        return [_redact_sensitive_values(subvalue) for subvalue in value]
+
+    return value
+
 
 def _check_storage(profile) -> dict[str, Any]:
     """Return storage connection information for the current profile."""
@@ -95,7 +124,7 @@ def _get_config_data() -> dict[str, Any] | None:
     if not filepath.exists():
         return None
 
-    return json.loads(filepath.read_text(encoding='utf-8'))
+    return _redact_sensitive_values(json.loads(filepath.read_text(encoding='utf-8')))
 
 
 def _collect_diagnostics() -> dict[str, Any]:

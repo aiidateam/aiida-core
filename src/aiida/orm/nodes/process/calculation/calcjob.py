@@ -13,6 +13,8 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Sequence, Tuple, Type, Union, cast
 
+from pydantic import field_validator
+
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
@@ -95,7 +97,7 @@ class CalcJobNode(CalculationNode):
         last_job_info: Optional[dict] = OrmMetadataField(
             None,
             description='The last job info returned by the scheduler',
-            orm_to_model=lambda node: dict(cast(CalcJobNode, node).get_last_job_info() or {}),
+            orm_to_model=lambda node: cast(CalcJobNode, node).get_last_job_info(),
         )
         detailed_job_info: Optional[dict] = OrmMetadataField(
             None,
@@ -115,8 +117,13 @@ class CalcJobNode(CalculationNode):
         imported: Optional[bool] = OrmMetadataField(
             None,
             description='Whether the node has been migrated',
-            orm_to_model=lambda node: cast(CalcJobNode, node).is_imported,
         )
+
+        @field_validator('last_job_info', mode='before')
+        @classmethod
+        def validate_last_job_info(cls, value: dict | JobInfo | None) -> dict | None:
+            """Validate the last job info field."""
+            return dict(value) if value is not None else None
 
     # An optional entry point for a CalculationTools instance
     _tools = None
@@ -179,6 +186,11 @@ class CalcJobNode(CalculationNode):
             'max_memory_kb',
             'version',
         )
+
+    @property
+    def imported(self) -> Optional[bool]:
+        """Return whether the calculation job was imported instead of being an actual run."""
+        return self.base.attributes.get(self.IMMIGRATED_KEY, None)
 
     @property
     def is_imported(self) -> bool:

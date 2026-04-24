@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union, cast
 
 from plumpy.process_states import ProcessState
 
@@ -219,6 +219,7 @@ class ProcessNode(Sealable, Node):
         paused: Optional[bool] = OrmMetadataField(
             None,
             description='Whether the process is paused',
+            orm_to_model=lambda node: cast(ProcessNode, node).base.attributes.get('paused', None),
         )
 
     def set_metadata_inputs(self, value: Dict[str, Any]) -> None:

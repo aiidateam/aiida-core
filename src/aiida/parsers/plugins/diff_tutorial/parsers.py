@@ -33,7 +33,7 @@ class DiffParser(Parser):
             return self.exit_codes.ERROR_MISSING_OUTPUT_FILES
 
         # add output file
-        self.logger.info(f"Parsing '{output_filename}'")
+        self.logger.debug(f"Parsing '{output_filename}'")
         with self.retrieved.open(output_filename, 'rb') as handle:
             output_node = SinglefileData(file=handle)
         self.out('diff', output_node)
@@ -49,7 +49,7 @@ class DiffParserSimple(Parser):
         output_filename = self.node.get_option('output_filename')
 
         # add output file
-        self.logger.info(f"Parsing '{output_filename}'")
+        self.logger.debug(f"Parsing '{output_filename}'")
         with self.retrieved.open(output_filename, 'rb') as handle:
             output_node = SinglefileData(file=handle)
         self.out('diff', output_node)

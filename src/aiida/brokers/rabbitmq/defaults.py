@@ -51,7 +51,7 @@ def detect_rabbitmq_config(
         'virtual_host': virtual_host or os.getenv('AIIDA_BROKER_VIRTUAL_HOST', BROKER_DEFAULTS['virtual_host']),
     }
 
-    LOGGER.info(f'Attempting to connect to RabbitMQ with parameters: {connection_params}')
+    LOGGER.debug(f'Attempting to connect to RabbitMQ with parameters: {connection_params}')
 
     try:
         connect(connection_params=connection_params)

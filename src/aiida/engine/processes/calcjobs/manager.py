@@ -97,7 +97,7 @@ class JobsList:
 
         """
         async with self._transport_queue.request_transport(self._authinfo) as request:
-            self.logger.info('waiting for transport')
+            self.logger.debug('waiting for transport')
             transport = await request
 
             scheduler = self._authinfo.computer.get_scheduler()
@@ -113,7 +113,7 @@ class JobsList:
             # Update the last update time and clear the jobs cache
             self._last_updated = time.time()
             jobs_cache = {}
-            self.logger.info(f'AuthInfo<{self._authinfo.pk}>: successfully retrieved status of active jobs')
+            self.logger.debug(f'AuthInfo<{self._authinfo.pk}>: successfully retrieved status of active jobs')
 
             for job_id, job_info in scheduler_response.items():
                 jobs_cache[job_id] = job_info

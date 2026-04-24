@@ -141,7 +141,7 @@ def await_condition(condition: t.Callable, timeout: int = 1) -> t.Any:
     return result
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_kill_failing_transport(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
@@ -178,7 +178,7 @@ def test_process_kill_failing_transport(
         assert node.process_status == 'Force killed through `verdi process kill`'
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_kill_failing_transport_failed_kill(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
@@ -222,7 +222,7 @@ def test_process_kill_failing_transport_failed_kill(
         assert node.process_status == 'Force killed through `verdi process kill`'
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_kill_failing_ebm_transport(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
@@ -260,7 +260,7 @@ def test_process_kill_failing_ebm_transport(
         await_condition(lambda: node.is_killed, timeout=kill_timeout)
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_kill_failing_ebm_kill(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
@@ -549,7 +549,7 @@ class TestVerdiProcess:
         assert result.exception is None, result.output
         assert len(result.output_lines) == 0
 
-    @pytest.mark.requires_rmq
+    @pytest.mark.requires_broker
     def test_process_watch(self, run_cli_command):
         """Test verdi process watch"""
         # Running without identifiers should except and print something
@@ -780,7 +780,7 @@ class TestVerdiProcess:
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('numprocesses, percentage', ((0, 100), (1, 90)))
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_list_worker_slot_warning(run_cli_command, monkeypatch, numprocesses, percentage):
     """Test that the if the number of used worker process slots exceeds a threshold,
     that the warning message is displayed to the user when running `verdi process list`
@@ -877,7 +877,7 @@ class TestVerdiProcessCallRoot:
         assert len(result.output_lines) > 0
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_pause(submit_and_await, run_cli_command):
     """Test the ``verdi process pause`` command."""
@@ -894,7 +894,7 @@ def test_process_pause(submit_and_await, run_cli_command):
     assert len(result.output_lines) > 0
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_play(submit_and_await, run_cli_command):
     """Test the ``verdi process play`` command."""
@@ -913,7 +913,7 @@ def test_process_play(submit_and_await, run_cli_command):
     assert len(result.output_lines) > 0
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_play_all(submit_and_await, run_cli_command):
     """Test the ``verdi process play`` command with the ``--all`` option."""
@@ -929,7 +929,7 @@ def test_process_play_all(submit_and_await, run_cli_command):
     await_condition(lambda: not node_two.paused)
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_kill(submit_and_await, run_cli_command, aiida_code_installed):
     """Test the ``verdi process kill`` command.
@@ -996,7 +996,7 @@ def test_process_kill(submit_and_await, run_cli_command, aiida_code_installed):
     assert node_2.process_status == 'Force killed through `verdi process kill`'
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_kill_all(submit_and_await, run_cli_command):
     """Test the ``verdi process kill --all`` command."""

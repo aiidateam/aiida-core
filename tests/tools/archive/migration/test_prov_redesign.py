@@ -82,7 +82,7 @@ def test_base_data_type_change(tmp_path, aiida_profile):
     assert nlist.node_type == 'data.core.list.List.', msg
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_node_process_type(aiida_profile, tmp_path):
     """Column `process_type` added to `Node` entity DB table"""
     from aiida.engine import run_get_node

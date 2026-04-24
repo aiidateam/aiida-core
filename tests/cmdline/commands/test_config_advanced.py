@@ -19,6 +19,10 @@ def test_config_list_hides_advanced_options(run_cli_command, config_with_profile
     config_with_profile_factory()
     result = run_cli_command(cmd_verdi.verdi, ['config', 'list'], use_subprocess=False)
 
+    # The new routing options SHOULD be visible
+    assert 'logging.terminal_loglevel' in result.output
+    assert 'logging.logfile_loglevel' in result.output
+
     # The advanced per-logger options should NOT be visible
     assert 'logging.aiida_loglevel' not in result.output
     assert 'logging.plumpy_loglevel' not in result.output
@@ -31,7 +35,9 @@ def test_config_list_advanced_shows_all(run_cli_command, config_with_profile_fac
     config_with_profile_factory()
     result = run_cli_command(cmd_verdi.verdi, ['config', 'list', '--advanced'], use_subprocess=False)
 
-    # All logging options should be visible
+    # Both new and old logging options should be visible
+    assert 'logging.terminal_loglevel' in result.output
+    assert 'logging.logfile_loglevel' in result.output
     assert 'logging.aiida_loglevel' in result.output
     assert 'logging.plumpy_loglevel' in result.output
     assert 'logging.kiwipy_loglevel' in result.output
@@ -68,6 +74,7 @@ def test_config_list_prefix_filter_with_advanced(run_cli_command, config_with_pr
     config_with_profile_factory()
     result = run_cli_command(cmd_verdi.verdi, ['config', 'list', 'logging', '--advanced'], use_subprocess=False)
 
+    assert 'logging.terminal_loglevel' in result.output
     assert 'logging.aiida_loglevel' in result.output
     # Non-logging options should NOT appear when filtering by "logging" prefix
     assert 'daemon.timeout' not in result.output

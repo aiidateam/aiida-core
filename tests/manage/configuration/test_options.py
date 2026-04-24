@@ -86,3 +86,10 @@ class TestConfigurationOptions:
         config.set_option(option_name, option_value_global)
         option_value = get_config_option(option_name)
         assert option_value == option_value_global
+
+
+@pytest.mark.presto
+def test_option_advanced_property():
+    """Test that ``Option.advanced`` defaults to False when not explicitly set."""
+    assert get_option('daemon.timeout').advanced is False
+    assert isinstance(get_option('daemon.timeout').advanced, bool)

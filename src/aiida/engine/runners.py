@@ -338,7 +338,7 @@ class Runner:
             broadcast_filter.add_subject_filter(f'state_changed.*.{state.value}')
 
         if self.communicator:
-            LOGGER.info('adding subscriber for broadcasts of %d', pk)
+            LOGGER.debug('adding subscriber for broadcasts of %d', pk)
             self.communicator.add_broadcast_subscriber(broadcast_filter, subscriber_identifier)
         self._poll_process(node, functools.partial(inline_callback, event))
 

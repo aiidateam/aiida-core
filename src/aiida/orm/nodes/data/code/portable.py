@@ -202,7 +202,7 @@ class PortableCode(Code):
         result = super()._prepare_yaml(*args, **kwargs)[0]
         target = pathlib.Path().cwd() / f'{self.label}'
         _export_filpath_files_from_repo(self, target)
-        _LOGGER.info(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
+        _LOGGER.debug(f'Repository files for PortableCode <{self.pk}> dumped to folder `{target}`.')
         return result, {}
 
     def get_executable_cmdline_params(self, cmdline_params: list[str] | None = None) -> list:

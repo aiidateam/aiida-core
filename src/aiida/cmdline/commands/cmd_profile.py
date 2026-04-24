@@ -179,10 +179,16 @@ def profile_configure_rabbitmq(ctx, /, profile, non_interactive, force, **kwargs
     else:
         echo.echo_success('Connected to RabbitMQ with the provided connection parameters')
 
-    from aiida.engine.daemon.client import get_daemon_client
+    daemon_client = None
+    daemon_running = False
 
-    daemon_client = get_daemon_client(profile.name)
-    daemon_running = daemon_client.is_daemon_running
+    # Only check daemon status if the profile already has a broker configured.
+    # If no broker is configured yet, there can't be a daemon running.
+    if profile.process_control_backend is not None:
+        from aiida.engine.daemon.client import DaemonClient
+
+        daemon_client = DaemonClient(profile)
+        daemon_running = daemon_client.is_daemon_running
 
     if daemon_running:
         echo.echo_warning('The daemon is currently running. It will need to be restarted for changes to take effect.')
@@ -194,7 +200,7 @@ def profile_configure_rabbitmq(ctx, /, profile, non_interactive, force, **kwargs
 
     echo.echo_success(f'RabbitMQ configuration for `{profile.name}` updated to: {broker_config}')
 
-    if daemon_running:
+    if daemon_running and daemon_client is not None:
         echo.echo_report('Restarting the daemon...')
         daemon_client.restart_daemon()
         echo.echo_success('Daemon restarted successfully.')

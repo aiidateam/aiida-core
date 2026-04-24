@@ -456,7 +456,7 @@ class BaseRestartWorkChain(WorkChain):
                     )
             else:
                 if name in existing_outputs:
-                    self.logger.info(f'output `{name}` was already attached, skipping.')
+                    self.logger.debug(f'output `{name}` was already attached, skipping.')
                 else:
                     self.out(name, output)
 

@@ -485,11 +485,11 @@ class PsqlDosBackend(StorageBackend):
 
         with maintenance_context():
             unreferenced_objects = self.get_unreferenced_keyset()
-            STORAGE_LOGGER.info(f'Deleting {len(unreferenced_objects)} unreferenced objects ...')
+            STORAGE_LOGGER.debug(f'Deleting {len(unreferenced_objects)} unreferenced objects ...')
             if not dry_run:
                 repository.delete_objects(list(unreferenced_objects))
 
-            STORAGE_LOGGER.info('Starting repository-specific operations ...')
+            STORAGE_LOGGER.debug('Starting repository-specific operations ...')
             repository.maintain(live=not full, dry_run=dry_run, **kwargs)
 
     def get_unreferenced_keyset(self, check_consistency: bool = True) -> Set[str]:
@@ -506,7 +506,7 @@ class PsqlDosBackend(StorageBackend):
         """
         from aiida import orm
 
-        STORAGE_LOGGER.info('Obtaining unreferenced object keys ...')
+        STORAGE_LOGGER.debug('Obtaining unreferenced object keys ...')
 
         repository = self.get_repository()
 
@@ -588,7 +588,7 @@ class PsqlDosBackend(StorageBackend):
                 raise backup_utils.BackupError(f'pg_dump: {exc}')
 
             if psql_temp_loc.is_file():
-                STORAGE_LOGGER.info(f'Dumped the PostgreSQL database to {psql_temp_loc!s}')
+                STORAGE_LOGGER.debug(f'Dumped the PostgreSQL database to {psql_temp_loc!s}')
             else:
                 raise backup_utils.BackupError(f"'{psql_temp_loc!s}' was not created.")
 

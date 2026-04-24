@@ -320,7 +320,7 @@ class SlurmScheduler(BashCliScheduler):
             # See that this automatic redirection works also if
             # I specify a different --output file
             if job_tmpl.sched_error_path:
-                self.logger.info(
+                self.logger.debug(
                     'sched_join_files is True, but sched_error_path is set in '
                     'SLURM script; ignoring sched_error_path'
                 )
@@ -408,7 +408,7 @@ class SlurmScheduler(BashCliScheduler):
         """
         submit_command = f'sbatch {submit_script}'
 
-        self.logger.info(f'submitting with: {submit_command}')
+        self.logger.debug(f'submitting with: {submit_command}')
 
         return submit_command
 
@@ -676,7 +676,7 @@ stderr='{stderr.strip()}'"""
         """Return the command to kill the job with specified jobid."""
         submit_command = f'scancel {jobid}'
 
-        self.logger.info(f'killing job {jobid}')
+        self.logger.debug(f'killing job {jobid}')
 
         return submit_command
 

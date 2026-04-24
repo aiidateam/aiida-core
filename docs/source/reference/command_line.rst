@@ -320,17 +320,20 @@ Below is a list with all available subcommands.
       * Set up the localhost as a `Computer` and configure it
       * Set a number of configuration options with sensible defaults
 
-      By default the command creates a profile that uses SQLite for the database. It
-      automatically checks for RabbitMQ running on the localhost, and, if it can connect,
-      configures that as the broker for the profile. Otherwise, the profile is created without
-      a broker, in which case some functionality will be unavailable, most notably running the
-      daemon and submitting processes to said daemon.
+      By default the command creates a profile that uses SQLite for the database. For the
+      message broker, it automatically checks for RabbitMQ running on localhost. If found, it
+      configures RabbitMQ as the broker. Otherwise, it falls back to the ZMQ broker, which
+      requires no external services and is started automatically with the daemon.
 
       When the `--use-postgres` flag is toggled, the command tries to connect to the
       PostgreSQL server with connection paramaters taken from the `--postgres-hostname`,
       `--postgres-port`, `--postgres-username` and `--postgres-password` options. It uses
       these credentials to try and automatically create a user and database. If successful,
       the newly created profile uses the new PostgreSQL database instead of SQLite.
+
+      When the `--use-zmq` flag is toggled, the command skips the RabbitMQ auto-detection and
+      directly configures the ZMQ broker. To switch to RabbitMQ later, use `verdi profile
+      configure-rabbitmq`.
 
     Options:
       -p, --profile-name TEXT         Name of the profile. By default, a unique name starting
@@ -343,6 +346,12 @@ Below is a list with all available subcommands.
                                       options. The command attempts to automatically create a
                                       user and database to use for the profile, but this can
                                       fail depending on the configuration of the server.
+      --use-zmq                       When toggled on, the profile uses the ZMQ broker, which
+                                      requires no external services and is started
+                                      automatically with the daemon. When not specified, the
+                                      command automatically tries RabbitMQ first and falls
+                                      back to ZMQ if unavailable. To switch to RabbitMQ later,
+                                      use `verdi profile configure-rabbitmq`.
       --postgres-hostname TEXT        The hostname of the PostgreSQL server.
       --postgres-port INTEGER         The port of the PostgreSQL server.
       --postgres-username TEXT        The username of the PostgreSQL user that is authorized

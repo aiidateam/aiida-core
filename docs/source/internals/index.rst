@@ -7,6 +7,7 @@ Internal architecture
     storage/index
     plugin_system
     engine
+    broker
     rest_api
 
 .. todo::

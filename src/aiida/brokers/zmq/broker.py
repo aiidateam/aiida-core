@@ -158,9 +158,11 @@ class ZmqBroker(Broker):
                     msg = f'Broker did not become ready within {wait_for_broker}s: {self}'
                     raise ConnectionError(msg)
 
+            from aiida.manage.configuration import get_config_option
+
             self._communicator = ZmqCommunicator(
                 router_endpoint=router_endpoint,
-                task_timeout=10,
+                task_timeout=get_config_option('broker.task_timeout'),
             )
             self._communicator.start()
 

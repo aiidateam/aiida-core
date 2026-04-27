@@ -142,6 +142,12 @@ Or when using ``verdi profile setup``:
 
     The ``verdi presto`` command automatically falls back to the ZMQ broker when RabbitMQ is not available on the localhost.
 
+.. tip::
+
+    The ``broker.task_timeout`` configuration option controls how long a caller waits for a response from the broker (default: 10 seconds).
+    This option applies to both the ZMQ and RabbitMQ backends.
+    It can be changed with ``verdi config set broker.task_timeout <seconds>``.
+
 .. _installation:guide-complete:rabbitmq:
 
 RabbitMQ

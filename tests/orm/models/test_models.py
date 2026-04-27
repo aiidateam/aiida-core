@@ -3,10 +3,12 @@
 import datetime
 import enum
 import io
+import typing as t
 
 import numpy as np
 import pytest
 from plumpy import get_object_loader
+from typing_extensions import NotRequired
 
 from aiida import orm
 from aiida.common.datastructures import StashMode
@@ -77,61 +79,70 @@ class JsonableClass:
         return cls(dictionary['data'])
 
 
+class RequiredEntityArguments(t.TypedDict):
+    cls: type[orm.Entity]
+    kwargs: dict
+
+
+class RequiredNodeArguments(t.TypedDict):
+    cls: type[orm.Node]
+    write_model_payload: dict
+    constructor_model_payload: NotRequired[dict]
+
+
 @pytest.fixture
 def required_arguments(request, default_user, aiida_localhost, tmp_path):
     if request.param is orm.AuthInfo:
         random_email = f'user{orm.User.collection.count() + 1}@aiida'
-        return (
-            orm.AuthInfo,
-            {
+        return {
+            'cls': orm.AuthInfo,
+            'kwargs': {
                 'user': orm.User(email=random_email).store(),
                 'computer': aiida_localhost,
             },
-            {
-                'user': lambda user: user.pk,
-                'computer': lambda computer: computer.pk,
-            },
-        )
+        }
     if request.param is orm.Comment:
-        return (
-            orm.Comment,
-            {'user': default_user, 'node': orm.Data().store(), 'content': ''},
-            {
-                'user': lambda user: user.pk,
-                'node': lambda node: node.pk,
+        return {
+            'cls': orm.Comment,
+            'kwargs': {
+                'user': default_user,
+                'node': orm.Data().store(),
+                'content': '',
             },
-        )
+        }
     if request.param is orm.Computer:
-        return (
-            orm.Computer,
-            {
+        return {
+            'cls': orm.Computer,
+            'kwargs': {
                 'label': 'test_localhost',
                 'hostname': 'test_localhost',
                 'transport_type': 'core.local',
                 'scheduler_type': 'core.direct',
             },
-            {},
-        )
+        }
     if request.param is orm.Group:
-        return (
-            orm.Group,
-            {'label': 'group'},
-            {'user': lambda user: user.pk},
-        )
+        return {
+            'cls': orm.Group,
+            'kwargs': {
+                'label': 'group',
+            },
+        }
     if request.param is orm.Log:
-        return (
-            orm.Log,
-            {
+        return {
+            'cls': orm.Log,
+            'kwargs': {
                 'time': datetime.datetime.now(),
                 'loggername': 'logger',
                 'levelname': 'REPORT',
                 'message': 'message',
                 'node': orm.Data().store(),
             },
-            {'node': lambda node: node.pk},
-        )
+        }
     if request.param is orm.User:
-        return orm.User, {'email': 'user42@aiida'}, {}
+        return {
+            'cls': orm.User,
+            'kwargs': {'email': 'user42@aiida'},
+        }
     if request.param is orm.ArrayData:
         buffered_array = io.BytesIO()
         np.save(buffered_array, np.array([1, 0, 0]), allow_pickle=False)
@@ -141,22 +152,24 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             assert node.base.attributes.all == {'array|test_array': [3]}
             assert node.get_array('test_array').tolist() == [1, 0, 0]
 
-        return orm.ArrayData, {
-            'attributes-based': {
+        return {
+            'cls': orm.ArrayData,
+            'write_model_payload': {
                 'attributes': {'array|test_array': [3]},
                 'files': {'test_array.npy': lambda: buffered_array},
                 'assert_derived': assert_derived_array_properties,
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'args': {'arrays': {'test_array': [1, 0, 0]}},
             },
         }
     if request.param is orm.Bool:
-        return orm.Bool, {
-            'attributes-based': {
+        return {
+            'cls': orm.Bool,
+            'write_model_payload': {
                 'attributes': {'value': True},
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'args': {'value': True},
             },
         }
@@ -167,8 +180,9 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             assert node.md5 == '771ee48ec137aba8a57328a1df42fcf4'
             assert node.get_content(mode='r') == 'data_test\nloop_\n_atom_site_label\nH1\n'
 
-        return orm.CifData, {
-            'attributes-based': {
+        return {
+            'cls': orm.CifData,
+            'write_model_payload': {
                 'attributes': {
                     'scan_type': 'standard',
                     'parse_policy': 'eager',
@@ -176,7 +190,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
                 'files': {'structure.cif': lambda: io.StringIO('data_test\nloop_\n_atom_site_label\nH1\n')},
                 'assert_derived': assert_derived_cif_properties,
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'args': {
                     'filename': 'structure.cif',
                     'content': 'data_test\nloop_\n_atom_site_label\nH1\n',
@@ -184,8 +198,9 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             },
         }
     if request.param is orm.ContainerizedCode:
-        return orm.ContainerizedCode, {
-            'attributes-based': {
+        return {
+            'cls': orm.ContainerizedCode,
+            'write_model_payload': {
                 'label': 'containerized_echo',
                 'computer': aiida_localhost.pk,
                 'attributes': {
@@ -194,7 +209,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
                     'engine_command': 'docker run {image_name}',
                 },
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'label': 'containerized_echo',
                 'args': {
                     'computer': aiida_localhost.label,
@@ -205,44 +220,48 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             },
         }
     if request.param is orm.Data:
-        return orm.Data, {
-            'attributes-based': {
+        return {
+            'cls': orm.Data,
+            'write_model_payload': {
                 'attributes': {
                     'source': {'uri': 'http://127.0.0.1'},
                 },
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'args': {'source': {'uri': 'http://127.0.0.1'}},
             },
         }
     if request.param is orm.Dict:
-        return orm.Dict, {
-            'attributes-based': {
+        return {
+            'cls': orm.Dict,
+            'write_model_payload': {
                 'attributes': {'a': 1, 'b': 2},
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'args': {'value': {'a': 1, 'b': 2}},
             },
         }
     if request.param is orm.EnumData:
-        return orm.EnumData, {
-            'attributes-based': {
+        return {
+            'cls': orm.EnumData,
+            'write_model_payload': {
                 'attributes': {
                     'name': 'OPTION_A',
                     'value': 'a',
                     'identifier': get_object_loader().identify_object(DummyEnum),
                 },
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'args': {'member': DummyEnum.OPTION_A},
             },
         }
     if request.param is orm.Float:
-        return orm.Float, {
-            'attributes-based': {
+        return {
+            'cls': orm.Float,
+            'write_model_payload': {
                 'attributes': {'value': 1.0},
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'args': {'value': 1.0},
             },
         }
@@ -254,8 +273,9 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             assert node.get_object_content('binary_file', mode='rb') == b'byte content'
             assert node.get_object_content('text_file', mode='r') == 'text content'
 
-        return orm.FolderData, {
-            'attributes-based': {
+        return {
+            'cls': orm.FolderData,
+            'write_model_payload': {
                 'attributes': {},
                 'files': {
                     'binary_file': lambda: io.BytesIO(b'byte content'),
@@ -263,13 +283,14 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
                 },
                 'assert_derived': assert_derived_folder_properties,
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'args': {'tree': str(tmp_path)},
             },
         }
     if request.param is orm.InstalledCode:
-        return orm.InstalledCode, {
-            'attributes-based': {
+        return {
+            'cls': orm.InstalledCode,
+            'write_model_payload': {
                 'label': 'echo',
                 'computer': aiida_localhost.pk,
                 'attributes': {
@@ -277,7 +298,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
                     'filepath_executable': '/bin/echo',
                 },
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'label': 'echo',
                 'args': {
                     'computer': aiida_localhost.label,
@@ -286,51 +307,52 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             },
         }
     if request.param is orm.Int:
-        return orm.Int, {
-            'attributes-based': {
+        return {
+            'cls': orm.Int,
+            'write_model_payload': {
                 'attributes': {'value': 1},
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'args': {'value': 1},
             },
         }
     if request.param is orm.JsonableData:
-        return orm.JsonableData, {
-            'attributes-based': {
+        return {
+            'cls': orm.JsonableData,
+            'write_model_payload': {
                 'attributes': {
                     'data': 1,
                     '@class': 'JsonableClass',
                     '@module': 'tests.orm.models.test_models',
                 },
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'args': {
                     'obj': JsonableClass(1),
                 }
             },
         }
     if request.param is orm.List:
-        return orm.List, {
-            'attributes-based': {
-                'attributes': {
-                    'list': [1, 2, 3],
-                },
+        return {
+            'cls': orm.List,
+            'write_model_payload': {
+                'attributes': {'list': [1, 2, 3]},
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'args': {'list': [1, 2, 3]},
             },
         }
     if request.param is orm.PortableCode:
         (tmp_path / 'code.sh').write_text('#!/bin/bash\necho "$@"\n')
-        return orm.PortableCode, {
-            'attributes-based': {
-                'label': 'portable_code',
+        return {
+            'cls': orm.PortableCode,
+            'write_model_payload': {
                 'attributes': {
                     'filepath_executable': 'code.sh',
                 },
             },
-            'constructor-based': {
-                'label': 'portable_code',
+            'constructor_model_payload': {
+                'label': 'portable_echo',
                 'args': {
                     'filepath_executable': 'code.sh',
                     'filepath_files': str(tmp_path),
@@ -343,13 +365,14 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             assert node.filename == 'file.txt'
             assert node.get_content(mode='r') == 'singlefile-content'
 
-        return orm.SinglefileData, {
-            'attributes-based': {
+        return {
+            'cls': orm.SinglefileData,
+            'write_model_payload': {
                 'attributes': {},
                 'files': {'file.txt': lambda: io.StringIO('singlefile-content')},
                 'assert_derived': assert_derived_singlefile_properties,
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'args': {
                     'filename': 'file.txt',
                     'content': 'some-content',
@@ -357,17 +380,21 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             },
         }
     if request.param is orm.Str:
-        return orm.Str, {
-            'attributes-based': {
+        return {
+            'cls': orm.Str,
+            'write_model_payload': {
                 'attributes': {'value': 'string'},
             },
-            'constructor-based': {
-                'args': {'value': 'string'},
+            'constructor_model_payload': {
+                'args': {
+                    'value': 'string',
+                },
             },
         }
     if request.param is orm.StructureData:
-        return orm.StructureData, {
-            'attributes-based': {
+        return {
+            'cls': orm.StructureData,
+            'write_model_payload': {
                 'attributes': {
                     'cell': [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
                     'pbc1': True,
@@ -377,7 +404,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
                     'kinds': [{'name': 'H', 'mass': 1.0, 'symbols': ('H',), 'weights': (1.0,)}],
                 }
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'args': {
                     'cell': [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
                     'pbc1': True,
@@ -389,23 +416,25 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             },
         }
     if request.param is orm.RemoteData:
-        return orm.RemoteData, {
-            'attributes-based': {
+        return {
+            'cls': orm.RemoteData,
+            'write_model_payload': {
                 'computer': aiida_localhost.pk,
                 'attributes': {
                     'remote_path': '/some/path',
                 },
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'args': {
                     'computer': aiida_localhost,
                     'remote_path': '/some/path',
-                }
+                },
             },
         }
     if request.param is orm.RemoteStashCompressedData:
-        return orm.RemoteStashCompressedData, {
-            'attributes-based': {
+        return {
+            'cls': orm.RemoteStashCompressedData,
+            'write_model_payload': {
                 'attributes': {
                     'stash_mode': StashMode.COMPRESS_TAR,
                     'target_basepath': '/some/path',
@@ -413,7 +442,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
                     'dereference': True,
                 }
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'args': {
                     'stash_mode': StashMode.COMPRESS_TAR,
                     'target_basepath': '/some/path',
@@ -449,8 +478,9 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
             assert node.get_array('y_array_0').tolist() == [4, 5, 6]
             assert node.get_array('y_array_1').tolist() == [7, 8, 9]
 
-        return orm.XyData, {
-            'attributes-based': {
+        return {
+            'cls': orm.XyData,
+            'write_model_payload': {
                 'attributes': {
                     'x_name': 'test_x',
                     'x_units': 'm',
@@ -467,7 +497,7 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
                 },
                 'assert_derived': assert_derived_array_properties,
             },
-            'constructor-based': {
+            'constructor_model_payload': {
                 'args': {
                     'x_name': 'test_x',
                     'x_units': 'm',
@@ -492,8 +522,8 @@ def test_minimal_model_idempotency():
     orm_to_test,
     indirect=True,
 )
-def test_model_overrides(required_arguments):
-    cls: type[orm.Entity] = required_arguments[0]
+def test_model_overrides(required_arguments: RequiredEntityArguments):
+    cls = required_arguments['cls']
     name = cls.__name__
 
     assert cls.ReadModel.__qualname__ == f'{name}.ReadModel'
@@ -503,13 +533,83 @@ def test_model_overrides(required_arguments):
     assert cls.WriteModel.model_config.get('title') == f'{name}WriteModel'
 
 
+def _clean_and_sort(dictionary: dict) -> dict:
+    return {
+        key: _clean_and_sort(value) if isinstance(value, dict) else value
+        for key, value in sorted(dictionary.items())
+        if value is not None
+        and key != '_aiida_hash'  # the hash is derived from the node uuid, which is expected to be different
+    }
+
+
+def _check(left, right):
+    if isinstance(left, dict) and isinstance(right, dict):
+        left = _clean_and_sort(left)
+        right = _clean_and_sort(right)
+    assert left == right, f'{left!r}\n{right!r}'
+
+
+def _check_all(serialized: dict, entity: orm.Entity):
+    for key, value in serialized.items():
+        field = getattr(entity, key)
+        if isinstance(field, datetime.datetime):
+            field = field.isoformat()
+        elif field is not None and key in {'user', 'computer', 'node'}:
+            field = field.pk
+        _check(value, field)
+
+
+@pytest.mark.parametrize(
+    'required_arguments',
+    entities_to_test,
+    indirect=True,
+)
+def test_stored_entity_serialization(required_arguments: RequiredEntityArguments):
+    cls = required_arguments['cls']
+    kwargs = required_arguments['kwargs']
+    entity = cls(**kwargs)
+    entity.store()
+    serialized = entity.serialize(mode='json')
+    _check_all(serialized, entity)
+
+
 @pytest.mark.parametrize(
     'required_arguments',
     nodes_to_test,
     indirect=True,
 )
-def test_node_attributes_model_overrides(required_arguments):
-    cls: type[orm.Node] = required_arguments[0]
+def test_stored_node_serialization(required_arguments: RequiredNodeArguments):
+    cls = required_arguments['cls']
+    kwargs = required_arguments['constructor_model_payload']
+    kwargs.update(kwargs.pop('args', {}))
+    node = cls(**kwargs)
+    node.store()
+    serialized = node.serialize(mode='json')
+    _check_all(serialized, node)
+
+
+@pytest.mark.parametrize(
+    'process_generator',
+    [
+        pytest.param('generate_calculation_node_add', id='CalcJobNode'),
+        pytest.param('generate_workchain_multiply_add', id='WorkChainNode'),
+    ],
+)
+def test_process_node_serialization(request, process_generator):
+    generator = request.getfixturevalue(process_generator)
+    node = generator()
+    node.store()
+    serialized = node.serialize(mode='json')
+    _check_all(serialized, node)
+
+
+@pytest.mark.parametrize(
+    'required_arguments',
+    nodes_to_test,
+    indirect=True,
+)
+def test_node_attributes_model_overrides(required_arguments: RequiredNodeArguments):
+    cls = required_arguments['cls']
 
     name = cls.__name__
 
@@ -542,10 +642,9 @@ def _validate_value(value):
     entities_to_test,
     indirect=True,
 )
-def test_roundtrip_entity_from_model(required_arguments):
-    cls: type[orm.Entity] = required_arguments[0]
-    kwargs: dict = required_arguments[1]
-
+def test_roundtrip_entity_from_model(required_arguments: RequiredEntityArguments):
+    cls = required_arguments['cls']
+    kwargs = required_arguments['kwargs']
     entity = cls(**kwargs)
     model = entity.to_model(schema='write')
     assert isinstance(model, cls.WriteModel)
@@ -561,10 +660,9 @@ def test_roundtrip_entity_from_model(required_arguments):
     entities_to_test,
     indirect=True,
 )
-def test_roundtrip_entity_from_serialized(required_arguments):
-    cls: type[orm.Entity] = required_arguments[0]
-    kwargs: dict = required_arguments[1]
-
+def test_roundtrip_entity_from_serialized(required_arguments: RequiredEntityArguments):
+    cls = required_arguments['cls']
+    kwargs = required_arguments['kwargs']
     entity = cls(**kwargs)
     serialized_entity = entity.serialize(schema='write')
     assert set(serialized_entity.keys()) == set(cls.WriteModel.model_fields.keys())
@@ -595,14 +693,12 @@ def _assert_roundtrip_field_values_equal(
     nodes_to_test,
     indirect=True,
 )
-def test_roundtrip_node_from_model_attributes(required_arguments, tmp_path):
-    cls: type[orm.Node] = required_arguments[0]
-    payload: dict = required_arguments[1]
-    attributes_payload: dict = payload['attributes-based']
-    files = attributes_payload.pop('files', {})
-    assert_derived = attributes_payload.pop('assert_derived', lambda _: None)
-
-    model = cls.WriteModel(node_type=cls.class_node_type, **attributes_payload)
+def test_roundtrip_node_from_model_attributes(required_arguments: RequiredNodeArguments, tmp_path):
+    cls = required_arguments['cls']
+    payload = required_arguments['write_model_payload']
+    files = payload.pop('files', {})
+    assert_derived = payload.pop('assert_derived', lambda _: None)
+    model = cls.WriteModel(node_type=cls.class_node_type, **payload)
     new = cls.from_model(model, files=files)
     assert isinstance(new, cls)
     assert_derived(new)
@@ -614,17 +710,16 @@ def test_roundtrip_node_from_model_attributes(required_arguments, tmp_path):
     nodes_to_test,
     indirect=True,
 )
-def test_roundtrip_node_from_model_constructor(required_arguments, tmp_path):
-    cls: type[orm.Node] = required_arguments[0]
-    payload: dict = required_arguments[1]
-    constructor_payload: dict = payload['constructor-based']
+def test_roundtrip_node_from_model_constructor(required_arguments: RequiredNodeArguments, tmp_path):
+    cls = required_arguments['cls']
 
     if not cls.supports_constructor_model:
         with pytest.raises(UnsupportedSchemaError):
             cls.ConstructorModel
         return
 
-    model = cls.ConstructorModel(node_type=cls.class_node_type, **constructor_payload)
+    payload = required_arguments['constructor_model_payload']
+    model = cls.ConstructorModel(node_type=cls.class_node_type, **payload)
     new = cls.from_model(model)
     assert isinstance(new, cls)
     _assert_roundtrip_field_values_equal(cls, model, new, 'constructor', tmp_path)
@@ -635,13 +730,12 @@ def test_roundtrip_node_from_model_constructor(required_arguments, tmp_path):
     nodes_to_test,
     indirect=True,
 )
-def test_roundtrip_node_from_serialized_attributes(required_arguments, tmp_path):
-    cls: type[orm.Node] = required_arguments[0]
-    attributes_payload: dict = required_arguments[1]['attributes-based']
-    files = attributes_payload.pop('files', {})
-    assert_derived = attributes_payload.pop('assert_derived', lambda _: None)
-
-    model = cls.WriteModel(node_type=cls.class_node_type, **attributes_payload)
+def test_roundtrip_node_from_serialized_attributes(required_arguments: RequiredNodeArguments, tmp_path):
+    cls = required_arguments['cls']
+    payload = required_arguments['write_model_payload']
+    files = payload.pop('files', {})
+    assert_derived = payload.pop('assert_derived', lambda _: None)
+    model = cls.WriteModel(node_type=cls.class_node_type, **payload)
     serialized = model.model_dump(exclude_none=True)
     new = cls.from_serialized(serialized, files=files)
     assert isinstance(new, cls)
@@ -654,74 +748,17 @@ def test_roundtrip_node_from_serialized_attributes(required_arguments, tmp_path)
     nodes_to_test,
     indirect=True,
 )
-def test_roundtrip_node_from_serialized_constructor(required_arguments, tmp_path):
-    cls: type[orm.Node] = required_arguments[0]
-    payload: dict = required_arguments[1]
-    constructor_payload: dict = payload['constructor-based']
+def test_roundtrip_node_from_serialized_constructor(required_arguments: RequiredNodeArguments, tmp_path):
+    cls = required_arguments['cls']
 
     if not cls.supports_constructor_model:
         with pytest.raises(UnsupportedSchemaError):
             cls.ConstructorModel
         return
 
-    model = cls.ConstructorModel(node_type=cls.class_node_type, **constructor_payload)
+    payload = required_arguments['constructor_model_payload']
+    model = cls.ConstructorModel(node_type=cls.class_node_type, **payload)
     serialized = model.model_dump(exclude_none=True)
     new = cls.from_serialized(serialized)
     assert isinstance(new, cls)
     _assert_roundtrip_field_values_equal(cls, model, new, 'constructor', tmp_path)
-
-
-def _get_sorted_dict(dictionary: dict) -> dict:
-    return {
-        key: _get_sorted_dict(value) if isinstance(value, dict) else value
-        for key, value in sorted(dictionary.items())
-        if value is not None
-        and key != '_aiida_hash'  # the hash is derived from the node uuid, which is expected to be different
-    }
-
-
-def _check(in1, in2):
-    if isinstance(in1, dict) and isinstance(in2, dict):
-        in1 = _get_sorted_dict(in1)
-        in2 = _get_sorted_dict(in2)
-    assert in1 == in2, f'{in1!r}\n{in2!r}'
-
-
-@pytest.mark.parametrize(
-    'required_arguments',
-    entities_to_test,
-    indirect=True,
-)
-def test_stored_entity_serialization(required_arguments):
-    cls: type[orm.Entity] = required_arguments[0]
-    kwargs: dict = required_arguments[1]
-    serializers: dict = required_arguments[2]
-    entity = cls(**kwargs)
-    entity.store()
-    serialized = entity.serialize(schema='read', mode='json')
-    for key in serialized:
-        field = getattr(entity, key)
-        if isinstance(field, datetime.datetime):
-            field = field.isoformat()
-        if key in serializers:
-            field = serializers[key](field)
-        _check(serialized[key], field)
-
-
-@pytest.mark.parametrize(
-    'required_arguments',
-    nodes_to_test,
-    indirect=True,
-)
-def test_stored_node_serialization(required_arguments):
-    cls: type[orm.Node] = required_arguments[0]
-    payload: dict = required_arguments[1]
-    args = payload['constructor-based']['args']
-    node = cls(**args)
-    node.store()
-    serialized = node.serialize(schema='read', mode='json')
-    _check(serialized['pk'], node.pk)
-    _check(serialized['uuid'], node.uuid)
-    _check(serialized['extras'], node.base.extras.all)
-    _check(serialized['attributes'], node.base.attributes.all)
-    _check(serialized['repository_metadata'], node.base.repository.metadata)

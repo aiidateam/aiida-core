@@ -287,10 +287,10 @@ Timeouts
    * - Constant / option
      - Default
      - Purpose
-   * - ``zmq.task_timeout`` |br| (``verdi config``)
+   * - ``broker.task_timeout`` |br| (``verdi config``)
      - 10s
      - How long a caller waits for a task or RPC response from the broker.
-       Fires a ``TimeoutError`` on the pending Future. Analogous to ``rmq.task_timeout``.
+       Fires a ``TimeoutError`` on the pending Future. Replaces the deprecated ``rmq.task_timeout``.
    * - ``BROKER_READY_TIMEOUT``
      - 10s
      - How long ``get_communicator()`` polls for the broker to write its socket files at startup.
@@ -315,7 +315,7 @@ Timeouts
      - 5s
      - How often the broker service writes its status JSON to disk.
 
-Only ``zmq.task_timeout`` is user-configurable.
+Only ``broker.task_timeout`` is user-configurable.
 All other values are developer-tunable constants in ``defaults.py``.
 
 

@@ -160,6 +160,10 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
     elif option.valid_type == typing.List[str]:
         value = [value]
 
+    # Warn about deprecated option names
+    if option.deprecated_by:
+        echo.echo_warning(f'`{option.name}` is deprecated, use `{option.deprecated_by}` instead.')
+
     # Set the specified option
     try:
         value = config.set_option(option.name, value, scope=scope)

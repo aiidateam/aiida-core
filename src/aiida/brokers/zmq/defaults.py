@@ -9,7 +9,8 @@
 """Default constants for the ZMQ broker.
 
 These are **developer-tunable** defaults, not exposed to end users via
-``verdi config``.
+``verdi config``.  User-facing options live in the config schema
+(e.g. ``broker.task_timeout``).
 """
 
 from __future__ import annotations

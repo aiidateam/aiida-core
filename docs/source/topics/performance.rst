@@ -35,10 +35,10 @@ Services
 For the default setup, AiiDA essentially has three services that influence its performance:
 
 * PostgreSQL (the database in which the provenance graph is stored)
-* RabbitMQ (the message broker that the daemon workers use to communicate)
+* Message broker (RabbitMQ or the built-in ZMQ broker, used by daemon workers to communicate)
 * Filesystem (files are stored by AiiDA in the file repository on a filesytem)
 
-For the simplest installations, the PostgreSQL and RabbitMQ services are typically running on the same machine as AiiDA itself.
+For the simplest installations, PostgreSQL and the message broker are typically running on the same machine as AiiDA itself.
 Although this means that a part of the machine's resources is not available for AiiDA itself and its daemon, the latency for AiiDA to communicate with the services is minimal.
 
 It is possible to configure an AiiDA profile to use services that are running on a different machine and can be reached over a network.
@@ -50,7 +50,7 @@ However, this will typically affect the performance negatively as now each time 
 Benchmarks
 ==========
 
-The :download:`benchmark script <../howto/include/scripts/performance_benchmark_base.py>` :fa:`download` provides a basic way of assessing performance of the workflow engine that involves all components (CPU, file system, postgresql, rabbitmq).
+The :download:`benchmark script <../howto/include/scripts/performance_benchmark_base.py>` :fa:`download` provides a basic way of assessing performance of the workflow engine that involves all components (CPU, file system, postgresql, message broker).
 
 It launches ``ArithmeticAddCalculation``s on the localhost and measures the time until completion.
 Since the workload of the ``ArithmeticAddCalculation`` (summing two numbers) completes instantly, the time per process is a reasonable measure of the overhead incurred from the workflow engine.

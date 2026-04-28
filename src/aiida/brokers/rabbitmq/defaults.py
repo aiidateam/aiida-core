@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import typing as t
+from contextlib import suppress
+
+from aio_pika.connection import make_url
+from aio_pika.robust_connection import RobustConnection
 
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.log import AIIDA_LOGGER
@@ -27,6 +32,31 @@ BROKER_DEFAULTS = AttributeDict(
 )
 
 
+def _probe_rabbitmq_connection(connection_params: dict[str, t.Any]) -> None:
+    """Validate RabbitMQ connection parameters in an isolated event loop."""
+
+    async def connect() -> None:
+        connection = RobustConnection(
+            make_url(
+                host=connection_params['host'],
+                port=connection_params['port'],
+                login=connection_params['username'],
+                password=connection_params['password'],
+                virtualhost=connection_params['virtual_host'],
+                ssl=connection_params['protocol'] == 'amqps',
+            ),
+            loop=asyncio.get_running_loop(),
+        )
+
+        try:
+            await connection.connect()
+        finally:
+            with suppress(Exception):
+                await connection.close()
+
+    asyncio.run(connect())
+
+
 def detect_rabbitmq_config(
     protocol: str | None = None,
     username: str | None = None,
@@ -40,8 +70,6 @@ def detect_rabbitmq_config(
     :raises ConnectionError: If the connection failed with the provided connection parameters
     :returns: The connection parameters if the RabbitMQ server was successfully connected to, or ``None`` otherwise.
     """
-    from kiwipy.rmq.threadcomms import connect
-
     connection_params = {
         'protocol': protocol or os.getenv('AIIDA_BROKER_PROTOCOL', BROKER_DEFAULTS['protocol']),
         'username': username or os.getenv('AIIDA_BROKER_USERNAME', BROKER_DEFAULTS['username']),
@@ -54,9 +82,10 @@ def detect_rabbitmq_config(
     LOGGER.debug(f'Attempting to connect to RabbitMQ with parameters: {connection_params}')
 
     try:
-        connect(connection_params=connection_params)
-    except ConnectionError:
-        raise ConnectionError(f'Failed to connect with following connection parameters: {connection_params}')
+        _probe_rabbitmq_connection(connection_params)
+    except Exception as exception:
+        msg = f'Failed to connect with following connection parameters: {connection_params}'
+        raise ConnectionError(msg) from exception
 
     # The profile configuration expects the keys of the broker config to be prefixed with ``broker_``.
     return {f'broker_{key}': value for key, value in connection_params.items()}

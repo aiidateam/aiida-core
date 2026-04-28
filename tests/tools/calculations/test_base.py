@@ -65,12 +65,14 @@ def test_fallback_calculation_tools_on_loading_error(monkeypatch, generate_calcj
     """Test fallback tools when the calculation tools entry point fails to load."""
     from aiida.plugins import entry_point as entry_point_module
 
+    # Create the node before monkeypatching, otherwise the patch also breaks
+    # ``StorageFactory`` which calls ``load_entry_point`` during node creation.
+    node = generate_calcjob_node(entry_point=f'aiida.calculations:{CALCULATION_ENTRY_POINT_NAME}')
+
     def raise_loading_entry_point_error(*_, **__):
         raise LoadingEntryPointError('broken tools entry point')
 
     monkeypatch.setattr(entry_point_module, 'load_entry_point', raise_loading_entry_point_error)
-
-    node = generate_calcjob_node(entry_point=f'aiida.calculations:{CALCULATION_ENTRY_POINT_NAME}')
 
     assert isinstance(node.tools, CalculationTools)
     assert f'could not load the calculation tools entry point {CALCULATION_ENTRY_POINT_NAME}' in caplog.text

@@ -158,7 +158,7 @@ To view all configuration options set for the current profile:
     logging.paramiko_loglevel              default   WARNING
     logging.plumpy_loglevel                default   WARNING
     logging.sqlalchemy_loglevel            default   WARNING
-    rmq.task_timeout                       default   10
+    broker.task_timeout                    default   10
     runner.poll.interval                   profile   50
     transport.task_maximum_attempts        global    6
     transport.task_retry_initial_interval  default   20

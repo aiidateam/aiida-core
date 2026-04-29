@@ -47,11 +47,11 @@ If none of the lines show a red cross, indicating a problem, the installation wa
 Quick install limitations
 =========================
 
-A setup that is ideal for production work requires the PostgreSQL and RabbitMQ services.
+A setup that is ideal for production work requires the PostgreSQL service and a message broker.
 By default, ``verdi presto`` creates a profile that allows running AiiDA without these:
 
 * **Database**: The PostgreSQL database that is used to store queryable data, is replaced by SQLite.
-* **Broker**: The RabbitMQ message broker that allows communication with and between processes is disabled.
+* **Broker**: The message broker that allows communication with and between processes is either set to the built-in ZMQ broker (automatic fallback) or disabled entirely.
 
 The following matrix shows the possible combinations of the database and broker options and their use cases:
 
@@ -60,32 +60,47 @@ The following matrix shows the possible combinations of the database and broker 
 +======================+====================================================+=============================================================+
 | **No broker**        | Quick start with AiiDA                             | [*not really relevant for any usecase*]                     |
 +----------------------+----------------------------------------------------+-------------------------------------------------------------+
+| **ZMQ broker**       | Getting started, light production                  | Production (no external services required)                  |
++----------------------+----------------------------------------------------+-------------------------------------------------------------+
 | **RabbitMQ**         | Production (low-throughput; beta, has limitations) | Production (maximum performance, ideal for high-throughput) |
 +----------------------+----------------------------------------------------+-------------------------------------------------------------+
 
+.. versionadded:: 2.9
+    The ZMQ broker row was added. Previously, only RabbitMQ and no-broker configurations were available.
+
 The sections below provide details on the use of the PostgreSQL and RabbitMQ services and the limitations when running AiiDA without them.
 
-.. _installation:guide-quick:limitations:rabbitmq:
+.. _installation:guide-quick:limitations:broker:
 
-RabbitMQ
---------
+Message broker
+--------------
 
-Part of AiiDA's functionality requires a `message broker <https://en.wikipedia.org/wiki/Message_broker>`_, with the default implementation using `RabbitMQ <https://www.rabbitmq.com/>`_.
+Part of AiiDA's functionality requires a `message broker <https://en.wikipedia.org/wiki/Message_broker>`_.
 The message broker is used to allow communication with processes and the :ref:`daemon <topics:daemon>` as well as between themselves.
-Since RabbitMQ is a separate service and is not always trivial to install, the quick installation guide allows setting up a profile that does not require it.
-However, as a result the profile:
+AiiDA supports two broker backends:
+
+* **ZMQ broker** (built-in): A lightweight broker that uses `ZeroMQ <https://zeromq.org/>`_ for inter-process communication.
+  It requires no external services and is started automatically with the daemon.
+* **RabbitMQ**: An external `message broker service <https://www.rabbitmq.com/>`_ that must be installed and managed separately.
+
+.. versionadded:: 2.9
+    The built-in ZMQ broker was added as an alternative to RabbitMQ.
+
+.. note::
+    The ``verdi presto`` command automatically checks if RabbitMQ is running on the localhost.
+    If it can successfully connect, it configures the profile with RabbitMQ.
+    Otherwise, it falls back to the built-in ZMQ broker.
+    If you do not want to use a broker at all, use ``verdi presto --no-broker``.
+
+A profile **without any broker** has the following limitations:
 
 * is not suitable for high-throughput workloads (a polling-based mechanism is used rather than an event-based one)
 * cannot run the daemon (no ``verdi daemon start/stop``) and therefore processes cannot be submitted to the daemon (i.e., one can only use ``run()`` instead of ``submit()`` to launch calculations and workflows)
 * cannot play, pause, kill processes
 
-.. note::
-    The ``verdi presto`` command automatically checks if RabbitMQ is running on the localhost.
-    If it can successfully connect, it configures the profile with the message broker and therefore the limitations listed above do not apply.
-
 .. tip::
     A profile created by ``verdi presto`` can easily start using RabbitMQ as the broker at a later stage.
-    Once a RabbitMQ service is available (see :ref:`install RabbitMQ <installation:guide-complete:rabbitmq>` for instruction to install it) and run ``verdi profile configure-rabbitmq`` to configure its use for the profile.
+    Once a RabbitMQ service is available (see :ref:`install RabbitMQ <installation:guide-complete:rabbitmq>` for instructions to install it), run ``verdi profile configure-rabbitmq`` to configure its use for the profile.
 
 .. _installation:guide-quick:limitations:postgresql:
 

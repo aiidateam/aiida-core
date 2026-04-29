@@ -15,7 +15,7 @@ from aiida.orm import Log
 from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_shutdown_worker(manager):
     """Test the ``shutdown_worker`` method."""
     runner = manager.get_runner()

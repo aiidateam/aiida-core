@@ -47,6 +47,11 @@ class Option:
         return self._field.description
 
     @property
+    def deprecated_by(self) -> str | None:
+        """Return the name of the option that replaces this one, or ``None``."""
+        return self._schema.get('deprecated_by')
+
+    @property
     def global_only(self) -> bool:
         from .config import ProfileOptionsSchema
 

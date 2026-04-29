@@ -41,20 +41,23 @@ async def shutdown_worker(runner: Runner) -> None:
 
 
 def start_daemon_worker(foreground: bool = False, profile_name: Union[str, None] = None) -> None:
-    """Start a daemon worker for the currently configured profile.
+    """Start a daemon worker for the given profile or the currently configured profile.
 
     :param foreground: If true, the logging will be configured to write to stdout, otherwise it will be configured to
         write to the daemon log file.
+    :param profile_name: Optional profile name.
     """
+    manager = get_manager()
+    profile = manager.load_profile(profile_name)
 
     daemon_client = get_daemon_client(profile_name)
     configure_logging(with_orm=True, daemon=not foreground, daemon_log_file=daemon_client.daemon_log_file)
 
-    LOGGER.debug(f'sys.executable: {sys.executable}')
-    LOGGER.debug(f'sys.path: {sys.path}')
+    LOGGER.debug('Loaded profile %s', profile.name)
+    LOGGER.debug('sys.executable: %s', sys.executable)
+    LOGGER.debug('sys.path: %s', sys.path)
 
     try:
-        manager = get_manager()
         runner = manager.create_daemon_runner()
         manager.set_runner(runner)
     except Exception:

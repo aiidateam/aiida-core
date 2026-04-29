@@ -10,7 +10,7 @@ def add_calcfunction(data):
     return orm.Int(data.value + 1)
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_disconnect():
     """Test the communicator disconnect.
 

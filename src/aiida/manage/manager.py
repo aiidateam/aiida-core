@@ -267,12 +267,27 @@ class Manager:
         2. The current configuration, if loaded and the option specified
         3. The default value for the option
 
+        If the option carries a ``deprecated_by`` marker, a warning is emitted
+        and the replacement option's value is returned instead.
+
         :param option_name: the name of the option to return
         :return: the value of the option
         :raises `aiida.common.exceptions.ConfigurationError`: if the option is not found
         """
         from aiida.common.exceptions import ConfigurationError
         from aiida.manage.configuration.options import get_option
+
+        option = get_option(option_name)
+
+        if option.deprecated_by is not None:
+            import warnings
+
+            warnings.warn(
+                f'`{option_name}` is deprecated, use `{option.deprecated_by}` instead.',
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            option_name = option.deprecated_by
 
         # try the profile
         if self._profile and option_name in self._profile.options:
@@ -354,6 +369,8 @@ class Manager:
             # Backwards compatibility. Before adding broker entry points, profiles used to define ``rabbitmq``.
             if entry_point == 'rabbitmq':
                 entry_point = 'core.rabbitmq'
+            elif entry_point == 'zmq':
+                entry_point = 'core.zmq'
 
             broker_cls = BrokerFactory(entry_point)
             self._broker = broker_cls(self._profile)

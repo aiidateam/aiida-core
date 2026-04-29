@@ -69,6 +69,7 @@ requires-python = '>=3.10'
 
 [project.entry-points.'aiida.brokers']
 'core.rabbitmq' = 'aiida.brokers.rabbitmq.broker:RabbitmqBroker'
+'core.zmq' = 'aiida.brokers.zmq.broker:ZmqBroker'
 
 [project.entry-points.'aiida.calculations']
 'core.arithmetic.add' = 'aiida.calculations.arithmetic.add:ArithmeticAddCalculation'
@@ -437,9 +438,10 @@ filterwarnings = [
 ]
 markers = [
   'nightly: long running tests that should rarely be affected and so only run nightly',
-  'requires_rmq: requires a connection (on port 5672) to RabbitMQ',
+  'requires_rmq: requires RabbitMQ specifically (not compatible with ZMQ broker)',
+  'requires_broker: requires a message broker (RabbitMQ or ZMQ)',
   'requires_psql: requires a connection to PostgreSQL DB',
-  'presto: automatic marker meaning "not requires_rmq and not requires_psql"',
+  'presto: automatic marker for tests needing no external services (not requires_rmq, not requires_psql)',
   'sphinx: set parameters for the sphinx `app` fixture'
 ]
 minversion = '7.0'

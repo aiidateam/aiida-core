@@ -115,7 +115,14 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
     transport__task_maximum_attempts: int = Field(
         5, description='Maximum number of transport task attempts before a Process is Paused.'
     )
-    rmq__task_timeout: int = Field(10, description='Timeout in seconds for communications with RabbitMQ.')
+    broker__task_timeout: int = Field(
+        10, description='Timeout in seconds for task/RPC communications with the message broker.'
+    )
+    rmq__task_timeout: int = Field(
+        10,
+        description='Timeout in seconds for communications with RabbitMQ.',
+        json_schema_extra={'deprecated_by': 'broker.task_timeout'},
+    )
     storage__sandbox: Optional[str] = Field(
         None, description='Absolute path to the directory to store sandbox folders.'
     )
@@ -572,10 +579,59 @@ class Config:
 
         :param delete_storage: Whether to delete the storage with all its data or not.
         """
+        from aiida.engine.daemon.client import (
+            DaemonException,
+            DaemonNotRunningException,
+            DaemonStalePidException,
+            DaemonTimeoutException,
+            get_daemon_client,
+        )
         from aiida.plugins import StorageFactory
 
         profile = self.get_profile(name)
         is_default_profile: bool = profile.name == self.default_profile_name
+
+        if profile.process_control_backend is not None:
+            client = get_daemon_client(profile.name)
+            try:
+                client.stop_daemon(wait=True, timeout=5)
+                LOGGER.report('Daemon for profile `%s` stopped.', profile.name)
+            except DaemonTimeoutException:
+                daemon_pid = client.get_daemon_pid()
+                if daemon_pid is None:
+                    LOGGER.warning(
+                        'Timed out while contacting the daemon for profile `%s`. The daemon may still be running.',
+                        profile.name,
+                    )
+                else:
+                    LOGGER.warning(
+                        'Timed out while contacting the daemon for profile `%s`. '
+                        'The daemon with PID `%s` may still be running.',
+                        profile.name,
+                        daemon_pid,
+                    )
+            except DaemonNotRunningException:
+                pass
+            except DaemonStalePidException as exception:
+                LOGGER.debug('Stale daemon PID file detected for profile `%s`: %s', profile.name, exception)
+            except DaemonException as exception:
+                daemon_pid = client.get_daemon_pid()
+                if daemon_pid is None:
+                    LOGGER.warning(
+                        'Failed to stop the daemon for profile `%s`: %s. ' 'The daemon may still be running.',
+                        profile.name,
+                        exception,
+                    )
+                else:
+                    LOGGER.warning(
+                        'Failed to stop the daemon for profile `%s`: %s. '
+                        'The daemon with PID `%s` may still be running.',
+                        profile.name,
+                        exception,
+                        daemon_pid,
+                    )
+        else:
+            LOGGER.debug('Profile `%s` has no broker configured, skipping daemon shutdown.', profile.name)
         if delete_storage:
             storage_cls = StorageFactory(profile.storage_backend)
             if profile.storage_backend == 'core.sqlite_zip':

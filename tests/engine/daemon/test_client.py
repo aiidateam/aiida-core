@@ -20,7 +20,7 @@ from aiida.engine.daemon.client import (
     get_daemon_client,
 )
 
-pytestmark = pytest.mark.requires_rmq
+pytestmark = pytest.mark.requires_broker
 
 
 def test_ipc_socket_file_length_limit():
@@ -41,6 +41,48 @@ def test_ipc_socket_file_length_limit():
     assert len(controller_endpoint) <= zmq.IPC_PATH_MAX_LEN
     assert len(pubsub_endpoint) <= zmq.IPC_PATH_MAX_LEN
     assert len(stats_endpoint) <= zmq.IPC_PATH_MAX_LEN
+
+
+def test_get_daemon_client_non_default_profile(profile_factory, empty_config):
+    """Test that ``get_daemon_client`` returns a client for the requested profile, not the default."""
+    profile_default = profile_factory('default-profile')
+    profile_other = profile_factory('other-profile')
+    empty_config.add_profile(profile_default)
+    empty_config.add_profile(profile_other)
+    empty_config.set_default_profile('default-profile', overwrite=True).store()
+
+    client = get_daemon_client('other-profile')
+    assert client.profile.name == 'other-profile'
+
+
+def test_get_daemon_client_does_not_switch_profile(empty_config, profile_factory):
+    """Test that ``get_daemon_client`` does not switch the loaded profile."""
+    from aiida.manage import get_manager
+
+    profile_default = profile_factory(
+        'default',
+        storage_backend='core.sqlite_dos',
+        process_control_backend='rabbitmq',
+        repository_dirpath=empty_config.dirpath,
+    )
+    profile_other = profile_factory(
+        'other',
+        storage_backend='core.sqlite_dos',
+        process_control_backend='rabbitmq',
+        repository_dirpath=empty_config.dirpath,
+    )
+
+    empty_config.add_profile(profile_default)
+    empty_config.add_profile(profile_other)
+    empty_config.set_default_profile(profile_default.name, overwrite=True)
+    empty_config.store()
+
+    manager = get_manager()
+    manager.load_profile(profile_other.name, allow_switch=True)
+
+    assert manager.get_profile().name == profile_other.name
+    assert get_daemon_client(profile_default.name).profile.name == profile_default.name
+    assert manager.get_profile().name == profile_other.name
 
 
 def test_get_status_daemon_not_running(stopped_daemon_client):

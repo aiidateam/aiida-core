@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import functools
+import sys
 import typing as t
+import warnings
 from collections.abc import Iterator
 
 from aiida.brokers.broker import Broker
@@ -49,10 +51,9 @@ class RabbitmqBroker(Broker):
 
     def __del__(self) -> None:
         if self._communicator is not None:
-            import warnings
-
             warnings.warn(f'RabbitmqBroker was not closed explicitly: {self!r}', ResourceWarning, stacklevel=1)
-            self.close()
+            if not sys.is_finalizing():
+                self.close()
 
     def iterate_tasks(self) -> Iterator[t.Any]:
         """Return an iterator over the tasks in the launch queue."""
@@ -81,7 +82,7 @@ class RabbitmqBroker(Broker):
             task_exchange=get_task_exchange_name(self._prefix),
             task_queue=get_launch_queue_name(self._prefix),
             task_prefetch_count=get_config_option('daemon.worker_process_slots'),
-            async_task_timeout=get_config_option('rmq.task_timeout'),
+            async_task_timeout=get_config_option('broker.task_timeout'),
             # This is needed because the verdi commands will call this function and when called in unit tests the
             # testing_mode cannot be set.
             testing_mode=self._profile.is_test_profile,

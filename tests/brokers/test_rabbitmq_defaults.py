@@ -67,6 +67,7 @@ def test_detect_rabbitmq_config_failed_probe_does_not_emit_cleanup_warning():
     result = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, check=False)
 
     assert result.returncode == 0, result.stderr
+    assert 'error when creating transport' not in result.stderr
     assert 'Exception ignored while calling deallocator' not in result.stderr
     assert "coroutine 'RobustConnection.close' was never awaited" not in result.stderr
 

@@ -102,6 +102,29 @@ def test_submit_no_broker(arithmetic_add_builder, monkeypatch, manager):
         launch.submit(arithmetic_add_builder)
 
 
+def test_submit_without_daemon(aiida_config_tmp, aiida_profile_factory, config_sqlite_dos):
+    """Test ``submit`` raises a meaningful error if the daemon is not running.
+
+    A ZMQ profile is used here because the daemon check is specific to the ZMQ broker.
+    """
+    from aiida.manage import get_manager
+
+    with aiida_profile_factory(
+        aiida_config_tmp,
+        storage_backend='core.sqlite_dos',
+        storage_config=config_sqlite_dos(),
+        broker_backend='core.zmq',
+        broker_config={},
+    ):
+        assert not get_manager().get_daemon_client().is_daemon_running
+
+        with pytest.raises(
+            exceptions.InvalidOperation,
+            match=r'Cannot submit because the daemon and thus the ZMQ broker is not running\..*',
+        ):
+            launch.submit(AddWorkChain, term_a=orm.Int(1), term_b=orm.Int(2))
+
+
 def test_await_processes_invalid():
     """Test :func:`aiida.engine.launch.await_processes` for invalid inputs."""
     with pytest.raises(TypeError):

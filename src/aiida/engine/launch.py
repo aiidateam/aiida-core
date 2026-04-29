@@ -112,7 +112,19 @@ def submit(
     if is_process_scoped() and not isinstance(Process.current(), FunctionProcess):
         raise InvalidOperation('Cannot use top-level `submit` from within another process, use `self.submit` instead')
 
-    runner = manager.get_manager().get_runner()
+    current_manager = manager.get_manager()
+    profile = current_manager.get_profile()
+
+    if profile is not None and profile.process_control_backend == 'core.zmq':
+        daemon_client = current_manager.get_daemon_client()
+        if not daemon_client.is_daemon_running:
+            msg = (
+                'Cannot submit because the daemon and thus the ZMQ broker is not running. '
+                'Start the daemon with `verdi daemon start` and try again.'
+            )
+            raise InvalidOperation(msg)
+
+    runner = current_manager.get_runner()
 
     if runner.controller is None:
         raise InvalidOperation(

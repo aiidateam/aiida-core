@@ -441,7 +441,7 @@ def test_run_launchers():
     assert isinstance(node, orm.CalcFunctionNode)
 
 
-@pytest.mark.requires_broker
+@pytest.mark.requires_rmq
 def test_submit_launchers():
     """Verify that submit to daemon works."""
     # Process function can be submitted and will be run by a daemon worker as long as the function is importable

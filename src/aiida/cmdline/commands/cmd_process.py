@@ -506,6 +506,65 @@ def process_watch(broker, processes, most_recent_node):
         raise
 
 
+def _start_temporary_zmq_broker(broker, timeout: float = 10.0):
+    """Start a temporary ZMQ broker service subprocess for ``verdi process repair``.
+
+    The ZMQ broker normally runs inside the daemon, but ``verdi process repair``
+    requires the daemon to be stopped.  This starts a short-lived broker so the
+    communicator can submit revival tasks.
+    """
+    import subprocess
+    import sys
+    import time
+
+    if broker.is_running:
+        return
+
+    broker.base_path.mkdir(parents=True, exist_ok=True)
+    subprocess.Popen(
+        [sys.executable, '-m', 'aiida.brokers.zmq.service', '--base-path', str(broker.base_path)],
+        start_new_session=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        stdin=subprocess.DEVNULL,
+    )
+
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        if broker.is_running:
+            return
+        time.sleep(0.1)
+
+    echo.echo_warning(f'ZMQ broker did not start within {timeout}s')
+
+
+def _stop_temporary_zmq_broker(broker, timeout: float = 5.0):
+    """Stop a temporary ZMQ broker service subprocess."""
+    import os
+    import signal
+    import time
+
+    pid = broker.get_service_pid()
+    if pid is None or not broker.is_running:
+        broker._cleanup_stale_service_files()
+        return
+
+    try:
+        os.kill(pid, signal.SIGINT)
+    except OSError:
+        broker._cleanup_stale_service_files()
+        return
+
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        if not broker.is_running:
+            broker._cleanup_stale_service_files()
+            return
+        time.sleep(0.1)
+
+    broker._cleanup_stale_service_files()
+
+
 @verdi_process.command('repair')
 @options.DRY_RUN()
 @options.FORCE(help='Do not ask for confirmation when terminating database connections.')
@@ -518,9 +577,9 @@ def process_repair(manager, broker, dry_run, force):
     N.B.: This command requires the daemon to be stopped.
 
     This command queries the database to find all "active" processes, meaning those that haven't yet reached a terminal
-    state, and cross-references them with the active process tasks in the process queue of RabbitMQ. Any active process
-    that does not have a corresponding process task can be considered a zombie, as it will never be picked up by a
-    daemon worker to complete it and will effectively be "stuck". Any process task that does not correspond to an active
+    state, and cross-references them with the active process tasks in the broker's task queue. Any active process that
+    does not have a corresponding process task can be considered a zombie, as it will never be picked up by a daemon
+    worker to complete it and will effectively be "stuck". Any process task that does not correspond to an active
     process is useless and should be discarded. Finally, duplicate process tasks are also problematic and are discarded.
     """
     from aiida.engine.processes.control import get_active_processes, get_process_tasks, iterate_process_tasks
@@ -579,10 +638,10 @@ def process_repair(manager, broker, dry_run, force):
         echo.echo(set_active_processes.difference(set_process_tasks))
 
     if not state_inconsistent:
-        echo.echo_success('No inconsistencies detected between database and RabbitMQ.')
+        echo.echo_success('No inconsistencies detected between database and broker.')
         return
 
-    echo.echo_warning('Inconsistencies detected between database and RabbitMQ.')
+    echo.echo_warning('Inconsistencies detected between database and broker.')
 
     if dry_run:
         echo.echo_critical('This was a dry-run, no changes will be made.')
@@ -600,11 +659,23 @@ def process_repair(manager, broker, dry_run, force):
             echo.echo_report(f'Acknowledged task `{pid}`')
 
     # Revive zombie processes that no longer have a process task
-    process_controller = manager.get_process_controller()
-    for pid in set_active_processes:
-        if pid not in set_process_tasks:
-            process_controller.continue_process(pid)
-            echo.echo_report(f'Revived process `{pid}`')
+    zombies = set_active_processes.difference(set_process_tasks)
+    if zombies:
+        from aiida.brokers.zmq.broker import ZmqBroker
+
+        # For ZMQ, the broker only runs inside the daemon, which must be stopped for repair.
+        # Start a temporary broker process so the communicator can submit revival tasks.
+        if isinstance(broker, ZmqBroker):
+            _start_temporary_zmq_broker(broker)
+
+        try:
+            process_controller = manager.get_process_controller()
+            for pid in zombies:
+                process_controller.continue_process(pid)
+                echo.echo_report(f'Revived process `{pid}`')
+        finally:
+            if isinstance(broker, ZmqBroker):
+                _stop_temporary_zmq_broker(broker)
 
 
 @verdi_process.command('dump')

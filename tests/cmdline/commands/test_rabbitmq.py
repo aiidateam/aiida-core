@@ -60,7 +60,7 @@ def test_tasks_analyze_consistent(monkeypatch, run_cli_command):
     monkeypatch.setattr(control, 'get_process_tasks', lambda *args: [1, 2, 3])
 
     result = run_cli_command(cmd_rabbitmq.cmd_tasks_analyze, use_subprocess=False)
-    assert 'No inconsistencies detected between database and RabbitMQ.' in result.output
+    assert 'No inconsistencies detected between database and broker.' in result.output
 
 
 @pytest.mark.usefixtures('stopped_daemon_client')

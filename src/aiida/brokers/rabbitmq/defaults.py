@@ -8,9 +8,6 @@ import os
 import typing as t
 from contextlib import contextmanager, suppress
 
-from aio_pika.connection import make_url
-from aio_pika.robust_connection import RobustConnection
-
 from aiida.common.extendeddicts import AttributeDict
 from aiida.common.log import AIIDA_LOGGER
 
@@ -50,6 +47,8 @@ def _suppress_rabbitmq_probe_logging() -> t.Iterator[None]:
 
 def _probe_rabbitmq_connection(connection_params: dict[str, t.Any]) -> None:
     """Validate RabbitMQ connection parameters in an isolated event loop."""
+    from aio_pika.connection import make_url
+    from aio_pika.robust_connection import RobustConnection
 
     async def connect() -> None:
         connection = RobustConnection(

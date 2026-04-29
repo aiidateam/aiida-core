@@ -112,6 +112,13 @@ def submit(
     if is_process_scoped() and not isinstance(Process.current(), FunctionProcess):
         raise InvalidOperation('Cannot use top-level `submit` from within another process, use `self.submit` instead')
 
+    # If a dry run is requested, simply forward to `run`, because it is not compatible with `submit`. We choose for this
+    # instead of raising, because in this way the user does not have to change the launcher when testing. The same goes
+    # for if `remote_folder` is present in the inputs, which means we are importing an already completed calculation.
+    if inputs.get('metadata', {}).get('dry_run', False) or 'remote_folder' in inputs:
+        _, node = run_get_node(process, inputs)
+        return node
+
     current_manager = manager.get_manager()
     profile = current_manager.get_profile()
 
@@ -138,13 +145,6 @@ def submit(
     assert runner.persister is not None, 'runner does not have a persister'
 
     process_inited = instantiate_process(runner, process, **inputs)
-
-    # If a dry run is requested, simply forward to `run`, because it is not compatible with `submit`. We choose for this
-    # instead of raising, because in this way the user does not have to change the launcher when testing. The same goes
-    # for if `remote_folder` is present in the inputs, which means we are importing an already completed calculation.
-    if process_inited.metadata.get('dry_run', False) or 'remote_folder' in inputs:
-        _, node = run_get_node(process_inited)
-        return node
 
     if not process_inited.metadata.store_provenance:
         raise InvalidOperation('cannot submit a process with `store_provenance=False`')

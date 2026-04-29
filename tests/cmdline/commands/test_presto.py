@@ -1,6 +1,7 @@
 """Tests for ``verdi presto``."""
 
 import textwrap
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -8,6 +9,16 @@ from aiida.cmdline.commands.cmd_presto import get_default_presto_profile_name, v
 from aiida.manage.configuration import profile_context
 from aiida.manage.configuration.config import Config
 from aiida.orm import Computer
+
+
+@pytest.fixture()
+def mock_daemon_client(monkeypatch):
+    """Mock the daemon client so the daemon is not actually started during tests."""
+    from aiida.engine.daemon import client as daemon_client_mod
+
+    mock_client = MagicMock()
+    monkeypatch.setattr(daemon_client_mod, 'get_daemon_client', lambda *args, **kwargs: mock_client)
+    return mock_client
 
 
 @pytest.mark.parametrize(
@@ -31,7 +42,7 @@ def test_get_default_presto_profile_name(monkeypatch, profile_names, expected):
 
 
 @pytest.mark.usefixtures('empty_config')
-def test_presto_without_rmq(pytestconfig, run_cli_command, monkeypatch):
+def test_presto_without_rmq(pytestconfig, run_cli_command, monkeypatch, mock_daemon_client):
     """Test the ``verdi presto`` without RabbitMQ falls back to ZMQ."""
     from aiida.brokers.rabbitmq import defaults
 
@@ -53,7 +64,7 @@ def test_presto_without_rmq(pytestconfig, run_cli_command, monkeypatch):
 
 
 @pytest.mark.usefixtures('empty_config')
-def test_presto(run_cli_command):
+def test_presto(run_cli_command, mock_daemon_client):
     """Test that ``verdi presto`` configures a broker (RabbitMQ if available, otherwise ZMQ)."""
     result = run_cli_command(verdi_presto, ['--non-interactive'])
     assert 'Created new profile `presto`.' in result.output
@@ -68,7 +79,7 @@ def test_presto(run_cli_command):
 
 @pytest.mark.requires_psql
 @pytest.mark.usefixtures('empty_config')
-def test_presto_use_postgres(run_cli_command, manager):
+def test_presto_use_postgres(run_cli_command, manager, mock_daemon_client):
     """Test the ``verdi presto`` with the ``--use-postgres`` flag."""
     result = run_cli_command(verdi_presto, ['--non-interactive', '--use-postgres'])
     assert 'Created new profile `presto`.' in result.output
@@ -90,11 +101,37 @@ def test_presto_use_postgres_fail(run_cli_command):
 
 
 @pytest.mark.usefixtures('empty_config')
-def test_presto_overdose(run_cli_command, config_with_profile_factory):
+def test_presto_overdose(run_cli_command, config_with_profile_factory, mock_daemon_client):
     """Test that ``verdi presto`` still works for users that have over 10 presto profiles."""
     config_with_profile_factory(name='presto-10')
     result = run_cli_command(verdi_presto)
     assert 'Created new profile `presto-11`.' in result.output
+
+
+@pytest.mark.usefixtures('empty_config')
+def test_presto_starts_daemon(run_cli_command, mock_daemon_client):
+    """Test that ``verdi presto`` auto-starts the daemon."""
+    result = run_cli_command(verdi_presto, ['--non-interactive'])
+    assert 'Starting the daemon' in result.output
+    mock_daemon_client.start_daemon.assert_called_once()
+
+
+@pytest.mark.usefixtures('empty_config')
+def test_presto_daemon_start_failure(run_cli_command, monkeypatch):
+    """Test that ``verdi presto`` handles daemon start failure gracefully."""
+    from aiida.engine.daemon import client as daemon_client_mod
+
+    def mock_get_daemon_client(*args, **kwargs):
+        mock = MagicMock()
+        mock.start_daemon.side_effect = RuntimeError('Could not start daemon')
+        return mock
+
+    monkeypatch.setattr(daemon_client_mod, 'get_daemon_client', mock_get_daemon_client)
+
+    result = run_cli_command(verdi_presto, ['--non-interactive'])
+    assert 'Created new profile' in result.output
+    assert 'FAILED' in result.output
+    assert 'Could not start daemon' in result.output
 
 
 @pytest.mark.requires_psql

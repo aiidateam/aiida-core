@@ -14,6 +14,7 @@ from aiida import __version__, get_profile
 from aiida.cmdline.commands import cmd_status
 from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.engine.daemon.client import DaemonClient
 from aiida.storage.psql_dos import migrator
 
 
@@ -130,3 +131,120 @@ def test_sqlite_version(run_cli_command, monkeypatch):
         monkeypatch.setattr('aiida.storage.sqlite_zip.backend.validate_sqlite_version', mock_)
         result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
         assert mock_.call_count == 0
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_version_mismatch_warning(run_cli_command, monkeypatch, tmp_path):
+    """Test that ``verdi status`` warns about version mismatches."""
+    daemon_path = tmp_path / 'old-checkout'
+    current_path = tmp_path / 'new-checkout'
+
+    monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
+    monkeypatch.setattr(
+        DaemonClient,
+        'get_daemon_package_snapshot',
+        lambda self: {'aiida-core': {'version': '2.8.0.post0', 'editable_path': str(daemon_path)}},
+    )
+    monkeypatch.setattr(
+        DaemonClient,
+        'get_package_version_snapshot',
+        staticmethod(lambda: {'aiida-core': {'version': '2.8.0.post0', 'editable_path': str(current_path)}}),
+    )
+
+    result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
+    assert 'different package versions' in result.output
+    assert 'Changed packages:' in result.output
+    assert 'aiida-core' in result.output
+    assert result.output.count('daemon:') == 1
+    assert str(daemon_path) in result.output
+    assert str(current_path) in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+@pytest.mark.parametrize(
+    ('daemon_versions', 'current_versions', 'expected_section', 'expected_change'),
+    [
+        (
+            {'aiida-core': {'version': '2.8.0.post0'}},
+            {'aiida-core': {'version': '2.8.0.post0'}, 'aiida-plugin': {'version': '1.2.3'}},
+            'Added packages:',
+            'aiida-plugin (1.2.3)',
+        ),
+        (
+            {'aiida-core': {'version': '2.8.0.post0'}, 'aiida-plugin': {'version': '1.2.3'}},
+            {'aiida-core': {'version': '2.8.0.post0'}},
+            'Removed packages:',
+            'aiida-plugin (1.2.3)',
+        ),
+    ],
+)
+def test_version_mismatch_warning_for_added_or_removed_plugin(
+    run_cli_command, monkeypatch, daemon_versions, current_versions, expected_section, expected_change
+):
+    """Test that ``verdi status`` warns when plugins were added or removed since daemon startup."""
+    monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
+    monkeypatch.setattr(DaemonClient, 'get_daemon_package_snapshot', lambda self: daemon_versions)
+    monkeypatch.setattr(DaemonClient, 'get_package_version_snapshot', staticmethod(lambda: current_versions))
+
+    result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
+    assert 'different package versions' in result.output
+    assert expected_section in result.output
+    assert expected_change in result.output
+    assert result.output.count('daemon:') == 1
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+@pytest.mark.parametrize(
+    ('use_editable_path',),
+    [(True,), (False,)],
+)
+def test_no_warning_when_versions_match(run_cli_command, monkeypatch, tmp_path, use_editable_path):
+    """Test that ``verdi status`` shows no warning when versions match."""
+    pkg_info: dict = {'version': '2.8.0.post0'}
+    if use_editable_path:
+        pkg_info['editable_path'] = str(tmp_path / 'aiida-core')
+
+    monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
+    monkeypatch.setattr(DaemonClient, 'get_daemon_package_snapshot', lambda self: {'aiida-core': pkg_info})
+    monkeypatch.setattr(DaemonClient, 'get_package_version_snapshot', staticmethod(lambda: {'aiida-core': pkg_info}))
+
+    result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
+    assert 'different package versions' not in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+@pytest.mark.parametrize(
+    ('daemon_has_path', 'current_has_path'),
+    [(True, False), (False, True)],
+)
+def test_warning_when_editable_install_state_changes(
+    run_cli_command, monkeypatch, tmp_path, daemon_has_path, current_has_path
+):
+    """Test that ``verdi status`` warns when editable-install state changes without a version change."""
+    editable_path = str(tmp_path / 'aiida-core')
+    daemon_info: dict = {'version': '2.8.0.post0'}
+    current_info: dict = {'version': '2.8.0.post0'}
+    if daemon_has_path:
+        daemon_info['editable_path'] = editable_path
+    if current_has_path:
+        current_info['editable_path'] = editable_path
+
+    monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
+    monkeypatch.setattr(DaemonClient, 'get_daemon_package_snapshot', lambda self: {'aiida-core': daemon_info})
+    monkeypatch.setattr(
+        DaemonClient, 'get_package_version_snapshot', staticmethod(lambda: {'aiida-core': current_info})
+    )
+
+    result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
+    assert 'different package versions' in result.output
+    assert 'Changed packages:' in result.output
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_no_warning_when_version_file_missing(run_cli_command, monkeypatch):
+    """Test that ``verdi status`` shows no warning when version file is missing."""
+    monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
+    monkeypatch.setattr(DaemonClient, 'get_daemon_package_snapshot', lambda self: None)
+
+    result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
+    assert 'different package versions' not in result.output

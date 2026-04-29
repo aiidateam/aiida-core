@@ -888,5 +888,6 @@ class Config:
             'daemon': {
                 'log': str(daemon_log_dir / f'aiida-{profile.name}.log'),
                 'pid': str(daemon_dir / f'aiida-{profile.name}.pid'),
+                'package_snapshot': str(daemon_dir / f'aiida-{profile.name}.package_snapshot'),
             },
         }

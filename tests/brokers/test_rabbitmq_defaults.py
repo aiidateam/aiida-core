@@ -90,8 +90,8 @@ def test_probe_rabbitmq_connection_closes_connection_on_failure(monkeypatch):
         async def close(self):
             self.closed = True
 
-    monkeypatch.setattr(defaults, 'make_url', lambda **kwargs: kwargs)
-    monkeypatch.setattr(defaults, 'RobustConnection', DummyConnection)
+    monkeypatch.setattr('aio_pika.connection.make_url', lambda **kwargs: kwargs)
+    monkeypatch.setattr('aio_pika.robust_connection.RobustConnection', DummyConnection)
 
     with pytest.raises(RuntimeError, match='failed to connect'):
         defaults._probe_rabbitmq_connection(

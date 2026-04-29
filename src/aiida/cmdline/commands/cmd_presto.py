@@ -139,6 +139,11 @@ def detect_postgres_config(
     help='When toggled on, no message broker is configured. This means the daemon cannot be started and processes '
     'cannot be submitted. Useful for profiles used only for data exploration and querying.',
 )
+@click.option(
+    '--no-daemon-autostart',
+    is_flag=True,
+    help='When toggled on, the daemon is not started automatically after setting up the profile.',
+)
 @click.option('--postgres-hostname', type=str, default='localhost', help='The hostname of the PostgreSQL server.')
 @click.option('--postgres-port', type=int, default=5432, help='The port of the PostgreSQL server.')
 @click.option(
@@ -162,6 +167,7 @@ def verdi_presto(
     use_postgres,
     use_zmq,
     no_broker,
+    no_daemon_autostart,
     postgres_hostname,
     postgres_port,
     postgres_username,
@@ -183,6 +189,7 @@ def verdi_presto(
     * Create a default user for the profile (email can be configured through the `--email` option)
     * Set up the localhost as a `Computer` and configure it
     * Set a number of configuration options with sensible defaults
+    * Start the daemon (unless `--no-broker` or `--no-daemon-autostart` is specified)
 
     By default the command creates a profile that uses SQLite for the database. For the message broker, it automatically
     checks for RabbitMQ running on localhost. If found, it configures RabbitMQ as the broker. Otherwise, it falls back
@@ -289,3 +296,17 @@ def verdi_presto(
     computer.set_default_mpiprocs_per_machine(1)
 
     echo.echo_success('Configured the localhost as a computer.')
+
+    if broker_backend is not None and not no_daemon_autostart:
+        from aiida.engine.daemon.client import get_daemon_client
+
+        echo.echo('Starting the daemon... ', nl=False)
+        try:
+            client = get_daemon_client(profile.name)
+            client.start_daemon()
+        except Exception as exception:
+            echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
+            echo.echo_warning(f'Failed to start the daemon: {exception}')
+            echo.echo_report('You can start it manually with `verdi daemon start`.')
+        else:
+            echo.echo('OK', fg=echo.COLORS['success'], bold=True)

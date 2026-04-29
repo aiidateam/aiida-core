@@ -18,14 +18,17 @@ verdi config set warnings.development_version False
 # If the environment variable `SETUP_DEFAULT_AIIDA_PROFILE` is not set, set it to `true`.
 if [[ ${SETUP_DEFAULT_AIIDA_PROFILE:-true} == true ]] && ! verdi profile show ${AIIDA_PROFILE_NAME} &> /dev/null; then
 
-    # Create AiiDA profile.
+    # Create AiiDA profile. Use --no-daemon-autostart because the Docker
+    # container manages the daemon lifecycle separately via s6-overlay
+    # (aiida-daemon-start runs after this script and run-before-daemon-start).
     verdi presto \
         --verbosity info \
         --profile-name "${AIIDA_PROFILE_NAME:-default}" \
         --email "${AIIDA_USER_EMAIL:-aiida@localhost}" \
         --use-postgres \
         --postgres-hostname "${AIIDA_POSTGRES_HOSTNAME:-localhost}" \
-        --postgres-password "${AIIDA_POSTGRES_PASSWORD:-password}"
+        --postgres-password "${AIIDA_POSTGRES_PASSWORD:-password}" \
+        --no-daemon-autostart
 
     # Setup and configure local computer.
     computer_name=localhost

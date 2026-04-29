@@ -43,20 +43,23 @@ def test_check_version_release(monkeypatch, capsys, isolated_config):
 
 @pytest.mark.parametrize('suppress_warning', (True, False))
 @pytest.mark.usefixtures('isolated_config')
-def test_check_version_development(monkeypatch, suppress_warning, aiida_profile):
+def test_check_version_development(monkeypatch, suppress_warning):
     """Test that ``Manager.check_version`` prints a warning for a post release development version.
 
     The warning can be suppressed by setting the option ``warnings.development_version`` to ``False``.
     """
-    from unittest.mock import patch
+    from unittest.mock import MagicMock
 
     version = '1.0.0.post0'
     monkeypatch.setattr(aiida, '__version__', version)
 
-    aiida_profile.set_option('warnings.development_version', not suppress_warning)
+    manager = get_manager()
+    manager._profile.set_option('warnings.development_version', not suppress_warning)
 
-    with patch('aiida.cmdline.utils.echo.echo_warning') as mock_warning:
-        get_manager().check_version()
+    mock_warning = MagicMock()
+    monkeypatch.setattr('aiida.cmdline.utils.echo.echo_warning', mock_warning)
+
+    manager.check_version()
 
     if suppress_warning:
         mock_warning.assert_not_called()

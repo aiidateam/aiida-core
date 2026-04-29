@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import typing as t
-from contextlib import suppress
+from contextlib import contextmanager, suppress
 
 from aio_pika.connection import make_url
 from aio_pika.robust_connection import RobustConnection
@@ -32,6 +33,21 @@ BROKER_DEFAULTS = AttributeDict(
 )
 
 
+@contextmanager
+def _suppress_rabbitmq_probe_logging() -> t.Iterator[None]:
+    """Suppress expected RabbitMQ probe logs for missing brokers."""
+    logger_names = ('aiormq.connection', 'aio_pika.robust_connection')
+    levels = {name: logging.getLogger(name).level for name in logger_names}
+
+    try:
+        for name in logger_names:
+            logging.getLogger(name).setLevel(logging.CRITICAL + 1)
+        yield
+    finally:
+        for name, level in levels.items():
+            logging.getLogger(name).setLevel(level)
+
+
 def _probe_rabbitmq_connection(connection_params: dict[str, t.Any]) -> None:
     """Validate RabbitMQ connection parameters in an isolated event loop."""
 
@@ -54,7 +70,8 @@ def _probe_rabbitmq_connection(connection_params: dict[str, t.Any]) -> None:
             with suppress(Exception):
                 await connection.close()
 
-    asyncio.run(connect())
+    with _suppress_rabbitmq_probe_logging():
+        asyncio.run(connect())
 
 
 def detect_rabbitmq_config(

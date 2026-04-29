@@ -215,3 +215,20 @@ def test_daemon_status_worker_timeout(run_cli_command):
     assert 'Active workers [1]:' in result.output
     assert '4990  -        -        -' in result.output
     assert 'Use `verdi daemon [incr | decr] [num]`' in result.output
+
+
+@patch.object(DaemonClient, 'get_status', lambda self, timeout=None: {'status': 'running'})
+@patch.object(DaemonClient, 'get_daemon_info', get_daemon_info)
+@patch.object(DaemonClient, 'get_worker_info', get_worker_info)
+@patch.object(DaemonClient, 'get_daemon_package_snapshot', lambda self: {'aiida-core': {'version': '2.8.0.post0'}})
+@patch.object(
+    DaemonClient,
+    'get_package_version_snapshot',
+    lambda: {'aiida-core': {'version': '2.8.0.post0'}, 'aiida-plugin': {'version': '1.2.3'}},
+)
+@patch('aiida.cmdline.utils.common.format_local_time', format_local_time)
+def test_daemon_status_package_state_warning(run_cli_command):
+    """Test `verdi daemon status` includes package-state mismatch warnings."""
+    result = run_cli_command(cmd_daemon.status)
+    assert 'different package versions' in result.output
+    assert 'Added packages: aiida-plugin (1.2.3)' in result.output

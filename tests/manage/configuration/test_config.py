@@ -225,6 +225,15 @@ def test_basic_properties(config_with_profile):
     assert isinstance(config.dictionary, dict)
 
 
+def test_filepaths_includes_package_snapshot(config_with_profile):
+    """Test that ``filepaths`` returns a ``package_snapshot`` entry for the daemon."""
+    config = config_with_profile
+    profile = config.get_profile(config.default_profile_name)
+    filepaths = config.filepaths(profile)
+    assert 'package_snapshot' in filepaths['daemon']
+    assert filepaths['daemon']['package_snapshot'].endswith('.package_snapshot')
+
+
 def test_setting_versions(config_with_profile):
     """Test the version setters."""
     config = config_with_profile

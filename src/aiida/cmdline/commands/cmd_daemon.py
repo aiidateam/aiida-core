@@ -111,6 +111,7 @@ def status(ctx, all_profiles, timeout):
     from tabulate import tabulate
 
     from aiida.cmdline.utils.common import format_local_time
+    from aiida.cmdline.utils.daemon import get_daemon_package_drift_lines
     from aiida.engine.daemon.client import DaemonException, get_daemon_client
     from aiida.manage.manager import get_manager
 
@@ -151,8 +152,8 @@ def status(ctx, all_profiles, timeout):
 
         start_time = format_local_time(daemon_response['info']['create_time'])
 
-        # Build broker status line for managed brokers (e.g., ZMQ)
-        broker_line = ''
+        # Build broker status lines for managed brokers (e.g., ZMQ)
+        broker_lines: list[str] = []
         broker = get_manager().get_broker()
         from aiida.brokers.zmq.broker import ZmqBroker
 
@@ -163,20 +164,25 @@ def status(ctx, all_profiles, timeout):
                     broker_pid = status_info.get('pid', '?')
                     pending = status_info.get('pending_tasks', 0)
                     processing = status_info.get('processing_tasks', 0)
-                    broker_line = (
-                        f'Broker is running as PID {broker_pid} [{pending} pending, {processing} processing]\n'
-                        f'Broker directory: {broker.base_path}\n'
+                    broker_lines.append(
+                        f'Broker is running as PID {broker_pid} [{pending} pending, {processing} processing]'
                     )
+                    broker_lines.append(f'Broker directory: {broker.base_path}')
             else:
-                broker_line = 'Broker is NOT running\n'
+                broker_lines.append('Broker is NOT running')
 
-        echo.echo(
-            f'Daemon is running as PID {daemon_response["info"]["pid"]} since {start_time}\n'
-            f'{broker_line}'
-            f'Active workers [{len(workers)}]:\n{workers_info}\n'
-            f'Log file: {client.daemon_log_file}\n'
-            'Use `verdi daemon [incr | decr] [num]` to increase / decrease the number of workers'
-        )
+        lines = [
+            f'Daemon is running as PID {daemon_response["info"]["pid"]} since {start_time}',
+            *broker_lines,
+            f'Active workers [{len(workers)}]:',
+            workers_info,
+            f'Log file: {client.daemon_log_file}',
+        ]
+
+        lines.extend(get_daemon_package_drift_lines(client))
+
+        lines.append('Use `verdi daemon [incr | decr] [num]` to increase / decrease the number of workers')
+        echo.echo('\n'.join(lines))
 
     if not all(daemons_running):
         sys.exit(3)

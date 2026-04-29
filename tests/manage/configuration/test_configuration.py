@@ -43,28 +43,27 @@ def test_check_version_release(monkeypatch, capsys, isolated_config):
 
 @pytest.mark.parametrize('suppress_warning', (True, False))
 @pytest.mark.usefixtures('isolated_config')
-def test_check_version_development(monkeypatch, capsys, suppress_warning, aiida_profile):
+def test_check_version_development(monkeypatch, suppress_warning, aiida_profile):
     """Test that ``Manager.check_version`` prints a warning for a post release development version.
 
     The warning can be suppressed by setting the option ``warnings.development_version`` to ``False``.
-
-    If a warning is emitted, it should be printed to stdout. So even though it will go through the logging system, the
-    logging configuration of AiiDA will interfere with that of pytest and the ultimately the output will simply be
-    written to stdout, so we use the ``capsys`` fixture and not the ``caplog`` one.
     """
+    from unittest.mock import patch
+
     version = '1.0.0.post0'
     monkeypatch.setattr(aiida, '__version__', version)
 
     aiida_profile.set_option('warnings.development_version', not suppress_warning)
 
-    get_manager().check_version()
-    captured = capsys.readouterr()
-    assert not captured.err
+    with patch('aiida.cmdline.utils.echo.echo_warning') as mock_warning:
+        get_manager().check_version()
 
     if suppress_warning:
-        assert not captured.out
+        mock_warning.assert_not_called()
     else:
-        assert f'You are currently using a post release development version of AiiDA: {version}' in captured.out
+        mock_warning.assert_called()
+        first_call_msg = mock_warning.call_args_list[0][0][0]
+        assert f'You are currently using a post release development version of AiiDA: {version}' in first_call_msg
 
 
 def test_profile_context(config_with_profile, profile_factory):

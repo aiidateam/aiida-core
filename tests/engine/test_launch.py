@@ -102,6 +102,35 @@ def test_submit_no_broker(arithmetic_add_builder, monkeypatch, manager):
         launch.submit(arithmetic_add_builder)
 
 
+def test_run_launchers_without_live_broker(aiida_config_tmp, aiida_profile_factory, config_sqlite_dos):
+    """Test local launchers work even if the configured broker is not running.
+
+    Regression test for ``launch.run*`` eagerly loading the profile communicator through the global runner. A RMQ
+    profile is used here because the bug is exposed reliably when no broker service has been started.
+    """
+    from aiida.manage import get_manager
+
+    with aiida_profile_factory(
+        aiida_config_tmp,
+        storage_backend='core.sqlite_dos',
+        storage_config=config_sqlite_dos(),
+        broker_backend='core.rabbitmq',
+        broker_config={},
+    ):
+        assert get_manager().get_broker() is not None
+
+        result = launch.run(add, term_a=orm.Int(1), term_b=orm.Int(2))
+        assert result == 3
+
+        result, node = launch.run_get_node(add, term_a=orm.Int(1), term_b=orm.Int(2))
+        assert result == 3
+        assert isinstance(node, orm.CalcFunctionNode)
+
+        result, pk = launch.run_get_pk(add, term_a=orm.Int(1), term_b=orm.Int(2))
+        assert result == 3
+        assert isinstance(pk, int)
+
+
 def test_await_processes_invalid():
     """Test :func:`aiida.engine.launch.await_processes` for invalid inputs."""
     with pytest.raises(TypeError):

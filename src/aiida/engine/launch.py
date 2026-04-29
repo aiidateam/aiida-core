@@ -43,7 +43,8 @@ def run(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwa
     if isinstance(process, Process):
         runner = process.runner
     else:
-        runner = manager.get_manager().get_runner()
+        # Note: it is safe to create new local runner here without but the explanation can be found in issue #7353
+        runner = manager.get_manager().create_runner(communicator=None)
 
     return runner.run(process, inputs, **kwargs)
 
@@ -60,7 +61,8 @@ def run_get_node(
     if isinstance(process, Process):
         runner = process.runner
     else:
-        runner = manager.get_manager().get_runner()
+        # Note: it is safe to create new local runner here without but the explanation can be found in issue #7353
+        runner = manager.get_manager().create_runner(communicator=None)
 
     return runner.run_get_node(process, inputs, **kwargs)
 
@@ -75,7 +77,8 @@ def run_get_pk(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None
     if isinstance(process, Process):
         runner = process.runner
     else:
-        runner = manager.get_manager().get_runner()
+        # Note: it is safe to create new local runner here without but the explanation can be found in issue #7353
+        runner = manager.get_manager().create_runner(communicator=None)
 
     return runner.run_get_pk(process, inputs, **kwargs)
 

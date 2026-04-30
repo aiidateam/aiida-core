@@ -99,7 +99,8 @@ class TestZmqBrokerServerMessageHandling:
     # --- Task handling ---
 
     def test_handle_task_no_reply(self, server):
-        """Test _handle_task queues a task with no_reply=True."""
+        """Test _handle_task queues a task with no_reply=True (no ack sent)."""
+        server._send_to_client = MagicMock()
         msg = {
             'type': MessageType.TASK.value,
             'id': 'task-001',
@@ -110,10 +111,12 @@ class TestZmqBrokerServerMessageHandling:
         server._handle_task(b'worker-1', msg)
 
         assert server._task_queue.size() == 1
-        assert 'task-001' not in server._pending_task_responses
+        # no_reply=True means no immediate acknowledgment sent
+        server._send_to_client.assert_not_called()
 
     def test_handle_task_with_reply(self, server):
-        """Test _handle_task tracks pending response when reply expected."""
+        """Test _handle_task sends immediate acknowledgment when reply expected."""
+        server._send_to_client = MagicMock()
         msg = {
             'type': MessageType.TASK.value,
             'id': 'task-002',
@@ -122,37 +125,23 @@ class TestZmqBrokerServerMessageHandling:
             'no_reply': False,
         }
         server._handle_task(b'client-1', msg)
-        assert 'task-002' in server._pending_task_responses
 
-    def test_handle_task_response(self, server):
-        """Test _handle_task_response routes to original sender."""
-        original_sender = b'sender-1'
-        server._pending_task_responses['task-100'] = (original_sender, time.time())
-        server._send_to_client = MagicMock()
+        # Broker sends immediate TASK_RESPONSE acknowledgment
+        server._send_to_client.assert_called_once()
+        ack_msg = server._send_to_client.call_args[0][1]
+        assert ack_msg['type'] == MessageType.TASK_RESPONSE.value
+        assert ack_msg['task_id'] == 'task-002'
+        assert ack_msg['result'] is True
 
+    def test_handle_task_response_discarded(self, server):
+        """Test _handle_task_response discards worker responses (sender already acked)."""
         msg = {
             'type': MessageType.TASK_RESPONSE.value,
             'task_id': 'task-100',
             'result': 'done',
         }
+        # Should not raise — worker responses are simply logged and discarded
         server._handle_task_response(b'worker-1', msg)
-
-        server._send_to_client.assert_called_once_with(original_sender, msg)
-        assert 'task-100' not in server._pending_task_responses
-
-    def test_handle_task_response_missing_task_id(self, server):
-        """Test _handle_task_response with missing task_id is a no-op."""
-        server._send_to_client = MagicMock()
-        msg = {'type': MessageType.TASK_RESPONSE.value}
-        server._handle_task_response(b'worker', msg)
-        server._send_to_client.assert_not_called()
-
-    def test_handle_task_response_no_pending(self, server):
-        """Test _handle_task_response with unknown task is a no-op."""
-        server._send_to_client = MagicMock()
-        msg = {'type': MessageType.TASK_RESPONSE.value, 'task_id': 'unknown'}
-        server._handle_task_response(b'worker', msg)
-        server._send_to_client.assert_not_called()
 
     def test_handle_task_ack(self, server):
         """Test _handle_task_ack removes task and marks worker available."""

@@ -218,9 +218,11 @@ def test_escape_for_glob_preserves_wildcards_escapes_dangerous_chars():
 
 
 def test_escape_for_rcp():
-    """Test RCP mode escapes shell metacharacters."""
+    """Test RCP mode escapes shell metacharacters but preserves globs."""
     backend = _TestOpenSSH()
     assert backend._escape_for_rcp('/path/with spaces/$VAR;cmd') == '/path/with\\ spaces/\\$VAR\\;cmd'
+    # Glob characters pass through so the remote shell can expand them.
+    assert backend._escape_for_rcp('/dir/*.[ch]') == '/dir/*.[ch]'
 
 
 def test_escape_for_scp_version_aware():

@@ -502,17 +502,16 @@ class _OpenSSH(_AsynchronousSSHBackend):
         return process.returncode, stdout.decode(), stderr.decode()
 
     def _escape_for_rcp(self, path: str) -> str:
-        """Escape special characters for scp RCP mode using backslashes.
+        """Backslash-escape shell metacharacters for scp's RCP protocol.
 
-        Note: escape_for_bash() does NOT work here because scp's RCP protocol
-        expects backslash-escaped paths, not quote-wrapped strings.
+        Glob characters (``*``, ``?``, ``[``, ``]``) are deliberately left
+        unescaped so the remote shell expands them; the trade-off is that
+        filenames containing literal glob characters cannot be addressed
+        in RCP mode. :func:`escape_for_bash` is unsuitable here because it
+        quote-wraps rather than backslash-escapes.
 
-        Important: We do NOT escape glob characters (*, ?, []) because the RCP
-        protocol passes these to the remote shell for glob expansion. Escaping
-        them would prevent proper file pattern matching.
-
-        :param path: The path to escape
-        :return: The escaped path with backslashes before special characters
+        :param path: The path to escape.
+        :return: The escaped path.
         """
 
         result = []
@@ -526,20 +525,13 @@ class _OpenSSH(_AsynchronousSSHBackend):
     def _escape_for_scp(self, path: str) -> str:
         """Prepare a path for use in scp commands.
 
-        Version-specific behavior:
-
-        - OpenSSH 9.0+ (SFTP mode):
-          Uses SFTP protocol where paths are treated as binary data.
-          No escaping needed - glob characters are not expanded.
-          Direct return of the path.
-
-        - OpenSSH < 9.0 (RCP mode):
-          Uses RCP protocol where paths are passed to remote shell.
-          Must escape shell metacharacters to prevent injection,
-          but MUST preserve glob characters (*, ?, []) for proper
-          file pattern matching.
-
-        Version detection is based on `is_openssh_9_or_higher` flag set in __init__.
+        OpenSSH >= 9.0 uses SFTP mode: paths are sent as binary, no
+        escaping needed. OpenSSH < 9.0 uses RCP mode: paths are interpreted
+        by a shell on both ends (scp itself shells out internally for local
+        paths), so shell metacharacters are backslash-escaped via
+        :meth:`_escape_for_rcp` while glob characters are deliberately
+        preserved for pattern matching. Mode is selected via
+        :attr:`is_openssh_9_or_higher`.
         """
 
         if self.is_openssh_9_or_higher:

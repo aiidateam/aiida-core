@@ -85,8 +85,7 @@ class ZmqBrokerServer:
         # rpc_subscribers: identifier -> client_identity (bytes)
         self._rpc_subscribers: dict[str, bytes] = {}
 
-        # Pending responses: correlation_id -> (client_identity, timestamp)
-        self._pending_task_responses: dict[str, tuple[bytes, float]] = {}
+        # Pending RPC responses: correlation_id -> (client_identity, timestamp)
         self._pending_rpc_responses: dict[str, tuple[bytes, float]] = {}
 
         # Task-worker assignments: task_id -> worker_identity
@@ -283,6 +282,14 @@ class ZmqBrokerServer:
         """Handle incoming task message.
 
         Queue the task and try to dispatch to an available worker.
+
+        When the sender expects a reply (``no_reply=False``), an immediate
+        acknowledgment response is sent back as soon as the task is persisted
+        to disk.  This mirrors RabbitMQ's publisher-confirm behaviour: the
+        caller learns that the broker accepted the task without having to wait
+        for a worker to process it.  The worker's eventual result (if any) is
+        *not* forwarded back to the original sender — callers like
+        ``continue_process`` only need the confirmation, not the outcome.
         """
         task_id = msg['id']
         sender = msg.get('sender', '')
@@ -299,9 +306,15 @@ class ZmqBrokerServer:
         }
         self._task_queue.push(task_id, task_data)
 
-        # Track pending response if reply expected
+        # Send an immediate acknowledgment to the sender so its Future
+        # resolves without waiting for a worker (matches RabbitMQ semantics).
         if not no_reply:
-            self._pending_task_responses[task_id] = (identity, time.time())
+            response = {
+                'type': MessageType.TASK_RESPONSE.value,
+                'task_id': task_id,
+                'result': True,
+            }
+            self._send_to_client(identity, response)
 
         # Try to dispatch immediately
         self._dispatch_pending_tasks()
@@ -309,23 +322,11 @@ class ZmqBrokerServer:
     def _handle_task_response(self, identity: bytes, msg: dict[str, Any]) -> None:
         """Handle task response from worker.
 
-        Route the response back to the original task sender.
+        Since the broker already sends an immediate acknowledgment when a task
+        is queued, the worker's result response is simply logged and discarded.
         """
-        task_id = msg.get('task_id')
-        if not task_id:
-            _LOGGER.warning('Task response missing task_id')
-            return
-
-        # Find original sender
-        pending = self._pending_task_responses.pop(task_id, None)
-        if not pending:
-            _LOGGER.warning('No pending response for task: %s', task_id)
-            return
-
-        original_sender, _ = pending
-
-        # Forward response to original sender
-        self._send_to_client(original_sender, msg)
+        task_id = msg.get('task_id', '?')
+        _LOGGER.debug('Received task response for %s (discarded — sender already acknowledged)', task_id)
 
     def _handle_task_ack(self, identity: bytes, msg: dict[str, Any]) -> None:
         """Handle task acknowledgment from worker."""
@@ -602,7 +603,6 @@ class ZmqBrokerServer:
             'task_subscribers': len(self._task_subscribers),
             'rpc_subscribers': len(self._rpc_subscribers),
             'available_workers': len(self._available_workers),
-            'pending_task_responses': len(self._pending_task_responses),
             'pending_rpc_responses': len(self._pending_rpc_responses),
         }
 

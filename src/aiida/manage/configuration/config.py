@@ -79,7 +79,7 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         description='Minimum log level needed for outputting a log into the terminal',
     )
     logging__logfile_loglevel: LogLevels = Field(
-        'INFO',
+        'DEBUG',
         description='Minimum log level written to log files (both client and daemon).',
     )
     logging__aiida_loglevel: LogLevels = Field(

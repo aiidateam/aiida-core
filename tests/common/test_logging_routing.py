@@ -68,7 +68,7 @@ class TestSystemLoglevelDaemonHandler:
     """Tests for ``logfile_loglevel`` as handler-level filter on the daemon log handler."""
 
     def test_daemon_handler_uses_logfile_loglevel(self, tmp_path):
-        """When ``daemon=True``, the daemon handler should use ``logfile_loglevel`` (default: INFO)."""
+        """When ``daemon=True``, the daemon handler should use ``logfile_loglevel`` (default: DEBUG)."""
         daemon_log = tmp_path / 'daemon.log'
 
         # We need to capture the config dict BEFORE dictConfig is called.
@@ -89,9 +89,8 @@ class TestSystemLoglevelDaemonHandler:
             logging.config.dictConfig = original
 
         assert 'daemon_log_file' in captured_config['handlers']
-        # The daemon handler level should be INFO (the default for logfile_loglevel),
-        # NOT the old hardcoded 'DEBUG'
-        assert captured_config['handlers']['daemon_log_file']['level'] == 'INFO'
+        # The daemon handler level should be DEBUG (the default for logfile_loglevel)
+        assert captured_config['handlers']['daemon_log_file']['level'] == 'DEBUG'
 
 
 @pytest.mark.presto

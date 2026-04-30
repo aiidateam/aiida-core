@@ -39,9 +39,9 @@ class TestNewLoggingOptions:
         assert isinstance(option, Option)
 
     def test_logfile_loglevel_default(self):
-        """The ``logging.logfile_loglevel`` option should default to ``INFO``."""
+        """The ``logging.logfile_loglevel`` option should default to ``DEBUG``."""
         option = get_option('logging.logfile_loglevel')
-        assert option.default == 'INFO'
+        assert option.default == 'DEBUG'
 
     def test_new_options_are_not_advanced(self):
         """The new routing options should NOT be marked as advanced."""

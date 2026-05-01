@@ -67,7 +67,7 @@ jobs:
 
     - name: Docker meta
       id: meta
-      uses: docker/metadata-action@v5
+      uses: docker/metadata-action@v6
       env: ${{ fromJSON(steps.build_vars.outputs.vars) }}
       with:
         images: ${{ inputs.registry }}/${{ github.repository_owner }}/${{ matrix.target }}

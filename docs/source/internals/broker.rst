@@ -137,8 +137,10 @@ Message types
      - worker → broker
      - Negative acknowledgment. Broker requeues the task for redelivery.
    * - ``TASK_RESPONSE``
-     - worker → broker → client
-     - Return the result of a completed task. Broker forwards to original sender.
+     - broker → client
+     - Immediate acknowledgment that the task was persisted to the queue
+       (matches RabbitMQ publisher-confirm semantics).
+       The worker's eventual result is not forwarded back to the sender.
    * - ``RPC``
      - client → broker → recipient
      - Remote procedure call to a named recipient. Broker routes by subscriber ID.
@@ -173,6 +175,7 @@ The protocol maps AMQP concepts to ZMQ message types:
 
     AMQP concept              ZMQ broker equivalent
     ────────────────────────  ──────────────────────────────────
+    publisher confirm         TASK_RESPONSE (immediate broker ack)
     basic.ack                 TASK_ACK
     basic.nack                TASK_NACK
     consumer with prefetch    TASK dispatch to available workers
@@ -209,24 +212,27 @@ Message flow: task submission
           │  task_send(task)            │                      │
           │──── TASK ──────────────────────────────────────────▶│
           │                             │          push to PersistentQueue
+          │◀──── TASK_RESPONSE (ack) ──────────────────────────│  immediate
           │                             │                      │
           │                             │◀─── TASK ────────────│  dispatch
           │                             │                      │
           │                             │  (process runs...)   │
           │                             │                      │
           │                             │──── TASK_ACK ───────▶│  ack: remove from queue
-          │                             │──── TASK_RESPONSE ──▶│
-          │                             │                      │
-          │◀────────────── TASK_RESPONSE (forwarded) ──────────│
           │                             │                      │
 
 Key details:
 
+- The broker sends an **immediate** ``TASK_RESPONSE`` back to the sender as soon as the task
+  is persisted to the queue on disk.  This matches RabbitMQ's publisher-confirm semantics:
+  the caller's ``Future`` resolves without waiting for a worker to process the task.
+  Without this, ``task_send`` would block until ``broker.task_timeout`` when no workers are connected
+  (e.g. during ``verdi process repair``).
 - The broker persists the task to disk **before** dispatching it.
   If the broker crashes, tasks are recovered from disk on restart.
 - Workers delay the ACK until the task Future resolves (see :ref:`deferred ACK <internal_architecture:broker:deferred_ack>` below).
   If a worker dies before ACK'ing, the broker detects the disconnect (via ZMTP heartbeats + PING probing) and requeues the task.
-- If ``no_reply=True``, no TASK_RESPONSE is sent.
+- If ``no_reply=True``, no ``TASK_RESPONSE`` is sent (fire-and-forget, used by ``submit()``).
 
 
 Task dispatch strategy

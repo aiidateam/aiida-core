@@ -91,8 +91,6 @@ def aiida_computer(tmp_path) -> t.Callable[[], 'Computer']:
     ) -> 'Computer':
         import uuid
 
-        from sqlalchemy.exc import IntegrityError as SqlaIntegrityError
-
         from aiida.common.exceptions import IntegrityError, NotExistent
         from aiida.orm import Computer
 
@@ -112,10 +110,12 @@ def aiida_computer(tmp_path) -> t.Callable[[], 'Computer']:
             )
             try:
                 computer.store()
-            except (IntegrityError, SqlaIntegrityError):
+            except IntegrityError:
                 # A computer with this label was concurrently created by another fixture call,
                 # e.g. after ``aiida_profile_clean`` wiped the database mid-session.
-                computer = Computer.collection.get(label=label)
+                computer = Computer.collection.get(
+                    label=label, hostname=hostname, scheduler_type=scheduler_type, transport_type=transport_type
+                )
             else:
                 computer.set_minimum_job_poll_interval(minimum_job_poll_interval)
                 computer.set_default_mpiprocs_per_machine(default_mpiprocs_per_machine)

@@ -50,6 +50,42 @@ def test_aiida_computer_fixtures(fixture_name, transport_cls, transport_type, re
     assert not computer_unconfigured.is_configured
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_aiida_computer_integrity_error_fallback(aiida_computer):
+    """Test that ``aiida_computer`` falls back to ``get()`` on ``IntegrityError``.
+
+    Simulates the TOCTOU race under xdist where ``get()`` raises ``NotExistent``
+    but ``store()`` fails because another worker already created the computer.
+    """
+    from unittest.mock import patch
+
+    from aiida.common.exceptions import IntegrityError, NotExistent
+
+    # First, create and store the computer normally.
+    label = f'test-integrity-{uuid.uuid4().hex}'
+    computer = aiida_computer(label=label)
+
+    # Simulate the race: the first get() misses (as if DB was just wiped by
+    # another worker's aiida_profile_clean), store() fails with IntegrityError
+    # (another worker re-created the computer first), and the fallback get()
+    # inside the except block finds the computer.
+    original_get = Computer.collection.get
+
+    collection = Computer.collection
+    with (
+        patch.object(
+            type(collection),
+            'get',
+            side_effect=[NotExistent('Simulated race: DB was just cleaned'), original_get(label=label)],
+        ),
+        patch.object(Computer, 'store', side_effect=IntegrityError('UNIQUE constraint failed')),
+    ):
+        fallback_computer = aiida_computer(label=label)
+
+    assert fallback_computer.pk == computer.pk
+    assert fallback_computer.uuid == computer.uuid
+
+
 @pytest.mark.parametrize(
     'backend, backend_class',
     [

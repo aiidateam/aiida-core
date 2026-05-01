@@ -13,14 +13,15 @@ import click
 from aiida.cmdline.params import options, types
 from aiida.cmdline.params.options.interactive import InteractiveOption, TemplateInteractiveOption
 from aiida.cmdline.params.options.overridable import OverridableOption
+from aiida.cmdline.utils.common import resolve_param
 
 
 def is_on_computer(ctx: click.Context) -> bool:
-    return bool(ctx.params.get('on_computer'))
+    return bool(resolve_param(ctx, 'on_computer'))
 
 
 def is_not_on_computer(ctx: click.Context) -> bool:
-    return bool(not is_on_computer(ctx))
+    return not is_on_computer(ctx)
 
 
 def validate_label_uniqueness(ctx: click.Context, _: None, value: str) -> str:
@@ -40,8 +41,8 @@ def validate_label_uniqueness(ctx: click.Context, _: None, value: str) -> str:
     from aiida.common import exceptions
     from aiida.orm import load_code
 
-    computer = ctx.params.get('computer', None)
-    on_computer = ctx.params.get('on_computer', None)
+    computer = resolve_param(ctx, 'computer')
+    on_computer = resolve_param(ctx, 'on_computer')
 
     if on_computer is False:
         try:

@@ -627,9 +627,10 @@ class _OpenSSH(_AsynchronousSSHBackend):
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if stderr:
-            # this should not happen, but just in case for debugging
-            self.logger.debug(f'Unexpected stderr: {stderr}')
-            raise OSError(stderr)
+            self.logger.debug(f'Stderr from `test -e {path}`: {stderr}')
+
+        if returncode not in (0, 1):
+            raise OSError(f'Failed to check whether path exists: {path} (exit code {returncode}): {stderr}')
         return returncode == 0
 
     async def rmtree(self, path: str):

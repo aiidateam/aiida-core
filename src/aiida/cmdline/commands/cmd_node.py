@@ -367,6 +367,46 @@ def _warn_about_stash_nodes(pks_to_delete: set[int]) -> None:
     echo.echo_warning('Consider manually removing these paths from the remote computer.')
 
 
+def _clean_workdirs(pks_set_to_delete: set[int], dry_run: bool, force: bool) -> None:
+    """Clean the remote work directories for the ``CalcJobNode`` instances in a deletion set."""
+    from aiida.orm import CalcJobNode, QueryBuilder
+    from aiida.orm.utils.remote import clean_mapping_remote_paths, get_calcjob_remote_paths
+
+    qb = QueryBuilder()
+    qb.append(CalcJobNode, filters={'id': {'in': pks_set_to_delete}}, project='id')
+    calcjobs_pks = [result[0] for result in qb.all()]
+
+    if not calcjobs_pks:
+        echo.echo_report('--clean-workdir ignored. No CalcJobNode associated with the given node, found.')
+        return
+
+    path_mapping = get_calcjob_remote_paths(
+        calcjobs_pks,
+        only_not_cleaned=True,
+    )
+
+    if not path_mapping:
+        echo.echo_report('--clean-workdir ignored. CalcJobNode work directories are already cleaned.')
+        return
+
+    _warn_about_stash_nodes(pks_set_to_delete)
+
+    descendant_pks = [remote_folder.pk for paths in path_mapping.values() for remote_folder in paths]
+
+    if not force and not dry_run:
+        echo.echo_warning(f'YOU ARE ABOUT TO CLEAN {len(descendant_pks)} REMOTE DIRECTORIES! THIS CANNOT BE UNDONE!')
+        echo.echo_info(
+            'Remote directories of nodes with the following pks would be cleaned: '
+            + ' '.join(map(str, descendant_pks))
+        )
+        click.confirm('Shall I continue?', abort=True)
+
+    if dry_run:
+        echo.echo_report('Remote folders of these node are marked for deletion: ' + ' '.join(map(str, descendant_pks)))
+    else:
+        clean_mapping_remote_paths(path_mapping)
+
+
 @verdi_node.command('delete')
 @click.argument('identifier', nargs=-1, metavar='NODES')
 @options.DRY_RUN()
@@ -411,8 +451,6 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
 
     if clean_workdir:
         from aiida.manage import get_manager
-        from aiida.orm import CalcJobNode, QueryBuilder
-        from aiida.orm.utils.remote import clean_mapping_remote_paths, get_calcjob_remote_paths
         from aiida.tools.graph.graph_traversers import get_nodes_delete
 
         backend = get_manager().get_profile_storage()
@@ -421,45 +459,7 @@ def node_delete(identifier, dry_run, force, clean_workdir, **traversal_rules):
             pks, get_links=False, missing_callback=lambda missing_pks: None, backend=backend, **traversal_rules
         )['nodes']
 
-        qb = QueryBuilder()
-        qb.append(CalcJobNode, filters={'id': {'in': pks_set_to_delete}}, project='id')
-        calcjobs_pks = [result[0] for result in qb.all()]
-
-        if not calcjobs_pks:
-            echo.echo_report('--clean-workdir ignored. No CalcJobNode associated with the given node, found.')
-            _perform_delete()
-            return
-
-        path_mapping = get_calcjob_remote_paths(
-            calcjobs_pks,
-            only_not_cleaned=True,
-        )
-
-        if not path_mapping:
-            echo.echo_report('--clean-workdir ignored. CalcJobNode work directories are already cleaned.')
-            _perform_delete()
-            return
-
-        _warn_about_stash_nodes(pks_set_to_delete)
-
-        descendant_pks = [remote_folder.pk for paths in path_mapping.values() for remote_folder in paths]
-
-        if not force and not dry_run:
-            echo.echo_warning(
-                f'YOU ARE ABOUT TO CLEAN {len(descendant_pks)} REMOTE DIRECTORIES! ' 'THIS CANNOT BE UNDONE!'
-            )
-            echo.echo_info(
-                'Remote directories of nodes with the following pks would be cleaned: '
-                + ' '.join(map(str, descendant_pks))
-            )
-            click.confirm('Shall I continue?', abort=True)
-
-        if dry_run:
-            echo.echo_report(
-                'Remote folders of these node are marked for deletion: ' + ' '.join(map(str, descendant_pks))
-            )
-        else:
-            clean_mapping_remote_paths(path_mapping)
+        _clean_workdirs(pks_set_to_delete, dry_run=dry_run, force=force)
 
     _perform_delete()
 

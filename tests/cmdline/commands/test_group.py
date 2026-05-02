@@ -324,6 +324,45 @@ class TestVerdiGroup:
             orm.load_group(label='group_test_delete_15')
         assert 'do_not_delete_group' not in result.output
 
+    def test_delete_clean_workdir_requires_delete_nodes(self, run_cli_command):
+        """Test that ``--clean-workdir`` is only accepted together with ``--delete-nodes``."""
+        result = run_cli_command(cmd_group.group_delete, ['--force', '--clean-workdir', 'dummygroup1'], raises=True)
+
+        assert 'The `--clean-workdir` option can only be used together with `--delete-nodes`.' in result.output
+
+    def test_delete_clean_workdir(self, run_cli_command, aiida_localhost, tmp_path):
+        """Test deleting a group can also clean remote work directories of contained calcjobs."""
+        from aiida.common.links import LinkType
+
+        workdir = tmp_path / 'workdir'
+        workdir.mkdir()
+        (workdir / 'output.txt').write_text('content')
+
+        calcjob = orm.CalcJobNode(computer=aiida_localhost)
+        calcjob.set_remote_workdir(str(workdir))
+        calcjob.store()
+
+        remote = orm.RemoteData(remote_path=str(workdir), computer=aiida_localhost)
+        remote.base.links.add_incoming(calcjob, LinkType.CREATE, link_label='remote_folder')
+        remote.store()
+
+        group = orm.Group(label='group_test_clean_workdir').store()
+        group.add_nodes(calcjob)
+        calcjob_pk = calcjob.pk
+        remote_pk = remote.pk
+
+        result = run_cli_command(
+            cmd_group.group_delete,
+            ['--force', '--delete-nodes', '--clean-workdir', group.label],
+        )
+
+        assert 'remote folders cleaned' in result.output
+        assert not workdir.exists()
+        with pytest.raises(exceptions.NotExistent):
+            orm.load_node(calcjob_pk)
+        with pytest.raises(exceptions.NotExistent):
+            orm.load_node(remote_pk)
+
     def test_show(self, run_cli_command):
         """Test `verdi group show` command."""
         result = run_cli_command(cmd_group.group_show, ['dummygroup1'], use_subprocess=True)

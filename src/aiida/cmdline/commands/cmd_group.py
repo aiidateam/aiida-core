@@ -178,12 +178,19 @@ def group_move_nodes(source_group, target_group, force, nodes, all_entries):
 @click.option(
     '--delete-nodes', is_flag=True, default=False, help='Delete all nodes in the group along with the group itself.'
 )
+@click.option(
+    '--clean-workdir',
+    is_flag=True,
+    default=False,
+    help='With `--delete-nodes`, also clean remote work directories of deleted calculation jobs.',
+)
 @options.graph_traversal_rules(GraphTraversalRules.DELETE.value)
 @options.DRY_RUN()
 @with_dbenv()
 def group_delete(
     groups,
     delete_nodes,
+    clean_workdir,
     dry_run,
     force,
     all_users,
@@ -205,6 +212,9 @@ def group_delete(
     filters_provided = any(
         [all_users or user or past_days or startswith or endswith or contains or node or type_string]
     )
+
+    if clean_workdir and not delete_nodes:
+        echo.echo_critical('The `--clean-workdir` option can only be used together with `--delete-nodes`.')
 
     if groups and filters_provided:
         echo.echo_critical('Cannot specify both GROUPS and any of the other filters.')
@@ -298,6 +308,22 @@ def group_delete(
         group_str = str(group)
 
         if delete_nodes:
+            if clean_workdir:
+                from aiida.cmdline.commands.cmd_node import _clean_workdirs
+                from aiida.manage import get_manager
+                from aiida.tools.graph.graph_traversers import get_nodes_delete
+
+                backend = get_manager().get_profile_storage()
+                node_pks = (
+                    orm.QueryBuilder(backend=backend)
+                    .append(orm.Group, filters={'id': group.pk}, tag='group')
+                    .append(orm.Node, with_group='group', project='id')
+                    .all(flat=True)
+                )
+                pks_set_to_delete = get_nodes_delete(
+                    node_pks, get_links=False, backend=backend, **traversal_rules
+                )['nodes']
+                _clean_workdirs(pks_set_to_delete, dry_run=dry_run, force=force)
 
             def _dry_run_callback(pks):
                 if not pks or force:

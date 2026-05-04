@@ -319,7 +319,8 @@ Below is a list with all available subcommands.
       * Create a default user for the profile (email can be configured through the `--email` option)
       * Set up the localhost as a `Computer` and configure it
       * Set a number of configuration options with sensible defaults
-      * Start the daemon (unless `--no-broker` or `--no-daemon-autostart` is specified)
+      * Start the daemon (unless `--no-broker` is specified or the
+        `AIIDA_NO_DAEMON_AUTOSTART` environment variable is set)
 
       By default the command creates a profile that uses SQLite for the database. For the
       message broker, it automatically checks for RabbitMQ running on localhost. If found, it
@@ -357,8 +358,6 @@ Below is a list with all available subcommands.
                                       means the daemon cannot be started and processes cannot
                                       be submitted. Useful for profiles used only for data
                                       exploration and querying.
-      --no-daemon-autostart           When toggled on, the daemon is not started automatically
-                                      after setting up the profile.
       --postgres-hostname TEXT        The hostname of the PostgreSQL server.
       --postgres-port INTEGER         The port of the PostgreSQL server.
       --postgres-username TEXT        The username of the PostgreSQL user that is authorized

@@ -117,9 +117,10 @@ def test_presto_starts_daemon(run_cli_command, mock_daemon_client):
 
 
 @pytest.mark.usefixtures('empty_config')
-def test_presto_no_daemon_autostart(run_cli_command, mock_daemon_client):
-    """Test that ``verdi presto --no-daemon-autostart`` does not start the daemon."""
-    result = run_cli_command(verdi_presto, ['--non-interactive', '--no-daemon-autostart'])
+def test_presto_no_daemon_autostart_env(run_cli_command, mock_daemon_client, monkeypatch):
+    """Test that setting ``AIIDA_NO_DAEMON_AUTOSTART`` skips the daemon auto-start."""
+    monkeypatch.setenv('AIIDA_NO_DAEMON_AUTOSTART', '1')
+    result = run_cli_command(verdi_presto, ['--non-interactive'])
     assert 'Created new profile' in result.output
     assert 'Starting the daemon' not in result.output
     mock_daemon_client.start_daemon.assert_not_called()

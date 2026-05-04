@@ -50,40 +50,62 @@ def test_aiida_computer_fixtures(fixture_name, transport_cls, transport_type, re
     assert not computer_unconfigured.is_configured
 
 
+@pytest.mark.parametrize(
+    'fallback_get_misses',
+    [False, True],
+    ids=['fallback_get_succeeds', 'fallback_get_misses_rebuilds'],
+)
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_aiida_computer_integrity_error_fallback(aiida_computer):
-    """Test that ``aiida_computer`` falls back to ``get()`` on ``IntegrityError``.
+def test_aiida_computer_integrity_error_recovery(aiida_computer, fallback_get_misses):
+    """Cover both branches of the ``IntegrityError`` recovery path under xdist races.
 
-    Simulates the TOCTOU race under xdist where ``get()`` raises ``NotExistent``
-    but ``store()`` fails because another worker already created the computer.
+    In both cases, the first ``get()`` misses (as if ``aiida_profile_clean`` wiped
+    the DB) and ``store()`` fails with ``IntegrityError`` (another worker re-created
+    the computer). The two branches differ in what the fallback ``get()`` sees:
+
+    - ``fallback_get_succeeds``: it finds the racing worker's row and returns it.
+    - ``fallback_get_misses_rebuilds``: it raises ``NotExistent`` again (rare),
+      so the fixture rebuilds and stores fresh.
     """
     from unittest.mock import patch
 
     from aiida.common.exceptions import IntegrityError, NotExistent
 
-    # First, create and store the computer normally.
-    label = f'test-integrity-{uuid.uuid4().hex}'
-    computer = aiida_computer(label=label)
+    label = f'test-recovery-{uuid.uuid4().hex}'
 
-    # Simulate the race: the first get() misses (as if DB was just wiped by
-    # another worker's aiida_profile_clean), store() fails with IntegrityError
-    # (another worker re-created the computer first), and the fallback get()
-    # inside the except block finds the computer.
-    original_get = Computer.collection.get
+    pre_existing = aiida_computer(label=label) if not fallback_get_misses else None
 
-    collection = Computer.collection
+    if fallback_get_misses:
+        get_side_effect = [
+            NotExistent('First get: DB was just cleaned'),
+            NotExistent('Second get: racing worker row vanished'),
+        ]
+    else:
+        get_side_effect = [NotExistent('First get: DB was just cleaned'), pre_existing]
+
+    original_store = Computer.store
+    store_calls = {'n': 0}
+
+    def store_side_effect(self):
+        store_calls['n'] += 1
+        if store_calls['n'] == 1:
+            raise IntegrityError('UNIQUE constraint failed')
+        return original_store(self)
+
     with (
-        patch.object(
-            type(collection),
-            'get',
-            side_effect=[NotExistent('Simulated race: DB was just cleaned'), original_get(label=label)],
-        ),
-        patch.object(Computer, 'store', side_effect=IntegrityError('UNIQUE constraint failed')),
+        patch.object(type(Computer.collection), 'get', side_effect=get_side_effect),
+        patch.object(Computer, 'store', autospec=True, side_effect=store_side_effect),
     ):
-        fallback_computer = aiida_computer(label=label)
+        recovered = aiida_computer(label=label)
 
-    assert fallback_computer.pk == computer.pk
-    assert fallback_computer.uuid == computer.uuid
+    assert recovered.is_stored
+    assert recovered.label == label
+    if fallback_get_misses:
+        assert store_calls['n'] == 2  # rebuild path: first store failed, second persisted
+    else:
+        assert pre_existing is not None
+        assert recovered.pk == pre_existing.pk
+        assert store_calls['n'] == 1  # fallback path: only the failing store ran
 
 
 @pytest.mark.parametrize(

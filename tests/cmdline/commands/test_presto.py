@@ -41,8 +41,8 @@ def test_get_default_presto_profile_name(monkeypatch, profile_names, expected):
     assert get_default_presto_profile_name() == expected
 
 
-@pytest.mark.usefixtures('empty_config')
-def test_presto_without_rmq(pytestconfig, run_cli_command, monkeypatch, mock_daemon_client):
+@pytest.mark.usefixtures('empty_config', 'mock_daemon_client')
+def test_presto_without_rmq(run_cli_command, monkeypatch):
     """Test the ``verdi presto`` without RabbitMQ falls back to ZMQ."""
     from aiida.brokers.rabbitmq import defaults
 
@@ -63,8 +63,8 @@ def test_presto_without_rmq(pytestconfig, run_cli_command, monkeypatch, mock_dae
         assert profile.process_control_backend == 'core.zmq'
 
 
-@pytest.mark.usefixtures('empty_config')
-def test_presto(run_cli_command, mock_daemon_client):
+@pytest.mark.usefixtures('empty_config', 'mock_daemon_client')
+def test_presto(run_cli_command):
     """Test that ``verdi presto`` configures a broker (RabbitMQ if available, otherwise ZMQ)."""
     result = run_cli_command(verdi_presto, ['--non-interactive'])
     assert 'Created new profile `presto`.' in result.output
@@ -78,8 +78,8 @@ def test_presto(run_cli_command, mock_daemon_client):
 
 
 @pytest.mark.requires_psql
-@pytest.mark.usefixtures('empty_config')
-def test_presto_use_postgres(run_cli_command, manager, mock_daemon_client):
+@pytest.mark.usefixtures('empty_config', 'mock_daemon_client')
+def test_presto_use_postgres(run_cli_command, manager):
     """Test the ``verdi presto`` with the ``--use-postgres`` flag."""
     result = run_cli_command(verdi_presto, ['--non-interactive', '--use-postgres'])
     assert 'Created new profile `presto`.' in result.output
@@ -100,8 +100,8 @@ def test_presto_use_postgres_fail(run_cli_command):
     assert 'Failed to connect to the PostgreSQL server' in result.output
 
 
-@pytest.mark.usefixtures('empty_config')
-def test_presto_overdose(run_cli_command, config_with_profile_factory, mock_daemon_client):
+@pytest.mark.usefixtures('empty_config', 'mock_daemon_client')
+def test_presto_overdose(run_cli_command, config_with_profile_factory):
     """Test that ``verdi presto`` still works for users that have over 10 presto profiles."""
     config_with_profile_factory(name='presto-10')
     result = run_cli_command(verdi_presto)
@@ -113,7 +113,7 @@ def test_presto_starts_daemon(run_cli_command, mock_daemon_client):
     """Test that ``verdi presto`` auto-starts the daemon."""
     result = run_cli_command(verdi_presto, ['--non-interactive'])
     assert 'Starting the daemon' in result.output
-    mock_daemon_client.start_daemon.assert_called_once()
+    mock_daemon_client.start_daemon.assert_called_once_with()
 
 
 @pytest.mark.usefixtures('empty_config')
@@ -126,21 +126,26 @@ def test_presto_no_daemon_autostart(run_cli_command, mock_daemon_client):
 
 
 @pytest.mark.usefixtures('empty_config')
-def test_presto_daemon_start_failure(run_cli_command, monkeypatch):
+def test_presto_no_broker_skips_daemon(run_cli_command, mock_daemon_client):
+    """Test that ``verdi presto --no-broker`` skips the daemon auto-start (no broker means no daemon)."""
+    result = run_cli_command(verdi_presto, ['--non-interactive', '--no-broker'])
+    assert 'Created new profile' in result.output
+    assert 'Starting the daemon' not in result.output
+    mock_daemon_client.start_daemon.assert_not_called()
+
+
+@pytest.mark.usefixtures('empty_config')
+def test_presto_daemon_start_failure(run_cli_command, mock_daemon_client):
     """Test that ``verdi presto`` handles daemon start failure gracefully."""
-    from aiida.engine.daemon import client as daemon_client_mod
+    from aiida.engine.daemon.client import DaemonException
 
-    def mock_get_daemon_client(*args, **kwargs):
-        mock = MagicMock()
-        mock.start_daemon.side_effect = RuntimeError('Could not start daemon')
-        return mock
-
-    monkeypatch.setattr(daemon_client_mod, 'get_daemon_client', mock_get_daemon_client)
+    mock_daemon_client.start_daemon.side_effect = DaemonException('Could not start daemon')
 
     result = run_cli_command(verdi_presto, ['--non-interactive'])
     assert 'Created new profile' in result.output
     assert 'FAILED' in result.output
     assert 'Could not start daemon' in result.output
+    assert 'verdi daemon start' in result.output
 
 
 @pytest.mark.requires_psql

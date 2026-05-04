@@ -298,13 +298,14 @@ def verdi_presto(
     echo.echo_success('Configured the localhost as a computer.')
 
     if broker_backend is not None and not no_daemon_autostart:
-        from aiida.engine.daemon.client import get_daemon_client
+        from aiida.common.exceptions import ConfigurationError
+        from aiida.engine.daemon.client import DaemonException, get_daemon_client
 
         echo.echo('Starting the daemon... ', nl=False)
         try:
             client = get_daemon_client(profile.name)
             client.start_daemon()
-        except Exception as exception:
+        except (DaemonException, ConfigurationError) as exception:
             echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
             echo.echo_warning(f'Failed to start the daemon: {exception}')
             echo.echo_report('You can start it manually with `verdi daemon start`.')

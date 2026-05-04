@@ -96,29 +96,38 @@ def aiida_computer(tmp_path) -> t.Callable[[], 'Computer']:
 
         label = label or f'test-computer-{uuid.uuid4().hex}'
 
-        try:
-            computer = Computer.collection.get(
-                label=label, hostname=hostname, scheduler_type=scheduler_type, transport_type=transport_type
-            )
-        except NotExistent:
-            computer = Computer(
+        def _build() -> 'Computer':
+            return Computer(
                 label=label,
                 hostname=hostname,
                 workdir=str(tmp_path),
                 transport_type=transport_type,
                 scheduler_type=scheduler_type,
             )
+
+        try:
+            computer = Computer.collection.get(
+                label=label, hostname=hostname, scheduler_type=scheduler_type, transport_type=transport_type
+            )
+        except NotExistent:
+            computer = _build()
             try:
                 computer.store()
             except IntegrityError:
-                # A computer with this label was concurrently created by another fixture call,
-                # e.g. after ``aiida_profile_clean`` wiped the database mid-session.
-                computer = Computer.collection.get(
-                    label=label, hostname=hostname, scheduler_type=scheduler_type, transport_type=transport_type
-                )
-            else:
-                computer.set_minimum_job_poll_interval(minimum_job_poll_interval)
-                computer.set_default_mpiprocs_per_machine(default_mpiprocs_per_machine)
+                # Another xdist worker concurrently re-created this computer after
+                # ``aiida_profile_clean`` reset the shared database. Re-querying is
+                # safe because the ``psql_dos`` storage backend rolls back our failed
+                # transaction before raising (see ``psql_dos/orm/utils.py``).
+                try:
+                    computer = Computer.collection.get(
+                        label=label, hostname=hostname, scheduler_type=scheduler_type, transport_type=transport_type
+                    )
+                except NotExistent:
+                    # Row no longer present (rare): rebuild and store fresh.
+                    computer = _build()
+                    computer.store()
+            computer.set_minimum_job_poll_interval(minimum_job_poll_interval)
+            computer.set_default_mpiprocs_per_machine(default_mpiprocs_per_machine)
 
         if configuration_kwargs:
             computer.configure(**configuration_kwargs)

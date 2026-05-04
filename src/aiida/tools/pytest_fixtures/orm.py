@@ -91,24 +91,41 @@ def aiida_computer(tmp_path) -> t.Callable[[], 'Computer']:
     ) -> 'Computer':
         import uuid
 
-        from aiida.common.exceptions import NotExistent
+        from aiida.common.exceptions import IntegrityError, NotExistent
         from aiida.orm import Computer
 
         label = label or f'test-computer-{uuid.uuid4().hex}'
 
-        try:
-            computer = Computer.collection.get(
-                label=label, hostname=hostname, scheduler_type=scheduler_type, transport_type=transport_type
-            )
-        except NotExistent:
-            computer = Computer(
+        def _build() -> 'Computer':
+            return Computer(
                 label=label,
                 hostname=hostname,
                 workdir=str(tmp_path),
                 transport_type=transport_type,
                 scheduler_type=scheduler_type,
             )
-            computer.store()
+
+        try:
+            computer = Computer.collection.get(
+                label=label, hostname=hostname, scheduler_type=scheduler_type, transport_type=transport_type
+            )
+        except NotExistent:
+            computer = _build()
+            try:
+                computer.store()
+            except IntegrityError:
+                # Another xdist worker concurrently re-created this computer after
+                # ``aiida_profile_clean`` reset the shared database. Re-querying is
+                # safe because the ``psql_dos`` storage backend rolls back our failed
+                # transaction before raising (see ``psql_dos/orm/utils.py``).
+                try:
+                    computer = Computer.collection.get(
+                        label=label, hostname=hostname, scheduler_type=scheduler_type, transport_type=transport_type
+                    )
+                except NotExistent:
+                    # Row no longer present (rare): rebuild and store fresh.
+                    computer = _build()
+                    computer.store()
             computer.set_minimum_job_poll_interval(minimum_job_poll_interval)
             computer.set_default_mpiprocs_per_machine(default_mpiprocs_per_machine)
 

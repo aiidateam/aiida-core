@@ -120,7 +120,7 @@ def test_submit_without_daemon(aiida_config_tmp, aiida_profile_factory, config_s
 
         with pytest.raises(
             exceptions.InvalidOperation,
-            match=r'Cannot submit because the daemon and thus the ZMQ broker is not running\..*',
+            match=r'Cannot submit because the daemon is not running\.',
         ):
             launch.submit(AddWorkChain, term_a=orm.Int(1), term_b=orm.Int(2))
 
@@ -310,6 +310,32 @@ class TestLaunchersDryRun:
 
         node = launch.submit(ArithmeticAddCalculation, **inputs)
         assert isinstance(node, orm.CalcJobNode)
+
+    def test_submit_builder_dry_run(self):
+        """Regression test: ``submit`` with a ``ProcessBuilder`` carrying ``metadata.dry_run=True``.
+
+        Builder inputs are merged into ``inputs`` only inside ``instantiate_process``, so the early dry-run detection in
+        ``submit`` must merge them itself; otherwise the call falls through to the real submit path.
+        """
+        import pathlib
+
+        builder = ArithmeticAddCalculation.get_builder()
+        builder.code = self.code
+        builder.x = orm.Int(1)
+        builder.y = orm.Int(1)
+        builder.metadata = {
+            'dry_run': True,
+            'options': {'resources': {'num_machines': 1, 'num_mpiprocs_per_machine': 1}},
+        }
+        node = launch.submit(builder)
+        assert isinstance(node, orm.CalcJobNode)
+        # ``dry_run_info`` is set only by ``CalcJob._perform_dry_run``; a real submit would have queued the calc for the
+        # daemon, returning a non-terminated node and no ``dry_run_info``.
+        assert isinstance(node.dry_run_info, dict)
+        assert node.is_terminated
+        folder = pathlib.Path(node.dry_run_info['folder'])
+        assert folder.is_dir()
+        assert (folder / node.dry_run_info['script_filename']).is_file()
 
     def test_launchers_dry_run_no_provenance(self):
         """Test the launchers in `dry_run` mode with `store_provenance=False`."""

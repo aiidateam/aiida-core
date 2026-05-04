@@ -118,7 +118,12 @@ def submit(
     # If a dry run is requested, simply forward to `run`, because it is not compatible with `submit`. We choose for this
     # instead of raising, because in this way the user does not have to change the launcher when testing. The same goes
     # for if `remote_folder` is present in the inputs, which means we are importing an already completed calculation.
-    if inputs.get('metadata', {}).get('dry_run', False) or 'remote_folder' in inputs:
+    # Builder inputs need to be merged so that detection works for ``submit(builder)`` too.
+    if isinstance(process, ProcessBuilder):
+        merged_inputs = {**inputs, **process._inputs(prune=True)}
+    else:
+        merged_inputs = inputs
+    if (merged_inputs.get('metadata') or {}).get('dry_run', False) or 'remote_folder' in merged_inputs:
         _, node = run_get_node(process, inputs)
         return node
 
@@ -127,10 +132,13 @@ def submit(
 
     if profile is not None and profile.process_control_backend == 'core.zmq':
         daemon_client = current_manager.get_daemon_client()
+        # Note: ``is_daemon_running`` only checks for a PID file, so a stale PID from a crashed daemon will let this
+        # check pass.
         if not daemon_client.is_daemon_running:
             msg = (
-                'Cannot submit because the daemon and thus the ZMQ broker is not running. '
-                'Start the daemon with `verdi daemon start` and try again.'
+                'Cannot submit because the daemon is not running. The ZMQ broker is bundled into the daemon for this '
+                'profile, so submission requires `verdi daemon start`. To run the process locally without the daemon '
+                'instead, use `aiida.engine.run` (or `run_get_node`).'
             )
             raise InvalidOperation(msg)
 

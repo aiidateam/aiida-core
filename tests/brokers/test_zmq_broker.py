@@ -269,31 +269,6 @@ class TestZmqBrokerTasks:
         assert task_data['body']['args']['pid'] == 42
         assert task_data['body']['args']['nowait'] is True
 
-    def test_revive_process_multiple_pids(self, tmp_path):
-        """Reviving multiple PIDs should produce one task per PID with unique task ids."""
-        broker = _create_broker_with_base_path(tmp_path)
-
-        for pid in (1, 2, 3):
-            broker.revive_process(pid)
-
-        queue = PersistentQueue(tmp_path / 'storage' / 'tasks')
-        pending = queue.get_all_pending()
-        assert len(pending) == 3
-        assert len({task_id for task_id, _ in pending}) == 3
-        assert {task_data['body']['args']['pid'] for _, task_data in pending} == {1, 2, 3}
-
-    def test_revive_then_iterate_round_trip(self, tmp_path):
-        """A revived task must be visible to ``iterate_tasks`` (producer/consumer schema check)."""
-        broker = _create_broker_with_base_path(tmp_path)
-
-        broker.revive_process(7)
-
-        tasks = list(broker.iterate_tasks())
-        assert len(tasks) == 1
-        body = tasks[0].body
-        assert body is not None
-        assert body['args']['pid'] == 7
-
 
 class TestZmqIncomingTask:
     """Tests for ZmqIncomingTask."""

@@ -441,9 +441,15 @@ def test_run_launchers():
     assert isinstance(node, orm.CalcFunctionNode)
 
 
-@pytest.mark.requires_broker
+@pytest.mark.requires_rmq
 def test_submit_launchers():
-    """Verify that submit to daemon works."""
+    """Verify that submit to daemon works.
+
+    Marked ``requires_rmq`` (not ``requires_broker``) because under the ``core.zmq`` profile the broker is bundled into
+    the daemon, so ``aiida.engine.launch.submit`` raises ``InvalidOperation`` when the daemon is not up — which a CI
+    run with only the broker started would trip. The ZMQ submit-of-process-function path is exercised by the daemon
+    system tests under ``.github/system_tests/test_daemon.py``.
+    """
     # Process function can be submitted and will be run by a daemon worker as long as the function is importable
     # Note that the actual running is not tested here but is done so in `.github/system_tests/test_daemon.py`.
     node = submit(add_multiply, x=orm.Int(1), y=orm.Int(2), z=orm.Int(3))

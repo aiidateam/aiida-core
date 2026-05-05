@@ -188,7 +188,7 @@ class SgeScheduler(BashCliScheduler):
         if email_events:
             lines.append(f'#$ -m {email_events}')
             if not job_tmpl.email:
-                self.logger.info(
+                self.logger.debug(
                     'Email triggers provided to SGE script for job,'
                     'but no email field set; will send emails to '
                     'the job owner as set in the scheduler'
@@ -225,7 +225,7 @@ class SgeScheduler(BashCliScheduler):
             # 'n' : Standard error and standard output are not merged (default)
             lines.append('#$ -j y')
             if job_tmpl.sched_error_path:
-                self.logger.info(
+                self.logger.debug(
                     'sched_join_files is True, but sched_error_path is set in ' 'SGE script; ignoring sched_error_path'
                 )
         elif job_tmpl.sched_error_path:
@@ -281,7 +281,7 @@ class SgeScheduler(BashCliScheduler):
         """
         submit_command = f'qsub -terse {submit_script}'
 
-        self.logger.info(f'submitting with: {submit_command}')
+        self.logger.debug(f'submitting with: {submit_command}')
 
         return submit_command
 
@@ -467,7 +467,7 @@ class SgeScheduler(BashCliScheduler):
         """Return the command to kill the job with specified jobid."""
         submit_command = f'qdel {jobid}'
 
-        self.logger.info(f'killing job {jobid}')
+        self.logger.debug(f'killing job {jobid}')
 
         return submit_command
 
@@ -488,6 +488,6 @@ class SgeScheduler(BashCliScheduler):
             )
 
         if stdout.strip():
-            self.logger.info(f'in _parse_kill_output for {self.transport!s}: there was some text in stdout: {stdout}')
+            self.logger.debug(f'in _parse_kill_output for {self.transport!s}: there was some text in stdout: {stdout}')
 
         return True

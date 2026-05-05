@@ -838,7 +838,7 @@ class CalcJob(Process):
         computer = self.node.computer
 
         if computer is None:
-            self.logger.info(
+            self.logger.debug(
                 'no computer is defined for this calculation job which suggest that it is an imported job and so '
                 'scheduler output probably is not available or not in a format that can be reliably parsed, skipping..'
             )
@@ -851,9 +851,9 @@ class CalcJob(Process):
         detailed_job_info = self.node.get_detailed_job_info()
 
         if detailed_job_info is None:
-            self.logger.info('could not parse scheduler output: the `detailed_job_info` attribute is missing')
+            self.logger.warning('could not parse scheduler output: the `detailed_job_info` attribute is missing')
         elif detailed_job_info.get('retval', 0) != 0:
-            self.logger.info('could not parse scheduler output: return value of `detailed_job_info` is non-zero')
+            self.logger.warning('could not parse scheduler output: return value of `detailed_job_info` is non-zero')
             detailed_job_info = None
 
         if filename_stderr is None:

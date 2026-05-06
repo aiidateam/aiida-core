@@ -184,8 +184,7 @@ def verdi_presto(
     * Create a default user for the profile (email can be configured through the `--email` option)
     * Set up the localhost as a `Computer` and configure it
     * Set a number of configuration options with sensible defaults
-    * Start the daemon (unless `--no-broker` is specified or the
-      `AIIDA_NO_DAEMON_AUTOSTART` environment variable is set)
+    * Start the daemon (unless `--no-broker` is specified)
 
     By default the command creates a profile that uses SQLite for the database. For the message broker, it automatically
     checks for RabbitMQ running on localhost. If found, it configures RabbitMQ as the broker. Otherwise, it falls back
@@ -293,7 +292,9 @@ def verdi_presto(
 
     echo.echo_success('Configured the localhost as a computer.')
 
-    if broker_backend is not None and not os.environ.get('AIIDA_NO_DAEMON_AUTOSTART'):
+    # `AIIDA_NO_DAEMON_AUTOSTART` is an internal escape hatch for the Docker init script (see
+    # `.docker/aiida-core-base/s6-assets/init/aiida-prepare.sh`); deliberately undocumented in `--help`.
+    if broker_backend is not None and os.environ.get('AIIDA_NO_DAEMON_AUTOSTART') != '1':
         from aiida.common.exceptions import ConfigurationError
         from aiida.engine.daemon.client import DaemonException, get_daemon_client
 

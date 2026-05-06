@@ -118,12 +118,27 @@ def test_presto_starts_daemon(run_cli_command, mock_daemon_client):
 
 @pytest.mark.usefixtures('empty_config')
 def test_presto_no_daemon_autostart_env(run_cli_command, mock_daemon_client, monkeypatch):
-    """Test that setting ``AIIDA_NO_DAEMON_AUTOSTART`` skips the daemon auto-start."""
+    """Test that ``AIIDA_NO_DAEMON_AUTOSTART=1`` skips the daemon auto-start."""
     monkeypatch.setenv('AIIDA_NO_DAEMON_AUTOSTART', '1')
     result = run_cli_command(verdi_presto, ['--non-interactive'])
     assert 'Created new profile' in result.output
     assert 'Starting the daemon' not in result.output
     mock_daemon_client.start_daemon.assert_not_called()
+
+
+@pytest.mark.parametrize('value', ('0', 'true', 'false', '', 'banana'))
+@pytest.mark.usefixtures('empty_config')
+def test_presto_daemon_autostart_env_non_one(run_cli_command, mock_daemon_client, monkeypatch, value):
+    """Test that anything other than the literal string ``1`` does not skip the daemon.
+
+    Only ``AIIDA_NO_DAEMON_AUTOSTART=1`` is recognized; any other value (including ``0``, ``true``,
+    typos, or empty string) falls through to "start the daemon" so a misspelled or unrecognized
+    value doesn't silently disable the daemon.
+    """
+    monkeypatch.setenv('AIIDA_NO_DAEMON_AUTOSTART', value)
+    result = run_cli_command(verdi_presto, ['--non-interactive'])
+    assert 'Starting the daemon' in result.output
+    mock_daemon_client.start_daemon.assert_called_once_with()
 
 
 @pytest.mark.usefixtures('empty_config')

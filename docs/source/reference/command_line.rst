@@ -319,8 +319,7 @@ Below is a list with all available subcommands.
       * Create a default user for the profile (email can be configured through the `--email` option)
       * Set up the localhost as a `Computer` and configure it
       * Set a number of configuration options with sensible defaults
-      * Start the daemon (unless `--no-broker` is specified or the
-        `AIIDA_NO_DAEMON_AUTOSTART` environment variable is set)
+      * Start the daemon (unless `--no-broker` is specified)
 
       By default the command creates a profile that uses SQLite for the database. For the
       message broker, it automatically checks for RabbitMQ running on localhost. If found, it

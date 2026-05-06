@@ -192,7 +192,7 @@ def test_code_delete_one_force(run_cli_command, code):
         load_code('code')
 
 
-def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, hostname) -> str:
+def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, computer_label, hostname) -> str:
     """Normalize dynamic values in CLI output for stable regression testing.
 
     Args:
@@ -200,6 +200,7 @@ def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, hostnam
         code_pk: The actual PK to be replaced with placeholder
         code_uuid: The actual UUID to be replaced with placeholder
         computer_pk: Optional computer PK to be replaced with placeholder
+        computer_label: Optional computer label to be replaced with placeholder
         hostname: Optional hostname to be replaced with placeholder
 
     Returns:
@@ -218,6 +219,11 @@ def _normalize_code_show_output(output, code_pk, code_uuid, computer_pk, hostnam
 
     # Replace UUID first (before PK, as PK digits might appear in UUID)
     normalized = normalized.replace(code_uuid, '<UUID>')
+
+    # Replace computer label before hostname: the ``aiida_localhost`` label contains the hostname as a
+    # substring (e.g. ``localhost-gw1`` vs ``localhost``), so substituting hostname first would corrupt it.
+    if computer_label:
+        normalized = normalized.replace(computer_label, '<COMPUTER_LABEL>')
 
     # Replace hostname if provided
     if hostname:
@@ -290,6 +296,7 @@ def test_code_show(run_cli_command, aiida_localhost, tmp_path, bash_path, aiida_
         code_pk=code.pk,
         code_uuid=code.uuid,
         computer_pk=computer.pk if computer else None,
+        computer_label=computer.label if computer else None,
         hostname=computer.hostname if computer else None,
     )
 
@@ -410,7 +417,7 @@ def test_code_duplicate_ignore(run_cli_command, aiida_code_installed, non_intera
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('sort_option', ('--sort', '--no-sort'))
-def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regression, sort_option):
+def test_code_export(run_cli_command, aiida_code_installed, aiida_localhost, tmp_path, file_regression, sort_option):
     """Test export the code setup to str."""
     prepend_text = 'module load something\n    some command'
     code = aiida_code_installed(
@@ -424,8 +431,9 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
     options = [str(code.pk), str(filepath), sort_option]
     result = run_cli_command(cmd_code.export, options)
     assert str(filepath) in result.output, 'Filename should be in terminal output but was not found.'
-    # file regression check
-    content = filepath.read_text()
+    # file regression check; substitute the worker-suffixed computer label so the golden file is
+    # stable across xdist workers (see ``aiida_localhost`` fixture).
+    content = filepath.read_text().replace(aiida_localhost.label, '<COMPUTER_LABEL>')
     file_regression.check(content, extension='.yml')
 
     # round trip test by create code from the config file
@@ -481,7 +489,7 @@ def test_code_export_overwrite(run_cli_command, aiida_code_installed, tmp_path):
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.usefixtures('chdir_tmp_path')
-def test_code_export_default_filename(run_cli_command, aiida_code_installed):
+def test_code_export_default_filename(run_cli_command, aiida_code_installed, aiida_localhost):
     """Test default filename being created if no argument passed."""
 
     prepend_text = 'module load something\n    some command'
@@ -495,7 +503,7 @@ def test_code_export_default_filename(run_cli_command, aiida_code_installed):
     options = [str(code.pk)]
     run_cli_command(cmd_code.export, options)
 
-    assert pathlib.Path('code@localhost.yaml').is_file()
+    assert pathlib.Path(f'code@{aiida_localhost.label}.yaml').is_file()
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)

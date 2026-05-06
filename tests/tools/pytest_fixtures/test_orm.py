@@ -16,8 +16,45 @@ pytest_plugins = ['aiida.tools.pytest_fixtures']
 
 
 def test_aiida_localhost(aiida_localhost):
-    """Test the ``aiida_localhost`` fixture."""
-    assert aiida_localhost.label == 'localhost'
+    """Test the ``aiida_localhost`` fixture.
+
+    The label is suffixed with the pytest-xdist worker id to avoid collisions with literal
+    ``'localhost'`` Computers created by other tests or commands (e.g. ``verdi presto``).
+    """
+    # Assert at the contract level (the suffix exists) rather than coupling to the specific
+    # worker-id value, which depends on ``PYTEST_XDIST_WORKER`` at runtime.
+    assert aiida_localhost.label.startswith('localhost-')
+    assert aiida_localhost.hostname == 'localhost'
+    assert aiida_localhost.transport_type == 'core.local'
+    assert aiida_localhost.scheduler_type == 'core.direct'
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_aiida_localhost_no_literal_collision(request):
+    """The fixture's Computer must coexist with a pre-existing literal ``'localhost'`` Computer.
+
+    ``verdi presto`` and other code paths create a Computer with the literal ``'localhost'``
+    label in the same profile. This is the actual #7347 failure
+    order: the literal row is inserted first, then ``aiida_localhost`` is requested. Worker-
+    suffixing the fixture's label makes its row distinct from any literal-label row already in
+    the database, so no UNIQUE-constraint collision can fire.
+    """
+    Computer(
+        label='localhost',
+        hostname='localhost',
+        transport_type='core.ssh',
+        scheduler_type='core.direct',
+        workdir='/tmp',
+    ).store()
+
+    # Defer the fixture's creation until *after* the literal-``'localhost'`` row exists, mirroring
+    # the actual #7347 failure order. If we depended on ``aiida_localhost`` via the test signature,
+    # pytest would evaluate it before the test body runs and the literal row would not yet be
+    # present — we'd be testing the wrong direction of the race.
+    aiida_localhost = request.getfixturevalue('aiida_localhost')
+
+    assert aiida_localhost.label != 'localhost'
+    assert aiida_localhost.transport_type == 'core.local'
 
 
 @pytest.mark.parametrize(

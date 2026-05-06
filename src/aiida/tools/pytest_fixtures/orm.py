@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import pathlib
 import typing as t
 
@@ -115,9 +116,13 @@ def aiida_computer(tmp_path) -> t.Callable[[], 'Computer']:
                 computer.store()
             except IntegrityError:
                 # Another xdist worker concurrently re-created this computer after
-                # ``aiida_profile_clean`` reset the shared database. Re-querying is
-                # safe because the ``psql_dos`` storage backend rolls back our failed
-                # transaction before raising (see ``psql_dos/orm/utils.py``).
+                # ``aiida_profile_clean`` reset the shared database. Re-querying is safe because
+                # the ``psql_dos`` storage backend rolls back our failed transaction before
+                # raising (see ``psql_dos/orm/utils.py``). No retry loop: ``IntegrityError`` only
+                # fires once the racing transaction has already committed, so the follow-up
+                # ``get()`` is guaranteed to succeed. Loop-with-backoff is the right tool for
+                # genuinely transient errors (SQLite ``database is locked``, connection-pool
+                # exhaustion), not for races whose outcome is already pinned down by commit.
                 try:
                     computer = Computer.collection.get(
                         label=label, hostname=hostname, scheduler_type=scheduler_type, transport_type=transport_type
@@ -269,6 +274,12 @@ def aiida_computer_ssh_async(aiida_computer) -> t.Callable[[], 'Computer']:
 def aiida_localhost(aiida_computer_local) -> 'Computer':
     """Return a :class:`aiida.orm.computers.Computer` instance representing localhost with ``core.local`` transport.
 
+    The computer's label is suffixed with the pytest-xdist worker id (e.g. ``localhost-gw0``,
+    or just ``localhost-master`` when not running under xdist). This keeps the fixture's row
+    distinct from any literal-``'localhost'`` Computer that ``verdi presto`` or other code
+    paths may create in the same profile, avoiding UNIQUE-constraint collisions on
+    ``Computer.label``.
+
     Usage::
 
         def test(aiida_localhost):
@@ -276,7 +287,8 @@ def aiida_localhost(aiida_computer_local) -> 'Computer':
 
     :return: The computer.
     """
-    return aiida_computer_local(label='localhost')
+    worker_id = os.environ.get('PYTEST_XDIST_WORKER', 'master')
+    return aiida_computer_local(label=f'localhost-{worker_id}')
 
 
 @pytest.fixture

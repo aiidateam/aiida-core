@@ -3,7 +3,7 @@ UUID                          <UUID>
 Type                          core.code.containerized
 Label                         test_containerized_code
 Description                   Test containerized code
-Computer                      <hostname> (<hostname>), pk: <COMPUTER_PK>
+Computer                      <COMPUTER_LABEL> (<hostname>), pk: <COMPUTER_PK>
 Default `CalcJob` plugin      core.arithmetic.add
 Escape using double quotes    False
 Run with MPI

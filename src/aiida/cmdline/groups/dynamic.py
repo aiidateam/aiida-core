@@ -95,20 +95,22 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         """Call the ``command`` after validating the provided inputs."""
         from pydantic import ValidationError
 
-        if hasattr(cls, 'Model'):
-            # The plugin defines a pydantic model: use it to validate the provided arguments
-            try:
-                cls.Model(**kwargs)
-            except ValidationError as exception:
-                param_hint = [
-                    f'--{loc.replace("_", "-")}'  # type: ignore[union-attr]
-                    for loc in exception.errors()[0]['loc']
-                ]
-                message = '\n'.join([str(e['msg']) for e in exception.errors()])
-                raise click.BadParameter(
-                    message,
-                    param_hint=param_hint or 'one or more parameters',  # type: ignore[arg-type]
-                ) from exception
+        CliModel = getattr(cls, 'CliModel', None)  # noqa: N806
+        if not CliModel:
+            return self._command(ctx, cls, **kwargs)
+
+        try:
+            CliModel(**kwargs)
+        except ValidationError as exception:
+            param_hint = [
+                f'--{loc.replace("_", "-")}'  # type: ignore[union-attr]
+                for loc in exception.errors()[0]['loc']
+            ]
+            message = '\n'.join([str(e['msg']) for e in exception.errors()])
+            raise click.BadParameter(
+                message,
+                param_hint=param_hint or 'one or more parameters',  # type: ignore[arg-type]
+            ) from exception
 
         return self._command(ctx, cls, **kwargs)
 
@@ -153,16 +155,14 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         """
         from pydantic_core import PydanticUndefined
 
-        from aiida.common.pydantic import get_metadata
-
         cls = self.factory(entry_point)
 
-        if not hasattr(cls, 'Model'):
+        CliModel = getattr(cls, 'CliModel', None)  # noqa: N806
+        if not CliModel:
             from aiida.common.warnings import warn_deprecation
 
             warn_deprecation(
-                'Relying on `_get_cli_options` is deprecated. The options should be defined through a '
-                '`pydantic.BaseModel` that should be assigned to the `Model` class attribute.',
+                'Relying on `_get_cli_options` is deprecated. The options should be defined through a `CliModel`.',
                 version=3,
             )
             options_spec = self.factory(entry_point).get_cli_options()  # type: ignore[union-attr]
@@ -170,10 +170,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         options_spec = {}
 
-        for key, field_info in cls.Model.model_fields.items():
-            if get_metadata(field_info, 'exclude_from_cli'):
-                continue
-
+        for key, field_info in CliModel.model_fields.items():
             default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default
 
             # If the annotation has the ``__args__`` attribute it is an instance of a type from ``typing`` and the real

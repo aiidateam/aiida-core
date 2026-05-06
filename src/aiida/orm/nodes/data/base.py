@@ -8,10 +8,12 @@
 ###########################################################################
 """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
+from __future__ import annotations
+
 import typing as t
 from functools import singledispatch
 
-from aiida.common.pydantic import MetadataField
+from aiida.orm.pydantic import OrmMetadataField
 
 from .data import Data
 
@@ -27,10 +29,9 @@ def to_aiida_type(value):
 class BaseType(Data):
     """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
-    class Model(Data.Model):
-        value: t.Any = MetadataField(
-            ...,
-            title='Data value.',
+    class AttributesModel(Data.AttributesModel):
+        value: t.Any = OrmMetadataField(
+            title='Data value',
             description='The value of the data',
         )
 
@@ -39,10 +40,8 @@ class BaseType(Data):
             getattr(self, '_type')
         except AttributeError:
             raise RuntimeError('Derived class must define the `_type` class member')
-
         super().__init__(**kwargs)
-
-        self.value = value or self._type()
+        self.value = value if value is not None else self._type()
 
     @property
     def value(self):

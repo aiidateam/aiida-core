@@ -14,8 +14,8 @@ from importlib.metadata import entry_points
 import pytest
 
 from aiida import orm
-from aiida.common.pydantic import MetadataField
 from aiida.orm.fields import add_field
+from aiida.orm.pydantic import OrmMetadataField
 from aiida.plugins import load_entry_point
 
 EPS = entry_points()
@@ -66,10 +66,8 @@ def test_add_field():
     """Test the `add_field` API."""
 
     class NewNode(orm.Data):
-        class Model(orm.Data.Model):
-            key1: str = MetadataField(  # type: ignore[annotation-unchecked]
-                is_subscriptable=False,
-            )
+        class AttributesModel(orm.Data.AttributesModel):
+            key1: str = OrmMetadataField()
 
     node = NewNode()
 
@@ -77,7 +75,7 @@ def test_add_field():
     assert node.fields.key1.dtype is str
     assert isinstance(node.fields.key1, orm.fields.QbStrField)
     assert node.fields.key1.backend_key == 'attributes.key1'
-    assert not node.fields.key1.is_subscriptable
+    assert node.fields.key1 == node.fields.attributes.key1
 
 
 @pytest.mark.parametrize('key', ('|', 'some.field', '1key'))
@@ -114,9 +112,9 @@ def test_query_new_class(monkeypatch):
     )
 
     class NewNode(orm.Data):
-        class Model(orm.Data.Model):
-            some_label: str = MetadataField()  # type: ignore[annotation-unchecked]
-            some_value: int = MetadataField()  # type: ignore[annotation-unchecked]
+        class AttributesModel(orm.Data.AttributesModel):
+            some_label: str = OrmMetadataField()  # type: ignore[annotation-unchecked]
+            some_value: int = OrmMetadataField()  # type: ignore[annotation-unchecked]
 
     node = NewNode()
     node.base.attributes.set_many({'some_label': 'A', 'some_value': 1})

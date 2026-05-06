@@ -8,16 +8,19 @@
 ###########################################################################
 """Module for Computer entities"""
 
+from __future__ import annotations
+
 import os
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Tuple, Type, Union
+from uuid import UUID
 
 from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER, AiidaLoggerType
-from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
 from aiida.plugins import SchedulerFactory, TransportFactory
 
 from . import entities, users
+from .pydantic import OrmMetadataField
 
 if TYPE_CHECKING:
     from aiida.orm import AuthInfo, User
@@ -31,11 +34,13 @@ __all__ = ('Computer',)
 class ComputerCollection(entities.Collection['Computer']):
     """The collection of Computer entries."""
 
+    collection_type: ClassVar[str] = 'computers'
+
     @staticmethod
-    def _entity_base_cls() -> Type['Computer']:
+    def _entity_base_cls() -> Type[Computer]:
         return Computer
 
-    def get_or_create(self, label: str, **kwargs: Any) -> Tuple[bool, 'Computer']:
+    def get_or_create(self, label: str, **kwargs: Any) -> Tuple[bool, Computer]:
         """Try to retrieve a Computer from the DB with the given arguments;
         create (and store) a new Computer if such a Computer was not present yet.
 
@@ -73,14 +78,39 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
     _CLS_COLLECTION = ComputerCollection
 
-    class Model(entities.Entity.Model):
-        uuid: str = MetadataField(description='The UUID of the computer', is_attribute=False, exclude_to_orm=True)
-        label: str = MetadataField(description='Label for the computer', is_attribute=False)
-        description: str = MetadataField(description='Description of the computer', is_attribute=False)
-        hostname: str = MetadataField(description='Hostname of the computer', is_attribute=False)
-        transport_type: str = MetadataField(description='Transport type of the computer', is_attribute=False)
-        scheduler_type: str = MetadataField(description='Scheduler type of the computer', is_attribute=False)
-        metadata: Dict[str, Any] = MetadataField(description='Metadata of the computer', is_attribute=False)
+    class ReadModel(entities.Entity.ReadModel):
+        uuid: UUID = OrmMetadataField(
+            description='The UUID of the computer',
+            read_only=True,
+            examples=['123e4567-e89b-12d3-a456-426614174000'],
+        )
+        label: str = OrmMetadataField(
+            description='Label for the computer',
+            examples=['localhost'],
+        )
+        description: str = OrmMetadataField(
+            '',
+            description='Description of the computer',
+            examples=['My local machine'],
+        )
+        hostname: str = OrmMetadataField(
+            description='Hostname of the computer',
+            examples=['localhost'],
+        )
+        transport_type: str = OrmMetadataField(
+            description='Transport type of the computer',
+            examples=['core.local'],
+        )
+        scheduler_type: str = OrmMetadataField(
+            description='Scheduler type of the computer',
+            examples=['core.direct'],
+        )
+        metadata: dict[str, Any] = OrmMetadataField(
+            default_factory=dict,
+            description='Metadata of the computer',
+            may_be_large=True,
+            examples=[{'key': 'value'}],
+        )
 
     def __init__(
         self,
@@ -261,11 +291,11 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
                 f'Invalid value for def_memory_per_machine, must be a positive int, got: {def_memory_per_machine}'
             )
 
-    def copy(self) -> 'Computer':
+    def copy(self) -> Computer:
         """Return a copy of the current object to work with, not stored yet."""
         return entities.from_backend_entity(Computer, self._backend_entity.copy())
 
-    def store(self) -> 'Computer':
+    def store(self) -> Computer:
         """Store the computer in the DB.
 
         Differently from Nodes, a computer can be re-stored if its properties

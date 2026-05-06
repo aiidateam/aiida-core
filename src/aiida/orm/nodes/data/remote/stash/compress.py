@@ -8,11 +8,13 @@
 ###########################################################################
 """Data plugin that models a stashed folder on a remote computer."""
 
+from __future__ import annotations
+
 from typing import List, Tuple, Union
 
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
-from aiida.common.pydantic import MetadataField
+from aiida.orm.pydantic import OrmMetadataField
 
 from .base import RemoteStashData
 
@@ -24,17 +26,17 @@ class RemoteStashCompressedData(RemoteStashData):
 
     _storable = True
 
-    class Model(RemoteStashData.Model):
-        target_basepath: str = MetadataField(
+    class AttributesModel(RemoteStashData.AttributesModel):
+        target_basepath: str = OrmMetadataField(
             description='The the target basepath',
         )
-        source_list: List[str] = MetadataField(
+        source_list: list[str] = OrmMetadataField(
             description='The list of source files that were stashed',
         )
-        dereference: bool = MetadataField(
+        dereference: bool = OrmMetadataField(
             description='The format of the compression used when stashed',
         )
-        fail_on_missing: bool = MetadataField(
+        fail_on_missing: bool = OrmMetadataField(
             description='Whether stashing should fail if any files are missing',
             default=False,
         )
@@ -43,7 +45,7 @@ class RemoteStashCompressedData(RemoteStashData):
         self,
         stash_mode: StashMode,
         target_basepath: str,
-        source_list: List,
+        source_list: List[str],
         dereference: bool,
         fail_on_missing: bool = False,
         **kwargs,
@@ -56,7 +58,9 @@ class RemoteStashCompressedData(RemoteStashData):
         :param dereference: whether to follow symlinks while stashing.
         :param fail_on_missing: whether stashing should fail if any files are missing.
         """
+
         super().__init__(stash_mode, **kwargs)
+
         self.target_basepath = target_basepath
         self.source_list = source_list
         self.dereference = dereference

@@ -10,21 +10,39 @@
 
 from __future__ import annotations
 
-import base64
 import datetime
+import pathlib
+from copy import deepcopy
 from functools import cached_property
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, Iterator, List, NoReturn, Optional, Tuple, Type, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    BinaryIO,
+    Callable,
+    ClassVar,
+    Generic,
+    Iterator,
+    List,
+    Literal,
+    NoReturn,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    cast,
+)
 from uuid import UUID
 
+import pydantic as pdt
 from typing_extensions import Self
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
+from aiida.orm.fields import QbAttributesField, QbFields, add_field
 from aiida.orm.utils.node import (
     AbstractNodeMeta,
     get_query_type_from_type_string,
@@ -35,6 +53,7 @@ from ..computers import Computer
 from ..entities import Collection as EntityCollection
 from ..entities import Entity, from_backend_entity
 from ..extras import EntityExtras
+from ..pydantic import OrmMetadataField, OrmModel
 from ..querybuilder import QueryBuilder
 from ..users import User
 from .attributes import NodeAttributes
@@ -59,8 +78,10 @@ NodeType = TypeVar('NodeType', bound='Node')
 class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
     """The collection of nodes."""
 
+    collection_type: ClassVar[str] = 'nodes'
+
     @staticmethod
-    def _entity_base_cls() -> Type['Node']:  # type: ignore[override]
+    def _entity_base_cls() -> Type[Node]:  # type: ignore[override]
         return Node
 
     def delete(self, pk: int) -> None:
@@ -105,39 +126,39 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
 class NodeBase:
     """A namespace for node related functionality, that is not directly related to its user-facing properties."""
 
-    def __init__(self, node: 'Node') -> None:
+    def __init__(self, node: Node) -> None:
         """Construct a new instance of the base namespace."""
         self._node = node
 
     @cached_property
-    def repository(self) -> 'NodeRepository':
+    def repository(self) -> NodeRepository:
         """Return the repository for this node."""
         from .repository import NodeRepository
 
         return NodeRepository(self._node)
 
     @cached_property
-    def caching(self) -> 'NodeCaching':
+    def caching(self) -> NodeCaching:
         """Return an interface to interact with the caching of this node."""
         return self._node._CLS_NODE_CACHING(self._node)
 
     @cached_property
-    def comments(self) -> 'NodeComments':
+    def comments(self) -> NodeComments:
         """Return an interface to interact with the comments of this node."""
         return NodeComments(self._node)
 
     @cached_property
-    def attributes(self) -> 'NodeAttributes':
+    def attributes(self) -> NodeAttributes:
         """Return an interface to interact with the attributes of this node."""
         return NodeAttributes(self._node)
 
     @cached_property
-    def extras(self) -> 'EntityExtras':
+    def extras(self) -> EntityExtras:
         """Return an interface to interact with the extras of this node."""
         return EntityExtras(self._node)
 
     @cached_property
-    def links(self) -> 'NodeLinks':
+    def links(self) -> NodeLinks:
         """Return an interface to interact with the links of this node."""
         return self._node._CLS_NODE_LINKS(self._node)
 
@@ -195,138 +216,295 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     _storable = False
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
-    class Model(Entity.Model):
-        uuid: Optional[str] = MetadataField(
-            None, description='The UUID of the node', is_attribute=False, exclude_to_orm=True, exclude_from_cli=True
+    identity_field = 'uuid'
+
+    class BaseNodeModel(OrmModel):
+        label: str = OrmMetadataField(
+            '',
+            description='The node label',
+            examples=['my_node'],
         )
-        node_type: Optional[str] = MetadataField(
-            None, description='The type of the node', is_attribute=False, exclude_to_orm=True, exclude_from_cli=True
+        description: str = OrmMetadataField(
+            '',
+            description='The node description',
+            examples=['This is my node description.'],
         )
-        process_type: Optional[str] = MetadataField(
+        extras: dict[str, Any] = OrmMetadataField(
+            default_factory=dict,
+            description='The node extras',
+            orm_to_model=lambda node: cast(Node, node).base.extras.all,
+            may_be_large=True,
+            examples=[{'extra_key': 'extra_value'}],
+        )
+        node_type: str = OrmMetadataField(description='The type of the node.')
+
+    class AttributesModel(OrmModel):
+        """The attributes schema for this node."""
+
+    class WritableFields(OrmModel):
+        attributes: Node.AttributesModel = OrmMetadataField(
+            description='The node attributes',
+            may_be_large=True,
+            examples=[{'attr_key': 'attr_value'}],
+        )
+        repository_metadata: dict[str, Any] = OrmMetadataField(
+            default_factory=dict,
+            description='Virtual hierarchy of the file repository',
+            orm_to_model=lambda node: cast(Node, node).base.repository.metadata,
+            may_be_large=True,
+            examples=[{'o': {'file.txt': {'k': '<file_hash>'}}}],
+        )
+
+    class ReadModel(WritableFields, BaseNodeModel, Entity.ReadModel):
+        """The absolute schema for this node."""
+
+        uuid: UUID = OrmMetadataField(
+            description='The UUID of the node',
+            read_only=True,
+            examples=['123e4567-e89b-12d3-a456-426614174000'],
+        )
+        process_type: Optional[str] = OrmMetadataField(
             None,
             description='The process type of the node',
-            is_attribute=False,
-            exclude_to_orm=True,
-            exclude_from_cli=True,
+            read_only=True,
+            examples=['aiida.calculations:arithmetic.add.'],
         )
-        repository_metadata: Optional[Dict[str, Any]] = MetadataField(
-            None,
-            description='Virtual hierarchy of the file repository.',
-            is_attribute=False,
-            orm_to_model=lambda node, _: node.base.repository.metadata,  # type: ignore[attr-defined]
-            exclude_to_orm=True,
-            exclude_from_cli=True,
-        )
-        ctime: Optional[datetime.datetime] = MetadataField(
-            None,
+        ctime: datetime.datetime = OrmMetadataField(
             description='The creation time of the node',
-            is_attribute=False,
-            exclude_to_orm=True,
-            exclude_from_cli=True,
+            read_only=True,
+            examples=['2024-01-01T12:00:00+00:00'],
         )
-        mtime: Optional[datetime.datetime] = MetadataField(
-            None,
+        mtime: datetime.datetime = OrmMetadataField(
             description='The modification time of the node',
-            is_attribute=False,
-            exclude_to_orm=True,
-            exclude_from_cli=True,
+            read_only=True,
+            examples=['2024-01-02T12:00:00+00:00'],
         )
-        label: Optional[str] = MetadataField(
-            None, description='The node label', is_attribute=False, exclude_from_cli=True
-        )
-        description: Optional[str] = MetadataField(
-            None, description='The node description', is_attribute=False, exclude_from_cli=True
-        )
-        attributes: Optional[Dict[str, Any]] = MetadataField(
-            None,
-            description='The node attributes',
-            is_attribute=False,
-            orm_to_model=lambda node, _: node.base.attributes.all,  # type: ignore[attr-defined]
-            is_subscriptable=True,
-            exclude_from_cli=True,
-            exclude_to_orm=True,
-        )
-        extras: Optional[Dict[str, Any]] = MetadataField(
-            None,
-            description='The node extras',
-            is_attribute=False,
-            orm_to_model=lambda node, _: node.base.extras.all,  # type: ignore[attr-defined]
-            is_subscriptable=True,
-            exclude_from_cli=True,
-            exclude_to_orm=True,
-        )
-        computer: Optional[int] = MetadataField(
+        computer: Optional[int] = OrmMetadataField(
             None,
             description='The PK of the computer',
-            is_attribute=False,
-            orm_to_model=lambda node, _: node.computer.pk if node.computer else None,  # type: ignore[attr-defined]
+            orm_to_model=lambda node: cast(Node, node).get_computer_pk(),
             orm_class=Computer,
-            exclude_from_cli=True,
+            read_only=True,
+            examples=[42],
         )
-        user: Optional[int] = MetadataField(
-            None,
+        user: int = OrmMetadataField(
             description='The PK of the user who owns the node',
-            is_attribute=False,
-            orm_to_model=lambda node, _: node.user.pk,  # type: ignore[attr-defined]
+            orm_to_model=lambda node: cast(Node, node).user.pk,
             orm_class=User,
-            exclude_from_cli=True,
+            read_only=True,
+            examples=[7],
         )
-        repository_content: Optional[dict[str, bytes]] = MetadataField(
-            None,
-            description='Dictionary of file repository content. Keys are relative filepaths and values are binary file '
-            'contents encoded as base64.',
-            is_attribute=False,
-            orm_to_model=lambda node, _: {
-                key: base64.encodebytes(content)
-                for key, content in node.base.repository.serialize_content().items()  # type: ignore[attr-defined]
-            },
-            exclude_from_cli=True,
-            exclude_to_orm=True,
-        )
+
+    class WriteModel(WritableFields, BaseNodeModel, Entity.WriteModel):
+        """The write schema for this node."""
+
+    _ConstructorModel: ClassVar[type[BaseNodeModel] | None] = None
+    _CliModel: ClassVar[type[OrmModel] | None] = None
+
+    if TYPE_CHECKING:
+        # Not all nodes support constructor-based and/or CLI-based creation (yet!).
+        # As such, we don't want to define these models on the base class, as they
+        # would be inherited by all nodes. Instead, we define them here for type
+        # checking purposes, and provide below (else) the runtime properties.
+
+        class ConstructorArgsModel(OrmModel):
+            """The constructor arguments schema for this node."""
+
+        class ConstructorModel(BaseNodeModel):
+            """The constructor-based creation schema for this node."""
+
+            args: Any = OrmMetadataField(
+                description='The arguments to create the node with',
+                write_only=True,
+            )
+
+        class CliModel(OrmModel):
+            """The CLI schema for this node."""
+
+    else:
+        # Runtime model properties. If not supported by the subclass, access will raise an exception.
+
+        @classproperty
+        def ConstructorModel(cls) -> type[BaseNodeModel]:  # noqa: N802, N805
+            """Return the constructor-based creation model class for this entity.
+
+            :raises UnsupportedSchemaError: if this node type does not support creation via a constructor model.
+            :return: The constructor-based creation model class.
+            """
+            if cls._ConstructorModel is None:
+                raise exceptions.UnsupportedSchemaError(
+                    f"'{cls.class_node_type}' does not support constructor-based creation."
+                )
+            return cls._ConstructorModel
+
+        @classproperty
+        def CliModel(cls) -> type[OrmModel]:  # noqa: N802, N805
+            """Return the CLI model class for this entity.
+
+            :return: The CLI model class.
+            :raises UnsupportedSchemaError: if this node type does not support creation via a CLI model.
+            """
+            if cls._CliModel is None:
+                raise exceptions.UnsupportedSchemaError(f"'{cls.class_node_type}' does not support CLI-based creation.")
+            return cls._CliModel
 
     def __init__(
         self,
         backend: Optional['StorageBackend'] = None,
         user: Optional[User] = None,
         computer: Optional[Computer] = None,
-        extras: Optional[Dict[str, Any]] = None,
+        extras: Optional[dict[str, Any]] = None,
         **kwargs: Any,
     ) -> None:
-        backend = backend or get_manager().get_profile_storage()
-
-        if computer and not computer.is_stored:
-            raise ValueError('the computer is not stored')
-
-        backend_computer = computer.backend_entity if computer else None
-        user = user if user else backend.default_user
-
-        if user is None:
-            raise ValueError('the user cannot be None')
-
-        backend_entity = backend.nodes.create(
-            node_type=self.class_node_type, user=user.backend_entity, computer=backend_computer, **kwargs
-        )
+        backend_entity = create_backend_node(self.class_node_type, backend, user, computer, **kwargs)
         super().__init__(backend_entity)
-        if extras is not None:
+        if extras:
             self.base.extras.set_many(extras)
 
-    @classmethod
-    def _from_model(cls, model: Model) -> Self:  # type: ignore[override]
-        """Return an entity instance from an instance of its model."""
-        fields = cls.model_to_orm_field_values(model)
-
-        repository_content = fields.pop('repository_content', {})
-        node = cls(**fields)
-
-        for filepath, encoded in repository_content.items():
-            node.base.repository.put_object_from_bytes(base64.decodebytes(encoded), filepath)
-
-        return node
+    def __init_subclass__(cls, **kwargs) -> None:
+        """Patch subclass models."""
+        cls._patch_attributes_model()
+        cls._patch_read_model()
+        cls._patch_constructor_model()
+        super().__init_subclass__(**kwargs)
 
     @cached_property
     def base(self) -> NodeBase:
         """Return the node base namespace."""
         return NodeBase(self)
+
+    def to_model(
+        self,
+        *,
+        context: dict[str, Any] | None = None,
+        minimal: bool = False,
+        schema: Literal['read', 'write', 'constructor'] | None = None,
+    ) -> OrmModel:
+        """Return the node instance as an instance of its model.
+
+        :param context: Optional context dictionary to pass to `orm_to_model` callables.
+        :param minimal: Whether to exclude potentially large value fields.
+        :param schema: The schema to use for serialization. Defaults to 'read' if stored, 'write' otherwise.
+            The 'constructor' schema can be used to serialize the node for constructor-based creation, if supported.
+        :raises UnsupportedSchemaError: if the provided schema is not supported for this entity.
+        """
+        if schema == 'constructor':
+            if not self.supports_constructor_model:
+                raise exceptions.UnsupportedSchemaError(
+                    f"'{self.class_node_type}' does not provide a constructor schema"
+                )
+            Model = self.ConstructorModel  # noqa: N806
+            fields = self._to_model_field_values(context=context, minimal=minimal, schema=Model)
+            return Model(**fields)
+        return super().to_model(context=context, minimal=minimal, schema=schema)
+
+    @classmethod
+    def from_model(
+        cls,
+        model: OrmModel,
+        files: dict[str, Callable[[], BinaryIO | None]] | None = None,
+    ) -> Self:
+        """Create a node instance from a model instance.
+
+        The creation branch is determined by the model type:
+        - `WriteModel`: attributes-based creation (expects `attributes`)
+        - `ConstructorModel`: constructor-based creation (expects `args`)
+        - `CliModel`: CLI-based creation (expects flat fields that are passed as CLI options)
+
+        :param model: The model instance to create the node from.
+        :param files: A mapping of target repository paths to file-like object callables (for efficient streaming).
+        :return: The created node instance.
+        """
+        if isinstance(model, cls.WriteModel):
+            return cls._from_write_model(model, files=files)
+        if cls._ConstructorModel is not None and isinstance(model, cls.ConstructorModel):
+            return cls._from_constructor_model(model)
+        if cls._CliModel is not None and isinstance(model, cls.CliModel):
+            return cls._from_cli_model(model)
+        raise ValueError(f'cannot create `{cls.__name__}` from model of type `{type(model).__name__}`')
+
+    def serialize(
+        self,
+        *,
+        context: dict[str, Any] | None = None,
+        minimal: bool = False,
+        schema: Literal['read', 'write', 'constructor'] | None = None,
+        mode: Literal['json', 'python'] = 'python',
+        exclude_none: bool = False,
+        repository_dump_path: pathlib.Path | None = None,
+    ) -> dict[str, Any]:
+        """Serialize the entity instance to JSON.
+
+        :param context: Optional context dictionary to pass to `orm_to_model` callables.
+        :param minimal: Whether to exclude potentially large value fields.
+        :param schema: The schema to use for serialization. Defaults to 'read' if stored, 'write' otherwise.
+            The 'constructor' schema can be used to serialize the node for constructor-based creation, if supported.
+        :param mode: The serialization mode, either 'json' or 'python' (default). JSON-based clients (e.g., REST APIs)
+            should use 'json' mode.
+        :param exclude_none: Whether to exclude fields with a value of `None`.
+        :param repository_dump_path: The path to which to dump the repository contents.
+        :return: A dictionary that can be serialized to JSON.
+        :raises UnsupportedSchemaError: if the provided schema is not supported for this entity.
+        :raises ValueError: if `repository_dump_path` is invalid.
+        """
+        context = context or {}
+        if repository_dump_path is not None and context.get('repository_dump_path') is not None:
+            raise ValueError('`repository_dump_path` should be given either as an argument or in the context, not both')
+        repository_dump_path = repository_dump_path or context.get('repository_dump_path')
+
+        if repository_dump_path is not None:
+            if not repository_dump_path.exists():
+                raise ValueError(f'`{repository_dump_path}` does not exist')
+            if not repository_dump_path.is_dir():
+                raise ValueError(f'`{repository_dump_path}` is not a directory')
+
+            self.base.repository.copy_tree(repository_dump_path)
+            context = {**context, 'repository_dump_path': repository_dump_path, 'written': True}
+
+        serialized = self.to_model(context=context, minimal=minimal, schema=schema).model_dump(
+            mode=mode,
+            exclude_unset=minimal,
+            exclude_none=exclude_none,
+        )
+
+        # To support plugins that have not yet implemented a model for serialization/validation,
+        # we add here any attributes that are not already included in the serialized output.
+        # This only applies to the 'read' schema (default if stored).
+        if schema == 'read' or (schema is None and self.is_stored):
+            for key, value in self.base.attributes.all.items():
+                if key not in serialized['attributes']:
+                    serialized['attributes'][key] = value
+
+        return serialized
+
+    @classmethod
+    def from_serialized(
+        cls,
+        serialized: dict[str, Any],
+        files: dict[str, Callable[[], BinaryIO | None]] | None = None,
+    ) -> Self:
+        """Construct an entity instance from JSON serialized data and optional files.
+
+        :param serialized: The serialized data.
+        :param files: A mapping of target repository paths to file-like object callables (for efficient streaming).
+        :return: The constructed node instance.
+        """
+        if 'attributes' in serialized:
+            return cls.from_model(cls.WriteModel(**serialized), files=files)
+        elif 'args' in serialized:
+            return cls.from_model(cls.ConstructorModel(**serialized), files=files)
+        raise ValueError('missing required `attributes` or `args` field')
+
+    def attach_file(self, filepath: str, fileobj: BinaryIO) -> None:
+        """Attach a file to the repository of this node.
+
+        Subclasses of `Node` may override this method, providing custom file handling that includes validation
+        and/or attribute derivation, e.g., `ArrayData.set_array`, `SinglefileData.set_file`, etc.
+
+        :param filepath: the path within the repository to store the file at
+        :param fileobj: the file-like object to store
+        """
+        self.base.repository.put_object_from_filelike(fileobj, filepath)  # type: ignore[arg-type]
 
     def _check_mutability_attributes(self, keys: Optional[List[str]] = None) -> None:
         """Check if the entity is mutable and raise an exception if not.
@@ -346,7 +524,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     def __hash__(self) -> int:
         """Python-Hash: Implementation that is compatible with __eq__"""
-        return UUID(self.uuid).int
+        return int(UUID(self.uuid))
 
     def __repr__(self) -> str:
         return f'<{self.__class__.__name__}: {self!s}>'
@@ -394,6 +572,11 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 'Check that the corresponding plugin is installed '
                 'and that the entry point shows up in `verdi plugin list`.'
             )
+
+    @classproperty
+    def supports_constructor_model(cls) -> bool:  # noqa: N805
+        """Return whether this node class supports constructor-based creation."""
+        return hasattr(cls, 'ConstructorArgsModel')
 
     @classproperty
     def class_node_type(cls) -> str:  # noqa: N805
@@ -615,7 +798,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                     f'Cannot store because source node of link triple {link_triple} is not stored'
                 )
 
-    def _store_from_cache(self, cache_node: 'Node') -> None:
+    def _store_from_cache(self, cache_node: Node) -> None:
         """Store this node from an existing cache node.
 
         .. note::
@@ -648,7 +831,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         self._add_outputs_from_cache(cache_node)
         self.base.extras.set(self.base.caching.CACHED_FROM_KEY, cache_node.uuid)
 
-    def _add_outputs_from_cache(self, cache_node: 'Node') -> None:
+    def _add_outputs_from_cache(self, cache_node: Node) -> None:
         """Replicate the output links and nodes from the cached node onto this node."""
         for entry in cache_node.base.links.get_outgoing(link_type=LinkType.CREATE):
             new_node = entry.node.clone()
@@ -661,6 +844,13 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         :return: a description string
         """
         return ''
+
+    def get_computer_pk(self) -> Optional[int]:
+        """Get the pk of the computer of this node.
+
+        :return: The computer pk or None if no computer is set.
+        """
+        return self.computer.pk if self.computer else None
 
     @property
     def is_valid_cache(self) -> bool:
@@ -839,3 +1029,258 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             return getattr(self.base.links, new_name)
 
         raise AttributeError(name)
+
+    @classmethod
+    def _patch_qb_fields(cls) -> None:
+        super()._patch_qb_fields()
+
+        fields = cls.fields._fields
+
+        if 'AttributesModel' in cls.__dict__:
+            cls._validate_model_inheritance('AttributesModel')
+
+        container_field = cast(QbAttributesField, fields['attributes'])
+        container_field._typed_children = {}
+
+        for key, field in cls.AttributesModel.model_fields.items():
+            typed_field = add_field(
+                key,
+                alias=field.alias,
+                dtype=field.annotation,
+                doc=field.description or '',
+                is_attribute=True,
+            )
+
+            container_field._typed_children[key] = typed_field
+            fields[key] = typed_field  # BACKWARDS COMPATIBILITY
+
+        cls.fields = QbFields(fields)
+
+    @classmethod
+    def _patch_attributes_model(cls):
+        """Patch `AttributesModel` as a subclass-specific version if not explicitly defined."""
+        if 'AttributesModel' not in cls.__dict__:
+            AttributesModel = cast(  # noqa: N806
+                type[Node.AttributesModel],
+                pdt.create_model(
+                    'AttributesModel',
+                    __base__=cls.AttributesModel,
+                    __module__=cls.__module__,
+                ),
+            )
+            AttributesModel.__qualname__ = f'{cls.__name__}.AttributesModel'
+            cls.AttributesModel = AttributesModel  # type: ignore[misc]
+        cls.AttributesModel.model_rebuild(force=True)
+
+    @classmethod
+    def _patch_read_model(cls):
+        """Patch `ReadModel` by wiring the subclass-specific `attributes` model.
+
+        Only `RemoteData` and `AbstractCode` are allowed to override `ReadModel`
+        due to required read-only fields, (e.g., computer).
+        """
+
+        BaseReadModel: type[Node.ReadModel] = cls.ReadModel  # noqa: N806
+        model_fields: dict[str, Any] = {}
+
+        if 'ReadModel' in cls.__dict__:
+            # TODO ideally we should do this check with issubclass, but we can't import
+            # the exception classes here without creating a circular import.
+            # Best to move all model-related logic to a separate module!
+            exceptions = ('RemoteData', 'AbstractCode')
+            is_exception = next(
+                (mro.__name__ for mro in cls.mro() if mro.__name__ in exceptions),
+                None,
+            )
+            if not is_exception:
+                raise TypeError(
+                    f'`{cls.__name__}` should not define `ReadModel`; '
+                    'only define `AttributesModel` and optionally `ConstructorArgsModel`'
+                )
+            # For exceptions that override `ReadModel`, we need to copy the overridden fields.
+            # We don't know a priori which fields are overridden, so we copy all.
+            BaseReadModel = cls.ReadModel.__bases__[0]  # noqa: N806
+            model_fields = {
+                key: (field.annotation, deepcopy(field)) for key, field in cls.ReadModel.model_fields.items()
+            }
+
+        attributes_field = deepcopy(cls.ReadModel.model_fields['attributes'])
+        node_type_field = deepcopy(cls.BaseNodeModel.model_fields['node_type'])
+        model_fields['node_type'] = (Literal[cls.class_node_type], node_type_field)
+        model_fields['attributes'] = (cls.AttributesModel, attributes_field)
+
+        ReadModel = cast(  # noqa: N806
+            type[Node.ReadModel],
+            pdt.create_model(
+                'ReadModel',
+                __base__=BaseReadModel,
+                __module__=cls.__module__,
+                **model_fields,
+            ),
+        )
+        ReadModel.__qualname__ = f'{cls.__name__}.ReadModel'
+        ReadModel.model_rebuild(force=True)
+
+        cls.ReadModel = ReadModel  # type: ignore[misc]
+
+    @classmethod
+    def _patch_constructor_model(cls):
+        """Patch `ConstructorModel` by synthesizing it from `BaseNodeModel` and `ConstructorArgsModel`."""
+        if not cls.supports_constructor_model:
+            return
+        node_type_field = deepcopy(cls.BaseNodeModel.model_fields['node_type'])
+        args_field = OrmMetadataField(
+            description='The constructor arguments.',
+            write_only=True,
+        )
+        ConstructorModel = cast(  # noqa: N806
+            type[Node.BaseNodeModel],
+            pdt.create_model(
+                'ConstructorModel',
+                __base__=cls.BaseNodeModel,
+                __module__=cls.__module__,
+                node_type=(Literal[cls.class_node_type], node_type_field),
+                args=(cls.ConstructorArgsModel, args_field),
+            ),
+        )
+        ConstructorModel.__qualname__ = f'{cls.__name__}.ConstructorModel'
+        ConstructorModel.model_rebuild(force=True)
+        cls._ConstructorModel = ConstructorModel
+
+    @classmethod
+    def _from_write_model(
+        cls,
+        model: WriteModel,
+        files: dict[str, Callable[[], BinaryIO | None]] | None = None,
+    ) -> Self:
+        """Construct a node instance from the attributes-based creation model.
+
+        :param model: the model instance to construct from
+        :param files: A mapping of target repository paths to file-like object callables (for efficient streaming).
+        :return: the constructed node instance
+        """
+
+        if not isinstance(model, cls.WriteModel):
+            raise ValueError(f'expected `{cls.WriteModel.__name__}` model, got `{type(model).__name__}`')
+
+        fields = model._to_orm_field_values()
+
+        extras = fields.pop('extras', None)
+
+        attributes = fields.pop('attributes', None)
+        if attributes is None:
+            raise ValueError('missing required `attributes` field')
+
+        repository_metadata = fields.pop('repository_metadata', {})
+        if repository_metadata:
+            import hashlib
+
+            from aiida.common.hashing import chunked_file_hash
+            from aiida.repository import Repository
+
+            if not files:
+                raise exceptions.ValidationError('got `repository_metadata` but no files provided')
+
+            flattened_repo = Repository.flatten(repository_metadata)
+
+        backend_node = create_backend_node(**fields)
+        instance = from_backend_entity(cls, backend_node)
+        instance.base.attributes.set_many(attributes)
+        if extras:
+            instance.base.extras.set_many(extras)
+
+        seen: set[str] = set()
+        for filepath, fileobj_callable in (files or {}).items():
+            if filepath in seen:
+                raise exceptions.ValidationError(f'duplicate file: {filepath}')
+
+            fileobj = fileobj_callable()
+            if fileobj is None:
+                instance.base.repository._repository.create_directory(filepath)  # empty directory
+            else:
+                if repository_metadata:
+                    expected_hash = flattened_repo.get(filepath)
+                    if expected_hash:
+                        actual_hash = chunked_file_hash(fileobj, hashlib.sha256)
+                        fileobj.seek(0)
+                        if expected_hash != actual_hash:
+                            raise exceptions.ValidationError(
+                                f'file hash mismatch for `{filepath}`; expected {expected_hash}, computed {actual_hash}'
+                            )
+                instance.attach_file(filepath, fileobj)
+                fileobj.close()
+
+            seen.add(filepath)
+
+        return instance
+
+    @classmethod
+    def _from_constructor_model(cls, model: ConstructorModel) -> Self:
+        """Construct a node instance from the constructor-based creation model.
+
+        :param model: the model instance to construct from
+        :return: the constructed node instance
+        """
+        if not isinstance(model, cls.ConstructorModel):
+            raise ValueError(f'expected `ConstructorModel`, got `{type(model).__name__}`')
+        fields = model._to_orm_field_values()
+        fields.update(**fields.pop('args'))
+        fields.pop('node_type')
+        return cls(**fields)
+
+    @classmethod
+    def _from_cli_model(cls, model: CliModel) -> Self:
+        """Construct a node instance from the CLI-based creation model.
+
+        :param model: the model instance to construct from
+        :return: the constructed node instance
+        """
+        if not isinstance(model, cls.CliModel):
+            raise ValueError(f'expected `{cls.CliModel.__name__}` model, got `{type(model).__name__}`')
+        fields = model._to_orm_field_values()
+        return cls(**fields)
+
+    def _to_model_field_values(
+        self,
+        *,
+        context: dict[str, Any] | None = None,
+        minimal: bool = False,
+        schema: type[OrmModel] | None = None,
+    ) -> dict[str, Any]:
+        """Collect values for the model fields from this node."""
+        fields = super()._to_model_field_values(context=context, minimal=minimal, schema=schema)
+        if self.supports_constructor_model and schema is self.ConstructorModel:
+            fields['args'] = self._to_model_field_values(
+                context=context,
+                minimal=minimal,
+                schema=self.ConstructorArgsModel,
+            )
+        return fields
+
+
+def create_backend_node(
+    node_type: str,
+    backend: Optional['StorageBackend'] = None,
+    user: Optional[User] = None,
+    computer: Optional[Computer] = None,
+    **kwargs: Any,
+) -> BackendNode:
+    backend = backend or get_manager().get_profile_storage()
+
+    if computer and not computer.is_stored:
+        raise ValueError('the computer is not stored')
+
+    backend_computer = computer.backend_entity if computer else None
+    user = user if user else backend.default_user
+
+    if user is None:
+        raise ValueError('the user cannot be None')
+
+    backend_entity = backend.nodes.create(
+        node_type=node_type,
+        user=user.backend_entity,
+        computer=backend_computer,
+        **kwargs,
+    )
+
+    return backend_entity

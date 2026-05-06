@@ -15,6 +15,8 @@ import io
 import pathlib
 import typing as t
 
+from aiida.orm.pydantic import OrmMetadataField, OrmModel
+
 from .data import Data
 
 if t.TYPE_CHECKING:
@@ -28,7 +30,17 @@ __all__ = ('FolderData',)
 class FolderData(Data):
     """`Data` sub class to represent a folder on a file system."""
 
-    def __init__(self, **kwargs):
+    class ConstructorArgsModel(OrmModel):
+        tree: str = OrmMetadataField(
+            title='Tree',
+            description='Absolute path to a folder to wrap',
+            orm_to_model=lambda node, ctx: t.cast(FolderData, node)._export_tree_from_repo(
+                ctx.get('repository_dump_path'),
+                ctx.get('written', False),
+            ),
+        )
+
+    def __init__(self, tree: str | pathlib.Path | None = None, **kwargs):
         """Construct a new `FolderData` to which any files and folders can be added.
 
         Use the `tree` keyword to simply wrap a directory:
@@ -45,10 +57,9 @@ class FolderData(Data):
         :param tree: absolute path to a folder to wrap
         :type tree: str
         """
-        tree = kwargs.pop('tree', None)
         super().__init__(**kwargs)
         if tree:
-            self.base.repository.put_object_from_tree(tree)
+            self.base.repository.put_object_from_tree(str(tree))
 
     def list_objects(self, path: str | None = None) -> list[File]:
         """Return a list of the objects contained in this repository sorted by name, optionally in given sub directory.
@@ -219,3 +230,23 @@ class FolderData(Data):
         :raises `~aiida.common.exceptions.ModificationNotAllowed`: when the node is stored and therefore immutable.
         """
         self.base.repository.erase()
+
+    def _export_tree_from_repo(
+        self,
+        repository_dump_path: pathlib.Path | None = None,
+        written: bool = False,
+    ) -> str:
+        """Export repository contents to a directory.
+
+        :param repository_dump_path: the path to which the repository contents should be dumped. If not provided,
+            a temporary directory will be created and used.
+        :param written: whether the repository content was already written, e.g., by `node.serialize(dump_repo_path)`.
+        """
+        import tempfile
+
+        if not written:
+            if repository_dump_path is None:
+                repository_dump_path = pathlib.Path(tempfile.mkdtemp()) / self.uuid
+            repository_dump_path.mkdir(parents=True, exist_ok=True)
+            self.base.repository.copy_tree(repository_dump_path)
+        return str(repository_dump_path)

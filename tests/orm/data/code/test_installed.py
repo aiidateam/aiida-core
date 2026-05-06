@@ -26,9 +26,6 @@ def test_constructor_raises(aiida_localhost, bash_path):
     with pytest.raises(TypeError, match=r'Got object of type .*'):
         InstalledCode(computer=aiida_localhost, filepath_executable=bash_path)
 
-    with pytest.raises(TypeError, match=r'Got object of type .*'):
-        InstalledCode(computer='computer', filepath_executable='/usr/bin/bash')
-
 
 def test_constructor(aiida_localhost, bash_path):
     """Test the constructor."""
@@ -146,10 +143,3 @@ def test_get_execname(aiida_localhost, bash_path):
     code = InstalledCode(label='some-label', computer=aiida_localhost, filepath_executable=str(bash_path.absolute()))
     with pytest.warns(AiidaDeprecationWarning):
         assert code.get_execname() == str(bash_path.absolute())
-
-
-def test_serialization(aiida_localhost, bash_path):
-    """Test the deprecated :meth:`aiida.orm.nodes.data.code.installed.InstalledCode.get_execname` method."""
-    code = InstalledCode(label='some-label', computer=aiida_localhost, filepath_executable=str(bash_path.absolute()))
-
-    InstalledCode.from_serialized(**code.serialize())

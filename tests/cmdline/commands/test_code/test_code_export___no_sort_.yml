@@ -1,6 +1,6 @@
 label: code
 description: ''
-computer: localhost
+computer: <COMPUTER_LABEL>
 default_calc_job_plugin: core.arithmetic.add
 use_double_quotes: false
 with_mpi: null

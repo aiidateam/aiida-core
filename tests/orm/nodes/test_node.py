@@ -17,24 +17,18 @@ import pytest
 
 from aiida.common import LinkType, exceptions, timezone
 from aiida.manage import get_manager
-from aiida.orm import CalculationNode, Computer, Data, Int, Log, Node, User, WorkflowNode, load_node
+from aiida.orm import CalculationNode, Data, Int, Log, Node, User, WorkflowNode, load_node
 from aiida.orm.utils.links import LinkTriple
 
 
 class TestNode:
     """Tests for generic node functionality."""
 
-    def setup_method(self):
+    @pytest.fixture(autouse=True)
+    def _setup(self, aiida_localhost):
         """Setup for methods."""
         self.user = User.collection.get_default()
-        _, self.computer = Computer.collection.get_or_create(
-            label='localhost',
-            description='localhost computer set up by test manager',
-            hostname='localhost',
-            transport_type='core.local',
-            scheduler_type='core.direct',
-        )
-        self.computer.store()
+        self.computer = aiida_localhost
 
     def test_instantiate_with_user(self):
         """Test a Node can be instantiated with a specific user."""

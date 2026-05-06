@@ -600,33 +600,9 @@ def process_repair(manager, broker, dry_run, force):
             echo.echo_report(f'Acknowledged task `{pid}`')
 
     # Revive zombie processes that no longer have a process task
-    zombies = set_active_processes.difference(set_process_tasks)
-    if zombies:
-        from aiida.brokers.zmq.broker import ZmqBroker
-
-        if isinstance(broker, ZmqBroker):
-            # For ZMQ, the broker runs inside the daemon (which must be stopped for repair).
-            # Write revival tasks directly to the persistent queue on disk — the broker will
-            # pick them up when the daemon is restarted.  This avoids starting a temporary
-            # broker process and the timing issues that come with it.
-            import uuid
-
-            from plumpy.process_comms import create_continue_body
-
-            from aiida.brokers.zmq.queue import PersistentQueue
-
-            queue_path = broker.storage_path / 'tasks'
-            queue = PersistentQueue(queue_path)
-            for pid in zombies:
-                task_id = uuid.uuid4().hex
-                body = create_continue_body(pid=pid, nowait=True)
-                queue.push(task_id, {'body': body, 'no_reply': True})
-                echo.echo_report(f'Revived process `{pid}`')
-        else:
-            process_controller = manager.get_process_controller()
-            for pid in zombies:
-                process_controller.continue_process(pid)
-                echo.echo_report(f'Revived process `{pid}`')
+    for pid in set_active_processes.difference(set_process_tasks):
+        broker.revive_process(pid)
+        echo.echo_report(f'Revived process `{pid}`')
 
 
 @verdi_process.command('dump')

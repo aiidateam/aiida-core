@@ -18,8 +18,11 @@ verdi config set warnings.development_version False
 # If the environment variable `SETUP_DEFAULT_AIIDA_PROFILE` is not set, set it to `true`.
 if [[ ${SETUP_DEFAULT_AIIDA_PROFILE:-true} == true ]] && ! verdi profile show ${AIIDA_PROFILE_NAME} &> /dev/null; then
 
-    # Create AiiDA profile.
-    verdi presto \
+    # Create AiiDA profile. Set AIIDA_NO_DAEMON_AUTOSTART because the
+    # Docker container manages the daemon lifecycle separately via
+    # s6-overlay (aiida-daemon-start runs after this script and
+    # run-before-daemon-start).
+    AIIDA_NO_DAEMON_AUTOSTART=1 verdi presto \
         --verbosity info \
         --profile-name "${AIIDA_PROFILE_NAME:-default}" \
         --email "${AIIDA_USER_EMAIL:-aiida@localhost}" \

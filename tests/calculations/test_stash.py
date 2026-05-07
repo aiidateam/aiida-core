@@ -109,7 +109,7 @@ def test_code_vs_stash_mode_conflict(stash_mode, fixture_sandbox, aiida_localhos
     code = orm.InstalledCode(
         label='dummy_code',
         default_calc_job_plugin='core.stash',
-        computer=orm.load_computer(label='localhost'),
+        computer=aiida_localhost,
         filepath_executable='/doesnot/exist/script.sh',
     )
 
@@ -252,7 +252,7 @@ done
     code = orm.InstalledCode(
         label='test_code',
         default_calc_job_plugin='core.stash',
-        computer=orm.load_computer(label='localhost'),
+        computer=aiida_localhost,
         filepath_executable=str(executable),
     )
     code.store()

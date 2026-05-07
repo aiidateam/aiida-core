@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import pathlib
 import typing as t
 
@@ -105,6 +106,14 @@ def aiida_computer(tmp_path) -> t.Callable[[], 'Computer']:
                 scheduler_type=scheduler_type,
             )
 
+        # Atomic get-or-create using UNIQUE as the serializer (try get → on miss, store → on UNIQUE
+        # violation, re-query). A user-space lock (``threading.Lock``, ``filelock``, etc.) would be
+        # redundant with the DB-level UNIQUE check and wouldn't address the actual flakiness — a
+        # single-thread session-cache stale read after ``aiida_profile_clean``, not a concurrent-
+        # write race. The cleanest alternative would be ``INSERT ... ON CONFLICT DO NOTHING
+        # RETURNING`` (one atomic round-trip, no exception handling), but that's dialect-specific
+        # and bypasses ``Computer(...).store()``'s AiiDA-side defaults — not worth it for a test
+        # fixture.
         try:
             computer = Computer.collection.get(
                 label=label, hostname=hostname, scheduler_type=scheduler_type, transport_type=transport_type
@@ -114,10 +123,23 @@ def aiida_computer(tmp_path) -> t.Callable[[], 'Computer']:
             try:
                 computer.store()
             except IntegrityError:
-                # Another xdist worker concurrently re-created this computer after
-                # ``aiida_profile_clean`` reset the shared database. Re-querying is
-                # safe because the ``psql_dos`` storage backend rolls back our failed
-                # transaction before raising (see ``psql_dos/orm/utils.py``).
+                # The row exists at the DB level (UNIQUE fired) but the preceding ``get()`` raised
+                # ``NotExistent``. This typically happens after ``aiida_profile_clean`` has reset
+                # session state mid-test, or when a row committed by an earlier test in the same
+                # worker is not visible to the current session's cache. The follow-up ``get()``
+                # re-issues the query against fresh state and is safe: the storage layer rolls back
+                # our failed transaction before raising (the shared ``ModelWrapper.save()`` in
+                # ``psql_dos/orm/utils.py``, used by both ``psql_dos`` and the ``sqlite_*`` backends).
+                #
+                # No retry loop or EBM: by the time ``IntegrityError`` fires, the conflicting row
+                # is already committed at the DB level, and a fresh ``get()`` against a rolled-
+                # back transaction will almost always see it. The ``NotExistent`` fallback below
+                # covers the rare cases where the re-query still misses — session-cache state
+                # hiding the committed row, a test manually calling ``reset_storage()`` between
+                # the two queries, or edge cases we haven't anticipated. Kept (not removed as
+                # dead code) to avoid re-introducing flakiness if any of those surface. Loop-
+                # with-backoff is for genuinely transient errors (SQLite ``database is locked``,
+                # connection-pool exhaustion), not races already pinned down by commit.
                 try:
                     computer = Computer.collection.get(
                         label=label, hostname=hostname, scheduler_type=scheduler_type, transport_type=transport_type
@@ -269,6 +291,12 @@ def aiida_computer_ssh_async(aiida_computer) -> t.Callable[[], 'Computer']:
 def aiida_localhost(aiida_computer_local) -> 'Computer':
     """Return a :class:`aiida.orm.computers.Computer` instance representing localhost with ``core.local`` transport.
 
+    The computer's label is suffixed with the pytest-xdist worker id (e.g. ``localhost-gw0``,
+    or just ``localhost-master`` when not running under xdist). This keeps the fixture's row
+    distinct from any literal-``'localhost'`` Computer that ``verdi presto`` or other code
+    paths may create in the same profile, avoiding UNIQUE-constraint collisions on
+    ``Computer.label``.
+
     Usage::
 
         def test(aiida_localhost):
@@ -276,7 +304,8 @@ def aiida_localhost(aiida_computer_local) -> 'Computer':
 
     :return: The computer.
     """
-    return aiida_computer_local(label='localhost')
+    worker_id = os.environ.get('PYTEST_XDIST_WORKER', 'master')
+    return aiida_computer_local(label=f'localhost-{worker_id}')
 
 
 @pytest.fixture

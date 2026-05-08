@@ -77,7 +77,7 @@ class Data(Node):
 
         backend_clone = self.backend_entity.clone()
         clone = from_backend_entity(self.__class__, backend_clone)
-        clone.base.attributes.reset(copy.deepcopy(self.base.attributes.all))
+        clone.base.attributes.reset(copy.deepcopy(self.base.attributes.get_dict()))
         clone.base.repository._clone(self.base.repository)
 
         return clone

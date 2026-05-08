@@ -137,11 +137,11 @@ class TestNodeAttributesExtras:
         self.node = Data()
 
     def test_attributes(self):
-        """Test the `Node.base.attributes.all` property."""
+        """Test the `Node.base.attributes.get_dict` method."""
         original_attribute = {'nested': {'a': 1}}
 
         self.node.base.attributes.set('key', original_attribute)
-        node_attributes = self.node.base.attributes.all
+        node_attributes = self.node.base.attributes.get_dict()
         assert node_attributes['key'] == original_attribute
         node_attributes['key']['nested']['a'] = 2
 
@@ -149,11 +149,17 @@ class TestNodeAttributesExtras:
 
         # Now store the node and verify that `attributes` then returns a deep copy
         self.node.store()
-        node_attributes = self.node.base.attributes.all
+        node_attributes = self.node.base.attributes.get_dict()
 
         # We change the returned node attributes but the original attribute should remain unchanged
         node_attributes['key']['nested']['a'] = 3
         assert original_attribute['nested']['a'] == 2
+
+    def test_attributes_all_deprecated(self):
+        """Test the deprecated `Node.base.attributes.all` property."""
+        from aiida.common.warnings import AiidaDeprecationWarning
+        with pytest.warns(AiidaDeprecationWarning):
+            _ = self.node.base.attributes.all
 
     def test_get_attribute(self):
         """Test the `Node.get_attribute` method."""
@@ -232,9 +238,9 @@ class TestNodeAttributesExtras:
         attributes_illegal = {'attribute.illegal': 'value', 'attribute_four': 'value'}
 
         self.node.base.attributes.set_many(attributes_before)
-        assert self.node.base.attributes.all == attributes_before
+        assert self.node.base.attributes.get_dict() == attributes_before
         self.node.base.attributes.reset(attributes_after)
-        assert self.node.base.attributes.all == attributes_after
+        assert self.node.base.attributes.get_dict() == attributes_after
 
         with pytest.raises(exceptions.ValidationError):
             self.node.base.attributes.reset(attributes_illegal)
@@ -267,10 +273,10 @@ class TestNodeAttributesExtras:
         """Test the `Node.clear_attributes` method."""
         attributes = {'attribute_one': 'value', 'attribute_two': 'value'}
         self.node.base.attributes.set_many(attributes)
-        assert self.node.base.attributes.all == attributes
+        assert self.node.base.attributes.get_dict() == attributes
 
         self.node.base.attributes.clear()
-        assert self.node.base.attributes.all == {}
+        assert self.node.base.attributes.get_dict() == {}
 
         # Repeat for stored node
         self.node.store()
@@ -1024,7 +1030,7 @@ class TestNodeCaching:
         """Test that subclasses get different hashes even if they contain the same attributes."""
         node_int = Int(5).store()
         node_data = Data()
-        node_data.base.attributes.set_many(node_int.base.attributes.all)
+        node_data.base.attributes.set_many(node_int.base.attributes.get_dict())
         node_data.store()
         assert node_int.base.caching.get_hash() != node_data.base.caching.get_hash()
 

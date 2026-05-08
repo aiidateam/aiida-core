@@ -119,6 +119,6 @@ class EnumData(Data):
             except (ImportError, ValueError):
                 return False
         elif isinstance(other, EnumData):
-            return self.base.attributes.all == other.base.attributes.all
+            return self.base.attributes.get_dict() == other.base.attributes.get_dict()
 
         return False

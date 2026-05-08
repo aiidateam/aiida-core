@@ -1307,7 +1307,9 @@ class StructureData(Data):
             raise ValueError(f'A kind with the same name ({kind.name}) already exists.')
 
         # If here, no exceptions have been raised, so I add the site.
-        self.base.attributes.all.setdefault('kinds', []).append(new_kind.get_raw())
+        kinds = self.base.attributes.get('kinds', [])
+        kinds.append(new_kind.get_raw())
+        self.base.attributes.set('kinds', kinds)
         # Note, this is a dict (with integer keys) so it allows for empty spots!
         if self._internal_kind_tags is None:
             self._internal_kind_tags = {}
@@ -1334,7 +1336,9 @@ class StructureData(Data):
             )
 
         # If here, no exceptions have been raised, so I add the site.
-        self.base.attributes.all.setdefault('sites', []).append(new_site.get_raw())
+        sites = self.base.attributes.get('sites', [])
+        sites.append(new_site.get_raw())
+        self.base.attributes.set('sites', sites)
 
     def append_atom(self, **kwargs):
         """Append an atom to the Structure, taking care of creating the

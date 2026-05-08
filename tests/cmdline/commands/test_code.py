@@ -435,7 +435,7 @@ def test_code_export(run_cli_command, aiida_code_installed, tmp_path, file_regre
         cmd_code.code_create, ['core.code.installed', '--non-interactive', '--config', filepath, '--label', new_label]
     )
     new_code = load_code(new_label)
-    assert code.base.attributes.all == new_code.base.attributes.all
+    assert code.base.attributes.get_dict() == new_code.base.attributes.get_dict()
     assert isinstance(new_code, InstalledCode)
 
 

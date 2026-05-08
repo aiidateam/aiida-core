@@ -121,7 +121,7 @@ class JsonableData(Data):
         try:
             return self._obj
         except AttributeError:
-            attributes = self.base.attributes.all
+            attributes = self.base.attributes.get_dict()
             class_name = attributes.pop('@class')
             module_name = attributes.pop('@module')
 

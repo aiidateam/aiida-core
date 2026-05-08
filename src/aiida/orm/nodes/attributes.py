@@ -40,24 +40,31 @@ class NodeAttributes:
 
     @property
     def all(self) -> Dict[str, Any]:
-        """Return the complete attributes dictionary.
+        """Return a deep copy of the complete attributes dictionary.
 
-        .. warning:: While the entity is unstored, this will return references of the attributes on the database model,
-            meaning that changes on the returned values (if they are mutable themselves, e.g. a list or dictionary) will
-            automatically be reflected on the database model as well. As soon as the entity is stored, the returned
-            attributes will be a deep copy and mutations of the database attributes will have to go through the
-            appropriate set methods. Therefore, once stored, retrieving a deep copy can be a heavy operation. If you
-            only need the keys or some values, use the iterators `keys` and `items`, or the
-            getters `get` and `get_many` instead.
+        .. deprecated:: 3.0
+            Use :meth:`get_dict` instead.
 
         :return: the attributes as a dictionary
         """
-        attributes = self._backend_node.attributes
+        from aiida.common.warnings import warn_deprecation
 
-        if self._node.is_stored:
-            attributes = copy.deepcopy(attributes)
+        warn_deprecation(
+            'The `all` property is deprecated. Please use the `get_dict()` method instead.',
+            version=3
+        )
+        return self.get_dict()
 
-        return attributes
+    def get_dict(self) -> Dict[str, Any]:
+        """Return a deep copy of the complete attributes dictionary.
+
+        This method will always return a deep copy, ensuring that modifications 
+        to the returned dictionary do not implicitly modify the node's attributes.
+        Use `set` or `set_many` to modify attributes.
+
+        :return: the attributes as a dictionary
+        """
+        return copy.deepcopy(self._backend_node.attributes)
 
     def get(self, key: str, default=_NO_DEFAULT) -> Any:
         """Return the value of an attribute.

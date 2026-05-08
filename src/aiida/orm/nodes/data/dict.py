@@ -134,7 +134,7 @@ class Dict(Data):
 
         :return: dictionary
         """
-        return dict(self.base.attributes.all)
+        return dict(self.base.attributes.get_dict())
 
     def keys(self):
         """Iterator of valid keys stored in the Dict object.
@@ -155,7 +155,7 @@ class Dict(Data):
 
         :return: The dictionary content.
         """
-        return self.base.attributes.all
+        return self.base.attributes.get_dict()
 
     @property
     def dict(self):

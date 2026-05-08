@@ -242,7 +242,7 @@ class NodeTranslator(BaseTranslator):
         if self._content_type == 'attributes':
             # Get all attrs if attributes_filter is None
             if self._attributes_filter is None:
-                data = {self._content_type: node.base.attributes.all}
+                data = {self._content_type: node.base.attributes.get_dict()}
             # Get all attrs contained in attributes_filter
             else:
                 attrs = {}

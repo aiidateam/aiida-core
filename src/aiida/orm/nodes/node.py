@@ -241,7 +241,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             None,
             description='The node attributes',
             is_attribute=False,
-            orm_to_model=lambda node, _: node.base.attributes.all,  # type: ignore[attr-defined]
+            orm_to_model=lambda node, _: node.base.attributes.get_dict(),  # type: ignore[attr-defined]
             is_subscriptable=True,
             exclude_from_cli=True,
             exclude_to_orm=True,
@@ -640,7 +640,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         # Make sure to reinitialize the repository instance of the clone to that of the source node.
         self.base.repository._copy(cache_node.base.repository)
 
-        for key, value in cache_node.base.attributes.all.items():
+        for key, value in cache_node.base.attributes.get_dict().items():
             if key != Sealable.SEALED_KEY:
                 self.base.attributes.set(key, value)
 

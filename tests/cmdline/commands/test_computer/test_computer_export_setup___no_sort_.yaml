@@ -9,5 +9,7 @@ mpirun_command: mpirun
 mpiprocs_per_machine: 8
 default_memory_per_machine: 100000
 use_double_quotes: false
+custom_scheduler_commands: ''
 prepend_text: ''
 append_text: ''
+environment_variables: {}

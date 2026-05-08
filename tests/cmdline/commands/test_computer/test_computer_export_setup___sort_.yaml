@@ -1,6 +1,8 @@
 append_text: ''
+custom_scheduler_commands: ''
 default_memory_per_machine: 100000
 description: Test Computer
+environment_variables: {}
 hostname: localhost
 label: test_computer_export_setup--sort
 mpiprocs_per_machine: 8

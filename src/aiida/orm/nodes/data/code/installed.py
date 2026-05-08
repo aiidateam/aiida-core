@@ -101,7 +101,7 @@ class InstalledCode(Code):
         except TypeError as exception:
             raise exceptions.ValidationError('The `filepath_executable` is not set.') from exception
 
-    def validate_filepath_executable(self):
+    def validate_filepath_executable(self, run_prepend_text: bool = False):
         """Validate the ``filepath_executable`` attribute.
 
         Checks whether the executable exists on the remote computer if a transport can be opened to it. This method
@@ -110,6 +110,9 @@ class InstalledCode(Code):
 
         .. note:: If the ``filepath_executable`` is not an absolute path, the check is skipped.
 
+        :param run_prepend_text: If ``True``, execute the computer's and code's ``prepend_text`` on the remote computer
+            before checking the executable. This is useful when the executable only becomes available after running
+            setup commands (e.g. ``uenv start ...``).
         :raises `~aiida.common.exceptions.ValidationError`: if no transport could be opened or if the defined executable
             does not exist on the remote computer.
         """
@@ -119,13 +122,33 @@ class InstalledCode(Code):
         try:
             with override_log_level():  # Temporarily suppress noisy logging
                 with self.computer.get_transport() as transport:
-                    file_exists = transport.isfile(str(self.filepath_executable))
-                    if file_exists:
-                        mode = transport.get_mode(str(self.filepath_executable))
-                        # `format(mode, 'b')` with default permissions
-                        # gives 110110100, representing rw-rw-r--
-                        # Check on index 2 if user has execute
-                        user_has_execute = format(mode, 'b')[2] == '1'
+                    if run_prepend_text:
+                        prepend_parts = [self.computer.get_prepend_text(), self.prepend_text]
+                        prepend_text = '\n\n'.join(part for part in prepend_parts if part)
+                    else:
+                        prepend_text = ''
+
+                    if prepend_text:
+                        filepath = str(self.filepath_executable)
+                        retval, stdout, stderr = transport.exec_command_wait(
+                            f'{prepend_text}\n'
+                            f'if [ -f {filepath} ]; then\n'
+                            f'  if [ -x {filepath} ]; then echo "OK"; else echo "NOT_EXECUTABLE"; fi\n'
+                            f'else\n'
+                            f'  echo "NOT_FOUND"\n'
+                            f'fi'
+                        )
+                        result = stdout.strip()
+                        file_exists = result != 'NOT_FOUND'
+                        user_has_execute = result == 'OK'
+                    else:
+                        file_exists = transport.isfile(str(self.filepath_executable))
+                        if file_exists:
+                            mode = transport.get_mode(str(self.filepath_executable))
+                            # `format(mode, 'b')` with default permissions
+                            # gives 110110100, representing rw-rw-r--
+                            # Check on index 2 if user has execute
+                            user_has_execute = format(mode, 'b')[2] == '1'
 
         except Exception as exception:
             raise exceptions.ValidationError(

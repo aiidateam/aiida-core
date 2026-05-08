@@ -284,8 +284,10 @@ def set_computer_builder(ctx, param, value):
 @options_computer.MPI_PROCS_PER_MACHINE()
 @options_computer.DEFAULT_MEMORY_PER_MACHINE()
 @options_computer.USE_DOUBLE_QUOTES()
+@options_computer.CUSTOM_SCHEDULER_COMMANDS()
 @options_computer.PREPEND_TEXT()
 @options_computer.APPEND_TEXT()
+@options_computer.ENVIRONMENT_VARIABLES()
 @options.NON_INTERACTIVE()
 @options.CONFIG_FILE()
 @click.pass_context
@@ -337,8 +339,12 @@ def computer_setup(ctx, non_interactive, **kwargs):
 @options_computer.DEFAULT_MEMORY_PER_MACHINE(
     contextual_default=partial(get_parameter_default, 'default_memory_per_machine')
 )
+@options_computer.CUSTOM_SCHEDULER_COMMANDS(
+    contextual_default=partial(get_parameter_default, 'custom_scheduler_commands')
+)
 @options_computer.PREPEND_TEXT(contextual_default=partial(get_parameter_default, 'prepend_text'))
 @options_computer.APPEND_TEXT(contextual_default=partial(get_parameter_default, 'append_text'))
+@options_computer.ENVIRONMENT_VARIABLES(contextual_default=partial(get_parameter_default, 'environment_variables'))
 @options.NON_INTERACTIVE()
 @click.pass_context
 @with_dbenv()
@@ -490,8 +496,10 @@ def computer_show(computer):
         ['Mpirun command', ' '.join(computer.get_mpirun_command())],
         ['Default #procs/machine', computer.get_default_mpiprocs_per_machine()],
         ['Default memory (kB)/machine', computer.get_default_memory_per_machine()],
+        ['Custom scheduler commands', computer.get_custom_scheduler_commands()],
         ['Prepend text', computer.get_prepend_text()],
         ['Append text', computer.get_append_text()],
+        ['Environment variables', computer.get_environment_variables()],
     ]
     echo_tabulate(table)
 
@@ -790,8 +798,10 @@ def computer_export_setup(computer, output_file, overwrite, sort):
         'mpiprocs_per_machine': computer.get_default_mpiprocs_per_machine(),
         'default_memory_per_machine': computer.get_default_memory_per_machine(),
         'use_double_quotes': computer.get_use_double_quotes(),
+        'custom_scheduler_commands': computer.get_custom_scheduler_commands(),
         'prepend_text': computer.get_prepend_text(),
         'append_text': computer.get_append_text(),
+        'environment_variables': computer.get_environment_variables(),
     }
 
     if output_file is None:

@@ -3,14 +3,19 @@ attributes: QbDictField('attributes', dtype=typing.Dict[str, typing.Any] | None,
   is_subscriptable=True)
 computer: QbNumericField('computer', dtype=int | None, is_attribute=False)
 ctime: QbNumericField('ctime', dtype=datetime.datetime | None, is_attribute=False)
+custom_scheduler_commands: QbStrField('custom_scheduler_commands', dtype=<class 'str'>,
+  is_attribute=True)
 default_calc_job_plugin: QbStrField('default_calc_job_plugin', dtype=str | None, is_attribute=True)
 description: QbStrField('description', dtype=<class 'str'>, is_attribute=True)
+environment_variables: QbDictField('environment_variables', dtype=typing.Dict[str,
+  str], is_attribute=True)
 extras: QbDictField('extras', dtype=typing.Dict[str, typing.Any] | None, is_attribute=False,
   is_subscriptable=True)
 input_plugin: QbStrField('input_plugin', dtype=str | None, is_attribute=True)
 is_local: QbField('is_local', dtype=bool | None, is_attribute=True)
 label: QbStrField('label', dtype=<class 'str'>, is_attribute=True)
 local_executable: QbStrField('local_executable', dtype=str | None, is_attribute=True)
+mpirun_extra_params: QbArrayField('mpirun_extra_params', dtype=typing.List[str], is_attribute=True)
 mtime: QbNumericField('mtime', dtype=datetime.datetime | None, is_attribute=False)
 node_type: QbStrField('node_type', dtype=str | None, is_attribute=False)
 pk: QbNumericField('pk', dtype=int | None, is_attribute=False)

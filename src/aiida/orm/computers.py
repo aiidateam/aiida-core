@@ -412,6 +412,20 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
                 raise AttributeError(f"'{name}' property not found")
             return args[0]
 
+    def get_custom_scheduler_commands(self) -> str:
+        """Return the custom scheduler commands for this computer.
+
+        :returns: Custom scheduler commands to add to the submission script header for all jobs on this computer.
+        """
+        return self.get_property('custom_scheduler_commands', '')
+
+    def set_custom_scheduler_commands(self, val: str) -> None:
+        """Set the custom scheduler commands for this computer.
+
+        :param val: Custom scheduler commands (e.g. extra ``#SBATCH`` lines).
+        """
+        self.set_property('custom_scheduler_commands', str(val))
+
     def get_prepend_text(self) -> str:
         return self.get_property('prepend_text', '')
 
@@ -423,6 +437,24 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
 
     def set_append_text(self, val: str) -> None:
         self.set_property('append_text', str(val))
+
+    def get_environment_variables(self) -> dict:
+        """Return the environment variables for this computer.
+
+        :returns: Dictionary of environment variables to set for all jobs on this computer.
+        """
+        return self.get_property('environment_variables', {})
+
+    def set_environment_variables(self, val: dict) -> None:
+        """Set the environment variables for this computer.
+
+        :param val: Dictionary of environment variables (keys and values must be strings).
+        """
+        if not isinstance(val, dict):
+            raise TypeError('environment_variables must be a dictionary')
+        if any(not isinstance(k, str) or not isinstance(v, str) for k, v in val.items()):
+            raise TypeError('environment_variables keys and values must all be strings')
+        self.set_property('environment_variables', val)
 
     def get_use_double_quotes(self) -> bool:
         """Return whether the command line parameters of this computer should be escaped with double quotes.

@@ -37,6 +37,9 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     # Should become ``default_calc_job_plugin`` once ``Code`` is dropped in ``aiida-core==3.0``
     _KEY_ATTRIBUTE_DEFAULT_CALC_JOB_PLUGIN: str = 'input_plugin'
     _KEY_ATTRIBUTE_APPEND_TEXT: str = 'append_text'
+    _KEY_ATTRIBUTE_CUSTOM_SCHEDULER_COMMANDS: str = 'custom_scheduler_commands'
+    _KEY_ATTRIBUTE_ENVIRONMENT_VARIABLES: str = 'environment_variables'
+    _KEY_ATTRIBUTE_MPIRUN_EXTRA_PARAMS: str = 'mpirun_extra_params'
     _KEY_ATTRIBUTE_PREPEND_TEXT: str = 'prepend_text'
     _KEY_ATTRIBUTE_USE_DOUBLE_QUOTES: str = 'use_double_quotes'
     _KEY_ATTRIBUTE_WITH_MPI: str = 'with_mpi'
@@ -101,12 +104,42 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 footer='All lines that start with `#=`: will be ignored.',
             ),
         )
+        custom_scheduler_commands: str = MetadataField(
+            '',
+            title='Custom scheduler commands',
+            description='Custom scheduler commands to be added to the submission script header '
+            'for all submit scripts for this code (e.g. "#SBATCH --uenv=...").',
+            option_cls=functools.partial(
+                TemplateInteractiveOption,
+                extension='.bash',
+                header='CUSTOM_SCHEDULER_COMMANDS: if there is any scheduler-specific commands that should be added '
+                'to the submission script header for this code, type that between the equal signs below '
+                'and save the file.',
+                footer='All lines that start with `#=`: will be ignored.',
+            ),
+        )
+        environment_variables: t.Dict[str, str] = MetadataField(
+            {},
+            title='Environment variables',
+            description='Environment variables to set for all jobs using this code '
+            '(e.g. {"OMP_NUM_THREADS": "1", "LD_LIBRARY_PATH": "/opt/lib"}).',
+        )
+        mpirun_extra_params: t.List[str] = MetadataField(
+            [],
+            title='Extra mpirun params',
+            description='Extra parameters to be passed to the mpirun command for this code '
+            '(e.g. "--uenv=... --view=default").',
+            orm_to_model=lambda node, _: list(t.cast('AbstractCode', node).mpirun_extra_params),
+        )
 
     def __init__(
         self,
         default_calc_job_plugin: str | None = None,
         append_text: str = '',
         prepend_text: str = '',
+        custom_scheduler_commands: str = '',
+        environment_variables: dict[str, str] | None = None,
+        mpirun_extra_params: list[str] | tuple[str, ...] = (),
         use_double_quotes: bool = False,
         with_mpi: bool | None = None,
         is_hidden: bool = False,
@@ -118,6 +151,9 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         :param default_calc_job_plugin: The entry point name of the default ``CalcJob`` plugin to use.
         :param append_text: The text that should be appended to the run line in the job script.
         :param prepend_text: The text that should be prepended to the run line in the job script.
+        :param custom_scheduler_commands: Custom scheduler commands to add to the submission script header.
+        :param environment_variables: Environment variables to set for all jobs using this code.
+        :param mpirun_extra_params: Extra parameters to pass to the mpirun command.
         :param use_double_quotes: Whether the command line invocation of this code should be escaped with double quotes.
         :param with_mpi: Whether the command should be run as an MPI program.
         :param wrap_cmdline_params: Whether to wrap the executable and all its command line parameters into quotes to
@@ -128,6 +164,9 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         self.default_calc_job_plugin = default_calc_job_plugin
         self.append_text = append_text
         self.prepend_text = prepend_text
+        self.custom_scheduler_commands = custom_scheduler_commands
+        self.environment_variables = environment_variables or {}
+        self.mpirun_extra_params = mpirun_extra_params
         self.use_double_quotes = use_double_quotes
         self.with_mpi = with_mpi
         self.wrap_cmdline_params = wrap_cmdline_params
@@ -267,6 +306,57 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         """
         type_check(value, str, allow_none=True)
         self.base.attributes.set(self._KEY_ATTRIBUTE_PREPEND_TEXT, value)
+
+    @property
+    def custom_scheduler_commands(self) -> str:
+        """Return the custom scheduler commands for this code.
+
+        :return: The custom scheduler commands to add to the submission script header.
+        """
+        return self.base.attributes.get(self._KEY_ATTRIBUTE_CUSTOM_SCHEDULER_COMMANDS, '')
+
+    @custom_scheduler_commands.setter
+    def custom_scheduler_commands(self, value: str) -> None:
+        """Set the custom scheduler commands for this code.
+
+        :param value: The custom scheduler commands to add to the submission script header.
+        """
+        type_check(value, str, allow_none=True)
+        self.base.attributes.set(self._KEY_ATTRIBUTE_CUSTOM_SCHEDULER_COMMANDS, value)
+
+    @property
+    def environment_variables(self) -> dict[str, str]:
+        """Return the environment variables for this code.
+
+        :return: The environment variables to set for all jobs using this code.
+        """
+        return self.base.attributes.get(self._KEY_ATTRIBUTE_ENVIRONMENT_VARIABLES, {})
+
+    @environment_variables.setter
+    def environment_variables(self, value: dict[str, str]) -> None:
+        """Set the environment variables for this code.
+
+        :param value: The environment variables to set for all jobs using this code.
+        """
+        self.base.attributes.set(self._KEY_ATTRIBUTE_ENVIRONMENT_VARIABLES, value)
+
+    @property
+    def mpirun_extra_params(self) -> list[str]:
+        """Return the extra mpirun parameters for this code.
+
+        :return: The extra parameters to pass to the mpirun command.
+        """
+        return list(self.base.attributes.get(self._KEY_ATTRIBUTE_MPIRUN_EXTRA_PARAMS, []))
+
+    @mpirun_extra_params.setter
+    def mpirun_extra_params(self, value: tuple[str, ...] | list[str]) -> None:
+        """Set the extra mpirun parameters for this code.
+
+        :param value: The extra parameters to pass to the mpirun command.
+        """
+        if any(not isinstance(p, str) for p in value):
+            raise TypeError('`mpirun_extra_params` must be a tuple or list of strings.')
+        self.base.attributes.set(self._KEY_ATTRIBUTE_MPIRUN_EXTRA_PARAMS, list(value))
 
     @property
     def use_double_quotes(self) -> bool:

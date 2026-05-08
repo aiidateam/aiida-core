@@ -275,43 +275,103 @@ def show(code):
 
 
 @verdi_code.command()
-@arguments.CODE()
-@arguments.OUTPUT_FILE(type=click.Path(exists=False, path_type=pathlib.Path), required=False)
+@click.argument('codes_and_output', nargs=-1, required=True)
+@click.option('-a', '--all', 'export_all', is_flag=True, help='Export all codes.')
 @options.OVERWRITE()
 @options.SORT()
 @with_dbenv()
-def export(code, output_file, overwrite, sort):
-    """Export code to a yaml file. If no output file is given, default name is created based on the code label."""
+def export(codes_and_output, export_all, overwrite, sort):
+    """Export code(s) to yaml file(s).
+
+    Usage:
+    - verdi code export CODE_ID [CODE_ID ...] [OUTPUT_FILE]
+    - verdi code export --all
+
+    If no output file is given, default names are created based on the code labels.
+    Custom output filename can only be provided when exporting a single code.
+    """
+    from aiida import orm
+    from aiida.common import NotExistent
+
     other_args = {'sort': sort}
     fileformat = 'yaml'
 
-    if output_file is None:
-        output_file = pathlib.Path(f'{code.full_label}.{fileformat}')
+    # Handle --all option
+    if export_all:
+        if codes_and_output:
+            echo.echo_critical('Cannot specify both --all and individual codes.')
 
-    try:
-        # In principle, output file validation is also done in the `data_export` function. However, the
-        # `validate_output_filename` function is applied here, as well, as it is also used in the `Computer` export, and
-        # as `Computer` is not derived from `Data`, it cannot be exported by `data_export`, so
-        # `validate_output_filename` cannot be removed in favor of the validation done in `data_export`.
-        validate_output_filename(
-            output_file=output_file,
-            overwrite=overwrite,
-        )
-    except (FileExistsError, IsADirectoryError) as exception:
-        raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
+        # Get all non-hidden codes
+        query = orm.QueryBuilder()
+        query.append(orm.Code, filters={f'extras.{orm.Code.HIDDEN_KEY}': {'!==': True}})
+        codes = [code for [code] in query.all()]
+        if not codes:
+            echo.echo_report('No codes found in the database.')
+            return
+        output_file = None
+    else:
+        # Parse codes and potential output file
+        if not codes_and_output:
+            echo.echo_critical('Must specify either --all or individual code identifiers.')
 
-    try:
-        data_export(
-            node=code,
-            output_fname=output_file,
-            fileformat=fileformat,
-            other_args=other_args,
-            overwrite=overwrite,
-        )
-    except Exception as exception:
-        echo.echo_critical(f'Error in the `data_export` function: {exception}')
+        codes = []
+        output_file = None
 
-    echo.echo_success(f'Code<{code.pk}> {code.label} exported to file `{output_file}`.')
+        # Try to parse all arguments as codes first
+        for i, arg in enumerate(codes_and_output):
+            try:
+                code = orm.load_code(arg)
+                codes.append(code)
+            except NotExistent:
+                # This argument is not a valid code identifier
+                if i == len(codes_and_output) - 1:
+                    # Last argument and not a code - treat as output file
+                    output_file = pathlib.Path(arg)
+                    break
+                else:
+                    # Not last argument and not a code - error
+                    echo.echo_critical(f'Invalid code identifier: {arg}')
+
+        if not codes:
+            echo.echo_critical('No valid code identifiers provided.')
+
+    # Validate output file usage
+    if output_file and len(codes) > 1:
+        msg = 'Custom output filename can only be provided if a single code is being exported.'
+        raise click.BadParameter(msg)
+
+    # Export each code
+    for code in codes:
+        # Determine the output file for this specific code
+        if output_file is None:
+            current_output_file = pathlib.Path(f'{code.full_label}.{fileformat}')
+        else:
+            current_output_file = output_file
+
+        try:
+            # In principle, output file validation is also done in the `data_export` function. However, the
+            # `validate_output_filename` function is applied here, as well, as it is also used in the `Computer` export,
+            # and as `Computer` is not derived from `Data`, it cannot be exported by `data_export`, so
+            # `validate_output_filename` cannot be removed in favor of the validation done in `data_export`.
+            validate_output_filename(
+                output_file=current_output_file,
+                overwrite=overwrite,
+            )
+        except (FileExistsError, IsADirectoryError) as exception:
+            raise click.BadParameter(str(exception), param_hint='OUTPUT_FILE') from exception
+
+        try:
+            data_export(
+                node=code,
+                output_fname=current_output_file,
+                fileformat=fileformat,
+                other_args=other_args,
+                overwrite=overwrite,
+            )
+        except Exception as exception:
+            echo.echo_critical(f'Error in the `data_export` function: {exception}')
+
+        echo.echo_success(f'Code<{code.pk}> {code.label} exported to file `{current_output_file}`.')
 
 
 @verdi_code.command()

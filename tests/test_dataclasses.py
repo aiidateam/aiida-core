@@ -26,6 +26,7 @@ from aiida.orm.nodes.data.structure import (
     ase_refine_cell,
     get_formula,
     has_ase,
+    has_atomistic,
     has_pymatgen,
     has_spglib,
 )
@@ -67,6 +68,7 @@ skip_ase = pytest.mark.skipif(not has_ase(), reason='Unable to import ase')
 skip_spglib = pytest.mark.skipif(not has_spglib(), reason='Unable to import spglib')
 skip_pycifrw = pytest.mark.skipif(not has_pycifrw(), reason='Unable to import PyCifRW')
 skip_pymatgen = pytest.mark.skipif(not has_pymatgen(), reason='Unable to import pymatgen')
+skip_atomistic = pytest.mark.skipif(not has_atomistic(), reason='Unable to import aiida-atomistic')
 
 
 class TestCifData:
@@ -1846,6 +1848,26 @@ class TestStructureDataReload:
             assert round(abs(c.sites[0].position[i] - 0.0), 7) == 0
         for i in range(3):
             assert round(abs(c.sites[1].position[i] - 1.0), 7) == 0
+
+
+@skip_atomistic
+def test_to_atomistic(self):
+    """Test the conversion from orm.StructureData to the atomistic structure."""
+
+    # Create a structure with a single atom
+    from aiida_atomistic import StructureData as AtomisticStructureData
+
+    legacy = StructureData(cell=((1.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 3.0)))
+    legacy.append_atom(position=(0.0, 0.0, 0.0), symbols=['Ba'], name='Ba1')
+
+    # Convert to atomistic structure
+    structure = legacy.to_atomistic()
+
+    # Check that the structure is as expected
+    assert isinstance(structure, AtomisticStructureData)
+    assert structure.properties.sites[0].kinds == legacy.sites[0].kind_name
+    assert structure.properties.sites[0].positions == list(legacy.sites[0].position)
+    assert structure.properties.cell == legacy.cell
 
 
 class TestStructureDataFromAse:

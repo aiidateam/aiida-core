@@ -17,9 +17,21 @@ import re
 
 import numpy as np
 
+from aiida.common import exceptions
 from aiida.common.constants import elements
 from aiida.engine import calcfunction
-from aiida.orm.nodes.data.structure import Kind, Site, StructureData
+from aiida.orm.nodes.data.structure import Kind, Site
+from aiida.orm.nodes.data.structure import StructureData as LegacyStructureData
+from aiida.plugins import DataFactory
+
+try:
+    StructureData = DataFactory('atomistic.structure')
+    HAS_ATOMISTIC = True
+except exceptions.MissingEntryPointError:
+    structures_classes = (LegacyStructureData,)
+    HAS_ATOMISTIC = False
+else:
+    structures_classes = (LegacyStructureData, StructureData)  # type: ignore[assignment]
 
 __all__ = ('spglib_tuple_to_structure', 'structure_to_spglib_tuple')
 
@@ -35,7 +47,8 @@ def _get_cif_ase_inline(struct, parameters):
     kwargs = {}
     if parameters is not None:
         kwargs = parameters.get_dict()
-    cif = CifData(ase=struct.get_ase(**kwargs))
+    ase_structure = struct.get_ase(**kwargs) if isinstance(struct, LegacyStructureData) else struct.to_ase(**kwargs)
+    cif = CifData(ase=ase_structure)
     formula = struct.get_formula(mode='hill', separator=' ')
     for i in cif.values.keys():
         cif.values[i]['_symmetry_space_group_name_H-M'] = 'P 1'
@@ -152,7 +165,7 @@ def spglib_tuple_to_structure(structure_tuple, kind_info=None, kinds=None):
     except KeyError as exc:
         raise ValueError(f'Unable to find kind in kind_info for number {exc.args[0]}')
 
-    structure = StructureData(cell=cell)
+    structure = LegacyStructureData(cell=cell)
     for k in _kinds:
         structure.append_kind(k)
     abs_pos = np.dot(rel_pos, cell)

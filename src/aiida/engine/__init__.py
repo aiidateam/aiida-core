@@ -12,6 +12,8 @@
 
 # fmt: off
 
+from aiida.common.log import get_process_logger
+
 from .daemon import *
 from .exceptions import *
 from .launch import *
@@ -62,6 +64,7 @@ __all__ = (
     'construct_awaitable',
     'get_daemon_client',
     'get_object_loader',
+    'get_process_logger',
     'if_',
     'interruptable_task',
     'is_process_function',

@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # Tutorial content tracking
 
 Development-only checklist. Tracks what each module should teach and current status.

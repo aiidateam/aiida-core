@@ -24,22 +24,8 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 
 After this module, you will be able to:
 
-- Run a parameter sweep using `aiida-shell` in a loop
-- Understand the limitation of file-only provenance
-- Write `@calcfunction`-decorated functions for input preparation and output parsing
-<!-- REPHRASE CANDIDATES — pick one and replace the bullet above:
-  1. Track Python steps (input preparation, output parsing) in the provenance graph
-  2. Include Python steps (input preparation, output parsing) in the provenance graph
-  3. Capture Python steps (input preparation, output parsing) in the provenance graph
-  4. Expand the provenance graph to also track input preparation and output parsing
-  5. Extend provenance tracking to your Python pre- and post-processing
-  6. Bring input preparation and output parsing under AiiDA's provenance tracking
-  7. Track input preparation and output parsing alongside the simulation itself
-  8. Have AiiDA track every Python step of the pipeline, not just the simulation
-  9. Cover input preparation and output parsing in the provenance graph, not just the simulation
- 10. Promote ordinary Python functions to tracked steps in the provenance graph
--->
-
+- Launch many tracked calculations programmatically
+- Add input preparation and output parsing as tracked Python steps to the simulation's provenance
 - Use AiiDA's structured data types to obtain queryable results
 - Run a parameter sweep with richer provenance
 
@@ -61,11 +47,11 @@ This module requires an AiiDA profile and the `python_code` variable (see {ref}`
 %run -i include/setup_tutorial.py
 ```
 
-## Parameter sweep with `aiida-shell`
+## Running many calculations with `aiida-shell`
 
 In {ref}`Module 1 <tutorial:module1>`, you ran a single simulation through `aiida-shell` and got back `SinglefileData` nodes: the raw input and output files, tracked with provenance.
 
-Now let's scale that up: scan the feed rate `F` and see how the pattern strength (`variance_V`) changes across a range of parameters.
+Let's start varying our simulation parameters: scan the feed rate `F` and see how the pattern strength (`variance_V`) changes across a range of values.
 
 ```{code-cell} ipython3
 # Sweep the feed rate F using aiida-shell.
@@ -133,19 +119,21 @@ Every simulation is tracked by AiiDA, so we can inspect any of them:
 :::{important}
 Notice what we had to do to get the `variance_V` values: manually open each YAML output file and extract the number.
 
-The provenance looks like this for each run: **file in &rarr; ShellJob &rarr; file out**.
+The provenance looks like this for each run: **file in → ShellJob → file out**.
 AiiDA knows *that* a result file was produced, but it can't see *what's inside* it.
-If we wanted to find "all runs where `variance_V > 0.001`", we'd have to open every output file ourselves &mdash; AiiDA's database can't help.
+If we wanted to find "all runs where `variance_V > 0.001`", we'd have to open every output file ourselves, since AiiDA's database can't help.
 :::
 
 ## Richer provenance with calcfunctions
 
 ### The idea
 
-What if, instead of just files in and files out, we could register the simulation's inputs and outputs as **structured AiiDA data nodes**?
+What if, instead of just files in and files out, we could register the simulation's inputs and outputs as **structured AiiDA data nodes**?[^data-types]
 
 - The input parameters as a {py:class}`~aiida.orm.Dict` (queryable key-value pairs in the database)
 - The output scalars as {py:class}`~aiida.orm.Float` nodes (directly searchable)
+
+[^data-types]: See {ref}`topics:data_types` for the full reference on AiiDA's data model.
 
 :::{tip}
 `orm` stands for **Object-Relational Mapping**: it lets you work with database-stored objects as regular Python classes.
@@ -161,13 +149,15 @@ AiiDA's {mod}`~aiida.orm` module provides data types like `Dict`, `Float`, `Int`
      (extras) to nodes for tagging, filtering, and organizing results.
      From meeting notes: "possibly introduce Extras here". -->
 
-A {func}`@calcfunction <aiida.engine.processes.functions.calcfunction>` is the simplest way to do this.
+A {func}`@calcfunction <aiida.engine.processes.functions.calcfunction>` is the simplest way to do this.[^processes]
 It's a regular Python function with a decorator that makes AiiDA automatically:
 
 1. Store all input nodes
 2. Create a **process node** recording the computation
 3. Store all output nodes
 4. Link everything in the provenance graph
+
+[^processes]: See {ref}`topics:processes` for an in-depth guide to calcfunctions and CalcJobs.
 
 ### Writing `prepare_input`
 
@@ -247,7 +237,7 @@ mystnb:
     image:
         width: 100%
 ---
-# Provenance graph now shows Dict in and Float out, not just opaque files.
+# Provenance graph now shows Dict in and Float out, not just files.
 %run -i include/plot_provenance.py
 plot_provenance(node)
 ```
@@ -331,17 +321,13 @@ See the {ref}`querying how-to guide <how-to:query>` for more.
 In this module you learned to:
 
 - **Run a parameter sweep** with `aiida-shell` in a loop (file in -> file out)
-- **Recognize the limitation**: AiiDA can't query inside opaque files
-- **Write calcfunctions** (`prepare_input`, `parse_output`) to convert between files and structured data
+- **Add** input preparation and output parsing as tracked Python steps to the simulation's provenance
 - **Build an enriched pipeline** with queryable `Dict` inputs and `Float` outputs
-
-:::{seealso}
-- {ref}`Topic: data types <topics:data_types>`: full reference on AiiDA's data model
-- {ref}`Topic: processes <topics:processes>`: in-depth guide to calcfunctions and CalcJobs
-:::
 
 ## Next steps
 
 We now have a tracked pipeline with structured data, but it's still a Python `for` loop that runs each step in a blocking manner.
 If one step fails, the loop stops. There's no single "sweep" object to query, and no way to run steps in parallel.
 In {ref}`Module 3 <tutorial:module3>`, you'll wrap the pipeline into a **WorkGraph workflow** and turn the loop into a mapped workflow too.
+
+## Footnotes

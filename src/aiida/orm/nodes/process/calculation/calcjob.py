@@ -107,12 +107,11 @@ class CalcJobNode(CalculationNode):
 
     @property
     def tools(self) -> 'CalculationTools':
-        """Return the calculation tools that are registered for the process type associated with this calculation.
+        """Return the calculation tools for the process type associated with this calculation.
 
-        If the entry point name stored in the `process_type` of the CalcJobNode has an accompanying entry point in the
-        `aiida.tools.calculations` entry point category, it will attempt to load the entry point and instantiate it
-        passing the node to the constructor. If the entry point does not exist, cannot be resolved or loaded, a warning
-        will be logged and the base CalculationTools class will be instantiated and returned.
+        If the entry point name stored in the `process_type` of the `CalcJobNode` has an accompanying entry point in
+        the `aiida.tools.calculations` entry point category, it will be loaded and instantiated with this node.
+        Otherwise, or if the tools entry point cannot be loaded, the base `CalculationTools` class is instantiated.
 
         :return: CalculationTools instance
         """
@@ -129,10 +128,12 @@ class CalcJobNode(CalculationNode):
                     tools_class = load_entry_point('aiida.tools.calculations', entry_point.name)
                     self._tools = tools_class(self)
                 except exceptions.EntryPointError as exception:
-                    self._tools = CalculationTools(self)
                     self.logger.warning(
                         f'could not load the calculation tools entry point {entry_point.name}: {exception}'
                     )
+
+            if self._tools is None:
+                self._tools = CalculationTools(self)
 
         return self._tools
 

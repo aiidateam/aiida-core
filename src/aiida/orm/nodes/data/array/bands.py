@@ -10,6 +10,7 @@
 in a Brillouin zone, and how to operate on them.
 """
 
+import itertools
 import json
 import typing as t
 from string import Template
@@ -493,7 +494,7 @@ class BandsData(KpointsData):
                 # I add an empty label that points to the last band if the last label does not do it
                 if labels[-1][0] != len(bands) - 1:
                     labels.append((len(bands) - 1, ''))
-                for (position_from, label_from), (position_to, label_to) in zip(labels[:-1], labels[1:]):
+                for (position_from, label_from), (position_to, label_to) in itertools.pairwise(labels):
                     if position_to - position_from > 1:
                         # Create a new path line only if there are at least two points,
                         # otherwise it is probably just a discontinuity point in the band

@@ -50,7 +50,7 @@ def main(code, number, daemon):
     computer_created = False
     code_created = False
 
-    echo.echo(f'Running on profile {get_manager().get_profile().name}')
+    echo.echo(f'Running on profile `{get_manager().get_profile().name}`')
 
     if not code:
         label = f'benchmark-{uuid.uuid4().hex[:8]}'

@@ -20,7 +20,7 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.plugins.entry_point import get_entry_point_from_string
 
 if t.TYPE_CHECKING:
-    from importlib_metadata import EntryPoint
+    from importlib.metadata import EntryPoint
 
     from aiida.orm.utils.loaders import OrmEntityLoader
 
@@ -114,7 +114,7 @@ class IdentifierParamType(click.ParamType, ABC):
 
             for entry_point in self._entry_points:
                 try:
-                    sub_class = entry_point.load()  # type: ignore[no-untyped-call]
+                    sub_class = entry_point.load()
                 except ImportError as exception:
                     raise RuntimeError(f'failed to load the entry point {entry_point}: {exception}')
 

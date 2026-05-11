@@ -20,7 +20,7 @@ from aiida.common.log import override_log_level
 class TestVerdiRun:
     """Tests for `verdi run`."""
 
-    @pytest.mark.requires_rmq
+    @pytest.mark.requires_broker
     def test_run_workfunction(self, run_cli_command):
         """Regression test for #2165
 
@@ -159,7 +159,7 @@ class TestAutoGroups:
             all_auto_groups = queryb.all()
             assert len(all_auto_groups) == 0, 'There should be no autogroup generated'
 
-    @pytest.mark.requires_rmq
+    @pytest.mark.requires_broker
     def test_autogroup_filter_class(self, run_cli_command):
         """Check if the autogroup is properly generated but filtered classes are skipped."""
         from aiida.orm import AutoGroup, Node, QueryBuilder, load_node

@@ -36,7 +36,7 @@ class NameSpacedProcess(Process):
         spec.input('some.name.space.a', valid_type=orm.Int)
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestProcessNamespace:
     """Test process namespace"""
 
@@ -94,7 +94,7 @@ class ProcessStackTest(Process):
         assert self._thread_id is threading.current_thread().ident
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestProcess:
     """Test AiiDA process."""
 

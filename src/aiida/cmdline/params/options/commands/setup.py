@@ -342,11 +342,20 @@ SETUP_DATABASE_PASSWORD = QUICKSETUP_DATABASE_PASSWORD.clone(
 
 SETUP_USE_RABBITMQ = options.OverridableOption(
     '--use-rabbitmq/--no-use-rabbitmq',
-    prompt='Use RabbitMQ?',
     is_flag=True,
-    default=True,
+    default=None,
+    hidden=True,
+    help='Deprecated: use --broker instead. --no-use-rabbitmq is equivalent to --broker none.',
+)
+
+SETUP_BROKER_BACKEND = options.OverridableOption(
+    '--broker',
+    prompt='Message broker',
+    type=click.Choice(['rabbitmq', 'zmq', 'none']),
+    default='rabbitmq',
     cls=options.interactive.InteractiveOption,
-    help='Whether to configure the RabbitMQ broker. Required to enable the daemon and submitting processes.',
+    help='Message broker backend for process control. Use "rabbitmq" for RabbitMQ (requires external server), '
+    '"zmq" for ZeroMQ (built-in, no external dependencies), or "none" to disable (limited functionality).',
 )
 
 SETUP_BROKER_PROTOCOL = QUICKSETUP_BROKER_PROTOCOL.clone(

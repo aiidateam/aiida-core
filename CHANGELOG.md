@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Behavior changes
+
+**`verdi presto`: auto-starts the daemon** ([#7351](https://github.com/aiidateam/aiida-core/pull/7351))
+
+`verdi presto` now starts the daemon automatically after creating the profile, when a broker is configured.
+Scripts that previously ran `verdi daemon start` after `verdi presto` continue to work; the daemon-start invocation is idempotent.
+
 ## v2.8.0 - 2026-03-16
 
 This release brings important improvements to the `BaseRestartWorkChain`, the engine, stashing, typing coverage, and dependency updates.

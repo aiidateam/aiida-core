@@ -42,7 +42,7 @@ Each builds on the previous one, so start with Module 0 if you are new to AiiDA.
 ::::{grid} 2 2 2 2
 :gutter: 3
 
-:::{grid-item-card} {fa}`flask;mr-1` Module 0: Life without AiiDA
+:::{grid-item-card} {fa}`flask;mr-1` Module 0: Calculations without AiiDA
 :text-align: center
 :shadow: md
 
@@ -61,7 +61,7 @@ Go to Module 0
 ```
 :::
 
-:::{grid-item-card} {fa}`circle-play;mr-1` Module 1: Your first AiiDA-tracked calculation
+:::{grid-item-card} {fa}`circle-play;mr-1` Module 1: Calculations with AiiDA
 :text-align: center
 :shadow: md
 

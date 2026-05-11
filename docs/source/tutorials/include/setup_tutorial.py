@@ -3,8 +3,14 @@
 Creates (or loads) a lightweight ``tutorial`` profile with:
 
 * SQLite storage (no PostgreSQL required)
+* ZMQ message broker (no external broker service required)
+* A running daemon (so asynchronous submission works in later modules)
 * A ``localhost`` Computer with local transport and direct scheduler
 * A ``python3@localhost`` Code pointing to the current Python interpreter
+
+The broker and daemon configuration matches what ``verdi presto`` sets up
+on a fresh machine, so ``verdi status`` in the tutorial mirrors what users
+will see locally.
 
 Every tutorial module runs this in a hidden cell so that data created in
 earlier modules is available in later ones.
@@ -19,10 +25,13 @@ replace the ``%run -i`` cell with::
 import os
 import pathlib
 import sys
+import time
 
 from aiida import load_profile
 from aiida.common.exceptions import NotExistent
+from aiida.engine.daemon.client import get_daemon_client
 from aiida.manage.configuration import create_profile, get_config
+from aiida.manage.manager import get_manager
 from aiida.orm import Computer, InstalledCode, load_code, load_computer
 
 profile_name = 'tutorial'
@@ -35,8 +44,8 @@ if profile_name not in config.profile_names:
         email='tutorial@aiida.net',
         storage_backend='core.sqlite_dos',
         storage_config={},
-        broker_backend=None,
-        broker_config=None,
+        broker_backend='core.zmq',
+        broker_config={},
     )
     config.set_option('runner.poll.interval', 1, scope=profile_name)
     config.set_option('warnings.development_version', False, scope=profile_name)
@@ -45,6 +54,20 @@ if profile_name not in config.profile_names:
 
 load_profile(profile_name, allow_switch=True)
 os.environ['AIIDA_PROFILE'] = profile_name
+
+# Start the daemon (idempotent) so verdi status mirrors `verdi presto`'s.
+_daemon_client = get_daemon_client(profile_name)
+if not _daemon_client.is_daemon_running:
+    _daemon_client.start_daemon()
+
+# Wait for the ZMQ broker watcher to actually be up before continuing.
+# `start_daemon` only waits for circusd itself, not for its child watchers,
+# so a verdi status call right after can still see "Broker is NOT running".
+_broker = get_manager().get_broker()
+if _broker is not None:
+    _deadline = time.monotonic() + 10.0
+    while not _broker.is_running and time.monotonic() < _deadline:
+        time.sleep(0.2)
 
 # Ensure a localhost Computer exists (create_profile does not create one,
 # unlike ``verdi presto``).

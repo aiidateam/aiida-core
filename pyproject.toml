@@ -298,7 +298,8 @@ tui = [
   'trogon'
 ]
 tutorials = [
-  'aiida-shell~=0.8.0'
+  'aiida-shell~=0.8.0',
+  'aiida-workgraph @ git+https://github.com/GeigerJ2/aiida-workgraph.git@fix/map-zone-output-retrieval'
 ]
 
 [project.scripts]

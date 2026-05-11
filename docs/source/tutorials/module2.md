@@ -27,12 +27,21 @@ After this module, you will be able to:
 - Run a parameter sweep using `aiida-shell` in a loop
 - Understand the limitation of file-only provenance
 - Write `@calcfunction`-decorated functions for input preparation and output parsing
-- Use AiiDA's structured data types (`Dict`, `Float`) for queryable results
+<!-- REPHRASE CANDIDATES — pick one and replace the bullet above:
+  1. Track Python steps (input preparation, output parsing) in the provenance graph
+  2. Include Python steps (input preparation, output parsing) in the provenance graph
+  3. Capture Python steps (input preparation, output parsing) in the provenance graph
+  4. Expand the provenance graph to also track input preparation and output parsing
+  5. Extend provenance tracking to your Python pre- and post-processing
+  6. Bring input preparation and output parsing under AiiDA's provenance tracking
+  7. Track input preparation and output parsing alongside the simulation itself
+  8. Have AiiDA track every Python step of the pipeline, not just the simulation
+  9. Cover input preparation and output parsing in the provenance graph, not just the simulation
+ 10. Promote ordinary Python functions to tracked steps in the provenance graph
+-->
+
+- Use AiiDA's structured data types to obtain queryable results
 - Run a parameter sweep with richer provenance
-
-## What you will not learn yet
-
-You cannot yet chain steps into automated workflows or run them in parallel -- that comes in {ref}`Module 3 <tutorial:module3>`.
 
 ## Setup
 
@@ -54,7 +63,7 @@ This module requires an AiiDA profile and the `python_code` variable (see {ref}`
 
 ## Parameter sweep with `aiida-shell`
 
-In {ref}`Module 1 <tutorial:module1>`, you ran a single simulation through `aiida-shell` and got back `SinglefileData` nodes -- the raw input and output files, tracked with provenance.
+In {ref}`Module 1 <tutorial:module1>`, you ran a single simulation through `aiida-shell` and got back `SinglefileData` nodes: the raw input and output files, tracked with provenance.
 
 Now let's scale that up: scan the feed rate `F` and see how the pattern strength (`variance_V`) changes across a range of parameters.
 
@@ -114,7 +123,7 @@ plot_transition_curve(
 
 The sharp drop in `variance_V` marks a **phase transition**: below it, the system forms rich spatial patterns; above it, the patterns dissolve (recall the two images in {ref}`Module 0 <tutorial:module0>`).
 
-Every simulation is tracked by AiiDA -- we can inspect any of them:
+Every simulation is tracked by AiiDA, so we can inspect any of them:
 
 ```{code-cell} ipython3
 # List all processes run so far in this profile.
@@ -179,7 +188,7 @@ def prepare_input(parameters: orm.Dict) -> orm.SinglefileData:
 ```
 
 :::{note}
-Inside a `calcfunction`, all parameters are AiiDA data nodes -- not plain Python types.
+Inside a `calcfunction`, all parameters are AiiDA data nodes, not plain Python types.
 That is why the function calls `parameters.get_dict()` to extract the dictionary.
 
 When *calling* the function, AiiDA auto-serializes plain Python types for you: `prepare_input(orm.Dict(params))` and `prepare_input(params)` both work.
@@ -271,7 +280,7 @@ for f_val in F_VALUES:
 Now the payoff: instead of manually opening YAML files, the results are stored as `Float` nodes that we can access directly through the provenance graph:
 
 ```{code-cell} ipython3
-# Access the structured results directly -- no file handling needed.
+# Access the structured results directly (no file handling needed).
 for f_val, parsed in enriched_nodes:
     print(f"F={f_val:.3f}  variance(V)={parsed['variance_V'].value:.4e}")
 ```
@@ -327,12 +336,12 @@ In this module you learned to:
 - **Build an enriched pipeline** with queryable `Dict` inputs and `Float` outputs
 
 :::{seealso}
-- {ref}`Topic: data types <topics:data_types>` -- full reference on AiiDA's data model
-- {ref}`Topic: processes <topics:processes>` -- in-depth guide to calcfunctions and CalcJobs
+- {ref}`Topic: data types <topics:data_types>`: full reference on AiiDA's data model
+- {ref}`Topic: processes <topics:processes>`: in-depth guide to calcfunctions and CalcJobs
 :::
 
 ## Next steps
 
-We now have a tracked pipeline with structured data -- but it's still a Python `for` loop that runs each step in a blocking manner.
+We now have a tracked pipeline with structured data, but it's still a Python `for` loop that runs each step in a blocking manner.
 If one step fails, the loop stops. There's no single "sweep" object to query, and no way to run steps in parallel.
 In {ref}`Module 3 <tutorial:module3>`, you'll wrap the pipeline into a **WorkGraph workflow** and turn the loop into a mapped workflow too.

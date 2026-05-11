@@ -15,15 +15,11 @@ execution:
 
 (tutorial:module0)=
 (tutorial:intro)=
-# Module 0: Life without AiiDA
+# Module 0: Calculations without AiiDA
 
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module0.ipynb` {octicon}`download`
 :::
-
-<!-- MOTIVATION: Give users an immediate, visual sense of what the simulation
-     produces, so they care about the rest of the module. Keep it simple:
-     one image, plain language, no jargon. -->
 
 In this module, we run a simulation the traditional way, without AiiDA, to experience the pain points it is built to solve.
 
@@ -146,6 +142,10 @@ With `F=0.055`, the pattern looks completely different:
 However, note that we just overwrote our input file, and now the original parameters are gone.
 As the output doesn't record what was used, it's not clear which result came from which parameter set. You'd have to remember, or manually organize your folders and files accordingly.
 
+:::{note}
+During the exploratory phase of a computational science project, quickly tweaking parameters and re-running is exactly how people often work in practice.
+:::
+
 :::{admonition} No systematic record of your work
 :class: warning
 
@@ -153,11 +153,7 @@ As the output doesn't record what was used, it's not clear which result came fro
 - Without a systematic way to organize runs, results become untraceable and data may be lost
 :::
 
-:::{note}
-This example might seem contrived here, but during the exploratory phase of a computational science project, quickly tweaking parameters and re-running is exactly how people often work in practice.
-:::
-
-## Running with errors
+## Running into errors
 
 <!-- MOTIVATION: Show that errors from scientific codes are often cryptic
      and leave no useful trace. The user has no idea what went wrong, and
@@ -185,8 +181,8 @@ if result.stderr:
 print(f'Exit code: {result.returncode}')
 ```
 
-A wall of text referencing internal functions and a cryptic error code.
-The error message doesn't tell you what to fix, and you're left digging through source code to make sense of it.
+A short traceback through internal functions and a cryptic numeric error code.
+In real scientific software this is typically much worse, with pages of unrelated output drowning out anything useful. But even the minimal version here doesn't tell you what to fix or how to recover.
 
 :::{admonition} Failures are hard to diagnose and easy to lose
 :class: warning
@@ -221,22 +217,22 @@ Those approaches are fragile, and the resulting data (and the workflow that prod
 
 Some more things that can go wrong at scale:
 
-- **Scattered data**: input and output files can end up on scratch filesystems across different clusters, your local machine, and shared drives. After a few months, good luck finding which directory has the converged results.
+- **Scattered data**: input and output files can end up on scratch filesystems across different clusters, your local machine, and shared drives. Months later, just tracking down which directory holds the converged results becomes a chore in itself.
 - **Multi-step workflows**: one code prepares the geometry, another runs the simulation, a third post-processes the results. If step 2 fails for 15 out of 100 runs, how do you figure out which ones failed, why, and how to re-run just those? You'd have to manually identify the failures, fix or adjust the inputs, and re-run each.
 - **Unstructured output formats**: many codes write plain text files with no defined schema. Extracting results programmatically often means writing fragile custom parsers that can break with new code versions.
-- **Code versions and environments**: talking of code versions, was this result produced with v2.1 or v2.3? Compiled with which flags? On which cluster? You'd easily lose track unless you logged it yourself.
+- **Code versions and environments**: was this result produced with v2.1 or v2.3? Compiled with which flags? On which cluster? You'd easily lose track unless you logged it yourself.
 - **Post-processing at scale**: aggregating a single number from each of hundreds of output files requires custom scripts that might break when the output format changes.
 - **Collaboration and handover**: a colleague takes over your project. They inherit a directory tree of thousands of files with no documentation of what produced what. You could write a README, but keeping it up to date is yet another manual task that rarely happens in practice.
 
 ## How AiiDA solves these problems
 
 AiiDA is a workflow manager designed for exactly these problems.
-It automatically builds a **provenance graph** that records every input, every output, which code ran on which machine, and how they are all connected, for every calculation, including failed ones.
+At its core is the **provenance graph**: an automatic record of every calculation, its inputs, its outputs, and how they all connect, for every run, including failed ones.
 It gives you:
 
-- **Provenance tracking**: every calculation is recorded with its full history. Inputs, outputs, metadata, the code it ran with, and the machine it ran on, are linked together automatically. Nothing is lost. Everything is tracked.
+- **Provenance tracking**: nothing is lost. Every result can be traced back to the exact inputs, code, and machine that produced it.
 - **Workflow orchestration**: multi-step pipelines run as managed workflows, handling execution, data passing, and error recovery. If some steps fail, AiiDA knows which ones, why, and can help you restart just those.
-- **Reproducibility and sharing**: the full provenance graph can be exported and shared. A colleague can trace any result back to the exact inputs, code, and parameters that produced it.
+- **Reproducibility and sharing**: the full provenance graph can be exported as a portable archive. A collaborator can easily reproduce, audit, or extend your work.
 - **Structured output parsing**: AiiDA plugins provide parsers that extract structured results from code output files and store them as queryable database entries, so you can search and filter across all your calculations without ever opening a single file.
 - **Community knowledge**: AiiDA plugins for popular codes ship with workflows, parsers, and error handlers, encoding years of domain expertise. You benefit from best practices without having to painfully discover them yourself.
 

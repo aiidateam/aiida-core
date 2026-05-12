@@ -153,7 +153,7 @@ def main() -> None:
     except Exception as e:
         fail(code=99, message=f'Unexpected error: {e}')
 
-    results = {'variance_V': round(var_v, 3), 'mean_V': round(mean_v, 3)}
+    results = {'variance_V': round(var_v, 5), 'mean_V': round(mean_v, 5)}
     with open(output_path, 'w') as f:
         yaml.dump(results, f, default_flow_style=False)
 

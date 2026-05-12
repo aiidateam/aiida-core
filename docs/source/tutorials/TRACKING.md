@@ -143,5 +143,5 @@ Development-only checklist. Tracks what each module should teach and current sta
 
 - [ ] Teaser page (AiiDA in Action demo, currently commented out in index)
 - [x] Shared include files: `constants.py`, `tasks.py`, `setup_tutorial.py`, `reaction-diffusion.py`
-- [x] Shared plot helpers: `plot_provenance.py`, `plot_sweep.py`, `plot_fields.py`
+- [x] Shared plot helpers: `plotting.py` (`plot_provenance`, `plot_transition_curve`, `plot_uv_fields`)
 - [x] Static images: `reaction-diffusion-fields.png`, `reaction-diffusion-fields-2.png`

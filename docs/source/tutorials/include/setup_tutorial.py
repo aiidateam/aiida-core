@@ -22,19 +22,26 @@ replace the ``%run -i`` cell with::
     load_profile()
 """
 
+import hashlib
 import os
 import pathlib
 import sys
 import time
 
 from aiida import load_profile
+from aiida.brokers.zmq.broker import ZmqBroker
 from aiida.common.exceptions import NotExistent
 from aiida.engine.daemon.client import get_daemon_client
 from aiida.manage.configuration import create_profile, get_config
 from aiida.manage.manager import get_manager
 from aiida.orm import Computer, InstalledCode, load_code, load_computer
 
-profile_name = 'tutorial'
+# Derive a short, time-based suffix from this script's mtime: stable across
+# all modules in one build, but bumped whenever the setup logic changes,
+# so stale profiles from older builds don't get reused.
+_setup_mtime = int(pathlib.Path(__file__).stat().st_mtime)
+_session_hash = hashlib.sha1(str(_setup_mtime).encode()).hexdigest()[:8]
+profile_name = f'tutorial-{_session_hash}'
 config = get_config()
 
 if profile_name not in config.profile_names:
@@ -64,7 +71,7 @@ if not _daemon_client.is_daemon_running:
 # `start_daemon` only waits for circusd itself, not for its child watchers,
 # so a verdi status call right after can still see "Broker is NOT running".
 _broker = get_manager().get_broker()
-if _broker is not None:
+if isinstance(_broker, ZmqBroker):
     _deadline = time.monotonic() + 10.0
     while not _broker.is_running and time.monotonic() < _deadline:
         time.sleep(0.2)

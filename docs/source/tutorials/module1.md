@@ -65,16 +65,19 @@ For more advanced high-throughput production setups (PostgreSQL, RabbitMQ), see 
 
 %load_ext aiida
 
-# Stop any leftover daemon and delete any existing tutorial profile,
-# so each docs build starts fresh. Modules 2+ reuse the profile created here.
+# Stop any leftover daemon and delete any past tutorial profiles created by
+# this script, so each docs build starts fresh. Modules 2+ reuse the profile
+# created here. Legacy bare `tutorial` profiles (without a hash suffix) are
+# left alone — they predate the current setup and should be cleaned up
+# manually with `verdi profile delete tutorial`.
 from aiida.engine.daemon.client import get_daemon_client
 from aiida.manage.configuration import get_config
 _config = get_config()
-if 'tutorial' in _config.profile_names:
-    _daemon_client = get_daemon_client('tutorial')
+for _stale_name in [n for n in _config.profile_names if n.startswith('tutorial-')]:
+    _daemon_client = get_daemon_client(_stale_name)
     if _daemon_client.is_daemon_running:
         _daemon_client.stop_daemon(wait=True)
-    _config.delete_profile('tutorial', delete_storage=True)
+    _config.delete_profile(_stale_name, delete_storage=True)
 
 %run -i include/setup_tutorial.py
 ```
@@ -90,7 +93,7 @@ You can verify that the profile is set up correctly with `verdi status`:
 We use IPython magic commands like `%verdi <cmd>` in Code cells (`%verdi` runs a `verdi` CLI command from the notebook).[^magics] To execute in a terminal, drop the `%` prefix.
 :::
 
-[^magics]: `%load_ext aiida` (in the hidden setup cell) registers the `%verdi` magic. `%run -i script.py` executes a Python file in the current namespace, equivalent to pasting its contents into the cell. The `from include.constants import ...` lines pull shared parameters from {download}`include/constants.py` so the code cells stay focused on AiiDA concepts.
+[^magics]: `%load_ext aiida` (in the hidden setup cell) registers the `%verdi` magic. `%run -i script.py` executes a Python file in the current namespace, equivalent to pasting its contents into the cell — we use it throughout the tutorial to pull in helper code (for example, plotting routines) so the code cells stay focused on AiiDA concepts. The `from include.constants import ...` lines do the same for shared parameters from {download}`include/constants.py`.
 
 ## Running the simulation with `aiida-shell`
 
@@ -100,9 +103,11 @@ Now let's run it through AiiDA, so the inputs, outputs, and execution metadata g
 AiiDA uses the **{ref}`CalcJob <topics:calculations:concepts:calcjobs>`** class to manage external executables by preparing input files, executing the code (locally or on a remote cluster), retrieving output files, and optionally parsing the results.
 
 The fastest way to run a CalcJob is with [`aiida-shell`](https://aiida-shell.readthedocs.io), which wraps any shell command without requiring additional plugin code.[^plugin-codes]
-Below, we use its `launch_shell_job` helper with the same input file as in {ref}`Module 0 <tutorial:module0>`:
+Below, we use its `launch_shell_job` helper with the same input file as in {ref}`Module 0 <tutorial:module0>` and a pre-registered `python_code` object[^python-code]:
 
 [^plugin-codes]: For writing your own CalcJob plugin (custom input preparation, exit codes, parsing), see {ref}`how to write a plugin for an external code <how-to:plugin-codes>`.
+
+[^python-code]: `python_code` is an `InstalledCode` pointing at the current Python interpreter on the `localhost` Computer. It is created by the hidden setup cell above ({download}`include/setup_tutorial.py`) so the same code can be reused across modules. Running locally, the equivalent one-liner is `verdi code create core.code.installed --label python3 --computer localhost --filepath-executable $(which python3) --default-calc-job-plugin core.shell`.
 
 ```{code-cell} ipython3
 # Run the simulation through AiiDA using aiida-shell's launch_shell_job.
@@ -153,7 +158,8 @@ mystnb:
         width: 100%
 ---
 # Generate and display the provenance graph for this calculation.
-%run -i include/plot_provenance.py
+from include.plotting import plot_provenance
+
 plot_provenance(node)
 ```
 
@@ -170,8 +176,10 @@ Open the image in a new tab for a larger view. You can also generate provenance 
 
 ## Inspecting the calculation
 
-AiiDA records the full lifecycle of every CalcJob.
+AiiDA records the full lifecycle of every CalcJob.[^process-state]
 Two ways to look at it: from the command line, and from Python.
+
+[^process-state]: A process moves through a defined state machine (`Created` → `Running` → `Waiting` → `Finished`/`Excepted`/`Killed`). See {ref}`topics:processes:concepts:state` for the full reference.
 
 ### From the command line
 
@@ -189,7 +197,9 @@ For a broader overview of all processes that have been run so far:
 %verdi process list -a
 ```
 
-And, for full details on a specific calculation (inputs, outputs, exit code, attributes):
+And, for full details on a specific calculation (inputs, outputs, exit code[^exit-codes], attributes):
+
+[^exit-codes]: Exit code `0` means success. Non-zero codes are defined by the CalcJob plugin and explain *why* it failed in a structured way (e.g. missing output file, parsing error). See {ref}`topics:processes:concepts:exit_codes`.
 
 ```{code-cell} ipython3
 # Show detailed information about the calculation node.
@@ -215,8 +225,10 @@ Each output plays a different role:
 
 - `results_yaml`: the main output file we declared via `outputs=`.
 - `stdout` / `stderr`: the captured standard streams of the script.
-- `retrieved`: a `FolderData` containing everything AiiDA fetched back from the working directory.
+- `retrieved`: a `FolderData`[^data-nodes] containing everything AiiDA fetched back from the working directory.
 - `remote_folder`: a `RemoteData` pointing to the working directory on the Computer where the job ran (typically a remote HPC):
+
+[^data-nodes]: `SinglefileData`, `FolderData`, and `RemoteData` are AiiDA's built-in data nodes for individual files, full directory trees, and pointers to remote working directories, respectively. See {ref}`topics:data_types:core:singlefile`, {ref}`topics:data_types:core:folder`, and {ref}`topics:data_types:core:remote` for the full reference.
 
 ```{code-cell} ipython3
 # Print the path of the remote working directory.
@@ -246,7 +258,9 @@ with result_file.open(mode='r') as f:
 ## Dumping calculation data
 
 AiiDA stores everything in its internal database and file repository (efficient for machines, opaque for humans).
-`verdi process dump` writes the same data out as a human-readable directory tree of inputs, outputs, and logs:
+`verdi process dump`[^process-dump] writes the same data out as a human-readable directory tree of inputs, outputs, and logs:
+
+[^process-dump]: The dump command can also walk entire workflow trees, profiles, or groups. See {ref}`how-to:data:dump` for the full reference.
 
 ```{code-cell} ipython3
 :tags: ["hide-output"]
@@ -254,7 +268,7 @@ AiiDA stores everything in its internal database and file repository (efficient 
 # Export the full calculation (inputs, outputs, logs) to a directory.
 import tempfile
 
-dump_path = tempfile.mkdtemp(prefix='aiida_tut_dump_')
+dump_path = tempfile.mkdtemp(prefix='aiida_tutorial_dump_')
 %verdi process dump {node.pk} --path {dump_path} -o
 ```
 
@@ -269,16 +283,6 @@ This is useful for debugging or sharing calculation data outside of AiiDA.
 <!-- TODO: Add "Handling failures" section — re-run with bad params (F=0.1),
      show how AiiDA records the failed CalcJob (exit code, stderr in provenance),
      contrast with Module 0 where the failure left no trace. From meeting notes. -->
-
-## Summary
-
-In this module you learned to:
-
-- **Set up** an AiiDA profile with `verdi presto`
-- **Run** an external code via `aiida-shell`'s `launch_shell_job`
-- **Visualize** the provenance graph of the calculation
-- **Inspect** the calculation from the `verdi` CLI and the Python API
-- **Export** calculation data as a human-readable directory with `verdi process dump`
 
 ## Next steps
 

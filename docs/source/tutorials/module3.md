@@ -333,7 +333,8 @@ mystnb:
         width: 100%
 ---
 # Visualize the hierarchical provenance graph of the workflow.
-%run -i include/plot_provenance.py
+from include.plotting import plot_provenance
+
 plot_provenance(wg.process)
 ```
 
@@ -442,8 +443,8 @@ for key in sorted(variances):
 ```
 
 ```{code-cell} ipython3
+from include.plotting import plot_transition_curve
 
-%run -i include/plot_sweep.py
 plot_transition_curve(
     list(F_VALUES),
     [float(variances[key].value) for key in sorted(variances)],

@@ -58,7 +58,7 @@ The simulation is invoked like a typical scientific code: a command-line executa
 import tempfile
 from pathlib import Path
 
-work_dir = Path(tempfile.mkdtemp(prefix='aiida_tut_m0_'))
+work_dir = Path(tempfile.mkdtemp(prefix='aiida_tutorial_m0_'))
 ```
 
 ```console
@@ -227,8 +227,10 @@ Some more things that can go wrong at scale:
 ## How AiiDA solves these problems
 
 AiiDA is a workflow manager designed for exactly these problems.
-At its core is the **provenance graph**: an automatic record of every calculation, its inputs, its outputs, and how they all connect, for every run, including failed ones.
+At its core is the **provenance graph**[^provenance]: an automatic record of every calculation, its inputs, its outputs, and how they all connect, for every run, including failed ones.
 It gives you:
+
+[^provenance]: See {ref}`topics:provenance:concepts` for the conceptual reference on AiiDA's provenance model.
 
 - **Provenance tracking**: nothing is lost. Every result can be traced back to the exact inputs, code, and machine that produced it.
 - **Workflow orchestration**: multi-step pipelines run as managed workflows, handling execution, data passing, and error recovery. If some steps fail, AiiDA knows which ones, why, and can help you restart just those.

@@ -10,9 +10,7 @@ kernelspec:
   language: python
   name: python3
 execution:
-  # Module 3 runs the Gray-Scott pipeline several times (single run +
-  # parameter sweep via Map), so it needs a generous per-cell timeout.
-  timeout: 600
+  timeout: 120
 ---
 
 (tutorial:module3)=
@@ -22,19 +20,23 @@ execution:
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module3.ipynb` {octicon}`download`
 :::
 
+:::{note}
+This module reuses the tutorial profile and the `python_code` object created in {ref}`Module 1 <tutorial:module1>`. If you are following along locally, run that module first — or, against your own profile, replace the setup cell at the top of the downloaded notebook with:
+
+```python
+from aiida import load_profile
+
+load_profile()
+```
+:::
+
 ## What you will learn
 
 After this module, you will be able to:
 
-- Understand how WorkGraph (AiiDA's declarative workflow framework) is structured
-- Wrap existing calcfunctions so they can be composed inside a workflow
-- Define and run a reusable workflow built from your `prepare_input` → simulation → `parse_output` pipeline
+- Build a reusable WorkGraph workflow from your existing calcfunctions and CalcJob
 - Inspect hierarchical provenance: workflows grouping their child processes
-- Turn a Python `for`-loop into a parallel workflow
-
-## Setup
-
-This module requires an AiiDA profile and the `python_code` variable (see {ref}`Module 1 <tutorial:module1>` for details on the setup cell).
+- Map a workflow over a set of parameters to replace `for`-loops with tracked sweeps
 
 ```{code-cell} ipython3
 :tags: ["remove-cell"]
@@ -52,16 +54,20 @@ This module requires an AiiDA profile and the `python_code` variable (see {ref}`
 
 ## Why workflows?
 
-In {ref}`Module 2 <tutorial:module2>`, you built a three-step pipeline (`prepare_input` &rarr; ShellJob &rarr; `parse_output`) and ran it in a Python `for` loop.
+In {ref}`Module 2 <tutorial:module2>`, you built a three-step pipeline (`prepare_input` &rarr; `ShellJob`[^calcjobs] &rarr; `parse_output`) and ran it in a Python `for` loop.
+
+[^calcjobs]: `ShellJob` is the `aiida-shell`-provided `CalcJob` subclass we first met in {ref}`Module 1 <tutorial:module1>`. For the `CalcJob` concept in depth, see {ref}`topics:calculations:concepts:calcjobs`.
 This has important limitations:
 
 - **No grouping**: each step is a separate process in AiiDA, with no single "simulation pipeline" object
 - **No hierarchy**: the provenance graph is flat; you can't tell which steps belong together
-- **No parallelism**: the loop runs each iteration sequentially and blocks until completion
+- **Sequential by construction**: the Python loop blocks until each iteration finishes — whereas a workflow submitted to the AiiDA daemon can run independent iterations in parallel
 - **No single entry point**: you can't re-run "the same workflow" with different parameters
 
-A **workflow** solves all of these.
+A **workflow**[^workflows-topic] solves all of these.
 You define the steps and their connections once, and AiiDA handles execution, data passing, and provenance tracking, grouping everything under a single workflow node.
+
+[^workflows-topic]: See {ref}`topics:workflows` for AiiDA's workflow concepts in depth.
 
 :::{note}
 AiiDA offers two workflow systems: **WorkGraph** (declarative, graph-based) and **WorkChain** (imperative, class-based).
@@ -87,21 +93,13 @@ It creates a task node in the graph and returns a handle whose attributes are ou
 This is the single most important mental shift when moving from plain Python loops to WorkGraph.
 :::
 
-A few more WorkGraph building blocks we will use:
+## Composing the pipeline as a workflow
 
-- **`@task.graph`**: a decorator that turns a Python function into a **graph task** (a reusable sub-workflow). Calling `my_workflow.build(...)` produces a standalone `WorkGraph`; calling `my_workflow(...)` inside another graph embeds it as a sub-task.
-- **`shelljob(...)`**: a helper that adds an `aiida-shell` `ShellJob` to the current graph. It is the WorkGraph equivalent of `launch_shell_job` from {ref}`Module 1 <tutorial:module1>`.
-- **`spec`**: a small module of helpers to declare socket types explicitly (for example `spec.namespace(variance_V=float, mean_V=float)` to declare that a task has two named outputs). You only need it when WorkGraph cannot infer the outputs from the function signature alone.
+With the mental model in place, we can assemble the three-step pipeline as a reusable workflow. We will use three more WorkGraph building blocks as we go:
 
-:::{note}
-WorkGraph also ships context managers for runtime control flow: `If`/`While` for conditional and iterative logic, and `Map` for sub-workflows that run once per entry of a collection. We use `Map` for the parameter sweep below; a plain for-loop alternative is shown as well.
-:::
-
-## Building the workflow
-
-With the mental model in place, we can now assemble the three-step pipeline (`prepare_input` &rarr; `ShellJob` &rarr; `parse_output`) as a reusable workflow.
-
-### Preparing tasks and inputs
+- `@task.graph()` — a decorator that turns a Python function into a reusable graph task.
+- `shelljob(...)` — the WorkGraph equivalent of `launch_shell_job` from {ref}`Module 1 <tutorial:module1>`; adds a `ShellJob` to the current graph.
+- `spec` — declares socket types explicitly when WorkGraph can't infer them from a function signature.
 
 ```{code-cell} ipython3
 from aiida import orm
@@ -112,33 +110,23 @@ from include.constants import BASE_PARAMS, F_VALUES, SCRIPT_PATH
 from include.tasks import prepare_input, parse_output
 ```
 
-We reuse the `prepare_input` and `parse_output` calcfunctions from {ref}`Module 2 <tutorial:module2>` ({download}`include/tasks.py`).
+We reuse the `prepare_input` and `parse_output` calcfunctions[^calcfunctions] from {ref}`Module 2 <tutorial:module2>` ({download}`include/tasks.py`). A calcfunction is already an AiiDA process, but to compose it inside a graph we wrap it with `task()`.
 
-A calcfunction is already an AiiDA process, but to compose it inside a graph we need to wrap it with `task()`.
-This wrapping does two things:
+[^calcfunctions]: For a refresher on calcfunctions, see {ref}`topics:processes:functions`.
 
-1. It turns the function into a **task factory**: calling `prepare_input(parameters=...)` inside a graph no longer runs it, but instead adds a new task to the current graph and returns a handle.
-2. It registers input and output sockets. The handle exposes those sockets so we can pass them as inputs to downstream tasks, for example `shelljob(..., nodes={'input': input_file})`.
+:::{important}
+Calling the wrapped version inside a graph **does not run it**. It adds a task to the current graph and returns a handle exposing its input and output sockets, which you can then pass to downstream tasks. The actual execution happens later, when you call `wg.run()` (or `wg.submit()`).
+:::
 
-For `prepare_input`, the default wrapping is enough: its single return value becomes an output socket called `.result`.
-
-`parse_output` is trickier. It returns a plain Python `dict` of `{'variance_V': ..., 'mean_V': ...}`, and WorkGraph cannot introspect the keys of that dict just from the function signature. We have to spell them out using `spec.namespace`, which tells WorkGraph: *"this task has two named output sockets, `variance_V` and `mean_V`, both of type `float`"*.
+For `prepare_input` the default wrapping is enough; its single return value becomes the `.result` output socket. `parse_output` is trickier: it returns a plain Python `dict` whose keys WorkGraph cannot introspect from the signature alone, so we declare them explicitly with `spec.namespace`:
 
 ```{code-cell} ipython3
-# Wrap the calcfunctions so they return task handles inside @task.graph().
-# We keep the originals around under their plain names and expose the
-# WorkGraph-wrapped versions as `*_task`, so it is always clear which variant
-# is being used where.
-#
-# `task(fn)` is enough for `prepare_input`: WorkGraph infers a single `.result`
-# output from the return annotation. For `parse_output`, we use `spec.namespace`
-# to declare the two named outputs explicitly, so that downstream code can
-# refer to `parsed.variance_V` and `parsed.mean_V` as individual sockets.
+# `*_task` = WorkGraph-wrapped variants; the originals stay usable under
+# their plain names.
 prepare_input_task = task(prepare_input)
 parse_output_task = task(outputs=spec.namespace(variance_V=float, mean_V=float))(parse_output)
 
-# Convert the script path to a SinglefileData node.
-# WorkGraph serializes all inputs, so plain Path objects must be wrapped.
+# WorkGraph serializes all inputs, so wrap the script path as a node.
 script_node = orm.SinglefileData(SCRIPT_PATH)
 ```
 
@@ -151,9 +139,9 @@ The `spec` module provides other helpers too:
 You only need `spec` when the default inference does not match what you want. For simple single-return functions, plain `task(fn)` is all you need.
 :::
 
-### Defining the graph task
+With the tasks wrapped, we can write the workflow itself: a Python function decorated with `@task.graph()`.[^explicit-io] Its body reads like ordinary Python — but, as the callouts above warned, the calls inside register tasks and links rather than executing right away.
 
-We use the `@task.graph` decorator. The function body looks like regular Python, but remember: none of the calls inside it actually execute anything. They just record a graph of tasks and links that WorkGraph will run later.
+[^explicit-io]: With `@task.graph()`, the function signature becomes the graph's inputs and the return statement its outputs. WorkGraph also supports an imperative `with WorkGraph() as wg:` form where you declare graph-level I/O explicitly (`wg.inputs.foo = ...`, `wg.outputs.bar = ...`) — useful for reusing inputs across tasks, exposing only a curated subset of outputs, or renaming on the way out. See the [aiida-workgraph documentation](https://aiida-workgraph.readthedocs.io) for details.
 
 ```{code-cell} ipython3
 
@@ -187,113 +175,31 @@ def gray_scott_pipeline(
     return {'variance_V': parsed.variance_V, 'mean_V': parsed.mean_V}
 ```
 
-:::{dropdown} Declaring graph-level inputs and outputs explicitly
-:icon: info
+Before running anything, it helps to convince yourself that the function body above really is just a *specification*. `.build(...)` returns a `WorkGraph` object whose tasks and sockets we can inspect without running any simulation:
 
-With `@task.graph`, the **function signature** automatically becomes the graph's input interface and the **return statement** its output interface. That's the most concise form and works well when the graph is a thin wrapper around its tasks.
-
-If you need more control, WorkGraph also lets you declare graph-level inputs and outputs **explicitly**, typically with the imperative `with WorkGraph() as wg:` API:
-
-```python
-with WorkGraph('explicit_io') as wg:
-    wg.inputs.parameters = orm.Dict(BASE_PARAMS)       # declare a graph input
-    input_file = prepare_input_task(parameters=wg.inputs.parameters).result
-    sim = shelljob(command=python_code, nodes={'input': input_file}, ...)
-    parsed = parse_output_task(output_file=sim.results_yaml)
-    wg.outputs.variance = parsed.variance_V            # expose under a custom name
-```
-
-This is useful when you want to
-
-- reuse a single graph-level input across many tasks,
-- hide internal tasks and only expose a curated subset of their outputs, or
-- rename things on the way out (for example expose `parsed.variance_V` as `wg.outputs.variance`).
-
-In this module we stick with the `@task.graph`-driven form because it keeps the graph definition close to its signature.
-:::
-
-:::{dropdown} (Optional) Peeking inside the graph before running it
-:icon: info
-
-If this is your first WorkGraph, it's worth pausing here to convince yourself that the function body above really is just a *specification*. The two cells below build the graph (without running any simulation) and print its structure.
-
-Let's **build** the graph once (without running it) and poke at its structure. `.build(...)` returns a `WorkGraph` object whose tasks and sockets we can inspect directly, with no simulation runs and nothing stored in AiiDA yet:
-
-```python
+```{code-cell} ipython3
 wg_preview = gray_scott_pipeline.build(
     parameters=orm.Dict(BASE_PARAMS),
     command=python_code,
     script=script_node,
 )
 
-print('Graph outputs (from spec.namespace return annotation):')
+print('Graph outputs:')
 for name in wg_preview.outputs._get_keys():
     print(f'  - {name}')
 
-print('\nTasks in the graph (one per call inside the function body):')
+print('\nTasks in the graph:')
 for t in wg_preview.tasks:
     print(f'  - {t.name:<25} ({t.identifier})')
-
-shell_task = wg_preview.tasks['ShellJob']
-print(f'\nShellJob output sockets (note the underscore):')
-for name in shell_task.outputs._get_keys():
-    print(f'  - {name}')
 ```
 
-Three takeaways from the printout:
+Three things to notice:
 
-- The **return type annotation** `-> spec.namespace(variance_V=float, mean_V=float)` is what makes `variance_V` and `mean_V` appear as graph outputs. Without it, WorkGraph would not expose them and the later `map_zone.gather(...)` call would have nothing to collect.
-- Inside the function, task inputs accept **both plain Python values and sockets**. We passed `parameters` (an input socket of the graph), `script` (a real `SinglefileData` node), and `input_file` (a socket from `prepare_input_task`). WorkGraph treats them uniformly and creates links wherever a socket is passed.
-- The first three entries in the task list are **built-ins** that WorkGraph adds to every graph: `graph_inputs` and `graph_outputs` expose the graph's own input/output sockets as pseudo-tasks (so links into and out of the graph look like ordinary task-to-task links), and `graph_ctx` is a shared key-value store for graph-scoped state, the WorkGraph analogue of the WorkChain `ctx`. You can write to it with `wg.ctx = {'key': value}` or `wg.update_ctx({'key': ...})` and read back with `wg.ctx.key`. We don't use it in this module, but it's always there.
+- The **return type annotation** `-> spec.namespace(variance_V=float, mean_V=float)` is what makes `variance_V` and `mean_V` appear as graph outputs. Without it, the later `map_zone.gather(...)` call would have nothing to collect.
+- Task inputs accept **both plain Python values and sockets**. Above we passed `parameters` (an input socket), `script` (a real `SinglefileData` node), and `input_file` (a socket from `prepare_input_task`). WorkGraph treats them uniformly and creates links wherever a socket is passed.
+- The first three tasks (`graph_inputs`, `graph_outputs`, `graph_ctx`) are **built-ins** WorkGraph adds to every graph: the first two expose the graph's own I/O as pseudo-tasks so links into/out of the graph look like ordinary task-to-task links; `graph_ctx` is a shared key-value store (the WorkGraph analogue of the WorkChain `ctx`), reachable via `wg.ctx.foo = ...`/`wg.ctx.foo`.
 
-One more thing worth showing with a print: **the function body of a graph task runs once, at build time**. The calls inside it don't compute anything, they just register tasks and links. Let's make that concrete with a throwaway graph task:
-
-```python
-@task
-def double(x: int) -> int:
-    return 2 * x
-
-
-@task.graph()
-def demo_graph(x: int) -> int:
-    print('  [demo_graph body] running the Python function now')
-    handle = double(x=x)
-    print(f'  [demo_graph body] handle.result = {handle.result!r}')
-    print(f'  [demo_graph body] type(handle.result) = {type(handle.result).__name__}')
-    return handle.result
-
-
-print('>>> calling .build() <<<')
-wg_demo = demo_graph.build(x=21)
-
-print('\n>>> calling .run() <<<')
-wg_demo.run()
-
-print(f'\nActual output after run: {wg_demo.outputs.result.value}')
-```
-
-Two things to notice in the output:
-
-1. All three `[demo_graph body]` lines appear under `>>> calling .build() <<<`, not under `>>> calling .run() <<<`. The Python function itself only ever runs once, while the graph is being constructed.
-2. At build time, `handle.result` prints as a `SocketInt`, not an integer, but WorkGraph already knows the *type* of the eventual value, because `double` was annotated `-> int`. The socket's `value` is still `None`; the actual integer `42` only materializes during `.run()` and is retrieved afterwards via `wg_demo.outputs.result.value`.
-:::
-
-### Two ways to use a graph task
-
-A `@task.graph`-decorated function is a **factory**. There are two ways to invoke it:
-
-1. **Standalone workflow** via `.build(...)`. This creates a top-level `WorkGraph` that you can `run()` or `submit()` directly:
-
-   ```python
-   wg = gray_scott_pipeline.build(parameters=..., command=..., script=...)
-   wg.run()
-   ```
-
-2. **Sub-task inside another graph** by calling it directly inside a `with WorkGraph() as wg:` block. In that case it is embedded as a single task in the parent graph, producing hierarchical provenance. We will use this form in the parameter sweep below.
-
-### Running and inspecting
-
-Let's build and run the workflow with a single set of parameters:
+`gray_scott_pipeline` is now a **factory**: call `.build(...)` to get a standalone `WorkGraph` you can `run()` or `submit()` directly, or call it inside a parent graph to embed it as a sub-task (we'll do the latter for the loop integration below). For now, let's exercise the standalone form — build the workflow with a single set of parameters and run it.
 
 ```{code-cell} ipython3
 
@@ -317,14 +223,15 @@ Let's inspect the hierarchy:
 %verdi process status {wg.process.pk}
 ```
 
-For a flat summary of the top-level workflow node alone (inputs, outputs, state, exit code, metadata), `verdi process show` is the companion command:
+We can again use the familiar `verdi process show` command here to get a full overview of the workflow. It shows the individual steps as well as the graph-level inputs and outputs we declared (folded by default since the table is long):
 
 ```{code-cell} ipython3
+:tags: ["hide-output"]
 
 %verdi process show {wg.process.pk}
 ```
 
-The provenance graph now shows a **hierarchical** structure: the workflow contains the individual steps:
+And the same hierarchy visualised as a provenance graph:
 
 ```{code-cell} ipython3
 ---
@@ -338,18 +245,13 @@ from include.plotting import plot_provenance
 plot_provenance(wg.process)
 ```
 
-Compare this to Module 2's flat provenance: instead of disconnected steps, the workflow clearly shows that `prepare_input`, the simulation, and `parse_output` are part of a single logical operation.
+Compare this to Module 2's flat provenance: the three process nodes are the same (`prepare_input`, the `ShellJob`, `parse_output`), but now they sit *below* a `WorkGraph<gray_scott_pipeline>` orchestrator. The orchestrator has `CALL_CALC` links down to each child step and `RETURN` links back up from the exposed outputs, so the whole pipeline is one queryable, inspectable unit in the database.
 
-## Turning the for-loop into a workflow
+## Integrating the for-loop into the workflow
 
-### The problem with loops
+In Module 2, the parameter sweep was a Python `for` loop calling the pipeline for each `F` value. But a `for` loop is not an AiiDA process: it doesn't show up in the provenance, can't be inspected with `verdi`, and can't recover from failures.
 
-In Module 2, the parameter sweep was a Python `for` loop calling the pipeline for each `F` value.
-But a `for` loop is not an AiiDA process: it doesn't show up in the provenance, can't be inspected with `verdi`, and can't recover from failures.
-
-### Using Map
-
-WorkGraph's {class}`~aiida_workgraph.Map` lets you run the same sub-workflow over multiple input values, like a parallel `for` loop, but as a single AiiDA workflow with full provenance.
+WorkGraph's {class}`~aiida_workgraph.Map` lets you run the same sub-workflow over multiple input values — like a parallel `for` loop, but as a single AiiDA workflow with full provenance.
 
 Conceptually, a `Map` zone does three things:
 
@@ -357,18 +259,11 @@ Conceptually, a `Map` zone does three things:
 2. Inside the zone, it exposes the current key/value via `map_zone.item.key` and `map_zone.item.value`. These are sockets, so you can wire them into tasks just like any other output.
 3. At the end of the zone, `map_zone.gather({...})` declares which per-iteration outputs to collect. The gathered outputs become accessible on `map_zone.outputs.<name>` as a namespace keyed by the original source keys.
 
-```{code-cell} ipython3
+We pass `Map` a plain `dict` (one entry per iteration), not a dict of `orm.Dict` nodes: `Map` stores its source as a task property and that property must be JSON-serializable, which database nodes aren't. AiiDA auto-wraps each value into an `orm.Dict` when the sub-task `prepare_input` runs anyway.
 
-# Build a plain-dict mapping {label: parameters} for Map to iterate over.
-# The keys become the names of each map iteration in the provenance graph;
-# the values are passed into each copy of the sub-workflow.
-#
-# Why plain dicts and not `orm.Dict` nodes? Map stores its `source` as a
-# property on the map task (the stored attributes must be JSON-serializable).
-# `orm.Dict` is a database node, not JSON-serializable. AiiDA auto-wraps each
-# plain dict into an `orm.Dict` when the sub-task `prepare_input` runs.
-#
-# Keys must not contain dots; WorkGraph treats dots as namespace separators.
+```{code-cell} ipython3
+# {label: parameters} for Map to iterate over. Keys become the names of
+# each map iteration in the provenance graph.
 param_sweep = {f'F_{f_val:.3f}'.replace('.', '_'): BASE_PARAMS | {'F': f_val} for f_val in F_VALUES}
 
 print(f'{len(param_sweep)} parameter sets (only F varies):')
@@ -376,28 +271,58 @@ for key, val in param_sweep.items():
     print(f'  {key:<10}  ->  F = {val["F"]}')
 ```
 
+To close the loop, we add a final **reduction step** to the workflow: a calcfunction `make_transition_plot` ({download}`include/tasks.py`) that takes the gathered `variance_V` `Float` nodes and renders a transition curve as a `SinglefileData` PNG. The workflow's primary output is then that single artifact — the per-iteration variances "fork out" via `Map`, and the plotting task "joins" them back together.
+
+The sweep itself is wrapped as a `@task.graph()` with three inputs: `param_sweep`, the `Code` to run on, and the simulation `script`. None of the workflow is specific to *which* parameter you sweep — to scan `k` instead of `F`, you just build `param_sweep` differently, or even build a 2D grid `{f'F_{F}_k_{k}': ... for F in ... for k in ...}` to sweep both at once. The blueprint stays the same.
+
+```{code-cell} ipython3
+from typing import Annotated
+
+from include.tasks import make_transition_plot
+
+
+@task.graph()
+def gray_scott_sweep(
+    param_sweep: Annotated[dict, spec.dynamic(dict)],
+    command: orm.AbstractCode,
+    script: orm.SinglefileData,
+) -> spec.namespace(
+    summary_plot=orm.SinglefileData,
+    variance_V=spec.dynamic(float),
+    mean_V=spec.dynamic(float),
+):
+    """Sweep gray_scott_pipeline over param_sweep and reduce to a transition plot."""
+    with Map(param_sweep) as map_zone:
+        result = gray_scott_pipeline(
+            parameters=map_zone.item.value,
+            command=command,
+            script=script,
+        )
+        map_zone.gather({
+            'variance_V': result.variance_V,
+            'mean_V': result.mean_V,
+        })
+
+    summary = make_transition_plot(variances=map_zone.outputs.variance_V)
+
+    return {
+        'summary_plot': summary.result,
+        'variance_V': map_zone.outputs.variance_V,
+        'mean_V': map_zone.outputs.mean_V,
+    }
+```
+
+That's the blueprint — no execution yet. We `.build(...)` it with concrete inputs and call `.run()` to actually launch the sweep:
+
 ```{code-cell} ipython3
 :tags: ["hide-output"]
 
-with WorkGraph('gray_scott_sweep') as wg_sweep:
-    # Enter a map zone. Everything inside the `with Map(...)` block will be
-    # executed once per entry in `param_sweep`.
-    with Map(param_sweep) as map_zone:
-        # Call the graph task inside the parent graph: this embeds it as a
-        # sub-task. `map_zone.item.value` is a socket that resolves, at runtime,
-        # to the dict of parameters for the current iteration.
-        result = gray_scott_pipeline(
-            parameters=map_zone.item.value,
-            command=python_code,
-            script=script_node,
-        )
-
-        # Tell the map zone which per-iteration outputs to collect. The keys
-        # passed to `gather` become attributes on `map_zone.outputs`, each
-        # holding a namespace keyed by the `param_sweep` keys.
-        map_zone.gather({'variance_V': result.variance_V, 'mean_V': result.mean_V})
-
-_ = wg_sweep.run()
+wg_sweep = gray_scott_sweep.build(
+    param_sweep=param_sweep,
+    command=python_code,
+    script=script_node,
+)
+wg_sweep.run()
 ```
 
 :::{note}
@@ -408,14 +333,51 @@ A few things to keep in mind about `Map`:
 - After the `with` block, `map_zone.outputs.<name>` gives you a namespace that behaves like a dict of AiiDA nodes, keyed by the original source keys.
 :::
 
-### Running and inspecting the sweep
+The per-iteration variances are now reachable directly on the workflow's outputs:
 
 ```{code-cell} ipython3
-:tags: ["hide-output"]
+# Access per-iteration variances via the workflow output namespace.
+variances = wg_sweep.outputs.variance_V._value
 
+for key in sorted(variances):
+    print(f"  {key}: variance(V) = {float(variances[key].value):.4e}")
+```
+
+The numbers are the same as Module 2's sweep — same simulation, same parameters. What changed is the *shape* of the provenance: instead of 24 disconnected processes in a flat list, the sweep is one workflow node that fans out into per-`F` sub-workflows and fans back in through `make_transition_plot`:
+
+```{code-cell} ipython3
 print(f"Sweep WorkGraph PK: {wg_sweep.process.pk}")
 %verdi process status {wg_sweep.process.pk}
 ```
+
+Time to bring out the binoculars — here's the same hierarchy rendered as a provenance graph:
+
+```{code-cell} ipython3
+---
+mystnb:
+    image:
+        width: 100%
+---
+plot_provenance(wg_sweep.process)
+```
+
+It's deliberately busy: every input, output, and linked sub-process is represented. The point is not to read it in detail (you can't — it's tiny in the rendered docs) but to see how rich the provenance becomes *for free* as workflows nest. For a zoomable view, download the notebook and re-run the cell locally, or use `verdi node graph generate {wg_sweep.process.pk}` from the command line to write a standalone file you can open.
+
+And finally, the workflow's *real* output — the transition curve PNG produced by the reduction step inside the workflow itself, recovered from the database the same way you would recover any other `SinglefileData`:
+
+```{code-cell} ipython3
+# TODO: WorkGraph output-socket dereference for SinglefileData currently
+# returns None via `.value`. Disabled until the right access path is settled.
+#
+# from IPython.display import Image
+#
+# with wg_sweep.outputs.summary_plot.value.open(mode='rb') as fh:
+#     img_bytes = fh.read()
+#
+# Image(img_bytes)
+```
+
+`verdi process show` works on the sweep workflow node too, but its per-node table is long, so it's hidden here:
 
 ```{code-cell} ipython3
 :tags: ["hide-output"]
@@ -423,51 +385,13 @@ print(f"Sweep WorkGraph PK: {wg_sweep.process.pk}")
 %verdi process show {wg_sweep.process.pk}
 ```
 
-:::{tip}
-The provenance graph for the full sweep is quite large (5 sub-workflows with 3 steps each).
-To explore it interactively, download this notebook via the link at the top and run `plot_provenance(wg_sweep.process)` locally, or use `verdi node graph generate {wg_sweep.process.pk}` from the command line.
-:::
-
-### Analyzing results
-
-The gathered results are accessible on the map zone's output sockets.
-Each gathered output is a namespace keyed by the `param_sweep` keys:
-
-```{code-cell} ipython3
-
-# Access the gathered results from the Map zone outputs.
-variances = map_zone.outputs.variance_V._value
-
-for key in sorted(variances):
-    print(f"  {key}: variance(V) = {float(variances[key].value):.4e}")
-```
-
-```{code-cell} ipython3
-from include.plotting import plot_transition_curve
-
-plot_transition_curve(
-    list(F_VALUES),
-    [float(variances[key].value) for key in sorted(variances)],
-)
-```
-
-The key advantage: the entire sweep (every pipeline run, every input, every output) lives under a single workflow node in AiiDA's provenance graph.
-
-## Summary
-
-In this module you learned to:
-
-- **Define a reusable workflow** with `@task.graph` and `shelljob`
-- **Run and inspect** hierarchical provenance: workflows grouping their child processes
-- **Turn a Python for-loop** into a mapped workflow with `Map`
-- **Compare** flat (Module 2) vs hierarchical (Module 3) provenance
-
-:::{seealso}
-- [aiida-workgraph documentation](https://aiida-workgraph.readthedocs.io): full reference for WorkGraph
-- {ref}`Topic: workflows <topics:workflows>`: AiiDA workflow concepts in depth
-:::
-
 ## Next steps
 
-You now have a complete pipeline from running simulations to building workflows.
-Future modules will cover error handling, remote HPC submission, and advanced workflow patterns.
+You now have the core building blocks: tracked external codes, structured data, calcfunctions, and reusable workflows. The remaining modules can be tackled in whatever order matches your needs — they each pick up an independent thread:
+
+- {ref}`Module 4 <tutorial:module4>` — more advanced workflow patterns (conditionals, dynamic graphs, sub-workflow composition)
+- {ref}`Module 5 <tutorial:module5>` — running on remote HPC clusters
+- {ref}`Module 6 <tutorial:module6>` — querying the database with the `QueryBuilder`
+- {ref}`Module 7 <tutorial:module7>` — handling failures and recovering from them
+
+## Footnotes

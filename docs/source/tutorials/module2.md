@@ -20,6 +20,16 @@ execution:
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module2.ipynb` {octicon}`download`
 :::
 
+:::{note}
+This module reuses the tutorial profile and the `python_code` object created in {ref}`Module 1 <tutorial:module1>`. If you are following along locally, run that module first — or, against your own profile, replace the setup cell at the top of the downloaded notebook with:
+
+```python
+from aiida import load_profile
+
+load_profile()
+```
+:::
+
 ## What you will learn
 
 After this module, you will be able to:
@@ -27,10 +37,6 @@ After this module, you will be able to:
 - Launch many tracked calculations programmatically
 - Use AiiDA's structured data types to obtain queryable results
 - Add input preparation and output parsing as tracked Python steps to the simulation's provenance
-
-## Setup
-
-This module requires an AiiDA profile and the `python_code` variable (see {ref}`Module 1 <tutorial:module1>` for details on the setup cell).
 
 ```{code-cell} ipython3
 :tags: ["remove-cell"]
@@ -207,7 +213,7 @@ That is why the function calls `parameters.get_dict()` to extract the dictionary
 
 When *calling* the function, AiiDA auto-serializes plain Python types for you[^auto-serialize]: `prepare_input(orm.Dict(params))` and `prepare_input(params)` both work.
 
-[^auto-serialize]: Plain `int`, `float`, `str`, `bool`, `dict`, `list` arguments are auto-converted to the corresponding `orm.Int`/`Float`/`Str`/`Bool`/`Dict`/`List` nodes. See {ref}`topics:calculations:concepts:calcfunctions:automatic-serialization`.
+[^auto-serialize]: Plain `int`, `float`, `str`, `bool`, `dict`, `list` arguments are auto-converted to the corresponding `orm.Int`/`Float`/`Str`/`Bool`/`Dict`/`List` nodes. See {ref}`the calcfunctions reference <topics:calculations:concepts:calcfunctions:automatic-serialization>`.
 
 You could also pass each parameter as a separate `orm.Float`/`orm.Int` node for finer-grained provenance, but a single `Dict` is the common pattern and its attributes are still queryable via the `QueryBuilder`.
 :::

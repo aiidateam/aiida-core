@@ -9,12 +9,18 @@
 """Module for logging methods/classes that need the ORM."""
 
 import logging
+import sys
 
 
 class DBLogHandler(logging.Handler):
     """A custom db log handler for writing logs tot he database"""
 
-    def emit(self, record):
+    # Capture `sys` as a default since module globals may be cleared during interpreter shutdown.
+    # See https://stackoverflow.com/questions/67902926/python-importerror-in-del-how-to-solve-this
+    def emit(self, record, _sys=sys):
+        if _sys.is_finalizing():
+            return
+
         if record.exc_info:
             # We do this because if there is exc_info this will put an appropriate string in exc_text.
             # See:

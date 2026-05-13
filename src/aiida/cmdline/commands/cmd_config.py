@@ -31,8 +31,9 @@ def verdi_config():
 @verdi_config.command('list')
 @click.argument('prefix', metavar='PREFIX', required=False, default='')
 @click.option('-d', '--description', is_flag=True, help='Include description of options')
+@click.option('--advanced', is_flag=True, help='Show all options including advanced per-logger settings.')
 @click.pass_context
-def verdi_config_list(ctx, prefix, description: bool):
+def verdi_config_list(ctx, prefix, description: bool, advanced: bool):
     """List AiiDA options for the current profile.
 
     Optionally filtered by a prefix.
@@ -60,20 +61,24 @@ def verdi_config_list(ctx, prefix, description: bool):
         table = [
             [name, source, _join(value), '\n'.join(textwrap.wrap(c.description))]
             for name, (c, source, value) in option_values.items()
-            if name.startswith(prefix)
+            if name.startswith(prefix) and not (c.advanced and not advanced)
         ]
         headers = ['name', 'source', 'value', 'description']
     else:
         table = [
             [name, source, _join(value)]
             for name, (c, source, value) in option_values.items()
-            if name.startswith(prefix)
+            if name.startswith(prefix) and not (c.advanced and not advanced)
         ]
         headers = ['name', 'source', 'value']
 
     # sort by name
     table = sorted(table, key=lambda x: x[0])
     echo.echo(tabulate(table, headers=headers))
+
+    if not advanced:
+        echo.echo('')
+        echo.echo('Use `verdi config list --advanced` to show all per-logger options.')
 
 
 @verdi_config.command('show')

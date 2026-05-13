@@ -486,7 +486,7 @@ fi
         """
         submit_command = f'bsub < {submit_script}'
 
-        self.logger.info(f'submitting with: {submit_command}')
+        self.logger.debug(f'submitting with: {submit_command}')
 
         return submit_command
 
@@ -714,7 +714,7 @@ fi
     def _get_kill_command(self, jobid: str) -> str:
         """Return the command to kill the job with specified jobid."""
         submit_command = f'bkill {jobid}'
-        self.logger.info(f'killing job {jobid}')
+        self.logger.debug(f'killing job {jobid}')
         return submit_command
 
     def _parse_kill_output(self, retval: int, stdout: str, stderr: str) -> bool:

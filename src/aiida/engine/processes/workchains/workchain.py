@@ -401,7 +401,7 @@ class WorkChain(Process, metaclass=Protect):
 
         :param awaitable: an Awaitable instance
         """
-        self.logger.info('received callback that awaitable %d has terminated', awaitable.pk)
+        self.logger.debug('received callback that awaitable %d has terminated', awaitable.pk)
 
         try:
             node = load_node(awaitable.pk)

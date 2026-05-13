@@ -331,7 +331,7 @@ class Process(PlumpyProcess):
         else:
             self._pid = self._create_and_setup_db_record()
 
-        self.node.logger.info(f'Loaded process<{self.node.pk}> from saved state')
+        self.node.logger.debug(f'Loaded process<{self.node.pk}> from saved state')
 
     def kill(self, msg_text: str | None = None, force_kill: bool = False) -> Union[bool, plumpy.futures.Future]:
         """Kill the process and all the children calculations it called
@@ -376,7 +376,7 @@ class Process(PlumpyProcess):
             killing = []
             for child in self.node.called:
                 if self.runner.controller is None:
-                    self.logger.info('no controller available to kill child<%s>', child.pk)
+                    self.logger.debug('no controller available to kill child<%s>', child.pk)
                     continue
                 try:
                     result = self.runner.controller.kill_process(child.pk, msg_text=f'Killed by parent<{self.node.pk}>')
@@ -384,7 +384,7 @@ class Process(PlumpyProcess):
                     if asyncio.isfuture(result):
                         killing.append(result)
                 except ConnectionClosed:
-                    self.logger.info('no connection available to kill child<%s>', child.pk)
+                    self.logger.debug('no connection available to kill child<%s>', child.pk)
                 except UnroutableError:
                     self.logger.info('kill signal was unable to reach child<%s>', child.pk)
 

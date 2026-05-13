@@ -74,36 +74,68 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         ':',
         description='Additional modules/functions/classes to be automatically loaded in `verdi shell`, split by `:`.',
     )
+    logging__terminal_loglevel: LogLevels = Field(
+        'REPORT',
+        description='Minimum log level needed for outputting a log into the terminal',
+    )
+    logging__logfile_loglevel: LogLevels = Field(
+        'INFO',
+        description='Minimum log level written to log files (both client and daemon).',
+    )
     logging__aiida_loglevel: LogLevels = Field(
-        'REPORT', description='Minimum level to log to daemon log and the `DbLog` table for the `aiida` logger.'
+        'REPORT',
+        description='Minimum level to log to daemon log and the `DbLog` table for the `aiida` logger.',
+        json_schema_extra={'advanced': True},
     )
     logging__verdi_loglevel: LogLevels = Field(
-        'REPORT', description='Minimum level to log to console when running a `verdi` command.'
+        'REPORT',
+        description='Minimum source log level for the verdi logger.',
+        json_schema_extra={'advanced': True},
     )
     logging__disk_objectstore_loglevel: LogLevels = Field(
-        'INFO', description='Minimum level to log to daemon log and the `DbLog` table for `disk_objectstore` logger.'
+        'INFO',
+        description='Minimum level to log to daemon log and the `DbLog` table for `disk_objectstore` logger.',
+        json_schema_extra={'advanced': True},
     )
-    logging__db_loglevel: LogLevels = Field('REPORT', description='Minimum level to log to the DbLog table.')
+    logging__db_loglevel: LogLevels = Field(
+        'REPORT',
+        description='Minimum level to log to the DbLog table.',
+        json_schema_extra={'advanced': True},
+    )
     logging__plumpy_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `plumpy` logger.'
+        'WARNING',
+        description='Minimum level to log to daemon log and the `DbLog` table for the `plumpy` logger.',
+        json_schema_extra={'advanced': True},
     )
     logging__kiwipy_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `kiwipy` logger'
+        'WARNING',
+        description='Minimum level to log to daemon log and the `DbLog` table for the `kiwipy` logger',
+        json_schema_extra={'advanced': True},
     )
     logging__paramiko_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `paramiko` logger'
+        'WARNING',
+        description='Minimum level to log to daemon log and the `DbLog` table for the `paramiko` logger',
+        json_schema_extra={'advanced': True},
     )
     logging__alembic_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `alembic` logger'
+        'WARNING',
+        description='Minimum level to log to daemon log and the `DbLog` table for the `alembic` logger',
+        json_schema_extra={'advanced': True},
     )
     logging__sqlalchemy_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `sqlalchemy` logger'
+        'WARNING',
+        description='Minimum level to log to daemon log and the `DbLog` table for the `sqlalchemy` logger',
+        json_schema_extra={'advanced': True},
     )
     logging__circus_loglevel: LogLevels = Field(
-        'INFO', description='Minimum level to log to daemon log and the `DbLog` table for the `circus` logger'
+        'INFO',
+        description='Minimum level to log to daemon log and the `DbLog` table for the `circus` logger',
+        json_schema_extra={'advanced': True},
     )
     logging__aiopika_loglevel: LogLevels = Field(
-        'WARNING', description='Minimum level to log to daemon log and the `DbLog` table for the `aiopika` logger'
+        'WARNING',
+        description='Minimum level to log to daemon log and the `DbLog` table for the `aiopika` logger',
+        json_schema_extra={'advanced': True},
     )
     warnings__showdeprecations: bool = Field(True, description='Whether to print AiiDA deprecation warnings.')
     warnings__rabbitmq_version: bool = Field(
@@ -872,8 +904,12 @@ class Config:
         _config_path_resolver: AiiDAConfigPathResolver = AiiDAConfigPathResolver(Path(self.dirpath))
         daemon_dir = _config_path_resolver.daemon_dir
         daemon_log_dir = _config_path_resolver.daemon_log_dir
+        log_dir = _config_path_resolver.log_dir
 
         return {
+            'client': {
+                'log': str(log_dir / f'aiida-{profile.name}.log'),
+            },
             'circus': {
                 'log': str(daemon_log_dir / f'circus-{profile.name}.log'),
                 'pid': str(daemon_dir / f'circus-{profile.name}.pid'),

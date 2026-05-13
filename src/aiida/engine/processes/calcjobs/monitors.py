@@ -210,6 +210,6 @@ class CalcJobMonitors:
                 monitor_result.key = key
 
             if monitor_result:
-                LOGGER.info(f'Monitor `{key}` returned: {monitor_result}')
+                LOGGER.debug(f'Monitor `{key}` returned: {monitor_result}')
                 return monitor_result
         return None

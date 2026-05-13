@@ -5,7 +5,6 @@ from __future__ import annotations
 import functools
 import sys
 import typing as t
-import warnings
 from collections.abc import Iterator
 
 from aiida.brokers.broker import Broker
@@ -50,10 +49,14 @@ class RabbitmqBroker(Broker):
             self._communicator = None
 
     def __del__(self) -> None:
-        if self._communicator is not None:
-            warnings.warn(f'RabbitmqBroker was not closed explicitly: {self!r}', ResourceWarning, stacklevel=1)
-            if not sys.is_finalizing():
-                self.close()
+        if self._communicator is None:
+            return
+
+        LOGGER.info('RabbitmqBroker was not closed explicitly: %r', self)
+        if sys.is_finalizing():
+            return
+
+        self.close()
 
     def iterate_tasks(self) -> Iterator[t.Any]:
         """Return an iterator over the tasks in the launch queue."""

@@ -8,6 +8,7 @@
 ###########################################################################
 """Tests for the `aiida.brokers.rabbitmq` module."""
 
+import logging
 import pathlib
 import uuid
 from unittest.mock import MagicMock
@@ -18,6 +19,7 @@ from kiwipy.rmq import RmqThreadCommunicator
 from packaging.version import parse
 
 from aiida.brokers.rabbitmq import RabbitmqBroker, client, utils
+from aiida.brokers.rabbitmq import broker as broker_module
 from aiida.engine.processes import ProcessState, control
 from aiida.orm import Int
 
@@ -37,30 +39,36 @@ def test_str_method(monkeypatch, manager):
     assert 'RabbitMQ @' in str(broker)
 
 
-def test_del_closes_broker_when_not_finalizing(aiida_profile, monkeypatch):
+def test_del_closes_broker_when_not_finalizing(aiida_profile, monkeypatch, caplog):
     """Test `__del__` closes the broker when Python is not finalizing."""
     broker = RabbitmqBroker(aiida_profile)
     broker._communicator = MagicMock()
     close = MagicMock()
     monkeypatch.setattr(broker, 'close', close)
 
-    with pytest.warns(ResourceWarning, match='RabbitmqBroker was not closed explicitly'):
+    with caplog.at_level(logging.INFO, logger=broker_module.LOGGER.name):
         broker.__del__()
 
+    assert caplog.record_tuples == [
+        (broker_module.LOGGER.name, logging.INFO, f'RabbitmqBroker was not closed explicitly: {broker!r}')
+    ]
     close.assert_called_once_with()
 
 
-def test_del_skips_close_when_finalizing(aiida_profile, monkeypatch):
-    """Test ``__del__`` skips close when Python is finalizing."""
+def test_del_logs_but_skips_close_when_finalizing(aiida_profile, monkeypatch, caplog):
+    """Test ``__del__`` logs but skips close when Python is finalizing."""
     broker = RabbitmqBroker(aiida_profile)
     broker._communicator = MagicMock()
     close = MagicMock()
     monkeypatch.setattr(broker, 'close', close)
     monkeypatch.setattr('sys.is_finalizing', lambda: True)
 
-    with pytest.warns(ResourceWarning, match='RabbitmqBroker was not closed explicitly'):
+    with caplog.at_level(logging.INFO, logger=broker_module.LOGGER.name):
         broker.__del__()
 
+    assert caplog.record_tuples == [
+        (broker_module.LOGGER.name, logging.INFO, f'RabbitmqBroker was not closed explicitly: {broker!r}')
+    ]
     close.assert_not_called()
 
 

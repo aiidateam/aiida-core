@@ -89,8 +89,13 @@ def get_logging_config() -> dict[str, t.Any]:
             'console': {
                 'class': 'logging.StreamHandler',
                 'formatter': 'halfverbose',
+                'level': lambda: get_config_option('logging.terminal_loglevel'),
             },
-            'cli': {'class': 'aiida.cmdline.utils.log.CliHandler', 'formatter': 'cli'},
+            'cli': {
+                'class': 'aiida.cmdline.utils.log.CliHandler',
+                'formatter': 'cli',
+                'level': lambda: get_config_option('logging.terminal_loglevel'),
+            },
         },
         'loggers': {
             'aiida': {
@@ -166,6 +171,39 @@ def evaluate_logging_configuration(dictionary: collections.abc.Mapping[t.Any, t.
     return result
 
 
+def _add_log_file_handler(
+    config: dict[str, t.Any], handler_name: str, log_file: str | FilePath, *, replace_console: bool = False
+) -> None:
+    """Add a rotating file handler to all loggers in *config*.
+
+    :param config: the logging configuration dictionary (already evaluated).
+    :param handler_name: key used in ``config['handlers']``.
+    :param log_file: absolute path to the log file.
+    :param replace_console: if ``True``, remove the ``console`` handler from every logger
+        to avoid duplicating output (used by the daemon).
+    """
+    from aiida.manage.configuration import get_config_option
+
+    config.setdefault('handlers', {})
+    config['handlers'][handler_name] = {
+        'level': get_config_option('logging.logfile_loglevel'),
+        'formatter': 'halfverbose',
+        'class': 'logging.handlers.RotatingFileHandler',
+        'filename': str(log_file),
+        'encoding': 'utf8',
+        'maxBytes': 10000000,  # 10 MB
+        'backupCount': 10,
+    }
+
+    for logger in config.get('loggers', {}).values():
+        logger.setdefault('handlers', []).append(handler_name)
+        if replace_console:
+            try:
+                logger['handlers'].remove('console')
+            except ValueError:
+                pass
+
+
 def configure_logging(with_orm: bool = False, daemon: bool = False, daemon_log_file: FilePath | None = None) -> None:
     """Setup the logging by retrieving the LOGGING dictionary from aiida and passing it to
     the python module logging.config.dictConfig. If the logging needs to be setup for the
@@ -184,9 +222,7 @@ def configure_logging(with_orm: bool = False, daemon: bool = False, daemon_log_f
     # Evaluate the `LOGGING` configuration to resolve the lambdas that will retrieve the correct values based on the
     # currently configured profile.
     config = evaluate_logging_configuration(get_logging_config())
-    daemon_handler_name = 'daemon_log_file'
 
-    # Add the daemon file handler to all loggers if daemon=True
     if daemon is True:
         # Daemon always needs to run with ORM enabled
         with_orm = True
@@ -194,24 +230,18 @@ def configure_logging(with_orm: bool = False, daemon: bool = False, daemon_log_f
         if daemon_log_file is None:
             raise ValueError('daemon_log_file has to be defined when configuring for the daemon')
 
-        config.setdefault('handlers', {})
-        config['handlers'][daemon_handler_name] = {
-            'level': 'DEBUG',
-            'formatter': 'halfverbose',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': daemon_log_file,
-            'encoding': 'utf8',
-            'maxBytes': 10000000,  # 10 MB
-            'backupCount': 10,
-        }
+        _add_log_file_handler(config, 'daemon_log_file', daemon_log_file, replace_console=True)
+    else:
+        # Always add a client log file handler so that all log output is persisted to disk for debugging.
+        try:
+            from aiida.manage.configuration import get_config, get_profile
 
-        for logger in config.get('loggers', {}).values():
-            logger.setdefault('handlers', []).append(daemon_handler_name)
-            try:
-                # Remove the `console` stdout stream handler to prevent messages being duplicated in the daemon log file
-                logger['handlers'].remove('console')
-            except ValueError:
-                pass
+            profile = get_profile()
+            if profile is not None:
+                log_file = get_config().filepaths(profile)['client']['log']
+                _add_log_file_handler(config, 'client_log_file', log_file)
+        except Exception:
+            pass
 
     # If the ``CLI_ACTIVE`` is set, a ``verdi`` command is being executed, so we replace the ``console`` handler with
     # the ``cli`` one for all loggers.
@@ -230,6 +260,8 @@ def configure_logging(with_orm: bool = False, daemon: bool = False, daemon_log_f
         for name, logger in config['loggers'].items():
             if name in ['aiida', 'verdi', 'disk_objectstore']:
                 logger['level'] = CLI_LOG_LEVEL
+        if 'cli' in config['handlers']:
+            config['handlers']['cli']['level'] = CLI_LOG_LEVEL
 
     # Add the `DbLogHandler` if `with_orm` is `True`
     if with_orm:

@@ -153,7 +153,15 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
             :return: tuple of the outputs of the process and the process node
             """
             manager = get_manager()
-            runner = manager.get_runner()
+            # If called from inside a running process (e.g. a workchain calling a calcfunction), reuse that
+            # process's runner. Otherwise create a new runner without eagerly connecting to the broker since
+            # function processes run locally and don't need a broker connection.
+            # Note: it is safe to create new local runner here without but the explanation can be found in issue #7353
+            current = Process.current()
+            if isinstance(current, Process):
+                runner = current.runner
+            else:
+                runner = manager.create_runner(communicator=None)
             inputs = process_class.create_inputs(*args, **kwargs)
 
             # Remove all the known inputs from the kwargs
@@ -168,7 +176,7 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
 
             # Only add handlers for interrupt signal to kill the process if we are in a local and not a daemon runner.
             # Without this check, running process functions in a daemon worker would be killed if the daemon is shutdown
-            current_runner = manager.get_runner()
+            current_runner = runner
             original_handler = None
             kill_signal = signal.SIGINT
 

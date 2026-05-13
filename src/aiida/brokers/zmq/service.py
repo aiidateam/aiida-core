@@ -93,9 +93,6 @@ class ZmqBrokerService:
         self._write_status(self._server.get_status())
 
     def stop(self) -> None:
-        if not self._running:
-            return
-
         self._running = False
 
         if self._server:

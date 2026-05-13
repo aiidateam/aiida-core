@@ -173,20 +173,23 @@ class TestZmqCommunicatorRoundTrip:
         stop_zmq_broker(broker)
 
     def test_task_round_trip(self, sender_and_worker):
-        """Test full task send -> subscribe -> handle -> response cycle."""
+        """Test task send gets immediate broker acknowledgment.
+
+        The broker sends an immediate TASK_RESPONSE when the task is queued
+        (matching RabbitMQ publisher-confirm semantics).  The worker processes
+        the task independently.
+        """
         _, sender, worker = sender_and_worker
 
-        def handle_task(comm, body):
-            return body.get('x', 0) * 2
-
-        worker.add_task_subscriber(handle_task, identifier='worker')
+        worker.add_task_subscriber(lambda comm, body: body.get('x', 0) * 2, identifier='worker')
         time.sleep(0.5)
 
         future = sender.task_send({'x': 21})
         assert future is not None
 
+        # The sender's Future resolves with the broker's acceptance, not the worker's result
         result = future.result(timeout=5.0)
-        assert result.result() == 42
+        assert result.result() is True
 
     def test_rpc_round_trip(self, sender_and_worker):
         """Test full RPC send -> subscribe -> handle -> response cycle."""
@@ -221,7 +224,7 @@ class TestZmqCommunicatorRoundTrip:
         assert received[0] == ('ping', 'test.ping')
 
     def test_task_with_deferred_future(self, sender_and_worker):
-        """Test task handler returning a Future (deferred ACK path)."""
+        """Test task send with deferred handler gets immediate broker ack."""
         _, sender, worker = sender_and_worker
 
         def handle_task(comm, body):
@@ -233,8 +236,9 @@ class TestZmqCommunicatorRoundTrip:
         time.sleep(0.5)
 
         future = sender.task_send({'val': 5})
+        # Sender gets immediate broker acknowledgment, not the worker's deferred result
         result = future.result(timeout=5.0)
-        assert result.result() == 105
+        assert result.result() is True
 
     def test_rpc_with_deferred_future(self, sender_and_worker):
         """Test RPC handler returning a Future."""

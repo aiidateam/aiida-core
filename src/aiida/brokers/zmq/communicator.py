@@ -205,6 +205,15 @@ class ZmqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
             if threading.current_thread() is not self._loop_thread:
                 self._loop_thread.join(timeout=LOOP_JOIN_TIMEOUT)
 
+                if self._loop_thread.is_alive():
+                    _LOGGER.warning('ZMQ loop thread did not join in time, terminating ZMQ context')
+                    # Force-terminate the ZMQ context to unblock the poll loop.
+                    # This causes recv_multipart to raise ZMQError, exiting the thread.
+                    if self._context is not None:
+                        self._context.term()
+                        self._context = None
+                    self._loop_thread.join(timeout=LOOP_JOIN_TIMEOUT)
+
         self._loop = None
         self._loop_thread = None
 

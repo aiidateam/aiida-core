@@ -18,14 +18,16 @@ from aiida.orm import RemoteData
 
 
 @pytest.fixture
-def remote_data_factory(tmp_path, aiida_computer_local, aiida_computer_ssh):
+def remote_data_factory(tmp_path, aiida_localhost, aiida_computer_ssh):
     """Factory fixture to create RemoteData instances."""
 
     def _create_remote_data(mode: str, content: str | bytes = b'some content'):
         if mode == 'local':
-            computer = aiida_computer_local(label='localhost')
+            computer = aiida_localhost
         elif mode == 'ssh':
-            computer = aiida_computer_ssh(label='localhost-ssh')
+            # Let ``aiida_computer_ssh`` auto-generate a UUID label, so concurrent xdist workers
+            # (or repeated calls within the same session) cannot collide on ``Computer.label``.
+            computer = aiida_computer_ssh()
         else:
             raise ValueError(f'Unknown mode: {mode}')
 

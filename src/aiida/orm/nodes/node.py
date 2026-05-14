@@ -394,7 +394,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                     f"'{self.class_node_type}' does not provide a constructor schema"
                 )
             Model = self.ConstructorModel  # noqa: N806
-            fields = self._to_model_field_values(context=context, minimal=minimal, schema=Model)
+            fields = self.to_model_field_values(context=context, minimal=minimal, schema=Model)
             return Model(**fields)
         return super().to_model(context=context, minimal=minimal, schema=schema)
 
@@ -1240,7 +1240,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         fields = model._to_orm_field_values()
         return cls(**fields)
 
-    def _to_model_field_values(
+    def to_model_field_values(
         self,
         *,
         context: dict[str, Any] | None = None,
@@ -1248,9 +1248,9 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         schema: type[OrmModel] | None = None,
     ) -> dict[str, Any]:
         """Collect values for the model fields from this node."""
-        fields = super()._to_model_field_values(context=context, minimal=minimal, schema=schema)
+        fields = super().to_model_field_values(context=context, minimal=minimal, schema=schema)
         if self.supports_constructor_model and schema is self.ConstructorModel:
-            fields['args'] = self._to_model_field_values(
+            fields['args'] = self.to_model_field_values(
                 context=context,
                 minimal=minimal,
                 schema=self.ConstructorArgsModel,

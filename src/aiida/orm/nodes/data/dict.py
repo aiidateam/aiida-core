@@ -178,14 +178,14 @@ class Dict(Data):
 
         return AttributeManager(self)
 
-    def _to_model_field_values(
+    def to_model_field_values(
         self,
         *,
         context: t.Dict[str, t.Any] | None = None,
         minimal: bool = False,
         schema: type[OrmModel] | None = None,
     ) -> t.Dict[str, t.Any]:
-        fields = super()._to_model_field_values(context=context, minimal=minimal, schema=schema)
+        fields = super().to_model_field_values(context=context, minimal=minimal, schema=schema)
         if schema in (self.ReadModel, self.WriteModel):
             return fields | {'attributes': self.get_dict()}
         return fields

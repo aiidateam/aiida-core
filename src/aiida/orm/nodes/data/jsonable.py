@@ -202,14 +202,14 @@ class JsonableData(Data):
 
             return self._obj
 
-    def _to_model_field_values(
+    def to_model_field_values(
         self,
         *,
         context: dict[str, typing.Any] | None = None,
         minimal: bool = False,
         schema: type[OrmModel] | None = None,
     ) -> dict[str, typing.Any]:
-        fields = super()._to_model_field_values(
+        fields = super().to_model_field_values(
             context=context,
             minimal=minimal,
             schema=schema,

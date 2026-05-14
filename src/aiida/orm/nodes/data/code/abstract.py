@@ -170,7 +170,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     ):
         if schema == 'cli':
             Model = self.CliModel  # noqa: N806
-            fields = self._to_model_field_values(context=context, minimal=minimal, schema=Model)
+            fields = self.to_model_field_values(context=context, minimal=minimal, schema=Model)
             return Model(**fields)
         return super().to_model(context=context, minimal=minimal, schema=schema)
 

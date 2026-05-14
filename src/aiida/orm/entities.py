@@ -252,7 +252,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         if schema == 'read' and not self.is_stored:
             raise exceptions.UnsupportedSchemaError("cannot use 'read' schema for an unstored entity")
         Model = self._MODEL_MAP[schema]  # noqa: N806
-        fields = self._to_model_field_values(context=context, minimal=minimal, schema=Model)
+        fields = self.to_model_field_values(context=context, minimal=minimal, schema=Model)
         if minimal:
             Model = Model._as_minimal_model()  # noqa: N806
         return Model(**fields)
@@ -555,7 +555,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
                 f'`class {model_name}({", ".join(sorted(bases))}):`'
             )
 
-    def _to_model_field_values(
+    def to_model_field_values(
         self,
         *,
         context: dict[str, Any] | None = None,

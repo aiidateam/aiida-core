@@ -317,14 +317,14 @@ class ArrayData(Data):
 
         return json.dumps(json_dict).encode('utf-8'), {}
 
-    def _to_model_field_values(
+    def to_model_field_values(
         self,
         *,
         context: dict[str, Any] | None = None,
         minimal: bool = False,
         schema: type[OrmModel] | None = None,
     ) -> dict[str, Any]:
-        fields = super()._to_model_field_values(context=context, minimal=minimal, schema=schema)
+        fields = super().to_model_field_values(context=context, minimal=minimal, schema=schema)
         if schema in (self.ReadModel, self.WriteModel):
             return fields | {'attributes': self.base.attributes.all}
         return fields

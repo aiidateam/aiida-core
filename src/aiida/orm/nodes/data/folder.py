@@ -34,6 +34,7 @@ class FolderData(Data):
         tree: str = OrmMetadataField(
             title='Tree',
             description='Absolute path to a folder to wrap',
+            write_only=True,
             orm_to_model=lambda node, ctx: t.cast(FolderData, node)._export_tree_from_repo(
                 ctx.get('repository_dump_path'),
                 ctx.get('written', False),

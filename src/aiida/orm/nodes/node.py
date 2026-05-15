@@ -469,8 +469,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
         # To support plugins that have not yet implemented a model for serialization/validation,
         # we add here any attributes that are not already included in the serialized output.
-        # This only applies to the 'read' schema (default if stored).
-        if schema == 'read' or (schema is None and self.is_stored):
+        # This only applies to the full (not minimal) 'read' schema (default if stored).
+        if not minimal and (schema == 'read' or (schema is None and self.is_stored)):
             for key, value in self.base.attributes.all.items():
                 if key not in serialized['attributes']:
                     serialized['attributes'][key] = value

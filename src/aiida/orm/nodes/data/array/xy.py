@@ -13,16 +13,15 @@ on them.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import Any, Sequence, cast
 
 import numpy as np
+from pydantic import ConfigDict, field_validator
 
 from aiida.common.exceptions import NotExistent
+from aiida.orm.pydantic import OrmMetadataField, OrmModel
 
 from .array import ArrayData
-
-if TYPE_CHECKING:
-    from numpy import ndarray
 
 __all__ = ('XyData',)
 
@@ -72,10 +71,67 @@ class XyData(ArrayData):
         To get the user-provided names, use :meth:`get_y` and extract the names from the returned tuples.
     """
 
+    class CommonFields(OrmModel):
+        x_name: str = OrmMetadataField(
+            description='The name of the x array',
+        )
+        x_units: str = OrmMetadataField(
+            description='The units of the x array',
+        )
+        y_names: Sequence[str] = OrmMetadataField(
+            description='The names of the y arrays',
+        )
+        y_units: Sequence[str] = OrmMetadataField(
+            description='The units of the y arrays',
+        )
+
+    class AttributesModel(CommonFields, ArrayData.AttributesModel): ...
+
+    class ConstructorArgsModel(CommonFields):
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+
+        x_array: Sequence = OrmMetadataField(
+            description='The x array, which must be a 1D numpy array of floats.',
+            write_only=True,
+            orm_to_model=lambda node: cast(XyData, node).get_array('x_array').tolist(),
+        )
+        y_arrays: Sequence = OrmMetadataField(
+            description='The y array(s), which must be 1D numpy arrays of floats with the same shape as the x array.',
+            write_only=True,
+            orm_to_model=lambda node: [
+                cast(XyData, node).get_array(name).tolist()
+                for name in node.get_arraynames()
+                if name.startswith('y_array_')
+            ],
+        )
+
+        @field_validator('x_array', mode='before')
+        @classmethod
+        def normalize_x_array(cls, value: Sequence | np.ndarray) -> Sequence:
+            if isinstance(value, Sequence):
+                return value
+            if isinstance(value, np.ndarray):
+                return value.tolist()
+            raise TypeError(f'`x_array` should be an iterable but got: {value}')
+
+        @field_validator('y_arrays', mode='before')
+        @classmethod
+        def normalize_y_arrays(
+            cls,
+            value: Sequence | np.ndarray | list[np.ndarray],
+        ) -> Sequence:
+            if isinstance(value, list) and all(isinstance(v, np.ndarray) for v in value):
+                return [v.tolist() for v in value]
+            if isinstance(value, np.ndarray):
+                return value.tolist()
+            if isinstance(value, Sequence):
+                return value
+            raise TypeError(f'`y_arrays` should be an iterable but got: {value}')
+
     def __init__(
         self,
-        x_array: 'ndarray' | None = None,
-        y_arrays: 'ndarray' | list['ndarray'] | None = None,
+        x_array: Sequence | np.ndarray | None = None,
+        y_arrays: Sequence | np.ndarray | list[Sequence | np.ndarray] | None = None,
         *,
         x_name: str | None = None,
         x_units: str | None = None,
@@ -97,11 +153,19 @@ class XyData(ArrayData):
         super().__init__(**kwargs)
 
         if x_array is not None:
-            self.set_x(x_array, x_name, x_units)  # type: ignore[arg-type]
-            self.set_y(y_arrays, y_names, y_units)  # type: ignore[arg-type]
+            if x_name is None or x_units is None or y_arrays is None or y_names is None or y_units is None:
+                raise TypeError('If `x_array` is specified, all other keywords must also be specified.')
+
+            self.set_x(np.asarray(x_array), x_name, x_units)
+
+            self.set_y(
+                np.asarray(y_arrays) if isinstance(y_names, str) else [np.asarray(arr) for arr in y_arrays],
+                y_names,
+                y_units,
+            )
 
     @staticmethod
-    def _arrayandname_validator(array: 'ndarray', name: str, units: str) -> None:
+    def _arrayandname_validator(array: np.ndarray, name: str, units: str) -> None:
         """Validates that the array is an numpy.ndarray and that the name is
         of type str. Raises TypeError or ValueError if this not the case.
         """
@@ -117,7 +181,23 @@ class XyData(ArrayData):
         if not isinstance(units, str):
             raise TypeError('The units must always be a str.')
 
-    def set_x(self, x_array: 'ndarray', x_name: str, x_units: str) -> None:
+    @property
+    def x_name(self) -> str:
+        return self.base.attributes.get('x_name')
+
+    @property
+    def x_units(self) -> str:
+        return self.base.attributes.get('x_units')
+
+    @property
+    def y_names(self) -> Sequence[str]:
+        return self.base.attributes.get('y_names')
+
+    @property
+    def y_units(self) -> Sequence[str]:
+        return self.base.attributes.get('y_units')
+
+    def set_x(self, x_array: np.ndarray, x_name: str, x_units: str) -> None:
         """Sets the array and the name for the x values.
 
         :param x_array: A numpy.ndarray, containing only floats
@@ -130,7 +210,10 @@ class XyData(ArrayData):
         self.set_array('x_array', x_array)
 
     def set_y(
-        self, y_arrays: 'ndarray' | Sequence['ndarray'], y_names: str | Sequence[str], y_units: str | Sequence[str]
+        self,
+        y_arrays: np.ndarray | Sequence[np.ndarray],
+        y_names: str | Sequence[str],
+        y_units: str | Sequence[str],
     ) -> None:
         """Set array(s) for the y part of the dataset. Also checks if the
         x_array has already been set, and that, the shape of the y_arrays
@@ -166,7 +249,7 @@ class XyData(ArrayData):
         self.base.attributes.set('y_names', y_names)
         self.base.attributes.set('y_units', y_units)
 
-    def get_x(self) -> tuple[str, 'ndarray', str]:
+    def get_x(self) -> tuple[str, np.ndarray, str]:
         """Tries to retrieve the x array and x name raises a NotExistent
         exception if no x array has been set yet.
         :return x_name: the name set for the x_array
@@ -181,7 +264,7 @@ class XyData(ArrayData):
             raise NotExistent('No x array has been set yet!')
         return x_name, x_array, x_units
 
-    def get_y(self) -> list[tuple[str, 'ndarray', str]]:
+    def get_y(self) -> list[tuple[str, np.ndarray, str]]:
         """Tries to retrieve the y arrays and the y names, raises a
         NotExistent exception if they have not been set yet, or cannot be
         retrieved

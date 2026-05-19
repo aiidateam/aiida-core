@@ -142,9 +142,7 @@ With `F=0.055`, the pattern looks completely different:
 However, note that we just overwrote our input file, and now the original parameters are gone.
 As the output doesn't record what was used, it's not clear which result came from which parameter set. You'd have to remember, or manually organize your folders and files accordingly.
 
-:::{note}
-During the exploratory phase of a computational science project, quickly tweaking parameters and re-running is exactly how people often work in practice.
-:::
+Quickly tweaking parameters and re-running like this is exactly how the exploratory phase of a project tends to look in practice, which makes the pain points below easy to walk into.
 
 :::{admonition} No systematic record of your work
 :class: warning
@@ -227,10 +225,8 @@ Some more things that can go wrong at scale:
 ## How AiiDA solves these problems
 
 AiiDA is a workflow manager designed for exactly these problems.
-At its core is the **provenance graph**[^provenance]: an automatic record of every calculation, its inputs, its outputs, and how they all connect, for every run, including failed ones.
+At its core is the **provenance graph**: an automatic record of every calculation, its inputs, its outputs, and how they all connect, for every run, including failed ones.
 It gives you:
-
-[^provenance]: See {ref}`topics:provenance:concepts` for the conceptual reference on AiiDA's provenance model.
 
 - **Provenance tracking**: nothing is lost. Every result can be traced back to the exact inputs, code, and machine that produced it.
 - **Workflow orchestration**: multi-step pipelines run as managed workflows, handling execution, data passing, and error recovery. If some steps fail, AiiDA knows which ones, why, and can help you restart just those.
@@ -239,3 +235,7 @@ It gives you:
 - **Community knowledge**: AiiDA plugins for popular codes ship with workflows, parsers, and error handlers, encoding years of domain expertise. You benefit from best practices without having to painfully discover them yourself.
 
 Buckle up: in {ref}`Module 1 <tutorial:module1>`, we'll run the same simulation through AiiDA and start seeing the benefits in action.
+
+## Further reading
+
+- AiiDA's provenance model: {ref}`topics:provenance:concepts`

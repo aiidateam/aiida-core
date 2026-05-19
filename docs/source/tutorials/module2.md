@@ -21,7 +21,7 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 :::
 
 :::{note}
-This module reuses the tutorial profile and the `python_code` object created in {ref}`Module 1 <tutorial:module1>`. If you are following along locally, run that module first — or, against your own profile, replace the setup cell at the top of the downloaded notebook with:
+This module reuses the tutorial profile and the `python_code` object created in {ref}`Module 1 <tutorial:module1>`. If you are following along locally, run that module first. To use your own profile instead, replace the setup cell at the top of the downloaded notebook with:
 
 ```python
 from aiida import load_profile
@@ -73,7 +73,7 @@ work_dir = Path(tempfile.mkdtemp(prefix='aiida_tutorial_m2_'))
 calc_nodes = []
 
 for f_val in F_VALUES:
-    input_path = work_dir / f'input_F{f_val}.yaml'
+    input_path = work_dir / (f'input_F{f_val:.3f}'.replace('.', '_') + '.yaml')
     input_path.write_text(yaml.dump(BASE_PARAMS | {'F': f_val}))
 
     results, calc_node = launch_shell_job(
@@ -150,18 +150,15 @@ Every simulation is tracked by AiiDA, so we can inspect any of them:
 Notice what we had to do to get the `variance_V` values: manually open each YAML output file and extract the number.
 
 The provenance looks like this for each run: **file in → ShellJob → file out**.
-AiiDA knows *that* a result file was produced, but it can't see *what's inside* it.
-If we wanted to find "all runs where `variance_V > 0.001`", we'd have to open every output file ourselves, since AiiDA's database can't help.
+AiiDA knows *that* a result file was produced, but it can't see *what's inside* it, so a query like "all runs where `variance_V > 0.001`" would mean opening every file ourselves.
 :::
 
 ## Structured data nodes
 
-What if, instead of just files in and files out, we could register the simulation's inputs and outputs as **structured AiiDA data nodes**?[^data-types]
+What if, instead of just files in and files out, we could register the simulation's inputs and outputs as **structured AiiDA data nodes**?
 
 - The input parameters as a {py:class}`~aiida.orm.Dict` (queryable key-value pairs in the database)
 - The output scalars as {py:class}`~aiida.orm.Float` nodes (directly searchable)
-
-[^data-types]: See {ref}`topics:data_types` for the full reference on AiiDA's data model, and {ref}`topics:data_types:core:base` for the base types (`Dict`, `Float`, `Int`, `Str`, `List`).
 
 :::{tip}
 `orm` stands for **Object-Relational Mapping**: it lets you work with database-stored objects as regular Python classes.
@@ -179,15 +176,13 @@ AiiDA's {mod}`~aiida.orm` module provides data types like `Dict`, `Float`, `Int`
 
 ## Tracking Python steps with `@calcfunction`
 
-A {func}`@calcfunction <aiida.engine.processes.functions.calcfunction>` is the simplest way to register inputs and outputs as structured data nodes.[^processes]
+A {func}`@calcfunction <aiida.engine.processes.functions.calcfunction>` is the simplest way to register inputs and outputs as structured data nodes.
 It's a regular Python function with a decorator that makes AiiDA automatically:
 
 1. Store all input nodes
 2. Create a **process node** recording the computation
 3. Store all output nodes
 4. Link everything in the provenance graph
-
-[^processes]: See {ref}`topics:processes:functions` for an in-depth guide to calcfunctions, and {ref}`topics:calculations:concepts:calcjobs` for the CalcJob reference.
 
 Let's write two: one for input preparation, one for output parsing.
 
@@ -208,22 +203,25 @@ def prepare_input(parameters: orm.Dict) -> orm.SinglefileData:
 ```
 
 :::{note}
-Inside a `calcfunction`, all parameters are AiiDA data nodes, not plain Python types.
-That is why the function calls `parameters.get_dict()` to extract the dictionary.
+Inside a `calcfunction`, all parameters are AiiDA data nodes, not plain Python types. That is why the function calls `parameters.get_dict()` to extract the dictionary.
 
-When *calling* the function, AiiDA auto-serializes plain Python types for you[^auto-serialize]: `prepare_input(orm.Dict(params))` and `prepare_input(params)` both work.
-
-[^auto-serialize]: Plain `int`, `float`, `str`, `bool`, `dict`, `list` arguments are auto-converted to the corresponding `orm.Int`/`Float`/`Str`/`Bool`/`Dict`/`List` nodes. See {ref}`the calcfunctions reference <topics:calculations:concepts:calcfunctions:automatic-serialization>`.
-
-You could also pass each parameter as a separate `orm.Float`/`orm.Int` node for finer-grained provenance, but a single `Dict` is the common pattern and its attributes are still queryable via the `QueryBuilder`.
+When *calling* the function, AiiDA auto-serializes plain Python types (`int`, `float`, `str`, `bool`, `dict`, `list`) to the corresponding `orm` nodes, so `prepare_input(orm.Dict(params))` and `prepare_input(params)` both work.
 :::
 
-The second, `parse_output`, reads the YAML output file and extracts the scalar results as `Float` nodes:
+The second, `parse_output`, reads the YAML output file and extracts the scalar results as `Float` nodes. We declare the two return keys as a {class}`~typing.TypedDict` so the function's return type is self-documenting (and so that {ref}`Module 3 <tutorial:module3>` can reuse the same annotation):
 
 ```{code-cell} ipython3
 # Define parse_output: a calcfunction that extracts scalars from the YAML results file.
+from typing import TypedDict
+
+
+class ParseOutputs(TypedDict):
+    variance_V: float
+    mean_V: float
+
+
 @engine.calcfunction
-def parse_output(output_file: orm.SinglefileData) -> dict[str, orm.Float]:
+def parse_output(output_file: orm.SinglefileData) -> ParseOutputs:
     """Extract variance_V and mean_V from a SinglefileData YAML results file."""
     with output_file.open(mode='r') as f:
         data = yaml.safe_load(f)
@@ -256,7 +254,7 @@ print(f"variance(V) = {parsed['variance_V'].value:.4e}")
 print(f"mean(V)     = {parsed['mean_V'].value:.4e}")
 ```
 
-`parse_output` is now itself a first-class process node — the calcjob's YAML output node is its input, and the `Float` nodes are its outputs:
+`parse_output` is now itself a first-class process node: the calcjob's YAML output node is its input, and the `Float` nodes are its outputs:
 
 ```{code-cell} ipython3
 # parse_output is a tracked process: SinglefileData in, Float nodes out.
@@ -285,7 +283,7 @@ Scaling that up to the full sweep, with the same structured data at every step:
 
 ```{code-cell} ipython3
 # Re-run the full sweep with the enriched pipeline (structured data at every step).
-enriched_nodes = []
+enriched_results = []
 
 for f_val in F_VALUES:
     input_file = prepare_input(BASE_PARAMS | {'F': f_val})
@@ -298,15 +296,15 @@ for f_val in F_VALUES:
     )
 
     parsed = parse_output(results['results_yaml'])
-    enriched_nodes.append((f_val, parsed))
+    enriched_results.append({'F': f_val, 'parsed': parsed})
 ```
 
 Now the payoff: instead of manually opening YAML files, the results are stored as `Float` nodes that we can access directly through the provenance graph:
 
 ```{code-cell} ipython3
 # Access the structured results directly (no file handling needed).
-for f_val, parsed in enriched_nodes:
-    print(f"F={f_val:.3f}  variance(V)={parsed['variance_V'].value:.4e}")
+for r in enriched_results:
+    print(f"F={r['F']:.3f}  variance(V)={r['parsed']['variance_V'].value:.4e}")
 ```
 
 The transition curve looks identical to the first sweep (same simulation, same parameters); what changed is *how* we got the numbers. The `Dict` inputs and `Float` outputs now live in the database with full provenance, ready to be queried.
@@ -324,17 +322,26 @@ The transition curve looks identical to the first sweep (same simulation, same p
      that runs asynchronously in the background via AiiDA daemon workers.)
      From meeting notes: "show speed impact (benchmark?)". -->
 
-:::{tip}
-AiiDA's {class}`~aiida.orm.QueryBuilder`[^querybuilder] can search these structured nodes directly.
-For example, to find all runs where `variance_V > 0.001`:
+This is what {class}`~aiida.orm.QueryBuilder` enables: structured search over the provenance graph. A few examples on the `Float` nodes we just stored:
 
-```python
-qb = orm.QueryBuilder()
-qb.append(orm.Float, filters={'attributes.value': {'>': 0.001}})
+```{code-cell} ipython3
+# Three QueryBuilder examples on the Float nodes stored by parse_output.
+
+# 1. Count all Float nodes in the database.
+qb = orm.QueryBuilder().append(orm.Float)
+print(f'Total Float nodes stored: {qb.count()}')
+
+# 2. Filter by attribute value (the "find runs above a threshold" pattern).
+qb = orm.QueryBuilder().append(orm.Float, filters={'attributes.value': {'>': 0.01}})
+print(f'  with value > 0.01:      {qb.count()}')
+
+# 3. Project just the values, so the DB doesn't have to load full nodes.
+qb = orm.QueryBuilder().append(orm.Float, project='attributes.value')
+values = sorted(row[0] for row in qb.all())
+print(f'All Float values (sorted): {[round(v, 4) for v in values]}')
 ```
-:::
 
-[^querybuilder]: We'll cover the QueryBuilder properly in {ref}`Module 6 <tutorial:module6>`. For the full reference now, see the {ref}`querying how-to guide <how-to:query>`.
+QueryBuilder can also join across the provenance graph: filter `Float` nodes by the calcfunction that created them, by output label, by the workflow they belong to, etc. We'll cover those patterns properly in {ref}`Module 6 <tutorial:module6>`.
 
 ```{code-cell} ipython3
 :tags: ["hide-output"]
@@ -349,4 +356,11 @@ We now have a tracked pipeline with structured data, but it's still a Python `fo
 If one step fails, the loop stops. There's no single "sweep" object to query, and no way to run steps in parallel.
 In {ref}`Module 3 <tutorial:module3>`, you'll wrap the pipeline into a **WorkGraph workflow** and turn the loop into a mapped workflow too.
 
-## Footnotes
+## Further reading
+
+- AiiDA's data model: {ref}`topics:data_types`
+- Base data types (`Dict`, `Float`, `Int`, `Str`, `List`): {ref}`topics:data_types:core:base`
+- In-depth guide to calcfunctions: {ref}`topics:processes:functions`
+- CalcJob reference: {ref}`topics:calculations:concepts:calcjobs`
+- Auto-serialization of plain Python types in calcfunctions: {ref}`topics:calculations:concepts:calcfunctions:automatic-serialization`
+- QueryBuilder (covered properly in {ref}`Module 6 <tutorial:module6>`): {ref}`querying how-to guide <how-to:query>`

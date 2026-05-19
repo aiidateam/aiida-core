@@ -7,12 +7,18 @@ curve as a ``SinglefileData`` PNG.
 """
 
 import io
-from typing import Annotated
+from typing import Annotated, TypedDict
 
 import yaml
+from aiida import engine, orm
 from aiida_workgraph import dynamic, task
 
-from aiida import engine, orm
+
+class ParseOutputs(TypedDict):
+    """Named outputs produced by :func:`parse_output`."""
+
+    variance_V: float
+    mean_V: float
 
 
 @engine.calcfunction
@@ -23,7 +29,7 @@ def prepare_input(parameters: orm.Dict) -> orm.SinglefileData:
 
 
 @engine.calcfunction
-def parse_output(output_file: orm.SinglefileData) -> dict[str, orm.Float]:
+def parse_output(output_file: orm.SinglefileData) -> ParseOutputs:
     """Extract variance_V and mean_V from a SinglefileData YAML results file."""
     with output_file.open(mode='r') as f:
         data = yaml.safe_load(f)
@@ -34,11 +40,11 @@ def parse_output(output_file: orm.SinglefileData) -> dict[str, orm.Float]:
 
 
 @task()
-def make_transition_plot(variances: Annotated[dict, dynamic(orm.Float)]) -> orm.SinglefileData:
+def make_transition_plot(variances: Annotated[dict, dynamic(float)]) -> orm.SinglefileData:
     """Plot variance(V) vs feed rate F from gathered sweep results.
 
     :param variances: dynamic-namespace input mapping sweep keys (e.g.
-        ``F_0_038``) to per-iteration ``orm.Float`` variance values.
+        ``F_0_038``) to per-iteration variance values.
     :returns: a ``SinglefileData`` PNG of the transition curve.
     """
     import matplotlib.pyplot as plt
@@ -48,7 +54,7 @@ def make_transition_plot(variances: Annotated[dict, dynamic(orm.Float)]) -> orm.
         _, integer, fractional = key.split('_')
         return float(f'{integer}.{fractional}')
 
-    items = sorted((_key_to_f(k), float(v.value)) for k, v in variances.items())
+    items = sorted((_key_to_f(k), float(v)) for k, v in variances.items())
     f_values = [f for f, _ in items]
     var_values = [v for _, v in items]
 

@@ -87,6 +87,25 @@ def test_submit_wait(arithmetic_add_builder):
     assert node.is_finished_ok, node.exit_code
 
 
+@pytest.mark.usefixtures('started_daemon_client')
+def test_submit_wait_with_timeout(arithmetic_add_builder):
+    """Test ``submit`` with ``wait=True`` and a generous ``timeout`` that the process finishes within."""
+    node = launch.submit(arithmetic_add_builder, wait=True, wait_interval=0.1, timeout=60)
+    assert node.is_finished, node.process_state
+    assert node.is_finished_ok, node.exit_code
+
+
+@pytest.mark.usefixtures('started_daemon_client')
+def test_submit_wait_timeout_raises(arithmetic_add_builder):
+    """Test ``submit`` with ``wait=True`` and ``timeout=0`` raises ``TimeoutError``.
+
+    Using ``timeout=0`` forces the timeout check to fire on the first iteration of the wait loop, before
+    the daemon can possibly finish the process. This keeps the test deterministic (no timing dependency).
+    """
+    with pytest.raises(TimeoutError, match=r'Process<\d+> did not terminate within 0 seconds'):
+        launch.submit(arithmetic_add_builder, wait=True, wait_interval=0.1, timeout=0)
+
+
 def test_submit_no_broker(arithmetic_add_builder, monkeypatch, manager):
     """Test that ``submit`` raises ``InvalidOperation`` if the runner does not have a controller.
 

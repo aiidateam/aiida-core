@@ -25,7 +25,7 @@ from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.common.datastructures import FileCopyOperation
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
 from aiida.engine.processes.calcjobs.calcjob import validate_monitors, validate_stash_options
-from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorAction, CalcJobMonitorResult
+from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorAction, CalcJobMonitorResult, CalcJobMonitors
 from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.utils import instantiate_process
 from aiida.plugins import CalculationFactory, ParserFactory
@@ -1298,28 +1298,52 @@ def test_monitor_result_action_disable_all(get_calcjob_builder, entry_points):
 
 
 def monitor_disable_self(node, transport, **kwargs):
-    """Monitor that will disable itself."""
+    """Monitor that will disable itself and record how often it was called."""
+    node.base.extras.set('disable_self_calls', node.base.extras.get('disable_self_calls', 0) + 1)
     return CalcJobMonitorResult(action=CalcJobMonitorAction.DISABLE_SELF, message='Disable self.')
 
 
-@pytest.mark.usefixtures('override_logging')
-def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, caplog):
+def monitor_record_kill(node, transport, **kwargs):
+    """Monitor that records how often it was called and requests the job to be killed."""
+    node.base.extras.set('record_kill_calls', node.base.extras.get('record_kill_calls', 0) + 1)
+    return CalcJobMonitorResult(message='Kill monitor called.')
+
+
+def test_monitor_result_action_disable_self(entry_points, generate_calcjob_node):
     """Test the ``action`` attr of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
 
-    If set to ``CalcJobMonitorAction.DISABLE_SELF``, the calculation should continue running and the monitor should not
-    be invoked anymore, but any other monitor should continue to be called.
+    If set to ``CalcJobMonitorAction.DISABLE_SELF``, the monitor should be invoked once, disable itself and allow other
+    monitors to continue running.
 
-    The ``override_logging`` fixture is necessary to set the logging level to ``DEBUG`` because the monitor message is
-    logged at the ``INFO`` level and so without this change, it would not be captured.
+    This test processes the same collection of monitors twice. The first pass should return the ``disable_self``
+    monitor. After disabling it, the second pass should skip it and execute the next monitor instead.
     """
     entry_points.add(monitor_disable_self, group='aiida.calculations.monitors', name='core.disable_self')
+    entry_points.add(monitor_record_kill, group='aiida.calculations.monitors', name='core.record_kill')
 
-    builder = get_calcjob_builder()
-    builder.metadata.options.sleep = 1
-    builder.monitors = {'disable_self': orm.Dict({'entry_point': 'core.disable_self'})}
-    _, node = launch.run_get_node(builder)
-    assert node.is_finished_ok
-    assert len([record for record in caplog.records if 'Disable self.' in record.message]) == 1
+    node = generate_calcjob_node()
+    monitors = CalcJobMonitors(
+        {
+            'disable_self': orm.Dict({'entry_point': 'core.disable_self', 'priority': 100}),
+            'record_kill': orm.Dict({'entry_point': 'core.record_kill', 'priority': 0}),
+        }
+    )
+
+    monitor_result = monitors.process(node, None)
+    assert monitor_result is not None
+    assert monitor_result.action == CalcJobMonitorAction.DISABLE_SELF
+    assert monitor_result.key == 'disable_self'
+    assert node.base.extras.get('disable_self_calls') == 1
+    assert 'record_kill_calls' not in node.base.extras.all
+
+    monitors.monitors[monitor_result.key].disabled = True
+
+    monitor_result = monitors.process(node, None)
+    assert monitor_result is not None
+    assert monitor_result.action == CalcJobMonitorAction.KILL
+    assert monitor_result.key == 'record_kill'
+    assert node.base.extras.get('disable_self_calls') == 1
+    assert node.base.extras.get('record_kill_calls') == 1
 
 
 def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):

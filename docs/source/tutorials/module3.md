@@ -36,7 +36,7 @@ After this module, you will be able to:
 
 - Build a reusable workflow from your existing calcfunctions and CalcJob
 - Wire tasks together via data flow and track the whole pipeline as a single named process you can query and restart
-- Map a workflow over a set of parameters to replace `for`-loops with tracked sweeps
+- Map a workflow over a set of parameters to replace plain Python `for`-loops with tracked sweeps
 
 ```{code-cell} ipython3
 :tags: ["remove-cell"]
@@ -377,6 +377,22 @@ wg_sweep = gray_scott_sweep.build(
 wg_sweep.run()
 ```
 
+:::{note}
+We called `.run()`, which **blocks** until all the pipelines have finished.
+That is fine for a tutorial, but wasteful for real work: the iterations are independent and could run concurrently.
+
+The production alternative is `.submit()`. It hands the whole workflow to the AiiDA **daemon** and returns immediately, freeing your session while the daemon drives the iterations in the background:
+
+```python
+wg_sweep = gray_scott_sweep.build(param_sweep=param_sweep, command=python_code, script=script_node)
+wg_sweep.submit()  # returns at once; the daemon runs the sweep in the background
+```
+
+The daemon is already running here — the tutorial profile starts one automatically, exactly as `verdi presto` does on a fresh machine, so there is no extra setup step.
+Everything downstream — `verdi process`, the provenance graph, the workflow outputs — is identical either way.
+`submit()` changes *who drives execution and whether your session blocks*, not *what gets recorded*.
+:::
+
 The per-iteration variances are now reachable directly on the workflow's outputs:
 
 ```{code-cell} ipython3
@@ -433,9 +449,9 @@ And finally, the workflow's *real* output: the transition curve PNG produced by 
 
 You now have the core building blocks: tracked external codes, structured data, calcfunctions, and reusable workflows. The remaining modules can be tackled in whatever order matches your needs, since they each pick up an independent thread:
 
-- {ref}`Module 4 <tutorial:module4>`: more advanced workflow patterns (conditionals, dynamic graphs, sub-workflow composition)
-- {ref}`Module 5 <tutorial:module5>`: running on remote HPC clusters
-- {ref}`Module 6 <tutorial:module6>`: querying the database with the `QueryBuilder`
+- {ref}`Module 4 <tutorial:module4>`: running on remote HPC clusters
+- {ref}`Module 5 <tutorial:module5>`: querying the database with the `QueryBuilder`
+- {ref}`Module 6 <tutorial:module6>`: more advanced workflow patterns (conditionals, dynamic graphs, sub-workflow composition)
 - {ref}`Module 7 <tutorial:module7>`: handling failures and recovering from them
 
 ## Further reading
@@ -444,3 +460,5 @@ You now have the core building blocks: tracked external codes, structured data, 
 - CalcJob concept (for `ShellJob` background): {ref}`topics:calculations:concepts:calcjobs`
 - Calcfunctions refresher: {ref}`topics:processes:functions`
 - WorkGraph imperative form (`with WorkGraph() as wg:`) and `spec` helpers: [aiida-workgraph documentation](https://aiida-workgraph.readthedocs.io)
+- Running versus submitting processes: {ref}`topics:processes:usage:launching`
+- The AiiDA daemon (architecture and management): {ref}`topics:daemon`, {ref}`how-to:manage-daemon`

@@ -62,7 +62,7 @@ Development-only checklist. Tracks what each module should teach and current sta
 - [ ] Built-in data types table (Dict, Float, Int, Str, List, ArrayData, XyData, SinglefileData)
 - [ ] Extras subsection (attach arbitrary metadata to nodes for tagging/filtering)
 - [ ] Grouping results (collect sweep runs into an AiiDA Group, `verdi group list/show`)
-- [ ] Benchmark/speed note on result retrieval at scale (QueryBuilder vs file I/O)
+- [ ] Keep Groups + Extras + light QB teaser here, *before* Querying (per 2026-05-12 notes); scale benchmark (QB vs file I/O) moved to Module 5
 
 ---
 
@@ -94,18 +94,7 @@ Development-only checklist. Tracks what each module should teach and current sta
 
 ---
 
-## Module 4: Complex workflows (coming soon)
-
-**Goal:** Conditional logic, nested sub-workflows, dynamic construction.
-
-- [ ] If/While context managers
-- [ ] Nested sub-workflows
-- [ ] Dynamic workflow construction
-- [ ] Error handlers within workflows
-
----
-
-## Module 5: Remote submission (coming soon)
+## Module 4: Remote submission (coming soon)
 
 **Goal:** Run on remote HPC clusters.
 
@@ -113,10 +102,17 @@ Development-only checklist. Tracks what each module should teach and current sta
 - [ ] Setting up a remote Code
 - [ ] Queue management and job scheduling
 - [ ] Monitoring remote jobs (`verdi process list`, `verdi process watch`)
+- [ ] Set up Computer + Code from a real `aiida-resource-registry` CSCS YAML (`include/computer-cscs.yaml`, `include/code-cscs.yaml`) via `verdi computer/code ... --config`
+- [ ] BLOCKER: resource-registry YAMLs carry AiiDAlab metadata that breaks `verdi computer setup --config` in aiida-core (JG has open PR); ship hand-cleaned copies until merged
+- [ ] Mention `aiida-code-registry` vs `aiida-resource-registry` (JG view: should be merged)
+- [ ] Forward-looking only: `verdi computer/code search` endpoint (JG WIP, open PR, unreleased — mention, don't demo)
+- [ ] Also show a typical manual InstalledCode (with prepend/append `module load`)
+- [ ] Mention the three code types: InstalledCode / PortableCode / ContainerizedCode
+- [ ] DECIDE (before implementing): replace invented host with the real `xenonmiddleware/slurm` container (aiida-core CI's own target; configs already in `.github/config/slurm-ssh*.yaml`). Trade-off: requires Docker vs. "keep it simple"; leaning toward optional "run it for real" dropdown
 
 ---
 
-## Module 6: Querying and analysis (coming soon)
+## Module 5: Querying and analysis (coming soon)
 
 **Goal:** Use QueryBuilder for searching and analyzing provenance.
 
@@ -125,6 +121,18 @@ Development-only checklist. Tracks what each module should teach and current sta
 - [ ] Traversing relationships (inputs, outputs, ancestors, descendants)
 - [ ] Aggregation and statistics
 - [ ] Exporting and sharing results (AiiDA archive)
+- [ ] Benchmark/speed: result retrieval at scale, QueryBuilder vs file I/O (per 2026-05-12 notes; only a light teaser in Module 2)
+
+---
+
+## Module 6: Complex workflows (coming soon)
+
+**Goal:** Conditional logic, nested sub-workflows, dynamic construction.
+
+- [ ] If/While context managers
+- [ ] Nested sub-workflows
+- [ ] Dynamic workflow construction
+- [ ] Error handlers within workflows
 
 ---
 
@@ -145,3 +153,4 @@ Development-only checklist. Tracks what each module should teach and current sta
 - [x] Shared include files: `constants.py`, `tasks.py`, `setup_tutorial.py`, `reaction-diffusion.py`
 - [x] Shared plot helpers: `plotting.py` (`plot_provenance`, `plot_transition_curve`, `plot_uv_fields`)
 - [x] Static images: `reaction-diffusion-fields.png`, `reaction-diffusion-fields-2.png`
+- [ ] Compare the new modules against the classic tutorial (`basic.md`); check nothing important was dropped (per 2026-05-12 notes)

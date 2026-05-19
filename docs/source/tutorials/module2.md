@@ -341,7 +341,7 @@ values = sorted(row[0] for row in qb.all())
 print(f'All Float values (sorted): {[round(v, 4) for v in values]}')
 ```
 
-QueryBuilder can also join across the provenance graph: filter `Float` nodes by the calcfunction that created them, by output label, by the workflow they belong to, etc. We'll cover those patterns properly in {ref}`Module 6 <tutorial:module6>`.
+QueryBuilder can also join across the provenance graph: filter `Float` nodes by the calcfunction that created them, by output label, by the workflow they belong to, etc. We'll cover those patterns properly in {ref}`Module 5 <tutorial:module5>`.
 
 ```{code-cell} ipython3
 :tags: ["hide-output"]
@@ -363,4 +363,4 @@ In {ref}`Module 3 <tutorial:module3>`, you'll wrap the pipeline into a **WorkGra
 - In-depth guide to calcfunctions: {ref}`topics:processes:functions`
 - CalcJob reference: {ref}`topics:calculations:concepts:calcjobs`
 - Auto-serialization of plain Python types in calcfunctions: {ref}`topics:calculations:concepts:calcfunctions:automatic-serialization`
-- QueryBuilder (covered properly in {ref}`Module 6 <tutorial:module6>`): {ref}`querying how-to guide <how-to:query>`
+- QueryBuilder (covered properly in {ref}`Module 5 <tutorial:module5>`): {ref}`querying how-to guide <how-to:query>`

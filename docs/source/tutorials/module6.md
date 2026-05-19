@@ -12,15 +12,15 @@ kernelspec:
 ---
 
 (tutorial:module6)=
-# Module 6: Querying and analysis (coming soon)
+# Module 6: Complex workflows (coming soon)
 
 :::{note}
 This module is under development. Planned topics:
 
-- Searching the provenance graph with the QueryBuilder (filter, project, join)
-- Analyzing trends across many runs at scale
-- Organizing calculations and data with Groups
-- Exporting and sharing data as `.aiida` archives
+- Conditional logic with `If` / `While` control-flow zones
+- Nested sub-workflows built from `@task.graph` factories
+- Dynamic workflow construction based on intermediate results
+- Branching patterns for parameter-dependent pipelines
 
 See {ref}`Module 3 <tutorial:module3>` for the latest completed module.
 :::
@@ -31,52 +31,73 @@ See {ref}`Module 3 <tutorial:module3>` for the latest completed module.
 
 After this module, you will be able to:
 
-- Use the QueryBuilder to find, filter, and project data
-- Organize data with Groups
-- Export and share data as `.aiida` archives
+- Diagnose failed calculations using `verdi process report` and `verdi process dump`
+- Inspect failed jobs (exit codes, stderr, output files)
+- Implement error handlers that automatically retry or adjust parameters
+- Build resilient workflows with re-submission strategies
 
-## Finding data with the QueryBuilder
+## What you will not learn yet
 
-### Basic queries: find, filter, project
+You cannot yet run systematic parameter sweeps or analyze trends across many runs.
 
-TODO: introduce QueryBuilder
-TODO: find all CalcJobs, filter by state or input parameters
-TODO: project specific output values (variance_V, mean_V)
+## Inspecting failed calculations
 
-### Combining filters
+### Using `verdi process report`
 
-TODO: filter by multiple criteria (e.g., F value AND successful exit code)
-TODO: show how to extract results into a table
+TODO: run a calculation with parameters that cause exit code 30 (trivial solution)
+TODO: verdi process report <PK> to see the error message
 
-## Organizing data with Groups
+### Using `verdi process dump`
 
-TODO: create a Group
-TODO: add calculations/data to the Group
-TODO: query within a Group
+TODO: verdi process dump <PK> to inspect the full calculation directory
+TODO: examine stderr and output files
 
-## Inspecting and exporting data
+### Reading logs and outputs
 
-### `verdi process dump`
+TODO: verdi calcjob outputcat <PK> to see stdout
+TODO: show how exit codes appear in verdi process list
 
-TODO: dump a calculation's full directory to disk
-TODO: inspect the dumped files
+## Understanding failure modes
 
-### Exporting `.aiida` archives
+TODO: recap exit codes from Module 1 (10, 11, 20, 30)
+TODO: run examples that trigger each failure mode
+TODO: discuss what each failure means and how to respond
 
-Archives include full provenance — not just the data, but how it was produced,
-with which inputs, by which code version.
-A colleague importing your archive can trace every result back to its origin.
+## Implementing error handlers
 
-TODO: export a Group as a portable archive
-TODO: explain how archives enable reproducibility and sharing
+Note: This module shows error handlers using the **WorkGraph** API, where handlers
+are standalone functions attached to tasks.
+The traditional **WorkChain** approach uses a different pattern: handler methods on the
+class, discovered automatically via a `@process_handler` decorator.
+Module 7 covers the WorkChain approach.
+The concepts (matching exit codes, adjusting inputs, retrying) are the same — only
+the registration syntax differs.
+
+### Handler for numerical instability (exit code 20)
+
+TODO: implement handler that catches exit code 20, reduces dt, resubmits
+
+### Handler for trivial solutions (exit code 30)
+
+TODO: implement handler that catches exit code 30, adjusts F, resubmits
+
+### Adding handlers to a workflow
+
+TODO: extend the WorkGraph from Module 3 with error handlers
+TODO: run the workflow with parameters that trigger the handler
+TODO: inspect the workflow to see the retry in the provenance graph
 
 ## Summary
 
 In this module you learned to:
 
-- **Query** the database with the QueryBuilder
-- **Organize** data with Groups
-- **Dump** calculation data to disk
-- **Export** data as `.aiida` archives
+- **Diagnose** failures with `verdi process report` and `verdi process dump`
+- **Inspect** failed jobs' exit codes and output files
+- **Implement** error handlers for automatic recovery
+- **Build** resilient workflows that retry with adjusted parameters
+
+## Next steps
+
+With robust error handling in place, we're ready to scale up.
 
 -->

@@ -12,15 +12,15 @@ kernelspec:
 ---
 
 (tutorial:module5)=
-# Module 5: Remote submission (coming soon)
+# Module 5: Querying and analysis (coming soon)
 
 :::{note}
 This module is under development. Planned topics:
 
-- `submit()` vs `run()` and the AiiDA daemon
-- Setting up remote HPC computers (SSH transport, SLURM/PBS schedulers)
-- Submitting calculations to remote clusters and managing the queue
-- Monitoring and retrieving results
+- Searching the provenance graph with the QueryBuilder (filter, project, join)
+- Analyzing trends across many runs at scale
+- Organizing calculations and data with Groups
+- Exporting and sharing data as `.aiida` archives
 
 See {ref}`Module 3 <tutorial:module3>` for the latest completed module.
 :::
@@ -31,44 +31,52 @@ See {ref}`Module 3 <tutorial:module3>` for the latest completed module.
 
 After this module, you will be able to:
 
-- Understand the difference between `run()` (synchronous) and `submit()` (asynchronous)
-- Start and manage the AiiDA daemon
-- Set up a remote Computer with SSH transport and a job scheduler
-- Submit calculations to remote HPC clusters
-- Monitor running calculations and retrieve results
+- Use the QueryBuilder to find, filter, and project data
+- Organize data with Groups
+- Export and share data as `.aiida` archives
 
-## submit() vs run() and the daemon
+## Finding data with the QueryBuilder
 
-So far, every calculation has been **synchronous** — `launch_shell_job(...)` blocks until
-the calculation finishes. This is fine for quick local runs, but for production use on
-HPC clusters you'll want **asynchronous** execution:
+### Basic queries: find, filter, project
 
-- **`run()`** — blocks until the calculation completes. Simple, but ties up your Python session.
-- **`submit()`** — sends the calculation to the AiiDA **daemon** and returns immediately.
-  The daemon manages the calculation lifecycle in the background.
+TODO: introduce QueryBuilder
+TODO: find all CalcJobs, filter by state or input parameters
+TODO: project specific output values (variance_V, mean_V)
 
-TODO: show submit() example
-TODO: explain daemon start/stop/status
-TODO: verdi daemon start, verdi daemon status
+### Combining filters
 
-## Setting up remote computers
+TODO: filter by multiple criteria (e.g., F value AND successful exit code)
+TODO: show how to extract results into a table
 
-TODO: verdi computer setup with SSH transport and SLURM scheduler
-TODO: verdi computer configure core.ssh
-TODO: verdi computer test
+## Organizing data with Groups
 
-## Submitting to remote clusters
+TODO: create a Group
+TODO: add calculations/data to the Group
+TODO: query within a Group
 
-TODO: submit a calculation to the remote computer
-TODO: monitor with verdi process list
-TODO: retrieve results
+## Inspecting and exporting data
+
+### `verdi process dump`
+
+TODO: dump a calculation's full directory to disk
+TODO: inspect the dumped files
+
+### Exporting `.aiida` archives
+
+Archives include full provenance — not just the data, but how it was produced,
+with which inputs, by which code version.
+A colleague importing your archive can trace every result back to its origin.
+
+TODO: export a Group as a portable archive
+TODO: explain how archives enable reproducibility and sharing
 
 ## Summary
 
 In this module you learned to:
 
-- **Distinguish** `run()` (synchronous) from `submit()` (asynchronous via daemon)
-- **Set up** remote HPC computers
-- **Submit** and monitor calculations on clusters
+- **Query** the database with the QueryBuilder
+- **Organize** data with Groups
+- **Dump** calculation data to disk
+- **Export** data as `.aiida` archives
 
 -->

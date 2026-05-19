@@ -82,6 +82,7 @@ def register_json_contains(dbapi_connection, _):
 def create_sqla_engine(path: Union[str, Path], *, enforce_foreign_keys: bool = True, **kwargs) -> Engine:
     """Create a new engine instance."""
     engine = create_engine(f'sqlite:///{path}', json_serializer=json.dumps, json_deserializer=json.loads, **kwargs)
+
     event.listen(engine, 'connect', sqlite_case_sensitive_like)
     if enforce_foreign_keys:
         event.listen(engine, 'connect', sqlite_enforce_foreign_keys)

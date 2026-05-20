@@ -117,6 +117,11 @@ Adding a new entry point consists of the following steps:
 
 Your new entry point should now show up in ``verdi plugin list aiida.calculations``.
 
+For ``CalcJob`` and ``WorkChain`` plugins, you can also register optional helper classes in the ``aiida.tools.calculations`` and ``aiida.tools.workflows`` entry point groups.
+Use the same entry point name as the corresponding process plugin.
+AiiDA exposes these helper classes on ``CalcJobNode.tools`` and ``WorkChainNode.tools``.
+If no matching tools entry point is registered, these properties fall back to the base ``CalculationTools`` or ``WorkflowTools`` implementation.
+
 .. note::
 
     Taking a package with the name ``aiida-diff`` as example, what does ``pip install aiida-diff`` do?

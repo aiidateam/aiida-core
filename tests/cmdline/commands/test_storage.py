@@ -210,6 +210,7 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch):
     assert ' > full: True' in message_list
     assert ' > do_repack: False' in message_list
     assert ' > dry_run: False' in message_list
+    assert ' > clean_loose_per_pack: True' in message_list
 
 
 def tests_storage_backup(run_cli_command, tmp_path):

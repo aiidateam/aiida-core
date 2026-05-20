@@ -324,9 +324,6 @@ exclude = [
   'tests/'
 ]
 
-[tool.hatch.metadata]
-allow-direct-references = true
-
 [tool.mypy]
 disallow_any_generics = false
 disallow_incomplete_defs = false

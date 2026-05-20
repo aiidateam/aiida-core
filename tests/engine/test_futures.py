@@ -17,7 +17,7 @@ from aiida.manage import get_manager
 from tests.utils import processes as test_processes
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestWf:
     """Test process futures."""
 

@@ -33,7 +33,7 @@ def linearize_namespace(tree_namespace, linear_namespace=None):
     return linear_namespace
 
 
-@pytest.mark.usefixtures('populate_restapi_database')
+@pytest.mark.usefixtures('aiida_profile_clean', 'populate_restapi_database')
 def test_count_consistency(restapi_server, server_url):
     """Test the consistency in values between full_type_count and statistics"""
     server = restapi_server()

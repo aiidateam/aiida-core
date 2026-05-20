@@ -223,7 +223,7 @@ class PotentialFailureWorkChain(WorkChain):
         self.out(self.OUTPUT_LABEL, Int(self.OUTPUT_VALUE).store())
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestExitStatus:
     """This class should test the various ways that one can exit from the outline flow of a WorkChain, other than
     it running it all the way through. Currently this can be done directly in the outline by calling the `return_`
@@ -303,7 +303,7 @@ class IfTest(WorkChain):
         self.ctx.s2 = True
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestContext:
     def test_attributes(self):
         wc = IfTest()
@@ -324,7 +324,7 @@ class TestContext:
             wc.ctx['new_attr']
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestWorkchain:
     @pytest.fixture(autouse=True)
     def init_profile(self):
@@ -1099,7 +1099,7 @@ class TestWorkchain:
         assert node.outputs.out_static == 3
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestWorkChainAbort:
     """Test the functionality to abort a workchain"""
 
@@ -1170,7 +1170,7 @@ class TestWorkChainAbort:
         assert process.node.is_killed is True
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestWorkChainAbortChildren:
     """Test the functionality to abort a workchain and verify that children
     are also aborted appropriately
@@ -1255,7 +1255,7 @@ class TestWorkChainAbortChildren:
         assert process.node.is_killed is True
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestImmutableInputWorkchain:
     """Test that inputs cannot be modified"""
 
@@ -1349,7 +1349,7 @@ class SerializeWorkChain(WorkChain):
         assert self.inputs.test == self.inputs.reference
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestSerializeWorkChain:
     """Test workchains with serialized input / output."""
 
@@ -1467,7 +1467,7 @@ class ChildExposeWorkChain(WorkChain):
         self.out('c', self.inputs.c)
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestWorkChainExpose:
     """Test the expose inputs / outputs functionality"""
 
@@ -1563,7 +1563,7 @@ class TestWorkChainExpose:
         assert input_namespace['b'].help == 'An integer argument.'
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestWorkChainMisc:
     class PointlessWorkChain(WorkChain):
         @classmethod
@@ -1598,7 +1598,7 @@ class TestWorkChainMisc:
             launch.run(TestWorkChainMisc.IllegalSubmitWorkChain)
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestDefaultUniqueness:
     """Test that default inputs of exposed nodes will get unique UUIDS."""
 

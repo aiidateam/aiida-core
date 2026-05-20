@@ -1,4 +1,6 @@
+__pycache__/
 *.pyc
+*.pyo
 *~
 *.swp
 *.project
@@ -13,24 +15,33 @@
 
 /venv*/
 /.idea/
+*.egg
 *.egg-info
 .eggs
 .vscode
+pyrightconfig.json
+stubs/
 .tox
 Pipfile
 
 .aiida
+
+# Linter/type-checker caches
+.mypy_cache/
+.ruff_cache/
 
 # files created by coverage
 .cache
 .pytest_cache
 .coverage
 coverage.xml
+htmlcov/
 
 # Files created by RPN tests
 **/polish_workchains/polish*
 
 # Build files
+build/
 dist/
 pip-wheel-metadata
 
@@ -38,6 +49,10 @@ pip-wheel-metadata
 docs/build
 docs/source/reference/apidoc
 _sandbox
+_build/
+docs/html/
+docs/jupyter_execute/
+sphinx.log
 
 pplot_out/
 

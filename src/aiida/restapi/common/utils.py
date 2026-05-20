@@ -709,8 +709,8 @@ class Utils:
         )
         # Value types
         value_num = ppc.number
-        value_bool = (Literal('true') | Literal('false')).addParseAction(lambda toks: toks[0] == 'true')
-        value_string = QuotedString('"', escQuote='""')
+        value_bool = (Literal('true') | Literal('false')).add_parse_action(lambda toks: toks[0] == 'true')
+        value_string = QuotedString('"', esc_quote='""')
         value_orderby = Combine(Optional(Word('+-', exact=1)) + key)
 
         ## DateTimeShift value. First, compose the atomic values and then
@@ -781,7 +781,7 @@ class Utils:
         ########################################################################
 
         # Convert datetime value to datetime object
-        value_datetime.setParseAction(validate_time)
+        value_datetime.set_parse_action(validate_time)
 
         # More General types
         value = value_string | value_bool | value_datetime | value_num | value_orderby
@@ -803,13 +803,13 @@ class Utils:
 
         ## Parse the query string
         try:
-            fields = general_grammar.parseString(query_string)
+            fields = general_grammar.parse_string(query_string)
 
             # JQuery adds _=timestamp a parameter to not use cached data/response.
             # To handle query, remove this "_" parameter from the query string
             # For more details check issue #789
             # (https://github.com/aiidateam/aiida-core/issues/789) in aiida-core
-            field_list = [entry for entry in fields.asList() if entry[0] != '_']
+            field_list = [entry for entry in fields.as_list() if entry[0] != '_']
 
         except ParseException as err:
             raise RestInputValidationError(

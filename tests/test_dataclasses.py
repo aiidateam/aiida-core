@@ -205,7 +205,7 @@ class TestCifData:
 
     @skip_ase
     @skip_pycifrw
-    @pytest.mark.requires_rmq
+    @pytest.mark.requires_broker
     @pytest.mark.filterwarnings('ignore:Cannot determine chemical composition from CIF:UserWarning:pymatgen.io')
     def test_get_structure(self):
         """Test `CifData.get_structure`."""
@@ -244,7 +244,7 @@ O 0.5 0.5 0.5
 
     @skip_ase
     @skip_pycifrw
-    @pytest.mark.requires_rmq
+    @pytest.mark.requires_broker
     def test_ase_primitive_and_conventional_cells_ase(self):
         """Checking the number of atoms per primitive/conventional cell
         returned by ASE ase.io.read() method. Test input is
@@ -287,7 +287,7 @@ O 0.5 0.5 0.5
     @skip_ase
     @skip_pycifrw
     @skip_pymatgen
-    @pytest.mark.requires_rmq
+    @pytest.mark.requires_broker
     @pytest.mark.filterwarnings('ignore:Cannot determine chemical composition from CIF:UserWarning:pymatgen.io')
     def test_ase_primitive_and_conventional_cells_pymatgen(self):
         """Checking the number of atoms per primitive/conventional cell
@@ -548,7 +548,7 @@ _tag   {'a' * 5000}
     @skip_ase
     @skip_pycifrw
     @skip_spglib
-    @pytest.mark.requires_rmq
+    @pytest.mark.requires_broker
     def test_refine(self):
         """Test case for refinement (space group determination) for a
         CifData object.
@@ -1599,7 +1599,7 @@ class TestStructureData:
 
     @skip_ase
     @skip_pycifrw
-    @pytest.mark.requires_rmq
+    @pytest.mark.requires_broker
     def test_get_cif(self):
         """Tests the conversion to CifData"""
         import re
@@ -2739,10 +2739,17 @@ class TestTrajectoryData:
                 [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, -0.5, -0.5]],
             ]
         )
+        pbc = [True, True, False]
 
         # I set the node
         n.set_trajectory(
-            stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times, velocities=velocities
+            stepids=stepids,
+            cells=cells,
+            symbols=symbols,
+            positions=positions,
+            times=times,
+            velocities=velocities,
+            pbc=pbc,
         )
 
         # Generic checks
@@ -2772,7 +2779,7 @@ class TestTrajectoryData:
 
         ########################################################
         # I set the node, this time without times or velocities (the same node)
-        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions)
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, pbc=pbc)
         # Generic checks
         assert n.numsites == 3
         assert n.numsteps == 2
@@ -2785,7 +2792,7 @@ class TestTrajectoryData:
 
         # Same thing, but for a new node
         n = TrajectoryData()
-        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions)
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, pbc=pbc)
         # Generic checks
         assert n.numsites == 3
         assert n.numsteps == 2
@@ -2798,7 +2805,7 @@ class TestTrajectoryData:
 
         ########################################################
         # I set the node, this time without velocities (the same node)
-        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times)
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times, pbc=pbc)
         # Generic checks
         assert n.numsites == 3
         assert n.numsteps == 2
@@ -2811,7 +2818,7 @@ class TestTrajectoryData:
 
         # Same thing, but for a new node
         n = TrajectoryData()
-        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times)
+        n.set_trajectory(stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times, pbc=pbc)
         # Generic checks
         assert n.numsites == 3
         assert n.numsteps == 2
@@ -2878,7 +2885,7 @@ class TestTrajectoryData:
             # Step 66 does not exist
             n.get_index_from_stepid(66)
 
-    @pytest.mark.requires_rmq
+    @pytest.mark.requires_broker
     def test_conversion_to_structure(self):
         """Check the methods to export a given time step to a StructureData node."""
         # Create a node with two arrays
@@ -2935,10 +2942,17 @@ class TestTrajectoryData:
                 [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, -0.5, -0.5]],
             ]
         )
+        pbc = [True, True, False]
 
         # I set the node
         n.set_trajectory(
-            stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times, velocities=velocities
+            stepids=stepids,
+            cells=cells,
+            symbols=symbols,
+            positions=positions,
+            times=times,
+            velocities=velocities,
+            pbc=pbc,
         )
 
         from_step = n.get_step_structure(1)
@@ -3116,10 +3130,17 @@ class TestTrajectoryData:
                 [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5], [-0.5, -0.5, -0.5]],
             ]
         )
+        pbc = [True, True, False]
 
         # I set the node
         n.set_trajectory(
-            stepids=stepids, cells=cells, symbols=symbols, positions=positions, times=times, velocities=velocities
+            stepids=stepids,
+            cells=cells,
+            symbols=symbols,
+            positions=positions,
+            times=times,
+            velocities=velocities,
+            pbc=pbc,
         )
 
         # It is not obvious how to check that the bands are correct.

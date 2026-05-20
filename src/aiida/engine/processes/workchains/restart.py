@@ -402,10 +402,7 @@ class BaseRestartWorkChain(WorkChain):
 
             self.report(template.format(self.ctx.process_name, node.pk))
 
-            if last_report.exit_code.status != 0:
-                return last_report.exit_code
-
-            if pause_process:
+            if last_report.exit_code.status == 0 and pause_process:
                 self.report(
                     'Resetting the iteration counter(s) and pausing for inspection. You can resume execution using '
                     f'`verdi process play {self.node.pk}`, or kill the work chain using '
@@ -413,8 +410,9 @@ class BaseRestartWorkChain(WorkChain):
                 )
                 self.ctx.iteration = 0
                 self.pause(f"Paused for user inspection, see: 'verdi process report {self.node.pk}'")
+                return None
 
-            return None
+            return last_report.exit_code
 
         # Otherwise the process was successful and no handler returned anything so we consider the work done
         self.ctx.is_finished = True

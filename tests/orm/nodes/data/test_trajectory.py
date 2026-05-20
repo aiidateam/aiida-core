@@ -5,6 +5,7 @@ import pytest
 
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import StructureData, TrajectoryData, load_node
+from aiida.orm.nodes.data.array.trajectory import plot_positions_XYZ
 
 
 @pytest.fixture
@@ -77,6 +78,44 @@ class TestTrajectory:
             positions = 'FAILED_tryexc'
         assert positions == 1
 
+    def test_numsteps_numsites_empty(self):
+        """Test that `numsteps` and `numsites` return zero on an empty trajectory."""
+        trajectory = TrajectoryData()
+        assert trajectory.numsteps == 0
+        assert trajectory.numsites == 0
+
+    def test_internal_validate_symbols_not_sequence(self):
+        """Test that passing a generator (non-Sequence) for symbols raises TypeError."""
+        trajectory = TrajectoryData()
+        positions = np.array([[[0.0, 0.0, 0.0]]])
+        with pytest.raises(TypeError, match='symbols must be of type list'):
+            trajectory.set_trajectory(symbols='H', positions=positions)
+
+    def test_internal_validate_wrong_array_types(self):
+        """Test TypeError is raised when arrays have wrong dtype or are not ndarrays."""
+        trajectory = TrajectoryData()
+        positions = np.array([[[0.0, 0.0, 0.0]]])
+
+        with pytest.raises(TypeError, match='positions must be a numpy array of floats'):
+            trajectory.set_trajectory(symbols=['H'], positions=positions.astype(int))
+
+        with pytest.raises(TypeError, match='stepids must be a numpy array of integers'):
+            trajectory.set_trajectory(symbols=['H'], positions=positions, stepids=np.array([0.0]))
+
+        cells = np.array([[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]])
+        with pytest.raises(TypeError, match='cells must be a numpy array of floats'):
+            trajectory.set_trajectory(
+                symbols=['H'], positions=positions, cells=cells.astype(int), pbc=[True, True, True]
+            )
+
+        times = np.array([0.0])
+        with pytest.raises(TypeError, match='times must be a numpy array of floats'):
+            trajectory.set_trajectory(symbols=['H'], positions=positions, times=times.astype(int))
+
+        velocities = np.array([[[0.0, 0.0, 0.0]]])
+        with pytest.raises(TypeError, match='velocities must be a numpy array of floats'):
+            trajectory.set_trajectory(symbols=['H'], positions=positions, velocities=velocities.astype(int))
+
     def test_units(self):
         """Test the setting of units attributes."""
         tjd = TrajectoryData()
@@ -110,6 +149,8 @@ class TestTrajectory:
         stepid, time, cell, symbols, positions, velocities = trajectory.get_step_data(-2)
         assert stepid == trajectory_data['stepids'][-2]
         assert time == trajectory_data['times'][-2]
+        assert type(stepid) is int
+        assert type(time) is float
         assert np.array_equal(cell, trajectory_data['cells'][-2, :, :])
         assert np.array_equal(symbols, trajectory_data['symbols'])
         assert np.array_equal(trajectory.pbc, trajectory_data['pbc'])
@@ -232,6 +273,15 @@ class TestTrajectory:
             }
         )
         trajectory.set_trajectory(**data)
+        data.update(
+            {
+                'cells': np.array([[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]]),
+                'pbc': [True, False],
+            }
+        )
+        with pytest.raises(ValueError, match='`pbc` must be a list/tuple of length three with boolean values.'):
+            trajectory.set_trajectory(**data)
+
         assert trajectory.get_step_structure(0).pbc == (True, False, False)
 
     def test_trajectory_without_pbc(self, trajectory_data):
@@ -243,3 +293,19 @@ class TestTrajectory:
         assert trajectory.pbc is None
         structure = trajectory.get_step_structure(0)
         assert structure.pbc == (True, True, True)
+
+
+def test_plot_positions_xyz(monkeypatch):
+    """Test that `plot_positions_XYZ` runs."""
+    import matplotlib
+
+    matplotlib.use('Agg')
+    monkeypatch.setattr('matplotlib.pyplot.show', lambda **kwargs: None)
+
+    n_steps, n_atoms = 20, 3
+    times = np.linspace(0, 1, n_steps)
+    positions = np.random.rand(n_steps, n_atoms, 3)
+    colors = [(1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)]
+
+    plot_positions_XYZ(times, positions, indices_to_show=[0, 1, 2], color_list=colors, label='test')
+    plot_positions_XYZ(times, positions, indices_to_show=[0], color_list=colors, label='test', mintime=0.2, maxtime=0.8)

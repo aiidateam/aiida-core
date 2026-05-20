@@ -110,7 +110,10 @@ class TestVerdiSetup:
 
         # Check that the repository UUID was stored in the database
         backend = profile.storage_cls(profile)
-        assert backend.get_global_variable('repository|uuid') == backend.get_repository().uuid
+        try:
+            assert backend.get_global_variable('repository|uuid') == backend.get_repository().uuid
+        finally:
+            backend.close()
 
     def test_quicksetup_default_user(self, tmp_path):
         """Test `verdi quicksetup` and ensure that user details (apart from the email) are optional."""
@@ -280,7 +283,10 @@ repository: {tmp_path}"""
 
         # Check that the repository UUID was stored in the database
         backend = profile.storage_cls(profile)
-        assert backend.get_global_variable('repository|uuid') == backend.get_repository().uuid
+        try:
+            assert backend.get_global_variable('repository|uuid') == backend.get_repository().uuid
+        finally:
+            backend.close()
 
     def test_setup_profile_uuid(self):
         """Test ``verdi setup`` explicitly defining the ``--profile-uuid`` option.

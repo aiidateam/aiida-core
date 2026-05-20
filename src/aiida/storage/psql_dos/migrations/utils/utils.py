@@ -23,7 +23,7 @@ from disk_objectstore import Container
 from disk_objectstore.utils import LazyOpener
 
 from aiida.common import exceptions
-from aiida.repository.backend import AbstractRepositoryBackend
+from aiida.repository.backend.abstract import AbstractRepositoryBackend, InfoDictType
 from aiida.repository.common import File, FileType
 from aiida.repository.repository import Repository
 from aiida.storage.psql_dos.backend import get_filepath_container
@@ -126,7 +126,7 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:
         raise NotImplementedError
 
-    def get_info(self, detailed: bool = False, **kwargs) -> dict:
+    def get_info(self, detailed: bool = False, **kwargs) -> InfoDictType:
         raise NotImplementedError
 
     @contextlib.contextmanager

@@ -8,6 +8,8 @@
 ###########################################################################
 """Tests for the `FolderData` class."""
 
+import warnings
+
 import pytest
 
 from aiida.orm import FolderData
@@ -45,7 +47,7 @@ def test_constructor_tree(tmp_path):
         'erase',
     ),
 )
-def test_api(method, recwarn):
+def test_api(method):
     """Test the direct interface can be called without deprecation warnings.
 
     During the reorganization of the ``Node`` interface, the repository methods were moved to the ``base.repository``
@@ -57,8 +59,10 @@ def test_api(method, recwarn):
     """
     node = FolderData()
 
-    try:
-        getattr(node, method)()
-    except Exception:
-        pass
-    assert len(recwarn) == 0
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always', DeprecationWarning)
+        try:
+            getattr(node, method)()
+        except Exception:
+            pass
+    assert len(caught) == 0

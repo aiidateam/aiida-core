@@ -50,7 +50,7 @@ def storage_version():
         echo.echo_critical(f'Failed to determine the storage version: {exception}')
 
     try:
-        profile.storage_cls(profile)
+        storage = profile.storage_cls(profile)
     except (CorruptStorage, UnreachableStorage) as exception:
         echo.echo_error(f'The storage cannot be reached or is corrupt: {exception}')
         sys.exit(3)
@@ -60,6 +60,8 @@ def storage_version():
             'Run `verdi storage migrate` to migrate the storage.'
         )
         sys.exit(4)
+    else:
+        storage.close()
 
 
 @verdi_storage.command('migrate')

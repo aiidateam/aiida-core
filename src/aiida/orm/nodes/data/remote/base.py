@@ -337,7 +337,7 @@ class RemoteData(Data):
             """Helper function for recursive directory traversal."""
 
             total_size = 0
-            contents = self.listdir_withattributes(full_path)
+            contents = transport.listdir_withattributes(str(full_path))
 
             for item in contents:
                 item_path = full_path / item['name']
@@ -356,6 +356,9 @@ class RemoteData(Data):
         try:
             return _get_size_on_disk_stat_recursive(full_path, transport)
 
-        except OSError:
-            # Not a directory or not existing anymore. Exception is captured outside in `get_size_on_disk`.
-            raise
+        except OSError as exception:
+            msg = (
+                f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
+                'directory or has been deleted.'
+            )
+            raise OSError(msg) from exception

@@ -9,6 +9,7 @@
 # ruff: noqa: N802
 """A module containing the logic for creating joined queries."""
 
+import weakref
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional, Protocol, Type
 
@@ -55,6 +56,8 @@ class _EntityMapper(Protocol):
     @property
     def table_groups_nodes(self) -> Type[Table]: ...
 
+    def build_filters(self, alias: AliasedClass, filter_spec: Dict[str, Any]) -> Optional[ColumnElement[bool]]: ...
+
 
 @dataclass
 class JoinReturn:
@@ -73,11 +76,9 @@ class SqlaJoiner:
     def __init__(
         self,
         entity_mapper: _EntityMapper,
-        filter_builder: Callable[[AliasedClass, FilterType], Optional[ColumnElement[bool]]],
     ):
         """Initialise the class"""
-        self._entities = entity_mapper
-        self._build_filters = filter_builder
+        self._entities = weakref.proxy(entity_mapper)
 
     def get_join_func(self, entity_key: str, relationship: str) -> JoinFuncType:
         """Return the function to join two entities"""
@@ -398,7 +399,7 @@ class SqlaJoiner:
         node1 = aliased(self._entities.Node)
 
         link_filters = link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # follow input / create links
-        in_recursive_filters = self._build_filters(node1, filter_dict)
+        in_recursive_filters = self._entities.build_filters(node1, filter_dict)
         if in_recursive_filters is None:
             filters = link_filters
         else:
@@ -465,7 +466,7 @@ class SqlaJoiner:
         node1 = aliased(self._entities.Node)
 
         link_filters = link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # follow input / create links
-        in_recursive_filters = self._build_filters(node1, filter_dict)
+        in_recursive_filters = self._entities.build_filters(node1, filter_dict)
         if in_recursive_filters is None:
             filters = link_filters
         else:

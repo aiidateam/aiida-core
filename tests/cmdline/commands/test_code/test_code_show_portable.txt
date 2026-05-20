@@ -1,11 +1,12 @@
-PK                          <PK>
-UUID                        <UUID>
-Type                        core.code.portable
-Label                       test_portable_code
-Description                 Test portable code
-Default `CalcJob` plugin    core.arithmetic.add
-Escape using double quotes  False
+PK                            <PK>
+UUID                          <UUID>
+Type                          core.code.portable
+Label                         test_portable_code
+Description                   Test portable code
+Default `CalcJob` plugin      core.arithmetic.add
+Escape using double quotes    False
 Run with MPI
-Prepend script              text to prepend
-Append script               text to append
-Filepath executable         bash
+Wrap command line parameters  False
+Prepend script                text to prepend
+Append script                 text to append
+Filepath executable           bash

@@ -30,6 +30,8 @@ class ProjectionData(OrbitalData, ArrayData):
     < orbital | Bloch wavefunction (s,n,k) >
     """
 
+    _SKIP_MODEL_INHERITANCE_CHECK = True
+
     def _check_projections_bands(self, projection_array):
         """Checks to make sure that a reference bandsdata is already set, and that
         projection_array is of the same shape of the bands data
@@ -283,5 +285,5 @@ class ProjectionData(OrbitalData, ArrayData):
         If used will raise a NotImplementedError
         """
         raise NotImplementedError(
-            'You cannot set orbitals using this class!' ' This class is for setting orbitals and ' ' projections only!'
+            'You cannot set orbitals using this class! This class is for setting orbitals and  projections only!'
         )

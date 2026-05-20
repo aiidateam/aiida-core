@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, BinaryIO, NoReturn, Optional, Tuple, Union, cast
 from zipfile import ZipFile, is_zipfile
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import field_validator
 from sqlalchemy.orm import Session
 
 from aiida import __version__
@@ -34,6 +34,7 @@ from aiida.common.exceptions import (
     StorageMigrationError,
 )
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
@@ -92,10 +93,10 @@ class SqliteZipBackend(StorageBackend):
     read_only = True
     """This plugin is read only and data cannot be created or mutated."""
 
-    class Model(BaseModel, defer_build=True):
+    class CliModel(AiiDABaseModel):
         """Model describing required information to configure an instance of the storage."""
 
-        filepath: str = Field(title='Filepath of the archive', description='Filepath of the archive.')
+        filepath: str = MetadataField(title='Filepath of the archive', description='Filepath of the archive.')
 
         @field_validator('filepath')
         @classmethod

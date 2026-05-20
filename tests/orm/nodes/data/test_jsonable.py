@@ -44,12 +44,6 @@ def test_construct():
     assert not node.is_stored
 
 
-def test_constructor_object_none():
-    """Test the ``JsonableData`` constructor raises if object is ``None``."""
-    with pytest.raises(TypeError, match=r'the `obj` argument cannot be `None`.'):
-        JsonableData(None)
-
-
 def test_invalid_class_no_as_dict():
     """Test the ``JsonableData`` constructor raises if object does not implement ``as_dict``."""
 

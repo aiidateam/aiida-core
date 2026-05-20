@@ -362,5 +362,5 @@ In {ref}`Module 3 <tutorial:module3>`, you'll wrap the pipeline into a **WorkGra
 - Base data types (`Dict`, `Float`, `Int`, `Str`, `List`): {ref}`topics:data_types:core:base`
 - In-depth guide to calcfunctions: {ref}`topics:processes:functions`
 - CalcJob reference: {ref}`topics:calculations:concepts:calcjobs`
-- Auto-serialization of plain Python types in calcfunctions: {ref}`topics:calculations:concepts:calcfunctions:automatic-serialization`
+- Auto-serialization of plain Python types in calcfunctions: {ref}`introduced in v2.1 <topics:calculations:concepts:calcfunctions:automatic-serialization>`
 - QueryBuilder (covered properly in {ref}`Module 5 <tutorial:module5>`): {ref}`querying how-to guide <how-to:query>`

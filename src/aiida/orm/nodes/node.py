@@ -218,7 +218,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     identity_field = 'uuid'
 
-    class BaseNodeModel(OrmModel):
+    class MutableNodeFields(OrmModel):
         label: str = OrmMetadataField(
             '',
             description='The node label',
@@ -236,6 +236,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             may_be_large=True,
             examples=[{'extra_key': 'extra_value'}],
         )
+
+    class BaseNodeModel(MutableNodeFields):
         node_type: str = OrmMetadataField(description='The type of the node.')
 
     class AttributesModel(OrmModel):

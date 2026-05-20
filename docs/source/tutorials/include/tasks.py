@@ -10,8 +10,9 @@ import io
 from typing import Annotated, TypedDict
 
 import yaml
-from aiida import engine, orm
 from aiida_workgraph import dynamic, task
+
+from aiida import engine, orm
 
 
 class ParseOutputs(TypedDict):

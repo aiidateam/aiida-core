@@ -201,7 +201,7 @@ requires-dist = [
     { name = "aiida-core", extras = ["atomic-tools", "rest"], marker = "extra == 'tests'" },
     { name = "aiida-core", extras = ["tests"], marker = "extra == 'pre-commit'" },
     { name = "aiida-export-migration-tests", marker = "extra == 'tests'", specifier = "==0.9.0" },
-    { name = "aiida-shell", marker = "extra == 'tutorials'", specifier = "~=0.8.0" },
+    { name = "aiida-shell", marker = "extra == 'tutorials'", git = "https://github.com/GeigerJ2/aiida-shell.git?rev=fix%2Finstalledcode-model-rename" },
     { name = "aiida-workgraph", marker = "extra == 'tutorials'", git = "https://github.com/GeigerJ2/aiida-workgraph.git?rev=fix%2Fmap-zone-output-retrieval" },
     { name = "alembic", specifier = "~=1.8" },
     { name = "archive-path", specifier = "~=0.4.2" },
@@ -323,14 +323,10 @@ wheels = [
 [[package]]
 name = "aiida-shell"
 version = "0.8.2"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/GeigerJ2/aiida-shell.git?rev=fix%2Finstalledcode-model-rename#b6ead20a20e72069ea3e8c896e02bd05eb87bada" }
 dependencies = [
     { name = "aiida-core" },
     { name = "dill" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/23/f5/4c809364d363f90d4b726eac3df85cc60b75cba69a4837cf808aa68d9fe9/aiida_shell-0.8.2.tar.gz", hash = "sha256:7efd2e67cbabe709585fa9c9aaf455bb7da249f2ef9eed2ae0b048a66737e0fd", size = 1474349, upload-time = "2026-01-14T17:55:49.17Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/9f/d61ba43b01b79881c910b93d8ac05cea741f437541fa7d43d01bd96a1bd2/aiida_shell-0.8.2-py3-none-any.whl", hash = "sha256:59feffa45c17c7de1161651601b566cf599ca0b2ec0177fff8328f28adfec85f", size = 20383, upload-time = "2026-01-14T17:55:47.636Z" },
 ]
 
 [[package]]

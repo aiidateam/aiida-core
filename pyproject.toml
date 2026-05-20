@@ -298,7 +298,7 @@ tui = [
   'trogon'
 ]
 tutorials = [
-  'aiida-shell~=0.8.0',
+  'aiida-shell @ git+https://github.com/GeigerJ2/aiida-shell.git@fix/installedcode-model-rename',
   'aiida-workgraph @ git+https://github.com/GeigerJ2/aiida-workgraph.git@fix/map-zone-output-retrieval'
 ]
 

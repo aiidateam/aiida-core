@@ -323,7 +323,7 @@ wheels = [
 [[package]]
 name = "aiida-shell"
 version = "0.8.2"
-source = { git = "https://github.com/GeigerJ2/aiida-shell.git?rev=fix%2Finstalledcode-model-rename#b6ead20a20e72069ea3e8c896e02bd05eb87bada" }
+source = { git = "https://github.com/GeigerJ2/aiida-shell.git?rev=fix%2Finstalledcode-model-rename#9eee6994b2d457a9190cb30029539b637d2e09cf" }
 dependencies = [
     { name = "aiida-core" },
     { name = "dill" },

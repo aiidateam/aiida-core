@@ -54,7 +54,7 @@ After this module, you will be able to:
 
 ## Running many calculations with `aiida-shell`
 
-In {ref}`Module 1 <tutorial:module1>`, you ran a single simulation through `aiida-shell` and got back `SinglefileData` nodes: the raw input and output files, tracked with provenance.
+In {ref}`Module 1 <tutorial:module1>`, you ran a single `gsrd` simulation through `aiida-shell` and got back `SinglefileData` nodes: the input YAML, the captured stdout, and the `results.npz` file, all tracked with provenance.
 
 Let's start varying our simulation parameters: scan the feed rate `F` and see how the pattern strength (`variance_V`) changes across a range of values.
 
@@ -67,7 +67,7 @@ import yaml
 
 from aiida_shell import launch_shell_job
 
-from include.constants import BASE_PARAMS, F_VALUES, SCRIPT_PATH
+from include.constants import BASE_PARAMS, F_VALUES
 
 work_dir = Path(tempfile.mkdtemp(prefix='aiida_tutorial_m2_'))
 calc_nodes = []
@@ -77,29 +77,28 @@ for f_val in F_VALUES:
     input_path.write_text(yaml.dump(BASE_PARAMS | {'F': f_val}))
 
     results, calc_node = launch_shell_job(
-        python_code,
-        arguments='{script} --input {input} --output results.yaml',
-        nodes={'script': SCRIPT_PATH, 'input': input_path},
-        outputs=['results.yaml'],
+        gsrd_code,
+        arguments='{input}',
+        nodes={'input': input_path},
+        outputs=['results.npz'],
     )
     calc_nodes.append((f_val, calc_node))
 ```
 
-The output of each run is a `SinglefileData` YAML node. To get the `variance_V` numbers for plotting, we open and parse each file:
+We saw in {ref}`Module 1 <tutorial:module1>` that `gsrd` only prints its scalar diagnostics (`variance(V)`, `mean(V)`) to stdout. So to get the numbers for plotting, we have to grep stdout for each run, same regex as before, just inside a `for` loop now:
 
 ```{code-cell} ipython3
-# Extract and print results from each run.
-import yaml
+# Extract and print results from each run by regexing stdout.
+import re
+
+_VARIANCE_RE = re.compile(r'Variance of V field\s*:\s*([\d.eE+-]+)')
 
 sweep_results = []
 
 for f_val, calc_node in calc_nodes:
-    with calc_node.outputs.results_yaml.open(mode='r') as fh:
-        data = yaml.safe_load(fh)
-        sweep_results.append({
-            'F': f_val,
-            'variance_V': data['variance_V'],
-        })
+    text = calc_node.outputs.stdout.get_content()
+    variance_v = float(_VARIANCE_RE.search(text).group(1))
+    sweep_results.append({'F': f_val, 'variance_V': variance_v})
 
 for r in sweep_results:
     print(f"F={r['F']:.3f}  variance(V)={r['variance_V']:.4e}")
@@ -147,10 +146,10 @@ Every simulation is tracked by AiiDA, so we can inspect any of them:
 ```
 
 :::{important}
-Notice what we had to do to get the `variance_V` values: manually open each YAML output file and extract the number.
+Notice what we had to do to get the `variance_V` values: regex each `stdout` node individually, the same hand-written line as in {ref}`Module 1 <tutorial:module1>`, just inside a `for` loop.
 
-The provenance looks like this for each run: **file in → ShellJob → file out**.
-AiiDA knows *that* a result file was produced, but it can't see *what's inside* it, so a query like "all runs where `variance_V > 0.001`" would mean opening every file ourselves.
+The provenance looks like this for each run: **file in → ShellJob → stdout/file out**.
+AiiDA knows *that* a stdout log and a `results.npz` were produced, but it doesn't know *what's inside* them, so a query like "all runs where `variance_V > 0.001`" would mean opening every stdout node and re-running that same regex ourselves.
 :::
 
 ## Structured data nodes
@@ -208,11 +207,14 @@ Inside a `calcfunction`, all parameters are AiiDA data nodes, not plain Python t
 When *calling* the function, AiiDA auto-serializes plain Python types (`int`, `float`, `str`, `bool`, `dict`, `list`) to the corresponding `orm` nodes, so `prepare_input(orm.Dict(params))` and `prepare_input(params)` both work.
 :::
 
-The second, `parse_output`, reads the YAML output file and extracts the scalar results as `Float` nodes. We declare the two return keys as a {class}`~typing.TypedDict` so the function's return type is self-documenting (and so that {ref}`Module 3 <tutorial:module3>` can reuse the same annotation):
+The second, `parse_output`, takes the captured stdout of a `gsrd` run and extracts the two scalar diagnostics as `Float` nodes. We declare the two return keys as a {class}`~typing.TypedDict` so the function's return type is self-documenting (and so that {ref}`Module 3 <tutorial:module3>` can reuse the same annotation):
 
 ```{code-cell} ipython3
-# Define parse_output: a calcfunction that extracts scalars from the YAML results file.
+# Define parse_output: a calcfunction that regexes scalars out of gsrd stdout.
 from typing import TypedDict
+
+_VARIANCE_RE = re.compile(r'Variance of V field\s*:\s*([\d.eE+-]+)')
+_MEAN_RE = re.compile(r'Mean\s+of V field\s*=\s*([\d.eE+-]+)')
 
 
 class ParseOutputs(TypedDict):
@@ -221,15 +223,19 @@ class ParseOutputs(TypedDict):
 
 
 @engine.calcfunction
-def parse_output(output_file: orm.SinglefileData) -> ParseOutputs:
-    """Extract variance_V and mean_V from a SinglefileData YAML results file."""
-    with output_file.open(mode='r') as f:
-        data = yaml.safe_load(f)
-        return {
-            'variance_V': orm.Float(data['variance_V']),
-            'mean_V': orm.Float(data['mean_V']),
-        }
+def parse_output(stdout: orm.SinglefileData) -> ParseOutputs:
+    """Extract variance_V and mean_V from the captured ``gsrd`` stdout log."""
+    with stdout.open(mode='r') as f:
+        text = f.read()
+    return {
+        'variance_V': orm.Float(float(_VARIANCE_RE.search(text).group(1))),
+        'mean_V': orm.Float(float(_MEAN_RE.search(text).group(1))),
+    }
 ```
+
+:::{note}
+This is the small price of wrapping a code that prints headline numbers only to stdout: a custom parser. The win is that the parser itself becomes a tracked AiiDA process &mdash; its inputs (the stdout node) and its outputs (the `Float`s) get linked into the provenance graph, so the regex result lives at the same level as the simulation's other data.
+:::
 
 :::{note}
 A calcfunction can return either a single data node or a plain `dict` mapping string labels to data nodes.
@@ -243,21 +249,21 @@ Now chain them: `prepare_input` → `launch_shell_job` → `parse_output`. Each 
 input_file = prepare_input(orm.Dict(BASE_PARAMS))
 
 results, node = launch_shell_job(
-    python_code,
-    arguments='{script} --input {input} --output results.yaml',
-    nodes={'script': SCRIPT_PATH, 'input': input_file},
-    outputs=['results.yaml'],
+    gsrd_code,
+    arguments='{input}',
+    nodes={'input': input_file},
+    outputs=['results.npz'],
 )
 
-parsed = parse_output(results['results_yaml'])
+parsed = parse_output(results['stdout'])
 print(f"variance(V) = {parsed['variance_V'].value:.4e}")
 print(f"mean(V)     = {parsed['mean_V'].value:.4e}")
 ```
 
-`parse_output` is now itself a first-class process node: the calcjob's YAML output node is its input, and the `Float` nodes are its outputs:
+`parse_output` is now itself a first-class process node: the calcjob's `stdout` node is its input, and the `Float` nodes are its outputs:
 
 ```{code-cell} ipython3
-# parse_output is a tracked process: SinglefileData in, Float nodes out.
+# parse_output is a tracked process: SinglefileData (stdout) in, Float nodes out.
 parse_node = parsed['variance_V'].creator
 %verdi process show {parse_node.pk}
 ```
@@ -289,13 +295,13 @@ for f_val in F_VALUES:
     input_file = prepare_input(BASE_PARAMS | {'F': f_val})
 
     results, calc_node = launch_shell_job(
-        python_code,
-        arguments='{script} --input {input} --output results.yaml',
-        nodes={'script': SCRIPT_PATH, 'input': input_file},
-        outputs=['results.yaml'],
+        gsrd_code,
+        arguments='{input}',
+        nodes={'input': input_file},
+        outputs=['results.npz'],
     )
 
-    parsed = parse_output(results['results_yaml'])
+    parsed = parse_output(results['stdout'])
     enriched_results.append({'F': f_val, 'parsed': parsed})
 ```
 

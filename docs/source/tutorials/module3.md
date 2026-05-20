@@ -102,7 +102,7 @@ from aiida import orm
 
 from aiida_workgraph import Map, WorkGraph, task, shelljob, dynamic, namespace
 
-from include.constants import BASE_PARAMS, F_VALUES, SCRIPT_PATH
+from include.constants import BASE_PARAMS, F_VALUES
 from include.tasks import ParseOutputs, prepare_input, parse_output
 ```
 
@@ -124,12 +124,7 @@ In both cases the plain `task(fn)` form is enough:
 # their plain names.
 prepare_input_task = task(prepare_input)
 parse_output_task = task(parse_output)
-
-# Wrap once so all Map iterations of the sweep share this input node.
-script_node = orm.SinglefileData(SCRIPT_PATH)
 ```
-
-`shelljob` accepts a `Path`, `str`, or pre-wrapped `SinglefileData` in `nodes={...}` and auto-wraps the first two into a `SinglefileData` at execution time. We pre-wrap the script once here so that, when the pipeline is later run many times in a parameter sweep, all those iterations share a single `script` input node instead of producing N near-identical `SinglefileData` nodes in the provenance graph.
 
 :::{note}
 WorkGraph infers output sockets from the function's return annotation. When that's a TypedDict (as above), a dataclass, a Pydantic model, or a single AiiDA data type, plain `task(fn)` is enough. For dynamic-namespace *inputs* (open-ended runtime-keyed dicts), annotate the argument with `Annotated[dict, dynamic(<type>)]`. For *outputs* that mix fixed and dynamic fields, write the return annotation as `namespace(field_a=<type>, field_b=dynamic(<type>))` — we'll use both patterns further down. If WorkGraph can't infer the shape at all (e.g., a function you don't control that returns a plain `dict`), pass an explicit spec via `task(outputs=...)`.
@@ -143,17 +138,16 @@ With the tasks wrapped, we can write the workflow itself: a Python function deco
 def gray_scott_pipeline(
     parameters: orm.Dict,
     command: orm.AbstractCode,
-    script: orm.SinglefileData,
 ) -> ParseOutputs:
     """Prepare input, run simulation, parse output."""
     prepared = prepare_input_task(parameters=parameters)
     simulation = shelljob(
         command=command,
-        arguments=['{script}', '--input', '{input}', '--output', 'results.yaml'],
-        nodes={'script': script, 'input': prepared.result},
-        outputs=['results.yaml'],
+        arguments=['{input}'],
+        nodes={'input': prepared.result},
+        outputs=['results.npz'],
     )
-    parsed = parse_output_task(output_file=simulation.results_yaml)
+    parsed = parse_output_task(stdout=simulation.stdout)
     return {'variance_V': parsed.variance_V, 'mean_V': parsed.mean_V}
 ```
 
@@ -166,16 +160,16 @@ prepared = prepare_input_task(parameters=parameters)
 Adds the `prepare_input` task to the graph. The returned handle's attributes are output sockets, references to future values that don't exist as AiiDA nodes until the graph runs.
 
 ```python
-simulation = shelljob(..., nodes={'script': script, 'input': prepared.result}, ...)
+simulation = shelljob(..., nodes={'input': prepared.result}, ...)
 ```
 
 Adds a `ShellJob` task. `prepared.result` is the default output socket of `prepare_input` (since it returns a single value); passing a socket as one of the `nodes` automatically creates the link `prepared.result` &rarr; `simulation.nodes.input` in the graph.
 
 ```python
-parsed = parse_output_task(output_file=simulation.results_yaml)
+parsed = parse_output_task(stdout=simulation.stdout)
 ```
 
-Adds the `parse_output` task. `simulation.results_yaml` is the ShellJob's output socket for the `results.yaml` file we declared in `outputs=`.
+Adds the `parse_output` task. `simulation.stdout` is the ShellJob's auto-captured stdout socket; that is where `gsrd` prints the headline scalars our parser regexes out.
 
 ```python
 return {'variance_V': parsed.variance_V, 'mean_V': parsed.mean_V}
@@ -188,8 +182,7 @@ Before running anything, it helps to convince yourself that the function body ab
 ```{code-cell} ipython3
 wg_preview = gray_scott_pipeline.build(
     parameters=orm.Dict(BASE_PARAMS),
-    command=python_code,
-    script=script_node,
+    command=gsrd_code,
 )
 
 print('Graph inputs (bound from .build()):')
@@ -211,7 +204,7 @@ for t in wg_preview.tasks:
 Three things to notice:
 
 - The **return type annotation** `-> ParseOutputs` is what makes `variance_V` and `mean_V` appear as graph outputs. WorkGraph reads the TypedDict's keys and turns them into named output sockets.
-- Task inputs accept **both plain Python values and sockets**. Above we passed `parameters` (an input socket), `script` (a real `SinglefileData` node), and `input_file` (a socket from `prepare_input_task`). WorkGraph treats them uniformly and creates links wherever a socket is passed.
+- Task inputs accept **both plain Python values and sockets**. Above we passed `parameters` (an input socket), `command` (a real `InstalledCode` node), and `input` (a socket from `prepare_input_task`). WorkGraph treats them uniformly and creates links wherever a socket is passed.
 - The first three tasks (`graph_inputs`, `graph_outputs`, `graph_ctx`) are **built-ins** WorkGraph adds to every graph: the first two expose the graph's own I/O as pseudo-tasks so links into/out of the graph look like ordinary task-to-task links; `graph_ctx` is a shared key-value store (the WorkGraph analogue of the WorkChain `ctx`), reachable via `wg.ctx.foo = ...`/`wg.ctx.foo`.
 
 `gray_scott_pipeline` is now a **factory**: call `.build(...)` to get a standalone `WorkGraph` you can `run()` or `submit()` directly, or call it inside a parent graph to embed it as a sub-task. For now, let's exercise the standalone form: build the workflow with a single set of parameters and run it.
@@ -220,8 +213,7 @@ Three things to notice:
 
 wg = gray_scott_pipeline.build(
     parameters=orm.Dict(BASE_PARAMS),
-    command=python_code,
-    script=script_node,
+    command=gsrd_code,
 )
 wg.run()
 
@@ -296,7 +288,7 @@ Conceptually, a `Map` zone does three things:
 To close the loop, we add a final **reduction step** to the workflow: a calcfunction `make_transition_plot` ({download}`include/tasks.py`) that takes the gathered `variance_V` `Float` nodes and renders a transition curve as a `SinglefileData` PNG. The workflow's primary output is then that single artifact: the per-iteration variances "fork out" via `Map`, and the plotting task "joins" them back together.
 
 :::{tip}
-The sweep is wrapped as a `@task.graph()` with three inputs: `param_sweep`, the `Code` to run on, and the simulation `script`. The blueprint is parameter-agnostic: change the contents of `param_sweep` and you can scan a different parameter (or several at once) without touching the workflow.
+The sweep is wrapped as a `@task.graph()` with two inputs: `param_sweep` and the `Code` to run on. The blueprint is parameter-agnostic: change the contents of `param_sweep` and you can scan a different parameter (or several at once) without touching the workflow.
 :::
 
 ```{code-cell} ipython3
@@ -309,7 +301,6 @@ from include.tasks import make_transition_plot
 def gray_scott_sweep(
     param_sweep: Annotated[dict, dynamic(dict)],
     command: orm.AbstractCode,
-    script: orm.SinglefileData,
 ) -> namespace(
     summary_plot=orm.SinglefileData,
     variance_V=dynamic(float),
@@ -320,7 +311,6 @@ def gray_scott_sweep(
         result = gray_scott_pipeline(
             parameters=map_zone.item.value,
             command=command,
-            script=script,
         )
         map_zone.gather({
             'variance_V': result.variance_V,
@@ -371,8 +361,7 @@ Now `.build(...)` with concrete inputs and `.run()` to actually launch the sweep
 
 wg_sweep = gray_scott_sweep.build(
     param_sweep=param_sweep,
-    command=python_code,
-    script=script_node,
+    command=gsrd_code,
 )
 wg_sweep.run()
 ```
@@ -384,7 +373,7 @@ That is fine for a tutorial, but wasteful for real work: the iterations are inde
 The production alternative is `.submit()`. It hands the whole workflow to the AiiDA **daemon** and returns immediately, freeing your session while the daemon drives the iterations in the background:
 
 ```python
-wg_sweep = gray_scott_sweep.build(param_sweep=param_sweep, command=python_code, script=script_node)
+wg_sweep = gray_scott_sweep.build(param_sweep=param_sweep, command=gsrd_code)
 wg_sweep.submit()  # returns at once; the daemon runs the sweep in the background
 ```
 

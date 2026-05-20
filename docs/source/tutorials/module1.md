@@ -91,13 +91,13 @@ We use IPython magic commands like `%verdi <cmd>` in Code cells (`%verdi` runs a
 
 ## Running the simulation with `aiida-shell`
 
-In {ref}`Module 0 <tutorial:module0>`, we ran the simulation directly from the command line.
+In {ref}`Module 0 <tutorial:module0>`, we ran `gsrd` directly from the command line.
 Now let's run it through AiiDA, so the inputs, outputs, and execution metadata get captured in the provenance graph.
 
 AiiDA uses the **{ref}`CalcJob <topics:calculations:concepts:calcjobs>`** class to manage external executables by preparing input files, executing the code (locally or on a remote cluster), retrieving output files, and optionally parsing the results.
 
 The fastest way to run a CalcJob is with [`aiida-shell`](https://aiida-shell.readthedocs.io), which wraps any shell command without requiring additional plugin code.
-Below, we use its `launch_shell_job` helper with the same input file as in {ref}`Module 0 <tutorial:module0>` and a pre-registered `python_code` object (an `InstalledCode` pointing at the current Python interpreter, set up by the hidden cell above, see {download}`include/setup_tutorial.py`):
+Below, we use its `launch_shell_job` helper with the same input file as in {ref}`Module 0 <tutorial:module0>` and a pre-registered `gsrd_code` object (an `InstalledCode` pointing at the `gsrd` CLI binary, set up by the hidden cell above, see {download}`include/setup_tutorial.py`):
 
 ```{code-cell} ipython3
 # Run the simulation through AiiDA using aiida-shell's launch_shell_job.
@@ -105,20 +105,17 @@ from pathlib import Path
 
 from aiida_shell import launch_shell_job
 
-from include.constants import SCRIPT_PATH
-
 input_path = Path('include/input.yaml').resolve()
 
 results, node = launch_shell_job(
-    python_code,
-    arguments='{script} --input {input} --output results.yaml',
-    nodes={'script': SCRIPT_PATH, 'input': input_path},
-    outputs=['results.yaml'],
+    gsrd_code,
+    arguments='{input}',
+    nodes={'input': input_path},
+    outputs=['results.npz'],
 )
 
 print(f"Process PK: {node.pk}")
 print(f"Exit status: {node.exit_status}")
-print(f"Stdout: {results['stdout'].get_content()}")
 ```
 
 ### What just happened?
@@ -204,13 +201,13 @@ for label, output_node in sorted(results.items()):
 ```
 
 :::{note}
-The output label `results_yaml` corresponds to the file we declared as `results.yaml` in the `outputs=` argument to `launch_shell_job`. AiiDA replaces dots with underscores because link labels must be valid Python identifiers.
+The output label `results_npz` corresponds to the file we declared as `results.npz` in the `outputs=` argument to `launch_shell_job`. AiiDA replaces dots with underscores because link labels must be valid Python identifiers.
 :::
 
 Each output plays a different role:
 
-- `results_yaml`: the main output file we declared via `outputs=`.
-- `stdout` / `stderr`: the captured standard streams of the script.
+- `results_npz`: the main output file we declared via `outputs=`.
+- `stdout` / `stderr`: the captured standard streams of the `gsrd` invocation.
 - `retrieved`: a `FolderData` containing everything AiiDA fetched back from the working directory.
 - `remote_folder`: a `RemoteData` pointing to the working directory on the Computer where the job ran (typically a remote HPC):
 
@@ -223,20 +220,30 @@ print(f"Remote folder: {node.outputs.remote_folder.get_remote_path()}")
 From the command line, `verdi calcjob gotocomputer <PK>` SSHes into the Computer and drops you directly into that working directory.
 :::
 
-The YAML results file itself is a `SinglefileData` node.
-We can open it and extract the scalar results from our simulation:
+Now to the actual numbers. Recall from {ref}`Module 0 <tutorial:module0>` that `gsrd` splits its output across two places: the arrays go into `results.npz`, but the scalar diagnostics (`variance(V)`, `mean(V)`) appear *only* on stdout.
+Both are now tracked by AiiDA: the binary file is a {py:class}`~aiida.orm.SinglefileData` node, and `stdout` is a captured-text node we can open just like any other:
 
 ```{code-cell} ipython3
-# Open the YAML output node and extract scalar results.
-import yaml
+# Pull the final V field out of the .npz, and grep the scalars out of stdout.
+import io
+import re
 
-result_file = node.outputs.results_yaml
+import numpy as np
 
-with result_file.open(mode='r') as f:
-    data = yaml.safe_load(f)
-    print(f"variance(V) = {data['variance_V']:.4e}")
-    print(f"mean(V)     = {data['mean_V']:.4e}")
+with node.outputs.results_npz.open(mode='rb') as fh:
+    arrays = np.load(io.BytesIO(fh.read()))
+    v_field = arrays['V_final']
+
+print(f"V field shape: {v_field.shape}")
+
+stdout_text = node.outputs.stdout.get_content()
+var_v = float(re.search(r'Variance of V field\s*:\s*([\d.eE+-]+)', stdout_text).group(1))
+mean_v = float(re.search(r'Mean\s+of V field\s*=\s*([\d.eE+-]+)', stdout_text).group(1))
+print(f"variance(V) = {var_v:.4e}")
+print(f"mean(V)     = {mean_v:.4e}")
 ```
+
+That regex is the price of admission for a code that prints its headline scalars only to stdout. We did exactly the same thing manually in {ref}`Module 0 <tutorial:module0>`; the difference now is that the stdout text, the regex result, and the input that produced them all live as tracked nodes in the provenance graph. {ref}`Module 2 <tutorial:module2>` turns this hand-written extraction into a proper {func}`@calcfunction <aiida.engine.processes.functions.calcfunction>`, so it becomes a first-class step in the pipeline.
 
 <!-- TODO: Add `verdi shell` subsection — interactive exploration of the database
      (load nodes, inspect attributes, follow links). From meeting notes. -->
@@ -271,7 +278,7 @@ This is useful for debugging or sharing calculation data outside of AiiDA.
 ## Next steps
 
 You can now run external codes through AiiDA with full provenance tracking.
-In {ref}`Module 2 <tutorial:module2>`, the result values from each simulation become individual database entries, searchable across runs without opening any output file.
+In {ref}`Module 2 <tutorial:module2>`, the regex we just wrote by hand turns into a tracked parsing step: the scalar results from each simulation become individual database entries, searchable across runs without opening any output file.
 The Python that prepares inputs and parses outputs gets tracked as part of the same provenance.
 
 ## Further reading

@@ -16,9 +16,11 @@ Development-only checklist. Tracks what each module should teach and current sta
 - [x] Dropdown with model details (Gray-Scott name, U/V, F/k parameters)
 - [x] Run the simulation via CLI, inspect YAML output
 - [x] Run with different parameters (F=0.055), show different pattern (static image)
-- [x] Show a failure (F=0.1, exit code 30, no output file)
+- [x] Show a failure (F=0.1, gsrd writes `ERR:` to stderr, always exits 0, no `results.npz`)
 - [x] "What's missing?" section motivating AiiDA (no provenance, no record of failures, no versioning)
-- [ ] Consider packaging simulation as a CLI tool (`gsrd`) instead of a raw Python script (deferred)
+- [x] Surface gsrd-specific pain points (stdout-only scalars, hardcoded `results.npz`, banner noise, uninformative exit codes)
+- [x] Frame AiiDA as "makes researchers' lives easier when dealing with scientific software", not just "high-throughput"
+- [x] Switch tutorial code from raw `reaction-diffusion.py` to the `gsrd` package (https://github.com/aiidateam/gsrd)
 
 ---
 
@@ -150,7 +152,7 @@ Development-only checklist. Tracks what each module should teach and current sta
 ## Cross-cutting concerns (not module-specific)
 
 - [ ] Teaser page (AiiDA in Action demo, currently commented out in index)
-- [x] Shared include files: `constants.py`, `tasks.py`, `setup_tutorial.py`, `reaction-diffusion.py`
+- [x] Shared include files: `constants.py`, `tasks.py`, `setup_tutorial.py` (custom `reaction-diffusion.py` replaced by the `gsrd` package, a docs dep in `pyproject.toml` `[project.optional-dependencies.tutorials]`)
 - [x] Shared plot helpers: `plotting.py` (`plot_provenance`, `plot_transition_curve`, `plot_uv_fields`)
 - [x] Static images: `reaction-diffusion-fields.png`, `reaction-diffusion-fields-2.png`
 - [ ] Compare the new modules against the classic tutorial (`basic.md`); check nothing important was dropped (per 2026-05-12 notes)

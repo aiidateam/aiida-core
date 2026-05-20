@@ -7,12 +7,16 @@ curve as a ``SinglefileData`` PNG.
 """
 
 import io
+import re
 from typing import Annotated, TypedDict
 
 import yaml
 from aiida_workgraph import dynamic, task
 
 from aiida import engine, orm
+
+_VARIANCE_RE = re.compile(r'Variance of V field\s*:\s*([\d.eE+-]+)')
+_MEAN_RE = re.compile(r'Mean\s+of V field\s*=\s*([\d.eE+-]+)')
 
 
 class ParseOutputs(TypedDict):
@@ -30,14 +34,24 @@ def prepare_input(parameters: orm.Dict) -> orm.SinglefileData:
 
 
 @engine.calcfunction
-def parse_output(output_file: orm.SinglefileData) -> ParseOutputs:
-    """Extract variance_V and mean_V from a SinglefileData YAML results file."""
-    with output_file.open(mode='r') as f:
-        data = yaml.safe_load(f)
-        return {
-            'variance_V': orm.Float(data['variance_V']),
-            'mean_V': orm.Float(data['mean_V']),
-        }
+def parse_output(stdout: orm.SinglefileData) -> ParseOutputs:
+    """Extract variance_V and mean_V scalars from the ``gsrd`` stdout log.
+
+    :param stdout: captured stdout of a ``gsrd`` run (as produced by
+        ``aiida-shell``). ``gsrd`` prints the headline diagnostics only to
+        stdout, so we recover them with a simple regex.
+    """
+    with stdout.open(mode='r') as f:
+        text = f.read()
+    variance_match = _VARIANCE_RE.search(text)
+    mean_match = _MEAN_RE.search(text)
+    if variance_match is None or mean_match is None:
+        msg = "gsrd stdout did not contain 'Variance of V field' / 'Mean of V field' diagnostics"
+        raise ValueError(msg)
+    return {
+        'variance_V': orm.Float(float(variance_match.group(1))),
+        'mean_V': orm.Float(float(mean_match.group(1))),
+    }
 
 
 @task()

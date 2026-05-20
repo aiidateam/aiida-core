@@ -6,7 +6,7 @@ Creates (or loads) a lightweight ``tutorial`` profile with:
 * ZMQ message broker (no external broker service required)
 * A running daemon (so asynchronous submission works in later modules)
 * A ``localhost`` Computer with local transport and direct scheduler
-* A ``python3@localhost`` Code pointing to the current Python interpreter
+* A ``gsrd@localhost`` Code pointing to the ``gsrd`` CLI binary
 
 The broker and daemon configuration matches what ``verdi presto`` sets up
 on a fresh machine, so ``verdi status`` in the tutorial mirrors what users
@@ -25,7 +25,7 @@ replace the ``%run -i`` cell with::
 import hashlib
 import os
 import pathlib
-import sys
+import shutil
 import time
 
 from aiida import load_profile
@@ -93,14 +93,24 @@ except NotExistent:
     computer.set_minimum_job_poll_interval(1)
     computer.set_default_mpiprocs_per_machine(1)
 
-# Pre-register a Code with a short label so that ``verdi process list``
-# shows "python3@localhost" instead of the full virtualenv path.
+# Pre-register a Code pointing at the ``gsrd`` CLI binary installed in the
+# active environment. ``gsrd`` is the small Gray-Scott reaction-diffusion
+# simulator used throughout this tutorial; see https://github.com/aiidateam/gsrd.
+_gsrd_executable = shutil.which('gsrd')
+if _gsrd_executable is None:
+    msg = (
+        "Could not find the 'gsrd' executable in PATH. "
+        'Install it with `pip install gsrd @ git+https://github.com/aiidateam/gsrd.git` '
+        'before running the tutorial.'
+    )
+    raise RuntimeError(msg)
+
 try:
-    python_code = load_code('python3@localhost')
+    gsrd_code = load_code('gsrd@localhost')
 except NotExistent:
-    python_code = InstalledCode(
-        label='python3',
+    gsrd_code = InstalledCode(
+        label='gsrd',
         computer=computer,
-        filepath_executable=sys.executable,
+        filepath_executable=_gsrd_executable,
         default_calc_job_plugin='core.shell',
     ).store()

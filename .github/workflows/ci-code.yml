@@ -88,7 +88,7 @@ jobs:
       if: matrix.python-version == '3.14'
       uses: actions/upload-artifact@v7
       with:
-        name: coverage
+        name: coverage-${{ matrix.broker-backend }}
         include-hidden-files: true
         path: |
           coverage.xml

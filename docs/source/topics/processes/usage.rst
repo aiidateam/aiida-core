@@ -494,6 +494,102 @@ The process can be launched by passing the builder to any of the free functions 
 Note that the process builder is in principle designed to be used in an interactive shell, as there is where the tab-completion and automatic input documentation really shines.
 However, it is perfectly possible to use the same builder in scripts where you simply use it as an input container, instead of a plain python dictionary.
 
+.. _topics:processes:usage:builder:get_schema:
+
+Inspecting the input schema
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+For complex processes with many nested inputs, tab completion alone may not give a full picture of the input structure.
+The :py:meth:`~aiida.engine.processes.builder.ProcessBuilderNamespace.get_schema` method returns a YAML-formatted overview of all available inputs:
+
+.. code-block:: ipython
+
+    In [1]: builder = ArithmeticAddCalculation.get_builder()
+
+    In [2]: print(builder.get_schema())
+    metadata: '{...}'
+    code: AbstractCode
+    monitors: Namespace(Dict)
+    remote_folder: RemoteData
+    x: Int | Float (required)
+    y: Int | Float (required)
+
+By default, the ``metadata`` namespace is collapsed.
+To expand it, pass ``collapse=()``:
+
+.. code-block:: ipython
+
+    In [3]: print(builder.get_schema(collapse=()))
+
+To show only required inputs:
+
+.. code-block:: ipython
+
+    In [4]: print(builder.get_schema(show='required'))
+    x: Int | Float (required)
+    y: Int | Float (required)
+
+To see which inputs have already been set on the builder:
+
+.. code-block:: ipython
+
+    In [5]: builder.x = Int(1)
+
+    In [6]: print(builder.get_schema(show='set'))
+    x: 1
+
+For detailed metadata including help text, use verbose mode:
+
+.. code-block:: ipython
+
+    In [7]: print(builder.get_schema(mode='verbose', collapse=()))
+    metadata:
+      store_provenance:
+        type: bool
+        help: If set to `False` provenance will not be stored in the database.
+        has_default: true
+      ...
+    code:
+      type: AbstractCode
+      help: The `Code` to use for this job. ...
+    monitors:
+      type: Namespace
+      entry_type: Dict
+      help: Add monitoring functions that can inspect output files ...
+    x:
+      type: Int | Float
+      help: The left operand.
+      required: true
+    y:
+      type: Int | Float
+      help: The right operand.
+      required: true
+
+The method also works on nested namespaces:
+
+.. code-block:: ipython
+
+    In [8]: print(builder.metadata.get_schema(collapse=()))
+    store_provenance: bool
+    description: str
+    label: str
+    call_link_label: str
+    disable_cache: bool
+    dry_run: bool
+    computer: Computer
+    options:
+      input_filename: str
+      output_filename: str
+      ...
+      resources: dict (required)
+      ...
+
+The full set of parameters:
+
+- ``mode``: ``'compact'`` (default) shows types inline, ``'verbose'`` includes help text and metadata.
+- ``show``: ``'all'`` (default), ``'required'`` for required inputs only, ``'set'`` for inputs that have been set.
+- ``collapse``: Tuple of namespace names to collapse to ``{...}``. Default: ``('metadata',)``. Use ``()`` to expand everything.
+- ``max_depth``: Maximum nesting depth to display. ``None`` (default) means unlimited.
+
 
 .. _topics:processes:usage:monitoring:
 

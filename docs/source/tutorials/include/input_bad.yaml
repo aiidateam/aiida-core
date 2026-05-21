@@ -1,0 +1,8 @@
+F: 0.1
+k: 0.065
+du: 0.16
+dv: 0.08
+dt: 1.0
+grid_size: 64
+n_steps: 3000
+seed: 42

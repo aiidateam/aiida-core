@@ -177,6 +177,36 @@ class _TestOpenSSH(_OpenSSH):
     def __init__(self):
         self.machine = 'localhost'
         self.bash_command = 'bash -c '
+        self.logger = MagicMock()
+
+
+class TestOpenSSHPathExists:
+    """Tests for `_OpenSSH.path_exists` handling of stderr and return codes."""
+
+    @pytest.mark.parametrize(
+        'returncode, expected',
+        [
+            (0, True),
+            (1, False),
+        ],
+    )
+    def test_path_exists_ignores_stderr_for_expected_return_codes(self, returncode, expected):
+        backend = _TestOpenSSH()
+        backend.openssh_execute = AsyncMock(return_value=(returncode, '', "Warning: host key added to known hosts"))
+
+        assert asyncio.run(backend.path_exists('/remote/path')) is expected
+        backend.logger.debug.assert_called_once_with(
+            'Stderr from `test -e /remote/path`: Warning: host key added to known hosts'
+        )
+
+    def test_path_exists_raises_for_unexpected_return_codes(self):
+        backend = _TestOpenSSH()
+        backend.openssh_execute = AsyncMock(return_value=(2, '', 'some actual ssh failure'))
+
+        with pytest.raises(OSError, match='Failed to check whether path exists: /remote/path'):
+            asyncio.run(backend.path_exists('/remote/path'))
+
+        backend.logger.debug.assert_called_once_with('Stderr from `test -e /remote/path`: some actual ssh failure')
 
 
 class TestSshCommandGenerator:

@@ -444,6 +444,7 @@ Alternatively to the CLI command, one can also manually create a backup. This re
     This will optimize the storage which can significantly reduce the time required to create the backup.
     For optimal results, run ``verdi storage maintain --full``.
     Note that this requires the profile to not be in use by any other process.
+    During maintenance, ``loose`` files are removed ``pack``-by-``pack`` so peak disk usage stays close to the initial size; pass ``--no-incremental-cleanup`` to defer cleanup until after all ``packs`` are written (at the cost of temporarily needing roughly double the disk space).
 
 .. tab-set::
 

@@ -231,7 +231,20 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         super().__init__(machine, logger, bash_command)
 
     async def open(self):
-        self._conn = await asyncssh.connect(self.machine)
+        # asyncssh reads ~/.ssh/config and resolves ``known_hosts`` from the
+        # ``UserKnownHostsFile`` directive.  When the config says
+        # ``UserKnownHostsFile /dev/null`` (common with ``StrictHostKeyChecking
+        # no``), asyncssh resolves this to an empty list ``[]``.  An empty list
+        # means "verify against nothing", which always fails with
+        # ``HostKeyNotVerifiable``.  Passing ``known_hosts=None`` instead tells
+        # asyncssh to skip host-key verification entirely, which is the
+        # behaviour the user intended with ``StrictHostKeyChecking no``.
+        opts = asyncssh.SSHClientConnectionOptions(host=self.machine)
+        connect_kwargs: dict = {}
+        if opts.known_hosts is not None and not opts.known_hosts:
+            connect_kwargs['known_hosts'] = None
+
+        self._conn = await asyncssh.connect(self.machine, **connect_kwargs)
         self._sftp = await self._conn.start_sftp_client()
 
     async def close(self):

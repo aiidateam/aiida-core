@@ -539,7 +539,9 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
     monkeypatch.setattr(
         request,
         'urlopen',
-        lambda *args, **kwargs: config_file_template.format(label=label, computer=aiida_localhost.label),
+        lambda *args, **kwargs: io.BytesIO(
+            config_file_template.format(label=label, computer=aiida_localhost.label).encode('utf-8')
+        ),
     )
 
     config_file_template = textwrap.dedent(

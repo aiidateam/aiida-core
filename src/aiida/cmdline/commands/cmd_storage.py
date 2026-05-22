@@ -155,14 +155,19 @@ def storage_info(detailed):
     '--compress', is_flag=True, default=False, help='Use compression if possible when carrying out maintenance tasks.'
 )
 @click.option(
-    '--clean-loose-per-pack/--no-clean-loose-per-pack',
+    '--incremental-cleanup/--no-incremental-cleanup',
     is_flag=True,
     default=True,
-    help='Delete corresponding loose files immediately after each pack creation when running a `full maintenance`.',
+    help=(
+        'Remove `loose` files after each `pack` is written during ``verdi storage maintain``, '
+        'keeping peak disk usage close to the initial size. [default: enabled]  '
+        'Use ``--no-incremental-cleanup`` for stronger crash-safety at the cost of temporarily '
+        'needing roughly double the disk space.'
+    ),
 )
 @decorators.with_dbenv()
 @click.pass_context
-def storage_maintain(ctx, full, no_repack, force, dry_run, compress, clean_loose_per_pack):
+def storage_maintain(ctx, full, no_repack, force, dry_run, compress, incremental_cleanup):
     """Performs maintenance tasks on the repository."""
     from aiida.common.exceptions import LockingProfileError
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
@@ -211,10 +216,10 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress, clean_loose
                 dry_run=dry_run,
                 do_repack=False,
                 compress=compress,
-                clean_loose_per_pack=clean_loose_per_pack,
+                incremental_cleanup=incremental_cleanup,
             )
         else:
-            storage.maintain(full=full, dry_run=dry_run, compress=compress, clean_loose_per_pack=clean_loose_per_pack)
+            storage.maintain(full=full, dry_run=dry_run, compress=compress, incremental_cleanup=incremental_cleanup)
     except LockingProfileError as exception:
         echo.echo_critical(str(exception))
     echo.echo_success('Requested maintenance procedures finished.')

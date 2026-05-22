@@ -125,6 +125,26 @@ The computer has now been created in the database but you still need to *configu
 
     Note: remove the ``--`` prefix and replace dashes (``-``) within the keys with an underscore ( ``_`` ).
 
+.. tip::
+
+    You can also use configuration files from the `AiiDA resource registry <https://github.com/aiidateam/aiida-resource-registry>`_ directly.
+    These files may contain `Jinja2 <https://jinja.palletsprojects.com/>`_ template placeholders (e.g. ``{{ slurm_account }}``) and a ``metadata`` section that describes each placeholder.
+    Both are handled transparently by ``--config``: in interactive mode, you will be prompted for each placeholder value; in non-interactive mode, provide them via ``--template-vars``:
+
+    .. code-block:: console
+
+        $ verdi computer setup --config https://raw.githubusercontent.com/aiidateam/aiida-resource-registry/main/eiger.cscs.ch/mc/computer-setup.yml
+
+    or non-interactively:
+
+    .. code-block:: console
+
+        $ verdi computer setup -n \
+            --config https://raw.githubusercontent.com/aiidateam/aiida-resource-registry/main/eiger.cscs.ch/mc/computer-setup.yml \
+            --template-vars '{"label": "eiger-mc", "slurm_partition": "normal", "slurm_account": "my_project", "multithreading": "nomultithread"}'
+
+    The ``metadata`` section is automatically stripped and never passed to the command.
+
 .. _how-to:run-codes:computer:configuration:
 
 Computer connection configuration
@@ -346,6 +366,18 @@ At the end, you receive a confirmation, with the *PK* and the *UUID* of your new
         $ verdi code create core.code.installed --help
 
     Note: remove the ``--`` prefix and replace dashes (``-``) within the keys with an underscore ( ``_`` ).
+
+.. tip::
+
+    Configuration files from the `AiiDA resource registry <https://github.com/aiidateam/aiida-resource-registry>`_ can be used directly, including those with Jinja2 template placeholders (see the :ref:`computer setup section <how-to:run-codes:computer>` for details).
+    For example:
+
+    .. code-block:: console
+
+        $ verdi code create core.code.installed -n \
+            --config https://raw.githubusercontent.com/aiidateam/aiida-resource-registry/main/merlin7.psi.ch/cpu/codes/QuantumESPRESSO-7.4.yml \
+            --template-vars '{"code_binary_name": "pw"}' \
+            --computer merlin7-cpu
 
 
 .. note::

@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import json
 import pathlib
 import typing as t
 
@@ -22,7 +23,7 @@ from aiida.manage.external.postgres import DEFAULT_DBINFO  # type: ignore[attr-d
 from ...utils import defaults, echo
 from .. import types
 from .callable import CallableDefaultOption
-from .config import ConfigFileOption
+from .config import TemplateAwareConfigFileOption
 from .multivalue import MultipleValueOption
 from .overridable import OverridableOption
 
@@ -119,6 +120,7 @@ __all__ = (
     'SORT',
     'START_DATE',
     'SYMLINK_CALCS',
+    'TEMPLATE_VARS',
     'TIMEOUT',
     'TRAJECTORY_INDEX',
     'TRANSPORT',
@@ -732,10 +734,33 @@ WITH_ELEMENTS_EXCLUSIVE = OverridableOption(
     help='Only select objects containing only these and no other elements.',
 )
 
-CONFIG_FILE = ConfigFileOption(
+
+def _set_template_vars_callback(ctx: click.Context, _param: click.Parameter, value: str | None) -> str | None:
+    """Store parsed ``--template-vars`` JSON on the context for the config provider to pick up."""
+    if value is not None:
+        try:
+            ctx._template_vars = json.loads(value)  # type: ignore[attr-defined]
+        except json.JSONDecodeError as exc:
+            msg = f'Invalid JSON in --template-vars: {exc}'
+            raise click.BadParameter(msg)
+    return value
+
+
+TEMPLATE_VARS = OverridableOption(
+    '--template-vars',
+    type=click.STRING,
+    is_eager=True,
+    callback=_set_template_vars_callback,
+    expose_value=False,
+    help='JSON string with template variable values for non-interactive mode. '
+    'Example: \'{"slurm_account": "my_account"}\'.',
+)
+
+CONFIG_FILE = TemplateAwareConfigFileOption(
     '--config',
     type=types.FileOrUrl(),
-    help='Load option values from configuration file in yaml format (local path or URL).',
+    help='Load option values from configuration file in YAML format (local path or URL). '
+    'Supports Jinja2 templates with interactive prompting for placeholders.',
 )
 
 IDENTIFIER = OverridableOption(

@@ -28,7 +28,7 @@ from .overridable import OverridableOption
 if t.TYPE_CHECKING:
     from click.decorators import FC
 
-__all__ = ('ConfigFileOption',)
+__all__ = ('ConfigFileOption', 'TemplateAwareConfigFileOption')
 
 
 def yaml_config_file_provider(handle: t.Any, _cmd_name: t.Any) -> t.Any:
@@ -36,6 +36,45 @@ def yaml_config_file_provider(handle: t.Any, _cmd_name: t.Any) -> t.Any:
     import yaml
 
     return yaml.safe_load(handle)
+
+
+def _template_aware_yaml_provider(file_path_or_handle: t.Any, _cmd_name: t.Any) -> dict[str, t.Any]:
+    """YAML config provider that transparently handles Jinja2 templates.
+
+    Always reads the content to a string first (whether from a file handle, a local file path,
+    or a URL), then runs Jinja2 template detection and resolution.  This ensures template
+    processing works regardless of whether the click type passes a handle or a path.
+
+    Plain YAML files (without Jinja2 placeholders) are handled identically to
+    :func:`yaml_config_file_provider`.
+    """
+    from aiida.cmdline.utils.template_config import load_and_process_template
+
+    # Read content to string, regardless of input type
+    if hasattr(file_path_or_handle, 'read'):
+        content = file_path_or_handle.read()
+        if hasattr(content, 'decode'):
+            content = content.decode('utf-8')
+        is_content = True
+    else:
+        content = str(file_path_or_handle)
+        is_content = False
+
+    # Determine interactive mode and template vars from click context
+    template_vars = None
+    interactive = True
+
+    try:
+        ctx = click.get_current_context()
+        template_vars = getattr(ctx, '_template_vars', None)
+        if ctx.params.get('non_interactive', False):
+            interactive = False
+    except RuntimeError:
+        pass  # no click context available (e.g. during testing)
+
+    return load_and_process_template(
+        content, interactive=interactive, template_vars=template_vars, is_content=is_content
+    )
 
 
 def configuration_callback(
@@ -186,4 +225,55 @@ class ConfigFileOption(OverridableOption):
         kw_copy = self.kwargs.copy()
         kw_copy.update(kwargs)
 
+        return configuration_option(*self.args, **kw_copy)
+
+
+class _TemplateAwareClickOption(click.Option):
+    """Custom :class:`click.Option` that resolves ``--template-vars`` before the config callback.
+
+    Click processes eager options in *invocation order* (the order they appear on the command
+    line).  When ``--config`` appears before ``--template-vars``, the config callback would run
+    before the template-vars callback has stored ``ctx._template_vars``.
+
+    This class overrides :meth:`handle_parse_result` to eagerly parse ``template_vars`` from
+    the raw opts dict (which still contains unprocessed options) before delegating to the
+    normal processing chain.
+    """
+
+    def handle_parse_result(
+        self, ctx: click.Context, opts: t.Mapping[str, t.Any], args: list[str]
+    ) -> tuple[t.Any, list[str]]:
+        if 'template_vars' in opts and not hasattr(ctx, '_template_vars'):
+            import json
+
+            raw = opts['template_vars']
+            if raw is not None:
+                try:
+                    ctx._template_vars = json.loads(raw)  # type: ignore[attr-defined]
+                except (json.JSONDecodeError, TypeError):
+                    pass  # let the real callback raise the proper error
+        return super().handle_parse_result(ctx, opts, args)
+
+
+class TemplateAwareConfigFileOption(OverridableOption):
+    """Like :class:`ConfigFileOption`, but transparently handles Jinja2 templates.
+
+    Uses :func:`_template_aware_yaml_provider` which detects Jinja2 placeholders and
+    resolves them (interactively or via ``--template-vars``).  Plain YAML files without
+    templates are handled identically to :class:`ConfigFileOption`.
+    """
+
+    def __init__(self, *args: t.Any, **kwargs: t.Any):
+        kwargs.update(
+            {
+                'provider': _template_aware_yaml_provider,
+                'implicit': False,
+                'cls': _TemplateAwareClickOption,
+            }
+        )
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, **kwargs: t.Any) -> t.Any:
+        kw_copy = self.kwargs.copy()
+        kw_copy.update(kwargs)
         return configuration_option(*self.args, **kw_copy)

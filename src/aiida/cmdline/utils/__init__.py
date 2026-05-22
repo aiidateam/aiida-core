@@ -16,7 +16,6 @@ from .ascii_vis import *
 from .common import *
 from .decorators import *
 from .echo import *
-from .template_config import *
 
 __all__ = (
     'dbenv',
@@ -30,7 +29,6 @@ __all__ = (
     'echo_warning',
     'format_call_graph',
     'is_verbose',
-    'load_and_process_template',
     'only_if_daemon_running',
     'with_dbenv',
 )

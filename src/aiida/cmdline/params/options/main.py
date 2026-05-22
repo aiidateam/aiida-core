@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-import json
 import pathlib
 import typing as t
 
@@ -736,13 +735,11 @@ WITH_ELEMENTS_EXCLUSIVE = OverridableOption(
 
 
 def _set_template_vars_callback(ctx: click.Context, _param: click.Parameter, value: str | None) -> str | None:
-    """Store parsed ``--template-vars`` JSON on the context for the config provider to pick up."""
+    """Store parsed ``--template-vars`` on the context for the config provider."""
     if value is not None:
-        try:
-            ctx._template_vars = json.loads(value)  # type: ignore[attr-defined]
-        except json.JSONDecodeError as exc:
-            msg = f'Invalid JSON in --template-vars: {exc}'
-            raise click.BadParameter(msg)
+        from aiida.cmdline.utils.template_config import parse_template_vars
+
+        ctx.meta['template_vars'] = parse_template_vars(value)
     return value
 
 
@@ -752,8 +749,8 @@ TEMPLATE_VARS = OverridableOption(
     is_eager=True,
     callback=_set_template_vars_callback,
     expose_value=False,
-    help='JSON string with template variable values for non-interactive mode. '
-    'Example: \'{"slurm_account": "my_account"}\'.',
+    help='Template variable values: inline JSON string, local YAML/JSON file path, or URL. '
+    'Example: \'{"account": "my_account"}\' or path/to/vars.yaml.',
 )
 
 CONFIG_FILE = TemplateAwareConfigFileOption(

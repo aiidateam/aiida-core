@@ -39,15 +39,7 @@ def yaml_config_file_provider(handle: t.Any, _cmd_name: t.Any) -> t.Any:
 
 
 def _template_aware_yaml_provider(file_path_or_handle: t.Any, _cmd_name: t.Any) -> dict[str, t.Any]:
-    """YAML config provider that transparently handles Jinja2 templates.
-
-    Always reads the content to a string first (whether from a file handle, a local file path,
-    or a URL), then runs Jinja2 template detection and resolution.  This ensures template
-    processing works regardless of whether the click type passes a handle or a path.
-
-    Plain YAML files (without Jinja2 placeholders) are handled identically to
-    :func:`yaml_config_file_provider`.
-    """
+    """YAML config provider that transparently handles Jinja2 templates."""
     from aiida.cmdline.utils.template_config import load_and_process_template
 
     # Read content to string, regardless of input type
@@ -60,17 +52,16 @@ def _template_aware_yaml_provider(file_path_or_handle: t.Any, _cmd_name: t.Any) 
         content = str(file_path_or_handle)
         is_content = False
 
-    # Determine interactive mode and template vars from click context
     template_vars = None
     interactive = True
 
     try:
         ctx = click.get_current_context()
-        template_vars = getattr(ctx, '_template_vars', None)
+        template_vars = ctx.meta.get('template_vars')
         if ctx.params.get('non_interactive', False):
             interactive = False
     except RuntimeError:
-        pass  # no click context available (e.g. during testing)
+        pass
 
     return load_and_process_template(
         content, interactive=interactive, template_vars=template_vars, is_content=is_content
@@ -229,28 +220,23 @@ class ConfigFileOption(OverridableOption):
 
 
 class _TemplateAwareClickOption(click.Option):
-    """Custom :class:`click.Option` that resolves ``--template-vars`` before the config callback.
+    """Eagerly resolves ``--template-vars`` before the config callback runs.
 
-    Click processes eager options in *invocation order* (the order they appear on the command
-    line).  When ``--config`` appears before ``--template-vars``, the config callback would run
-    before the template-vars callback has stored ``ctx._template_vars``.
-
-    This class overrides :meth:`handle_parse_result` to eagerly parse ``template_vars`` from
-    the raw opts dict (which still contains unprocessed options) before delegating to the
-    normal processing chain.
+    Necessary because Click processes eager options in invocation order, so
+    ``--config`` before ``--template-vars`` would otherwise miss the values.
     """
 
     def handle_parse_result(
         self, ctx: click.Context, opts: t.Mapping[str, t.Any], args: list[str]
     ) -> tuple[t.Any, list[str]]:
-        if 'template_vars' in opts and not hasattr(ctx, '_template_vars'):
-            import json
+        if 'template_vars' in opts and 'template_vars' not in ctx.meta:
+            from aiida.cmdline.utils.template_config import parse_template_vars
 
             raw = opts['template_vars']
             if raw is not None:
                 try:
-                    ctx._template_vars = json.loads(raw)  # type: ignore[attr-defined]
-                except (json.JSONDecodeError, TypeError):
+                    ctx.meta['template_vars'] = parse_template_vars(raw)
+                except click.BadParameter:
                     pass  # let the real callback raise the proper error
         return super().handle_parse_result(ctx, opts, args)
 

@@ -135,7 +135,7 @@ The computer has now been created in the database but you still need to *configu
 
         $ verdi computer setup --config https://raw.githubusercontent.com/aiidateam/aiida-resource-registry/main/eiger.cscs.ch/mc/computer-setup.yml
 
-    or non-interactively:
+    or non-interactively (``--template-vars`` accepts inline JSON, a local YAML/JSON file path, or a URL):
 
     .. code-block:: console
 

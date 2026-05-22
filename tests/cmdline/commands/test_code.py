@@ -536,6 +536,12 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
     """Test setting up a code from a config file from URL."""
     from urllib import request
 
+    monkeypatch.setattr(
+        request,
+        'urlopen',
+        lambda *args, **kwargs: config_file_template.format(label=label, computer=aiida_localhost.label),
+    )
+
     config_file_template = textwrap.dedent(
         """
         label: {label}
@@ -546,15 +552,6 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
     )
 
     label = 'noninteractive_config_url'
-
-    monkeypatch.setattr(
-        request,
-        'urlopen',
-        lambda *args, **kwargs: io.BytesIO(
-            config_file_template.format(label=label, computer=aiida_localhost.label).encode()
-        ),
-    )
-
     fake_url = 'https://my.url.com'
     run_cli_command(cmd_code.setup_code, ['--non-interactive', '--config', fake_url], use_subprocess=False)
     assert isinstance(load_code(label), InstalledCode)

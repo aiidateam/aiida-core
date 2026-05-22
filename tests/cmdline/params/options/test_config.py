@@ -83,8 +83,15 @@ def test_invalid_unknown_keys(run_cli_command, tmp_path):
     assert "the following keys are not supported: {'unknown'}" in result.stderr
 
 
-def test_template_config_with_template_vars(run_cli_command, tmp_path):
-    """Test that a templated config file is resolved via ``--template-vars``."""
+@pytest.mark.parametrize(
+    'template_vars_arg',
+    [
+        '{"label": "my-computer"}',
+        pytest.param('vars_file', id='yaml_file'),
+    ],
+)
+def test_template_config_with_template_vars(run_cli_command, tmp_path, template_vars_arg):
+    """Test that a templated config file is resolved via ``--template-vars`` (JSON or file)."""
     filepath = tmp_path / 'config.yml'
     filepath.write_text(
         textwrap.dedent(
@@ -100,11 +107,14 @@ def test_template_config_with_template_vars(run_cli_command, tmp_path):
         )
     )
 
-    # Test both orderings: Click processes eager options in invocation order,
-    # so --config before --template-vars must also work.
+    if template_vars_arg == 'vars_file':
+        vars_file = tmp_path / 'vars.yaml'
+        vars_file.write_text('label: my-computer\n')
+        template_vars_arg = str(vars_file)
+
     for args in [
-        ['--template-vars', '{"label": "my-computer"}', '--config', str(filepath)],
-        ['--config', str(filepath), '--template-vars', '{"label": "my-computer"}'],
+        ['--template-vars', template_vars_arg, '--config', str(filepath)],
+        ['--config', str(filepath), '--template-vars', template_vars_arg],
     ]:
         result = run_cli_command(cmd_with_template, args)
         assert 'Label: my-computer' in result.output

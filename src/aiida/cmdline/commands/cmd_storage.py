@@ -161,8 +161,8 @@ def storage_info(detailed):
     help=(
         'Remove `loose` files after each `pack` is written during ``verdi storage maintain``, '
         'keeping peak disk usage close to the initial size. [default: enabled]  '
-        'Use ``--no-incremental-cleanup`` for stronger crash-safety at the cost of temporarily '
-        'needing roughly double the disk space.'
+        'Use ``--no-incremental-cleanup`` to defer cleanup until all `packs` are written, '
+        'at the cost of temporarily needing roughly double the disk space.'
     ),
 )
 @decorators.with_dbenv()

@@ -11,7 +11,7 @@ Scripts that previously ran `verdi daemon start` after `verdi presto` continue t
 
 **`verdi storage maintain`: incrementally cleans loose files while packing** ([#7078](https://github.com/aiidateam/aiida-core/pull/7078))
 
-`verdi storage maintain` now deletes each set of loose files right after the pack to which they were added is written, keeping peak disk usage near the initial size instead of needing roughly double. Pass `--no-incremental-cleanup` to retain the previous behavior (defer cleanup until all packs are written: stronger crash-safety, higher peak usage).
+`verdi storage maintain` now deletes each set of loose files right after the pack to which they were added is written, keeping peak disk usage near the initial size instead of needing roughly double. Pass `--no-incremental-cleanup` to retain the previous behavior (defer cleanup until all packs are written, at the cost of higher peak disk usage).
 
 ## v2.8.0 - 2026-03-16
 

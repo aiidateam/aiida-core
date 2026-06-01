@@ -28,7 +28,7 @@ def load_node_class(type_string):
     :param type_string: the `type` string of the node
     :return: a sub class of `Node`
     """
-    from aiida.orm import Data, Node
+    from aiida.orm import Data, Node, ProcessNode
     from aiida.plugins.entry_point import load_entry_point
 
     if type_string == '':
@@ -57,7 +57,10 @@ def load_node_class(type_string):
             return Data
 
     if base_path.startswith('process'):
-        return load_entry_point('aiida.node', base_path)
+        try:
+            return load_entry_point('aiida.node', base_path)
+        except exceptions.MissingEntryPointError:
+            return ProcessNode
 
     # At this point we really have an anomalous type string. At some point, storing nodes with unresolvable type strings
     # was allowed, for example by creating a sub class in a shell and then storing an instance. Attempting to load the

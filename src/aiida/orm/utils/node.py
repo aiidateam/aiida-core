@@ -47,8 +47,7 @@ def load_node_class(type_string):
     if base_path.startswith('node.'):
         base_path = base_path.removeprefix('node.')
 
-    # Data nodes are the only ones with sub classes that are still external, so if the plugin is not available
-    # we fall back on the base node type
+    # If the Data plugin is not available we fall back on the base Data class
     if base_path.startswith('data.'):
         entry_point_name = base_path.removeprefix('data.')
         try:
@@ -56,6 +55,7 @@ def load_node_class(type_string):
         except exceptions.MissingEntryPointError:
             return Data
 
+    # If the Process plugin is not available we fall back on the base ProcessNode class
     if base_path.startswith('process'):
         try:
             return load_entry_point('aiida.node', base_path)

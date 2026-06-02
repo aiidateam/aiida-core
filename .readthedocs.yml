@@ -24,7 +24,7 @@ build:
     # which is picked up automatically by `uv sync` and `uv run` commands below
     - uv venv
     install:
-    - uv sync --extra docs --extra tests --extra rest --extra atomic_tools
+    - uv sync --extra docs --extra tutorials --extra tests --extra rest --extra atomic_tools
     build:
       html:
       - uv run sphinx-build -T -W --keep-going -b html -d _build/doctrees -D language=en docs/source $READTHEDOCS_OUTPUT/html -w sphinx.log || (cat sphinx.log && exit 1)

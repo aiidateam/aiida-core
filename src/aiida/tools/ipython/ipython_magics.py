@@ -95,6 +95,8 @@ class AiiDALoaderMagics(magic.Magics):
         # The ``line`` should be of the form ``process list -a -p1``, i.e., a ``verdi`` subcommand with some optional
         # parameters. Validate that the first entry is indeed a subcommand and not the flag to specify the profile which
         # is not supported in this magic method.
+        if self.shell is not None:
+            line = self.shell.var_expand(line)
         cmdline_arguments = shlex.split(line)
         command_name = cmdline_arguments[0]
 

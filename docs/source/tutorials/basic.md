@@ -75,11 +75,10 @@ An AiiDA database does not only contain the results of your calculations, but al
 All of this information is stored in the form of a *directed acyclic graph* (DAG).
 As an example, {numref}`fig_intro_workchain_graph` shows the provenance of the calculations of this tutorial.
 
-(fig_intro_workchain_graph)=
-
 :::{figure} include/workchain_graph.png
 :align: center
 :scale: 30
+:name: fig_intro_workchain_graph
 
 Provenance Graph of a basic AiiDA WorkChain.
 :::

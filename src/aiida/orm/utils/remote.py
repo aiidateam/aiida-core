@@ -69,8 +69,8 @@ def clean_mapping_remote_paths(path_mapping, silent=False):
         except NotExistent:
             if not silent:
                 echo.echo_warning(
-                    f'Skipping {len(paths)} remote folders on {computer.label}: '
-                    f'computer is not configured for user {user.email}'
+                    f'Skipping {len(paths)} remote folders on `{computer.label}`: '
+                    f'computer is not configured for user `{user.email}`'
                 )
             continue
 

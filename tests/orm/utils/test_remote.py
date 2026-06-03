@@ -58,5 +58,5 @@ def test_clean_mapping_remote_paths_skips_unconfigured_computer(tmp_path, monkey
     folder_configured._clean.assert_called_once()
 
     assert warnings == [
-        f'Skipping 1 remote folders on `{unconfigured.label}`: ' f'computer is not configured for user `{user.email}`',
+        f'Skipping 1 remote folders on `{unconfigured.label}`: ' f'computer is not configured for user `{user.email}`'
     ]

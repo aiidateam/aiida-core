@@ -50,7 +50,8 @@ def test_clean_mapping_remote_paths_skips_unconfigured_computer(tmp_path, monkey
         {
             unconfigured.uuid: [folder_unconfigured],
             configured.uuid: [folder_configured],
-        }
+        },
+        silent=True,
     )
 
     folder_unconfigured._clean.assert_not_called()

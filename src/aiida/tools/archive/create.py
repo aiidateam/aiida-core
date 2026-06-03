@@ -239,7 +239,7 @@ def create_archive(
             elif isinstance(entry, orm.Computer):
                 starting_uuids[EntityTypes.COMPUTER].add(entry.uuid)
                 entity_ids[EntityTypes.COMPUTER].add(entry.pk)
-            elif isinstance(entry, orm.User):
+            elif isinstance(entry, orm.User):  # type: ignore[unreachable]
                 starting_uuids[EntityTypes.USER].add(entry.email)
                 entity_ids[EntityTypes.USER].add(entry.pk)
             else:

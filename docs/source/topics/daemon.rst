@@ -15,7 +15,7 @@ The daemon concept in AiiDA consists of multiple *system processes*.
 
 When the daemon is started, a single system process is launched in the background that runs indefinitely until it is stopped.
 This daemonized process is responsible for launching and then monitoring one or multiple daemon *workers*.
-Each daemon worker is another system process that connects to RabbitMQ to retrieve calculations and workflows that have been submitted and run them to completion.
+Each daemon worker is another system process that connects to the message broker to retrieve calculations and workflows that have been submitted and run them to completion.
 If a daemon worker dies, the daemon will automatically revive it.
 When the daemon is requested to stop, it will send a signal to all workers to shut them down before shutting down itself.
 
@@ -65,3 +65,8 @@ The default for the ``timeout`` is taken from the ``daemon.timeout`` configurati
 .. note::
 
     The ``DaemonClient`` only directly interacts with the main daemon process, not with any of the daemon workers that it manages.
+
+For step-by-step guides on diagnosing common daemon failures and debugging AiiDA's asynchronous engine, see also these blog posts:
+
+* `Debugging AiiDA Daemon (a practical guide) <https://aiida.net/news/posts/2025-02-21-how-to-debug-aiida-daemon.html>`__
+* `Debugging Asynchronous Programming in AiiDA <https://aiida.net/news/posts/2025-01-31-how-to-debug-async-in-aiida.html>`__

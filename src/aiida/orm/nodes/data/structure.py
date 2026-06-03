@@ -10,15 +10,19 @@
 functions to operate on them.
 """
 
+from __future__ import annotations
+
 import copy
 import functools
 import itertools
 import json
 import typing as t
 
+from pydantic import field_validator
+
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
-from aiida.common.pydantic import MetadataField
+from aiida.orm.pydantic import OrmMetadataField
 
 from .data import Data
 
@@ -503,7 +507,7 @@ def get_symbols_string(symbols, weights):
         pieces.append(f'{symbol}{weight:4.2f}')
     if has_vacancies(weights):
         pieces.append(f'X{1.0 - sum(weights):4.2f}')
-    return f"{{{''.join(sorted(pieces))}}}"
+    return f'{{{"".join(sorted(pieces))}}}'
 
 
 def has_vacancies(weights):
@@ -684,13 +688,39 @@ class StructureData(Data):
     _dimensionality_label = {0: '', 1: 'length', 2: 'surface', 3: 'volume'}
     _internal_kind_tags = None
 
-    class Model(Data.Model):
-        pbc1: bool = MetadataField(description='Whether periodic in the a direction')
-        pbc2: bool = MetadataField(description='Whether periodic in the b direction')
-        pbc3: bool = MetadataField(description='Whether periodic in the c direction')
-        cell: t.List[t.List[float]] = MetadataField(description='The cell parameters')
-        kinds: t.Optional[t.List[dict]] = MetadataField(description='The kinds of atoms')
-        sites: t.Optional[t.List[dict]] = MetadataField(description='The atomic sites')
+    class AttributesModel(Data.AttributesModel):
+        pbc1: bool = OrmMetadataField(
+            False,
+            description='Whether periodic in the a direction',
+        )
+        pbc2: bool = OrmMetadataField(
+            False,
+            description='Whether periodic in the b direction',
+        )
+        pbc3: bool = OrmMetadataField(
+            False,
+            description='Whether periodic in the c direction',
+        )
+        cell: t.Optional[list[list[float]]] = OrmMetadataField(
+            None,
+            description='The cell parameters',
+        )
+        kinds: list[dict] = OrmMetadataField(
+            description='The kinds of atoms',
+        )
+        sites: list[dict] = OrmMetadataField(
+            description='The atomic sites',
+        )
+
+        @field_validator('kinds', mode='before')
+        @classmethod
+        def _validate_kinds(cls, value: list[Kind | dict[str, t.Any]]) -> list[t.Dict]:
+            return [kind.get_raw() if isinstance(kind, Kind) else kind for kind in value]
+
+        @field_validator('sites', mode='before')
+        @classmethod
+        def _validate_sites(cls, value: list[Site | dict[str, t.Any]]) -> list[t.Dict]:
+            return [site.get_raw() if isinstance(site, Site) else site for site in value]
 
     def __init__(
         self,
@@ -700,15 +730,15 @@ class StructureData(Data):
         pymatgen=None,
         pymatgen_structure=None,
         pymatgen_molecule=None,
-        pbc1=None,
-        pbc2=None,
-        pbc3=None,
-        kinds=None,
-        sites=None,
+        pbc1: bool | None = None,
+        pbc2: bool | None = None,
+        pbc3: bool | None = None,
+        kinds: list[Kind | dict[str, t.Any]] | None = None,
+        sites: list[Site | dict[str, t.Any]] | None = None,
         **kwargs,
     ):
-        if pbc1 is not None and pbc2 is not None and pbc3 is not None:
-            pbc = [pbc1, pbc2, pbc3]
+        if pbc1 is not None or pbc2 is not None or pbc3 is not None:
+            pbc = [pbc1 or False, pbc2 or False, pbc3 or False]
 
         args = {
             'cell': cell,
@@ -748,10 +778,22 @@ class StructureData(Data):
             self.set_pbc(pbc)
 
             if kinds is not None:
-                self.base.attributes.set('kinds', kinds)
+                for kind in kinds:
+                    if isinstance(kind, Kind):
+                        self.append_kind(kind)
+                    elif isinstance(kind, dict):
+                        self.append_kind(Kind(**kind))
+                    else:
+                        raise TypeError('Each kind must be either a Kind instance or a dictionary.')
 
             if sites is not None:
-                self.base.attributes.set('sites', sites)
+                for site in sites:
+                    if isinstance(site, Site):
+                        self.append_site(site)
+                    elif isinstance(site, dict):
+                        self.append_site(Site(**site))
+                    else:
+                        raise TypeError('Each site must be either a Site instance or a dictionary.')
 
     def get_dimensionality(self):
         """Return the dimensionality of the structure and its length/surface/volume.
@@ -945,7 +987,7 @@ class StructureData(Data):
             return_string += ' '.join([f'{i:18.10f}' for i in cell_vector])
             return_string += '\n'
         return_string += 'PRIMCOORD 1\n'
-        return_string += f'{int(len(sites))} 1\n'
+        return_string += f'{len(sites)} 1\n'
         for site in sites:
             # I checked above that it is not an alloy, therefore I take the
             # first symbol
@@ -1371,7 +1413,7 @@ class StructureData(Data):
         if aseatom is not None:
             if kwargs:
                 raise ValueError(
-                    "If you pass 'ase' as a parameter to " 'append_atom, you cannot pass any further' 'parameter'
+                    "If you pass 'ase' as a parameter to append_atom, you cannot pass any furtherparameter"
                 )
             position = aseatom.position
             kind = Kind(ase=aseatom)
@@ -1662,19 +1704,45 @@ class StructureData(Data):
 
     @property
     def cell_angles(self):
-        """Get the angles between the cell lattice vectors in degrees."""
+        """Get the angles between the cell lattice vectors in degrees.
+
+        :return: a list of three floats ``[alpha, beta, gamma]`` representing the angles
+            (in degrees) between cell vectors: alpha is the angle between b and c,
+            beta between a and c, and gamma between a and b. Returns ``None`` for
+            angles that cannot be computed due to zero-length vectors.
+
+        :raises ValueError: if all cell vectors have zero length.
+
+        .. versionchanged:: 2.8.0
+            Now returns ``None`` for angles involving zero-length vectors (previously
+            returned ``nan``), and raises ``ValueError`` when all vectors have zero length.
+        """
         import numpy
 
         cell = self.cell
         lengths = self.cell_lengths
-        return [
-            float(numpy.arccos(x) / numpy.pi * 180)
-            for x in [
-                numpy.vdot(cell[1], cell[2]) / lengths[1] / lengths[2],
-                numpy.vdot(cell[0], cell[2]) / lengths[0] / lengths[2],
-                numpy.vdot(cell[0], cell[1]) / lengths[0] / lengths[1],
-            ]
-        ]
+
+        # Check for zero-length vectors
+        eps = numpy.finfo(numpy.asarray(lengths[0]).dtype).eps
+        if all(length < eps for length in lengths):
+            raise ValueError('Cannot calculate angles for a cell with all zero-length vectors')
+
+        angles = []
+
+        # Pairs of vector indices for each angle: alpha=(b,c), beta=(a,c), gamma=(a,b)
+        vector_pairs = [(1, 2), (0, 2), (0, 1)]
+
+        for i, j in vector_pairs:
+            if lengths[i] < eps or lengths[j] < eps:
+                angles.append(None)
+            else:
+                dot_product = numpy.vdot(cell[i], cell[j])
+                cos_angle = dot_product / (lengths[i] * lengths[j])
+                # Handle numerical issues where |cos_angle| might slightly exceed 1
+                cos_angle = max(min(cos_angle, 1.0), -1.0)
+                angles.append(numpy.degrees(numpy.arccos(cos_angle)))
+
+        return angles
 
     @cell_angles.setter
     def cell_angles(self, value):
@@ -2127,9 +2195,7 @@ class Kind:
         weights_tuple = _create_weights_tuple(value)
 
         if len(weights_tuple) != len(self._symbols):
-            raise ValueError(
-                'Cannot change the number of weights. Use the ' 'set_symbols_and_weights function instead.'
-            )
+            raise ValueError('Cannot change the number of weights. Use the set_symbols_and_weights function instead.')
         validate_weights_tuple(weights_tuple, _SUM_THRESHOLD)
 
         self._weights = weights_tuple
@@ -2182,9 +2248,7 @@ class Kind:
         symbols_tuple = _create_symbols_tuple(value)
 
         if len(symbols_tuple) != len(self._weights):
-            raise ValueError(
-                'Cannot change the number of symbols. Use the ' 'set_symbols_and_weights function instead.'
-            )
+            raise ValueError('Cannot change the number of symbols. Use the set_symbols_and_weights function instead.')
         validate_symbols_tuple(symbols_tuple)
 
         self._symbols = symbols_tuple

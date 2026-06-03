@@ -28,6 +28,7 @@ def test_basic(tmp_path):
 
     # export to archive
     create_archive(None, backend=backend1, filename=filename)
+    backend1.close()
 
     # create a new temporary backend and import
     profile2 = SqliteTempBackend.create_profile(filepath=str(tmp_path / 'repo2'))
@@ -45,3 +46,5 @@ def test_basic(tmp_path):
     # check that we can retrieve the repository data
     node = orm.QueryBuilder(backend=backend2).append(orm.SinglefileData).first(flat=True)
     assert node.get_content() == text_data
+
+    backend2.close()

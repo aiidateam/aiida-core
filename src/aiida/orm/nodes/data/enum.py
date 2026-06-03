@@ -15,13 +15,15 @@ members (or enum members) and are functionally constants. The enum members have 
 ``Color.RED`` is ``RED`` and the value of ``Color.RED`` is ``1``.
 """
 
+from __future__ import annotations
+
 import typing as t
 from enum import Enum
 
 from plumpy.loaders import get_object_loader
 
 from aiida.common.lang import type_check
-from aiida.common.pydantic import MetadataField
+from aiida.orm.pydantic import OrmMetadataField, OrmModel
 
 from .base import to_aiida_type
 from .data import Data
@@ -50,10 +52,24 @@ class EnumData(Data):
     KEY_VALUE = 'value'
     KEY_IDENTIFIER = 'identifier'
 
-    class Model(Data.Model):
-        member: Enum = MetadataField(
-            description='The member name.',
-            orm_to_model=lambda node, _: node.get_member(),  # type: ignore[attr-defined]
+    class AttributesModel(Data.AttributesModel):
+        name: str = OrmMetadataField(
+            description='The member name',
+            orm_to_model=lambda node: t.cast(EnumData, node).name,
+        )
+        value: t.Any = OrmMetadataField(
+            description='The member value',
+            orm_to_model=lambda node: t.cast(EnumData, node).value,
+        )
+        identifier: str = OrmMetadataField(
+            description='The member identifier',
+            orm_to_model=lambda node: t.cast(EnumData, node).identifier,
+        )
+
+    class ConstructorArgsModel(OrmModel):
+        member: Enum = OrmMetadataField(
+            description='The enum member to wrap',
+            write_only=True,
         )
 
     def __init__(self, member: Enum, *args, **kwargs):
@@ -79,12 +95,22 @@ class EnumData(Data):
         """Return the value of the enum member."""
         return self.base.attributes.get(self.KEY_VALUE)
 
+    @property
+    def identifier(self) -> str:
+        """Return the identifier of the enum member."""
+        return self.base.attributes.get(self.KEY_IDENTIFIER)
+
+    @property
+    def member(self) -> Enum:
+        """Return the enum member wrapped by this node."""
+        return self.get_member()
+
     def get_enum(self) -> t.Type[EnumType]:
         """Return the enum class reconstructed from the serialized identifier stored in the database.
 
         :raises `ImportError`: if the enum class represented by the stored identifier cannot be imported.
         """
-        identifier = self.base.attributes.get(self.KEY_IDENTIFIER)
+        identifier = self.identifier
         try:
             return get_object_loader().load_object(identifier)
         except ValueError as exc:

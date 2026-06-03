@@ -537,6 +537,8 @@ class JobInfo(DefaultFieldsAttributeDict):
         'finish_time',
     )
 
+    # NOTE: All of these fields might be undefined, in which case they return `None`,
+    # see the definition of DefaultFieldsAttributeDict.__getitem__
     if TYPE_CHECKING:
         job_id: str
         title: str
@@ -554,7 +556,7 @@ class JobInfo(DefaultFieldsAttributeDict):
         account: str
         qos: str
         wallclock_time_seconds: int
-        requested_wallclock_time_seconds: int
+        requested_wallclock_time_seconds: int | None
         cpu_time: int
         submission_time: datetime
         dispatch_time: datetime

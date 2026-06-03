@@ -216,8 +216,9 @@ def migrate(
                 MIGRATE_LOGGER.report('Performing SQLite migrations:')
                 with _migration_context(db_path) as context:
                     assert context.script is not None
+                    assert context.connection is not None
                     context.stamp(context.script, current_version)
-                    context.connection.commit()  # type: ignore
+                    context.connection.commit()
                 # see https://alembic.sqlalchemy.org/en/latest/batch.html#dealing-with-referencing-foreign-keys
                 # for why we do not enforce foreign keys here
                 with _alembic_connect(db_path, enforce_foreign_keys=False) as config:
@@ -252,7 +253,7 @@ def migrate(
         # move the new zip file to the final location
         if outpath.exists() and force:
             outpath.unlink()
-        shutil.move(new_zip_path, outpath)  # type: ignore[arg-type]
+        shutil.move(new_zip_path, outpath)
 
 
 def _read_json(inpath: Path, filename: str, is_tar: bool) -> Dict[str, Any]:
@@ -320,7 +321,7 @@ def _alembic_script() -> ScriptDirectory:
 
 
 @contextlib.contextmanager
-def _alembic_connect(db_path: Path, enforce_foreign_keys=True) -> Iterator[Config]:
+def _alembic_connect(db_path: Path, enforce_foreign_keys: bool = True) -> Iterator[Config]:
     """Context manager to return an instance of an Alembic configuration.
 
     The profiles's database connection is added in the `attributes` property, through which it can then also be
@@ -330,7 +331,7 @@ def _alembic_connect(db_path: Path, enforce_foreign_keys=True) -> Iterator[Confi
         config = _alembic_config()
         config.attributes['connection'] = connection
 
-        def _callback(step: MigrationInfo, **kwargs):
+        def _callback(step: MigrationInfo, **kwargs: Any) -> None:
             """Callback to be called after a migration step is executed."""
             from_rev = step.down_revision_ids[0] if step.down_revision_ids else '<base>'
             MIGRATE_LOGGER.report(f'- {from_rev} -> {step.up_revision_id}')

@@ -1,5 +1,6 @@
 """Tests for the :mod:`aiida.repository.backend.abstract` module."""
 
+import contextlib
 import io
 import tempfile
 from typing import BinaryIO, Iterable, List, Optional
@@ -50,6 +51,12 @@ class RepositoryBackend(AbstractRepositoryBackend):
 
     def get_info(self, detailed: bool = False, **kwargs) -> dict:
         raise NotImplementedError
+
+    def open(self, key: str) -> contextlib.AbstractContextManager[BinaryIO]:
+        """Minimal implementation required because open() is now abstract."""
+        if not self.has_object(key):
+            raise FileNotFoundError(f'object with key `{key}` does not exist.')
+        return contextlib.nullcontext(io.BytesIO(b'test'))
 
 
 @pytest.fixture(scope='function')

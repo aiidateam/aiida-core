@@ -141,7 +141,7 @@ def await_condition(condition: t.Callable, timeout: int = 1) -> t.Any:
     return result
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_kill_failing_transport(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
@@ -178,7 +178,7 @@ def test_process_kill_failing_transport(
         assert node.process_status == 'Force killed through `verdi process kill`'
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_kill_failing_transport_failed_kill(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
@@ -222,7 +222,7 @@ def test_process_kill_failing_transport_failed_kill(
         assert node.process_status == 'Force killed through `verdi process kill`'
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_kill_failing_ebm_transport(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
@@ -260,7 +260,7 @@ def test_process_kill_failing_ebm_transport(
         await_condition(lambda: node.is_killed, timeout=kill_timeout)
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_kill_failing_ebm_kill(
     fork_worker_context, submit_and_await, aiida_code_installed, run_cli_command, monkeypatch
@@ -549,7 +549,7 @@ class TestVerdiProcess:
         assert result.exception is None, result.output
         assert len(result.output_lines) == 0
 
-    @pytest.mark.requires_rmq
+    @pytest.mark.requires_broker
     def test_process_watch(self, run_cli_command):
         """Test verdi process watch"""
         # Running without identifiers should except and print something
@@ -780,7 +780,7 @@ class TestVerdiProcess:
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('numprocesses, percentage', ((0, 100), (1, 90)))
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_list_worker_slot_warning(run_cli_command, monkeypatch, numprocesses, percentage):
     """Test that the if the number of used worker process slots exceeds a threshold,
     that the warning message is displayed to the user when running `verdi process list`
@@ -877,7 +877,7 @@ class TestVerdiProcessCallRoot:
         assert len(result.output_lines) > 0
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_pause(submit_and_await, run_cli_command):
     """Test the ``verdi process pause`` command."""
@@ -894,7 +894,7 @@ def test_process_pause(submit_and_await, run_cli_command):
     assert len(result.output_lines) > 0
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_play(submit_and_await, run_cli_command):
     """Test the ``verdi process play`` command."""
@@ -913,7 +913,7 @@ def test_process_play(submit_and_await, run_cli_command):
     assert len(result.output_lines) > 0
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_play_all(submit_and_await, run_cli_command):
     """Test the ``verdi process play`` command with the ``--all`` option."""
@@ -929,7 +929,7 @@ def test_process_play_all(submit_and_await, run_cli_command):
     await_condition(lambda: not node_two.paused)
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_kill(submit_and_await, run_cli_command, aiida_code_installed):
     """Test the ``verdi process kill`` command.
@@ -996,7 +996,7 @@ def test_process_kill(submit_and_await, run_cli_command, aiida_code_installed):
     assert node_2.process_status == 'Force killed through `verdi process kill`'
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.usefixtures('started_daemon_client')
 def test_process_kill_all(submit_and_await, run_cli_command):
     """Test the ``verdi process kill --all`` command."""
@@ -1021,7 +1021,7 @@ def test_process_repair_consistent(monkeypatch, run_cli_command):
     monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2, 3])
 
     result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
-    assert 'No inconsistencies detected between database and RabbitMQ.' in result.output
+    assert 'No inconsistencies detected between database and broker.' in result.output
 
 
 @pytest.mark.usefixtures('stopped_daemon_client')
@@ -1032,7 +1032,7 @@ def test_process_repair_duplicate_tasks(monkeypatch, run_cli_command):
 
     result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
     assert 'There are duplicates process tasks:' in result.output
-    assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
+    assert 'Inconsistencies detected between database and broker.' in result.output
 
 
 @pytest.mark.usefixtures('stopped_daemon_client')
@@ -1043,7 +1043,7 @@ def test_process_repair_additional_tasks(monkeypatch, run_cli_command):
 
     result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
     assert 'There are process tasks for terminated processes:' in result.output
-    assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
+    assert 'Inconsistencies detected between database and broker.' in result.output
     assert 'Attempting to fix inconsistencies' in result.output
 
 
@@ -1055,7 +1055,7 @@ def test_process_repair_missing_tasks(monkeypatch, run_cli_command):
 
     result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
     assert 'There are active processes without process task:' in result.output
-    assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
+    assert 'Inconsistencies detected between database and broker.' in result.output
     assert 'Attempting to fix inconsistencies' in result.output
 
 
@@ -1066,7 +1066,7 @@ def test_process_repair_dry_run(monkeypatch, run_cli_command):
     monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [1, 2])
 
     result = run_cli_command(cmd_process.process_repair, ['--dry-run'], raises=True, use_subprocess=False)
-    assert 'Inconsistencies detected between database and RabbitMQ.' in result.output
+    assert 'Inconsistencies detected between database and broker.' in result.output
     assert 'This was a dry-run, no changes will be made.' in result.output
 
 
@@ -1079,6 +1079,90 @@ def test_process_repair_verbosity(monkeypatch, run_cli_command):
     result = run_cli_command(cmd_process.process_repair, ['-v', 'INFO'], use_subprocess=False)
     assert 'Active processes: [1, 2, 3, 4]' in result.output
     assert 'Process tasks: [1, 2]' in result.output
+
+
+@pytest.mark.requires_psql
+@pytest.mark.usefixtures('stopped_daemon_client')
+class TestProcessRepairUnreferencedConnections:
+    """Tests for unreferenced database connection cleanup in ``verdi process repair``."""
+
+    @pytest.fixture
+    def mock_no_rmq_inconsistencies(self, monkeypatch):
+        """Mock RabbitMQ-related functions to return empty lists.
+
+        This allows testing the database connection cleanup feature in isolation,
+        without any RabbitMQ inconsistencies to repair.
+        """
+        monkeypatch.setattr(process_control, 'get_active_processes', lambda *args, **kwargs: [])
+        monkeypatch.setattr(process_control, 'get_process_tasks', lambda *args: [])
+
+    @pytest.fixture
+    def mock_unreferenced_connection(self, monkeypatch):
+        """Mock a single unreferenced database connection."""
+        from aiida.storage.psql_dos.backend import PsqlDosBackend
+
+        monkeypatch.setattr(
+            PsqlDosBackend, 'get_unreferenced_connections', lambda self: [(1234, 'idle in transaction', 5678)]
+        )
+
+    @pytest.fixture
+    def mock_terminate_connections(self, monkeypatch):
+        """Mock terminate_connections and track which PIDs were passed."""
+        from aiida.storage.psql_dos.backend import PsqlDosBackend
+
+        terminated = []
+
+        def mock_terminate(self, pids):
+            terminated.extend(pids)
+            return len(pids)
+
+        monkeypatch.setattr(PsqlDosBackend, 'terminate_connections', mock_terminate)
+        return terminated
+
+    def test_no_unreferenced_connections(self, monkeypatch, run_cli_command, mock_no_rmq_inconsistencies):
+        """Test ``verdi process repair`` when there are no unreferenced database connections."""
+        from aiida.storage.psql_dos.backend import PsqlDosBackend
+
+        monkeypatch.setattr(PsqlDosBackend, 'get_unreferenced_connections', lambda self: [])
+
+        result = run_cli_command(cmd_process.process_repair, use_subprocess=False)
+        assert 'No unreferenced database connections found.' in result.output
+
+    def test_terminates_connections(
+        self, run_cli_command, mock_no_rmq_inconsistencies, mock_unreferenced_connection, mock_terminate_connections
+    ):
+        """Test ``verdi process repair`` terminates unreferenced database connections."""
+        result = run_cli_command(cmd_process.process_repair, user_input='y', use_subprocess=False)
+        assert 'Found 1 database connection(s)' in result.output
+        assert 'PID 1234' in result.output
+        assert 'Terminated 1 database connection(s)' in result.output
+        assert mock_terminate_connections == [1234]
+
+    def test_abort_on_user_decline(
+        self, run_cli_command, mock_no_rmq_inconsistencies, mock_unreferenced_connection, mock_terminate_connections
+    ):
+        """Test ``verdi process repair`` aborts when user declines to terminate connections."""
+        result = run_cli_command(cmd_process.process_repair, user_input='n', use_subprocess=False, raises=True)
+        assert 'Found 1 database connection(s)' in result.output
+        assert len(mock_terminate_connections) == 0
+
+    def test_dry_run_does_not_terminate(
+        self, run_cli_command, mock_no_rmq_inconsistencies, mock_unreferenced_connection, mock_terminate_connections
+    ):
+        """Test ``verdi process repair --dry-run`` does not terminate unreferenced connections."""
+        result = run_cli_command(cmd_process.process_repair, ['--dry-run'], use_subprocess=False)
+        assert 'Found 1 database connection(s)' in result.output
+        assert 'PID 1234' in result.output
+        assert len(mock_terminate_connections) == 0
+
+    def test_force_skips_confirmation(
+        self, run_cli_command, mock_no_rmq_inconsistencies, mock_unreferenced_connection, mock_terminate_connections
+    ):
+        """Test ``verdi process repair --force`` terminates connections without confirmation."""
+        result = run_cli_command(cmd_process.process_repair, ['--force'], use_subprocess=False)
+        assert 'Found 1 database connection(s)' in result.output
+        assert 'Terminated 1 database connection(s)' in result.output
+        assert mock_terminate_connections == [1234]
 
 
 @pytest.fixture

@@ -29,8 +29,6 @@ class PrettyEncoder(json.JSONEncoder):
     """JSON encoder for returning a pretty representation of an AiiDA ``ProcessBuilder``."""
 
     def default(self, o):
-        if isinstance(o, (ProcessBuilder, ProcessBuilderNamespace)):
-            return dict(o)
         if isinstance(o, Dict):
             return o.get_dict()
         if isinstance(o, BaseType):
@@ -69,26 +67,18 @@ class ProcessBuilderNamespace(MutableMapping):
             self._valid_fields.append(name)
 
             if isinstance(port, PortNamespace):
-                # Only add the nested namespace to _data if populate_defaults is True.
-                # This prevents empty namespaces from appearing in the builder when they
-                # have no values set and populate_defaults=False.
-                if port.populate_defaults:
-                    self._data[name] = ProcessBuilderNamespace(port)
+                self._data[name] = ProcessBuilderNamespace(port)
 
-                def fgetter(self, name=name, port=port, default=None):
-                    # Lazily create the ProcessBuilderNamespace if it doesn't exist yet.
-                    # This allows accessing nested namespaces that have populate_defaults=False.
-                    if name not in self._data:
-                        self._data[name] = ProcessBuilderNamespace(port)
+                def fgetter(self, name=name):
                     return self._data.get(name)
             elif port.has_default():
 
-                def fgetter(self, name=name, port=None, default=port.default):
+                def fgetter(self, name=name, default=port.default):  # type: ignore[misc]
                     return self._data.get(name, default)
             else:
 
-                def fgetter(self, name=name, port=None, default=None):
-                    return self._data.get(name, default)
+                def fgetter(self, name=name):
+                    return self._data.get(name, None)
 
             def fsetter(self, value, name=name):
                 self._data[name] = value
@@ -247,11 +237,15 @@ class ProcessBuilder(ProcessBuilderNamespace):
         """Return the process class for which this builder is constructed."""
         return self._process_class
 
-    def _repr_pretty_(self, p, _) -> str:
-        """Pretty representation for in the IPython console and notebooks."""
+    def __str__(self) -> str:
+        """Return a readable string showing the process class and its current inputs."""
         import yaml
 
-        return p.text(
+        return (
             f'Process class: {self._process_class.__name__}\n'
-            f'Inputs:\n{yaml.safe_dump(json.JSONDecoder().decode(PrettyEncoder().encode(self)))}'
+            f'Inputs:\n{yaml.safe_dump(json.JSONDecoder().decode(PrettyEncoder().encode(self._inputs(prune=True))))}'
         )
+
+    def _repr_pretty_(self, p, _) -> None:
+        """Pretty representation hook for IPython and Jupyter environments."""
+        p.text(str(self))

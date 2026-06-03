@@ -187,8 +187,6 @@ class TestVisGraph:
 
     def test_graph_recurse_spot_highlight_classes(self):
         """Test adding nodes and all its (recursed) incoming nodes to a graph"""
-        import difflib
-
         nodes = self.create_provenance()
 
         graph = graph_mod.Graph()
@@ -199,21 +197,20 @@ class TestVisGraph:
         graph_highlight.recurse_ancestors(nodes.pd0, highlight_classes=['Dict'])
         graph_highlight.recurse_descendants(nodes.pd0, highlight_classes=['Dict', 'CalcJobNode', 'Dummy'])
 
-        diff = difflib.unified_diff(
-            graph.graphviz.source.splitlines(keepends=True), graph_highlight.graphviz.source.splitlines(keepends=True)
-        )
-        got_diff = ''.join([line for line in diff if line.startswith('+')])
+        base_lines = set(graph.graphviz.source.splitlines(keepends=True))
+        hl_lines = set(graph_highlight.graphviz.source.splitlines(keepends=True))
 
-        expected_diff = """\
-        +State: running" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]
-        +@localhost" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]
-        +Exit Code: 200" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]
-        +\tN{fd1} [label="FolderData ({fd1})" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]
-        +++""".format(**{k: v.pk for k, v in nodes.items()})
+        added = hl_lines - base_lines
+        added_stripped = {line.strip() for line in added}
 
-        assert sorted([line.strip() for line in got_diff.splitlines()]) == sorted(
-            [line.strip() for line in expected_diff.splitlines()]
-        )
+        expected = {
+            'State: running" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]',
+            f'@{self.computer.label}" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]',
+            'Exit Code: 200" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]',
+            f'N{nodes.fd1.pk} [label="FolderData ({nodes.fd1.pk})" color=lightgray fillcolor=white penwidth=2 '
+            'shape=ellipse style=filled]',
+        }
+        assert added_stripped == expected
 
     def test_graph_recurse_ancestors_filter_links(self):
         """Test adding nodes and all its (recursed) incoming nodes to a graph, but filter link types"""
@@ -265,7 +262,7 @@ class TestVisGraph:
                     State: running" fillcolor="#e38851ff" penwidth=0 shape=rectangle style=filled]
                 N{pd0} -> N{wc1} [color="#000000" style=dashed]
                 N{rd1} [label="RemoteData ({rd1})
-                    @localhost" fillcolor="#8cd499ff" penwidth=0 shape=ellipse style=filled]
+                    @{computer_label}" fillcolor="#8cd499ff" penwidth=0 shape=ellipse style=filled]
                 N{calc1} -> N{rd1} [color="#000000" style=solid]
                 N{fd1} [label="FolderData ({fd1})" fillcolor="#8cd499ff" penwidth=0 shape=ellipse style=filled]
                 N{wc1} -> N{fd1} [color="#000000" style=dashed]
@@ -279,7 +276,7 @@ class TestVisGraph:
                 N{rd1} -> N{calcf1} [color="#000000" style=solid]
                 N{calcf1} -> N{fd1} [color="#000000" style=solid]
                 N{calcf1} -> N{pd3} [color="#000000" style=solid]
-        }}""".format(**{k: v.pk for k, v in nodes.items()})
+        }}""".format(computer_label=self.computer.label, **{k: v.pk for k, v in nodes.items()})
 
         # dedent before comparison
         assert sorted([line.strip() for line in graph.graphviz.source.splitlines()]) == sorted(
@@ -304,7 +301,7 @@ class TestVisGraph:
                     State: running" fillcolor="#e38851ff" penwidth=0 shape=polygon sides=6 style=filled]
                 N{pd0} -> N{wc1} [color="#000000" style=dashed]
                 N{rd1} [label="RemoteData ({rd1})
-                    @localhost" pencolor=black shape=rectangle]
+                    @{computer_label}" pencolor=black shape=rectangle]
                 N{calc1} -> N{rd1} [color="#000000" style=solid]
                 N{fd1} [label="FolderData ({fd1})" pencolor=black shape=rectangle]
                 N{wc1} -> N{fd1} [color="#000000" style=dashed]
@@ -318,7 +315,7 @@ class TestVisGraph:
                 N{rd1} -> N{calcf1} [color="#000000" style=solid]
                 N{calcf1} -> N{fd1} [color="#000000" style=solid]
                 N{calcf1} -> N{pd3} [color="#000000" style=solid]
-        }}""".format(**{k: v.pk for k, v in nodes.items()})
+        }}""".format(computer_label=self.computer.label, **{k: v.pk for k, v in nodes.items()})
 
         # dedent before comparison
         assert sorted([line.strip() for line in graph.graphviz.source.splitlines()]) == sorted(

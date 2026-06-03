@@ -145,8 +145,57 @@ class Manager:
         # Check whether a development version is being run. Note that needs to be called after ``configure_logging``
         # because this function relies on the logging being properly configured for the warning to show.
         self.check_version()
+        self._setup_event_loop_in_ipython()
 
         return self._profile
+
+    def _setup_event_loop_in_ipython(self) -> None:
+        """Monkey-patch ``IPythonKernel.do_execute`` to ensure a portal.
+
+        When running inside an environment with an already-running event loop
+        (e.g. a Jupyter notebook kernel), this patches the kernel's
+        ``do_execute`` to open a portal before executing each cell.
+        The portal is opended on whichever asyncio task ipykernel uses for that cell.
+
+        The patch takes effect from the **next cell**.
+        ``load_profile()`` must therefore be called in a separate cell before
+        synchronous process execution.
+
+        This is a no-op if no event loop is running (scripts, CLI, daemon).
+        """
+        import asyncio
+
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return  # No running loop — not in Jupyter, nothing to do
+
+        self._patch_kernel_do_execute()
+
+    def _patch_kernel_do_execute(self) -> None:
+        """Patch ``IPythonKernel.do_execute`` to ensure a portal before each cell."""
+        try:
+            from ipykernel.ipkernel import IPythonKernel
+
+            if getattr(IPythonKernel, '_aiida_portal_patched', False):
+                return  # Already patched
+
+            from plumpy import ensure_portal
+
+            _orig_do_execute = IPythonKernel.do_execute
+
+            async def _patched_do_execute(self, code, silent, *args, **kwargs):
+                await ensure_portal()
+                return await _orig_do_execute(self, code, silent, *args, **kwargs)
+
+            IPythonKernel.do_execute = _patched_do_execute  # type: ignore[method-assign]
+            IPythonKernel._aiida_portal_patched = True  # type: ignore[attr-defined]
+            self.logger.debug(
+                'Patched IPythonKernel.do_execute for portal. '
+                'This should occur in a Jupyter kernel, and only once per kernel session.'
+            )
+        except Exception:
+            self.logger.debug('Could not patch IPythonKernel for portal.', exc_info=True)
 
     def reset_profile(self) -> None:
         """Close and reset any associated resources for the current profile."""
@@ -175,7 +224,6 @@ class Manager:
                 self._broker.close()
             except futures.TimeoutError as exception:
                 self.logger.warning(f'Call to close the broker timed out: {exception}')
-            self._broker.close()
 
         self._broker = None
         self._process_controller = None
@@ -218,12 +266,27 @@ class Manager:
         2. The current configuration, if loaded and the option specified
         3. The default value for the option
 
+        If the option carries a ``deprecated_by`` marker, a warning is emitted
+        and the replacement option's value is returned instead.
+
         :param option_name: the name of the option to return
         :return: the value of the option
         :raises `aiida.common.exceptions.ConfigurationError`: if the option is not found
         """
         from aiida.common.exceptions import ConfigurationError
         from aiida.manage.configuration.options import get_option
+
+        option = get_option(option_name)
+
+        if option.deprecated_by is not None:
+            import warnings
+
+            warnings.warn(
+                f'`{option_name}` is deprecated, use `{option.deprecated_by}` instead.',
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            option_name = option.deprecated_by
 
         # try the profile
         if self._profile and option_name in self._profile.options:
@@ -305,6 +368,8 @@ class Manager:
             # Backwards compatibility. Before adding broker entry points, profiles used to define ``rabbitmq``.
             if entry_point == 'rabbitmq':
                 entry_point = 'core.rabbitmq'
+            elif entry_point == 'zmq':
+                entry_point = 'core.zmq'
 
             broker_cls = BrokerFactory(entry_point)
             self._broker = broker_cls(self._profile)

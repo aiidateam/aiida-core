@@ -37,13 +37,12 @@ class AlembicRunner:
         """
         if self.profile is None:
             raise click.ClickException('No profile specified')
-        migrator = PsqlDosMigrator(self.profile)
-
-        context = migrator._alembic_connect() if connect else contextlib.nullcontext(migrator._alembic_config())
-        with context as config:
-            command = getattr(alembic.command, command_name)
-            config.stdout = click.get_text_stream('stdout')
-            command(config, **kwargs)
+        with PsqlDosMigrator(self.profile) as migrator:
+            context = migrator._alembic_connect() if connect else contextlib.nullcontext(migrator._alembic_config())
+            with context as config:
+                command = getattr(alembic.command, command_name)
+                config.stdout = click.get_text_stream('stdout')
+                command(config, **kwargs)
 
 
 pass_runner = click.make_pass_decorator(AlembicRunner, ensure=True)

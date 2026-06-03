@@ -508,21 +508,49 @@ def process_watch(broker, processes, most_recent_node):
 
 @verdi_process.command('repair')
 @options.DRY_RUN()
+@options.FORCE(help='Do not ask for confirmation when terminating database connections.')
 @decorators.only_if_daemon_not_running()
 @decorators.with_manager
 @decorators.with_broker
-def process_repair(manager, broker, dry_run):
+def process_repair(manager, broker, dry_run, force):
     """Automatically repair all stuck processes.
 
     N.B.: This command requires the daemon to be stopped.
 
     This command queries the database to find all "active" processes, meaning those that haven't yet reached a terminal
-    state, and cross-references them with the active process tasks in the process queue of RabbitMQ. Any active process
-    that does not have a corresponding process task can be considered a zombie, as it will never be picked up by a
-    daemon worker to complete it and will effectively be "stuck". Any process task that does not correspond to an active
+    state, and cross-references them with the active process tasks in the broker's task queue. Any active process that
+    does not have a corresponding process task can be considered a zombie, as it will never be picked up by a daemon
+    worker to complete it and will effectively be "stuck". Any process task that does not correspond to an active
     process is useless and should be discarded. Finally, duplicate process tasks are also problematic and are discarded.
     """
     from aiida.engine.processes.control import get_active_processes, get_process_tasks, iterate_process_tasks
+    from aiida.storage.psql_dos.backend import PsqlDosBackend
+
+    # Terminate unreferenced database connections that could be holding locks
+    # Note: Use `type()` instead of `isinstance()` because SqliteDosBackend inherits from PsqlDosBackend
+    storage = manager.get_profile_storage()
+    profile = manager.get_profile()
+    if type(storage) is PsqlDosBackend:
+        unreferenced = storage.get_unreferenced_connections()
+        if unreferenced:
+            echo.echo_warning(
+                f'Found {len(unreferenced)} database connection(s) for profile `{profile.name}` that may be orphaned:'
+            )
+            for pid, state, port in unreferenced:
+                echo.echo(f'  PID {pid} | {state} | port {port}')
+            echo.echo_warning(
+                f'These may include legitimate connections from workers, Jupyter notebooks, or other processes '
+                f'using profile `{profile.name}`. Only terminate if you are sure no other AiiDA processes '
+                f'are using this profile.'
+            )
+            if not dry_run:
+                if not force:
+                    click.confirm('Do you want to terminate these connections?', abort=True)
+                pids = [pid for pid, _, _ in unreferenced]
+                terminated = storage.terminate_connections(pids)
+                echo.echo_success(f'Terminated {terminated} database connection(s)')
+        else:
+            echo.echo_success('No unreferenced database connections found.')
 
     active_processes = get_active_processes(project='id')
     process_tasks = get_process_tasks(broker)
@@ -551,10 +579,10 @@ def process_repair(manager, broker, dry_run):
         echo.echo(set_active_processes.difference(set_process_tasks))
 
     if not state_inconsistent:
-        echo.echo_success('No inconsistencies detected between database and RabbitMQ.')
+        echo.echo_success('No inconsistencies detected between database and broker.')
         return
 
-    echo.echo_warning('Inconsistencies detected between database and RabbitMQ.')
+    echo.echo_warning('Inconsistencies detected between database and broker.')
 
     if dry_run:
         echo.echo_critical('This was a dry-run, no changes will be made.')
@@ -572,11 +600,33 @@ def process_repair(manager, broker, dry_run):
             echo.echo_report(f'Acknowledged task `{pid}`')
 
     # Revive zombie processes that no longer have a process task
-    process_controller = manager.get_process_controller()
-    for pid in set_active_processes:
-        if pid not in set_process_tasks:
-            process_controller.continue_process(pid)
-            echo.echo_report(f'Revived process `{pid}`')
+    zombies = set_active_processes.difference(set_process_tasks)
+    if zombies:
+        from aiida.brokers.zmq.broker import ZmqBroker
+
+        if isinstance(broker, ZmqBroker):
+            # For ZMQ, the broker runs inside the daemon (which must be stopped for repair).
+            # Write revival tasks directly to the persistent queue on disk — the broker will
+            # pick them up when the daemon is restarted.  This avoids starting a temporary
+            # broker process and the timing issues that come with it.
+            import uuid
+
+            from plumpy.process_comms import create_continue_body
+
+            from aiida.brokers.zmq.queue import PersistentQueue
+
+            queue_path = broker.storage_path / 'tasks'
+            queue = PersistentQueue(queue_path)
+            for pid in zombies:
+                task_id = uuid.uuid4().hex
+                body = create_continue_body(pid=pid, nowait=True)
+                queue.push(task_id, {'body': body, 'no_reply': True})
+                echo.echo_report(f'Revived process `{pid}`')
+        else:
+            process_controller = manager.get_process_controller()
+            for pid in zombies:
+                process_controller.continue_process(pid)
+                echo.echo_report(f'Revived process `{pid}`')
 
 
 @verdi_process.command('dump')

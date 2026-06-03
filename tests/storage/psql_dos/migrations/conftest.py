@@ -84,7 +84,8 @@ def uninitialised_profile(empty_pg_cluster: PGTest, tmp_path):
 @pytest.fixture()
 def perform_migrations(uninitialised_profile):
     """A fixture to setup a database for migration tests."""
-    yield PsqlDosMigrator(uninitialised_profile)
+    with PsqlDosMigrator(uninitialised_profile) as migrator:
+        yield migrator
 
 
 def _generate_column_schema(profile: Profile) -> dict:

@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import functools
+import sys
 import typing as t
+import warnings
+from collections.abc import Iterator
 
 from aiida.brokers.broker import Broker
 from aiida.common.log import AIIDA_LOGGER
@@ -13,6 +16,7 @@ from .utils import get_launch_queue_name, get_message_exchange_name, get_task_ex
 
 if t.TYPE_CHECKING:
     from kiwipy.rmq import RmqThreadCommunicator
+    from packaging.version import Version
 
     from aiida.manage.configuration.profile import Profile
 
@@ -33,19 +37,25 @@ class RabbitmqBroker(Broker):
         self._communicator: 'RmqThreadCommunicator' | None = None
         self._prefix = f'aiida-{self._profile.uuid}'
 
-    def __str__(self):
+    def __str__(self) -> str:
         try:
             return f'RabbitMQ v{self.get_rabbitmq_version()} @ {self.get_url()}'
         except ConnectionError:
             return f'RabbitMQ @ {self.get_url()} <Connection failed>'
 
-    def close(self):
+    def close(self) -> None:
         """Close the broker."""
         if self._communicator is not None:
             self._communicator.close()
             self._communicator = None
 
-    def iterate_tasks(self):
+    def __del__(self) -> None:
+        if self._communicator is not None:
+            warnings.warn(f'RabbitmqBroker was not closed explicitly: {self!r}', ResourceWarning, stacklevel=1)
+            if not sys.is_finalizing():
+                self.close()
+
+    def iterate_tasks(self) -> Iterator[t.Any]:
         """Return an iterator over the tasks in the launch queue."""
         for task in self.get_communicator().task_queue(get_launch_queue_name(self._prefix)):
             yield task
@@ -72,7 +82,7 @@ class RabbitmqBroker(Broker):
             task_exchange=get_task_exchange_name(self._prefix),
             task_queue=get_launch_queue_name(self._prefix),
             task_prefetch_count=get_config_option('daemon.worker_process_slots'),
-            async_task_timeout=get_config_option('rmq.task_timeout'),
+            async_task_timeout=get_config_option('broker.task_timeout'),
             # This is needed because the verdi commands will call this function and when called in unit tests the
             # testing_mode cannot be set.
             testing_mode=self._profile.is_test_profile,
@@ -80,7 +90,7 @@ class RabbitmqBroker(Broker):
 
         return self._communicator
 
-    def check_rabbitmq_version(self):
+    def check_rabbitmq_version(self) -> tuple[Version, bool]:
         """Check the version of RabbitMQ that is being connected to and emit warning if it is not compatible."""
         show_warning = get_config_option('warnings.rabbitmq_version')
         version = self.get_rabbitmq_version()
@@ -115,7 +125,7 @@ class RabbitmqBroker(Broker):
 
         return parse('3.6.0') <= self.get_rabbitmq_version() < parse('3.8.15')
 
-    def get_rabbitmq_version(self):
+    def get_rabbitmq_version(self) -> Version:
         """Return the version of the RabbitMQ server that the current profile connects to.
 
         :return: :class:`packaging.version.Version`

@@ -163,6 +163,43 @@ It is also possible to run ``verdi`` commands inside the notebook, for example:
    %verdi status
 
 
+Running AiiDA engine processes in notebooks
+-------------------------------------------
+
+AiiDA supports running engine processes (such as calculation functions and work chains) directly in Jupyter notebooks.
+When :meth:`~aiida.manage.configuration.load_profile` is called inside a Jupyter notebook, AiiDA automatically sets up the necessary infrastructure to allow synchronous process execution within the notebook's event loop.
+
+.. important::
+
+    ``load_profile()`` must be called in a **separate cell** before any AiiDA engine processes can be executed.
+    The setup takes effect from the **next cell** after loading the profile.
+
+For example, load the profile in the first cell:
+
+.. code-block:: ipython
+
+    In [1]: from aiida import load_profile
+       ...: load_profile()
+
+Then, in a subsequent cell, you can run engine processes as usual:
+
+.. code-block:: ipython
+
+    In [2]: from aiida.engine import calcfunction
+       ...: from aiida import orm
+       ...:
+       ...: @calcfunction
+       ...: def add(x, y):
+       ...:     return orm.Int(x.value + y.value)
+       ...:
+       ...: result = add(orm.Int(3), orm.Int(4))
+       ...: print(result)
+
+.. warning::
+
+    Attempting to run engine processes in the **same cell** where ``load_profile()`` is called will raise an error.
+    Always ensure the profile is loaded in a separate cell.
+
 
 .. _how-to:interact-restapi:
 

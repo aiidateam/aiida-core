@@ -147,7 +147,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         self,
         jobs: list[str] | None = None,
         user: str | None = None,
-        as_dict: t.Literal[True] = True,
+        as_dict: t.Literal[True] = ...,
     ) -> dict[str, JobInfo]: ...
 
     @abc.abstractmethod
@@ -341,7 +341,7 @@ class Scheduler(metaclass=abc.ABCMeta):
 
         raise NotImplementedError('Unrecognized code run mode')
 
-    def _get_detailed_job_info_command(self, job_id: str) -> dict[str, t.Any]:
+    def _get_detailed_job_info_command(self, job_id: str) -> str:
         """Return the command to run to get detailed information for a given job.
 
         This is typically called after the job has finished, to retrieve the most detailed information possible about

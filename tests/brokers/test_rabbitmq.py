@@ -10,13 +10,14 @@
 
 import pathlib
 import uuid
+from unittest.mock import MagicMock
 
 import pytest
 import requests
 from kiwipy.rmq import RmqThreadCommunicator
 from packaging.version import parse
 
-from aiida.brokers.rabbitmq import client, utils
+from aiida.brokers.rabbitmq import RabbitmqBroker, client, utils
 from aiida.engine.processes import ProcessState, control
 from aiida.orm import Int
 
@@ -34,6 +35,33 @@ def test_str_method(monkeypatch, manager):
 
     monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
     assert 'RabbitMQ @' in str(broker)
+
+
+def test_del_closes_broker_when_not_finalizing(aiida_profile, monkeypatch):
+    """Test `__del__` closes the broker when Python is not finalizing."""
+    broker = RabbitmqBroker(aiida_profile)
+    broker._communicator = MagicMock()
+    close = MagicMock()
+    monkeypatch.setattr(broker, 'close', close)
+
+    with pytest.warns(ResourceWarning, match='RabbitmqBroker was not closed explicitly'):
+        broker.__del__()
+
+    close.assert_called_once_with()
+
+
+def test_del_skips_close_when_finalizing(aiida_profile, monkeypatch):
+    """Test ``__del__`` skips close when Python is finalizing."""
+    broker = RabbitmqBroker(aiida_profile)
+    broker._communicator = MagicMock()
+    close = MagicMock()
+    monkeypatch.setattr(broker, 'close', close)
+    monkeypatch.setattr('sys.is_finalizing', lambda: True)
+
+    with pytest.warns(ResourceWarning, match='RabbitmqBroker was not closed explicitly'):
+        broker.__del__()
+
+    close.assert_not_called()
 
 
 @pytest.mark.parametrize(

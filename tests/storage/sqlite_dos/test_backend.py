@@ -10,9 +10,9 @@ from aiida.storage.sqlite_dos.backend import FILENAME_CONTAINER, FILENAME_DATABA
 
 @pytest.mark.usefixtures('chdir_tmp_path')
 def test_model():
-    """Test :class:`aiida.storage.sqlite_dos.backend.SqliteDosStorage.Model`."""
+    """Test :class:`aiida.storage.sqlite_dos.backend.SqliteDosStorage.CliModel`."""
     filepath = pathlib.Path.cwd() / 'archive.aiida'
-    model = SqliteDosStorage.Model(filepath=filepath.name)
+    model = SqliteDosStorage.CliModel(filepath=filepath.name)
     assert pathlib.Path(model.filepath).is_absolute()
 
 
@@ -52,3 +52,13 @@ def test_initialise_version_check(tmp_path, monkeypatch):
     with pytest.raises(AttributeError):
         SqliteDosStorage.initialise('')
     mock_.assert_called_once()
+
+
+def test_version_profile(aiida_config, aiida_profile_factory):
+    """Test that ``version_profile`` works correctly using ``SqliteDosMigrator`` as context manager.
+
+    Regression test to ensure ``migrator_context`` removal does not break ``version_profile``.
+    """
+    with aiida_profile_factory(aiida_config, storage_backend='core.sqlite_dos') as profile:
+        version = SqliteDosStorage.version_profile(profile)
+        assert version == SqliteDosStorage.version_head()

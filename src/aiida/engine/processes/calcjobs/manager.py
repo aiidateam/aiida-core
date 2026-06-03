@@ -96,7 +96,7 @@ class JobsList:
         :return: a mapping of job ids to :py:class:`~aiida.schedulers.datastructures.JobInfo` instances
 
         """
-        with self._transport_queue.request_transport(self._authinfo) as request:
+        async with self._transport_queue.request_transport(self._authinfo) as request:
             self.logger.info('waiting for transport')
             transport = await request
 

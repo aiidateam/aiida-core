@@ -50,6 +50,7 @@ __all__ = (
     'TestsNotAllowedError',
     'TransportTaskException',
     'UniquenessError',
+    'UnsupportedSchemaError',
     'UnsupportedSpeciesError',
     'ValidationError',
 )
@@ -294,3 +295,7 @@ class LockedProfileError(AiidaException):
 
 class LockingProfileError(AiidaException):
     """Raised if the profile can`t be locked"""
+
+
+class UnsupportedSchemaError(AiidaException):
+    """Raised when a schema (model) is not supported by the entity."""

@@ -22,6 +22,7 @@ from .extendeddicts import *
 from .links import *
 from .log import *
 from .progress_reporter import *
+from .utils import *
 
 __all__ = (
     'AIIDA_LOGGER',
@@ -80,6 +81,7 @@ __all__ = (
     'TransportTaskException',
     'UniquenessError',
     'UnstashTargetMode',
+    'UnsupportedSchemaError',
     'UnsupportedSpeciesError',
     'ValidationError',
     'create_callback',
@@ -87,6 +89,7 @@ __all__ = (
     'override_log_level',
     'set_progress_bar_tqdm',
     'set_progress_reporter',
+    'url2pathname',
     'validate_link_label',
 )
 

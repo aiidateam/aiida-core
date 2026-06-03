@@ -212,18 +212,8 @@ class NodeRepository:
 
         with self._repository.open(path) as handle:
             if 'b' not in mode:
-                # Note: do not yield directly the text_wrapper, but give it a variable name.
-                #
-                # In fact, if this is not done and the caller does a
-                # `with ...repo.open():` (rather than
-                #  `with ...repo.open() as something:`),
-                # then one gets (at least in python 3.11) a
-                # then the following warning is triggered
-                # `ResourceWarning: unclosed file <_io.TextIOWrapper...>`
-                # (even if the underlying file is closed).
-                # See more discussion in #7181.
-                text_wrapper = io.TextIOWrapper(handle, encoding='utf-8')
-                yield text_wrapper
+                with io.TextIOWrapper(handle, encoding='utf-8') as text_stream:
+                    yield text_stream
             else:
                 yield handle
 
@@ -295,10 +285,10 @@ class NodeRepository:
         :raises IsADirectoryError: if the object is a directory and not a file.
         :raises OSError: if the file could not be opened.
         """
-        with self.open(path, mode='rb') as handle:
-            handle.seek(0, io.SEEK_END)
-            size = handle.tell()
-        return size
+        import os
+
+        with self.as_path(path) as filepath:
+            return os.path.getsize(filepath)
 
     def get_zipped_objects(self, compression: int = zipfile.ZIP_DEFLATED) -> bytes:
         """Return the zipped content of the repository or a sub path within it.

@@ -38,6 +38,11 @@ class SomeWorkChain(engine.BaseRestartWorkChain):
     def handler_c(self, _):
         return
 
+    @engine.process_handler()
+    def handler_d(self, node):
+        if node.exit_status == 1:
+            return engine.ProcessHandlerReport()
+
     def not_a_handler(self, _):
         pass
 
@@ -55,17 +60,18 @@ def test_get_process_handlers():
         'handler_a',
         'handler_b',
         'handler_c',
+        'handler_d',
     ]
 
 
 @pytest.mark.parametrize(
     'inputs, priorities',
     (
-        ({}, [100, 200]),
-        ({'handler_overrides': {'handler_c': {'enabled': True}}}, [0, 100, 200]),
-        ({'handler_overrides': {'handler_a': {'priority': 50}}}, [50, 100]),
-        ({'handler_overrides': {'handler_a': {'enabled': False}}}, [100]),
-        ({'handler_overrides': {'handler_a': False}}, [100]),  # This notation is deprecated
+        ({}, [0, 100, 200]),
+        ({'handler_overrides': {'handler_c': {'enabled': True}}}, [0, 0, 100, 200]),
+        ({'handler_overrides': {'handler_a': {'priority': 50}}}, [0, 50, 100]),
+        ({'handler_overrides': {'handler_a': {'enabled': False}}}, [0, 100]),
+        ({'handler_overrides': {'handler_a': False}}, [0, 100]),  # This notation is deprecated
     ),
 )
 def test_get_process_handlers_by_priority(generate_work_chain, inputs, priorities):
@@ -81,6 +87,7 @@ def test_get_process_handlers_by_priority(generate_work_chain, inputs, prioritie
     assert getattr(SomeWorkChain, 'handler_a').priority == 200
     assert getattr(SomeWorkChain, 'handler_b').priority == 100
     assert getattr(SomeWorkChain, 'handler_c').priority == 0
+    assert getattr(SomeWorkChain, 'handler_d').priority == 0
     assert getattr(SomeWorkChain, 'handler_a').enabled
     assert getattr(SomeWorkChain, 'handler_b').enabled
     assert not getattr(SomeWorkChain, 'handler_c').enabled
@@ -94,7 +101,7 @@ def test_get_process_handlers_by_priority(generate_work_chain, inputs, prioritie
     ]
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_excepted_process(generate_work_chain, generate_calculation_node):
     """Test that the workchain aborts if the sub process was excepted."""
     process = generate_work_chain(SomeWorkChain, {})
@@ -103,7 +110,7 @@ def test_excepted_process(generate_work_chain, generate_calculation_node):
     assert process.inspect_process() == engine.BaseRestartWorkChain.exit_codes.ERROR_SUB_PROCESS_EXCEPTED
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_killed_process(generate_work_chain, generate_calculation_node):
     """Test that the workchain aborts if the sub process was killed."""
     process = generate_work_chain(SomeWorkChain, {})
@@ -112,7 +119,7 @@ def test_killed_process(generate_work_chain, generate_calculation_node):
     assert process.inspect_process() == engine.BaseRestartWorkChain.exit_codes.ERROR_SUB_PROCESS_KILLED
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.parametrize('on_unhandled_failure', (None, 'abort', 'pause', 'restart_once', 'restart_and_pause'))
 def test_unhandled_failure(generate_work_chain, generate_calculation_node, on_unhandled_failure):
     """Test the `on_unhandled_failure` input and behavior."""
@@ -141,7 +148,7 @@ def test_unhandled_failure(generate_work_chain, generate_calculation_node, on_un
         assert process.paused
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_unhandled_reset_after_success(generate_work_chain, generate_calculation_node):
     """Test `ctx.unhandled_failure` is reset to `False` in `inspect_process` after a successful process."""
     process = generate_work_chain(SomeWorkChain, {'on_unhandled_failure': orm.Str('restart_once')})
@@ -155,7 +162,7 @@ def test_unhandled_reset_after_success(generate_work_chain, generate_calculation
     assert process.ctx.unhandled_failure is False
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_unhandled_reset_after_handled(generate_work_chain, generate_calculation_node):
     """Test `ctx.unhandled_failure` is reset to `False` in `inspect_process` after a handled failed process."""
     process = generate_work_chain(SomeWorkChain, {'on_unhandled_failure': orm.Str('restart_once')})
@@ -176,7 +183,7 @@ def test_unhandled_reset_after_handled(generate_work_chain, generate_calculation
     assert process.ctx.unhandled_failure is False
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_run_process(generate_work_chain, generate_calculation_node, monkeypatch):
     """Test the `run_process` method."""
 
@@ -196,6 +203,90 @@ def test_run_process(generate_work_chain, generate_calculation_node, monkeypatch
     assert isinstance(result, engine.ToContext)
     assert isinstance(result['children'], Awaitable)
     assert process.node.base.extras.get(SomeWorkChain._considered_handlers_extra) == [[]]
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.parametrize('max_iterations', (1, 2, 3))
+@pytest.mark.parametrize('pause_on_max_iterations', (False, True))
+def test_global_max_iterations(generate_work_chain, generate_calculation_node, max_iterations, pause_on_max_iterations):
+    """Test the global `max_iterations` input."""
+    process = generate_work_chain(
+        SomeWorkChain, {'pause_on_max_iterations': pause_on_max_iterations, 'max_iterations': max_iterations}
+    )
+    process.setup()
+    process.ctx.children = []
+
+    if max_iterations > 1:
+        while process.ctx.iteration < max_iterations - 1:
+            process.ctx.children.append(generate_calculation_node(exit_status=1))
+            process.ctx.iteration += 1
+            result = process.inspect_process()
+            assert isinstance(result, engine.ExitCode)
+            assert result.status == 0
+
+    # One more trigger - `max_iterations` is reached
+    process.ctx.children.append(generate_calculation_node(exit_status=1))
+    process.ctx.iteration += 1
+    result = process.inspect_process()
+
+    if pause_on_max_iterations:
+        assert process.ctx.iteration == 0  # Counter should be reset
+        assert result is None  # No exit code
+        assert process.paused
+    else:
+        assert process.ctx.iteration == max_iterations
+        assert result == engine.BaseRestartWorkChain.exit_codes.ERROR_MAXIMUM_ITERATIONS_EXCEEDED
+
+
+class WorkChainWithFinishHandler(engine.BaseRestartWorkChain):
+    """WorkChain with a handler that sets is_finished."""
+
+    _process_class = engine.CalcJob
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        spec.expose_outputs(engine.CalcJob)
+
+    def setup(self):
+        super().setup()
+        self.ctx.inputs = {}
+
+    @engine.process_handler(priority=100)
+    def handler_that_finishes(self, node):
+        """Handler that marks work as finished even with non-zero exit."""
+        if node.exit_status == 1:
+            self.ctx.is_finished = True
+            self.results()
+            return engine.ProcessHandlerReport(do_break=False, exit_code=engine.ExitCode(42, 'CUSTOM_FINISH'))
+
+
+@pytest.mark.requires_rmq
+def test_handler_sets_is_finished(generate_work_chain, generate_calculation_node, aiida_localhost):
+    """Test the case when a handler sets ctx.is_finished=True."""
+
+    # Test with max_iterations=1 to make sure the pausing logic isn't triggered
+    process = generate_work_chain(WorkChainWithFinishHandler, {'max_iterations': orm.Int(1)})
+    process.setup()
+
+    # First trigger - handler sets is_finished
+    process.ctx.children = [
+        # Add outputs to the `CalcJob` to check if they are attached when the workflow is finished
+        generate_calculation_node(
+            exit_status=1,
+            outputs={
+                'retrieved': orm.FolderData(),
+                'remote_folder': orm.RemoteData(computer=aiida_localhost, remote_path='/tmp'),
+            },
+        )
+    ]
+    process.ctx.iteration = 1
+    result = process.inspect_process()
+
+    assert result.status == 42
+    assert process.ctx.is_finished is True
+    assert 'retrieved' in process.outputs
+    assert 'remote_folder' in process.outputs
 
 
 class OutputNamespaceWorkChain(engine.WorkChain):
@@ -244,14 +335,14 @@ class CustomBaseRestartWorkChain(engine.BaseRestartWorkChain):
             self.ctx.inputs.parameters = self.ctx.inputs.parameters.get_dict()
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_results():
     results, node = engine.launch.run_get_node(CustomBaseRestartWorkChain)
     assert results['sub'].result.value == 1
     assert node.exit_status == 11
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_wrap_bare_dict_inputs():
     """Test that ``BaseRestartWorkChain._wrap_bare_dict_inputs`` method works properly.
 

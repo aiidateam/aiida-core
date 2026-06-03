@@ -502,17 +502,20 @@ class _OpenSSH(_AsynchronousSSHBackend):
         return process.returncode, stdout.decode(), stderr.decode()
 
     def _escape_for_rcp(self, path: str) -> str:
-        """Escape special characters for scp RCP mode using backslashes.
+        """Backslash-escape shell metacharacters for scp's RCP protocol.
 
-        Note: escape_for_bash() does NOT work here because scp's RCP protocol
-        expects backslash-escaped paths, not quote-wrapped strings.
+        Glob characters (``*``, ``?``, ``[``, ``]``) are deliberately left
+        unescaped so the remote shell expands them; the trade-off is that
+        filenames containing literal glob characters cannot be addressed
+        in RCP mode. :func:`escape_for_bash` is unsuitable here because it
+        quote-wraps rather than backslash-escapes.
 
-        :param path: The path to escape
-        :return: The escaped path with backslashes before special characters
+        :param path: The path to escape.
+        :return: The escaped path.
         """
 
         result = []
-        special = set(' \t\n"\'`$\\!#&*?;<>|(){}[]')
+        special = set(' \t\n"\'`$\\!#&;<>|(){}')
         for char in path:
             if char in special:
                 result.append('\\')
@@ -522,11 +525,13 @@ class _OpenSSH(_AsynchronousSSHBackend):
     def _escape_for_scp(self, path: str) -> str:
         """Prepare a path for use in scp commands.
 
-        In OpenSSH < 9.0, scp uses the RCP protocol which passes paths through
-        the remote shell. We must escape shell metacharacters with backslashes
-        to prevent shell expansion/injection.
-
-        OpenSSH 9.0+, however, uses SFTP mode by default - paths are binary data, no shell quoting needed.
+        OpenSSH >= 9.0 uses SFTP mode: paths are sent as binary, no
+        escaping needed. OpenSSH < 9.0 uses RCP mode: paths are interpreted
+        by a shell on both ends (scp itself shells out internally for local
+        paths), so shell metacharacters are backslash-escaped via
+        :meth:`_escape_for_rcp` while glob characters are deliberately
+        preserved for pattern matching. Mode is selected via
+        :attr:`is_openssh_9_or_higher`.
         """
 
         if self.is_openssh_9_or_higher:

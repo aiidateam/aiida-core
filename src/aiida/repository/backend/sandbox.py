@@ -11,7 +11,7 @@ import uuid
 
 from aiida.common.folders import SandboxFolder
 
-from .abstract import AbstractRepositoryBackend
+from .abstract import AbstractRepositoryBackend, InfoDictType
 
 __all__ = ('SandboxRepositoryBackend',)
 
@@ -104,7 +104,10 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
 
     @contextlib.contextmanager
     def open(self, key: str) -> t.Iterator[t.BinaryIO]:
-        super().open(key)
+        """Open a file handle to an object stored under the given key."""
+
+        if not self.has_object(key):
+            raise FileNotFoundError(f'object with key `{key}` does not exist.')
 
         with self.sandbox.open(key, mode='rb') as handle:
             yield handle
@@ -122,5 +125,5 @@ class SandboxRepositoryBackend(AbstractRepositoryBackend):
     def list_objects(self) -> t.Iterable[str]:
         return self.sandbox.get_content_list()
 
-    def get_info(self, detailed: bool = False) -> t.NoReturn:
+    def get_info(self, detailed: bool = False, **kwargs: t.Any) -> InfoDictType:
         raise NotImplementedError

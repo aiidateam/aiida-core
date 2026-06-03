@@ -338,3 +338,5 @@ In the following, we explain how to run this wsgi application using Apache on Ub
 #. Restart apache: ``sudo service apache2 restart``.
 
 You should now be able to reach your REST API at ``localhost/myprofile/api/v4`` (Port 80).
+
+For a guide on browsing AiiDA archives interactively through RenkuLab without a local installation, see also `One-click exploration of AiiDA archives via RenkuLab <https://aiida.net/news/posts/2025-10-10-aiida-renku-integration.html>`__.

@@ -36,11 +36,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class PbsproScheduler(PbsBaseClass):
-    """Subclass to support the PBSPro scheduler
-    (http://www.pbsworks.com/).
-
-    I redefine only what needs to change from the base class
-    """
+    """Support for the PBSPro scheduler (http://www.pbsworks.com/)."""
 
     ## I don't need to change this from the base class
     # _job_resource_class = PbsJobResource

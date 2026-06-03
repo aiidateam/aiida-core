@@ -200,9 +200,9 @@ class AiidaEntitySet(AbstractSetContainer):
         if self._identifier_type != other.identifier_type:
             raise TypeError('The two instances do not have the same identifier type!')
 
-    def _check_input_for_set(self, input_for_set: _NodeOrGroupCls | int) -> Any:
+    def _check_input_for_set(self, input_for_set: orm.Node | orm.Group | int) -> Any:
         if isinstance(input_for_set, self._aiida_cls):
-            return getattr(input_for_set, self._identifier)  # type: ignore[unreachable]
+            return getattr(input_for_set, self._identifier)
 
         if isinstance(input_for_set, self._identifier_type):
             return input_for_set

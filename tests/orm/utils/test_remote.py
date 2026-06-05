@@ -8,7 +8,7 @@
 ###########################################################################
 """Tests for remote utilities."""
 
-from unittest.mock import Mock
+from unittest.mock import patch
 
 import pytest
 
@@ -39,23 +39,24 @@ def test_clean_mapping_remote_paths_skips_unconfigured_computer(tmp_path, monkey
     ).store()
     configured.configure(user=user)
 
-    folder_unconfigured = Mock(spec=RemoteData)
-    folder_configured = Mock(spec=RemoteData)
+    folder_unconfigured = RemoteData(remote_path=str(tmp_path / 'unconfigured-folder'), computer=unconfigured)
+    folder_configured = RemoteData(remote_path=str(tmp_path / 'configured-folder'), computer=configured)
 
     warnings: list[str] = []
     monkeypatch.setattr(remote.echo, 'echo_warning', lambda message, **kwargs: warnings.append(message))
     monkeypatch.setattr(remote.echo, 'echo_success', lambda *args, **kwargs: None)
 
-    remote.clean_mapping_remote_paths(
-        {
-            unconfigured.uuid: [folder_unconfigured],
-            configured.uuid: [folder_configured],
-        },
-        silent=True,
-    )
+    with patch.object(RemoteData, '_clean', autospec=True) as mock_clean:
+        remote.clean_mapping_remote_paths(
+            {
+                unconfigured.uuid: [folder_unconfigured],
+                configured.uuid: [folder_configured],
+            },
+            silent=True,
+        )
 
-    folder_unconfigured._clean.assert_not_called()
-    folder_configured._clean.assert_called_once()
+    mock_clean.assert_called_once()
+    assert mock_clean.call_args.args[0] is folder_configured
 
     assert warnings == [
         f'Skipping 1 remote folders on `{unconfigured.label}`: ' f'computer is not configured for user `{user.email}`'

@@ -7,8 +7,13 @@
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
 import os
+import sys
+from pathlib import Path
 
 import aiida
+
+# Make local extensions importable
+sys.path.insert(0, str(Path(__file__).parent / '_ext'))
 
 # imports required for docs/source/reference/api/public.rst
 from aiida import (  # noqa: F401
@@ -51,6 +56,7 @@ exclude_patterns = [
     'import_export/**',
     'internals/global_design.rst',
     'reference/apidoc/**',
+    'tutorials/_notes/**',
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -78,6 +84,7 @@ extensions = [
     'sphinx_copybutton',
     'sphinxext.rediraffe',
     'notfound.extension',
+    'inline_downloads',
 ]
 
 intersphinx_mapping = {
@@ -97,8 +104,39 @@ ipython_mplbackend = ''
 
 myst_enable_extensions = ['colon_fence', 'deflist']
 myst_heading_anchors = 4
+
 nb_execution_show_tb = 'READTHEDOCS' in os.environ
 nb_merge_streams = True
+
+# Module 4 requires a live SLURM cluster reachable over SSH (the
+# `xenonmiddleware/slurm` container in local dev and CI). Read the Docs
+# build environments cannot run Docker and have no such endpoint, so the
+# notebook is skipped there; code cells render without outputs.
+nb_execution_excludepatterns = []
+if 'READTHEDOCS' in os.environ:
+    nb_execution_excludepatterns.append('tutorials/module4.md')
+
+# --- Optional: bake module4 outputs into RTD via a pre-executed .ipynb ----
+# Future work, currently disabled. The intent is:
+#   - CI's docs-build job (which already runs module4 live against the
+#     xenonmiddleware/slurm service container) copies the executed
+#     `_build/jupyter_execute/tutorials/module4.ipynb` to
+#     `docs/source/tutorials/module4.ipynb` and pushes it back to the
+#     branch when `module4.md` itself changed.
+#   - On Read the Docs, sphinx would pick up `module4.ipynb` instead of
+#     `module4.md` so the rendered page shows real outputs from the live
+#     CI run rather than empty code cells.
+#   - Locally and in CI, sphinx would build `module4.md` (live), and
+#     skip `module4.ipynb` so there is no double-build of the same
+#     docname.
+# Trade-off to revisit: every push that touches `module4.md` adds one
+# bot commit on top with the freshly-baked notebook, which is noisy on
+# PR history. A leaner variant would bake only at merge-to-main time.
+#
+# if 'READTHEDOCS' in os.environ:
+#     exclude_patterns.append('tutorials/module4.md')
+# else:
+#     exclude_patterns.append('tutorials/module4.ipynb')
 nb_mime_priority_overrides = [
     ('gettext', 'application/vnd.jupyter.widget-view+json', 0),
     ('gettext', 'application/javascript', 10),
@@ -109,6 +147,14 @@ nb_mime_priority_overrides = [
     ('gettext', 'text/markdown', 60),
     ('gettext', 'text/latex', 70),
     ('gettext', 'text/plain', 80),
+    # HTML builders: prefer text/html over the Jupyter widget-view mime, so
+    # that printing a bare WorkGraph in a cell renders the self-contained
+    # srcdoc-iframe returned by ``WorkGraph._repr_html_`` (the interactive
+    # Rete.js viewer) instead of the widget-view mime, which only works in
+    # live Jupyter sessions with the ipywidgets JS bundle loaded.
+    ('html', 'text/html', 5),
+    ('dirhtml', 'text/html', 5),
+    ('singlehtml', 'text/html', 5),
 ]
 
 # -- Options for HTML output ---------------------------------------------------

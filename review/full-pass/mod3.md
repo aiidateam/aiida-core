@@ -1,0 +1,103 @@
+# Full readthrough &mdash; Module 3
+
+- [x] "Wire tasks together via data flow and" what does that mean? rephrase?
+    - "Connect tasks by passing one task's output socket as another task's input, so the whole pipeline is tracked as a single named process you can query and restart"
+- [x] again, too sweep-specific. mention the general concept: Map a workflow over a set of parameters to replace plain Python for-loops with tracked sweeps
+    - "Run a workflow over multiple input sets in parallel to replace plain Python `for`-loops with tracked, fan-out execution"
+- [x] maybe let's not use the term "grouping" here, as it's not a group in the sense in which we had just introduced it:  grouping everything under a single workflow node.
+    - rewrote to "with the whole pipeline recorded under a single workflow node"; further down, "The three steps are now bundled under that single workflow node" instead of "grouped".
+- [x] WorkGraph tasks can wrap any calcfunction -> any calcfunction, but also any normal python function, no? can you verify?
+    - verified: `task` returns a `TaskHandle` for plain Python functions too. Updated the table row to: "`@task` wraps any callable (calcfunctions, plain Python functions, CalcJobs) and turns it into a graph task".
+- [x] aiida-core is engine.run / engine.submit; we eventually want to have the same API for workgraph, engine.run / submit of WG objects: submit() / run()
+  wg.submit() / wg.run() / Identical semantics
+    - made the table row explicit: `engine.submit(...) / engine.run(...)` &harr; `wg.submit() / wg.run()`, with a note about daemon vs in-process semantics.
+- [x] There is also a "context" in workgraph, though? ToContext / self.ctx / Implicit (data flows through links) / WorkGraph passes data via socket connections
+    - extended that table row: sockets for data flow, `wg.ctx` for shared state. Forward-pointed to Module 6 where `wg.ctx` is covered properly.
+- [x] of the four objects WorkGraph -> of the four main objects WorkGraph
+- [x] plain Python loops to WorkGraph. ->  plain Python control flow to WorkGraph.
+- [x] We will use three more WorkGraph building blocks as we go: -> sounds weird as we introduce the main building blocks above. maybe we drop the list here and mention each of the bullet points as it's used? or, we phrase it differently: the building blocks in code look like. `dynamic` i would defer either way, when it's used, the concept is not clear at this point yet.
+    - dropped the bullet list; replaced with "The imports below cover everything we will use across this module; each helper is introduced when it first comes up." `@task.graph()`, `shelljob`, `dynamic` are now introduced at point of use.
+- [x] WorkGraph infers the output sockets from each function's return annotation: -> What about input sockets, isn't that the same for the function arguments?
+    - extended to cover both: "**Input sockets** come from the function's positional and keyword arguments. ... **Output sockets** come from the return annotation."
+- [x] this is the same as for calcfunctions in one of the earlier modules, no? "The default output socket is named .result. When a wrapped function returns a single (unnamed) value, WorkGraph exposes it via the .result attribute on the task handle."
+    - dropped the standalone admonition; folded into prose with an explicit cross-reference: "The default-output convention is the same as for the plain calcfunctions in {ref}`Module 2 <tutorial:module2>`: ..."
+- [x] `task` is a decorator, don't we call it like: `task()(prepare_input)`? same for output? if both forms work, let's use the one that makes it clear it's a decorator.
+    - changed to `task()(prepare_input)` / `task()(parse_output)` with a comment: "the explicit decorator-application form, equivalent to writing `@task()` above the definition."
+- [x] did they _warn_? but as the callouts above warned
+    - "warned" &rarr; "already noted".
+- [x] drop this sentence, it's not needed: "Each module's .md file runs in its own kernel and cannot reach names defined in other modules' cells."
+- [x] this: "Three things to notice: ... The return type annotation -> GrayScottOutputs ..." doesn't become immediately clear from the code and output above?
+    - dropped the first bullet (return-annotation observation is obvious from the `wg_preview` cell output). Now "Two things to notice".
+- [x] WorkGraph treats them uniformly and creates links wherever a socket is passed. -> it treats multiple in the same way, so it doesn't just create a link if a socket is passed? can you generalize here / be more precise?
+    - rewrote: "For socket arguments WorkGraph creates a link from the producing task to this one; for plain values it stores them directly as the task's input data. The graph definition does not care which kind you pass; only at execution time does the engine resolve sockets to the values flowing through them."
+- [x] here, wondering about the design, if it should be pseudo-tasks: ... that's maybe for future upstream changes. any first thought on this, though?
+    - kept the description for now (no upstream change needed yet). In chat I'd say: the pseudo-task framing is fine because it lets links into/out of the graph share the same socket machinery as task-to-task links (uniform model). The alternative would be to special-case graph I/O in the engine, which costs more than the conceptual overhead of "graph_inputs is just another task". Worth a separate discussion if WG decides to revisit it.
+- [x] three built-ins sit on the left -> the flow in the UI is actually graph_inputs -> prepare_input -> ShellJob -> parse_output -> graph_outputs. what do you mean with 'three built-ins'?
+    - rewrote: "the flow is `graph_inputs` &rarr; `prepare_input` &rarr; `ShellJob` &rarr; `parse_output` &rarr; `graph_outputs`, with `graph_ctx` sitting off to the side since nothing here wires into it."
+- [x] introduce this better: gray_scott_pipeline is now a factory... -> at least: So, `gray_scott_pipeline` is now...
+    - prepended "So, ".
+- [x] where does this output come from? {'variance_V': <Float: ...>, ...} hidden cell? if so, at least mention in prose where it's coming from
+    - added prose right below the hidden `wg.run()` cell explaining the dict is the return value of `wg.run()`.
+- [x] mention here: `# Show the hierarchical process tree of the workflow.` `%verdi process status {wg.process.pk}` that the `wg` is the container, and we need to access it's `process` attribute to get the pk from it (and verify in the code, an executed workgraph still results in a processnode, so that's a bit confusing to myself, as well rn...)
+    - added a paragraph: "`wg` itself stays a Python-side container around the graph definition. The actual AiiDA process node that records the execution lives on `wg.process`..."
+- [x] well, actually, it's a WorkGraphNode ^^: caller PK:      1031  (WorkGraphNode) -> verify in the code, and make the prose precise so there is no confusion...
+    - verified: `class WorkGraphNode(WorkChainNode)` in `aiida_workgraph.orm.workgraph`. Added explicit type print in the new cell (`print(f"wg.process type: {type(wg.process).__name__}")`) so the rendered output shows it. Prose calls it out: "...a `WorkGraphNode` (a subclass of `WorkChainNode`, so anything that works on a WorkChain process node works on this one too)".
+- [x] but now they sit below a -> "below" the real term?
+    - replaced with the precise relationship: "they are now *children* of a `WorkGraph<gray_scott_pipeline>` orchestrator node. The orchestrator owns `CALL_CALC` links pointing to each child step and `RETURN` links back from the exposed outputs..."
+***
+- [x] "and input (a socket from prepare_input_task)" where is this actually passed?
+    - clarified: `prepared.result` (a socket from the `prepare_input` task, wired through the `nodes` dict of the `shelljob` call).
+- [x] "reachable via wg.ctx.foo = ... / wg.ctx.foo," enough to just print the second one, not the assignment
+    - shortened to `wg.ctx.foo`.
+- [x] "with graph_ctx sitting off" -> graph_ctx is not shown at all?
+    - removed the `graph_ctx` clause from the viewer description; it's already explained in the bullet above.
+- [x] "nodes. That is the return value of wg.run(); IPython auto-displays it." -> "nodes, the return value of wg.run()."
+    - shortened.
+- [x] "whole pipeline is one queryable, inspectable unit in the database." -> make bold
+    - bolded.
+- [x] "one copy of its body per entry." -> What? which body? i don't understand this
+    - reworded: "runs the tasks inside the zone once per entry."
+- [x] maybe, on the first occurence of Map, "WorkGraph's Map lets you run the same sub-workflow", we should introduce "zone"s
+    - added: "In WorkGraph terminology, a `Map` is a **zone**: a region of the graph that controls how the tasks inside it are scheduled."
+- [ ] hm, i'm a bit surprised: "Help on function Map in module aiida_workgraph.manager:" shouldn't "Map" be at the top-level? Or, under `aiida_workgraph.control_flow`, or so. i didn't expect "manager"
+    - this is just what Python's `help()` reports based on where the class is defined. The import path (`from aiida_workgraph import Map`) is clean; the internal module location is an implementation detail. No tutorial change needed, but worth flagging upstream if the location feels wrong.
+- [x] "renders a transition curve" -> "renders the transition curve"
+    - fixed.
+- [x] "    param_sweep: Annotated[dict, dynamic(dict)], " -> is dynamic now introduced in one of the earlier modules? i'm not sure, can you check? here, there is not even an import?
+    - `dynamic` and `namespace` are imported at the top of the module. Added a prose paragraph before the `gray_scott_sweep` code cell that explains both helpers in the signature: `dynamic(dict)` for runtime-keyed inputs, `namespace(...)` for multiple named outputs.
+- [x] ") -> namespace(...)" -> should we still return variance and mean, as well? in the prose we say the only final artifact is the plot? maybe, let's also use a better name than "summary_plot"?
+    - renamed `summary_plot` &rarr; `transition_plot` throughout. Kept `variance_V` and `mean_V` outputs (see item 67).
+- [ ] from the `Map` signature: "    :param source_socket: A TaskSocket or boolean-like object (e.g. sum_ > 0) "; a bit weird, as later on, we pass: "    with Map(param_sweep) as map_zone: ", so, where does the param_sweep end up? ...
+    - `param_sweep` is passed as the first positional argument to `Map(...)` and becomes the source collection (step 1 of the important box). The `source_socket` docstring name is a bit generic; at build time it accepts a plain dict, at execution time the engine resolves it. No tutorial prose change needed, but the WG docstring could be clearer.
+- [x] '.gather({' -> is that a Map zone builtin? is that correct? maybe mention that somewhere. it's not something people can derive logically, they just have to know: with Map, you then need to do .gather...
+    - already covered in the `:::{important}` box (step 3: "`map_zone.gather({...})` declares which per-iteration outputs to collect").
+- [x] also here, `summary` is a bit non-descriptive
+    - renamed to `plotted`.
+- [x] huh, maybe returning variance and mean is pedagogical, to show that they are fetched from map_zone.outputs?
+    - agreed; kept them. The outputs demonstrate how `map_zone.outputs.<name>` works.
+- [x] put gsrd in backticks, here: " we are about to run gsrd many time" but also everywhere else. please verify
+    - verified across all modules. Fixed un-backticked prose occurrences in module3 (already clean), module6 (3 occurrences fixed). Code comments left as-is (backticks don't render there).
+- [x] what is "the actual fan-out" here "and the actual fan-out happens at execution time." ?
+    - reworded: "the engine only creates the per-iteration sub-workflows when the graph actually runs."
+- [x] does run or submit really change the concurrency of the sub-pipelines?
+    - no. Rewrote the note: in both cases the sub-workflows inside the `Map` zone run concurrently; the only difference is whether your session waits.
+- [x] drop this: "submit() changes who drives execution and whether your session blocks, not what gets recorded."
+    - removed; the whole note is now a compact 4-line explanation of `.run()` vs `.submit()`.
+- [x] hm, we are accessing a singular, private attribute here, but get a list of values: variances = wg_sweep.outputs.variance_V._value
+    - added a code comment explaining `._value` unwraps the namespace into a plain dict and noting this is the current WorkGraph API (may become public).
+- [x] add an emoji here, i like the first statement... Time to bring out the binoculars.
+    - added 🔭.
+- [x] "For a zoomable view, run verdi node graph generate <PK> from the command line." also, one can open it in a new tab, then it's larger and one can zoom, scroll, explore, as well!
+    - added: "right-click the image and open it in a new tab, or run `verdi node graph generate <PK>` from the command line to get a standalone SVG."
+- [x] in this snippet, we still use the live python object... could be nicer if we'd _actually_ retrieve it from the db?
+    - rewrote: now loads via `orm.load_node(wg_sweep.process.pk)` and accesses `sweep_node.outputs.transition_plot`.
+- [x] and read the boundary off the heatmap. -> what does that mean? i don't get it?
+    - already removed by the 2D grid rewrite (that sentence no longer exists).
+- [x] ah, that doesn't read nicely... "but its 1D transition curve is not the figure we care about here, so we ignore that output..."
+    - reworded: "The `make_transition_plot` reduction still runs and produces its 1D transition curve, but for the 2D case we use the gathered `variance_V` outputs directly and reshape them into a 5&times;5 matrix for the heatmap."
+
+### 2D scan grid fix
+
+The original 5&times;5 grid (`F=[0.020..0.060] &times; k=[0.045..0.066]`) had 14 out of 25 combinations where `gsrd` does not produce `results.npz` (the V field decays to a trivial state and `gsrd` skips the output file). This caused `ShellJob` exit code 303 for those iterations, and because WorkGraph's `Map` gather drops all entries when any iteration fails, the heatmap cell raised `ValueError: No positive variance values`.
+
+Fixed by narrowing the grid to `F=[0.040..0.060] &times; k=[0.061..0.065]`, which stays inside the pattern-forming band. All 25 combinations produce output. Variance ranges from ~1.6e-3 (edge of band) to ~2.2e-2 (center), about an order of magnitude, enough to show the transition on a log-scale heatmap. Prose updated to explain the grid choice.

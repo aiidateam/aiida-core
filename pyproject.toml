@@ -233,7 +233,8 @@ docs = [
   'sphinxext-rediraffe~=0.2.4',
   'sphinx-sqlalchemy~=0.2.0',
   'sphinx-intl~=2.1.0',
-  'myst-nb~=1.0.0'
+  'myst-nb~=1.0.0',
+  'sphinx-autobuild'
 ]
 notebook = [
   'jupyter-client~=8.0',
@@ -295,6 +296,11 @@ tests = [
 ]
 tui = [
   'trogon'
+]
+tutorials = [
+  'aiida-shell @ git+https://github.com/aiidateam/aiida-shell.git@master',
+  'aiida-workgraph @ git+https://github.com/GeigerJ2/aiida-workgraph.git@fix/map-zone-output-retrieval',
+  'gsrd @ git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state'  # TODO: revert to aiidateam/gsrd@main once the PR merges
 ]
 
 [project.scripts]
@@ -456,7 +462,8 @@ xfail_strict = true
 [tool.ruff]
 exclude = [
   'docs/source/topics/processes/include/snippets/functions/parse_docstring_expose_ipython.py',
-  'docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py'
+  'docs/source/topics/processes/include/snippets/functions/signature_plain_python_call_illegal.py',
+  'docs/source/tutorials/_notes/**'
 ]
 line-length = 120
 

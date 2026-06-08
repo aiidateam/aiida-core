@@ -17,15 +17,35 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
+    services:
+      slurm:
+        image: xenonmiddleware/slurm:17
+        ports:
+        - 5001:22
+
     steps:
     - uses: actions/checkout@v6
+
+    - name: Install system dependencies
+      run: sudo apt update && sudo apt install -y graphviz
 
     - name: Install aiida-core and docs deps
       uses: ./.github/actions/install-aiida-core
       with:
         python-version: '3.10'
-        extras: docs,tests,rest,atomic_tools
+        extras: docs,tutorials,tests,rest,atomic_tools
         from-lock: 'false'
+
+    - name: Install gsrd on SLURM container
+      run: |
+        cp "$(readlink -f "$(which uv)")" /tmp/uv-binary
+        docker cp /tmp/uv-binary "${{ job.services.slurm.id }}:/usr/local/bin/uv"
+        docker exec "${{ job.services.slurm.id }}" bash -c "\
+          export UV_PYTHON_INSTALL_DIR=/opt/uv-python && \
+          uv venv /opt/gsrd --python 3.12 && \
+          uv pip install --python /opt/gsrd/bin/python --only-binary numpy \
+            'gsrd @ https://github.com/aiidateam/gsrd/archive/refs/heads/main.zip' && \
+          chmod -R a+rX /opt/gsrd /opt/uv-python"
 
     - name: Build HTML docs
       id: linkcheck
@@ -45,3 +65,46 @@ jobs:
             echo "${{ steps.linkcheck.outputs.broken }}"
             exit 1
         fi
+
+    # --- Optional: bake module4 outputs into the branch for RTD --------------
+    # Future work, currently disabled. The intent is to copy the executed
+    # `module4.ipynb` that the live build above just produced into the source
+    # tree, so Read the Docs (which has no SLURM container) can render real
+    # outputs instead of empty code cells. See the matching commented block
+    # in `docs/source/conf.py` (`exclude_patterns` swap) that this depends on.
+    #
+    # Trigger logic:
+    #   - Only re-bake when `module4.md` itself changed in this push. Without
+    #     this guard, every push would re-bake because notebook outputs are
+    #     non-deterministic (UUIDs, PKs, timestamps drift each run).
+    #   - The auto-commit message carries a `[bake-skip]` tag and the next
+    #     step skips on it as belt-and-suspenders against an infinite loop.
+    #   - Needs `permissions: contents: write` at job or workflow level.
+    #     Forked-PR pushes will fail the push silently (read-only GITHUB_TOKEN
+    #     on forks), which is acceptable: module 4 changes go through the
+    #     maintainer anyway.
+    #
+    # - name: Check whether module4.md changed in this push
+    #   id: module4-changed
+    #   if: github.event_name == 'push' && !contains(github.event.head_commit.message, '[bake-skip]')
+    #   run: |
+    #     if git diff --name-only HEAD^ HEAD | grep -qx 'docs/source/tutorials/module4.md'; then
+    #       echo "changed=true" >> "$GITHUB_OUTPUT"
+    #     else
+    #       echo "changed=false" >> "$GITHUB_OUTPUT"
+    #     fi
+    #
+    # - name: Bake executed module4.ipynb into the branch for RTD
+    #   if: steps.module4-changed.outputs.changed == 'true'
+    #   run: |
+    #     cp docs/_build/jupyter_execute/tutorials/module4.ipynb \
+    #        docs/source/tutorials/module4.ipynb
+    #     git config user.name  'github-actions[bot]'
+    #     git config user.email 'github-actions[bot]@users.noreply.github.com'
+    #     git add docs/source/tutorials/module4.ipynb
+    #     if git diff --staged --quiet; then
+    #       echo 'No notebook changes to commit.'
+    #       exit 0
+    #     fi
+    #     git commit -m '🤖 docs: re-bake module4.ipynb for RTD [bake-skip]'
+    #     git push

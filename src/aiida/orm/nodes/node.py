@@ -1075,6 +1075,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         cls.AttributesModel.model_rebuild(force=True)
 
     @classmethod
+    def _get_patched_node_type_field(cls):
+        """Return a copy of the `node_type` field cast as the literal type for this class."""
+        node_type_field = deepcopy(cls.BaseNodeModel.model_fields['node_type'])
+        return (Literal[cls.class_node_type], node_type_field)
+
+    @classmethod
     def _patch_read_model(cls):
         """Patch `ReadModel` by wiring the subclass-specific `attributes` model.
 
@@ -1107,9 +1113,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             }
 
         attributes_field = deepcopy(cls.ReadModel.model_fields['attributes'])
-        node_type_field = deepcopy(cls.BaseNodeModel.model_fields['node_type'])
-        model_fields['node_type'] = (Literal[cls.class_node_type], node_type_field)
         model_fields['attributes'] = (cls.AttributesModel, attributes_field)
+        model_fields['node_type'] = cls._get_patched_node_type_field()
 
         ReadModel = cast(  # noqa: N806
             type[Node.ReadModel],
@@ -1130,23 +1135,28 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """Patch `ConstructorModel` by synthesizing it from `BaseNodeModel` and `ConstructorArgsModel`."""
         if not cls.supports_constructor_model:
             return
-        node_type_field = deepcopy(cls.BaseNodeModel.model_fields['node_type'])
+
         args_field = OrmMetadataField(
             description='The constructor arguments.',
             write_only=True,
         )
+        model_fields: dict[str, Any] = {
+            'args': (cls.ConstructorArgsModel, args_field),
+            'node_type': cls._get_patched_node_type_field(),
+        }
+
         ConstructorModel = cast(  # noqa: N806
             type[Node.BaseNodeModel],
             pdt.create_model(
                 'ConstructorModel',
                 __base__=cls.BaseNodeModel,
                 __module__=cls.__module__,
-                node_type=(Literal[cls.class_node_type], node_type_field),
-                args=(cls.ConstructorArgsModel, args_field),
+                **model_fields,
             ),
         )
         ConstructorModel.__qualname__ = f'{cls.__name__}.ConstructorModel'
         ConstructorModel.model_rebuild(force=True)
+
         cls._ConstructorModel = ConstructorModel
 
     @classmethod

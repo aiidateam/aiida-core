@@ -119,3 +119,56 @@ def test_template_config_with_template_vars(run_cli_command, tmp_path, template_
         result = run_cli_command(cmd_with_template, args)
         assert 'Label: my-computer' in result.output
         assert 'Hostname: localhost' in result.output
+
+
+@pytest.mark.parametrize(
+    ('user_input', 'expected_label'),
+    [
+        pytest.param('my-prompted-label\n', 'my-prompted-label', id='typed_value'),
+        pytest.param('\n', 'default-label', id='accept_default'),
+    ],
+)
+def test_template_config_interactive_prompting(run_cli_command, tmp_path, user_input, expected_label):
+    """Interactive mode prompts for template variables; Enter accepts the default."""
+    filepath = tmp_path / 'config.yml'
+    filepath.write_text(
+        textwrap.dedent(
+            """\
+            label: '{{ label }}'
+            hostname: localhost
+            metadata:
+                template_variables:
+                    label:
+                        key_display: Computer Label
+                        description: A short name
+                        default: default-label
+            """
+        )
+    )
+
+    result = run_cli_command(cmd_with_template, ['--config', str(filepath)], user_input=user_input)
+    assert f'Label: {expected_label}' in result.output
+    assert 'Hostname: localhost' in result.output
+
+
+def test_template_config_interactive_choice(run_cli_command, tmp_path):
+    """Interactive mode with ``type: list`` constrains input to the given options."""
+    filepath = tmp_path / 'config.yml'
+    filepath.write_text(
+        textwrap.dedent(
+            """\
+            label: '{{ binary }}'
+            hostname: localhost
+            metadata:
+                template_variables:
+                    binary:
+                        type: list
+                        options:
+                            - pw
+                            - ph
+            """
+        )
+    )
+
+    result = run_cli_command(cmd_with_template, ['--config', str(filepath)], user_input='pw\n')
+    assert 'Label: pw' in result.output

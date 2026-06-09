@@ -139,7 +139,7 @@ def _process_content(
         else:
             msg = (
                 f'Template variables detected ({", ".join(detected_vars)}) but no values provided. '
-                'Use --template-vars to provide values in JSON format.'
+                'Use --template-vars to provide values (JSON string, YAML file, or URL).'
             )
             raise click.BadParameter(msg)
         return _render_template(content, template_values)

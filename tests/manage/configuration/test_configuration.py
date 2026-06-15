@@ -41,16 +41,17 @@ def test_check_version_release(monkeypatch, capsys, isolated_config):
     assert not captured.out
 
 
+@pytest.mark.parametrize('version', ('1.0.0.dev0', '1.0.0.post0'))
 @pytest.mark.parametrize('suppress_warning', (True, False))
 @pytest.mark.usefixtures('isolated_config')
-def test_check_version_development(monkeypatch, suppress_warning):
-    """Test that ``Manager.check_version`` prints a warning for a post release development version.
+def test_check_version_development(monkeypatch, suppress_warning, version):
+    """Test that ``Manager.check_version`` prints a warning for a development or post release version.
 
-    The warning can be suppressed by setting the option ``warnings.development_version`` to ``False``.
+    The ``main`` branch carries a ``.dev0`` version and support branches a ``.post0`` version; both should trigger the
+    warning. It can be suppressed by setting the option ``warnings.development_version`` to ``False``.
     """
     from unittest.mock import MagicMock
 
-    version = '1.0.0.post0'
     monkeypatch.setattr(aiida, '__version__', version)
 
     manager = get_manager()
@@ -66,7 +67,7 @@ def test_check_version_development(monkeypatch, suppress_warning):
     else:
         mock_warning.assert_called()
         first_call_msg = mock_warning.call_args_list[0][0][0]
-        assert f'You are currently using a post release development version of AiiDA: {version}' in first_call_msg
+        assert f'You are currently using a development version of AiiDA: {version}' in first_call_msg
 
 
 def test_profile_context(config_with_profile, profile_factory):

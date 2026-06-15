@@ -135,22 +135,7 @@
 
          To the architecture guide
 
-   .. grid-item-card:: :fa:`puzzle-piece;mr-1` Core plugins
-      :text-align: center
-      :shadow: md
 
-      Commonly used AiiDA plugins to extend core functionality
-
-      +++++++++++++++++++++++++++++++++++++++++++++
-
-      .. button-ref:: reference/core_plugins
-         :ref-type: doc
-         :click-parent:
-         :expand:
-         :color: primary
-         :outline:
-
-         To the plugin overview
 
    .. grid-item-card:: :fa:`cogs;mr-1` API Reference
       :text-align: center
@@ -201,7 +186,6 @@
    howto/index
    topics/index
    internals/index
-   reference/core_plugins
    reference/index
 
 ===========

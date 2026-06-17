@@ -128,11 +128,11 @@ def detect_postgres_config(
     'user and database to use for the profile, but this can fail depending on the configuration of the server.',
 )
 @click.option(
-    '--use-zmq',
+    '--use-rabbitmq',
     is_flag=True,
-    help='When toggled on, the profile uses the ZMQ broker, which requires no external services and is started '
-    'automatically with the daemon. When not specified, the command automatically tries RabbitMQ first and falls back '
-    'to ZMQ if unavailable. To switch to RabbitMQ later, use `verdi profile configure-rabbitmq`.',
+    help='When toggled on, the profile uses RabbitMQ as the message broker instead of the built-in ZMQ broker. The '
+    'command attempts to connect to a RabbitMQ server on localhost and aborts if none can be reached. To switch an '
+    'existing profile to RabbitMQ later, use `verdi profile set-broker rabbitmq`.',
 )
 @click.option(
     '--no-broker',
@@ -161,7 +161,7 @@ def verdi_presto(
     profile_name,
     email,
     use_postgres,
-    use_zmq,
+    use_rabbitmq,
     no_broker,
     postgres_hostname,
     postgres_port,
@@ -186,17 +186,17 @@ def verdi_presto(
     * Set a number of configuration options with sensible defaults
     * Start the daemon (unless `--no-broker` is specified)
 
-    By default the command creates a profile that uses SQLite for the database. For the message broker, it automatically
-    checks for RabbitMQ running on localhost. If found, it configures RabbitMQ as the broker. Otherwise, it falls back
-    to the ZMQ broker, which requires no external services and is started automatically with the daemon.
+    By default the command creates a profile that uses SQLite for the database and the built-in ZMQ broker for the
+    message broker. The ZMQ broker requires no external services and is started automatically with the daemon.
 
     When the `--use-postgres` flag is toggled, the command tries to connect to the PostgreSQL server with connection
     paramaters taken from the `--postgres-hostname`, `--postgres-port`, `--postgres-username` and `--postgres-password`
     options. It uses these credentials to try and automatically create a user and database. If successful, the newly
     created profile uses the new PostgreSQL database instead of SQLite.
 
-    When the `--use-zmq` flag is toggled, the command skips the RabbitMQ auto-detection and directly configures the ZMQ
-    broker. To switch to RabbitMQ later, use `verdi profile configure-rabbitmq`.
+    When the `--use-rabbitmq` flag is toggled, the command configures RabbitMQ as the broker instead of ZMQ. It attempts
+    to connect to a RabbitMQ server on localhost and aborts if none can be reached. To switch an existing profile to
+    RabbitMQ later, use `verdi profile set-broker rabbitmq`.
     """
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
     from aiida.common import exceptions
@@ -235,24 +235,20 @@ def verdi_presto(
         echo.echo_report('`--no-broker` enabled: configuring the profile without a broker.')
         broker_backend = None
         broker_config = None
-    elif use_zmq:
-        echo.echo_report('`--use-zmq` enabled: configuring the profile with ZMQ broker.')
-        broker_backend = 'core.zmq'
-        broker_config = {}
-    else:
+    elif use_rabbitmq:
         try:
             broker_config = detect_rabbitmq_config()
         except ConnectionError:
-            echo.echo_report('RabbitMQ server not found: falling back to ZMQ broker.')
-            echo.echo_warning(
-                'The ZMQ broker is a new feature. If you experience issues, '
-                'recreate the profile with `verdi presto --no-broker`.'
+            echo.echo_critical(
+                '`--use-rabbitmq` enabled but no RabbitMQ server could be reached on localhost. Start a RabbitMQ '
+                'server and try again, or omit `--use-rabbitmq` to use the built-in ZMQ broker instead.'
             )
-            broker_backend = 'core.zmq'
-            broker_config = {}
-        else:
-            echo.echo_report('RabbitMQ server detected: configuring the profile with RabbitMQ broker.')
-            broker_backend = 'core.rabbitmq'
+        echo.echo_report('RabbitMQ server detected: configuring the profile with RabbitMQ broker.')
+        broker_backend = 'core.rabbitmq'
+    else:
+        echo.echo_report('Configuring the profile with the built-in ZMQ broker (no external services required).')
+        broker_backend = 'core.zmq'
+        broker_config = {}
 
     try:
         profile = create_profile(

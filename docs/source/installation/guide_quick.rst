@@ -51,7 +51,7 @@ A setup that is ideal for production work requires the PostgreSQL service and a 
 By default, ``verdi presto`` creates a profile that allows running AiiDA without these:
 
 * **Database**: The PostgreSQL database that is used to store queryable data, is replaced by SQLite.
-* **Broker**: The message broker that allows communication with and between processes is either set to the built-in ZMQ broker (automatic fallback) or disabled entirely.
+* **Broker**: The message broker that allows communication with and between processes is set to the built-in ZMQ broker by default, or disabled entirely.
 
 The following matrix shows the possible combinations of the database and broker options and their use cases:
 
@@ -87,10 +87,13 @@ AiiDA supports two broker backends:
     The built-in ZMQ broker was added as an alternative to RabbitMQ.
 
 .. note::
-    The ``verdi presto`` command automatically checks if RabbitMQ is running on the localhost.
-    If it can successfully connect, it configures the profile with RabbitMQ.
-    Otherwise, it falls back to the built-in ZMQ broker.
+    By default, ``verdi presto`` configures the profile with the built-in ZMQ broker, which requires no external services.
+    To use RabbitMQ instead, run ``verdi presto --use-rabbitmq`` (this requires a RabbitMQ server reachable on the localhost).
     If you do not want to use a broker at all, use ``verdi presto --no-broker``.
+
+.. versionchanged:: 2.9
+    ``verdi presto`` now configures the ZMQ broker by default.
+    Previously it auto-detected RabbitMQ on the localhost and only fell back to ZMQ when RabbitMQ was unreachable.
 
 A profile **without any broker** has the following limitations:
 
@@ -99,8 +102,8 @@ A profile **without any broker** has the following limitations:
 * cannot play, pause, kill processes
 
 .. tip::
-    A profile created by ``verdi presto`` can easily start using RabbitMQ as the broker at a later stage.
-    Once a RabbitMQ service is available (see :ref:`install RabbitMQ <installation:guide-complete:rabbitmq>` for instructions to install it), run ``verdi profile configure-rabbitmq`` to configure its use for the profile.
+    A profile created by ``verdi presto`` can easily switch to RabbitMQ as the broker at a later stage.
+    Once a RabbitMQ service is available (see :ref:`install RabbitMQ <installation:guide-complete:rabbitmq>` for instructions to install it), run ``verdi profile set-broker rabbitmq`` to configure its use for the profile.
 
 .. _installation:guide-quick:limitations:postgresql:
 

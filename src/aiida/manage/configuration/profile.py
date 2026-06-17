@@ -133,10 +133,10 @@ class Profile:
         """Return the configuration required by the process control backend."""
         return self._attributes[self.KEY_PROCESS][self.KEY_PROCESS_CONFIG] or {}
 
-    def set_process_controller(self, name: str, config: Dict[str, Any]) -> None:
+    def set_process_controller(self, name: str | None, config: Dict[str, Any]) -> None:
         """Set the process control backend and its configuration.
 
-        :param name: the name of the process backend
+        :param name: the name of the process backend, or ``None`` to configure the profile without a broker
         :param config: the configuration of the process backend
         """
         self._attributes.setdefault(self.KEY_PROCESS, {})

@@ -130,7 +130,7 @@ To create a profile that uses the ZMQ broker:
 
 .. code-block:: console
 
-    verdi presto --use-zmq
+    verdi presto
 
 Or when using ``verdi profile setup``:
 
@@ -140,7 +140,7 @@ Or when using ``verdi profile setup``:
 
 .. note::
 
-    The ``verdi presto`` command automatically falls back to the ZMQ broker when RabbitMQ is not available on the localhost.
+    Both ``verdi presto`` and ``verdi profile setup`` configure the ZMQ broker by default, so no broker-related option is required.
 
 .. tip::
 
@@ -303,13 +303,15 @@ The exact options available for the ``verdi profile setup`` command depend on th
 * ``--last-name``: Last name for the default user that is created.
 * ``--institution``: Institution for the default user that is created.
 * ``--broker [rabbitmq|zmq|none]``: Which message broker backend to use.
-  The default is ``rabbitmq``, in which case the command tries to connect to RabbitMQ running on the localhost with default connection parameters.
-  If this fails, a warning is issued and the profile is configured without a broker.
-  Use ``zmq`` for the built-in ZMQ broker (no external services required), or ``none`` to disable the broker entirely.
-  Once the profile is created, RabbitMQ can still be enabled through ``verdi profile configure-rabbitmq`` which allows to customize the connection parameters.
+  The default is ``zmq``, the built-in ZMQ broker that requires no external services.
+  Use ``rabbitmq`` to connect to a RabbitMQ server running on the localhost with default connection parameters, or ``none`` to disable the broker entirely.
+  The broker can be changed at any later point with ``verdi profile set-broker``, which for RabbitMQ also allows customizing the connection parameters.
 
   .. versionadded:: 2.9
       The ``--broker`` option replaces the deprecated ``--use-rabbitmq/--no-use-rabbitmq`` flags.
+
+  .. versionchanged:: 2.9
+      The default broker changed from ``rabbitmq`` to ``zmq``.
 * ``--non-interactive``: By default, the command prompts to specify a value for all options.
   Alternatively, the ``--non-interactive`` flag can be specified, in which case the command never prompts and the options need to be specified directly on the command line.
   This is useful when using ``verdi profile setup`` is used in non-interactive environments, such as scripts.
@@ -354,8 +356,8 @@ The options specific to the ``core.sqlite_dos`` storage plugin are:
 
         verdi presto --use-postgres
 
-    The ``verdi presto`` command also automatically tries to configure RabbitMQ as the broker if it is running locally.
-    Therefore, if the command succeeds in connecting to both PostgreSQL and RabbitMQ, ``verdi presto --use-postgres`` provides a fully automated way to create a profile suitable for production workloads.
+    By default ``verdi presto`` configures the built-in ZMQ broker; add ``--use-rabbitmq`` to use a RabbitMQ server running locally instead.
+    Therefore, ``verdi presto --use-postgres --use-rabbitmq`` provides a fully automated way to create a profile backed by both PostgreSQL and RabbitMQ, suitable for high-throughput production workloads.
 
 This storage plugin uses `PostgreSQL <https://www.postgresql.org/>`_ and the `disk-objectstore <https://disk-objectstore.readthedocs.io/en/latest/>`_ to store data.
 The ``disk-objectstore`` is a Python package that is automatically installed as a dependency when installing ``aiida-core``, which was covered in the :ref:`Python package installation section <installation:guide-complete:python-package>`.

@@ -42,39 +42,44 @@ def test_get_default_presto_profile_name(monkeypatch, profile_names, expected):
 
 
 @pytest.mark.usefixtures('empty_config', 'mock_daemon_client')
-def test_presto_without_rmq(run_cli_command, monkeypatch):
-    """Test the ``verdi presto`` without RabbitMQ falls back to ZMQ."""
+def test_presto(run_cli_command):
+    """Test that ``verdi presto`` configures the built-in ZMQ broker by default."""
+    result = run_cli_command(verdi_presto, ['--non-interactive'])
+    assert 'Created new profile `presto`.' in result.output
+
+    with profile_context('presto', allow_switch=True) as profile:
+        assert profile.name == 'presto'
+        localhost = Computer.collection.get(label='localhost')
+        assert localhost.is_configured
+        # By default, presto configures the ZMQ broker without attempting to detect RabbitMQ.
+        assert profile.process_control_backend == 'core.zmq'
+
+
+@pytest.mark.requires_rmq
+@pytest.mark.usefixtures('empty_config', 'mock_daemon_client')
+def test_presto_use_rabbitmq(run_cli_command):
+    """Test that ``verdi presto --use-rabbitmq`` configures RabbitMQ when a server is reachable."""
+    result = run_cli_command(verdi_presto, ['--non-interactive', '--use-rabbitmq'])
+    assert 'Created new profile `presto`.' in result.output
+
+    with profile_context('presto', allow_switch=True) as profile:
+        assert profile.process_control_backend == 'core.rabbitmq'
+
+
+def test_presto_use_rabbitmq_unreachable(run_cli_command, empty_config, monkeypatch):
+    """Test that ``verdi presto --use-rabbitmq`` aborts when no RabbitMQ server can be reached."""
     from aiida.brokers.rabbitmq import defaults
 
     def detect_rabbitmq_config(**kwargs):
         raise ConnectionError()
 
-    # Patch the RabbitMQ detection function to pretend it could not find the service
-    monkeypatch.setattr(defaults, 'detect_rabbitmq_config', lambda: detect_rabbitmq_config())
+    # Pretend that no RabbitMQ server is reachable.
+    monkeypatch.setattr(defaults, 'detect_rabbitmq_config', detect_rabbitmq_config)
 
-    result = run_cli_command(verdi_presto, ['--non-interactive'])
-    assert 'Created new profile `presto`.' in result.output
-
-    with profile_context('presto', allow_switch=True) as profile:
-        assert profile.name == 'presto'
-        localhost = Computer.collection.get(label='localhost')
-        assert localhost.is_configured
-        # When RabbitMQ is not available, presto falls back to ZMQ broker
-        assert profile.process_control_backend == 'core.zmq'
-
-
-@pytest.mark.usefixtures('empty_config', 'mock_daemon_client')
-def test_presto(run_cli_command):
-    """Test that ``verdi presto`` configures a broker (RabbitMQ if available, otherwise ZMQ)."""
-    result = run_cli_command(verdi_presto, ['--non-interactive'])
-    assert 'Created new profile `presto`.' in result.output
-
-    with profile_context('presto', allow_switch=True) as profile:
-        assert profile.name == 'presto'
-        localhost = Computer.collection.get(label='localhost')
-        assert localhost.is_configured
-        # Presto auto-detects RabbitMQ, falls back to ZMQ if not available
-        assert profile.process_control_backend in ('core.rabbitmq', 'core.zmq')
+    result = run_cli_command(verdi_presto, ['--non-interactive', '--use-rabbitmq'], raises=True)
+    assert 'no RabbitMQ server could be reached' in result.output
+    # The command must abort before creating the profile.
+    assert 'presto' not in empty_config.profile_names
 
 
 @pytest.mark.requires_psql

@@ -1,0 +1,49 @@
+Job Id: 171390152.mycluster
+    Job_Name = script.sh
+    Job_Owner = user@mycluster.cluster
+    job_state = Q
+    queue = normal-exec
+    server = mycluster
+    Checkpoint = u
+    ctime = Wed Jun 17 04:56:36 2026
+    Error_Path = mycluster.cluster:/path/to/script.sh.e171390152
+    group_list = proj
+    Hold_Types = n
+    Join_Path = n
+    Keep_Files = n
+    Mail_Points = a
+    mtime = Wed Jun 17 04:56:36 2026
+    Output_Path = mycluster.cluster:/path/to/script.sh.o171390152
+    Priority = 0
+    qtime = Wed Jun 17 04:56:36 2026
+    Rerunable = False
+    Resource_List.jobfs = 104857600b
+    Resource_List.mem = 524288000b
+    Resource_List.mpiprocs = 1
+    Resource_List.ncpus = 1
+    Resource_List.nodect = 1
+    Resource_List.place = free
+    Resource_List.select = 1:ncpus=1:mpiprocs=1:mem=524288000:job_tags=normal:j
+	obfs=104857600
+    Resource_List.storage = storage/proj
+    Resource_List.walltime = 10:00:00
+    Resource_List.wd = 0
+    substate = 10
+    Variable_List = PBS_O_HOME=/,
+	PBS_O_PATH=/path/to/scripts:/path/to/scripts/
+	bin:/path/to/scripts/bin:/path/to/bin:/opt/pbs/default/b
+	in:/path/to/bin:/opt/bin:/path/to/bin:/bin:/usr/bin:/usr/loc
+	al/sbin:/usr/sbin:/opt/pbs/default/bin,
+	PBS_O_HOST=user@mycluster.cluster,
+	PBS_O_WORKDIR=/path/to/jobdir,PBS_O_SYSTEM=Linux,PROJECT=proj,
+	HOSTNAME=user@mycluster.cluster,USER=user,
+	PATH=/path/to/scripts:/path/to/scripts/bin:/h
+	ome/path/to/bin:/path/to/bin:/opt/pbs/default/bin:/op
+	t/path/bin:/opt/bin:/path/to/bin:/bin:/usr/bin:/usr/local/sbi
+	n:/usr/sbin:/opt/pbs/default/bin,MY_VARIABLE=1,MY_VARIABLE_2=2,
+	_=/opt/pbs/default/bin/qsub,
+	PBS_O_QUEUE=normal
+    etime = Wed Jun 17 04:56:36 2026
+    Submit_arguments = -V script.sh
+    project = proj
+    Submit_Host = user@mycluster.cluster

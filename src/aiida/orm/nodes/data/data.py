@@ -354,13 +354,3 @@ class Data(Node):
         valid_format_names = [i[len(exporter_prefix) :] for i in method_names if i.startswith(exporter_prefix)]
         valid_formats = {k: getattr(self, exporter_prefix + k) for k in valid_format_names}
         return valid_formats
-
-    @classmethod
-    def _get_patched_node_type_field(cls):
-        node_type_field = super()._get_patched_node_type_field()
-        if cls.__name__ == 'Data':
-            # `Data` is not to be used directly! It is only ever used when a subclass
-            # from an uninstalled plugin regresses to `Data`, in which case, the node
-            # type should not be validated against a `Literal`, only as a `str`.
-            return (str, node_type_field[1])
-        return node_type_field

@@ -8,11 +8,20 @@
 ###########################################################################
 """Tests for the `PbsProScheduler` plugin."""
 
+import pathlib
 import unittest
 import uuid
 
 from aiida.schedulers.datastructures import JobState
 from aiida.schedulers.plugins.pbspro import PbsproScheduler
+
+FIXTURES_DIR = pathlib.Path(__file__).parent / 'fixtures'
+
+
+def read_fixture(filename):
+    """Return the contents of a scheduler test fixture."""
+    return (FIXTURES_DIR / filename).read_text()
+
 
 text_qstat_f_to_test = """Job Id: 68350.mycluster
     Job_Name = cell-Qnormal
@@ -851,6 +860,43 @@ class TestParserQstat(unittest.TestCase):
 
                 self.assertTrue(j.num_machines == num_machines)
                 self.assertTrue(j.num_cpus == num_cpus)
+
+    def test_parse_with_multiline_function_variable_list(self):
+        """Test parsing qstat output with a multiline bash function in `Variable_List`."""
+        scheduler = PbsproScheduler()
+
+        job_list = scheduler._parse_joblist_output(0, read_fixture('qstat-multiline-func.txt'), '')
+
+        self.assertEqual(len(job_list), 1)
+
+        job = job_list[0]
+        self.assertEqual(job.job_id, '171389798.mycluster')
+        self.assertEqual(job.title, 'script.sh')
+        self.assertEqual(job.job_owner, 'user')
+        self.assertEqual(job.job_state, JobState.QUEUED)
+        self.assertEqual(job.queue_name, 'normal-exec')
+        self.assertEqual(job.num_machines, 1)
+        self.assertEqual(job.num_mpiprocs, 1)
+        self.assertEqual(job.num_cpus, 1)
+        self.assertEqual(job.requested_wallclock_time, 36000)
+        self.assertEqual(job.raw_data['warning_fields_with_newlines'], ['variable_list'])
+
+    def test_parse_qstat_fixtures(self):
+        """Test parsing additional sanitized qstat outputs."""
+        scheduler = PbsproScheduler()
+
+        cases = [
+            ('qstat-queued.txt', '171390152.mycluster', JobState.QUEUED),
+            ('qstat-running.txt', '171390152.mycluster', JobState.RUNNING),
+        ]
+
+        for fixture, job_id, job_state in cases:
+            with self.subTest(fixture=fixture):
+                job_list = scheduler._parse_joblist_output(0, read_fixture(fixture), '')
+
+                self.assertEqual(len(job_list), 1)
+                self.assertEqual(job_list[0].job_id, job_id)
+                self.assertEqual(job_list[0].job_state, job_state)
 
 
 # TODO: WHEN WE USE THE CORRECT ERROR MANAGEMENT, REIMPLEMENT THIS TEST

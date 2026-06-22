@@ -12,7 +12,6 @@ import os
 import shutil
 
 import pytest
-
 from aiida import orm
 from aiida.common import exceptions
 from aiida.engine import CalcJob, Process, WorkChain, calcfunction, launch
@@ -124,9 +123,7 @@ def test_wait_for_process_termination_timeout(monkeypatch):
     monkeypatch.setattr(launch.time, 'monotonic', lambda: clock['now'])
     monkeypatch.setattr(launch.time, 'sleep', lambda seconds: clock.__setitem__('now', clock['now'] + seconds))
 
-    with pytest.raises(
-        TimeoutError, match=r'Process<1> did not terminate within 5 seconds\. It is still running on the daemon'
-    ):
+    with pytest.raises(TimeoutError, match=r'Process<1> did not terminate within the 5s timeout.*was not cancelled'):
         launch._wait_for_process_termination(_NeverTerminatingNode(), wait_interval=2, timeout=5)
 
     assert clock['now'] == pytest.approx(5.0), 'timeout should fire exactly at the deadline, not overshoot'

@@ -124,9 +124,14 @@ def test_wait_for_process_termination_timeout(monkeypatch):
     monkeypatch.setattr(launch.time, 'monotonic', lambda: clock['now'])
     monkeypatch.setattr(launch.time, 'sleep', lambda seconds: clock.__setitem__('now', clock['now'] + seconds))
 
-    with pytest.raises(TimeoutError, match=r'Process<1> did not terminate within the 5s timeout.*was not cancelled'):
-        launch._wait_for_process_termination(_NeverTerminatingNode(), wait_interval=2, timeout=5)
+    node = _NeverTerminatingNode()
+    with pytest.raises(
+        launch.ProcessTimeoutError, match=r'Process<1> did not terminate within the 5s timeout.*was not cancelled'
+    ) as excinfo:
+        launch._wait_for_process_termination(node, wait_interval=2, timeout=5)
 
+    assert isinstance(excinfo.value, TimeoutError), '`ProcessTimeoutError` must remain catchable as `TimeoutError`'
+    assert excinfo.value.node is node, 'the timed-out process node should be attached to the exception'
     assert clock['now'] == pytest.approx(5.0), 'timeout should fire exactly at the deadline, not overshoot'
 
 

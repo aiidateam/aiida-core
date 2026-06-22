@@ -15,7 +15,7 @@ The daemon concept in AiiDA consists of multiple *system processes*.
 
 When the daemon is started, a single system process is launched in the background that runs indefinitely until it is stopped.
 This daemonized process is responsible for launching and then monitoring one or multiple daemon *workers*.
-Each daemon worker is another system process that connects to RabbitMQ to retrieve calculations and workflows that have been submitted and run them to completion.
+Each daemon worker is another system process that connects to the message broker to retrieve calculations and workflows that have been submitted and run them to completion.
 If a daemon worker dies, the daemon will automatically revive it.
 When the daemon is requested to stop, it will send a signal to all workers to shut them down before shutting down itself.
 

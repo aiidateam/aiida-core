@@ -28,6 +28,7 @@ from .data import *
 from .graph import *
 from .groups import *
 from .visualization import *
+from .workflows import *
 
 __all__ = (
     'ArchiveExportError',
@@ -45,6 +46,7 @@ __all__ = (
     'NoGroupsInPathError',
     'Orbital',
     'RealhydrogenOrbital',
+    'WorkflowTools',
     'create_archive',
     'default_link_styles',
     'default_node_styles',

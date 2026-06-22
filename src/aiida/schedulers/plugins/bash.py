@@ -48,7 +48,7 @@ class BashCliScheduler(Scheduler, metaclass=abc.ABCMeta):
         self,
         jobs: list[str] | None = None,
         user: str | None = None,
-        as_dict: t.Literal[True] = True,
+        as_dict: t.Literal[True] = ...,
     ) -> dict[str, JobInfo]: ...
 
     def get_jobs(

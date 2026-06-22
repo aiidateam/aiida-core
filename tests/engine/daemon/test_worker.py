@@ -15,18 +15,13 @@ from aiida.orm import Log
 from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
 
 
-@pytest.mark.requires_rmq
-@pytest.mark.asyncio
-async def test_shutdown_worker(manager):
+@pytest.mark.requires_broker
+def test_shutdown_worker(manager):
     """Test the ``shutdown_worker`` method."""
     runner = manager.get_runner()
-    await shutdown_worker(runner)
-
-    try:
-        assert runner.is_closed()
-    finally:
-        # Reset the runner of the manager, because once closed it cannot be reused by other tests.
-        manager._runner = None
+    runner.loop.create_task(shutdown_worker(runner))
+    runner.loop.run_forever()
+    assert runner.is_closed()
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')

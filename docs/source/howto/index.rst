@@ -20,6 +20,7 @@ How-To Guides
    archive_profile
    visualising_graphs
    installation
+   tune_performance
    plugins_develop
    cookbook
    tricks_real_world_runs

@@ -15,6 +15,7 @@ from pgtest.pgtest import PGTest
 
 from aiida import orm
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
+from aiida.engine.daemon.client import DaemonException, DaemonStalePidException, DaemonTimeoutException
 from aiida.manage import configuration
 from aiida.plugins import StorageFactory
 from aiida.tools.archive.create import create_archive
@@ -164,6 +165,78 @@ def test_delete_force(run_cli_command, mock_profiles, pg_test_cluster):
         cmd_profile.profile_delete, ['--force', profile_list[0]], use_subprocess=False, raises=True
     )
     assert 'When the `-f/--force` flag is used either `--delete-data` or `--keep-data`' in result.output
+
+
+def test_delete_stops_running_daemon(run_cli_command, mock_profiles, pg_test_cluster, monkeypatch):
+    """Test that ``verdi profile delete`` stops the daemon if it is running."""
+    from aiida.engine.daemon.client import DaemonClient
+
+    kwargs = {'database_port': pg_test_cluster.dsn['port']}
+    profile_list = mock_profiles(**kwargs)
+    daemon_kwargs = {}
+
+    def stop_daemon(self, **kwargs):
+        daemon_kwargs.update(kwargs)
+        return {'status': 'ok'}
+
+    monkeypatch.setattr(DaemonClient, 'stop_daemon', stop_daemon)
+
+    result = run_cli_command(
+        cmd_profile.profile_delete,
+        ['--force', '--keep-data', profile_list[0]],
+        use_subprocess=False,
+    )
+
+    assert daemon_kwargs == {'wait': True, 'timeout': 5}
+    assert f'Daemon for profile `{profile_list[0]}` stopped.' in result.output
+    assert f'`{profile_list[0]}` was deleted' in result.output
+
+
+@pytest.mark.parametrize(
+    ('exception_cls', 'message'),
+    [
+        (DaemonTimeoutException, 'Connection to the daemon timed out.'),
+        (DaemonException, 'Connection failed.'),
+        (DaemonStalePidException, 'Stale PID file.'),
+    ],
+)
+def test_delete_proceeds_on_daemon_stop_exception(
+    run_cli_command, mock_profiles, pg_test_cluster, monkeypatch, exception_cls, message
+):
+    """Test that ``verdi profile delete`` proceeds when stopping the daemon raises a non-fatal exception."""
+    from aiida.engine.daemon.client import DaemonClient
+
+    kwargs = {'database_port': pg_test_cluster.dsn['port']}
+    profile_list = mock_profiles(**kwargs)
+
+    def stop_daemon_raise(self, **kwargs):
+        raise exception_cls(message)
+
+    monkeypatch.setattr(DaemonClient, 'stop_daemon', stop_daemon_raise)
+
+    result = run_cli_command(
+        cmd_profile.profile_delete,
+        ['--force', '--keep-data', profile_list[0]],
+        use_subprocess=False,
+    )
+
+    assert f'`{profile_list[0]}` was deleted' in result.output
+    config = configuration.get_config()
+    assert profile_list[0] not in config.profile_names
+
+
+def test_delete_no_broker(run_cli_command, mock_profiles, pg_test_cluster):
+    """Test that ``verdi profile delete`` proceeds if no broker is configured."""
+    kwargs = {'database_port': pg_test_cluster.dsn['port'], 'process_control_backend': None}
+    profile_list = mock_profiles(**kwargs)
+
+    result = run_cli_command(
+        cmd_profile.profile_delete,
+        ['--force', '--keep-data', profile_list[0]],
+        use_subprocess=False,
+    )
+
+    assert f'`{profile_list[0]}` was deleted' in result.output
 
 
 @pytest.mark.parametrize('entry_point', ('core.sqlite_dos', 'core.sqlite_zip'))

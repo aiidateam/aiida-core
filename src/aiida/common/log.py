@@ -96,7 +96,7 @@ def get_logging_config() -> dict[str, t.Any]:
             'aiida': {
                 'handlers': ['console'],
                 'level': lambda: get_config_option('logging.aiida_loglevel'),
-                'propagate': True,
+                'propagate': False,
             },
             'verdi': {
                 'handlers': ['cli'],

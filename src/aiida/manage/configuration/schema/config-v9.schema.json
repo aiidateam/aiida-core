@@ -143,11 +143,18 @@
           "description": "Toggle whether the profile can be specified in requests submitted to the REST API",
           "global_only": true
         },
+        "broker.task_timeout": {
+          "type": "integer",
+          "default": 10,
+          "minimum": 1,
+          "description": "Timeout in seconds for task/RPC communications with the message broker"
+        },
         "rmq.task_timeout": {
           "type": "integer",
           "default": 10,
           "minimum": 1,
-          "description": "Timeout in seconds for communications with RabbitMQ"
+          "description": "Timeout in seconds for communications with RabbitMQ",
+          "deprecated_by": "broker.task_timeout"
         },
         "storage.sandbox": {
           "type": "string",

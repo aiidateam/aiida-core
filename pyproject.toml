@@ -18,11 +18,11 @@ classifiers = [
   'Operating System :: POSIX :: Linux',
   'Operating System :: MacOS :: MacOS X',
   'Programming Language :: Python',
-  'Programming Language :: Python :: 3.9',
   'Programming Language :: Python :: 3.10',
   'Programming Language :: Python :: 3.11',
   'Programming Language :: Python :: 3.12',
   'Programming Language :: Python :: 3.13',
+  'Programming Language :: Python :: 3.14',
   'Topic :: Scientific/Engineering'
 ]
 # NOTE: When updating versions of some packages, such as requests or paramiko,
@@ -31,26 +31,24 @@ classifiers = [
 dependencies = [
   'alembic~=1.8',
   'archive-path~=0.4.2',
-  "asyncssh~=2.21.0",
+  "asyncssh~=2.22.0",
   'circus~=0.19.0',
   'click-spinner~=0.1.8',
   'click>=8.1.0,<8.3',
   'disk-objectstore~=1.5.0',
   'docstring-parser',
-  'get-annotations~=0.1;python_version<"3.10"',
   'graphviz~=0.19',
   'plumpy~=0.26.0',
   'ipython>=7.6',
   'jedi<0.19',
   'jinja2~=3.0',
   'kiwipy[rmq]~=0.9.0',
-  'importlib-metadata~=6.0',
   'numpy>=1.21,<3',
   'paramiko~=3.0',
   'pgsu~=0.3.0',
   'psutil~=7.0',
   'psycopg[binary]>=3.0.2,<4',
-  'pydantic~=2.6',
+  'pydantic~=2.12',
   'pytz~=2021.1',
   'pyyaml~=6.0',
   'requests~=2.0',
@@ -68,10 +66,11 @@ keywords = ['aiida', 'workflows']
 license = {file = 'LICENSE.txt'}
 name = 'aiida-core'
 readme = 'README.md'
-requires-python = '>=3.9'
+requires-python = '>=3.10'
 
 [project.entry-points.'aiida.brokers']
 'core.rabbitmq' = 'aiida.brokers.rabbitmq.broker:RabbitmqBroker'
+'core.zmq' = 'aiida.brokers.zmq.broker:ZmqBroker'
 
 [project.entry-points.'aiida.calculations']
 'core.arithmetic.add' = 'aiida.calculations.arithmetic.add:ArithmeticAddCalculation'
@@ -201,6 +200,8 @@ requires-python = '>=3.9'
 'core.pcod' = 'aiida.tools.dbimporters.plugins.pcod:PcodDbImporter'
 'core.tcod' = 'aiida.tools.dbimporters.plugins.tcod:TcodDbImporter'
 
+[project.entry-points.'aiida.tools.workflows']
+
 [project.entry-points.'aiida.transports']
 'core.local' = 'aiida.transports.plugins.local:LocalTransport'
 'core.ssh' = 'aiida.transports.plugins.ssh:SshTransport'
@@ -244,7 +245,7 @@ notebook = [
 # https://github.com/python/typeshed?tab=readme-ov-file#package-versioning-for-third-party-stubs
 pre-commit = [
   'aiida-core[tests]',
-  'mypy~=1.19.0',
+  'mypy~=2.1.0',
   'packaging~=23.0',
   'pre-commit~=3.5',
   'sqlalchemy[mypy]~=2.0',
@@ -260,7 +261,7 @@ pre-commit = [
   'types-requests~=2.0'
 ]
 rest = [
-  'flask-cors~=3.0',
+  'flask-cors~=4.0',
   'flask-restful~=0.3.10',
   'flask~=2.3.3',
   'pyparsing~=3.1',
@@ -387,7 +388,6 @@ module = [
   'bs4.*',
   'circus.*',
   'flask_restful.*',
-  'get_annotations.*',
   'graphviz.*',
   'kiwipy.*',
   'mayavi.*',
@@ -439,9 +439,10 @@ filterwarnings = [
 ]
 markers = [
   'nightly: long running tests that should rarely be affected and so only run nightly',
-  'requires_rmq: requires a connection (on port 5672) to RabbitMQ',
+  'requires_rmq: requires RabbitMQ specifically (not compatible with ZMQ broker)',
+  'requires_broker: requires a message broker (RabbitMQ or ZMQ)',
   'requires_psql: requires a connection to PostgreSQL DB',
-  'presto: automatic marker meaning "not requires_rmq and not requires_psql"',
+  'presto: automatic marker for tests needing no external services (not requires_rmq, not requires_psql)',
   'sphinx: set parameters for the sphinx `app` fixture'
 ]
 minversion = '7.0'
@@ -503,33 +504,32 @@ envlist = py39
 [testenv]
 usedevelop=True
 deps =
-    py39: -rrequirements/requirements-py-3.9.txt
     py310: -rrequirements/requirements-py-3.10.txt
     py311: -rrequirements/requirements-py-3.11.txt
     py312: -rrequirements/requirements-py-3.12.txt
 
-[testenv:py{39,310,311,312}-presto]
+[testenv:py{310,311,312}-presto]
 passenv =
     PYTHONASYNCIODEBUG
 setenv =
     AIIDA_WARN_v3 =
 commands = pytest -m 'presto' {posargs}
 
-[testenv:py{39,310,311,312}]
+[testenv:py{310,311,312}]
 passenv =
     PYTHONASYNCIODEBUG
 setenv =
     AIIDA_WARN_v3 =
 commands = pytest {posargs}
 
-[testenv:py{39,310,311,312}-verdi]
+[testenv:py{310,311,312}-verdi]
 passenv =
     AIIDA_TEST_BACKEND
 setenv =
     AIIDA_PATH = {toxinidir}/.tox/.aiida
 commands = verdi {posargs}
 
-[testenv:py{39,310,311,312}-docs-{clean,update}]
+[testenv:py{310,311,312}-docs-{clean,update}]
 description =
     clean: Build the documentation (remove any existing build)
     update: Build the documentation (modify any existing build)
@@ -542,11 +542,10 @@ commands =
     clean: make clean
     make debug
 
-[testenv:py{39,310,311,312}-docs-live]
+[testenv:py{310,311,312}-docs-live]
 # tip: remove apidocs before using this feature (`cd docs; make clean`)
 description = Build the documentation and launch browser (with live updates)
 deps =
-    py39: -rrequirements/requirements-py-3.9.txt
     py310: -rrequirements/requirements-py-3.10.txt
     py311: -rrequirements/requirements-py-3.11.txt
     py312: -rrequirements/requirements-py-3.12.txt
@@ -588,5 +587,4 @@ commands = molecule {posargs:test}
 # NOTE: When you bump the minimum uv version, you might also need to change it in:
 # .pre-commit-config.yaml
 # .github/actions/install-aiida-core/action.yml
-# .readthedocs.yml
 required-version = ">=0.8.4"

@@ -11,7 +11,7 @@
 import pytest
 
 from aiida.common import exceptions
-from aiida.orm import Data
+from aiida.orm import Data, ProcessNode
 from aiida.orm.utils.node import (
     get_type_string_from_class,
     is_valid_node_type_string,
@@ -32,6 +32,10 @@ def test_load_node_class_fallback():
     # Test invalid type string without trailing dot.
     with pytest.raises(exceptions.DbContentError, match='invalid'):
         load_node_class('data.dict')
+
+    # Test process plugin fallback
+    loaded_class = load_node_class('process.some.non.existing.plugin.')
+    assert loaded_class == ProcessNode
 
 
 def test_load_node_class_with_node_prefix():

@@ -11,7 +11,7 @@ This guide provides detailed information and instructions to set up a feature-co
 Setting up a working installation of AiiDA, involves the following steps:
 
 #. :ref:`Install the Python Package <installation:guide-complete:python-package>`
-#. :ref:`(Optional) RabbitMQ <installation:guide-complete:rabbitmq>`
+#. :ref:`(Optional) Set up a message broker <installation:guide-complete:broker>`
 #. :ref:`Create a profile <installation:guide-complete:create-profile>`
 
 
@@ -102,18 +102,60 @@ These optional requirements can be installed using pip by adding them as comma s
     pip install aiida-core[atomic_tools,docs]
 
 
+.. _installation:guide-complete:broker:
+
+Message broker
+==============
+
+AiiDA uses a message broker to facilitate communication between the daemon and its workers.
+The daemon is a system process that runs in the background that manages one or multiple daemon workers that can run AiiDA processes.
+This way, the daemon helps AiiDA to scale as it is possible to run many processes in parallel on the daemon workers instead of blockingly in a single Python interpreter.
+
+AiiDA supports two broker backends:
+
+.. _installation:guide-complete:broker:zmq:
+
+ZMQ broker (built-in)
+---------------------
+
+.. versionadded:: 2.9
+
+The ZMQ broker is a lightweight, built-in message broker that uses `ZeroMQ <https://zeromq.org/>`_ for communication.
+It requires no external services: the broker process is started and stopped automatically together with the daemon.
+
+The ZMQ broker is the easiest way to get a fully functional AiiDA installation with daemon support.
+No additional installation steps are needed beyond installing ``aiida-core`` itself.
+
+To create a profile that uses the ZMQ broker:
+
+.. code-block:: console
+
+    verdi presto --use-zmq
+
+Or when using ``verdi profile setup``:
+
+.. code-block:: console
+
+    verdi profile setup core.sqlite_dos --broker zmq
+
+.. note::
+
+    The ``verdi presto`` command automatically falls back to the ZMQ broker when RabbitMQ is not available on the localhost.
+
+.. tip::
+
+    The ``broker.task_timeout`` configuration option controls how long a caller waits for a response from the broker (default: 10 seconds).
+    This option applies to both the ZMQ and RabbitMQ backends.
+    It can be changed with ``verdi config set broker.task_timeout <seconds>``.
+
 .. _installation:guide-complete:rabbitmq:
 
 RabbitMQ
-========
+--------
 
-`RabbitMQ <https://www.rabbitmq.com/>`_ is an optional but recommended service for AiiDA.
-It is a messsage broker that is required to run AiiDA's daemon.
-The daemon is a system process that runs in the background that manages one or multiple daemon workers that can run AiiDA processes.
-This way, the daemon helps AiiDA to scale as it is possible to run many processes in parallel on the daemon workers instead of blockingly in a single Python interpreter.
-To facilitate communication with the daemon workers, RabbitMQ is required.
+`RabbitMQ <https://www.rabbitmq.com/>`_ is an external message broker service that can be used as an alternative to the built-in ZMQ broker.
 
-Although it is possible to run AiiDA without a daemon it does provide significant benefits and therefore it is recommended to install RabbitMQ.
+Although it is possible to run AiiDA without RabbitMQ (using the ZMQ broker or no broker at all), RabbitMQ remains a well-tested option for production setups.
 
 .. tab-set::
 
@@ -260,11 +302,14 @@ The exact options available for the ``verdi profile setup`` command depend on th
 * ``--first-name``: First name for the default user that is created.
 * ``--last-name``: Last name for the default user that is created.
 * ``--institution``: Institution for the default user that is created.
-* ``--use-rabbitmq/--no-use-rabbitmq``: Whether to configure the RabbitMQ broker.
-  Required to enable the daemon and submitting processes to it.
-  The default is ``--use-rabbitmq``, in which case the command tries to connect to RabbitMQ running on the localhost with default connection parameters.
+* ``--broker [rabbitmq|zmq|none]``: Which message broker backend to use.
+  The default is ``rabbitmq``, in which case the command tries to connect to RabbitMQ running on the localhost with default connection parameters.
   If this fails, a warning is issued and the profile is configured without a broker.
+  Use ``zmq`` for the built-in ZMQ broker (no external services required), or ``none`` to disable the broker entirely.
   Once the profile is created, RabbitMQ can still be enabled through ``verdi profile configure-rabbitmq`` which allows to customize the connection parameters.
+
+  .. versionadded:: 2.9
+      The ``--broker`` option replaces the deprecated ``--use-rabbitmq/--no-use-rabbitmq`` flags.
 * ``--non-interactive``: By default, the command prompts to specify a value for all options.
   Alternatively, the ``--non-interactive`` flag can be specified, in which case the command never prompts and the options need to be specified directly on the command line.
   This is useful when using ``verdi profile setup`` is used in non-interactive environments, such as scripts.

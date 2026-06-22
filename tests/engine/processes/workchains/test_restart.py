@@ -101,7 +101,7 @@ def test_get_process_handlers_by_priority(generate_work_chain, inputs, prioritie
     ]
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_excepted_process(generate_work_chain, generate_calculation_node):
     """Test that the workchain aborts if the sub process was excepted."""
     process = generate_work_chain(SomeWorkChain, {})
@@ -110,7 +110,7 @@ def test_excepted_process(generate_work_chain, generate_calculation_node):
     assert process.inspect_process() == engine.BaseRestartWorkChain.exit_codes.ERROR_SUB_PROCESS_EXCEPTED
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_killed_process(generate_work_chain, generate_calculation_node):
     """Test that the workchain aborts if the sub process was killed."""
     process = generate_work_chain(SomeWorkChain, {})
@@ -119,7 +119,7 @@ def test_killed_process(generate_work_chain, generate_calculation_node):
     assert process.inspect_process() == engine.BaseRestartWorkChain.exit_codes.ERROR_SUB_PROCESS_KILLED
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 @pytest.mark.parametrize('on_unhandled_failure', (None, 'abort', 'pause', 'restart_once', 'restart_and_pause'))
 def test_unhandled_failure(generate_work_chain, generate_calculation_node, on_unhandled_failure):
     """Test the `on_unhandled_failure` input and behavior."""
@@ -148,7 +148,7 @@ def test_unhandled_failure(generate_work_chain, generate_calculation_node, on_un
         assert process.paused
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_unhandled_reset_after_success(generate_work_chain, generate_calculation_node):
     """Test `ctx.unhandled_failure` is reset to `False` in `inspect_process` after a successful process."""
     process = generate_work_chain(SomeWorkChain, {'on_unhandled_failure': orm.Str('restart_once')})
@@ -162,7 +162,7 @@ def test_unhandled_reset_after_success(generate_work_chain, generate_calculation
     assert process.ctx.unhandled_failure is False
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_unhandled_reset_after_handled(generate_work_chain, generate_calculation_node):
     """Test `ctx.unhandled_failure` is reset to `False` in `inspect_process` after a handled failed process."""
     process = generate_work_chain(SomeWorkChain, {'on_unhandled_failure': orm.Str('restart_once')})
@@ -183,7 +183,7 @@ def test_unhandled_reset_after_handled(generate_work_chain, generate_calculation
     assert process.ctx.unhandled_failure is False
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_run_process(generate_work_chain, generate_calculation_node, monkeypatch):
     """Test the `run_process` method."""
 
@@ -335,14 +335,14 @@ class CustomBaseRestartWorkChain(engine.BaseRestartWorkChain):
             self.ctx.inputs.parameters = self.ctx.inputs.parameters.get_dict()
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_results():
     results, node = engine.launch.run_get_node(CustomBaseRestartWorkChain)
     assert results['sub'].result.value == 1
     assert node.exit_status == 11
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_wrap_bare_dict_inputs():
     """Test that ``BaseRestartWorkChain._wrap_bare_dict_inputs`` method works properly.
 

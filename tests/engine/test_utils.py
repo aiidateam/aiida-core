@@ -174,7 +174,7 @@ class TestInterruptable:
         assert future.done()
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestInterruptableTask:
     """Tests for InterruptableFuture and interruptable_task."""
 

@@ -88,8 +88,8 @@ def submit(
     inputs: dict[str, t.Any] | None = None,
     *,
     wait: bool = False,
-    wait_interval: int = 5,
-    timeout: int | None = None,
+    wait_interval: float = 5,
+    timeout: float | None = None,
     **kwargs: t.Any,
 ) -> ProcessNode:
     """Submit the process with the supplied inputs to the daemon immediately returning control to the interpreter.
@@ -104,13 +104,21 @@ def submit(
     :param wait: when set to ``True``, the submission will be blocking and wait for the process to complete at which
         point the function returns the calculation node.
     :param wait_interval: the number of seconds to wait between checking the state of the process when ``wait=True``.
-    :param timeout: optional timeout in seconds when ``wait=True``. If the process does not terminate within this time,
-        a ``TimeoutError`` is raised. If ``None`` (default), waits indefinitely.
+    :param timeout: optional maximum number of seconds to wait for the process to terminate, only used when
+        ``wait=True``. Must be a positive number. If the process does not terminate within this time, a
+        ``TimeoutError`` is raised; note that the process itself keeps running on the daemon. If ``None`` (default),
+        waits indefinitely.
     :param kwargs: inputs to be passed to the process. This is an alternative to the positional ``inputs`` argument.
     :return: the calculation node of the process
-    :raises TimeoutError: if ``wait=True`` and the process does not terminate within ``timeout`` seconds.
+    :raises ValueError: if ``timeout`` is not a positive number.
+    :raises TimeoutError: if ``wait=True`` and the process does not terminate within ``timeout`` seconds; the process
+        continues running on the daemon.
     """
     from aiida.common.docs import URL_NO_BROKER
+
+    if timeout is not None and timeout <= 0:
+        msg = f'`timeout` must be a positive number of seconds, but got {timeout}.'
+        raise ValueError(msg)
 
     inputs = prepare_inputs(inputs, **kwargs)
 
@@ -176,18 +184,40 @@ def submit(
     if not wait:
         return node
 
+    return _wait_for_process_termination(node, wait_interval=wait_interval, timeout=timeout)
+
+
+def _wait_for_process_termination(node: ProcessNode, wait_interval: float, timeout: float | None = None) -> ProcessNode:
+    """Block until ``node`` reaches a terminal state, polling its state every ``wait_interval`` seconds.
+
+    :param node: the process node to wait for.
+    :param wait_interval: the number of seconds to wait between checks of the process state.
+    :param timeout: optional maximum number of seconds to wait. If the process does not terminate within this time, a
+        ``TimeoutError`` is raised; the process itself keeps running on the daemon. If ``None``, waits indefinitely.
+        Assumed to be ``None`` or a positive number (validated by the caller).
+    :return: the ``node``, once it has reached a terminal state.
+    :raises TimeoutError: if ``timeout`` is set and the process does not terminate within it.
+    """
     start_time = time.monotonic()
 
     while not node.is_terminated:
-        if timeout is not None and (time.monotonic() - start_time) >= timeout:
-            msg = f'Process<{node.pk}> did not terminate within {timeout} seconds.'
+        elapsed = time.monotonic() - start_time
+
+        if timeout is not None and elapsed >= timeout:
+            msg = (
+                f'Process<{node.pk}> did not terminate within {timeout} seconds. It is still running on the daemon; '
+                f'use `verdi process status {node.pk}` to monitor it or `verdi process kill {node.pk}` to stop it.'
+            )
             raise TimeoutError(msg)
 
+        # Never sleep past the deadline, so the timeout fires on time rather than overshooting by up to
+        # ``wait_interval`` (relevant when ``timeout`` is smaller than, or not a multiple of, ``wait_interval``).
+        wait = wait_interval if timeout is None else min(wait_interval, timeout - elapsed)
         LOGGER.report(
             f'Process<{node.pk}> has not yet terminated, current state is `{node.process_state}`. '
-            f'Waiting for {wait_interval} seconds.'
+            f'Waiting for {wait:g} seconds.'
         )
-        time.sleep(wait_interval)
+        time.sleep(wait)
 
     return node
 

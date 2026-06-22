@@ -1083,8 +1083,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             # a subclass from a plugin regresses due to the plugin not being installed, in which
             # case, the node type should not be validated against a `Literal`, only as a `str`.
             return str, node_type_field
-        else:
-            return Literal[cls.class_node_type], node_type_field
+        return Literal[cls.class_node_type], node_type_field
 
     @classmethod
     def _patch_read_model(cls):

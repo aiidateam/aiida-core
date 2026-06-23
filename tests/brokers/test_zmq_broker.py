@@ -253,6 +253,22 @@ class TestZmqBrokerTasks:
         assert len(tasks) == 2
         assert all(isinstance(t, ZmqIncomingTask) for t in tasks)
 
+    def test_revive_process_writes_continue_task(self, tmp_path):
+        """``revive_process`` should push a continue task to the persistent queue."""
+        broker = _create_broker_with_base_path(tmp_path)
+
+        broker.revive_process(42)
+
+        queue = PersistentQueue(tmp_path / 'storage' / 'tasks')
+        pending = queue.get_all_pending()
+        assert len(pending) == 1
+
+        _, task_data = pending[0]
+        assert task_data['no_reply'] is True
+        # plumpy.create_continue_body shape: {'task': 'continue', 'args': {'pid': 42, 'nowait': True, 'tag': None}}
+        assert task_data['body']['args']['pid'] == 42
+        assert task_data['body']['args']['nowait'] is True
+
 
 class TestZmqIncomingTask:
     """Tests for ZmqIncomingTask."""

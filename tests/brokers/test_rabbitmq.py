@@ -10,7 +10,7 @@
 
 import pathlib
 import uuid
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
@@ -35,6 +35,19 @@ def test_str_method(monkeypatch, manager):
 
     monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
     assert 'RabbitMQ @' in str(broker)
+
+
+def test_revive_process_uses_remote_controller(aiida_profile):
+    """``revive_process`` should delegate to ``RemoteProcessThreadController.continue_process``."""
+    broker = RabbitmqBroker(aiida_profile)
+    communicator = MagicMock()
+    broker._communicator = communicator
+
+    with patch('plumpy.process_comms.RemoteProcessThreadController') as controller_cls:
+        broker.revive_process(42)
+
+    controller_cls.assert_called_once_with(communicator)
+    controller_cls.return_value.continue_process.assert_called_once_with(42)
 
 
 def test_del_closes_broker_when_not_finalizing(aiida_profile, monkeypatch):

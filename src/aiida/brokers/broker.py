@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import abc
+import pathlib
 import typing as t
 
 if t.TYPE_CHECKING:
@@ -30,6 +31,10 @@ class Broker(abc.ABC):
     @abc.abstractmethod
     def iterate_tasks(self) -> Iterator[t.Any]:
         """Return an iterator over the tasks in the launch queue."""
+
+    def get_log_file(self) -> pathlib.Path | None:
+        """Return the broker log file path, if available."""
+        return None
 
     @abc.abstractmethod
     def close(self) -> None:

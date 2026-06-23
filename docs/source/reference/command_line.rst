@@ -110,6 +110,7 @@ Below is a list with all available subcommands.
       goto       Open a shell connecting to the remote computer.
       list       List all available computers.
       relabel    Relabel a computer.
+      search     Search for computers and setup them in your profile.
       setup      Create a new computer.
       show       Show detailed information for a computer.
       test       Test the connection to a computer.

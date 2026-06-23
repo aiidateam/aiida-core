@@ -12,9 +12,11 @@ import textwrap
 from collections.abc import Mapping, MutableMapping
 
 import pytest
+import yaml
 from IPython.lib.pretty import pretty
 
 from aiida import orm
+from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.common import LinkType
 from aiida.engine import Process, WorkChain, run_get_node
 from aiida.engine.processes.builder import ProcessBuilderNamespace
@@ -434,3 +436,175 @@ def test_pretty_repr(example_inputs):
     name_spaced: underscored
     """
     assert pretty(builder) == textwrap.dedent(pretty_repr.lstrip('\n'))
+
+
+@pytest.fixture()
+def add_builder():
+    return ArithmeticAddCalculation.get_builder()
+
+
+def test_get_schema_default(add_builder):
+    """Test the default ``get_schema`` output (compact format, metadata collapsed)."""
+
+    builder = add_builder
+    parsed = yaml.safe_load(builder.get_schema())
+
+    # Assert exact type strings for known ports
+    assert parsed['x'] == 'Int | Float (required)'
+    assert parsed['y'] == 'Int | Float (required)'
+    assert parsed['code'] == 'AbstractCode'
+    assert parsed['remote_folder'] == 'RemoteData'
+    assert parsed['monitors'] == 'Namespace(Dict)'
+
+    # Metadata should be collapsed by default
+    assert parsed['metadata'] == '{...}'
+
+    # get_schema should appear in dir()
+    assert 'get_schema' in dir(builder)
+
+    # Nested namespace should also have get_schema
+    nested_parsed = yaml.safe_load(builder.metadata.get_schema(collapse=()))
+    assert nested_parsed['store_provenance'] == 'bool'
+    assert isinstance(nested_parsed['options'], dict)
+    assert nested_parsed['options']['resources'] == 'dict (required)'
+
+
+def test_get_schema_collapse(add_builder):
+    """Test the ``collapse`` parameter of ``get_schema``."""
+
+    builder = add_builder
+
+    # Default: metadata is collapsed
+    parsed_default = yaml.safe_load(builder.get_schema())
+    assert parsed_default['metadata'] == '{...}'
+
+    # Expand everything with collapse=()
+    parsed_expanded = yaml.safe_load(builder.get_schema(collapse=()))
+    assert isinstance(parsed_expanded['metadata'], dict)
+    assert isinstance(parsed_expanded['metadata']['options'], dict)
+    assert parsed_expanded['metadata']['store_provenance'] == 'bool'
+
+    # Collapse multiple namespaces
+    parsed_multi = yaml.safe_load(builder.get_schema(collapse=('metadata', 'monitors')))
+    assert parsed_multi['metadata'] == '{...}'
+    assert parsed_multi['monitors'] == '{...}'
+    # Non-collapsed ports should still show types
+    assert parsed_multi['x'] == 'Int | Float (required)'
+
+
+def test_get_schema_show_required(add_builder):
+    """Test the ``show='required'`` parameter of ``get_schema``."""
+
+    builder = add_builder
+
+    parsed = yaml.safe_load(builder.get_schema(show='required', collapse=()))
+
+    # Only x and y are required at the top level for ArithmeticAddCalculation.
+    # Note: ``code`` is not required because it can be omitted for import runs
+    # (when ``remote_folder`` is provided instead). See ``validate_calc_job``.
+    assert parsed == {
+        'x': 'Int | Float (required)',
+        'y': 'Int | Float (required)',
+    }
+
+
+def test_get_schema_show_set(add_builder):
+    """Test the ``show='set'`` parameter of ``get_schema``."""
+
+    builder = add_builder
+
+    # Nothing set yet
+    assert yaml.safe_load(builder.get_schema(show='set')) == {}
+
+    # Set some values and verify exact output
+    builder.x = orm.Int(42)
+    builder.y = orm.Int(7)
+
+    parsed = yaml.safe_load(builder.get_schema(show='set'))
+    assert parsed == {'x': 42, 'y': 7}
+
+
+def test_get_schema_max_depth(add_builder):
+    """Test the ``max_depth`` parameter of ``get_schema``."""
+
+    builder = add_builder
+
+    # max_depth=0: all namespaces collapsed, leaf ports remain
+    parsed_d0 = yaml.safe_load(builder.get_schema(max_depth=0, collapse=()))
+    assert parsed_d0['metadata'] == '{...}'
+    assert parsed_d0['monitors'] == '{...}'
+    assert parsed_d0['x'] == 'Int | Float (required)'
+
+    # max_depth=1: first level of namespaces expanded, second level collapsed
+    parsed_d1 = yaml.safe_load(builder.get_schema(max_depth=1, collapse=()))
+    assert isinstance(parsed_d1['metadata'], dict)
+    assert parsed_d1['metadata']['options'] == '{...}'
+    assert parsed_d1['metadata']['store_provenance'] == 'bool'
+    assert parsed_d1['metadata']['computer'] == 'Computer'
+
+
+def test_get_schema_mode_verbose(add_builder):
+    """Test the ``mode='verbose'`` parameter of ``get_schema``."""
+
+    builder = add_builder
+
+    parsed = yaml.safe_load(builder.get_schema(mode='verbose', collapse=()))
+
+    # Required port should have type, help, and required fields
+    assert parsed['x'] == {
+        'type': 'Int | Float',
+        'help': 'The left operand.',
+        'required': True,
+    }
+    assert parsed['y'] == {
+        'type': 'Int | Float',
+        'help': 'The right operand.',
+        'required': True,
+    }
+
+    # Port with default should show actual default value
+    assert parsed['metadata']['store_provenance']['default'] is True
+    assert parsed['metadata']['options']['resources']['required'] is True
+    assert parsed['metadata']['options']['resources']['default'] == {'num_machines': 1, 'num_mpiprocs_per_machine': 1}
+
+    # Callable defaults are shown as '<callable>'
+    assert parsed['metadata']['options']['mpirun_extra_params']['default'] == '<callable>'
+
+    # Empty dynamic namespace (monitors) should show structured info in verbose mode
+    assert parsed['monitors'] == {
+        'type': 'Namespace',
+        'entry_type': 'Dict',
+        'help': (
+            'Add monitoring functions that can inspect output files while the job is running'
+            ' and decide to prematurely terminate the job.'
+        ),
+    }
+
+
+def test_get_schema_show_set_collapsed(add_builder):
+    """Test ``show='set'`` with values inside a collapsed namespace."""
+
+    builder = add_builder
+    builder.metadata.description = 'test'
+
+    # Default collapse includes metadata, so it should show as '{...}' since it has a set value
+    parsed = yaml.safe_load(builder.get_schema(show='set'))
+    assert parsed == {'metadata': '{...}'}
+
+    # With collapse=(), it should show the actual set value
+    parsed_expanded = yaml.safe_load(builder.get_schema(show='set', collapse=()))
+    assert parsed_expanded == {'metadata': {'description': 'test'}}
+
+
+def test_get_schema_port_name_conflict():
+    """Test that a port named ``get_schema`` raises a ``RuntimeError``."""
+    from aiida.engine import Process
+
+    class ConflictingProcess(Process):
+        @classmethod
+        def define(cls, spec):
+            super().define(spec)
+            spec.input('get_schema', valid_type=orm.Int)
+
+    with pytest.raises(RuntimeError, match='reserved method'):
+        ConflictingProcess.get_builder()

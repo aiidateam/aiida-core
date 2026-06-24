@@ -60,13 +60,21 @@ def test_comment_user(node, default_user):
     assert comment.user.uuid == default_user.uuid
 
 
-@pytest.mark.xfail
 def test_comment_set_user(node, default_user):
+    """Test setting the user of a Comment.
+
+    Regression test for https://github.com/aiidateam/aiida-core/issues/7027: ``set_user`` used to assign to the
+    read-only ``user`` property of the backend entity, raising an ``AttributeError``.
+    """
     new_user = orm.User(email='meeseeks.look@me').store()
     comment = Comment(node, default_user, 'Look at me!').store()
     assert comment.user.uuid == default_user.uuid
+
     comment.set_user(new_user)
     assert comment.user.uuid == new_user.uuid
+
+    # The change should be persisted, so reloading the comment from the backend should reflect the new user.
+    assert Comment.collection.get(id=comment.pk).user.uuid == new_user.uuid
 
 
 def test_comment_collection_get(create_comment):

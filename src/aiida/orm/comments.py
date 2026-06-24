@@ -165,8 +165,7 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         return entities.from_backend_entity(User, self._backend_entity.user)
 
     def set_user(self, value: 'User') -> None:
-        # mypy error: Property "user" defined in "BackendComment" is read-only
-        self._backend_entity.user = value.backend_entity  # type: ignore[misc]
+        return self._backend_entity.set_user(value.backend_entity)
 
     @property
     def content(self) -> str:

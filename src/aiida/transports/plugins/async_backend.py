@@ -514,6 +514,18 @@ class _OpenSSH(_AsynchronousSSHBackend):
         :return: The escaped path.
         """
 
+        return self._escape_preserving_glob(path)
+
+    def _escape_preserving_glob(self, path: str) -> str:
+        """Backslash-escape shell metacharacters while preserving glob wildcards.
+
+        Glob characters (``*``, ``?``, ``[``, ``]``) are deliberately left
+        unescaped so the remote shell expands them.
+
+        :param path: The path to escape.
+        :return: The escaped path.
+        """
+
         result = []
         special = set(' \t\n"\'`$\\!#&;<>|(){}')
         for char in path:
@@ -589,19 +601,12 @@ class _OpenSSH(_AsynchronousSSHBackend):
         if returncode != 0:
             raise OSError(f'Failed to change permissions: {path}')
 
-    def _escape_for_glob(self, s):
+    def _escape_for_glob(self, path: str) -> str:
         """Escape dangerous shell characters while preserving glob wildcards (* ? [ ])
         This allows safe glob expansion without command injection
         Characters that need escaping in shell (excluding glob chars)"""
 
-        dangerous = {';', '&', '|', '$', '`', '(', ')', '<', '>', '\n', '"', "'", '\\', '!', '#', ' ', '\t'}
-        result = []
-        for c in s:
-            if c in dangerous:
-                result.append('\\' + c)
-            else:
-                result.append(c)
-        return ''.join(result)
+        return self._escape_preserving_glob(path)
 
     async def glob(self, path: str, ignore_nonexisting: bool = True):
         escaped_path = self._escape_for_glob(path)

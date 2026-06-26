@@ -50,6 +50,7 @@ __all__ = (
     'ProcessHandlerReport',
     'ProcessSpec',
     'ProcessState',
+    'ProcessTimeoutError',
     'Runner',
     'ToContext',
     'WithNonDb',

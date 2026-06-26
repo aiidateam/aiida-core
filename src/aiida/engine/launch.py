@@ -25,12 +25,25 @@ from .processes.process import Process
 from .runners import ResultAndPk
 from .utils import instantiate_process, is_process_scoped, prepare_inputs
 
-__all__ = ('await_processes', 'run', 'run_get_node', 'run_get_pk', 'submit')
+__all__ = ('ProcessTimeoutError', 'await_processes', 'run', 'run_get_node', 'run_get_pk', 'submit')
 
 TYPE_RUN_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
 # run can also be process function, but it is not clear what type this should be
 TYPE_SUBMIT_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
 LOGGER = AIIDA_LOGGER.getChild('engine.launch')
+
+
+class ProcessTimeoutError(TimeoutError):
+    """Raised when a blocking wait (``submit(wait=True, timeout=...)``) exceeds its ``timeout``.
+
+    Subclasses the built-in :class:`TimeoutError`, so existing ``except TimeoutError`` handlers keep working. The wait
+    timing out does not cancel the process; it keeps being processed by the daemon. The process node is attached as
+    :attr:`node` so a caller that catches this can keep monitoring the process without parsing the message.
+    """
+
+    def __init__(self, message: str, node: ProcessNode) -> None:
+        super().__init__(message)
+        self.node = node
 
 
 def run(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwargs: t.Any) -> dict[str, t.Any]:
@@ -88,7 +101,8 @@ def submit(
     inputs: dict[str, t.Any] | None = None,
     *,
     wait: bool = False,
-    wait_interval: int = 5,
+    wait_interval: float = 5,
+    timeout: float | None = None,
     **kwargs: t.Any,
 ) -> ProcessNode:
     """Submit the process with the supplied inputs to the daemon immediately returning control to the interpreter.
@@ -103,10 +117,22 @@ def submit(
     :param wait: when set to ``True``, the submission will be blocking and wait for the process to complete at which
         point the function returns the calculation node.
     :param wait_interval: the number of seconds to wait between checking the state of the process when ``wait=True``.
+    :param timeout: optional maximum number of seconds to wait for the process to terminate, only used when
+        ``wait=True``. Must be a positive number. If the process does not terminate within this time, a
+        ``TimeoutError`` is raised. The timeout only stops waiting; the process itself is not cancelled and keeps
+        being processed by the daemon. If ``None`` (default), waits indefinitely.
     :param kwargs: inputs to be passed to the process. This is an alternative to the positional ``inputs`` argument.
     :return: the calculation node of the process
+    :raises ValueError: if ``timeout`` is not a positive number.
+    :raises ProcessTimeoutError: subclass of ``TimeoutError``, if ``wait=True`` and the process does not terminate
+        within ``timeout`` seconds. The timeout only stops waiting; the process is not cancelled, keeps being processed
+        by the daemon, and is available as the exception's ``node`` attribute.
     """
     from aiida.common.docs import URL_NO_BROKER
+
+    if timeout is not None and timeout <= 0:
+        msg = f'`timeout` must be a positive number of seconds, but got {timeout}.'
+        raise ValueError(msg)
 
     inputs = prepare_inputs(inputs, **kwargs)
 
@@ -170,12 +196,42 @@ def submit(
     if not wait:
         return node
 
+    return _wait_for_process_termination(node, wait_interval=wait_interval, timeout=timeout)
+
+
+def _wait_for_process_termination(node: ProcessNode, wait_interval: float, timeout: float | None = None) -> ProcessNode:
+    """Block until ``node`` reaches a terminal state, polling its state every ``wait_interval`` seconds.
+
+    :param node: the process node to wait for.
+    :param wait_interval: the number of seconds to wait between checks of the process state.
+    :param timeout: optional maximum number of seconds to wait. If the process does not terminate within this time, a
+        ``TimeoutError`` is raised; the process is not cancelled and keeps being processed by the daemon. If ``None``,
+        waits indefinitely. Assumed to be ``None`` or a positive number (validated by the caller).
+    :return: the ``node``, once it has reached a terminal state.
+    :raises ProcessTimeoutError: if ``timeout`` is set and the process does not terminate within it.
+    """
+    start_time = time.monotonic()
+
     while not node.is_terminated:
+        elapsed = time.monotonic() - start_time
+
+        if timeout is not None and elapsed >= timeout:
+            msg = (
+                f'Process<{node.pk}> did not terminate within the {timeout}s timeout '
+                f'(current state: `{node.process_state}`). The timeout only stopped waiting; the process was not '
+                f'cancelled and keeps being processed by the daemon. Use `verdi process status {node.pk}` to '
+                f'monitor it or `verdi process kill {node.pk}` to stop it.'
+            )
+            raise ProcessTimeoutError(msg, node)
+
+        # Never sleep past the deadline, so the timeout fires on time rather than overshooting by up to
+        # ``wait_interval`` (relevant when ``timeout`` is smaller than, or not a multiple of, ``wait_interval``).
+        wait = wait_interval if timeout is None else min(wait_interval, timeout - elapsed)
         LOGGER.report(
             f'Process<{node.pk}> has not yet terminated, current state is `{node.process_state}`. '
-            f'Waiting for {wait_interval} seconds.'
+            f'Waiting for {wait:g} seconds.'
         )
-        time.sleep(wait_interval)
+        time.sleep(wait)
 
     return node
 

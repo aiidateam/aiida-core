@@ -55,38 +55,36 @@ def test_list_options(entry_points):
         assert option.type == t.get_args(field.annotation) or field.annotation
 
 
-def test_list_commands_excludes_non_exposed(entry_points):
-    """Test that abstract and non-exposed plugin classes are not listed as subcommands.
-
-    Regression test for https://github.com/aiidateam/aiida-core/issues/7379: an abstract entry point class
-    cannot be instantiated and so building its CLI options is not possible. Such classes (and any class that
-    sets ``cli_exposed = False``) should silently be excluded instead of breaking the rendering of the group.
-    """
+@pytest.fixture
+def custom_group(entry_points):
+    """A dynamic group with one concrete, one abstract, and one ``cli_exposed = False`` plugin registered."""
     entry_points.add(CustomClass, 'aiida.custom:custom')
     entry_points.add(AbstractCustomClass, 'aiida.custom:abstract')
     entry_points.add(HiddenCustomClass, 'aiida.custom:hidden')
-
-    group = DynamicEntryPointCommandGroup(lambda *args, **kwargs: True, entry_point_group='aiida.custom')
-    ctx = click.Context(group)
-
-    assert group.list_commands(ctx) == ['custom']
+    return DynamicEntryPointCommandGroup(lambda *args, **kwargs: True, name='create', entry_point_group='aiida.custom')
 
 
-def test_get_command_non_exposed(entry_points):
-    """Test that resolving an abstract or non-exposed entry point fails gracefully.
+@pytest.mark.parametrize(
+    'cmd_name, exposed',
+    [
+        pytest.param('custom', True, id='concrete'),
+        pytest.param('abstract', False, id='abstract'),
+        pytest.param('hidden', False, id='cli_exposed_false'),
+        pytest.param('non_existent', False, id='unknown'),
+    ],
+)
+def test_subcommand_exposure(custom_group, cmd_name, exposed):
+    """Only exposed plugins are listed and resolvable; abstract / ``cli_exposed = False`` / unknown are excluded.
 
-    Regression test for https://github.com/aiidateam/aiida-core/issues/7379: instead of raising an internal
-    ``UnsupportedSchemaError`` while building the options, resolving such an entry point should be treated as
-    an unknown command and raise the regular user-facing :class:`click.exceptions.UsageError`.
+    Regression test for https://github.com/aiidateam/aiida-core/issues/7379: an abstract entry point cannot be
+    instantiated, so building its CLI options raised ``UnsupportedSchemaError`` and broke rendering of the whole
+    group. Such plugins must be silently dropped from the listing and resolve to the regular user-facing
+    :class:`click.exceptions.UsageError` instead of an internal traceback.
     """
-    entry_points.add(CustomClass, 'aiida.custom:custom')
-    entry_points.add(AbstractCustomClass, 'aiida.custom:abstract')
-    entry_points.add(HiddenCustomClass, 'aiida.custom:hidden')
-
-    group = DynamicEntryPointCommandGroup(lambda *args, **kwargs: True, name='create', entry_point_group='aiida.custom')
-    ctx = click.Context(group)
-
-    assert group.get_command(ctx, 'custom') is not None
-    for cmd_name in ('abstract', 'hidden', 'non_existent'):
+    ctx = click.Context(custom_group)
+    assert (cmd_name in custom_group.list_commands(ctx)) is exposed
+    if exposed:
+        assert custom_group.get_command(ctx, cmd_name) is not None
+    else:
         with pytest.raises(click.exceptions.UsageError):
-            group.get_command(ctx, cmd_name)
+            custom_group.get_command(ctx, cmd_name)

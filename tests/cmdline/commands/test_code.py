@@ -55,6 +55,7 @@ def test_code_create_help(run_cli_command):
     the help of the dynamic group used to crash with an ``UnsupportedSchemaError`` while building its options.
     """
     result = run_cli_command(cmd_code.code_create, ['--help'])
+    assert 'core.code.containerized' in result.output
     assert 'core.code.installed' in result.output
     assert 'core.code.portable' in result.output
     assert 'core.code.abstract' not in result.output

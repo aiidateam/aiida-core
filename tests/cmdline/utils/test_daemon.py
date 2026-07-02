@@ -8,7 +8,7 @@
 ###########################################################################
 """Unit tests for ``aiida.cmdline.utils.daemon`` formatter helpers."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -119,29 +119,20 @@ def test_format_package_state_change_lines_editable_path_disappears(tmp_path):
     assert format_package_state_change_lines(daemon, current) == expected
 
 
-def test_validate_python_binary_no_binary():
-    """No error when daemon binary is not recorded."""
-    client = MagicMock()
-    client.get_daemon_python_binary.return_value = None
-    assert validate_python_binary(client) is None
-
-
 def test_validate_python_binary_match():
     """No error when binaries match."""
-    client = MagicMock()
-    client.get_daemon_python_binary.return_value = '/usr/bin/python3'
+    version_info = {'packages': {}, 'python_binary': '/usr/bin/python3'}
     with patch('aiida.cmdline.utils.daemon.sys') as mock_sys:
         mock_sys.executable = '/usr/bin/python3'
-        assert validate_python_binary(client) is None
+        assert validate_python_binary(version_info) is None
 
 
 def test_validate_python_binary_mismatch():
     """Error message is returned when binaries differ."""
-    client = MagicMock()
-    client.get_daemon_python_binary.return_value = '/old/venv/bin/python'
+    version_info = {'packages': {}, 'python_binary': '/old/venv/bin/python'}
     with patch('aiida.cmdline.utils.daemon.sys') as mock_sys:
         mock_sys.executable = '/new/venv/bin/python'
-        error = validate_python_binary(client)
+        error = validate_python_binary(version_info)
     assert 'different Python binary' in error
     assert '/old/venv/bin/python' in error
     assert '/new/venv/bin/python' in error

@@ -15,7 +15,7 @@ import pytest
 from aiida.cmdline.utils.daemon import (
     format_package_state_change_lines,
     format_package_version_info,
-    get_daemon_python_binary_drift_lines,
+    validate_python_binary,
 )
 
 
@@ -119,30 +119,29 @@ def test_format_package_state_change_lines_editable_path_disappears(tmp_path):
     assert format_package_state_change_lines(daemon, current) == expected
 
 
-def test_get_daemon_python_binary_drift_lines_no_binary():
-    """No drift lines when daemon binary is not recorded."""
+def test_validate_python_binary_no_binary():
+    """No error when daemon binary is not recorded."""
     client = MagicMock()
     client.get_daemon_python_binary.return_value = None
-    assert get_daemon_python_binary_drift_lines(client) == []
+    assert validate_python_binary(client) is None
 
 
-def test_get_daemon_python_binary_drift_lines_match():
-    """No drift lines when binaries match."""
+def test_validate_python_binary_match():
+    """No error when binaries match."""
     client = MagicMock()
     client.get_daemon_python_binary.return_value = '/usr/bin/python3'
     with patch('aiida.cmdline.utils.daemon.sys') as mock_sys:
         mock_sys.executable = '/usr/bin/python3'
-        assert get_daemon_python_binary_drift_lines(client) == []
+        assert validate_python_binary(client) is None
 
 
-def test_get_daemon_python_binary_drift_lines_mismatch():
-    """Drift lines are returned when binaries differ."""
+def test_validate_python_binary_mismatch():
+    """Error message is returned when binaries differ."""
     client = MagicMock()
     client.get_daemon_python_binary.return_value = '/old/venv/bin/python'
     with patch('aiida.cmdline.utils.daemon.sys') as mock_sys:
         mock_sys.executable = '/new/venv/bin/python'
-        lines = get_daemon_python_binary_drift_lines(client)
-    assert len(lines) == 3
-    assert 'different Python binary' in lines[0]
-    assert '/old/venv/bin/python' in lines[1]
-    assert '/new/venv/bin/python' in lines[2]
+        error = validate_python_binary(client)
+    assert 'different Python binary' in error
+    assert '/old/venv/bin/python' in error
+    assert '/new/venv/bin/python' in error

@@ -62,7 +62,7 @@ class PackageVersionInfo(_PackageVersionInfoRequired, total=False):
 PackageVersionSnapshot: t.TypeAlias = dict[str, PackageVersionInfo]
 
 
-class DaemonVersionInfo(t.TypedDict):
+class _DaemonVersionInfo(t.TypedDict):
     """Content written to the daemon version file."""
 
     packages: PackageVersionSnapshot
@@ -694,7 +694,7 @@ class DaemonClient:
 
     def _write_version_file(self) -> None:
         """Write the current package version snapshot to the daemon version file."""
-        version_info: DaemonVersionInfo = {
+        version_info: _DaemonVersionInfo = {
             'packages': self.get_package_version_snapshot(),
             'python_binary': sys.executable,
         }
@@ -705,7 +705,7 @@ class DaemonClient:
         except OSError as exc:
             LOGGER.warning('Failed to write daemon version file: %s', exc)
 
-    def _read_version_file(self) -> DaemonVersionInfo | None:
+    def _read_version_file(self) -> _DaemonVersionInfo | None:
         """Read and validate the daemon version file, or return None if unavailable or invalid."""
         try:
             data = json.loads(pathlib.Path(self.daemon_package_snapshot_file).read_text(encoding='utf8'))
@@ -723,7 +723,7 @@ class DaemonClient:
         if not isinstance(python_binary, str):
             return None
 
-        return DaemonVersionInfo(packages=packages, python_binary=python_binary)
+        return _DaemonVersionInfo(packages=packages, python_binary=python_binary)
 
     def get_daemon_package_snapshot(self) -> PackageVersionSnapshot | None:
         """Return version info recorded at daemon startup, or None if unavailable."""

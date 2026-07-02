@@ -173,7 +173,7 @@ The profile (and configuration directory in which it is hosted) is only temporar
 This ensures that any production profiles on the system are not affected by the tests.
 
 Other fixtures have to be explicitly used in a test to be of use.
-They usually allow creating some resources that are required by the test, such as a ``Code`` node:
+They usually allow creating some resources that are required by the test, such as a ``Code`` node::
 
     def test_calculation(aiida_code_installed):
         """Test running a calculation using a ``CalcJob`` plugin."""

@@ -13,6 +13,10 @@ Scripts that previously ran `verdi daemon start` after `verdi presto` continue t
 
 `verdi storage maintain` now deletes each set of loose files right after the pack to which they were added is written, keeping peak disk usage near the initial size instead of needing roughly double. Pass `--no-incremental-cleanup` to retain the previous behavior (defer cleanup until all packs are written, at the cost of higher peak disk usage).
 
+**`verdi profile setup`: `cli_exposed = False` backends are no longer CLI-settable** ([#7381](https://github.com/aiidateam/aiida-core/pull/7381))
+
+Storage backends that opt out of CLI exposure via `cli_exposed = False` (only `core.sqlite_temp` in core) are now fully excluded from `verdi profile setup`: neither listed nor resolvable. Previously they were hidden from the listing but could still be set up by passing the entry point name explicitly. Use the `create_profile()` Python API to create a temporary profile instead.
+
 ## v2.8.0 - 2026-03-16
 
 This release brings important improvements to the `BaseRestartWorkChain`, the engine, stashing, typing coverage, and dependency updates.

@@ -8,11 +8,14 @@
 ###########################################################################
 """Unit tests for ``aiida.cmdline.utils.daemon`` formatter helpers."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from aiida.cmdline.utils.daemon import (
     format_package_state_change_lines,
     format_package_version_info,
+    get_daemon_python_binary_drift_lines,
 )
 
 
@@ -114,3 +117,32 @@ def test_format_package_state_change_lines_editable_path_disappears(tmp_path):
     current = {'aiida-core': {'version': '2.8.0'}}
     expected = [f'Changed packages: aiida-core (2.8.0 @ {tmp_path} -> 2.8.0)']
     assert format_package_state_change_lines(daemon, current) == expected
+
+
+def test_get_daemon_python_binary_drift_lines_no_binary():
+    """No drift lines when daemon binary is not recorded."""
+    client = MagicMock()
+    client.get_daemon_python_binary.return_value = None
+    assert get_daemon_python_binary_drift_lines(client) == []
+
+
+def test_get_daemon_python_binary_drift_lines_match():
+    """No drift lines when binaries match."""
+    client = MagicMock()
+    client.get_daemon_python_binary.return_value = '/usr/bin/python3'
+    with patch('aiida.cmdline.utils.daemon.sys') as mock_sys:
+        mock_sys.executable = '/usr/bin/python3'
+        assert get_daemon_python_binary_drift_lines(client) == []
+
+
+def test_get_daemon_python_binary_drift_lines_mismatch():
+    """Drift lines are returned when binaries differ."""
+    client = MagicMock()
+    client.get_daemon_python_binary.return_value = '/old/venv/bin/python'
+    with patch('aiida.cmdline.utils.daemon.sys') as mock_sys:
+        mock_sys.executable = '/new/venv/bin/python'
+        lines = get_daemon_python_binary_drift_lines(client)
+    assert len(lines) == 3
+    assert 'different Python binary' in lines[0]
+    assert '/old/venv/bin/python' in lines[1]
+    assert '/new/venv/bin/python' in lines[2]

@@ -162,12 +162,14 @@ class TestDaemonVersionInfo:
         """Test that version info can be written and read back."""
         version_file = pathlib.Path(stopped_daemon_client.daemon_package_snapshot_file)
         version_file.parent.mkdir(parents=True, exist_ok=True)
-        expected = {
+        packages = {
             'aiida-core': {'version': '2.6.0', 'editable_path': '/tmp/aiida-core'},
             'some-plugin': {'version': '1.0.0'},
         }
-        version_file.write_text(json.dumps(expected), encoding='utf8')
-        assert stopped_daemon_client.get_daemon_package_snapshot() == expected
+        snapshot = {'packages': packages, 'python_binary': '/usr/bin/python3'}
+        version_file.write_text(json.dumps(snapshot), encoding='utf8')
+        assert stopped_daemon_client.get_daemon_package_snapshot() == packages
+        assert stopped_daemon_client.get_daemon_python_binary() == '/usr/bin/python3'
 
     @staticmethod
     def test_get_dist_commit_hash_vcs_install():
@@ -308,7 +310,9 @@ class TestDaemonVersionInfo:
             stopped_daemon_client.start_daemon()
 
         assert version_file.exists()
-        assert json.loads(version_file.read_text(encoding='utf8')) == {'aiida-core': {'version': '2.6.0'}}
+        written = json.loads(version_file.read_text(encoding='utf8'))
+        assert written['packages'] == {'aiida-core': {'version': '2.6.0'}}
+        assert 'python_binary' in written
 
     @staticmethod
     def test_start_daemon_no_version_file_on_await_failure(stopped_daemon_client):
@@ -368,7 +372,9 @@ class TestDaemonVersionInfo:
         ):
             stopped_daemon_client.restart_daemon()
 
-        assert json.loads(version_file.read_text(encoding='utf8')) == {'aiida-core': {'version': '2.6.0'}}
+        written = json.loads(version_file.read_text(encoding='utf8'))
+        assert written['packages'] == {'aiida-core': {'version': '2.6.0'}}
+        assert 'python_binary' in written
 
     @staticmethod
     def test_restart_daemon_missing_version_file_configuration(stopped_daemon_client, monkeypatch):

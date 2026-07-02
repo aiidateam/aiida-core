@@ -62,7 +62,7 @@ class PackageVersionInfo(_PackageVersionInfoRequired, total=False):
 PackageVersionSnapshot: t.TypeAlias = dict[str, PackageVersionInfo]
 
 
-class _DaemonVersionInfo(t.TypedDict):
+class DaemonVersionInfo(t.TypedDict):
     """Content written to the daemon version file."""
 
     packages: PackageVersionSnapshot
@@ -694,7 +694,7 @@ class DaemonClient:
 
     def _write_version_file(self) -> None:
         """Write the current package version snapshot to the daemon version file."""
-        version_info: _DaemonVersionInfo = {
+        version_info: DaemonVersionInfo = {
             'packages': self.get_package_version_snapshot(),
             'python_binary': sys.executable,
         }
@@ -705,7 +705,7 @@ class DaemonClient:
         except OSError as exc:
             LOGGER.warning('Failed to write daemon version file: %s', exc)
 
-    def _read_version_file(self) -> _DaemonVersionInfo | None:
+    def get_daemon_version_info(self) -> DaemonVersionInfo | None:
         """Read and validate the daemon version file, or return None if unavailable or invalid."""
         try:
             data = json.loads(pathlib.Path(self.daemon_package_snapshot_file).read_text(encoding='utf8'))
@@ -723,17 +723,7 @@ class DaemonClient:
         if not isinstance(python_binary, str):
             return None
 
-        return _DaemonVersionInfo(packages=packages, python_binary=python_binary)
-
-    def get_daemon_package_snapshot(self) -> PackageVersionSnapshot | None:
-        """Return version info recorded at daemon startup, or None if unavailable."""
-        version_file = self._read_version_file()
-        return version_file['packages'] if version_file is not None else None
-
-    def get_daemon_python_binary(self) -> str | None:
-        """Return the Python binary path recorded at daemon startup, or None if unavailable."""
-        version_file = self._read_version_file()
-        return version_file['python_binary'] if version_file is not None else None
+        return DaemonVersionInfo(packages=packages, python_binary=python_binary)
 
     def increase_workers(self, number: int, timeout: int | None = None) -> dict[str, t.Any]:
         """Increase the number of workers.

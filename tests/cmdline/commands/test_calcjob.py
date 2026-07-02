@@ -14,7 +14,7 @@ import pytest
 from click.testing import CliRunner
 
 from aiida import orm
-from aiida.cmdline.commands import cmd_calcjob as command
+from aiida.cmdline._commands import cmd_calcjob as command
 from aiida.common.datastructures import CalcJobState
 from aiida.common.links import LinkType
 from aiida.engine import ProcessState
@@ -387,7 +387,7 @@ class TestVerdiCalculation:
 
         # Test when gotocomputer_command raises NotImplementedError
         with patch(
-            'aiida.transports.plugins.local.LocalTransport.gotocomputer_command',
+            'aiida.transports.plugins._local.LocalTransport.gotocomputer_command',
             new=lambda _, __: raise_(NotImplementedError),
         ):
             result = self.cli_runner.invoke(command.calcjob_gotocomputer, options)

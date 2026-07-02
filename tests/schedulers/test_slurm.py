@@ -18,7 +18,7 @@ import pytest
 
 from aiida.engine import CalcJob
 from aiida.schedulers import JobState, SchedulerError
-from aiida.schedulers.plugins.slurm import SlurmJobResource, SlurmScheduler
+from aiida.schedulers.plugins._slurm import SlurmJobResource, SlurmScheduler
 
 # job_id, state_raw, annotation, executing_host, username, number_nodes, number_cpus, allocated_machines, partition, time_limit, time_used, dispatch_time, job_name, submission_time
 # See SlurmScheduler.fields

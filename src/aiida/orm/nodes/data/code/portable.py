@@ -25,9 +25,9 @@ import warnings
 from typing import cast
 
 from aiida.common import exceptions
+from aiida.common._typing import FilePath
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check
-from aiida.common.typing import FilePath
 from aiida.orm import Computer
 from aiida.orm.pydantic import OrmMetadataField
 

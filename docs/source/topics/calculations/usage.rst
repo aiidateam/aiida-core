@@ -1182,7 +1182,7 @@ This is the last *required* step for a ``CalcJob`` to terminate, but often we wo
 To automatically trigger the parsing of a calculation job after its output has been retrieved, is to specify the :ref:`parser name option<topics:calculations:usage:calcjobs:options>`.
 If the engine find this option specified, it will load the corresponding parser class, which should be a sub class of :py:class:`~aiida.parsers.parser.Parser` and calls its :py:meth:`~aiida.parsers.parser.Parser.parse` method.
 
-To explain the interface of the ``Parser`` class and the ``parse`` method, let's take the :py:class:`~aiida.parsers.plugins.arithmetic.add.ArithmeticAddParser` as an example.
+To explain the interface of the ``Parser`` class and the ``parse`` method, let's take the :py:class:`~aiida.parsers._plugins.arithmetic.add.ArithmeticAddParser` as an example.
 This parser is designed to parse the output produced by the simple bash script that is wrapped by the ``ArithmeticAddCalculation`` discussed in the previous sections.
 
 .. literalinclude:: include/snippets/calcjobs/arithmetic_add_parser.py

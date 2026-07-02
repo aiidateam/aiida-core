@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from aiida.transports.plugins.async_backend import _OpenSSH, get_openssh_version
+from aiida.transports.plugins._async_backend import _OpenSSH, get_openssh_version
 from aiida.transports.plugins.ssh_async import AsyncSshTransport
 
 
@@ -159,15 +159,15 @@ def test_get_openssh_version():
     mock_result.stdout = ''
 
     mock_result.stderr = 'OpenSSH_9.0p1, OpenSSL 3.0.2'
-    with patch('aiida.transports.plugins.async_backend.subprocess.run', return_value=mock_result):
+    with patch('aiida.transports.plugins._async_backend.subprocess.run', return_value=mock_result):
         assert get_openssh_version() == 9
 
     mock_result.stderr = 'OpenSSH_8.9p1, OpenSSL 3.0.2'
-    with patch('aiida.transports.plugins.async_backend.subprocess.run', return_value=mock_result):
+    with patch('aiida.transports.plugins._async_backend.subprocess.run', return_value=mock_result):
         assert get_openssh_version() == 8
 
     mock_result.stderr = ''
-    with patch('aiida.transports.plugins.async_backend.subprocess.run', return_value=mock_result):
+    with patch('aiida.transports.plugins._async_backend.subprocess.run', return_value=mock_result):
         assert get_openssh_version() is None
 
 

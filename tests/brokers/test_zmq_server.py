@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for ``aiida.brokers.zmq.server.ZmqBrokerServer``."""
+"""Tests for ``aiida.brokers.zmq._server.ZmqBrokerServer``."""
 
 from __future__ import annotations
 
@@ -17,8 +17,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from aiida.brokers.zmq.protocol import MessageType, decode_message, encode_message
-from aiida.brokers.zmq.server import ZmqBrokerServer
+from aiida.brokers.zmq._protocol import MessageType, decode_message, encode_message
+from aiida.brokers.zmq._server import ZmqBrokerServer
 
 
 class TestZmqBrokerServerInit:

@@ -31,12 +31,12 @@ from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import StorageBackend
 from aiida.orm.utils.links import LinkQuadruple
-from aiida.tools.graph.graph_traversers import get_nodes_export, validate_traversal_rules
+from aiida.tools.graph._graph_traversers import get_nodes_export, validate_traversal_rules
 
-from .abstract import ArchiveFormatAbstract, ArchiveWriterAbstract
-from .common import entity_type_to_orm
+from ._abstract import ArchiveFormatAbstract, ArchiveWriterAbstract
+from ._common import entity_type_to_orm
+from ._implementations.sqlite_zip.main import ArchiveFormatSqlZip
 from .exceptions import ArchiveExportError, ExportValidationError
-from .implementations.sqlite_zip.main import ArchiveFormatSqlZip
 
 __all__ = ('create_archive',)
 

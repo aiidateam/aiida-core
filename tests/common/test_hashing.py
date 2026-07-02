@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Unittests for aiida.common.hashing:make_hash with hardcoded hash values"""
+"""Unittests for aiida.common._hashing:make_hash with hardcoded hash values"""
 
 import collections
 import hashlib
@@ -18,10 +18,10 @@ from decimal import Decimal
 import numpy as np
 import pytest
 
+from aiida.common._hashing import chunked_file_hash, float_to_text, make_hash
+from aiida.common._timezone import timezone_from_name
 from aiida.common.exceptions import HashingError
 from aiida.common.folders import SandboxFolder
-from aiida.common.hashing import chunked_file_hash, float_to_text, make_hash
-from aiida.common.timezone import timezone_from_name
 from aiida.common.utils import DatetimePrecision
 from aiida.orm import Dict
 

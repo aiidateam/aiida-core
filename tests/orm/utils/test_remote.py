@@ -14,7 +14,7 @@ import pytest
 
 from aiida import orm
 from aiida.orm.nodes.data.remote.base import RemoteData
-from aiida.orm.utils import remote
+from aiida.orm.utils import _remote as remote
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

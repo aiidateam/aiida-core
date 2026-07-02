@@ -96,8 +96,8 @@ class EntryPointFormat(enum.Enum):
 
 ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP = {
     'aiida.calculations': 'aiida.orm.nodes.process.calculation.calcjob',
-    'aiida.calculations.importers': 'aiida.calculations.importers',
-    'aiida.calculations.monitors': 'aiida.calculations.monitors',
+    'aiida.calculations.importers': 'aiida.calculations._importers',
+    'aiida.calculations.monitors': 'aiida.calculations._monitors',
     'aiida.cmdline.computer.configure': 'aiida.cmdline.computer.configure',
     'aiida.cmdline.data': 'aiida.cmdline.data',
     'aiida.cmdline.data.structure.import': 'aiida.cmdline.data.structure.import',
@@ -105,15 +105,15 @@ ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP = {
     'aiida.groups': 'aiida.orm.groups',
     'aiida.orm': 'aiida.orm',
     'aiida.node': 'aiida.orm.nodes',
-    'aiida.parsers': 'aiida.parsers.plugins',
+    'aiida.parsers': 'aiida.parsers._plugins',
     'aiida.schedulers': 'aiida.schedulers.plugins',
     'aiida.storage': 'aiida.storage',
     'aiida.transports': 'aiida.transports.plugins',
     'aiida.tools.calculations': 'aiida.tools.calculations',
     'aiida.tools.workflows': 'aiida.tools.workflows',
     'aiida.tools.data.orbitals': 'aiida.tools.data.orbitals',
-    'aiida.tools.dbexporters': 'aiida.tools.dbexporters',
-    'aiida.tools.dbimporters': 'aiida.tools.dbimporters.plugins',
+    'aiida.tools.dbexporters': 'aiida.tools._dbexporters',
+    'aiida.tools.dbimporters': 'aiida.tools._dbimporters.plugins',
     'aiida.workflows': 'aiida.workflows',
 }
 

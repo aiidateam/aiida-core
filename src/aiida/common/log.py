@@ -18,7 +18,7 @@ import logging
 import types
 import typing as t
 
-from aiida.common.typing import FilePath
+from aiida.common._typing import FilePath
 
 __all__ = ('AIIDA_LOGGER', 'override_log_level')
 
@@ -83,14 +83,14 @@ def get_logging_config() -> dict[str, t.Any]:
                 'format': '%(asctime)s <%(process)d> %(name)s: [%(levelname)s] %(message)s',
                 'datefmt': '%m/%d/%Y %I:%M:%S %p',
             },
-            'cli': {'class': 'aiida.cmdline.utils.log.CliFormatter'},
+            'cli': {'class': 'aiida.cmdline.utils._log.CliFormatter'},
         },
         'handlers': {
             'console': {
                 'class': 'logging.StreamHandler',
                 'formatter': 'halfverbose',
             },
-            'cli': {'class': 'aiida.cmdline.utils.log.CliHandler', 'formatter': 'cli'},
+            'cli': {'class': 'aiida.cmdline.utils._log.CliHandler', 'formatter': 'cli'},
         },
         'loggers': {
             'aiida': {
@@ -237,7 +237,7 @@ def configure_logging(with_orm: bool = False, daemon: bool = False, daemon_log_f
 
         config['handlers']['db_logger'] = {
             'level': get_config_option('logging.db_loglevel'),
-            'class': 'aiida.orm.utils.log.DBLogHandler',
+            'class': 'aiida.orm.utils._log.DBLogHandler',
         }
         config['loggers']['aiida']['handlers'].append('db_logger')
 

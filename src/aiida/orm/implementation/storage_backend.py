@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from disk_objectstore.backup_utils import BackupManager
 
     from aiida.manage.configuration.profile import Profile
-    from aiida.orm.autogroup import AutogroupManager
+    from aiida.orm._autogroup import AutogroupManager
     from aiida.orm.entities import EntityTypes
     from aiida.orm.implementation import (
         BackendAuthInfoCollection,
@@ -107,7 +107,7 @@ class StorageBackend(abc.ABC):
             if the profile's storage schema is not at the latest version (and thus should be migrated)
         :raises: :raises: :class:`aiida.common.exceptions.CorruptStorage` if the storage is internally inconsistent
         """
-        from aiida.orm.autogroup import AutogroupManager
+        from aiida.orm._autogroup import AutogroupManager
 
         self._profile = profile
         self._default_user: Optional['User'] = None
@@ -159,7 +159,7 @@ class StorageBackend(abc.ABC):
 
         .. warning:: This is a destructive operation, and should only be used for testing purposes.
         """
-        from aiida.orm.autogroup import AutogroupManager
+        from aiida.orm._autogroup import AutogroupManager
 
         self.reset_default_user()
         self._autogroup = AutogroupManager(self)
@@ -335,7 +335,7 @@ class StorageBackend(abc.ABC):
         from aiida.common import exceptions
         from aiida.common.log import override_log_level
         from aiida.manage.configuration import get_config
-        from aiida.manage.configuration.config import Config
+        from aiida.manage.configuration._config import Config
         from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
 
         try:
@@ -361,9 +361,9 @@ class StorageBackend(abc.ABC):
         from disk_objectstore import backup_utils
 
         from aiida.common import exceptions
-        from aiida.manage.configuration.config import Config
+        from aiida.manage.configuration._config import Config
         from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
-        from aiida.storage.log import STORAGE_LOGGER
+        from aiida.storage._log import STORAGE_LOGGER
 
         try:
             # this creates the dest folder if it doesn't exist
@@ -422,9 +422,9 @@ class StorageBackend(abc.ABC):
         :raises NotImplementedError: If the storage backend doesn't implement a backup procedure.
         """
         from aiida.common.exceptions import LockedProfileError, StorageBackupError
+        from aiida.manage._profile_access import ProfileAccessManager
         from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
-        from aiida.manage.profile_access import ProfileAccessManager
-        from aiida.storage.log import STORAGE_LOGGER
+        from aiida.storage._log import STORAGE_LOGGER
 
         # check that the AiiDA profile is not locked and request access for the duration of this backup process
         # (locked means that possibly a maintenance operation is running that could interfere with the backup)

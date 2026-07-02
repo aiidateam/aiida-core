@@ -11,7 +11,7 @@
 import pytest
 
 from aiida import get_profile
-from aiida.cmdline.commands import cmd_verdi
+from aiida.cmdline._commands import cmd_verdi
 
 
 @pytest.mark.usefixtures('empty_config')
@@ -188,8 +188,8 @@ def test_config_caching(run_cli_command, config_with_profile_factory):
         ('aiida.calculations:core.arithmetic.add', False),
         ('aiida.calculations:core.arithmetic.invalid', True),
         ('core.arithmetic.invalid', True),
-        ('aiida.calculations.arithmetic.add.ArithmeticAddCalculation', False),
-        ('aiida.calculations.arithmetic.invalid.ArithmeticAddCalculation', True),
+        ('aiida.calculations._arithmetic.add.ArithmeticAddCalculation', False),
+        ('aiida.calculations._arithmetic.invalid.ArithmeticAddCalculation', True),
     ),
 )
 def test_config_set_caching_enabled(run_cli_command, config_with_profile_factory, value, raises):

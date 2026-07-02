@@ -13,7 +13,7 @@ import urllib.request
 import pytest
 
 from aiida import get_profile
-from aiida.tools.dbimporters.plugins import icsd
+from aiida.tools._dbimporters.plugins import icsd
 
 
 def has_mysqldb():

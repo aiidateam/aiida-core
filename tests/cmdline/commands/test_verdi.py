@@ -12,7 +12,7 @@ import click
 import pytest
 
 from aiida import get_version
-from aiida.cmdline.commands import cmd_verdi
+from aiida.cmdline._commands import cmd_verdi
 
 
 @pytest.mark.usefixtures('config_with_profile')

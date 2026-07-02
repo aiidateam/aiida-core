@@ -3,8 +3,8 @@ import click
 from flask_restful import Resource
 
 from aiida import load_profile
-from aiida.restapi import common
-from aiida.restapi.api import AiidaApi, App
+from aiida.restapi import _common as common
+from aiida.restapi._api import AiidaApi, App
 from aiida.restapi.run_api import run_api
 
 

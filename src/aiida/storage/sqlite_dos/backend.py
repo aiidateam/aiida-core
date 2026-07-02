@@ -24,18 +24,18 @@ from sqlalchemy import insert, inspect, select
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from aiida.common import exceptions
+from aiida.common._pydantic import AiiDABaseModel, MetadataField
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage.configuration.profile import Profile
 from aiida.manage.configuration.settings import AiiDAConfigDir
 from aiida.orm.implementation import BackendEntity
-from aiida.storage.log import MIGRATE_LOGGER
+from aiida.storage._log import MIGRATE_LOGGER
 from aiida.storage.psql_dos.models.settings import DbSetting
 from aiida.storage.sqlite_zip import models, orm
 from aiida.storage.sqlite_zip.backend import validate_sqlite_version
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
 
-from ..migrations import TEMPLATE_INVALID_SCHEMA_VERSION
+from .._migrations import TEMPLATE_INVALID_SCHEMA_VERSION
 from ..psql_dos import PsqlDosBackend
 from ..psql_dos.migrator import PsqlDosMigrator
 

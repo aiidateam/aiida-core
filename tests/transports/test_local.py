@@ -6,13 +6,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Test :mod:`aiida.transports.plugins.local`."""
+"""Test :mod:`aiida.transports.plugins._local`."""
 
 import getpass
 
 import pytest
 
-from aiida.transports.plugins.local import LocalTransport
+from aiida.transports.plugins._local import LocalTransport
 from aiida.transports.transport import TransportInternalError
 
 

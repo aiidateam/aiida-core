@@ -1,6 +1,6 @@
-"""Tests for the :mod:`aiida.calculations.importers.arithmetic.add` module."""
+"""Tests for the :mod:`aiida.calculations._importers.arithmetic.add` module."""
 
-from aiida.calculations.importers.arithmetic.add import ArithmeticAddCalculationImporter
+from aiida.calculations._importers.arithmetic.add import ArithmeticAddCalculationImporter
 from aiida.orm import Int, RemoteData
 
 

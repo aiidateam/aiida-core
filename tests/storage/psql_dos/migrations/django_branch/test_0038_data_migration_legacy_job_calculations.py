@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from aiida.common import timezone
+from aiida.common import _timezone as timezone
 from aiida.storage.psql_dos.migrations.utils.calc_state import STATE_MAPPING, StateMapping
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 

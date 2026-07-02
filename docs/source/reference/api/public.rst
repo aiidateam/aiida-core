@@ -18,7 +18,10 @@ It contains various sub-packages that we refer to as "second-level packages".
 
         from aiida import load_profile  # OK, top-level import
         from aiida.orm import QueryBuilder  # OK, second-level import
-        from aiida.tools.importexport import Archive # NOT PUBLIC API
+        from aiida.common._hashing import make_hash  # NOT PUBLIC API
+
+Internal modules are marked with a leading underscore (e.g. ``aiida.common._hashing``), so that reaching into them is always a deliberate act.
+A module without a leading underscore may still be internal: the public surface is defined exclusively by the ``__all__`` of the second-level packages (and the CLI toolkit modules listed below).
 
 .. warning::
 

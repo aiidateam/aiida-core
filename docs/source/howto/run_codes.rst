@@ -688,7 +688,7 @@ Advanced functionality
 
 The most simple implementation of a monitor simply returns a string.
 This is interpreted by the engine that the job should be killed and the string contains the reason for doing so.
-This behavior can be controlled by returning an instance of :class:`~aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult` instead.
+This behavior can be controlled by returning an instance of :class:`~aiida.engine.processes.calcjobs._monitors.CalcJobMonitorResult` instead.
 
 Disable parsing of retrieved files
 ..................................
@@ -700,7 +700,7 @@ To skip the parsing of the retrieved files, set ``CalcJobMonitorResult.parse`` t
 
     def monitor_skip_parsing(node: CalcJobNode, transport: Transport) -> str | None:
         """Kill the job and do not call the parser, if specified in the inputs."""
-        from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult
+        from aiida.engine.processes.calcjobs._monitors import CalcJobMonitorResult
         return CalcJobMonitorResult(parse=False)
 
 Disable retrieving of files
@@ -713,7 +713,7 @@ To skip the file retrieval, set ``CalcJobMonitorResult.retrieve`` to ``False``:
 
     def monitor_skip_retrieval(node: CalcJobNode, transport: Transport) -> str | None:
         """Kill the job and do not retrieve the output files."""
-        from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult
+        from aiida.engine.processes.calcjobs._monitors import CalcJobMonitorResult
         return CalcJobMonitorResult(retrieve=False, parse=False)
 
 Note that in this case ``parse`` should also be set to ``False`` since the engine cannot parse files that have not been retrieved.
@@ -729,7 +729,7 @@ To keep the exit code of the parser instead, set ``CalcJobMonitorResult.override
 
     def monitor_do_not_override_exit_code(node: CalcJobNode, transport: Transport) -> str | None:
         """Kill the job and do not override the exit code returned by the parser."""
-        from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult
+        from aiida.engine.processes.calcjobs._monitors import CalcJobMonitorResult
         return CalcJobMonitorResult(override_exit_code=False)
 
 Disable a monitor
@@ -737,13 +737,13 @@ Disable a monitor
 
 By default, when a monitor returns anything other than ``None``, the engine will immediately kill the job.
 In certain use-cases, a monitor may want to perform an action and then let the job terminate nominally, but not invoke the monitor again.
-To disable a monitor, set ``CalcJobMonitorResult.action`` to the ``DISABLE_SELF`` option of the :class:`~aiida.engine.processes.calcjobs.monitors.CalcJobMonitorAction`:
+To disable a monitor, set ``CalcJobMonitorResult.action`` to the ``DISABLE_SELF`` option of the :class:`~aiida.engine.processes.calcjobs._monitors.CalcJobMonitorAction`:
 
 .. code-block:: python
 
     def monitor_disable_self(node: CalcJobNode, transport: Transport) -> str | None:
         """Disable this monitor and let job terminate nominally."""
-        from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult, CalcJobMonitorAction
+        from aiida.engine.processes.calcjobs._monitors import CalcJobMonitorResult, CalcJobMonitorAction
         return CalcJobMonitorResult(action=CalcJobMonitorAction.DISABLE_SELF)
 
 All other monitors, if defined, will continue to be invoked by the engine.
@@ -755,13 +755,13 @@ By default, when a monitor returns anything other than ``None``, the engine will
 In certain use-cases, a monitor may want to perform an action and then let the job terminate nominally.
 An example might be where the monitor writes a sentinel file in the remote working directory, which will let the code running on the remote shut itself down gracefully.
 In this case it is desirable that the engine stops calling the monitors that were registered and just let the job continue normally.
-To disable all monitors, set ``CalcJobMonitorResult.action`` to the ``DISABLE_ALL`` option of the :class:`~aiida.engine.processes.calcjobs.monitors.CalcJobMonitorAction`:
+To disable all monitors, set ``CalcJobMonitorResult.action`` to the ``DISABLE_ALL`` option of the :class:`~aiida.engine.processes.calcjobs._monitors.CalcJobMonitorAction`:
 
 .. code-block:: python
 
     def monitor_disable_all_monitors(node: CalcJobNode, transport: Transport) -> str | None:
         """Disable all monitors and let job terminate nominally."""
-        from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorResult, CalcJobMonitorAction
+        from aiida.engine.processes.calcjobs._monitors import CalcJobMonitorResult, CalcJobMonitorAction
         return CalcJobMonitorResult(action=CalcJobMonitorAction.DISABLE_ALL)
 
 

@@ -142,7 +142,7 @@ class TestSessionSqla:
         Tests for bug #1372
         """
         import aiida.storage.psql_dos as sa
-        from aiida.common import timezone
+        from aiida.common import _timezone as timezone
 
         session = sessionmaker(bind=self.backend.get_session().bind, future=True)
         custom_session = session()

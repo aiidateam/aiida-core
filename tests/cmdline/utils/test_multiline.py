@@ -11,7 +11,7 @@
 import click
 import pytest
 
-from aiida.cmdline.utils.multi_line_input import edit_comment, edit_multiline_template
+from aiida.cmdline.utils._multi_line_input import edit_comment, edit_multiline_template
 
 COMMAND = 'sleep 1 ; vim -c "g!/^#=/s/$/Test" -cwq'  # Appends `Test` to every line NOT starting with `#=`
 

@@ -1,4 +1,4 @@
-"""Tests for the :mod:`aiida.tools.pytest_fixtures.orm` module."""
+"""Tests for the :mod:`aiida.tools.pytest_fixtures._orm` module."""
 
 import uuid
 from unittest.mock import patch
@@ -8,7 +8,7 @@ import pytest
 from aiida.common.exceptions import IntegrityError, NotExistent
 from aiida.orm import Computer
 from aiida.transports import AsyncTransport, BlockingTransport
-from aiida.transports.plugins.async_backend import _AsyncSSH, _OpenSSH
+from aiida.transports.plugins._async_backend import _AsyncSSH, _OpenSSH
 
 # This is needed when we run this file in isolation using
 # the `--noconftest` pytest option in the 'test-pytest-fixtures' CI job.

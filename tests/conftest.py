@@ -45,7 +45,7 @@ except ImportError:
     from typing_extensions import ParamSpec  # type: ignore[assignment]
 
 if t.TYPE_CHECKING:
-    from aiida.manage.configuration.config import Config
+    from aiida.manage.configuration._config import Config
 
 pytest_plugins = ['aiida.tools.pytest_fixtures', 'sphinx.testing.fixtures']
 
@@ -78,7 +78,7 @@ def start_zmq_broker(broker, timeout: float = 10.0):
         return
 
     subprocess.Popen(
-        [sys.executable, '-m', 'aiida.brokers.zmq.service', '--base-path', str(broker.base_path)],
+        [sys.executable, '-m', 'aiida.brokers.zmq._service', '--base-path', str(broker.base_path)],
         start_new_session=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -261,7 +261,7 @@ def capture_aiida_and_verdi_logs(request, monkeypatch):
 
     monkeypatch.setattr(common_log, 'configure_logging', configure_logging)
     monkeypatch.setattr('aiida.configure_logging', configure_logging, raising=False)
-    monkeypatch.setattr('aiida.engine.daemon.worker.configure_logging', configure_logging, raising=False)
+    monkeypatch.setattr('aiida.engine.daemon._worker.configure_logging', configure_logging, raising=False)
     monkeypatch.setattr('aiida.cmdline.params.options.main.configure_logging', configure_logging, raising=False)
 
     attach_handler()
@@ -505,7 +505,7 @@ def isolated_config(monkeypatch):
     Python process and so doesn't have access to the loaded config in memory in the process that is running the test.
     """
     from aiida.manage import configuration
-    from aiida.manage.configuration.config import Config
+    from aiida.manage.configuration._config import Config
 
     monkeypatch.setattr(Config, '_backup', lambda *args, **kwargs: None)
 
@@ -758,7 +758,7 @@ def chdir_tmp_path(request, tmp_path):
 
 def cli_command_map() -> dict[click.Command, list[str]]:
     """Return a map of all ``verdi`` subcommands and their path in the command tree."""
-    from aiida.cmdline.commands.cmd_verdi import verdi
+    from aiida.cmdline._commands.cmd_verdi import verdi
 
     def recurse_commands(ctx, command: click.Command, breadcrumbs: list[str] | None = None):
         """Recursively return all subcommands that are part of ``command``.
@@ -947,7 +947,7 @@ def run_cli_command_runner(command, parameters, user_input, initialize_ctx_obj, 
     """Run CLI command through ``click.testing.CliRunner``."""
     from click.testing import CliRunner
 
-    from aiida.cmdline.commands.cmd_verdi import VerdiCommandGroup
+    from aiida.cmdline._commands.cmd_verdi import VerdiCommandGroup
     from aiida.cmdline.groups.verdi import LazyVerdiObjAttributeDict
 
     if initialize_ctx_obj:

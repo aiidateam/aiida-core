@@ -28,7 +28,7 @@ import pytest
 from aiida import orm
 from aiida.engine import ExitCode, calcfunction, run, run_get_node, submit, workfunction
 from aiida.orm.nodes.data.bool import get_true_node
-from aiida.workflows.arithmetic.add_multiply import add_multiply
+from aiida.workflows._arithmetic.add_multiply import add_multiply
 
 DEFAULT_INT = 256
 DEFAULT_LABEL = 'Default label'
@@ -222,7 +222,7 @@ def test_get_source_code_file():
     This is the case for example for functions defined in an interactive shell, where the retrieval of the source code
     upon storing the node fails and nothing is stored. The function should not except in this case.
     """
-    from aiida.orm.utils.mixins import FunctionCalculationMixin
+    from aiida.orm.utils._mixins import FunctionCalculationMixin
 
     _, node = function_return_true.run_get_node()
 

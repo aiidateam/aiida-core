@@ -1078,7 +1078,7 @@ Seekpath implementation
 When specifying ``method='seekpath'``, the `seekpath <https://github.com/giovannipizzi/seekpath/>`_ library is used to generate the path.
 Note that this requires  ``seekpath`` to be installed (this is not available by default, in order to reduce the dependencies of AiiDA core, but can be easily installed using ``pip install seekpath``).
 
-For a full description of the accepted parameters, we refer to the docstring of the underlying methods :py:func:`aiida.tools.data.array.kpoints.seekpath.get_explicit_kpoints_path` and :py:func:`aiida.tools.data.array.kpoints.seekpath.get_kpoints_path`, and for more general information to the `seekpath documentation <https://seekpath.readthedocs.io/>`_.
+For a full description of the accepted parameters, we refer to the docstring of the underlying methods :py:func:`aiida.tools.data.array.kpoints._seekpath.get_explicit_kpoints_path` and :py:func:`aiida.tools.data.array.kpoints._seekpath.get_kpoints_path`, and for more general information to the `seekpath documentation <https://seekpath.readthedocs.io/>`_.
 
 If you use this implementation, please cite the `Hinuma paper <https://doi.org/10.1016/j.commatsci.2016.10.015>`_::
 
@@ -1097,7 +1097,7 @@ If you use this implementation, please cite the `Hinuma paper <https://doi.org/1
 
     We therefore suggest that you use the seekpath implementation, that is able to automatically correctly identify the standardized crystal structure (primitive and conventional) as described in the `Hinuma paper <https://doi.org/10.1016/j.commatsci.2016.10.015>`_.
 
-  For a full description of the accepted parameters, we refer to the docstring of the underlying methods :py:func:`aiida.tools.data.array.kpoints.legacy.get_explicit_kpoints_path` and :py:func:`aiida.tools.data.array.kpoints.legacy.get_kpoints_path`, and for more general information to the `seekpath documentation <https://seekpath.readthedocs.io/>`_.
+  For a full description of the accepted parameters, we refer to the docstring of the underlying methods :py:func:`aiida.tools.data.array.kpoints._legacy.get_explicit_kpoints_path` and :py:func:`aiida.tools.data.array.kpoints._legacy.get_kpoints_path`, and for more general information to the `seekpath documentation <https://seekpath.readthedocs.io/>`_.
 
   If you use this implementation, please cite the correct reference from the following ones:
 

@@ -85,8 +85,8 @@ class TestRestApi:
         # create log message for calcjob
         import logging
 
+        from aiida.common._timezone import now
         from aiida.common.log import LOG_LEVEL_REPORT
-        from aiida.common.timezone import now
         from aiida.orm import Log
 
         log_record = {
@@ -1094,7 +1094,7 @@ class TestRestApi:
         This should return with 405 Method Not Allowed.
         Otherwise, a "conventional" JSON response should be returned with a helpful message.
         """
-        from aiida.restapi.resources import QueryBuilder as qb_api  # noqa: N813
+        from aiida.restapi._resources import QueryBuilder as qb_api  # noqa: N813
 
         with self.app.test_client() as client:
             response_value = client.get(f'{self.get_url_prefix()}/querybuilder')

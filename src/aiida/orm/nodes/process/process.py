@@ -20,10 +20,10 @@ from aiida.common import exceptions
 from aiida.common.lang import classproperty
 from aiida.common.links import LinkType
 from aiida.orm.pydantic import OrmMetadataField
-from aiida.orm.utils.mixins import Sealable
+from aiida.orm.utils._mixins import Sealable
 
-from ..caching import NodeCaching
-from ..links import NodeLinks
+from .._caching import NodeCaching
+from .._links import NodeLinks
 from ..node import Node
 
 if TYPE_CHECKING:
@@ -236,7 +236,7 @@ class ProcessNode(Sealable, Node):
 
         :return: LoggerAdapter object, that works like a logger, but also has the 'extra' embedded
         """
-        from aiida.orm.utils.log import create_logger_adapter
+        from aiida.orm.utils._log import create_logger_adapter
 
         # If the node is not yet stored, there is no point in creating the logger adapter yet, as the ``DbLogHandler``
         # it configures, is only triggered for stored nodes, otherwise it cannot link the log message to the node.

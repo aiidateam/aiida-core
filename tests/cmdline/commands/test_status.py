@@ -11,7 +11,7 @@
 import pytest
 
 from aiida import __version__, get_profile
-from aiida.cmdline.commands import cmd_status
+from aiida.cmdline._commands import cmd_status
 from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.engine.daemon.client import DaemonClient

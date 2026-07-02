@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for :mod:`aiida.storage.utils`."""
+"""Tests for :mod:`aiida.storage._utils`."""
 
 from collections.abc import Generator
 from typing import cast
@@ -16,7 +16,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
-from aiida.storage.utils import IN_CLAUSE_BATCH_SIZE, _create_smarter_in_clause
+from aiida.storage._utils import IN_CLAUSE_BATCH_SIZE, _create_smarter_in_clause
 
 # Type alias for the fixture's yielded value
 SqliteSessionFixture = tuple[Session, sa.Column[int]]

@@ -6,11 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the :mod:`aiida.cmdline.utils.log` module."""
+"""Tests for the :mod:`aiida.cmdline.utils._log` module."""
 
 import logging
 
-from aiida.cmdline.utils import log
+from aiida.cmdline.utils import _log as log
 
 
 def test_cli_formatter():

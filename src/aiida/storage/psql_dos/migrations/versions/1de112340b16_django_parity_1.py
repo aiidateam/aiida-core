@@ -19,7 +19,7 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
-from aiida.common import timezone
+from aiida.common import _timezone as timezone
 from aiida.common.utils import get_new_uuid
 
 # revision identifiers, used by Alembic.

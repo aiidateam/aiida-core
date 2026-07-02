@@ -73,32 +73,32 @@ requires-python = '>=3.10'
 'core.zmq' = 'aiida.brokers.zmq.broker:ZmqBroker'
 
 [project.entry-points.'aiida.calculations']
-'core.arithmetic.add' = 'aiida.calculations.arithmetic.add:ArithmeticAddCalculation'
-'core.stash' = 'aiida.calculations.stash:StashCalculation'
-'core.templatereplacer' = 'aiida.calculations.templatereplacer:TemplatereplacerCalculation'
-'core.transfer' = 'aiida.calculations.transfer:TransferCalculation'
-'core.unstash' = 'aiida.calculations.unstash:UnstashCalculation'
+'core.arithmetic.add' = 'aiida.calculations._arithmetic.add:ArithmeticAddCalculation'
+'core.stash' = 'aiida.calculations._stash:StashCalculation'
+'core.templatereplacer' = 'aiida.calculations._templatereplacer:TemplatereplacerCalculation'
+'core.transfer' = 'aiida.calculations._transfer:TransferCalculation'
+'core.unstash' = 'aiida.calculations._unstash:UnstashCalculation'
 
 [project.entry-points.'aiida.calculations.importers']
-'core.arithmetic.add' = 'aiida.calculations.importers.arithmetic.add:ArithmeticAddCalculationImporter'
+'core.arithmetic.add' = 'aiida.calculations._importers.arithmetic.add:ArithmeticAddCalculationImporter'
 
 [project.entry-points.'aiida.calculations.monitors']
-'core.always_kill' = 'aiida.calculations.monitors.base:always_kill'
+'core.always_kill' = 'aiida.calculations._monitors.base:always_kill'
 
 [project.entry-points.'aiida.cmdline.computer.configure']
-'core.local' = 'aiida.transports.plugins.local:CONFIGURE_LOCAL_CMD'
+'core.local' = 'aiida.transports.plugins._local:CONFIGURE_LOCAL_CMD'
 'core.ssh' = 'aiida.transports.plugins.ssh:CONFIGURE_SSH_CMD'
 
 [project.entry-points.'aiida.cmdline.data']
-'core.array' = 'aiida.cmdline.commands.cmd_data.cmd_array:array'
-'core.bands' = 'aiida.cmdline.commands.cmd_data.cmd_bands:bands'
-'core.cif' = 'aiida.cmdline.commands.cmd_data.cmd_cif:cif'
-'core.dict' = 'aiida.cmdline.commands.cmd_data.cmd_dict:dictionary'
-'core.remote' = 'aiida.cmdline.commands.cmd_data.cmd_remote:remote'
-'core.singlefile' = 'aiida.cmdline.commands.cmd_data.cmd_singlefile:singlefile'
-'core.structure' = 'aiida.cmdline.commands.cmd_data.cmd_structure:structure'
-'core.trajectory' = 'aiida.cmdline.commands.cmd_data.cmd_trajectory:trajectory'
-'core.upf' = 'aiida.cmdline.commands.cmd_data.cmd_upf:upf'
+'core.array' = 'aiida.cmdline._commands.cmd_data.cmd_array:array'
+'core.bands' = 'aiida.cmdline._commands.cmd_data.cmd_bands:bands'
+'core.cif' = 'aiida.cmdline._commands.cmd_data.cmd_cif:cif'
+'core.dict' = 'aiida.cmdline._commands.cmd_data.cmd_dict:dictionary'
+'core.remote' = 'aiida.cmdline._commands.cmd_data.cmd_remote:remote'
+'core.singlefile' = 'aiida.cmdline._commands.cmd_data.cmd_singlefile:singlefile'
+'core.structure' = 'aiida.cmdline._commands.cmd_data.cmd_structure:structure'
+'core.trajectory' = 'aiida.cmdline._commands.cmd_data.cmd_trajectory:trajectory'
+'core.upf' = 'aiida.cmdline._commands.cmd_data.cmd_upf:upf'
 
 [project.entry-points.'aiida.cmdline.data.structure.import']
 
@@ -164,16 +164,16 @@ requires-python = '>=3.10'
 'core.user' = 'aiida.orm.users:User'
 
 [project.entry-points.'aiida.parsers']
-'core.arithmetic.add' = 'aiida.parsers.plugins.arithmetic.add:ArithmeticAddParser'
-'core.templatereplacer' = 'aiida.parsers.plugins.templatereplacer.parser:TemplatereplacerParser'
+'core.arithmetic.add' = 'aiida.parsers._plugins.arithmetic.add:ArithmeticAddParser'
+'core.templatereplacer' = 'aiida.parsers._plugins.templatereplacer.parser:TemplatereplacerParser'
 
 [project.entry-points.'aiida.schedulers']
-'core.direct' = 'aiida.schedulers.plugins.direct:DirectScheduler'
-'core.lsf' = 'aiida.schedulers.plugins.lsf:LsfScheduler'
-'core.pbspro' = 'aiida.schedulers.plugins.pbspro:PbsproScheduler'
-'core.sge' = 'aiida.schedulers.plugins.sge:SgeScheduler'
-'core.slurm' = 'aiida.schedulers.plugins.slurm:SlurmScheduler'
-'core.torque' = 'aiida.schedulers.plugins.torque:TorqueScheduler'
+'core.direct' = 'aiida.schedulers.plugins._direct:DirectScheduler'
+'core.lsf' = 'aiida.schedulers.plugins._lsf:LsfScheduler'
+'core.pbspro' = 'aiida.schedulers.plugins._pbspro:PbsproScheduler'
+'core.sge' = 'aiida.schedulers.plugins._sge:SgeScheduler'
+'core.slurm' = 'aiida.schedulers.plugins._slurm:SlurmScheduler'
+'core.torque' = 'aiida.schedulers.plugins._torque:TorqueScheduler'
 
 [project.entry-points.'aiida.storage']
 'core.psql_dos' = 'aiida.storage.psql_dos.backend:PsqlDosBackend'
@@ -190,26 +190,26 @@ requires-python = '>=3.10'
 [project.entry-points.'aiida.tools.dbexporters']
 
 [project.entry-points.'aiida.tools.dbimporters']
-'core.cod' = 'aiida.tools.dbimporters.plugins.cod:CodDbImporter'
-'core.icsd' = 'aiida.tools.dbimporters.plugins.icsd:IcsdDbImporter'
-'core.materialsproject' = 'aiida.tools.dbimporters.plugins.materialsproject:MaterialsProjectImporter'
-'core.mpds' = 'aiida.tools.dbimporters.plugins.mpds:MpdsDbImporter'
-'core.mpod' = 'aiida.tools.dbimporters.plugins.mpod:MpodDbImporter'
-'core.nninc' = 'aiida.tools.dbimporters.plugins.nninc:NnincDbImporter'
-'core.oqmd' = 'aiida.tools.dbimporters.plugins.oqmd:OqmdDbImporter'
-'core.pcod' = 'aiida.tools.dbimporters.plugins.pcod:PcodDbImporter'
-'core.tcod' = 'aiida.tools.dbimporters.plugins.tcod:TcodDbImporter'
+'core.cod' = 'aiida.tools._dbimporters.plugins.cod:CodDbImporter'
+'core.icsd' = 'aiida.tools._dbimporters.plugins.icsd:IcsdDbImporter'
+'core.materialsproject' = 'aiida.tools._dbimporters.plugins.materialsproject:MaterialsProjectImporter'
+'core.mpds' = 'aiida.tools._dbimporters.plugins.mpds:MpdsDbImporter'
+'core.mpod' = 'aiida.tools._dbimporters.plugins.mpod:MpodDbImporter'
+'core.nninc' = 'aiida.tools._dbimporters.plugins.nninc:NnincDbImporter'
+'core.oqmd' = 'aiida.tools._dbimporters.plugins.oqmd:OqmdDbImporter'
+'core.pcod' = 'aiida.tools._dbimporters.plugins.pcod:PcodDbImporter'
+'core.tcod' = 'aiida.tools._dbimporters.plugins.tcod:TcodDbImporter'
 
 [project.entry-points.'aiida.tools.workflows']
 
 [project.entry-points.'aiida.transports']
-'core.local' = 'aiida.transports.plugins.local:LocalTransport'
+'core.local' = 'aiida.transports.plugins._local:LocalTransport'
 'core.ssh' = 'aiida.transports.plugins.ssh:SshTransport'
 'core.ssh_async' = 'aiida.transports.plugins.ssh_async:AsyncSshTransport'
 
 [project.entry-points.'aiida.workflows']
-'core.arithmetic.add_multiply' = 'aiida.workflows.arithmetic.add_multiply:add_multiply'
-'core.arithmetic.multiply_add' = 'aiida.workflows.arithmetic.multiply_add:MultiplyAddWorkChain'
+'core.arithmetic.add_multiply' = 'aiida.workflows._arithmetic.add_multiply:add_multiply'
+'core.arithmetic.multiply_add' = 'aiida.workflows._arithmetic.multiply_add:MultiplyAddWorkChain'
 
 [project.optional-dependencies]
 atomic_tools = [
@@ -298,8 +298,8 @@ tui = [
 ]
 
 [project.scripts]
-runaiida = 'aiida.cmdline.commands.cmd_run:run'
-verdi = 'aiida.cmdline.commands.cmd_verdi:verdi'
+runaiida = 'aiida.cmdline._commands.cmd_run:run'
+verdi = 'aiida.cmdline._commands.cmd_verdi:verdi'
 
 [project.urls]
 Changelog = 'https://github.com/aiidateam/aiida-core/blob/main/CHANGELOG.md'
@@ -354,7 +354,7 @@ module = 'aiida'
 
 [[tool.mypy.overrides]]
 disallow_untyped_decorators = false
-module = 'aiida.cmdline.commands.*'
+module = 'aiida.cmdline._commands.*'
 
 [[tool.mypy.overrides]]
 disallow_any_generics = true
@@ -366,14 +366,14 @@ module = [
   'aiida.brokers.*',
   'aiida.cmdline.groups.*',
   'aiida.cmdline.params.*',
-  'aiida.cmdline.commands.cmd_status',
+  'aiida.cmdline._commands.cmd_status',
   'aiida.common.*',
   'aiida.repository.*',
   'aiida.schedulers.*',
   'aiida.storage.psql_dos.migrator',
   'aiida.storage.psql_dos.utils',
   'aiida.tools.graph.*',
-  'aiida.tools.query.*'
+  'aiida.tools._query.*'
 ]
 warn_return_any = true
 

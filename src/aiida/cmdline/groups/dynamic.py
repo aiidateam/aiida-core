@@ -13,7 +13,7 @@ from aiida.plugins.entry_point import ENTRY_POINT_GROUP_FACTORY_MAPPING, get_ent
 from aiida.plugins.factories import BaseFactory
 
 from ..params import options
-from ..params.options.interactive import InteractiveOption
+from ..params.options._interactive import InteractiveOption
 from .verdi import VerdiCommandGroup
 
 if t.TYPE_CHECKING:

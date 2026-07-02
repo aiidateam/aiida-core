@@ -17,7 +17,7 @@ Create Date: 2022-03-04
 import sqlalchemy as sa
 from alembic import op
 
-from aiida.common import timezone
+from aiida.common import _timezone as timezone
 
 # revision identifiers, used by Alembic.
 revision = 'main_0000a'

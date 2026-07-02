@@ -13,7 +13,7 @@ import pytest
 from aiida.common.datastructures import CodeRunMode
 from aiida.schedulers import SchedulerError
 from aiida.schedulers.datastructures import JobTemplate, JobTemplateCodeInfo
-from aiida.schedulers.plugins.direct import DirectScheduler
+from aiida.schedulers.plugins._direct import DirectScheduler
 
 
 @pytest.fixture
@@ -93,7 +93,7 @@ def test_kill_job(scheduler, tmpdir):
 
     from psutil import Process
 
-    from aiida.transports.plugins.local import LocalTransport
+    from aiida.transports.plugins._local import LocalTransport
 
     def run_sleep_100():
         import subprocess

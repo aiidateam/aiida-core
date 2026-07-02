@@ -25,16 +25,16 @@ from aiida.common.datastructures import CalcJobState
 from aiida.common.exceptions import FeatureNotAvailable, StashingError, TransportTaskException
 from aiida.common.folders import SandboxFolder
 from aiida.engine import utils
-from aiida.engine.daemon import execmanager
+from aiida.engine._transports import TransportQueue
+from aiida.engine.daemon import _execmanager as execmanager
 from aiida.engine.processes.exit_code import ExitCode
-from aiida.engine.transports import TransportQueue
 from aiida.engine.utils import InterruptableFuture, interruptable_task
 from aiida.manage.configuration import get_config_option
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
 from aiida.schedulers.datastructures import JobState
 
 from ..process import ProcessState
-from .monitors import CalcJobMonitorAction, CalcJobMonitorResult, CalcJobMonitors
+from ._monitors import CalcJobMonitorAction, CalcJobMonitorResult, CalcJobMonitors
 
 if TYPE_CHECKING:
     from .calcjob import CalcJob

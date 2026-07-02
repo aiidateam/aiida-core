@@ -6,13 +6,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the :mod:`aiida.cmdline.utils.repository` module."""
+"""Tests for the :mod:`aiida.cmdline.utils._repository` module."""
 
 import io
 
 import pytest
 
-from aiida.cmdline.utils.repository import list_repository_contents
+from aiida.cmdline.utils._repository import list_repository_contents
 from aiida.orm import FolderData
 
 

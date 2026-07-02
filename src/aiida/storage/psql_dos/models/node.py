@@ -14,7 +14,7 @@ from sqlalchemy.schema import Column
 from sqlalchemy.sql.schema import ForeignKey, Index
 from sqlalchemy.types import DateTime, Integer, String, Text
 
-from aiida.common import timezone
+from aiida.common import _timezone as timezone
 from aiida.common.utils import get_new_uuid
 from aiida.storage.psql_dos.models.base import Base
 

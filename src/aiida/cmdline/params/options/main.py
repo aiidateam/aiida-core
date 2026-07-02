@@ -15,11 +15,12 @@ import typing as t
 
 import click
 
-from aiida.brokers.rabbitmq.defaults import BROKER_DEFAULTS
+from aiida.brokers.rabbitmq._defaults import BROKER_DEFAULTS
 from aiida.common.log import LOG_LEVELS, configure_logging
-from aiida.manage.external.postgres import DEFAULT_DBINFO  # type: ignore[attr-defined]
+from aiida.manage._external.postgres import DEFAULT_DBINFO  # type: ignore[attr-defined]
 
-from ...utils import defaults, echo
+from ...utils import _defaults as defaults
+from ...utils import echo
 from .. import types
 from .callable import CallableDefaultOption
 from .config import ConfigFileOption

@@ -48,7 +48,7 @@ def with_broker(wrapped, _, args, kwargs):
 
     If the currently loaded profile does not define a broker, the command is aborted.
     """
-    from aiida.common.docs import URL_NO_BROKER
+    from aiida.common._docs import URL_NO_BROKER
     from aiida.manage import get_manager
 
     broker = get_manager().get_broker()
@@ -269,7 +269,7 @@ def deprecated_command(message: str):
         """Echo a deprecation warning before doing anything else."""
         from textwrap import wrap
 
-        from aiida.cmdline.utils import templates
+        from aiida.cmdline.utils import _templates as templates
 
         template = templates.env.get_template('deprecated.tpl')
         width = 80
@@ -318,7 +318,7 @@ def requires_broker(wrapped, _, args, kwargs):
 
     If the loaded profile does not define a broker, the command will exit with a critical error.
     """
-    from aiida.common.docs import URL_NO_BROKER
+    from aiida.common._docs import URL_NO_BROKER
     from aiida.manage import get_manager
 
     manager = get_manager()

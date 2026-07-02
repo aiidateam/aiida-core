@@ -29,8 +29,8 @@ The endpoint implements a ``GET`` request that retrieves the latest created ``Di
 In order to achieve this, we will need to:
 
 * Create the ``flask_restful.Resource`` class that will be bound to the new endpoint.
-* Extend the :py:class:`~aiida.restapi.api.AiidaApi` class in order to register the new endpoint.
-* (Optional) Extend the :py:class:`~aiida.restapi.api.App` class for additional customization.
+* Extend the :py:class:`~aiida.restapi._api.AiidaApi` class in order to register the new endpoint.
+* (Optional) Extend the :py:class:`~aiida.restapi._api.App` class for additional customization.
 
 Let's start by putting the following code into a  file ``api.py``:
 
@@ -42,7 +42,7 @@ First things first: the imports.
 
 .. code-block:: python
 
-    from aiida.restapi.api import AiidaApi, App
+    from aiida.restapi._api import AiidaApi, App
     from aiida.restapi.run_api import run_api
     from flask_restful import Resource
 
@@ -80,7 +80,7 @@ The data, which are packed as dictionaries, are serialized by Flask as a JSON st
 All the Python built-in types can be serialized by Flask (e.g. ``int``, ``float``, ``str``, etc.), whereas for serialization of custom types we let you refer to the `Flask documentation <http://flask.pocoo.org/docs/>`_ .
 The documentation of Flask is the main source of information also for topics such as customization of HTTP responses, construction of custom URLs (e.g. accepting parameters), and more advanced serialization issues.
 
-Whenever you face the need to handle errors, consider to use the AiiDA REST API-specific exceptions already defined in  :py:class:`aiida.restapi.common.exceptions`.
+Whenever you face the need to handle errors, consider to use the AiiDA REST API-specific exceptions already defined in  :py:class:`aiida.restapi._common.exceptions`.
 The reason will become clear slightly later in this section.
 
 Once the new resource is defined, we have to register it to the API by assigning it one (or more) endpoint(s).
@@ -123,7 +123,7 @@ Finally, the ``main`` code configures and runs the API:
 
 .. code-block:: python
 
-    import aiida.restapi.common as common
+    import aiida.restapi._common as common
     from aiida import load_profile
 
     CONFIG_DIR = common.__path__[0]
@@ -166,7 +166,7 @@ Consequently, the app is configured and, if required, hooked up.
 It takes as inputs:
 
 * the classes representing the API and the application.
-   We strongly suggest to pass to ``run_api()`` the :py:class:`aiida.restapi.api.App` class, inheriting from ``flask.Flask``, as it handles correctly AiiDA RESTApi-specific exceptions.
+   We strongly suggest to pass to ``run_api()`` the :py:class:`aiida.restapi._api.App` class, inheriting from ``flask.Flask``, as it handles correctly AiiDA RESTApi-specific exceptions.
 
 * positional arguments representing the command-line arguments/options, passed by the click function.
    Types, defaults and help strings can be set in the ``@click.option`` definitions, and will be handled by the command line call.

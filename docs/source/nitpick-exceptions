@@ -82,8 +82,8 @@ py:class aiida.storage.psql_dos.orm.SelfType
 py:class aiida.storage.psql_dos.orm.entities.SelfType
 py:class aiida.tools.archive.SelfType
 py:class aiida.tools.archive.EntityType
-py:class aiida.tools.archive.abstract.EntityType
-py:class aiida.tools.archive.abstract.SelfType
+py:class aiida.tools.archive._abstract.EntityType
+py:class aiida.tools.archive._abstract.SelfType
 py:class aiida.common.lang.SelfType
 py:class aiida.common.lang.ReturnType
 py:obj aiida.common.ReturnType

@@ -14,7 +14,7 @@ import pytest
 from click.testing import CliRunner
 
 from aiida import orm
-from aiida.cmdline.commands.cmd_group import group_path_ls
+from aiida.cmdline._commands.cmd_group import group_path_ls
 
 
 @pytest.fixture

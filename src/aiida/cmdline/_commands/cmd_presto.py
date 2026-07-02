@@ -1,0 +1,310 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""``verdi presto`` command."""
+
+from __future__ import annotations
+
+import os
+import pathlib
+import re
+import typing as t
+
+import click
+
+from aiida.cmdline._commands.cmd_verdi import verdi
+from aiida.cmdline.params import options
+from aiida.cmdline.utils import echo
+from aiida.manage.configuration import get_config_option
+
+DEFAULT_PROFILE_NAME_PREFIX: str = 'presto'
+
+
+def get_default_presto_profile_name():
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.manage import get_config
+
+    try:
+        profile_names = get_config().profile_names
+    except ConfigurationError:
+        # This can happen when tab-completing in an environment that did not create the configuration folder yet.
+        # It would have been possible to just call ``get_config(create=True)`` to create the config directory, but this
+        # should not be done during tab-completion just to generate a default value.
+        return DEFAULT_PROFILE_NAME_PREFIX
+
+    indices = []
+
+    for profile_name in profile_names:
+        if match := re.search(r'presto[-]?(\d+)?', profile_name):
+            indices.append(int(match.group(1) or '0'))
+
+    if not indices:
+        return DEFAULT_PROFILE_NAME_PREFIX
+
+    last_index = int(sorted(indices)[-1])
+
+    return f'{DEFAULT_PROFILE_NAME_PREFIX}-{last_index + 1}'
+
+
+def detect_postgres_config(
+    profile_name: str,
+    postgres_hostname: str,
+    postgres_port: int,
+    postgres_username: str,
+    postgres_password: str,
+    non_interactive: bool,
+) -> dict[str, t.Any]:
+    """Attempt to connect to the given PostgreSQL server and create a new user and database.
+
+    :raises ConnectionError: If no connection could be established to the PostgreSQL server or a user and database
+        could not be created.
+    :returns: The connection configuration for the newly created user and database as can be used directly for the
+        storage configuration of the ``core.psql_dos`` storage plugin.
+    """
+    import secrets
+
+    from aiida.manage._external.postgres import Postgres
+    from aiida.manage.configuration.settings import AiiDAConfigDir
+
+    dbinfo = {
+        'host': postgres_hostname,
+        'port': postgres_port,
+        'user': postgres_username,
+        'password': postgres_password,
+    }
+    postgres = Postgres(interactive=not non_interactive, quiet=False, dbinfo=dbinfo)
+
+    if not postgres.is_connected:
+        raise ConnectionError(f'Failed to connect to the PostgreSQL server using parameters: {dbinfo}')
+
+    database_name = f'aiida-{profile_name}'
+    database_username = f'aiida-{profile_name}'
+    database_password = secrets.token_hex(15)
+
+    try:
+        database_username, database_name = postgres.create_dbuser_db_safe(
+            dbname=database_name, dbuser=database_username, dbpass=database_password
+        )
+    except Exception as exception:
+        raise ConnectionError(f'Unable to automatically create the PostgreSQL user and database: {exception}')
+
+    aiida_config_folder = AiiDAConfigDir.get()
+
+    return {
+        'database_hostname': postgres_hostname,
+        'database_port': postgres_port,
+        'database_name': database_name,
+        'database_username': database_username,
+        'database_password': database_password,
+        'repository_uri': pathlib.Path(f'{aiida_config_folder / "repository" / profile_name}').as_uri(),
+    }
+
+
+@verdi.command('presto')
+@click.option(
+    '-p',
+    '--profile-name',
+    default=lambda: get_default_presto_profile_name(),
+    show_default=True,
+    help=f'Name of the profile. By default, a unique name starting with `{DEFAULT_PROFILE_NAME_PREFIX}` is '
+    'automatically generated.',
+)
+@click.option(
+    '--email',
+    default=lambda: get_config_option('autofill.user.email') or 'aiida@localhost',
+    show_default=True,
+    help='Email of the default user.',
+)
+@click.option(
+    '--use-postgres',
+    is_flag=True,
+    help='When toggled on, the profile uses a PostgreSQL database instead of an SQLite one. The connection details to '
+    'the PostgreSQL server can be configured with the relevant options. The command attempts to automatically create a '
+    'user and database to use for the profile, but this can fail depending on the configuration of the server.',
+)
+@click.option(
+    '--use-zmq',
+    is_flag=True,
+    help='When toggled on, the profile uses the ZMQ broker, which requires no external services and is started '
+    'automatically with the daemon. When not specified, the command automatically tries RabbitMQ first and falls back '
+    'to ZMQ if unavailable. To switch to RabbitMQ later, use `verdi profile configure-rabbitmq`.',
+)
+@click.option(
+    '--no-broker',
+    is_flag=True,
+    help='When toggled on, no message broker is configured. This means the daemon cannot be started and processes '
+    'cannot be submitted. Useful for profiles used only for data exploration and querying.',
+)
+@click.option('--postgres-hostname', type=str, default='localhost', help='The hostname of the PostgreSQL server.')
+@click.option('--postgres-port', type=int, default=5432, help='The port of the PostgreSQL server.')
+@click.option(
+    '--postgres-username',
+    type=str,
+    default='postgres',
+    help='The username of the PostgreSQL user that is authorized to create new databases.',
+)
+@click.option(
+    '--postgres-password',
+    type=str,
+    required=False,
+    help='The password of the PostgreSQL user that is authorized to create new databases.',
+)
+@options.NON_INTERACTIVE(help='Never prompt, such as for sudo password.')
+@click.pass_context
+def verdi_presto(
+    ctx,
+    profile_name,
+    email,
+    use_postgres,
+    use_zmq,
+    no_broker,
+    postgres_hostname,
+    postgres_port,
+    postgres_username,
+    postgres_password,
+    non_interactive,
+):
+    """Set up a new profile in a jiffy.
+
+    This command aims to make setting up a new profile as easy as possible. It does not require any services, such as
+    PostgreSQL and RabbitMQ. It intentionally provides only a limited amount of options to customize the profile and by
+    default does not require any options to be specified at all. To create a new profile with full control over its
+    configuration, please use `verdi profile setup` instead.
+
+    After running `verdi presto` you can immediately start using AiiDA without additional setup. The command performs
+    the following actions:
+
+    \b
+    * Create a new profile that is set as the new default
+    * Create a default user for the profile (email can be configured through the `--email` option)
+    * Set up the localhost as a `Computer` and configure it
+    * Set a number of configuration options with sensible defaults
+    * Start the daemon (unless `--no-broker` is specified)
+
+    By default the command creates a profile that uses SQLite for the database. For the message broker, it automatically
+    checks for RabbitMQ running on localhost. If found, it configures RabbitMQ as the broker. Otherwise, it falls back
+    to the ZMQ broker, which requires no external services and is started automatically with the daemon.
+
+    When the `--use-postgres` flag is toggled, the command tries to connect to the PostgreSQL server with connection
+    paramaters taken from the `--postgres-hostname`, `--postgres-port`, `--postgres-username` and `--postgres-password`
+    options. It uses these credentials to try and automatically create a user and database. If successful, the newly
+    created profile uses the new PostgreSQL database instead of SQLite.
+
+    When the `--use-zmq` flag is toggled, the command skips the RabbitMQ auto-detection and directly configures the ZMQ
+    broker. To switch to RabbitMQ later, use `verdi profile configure-rabbitmq`.
+    """
+    from aiida.brokers.rabbitmq._defaults import detect_rabbitmq_config
+    from aiida.common import exceptions
+    from aiida.manage.configuration import create_profile, load_profile
+    from aiida.orm import Computer
+
+    if profile_name in ctx.obj.config.profile_names:
+        raise click.BadParameter(f'The profile `{profile_name}` already exists.', param_hint='--profile-name')
+
+    postgres_config_kwargs = {
+        'profile_name': profile_name,
+        'postgres_hostname': postgres_hostname,
+        'postgres_port': postgres_port,
+        'postgres_username': postgres_username,
+        'postgres_password': postgres_password,
+        'non_interactive': non_interactive,
+    }
+
+    storage_backend: str = 'core.sqlite_dos'
+    storage_config: dict[str, t.Any] = {}
+
+    if use_postgres:
+        try:
+            storage_config = detect_postgres_config(**postgres_config_kwargs)
+        except ConnectionError as exception:
+            echo.echo_critical(str(exception))
+        else:
+            echo.echo_report(
+                '`--use-postgres` enabled and database creation successful: configuring the profile to use PostgreSQL.'
+            )
+            storage_backend = 'core.psql_dos'
+    else:
+        echo.echo_report('Option `--use-postgres` not enabled: configuring the profile to use SQLite.')
+
+    if no_broker:
+        echo.echo_report('`--no-broker` enabled: configuring the profile without a broker.')
+        broker_backend = None
+        broker_config = None
+    elif use_zmq:
+        echo.echo_report('`--use-zmq` enabled: configuring the profile with ZMQ broker.')
+        broker_backend = 'core.zmq'
+        broker_config = {}
+    else:
+        try:
+            broker_config = detect_rabbitmq_config()
+        except ConnectionError:
+            echo.echo_report('RabbitMQ server not found: falling back to ZMQ broker.')
+            echo.echo_warning(
+                'The ZMQ broker is a new feature. If you experience issues, '
+                'recreate the profile with `verdi presto --no-broker`.'
+            )
+            broker_backend = 'core.zmq'
+            broker_config = {}
+        else:
+            echo.echo_report('RabbitMQ server detected: configuring the profile with RabbitMQ broker.')
+            broker_backend = 'core.rabbitmq'
+
+    try:
+        profile = create_profile(
+            ctx.obj.config,
+            name=profile_name,
+            email=email,
+            storage_backend=storage_backend,
+            storage_config=storage_config,
+            broker_backend=broker_backend,
+            broker_config=broker_config,
+        )
+    except (ValueError, TypeError, exceptions.EntryPointError, exceptions.StorageMigrationError) as exception:
+        echo.echo_critical(str(exception))
+
+    echo.echo_success(f'Created new profile `{profile.name}`.')
+
+    ctx.obj.config.set_option('runner.poll.interval', 1, scope=profile.name)
+    ctx.obj.config.set_default_profile(profile.name, overwrite=True)
+    ctx.obj.config.store()
+
+    load_profile(profile.name, allow_switch=True)
+    echo.echo_info(f'Loaded newly created profile `{profile.name}`.')
+
+    filepath_scratch = pathlib.Path(ctx.obj.config.dirpath) / 'scratch' / profile.name
+
+    computer = Computer(
+        label='localhost',
+        hostname='localhost',
+        description='Localhost automatically created by `verdi presto`',
+        transport_type='core.local',
+        scheduler_type='core.direct',
+        workdir=str(filepath_scratch),
+    ).store()
+    computer.configure(safe_interval=0)
+    computer.set_minimum_job_poll_interval(1)
+    computer.set_default_mpiprocs_per_machine(1)
+
+    echo.echo_success('Configured the localhost as a computer.')
+
+    # `AIIDA_NO_DAEMON_AUTOSTART` is an internal escape hatch for the Docker init script (see
+    # `.docker/aiida-core-base/s6-assets/init/aiida-prepare.sh`); deliberately undocumented in `--help`.
+    if broker_backend is not None and os.environ.get('AIIDA_NO_DAEMON_AUTOSTART') != '1':
+        from aiida.common.exceptions import ConfigurationError
+        from aiida.engine.daemon.client import DaemonException, get_daemon_client
+
+        echo.echo('Starting the daemon... ', nl=False)
+        try:
+            client = get_daemon_client(profile.name)
+            client.start_daemon()
+        except (DaemonException, ConfigurationError) as exception:
+            echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
+            echo.echo_warning(f'Failed to start the daemon: {exception}')
+            echo.echo_report('You can start it manually with `verdi daemon start`.')
+        else:
+            echo.echo('OK', fg=echo.COLORS['success'], bold=True)

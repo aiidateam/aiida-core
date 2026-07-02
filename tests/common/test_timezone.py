@@ -6,14 +6,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the :mod:`~aiida.common.timezone` module."""
+"""Tests for the :mod:`~aiida.common._timezone` module."""
 
 from datetime import datetime, timedelta, timezone, tzinfo
 from time import time
 
 import pytest
 
-from aiida.common.timezone import delta, localtime, make_aware, now, timezone_from_name
+from aiida.common._timezone import delta, localtime, make_aware, now, timezone_from_name
 
 
 def is_aware(dt):
@@ -28,7 +28,7 @@ def is_aware(dt):
 
 
 def test_now():
-    """Test the :func:`aiida.common.timezone.now` function.
+    """Test the :func:`aiida.common._timezone.now` function.
 
     Check that the time returned by AiiDA's ``now`` function is compatible with attaching a timezone to a "naive" time
     stamp using ``make_aware``.
@@ -42,7 +42,7 @@ def test_now():
 
 
 def test_make_aware_already_aware():
-    """Test the :func:`aiida.common.timezone.make_aware` function for an already aware datetime.
+    """Test the :func:`aiida.common._timezone.make_aware` function for an already aware datetime.
 
     This should simply return the datetime if ``timezone`` is not specified, otherwise the ``timezone`` will be set on
     the datetime object.
@@ -58,7 +58,7 @@ def test_make_aware_already_aware():
 
 
 def test_localtime_aware():
-    """Test the :func:`aiida.common.timezone.test_localtime` function for an already aware datetime.
+    """Test the :func:`aiida.common._timezone.test_localtime` function for an already aware datetime.
 
     This should simply return the datetime if ``timezone`` is not specified, otherwise the ``timezone`` will be set on
     the datetime object.
@@ -69,7 +69,7 @@ def test_localtime_aware():
 
 
 def test_localtime_naive():
-    """Test the :func:`aiida.common.timezone.test_localtime` function for a naive datetime.
+    """Test the :func:`aiida.common._timezone.test_localtime` function for a naive datetime.
 
     This should not raise but simply return the same datetime made aware.
     """
@@ -82,7 +82,7 @@ def test_localtime_naive():
 
 
 def test_make_aware_timezone():
-    """Test the :func:`aiida.common.timezone.make_aware` function passing an explicit timezone."""
+    """Test the :func:`aiida.common._timezone.make_aware` function passing an explicit timezone."""
     dt = timedelta(hours=2)
     naive = datetime(1970, 1, 1)
     aware = make_aware(naive, timezone(dt))
@@ -91,18 +91,18 @@ def test_make_aware_timezone():
 
 
 def test_timezone_from_name():
-    """Test the :func:`aiida.common.timezone.timezone_from_name` function."""
+    """Test the :func:`aiida.common._timezone.timezone_from_name` function."""
     assert isinstance(timezone_from_name('Europe/Amsterdam'), tzinfo)
 
 
 def test_timezone_from_name_unknown():
-    """Test the :func:`aiida.common.timezone.timezone_from_name` function for unknown timezone."""
+    """Test the :func:`aiida.common._timezone.timezone_from_name` function for unknown timezone."""
     with pytest.raises(ValueError, match=r'unknown timezone: .*'):
         timezone_from_name('Invalid/Unknown')
 
 
 def test_delta():
-    """Test the :func:`aiida.common.timezone.delta` function."""
+    """Test the :func:`aiida.common._timezone.delta` function."""
     datetime_01 = datetime(1980, 1, 1, 0, 0, 0)
     datetime_02 = datetime(1980, 1, 1, 0, 0, 2)
 

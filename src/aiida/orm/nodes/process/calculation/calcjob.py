@@ -372,7 +372,7 @@ class CalcJobNode(CalculationNode):
 
         :param state: an instance of `JobState`
         """
-        from aiida.common import timezone
+        from aiida.common import _timezone as timezone
         from aiida.schedulers.datastructures import JobState
 
         if not isinstance(state, JobState):

@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from aiida.engine.daemon.client import DaemonClient
     from aiida.engine.persistence import AiiDAPersister
     from aiida.engine.runners import Runner
-    from aiida.manage.configuration.config import Config
+    from aiida.manage.configuration._config import Config
     from aiida.manage.configuration.profile import Profile
     from aiida.orm.implementation import StorageBackend
 
@@ -318,7 +318,7 @@ class Manager:
         """Return the current profile's storage backend, loading it if necessary."""
         from aiida.common import ConfigurationError
         from aiida.common.log import configure_logging
-        from aiida.manage.profile_access import ProfileAccessManager
+        from aiida.manage._profile_access import ProfileAccessManager
 
         # if loaded, return the current storage backend (which is "synced" with the global profile)
         if self._profile_storage is not None:
@@ -510,7 +510,7 @@ class Manager:
         from plumpy.persistence import LoadSaveContext
 
         from aiida.engine import persistence
-        from aiida.engine.processes.launcher import ProcessLauncher
+        from aiida.engine.processes._launcher import ProcessLauncher
 
         runner = self.create_runner(broker_submit=True, loop=loop)
         runner_loop = runner.loop

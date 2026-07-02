@@ -13,8 +13,8 @@ import pytest
 
 from aiida import orm
 from aiida.common.links import LinkType
-from aiida.tools.graph.age_entities import AiidaEntitySet, Basket, DirectedEdgeSet, GroupNodeEdge
-from aiida.tools.graph.age_rules import ReplaceRule, RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule
+from aiida.tools.graph._age_entities import AiidaEntitySet, Basket, DirectedEdgeSet, GroupNodeEdge
+from aiida.tools.graph._age_rules import ReplaceRule, RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule
 
 
 def create_tree(max_depth=3, branching=3, starting_cls=orm.Data):

@@ -16,7 +16,7 @@ from aiida import orm
 from aiida.common import LinkType
 from aiida.engine import CalcJob
 from aiida.parsers import Parser
-from aiida.parsers.plugins.arithmetic.add import SimpleArithmeticAddParser  # for demonstration purposes only
+from aiida.parsers._plugins.arithmetic.add import SimpleArithmeticAddParser  # for demonstration purposes only
 from aiida.plugins import CalculationFactory, ParserFactory
 
 ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')

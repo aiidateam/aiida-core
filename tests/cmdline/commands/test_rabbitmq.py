@@ -11,9 +11,9 @@
 import pytest
 from plumpy.process_comms import RemoteProcessThreadController
 
-from aiida.cmdline.commands import cmd_rabbitmq
+from aiida.cmdline._commands import cmd_rabbitmq
 from aiida.engine import ProcessState, submit
-from aiida.engine.processes import control
+from aiida.engine.processes import _control as control
 from aiida.orm import Int
 
 

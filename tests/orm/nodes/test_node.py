@@ -15,7 +15,8 @@ from io import BytesIO
 
 import pytest
 
-from aiida.common import LinkType, exceptions, timezone
+from aiida.common import LinkType, exceptions
+from aiida.common import _timezone as timezone
 from aiida.manage import get_manager
 from aiida.orm import CalculationNode, Data, Int, Log, Node, User, WorkflowNode, load_node
 from aiida.orm.utils.links import LinkTriple
@@ -980,7 +981,7 @@ class TestNodeCaching:
 
     def test_hashing_errors(self, caplog, monkeypatch):
         """Tests that ``compute_hash`` fails in an expected manner."""
-        from aiida.orm.nodes.caching import NodeCaching
+        from aiida.orm.nodes._caching import NodeCaching
 
         node = Data().store()
 

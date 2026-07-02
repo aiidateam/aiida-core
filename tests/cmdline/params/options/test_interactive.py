@@ -14,7 +14,7 @@ import click
 import pytest
 
 from aiida.cmdline.params.options import NON_INTERACTIVE
-from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.cmdline.params.options._interactive import InteractiveOption
 from aiida.cmdline.params.types.plugin import PluginParamType
 
 
@@ -482,7 +482,7 @@ def test_interactive_ignore_default_required_option(run_cli_command):
 
 
 def test_get_help_message():
-    """Test the :meth:`aiida.cmdline.params.options.interactive.InteractiveOption.get_help_message`."""
+    """Test the :meth:`aiida.cmdline.params.options._interactive.InteractiveOption.get_help_message`."""
     option = InteractiveOption('-s', type=click.STRING)
     message = option.get_help_message()
     assert message == 'Expecting text'

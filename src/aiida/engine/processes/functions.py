@@ -37,7 +37,7 @@ from aiida.orm import (
     WorkFunctionNode,
     to_aiida_type,
 )
-from aiida.orm.utils.mixins import FunctionCalculationMixin
+from aiida.orm.utils._mixins import FunctionCalculationMixin
 
 from .process import Process
 from .process_spec import ProcessSpec
@@ -298,7 +298,7 @@ class FunctionProcess(Process):
 
         :param func: The function to build a process from
         :param node_class: Provide a custom node class to be used, has to be constructable with no arguments. It has to
-            be a sub class of `ProcessNode` and the mixin :class:`~aiida.orm.utils.mixins.FunctionCalculationMixin`.
+            be a sub class of `ProcessNode` and the mixin :class:`~aiida.orm.utils._mixins.FunctionCalculationMixin`.
 
         :return: A Process class that represents the function
 

@@ -12,7 +12,7 @@ from unittest import TestCase
 
 import pytest
 
-from aiida.manage.external.postgres import Postgres
+from aiida.manage._external.postgres import Postgres
 
 
 @pytest.mark.requires_psql

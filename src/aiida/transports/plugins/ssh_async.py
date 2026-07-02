@@ -142,12 +142,12 @@ class AsyncSshTransport(AsyncTransport):
             self.auth_script = kwargs.pop('script_before', 'None')
 
         if kwargs.get('backend') == 'openssh':
-            from .async_backend import _OpenSSH
+            from ._async_backend import _OpenSSH
 
             self.async_backend = _OpenSSH(self.machine, self.logger, self._bash_command_str)
         else:
             # default backend is asyncssh
-            from .async_backend import _AsyncSSH
+            from ._async_backend import _AsyncSSH
 
             self.async_backend = _AsyncSSH(self.machine, self.logger, self._bash_command_str)  # type: ignore[assignment]
 
@@ -919,7 +919,7 @@ class AsyncSshTransport(AsyncTransport):
         :return: object FixedFieldsAttributeDict
         """
         path = str(path)
-        from aiida.transports.util import FileAttribute
+        from aiida.transports._util import FileAttribute
 
         obj_stat = await self.async_backend.lstat(path)
         aiida_attr = FileAttribute()

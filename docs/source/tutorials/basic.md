@@ -434,7 +434,7 @@ You can see the code below:
 
 :::{dropdown} MultiplyAddWorkChain code
 
-```{literalinclude} ../../../src/aiida/workflows/arithmetic/multiply_add.py
+```{literalinclude} ../../../src/aiida/workflows/_arithmetic/multiply_add.py
 :language: python
 :start-after: start-marker
 ```
@@ -576,7 +576,7 @@ The `verdi process status` command prints a *hierarchical* overview of the proce
 %verdi process status 14
 ```
 
-The bracket `[3:result]` indicates the current step in the outline of the {py:class}`~aiida.workflows.arithmetic.multiply_add.MultiplyAddWorkChain` (step 3, with name `result`).
+The bracket `[3:result]` indicates the current step in the outline of the {py:class}`~aiida.workflows._arithmetic.multiply_add.MultiplyAddWorkChain` (step 3, with name `result`).
 The `process status` is particularly useful for debugging complex work chains, since it helps pinpoint where a problem occurred.
 
 We can now generate the full provenance graph for the `WorkChain` with:

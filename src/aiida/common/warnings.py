@@ -11,6 +11,8 @@
 import os
 import warnings
 
+__all__ = ('AiidaDeprecationWarning', 'AiidaEntryPointWarning', 'AiidaTestWarning', 'warn_deprecation')
+
 
 class AiidaDeprecationWarning(Warning):
     """Class for AiiDA deprecations.

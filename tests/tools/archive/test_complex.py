@@ -15,8 +15,8 @@ from datetime import datetime
 import numpy as np
 
 from aiida import orm
+from aiida.common._hashing import make_hash
 from aiida.common.exceptions import NotExistent
-from aiida.common.hashing import make_hash
 from aiida.common.links import LinkType
 from aiida.tools.archive import create_archive, import_archive
 

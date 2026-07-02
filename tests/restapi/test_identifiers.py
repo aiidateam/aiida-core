@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the `aiida.restapi.common.identifiers` module."""
+"""Tests for the `aiida.restapi._common.identifiers` module."""
 
 from threading import Thread
 
@@ -14,7 +14,7 @@ import pytest
 import requests
 
 from aiida import orm
-from aiida.restapi.common.identifiers import FULL_TYPE_CONCATENATOR, LIKE_OPERATOR_CHARACTER, get_full_type_filters
+from aiida.restapi._common.identifiers import FULL_TYPE_CONCATENATOR, LIKE_OPERATOR_CHARACTER, get_full_type_filters
 
 
 def test_get_full_type_filters():

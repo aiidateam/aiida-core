@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for ``aiida.brokers.zmq.communicator.ZmqCommunicator``."""
+"""Tests for ``aiida.brokers.zmq._communicator.ZmqCommunicator``."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ import kiwipy
 import pytest
 
 from aiida.brokers.zmq import ZmqBroker
-from aiida.brokers.zmq.communicator import ZmqCommunicator
+from aiida.brokers.zmq._communicator import ZmqCommunicator
 from tests.conftest import start_zmq_broker, stop_zmq_broker
 
 

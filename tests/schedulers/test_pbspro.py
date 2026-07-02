@@ -12,7 +12,7 @@ import unittest
 import uuid
 
 from aiida.schedulers.datastructures import JobState
-from aiida.schedulers.plugins.pbspro import PbsproScheduler
+from aiida.schedulers.plugins._pbspro import PbsproScheduler
 
 text_qstat_f_to_test = """Job Id: 68350.mycluster
     Job_Name = cell-Qnormal

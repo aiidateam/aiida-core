@@ -3,7 +3,7 @@
 
 # fmt: off
 
-from .configuration import (
+from ._configuration import (
     aiida_config,
     aiida_config_factory,
     aiida_config_tmp,
@@ -13,10 +13,10 @@ from .configuration import (
     aiida_profile_factory,
     aiida_profile_tmp,
 )
-from .daemon import daemon_client, started_daemon_client, stopped_daemon_client, submit_and_await
-from .entry_points import entry_points
-from .globals import aiida_manager
-from .orm import (
+from ._daemon import daemon_client, started_daemon_client, stopped_daemon_client, submit_and_await
+from ._entry_points import entry_points
+from ._globals import aiida_manager
+from ._orm import (
     aiida_code,
     aiida_code_installed,
     aiida_computer,
@@ -26,7 +26,7 @@ from .orm import (
     aiida_localhost,
     ssh_key,
 )
-from .storage import config_psql_dos, config_sqlite_dos, postgres_cluster
+from ._storage import config_psql_dos, config_sqlite_dos, postgres_cluster
 
 __all__ = (
     'aiida_code',

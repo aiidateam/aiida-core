@@ -18,8 +18,8 @@ import uuid
 import click
 import pytest
 
-from aiida.cmdline.commands import cmd_code
-from aiida.cmdline.params.options.commands.code import validate_label_uniqueness
+from aiida.cmdline._commands import cmd_code
+from aiida.cmdline.params.options._commands.code import validate_label_uniqueness
 from aiida.common.exceptions import MultipleObjectsError, NotExistent
 from aiida.orm import Code, Computer, InstalledCode, PortableCode, QueryBuilder, load_code
 from aiida.plugins import DataFactory

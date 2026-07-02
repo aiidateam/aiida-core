@@ -21,7 +21,7 @@ from aiida import orm
 from aiida.common import LinkType
 from aiida.manage import get_manager
 from aiida.orm.utils.links import LinkPair
-from aiida.tools.graph.graph_traversers import traverse_graph
+from aiida.tools.graph._graph_traversers import traverse_graph
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend

@@ -78,8 +78,8 @@ def test_run_threaded_server(restapi_server, server_url, aiida_localhost):
 @pytest.mark.usefixtures('restrict_db_connections')
 def test_run_without_close_session(restapi_server, server_url, aiida_localhost, capfd):
     """Run AiiDA REST API threaded in a separate thread and perform many sequential requests"""
-    from aiida.restapi.api import AiidaApi
-    from aiida.restapi.resources import Computer
+    from aiida.restapi._api import AiidaApi
+    from aiida.restapi._resources import Computer
 
     class NoCloseSessionApi(AiidaApi):
         """Add Computer to this API (again) with a new endpoint, but pass an empty list for `get_decorators`"""

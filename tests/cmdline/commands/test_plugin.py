@@ -10,7 +10,7 @@
 
 import pytest
 
-from aiida.cmdline.commands import cmd_plugin
+from aiida.cmdline._commands import cmd_plugin
 from aiida.parsers import Parser
 from aiida.plugins import BaseFactory
 from aiida.plugins.entry_point import ENTRY_POINT_GROUP_TO_MODULE_PATH_MAP

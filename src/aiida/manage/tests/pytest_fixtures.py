@@ -50,7 +50,7 @@ from aiida.manage.manager import Manager
 from aiida.orm import Computer, ProcessNode, User
 
 if t.TYPE_CHECKING:
-    from aiida.manage.configuration.config import Config
+    from aiida.manage.configuration._config import Config
 
 
 warn_deprecation(
@@ -95,7 +95,7 @@ def postgres_cluster():
     def create_database(
         database_name: str | None = None, database_username: str | None = None, database_password: str | None = None
     ) -> dict[str, str]:
-        from aiida.manage.external.postgres import Postgres
+        from aiida.manage._external.postgres import Postgres
 
         postgres_config = {
             'database_engine': 'postgresql_psycopg',
@@ -152,7 +152,7 @@ def aiida_instance(
     aiida_manager: Manager,
     aiida_test_profile: str | None,
 ) -> t.Generator[Config, None, None]:
-    """Return the :class:`~aiida.manage.configuration.config.Config` instance that is used for the test session.
+    """Return the :class:`~aiida.manage.configuration._config.Config` instance that is used for the test session.
 
     If an existing test profile is defined through the ``aiida_test_profile`` fixture, the configuration of the actual
     AiiDA instance is loaded and returned. If no test profile is defined, a completely independent and temporary AiiDA

@@ -175,7 +175,7 @@ class RemoteData(Data):
             Note that the user should take care that the correct transport is passed.
         :raises ValueError: If the hostname of the provided transport does not match that of the node's computer.
         """
-        from aiida.orm.utils.remote import clean_remote
+        from aiida.orm.utils._remote import clean_remote
 
         remote_dir = self.get_remote_path()
 

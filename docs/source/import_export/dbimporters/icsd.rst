@@ -4,7 +4,7 @@
 ICSD database importer
 ######################
 
-In this section we explain how to import CIF files from the ICSD database using the :py:class:`~aiida.tools.dbimporters.plugins.icsd.IcsdDbImporter` class.
+In this section we explain how to import CIF files from the ICSD database using the :py:class:`~aiida.tools._dbimporters.plugins.icsd.IcsdDbImporter` class.
 
 Before being able to query ICSD, provided by FIZ Karlsruhe, you should have the intranet database installed on a server (http://www2.fiz-karlsruhe.de/icsd_intranet.html).
 Follow the installation as described in the manual.
@@ -18,11 +18,11 @@ For this purpose, we recommend you to set up the MySQL connection.
 Setup
 +++++
 
-An instance of the :py:class:`~aiida.tools.dbimporters.plugins.icsd.IcsdDbImporter` can be created as follows:
+An instance of the :py:class:`~aiida.tools._dbimporters.plugins.icsd.IcsdDbImporter` can be created as follows:
 
 .. code-block:: python
 
-  from aiida.tools.dbimporters.plugins.icsd import IcsdDbImporter
+  from aiida.tools._dbimporters.plugins.icsd import IcsdDbImporter
 
   importer = IcsdDbImporter(server="http://ICSDSERVER.com/", host= "127.0.0.1")
 
@@ -64,7 +64,7 @@ Other settings:
 
 * ``querydb``: If ``True`` (default) the MySQL database is queried, otherwise the web page is queried.
 
-A more detailed documentation and additional settings can be found under :py:class:`~aiida.tools.dbimporters.plugins.icsd.IcsdDbImporter`.
+A more detailed documentation and additional settings can be found under :py:class:`~aiida.tools._dbimporters.plugins.icsd.IcsdDbImporter`.
 
 How to do a query
 +++++++++++++++++
@@ -85,9 +85,9 @@ All supported keywords can be obtained using:
 
 More information on the keywords can be found `here <http://www2.fiz-karlsruhe.de/fileadmin/be_user/ICSD/PDF/sci_man_ICSD_v1.pdf>`_.
 
-A query returns an instance of :py:class:`~aiida.tools.dbimporters.plugins.icsd.IcsdSearchResults`.
+A query returns an instance of :py:class:`~aiida.tools._dbimporters.plugins.icsd.IcsdSearchResults`.
 
-The :py:class:`~aiida.tools.dbimporters.plugins.icsd.IcsdEntry` at position ``i`` can be accessed using:
+The :py:class:`~aiida.tools._dbimporters.plugins.icsd.IcsdEntry` at position ``i`` can be accessed using:
 
 .. code-block:: python
 
@@ -100,13 +100,13 @@ You can also iterate through all query results:
   for entry in query_results:
       # do something
 
-Instances of :py:class:`~aiida.tools.dbimporters.plugins.icsd.IcsdEntry` have the following methods:
+Instances of :py:class:`~aiida.tools._dbimporters.plugins.icsd.IcsdEntry` have the following methods:
 
-* :py:meth:`~aiida.tools.dbimporters.baseclasses.CifEntry.get_cif_node`: Return an instance of :py:class:`~aiida.orm.nodes.data.cif.CifData`, which can be used in an AiiDA workflow.
+* :py:meth:`~aiida.tools._dbimporters.baseclasses.CifEntry.get_cif_node`: Return an instance of :py:class:`~aiida.orm.nodes.data.cif.CifData`, which can be used in an AiiDA workflow.
 
-* :py:meth:`~aiida.tools.dbimporters.baseclasses.CifEntry.get_aiida_structure`: Return an AiiDA :py:class:`~aiida.orm.nodes.data.structure.StructureData` instance.
+* :py:meth:`~aiida.tools._dbimporters.baseclasses.CifEntry.get_aiida_structure`: Return an AiiDA :py:class:`~aiida.orm.nodes.data.structure.StructureData` instance.
 
-* :py:meth:`~aiida.tools.dbimporters.plugins.icsd.IcsdEntry.get_ase_structure`: Return an ASE structure.
+* :py:meth:`~aiida.tools._dbimporters.plugins.icsd.IcsdEntry.get_ase_structure`: Return an ASE structure.
 
 The most convenient format can be chosen for further processing.
 
@@ -119,7 +119,7 @@ Here is a full example how the ICSD importer can be used:
 .. code-block:: python
 
 
-  from aiida.tools.dbimporters.plugins.icsd import IcsdDbImporter
+  from aiida.tools._dbimporters.plugins.icsd import IcsdDbImporter
 
   cif_nr_list = [
       "50542",

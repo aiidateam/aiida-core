@@ -14,7 +14,7 @@ from typing import Any, Callable, Dict, Literal, Optional, Set, Tuple, Union
 from tabulate import tabulate
 
 from aiida import orm
-from aiida.common import timezone
+from aiida.common import _timezone as timezone
 from aiida.common.exceptions import IncompatibleStorageSchema
 from aiida.common.lang import type_check
 from aiida.common.links import LinkType
@@ -27,10 +27,10 @@ from aiida.orm.implementation import StorageBackend
 from aiida.orm.querybuilder import QueryBuilder
 from aiida.repository import Repository
 
-from .abstract import ArchiveFormatAbstract
-from .common import entity_type_to_orm
+from ._abstract import ArchiveFormatAbstract
+from ._common import entity_type_to_orm
+from ._implementations.sqlite_zip.main import ArchiveFormatSqlZip
 from .exceptions import ImportTestRun, ImportUniquenessError, ImportValidationError
-from .implementations.sqlite_zip.main import ArchiveFormatSqlZip
 
 __all__ = ('import_archive',)
 

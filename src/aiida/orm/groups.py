@@ -24,7 +24,8 @@ from aiida.common.lang import classproperty, type_check
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
-from . import convert, entities, extras, users
+from . import _convert as convert
+from . import entities, extras, users
 from .pydantic import OrmMetadataField
 
 if TYPE_CHECKING:

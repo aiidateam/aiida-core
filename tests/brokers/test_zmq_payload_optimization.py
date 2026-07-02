@@ -20,13 +20,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from aiida.brokers.zmq.protocol import (
+from aiida.brokers.zmq._protocol import (
     MessageType,
     _UUIDEncoder,
     decode_message,
     encode_message,
 )
-from aiida.brokers.zmq.server import ZmqBrokerServer
+from aiida.brokers.zmq._server import ZmqBrokerServer
 
 
 @pytest.mark.presto
@@ -112,7 +112,7 @@ class TestCommunicatorPayloadEncoding:
 
     def test_send_encodes_body_as_json_native(self):
         """Test that _send passes body through as a JSON-native object (no pre-encoding)."""
-        from aiida.brokers.zmq.communicator import ZmqCommunicator
+        from aiida.brokers.zmq._communicator import ZmqCommunicator
 
         comm = ZmqCommunicator(router_endpoint='ipc://test')
         comm._dealer = MagicMock()
@@ -139,7 +139,7 @@ class TestCommunicatorPayloadEncoding:
 
     def test_send_encodes_result_as_json_native(self):
         """Test that _send passes result through as a JSON-native object."""
-        from aiida.brokers.zmq.communicator import ZmqCommunicator
+        from aiida.brokers.zmq._communicator import ZmqCommunicator
 
         comm = ZmqCommunicator(router_endpoint='ipc://test')
         comm._dealer = MagicMock()
@@ -167,7 +167,7 @@ class TestCommunicatorPayloadEncoding:
 
     def test_send_ignores_none_body(self):
         """Test that _send doesn't fail with None body."""
-        from aiida.brokers.zmq.communicator import ZmqCommunicator
+        from aiida.brokers.zmq._communicator import ZmqCommunicator
 
         comm = ZmqCommunicator(router_endpoint='ipc://test')
         comm._dealer = MagicMock()
@@ -191,7 +191,7 @@ class TestCommunicatorPayloadEncoding:
 
     def test_dispatch_passes_body_directly(self):
         """Test that _dispatch_dealer_message passes body directly (no post-decode)."""
-        from aiida.brokers.zmq.communicator import ZmqCommunicator
+        from aiida.brokers.zmq._communicator import ZmqCommunicator
 
         comm = ZmqCommunicator(router_endpoint='ipc://test')
         comm._dealer = MagicMock()
@@ -220,7 +220,7 @@ class TestCommunicatorPayloadEncoding:
         """Verify ZmqCommunicator.__init__ has no encoder/decoder parameters."""
         import inspect
 
-        from aiida.brokers.zmq.communicator import ZmqCommunicator
+        from aiida.brokers.zmq._communicator import ZmqCommunicator
 
         sig = inspect.signature(ZmqCommunicator.__init__)
         param_names = [p for p in sig.parameters.keys() if p != 'self']
@@ -259,7 +259,7 @@ class TestQueueCompressionOptimization:
 
     def test_queue_push_no_indent(self, tmp_path):
         """Test that queue.push writes JSON without indent."""
-        from aiida.brokers.zmq.queue import PersistentQueue
+        from aiida.brokers.zmq._queue import PersistentQueue
 
         queue = PersistentQueue(tmp_path / 'queue')
 
@@ -287,7 +287,7 @@ class TestQueueCompressionOptimization:
 
     def test_queue_pop_handles_minified_json(self, tmp_path):
         """Test that queue.pop can read minified JSON."""
-        from aiida.brokers.zmq.queue import PersistentQueue
+        from aiida.brokers.zmq._queue import PersistentQueue
 
         queue = PersistentQueue(tmp_path / 'queue')
 
@@ -322,8 +322,8 @@ class TestTaskBodyPreEncoding:
 
     def test_zmq_incoming_task_reads_body_directly(self):
         """Test that ZmqIncomingTask reads body directly as a JSON-native object."""
+        from aiida.brokers.zmq._queue import PersistentQueue
         from aiida.brokers.zmq.broker import ZmqIncomingTask
-        from aiida.brokers.zmq.queue import PersistentQueue
 
         original_body = {'function': 'test_function', 'args': [1, 2, 3]}
 
@@ -341,8 +341,8 @@ class TestTaskBodyPreEncoding:
 
     def test_zmq_incoming_task_handles_none_body(self):
         """Test that ZmqIncomingTask handles None body."""
+        from aiida.brokers.zmq._queue import PersistentQueue
         from aiida.brokers.zmq.broker import ZmqIncomingTask
-        from aiida.brokers.zmq.queue import PersistentQueue
 
         task_data = {
             'id': 'task-456',

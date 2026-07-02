@@ -17,7 +17,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Literal, Optional
 
-from aiida.common import AIIDA_LOGGER, timezone
+from aiida.common import AIIDA_LOGGER
+from aiida.common import _timezone as timezone
 from aiida.tools._dumping.mapping import GroupNodeMapping
 from aiida.tools._dumping.utils import DumpPaths, DumpTimes
 

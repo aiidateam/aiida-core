@@ -20,9 +20,9 @@ from pathlib import Path
 import pytest
 
 from aiida import orm
-from aiida.cmdline.commands import cmd_node
+from aiida.cmdline._commands import cmd_node
 from aiida.cmdline.utils.echo import ExitCode
-from aiida.common import timezone
+from aiida.common import _timezone as timezone
 from aiida.common.exceptions import NotExistent
 from aiida.common.links import LinkType
 from aiida.orm import CalcJobNode, RemoteData, WorkflowNode

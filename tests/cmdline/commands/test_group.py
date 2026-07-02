@@ -13,7 +13,7 @@ from unittest.mock import patch
 import pytest
 
 from aiida import orm
-from aiida.cmdline.commands import cmd_group
+from aiida.cmdline._commands import cmd_group
 from aiida.cmdline.utils.echo import ExitCode
 from aiida.common import exceptions
 

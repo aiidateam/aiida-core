@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for :mod:`aiida.brokers.rabbitmq.defaults`."""
+"""Tests for :mod:`aiida.brokers.rabbitmq._defaults`."""
 
 import subprocess
 import sys
@@ -14,7 +14,7 @@ import textwrap
 
 import pytest
 
-from aiida.brokers.rabbitmq import defaults
+from aiida.brokers.rabbitmq import _defaults as defaults
 
 
 @pytest.fixture
@@ -56,7 +56,7 @@ def test_detect_rabbitmq_config_raises_connection_error(monkeypatch):
 def test_detect_rabbitmq_config_failed_probe_does_not_emit_cleanup_warning():
     """Test failed probes do not emit asyncio cleanup warnings on interpreter shutdown."""
     code = textwrap.dedent("""
-        from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
+        from aiida.brokers.rabbitmq._defaults import detect_rabbitmq_config
 
         try:
             detect_rabbitmq_config(host='127.0.0.1', port=1)

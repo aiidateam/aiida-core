@@ -29,7 +29,7 @@ class TestBasic:
     @pytest.mark.requires_psql
     def test_date_filters_support(self):
         """Verify that `datetime.date` is supported in filters."""
-        from aiida.common import timezone
+        from aiida.common import _timezone as timezone
 
         # Using timezone.now() rather than datetime.now() to get a timezone-aware object rather than a naive one
         orm.Data(ctime=timezone.now() - timedelta(days=3)).store()

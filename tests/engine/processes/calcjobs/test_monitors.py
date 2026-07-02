@@ -1,4 +1,4 @@
-"""Tests for the :mod:`aiida.engine.processes.calcjobs.monitors` module."""
+"""Tests for the :mod:`aiida.engine.processes.calcjobs._monitors` module."""
 
 from __future__ import annotations
 
@@ -6,11 +6,11 @@ import time
 
 import pytest
 
-from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
-from aiida.calculations.monitors import base
+from aiida.calculations._arithmetic.add import ArithmeticAddCalculation
+from aiida.calculations._monitors import base
 from aiida.common.exceptions import EntryPointError
 from aiida.engine import run_get_node
-from aiida.engine.processes.calcjobs.monitors import (
+from aiida.engine.processes.calcjobs._monitors import (
     CalcJobMonitor,
     CalcJobMonitorAction,
     CalcJobMonitorResult,
@@ -46,7 +46,7 @@ def monitor_store_message(node, transport, **kwargs):
 
 
 def test_calc_job_monitor_result_constructor_invalid():
-    """Test :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult` constructor for invalid input."""
+    """Test :class:`aiida.engine.processes.calcjobs._monitors.CalcJobMonitorResult` constructor for invalid input."""
     with pytest.raises(TypeError, match=r'got an unexpected keyword argument .*'):
         CalcJobMonitorResult(invalid_key='test')
 
@@ -73,7 +73,7 @@ def test_calc_job_monitor_result_constructor_invalid():
 
 
 def test_calc_job_monitor_result_constructor_valid():
-    """Test the :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult` constructor for valid input."""
+    """Test the :class:`aiida.engine.processes.calcjobs._monitors.CalcJobMonitorResult` constructor for valid input."""
     key = 'some_monitor'
     message = 'some message'
     result = CalcJobMonitorResult(key=key, message=message)
@@ -86,7 +86,7 @@ def test_calc_job_monitor_result_constructor_valid():
 
 
 def test_calc_job_monitor_constructor_invalid():
-    """Test :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitor` constructor for invalid input."""
+    """Test :class:`aiida.engine.processes.calcjobs._monitors.CalcJobMonitor` constructor for invalid input."""
     with pytest.raises(TypeError, match=r'missing 1 required positional argument: .*'):
         CalcJobMonitor()
 
@@ -116,7 +116,7 @@ def test_calc_job_monitor_constructor_invalid():
 
 
 def test_calc_job_monitor_constructor_valid():
-    """Test the :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitor` constructor for valid input."""
+    """Test the :class:`aiida.engine.processes.calcjobs._monitors.CalcJobMonitor` constructor for valid input."""
     entry_point = 'core.always_kill'
     monitor = CalcJobMonitor(entry_point)
     assert monitor.entry_point == entry_point
@@ -127,7 +127,7 @@ def test_calc_job_monitor_constructor_valid():
 
 
 def test_calc_job_monitor_load_entry_point():
-    """Test the :meth:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitor.load_entry_point`."""
+    """Test the :meth:`aiida.engine.processes.calcjobs._monitors.CalcJobMonitor.load_entry_point`."""
     entry_point = 'core.always_kill'
     monitor = CalcJobMonitor(entry_point)
     assert monitor.load_entry_point() == base.always_kill
@@ -143,7 +143,7 @@ def test_calc_job_monitor_load_entry_point():
     ),
 )
 def test_calc_job_monitors_monitors(monitors, expected):
-    """Test the :meth:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitors.monitors` property."""
+    """Test the :meth:`aiida.engine.processes.calcjobs._monitors.CalcJobMonitors.monitors` property."""
     monitors_full = {}
 
     for key, value in monitors.items():
@@ -155,7 +155,7 @@ def test_calc_job_monitors_monitors(monitors, expected):
 
 
 def test_calc_job_monitors_process_poll_interval(monkeypatch):
-    """Test the :meth:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitors.process` method.
+    """Test the :meth:`aiida.engine.processes.calcjobs._monitors.CalcJobMonitors.process` method.
 
     Test that the ``minimum_poll_interval`` of the monitors is respected.
     """

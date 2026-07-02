@@ -28,7 +28,7 @@ from archive_path import ZipPath, extract_file_in_zip, open_file_in_tar, open_fi
 
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, StorageMigrationError
 from aiida.common.progress_reporter import get_progress_reporter
-from aiida.storage.log import MIGRATE_LOGGER
+from aiida.storage._log import MIGRATE_LOGGER
 from aiida.storage.sqlite_zip.backend import SqliteZipBackend
 
 from .migrations.legacy import FINAL_LEGACY_VERSION, LEGACY_MIGRATE_FUNCTIONS

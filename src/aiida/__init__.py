@@ -110,6 +110,6 @@ def load_ipython_extension(ipython):
 
     :param ipython: InteractiveShell instance. If ``None``, the global InteractiveShell is used.
     """
-    from aiida.tools.ipython.ipython_magics import load_ipython_extension
+    from aiida.tools._ipython.ipython_magics import load_ipython_extension
 
     load_ipython_extension(ipython)

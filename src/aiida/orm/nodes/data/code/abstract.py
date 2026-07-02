@@ -18,7 +18,7 @@ from copy import deepcopy
 
 import pydantic as pdt
 
-from aiida.cmdline.params.options.interactive import TemplateInteractiveOption
+from aiida.cmdline.params.options._interactive import TemplateInteractiveOption
 from aiida.common import exceptions
 from aiida.common.folders import Folder
 from aiida.common.lang import type_check

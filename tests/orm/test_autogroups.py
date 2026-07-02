@@ -11,7 +11,7 @@
 import pytest
 
 from aiida.orm import AutoGroup, QueryBuilder
-from aiida.orm.autogroup import AutogroupManager
+from aiida.orm._autogroup import AutogroupManager
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')

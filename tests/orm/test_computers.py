@@ -85,7 +85,7 @@ class TestComputerConfigure:
     @pytest.fixture(autouse=True)
     def init_profile(self):
         """Prepare current user and computer builder with common properties."""
-        from aiida.orm.utils.builders.computer import ComputerBuilder
+        from aiida.orm.utils._builders.computer import ComputerBuilder
 
         self.comp_builder = ComputerBuilder(label='test', description='computer', hostname='localhost')
         self.comp_builder.scheduler = 'core.direct'

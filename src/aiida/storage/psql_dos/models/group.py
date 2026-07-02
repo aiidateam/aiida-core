@@ -13,7 +13,7 @@ from sqlalchemy.orm import backref, relationship
 from sqlalchemy.schema import Column, ForeignKey, Index, UniqueConstraint
 from sqlalchemy.types import DateTime, Integer, String, Text
 
-from aiida.common import timezone
+from aiida.common import _timezone as timezone
 from aiida.common.utils import get_new_uuid
 
 from .base import Base

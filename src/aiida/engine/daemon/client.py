@@ -219,7 +219,7 @@ class DaemonClient:
 
         :param profile: The profile instance.
         """
-        from aiida.common.docs import URL_NO_BROKER
+        from aiida.common._docs import URL_NO_BROKER
 
         type_check(profile, Profile)
         self._config = get_config()

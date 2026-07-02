@@ -14,9 +14,9 @@ import psutil
 from aiida.brokers.broker import Broker
 from aiida.common.log import AIIDA_LOGGER
 
-from .communicator import ZmqCommunicator
-from .defaults import BROKER_READY_TIMEOUT
-from .queue import PersistentQueue
+from ._communicator import ZmqCommunicator
+from ._defaults import BROKER_READY_TIMEOUT
+from ._queue import PersistentQueue
 
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.profile import Profile

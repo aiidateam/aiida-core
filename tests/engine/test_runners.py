@@ -13,7 +13,7 @@ import threading
 import plumpy
 import pytest
 
-from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
+from aiida.calculations._arithmetic.add import ArithmeticAddCalculation
 from aiida.engine import Process, launch
 from aiida.manage.caching import enable_caching
 from aiida.orm import Int, Str, WorkflowNode

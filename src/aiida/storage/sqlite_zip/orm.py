@@ -22,6 +22,7 @@ from sqlalchemy.orm.util import AliasedClass
 from sqlalchemy.sql import ColumnElement, null
 
 from aiida.common.lang import type_check
+from aiida.storage._utils import _create_smarter_in_clause
 from aiida.storage.psql_dos.orm import authinfos, comments, computers, entities, groups, logs, nodes, users, utils
 from aiida.storage.psql_dos.orm.querybuilder.main import (
     BinaryExpression,
@@ -34,7 +35,6 @@ from aiida.storage.psql_dos.orm.querybuilder.main import (
     String,
     get_column,
 )
-from aiida.storage.utils import _create_smarter_in_clause
 
 from . import models
 from .utils import ReadOnlyError

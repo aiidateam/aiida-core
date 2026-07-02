@@ -106,7 +106,7 @@ def submit(
     :param kwargs: inputs to be passed to the process. This is an alternative to the positional ``inputs`` argument.
     :return: the calculation node of the process
     """
-    from aiida.common.docs import URL_NO_BROKER
+    from aiida.common._docs import URL_NO_BROKER
 
     inputs = prepare_inputs(inputs, **kwargs)
 

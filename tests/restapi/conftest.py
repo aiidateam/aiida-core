@@ -20,7 +20,7 @@ def restapi_server():
 
     from werkzeug.serving import make_server
 
-    from aiida.restapi.common.config import CLI_DEFAULTS
+    from aiida.restapi._common.config import CLI_DEFAULTS
     from aiida.restapi.run_api import configure_api
 
     def _restapi_server(restapi=None):
@@ -51,7 +51,7 @@ def restapi_server():
 
 @pytest.fixture
 def server_url():
-    from aiida.restapi.common.config import API_CONFIG, CLI_DEFAULTS
+    from aiida.restapi._common.config import API_CONFIG, CLI_DEFAULTS
 
     def _server_url(hostname: Optional[str] = None, port: Optional[int] = None):
         return f"http://{hostname or CLI_DEFAULTS['HOST_NAME']}:{port or CLI_DEFAULTS['PORT']}{API_CONFIG['PREFIX']}"

@@ -43,6 +43,7 @@ __all__ = (
     'OutputPort',
     'PastException',
     'PortNamespace',
+    'PreSubmitException',
     'Process',
     'ProcessBuilder',
     'ProcessBuilderNamespace',

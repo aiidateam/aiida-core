@@ -5,9 +5,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from aiida.cmdline.commands.cmd_presto import get_default_presto_profile_name, verdi_presto
+from aiida.cmdline._commands.cmd_presto import get_default_presto_profile_name, verdi_presto
 from aiida.manage.configuration import profile_context
-from aiida.manage.configuration.config import Config
+from aiida.manage.configuration._config import Config
 from aiida.orm import Computer
 
 
@@ -44,7 +44,7 @@ def test_get_default_presto_profile_name(monkeypatch, profile_names, expected):
 @pytest.mark.usefixtures('empty_config', 'mock_daemon_client')
 def test_presto_without_rmq(run_cli_command, monkeypatch):
     """Test the ``verdi presto`` without RabbitMQ falls back to ZMQ."""
-    from aiida.brokers.rabbitmq import defaults
+    from aiida.brokers.rabbitmq import _defaults as defaults
 
     def detect_rabbitmq_config(**kwargs):
         raise ConnectionError()

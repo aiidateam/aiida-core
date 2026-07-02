@@ -39,7 +39,7 @@ class Parser(ABC):
         :param node: the `CalcJobNode` that contains the results of the executed `CalcJob` process.
         """
         from aiida.common.log import AIIDA_LOGGER
-        from aiida.orm.utils.log import create_logger_adapter
+        from aiida.orm.utils._log import create_logger_adapter
 
         self._logger = create_logger_adapter(AIIDA_LOGGER.getChild('parser').getChild(self.__class__.__name__), node)
         self._node = node

@@ -20,7 +20,8 @@ from typing import Dict, List, Literal, Optional, Set, Type, Union
 from typing_extensions import assert_never
 
 from aiida import orm
-from aiida.common import AIIDA_LOGGER, timezone
+from aiida.common import AIIDA_LOGGER
+from aiida.common import _timezone as timezone
 from aiida.manage.configuration import Profile
 from aiida.tools._dumping.config import DumpMode, GroupDumpConfig, ProcessDumpConfig, ProfileDumpConfig
 

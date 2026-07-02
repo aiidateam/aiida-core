@@ -14,8 +14,8 @@ import os
 
 from flask_cors import CORS
 
-from . import api as api_classes
-from .common.config import API_CONFIG, APP_CONFIG, CLI_DEFAULTS
+from . import _api as api_classes
+from ._common.config import API_CONFIG, APP_CONFIG, CLI_DEFAULTS
 
 __all__ = ('configure_api', 'run_api')
 
@@ -91,7 +91,7 @@ def configure_api(flask_app=api_classes.App, flask_api=api_classes.AiidaApi, **k
 
     # Configure the serializer
     if config_module.SERIALIZER_CONFIG:
-        from aiida.restapi.common.utils import CustomJSONProvider
+        from aiida.restapi._common.utils import CustomJSONProvider
 
         app.json = CustomJSONProvider(app)
 

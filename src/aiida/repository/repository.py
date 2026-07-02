@@ -4,9 +4,9 @@ import contextlib
 import pathlib
 from typing import Any, BinaryIO, Dict, Iterable, Iterator, List, Optional, Tuple, Union
 
-from aiida.common.hashing import make_hash
+from aiida.common._hashing import make_hash
+from aiida.common._typing import FilePath
 from aiida.common.lang import type_check
-from aiida.common.typing import FilePath
 
 from .backend import AbstractRepositoryBackend, SandboxRepositoryBackend
 from .common import File, FileType

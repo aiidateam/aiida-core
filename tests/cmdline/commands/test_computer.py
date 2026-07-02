@@ -18,7 +18,7 @@ import pytest
 import yaml
 
 from aiida import orm
-from aiida.cmdline.commands.cmd_computer import (
+from aiida.cmdline._commands.cmd_computer import (
     computer_configure,
     computer_delete,
     computer_duplicate,
@@ -318,7 +318,7 @@ class TestVerdiComputerConfigure:
     @pytest.fixture(autouse=True)
     def init_profile(self, run_cli_command):
         """Initialize the profile."""
-        from aiida.orm.utils.builders.computer import ComputerBuilder
+        from aiida.orm.utils._builders.computer import ComputerBuilder
 
         self.cli_runner = run_cli_command
         self.user = orm.User.collection.get_default()
@@ -963,7 +963,7 @@ def test_direct_interactive(run_cli_command, non_interactive_editor):
 
 def test_computer_test_stderr(run_cli_command, aiida_localhost, monkeypatch):
     """Test `verdi computer test` where tested command returns non-empty stderr."""
-    from aiida.transports.plugins.local import LocalTransport
+    from aiida.transports.plugins._local import LocalTransport
 
     aiida_localhost.configure()
     stderr = 'spurious output in standard error'
@@ -980,7 +980,7 @@ def test_computer_test_stderr(run_cli_command, aiida_localhost, monkeypatch):
 
 def test_computer_test_stdout(run_cli_command, aiida_localhost, monkeypatch):
     """Test `verdi computer test` where tested command returns non-empty stdout."""
-    from aiida.transports.plugins.local import LocalTransport
+    from aiida.transports.plugins._local import LocalTransport
 
     aiida_localhost.configure()
     stdout = 'spurious output in standard output'
@@ -997,7 +997,7 @@ def test_computer_test_stdout(run_cli_command, aiida_localhost, monkeypatch):
 
 def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeypatch):
     """Test ``verdi computer test`` where ``use_login_shell=True`` is much slower."""
-    from aiida.cmdline.commands import cmd_computer
+    from aiida.cmdline._commands import cmd_computer
 
     aiida_localhost.configure()
 
@@ -1057,7 +1057,7 @@ def test_computer_goto(run_cli_command, aiida_localhost):
 
     # Test when gotocomputer_command raises NotImplementedError
     with patch(
-        'aiida.transports.plugins.local.LocalTransport.gotocomputer_command',
+        'aiida.transports.plugins._local.LocalTransport.gotocomputer_command',
         new=lambda _, __=None: raise_(NotImplementedError('something-BBB')),
     ):
         # The run_cli_command wraps the actual exception into an AssertionError

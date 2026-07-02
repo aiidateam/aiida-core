@@ -19,7 +19,7 @@ from aiida.common import exceptions
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine.daemon.client import DaemonException, DaemonTimeoutException
 from aiida.manage.configuration import Profile, settings
-from aiida.manage.configuration.config import Config
+from aiida.manage.configuration._config import Config
 from aiida.manage.configuration.migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
 from aiida.manage.configuration.options import get_option
 from aiida.manage.configuration.settings import AiiDAConfigDir
@@ -291,7 +291,7 @@ def test_default_profile(empty_config, profile_factory):
 
 
 def test_set_default_user_email(config_with_profile):
-    """Test the :meth:`aiida.manage.configuration.config.Config.set_default_user_email`."""
+    """Test the :meth:`aiida.manage.configuration._config.Config.set_default_user_email`."""
     config = config_with_profile
     profile = config.get_profile()
     default_user_email = profile.default_user_email
@@ -449,10 +449,10 @@ def test_delete_profile(config_with_profile, profile_factory, monkeypatch, caplo
 
     monkeypatch.setattr(DaemonClient, 'stop_daemon', lambda self, **kwargs: {'status': 'ok'})
 
-    logger = logging.getLogger('aiida.manage.configuration.config')
+    logger = logging.getLogger('aiida.manage.configuration._config')
     logger.addHandler(caplog.handler)
     try:
-        with caplog.at_level(LOG_LEVEL_REPORT, logger='aiida.manage.configuration.config'):
+        with caplog.at_level(LOG_LEVEL_REPORT, logger='aiida.manage.configuration._config'):
             config.delete_profile(profile_name, delete_storage=False)
     finally:
         logger.removeHandler(caplog.handler)
@@ -492,10 +492,10 @@ def test_delete_profile_warns_with_daemon_pid(
     monkeypatch.setattr(DaemonClient, 'stop_daemon', stop_daemon_raise)
     monkeypatch.setattr(DaemonClient, 'get_daemon_pid', lambda self: 1234)
 
-    logger = logging.getLogger('aiida.manage.configuration.config')
+    logger = logging.getLogger('aiida.manage.configuration._config')
     logger.addHandler(caplog.handler)
     try:
-        with caplog.at_level(logging.WARNING, logger='aiida.manage.configuration.config'):
+        with caplog.at_level(logging.WARNING, logger='aiida.manage.configuration._config'):
             config.delete_profile(profile_name, delete_storage=False)
     finally:
         logger.removeHandler(caplog.handler)
@@ -543,10 +543,10 @@ def test_delete_profile_sqlite_zip(
 
     caplog.clear()
 
-    logger = logging.getLogger('aiida.manage.configuration.config')
+    logger = logging.getLogger('aiida.manage.configuration._config')
     logger.addHandler(caplog.handler)
     try:
-        with caplog.at_level(LOG_LEVEL_REPORT, logger='aiida.manage.configuration.config'):
+        with caplog.at_level(LOG_LEVEL_REPORT, logger='aiida.manage.configuration._config'):
             config.delete_profile(profile_name, delete_storage=delete_storage)
     finally:
         logger.removeHandler(caplog.handler)

@@ -17,8 +17,11 @@ import requests
 from kiwipy.rmq import RmqThreadCommunicator
 from packaging.version import parse
 
-from aiida.brokers.rabbitmq import RabbitmqBroker, client, utils
-from aiida.engine.processes import ProcessState, control
+from aiida.brokers.rabbitmq import RabbitmqBroker
+from aiida.brokers.rabbitmq import _client as client
+from aiida.brokers.rabbitmq import _utils as utils
+from aiida.engine.processes import ProcessState
+from aiida.engine.processes import _control as control
 from aiida.orm import Int
 
 pytestmark = pytest.mark.requires_rmq
@@ -189,14 +192,14 @@ def rabbitmq_client(aiida_profile):
 
 
 class TestRabbitmqManagementClient:
-    """Tests for the :class:`aiida.brokers.rabbitmq.client.RabbitmqManagementClient`."""
+    """Tests for the :class:`aiida.brokers.rabbitmq._client.RabbitmqManagementClient`."""
 
     def test_is_connected(self, rabbitmq_client):
-        """Test the :meth:`aiida.brokers.rabbitmq.client.RabbitmqManagementClient.is_connected`."""
+        """Test the :meth:`aiida.brokers.rabbitmq._client.RabbitmqManagementClient.is_connected`."""
         assert rabbitmq_client.is_connected
 
     def test_not_is_connected(self, rabbitmq_client, monkeypatch):
-        """Test the :meth:`aiida.brokers.rabbitmq.client.RabbitmqManagementClient.is_connected` if not connected."""
+        """Test the :meth:`aiida.brokers.rabbitmq._client.RabbitmqManagementClient.is_connected` if not connected."""
 
         def raise_connection_error(*_):
             raise client.ManagementApiConnectionError
@@ -205,13 +208,13 @@ class TestRabbitmqManagementClient:
         assert not rabbitmq_client.is_connected
 
     def test_request(self, rabbitmq_client):
-        """Test the :meth:`aiida.brokers.rabbitmq.client.RabbitmqManagementClient.request`."""
+        """Test the :meth:`aiida.brokers.rabbitmq._client.RabbitmqManagementClient.request`."""
         response = rabbitmq_client.request('cluster-name')
         assert isinstance(response, requests.Response)
         assert response.ok
 
     def test_request_url_params(self, rabbitmq_client):
-        """Test the :meth:`aiida.brokers.rabbitmq.client.RabbitmqManagementClient.request` with ``url_params``.
+        """Test the :meth:`aiida.brokers.rabbitmq._client.RabbitmqManagementClient.request` with ``url_params``.
 
         Create a queue and delete it again.
         """

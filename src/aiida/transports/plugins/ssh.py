@@ -424,7 +424,7 @@ class SshTransport(BlockingTransport):
         from paramiko.ssh_exception import SSHException
 
         from aiida.common.exceptions import InvalidOperation
-        from aiida.transports.util import _DetachedProxyCommand
+        from aiida.transports._util import _DetachedProxyCommand
 
         if self._is_open:
             raise InvalidOperation('Cannot open the transport twice')
@@ -1187,7 +1187,7 @@ class SshTransport(BlockingTransport):
         Receives in input the path of a given file.
         """
         path = str(path)
-        from aiida.transports.util import FileAttribute
+        from aiida.transports._util import FileAttribute
 
         paramiko_attr = self.lstat(path)
         aiida_attr = FileAttribute()

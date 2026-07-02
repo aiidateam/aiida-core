@@ -20,12 +20,12 @@ from unittest.mock import patch
 import pytest
 
 from aiida import get_profile
-from aiida.cmdline.commands import cmd_process
+from aiida.cmdline._commands import cmd_process
 from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.links import LinkType
 from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine import Process, ProcessState
-from aiida.engine.processes import control as process_control
+from aiida.engine.processes import _control as process_control
 from aiida.engine.utils import exponential_backoff_retry
 from aiida.orm import CalcJobNode, Group, Int, WorkChainNode, WorkflowNode, WorkFunctionNode
 from aiida.tools.archive.exceptions import ExportValidationError
@@ -47,7 +47,7 @@ def start_daemon_worker_in_foreground_and_redirect_streams(
     import os
     import sys
 
-    from aiida.engine.daemon.worker import start_daemon_worker
+    from aiida.engine.daemon._worker import start_daemon_worker
 
     prepare_func(*prepare_func_args)
 
@@ -164,7 +164,7 @@ def test_process_kill_failing_transport(
     kill_timeout = 10
 
     # patch a faulty transport open
-    mokeypatch_args = ('aiida.transports.plugins.local.LocalTransport.open', MockFunctions.mock_open)
+    mokeypatch_args = ('aiida.transports.plugins._local.LocalTransport.open', MockFunctions.mock_open)
     with fork_worker_context(monkeypatch.setattr, mokeypatch_args):
         node = submit_and_await(make_a_builder(100), ProcessState.WAITING)
         result = await_condition(lambda: get_process_function_report(node), timeout=kill_timeout)
@@ -203,7 +203,7 @@ def test_process_kill_failing_transport_failed_kill(
 
     kill_timeout = 10
 
-    monkeypatch_args = ('aiida.transports.plugins.local.LocalTransport.open', MockFunctions.mock_open)
+    monkeypatch_args = ('aiida.transports.plugins._local.LocalTransport.open', MockFunctions.mock_open)
     with fork_worker_context(monkeypatch.setattr, monkeypatch_args):
         node = submit_and_await(make_a_builder(5), ProcessState.WAITING)
 

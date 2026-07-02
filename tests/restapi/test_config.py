@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the configuration options from `aiida.restapi.common.config` when running the REST API."""
+"""Tests for the configuration options from `aiida.restapi._common.config` when running the REST API."""
 
 import pytest
 
@@ -37,7 +37,7 @@ def create_app():
 
 def test_posting(create_app):
     """Test CLI_DEFAULTS['POSTING'] configuration"""
-    from aiida.restapi.common.config import API_CONFIG
+    from aiida.restapi._common.config import API_CONFIG
 
     app = create_app(posting=False)
 

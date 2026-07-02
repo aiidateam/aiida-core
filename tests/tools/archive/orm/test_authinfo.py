@@ -12,7 +12,7 @@ import pytest
 
 from aiida import orm
 from aiida.tools.archive import create_archive, import_archive
-from aiida.tools.archive.abstract import get_format
+from aiida.tools.archive._abstract import get_format
 
 
 @pytest.mark.usefixtures('aiida_localhost')

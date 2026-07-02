@@ -61,7 +61,7 @@ from aiida.common.warnings import AiidaDeprecationWarning
 if TYPE_CHECKING:
     from aiida.orm import User
 
-    from .config import Config
+    from ._config import Config
 
 # global variables for aiida
 CONFIG: Optional['Config'] = None
@@ -84,12 +84,12 @@ def load_config(create=False) -> 'Config':
     :type create: bool
 
     :return: the config
-    :rtype: :class:`~aiida.manage.configuration.config.Config`
+    :rtype: :class:`~aiida.manage.configuration._config.Config`
     :raises aiida.common.MissingConfigurationError: if the configuration file could not be found and create=False
     """
     from aiida.common import exceptions
 
-    from .config import Config
+    from ._config import Config
 
     filepath = get_config_path()
 
@@ -117,7 +117,7 @@ def _merge_deprecated_cache_yaml(config, filepath):
 
     import yaml
 
-    from aiida.common import timezone
+    from aiida.common import _timezone as timezone
 
     cache_path_backup = None
     # Keep generating a new backup filename based on the current time until it does not exist
@@ -307,7 +307,7 @@ def get_config(create=False) -> 'Config':
     :type create: bool
 
     :return: the config
-    :rtype: :class:`~aiida.manage.configuration.config.Config`
+    :rtype: :class:`~aiida.manage.configuration._config.Config`
     :raises aiida.common.ConfigurationError: if the configuration file could not be found, read or deserialized
     """
     global CONFIG  # noqa: PLW0603

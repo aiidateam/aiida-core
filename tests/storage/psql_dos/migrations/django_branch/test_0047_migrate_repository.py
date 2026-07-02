@@ -12,7 +12,7 @@ import hashlib
 import os
 from uuid import uuid4
 
-from aiida.common import timezone
+from aiida.common import _timezone as timezone
 from aiida.storage.psql_dos.backend import get_filepath_container
 from aiida.storage.psql_dos.migrations.utils import utils
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator

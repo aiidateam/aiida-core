@@ -350,7 +350,7 @@ All functions have the exact same interface ``launch(process, inputs)`` where:
     If the process being launched *also* defines an input named ``wait``, the launcher method cannot tell them apart.
 
 What inputs can be passed depends on the exact process class that is to be launched.
-For example, when we want to run an instance of the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` process, which takes two :py:class:`~aiida.orm.nodes.data.int.Int` nodes as inputs under the name ``x`` and ``y`` [#f1]_, we would do the following:
+For example, when we want to run an instance of the :py:class:`~aiida.calculations._arithmetic.add.ArithmeticAddCalculation` process, which takes two :py:class:`~aiida.orm.nodes.data.int.Int` nodes as inputs under the name ``x`` and ``y`` [#f1]_, we would do the following:
 
 .. include:: include/snippets/launch/launch_submit.py
     :code: python
@@ -430,7 +430,7 @@ To know what inputs they take, one would have to read the implementation, which 
 To simplify this process, these two process classes provide a utility called the 'process builder'.
 The process builder is essentially a tool that helps you build the inputs for the specific process class that you want to run.
 To get a *builder* for a particular ``CalcJob`` or a ``WorkChain`` implementation, all you need is the class itself, which can be loaded through the :py:class:`~aiida.plugins.factories.CalculationFactory` and :py:class:`~aiida.plugins.factories.WorkflowFactory`, respectively.
-Let's take the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` as an example::
+Let's take the :py:class:`~aiida.calculations._arithmetic.add.ArithmeticAddCalculation` as an example::
 
     ArithmeticAddCalculation = CalculationFactory('core.arithmetic.add')
     builder = ArithmeticAddCalculation.get_builder()
@@ -738,7 +738,7 @@ In this case, a cancellation request is still sent to the scheduler, but the com
 
 .. rubric:: Footnotes
 
-.. [#f1] Note that the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation` process class also takes a ``code`` as input, but that has been omitted for the purposes of the example.
+.. [#f1] Note that the :py:class:`~aiida.calculations._arithmetic.add.ArithmeticAddCalculation` process class also takes a ``code`` as input, but that has been omitted for the purposes of the example.
 
 
 .. _topics:processes:usage:processes_api:
@@ -746,8 +746,8 @@ In this case, a cancellation request is still sent to the scheduler, but the com
 The processes API
 -----------------
 
-The functionality of ``verdi process`` to ``play``, ``pause`` and ``kill`` is now made available through the :meth:`aiida.engine.processes.control` module.
-Processes can be played, paused or killed through the :meth:`~aiida.engine.processes.control.play_processes`, :meth:`~aiida.engine.processes.control.pause_processes`, and :meth:`~aiida.engine.processes.control.kill_processes`, respectively:
+The functionality of ``verdi process`` to ``play``, ``pause`` and ``kill`` is now made available through the :meth:`aiida.engine.processes._control` module.
+Processes can be played, paused or killed through the :meth:`~aiida.engine.processes._control.play_processes`, :meth:`~aiida.engine.processes._control.pause_processes`, and :meth:`~aiida.engine.processes._control.kill_processes`, respectively:
 
 .. code-block:: python
 

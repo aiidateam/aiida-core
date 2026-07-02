@@ -14,7 +14,7 @@ import secrets
 import pytest
 
 from aiida import orm
-from aiida.cmdline.commands import cmd_user
+from aiida.cmdline._commands import cmd_user
 
 
 @pytest.fixture

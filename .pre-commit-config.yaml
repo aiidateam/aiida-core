@@ -89,32 +89,32 @@ repos:
         utils/.*|
         tests/.*|
 
-        src/aiida/calculations/arithmetic/add.py|
-        src/aiida/calculations/diff_tutorial/calculations.py|
-        src/aiida/calculations/templatereplacer.py|
-        src/aiida/calculations/transfer.py|
-        src/aiida/engine/daemon/execmanager.py|
+        src/aiida/calculations/_arithmetic/add.py|
+        src/aiida/calculations/_diff_tutorial/calculations.py|
+        src/aiida/calculations/_templatereplacer.py|
+        src/aiida/calculations/_transfer.py|
+        src/aiida/engine/daemon/_execmanager.py|
         src/aiida/manage/configuration/__init__.py|
-        src/aiida/manage/configuration/config.py|
-        src/aiida/manage/external/rmq/launcher.py|
+        src/aiida/manage/configuration/_config.py|
+        src/aiida/manage/_external/rmq/launcher.py|
         src/aiida/orm/nodes/data/cif.py|
         src/aiida/orm/nodes/data/remote/base.py|
         src/aiida/orm/nodes/data/structure.py|
         src/aiida/orm/nodes/data/upf.py|
         src/aiida/orm/nodes/process/calculation/calcjob.py|
         src/aiida/orm/nodes/process/process.py|
-        src/aiida/orm/utils/builders/code.py|
-        src/aiida/orm/utils/builders/computer.py|
+        src/aiida/orm/utils/_builders/code.py|
+        src/aiida/orm/utils/_builders/computer.py|
         src/aiida/orm/utils/calcjob.py|
         src/aiida/orm/utils/node.py|
-        src/aiida/restapi/common/utils.py|
-        src/aiida/restapi/resources.py|
+        src/aiida/restapi/_common/utils.py|
+        src/aiida/restapi/_resources.py|
         src/aiida/restapi/run_api.py|
-        src/aiida/restapi/translator/base.py|
-        src/aiida/restapi/translator/computer.py|
-        src/aiida/restapi/translator/group.py|
-        src/aiida/restapi/translator/nodes/.*|
-        src/aiida/restapi/translator/user.py|
+        src/aiida/restapi/_translator/base.py|
+        src/aiida/restapi/_translator/computer.py|
+        src/aiida/restapi/_translator/group.py|
+        src/aiida/restapi/_translator/nodes/.*|
+        src/aiida/restapi/_translator/user.py|
         src/aiida/storage/psql_dos/migrations/utils/integrity.py|
         src/aiida/storage/psql_dos/migrations/utils/legacy_workflows.py|
         src/aiida/storage/psql_dos/migrations/utils/migrate_repository.py|
@@ -128,13 +128,13 @@ repos:
         src/aiida/storage/sqlite_zip/migrations/legacy_to_main.py|
         src/aiida/storage/sqlite_zip/models.py|
         src/aiida/storage/sqlite_zip/orm.py|
-        src/aiida/tools/data/array/kpoints/legacy.py|
-        src/aiida/tools/data/array/kpoints/seekpath.py|
+        src/aiida/tools/data/array/kpoints/_legacy.py|
+        src/aiida/tools/data/array/kpoints/_seekpath.py|
         src/aiida/tools/data/orbital/orbital.py|
         src/aiida/tools/data/orbital/realhydrogen.py|
-        src/aiida/tools/dbimporters/plugins/.*|
-        src/aiida/transports/cli.py|
-        src/aiida/transports/plugins/local.py|
+        src/aiida/tools/_dbimporters/plugins/.*|
+        src/aiida/transports/_cli.py|
+        src/aiida/transports/plugins/_local.py|
         src/aiida/transports/plugins/ssh.py|
       )$
 
@@ -169,7 +169,7 @@ repos:
     pass_filenames: false
     files: >-
       (?x)^(
-        src/aiida/cmdline/commands/.*|
+        src/aiida/cmdline/_commands/.*|
         src/aiida/cmdline/params/.*|
         src/aiida/cmdline/params/types/.*|
         utils/validate_consistency.py|

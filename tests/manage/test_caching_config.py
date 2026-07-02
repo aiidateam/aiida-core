@@ -254,10 +254,10 @@ def test_enable_caching_global(configure_caching):
     """
     Check that using enable_caching for a specific identifier works.
     """
-    specific_identifier = 'aiida.calculations.arithmetic.add.ArithmeticAddCalculation'
+    specific_identifier = 'aiida.calculations._arithmetic.add.ArithmeticAddCalculation'
     with configure_caching(config_dict={'default_enabled': False, 'disabled_for': [specific_identifier]}):
         with enable_caching():
-            assert get_use_cache(identifier='aiida.calculations.transfer.TransferCalculation')
+            assert get_use_cache(identifier='aiida.calculations._transfer.TransferCalculation')
             assert get_use_cache(identifier=specific_identifier)
 
 
@@ -265,7 +265,7 @@ def test_disable_caching_specific(configure_caching):
     """
     Check that using disable_caching for a specific identifier works.
     """
-    identifier = 'aiida.calculations.arithmetic.add.ArithmeticAddCalculation'
+    identifier = 'aiida.calculations._arithmetic.add.ArithmeticAddCalculation'
     with configure_caching({'default_enabled': True}):
         with disable_caching(identifier=identifier):
             assert not get_use_cache(identifier=identifier)
@@ -275,10 +275,10 @@ def test_disable_caching_global(configure_caching):
     """
     Check that using disable_caching for a specific identifier works.
     """
-    specific_identifier = 'aiida.calculations.arithmetic.add.ArithmeticAddCalculation'
+    specific_identifier = 'aiida.calculations._arithmetic.add.ArithmeticAddCalculation'
     with configure_caching(config_dict={'default_enabled': True, 'enabled_for': [specific_identifier]}):
         with disable_caching():
-            assert not get_use_cache(identifier='aiida.calculations.transfer.TransferCalculation')
+            assert not get_use_cache(identifier='aiida.calculations._transfer.TransferCalculation')
             assert not get_use_cache(identifier=specific_identifier)
 
 
@@ -309,9 +309,9 @@ def test_enable_disable_invalid(identifier):
     'strict, identifier, matches',
     (
         (False, 'aiida.calculations:core.arithmetic.add', None),
-        (False, 'aiida.calculations.arithmetic.add.ArithmeticAddCalculation', None),
+        (False, 'aiida.calculations._arithmetic.add.ArithmeticAddCalculation', None),
         (False, 'aiida.calculations:core.non_existent', None),
-        (False, 'aiida.calculations.arithmetic.non_existent.ArithmeticAddCalculation', None),
+        (False, 'aiida.calculations._arithmetic.non_existent.ArithmeticAddCalculation', None),
         (False, 'aiida.spam:Ni', r'does not match any of the AiiDA entry point group names\.'),
         (False, 'aiida.calculations:With:second_separator', r'Can contain at most one entry point string separator.*'),
         (False, 'aiida.sp*:Ni', r'does not match any of the AiiDA entry point group names\.'),
@@ -319,9 +319,9 @@ def test_enable_disable_invalid(identifier):
         (False, 'startswith.number.2bad', r'is not a valid Python identifier\.'),
         (False, 'some.thing.in.this.is.a.keyword', r'is a reserved Python keyword\.'),
         (True, 'aiida.calculations:core.arithmetic.add', None),
-        (True, 'aiida.calculations.arithmetic.add.ArithmeticAddCalculation', None),
+        (True, 'aiida.calculations._arithmetic.add.ArithmeticAddCalculation', None),
         (True, 'aiida.calculations:core.non_existent', r'cannot be loaded\.'),
-        (True, 'aiida.calculations.arithmetic.non_existent.ArithmeticAddCalculation', r'cannot be imported\.'),
+        (True, 'aiida.calculations._arithmetic.non_existent.ArithmeticAddCalculation', r'cannot be imported\.'),
         (True, 'aiida.spam:Ni', r'does not match any of the AiiDA entry point group names\.'),
         (True, 'aiida.calculations:With:second_separator', r'Can contain at most one entry point string separator.*'),
         (True, 'aiida.sp*:Ni', r'does not match any of the AiiDA entry point group names\.'),

@@ -24,8 +24,8 @@ from aiida import orm
 from aiida.common import CalcJobState, LinkType, StashMode, exceptions
 from aiida.common.datastructures import FileCopyOperation
 from aiida.engine import CalcJob, CalcJobImporter, ExitCode, Process, launch
+from aiida.engine.processes.calcjobs._monitors import CalcJobMonitorAction, CalcJobMonitorResult
 from aiida.engine.processes.calcjobs.calcjob import validate_monitors, validate_stash_options
-from aiida.engine.processes.calcjobs.monitors import CalcJobMonitorAction, CalcJobMonitorResult
 from aiida.engine.processes.ports import PortNamespace
 from aiida.engine.utils import instantiate_process
 from aiida.plugins import CalculationFactory, ParserFactory
@@ -945,7 +945,7 @@ def test_parse_scheduler_excepted(generate_process, monkeypatch):
 
     Here we check explicitly the case where the `Scheduler.parse_output` method excepts
     """
-    from aiida.schedulers.plugins.direct import DirectScheduler
+    from aiida.schedulers.plugins._direct import DirectScheduler
 
     process = generate_process()
 
@@ -1180,7 +1180,7 @@ def test_validate_monitors_invalid_signature(monkeypatch):
     For this test, we monkeypatch the ``BaseFactory`` which is used by the validator to load the monitor. The patched
     function will return a monitor implementation with an invalid signature.
     """
-    from aiida.engine.processes.calcjobs.monitors import CalcJobMonitor
+    from aiida.engine.processes.calcjobs._monitors import CalcJobMonitor
 
     def monitor_invalid_signature(**kwargs):
         """Monitor with invalid signature"""
@@ -1218,7 +1218,7 @@ def monitor_skip_parse(node, transport, **kwargs):
 
 
 def test_monitor_result_parse(get_calcjob_builder, entry_points):
-    """Test the ``parse`` attribute of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
+    """Test the ``parse`` attribute of :class:`aiida.engine.processes.calcjobs._monitors.CalcJobMonitorResult`.
 
     If set to ``False``, parsing of output files should be skipped.
     """
@@ -1238,7 +1238,7 @@ def monitor_skip_retrieve(node, transport, **kwargs):
 
 
 def test_monitor_result_retrieve(get_calcjob_builder, entry_points):
-    """Test the ``retrieve`` attribute of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
+    """Test the ``retrieve`` attribute of :class:`aiida.engine.processes.calcjobs._monitors.CalcJobMonitorResult`.
 
     If set to ``False``, retrieval and parsing of output files should be skipped.
     """
@@ -1258,7 +1258,7 @@ def monitor_override_exit_code(node, transport, **kwargs):
 
 
 def test_monitor_result_override_exit_code(get_calcjob_builder, entry_points):
-    """Test the ``override_exit_code`` attr of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
+    """Test the ``override_exit_code`` attr of :class:`aiida.engine.processes.calcjobs._monitors.CalcJobMonitorResult`.
 
     If set to ``False``, parsing of output files should be skipped.
     """
@@ -1278,7 +1278,7 @@ def monitor_disable_all(node, transport, **kwargs):
 
 
 def test_monitor_result_action_disable_all(get_calcjob_builder, entry_points):
-    """Test the ``action`` attr of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
+    """Test the ``action`` attr of :class:`aiida.engine.processes.calcjobs._monitors.CalcJobMonitorResult`.
 
     If set to ``CalcJobMonitorAction.DISABLE_ALL``, the calculation should continue running and no monitor should be
     invoked anymore.
@@ -1304,7 +1304,7 @@ def monitor_disable_self(node, transport, **kwargs):
 
 @pytest.mark.usefixtures('override_logging')
 def test_monitor_result_action_disable_self(get_calcjob_builder, entry_points, caplog):
-    """Test the ``action`` attr of :class:`aiida.engine.processes.calcjobs.monitors.CalcJobMonitorResult`.
+    """Test the ``action`` attr of :class:`aiida.engine.processes.calcjobs._monitors.CalcJobMonitorResult`.
 
     If set to ``CalcJobMonitorAction.DISABLE_SELF``, the calculation should continue running and the monitor should not
     be invoked anymore, but any other monitor should continue to be called.
@@ -1329,7 +1329,7 @@ def test_submit_return_exit_code(get_calcjob_builder, monkeypatch):
     is called internally by ``Scheduler.submit_job`` and it returns its result, and the ``DirectScheduler`` is
     the plugin that is used by the localhost computer used in the inputs for this calcjob.
     """
-    from aiida.schedulers.plugins.direct import DirectScheduler
+    from aiida.schedulers.plugins._direct import DirectScheduler
 
     def _parse_submit_output(self, *args):
         return ExitCode(418)

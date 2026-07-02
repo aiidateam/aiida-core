@@ -16,7 +16,7 @@ The design for this subsystem is illustrated below.
 
 Separate data is stored per ``Profile``, forming a single provenance graph.
 A :py:class:`~aiida.manage.configuration.profile.Profile` instance represents a dictionary that includes the configuration details for accessing the storage for that profile, such as a database URI, etc.
-Multiple ``Profile`` can be stored in a :py:class:`~aiida.manage.configuration.config.Config` instance, which is stored in the configuration file (``config.json``).
+Multiple ``Profile`` can be stored in a :py:class:`~aiida.manage.configuration._config.Config` instance, which is stored in the configuration file (``config.json``).
 
 Within a single Python process, a single :py:class:`~aiida.manage.manager.Manager` instance can be loaded, to manage access to a globally loaded ``Profile`` and its :py:class:`~aiida.orm.implementation.storage_backend.StorageBackend` instance.
 
@@ -68,5 +68,5 @@ Storage maintenance and profile locking
 The :py:meth:`~aiida.orm.implementation.storage_backend.StorageBackend.maintain` method is allows for maintenance operations on the storage (for example, to optimise memory usage), and is called by `verdi storage maintain`.
 
 During "full" maintenance, to guarantee the safety of its procedures, it may be necessary that the storage is not accessed by other processes.
-The :py:class`~aiida.manage.profile_access.ProfileAccessManager` allows for profile access requests, and locking of profiles during such procedures.
-:py:meth:`~aiida.manage.profile_access.ProfileAccessManager.request_access` is called within :py:meth:`~aiida.manage.manager.Manager.get_profile_storage`.
+The :py:class`~aiida.manage._profile_access.ProfileAccessManager` allows for profile access requests, and locking of profiles during such procedures.
+:py:meth:`~aiida.manage._profile_access.ProfileAccessManager.request_access` is called within :py:meth:`~aiida.manage.manager.Manager.get_profile_storage`.

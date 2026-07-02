@@ -22,9 +22,11 @@ from collections.abc import Iterator
 
 from typing_extensions import Self
 
-from . import timezone
+from . import _timezone as timezone
+from ._typing import FilePath
 from .lang import type_check
-from .typing import FilePath
+
+__all__ = ('Folder', 'SandboxFolder', 'SubmitTestFolder')
 
 # If True, tries to make everything (dirs, files) group-writable.
 # Otherwise, tries to make everything only readable and writable by the user.

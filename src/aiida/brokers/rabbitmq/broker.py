@@ -12,7 +12,7 @@ from aiida.brokers.broker import Broker
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import get_config_option
 
-from .utils import get_launch_queue_name, get_message_exchange_name, get_task_exchange_name
+from ._utils import get_launch_queue_name, get_message_exchange_name, get_task_exchange_name
 
 if t.TYPE_CHECKING:
     from kiwipy.rmq import RmqThreadCommunicator
@@ -72,13 +72,13 @@ class RabbitmqBroker(Broker):
         """Return an instance of :class:`kiwipy.Communicator`."""
         from kiwipy.rmq import RmqThreadCommunicator
 
-        from aiida.orm.utils import serialize
+        from aiida.orm.utils import serialization
 
         self._communicator = RmqThreadCommunicator.connect(
             connection_params={'url': self.get_url()},
             message_exchange=get_message_exchange_name(self._prefix),
-            encoder=functools.partial(serialize.serialize, encoding='utf-8'),
-            decoder=serialize.deserialize_unsafe,
+            encoder=functools.partial(serialization.serialize, encoding='utf-8'),
+            decoder=serialization.deserialize_unsafe,
             task_exchange=get_task_exchange_name(self._prefix),
             task_queue=get_launch_queue_name(self._prefix),
             task_prefetch_count=get_config_option('daemon.worker_process_slots'),
@@ -105,7 +105,7 @@ class RabbitmqBroker(Broker):
 
     def get_url(self) -> str:
         """Return the RMQ url for this profile."""
-        from .utils import get_rmq_url
+        from ._utils import get_rmq_url
 
         kwargs = {
             key[7:]: val for key, val in self._profile.process_control_config.items() if key.startswith('broker_')

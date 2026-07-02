@@ -13,8 +13,8 @@ import pytest
 from aiida import orm
 from aiida.common.exceptions import NotExistent
 from aiida.orm.implementation import StorageBackend
-from aiida.tools.archive.abstract import ArchiveReaderAbstract
-from aiida.tools.archive.implementations.sqlite_zip.main import ArchiveFormatSqlZip
+from aiida.tools.archive._abstract import ArchiveReaderAbstract
+from aiida.tools.archive._implementations.sqlite_zip.main import ArchiveFormatSqlZip
 from tests.utils.archives import get_archive_file
 
 

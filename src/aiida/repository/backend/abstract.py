@@ -13,7 +13,7 @@ import pathlib
 from collections.abc import Iterable, Iterator
 from typing import Any, BinaryIO, List, Optional, Tuple, Union
 
-from aiida.common.hashing import chunked_file_hash
+from aiida.common._hashing import chunked_file_hash
 
 __all__ = ('AbstractRepositoryBackend',)
 

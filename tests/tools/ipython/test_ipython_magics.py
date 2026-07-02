@@ -1,10 +1,10 @@
-"""Tests for :mod:`aiida.tools.ipython.ipython_magics`."""
+"""Tests for :mod:`aiida.tools._ipython.ipython_magics`."""
 
 import textwrap
 
 from IPython.testing.globalipapp import get_ipython
 
-from aiida.tools.ipython.ipython_magics import register_ipython_extension
+from aiida.tools._ipython.ipython_magics import register_ipython_extension
 
 
 def test_ipython_magics():

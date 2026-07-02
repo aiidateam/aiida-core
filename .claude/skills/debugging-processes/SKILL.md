@@ -71,5 +71,5 @@ node.base.repository.list_object_names()  # files in the node's repository
 
 - Process runner: `src/aiida/engine/runners.py`
 - Daemon client: `src/aiida/engine/daemon/client.py`
-- CalcJob exec manager (file copying, job submission, retrieval): `src/aiida/engine/daemon/execmanager.py`
+- CalcJob exec manager (file copying, job submission, retrieval): `src/aiida/engine/daemon/_execmanager.py`
 - Transport tasks (submit, update, retrieve): `src/aiida/engine/processes/calcjobs/tasks.py`

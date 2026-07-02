@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -84,19 +85,39 @@ _DRIFT_WARNING = (
     'Run `verdi daemon restart` to pick up the new versions.'
 )
 
+_BINARY_DRIFT_WARNING = (
+    'The daemon is running with a different Python binary than the current one. '
+    'Run `verdi daemon restart` to use the current Python binary.'
+)
+
+
+def get_daemon_python_binary_drift_lines(client: DaemonClient) -> list[str]:
+    """Return Python binary mismatch warning lines, or an empty list if they match."""
+    daemon_binary = client.get_daemon_python_binary()
+    if daemon_binary is None:
+        return []
+
+    current_binary = sys.executable
+    if daemon_binary == current_binary:
+        return []
+
+    return [_BINARY_DRIFT_WARNING, f'Daemon: {daemon_binary}', f'Current: {current_binary}']
+
 
 def get_daemon_package_drift_lines(client: DaemonClient) -> list[str]:
     """Return drift warning lines, or an empty list if package state matches."""
     from aiida.engine.daemon.client import DaemonClient as _DaemonClient
 
+    lines = get_daemon_python_binary_drift_lines(client)
+
     daemon_versions = client.get_daemon_package_snapshot()
     if daemon_versions is None:
-        return []
+        return lines
     current_versions = _DaemonClient.get_package_version_snapshot()
     validated = _DaemonClient._validate_package_version_snapshot(current_versions)
     if validated is None:
-        return []
+        return lines
     change_lines = format_package_state_change_lines(daemon_versions, validated)
     if not change_lines:
-        return []
-    return [_DRIFT_WARNING, *change_lines]
+        return lines
+    return [*lines, _DRIFT_WARNING, *change_lines]

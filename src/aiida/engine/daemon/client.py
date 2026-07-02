@@ -62,6 +62,13 @@ class PackageVersionInfo(_PackageVersionInfoRequired, total=False):
 PackageVersionSnapshot: t.TypeAlias = dict[str, PackageVersionInfo]
 
 
+class DaemonVersionInfo(t.TypedDict):
+    """Content written to the daemon version file."""
+
+    packages: PackageVersionSnapshot
+    python_binary: str
+
+
 class _VcsInfo(t.TypedDict, total=False):
     """VCS metadata from ``direct_url.json`` (PEP 610)."""
 
@@ -687,7 +694,10 @@ class DaemonClient:
 
     def _write_version_file(self) -> None:
         """Write the current package version snapshot to the daemon version file."""
-        version_info = self.get_package_version_snapshot()
+        version_info: DaemonVersionInfo = {
+            'packages': self.get_package_version_snapshot(),
+            'python_binary': sys.executable,
+        }
         try:
             pathlib.Path(self.daemon_package_snapshot_file).write_text(json.dumps(version_info), encoding='utf8')
         except ConfigurationError:
@@ -695,14 +705,35 @@ class DaemonClient:
         except OSError as exc:
             LOGGER.warning('Failed to write daemon version file: %s', exc)
 
-    def get_daemon_package_snapshot(self) -> PackageVersionSnapshot | None:
-        """Return version info recorded at daemon startup, or None if unavailable."""
+    def _read_version_file(self) -> DaemonVersionInfo | None:
+        """Read and validate the daemon version file, or return None if unavailable or invalid."""
         try:
             data = json.loads(pathlib.Path(self.daemon_package_snapshot_file).read_text(encoding='utf8'))
         except (ConfigurationError, OSError, json.JSONDecodeError):
             return None
 
-        return self._validate_package_version_snapshot(data)
+        if not isinstance(data, dict):
+            return None
+
+        packages = self._validate_package_version_snapshot(data.get('packages'))
+        if packages is None:
+            return None
+
+        python_binary = data.get('python_binary')
+        if not isinstance(python_binary, str):
+            return None
+
+        return DaemonVersionInfo(packages=packages, python_binary=python_binary)
+
+    def get_daemon_package_snapshot(self) -> PackageVersionSnapshot | None:
+        """Return version info recorded at daemon startup, or None if unavailable."""
+        version_file = self._read_version_file()
+        return version_file['packages'] if version_file is not None else None
+
+    def get_daemon_python_binary(self) -> str | None:
+        """Return the Python binary path recorded at daemon startup, or None if unavailable."""
+        version_file = self._read_version_file()
+        return version_file['python_binary'] if version_file is not None else None
 
     def increase_workers(self, number: int, timeout: int | None = None) -> dict[str, t.Any]:
         """Increase the number of workers.

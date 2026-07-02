@@ -28,7 +28,7 @@ from .overridable import OverridableOption
 if t.TYPE_CHECKING:
     from click.decorators import FC
 
-__all__ = ('ConfigFileOption',)
+__all__ = ('ConfigFileOption', 'TemplateAwareConfigFileOption')
 
 
 def yaml_config_file_provider(handle: t.Any, _cmd_name: t.Any) -> t.Any:
@@ -36,6 +36,36 @@ def yaml_config_file_provider(handle: t.Any, _cmd_name: t.Any) -> t.Any:
     import yaml
 
     return yaml.safe_load(handle)
+
+
+def _template_aware_yaml_provider(file_path_or_handle: t.Any, _cmd_name: t.Any) -> dict[str, t.Any]:
+    """YAML config provider that transparently handles Jinja2 templates."""
+    from aiida.cmdline.utils.template_config import load_and_process_template
+
+    # Read content to string, regardless of input type
+    if hasattr(file_path_or_handle, 'read'):
+        content = file_path_or_handle.read()
+        if hasattr(content, 'decode'):
+            content = content.decode('utf-8')
+        is_content = True
+    else:
+        content = str(file_path_or_handle)
+        is_content = False
+
+    template_vars = None
+    interactive = True
+
+    try:
+        ctx = click.get_current_context()
+        template_vars = ctx.meta.get('template_vars')
+        if ctx.params.get('non_interactive', False):
+            interactive = False
+    except RuntimeError:
+        pass
+
+    return load_and_process_template(
+        content, interactive=interactive, template_vars=template_vars, is_content=is_content
+    )
 
 
 def configuration_callback(
@@ -186,4 +216,50 @@ class ConfigFileOption(OverridableOption):
         kw_copy = self.kwargs.copy()
         kw_copy.update(kwargs)
 
+        return configuration_option(*self.args, **kw_copy)
+
+
+class _TemplateAwareClickOption(click.Option):
+    """Eagerly resolves ``--template-vars`` before the config callback runs.
+
+    Necessary because Click processes eager options in invocation order, so
+    ``--config`` before ``--template-vars`` would otherwise miss the values.
+    """
+
+    def handle_parse_result(
+        self, ctx: click.Context, opts: t.Mapping[str, t.Any], args: list[str]
+    ) -> tuple[t.Any, list[str]]:
+        if 'template_vars' in opts and 'template_vars' not in ctx.meta:
+            from aiida.cmdline.utils.template_config import parse_template_vars
+
+            raw = opts['template_vars']
+            if raw is not None:
+                try:
+                    ctx.meta['template_vars'] = parse_template_vars(raw)
+                except click.BadParameter:
+                    pass  # let the real callback raise the proper error
+        return super().handle_parse_result(ctx, opts, args)
+
+
+class TemplateAwareConfigFileOption(OverridableOption):
+    """Like :class:`ConfigFileOption`, but transparently handles Jinja2 templates.
+
+    Uses :func:`_template_aware_yaml_provider` which detects Jinja2 placeholders and
+    resolves them (interactively or via ``--template-vars``).  Plain YAML files without
+    templates are handled identically to :class:`ConfigFileOption`.
+    """
+
+    def __init__(self, *args: t.Any, **kwargs: t.Any):
+        kwargs.update(
+            {
+                'provider': _template_aware_yaml_provider,
+                'implicit': False,
+                'cls': _TemplateAwareClickOption,
+            }
+        )
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, **kwargs: t.Any) -> t.Any:
+        kw_copy = self.kwargs.copy()
+        kw_copy.update(kwargs)
         return configuration_option(*self.args, **kw_copy)

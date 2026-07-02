@@ -8,8 +8,6 @@
 ###########################################################################
 """Tests for `aiida.engine.processes.workchains.restart` module."""
 
-import warnings
-
 import pytest
 
 from aiida import engine, orm
@@ -71,14 +69,11 @@ def test_get_process_handlers():
         ({'handler_overrides': {'handler_c': {'enabled': True}}}, [0, 0, 100, 200]),
         ({'handler_overrides': {'handler_a': {'priority': 50}}}, [0, 50, 100]),
         ({'handler_overrides': {'handler_a': {'enabled': False}}}, [0, 100]),
-        ({'handler_overrides': {'handler_a': False}}, [0, 100]),  # This notation is deprecated
     ),
 )
 def test_get_process_handlers_by_priority(generate_work_chain, inputs, priorities):
     """Test the `BaseRestartWorkChain.get_process_handlers_by_priority` method."""
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore')
-        process = generate_work_chain(SomeWorkChain, inputs)
+    process = generate_work_chain(SomeWorkChain, inputs)
     process.setup()
     handlers = process.get_process_handlers_by_priority()
     assert sorted([priority for priority, _ in handlers]) == priorities

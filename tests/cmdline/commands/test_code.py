@@ -8,7 +8,6 @@
 ###########################################################################
 """Tests for the 'verdi code' command."""
 
-import io
 import os
 import pathlib
 import tempfile
@@ -40,26 +39,6 @@ def code(aiida_localhost):
     code.store()
 
     return code
-
-
-def test_help(run_cli_command):
-    """Test the help message."""
-    run_cli_command(cmd_code.setup_code, ['--help'])
-
-
-def test_code_setup_deprecation(run_cli_command):
-    """Checks if a deprecation warning is printed in stdout and stderr."""
-    # Checks if the deprecation warning is present when invoking the help page
-    result = run_cli_command(cmd_code.setup_code, ['--help'])
-    assert 'Deprecated:' in result.output
-    assert 'Deprecated:' in result.stderr
-
-    # Checks if the deprecation warning is present when invoking the command
-    # Runs setup in interactive mode and sends Ctrl+D (\x04) as input so we exit the prompts.
-    # This way we can check if the deprecated message was printed with the first prompt.
-    result = run_cli_command(cmd_code.setup_code, user_input='\x04', use_subprocess=True, raises=True)
-    assert 'Deprecated:' in result.output
-    assert 'Deprecated:' in result.stderr
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
@@ -322,70 +301,6 @@ def test_code_duplicate_non_interactive(run_cli_command, code, non_interactive_e
 
 
 @pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
-def test_noninteractive_remote(run_cli_command, aiida_localhost, non_interactive_editor):
-    """Test non-interactive remote code setup."""
-    label = 'noninteractive_remote'
-    options = [
-        '--non-interactive',
-        f'--label={label}',
-        '--description=description',
-        '--input-plugin=core.arithmetic.add',
-        '--on-computer',
-        f'--computer={aiida_localhost.label}',
-        '--remote-abs-path=/remote/abs/path',
-    ]
-    run_cli_command(cmd_code.setup_code, options)
-    assert isinstance(load_code(label), InstalledCode)
-
-
-@pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
-def test_noninteractive_upload(run_cli_command, non_interactive_editor):
-    """Test non-interactive code setup."""
-    label = 'noninteractive_upload'
-    options = [
-        '--non-interactive',
-        f'--label={label}',
-        '--description=description',
-        '--input-plugin=core.arithmetic.add',
-        '--store-in-db',
-        f'--code-folder={os.path.dirname(__file__)}',
-        f'--code-rel-path={os.path.basename(__file__)}',
-    ]
-    run_cli_command(cmd_code.setup_code, options)
-    assert isinstance(load_code(label), PortableCode)
-
-
-@pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
-def test_interactive_remote(run_cli_command, aiida_localhost, non_interactive_editor):
-    """Test interactive remote code setup."""
-    label = 'interactive_remote'
-    user_input = '\n'.join(['yes', aiida_localhost.label, label, 'desc', 'core.arithmetic.add', '/remote/path', 'y'])  # noqa: FLY002
-    run_cli_command(cmd_code.setup_code, user_input=user_input)
-    assert isinstance(load_code(label), InstalledCode)
-
-
-@pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
-def test_interactive_upload(run_cli_command, non_interactive_editor):
-    """Test interactive code setup."""
-    label = 'interactive_upload'
-    dirname = os.path.dirname(__file__)
-    basename = os.path.basename(__file__)
-    user_input = '\n'.join(['no', label, 'description', 'core.arithmetic.add', dirname, basename, 'y'])  # noqa: FLY002
-    run_cli_command(cmd_code.setup_code, user_input=user_input)
-    assert isinstance(load_code(label), PortableCode)
-
-
-@pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
-def test_mixed(run_cli_command, aiida_localhost, non_interactive_editor):
-    """Test mixed (interactive/from config) code setup."""
-    label = 'mixed_remote'
-    options = ['--description=description', '--on-computer', '--remote-abs-path=/remote/path']
-    user_input = '\n'.join([aiida_localhost.label, label, 'core.arithmetic.add', 'y'])  # noqa: FLY002
-    run_cli_command(cmd_code.setup_code, options, user_input=user_input)
-    assert isinstance(load_code(label), InstalledCode)
-
-
-@pytest.mark.parametrize('non_interactive_editor', ('vim -cwq',), indirect=True)
 def test_code_duplicate_interactive(run_cli_command, aiida_code_installed, non_interactive_editor):
     """Test code duplication interactive."""
     label = 'code_duplicate_interactive'
@@ -518,8 +433,8 @@ def test_from_config_local_file(non_interactive_editor, run_cli_command, aiida_l
         """
         label: {label}
         computer: {computer}
-        input_plugin: core.arithmetic.add
-        remote_abs_path: /remote/abs/path
+        default_calc_job_plugin: core.arithmetic.add
+        filepath_executable: /remote/abs/path
         """
     )
 
@@ -527,7 +442,10 @@ def test_from_config_local_file(non_interactive_editor, run_cli_command, aiida_l
     with tempfile.NamedTemporaryFile('w') as handle:
         handle.write(config_file_template.format(label=label, computer=aiida_localhost.label))
         handle.flush()
-        run_cli_command(cmd_code.setup_code, ['--non-interactive', '--config', os.path.realpath(handle.name)])
+        run_cli_command(
+            cmd_code.code_create,
+            ['core.code.installed', '--non-interactive', '--config', os.path.realpath(handle.name)],
+        )
         assert isinstance(load_code(label), InstalledCode)
 
 
@@ -546,111 +464,17 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
         """
         label: {label}
         computer: {computer}
-        input_plugin: core.arithmetic.add
-        remote_abs_path: /remote/abs/path
+        default_calc_job_plugin: core.arithmetic.add
+        filepath_executable: /remote/abs/path
         """
     )
 
     label = 'noninteractive_config_url'
     fake_url = 'https://my.url.com'
-    run_cli_command(cmd_code.setup_code, ['--non-interactive', '--config', fake_url], use_subprocess=False)
-    assert isinstance(load_code(label), InstalledCode)
-
-
-@pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
-def test_code_setup_remote_duplicate_full_label_interactive(
-    run_cli_command, aiida_code_installed, aiida_localhost, non_interactive_editor
-):
-    """Test ``verdi code setup`` for a remote code in interactive mode specifying an existing full label."""
-    label = 'some-label'
-    aiida_code_installed(
-        default_calc_job_plugin='core.arithmetic.add',
-        filepath_executable='/bin/cat',
-        computer=aiida_localhost,
-        label=label,
+    run_cli_command(
+        cmd_code.code_create, ['core.code.installed', '--non-interactive', '--config', fake_url], use_subprocess=False
     )
     assert isinstance(load_code(label), InstalledCode)
-
-    label_unique = 'label-unique'
-    user_input = '\n'.join(  # noqa: FLY002
-        ['yes', aiida_localhost.label, label, label_unique, 'd', 'core.arithmetic.add', '/bin/bash', 'y']
-    )
-    run_cli_command(cmd_code.setup_code, user_input=user_input)
-    assert isinstance(load_code(label_unique), InstalledCode)
-
-
-@pytest.mark.parametrize('label_first', (True, False))
-def test_code_setup_remote_duplicate_full_label_non_interactive(
-    run_cli_command, aiida_code_installed, aiida_localhost, label_first
-):
-    """Test ``verdi code setup`` for a remote code in non-interactive mode specifying an existing full label."""
-    label = f'some-label-{label_first}'
-    aiida_code_installed(
-        default_calc_job_plugin='core.arithmetic.add',
-        filepath_executable='/bin/cat',
-        computer=aiida_localhost,
-        label=label,
-    )
-    assert isinstance(load_code(label), InstalledCode)
-
-    options = ['-n', '-D', 'd', '-P', 'core.arithmetic.add', '--on-computer', '--remote-abs-path=/remote/abs/path']
-
-    if label_first:
-        options.extend(['--label', label, '--computer', aiida_localhost.label])
-    else:
-        options.extend(['--computer', aiida_localhost.label, '--label', label])
-
-    result = run_cli_command(cmd_code.setup_code, options, raises=True)
-    assert f'the code `{label}@{aiida_localhost.label}` already exists.' in result.output
-
-
-@pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.parametrize('non_interactive_editor', ('sleep 1; vim -cwq',), indirect=True)
-def test_code_setup_local_duplicate_full_label_interactive(run_cli_command, non_interactive_editor, tmp_path):
-    """Test ``verdi code setup`` for a local code in interactive mode specifying an existing full label."""
-    filepath = tmp_path / 'bash'
-    filepath.write_text('fake bash')
-
-    label = 'some-label'
-    code = PortableCode(filepath_executable='bash', filepath_files=tmp_path)
-    code.label = label
-    code.store()
-    assert isinstance(load_code(label), PortableCode)
-
-    label_unique = 'label-unique'
-    user_input = '\n'.join(['no', label, label_unique, 'd', 'core.arithmetic.add', str(tmp_path), filepath.name, 'y'])
-    run_cli_command(cmd_code.setup_code, user_input=user_input)
-    assert isinstance(load_code(label_unique), PortableCode)
-
-
-@pytest.mark.usefixtures('aiida_profile_clean')
-def test_code_setup_local_duplicate_full_label_non_interactive(run_cli_command, tmp_path):
-    """Test ``verdi code setup`` for a local code in non-interactive mode specifying an existing full label."""
-    label = 'some-label'
-    tmp_bin_dir = tmp_path / 'bin'
-    tmp_bin_dir.mkdir()
-    (tmp_bin_dir / 'bash').touch()
-    code = PortableCode(filepath_executable='bash', filepath_files=tmp_bin_dir)
-    code.label = label
-    code.base.repository.put_object_from_filelike(io.BytesIO(b''), 'bash')
-    code.store()
-    assert isinstance(load_code(label), PortableCode)
-
-    options = [
-        '-n',
-        '-D',
-        'd',
-        '-P',
-        'core.arithmetic.add',
-        '--store-in-db',
-        f'--code-folder={tmp_bin_dir}',
-        '--code-rel-path=bash',
-        '--label',
-        label,
-    ]
-
-    result = run_cli_command(cmd_code.setup_code, options, raises=True)
-    assert f'the code `{label}` already exists.' in result.output
 
 
 def test_validate_label_uniqueness(monkeypatch, aiida_localhost):
@@ -662,13 +486,13 @@ def test_validate_label_uniqueness(monkeypatch, aiida_localhost):
 
     monkeypatch.setattr(orm, 'load_code', load_code)
 
-    ctx = click.Context(cmd_code.setup_code)
+    ctx = click.Context(cmd_code.code_duplicate)
     ctx.params = {'on_computer': False}
 
     with pytest.raises(click.BadParameter, match=r'multiple copies of the remote code `.*` already exist.'):
         validate_label_uniqueness(ctx, None, 'some-code')
 
-    ctx = click.Context(cmd_code.setup_code)
+    ctx = click.Context(cmd_code.code_duplicate)
     ctx.params = {'on_computer': None, 'computer': aiida_localhost}
 
     with pytest.raises(click.BadParameter, match=r'multiple copies of the local code `.*` already exist.'):

@@ -270,8 +270,8 @@ def required_arguments(request, default_user, aiida_localhost, tmp_path):
         (tmp_path / 'text_file').write_text('text content')
 
         def assert_derived_folder_properties(node: orm.FolderData):
-            assert node.get_object_content('binary_file', mode='rb') == b'byte content'
-            assert node.get_object_content('text_file', mode='r') == 'text content'
+            assert node.base.repository.get_object_content('binary_file', mode='rb') == b'byte content'
+            assert node.base.repository.get_object_content('text_file', mode='r') == 'text content'
 
         return {
             'cls': orm.FolderData,

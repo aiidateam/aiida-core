@@ -3,7 +3,6 @@
 import numpy as np
 import pytest
 
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import StructureData, TrajectoryData, load_node
 from aiida.orm.nodes.data.array.trajectory import plot_positions_XYZ
 
@@ -263,7 +262,7 @@ class TestTrajectory:
                 'pbc': None,
             }
         )
-        with pytest.warns(AiidaDeprecationWarning, match="When 'cells' is not None, the periodic"):
+        with pytest.raises(ValueError, match="When 'cells' is not None, the periodic"):
             trajectory.set_trajectory(**data)
 
         data.update(

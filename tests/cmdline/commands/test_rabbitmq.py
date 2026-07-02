@@ -40,29 +40,6 @@ def test_tasks_list(monkeypatch, run_cli_command):
     assert result.output == '1\n2\n3\n'
 
 
-@pytest.mark.usefixtures('started_daemon_client')
-def test_tasks_analyze_running_daemon(run_cli_command):
-    """Test the ``tasks analyze`` command excepts when the daemon is running.
-
-    This is a copy of the test for the equivalent ``verdi process repair`` since it just forwards to that command.
-    """
-    result = run_cli_command(cmd_rabbitmq.cmd_tasks_analyze, raises=True, use_subprocess=False)
-    assert 'The daemon needs to be stopped before running this command.' in result.output
-
-
-@pytest.mark.usefixtures('stopped_daemon_client')
-def test_tasks_analyze_consistent(monkeypatch, run_cli_command):
-    """Test the ``tasks analyze`` command when everything is consistent.
-
-    This is a copy of the test for the equivalent ``verdi process repair`` since it just forwards to that command.
-    """
-    monkeypatch.setattr(control, 'get_active_processes', lambda *args, **kwargs: [1, 2, 3])
-    monkeypatch.setattr(control, 'get_process_tasks', lambda *args: [1, 2, 3])
-
-    result = run_cli_command(cmd_rabbitmq.cmd_tasks_analyze, use_subprocess=False)
-    assert 'No inconsistencies detected between database and broker.' in result.output
-
-
 @pytest.mark.usefixtures('stopped_daemon_client')
 def test_tasks_revive_without_daemon(run_cli_command):
     """Test that ``tasks revive`` fails if no daemon is running."""

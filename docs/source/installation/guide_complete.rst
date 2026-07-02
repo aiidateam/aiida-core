@@ -307,9 +307,6 @@ The exact options available for the ``verdi profile setup`` command depend on th
   If this fails, a warning is issued and the profile is configured without a broker.
   Use ``zmq`` for the built-in ZMQ broker (no external services required), or ``none`` to disable the broker entirely.
   Once the profile is created, RabbitMQ can still be enabled through ``verdi profile configure-rabbitmq`` which allows to customize the connection parameters.
-
-  .. versionadded:: 2.9
-      The ``--broker`` option replaces the deprecated ``--use-rabbitmq/--no-use-rabbitmq`` flags.
 * ``--non-interactive``: By default, the command prompts to specify a value for all options.
   Alternatively, the ``--non-interactive`` flag can be specified, in which case the command never prompts and the options need to be specified directly on the command line.
   This is useful when using ``verdi profile setup`` is used in non-interactive environments, such as scripts.

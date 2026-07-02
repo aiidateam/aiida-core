@@ -304,16 +304,6 @@ class Manager:
         option = get_option(option_name)
         return option.default
 
-    def get_backend(self) -> 'StorageBackend':
-        """Return the current profile's storage backend, loading it if necessary.
-
-        Deprecated: use `get_profile_storage` instead.
-        """
-        from aiida.common.warnings import warn_deprecation
-
-        warn_deprecation('get_backend() is deprecated, use get_profile_storage() instead', version=3, stacklevel=3)
-        return self.get_profile_storage()
-
     def get_profile_storage(self) -> 'StorageBackend':
         """Return the current profile's storage backend, loading it if necessary."""
         from aiida.common import ConfigurationError

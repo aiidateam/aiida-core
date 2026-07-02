@@ -40,7 +40,6 @@ from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 from aiida.orm.fields import QbAttributesField, QbFields, add_field
 from aiida.orm.utils.node import (
@@ -189,7 +188,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def _plugin_type_string(cls) -> str:  # noqa: N805
         """Return the plugin type string of this node class."""
         if not hasattr(cls, '__plugin_type_string'):
-            cls.__plugin_type_string = get_type_string_from_class(cls.__module__, cls.__name__)  # type: ignore[misc]
+            cls.__plugin_type_string = get_type_string_from_class(cls.__module__, cls.__name__)  # type: ignore[misc, attr-defined]
         return cls.__plugin_type_string
 
     @classproperty
@@ -593,7 +592,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
         from aiida.plugins.entry_point import get_entry_point_from_class
 
-        return get_entry_point_from_class(cls.__module__, cls.__name__)[1]
+        return get_entry_point_from_class(cls.__module__, cls.__name__)[1]  # type: ignore[attr-defined]
 
     @property
     def logger(self) -> AiidaLoggerType:
@@ -836,7 +835,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def _add_outputs_from_cache(self, cache_node: Node) -> None:
         """Replicate the output links and nodes from the cached node onto this node."""
         for entry in cache_node.base.links.get_outgoing(link_type=LinkType.CREATE):
-            new_node = entry.node.clone()
+            new_node = entry.node.clone()  # type: ignore[attr-defined]
             new_node.base.links.add_incoming(self, link_type=LinkType.CREATE, link_label=entry.link_label)
             new_node.store()
 
@@ -853,184 +852,6 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         :return: The computer pk or None if no computer is set.
         """
         return self.computer.pk if self.computer else None
-
-    @property
-    def is_valid_cache(self) -> bool:
-        """Hook to exclude certain ``Node`` classes from being considered a valid cache.
-
-        The base class assumes that all node instances are valid to cache from, unless the ``_VALID_CACHE_KEY`` extra
-        has been set to ``False`` explicitly. Subclasses can override this property with more specific logic, but should
-        probably also consider the value returned by this base class.
-        """
-        kls = self.__class__.__name__
-        warn_deprecation(
-            f'`{kls}.is_valid_cache` is deprecated, use `{kls}.base.caching.is_valid_cache` instead.',
-            version=3,
-            stacklevel=2,
-        )
-        return self.base.caching.is_valid_cache
-
-    @is_valid_cache.setter
-    def is_valid_cache(self, valid: bool) -> None:
-        """Set whether this node instance is considered valid for caching or not.
-
-        If a node instance has this property set to ``False``, it will never be used in the caching mechanism, unless
-        the subclass overrides the ``is_valid_cache`` property and ignores it implementation completely.
-
-        :param valid: whether the node is valid or invalid for use in caching.
-        """
-        kls = self.__class__.__name__
-        warn_deprecation(
-            f'`{kls}.is_valid_cache` is deprecated, use `{kls}.base.caching.is_valid_cache` instead.',
-            version=3,
-            stacklevel=2,
-        )
-        self.base.caching.is_valid_cache = valid
-
-    _deprecated_repo_methods = {
-        'copy_tree': 'copy_tree',
-        'delete_object': 'delete_object',
-        'get_object': 'get_object',
-        'get_object_content': 'get_object_content',
-        'glob': 'glob',
-        'list_objects': 'list_objects',
-        'list_object_names': 'list_object_names',
-        'open': 'open',
-        'put_object_from_filelike': 'put_object_from_filelike',
-        'put_object_from_file': 'put_object_from_file',
-        'put_object_from_tree': 'put_object_from_tree',
-        'walk': 'walk',
-        'repository_metadata': 'metadata',
-    }
-
-    _deprecated_attr_methods = {
-        'attributes': 'all',
-        'get_attribute': 'get',
-        'get_attribute_many': 'get_many',
-        'set_attribute': 'set',
-        'set_attribute_many': 'set_many',
-        'reset_attributes': 'reset',
-        'delete_attribute': 'delete',
-        'delete_attribute_many': 'delete_many',
-        'clear_attributes': 'clear',
-        'attributes_items': 'items',
-        'attributes_keys': 'keys',
-    }
-
-    _deprecated_extra_methods = {
-        'extras': 'all',
-        'get_extra': 'get',
-        'get_extra_many': 'get_many',
-        'set_extra': 'set',
-        'set_extra_many': 'set_many',
-        'reset_extras': 'reset',
-        'delete_extra': 'delete',
-        'delete_extra_many': 'delete_many',
-        'clear_extras': 'clear',
-        'extras_items': 'items',
-        'extras_keys': 'keys',
-    }
-
-    _deprecated_comment_methods = {
-        'add_comment': 'add',
-        'get_comment': 'get',
-        'get_comments': 'all',
-        'remove_comment': 'remove',
-        'update_comment': 'update',
-    }
-
-    _deprecated_caching_methods = {
-        'get_hash': 'get_hash',
-        '_get_hash': '_get_hash',
-        '_get_objects_to_hash': '_get_objects_to_hash',
-        'rehash': 'rehash',
-        'clear_hash': 'clear_hash',
-        'get_cache_source': 'get_cache_source',
-        'is_created_from_cache': 'is_created_from_cache',
-        '_get_same_node': '_get_same_node',
-        'get_all_same_nodes': 'get_all_same_nodes',
-        '_iter_all_same_nodes': '_iter_all_same_nodes',
-    }
-
-    _deprecated_links_methods = {
-        'add_incoming': 'add_incoming',
-        'validate_incoming': 'validate_incoming',
-        'validate_outgoing': 'validate_outgoing',
-        'get_stored_link_triples': 'get_stored_link_triples',
-        'get_incoming': 'get_incoming',
-        'get_outgoing': 'get_outgoing',
-    }
-
-    @classproperty
-    def Collection(cls) -> type[NodeCollection]:  # noqa: N802, N805
-        """Return the collection type for this class.
-
-        This used to be a class argument with the value ``NodeCollection``. The argument is deprecated and this property
-        is here for backwards compatibility to print the deprecation warning.
-        """
-        warn_deprecation(
-            'This attribute is deprecated, use `aiida.orm.nodes.node.NodeCollection` instead.', version=3, stacklevel=2
-        )
-        return NodeCollection
-
-    def __getattr__(self, name: str) -> Any:
-        """This method is called when an attribute is not found in the instance.
-
-        It allows for the handling of deprecated mixin methods.
-        """
-        if name in self._deprecated_extra_methods:
-            new_name = self._deprecated_extra_methods[name]
-            kls = self.__class__.__name__
-            warn_deprecation(
-                f'`{kls}.{name}` is deprecated, use `{kls}.base.extras.{new_name}` instead.', version=3, stacklevel=3
-            )
-            return getattr(self.base.extras, new_name)
-
-        if name in self._deprecated_attr_methods:
-            new_name = self._deprecated_attr_methods[name]
-            kls = self.__class__.__name__
-            warn_deprecation(
-                f'`{kls}.{name}` is deprecated, use `{kls}.base.attributes.{new_name}` instead.',
-                version=3,
-                stacklevel=3,
-            )
-            return getattr(self.base.attributes, new_name)
-
-        if name in self._deprecated_repo_methods:
-            new_name = self._deprecated_repo_methods[name]
-            kls = self.__class__.__name__
-            warn_deprecation(
-                f'`{kls}.{name}` is deprecated, use `{kls}.base.repository.{new_name}` instead.',
-                version=3,
-                stacklevel=3,
-            )
-            return getattr(self.base.repository, new_name)
-
-        if name in self._deprecated_comment_methods:
-            new_name = self._deprecated_comment_methods[name]
-            kls = self.__class__.__name__
-            warn_deprecation(
-                f'`{kls}.{name}` is deprecated, use `{kls}.base.comments.{new_name}` instead.', version=3, stacklevel=3
-            )
-            return getattr(self.base.comments, new_name)
-
-        if name in self._deprecated_caching_methods:
-            new_name = self._deprecated_caching_methods[name]
-            kls = self.__class__.__name__
-            warn_deprecation(
-                f'`{kls}.{name}` is deprecated, use `{kls}.base.caching.{new_name}` instead.', version=3, stacklevel=3
-            )
-            return getattr(self.base.caching, new_name)
-
-        if name in self._deprecated_links_methods:
-            new_name = self._deprecated_links_methods[name]
-            kls = self.__class__.__name__
-            warn_deprecation(
-                f'`{kls}.{name}` is deprecated, use `{kls}.base.links.{new_name}` instead.', version=3, stacklevel=3
-            )
-            return getattr(self.base.links, new_name)
-
-        raise AttributeError(name)
 
     @classmethod
     def _patch_qb_fields(cls) -> None:

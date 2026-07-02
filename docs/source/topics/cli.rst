@@ -114,7 +114,7 @@ In order to use a different profile, pass the ``-p/--profile`` option to any ``v
     verdi -p <profile> process list
 
 Note that the specified profile will be used for this and *only* this command.
-Use ``verdi profile setdefault`` in order to permanently change the default profile.
+Use ``verdi profile set-default`` in order to permanently change the default profile.
 
 
 .. _topics:cli:verbosity:

@@ -11,8 +11,6 @@
 from __future__ import annotations
 
 import collections
-import os
-import pathlib
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
@@ -202,68 +200,6 @@ class Profile:
         :param value: boolean indicating whether this profile is a test profile.
         """
         self._attributes[self.KEY_TEST_PROFILE] = value
-
-    @property
-    def repository_path(self) -> pathlib.Path:
-        """Return the absolute path of the repository configured for this profile.
-
-        The URI should be in the format `protocol://address`
-
-        :note: At the moment, only the file protocol is supported.
-
-        :return: absolute filepath of the profile's file repository
-        """
-        from urllib.parse import urlparse
-
-        from aiida.common.utils import url2pathname
-        from aiida.common.warnings import warn_deprecation
-
-        warn_deprecation('This method has been deprecated', version=3)
-
-        if 'repository_uri' not in self.storage_config:
-            raise KeyError('repository_uri not defined in profile storage config')
-
-        parts = urlparse(self.storage_config['repository_uri'])
-
-        if parts.scheme != 'file':
-            raise exceptions.ConfigurationError('invalid repository protocol, only the local `file://` is supported')
-
-        if not os.path.isabs(url2pathname(parts.path)):
-            raise exceptions.ConfigurationError('invalid repository URI: the path has to be absolute')
-
-        return pathlib.Path(os.path.expanduser(url2pathname(parts.path)))
-
-    @property
-    def filepaths(self):
-        """Return the filepaths used by this profile.
-
-        :return: a dictionary of filepaths
-        """
-        from aiida.common.warnings import warn_deprecation
-        from aiida.manage.configuration.settings import AiiDAConfigPathResolver
-
-        warn_deprecation('This method has been deprecated, use `filepaths` method from `Config` obj instead', version=3)
-
-        daemon_dir = AiiDAConfigPathResolver().daemon_dir
-        daemon_log_dir = AiiDAConfigPathResolver().daemon_log_dir
-
-        return {
-            'circus': {
-                'log': str(daemon_log_dir / f'circus-{self.name}.log'),
-                'pid': str(daemon_dir / f'circus-{self.name}.pid'),
-                'port': str(daemon_dir / f'circus-{self.name}.port'),
-                'socket': {
-                    'file': str(daemon_dir / f'circus-{self.name}.sockets'),
-                    'controller': 'circus.c.sock',
-                    'pubsub': 'circus.p.sock',
-                    'stats': 'circus.s.sock',
-                },
-            },
-            'daemon': {
-                'log': str(daemon_log_dir / f'aiida-{self.name}.log'),
-                'pid': str(daemon_dir / f'aiida-{self.name}.pid'),
-            },
-        }
 
     def dump(
         self,

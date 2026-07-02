@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import typing as t
 
-from aiida.common.warnings import warn_deprecation
 from aiida.orm.pydantic import OrmMetadataField
 
 from .array import ArrayData
@@ -177,12 +176,10 @@ class TrajectoryData(ArrayData):
         if cells is None:
             pbc = pbc or (False, False, False)
         elif pbc is None:
-            warn_deprecation(
-                "When 'cells' is not None, the periodic boundary conditions should be explicitly specified via "
-                "the 'pbc' keyword argument. Defaulting to '[True, True, True]', but this will raise in v3.0.0.",
-                version=3,
+            raise ValueError(
+                "When 'cells' is not None, the periodic boundary conditions must be explicitly specified via "
+                "the 'pbc' keyword argument."
             )
-            pbc = (True, True, True)
 
         self._internal_validate(stepids, cells, symbols, positions, times, velocities, pbc)
         # set symbols/pbc as attributes for easier querying

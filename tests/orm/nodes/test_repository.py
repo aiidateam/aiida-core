@@ -7,7 +7,6 @@ import zipfile
 import pytest
 
 from aiida.common import exceptions
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.engine import ProcessState
 from aiida.manage.caching import enable_caching
 from aiida.orm import CalcJobNode, Data, load_node
@@ -250,15 +249,6 @@ def test_copy_tree(tmp_path):
     assert filepath.is_file()
     with node.base.repository.open('relative/path', 'rb') as handle:
         assert filepath.read_bytes() == handle.read()
-
-
-def test_deprecated_methods(monkeypatch):
-    """Test calling (deprecated) methods, directly from the `Node` instance still works."""
-    node = Data()
-    monkeypatch.setenv('AIIDA_WARN_v3', 'true')
-    for method in node._deprecated_repo_methods:
-        with pytest.warns(AiidaDeprecationWarning):
-            getattr(node, method)
 
 
 def test_as_path():

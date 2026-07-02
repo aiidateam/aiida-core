@@ -13,7 +13,7 @@ from __future__ import annotations
 import abc
 import typing as t
 
-from aiida.common import exceptions, log, warnings
+from aiida.common import exceptions, log
 from aiida.common.datastructures import CodeRunMode
 from aiida.common.escaping import escape_for_bash
 from aiida.common.lang import classproperty
@@ -216,13 +216,6 @@ class Scheduler(metaclass=abc.ABCMeta):
         script_header = self._get_submit_script_header(job_tmpl)
         script_lines.append(script_header)
         script_lines.append(empty_line)
-
-        if '# ENVIRONMENT VARIABLES BEGIN ###' in script_header:
-            warnings.warn_deprecation(
-                f'Environment variables added by `{self.__class__.__name__}._get_submit_script_environment_variables`, '
-                'however, this is no longer necessary and automatically done by the base `Scheduler` class.',
-                version=3,
-            )
 
         if job_tmpl.job_environment:
             script_lines.append(self._get_submit_script_environment_variables(job_tmpl))

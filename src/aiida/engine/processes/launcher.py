@@ -54,7 +54,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         from aiida.common import exceptions
         from aiida.engine.exceptions import PastException
         from aiida.orm import Data, load_node
-        from aiida.orm.utils import serialize
+        from aiida.orm.utils import serialization
 
         try:
             node = load_node(pk=pid)
@@ -128,7 +128,7 @@ class ProcessLauncher(plumpy.ProcessLauncher):
 
         # Ensure that the result is serialized such that communication thread won't have to do database operations
         try:
-            serialized = serialize.serialize(result)
+            serialized = serialization.serialize(result)
         except Exception:
             LOGGER.exception('failed to serialize the result for process<%d>', pid)
             raise

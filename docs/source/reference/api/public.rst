@@ -33,11 +33,20 @@ If a module is mentioned, then all the resources defined in its ``__all__`` are 
 
 .. autoattribute:: aiida.cmdline.__all__
 
-Since some ``click`` argument and option decorators clash, these may be imported at a lower level:
+The CLI construction toolkit is public at the module level: the modules ``aiida.cmdline.params.arguments``, ``aiida.cmdline.params.options``, ``aiida.cmdline.params.types``, ``aiida.cmdline.utils.echo`` and ``aiida.cmdline.utils.decorators`` are supported import targets for plugins that build ``verdi``-style command lines.
+Since some ``click`` argument and option decorators clash, arguments and options are not flattened into ``aiida.cmdline`` and should be imported from their module:
 
 .. autoattribute:: aiida.cmdline.params.arguments.__all__
 
 .. autoattribute:: aiida.cmdline.params.options.__all__
+
+.. autoattribute:: aiida.cmdline.params.types.__all__
+
+
+``aiida.brokers``
+.................
+
+.. autoattribute:: aiida.brokers.__all__
 
 
 ``aiida.common``
@@ -73,10 +82,22 @@ Since some ``click`` argument and option decorators clash, these may be imported
 .. autoattribute:: aiida.plugins.__all__
 
 
+``aiida.repository``
+....................
+
+.. autoattribute:: aiida.repository.__all__
+
+
 ``aiida.schedulers``
 ....................
 
 .. autoattribute:: aiida.schedulers.__all__
+
+
+``aiida.storage``
+.................
+
+.. autoattribute:: aiida.storage.__all__
 
 
 ``aiida.tools``

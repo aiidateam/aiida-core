@@ -19,15 +19,19 @@ import inspect
 from dataclasses import asdict, is_dataclass
 from enum import Enum
 from functools import partial
-from typing import Any, Protocol, Type, overload
+from typing import TYPE_CHECKING, Any, Protocol, Type, overload
 
 import yaml
 from plumpy import Bundle, get_object_loader
 from plumpy.utils import AttributesFrozendict
 
-from aiida import orm
 from aiida.common import AttributeDict
 from aiida.orm.utils.managers import NodeLinksManager
+
+if TYPE_CHECKING:
+    from aiida import orm
+
+__all__ = ('deserialize_unsafe', 'serialize')
 
 _ENUM_TAG = '!enum'
 _DATACLASS_TAG = '!dataclass'
@@ -83,6 +87,8 @@ def represent_node(dumper: yaml.Dumper, node: orm.Node) -> yaml.ScalarNode:
 
 def node_constructor(loader: yaml.Loader, node: yaml.Node) -> orm.Node:
     """Load a node from the yaml representation."""
+    from aiida import orm
+
     yaml_node = loader.construct_scalar(node)  # type: ignore[arg-type]
     return orm.load_node(uuid=yaml_node)
 
@@ -99,6 +105,7 @@ def represent_node_links_manager(dumper: yaml.Dumper, node_links_manager: NodeLi
 
 def node_links_manager_constructor(loader: yaml.Loader, node_links_manager: yaml.Node) -> NodeLinksManager:
     """Load a link from the yaml representation."""
+    from aiida import orm
     from aiida.common.links import LinkType
 
     yaml_node_links_manager = loader.construct_mapping(node_links_manager)  # type: ignore[arg-type]
@@ -117,6 +124,8 @@ def represent_group(dumper: yaml.Dumper, group: orm.Group) -> yaml.ScalarNode:
 
 def group_constructor(loader: yaml.Loader, group: yaml.Node) -> orm.Group:
     """Load a group from the yaml representation."""
+    from aiida import orm
+
     yaml_node = loader.construct_scalar(group)  # type: ignore[arg-type]
     return orm.load_group(uuid=yaml_node)
 
@@ -130,6 +139,8 @@ def represent_computer(dumper: yaml.Dumper, computer: orm.Computer) -> yaml.Scal
 
 def computer_constructor(loader: yaml.Loader, computer: yaml.Node) -> orm.Computer:
     """Load a computer from the yaml representation."""
+    from aiida import orm
+
     yaml_node = loader.construct_scalar(computer)  # type: ignore[arg-type]
     return orm.Computer.collection.get(uuid=yaml_node)
 
@@ -172,6 +183,8 @@ class AiiDADumper(yaml.Dumper):
     """
 
     def represent_data(self, data):
+        from aiida import orm
+
         if isinstance(data, orm.Node):
             return represent_node(self, data)
         if isinstance(data, NodeLinksManager):

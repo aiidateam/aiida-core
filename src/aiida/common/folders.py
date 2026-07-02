@@ -26,6 +26,8 @@ from . import timezone
 from .lang import type_check
 from .typing import FilePath
 
+__all__ = ('Folder', 'SandboxFolder', 'SubmitTestFolder')
+
 # If True, tries to make everything (dirs, files) group-writable.
 # Otherwise, tries to make everything only readable and writable by the user.
 GROUP_WRITABLE = True

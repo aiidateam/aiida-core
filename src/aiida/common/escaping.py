@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import re
 
+__all__ = ('escape_for_bash', 'escape_for_sql_like')
+
 
 def escape_for_bash(str_to_escape: str | None, use_double_quotes: bool | None = False) -> str:
     """This function takes any string and escapes it in a way that

@@ -23,7 +23,17 @@ from . import factories
 if TYPE_CHECKING:
     from importlib.metadata import EntryPoint, EntryPoints
 
-__all__ = ('get_entry_points', 'load_entry_point', 'load_entry_point_from_string', 'parse_entry_point')
+__all__ = (
+    'get_entry_point',
+    'get_entry_point_from_class',
+    'get_entry_point_from_string',
+    'get_entry_point_names',
+    'get_entry_points',
+    'is_valid_entry_point_string',
+    'load_entry_point',
+    'load_entry_point_from_string',
+    'parse_entry_point',
+)
 
 ENTRY_POINT_GROUP_PREFIX = 'aiida.'
 ENTRY_POINT_STRING_SEPARATOR = ':'

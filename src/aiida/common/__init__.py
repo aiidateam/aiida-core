@@ -16,18 +16,26 @@
 
 # fmt: off
 
+from .constants import *
 from .datastructures import *
+from .escaping import *
 from .exceptions import *
 from .extendeddicts import *
+from .folders import *
+from .lang import *
 from .links import *
 from .log import *
 from .progress_reporter import *
 from .utils import *
+from .warnings import *
 
 __all__ = (
     'AIIDA_LOGGER',
     'TQDM_BAR_FORMAT',
+    'AiidaDeprecationWarning',
+    'AiidaEntryPointWarning',
     'AiidaException',
+    'AiidaTestWarning',
     'AttributeDict',
     'CalcInfo',
     'CalcJobState',
@@ -45,6 +53,7 @@ __all__ = (
     'FeatureDisabled',
     'FeatureNotAvailable',
     'FixedFieldsAttributeDict',
+    'Folder',
     'GraphTraversalRule',
     'GraphTraversalRules',
     'HashingError',
@@ -73,10 +82,12 @@ __all__ = (
     'ProfileConfigurationError',
     'ProgressReporterAbstract',
     'RemoteOperationError',
+    'SandboxFolder',
     'StashMode',
     'StorageBackupError',
     'StorageMigrationError',
     'StoringNotAllowed',
+    'SubmitTestFolder',
     'TestsNotAllowedError',
     'TransportTaskException',
     'UniquenessError',
@@ -84,13 +95,20 @@ __all__ = (
     'UnsupportedSchemaError',
     'UnsupportedSpeciesError',
     'ValidationError',
+    'classproperty',
     'create_callback',
+    'elements',
+    'escape_for_bash',
+    'escape_for_sql_like',
     'get_progress_reporter',
+    'override',
     'override_log_level',
     'set_progress_bar_tqdm',
     'set_progress_reporter',
+    'type_check',
     'url2pathname',
     'validate_link_label',
+    'warn_deprecation',
 )
 
 # fmt: on

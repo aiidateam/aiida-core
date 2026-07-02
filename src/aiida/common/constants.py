@@ -8,6 +8,8 @@
 ###########################################################################
 """Module to define the (physical) constants used throughout the code."""
 
+__all__ = ('elements',)
+
 # This is the precision with which AiiDA internally will store float numbers
 # In particular, before storing a number (in attributes/extras),
 # when going via clean_value, AiiDA will first serialize to a string with

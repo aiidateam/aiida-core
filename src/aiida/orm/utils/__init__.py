@@ -17,6 +17,7 @@ from .links import *
 from .loaders import *
 from .managers import *
 from .node import *
+from .serialization import *
 
 __all__ = (
     'AbstractNodeMeta',
@@ -32,6 +33,7 @@ __all__ = (
     'NodeEntityLoader',
     'NodeLinksManager',
     'OrmEntityLoader',
+    'deserialize_unsafe',
     'get_loader',
     'get_query_type_from_type_string',
     'get_type_string_from_class',
@@ -41,6 +43,7 @@ __all__ = (
     'load_group',
     'load_node',
     'load_node_class',
+    'serialize',
     'validate_link',
 )
 

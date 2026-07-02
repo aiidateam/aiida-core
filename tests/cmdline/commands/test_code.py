@@ -47,6 +47,20 @@ def test_help(run_cli_command):
     run_cli_command(cmd_code.setup_code, ['--help'])
 
 
+def test_code_create_help(run_cli_command):
+    """Test the help message of the ``verdi code create`` group.
+
+    Regression test for https://github.com/aiidateam/aiida-core/issues/7379: the ``core.code.abstract`` entry
+    point resolves to the abstract base class ``AbstractCode`` which cannot be created through the CLI. Rendering
+    the help of the dynamic group used to crash with an ``UnsupportedSchemaError`` while building its options.
+    """
+    result = run_cli_command(cmd_code.code_create, ['--help'])
+    assert 'core.code.containerized' in result.output
+    assert 'core.code.installed' in result.output
+    assert 'core.code.portable' in result.output
+    assert 'core.code.abstract' not in result.output
+
+
 def test_code_setup_deprecation(run_cli_command):
     """Checks if a deprecation warning is printed in stdout and stderr."""
     # Checks if the deprecation warning is present when invoking the help page

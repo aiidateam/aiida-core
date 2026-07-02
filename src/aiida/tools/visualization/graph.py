@@ -90,7 +90,7 @@ def default_node_styles(node: orm.Node) -> dict:
     class_node_type = node.class_node_type
 
     try:
-        default = node.get_style_default()
+        default = node.get_style_default()  # type: ignore[attr-defined]
     except AttributeError:
         default = {
             'shape': 'ellipse',
@@ -224,16 +224,16 @@ def default_node_sublabels(node: orm.Node) -> str:
         sublabel = f"{node.base.attributes.get('value', '')}"
     elif class_node_type == 'data.core.code.Code.':
         label = '?' if node.computer is None else node.computer.label
-        sublabel = f'{os.path.basename(node.get_execname())}@{label}'
+        sublabel = f'{os.path.basename(node.get_execname())}@{label}'  # type: ignore[attr-defined]
     elif class_node_type == 'data.core.singlefile.SinglefileData.':
-        sublabel = node.filename
+        sublabel = node.filename  # type: ignore[attr-defined]
     elif class_node_type == 'data.core.remote.RemoteData.':
         sublabel = f'@{node.computer.label}' if node.computer is not None else '@?'
     elif class_node_type == 'data.core.structure.StructureData.':
-        sublabel = node.get_formula()
+        sublabel = node.get_formula()  # type: ignore[attr-defined]
     elif class_node_type == 'data.core.cif.CifData.':
-        formulae = [str(f).replace(' ', '') for f in node.get_formulae() or []]
-        sg_numbers = [str(s) for s in node.get_spacegroup_numbers() or []]
+        formulae = [str(f).replace(' ', '') for f in node.get_formulae() or []]  # type: ignore[attr-defined]
+        sg_numbers = [str(s) for s in node.get_spacegroup_numbers() or []]  # type: ignore[attr-defined]
         sublabel_lines = []
         if formulae:
             sublabel_lines.append(', '.join(formulae))

@@ -551,7 +551,15 @@ def _check(left, right):
 
 def _check_all(serialized: dict, entity: orm.Entity):
     for key, value in serialized.items():
-        field = getattr(entity, key)
+        # These fields are no longer exposed directly on the entity; access them via the ``base`` namespace.
+        if key == 'attributes':
+            field = entity.base.attributes.all
+        elif key == 'extras':
+            field = entity.base.extras.all
+        elif key == 'repository_metadata':
+            field = entity.base.repository.metadata
+        else:
+            field = getattr(entity, key)
         if isinstance(field, datetime.datetime):
             field = field.isoformat()
         elif field is not None and key in {'user', 'computer', 'node'}:

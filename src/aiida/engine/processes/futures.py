@@ -9,12 +9,12 @@
 """Futures that can poll or receive broadcasted messages while waiting for a task to be completed."""
 
 import asyncio
-from typing import Optional, Union
+from typing import Optional, Union, cast
 
 import kiwipy
 from plumpy import get_or_create_event_loop
 
-from aiida.orm import Node, load_node
+from aiida.orm import ProcessNode, load_node
 
 __all__ = ('ProcessFuture',)
 
@@ -49,7 +49,7 @@ class ProcessFuture(asyncio.Future):
 
         assert not (poll_interval is None and communicator is None), 'Must poll or have a communicator to use'
 
-        node = load_node(pk=pk)
+        node = cast(ProcessNode, load_node(pk=pk))
 
         if node.is_terminated:
             self.set_result(node)
@@ -80,7 +80,7 @@ class ProcessFuture(asyncio.Future):
             self._communicator = None
             self._broadcast_identifier = None
 
-    async def _poll_process(self, node: Node, poll_interval: Union[int, float]) -> None:
+    async def _poll_process(self, node: ProcessNode, poll_interval: Union[int, float]) -> None:
         """Poll whether the process node has reached a terminal state."""
         print('polling', node)
         while not self.done() and not node.is_terminated:

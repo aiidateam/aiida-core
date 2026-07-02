@@ -383,7 +383,7 @@ class ProcessDumpExecutor:
 
         # NOTE: Could also use node.label here, similar to main ProcessNode output dumping directory
         try:
-            process_label = node.process_label
+            process_label = cast('orm.ProcessNode', node).process_label
             if process_label is not None and process_label != link_label:
                 label_list += [process_label]
 

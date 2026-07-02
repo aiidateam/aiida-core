@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import pathlib
+import tempfile
 from collections import defaultdict
 from functools import partial
 from typing import TYPE_CHECKING, Any
@@ -78,8 +79,12 @@ def get_code_spec(code: Code) -> dict[str, Any]:
 
     if isinstance(code, PortableCode):
         spec['on_computer'] = False
-        spec['code_folder'] = code.get_code_folder()
-        spec['code_rel_path'] = code.get_code_rel_path()
+        # A stored ``PortableCode`` keeps its files in the node repository rather than on disk, so export them to a
+        # temporary directory that can be passed as ``filepath_files`` when reconstructing the duplicate.
+        code_folder = tempfile.mkdtemp()
+        code.base.repository.copy_tree(code_folder)
+        spec['code_folder'] = code_folder
+        spec['code_rel_path'] = str(code.filepath_executable)
     else:
         spec['on_computer'] = True
         spec['computer'] = code.computer

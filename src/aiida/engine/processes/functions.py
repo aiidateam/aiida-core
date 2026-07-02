@@ -518,7 +518,7 @@ class FunctionProcess(Process):
     def _setup_db_record(self) -> None:
         """Set up the database record for the process."""
         super()._setup_db_record()
-        self.node.store_source_info(self._func)
+        t.cast(FunctionCalculationMixin, self.node).store_source_info(self._func)
 
     @override
     async def run(self) -> 'ExitCode' | None:

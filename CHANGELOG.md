@@ -4,6 +4,10 @@
 
 ### Behavior changes
 
+**Broker: the built-in ZMQ broker is now the default for new profiles** ([#7367](https://github.com/aiidateam/aiida-core/issues/7367))
+
+`verdi presto` and `verdi profile setup` now configure the built-in ZMQ broker by default instead of RabbitMQ. ZMQ requires no external services and starts automatically with the daemon, so a new profile is immediately ready to submit processes without installing RabbitMQ. `verdi presto` no longer auto-detects a RabbitMQ server on localhost; pass `--use-rabbitmq` to use RabbitMQ explicitly (the command aborts if no RabbitMQ server can be reached). For `verdi profile setup`, pass `--broker rabbitmq`. Existing profiles are unaffected. The broker of an existing profile can be changed at any time with the new `verdi profile set-broker {rabbitmq,zmq,none}` command, which refuses to switch while processes are active and stops/restarts the daemon as needed. `verdi profile configure-rabbitmq` is deprecated in favor of `verdi profile set-broker rabbitmq`.
+
 **`verdi presto`: auto-starts the daemon** ([#7351](https://github.com/aiidateam/aiida-core/pull/7351))
 
 `verdi presto` now starts the daemon automatically after creating the profile, when a broker is configured.

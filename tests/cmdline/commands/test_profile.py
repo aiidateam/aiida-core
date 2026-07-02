@@ -412,6 +412,68 @@ def test_configure_rabbitmq(run_cli_command, isolated_config):
     assert profile.process_control_config['broker_port'] == 5672
 
 
+@pytest.mark.parametrize(
+    'backend, expected_backend',
+    (
+        pytest.param('zmq', 'core.zmq', id='zmq'),
+        pytest.param('none', None, id='none'),
+    ),
+)
+def test_set_broker(run_cli_command, isolated_config, backend, expected_backend):
+    """Test ``verdi profile set-broker`` switching a profile to the ZMQ broker or to no broker."""
+    profile_name = 'profile'
+
+    # Start from a profile that already has a (ZMQ) broker, so switching away is meaningful.
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', 'zmq']
+    run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    profile = isolated_config.get_profile(profile_name)
+    assert profile.process_control_backend == 'core.zmq'
+
+    result = run_cli_command(cmd_profile.profile_set_broker, [backend, profile_name, '-n'], use_subprocess=False)
+    profile = isolated_config.get_profile(profile_name)
+    assert profile.process_control_backend == expected_backend
+
+    if expected_backend is None:
+        assert f'Removed the broker for profile `{profile_name}`.' in result.output
+    else:
+        assert f'Broker for profile `{profile_name}` set to `{expected_backend}`.' in result.output
+
+
+@pytest.mark.requires_rmq
+def test_set_broker_rabbitmq(run_cli_command, isolated_config):
+    """Test ``verdi profile set-broker rabbitmq`` configuring RabbitMQ on a broker-less profile."""
+    profile_name = 'profile'
+
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', 'none']
+    run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    profile = isolated_config.get_profile(profile_name)
+    assert profile.process_control_backend is None
+
+    result = run_cli_command(cmd_profile.profile_set_broker, ['rabbitmq', profile_name, '-n'], use_subprocess=False)
+    profile = isolated_config.get_profile(profile_name)
+    assert profile.process_control_backend == 'core.rabbitmq'
+    assert 'Connected to RabbitMQ with the provided connection parameters' in result.output
+
+
+def test_set_broker_aborts_with_active_processes(run_cli_command, isolated_config, monkeypatch):
+    """Test that ``verdi profile set-broker`` refuses to switch while there are active processes."""
+    from aiida.engine.processes import control
+
+    profile_name = 'profile'
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', 'zmq']
+    run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+
+    # Pretend two processes are still active.
+    monkeypatch.setattr(control, 'get_active_processes', lambda **kwargs: [1, 2])
+
+    result = run_cli_command(
+        cmd_profile.profile_set_broker, ['none', profile_name, '-n'], use_subprocess=False, raises=True
+    )
+    assert '2 process(es) are still active' in result.output
+    # The broker must be left untouched.
+    assert isolated_config.get_profile(profile_name).process_control_backend == 'core.zmq'
+
+
 class TestVerdiProfileDumpCLI:
     """CLI-focused tests for `verdi profile dump` command."""
 
@@ -504,7 +566,7 @@ class TestVerdiProfileDumpCLI:
         run_cli_command(cmd_profile.profile_dump, options)
 
         # Verify the dump method was called with expected arguments
-        args, kwargs = mock_dump.call_args
+        _, kwargs = mock_dump.call_args
         assert kwargs['output_path'] == test_path.resolve()
         assert kwargs['all_entries'] is True
         assert kwargs['groups'] == [group]  # Converted to `orm.Group`

@@ -13,7 +13,6 @@ import pytest
 from aiida import __version__, get_profile
 from aiida.cmdline.commands import cmd_status
 from aiida.cmdline.utils.echo import ExitCode
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.engine.daemon.client import DaemonClient
 from aiida.storage.psql_dos import migrator
 
@@ -41,19 +40,6 @@ def test_status_no_profile(run_cli_command):
     options = []
     result = run_cli_command(cmd_status.verdi_status, options, use_subprocess=False)
     assert 'no profile configured yet' in result.output
-
-
-def test_status_no_rmq(run_cli_command):
-    """Test `verdi status` without a check for RabbitMQ."""
-    options = ['--no-rmq']
-    with pytest.warns(AiidaDeprecationWarning, match='The `--no-rmq` option is deprecated.'):
-        result = run_cli_command(cmd_status.verdi_status, options)
-
-    assert 'rabbitmq' not in result.output
-    assert result.exit_code is ExitCode.SUCCESS.value
-
-    for string in ['config', 'profile', 'storage', 'daemon']:
-        assert string in result.output
 
 
 @pytest.mark.requires_psql

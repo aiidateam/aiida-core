@@ -15,7 +15,6 @@ import pytest
 from aiida import orm
 from aiida.common import AttributeDict, LinkType
 from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError
-from aiida.common.warnings import AiidaDeprecationWarning
 
 
 def test_dot_dict_manager():
@@ -165,11 +164,6 @@ def test_link_manager_with_nested_namespaces():
     # Leafs will return an ``AttributeDict`` instance
     assert isinstance(calc.outputs.nested.sub, AttributeDict)
 
-    # Check the legacy way still works
-    with pytest.warns(Warning):
-        assert calc.inputs.nested__sub__namespace.uuid == inp1.uuid
-        assert calc.outputs.nested__sub__namespace.uuid == out1.uuid
-
     # Dunder methods should not invoke the deprecation warning
     with warnings.catch_warnings():
         warnings.simplefilter('error')
@@ -190,12 +184,10 @@ def test_link_manager_with_nested_namespaces():
 
     # Note that `remote_folder` corresponds to an actual leaf node, but it is treated like an intermediate namespace
     with pytest.raises(AttributeError):
-        with pytest.warns(AiidaDeprecationWarning):
-            _ = calc.outputs.remote_folder__namespace
+        _ = calc.outputs.remote_folder__namespace
 
     with pytest.raises(KeyError):
-        with pytest.warns(AiidaDeprecationWarning):
-            _ = calc.outputs['remote_folder__namespace']
+        _ = calc.outputs['remote_folder__namespace']
 
 
 def test_link_manager_contains():
@@ -211,15 +203,8 @@ def test_link_manager_contains():
     assert 'sub' in calc.inputs.nested
     assert 'name' in calc.inputs.nested.sub
 
-    # Check that using a double-underscore-containing key with an ``in`` statement issues a warning but works
-    with pytest.warns(Warning, match=r'The use of double underscores in keys is deprecated..*'):
-        assert 'nested__sub__name' in calc.inputs
-
-    with pytest.warns(Warning, match=r'The use of double underscores in keys is deprecated..*'):
-        assert 'nested__sub' in calc.inputs
-
-    with pytest.warns(Warning, match=r'The use of double underscores in keys is deprecated..*'):
-        assert 'spaced__sub' not in calc.inputs
-
-    with pytest.warns(Warning, match=r'The use of double underscores in keys is deprecated..*'):
-        assert 'nested__namespace' not in calc.inputs
+    # Double-underscore-containing keys are only looked up at the top level, so they are never contained
+    assert 'nested__sub__name' not in calc.inputs
+    assert 'nested__sub' not in calc.inputs
+    assert 'spaced__sub' not in calc.inputs
+    assert 'nested__namespace' not in calc.inputs

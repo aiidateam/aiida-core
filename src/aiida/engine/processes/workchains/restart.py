@@ -18,7 +18,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Tuple, Typ
 from aiida import orm
 from aiida.common import AttributeDict
 from aiida.common.links import LinkType
-from aiida.common.warnings import warn_deprecation
 
 from .context import ToContext, append_
 from .utils import ProcessHandlerReport, process_handler
@@ -72,20 +71,12 @@ def validate_handler_overrides(
         if not process_class.is_process_handler(handler):
             return f'The key `{handler}` is not a process handler of {process_class}'
 
-        if not isinstance(overrides, (bool, dict)):
-            return f'The value of key `{handler}` is not a boolean or dictionary.'
+        if not isinstance(overrides, dict):
+            return f'The value of key `{handler}` is not a dictionary.'
 
-        if isinstance(overrides, bool):
-            warn_deprecation(
-                'Setting a boolean as value for `handler_overrides` is deprecated. Use '
-                "`{'handler_name': {'enabled': " + f'{overrides}' + '}` instead.',
-                version=3,
-            )
-
-        if isinstance(overrides, dict):
-            for key in overrides.keys():
-                if key not in ['enabled', 'priority']:
-                    return f'The value of key `{handler}` contain keys `{key}` which is not supported.'
+        for key in overrides.keys():
+            if key not in ['enabled', 'priority']:
+                return f'The value of key `{handler}` contain keys `{key}` which is not supported.'
 
     return None
 
@@ -494,14 +485,8 @@ class BaseRestartWorkChain(WorkChain):
         for handler in self.get_process_handlers():
             overrides = self.ctx.handler_overrides.get(handler.__name__, {})
 
-            enabled = None
-            priority = None
-
-            if isinstance(overrides, bool):
-                enabled = overrides
-            else:
-                enabled = overrides.get('enabled')
-                priority = overrides.get('priority')
+            enabled = overrides.get('enabled')
+            priority = overrides.get('priority')
 
             if enabled is False or (enabled is None and not handler.enabled):  # type: ignore[attr-defined]
                 continue

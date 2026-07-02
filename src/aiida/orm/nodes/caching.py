@@ -7,7 +7,6 @@ import typing as t
 from aiida.common import exceptions
 from aiida.common.hashing import make_hash
 from aiida.common.lang import type_check
-from aiida.common.warnings import warn_deprecation
 
 from ..querybuilder import QueryBuilder
 
@@ -51,12 +50,6 @@ class NodeCaching:
                 raise
             self._node.logger.exception('Node hashing failed')
             return None
-
-    def _get_objects_to_hash(self) -> dict[str, t.Any]:
-        warn_deprecation(
-            '`NodeCaching._get_objects_to_hash` is deprecated, use `NodeCaching.get_objects_to_hash` instead', version=3
-        )
-        return self.get_objects_to_hash()
 
     def get_objects_to_hash(self) -> dict[str, t.Any]:
         """Return a list of objects which should be included in the hash."""

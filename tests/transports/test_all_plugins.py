@@ -13,7 +13,6 @@ Plugin specific tests will be written in the corresponding test file.
 
 import io
 import os
-import re
 import shutil
 import signal
 import tempfile
@@ -24,7 +23,6 @@ from pathlib import Path
 import psutil
 import pytest
 
-from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.plugins import SchedulerFactory, TransportFactory
 from aiida.transports import Transport
 
@@ -32,8 +30,6 @@ from aiida.transports import Transport
 # TODO : test for copy with/without patterns, overwriting folder
 # TODO : test for exotic cases of copy with source = destination
 # TODO : silly cases of copy/put/get from self to self
-
-CHDIR_WARNING = re.escape('`chdir()` is deprecated and will be removed')
 
 
 @pytest.fixture(scope='function')
@@ -312,24 +308,6 @@ def test_isfile_isdir(custom_transport, tmp_path_remote):
 
         assert transport.isdir(tmp_path_remote / 'sampledir')
         assert not transport.isfile(tmp_path_remote / 'sampledir')
-
-
-def test_chdir_to_empty_string(custom_transport):
-    """I check that if I pass an empty string to chdir, the cwd does
-    not change (this is a paramiko default behavior), but getcwd()
-    is still correctly defined.
-
-    chdir() is no longer an abstract method, to be removed from interface
-    """
-    if not hasattr(custom_transport, 'chdir'):
-        return
-
-    with custom_transport as transport:
-        with pytest.warns(AiidaDeprecationWarning, match=CHDIR_WARNING):
-            new_dir = transport.normalize(os.path.join('/', 'tmp'))
-            transport.chdir(new_dir)
-            transport.chdir('')
-            assert new_dir == transport.getcwd()
 
 
 def test_put_and_get(custom_transport, tmp_path_remote, tmp_path_local):
@@ -1006,41 +984,21 @@ def test_gettree_nested_directory(custom_transport, tmp_path_remote, tmp_path_lo
 
 
 def test_exec_pwd(custom_transport, tmp_path_remote):
-    """I create a strange subfolder with a complicated name and
-    then see if I can run ``ls``. This also checks the correct
-    escaping of funny characters, both in the directory
-    creation (which should be done by paramiko) and in the command
-    execution (done in this module, in the _exec_command_internal function).
-
-    Note: chdir() & getcwd() is no longer an abstract method, therefore this test is skipped for AsyncSshTransport.
+    """Check that a command executed with an explicit ``workdir`` runs in that
+    directory, by creating a subfolder and asserting that ``pwd`` returns its
+    absolute path.
     """
-    # Start value
-    if not hasattr(custom_transport, 'chdir'):
-        return
-
     with custom_transport as transport:
-        # To compare with: getcwd uses the normalized ('realpath') path
-        location = transport.normalize('/tmp')
-        subfolder = """_'s f"#"""  # A folder with characters to escape
-        subfolder_fullpath = os.path.join(location, subfolder)
+        subfolder_fullpath = str(tmp_path_remote / 'subfolder')
 
-        with pytest.warns(AiidaDeprecationWarning, match=CHDIR_WARNING):
-            transport.chdir(location)
-        if not transport.isdir(subfolder):
-            # Since I created the folder, I will remember to
-            # delete it at the end of this test
-            transport.mkdir(subfolder)
+        transport.mkdir(subfolder_fullpath)
+        assert transport.isdir(subfolder_fullpath)
 
-            assert transport.isdir(subfolder)
-            with pytest.warns(AiidaDeprecationWarning, match=CHDIR_WARNING):
-                transport.chdir(subfolder)
-
-            assert subfolder_fullpath == transport.getcwd()
-            retcode, stdout, stderr = transport.exec_command_wait('pwd')
-            assert retcode == 0
-            # I have to strip it because 'pwd' returns a trailing \n
-            assert stdout.strip() == subfolder_fullpath
-            assert stderr == ''
+        retcode, stdout, stderr = transport.exec_command_wait('pwd', workdir=subfolder_fullpath)
+        assert retcode == 0
+        # I have to strip it because 'pwd' returns a trailing \n
+        assert stdout.strip() == subfolder_fullpath
+        assert stderr == ''
 
 
 def test_exec_with_stdin_string(custom_transport):

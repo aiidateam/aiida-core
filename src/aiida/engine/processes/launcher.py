@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import traceback
+from typing import cast
 
 import kiwipy
 import plumpy
@@ -53,11 +54,11 @@ class ProcessLauncher(plumpy.ProcessLauncher):
         """
         from aiida.common import exceptions
         from aiida.engine.exceptions import PastException
-        from aiida.orm import Data, load_node
+        from aiida.orm import Data, ProcessNode, load_node
         from aiida.orm.utils import serialize
 
         try:
-            node = load_node(pk=pid)
+            node = cast(ProcessNode, load_node(pk=pid))
         except (exceptions.MultipleObjectsError, exceptions.NotExistent):
             # In this case, the process node corresponding to the process id, cannot be resolved uniquely or does not
             # exist. The latter being the most common case, where someone deleted the node, before the process was

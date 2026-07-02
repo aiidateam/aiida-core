@@ -20,7 +20,6 @@ import click
 from aiida.cmdline.params import options
 from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
 from aiida.common.escaping import escape_for_bash
-from aiida.common.warnings import warn_deprecation
 
 from ..transport import BlockingTransport, TransportInternalError, TransportPath, has_magic
 
@@ -583,49 +582,6 @@ class SshTransport(BlockingTransport):
 
         return f"{'OPEN' if self._is_open else 'CLOSED'} [{conn_info}]"
 
-    def chdir(self, path: TransportPath):
-        """
-        PLEASE DON'T USE `chdir()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
-        `chdir()` is DEPRECATED and will be removed in the next major version.
-
-        Change directory of the SFTP session. Emulated internally by paramiko.
-
-        Differently from paramiko, if you pass None to chdir, nothing
-        happens and the cwd is unchanged.
-        """
-        warn_deprecation(
-            '`chdir()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
-            version=3,
-        )
-        from paramiko.sftp import SFTPError
-
-        path = str(path)
-        old_path = self.sftp.getcwd()
-        if path is not None:
-            try:
-                self.sftp.chdir(path)
-            except SFTPError as exc:
-                # e.args[0] is an error code. For instance,
-                # 20 is 'the object is not a directory'
-                # Here I just re-raise the message as OSError
-                raise OSError(exc.args[1])
-
-        # Paramiko already checked that path is a folder, otherwise I would
-        # have gotten an exception. Now, I want to check that I have read
-        # permissions in this folder (nothing is said on write permissions,
-        # though).
-        # Otherwise, if I do _exec_command_internal, that as a first operation
-        # cd's in a folder, I get a wrong retval, that is an unwanted behavior.
-        #
-        # Note: I don't store the result of the function; if I have no
-        # read permissions, this will raise an exception.
-        try:
-            self.stat('.')
-        except OSError as exc:
-            if 'Permission denied' in str(exc):
-                self.chdir(old_path)
-            raise OSError(str(exc))
-
     def normalize(self, path: TransportPath = '.'):
         """Returns the normalized path (removing double slashes, etc...)"""
         path = str(path)
@@ -662,18 +618,6 @@ class SshTransport(BlockingTransport):
         path = str(path)
 
         return self.sftp.lstat(path)
-
-    def getcwd(self):
-        """
-        PLEASE DON'T USE `getcwd()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
-        `getcwd()` is DEPRECATED and will be removed in the next major version.
-
-        Return the current working directory for this SFTP session, as
-        emulated by paramiko. If no directory has been set with chdir,
-        this method will return None. But in __enter__ this is set explicitly,
-        so this should never happen within this class.
-        """
-        return self.sftp.getcwd()
 
     def makedirs(self, path: TransportPath, ignore_existing: bool = False):
         """Super-mkdir; create a leaf directory and all intermediate ones.
@@ -738,9 +682,9 @@ class SshTransport(BlockingTransport):
                 )
             else:
                 raise OSError(
-                    "Error during mkdir of '{}' from folder '{}', "
+                    "Error during mkdir of '{}', "
                     "maybe you don't have the permissions to do it, "
-                    'or the directory already exists? ({})'.format(path, self.getcwd(), exc)
+                    'or the directory already exists? ({})'.format(path, exc)
                 )
 
     def rmtree(self, path: TransportPath):
@@ -1325,10 +1269,9 @@ class SshTransport(BlockingTransport):
         """
         path = str(path)
 
-        if path.startswith('/'):
-            abs_dir = path
-        else:
-            abs_dir = os.path.join(self.getcwd(), path)
+        if not path.startswith('/'):
+            raise ValueError('listdir() requires an absolute path.')
+        abs_dir = path
 
         if not pattern:
             return self.sftp.listdir(abs_dir)
@@ -1406,8 +1349,8 @@ class SshTransport(BlockingTransport):
         :param bufsize: same meaning of the one used by paramiko.
         :param workdir: (optional, default=None) if set, the command will be executed
                 in the specified working directory.
-                if None, the command will be executed in the current working directory,
-                from DEPRECATED `self.getcwd()`, if that has a value.
+                if None, the command will be executed in the default working directory
+                of the spawned shell.
 
         :return: a tuple with (stdin, stdout, stderr, channel),
             where stdin, stdout and stderr behave as file-like objects,
@@ -1419,9 +1362,6 @@ class SshTransport(BlockingTransport):
 
         if workdir is not None:
             command_to_execute = f'cd {workdir} &&  ( {command} )'
-        elif (cwd := self.getcwd()) is not None:
-            escaped_folder = escape_for_bash(cwd)
-            command_to_execute = f'cd {escaped_folder} && ( {command} )'
         else:
             command_to_execute = command
 

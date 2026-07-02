@@ -21,7 +21,6 @@ from typing_extensions import Self
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
-from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
 from . import convert, entities, extras, users
@@ -164,7 +163,6 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         label: Optional[str] = None,
         user: Optional['User'] = None,
         description: str = '',
-        type_string: Optional[str] = None,
         time: Optional[datetime.datetime] = None,
         extras: Optional[Dict[str, Any]] = None,
         backend: Optional['StorageBackend'] = None,
@@ -176,14 +174,9 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         :param label: The group label, required on creation
         :param description: The group description (by default, an empty string)
         :param user: The owner of the group (by default, the automatic user)
-        :param type_string: a string identifying the type of group (by default,
-            an empty string, indicating an user-defined group.
         """
         if not label:
             raise ValueError('Group label must be provided')
-
-        if type_string:
-            warn_deprecation('Passing the `type_string` is deprecated, it is determined automatically', version=3)
 
         backend = backend or get_manager().get_profile_storage()
         user = cast(users.User, user or backend.default_user)
@@ -203,7 +196,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         if hasattr(cls, '__type_string'):
             return cls.__type_string
 
-        mod, name = cls.__module__, cls.__name__
+        mod, name = cls.__module__, cls.__name__  # type: ignore[attr-defined]
         entry_point_group, entry_point = get_entry_point_from_class(mod, name)
 
         if entry_point_group is None or entry_point_group != 'aiida.groups':
@@ -244,7 +237,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         """
         from aiida.plugins.entry_point import get_entry_point_from_class
 
-        return get_entry_point_from_class(cls.__module__, cls.__name__)[1]
+        return get_entry_point_from_class(cls.__module__, cls.__name__)[1]  # type: ignore[attr-defined]
 
     @property
     def uuid(self) -> str:
@@ -463,35 +456,6 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         engine.dump()
 
         return target_path
-
-    _deprecated_extra_methods = {
-        'extras': 'all',
-        'get_extra': 'get',
-        'get_extra_many': 'get_many',
-        'set_extra': 'set',
-        'set_extra_many': 'set_many',
-        'reset_extras': 'reset',
-        'delete_extra': 'delete',
-        'delete_extra_many': 'delete_many',
-        'clear_extras': 'clear',
-        'extras_items': 'items',
-        'extras_keys': 'keys',
-    }
-
-    def __getattr__(self, name: str) -> Any:
-        """This method is called when an extras is not found in the instance.
-
-        It allows for the handling of deprecated mixin methods.
-        """
-        if name in self._deprecated_extra_methods:
-            new_name = self._deprecated_extra_methods[name]
-            kls = self.__class__.__name__
-            warn_deprecation(
-                f'`{kls}.{name}` is deprecated, use `{kls}.base.extras.{new_name}` instead.', version=3, stacklevel=3
-            )
-            return getattr(self.base.extras, new_name)
-
-        raise AttributeError(name)
 
 
 class AutoGroup(Group):

@@ -35,7 +35,7 @@ def get_data_node_and_object(store=True):
     """A function to create a simple data node, with an object."""
     data = Data()
     data.base.attributes.set_many({str(i): i for i in range(10)})
-    data.put_object_from_filelike(StringIO('a' * 10000), 'key')
+    data.base.repository.put_object_from_filelike(StringIO('a' * 10000), 'key')
     if store:
         data.store()
     return (), {'node': data}

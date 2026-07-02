@@ -14,14 +14,6 @@ class NewTransport(Transport):
     def __exit__(self, type, value, traceback):
         """Close the connection."""
 
-    def chdir(self, path):
-        """Change directory to 'path'.
-
-        :param str path: path to change working directory into.
-        :raises: OSError, if the requested path does not exist
-        :rtype: string
-        """
-
     def chmod(self, path, mode):
         """Change permissions of a path.
 
@@ -80,12 +72,6 @@ class NewTransport(Transport):
 
         :param str path: path to file
         :return: object FixedFieldsAttributeDict
-        """
-
-    def getcwd(self):
-        """Get working directory.
-
-        :return: a string identifying the current working directory
         """
 
     def get(self, remotepath, localpath, *args, **kwargs):

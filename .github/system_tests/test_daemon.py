@@ -375,7 +375,7 @@ def run_base_restart_workchain():
 
     # Check that overriding default handler enabled status works
     inputs['add']['y'] = Int(1)
-    inputs['handler_overrides'] = Dict({'disabled_handler': True})
+    inputs['handler_overrides'] = Dict({'disabled_handler': {'enabled': True}})
     results, node = run.get_node(ArithmeticAddBaseWorkChain, **inputs)
     assert not node.is_finished_ok, node.process_state
     assert node.exit_status == ArithmeticAddBaseWorkChain.exit_codes.ERROR_ENABLED_DOOM.status, node.exit_status

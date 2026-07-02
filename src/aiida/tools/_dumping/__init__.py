@@ -8,6 +8,4 @@
 ###########################################################################
 """Public API for data dumping functionality."""
 
-from aiida.tools._dumping.facades import ProcessDumper
-
-__all__ = ('ProcessDumper',)
+__all__ = ()

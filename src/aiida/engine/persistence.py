@@ -11,7 +11,7 @@
 import importlib
 import logging
 import traceback
-from typing import TYPE_CHECKING, Any, Hashable, Optional
+from typing import TYPE_CHECKING, Any, Hashable, Optional, cast
 
 import plumpy.loaders
 import plumpy.persistence
@@ -103,13 +103,13 @@ class AiiDAPersister(plumpy.persistence.Persister):
         :raises: :class:`PersistenceError` Raised if there was a problem loading the checkpoint
         """
         from aiida.common.exceptions import MultipleObjectsError, NotExistent
-        from aiida.orm import load_node
+        from aiida.orm import ProcessNode, load_node
 
         if tag is not None:
             raise NotImplementedError('Checkpoint tags not supported yet')
 
         try:
-            calculation = load_node(pid)
+            calculation = cast(ProcessNode, load_node(pid))
         except (MultipleObjectsError, NotExistent):
             raise PersistenceError(f'Failed to load the node for process<{pid}>: {traceback.format_exc()}')
 
@@ -144,9 +144,9 @@ class AiiDAPersister(plumpy.persistence.Persister):
         :param pid: the process id of the :class:`plumpy.Process`
         :param tag: optional checkpoint identifier to allow retrieving a specific sub checkpoint
         """
-        from aiida.orm import load_node
+        from aiida.orm import ProcessNode, load_node
 
-        calc = load_node(pid)
+        calc = cast(ProcessNode, load_node(pid))
         calc.delete_checkpoint()
 
     def delete_process_checkpoints(self, pid: Hashable):

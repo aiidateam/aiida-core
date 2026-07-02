@@ -8,7 +8,7 @@
 ###########################################################################
 """Collection of ``pytest`` fixtures that are intended for internal use to ``aiida-core`` only.
 
-Fixtures that are intended for use in plugin packages are kept in :mod:`aiida.manage.tests.pytest_fixtures`. They are
+Fixtures that are intended for use in plugin packages are kept in :mod:`aiida.tools.pytest_fixtures`. They are
 loaded in this file as well, such that they can also be used for the tests of ``aiida-core`` itself.
 """
 
@@ -1276,7 +1276,10 @@ def generate_calculation_node_io(generate_calculation_node, tmp_path):
         singlefiledata_input = SinglefileData.from_string(content=filecontent, filename=filename)
         # ? Use instance for folderdata
         folderdata = FolderData()
-        folderdata.put_object_from_filelike(handle=io.StringIO(filecontent), path=str(folderdata_relpath / filename))  # type: ignore[arg-type]
+        folderdata.base.repository.put_object_from_filelike(
+            handle=io.StringIO(filecontent),
+            path=str(folderdata_relpath / filename),  # type: ignore[arg-type]
+        )
         arraydata_input = ArrayData(arrays=np.ones(3))
 
         # Create calculation inputs, outputs

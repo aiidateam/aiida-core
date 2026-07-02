@@ -11,7 +11,7 @@ sed -i "s|PLACEHOLDER_WORK_DIR|${GITHUB_WORKSPACE}|" "${CONFIG}/localhost.yaml"
 sed -i "s|PLACEHOLDER_REMOTE_ABS_PATH_DOUBLER|${CONFIG}/doubler.sh|" "${CONFIG}/doubler.yaml"
 sed -i "s|PLACEHOLDER_SSH_KEY|${HOME}/.ssh/slurm_rsa|" "${CONFIG}/slurm-ssh-config.yaml"
 
-verdi setup --non-interactive --config "${CONFIG}/profile.yaml"
+verdi profile setup core.psql_dos --non-interactive --config "${CONFIG}/profile.yaml"
 
 # set up localhost computer
 verdi computer setup --non-interactive --config "${CONFIG}/localhost.yaml"
@@ -26,7 +26,7 @@ verdi computer setup --non-interactive --config "${CONFIG}/slurm-ssh.yaml"
 verdi computer configure core.ssh slurm-ssh --non-interactive --config "${CONFIG}/slurm-ssh-config.yaml" -n  # needs slurm container
 verdi computer test slurm-ssh --print-traceback
 
-verdi profile setdefault test_aiida
+verdi profile set-default test_aiida
 verdi config set runner.poll.interval 0
 verdi config set warnings.development_version False
 verdi config set warnings.rabbitmq_version False

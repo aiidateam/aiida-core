@@ -37,7 +37,6 @@ from aiida.common import exceptions, log
 from aiida.common.exceptions import InvalidOperation
 from aiida.common.lang import classproperty, type_check
 from aiida.common.pydantic import get_metadata
-from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
 from .fields import QbFields, add_field
@@ -303,17 +302,6 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         return cls.from_model(cls.WriteModel(**serialized))
 
     @classproperty
-    def objects(cls) -> CollectionType:  # noqa: N805
-        """Get a collection for objects of this type, with the default backend.
-
-        .. deprecated:: This will be removed in v3, use ``collection`` instead.
-
-        :return: an object that can be used to access entities of this type
-        """
-        warn_deprecation('`objects` property is deprecated, use `collection` instead.', version=3, stacklevel=4)
-        return cls.collection
-
-    @classproperty
     def collection(cls) -> CollectionType:  # noqa: N805
         """Get a collection for objects of this type, with the default backend.
 
@@ -332,20 +320,6 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         :return: A collection object that can be used to access entities of this type.
         """
         return cls._CLS_COLLECTION.get_cached(cls, backend)
-
-    @classmethod
-    def get(cls, **kwargs: Any) -> Self:
-        """Get an entity of the collection matching the given filters.
-
-        .. deprecated: Will be removed in v3, use `Entity.collection.get` instead.
-
-        """
-        warn_deprecation(
-            f'`{cls.__name__}.get` method is deprecated, use `{cls.__name__}.collection.get` instead.',
-            version=3,
-            stacklevel=2,
-        )
-        return cls.collection.get(**kwargs)
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, self.__class__):
@@ -374,19 +348,6 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
             return self._logger
         except AttributeError:
             raise exceptions.InternalError('No self._logger configured for {}!')
-
-    @property
-    def id(self) -> int | None:
-        """Return the id for this entity.
-
-        This identifier is guaranteed to be unique amongst entities of the same type for a single backend instance.
-
-        .. deprecated: Will be removed in v3, use `pk` instead.
-
-        :return: the entity's id
-        """
-        warn_deprecation('`id` property is deprecated, use `pk` instead.', version=3, stacklevel=2)
-        return self._backend_entity.id
 
     @property
     def pk(self) -> int | None:

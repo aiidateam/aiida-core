@@ -14,7 +14,6 @@ import inspect
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, override, type_check
-from aiida.common.warnings import warn_deprecation
 from aiida.orm.pydantic import OrmMetadataField
 
 from ..pydantic import OrmModel
@@ -132,19 +131,6 @@ class FunctionCalculationMixin:
         self.base.attributes.set(  # type: ignore[attr-defined]
             self.FUNCTION_NUMBER_OF_LINES_KEY, function_number_of_lines
         )
-
-    def get_function_source_code(self) -> str | None:
-        """Return the source code of the function stored in the repository.
-
-        If the source code file does not exist, this will return ``None`` instead. This can happen for example when the
-        function was defined in an interactive shell in which case ``store_source_info`` will have failed to retrieve
-        the source code using ``inspect.getsourcefile``.
-
-        :returns: The source code of the function or ``None`` if it could not be determined when storing the node.
-        """
-        warn_deprecation('This method will be removed, use `get_source_code_file` instead.', version=3)
-
-        return self.get_source_code_file()
 
     def get_source_code_file(self) -> str | None:
         """Return the source code of the file in which the process function was defined.

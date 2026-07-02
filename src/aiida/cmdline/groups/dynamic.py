@@ -158,15 +158,10 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         cls = self.factory(entry_point)
 
         CliModel = getattr(cls, 'CliModel', None)  # noqa: N806
-        if not CliModel:
-            from aiida.common.warnings import warn_deprecation
-
-            warn_deprecation(
-                'Relying on `_get_cli_options` is deprecated. The options should be defined through a `CliModel`.',
-                version=3,
+        if CliModel is None:
+            raise TypeError(
+                f'The entry point `{entry_point}` does not define the required `CliModel` to generate its CLI options.'
             )
-            options_spec = self.factory(entry_point).get_cli_options()  # type: ignore[union-attr]
-            return [self.create_option(*item) for item in options_spec]
 
         options_spec = {}
 

@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import pathlib
-import warnings
+import tempfile
 from collections import defaultdict
 from functools import partial
 from typing import TYPE_CHECKING, Any
@@ -64,95 +64,90 @@ def code_create():
     """Create a new code."""
 
 
+def get_code_spec(code: Code) -> dict[str, Any]:
+    """Return the attributes needed to duplicate an existing code, as a dictionary."""
+    from aiida.orm import PortableCode
+
+    spec: dict[str, Any] = {
+        'label': code.label,
+        'description': code.description,
+        'input_plugin': code.default_calc_job_plugin,
+        'use_double_quotes': code.use_double_quotes,
+        'prepend_text': code.prepend_text,
+        'append_text': code.append_text,
+    }
+
+    if isinstance(code, PortableCode):
+        spec['on_computer'] = False
+        # A stored ``PortableCode`` keeps its files in the node repository rather than on disk, so export them to a
+        # temporary directory that can be passed as ``filepath_files`` when reconstructing the duplicate.
+        code_folder = tempfile.mkdtemp()
+        code.base.repository.copy_tree(code_folder)
+        spec['code_folder'] = code_folder
+        spec['code_rel_path'] = str(code.filepath_executable)
+    else:
+        spec['on_computer'] = True
+        spec['computer'] = code.computer
+        spec['remote_abs_path'] = str(code.get_executable())
+
+    return spec
+
+
+def build_code_from_spec(spec: dict[str, Any]) -> Code:
+    """Build a new, unstored code instance from a code spec (see :func:`get_code_spec`)."""
+    from aiida.orm import InstalledCode, PortableCode
+
+    if spec.get('on_computer'):
+        code: Code = InstalledCode(
+            computer=spec['computer'],
+            filepath_executable=spec['remote_abs_path'],
+        )
+    else:
+        code = PortableCode(
+            filepath_executable=spec['code_rel_path'],
+            filepath_files=pathlib.Path(spec['code_folder']),
+        )
+
+    code.label = spec['label']
+    code.description = spec.get('description') or ''
+    code.default_calc_job_plugin = spec.get('input_plugin')
+    code.use_double_quotes = spec.get('use_double_quotes', False)
+    code.prepend_text = spec.get('prepend_text') or ''
+    code.append_text = spec.get('append_text') or ''
+
+    return code
+
+
+def set_code_spec(ctx: click.Context, _param: Any, value: Any) -> Any:
+    """Store the spec of the given code on the context, used as contextual defaults for the following options."""
+    if value is not None:
+        ctx.code_spec = get_code_spec(value)  # type: ignore[attr-defined]
+    return value
+
+
 def get_default(key: str, ctx: click.Context) -> 'Any | None':
-    """Get the default argument using a user instance property
+    """Get the default for an option from the spec of the code being duplicated.
 
-    :param key: The name of the property to use
-    :param ctx: The click context (which will be used to get the user)
-    :return: The default value, or None
+    :param key: The name of the code spec attribute to use.
+    :param ctx: The click context, which holds the spec set by :func:`set_code_spec`.
+    :return: The default value, or None.
     """
-    try:
-        value = getattr(ctx.code_builder, key)  # type: ignore[attr-defined]
-        if value == '':
-            value = None
-    except KeyError:
+    value = ctx.code_spec.get(key)  # type: ignore[attr-defined]
+    if value == '':
         value = None
-
     return value
 
 
 def get_computer_name(ctx: click.Context) -> str:
-    return getattr(ctx.code_builder, 'computer').label  # type: ignore[attr-defined]
+    return ctx.code_spec['computer'].label  # type: ignore[attr-defined]
 
 
 def get_on_computer(ctx: click.Context) -> bool:
-    return not getattr(ctx.code_builder, 'is_local')()  # type: ignore[attr-defined]
-
-
-def set_code_builder(ctx: click.Context, _param: Any, value: Any) -> Any:
-    """Set the code spec for defaults of following options."""
-    from aiida.orm.utils.builders.code import CodeBuilder
-
-    # TODO(danielhollas): CodeBuilder is deprecated, rewrite this somehow?
-    with warnings.catch_warnings(record=True):
-        ctx.code_builder = CodeBuilder.from_code(value)  # type: ignore[attr-defined]
-    return value
-
-
-# Defining the ``COMPUTER`` option first guarantees that the user is prompted for the computer first. This is necessary
-# because the ``LABEL`` option has a callback that relies on the computer being already set. Execution order is
-# guaranteed only for the interactive case, however. For the non-interactive case, the callback is called explicitly
-# once more in the command body to cover the case when the label is specified before the computer.
-@verdi_code.command('setup', deprecated='Please use `verdi code create` instead.')
-@options_code.ON_COMPUTER()
-@options_code.COMPUTER()
-@options_code.LABEL()
-@options_code.DESCRIPTION()
-@options_code.INPUT_PLUGIN()
-@options_code.REMOTE_ABS_PATH()
-@options_code.FOLDER()
-@options_code.REL_PATH()
-@options_code.USE_DOUBLE_QUOTES()
-@options_code.PREPEND_TEXT()
-@options_code.APPEND_TEXT()
-@options.NON_INTERACTIVE()
-@options.CONFIG_FILE()
-@click.pass_context
-@with_dbenv()
-def setup_code(ctx, non_interactive, **kwargs):
-    """Setup a new code (use `verdi code create`)."""
-    from aiida.orm.utils.builders.code import CodeBuilder
-
-    options_code.validate_label_uniqueness(ctx, None, kwargs['label'])
-
-    if kwargs.pop('on_computer'):
-        kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
-    else:
-        kwargs['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
-
-    # Convert entry point to its name
-    if kwargs['input_plugin']:
-        kwargs['input_plugin'] = kwargs['input_plugin'].name
-
-    # TODO(danielhollas): CodeBuilder is deprecated
-    with warnings.catch_warnings(record=True):
-        code_builder = CodeBuilder(**kwargs)
-
-    try:
-        code = code_builder.new()
-    except ValueError as exception:
-        echo.echo_critical(f'invalid inputs: {exception}')
-
-    try:
-        code.store()
-    except Exception as exception:
-        echo.echo_critical(f'Unable to store the Code: {exception}')
-
-    echo.echo_success(f'Code<{code.pk}> {code.full_label} created')
+    return ctx.code_spec['on_computer']  # type: ignore[attr-defined]
 
 
 @verdi_code.command('test')
-@arguments.CODE(callback=set_code_builder)
+@arguments.CODE()
 @with_dbenv()
 def code_test(code):
     """Run tests for the given code to check whether it is usable.
@@ -178,7 +173,7 @@ def code_test(code):
 # guaranteed only for the interactive case, however. For the non-interactive case, the callback is called explicitly
 # once more in the command body to cover the case when the label is specified before the computer.
 @verdi_code.command('duplicate')
-@arguments.CODE(callback=set_code_builder)
+@arguments.CODE(callback=set_code_spec)
 @options_code.ON_COMPUTER(contextual_default=get_on_computer)
 @options_code.COMPUTER(contextual_default=get_computer_name)
 @options_code.LABEL(contextual_default=partial(get_default, 'label'))
@@ -196,14 +191,8 @@ def code_test(code):
 def code_duplicate(ctx, code, non_interactive, **kwargs):
     """Duplicate a code allowing to change some parameters."""
     from aiida.common.exceptions import ValidationError
-    from aiida.orm.utils.builders.code import CodeBuilder
 
     options_code.validate_label_uniqueness(ctx, None, kwargs['label'])
-
-    if kwargs.pop('on_computer'):
-        kwargs['code_type'] = CodeBuilder.CodeType.ON_COMPUTER
-    else:
-        kwargs['code_type'] = CodeBuilder.CodeType.STORE_AND_UPLOAD
 
     if kwargs.pop('hide_original'):
         code.is_hidden = True
@@ -212,10 +201,13 @@ def code_duplicate(ctx, code, non_interactive, **kwargs):
     if kwargs['input_plugin']:
         kwargs['input_plugin'] = kwargs['input_plugin'].name
 
-    code_builder = ctx.code_builder
-    for key, value in kwargs.items():
-        setattr(code_builder, key, value)
-    new_code = code_builder.new()
+    # Start from the spec of the code being duplicated and override it with the values passed on the command line.
+    spec = {**ctx.code_spec, **kwargs}
+
+    try:
+        new_code = build_code_from_spec(spec)
+    except (TypeError, ValueError) as exception:
+        echo.echo_critical(f'invalid inputs: {exception}')
 
     try:
         new_code.store()

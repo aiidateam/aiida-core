@@ -244,42 +244,6 @@ def check_circus_zmq_version(wrapped, _, args, kwargs):
     return wrapped(*args, **kwargs)
 
 
-def deprecated_command(message: str):
-    """Function decorator that will mark a click command as deprecated when invoked.
-
-    Example::
-
-        @click.command()
-        @deprecated_command('This command has been deprecated in AiiDA v1.0, please use 'foo' instead.)
-        def mycommand():
-            pass
-
-    .. deprecated:: 2.6
-
-        Ironically, this decorator itself has been deprecated. ``verdi`` commands that should be deprecated should
-        simply use the ``deprecated`` argument in the ``command`` decorator and specify the deprecation message.
-
-    """
-    from aiida.common.warnings import warn_deprecation
-
-    warn_deprecation('The `deprecated_command` decorator is deprecated', version=3)
-
-    @decorator
-    def wrapper(wrapped, _, args, kwargs):
-        """Echo a deprecation warning before doing anything else."""
-        from textwrap import wrap
-
-        from aiida.cmdline.utils import templates
-
-        template = templates.env.get_template('deprecated.tpl')
-        width = 80
-        echo.echo(template.render(msg=wrap(message, width - 4), width=width))
-
-        return wrapped(*args, **kwargs)
-
-    return wrapper
-
-
 def requires_loaded_profile():
     """Function decorator for CLI command that requires a profile to be loaded.
 

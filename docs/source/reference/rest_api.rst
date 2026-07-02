@@ -1071,7 +1071,7 @@ Option 1: HTTPie
     In [2]: qb.append(Code)
     Out[2]: <aiida.orm.querybuilder.QueryBuilder at 0x7f2bbeedd700>
 
-    In [3]: qb_dict = qb.queryhelp
+    In [3]: qb_dict = qb.as_dict()
 
     In [4]: import json
 
@@ -1123,7 +1123,7 @@ Option 2: Resquests library (all python approach)
     qb = QueryBuilder()
     qb.append(Code)
 
-    qb_dict = qb.queryhelp
+    qb_dict = qb.as_dict()
 
     response = requests.post('http://localhost:5000/api/v4/querybuilder/', json=qb_dict)
 

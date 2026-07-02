@@ -41,7 +41,6 @@ from typing import (
 )
 
 from aiida.common.log import AIIDA_LOGGER
-from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import (
@@ -99,7 +98,6 @@ class QueryBuilder:
         self,
         backend: Optional['StorageBackend'] = None,
         *,
-        debug: bool | None = None,
         path: Optional[Sequence[Union[str, Dict[str, Any], EntityClsType]]] = (),
         filters: Optional[Dict[str, FilterType]] = None,
         project: Optional[Dict[str, ProjectType]] = None,
@@ -114,9 +112,6 @@ class QueryBuilder:
         Which backend is used decided here based on backend-settings (taken from the user profile).
         This cannot be overridden so far by the user.
 
-        :param debug:
-            Turn on debug mode. This feature prints information on the screen about the stages
-            of the QueryBuilder. Does not affect results.
         :param path:
             A list of the vertices to traverse. Leave empty if you plan on using the method
             :func:`QueryBuilder.append`.
@@ -160,18 +155,6 @@ class QueryBuilder:
 
         # cache of tag mappings, populated during appends
         self._tags = _QueryTagMap()
-
-        # Set the debug level
-        if debug is not None:
-            warn_deprecation(
-                'The `debug` argument is deprecated. Configure the log level of the AiiDA logger instead.', version=3
-            )
-        else:
-            debug = False
-
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            self.set_debug(debug)
 
         # Validate & add the query path
         if not isinstance(path, (list, tuple)):
@@ -225,12 +208,6 @@ class QueryBuilder:
         if copy:
             return deepcopy(data)
         return data
-
-    @property
-    def queryhelp(self) -> 'QueryDictType':
-        """ "Legacy name for ``as_dict`` method."""
-        warn_deprecation('`QueryBuilder.queryhelp` is deprecated, use `QueryBuilder.as_dict()` instead', version=3)
-        return self.as_dict()
 
     @classmethod
     def from_dict(cls, dct: Dict[str, Any]) -> 'QueryBuilder':
@@ -877,30 +854,6 @@ class QueryBuilder:
             _projections.append(_thisprojection)
         LOGGER.debug('projections have become: %s', _projections)
         self._projections[tag] = _projections
-
-    def set_debug(self, debug: bool) -> 'QueryBuilder':
-        """Run in debug mode. This does not affect functionality, but prints intermediate stages
-        when creating a query on screen.
-
-        :param debug: Turn debug on or off
-        """
-        warn_deprecation(
-            '`QueryBuilder.set_debug` is deprecated. Configure the log level of the AiiDA logger instead.', version=3
-        )
-        if not isinstance(debug, bool):
-            raise TypeError('I expect a boolean')
-        self._debug = debug
-
-        return self
-
-    def debug(self, msg: str, *objects: Any) -> None:
-        """Log debug message.
-
-        objects will passed to the format string, e.g. ``msg % objects``
-        """
-        warn_deprecation('`QueryBuilder.debug` is deprecated.', version=3)
-        if self._debug:
-            print(f'DEBUG: {msg}' % objects)
 
     def limit(self, limit: Optional[int]) -> 'QueryBuilder':
         """Set the limit (nr of rows to return)

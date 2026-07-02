@@ -340,14 +340,6 @@ SETUP_DATABASE_PASSWORD = QUICKSETUP_DATABASE_PASSWORD.clone(
     cls=options.interactive.InteractiveOption,
 )
 
-SETUP_USE_RABBITMQ = options.OverridableOption(
-    '--use-rabbitmq/--no-use-rabbitmq',
-    is_flag=True,
-    default=None,
-    hidden=True,
-    help='Deprecated: use --broker instead. --no-use-rabbitmq is equivalent to --broker none.',
-)
-
 SETUP_BROKER_BACKEND = options.OverridableOption(
     '--broker',
     prompt='Message broker',

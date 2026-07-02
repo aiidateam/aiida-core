@@ -247,10 +247,6 @@ List of all relationships:
 Converting the QueryBuilder to/from a dictionary
 ------------------------------------------------
 
-.. important::
-
-    In aiida-core version 1, this dictionary was accessed with ``QueryBuilder.queryhelp``, which is now deprecated.
-
 The :class:`~aiida.orm.querybuilder.QueryBuilder` class can be converted to a dictionary and also loaded from a dictionary, for easy serialisation and storage.
 Once you have built your query using the appender method explained in the :ref:`finding and querying for data how-to<how-to:query>` and the advanced sections above, you can easily store your query by saving the ``QueryBuilder.as_dict()`` dictionary as a JSON file for later use:
 

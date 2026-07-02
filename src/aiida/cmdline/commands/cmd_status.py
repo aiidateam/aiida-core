@@ -13,14 +13,11 @@ from __future__ import annotations
 import enum
 import sys
 
-import click
-
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
 from aiida.common.exceptions import CorruptStorage, IncompatibleStorageSchema, UnreachableStorage
 from aiida.common.log import override_log_level
-from aiida.common.warnings import warn_deprecation
 
 from ..utils.echo import ExitCode
 
@@ -56,8 +53,7 @@ STATUS_SYMBOLS = {
 
 @verdi.command('status')
 @options.PRINT_TRACEBACK()
-@click.option('--no-rmq', is_flag=True, help='Do not check RabbitMQ status')
-def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
+def verdi_status(print_traceback: bool) -> None:
     """Print status of AiiDA services."""
     from aiida import __version__
     from aiida.cmdline.utils.daemon import get_daemon_package_drift_lines
@@ -123,13 +119,6 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
         message = str(storage_backend)
         print_status(ServiceStatus.UP, 'storage', message)
         storage_backend.close()
-
-    if no_rmq:
-        warn_deprecation(
-            'The `--no-rmq` option is deprecated. If RabbitMQ is not available, a profile should be configured that '
-            'sets the `process_control.backend` attribute to `None`.',
-            version=3,
-        )
 
     # Getting the daemon and broker status
     broker = manager.get_broker()

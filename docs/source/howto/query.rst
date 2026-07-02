@@ -379,7 +379,7 @@ For example, for a given ``node``, to inspect all the neighboring nodes from whi
 
 .. code-block:: python
 
-    node.get_incoming()
+    node.base.links.get_incoming()
 
 This will return an instance of the :class:`~aiida.orm.utils.links.LinkManager`.
 From that manager, you can request the results in a specific format.
@@ -387,7 +387,7 @@ If you are only interested in the neighboring nodes themselves, you can call the
 
 .. code-block:: python
 
-    node.get_incoming().all_nodes()
+    node.base.links.get_incoming().all_nodes()
 
 This will return a list of :class:`~aiida.orm.nodes.node.Node` instances that correspond to the nodes that are neighbors of ``node``, where the link is going towards ``node``.
 Calling the :meth:`~aiida.orm.utils.links.LinkManager.all` method of the manager instead will return a list of :class:`~aiida.orm.utils.links.LinkTriple` named tuples.
@@ -396,7 +396,7 @@ For example, to list all the neighbors of a node from which a link is incoming:
 
 .. code-block:: python
 
-    for link_triple in node.get_incoming().all():
+    for link_triple in node.base.links.get_incoming().all():
         print(link_triple.node, link_triple.link_type, link_triple.link_label)
 
 Note that the :class:`~aiida.orm.utils.links.LinkManager` provides many convenience methods to get information from the neigboring nodes, such as :meth:`~aiida.orm.utils.links.LinkManager.all_link_labels` if you only need the list of link labels.
@@ -411,7 +411,7 @@ As an example:
 
 .. code-block:: python
 
-    node.get_incoming(node_class=Data, link_type=LinkType.INPUT_CALC, link_label_filter='output%node_').all_nodes()
+    node.base.links.get_incoming(node_class=Data, link_type=LinkType.INPUT_CALC, link_label_filter='output%node_').all_nodes()
 
 will return only neighboring data nodes that are linked to the ``node`` with a link of type ``LinkType.INPUT_CALC`` and where the link label matches the pattern ``'output%node_'``.
 Reminder on the syntax of SQL `LIKE` patterns: the ``%`` character matches any string of zero or more characters, while the ``_`` character matches exactly one character.

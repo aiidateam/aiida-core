@@ -222,27 +222,6 @@ def cmd_tasks_list(broker):
         echo.echo(pk)
 
 
-@cmd_tasks.command('analyze', deprecated='Use `verdi process repair` instead.')
-@click.option('--fix', is_flag=True, help='Attempt to fix the inconsistencies if any are detected.')
-@decorators.only_if_daemon_not_running()
-@click.pass_context
-def cmd_tasks_analyze(ctx, fix):
-    """Perform analysis of process tasks.
-
-    This command will perform a query of the database to find all "active" processes, meaning those that haven't yet
-    reached a terminal state, and cross-references this with the active process tasks that are in the process queue of
-    RabbitMQ. Any active process that does not have a corresponding process task can be considered a zombie, as it will
-    never be picked up by a daemon worker to complete it and will effectively be "stuck". Any process task that does not
-    correspond to an active process is useless and should be discarded. Finally, duplicate process tasks are also
-    problematic and duplicates should be discarded.
-
-    Use ``-v INFO`` to be more verbose and print more information.
-    """
-    from .cmd_process import process_repair
-
-    ctx.invoke(process_repair, dry_run=not fix)
-
-
 @cmd_tasks.command('revive')
 @arguments.PROCESSES()
 @options.FORCE()

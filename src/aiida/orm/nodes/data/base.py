@@ -29,6 +29,9 @@ def to_aiida_type(value):
 class BaseType(Data):
     """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
+    #: The Python type wrapped by the derived class (e.g. ``int``, ``float``). Subclasses must define this.
+    _type: t.ClassVar[t.Callable[..., t.Any]]
+
     class AttributesModel(Data.AttributesModel):
         value: t.Any = OrmMetadataField(
             title='Data value',

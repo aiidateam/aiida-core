@@ -111,7 +111,7 @@ def status(ctx, all_profiles, timeout):
     from tabulate import tabulate
 
     from aiida.cmdline.utils.common import format_local_time
-    from aiida.cmdline.utils.daemon import get_daemon_package_drift_lines
+    from aiida.cmdline.utils.daemon import validate_daemon_version
     from aiida.engine.daemon.client import DaemonException, get_daemon_client
     from aiida.manage.manager import get_manager
 
@@ -179,7 +179,9 @@ def status(ctx, all_profiles, timeout):
             f'Log file: {client.daemon_log_file}',
         ]
 
-        lines.extend(get_daemon_package_drift_lines(client))
+        drift_error = validate_daemon_version(client)
+        if drift_error is not None:
+            lines.append(drift_error)
 
         lines.append('Use `verdi daemon [incr | decr] [num]` to increase / decrease the number of workers')
         echo.echo('\n'.join(lines))

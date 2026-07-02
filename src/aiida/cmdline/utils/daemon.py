@@ -10,10 +10,11 @@
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from aiida.engine.daemon.client import DaemonClient, PackageVersionInfo, PackageVersionSnapshot
+    from aiida.engine.daemon.client import DaemonClient, DaemonVersionInfo, PackageVersionInfo, PackageVersionSnapshot
 
 
 def format_package_version_info(version_info: PackageVersionInfo) -> str:
@@ -78,25 +79,50 @@ def format_package_state_change_lines(
     return lines
 
 
-_DRIFT_WARNING = (
-    'The daemon was started with different package versions than currently installed. '
-    'Running processes may use the old versions and behave unexpectedly. '
-    'Run `verdi daemon restart` to pick up the new versions.'
-)
+def validate_python_binary(version_info: DaemonVersionInfo) -> str | None:
+    """Return an error message if the daemon's Python binary differs from the current one, or None if they match."""
+    import os
+
+    daemon_binary = os.path.realpath(version_info['python_binary'])
+    current_binary = os.path.realpath(sys.executable)
+    if daemon_binary == current_binary:
+        return None
+
+    return (
+        'The daemon is running with a different Python binary than the current one. '
+        'Run `verdi daemon restart` to use the current Python binary.\n'
+        f'Daemon: {version_info["python_binary"]}\n'
+        f'Current: {sys.executable}'
+    )
 
 
-def get_daemon_package_drift_lines(client: DaemonClient) -> list[str]:
-    """Return drift warning lines, or an empty list if package state matches."""
-    from aiida.engine.daemon.client import DaemonClient as _DaemonClient
+def validate_package_versions(version_info: DaemonVersionInfo) -> str | None:
+    """Return an error message if daemon and current package versions differ, or None if they match."""
+    from aiida.engine.daemon.client import DaemonClient
 
-    daemon_versions = client.get_daemon_package_snapshot()
-    if daemon_versions is None:
-        return []
-    current_versions = _DaemonClient.get_package_version_snapshot()
-    validated = _DaemonClient._validate_package_version_snapshot(current_versions)
+    current_versions = DaemonClient.get_package_version_snapshot()
+    validated = DaemonClient._validate_package_version_snapshot(current_versions)
     if validated is None:
-        return []
-    change_lines = format_package_state_change_lines(daemon_versions, validated)
+        return None
+    change_lines = format_package_state_change_lines(version_info['packages'], validated)
     if not change_lines:
-        return []
-    return [_DRIFT_WARNING, *change_lines]
+        return None
+
+    header = (
+        'The daemon was started with different package versions than currently installed. '
+        'Running processes may use the old versions and behave unexpectedly. '
+        'Run `verdi daemon restart` to pick up the new versions.'
+    )
+    return '\n'.join([header, *change_lines])
+
+
+def validate_daemon_version(client: DaemonClient) -> str | None:
+    """Return an error message if the daemon environment differs from the current one, or None if they match."""
+    version_info = client.get_daemon_version_info()
+    if version_info is None:
+        return None
+
+    if (error := validate_python_binary(version_info)) is not None:
+        return error
+
+    return validate_package_versions(version_info)

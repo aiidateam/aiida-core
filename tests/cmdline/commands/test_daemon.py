@@ -8,6 +8,7 @@
 ###########################################################################
 """Tests for ``verdi daemon``."""
 
+import sys
 from unittest.mock import patch
 
 import pytest
@@ -220,7 +221,11 @@ def test_daemon_status_worker_timeout(run_cli_command):
 @patch.object(DaemonClient, 'get_status', lambda self, timeout=None: {'status': 'running'})
 @patch.object(DaemonClient, 'get_daemon_info', get_daemon_info)
 @patch.object(DaemonClient, 'get_worker_info', get_worker_info)
-@patch.object(DaemonClient, 'get_daemon_package_snapshot', lambda self: {'aiida-core': {'version': '2.8.0.post0'}})
+@patch.object(
+    DaemonClient,
+    'get_daemon_version_info',
+    lambda self: {'packages': {'aiida-core': {'version': '2.8.0.post0'}}, 'python_binary': sys.executable},
+)
 @patch.object(
     DaemonClient,
     'get_package_version_snapshot',

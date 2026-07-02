@@ -121,9 +121,9 @@ class TestDaemonVersionInfo:
         assert versions['aiida-core']['version'].startswith(metadata_version('aiida-core'))
 
     @staticmethod
-    def test_get_daemon_package_snapshot_no_file(stopped_daemon_client):
-        """Test that ``get_daemon_package_snapshot`` returns None when no version file exists."""
-        assert stopped_daemon_client.get_daemon_package_snapshot() is None
+    def test_get_daemon_version_info_no_file(stopped_daemon_client):
+        """Test that ``get_daemon_version_info`` returns None when no version file exists."""
+        assert stopped_daemon_client.get_daemon_version_info() is None
 
     @staticmethod
     def test_daemon_package_snapshot_file_missing_configuration(stopped_daemon_client, monkeypatch):
@@ -139,35 +139,38 @@ class TestDaemonVersionInfo:
             _ = stopped_daemon_client.daemon_package_snapshot_file
 
     @staticmethod
-    def test_get_daemon_package_snapshot_missing_configuration(stopped_daemon_client, monkeypatch):
-        """Test that ``get_daemon_package_snapshot`` returns None when the filepath is missing."""
+    def test_get_daemon_version_info_missing_configuration(stopped_daemon_client, monkeypatch):
+        """Test that ``get_daemon_version_info`` returns None when the filepath is missing."""
         filepaths = stopped_daemon_client._config.filepaths(stopped_daemon_client.profile)
         modified_filepaths = dict(filepaths)
         modified_filepaths['daemon'] = dict(filepaths['daemon'])
         modified_filepaths['daemon'].pop('package_snapshot', None)
         monkeypatch.setattr(stopped_daemon_client._config, 'filepaths', lambda profile: modified_filepaths)
 
-        assert stopped_daemon_client.get_daemon_package_snapshot() is None
+        assert stopped_daemon_client.get_daemon_version_info() is None
 
     @staticmethod
-    def test_get_daemon_package_snapshot_corrupt_file(stopped_daemon_client):
-        """Test that ``get_daemon_package_snapshot`` returns None for corrupt version file."""
+    def test_get_daemon_version_info_corrupt_file(stopped_daemon_client):
+        """Test that ``get_daemon_version_info`` returns None for corrupt version file."""
         version_file = pathlib.Path(stopped_daemon_client.daemon_package_snapshot_file)
         version_file.parent.mkdir(parents=True, exist_ok=True)
         version_file.write_text('not valid json {{{', encoding='utf8')
-        assert stopped_daemon_client.get_daemon_package_snapshot() is None
+        assert stopped_daemon_client.get_daemon_version_info() is None
 
     @staticmethod
     def test_daemon_version_info_roundtrip(stopped_daemon_client):
         """Test that version info can be written and read back."""
         version_file = pathlib.Path(stopped_daemon_client.daemon_package_snapshot_file)
         version_file.parent.mkdir(parents=True, exist_ok=True)
-        expected = {
+        packages = {
             'aiida-core': {'version': '2.6.0', 'editable_path': '/tmp/aiida-core'},
             'some-plugin': {'version': '1.0.0'},
         }
-        version_file.write_text(json.dumps(expected), encoding='utf8')
-        assert stopped_daemon_client.get_daemon_package_snapshot() == expected
+        snapshot = {'packages': packages, 'python_binary': '/usr/bin/python3'}
+        version_file.write_text(json.dumps(snapshot), encoding='utf8')
+        info = stopped_daemon_client.get_daemon_version_info()
+        assert info['packages'] == packages
+        assert info['python_binary'] == '/usr/bin/python3'
 
     @staticmethod
     def test_get_dist_commit_hash_vcs_install():
@@ -308,7 +311,9 @@ class TestDaemonVersionInfo:
             stopped_daemon_client.start_daemon()
 
         assert version_file.exists()
-        assert json.loads(version_file.read_text(encoding='utf8')) == {'aiida-core': {'version': '2.6.0'}}
+        written = json.loads(version_file.read_text(encoding='utf8'))
+        assert written['packages'] == {'aiida-core': {'version': '2.6.0'}}
+        assert 'python_binary' in written
 
     @staticmethod
     def test_start_daemon_no_version_file_on_await_failure(stopped_daemon_client):
@@ -368,7 +373,9 @@ class TestDaemonVersionInfo:
         ):
             stopped_daemon_client.restart_daemon()
 
-        assert json.loads(version_file.read_text(encoding='utf8')) == {'aiida-core': {'version': '2.6.0'}}
+        written = json.loads(version_file.read_text(encoding='utf8'))
+        assert written['packages'] == {'aiida-core': {'version': '2.6.0'}}
+        assert 'python_binary' in written
 
     @staticmethod
     def test_restart_daemon_missing_version_file_configuration(stopped_daemon_client, monkeypatch):

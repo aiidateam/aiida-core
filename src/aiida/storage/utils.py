@@ -14,14 +14,14 @@ import json
 from functools import singledispatch
 from typing import TYPE_CHECKING, Sequence, TypeVar
 
-from sqlalchemy import Select, or_, select, type_coerce
+from sqlalchemy import Select, select, type_coerce, union_all
 from sqlalchemy import cast as sql_cast
 from sqlalchemy import func as sa_func
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.dialects.sqlite.base import SQLiteDialect
 from sqlalchemy.engine import Dialect
 from sqlalchemy.orm.attributes import InstrumentedAttribute
-from sqlalchemy.sql.elements import ColumnElement
+from sqlalchemy.sql.elements import BinaryExpression, ColumnElement
 from sqlalchemy.types import TypeEngine
 
 from aiida.common.utils import batch_iter
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 
 # NOTE: Controls how many values are passed to a single unnest() (PostgreSQL) or json_each() (SQLite) call.
-# For very large lists, multiple batches are combined with OR. 500k balances memory usage with query performance.
+# For very large lists, multiple batches are combined with UNION ALL. 500k balances memory usage with query performance.
 IN_CLAUSE_BATCH_SIZE: int = 500_000
 
 T = TypeVar('T')
@@ -71,14 +71,14 @@ def _build_select_stmt_sqlite(dialect: SQLiteDialect, coltype: TypeEngine[T], va
 
 def _create_smarter_in_clause(
     session: 'Session', column: ColumnElement[T] | InstrumentedAttribute[T], values: Sequence[T]
-) -> ColumnElement[bool]:
+) -> BinaryExpression[bool]:
     """Return an IN condition using database-specific functions to avoid parameter limits.
 
     Uses ``unnest()`` (PostgreSQL) or ``json_each()`` (SQLite) to pass large lists as a single
     parameter instead of N parameters, avoiding database parameter limits.
 
-    For very large lists (>500k items), automatically batches into multiple OR'd conditions
-    to balance query performance with memory usage and database load.
+    For very large lists (>500k items), automatically batches into multiple subqueries
+    combined with UNION ALL to balance query performance with memory usage and database load.
 
     .. note::
         The 500k batch threshold is chosen to balance several factors:
@@ -98,10 +98,10 @@ def _create_smarter_in_clause(
 
     Large list (1.5M items)::
 
-        WHERE (
-            column IN (SELECT unnest(:array_1))  -- First 500k
-            OR column IN (SELECT unnest(:array_2))  -- Second 500k
-            OR column IN (SELECT unnest(:array_3))  -- Remaining 500k
+        WHERE column IN (
+            SELECT unnest(:array_1)   -- First 500k
+            UNION ALL SELECT unnest(:array_2)   -- Second 500k
+            UNION ALL SELECT unnest(:array_3)   -- Remaining 500k
         )
 
     :param session: The SQLAlchemy session, used to detect the database dialect.
@@ -116,13 +116,13 @@ def _create_smarter_in_clause(
     coltype: TypeEngine[T] = column.type
 
     if len(values) > IN_CLAUSE_BATCH_SIZE:
-        # For very large lists, batch to avoid memory/performance issues
-        # Create individual IN clauses for each batch and combine with OR
-        batch_in_clauses = [
-            column.in_(_build_select_stmt(dialect, coltype, batch).scalar_subquery())
-            for _, batch in batch_iter(values, IN_CLAUSE_BATCH_SIZE)
+        # For very large lists, batch and combine with UNION ALL.
+        # This gives the query planner a single derived set to scan/hash-join,
+        # rather than N separate IN conditions merged via bitmap OR.
+        batch_selects = [
+            _build_select_stmt(dialect, coltype, batch) for _, batch in batch_iter(values, IN_CLAUSE_BATCH_SIZE)
         ]
-        return or_(*batch_in_clauses)
+        return column.in_(union_all(*batch_selects).scalar_subquery())
 
     subq = _build_select_stmt(dialect, coltype, values).scalar_subquery()
     return column.in_(subq)

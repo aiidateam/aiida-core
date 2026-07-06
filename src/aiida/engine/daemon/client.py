@@ -62,7 +62,7 @@ class PackageVersionInfo(_PackageVersionInfoRequired, total=False):
 PackageVersionSnapshot: t.TypeAlias = dict[str, PackageVersionInfo]
 
 
-class DaemonVersionInfo(t.TypedDict):
+class DaemonEnvInfo(t.TypedDict):
     """Content written to the daemon version file."""
 
     packages: PackageVersionSnapshot
@@ -323,11 +323,11 @@ class DaemonClient:
         return self._config.filepaths(self.profile)['daemon']['pid']
 
     @property
-    def daemon_package_snapshot_file(self) -> str:
+    def daemon_env_info_file(self) -> str:
         try:
-            return self._config.filepaths(self.profile)['daemon']['package_snapshot']
+            return self._config.filepaths(self.profile)['daemon']['daemon_env_info']
         except KeyError as exc:
-            raise ConfigurationError('daemon package snapshot file path is not configured') from exc
+            raise ConfigurationError('daemon env info file path is not configured') from exc
 
     def get_circus_port(self) -> int:
         """Retrieve the port for the circus controller, which should be written to the circus port file.
@@ -668,19 +668,19 @@ class DaemonClient:
     def _validate_package_version_snapshot(snapshot: t.Any) -> PackageVersionSnapshot | None:
         """Validate a structured package version snapshot."""
         if not isinstance(snapshot, dict):
-            LOGGER.warning('Daemon package snapshot file has unexpected format; ignoring.')
+            LOGGER.warning('Daemon env info file has unexpected format; ignoring.')
             return None
 
         validated: PackageVersionSnapshot = {}
 
         for package, value in snapshot.items():
             if not isinstance(package, str) or not isinstance(value, dict):
-                LOGGER.warning('Daemon package snapshot file has unexpected format; ignoring.')
+                LOGGER.warning('Daemon env info file has unexpected format; ignoring.')
                 return None
 
             version = value.get('version')
             if not isinstance(version, str):
-                LOGGER.warning('Daemon package snapshot file has unexpected format; ignoring.')
+                LOGGER.warning('Daemon env info file has unexpected format; ignoring.')
                 return None
 
             package_info: PackageVersionInfo = {'version': version}
@@ -694,21 +694,21 @@ class DaemonClient:
 
     def _write_version_file(self) -> None:
         """Write the current package version snapshot to the daemon version file."""
-        version_info: DaemonVersionInfo = {
+        env_info: DaemonEnvInfo = {
             'packages': self.get_package_version_snapshot(),
             'python_binary': sys.executable,
         }
         try:
-            pathlib.Path(self.daemon_package_snapshot_file).write_text(json.dumps(version_info), encoding='utf8')
+            pathlib.Path(self.daemon_env_info_file).write_text(json.dumps(env_info), encoding='utf8')
         except ConfigurationError:
             LOGGER.debug('Cannot write daemon version file: version file path is not configured.')
         except OSError as exc:
             LOGGER.warning('Failed to write daemon version file: %s', exc)
 
-    def get_daemon_version_info(self) -> DaemonVersionInfo | None:
+    def get_daemon_env_info(self) -> DaemonEnvInfo | None:
         """Read and validate the daemon version file, or return None if unavailable or invalid."""
         try:
-            data = json.loads(pathlib.Path(self.daemon_package_snapshot_file).read_text(encoding='utf8'))
+            data = json.loads(pathlib.Path(self.daemon_env_info_file).read_text(encoding='utf8'))
         except (ConfigurationError, OSError, json.JSONDecodeError):
             return None
 
@@ -723,7 +723,7 @@ class DaemonClient:
         if not isinstance(python_binary, str):
             return None
 
-        return DaemonVersionInfo(packages=packages, python_binary=python_binary)
+        return DaemonEnvInfo(packages=packages, python_binary=python_binary)
 
     def increase_workers(self, number: int, timeout: int | None = None) -> dict[str, t.Any]:
         """Increase the number of workers.
@@ -822,7 +822,7 @@ class DaemonClient:
 
         # Best-effort cleanup of version file
         try:
-            pathlib.Path(self.daemon_package_snapshot_file).unlink(missing_ok=True)
+            pathlib.Path(self.daemon_env_info_file).unlink(missing_ok=True)
         except ConfigurationError:
             LOGGER.debug('Cannot remove daemon version file: version file path is not configured.')
         except OSError as exc:

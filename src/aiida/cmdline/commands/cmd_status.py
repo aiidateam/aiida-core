@@ -60,7 +60,7 @@ STATUS_SYMBOLS = {
 def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     """Print status of AiiDA services."""
     from aiida import __version__
-    from aiida.cmdline.utils.daemon import validate_daemon_version
+    from aiida.cmdline.utils.daemon import validate_daemon_env
     from aiida.common.docs import URL_NO_BROKER
     from aiida.common.exceptions import ConfigurationError
     from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException
@@ -195,7 +195,7 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
         daemon_lines = [daemon_msg]
 
         # Check for package mismatches
-        drift_error = validate_daemon_version(daemon_client)
+        drift_error = validate_daemon_env(daemon_client)
         if drift_error is not None:
             daemon_status = ServiceStatus.WARNING
             daemon_lines.append(drift_error)

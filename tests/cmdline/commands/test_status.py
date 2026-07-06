@@ -144,7 +144,7 @@ def test_version_mismatch_warning(run_cli_command, monkeypatch, tmp_path):
     monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
     monkeypatch.setattr(
         DaemonClient,
-        'get_daemon_version_info',
+        'get_daemon_env_info',
         lambda self: {
             'packages': {'aiida-core': {'version': '2.8.0.post0', 'editable_path': str(daemon_path)}},
             'python_binary': sys.executable,
@@ -167,7 +167,7 @@ def test_version_mismatch_warning(run_cli_command, monkeypatch, tmp_path):
 
 @pytest.mark.usefixtures('stopped_daemon_client')
 @pytest.mark.parametrize(
-    ('daemon_versions', 'current_versions', 'expected_section', 'expected_change'),
+    ('daemon_packages', 'current_packages', 'expected_section', 'expected_change'),
     [
         (
             {'aiida-core': {'version': '2.8.0.post0'}},
@@ -184,16 +184,16 @@ def test_version_mismatch_warning(run_cli_command, monkeypatch, tmp_path):
     ],
 )
 def test_version_mismatch_warning_for_added_or_removed_plugin(
-    run_cli_command, monkeypatch, daemon_versions, current_versions, expected_section, expected_change
+    run_cli_command, monkeypatch, daemon_packages, current_packages, expected_section, expected_change
 ):
     """Test that ``verdi status`` warns when plugins were added or removed since daemon startup."""
     monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
     monkeypatch.setattr(
         DaemonClient,
-        'get_daemon_version_info',
-        lambda self: {'packages': daemon_versions, 'python_binary': sys.executable},
+        'get_daemon_env_info',
+        lambda self: {'packages': daemon_packages, 'python_binary': sys.executable},
     )
-    monkeypatch.setattr(DaemonClient, 'get_package_version_snapshot', staticmethod(lambda: current_versions))
+    monkeypatch.setattr(DaemonClient, 'get_package_version_snapshot', staticmethod(lambda: current_packages))
 
     result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
     assert 'different package versions' in result.output
@@ -216,7 +216,7 @@ def test_no_warning_when_versions_match(run_cli_command, monkeypatch, tmp_path, 
     monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
     monkeypatch.setattr(
         DaemonClient,
-        'get_daemon_version_info',
+        'get_daemon_env_info',
         lambda self: {'packages': {'aiida-core': pkg_info}, 'python_binary': sys.executable},
     )
     monkeypatch.setattr(DaemonClient, 'get_package_version_snapshot', staticmethod(lambda: {'aiida-core': pkg_info}))
@@ -245,7 +245,7 @@ def test_warning_when_editable_install_state_changes(
     monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
     monkeypatch.setattr(
         DaemonClient,
-        'get_daemon_version_info',
+        'get_daemon_env_info',
         lambda self: {'packages': {'aiida-core': daemon_info}, 'python_binary': sys.executable},
     )
     monkeypatch.setattr(
@@ -261,7 +261,7 @@ def test_warning_when_editable_install_state_changes(
 def test_no_warning_when_version_file_missing(run_cli_command, monkeypatch):
     """Test that ``verdi status`` shows no warning when version file is missing."""
     monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
-    monkeypatch.setattr(DaemonClient, 'get_daemon_version_info', lambda self: None)
+    monkeypatch.setattr(DaemonClient, 'get_daemon_env_info', lambda self: None)
 
     result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
     assert 'different package versions' not in result.output

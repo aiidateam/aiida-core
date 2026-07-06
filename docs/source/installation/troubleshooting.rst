@@ -408,49 +408,74 @@ and from the newly opened browser tab select ``New -> <aiida.kernel.name>``
 Increasing the logging verbosity
 --------------------------------
 
-By default, the logging level of AiiDA is minimal to avoid too much noise in the logfiles.
-Only warnings and errors are logged to the daemon log files, while info and debug messages are discarded.
-
-If you are experiencing a problem, you can increase the default minimum logging level of AiiDA messages, with:
+By default, the aiida log level is set to ``REPORT``.
+To change it one can set it with the config option:
 
 .. code-block:: console
 
     $ verdi config set logging.aiida_loglevel DEBUG
 
-You might also be interested in reviewing the circus log messages (the ``circus`` library is the daemonizer that manages the daemon runners),
+Each profile has three log files:
+
+- ``<AIIDA_PATH>/log/aiida-<profile_name>.log`` -- client-side logs (task submissions, pause/play/kill messages, and process execution in running mode)
+- ``<AIIDA_PATH>/daemon/log/aiida-<profile_name>.log`` -- daemon worker logs
+- ``<AIIDA_PATH>/daemon/log/circus-<profile_name>.log`` -- circus supervisor internals
+
+By default, only messages at the ``REPORT`` level and above are shown in the terminal, while the log files capture all messages.
+AiiDA provides separate options to control the verbosity of what is also directed to the terminal and database:
+
+- ``logging.terminal_handler`` -- minimum log level needed for outputting a log into the terminal.
+- ``logging.database_handler`` -- minimum log level needed for log messages bound to a stored node to be written to the `DbLog` table (what `verdi process report` displays).
+
+With verdi commands adding the ``--verbosity`` flag the ``logging.aiida_loglevel`` and ``logging.terminal_handler`` option can be changed for execution of the command.
+
+By default, only messages from AiiDA's own loggers (``aiida-core``, ``plumpy``, ``kiwipy``, ``disk-objectstore``) are affected by ``logging.aiida_loglevel``.
+To also include messages from third-party libraries, lower their log level as well.
+For example, to include SQLAlchemy messages:
 
 .. code-block:: console
 
-    $ verdi config set logging.circus_loglevel DEBUG
+    $ verdi config set logging.sqlalchemy_loglevel DEBUG
 
-however those messages are usually only relevant to debug AiiDA internals.
+Remember to restart the daemon after any config change so the change takes affect on the daemon workers:
 
-For each profile that runs a daemon, there are two unique logfiles, one for AiiDA log messages (named ``aiida-<profile_name>.log``) and one for the circus logs (named ``circus-<profile_name>.log``).
-Those files can be found in the ``~/.aiida/daemon/log`` folder.
+.. code-block:: console
 
-After restarting the daemon (``verdi daemon restart``), the number of messages logged will increase significantly and may help in determining the source of the problem.
+    $ verdi daemon restart
 
 .. note::
 
-    Besides ``DEBUG``, you can also use the levels defined in the `standard Python logging module <https://docs.python.org/3/library/logging.html#logging-levels>`_.
-    In addition to those, AiiDA defines the custom ``REPORT`` level, which, with a value of ``23``, is more verbose than the ``WARNING`` level, but less verbose than ``INFO``.
-    The ``REPORT`` level is AiiDA's default logging level.
+    Besides ``DEBUG``, you can use any level defined in the `standard Python logging module <https://docs.python.org/3/library/logging.html#logging-levels>`_.
+    AiiDA also defines a custom ``REPORT`` level (value ``23``), which sits between ``INFO`` and ``WARNING``.
+    ``REPORT`` is the default logging level.
 
-When the problem is solved, we suggest to reset the default logging level, with:
+When the problem is solved, reset the logging level to avoid excessive noise:
 
 .. code-block:: console
 
-    $ verdi config unset logging.circus_loglevel
     $ verdi config unset logging.aiida_loglevel
+    $ verdi config unset logging.sqlalchemy_loglevel
 
-to avoid too much noise in the logfiles.
+To increase terminal verbosity:
+
+.. code-block:: console
+
+    $ verdi config set logging.terminal_handler DEBUG
+
+This is especially useful when running a daemon worker in the foreground with ``verdi daemon worker``.
 
 .. tip::
 
-    It is also possible to temporarily change the log level for ``verdi`` commands using the ``--v/--verbosity`` options (see :ref:`this section <topics:cli:verbosity>` for more details).
+    You can also temporarily change terminal verbosity for a single command using ``verdi --verbosity DEBUG <command>`` (see :ref:`this section <topics:cli:verbosity>` for details).
 
-The config options set for the current profile can be viewed using
+To view the config options set for the current profile:
 
 .. code-block:: console
 
     $ verdi config list
+
+To also see advanced per-logger options:
+
+.. code-block:: console
+
+    $ verdi config list --advanced

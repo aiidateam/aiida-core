@@ -67,14 +67,16 @@ That is to say, if the safe interval is set to 60 seconds, any single worker is 
 Why would a process that runs fine locally raise an exception when submitted to the daemon?
 ===========================================================================================
 This is almost always caused by an import issue.
-To determine exactly what might be going wrong, first :ref:`set the loglevel <intro:increase-logging-verbosity>` to ``DEBUG`` by executing the command:
+To determine exactly what might be going wrong, first :ref:`increase the logging verbosity <intro:increase-logging-verbosity>` by running:
 
 .. code-block:: console
 
     $ verdi config set logging.aiida_loglevel DEBUG
+    $ verdi daemon restart
 
-Then restart the daemon with ``verdi daemon restart`` for the changes to take effect.
-Run the command ``verdi daemon logshow`` in a separate terminal to see the logging output of the daemon and then submit the problematic calculation or workflow again.
+You can find the daemon log file in ``<AIIDA_PATH>/.aiida/daemon/log/aiida-<PROFILE_NAME>.log``.
+Alternatively you can run ``verdi daemon logshow`` in a separate terminal to see the daemon log output and submit the problematic calculation or workflow again.
+The daemon log file does not have such a filter in place and logs everything.
 
 If the root cause is indeed due to an import problem, it will probably appear as an ``ImportError`` exception in the daemon log.
 To solve these issues, make sure that all the Python code that is being run is properly importable, which means that it is part of the `PYTHONPATH <https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH>`_.

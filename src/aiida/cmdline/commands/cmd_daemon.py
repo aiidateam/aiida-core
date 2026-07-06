@@ -111,7 +111,7 @@ def status(ctx, all_profiles, timeout):
     from tabulate import tabulate
 
     from aiida.cmdline.utils.common import format_local_time
-    from aiida.cmdline.utils.daemon import validate_daemon_version
+    from aiida.cmdline.utils.daemon import validate_daemon_env
     from aiida.engine.daemon.client import DaemonException, get_daemon_client
     from aiida.manage.manager import get_manager
 
@@ -179,7 +179,7 @@ def status(ctx, all_profiles, timeout):
             f'Log file: {client.daemon_log_file}',
         ]
 
-        drift_error = validate_daemon_version(client)
+        drift_error = validate_daemon_env(client)
         if drift_error is not None:
             lines.append(drift_error)
 

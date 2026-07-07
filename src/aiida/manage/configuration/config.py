@@ -98,10 +98,20 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         description='Minimum level for the `disk_objectstore` logger.',
         json_schema_extra={'advanced': True},
     )
+    logging__database_handler: LogLevels = Field(
+        'REPORT',
+        description=(
+            'Minimum log level needed for log messages bound to a stored node to be written to the `DbLog` '
+            'table (what `verdi process report` displays). This only filters log messages and does not change '
+            'the actual emitted log messages. To take effect you need to also change one of the log levels '
+            'to the same or higher verbosity (e.g. `logging.aiida_loglevel`).'
+        ),
+        json_schema_extra={'advanced': False},
+    )
     logging__db_loglevel: LogLevels = Field(
         'REPORT',
-        description='Minimum level to log to the DbLog table used for logging in AiiDA processes.',
-        json_schema_extra={'advanced': False},
+        description='Deprecated: use ``logging.database_handler`` instead.',
+        json_schema_extra={'deprecated_by': 'logging.database_handler', 'advanced': True},
     )
     logging__plumpy_loglevel: LogLevels = Field(
         'WARNING',

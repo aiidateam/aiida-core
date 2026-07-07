@@ -241,11 +241,11 @@ def configure_logging(with_orm: bool = False, daemon: bool = False, daemon_log_f
     if with_orm:
         from aiida.manage.configuration import get_config_option
 
-        config['handlers']['db_logger'] = {
-            'level': get_config_option('logging.db_loglevel'),
+        config['handlers']['database'] = {
+            'level': get_config_option('logging.database_handler'),
             'class': 'aiida.orm.utils.log.DBLogHandler',
         }
-        config['loggers']['aiida']['handlers'].append('db_logger')
+        config['loggers']['aiida']['handlers'].append('database')
 
     dictConfig(config)
 

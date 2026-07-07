@@ -719,19 +719,20 @@ def default_user():
 def override_logging(isolated_config):
     """Temporarily override the log level for the AiiDA logger and the database log handler to ``DEBUG``.
 
-    The changes are made by changing the configuration options ``logging.aiida_loglevel`` and ``logging.db_loglevel``.
-    To ensure the changes are temporary, the are made on an isolated temporary configuration.
+    The changes are made by changing the configuration options ``logging.aiida_loglevel`` and
+    ``logging.database_handler``. To ensure the changes are temporary, they are made on an isolated
+    temporary configuration.
     """
     from aiida.common.log import configure_logging
 
     try:
         isolated_config.set_option('logging.aiida_loglevel', 'DEBUG')
-        isolated_config.set_option('logging.db_loglevel', 'DEBUG')
+        isolated_config.set_option('logging.database_handler', 'DEBUG')
         configure_logging(with_orm=True)
         yield
     finally:
         isolated_config.unset_option('logging.aiida_loglevel')
-        isolated_config.unset_option('logging.db_loglevel')
+        isolated_config.unset_option('logging.database_handler')
         configure_logging(with_orm=True)
 
 

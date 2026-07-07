@@ -14,8 +14,8 @@ import time
 import pytest
 from plumpy import get_or_create_event_loop
 
+from aiida.engine._transports import TransportQueue
 from aiida.engine.processes.calcjobs.manager import JobManager, JobsList
-from aiida.engine.transports import TransportQueue
 from aiida.orm import User
 
 

@@ -7,7 +7,7 @@ description: Use when adding a new `verdi` subcommand in `src/aiida/cmdline/`.
 
 ## Steps
 
-1. Create the command under `src/aiida/cmdline/commands/`, typically as part of an existing `cmd_*.py` file (`cmd_process.py`, `cmd_calcjob.py`, `cmd_devel.py`, etc.).
+1. Create the command under `src/aiida/cmdline/_commands/`, typically as part of an existing `cmd_*.py` file (`cmd_process.py`, `cmd_calcjob.py`, `cmd_devel.py`, etc.).
 2. Use Click decorators plus AiiDA's custom decorators from `aiida.cmdline.utils.decorators` (e.g. `@decorators.with_dbenv()` for commands that need the storage backend loaded).
 3. Register the command in the appropriate command group (usually via `@<group>.command()`).
 4. Add tests in `tests/cmdline/commands/`.
@@ -57,9 +57,9 @@ Both are wrapped in `OverridableArgument` / `OverridableOption` classes that sto
 ## Relevant source
 
 - Decorators: `src/aiida/cmdline/utils/decorators.py`
-- Existing commands: `src/aiida/cmdline/commands/cmd_*.py`
+- Existing commands: `src/aiida/cmdline/_commands/cmd_*.py`
 - Reusable arguments: `src/aiida/cmdline/params/arguments/main.py`
 - Reusable options: `src/aiida/cmdline/params/options/main.py`
 - Custom option types: `src/aiida/cmdline/params/options/{callable,conditional,interactive,multivalue,config}.py`
 - Parameter types (ParamType subclasses): `src/aiida/cmdline/params/types/`
-- Load-time check implementation: `src/aiida/cmdline/commands/cmd_devel.py` (`check-load-time`)
+- Load-time check implementation: `src/aiida/cmdline/_commands/cmd_devel.py` (`check-load-time`)

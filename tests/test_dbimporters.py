@@ -22,7 +22,7 @@ class TestCodDbImporter:
         """Test query construction."""
         import re
 
-        from aiida.tools.dbimporters.plugins.cod import CodDbImporter
+        from aiida.tools._dbimporters.plugins.cod import CodDbImporter
 
         codi = CodDbImporter()
         q_sql = codi.query_sql(
@@ -73,7 +73,7 @@ class TestCodDbImporter:
         """Rather complicated, but wide-coverage test for data types, accepted
         and rejected by CodDbImporter._*_clause methods.
         """
-        from aiida.tools.dbimporters.plugins.cod import CodDbImporter
+        from aiida.tools._dbimporters.plugins.cod import CodDbImporter
 
         codi = CodDbImporter()
         messages = [
@@ -112,7 +112,7 @@ class TestCodDbImporter:
 
     def test_dbentry_creation(self):
         """Tests the creation of CodEntry from CodSearchResults."""
-        from aiida.tools.dbimporters.plugins.cod import CodSearchResults
+        from aiida.tools._dbimporters.plugins.cod import CodSearchResults
 
         results = CodSearchResults(
             [
@@ -143,7 +143,7 @@ class TestCodDbImporter:
     def test_dbentry_to_cif_node(self):
         """Tests the creation of CifData node from CodEntry."""
         from aiida.orm import CifData
-        from aiida.tools.dbimporters.plugins.cod import CodEntry
+        from aiida.tools._dbimporters.plugins.cod import CodEntry
 
         entry = CodEntry('http://www.crystallography.net/cod/1000000.cif')
         entry.cif = "data_test _publ_section_title 'Test structure'"
@@ -168,7 +168,7 @@ class TestTcodDbImporter:
 
     def test_dbentry_creation(self):
         """Tests the creation of TcodEntry from TcodSearchResults."""
-        from aiida.tools.dbimporters.plugins.tcod import TcodSearchResults
+        from aiida.tools._dbimporters.plugins.tcod import TcodSearchResults
 
         results = TcodSearchResults(
             [
@@ -200,7 +200,7 @@ class TestPcodDbImporter:
 
     def test_dbentry_creation(self):
         """Tests the creation of PcodEntry from PcodSearchResults."""
-        from aiida.tools.dbimporters.plugins.pcod import PcodSearchResults
+        from aiida.tools._dbimporters.plugins.pcod import PcodSearchResults
 
         results = PcodSearchResults([{'id': '12345678'}])
         assert len(results) == 1
@@ -221,7 +221,7 @@ class TestMpodDbImporter:
 
     def test_dbentry_creation(self):
         """Tests the creation of MpodEntry from MpodSearchResults."""
-        from aiida.tools.dbimporters.plugins.mpod import MpodSearchResults
+        from aiida.tools._dbimporters.plugins.mpod import MpodSearchResults
 
         results = MpodSearchResults([{'id': '1234567'}])
         assert len(results) == 1
@@ -245,7 +245,7 @@ class TestNnincDbImporter:
         import os
 
         from aiida.common.exceptions import ParsingError
-        from aiida.tools.dbimporters.plugins.nninc import NnincSearchResults
+        from aiida.tools._dbimporters.plugins.nninc import NnincSearchResults
 
         upf = 'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030'
 

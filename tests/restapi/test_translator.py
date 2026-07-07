@@ -6,10 +6,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the `aiida.restapi.translator` module."""
+"""Tests for the `aiida.restapi._translator` module."""
 
 from aiida.orm import Data
-from aiida.restapi.translator.nodes.node import NodeTranslator
+from aiida.restapi._translator.nodes.node import NodeTranslator
 
 
 def test_get_all_download_formats():

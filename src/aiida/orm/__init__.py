@@ -107,6 +107,7 @@ __all__ = (
     'WorkflowNode',
     'XyData',
     'cif_from_ase',
+    'deserialize_unsafe',
     'find_bandgap',
     'get_loader',
     'get_query_type_from_type_string',
@@ -119,6 +120,7 @@ __all__ = (
     'load_node',
     'load_node_class',
     'pycifrw_from_cif',
+    'serialize',
     'to_aiida_type',
     'validate_link',
 )

@@ -17,8 +17,8 @@ import numpy as np
 import pytest
 
 from aiida import orm
-from aiida.cmdline.commands import cmd_group
-from aiida.cmdline.commands.cmd_data import (
+from aiida.cmdline._commands import cmd_group
+from aiida.cmdline._commands.cmd_data import (
     cmd_array,
     cmd_bands,
     cmd_cif,

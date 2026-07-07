@@ -1,11 +1,11 @@
-"""Tests for the :mod:`aiida.engine.processes.control` module."""
+"""Tests for the :mod:`aiida.engine.processes._control` module."""
 
 import pytest
 from plumpy.process_comms import RemoteProcessThreadController
 
 from aiida.engine import ProcessState
 from aiida.engine.launch import submit
-from aiida.engine.processes import control
+from aiida.engine.processes import _control as control
 from aiida.orm import Int
 from tests.utils.processes import WaitProcess
 
@@ -31,18 +31,18 @@ def test_daemon_not_running(action, caplog):
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 def test_pause_processes(submit_and_await):
-    """Test :func:`aiida.engine.processes.control.pause_processes`."""
+    """Test :func:`aiida.engine.processes._control.pause_processes`."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
     control.pause_processes([node], timeout=float('inf'))
     assert node.paused
-    assert node.process_status == 'Paused through `aiida.engine.processes.control.pause_processes`'
+    assert node.process_status == 'Paused through `aiida.engine.processes._control.pause_processes`'
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 def test_pause_processes_all_entries(submit_and_await):
-    """Test :func:`aiida.engine.processes.control.pause_processes` with ``all_entries=True``."""
+    """Test :func:`aiida.engine.processes._control.pause_processes` with ``all_entries=True``."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
@@ -52,7 +52,7 @@ def test_pause_processes_all_entries(submit_and_await):
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 def test_play_processes(submit_and_await):
-    """Test :func:`aiida.engine.processes.control.play_processes`."""
+    """Test :func:`aiida.engine.processes._control.play_processes`."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
@@ -65,7 +65,7 @@ def test_play_processes(submit_and_await):
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 def test_play_processes_all_entries(submit_and_await):
-    """Test :func:`aiida.engine.processes.control.play_processes` with ``all_entries=True``."""
+    """Test :func:`aiida.engine.processes._control.play_processes` with ``all_entries=True``."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
@@ -78,18 +78,18 @@ def test_play_processes_all_entries(submit_and_await):
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 def test_kill_processes(submit_and_await):
-    """Test :func:`aiida.engine.processes.control.kill_processes`."""
+    """Test :func:`aiida.engine.processes._control.kill_processes`."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
 
     control.kill_processes([node], timeout=float('inf'))
     assert node.is_terminated
     assert node.is_killed
-    assert node.process_status == 'Killed through `aiida.engine.processes.control.kill_processes`'
+    assert node.process_status == 'Killed through `aiida.engine.processes._control.kill_processes`'
 
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 def test_kill_processes_all_entries(submit_and_await):
-    """Test :func:`aiida.engine.processes.control.kill_processes` with ``all_entries=True``."""
+    """Test :func:`aiida.engine.processes._control.kill_processes` with ``all_entries=True``."""
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
 
     control.kill_processes(all_entries=True, timeout=float('inf'))
@@ -99,7 +99,7 @@ def test_kill_processes_all_entries(submit_and_await):
 
 @pytest.mark.usefixtures('aiida_profile_clean', 'started_daemon_client')
 def test_revive(monkeypatch, aiida_code_installed, submit_and_await):
-    """Test :func:`aiida.engine.processes.control.revive_processes`."""
+    """Test :func:`aiida.engine.processes._control.revive_processes`."""
     code = aiida_code_installed(default_calc_job_plugin='core.arithmetic.add', filepath_executable='/bin/bash')
     builder = code.get_builder()
     builder.x = Int(1)

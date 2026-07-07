@@ -15,7 +15,7 @@ import pytest
 
 from aiida.common.exceptions import ConfigurationError
 from aiida.schedulers.datastructures import JobState
-from aiida.schedulers.plugins.lsf import LsfScheduler
+from aiida.schedulers.plugins._lsf import LsfScheduler
 from aiida.schedulers.scheduler import SchedulerError
 
 BJOBS_STDOUT_TO_TEST = (

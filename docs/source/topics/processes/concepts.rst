@@ -195,4 +195,4 @@ A sealed process node behaves exactly like a normal stored node, as in *all* of 
 In addition, once a process node is sealed, no more incoming or outgoing links can be attached to it.
 Unsealed process nodes can also not be exported, because they belong to processes that are still active.
 Note that the sealing concept does not apply to data nodes and they are exportable as soon as they are stored.
-To determine whether a process node is sealed, one can use the property :py:attr:`~aiida.orm.utils.mixins.Sealable.is_sealed`.
+To determine whether a process node is sealed, one can use the property :py:attr:`~aiida.orm.utils._mixins.Sealable.is_sealed`.

@@ -13,7 +13,7 @@ import textwrap
 
 import pytest
 
-from aiida.cmdline.commands import cmd_run
+from aiida.cmdline._commands import cmd_run
 from aiida.common.log import override_log_level
 
 

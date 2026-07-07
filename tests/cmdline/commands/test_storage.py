@@ -13,7 +13,7 @@ import json
 import pytest
 
 from aiida import get_profile
-from aiida.cmdline.commands import cmd_storage
+from aiida.cmdline._commands import cmd_storage
 from aiida.common import exceptions
 
 

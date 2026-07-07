@@ -328,7 +328,7 @@ Updatable attributes
 ********************
 The :py:class:`~aiida.orm.ProcessNode` class is a subclass of the :py:class:`~aiida.orm.nodes.node.Node` class, which means that its attributes become immutable once stored.
 However, for a ``Calculation`` to be runnable it needs to be stored, but that would mean that its state, which is stored in an attribute can no longer be updated.
-To solve this issue the :py:class:`~aiida.orm.utils.mixins.Sealable` mixin is introduced.
+To solve this issue the :py:class:`~aiida.orm.utils._mixins.Sealable` mixin is introduced.
 This mixin can be used for subclasses of ``Node`` that need to have updatable attributes even after the node has been stored in the database.
 The mixin defines the ``_updatable_attributes`` tuple, which defines the attributes that are considered to be mutable even when the node is stored.
 It also allows the node to be *sealed*, after which even the updatable attributes become immutable.

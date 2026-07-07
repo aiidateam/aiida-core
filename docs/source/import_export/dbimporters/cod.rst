@@ -6,11 +6,11 @@ COD database importer is used to import crystal structures from the `Crystallogr
 Setup
 +++++
 
-An instance of :py:class:`~aiida.tools.dbimporters.plugins.cod.CodDbImporter` is created as follows:
+An instance of :py:class:`~aiida.tools._dbimporters.plugins.cod.CodDbImporter` is created as follows:
 
 .. code-block:: python
 
-    from aiida.tools.dbimporters.plugins.cod import CodDbImporter
+    from aiida.tools._dbimporters.plugins.cod import CodDbImporter
 
     importer = CodDbImporter()
 
@@ -19,13 +19,13 @@ No additional parameters are required for standard queries on the main COD serve
 How to do a query
 +++++++++++++++++
 
-A search is initiated by using the :py:meth:`~aiida.tools.dbimporters.plugins.cod.CodDbImporter.query` method, supplying statements using the ``keyword=value`` syntax:
+A search is initiated by using the :py:meth:`~aiida.tools._dbimporters.plugins.cod.CodDbImporter.query` method, supplying statements using the ``keyword=value`` syntax:
 
 .. code-block:: python
 
     results = importer.query(chemical_name="caffeine")
 
-List of possible keywords can be listed using the method :py:meth:`~aiida.tools.dbimporters.plugins.cod.CodDbImporter.get_supported_keywords`:
+List of possible keywords can be listed using the method :py:meth:`~aiida.tools._dbimporters.plugins.cod.CodDbImporter.get_supported_keywords`:
 
 .. code-block:: python
 
@@ -49,7 +49,7 @@ is equivalent to the following SQL statement:
                 ( chemical_name == "caffeine" OR chemical_name == "serotonin" ) AND
                 ( year = 2000 OR year = 2001 )
 
-A query returns an instance of :py:class:`~aiida.tools.dbimporters.plugins.cod.CodSearchResults`, which can be used in the same way as a list of :py:class:`~aiida.tools.dbimporters.plugins.cod.CodEntry` instances:
+A query returns an instance of :py:class:`~aiida.tools._dbimporters.plugins.cod.CodSearchResults`, which can be used in the same way as a list of :py:class:`~aiida.tools._dbimporters.plugins.cod.CodEntry` instances:
 
 .. code-block:: python
 
@@ -59,13 +59,13 @@ A query returns an instance of :py:class:`~aiida.tools.dbimporters.plugins.cod.C
     for entry in results:
         print(entry)
 
-Using data from :py:class:`~aiida.tools.dbimporters.plugins.cod.CodEntry`
+Using data from :py:class:`~aiida.tools._dbimporters.plugins.cod.CodEntry`
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-:py:class:`~aiida.tools.dbimporters.plugins.cod.CodEntry` has a few methods (inherited from :py:class:`~aiida.tools.dbimporters.baseclasses.CifEntry`) to access the contents of its instances:
+:py:class:`~aiida.tools._dbimporters.plugins.cod.CodEntry` has a few methods (inherited from :py:class:`~aiida.tools._dbimporters.baseclasses.CifEntry`) to access the contents of its instances:
 
-* :py:meth:`~aiida.tools.dbimporters.baseclasses.CifEntry.get_aiida_structure`
-* :py:meth:`~aiida.tools.dbimporters.baseclasses.CifEntry.get_ase_structure`
-* :py:meth:`~aiida.tools.dbimporters.baseclasses.CifEntry.get_cif_node`
-* :py:meth:`~aiida.tools.dbimporters.baseclasses.CifEntry.get_parsed_cif`
-* :py:meth:`~aiida.tools.dbimporters.baseclasses.CifEntry.get_raw_cif`
+* :py:meth:`~aiida.tools._dbimporters.baseclasses.CifEntry.get_aiida_structure`
+* :py:meth:`~aiida.tools._dbimporters.baseclasses.CifEntry.get_ase_structure`
+* :py:meth:`~aiida.tools._dbimporters.baseclasses.CifEntry.get_cif_node`
+* :py:meth:`~aiida.tools._dbimporters.baseclasses.CifEntry.get_parsed_cif`
+* :py:meth:`~aiida.tools._dbimporters.baseclasses.CifEntry.get_raw_cif`

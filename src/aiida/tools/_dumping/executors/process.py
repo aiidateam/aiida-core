@@ -20,7 +20,8 @@ from typing import TYPE_CHECKING, Callable, Optional, Tuple, Union, cast
 import yaml
 
 from aiida import orm
-from aiida.common import LinkType, timezone
+from aiida.common import LinkType
+from aiida.common import _timezone as timezone
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.utils import LinkTriple
 from aiida.tools._dumping.config import DumpMode

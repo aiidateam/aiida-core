@@ -80,7 +80,7 @@ This layer serves a couple of functions:
 * It serves as a translation layer between string and byte streams.
 
 The first is necessary because after a node has been stored, its content is considered immutable, which includes the content of its file repository.
-The :class:`~aiida.orm.utils.mixins.Sealable` mixin overrides the :class:`~aiida.repository.repository.Repository` methods that mutate repository content, to ensure that process nodes *can* mutate their content, as long as they are not sealed.
+The :class:`~aiida.orm.utils._mixins.Sealable` mixin overrides the :class:`~aiida.repository.repository.Repository` methods that mutate repository content, to ensure that process nodes *can* mutate their content, as long as they are not sealed.
 
 The second *raison-d'être* of the :class:`~aiida.orm.nodes.repository.NodeRepository` is to allow clients to work with string streams instead of byte streams.
 As explained in the section on the :ref:`file repository backend <internal-architecture:repository:design:repository-backend>`, it only works with byte streams.

@@ -17,7 +17,7 @@ import plumpy.loaders
 import plumpy.persistence
 from plumpy.exceptions import PersistenceError
 
-from aiida.orm.utils import serialize
+from aiida.orm.utils import serialization
 
 if TYPE_CHECKING:
     from aiida.engine.processes.process import Process
@@ -87,7 +87,7 @@ class AiiDAPersister(plumpy.persistence.Persister):
             raise PersistenceError(f"Failed to create a bundle for '{process}': {traceback.format_exc()}")
 
         try:
-            process.node.set_checkpoint(serialize.serialize(bundle))
+            process.node.set_checkpoint(serialization.serialize(bundle))
         except Exception:
             raise PersistenceError(f"Failed to store a checkpoint for '{process}': {traceback.format_exc()}")
 
@@ -119,7 +119,7 @@ class AiiDAPersister(plumpy.persistence.Persister):
             raise PersistenceError(f'Calculation<{calculation.pk}> does not have a saved checkpoint')
 
         try:
-            bundle = serialize.deserialize_unsafe(checkpoint)
+            bundle = serialization.deserialize_unsafe(checkpoint)
         except Exception:
             raise PersistenceError(f'Failed to load the checkpoint for process<{pid}>: {traceback.format_exc()}')
 

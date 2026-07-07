@@ -40,8 +40,8 @@ if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
     from aiida.parsers import Parser
     from aiida.schedulers import Scheduler
+    from aiida.tools._dbimporters import DbImporter
     from aiida.tools.data.orbital import Orbital
-    from aiida.tools.dbimporters import DbImporter
     from aiida.transports import Transport
 
 
@@ -224,12 +224,12 @@ def DbImporterFactory(entry_point_name: str, load: bool = True) -> Union[EntryPo
 
     :param entry_point_name: the entry point name.
     :param load: if True, load the matched entry point and return the loaded resource instead of the entry point itself.
-    :return: sub class of :py:class:`~aiida.tools.dbimporters.baseclasses.DbImporter`
+    :return: sub class of :py:class:`~aiida.tools._dbimporters.baseclasses.DbImporter`
     :raises aiida.common.InvalidEntryPointTypeError: if the type of the loaded entry point is invalid.
     """
     from inspect import isclass
 
-    from aiida.tools.dbimporters import DbImporter
+    from aiida.tools._dbimporters import DbImporter
 
     entry_point_group = 'aiida.tools.dbimporters'
     entry_point = BaseFactory(entry_point_group, entry_point_name, load=load)

@@ -6,13 +6,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Unit tests for the :mod:`aiida.engine.daemon.worker` module."""
+"""Unit tests for the :mod:`aiida.engine.daemon._worker` module."""
 
 import pytest
 
-from aiida.engine.daemon.worker import shutdown_worker
+from aiida.engine.daemon._worker import shutdown_worker
 from aiida.orm import Log
-from aiida.workflows.arithmetic.multiply_add import MultiplyAddWorkChain
+from aiida.workflows._arithmetic.multiply_add import MultiplyAddWorkChain
 
 
 @pytest.mark.requires_broker

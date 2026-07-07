@@ -8,7 +8,7 @@
 ###########################################################################
 """Tests for ``verdi restapi``."""
 
-from aiida.cmdline.commands.cmd_restapi import restapi
+from aiida.cmdline._commands.cmd_restapi import restapi
 from aiida.restapi import run_api
 
 

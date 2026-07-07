@@ -34,7 +34,7 @@ The source code lives under `src/aiida/` with these main packages:
 |------|------------|---------|
 | Engine core | `src/aiida/engine/processes/process.py` | Base `Process` class |
 | CalcJob | `src/aiida/engine/processes/calcjobs/calcjob.py` | `CalcJob` implementation |
-| CalcJob file ops | `src/aiida/engine/daemon/execmanager.py` | File copying, job submission, retrieval |
+| CalcJob file ops | `src/aiida/engine/daemon/_execmanager.py` | File copying, job submission, retrieval |
 | WorkChain | `src/aiida/engine/processes/workchains/workchain.py` | `WorkChain` implementation |
 | ORM node | `src/aiida/orm/nodes/node.py` | Base `Node` class |
 | QueryBuilder | `src/aiida/orm/querybuilder.py` | Query interface for the provenance graph |
@@ -63,7 +63,7 @@ To create a plugin, implement the corresponding ABC and register it as an entry 
 | `Parser` | `aiida.parsers.parser` | Parse calculation outputs | `aiida.parsers` |
 | `StorageBackend` | `aiida.orm.implementation.storage_backend` | Database and file storage | `aiida.storage` |
 | `AbstractCode` | `aiida.orm.nodes.data.code.abstract` | Code/executable representation | `aiida.data` |
-| `CalcJobImporter` | `aiida.engine.processes.calcjobs.importer` | Import existing calculation results | `aiida.calculations.importers` |
+| `CalcJobImporter` | `aiida.engine.processes.calcjobs.importer` | Import existing calculation results | `aiida.calculations._importers` |
 
 ## Quick API overview via stubs
 

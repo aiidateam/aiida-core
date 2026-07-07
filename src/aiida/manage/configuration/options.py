@@ -53,7 +53,7 @@ class Option:
 
     @property
     def global_only(self) -> bool:
-        from .config import ProfileOptionsSchema
+        from ._config import ProfileOptionsSchema
 
         return self._name.replace('.', '__') not in ProfileOptionsSchema.model_fields
 
@@ -66,7 +66,7 @@ class Option:
         """
         from pydantic import ValidationError
 
-        from .config import GlobalOptionsSchema
+        from ._config import GlobalOptionsSchema
 
         attribute = self.name.replace('.', '__')
 
@@ -92,14 +92,14 @@ class Option:
 
 def get_option_names() -> List[str]:
     """Return a list of available option names."""
-    from .config import GlobalOptionsSchema
+    from ._config import GlobalOptionsSchema
 
     return [key.replace('__', '.') for key in GlobalOptionsSchema.model_fields]
 
 
 def get_option(name: str) -> Option:
     """Return option."""
-    from .config import GlobalOptionsSchema
+    from ._config import GlobalOptionsSchema
 
     options = GlobalOptionsSchema.model_fields
     option_name = name.replace('.', '__')

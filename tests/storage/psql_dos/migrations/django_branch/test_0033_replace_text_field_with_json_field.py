@@ -10,7 +10,7 @@
 
 import json
 
-from aiida.common import timezone
+from aiida.common import _timezone as timezone
 from aiida.common.utils import get_new_uuid
 from aiida.storage.psql_dos.migrator import PsqlDosMigrator
 

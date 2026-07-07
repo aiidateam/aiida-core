@@ -55,13 +55,13 @@ from aiida.common.log import LOG_LEVEL_REPORT
 from aiida.engine.utils import InterruptableFuture
 from aiida.orm.implementation.utils import clean_value
 from aiida.orm.nodes.process.calculation.calcjob import CalcJobNode
-from aiida.orm.utils import serialize
+from aiida.orm.utils import serialization
 
+from ._utils import prune_mapping
 from .builder import ProcessBuilder
 from .exit_code import ExitCode, ExitCodesNamespace
 from .ports import PORT_NAMESPACE_SEPARATOR, InputPort, OutputPort, PortNamespace
 from .process_spec import ProcessSpec
-from .utils import prune_mapping
 
 if TYPE_CHECKING:
     from aiida.engine.runners import Runner
@@ -690,7 +690,7 @@ class Process(PlumpyProcess):
         :param inputs: A mapping of the inputs as passed to the process
         :return: The encoded (serialized) inputs
         """
-        return serialize.serialize(inputs)
+        return serialization.serialize(inputs)
 
     @override
     def decode_input_args(self, encoded: str) -> Dict[str, Any]:
@@ -699,7 +699,7 @@ class Process(PlumpyProcess):
         :param encoded: encoded (serialized) inputs
         :return: The decoded input args
         """
-        return serialize.deserialize_unsafe(encoded)
+        return serialization.deserialize_unsafe(encoded)
 
     def update_outputs(self) -> None:
         """Attach new outputs to the node since the last call.

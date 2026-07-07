@@ -6,12 +6,12 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for aiida.tools.graph.graph_traversers"""
+"""Tests for aiida.tools.graph._graph_traversers"""
 
 import pytest
 
 from aiida.common.links import LinkType
-from aiida.tools.graph.graph_traversers import get_nodes_delete, traverse_graph
+from aiida.tools.graph._graph_traversers import get_nodes_delete, traverse_graph
 
 
 def create_minimal_graph():

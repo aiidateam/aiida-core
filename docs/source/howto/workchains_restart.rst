@@ -13,7 +13,7 @@ However, there is one thing that we did not consider there:
 
     What if a calculation step fails?
 
-For example with the :py:class:`~aiida.workflows.arithmetic.multiply_add.MultiplyAddWorkChain`; it launches a :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation`.
+For example with the :py:class:`~aiida.workflows._arithmetic.multiply_add.MultiplyAddWorkChain`; it launches a :py:class:`~aiida.calculations._arithmetic.add.ArithmeticAddCalculation`.
 If that were to fail, the work chain would except because the line ``self.ctx.addition.outputs.sum`` will raise an ``AttributeError``.
 In this case, where the work chain just runs a single calculation, that is not such a big deal but for real-life work chains that run a number of calculations in sequence, having the work chain except will cause all the work up to that point to be lost.
 Take as an example a workflow that computes the phonons of a crystal structure using Quantum ESPRESSO:
@@ -179,7 +179,7 @@ The options are:
 Writing a base restart work chain
 =================================
 
-In this how-to, we will show how to implement the ``BaseRestartWorkChain`` for the :py:class:`~aiida.calculations.arithmetic.add.ArithmeticAddCalculation`.
+In this how-to, we will show how to implement the ``BaseRestartWorkChain`` for the :py:class:`~aiida.calculations._arithmetic.add.ArithmeticAddCalculation`.
 We start by importing the relevant base classes and create a subclass:
 
 .. code-block:: python

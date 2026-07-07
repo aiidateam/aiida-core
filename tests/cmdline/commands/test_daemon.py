@@ -13,7 +13,7 @@ from unittest.mock import patch
 import pytest
 
 from aiida import get_profile
-from aiida.cmdline.commands import cmd_daemon
+from aiida.cmdline._commands import cmd_daemon
 from aiida.engine.daemon.client import DaemonClient, DaemonTimeoutException
 
 pytestmark = pytest.mark.requires_broker

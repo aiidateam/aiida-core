@@ -16,9 +16,9 @@ import pytest
 from pgtest.pgtest import PGTest
 
 from aiida import orm
-from aiida.cmdline.commands import cmd_setup
+from aiida.cmdline._commands import cmd_setup
 from aiida.manage import configuration
-from aiida.manage.external.postgres import Postgres
+from aiida.manage._external.postgres import Postgres
 
 pytestmark = pytest.mark.requires_psql
 

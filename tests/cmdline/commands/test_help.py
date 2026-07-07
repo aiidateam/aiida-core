@@ -12,7 +12,7 @@ from importlib import metadata
 
 from packaging import version
 
-from aiida.cmdline.commands import cmd_verdi
+from aiida.cmdline._commands import cmd_verdi
 
 
 class TestVerdiHelpCommand:

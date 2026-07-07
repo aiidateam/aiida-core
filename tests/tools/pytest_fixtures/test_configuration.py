@@ -32,7 +32,7 @@ def test_aiida_config_file(tmp_path_factory):
 
 def test_aiida_config_tmp(aiida_config_tmp, tmp_path_factory):
     """Test that ``aiida_config_tmp`` returns a config instance in temp directory."""
-    from aiida.manage.configuration.config import Config
+    from aiida.manage.configuration._config import Config
 
     assert isinstance(aiida_config_tmp, Config)
     assert aiida_config_tmp.dirpath.startswith(str(tmp_path_factory.getbasetemp()))

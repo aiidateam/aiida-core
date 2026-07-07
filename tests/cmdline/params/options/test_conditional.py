@@ -6,14 +6,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the :mod:`aiida.cmdline.params.options.conditional` module."""
+"""Tests for the :mod:`aiida.cmdline.params.options._conditional` module."""
 
 import functools
 
 import click
 import pytest
 
-from aiida.cmdline.params.options.conditional import ConditionalOption
+from aiida.cmdline.params.options._conditional import ConditionalOption
 
 
 @pytest.fixture

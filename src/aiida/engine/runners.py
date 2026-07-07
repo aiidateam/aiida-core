@@ -29,7 +29,8 @@ from aiida.common import exceptions
 from aiida.orm import ProcessNode, load_node
 from aiida.plugins.utils import PluginVersionProvider
 
-from . import transports, utils
+from . import _transports as transports
+from . import utils
 from .processes import Process, ProcessBuilder, ProcessState, futures
 from .processes.calcjobs import manager
 

@@ -6,13 +6,13 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the `aiida.workflows.arithmetic.add_multiply` work function."""
+"""Tests for the `aiida.workflows._arithmetic.add_multiply` work function."""
 
 import pytest
 
 from aiida.orm import Int
 from aiida.plugins import WorkflowFactory
-from aiida.workflows.arithmetic.add_multiply import add_multiply
+from aiida.workflows._arithmetic.add_multiply import add_multiply
 
 
 def test_factory():

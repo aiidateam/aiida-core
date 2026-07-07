@@ -56,10 +56,10 @@ from ..extras import EntityExtras
 from ..pydantic import OrmMetadataField, OrmModel
 from ..querybuilder import QueryBuilder
 from ..users import User
+from ._caching import NodeCaching
+from ._comments import NodeComments
+from ._links import NodeLinks
 from .attributes import NodeAttributes
-from .caching import NodeCaching
-from .comments import NodeComments
-from .links import NodeLinks
 
 if TYPE_CHECKING:
     from importlib.metadata import EntryPoint
@@ -811,7 +811,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             ``repository`` instance with a clone of that of the source node, which does not actually copy any files.
 
         """
-        from aiida.orm.utils.mixins import Sealable
+        from aiida.orm.utils._mixins import Sealable
 
         assert self.node_type == cache_node.node_type
 
@@ -1192,7 +1192,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         if repository_metadata:
             import hashlib
 
-            from aiida.common.hashing import chunked_file_hash
+            from aiida.common._hashing import chunked_file_hash
             from aiida.repository import Repository
 
             if not files:

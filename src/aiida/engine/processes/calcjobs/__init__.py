@@ -15,12 +15,14 @@
 from .calcjob import *
 from .importer import *
 from .manager import *
+from .tasks import *
 
 __all__ = (
     'CalcJob',
     'CalcJobImporter',
     'JobManager',
     'JobsList',
+    'PreSubmitException',
 )
 
 # fmt: on

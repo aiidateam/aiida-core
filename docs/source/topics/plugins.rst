@@ -128,7 +128,7 @@ Will lead to usage::
 ``aiida.parsers``
 -----------------
 
-AiiDA expects a subclass of ``Parser``. Replaces the previous approach consisting in placing a parser module under ``aiida/parsers/plugins``.
+AiiDA expects a subclass of ``Parser``. Replaces the previous approach consisting in placing a parser module under ``aiida/parsers/_plugins``.
 
 Example spec::
 
@@ -354,7 +354,7 @@ The module provides the following fixtures:
 * :ref:`aiida_profile_clean <topics:plugins:testfixtures:aiida-profile-clean>`: Same as ``aiida_profile`` but the storage backend is cleaned
 * :ref:`aiida_profile_clean_class <topics:plugins:testfixtures:aiida-profile-clean-class>`: Same as ``aiida_profile_clean`` but should be used at the class scope
 * :ref:`aiida_profile_factory <topics:plugins:testfixtures:aiida-profile-factory>`: Create a temporary profile ready to be used for testing
-* :ref:`aiida_config <topics:plugins:testfixtures:aiida-config>`: Return the :class:`~aiida.manage.configuration.config.Config` instance that is used for the test session
+* :ref:`aiida_config <topics:plugins:testfixtures:aiida-config>`: Return the :class:`~aiida.manage.configuration._config.Config` instance that is used for the test session
 * :ref:`config_psql_dos <topics:plugins:testfixtures:config-psql-dos>`: Return a profile configuration for the :class:`~aiida.storage.psql_dos.backend.PsqlDosBackend`
 * :ref:`postgres_cluster <topics:plugins:testfixtures:postgres-cluster>`: Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yielder
 * :ref:`aiida_computer <topics:plugins:testfixtures:aiida-computer>`: Setup a :class:`~aiida.orm.computers.Computer` instance
@@ -382,7 +382,7 @@ The module provides the following fixtures:
 -----------------
 
 Return the global instance of the :class:`~aiida.manage.manager.Manager`.
-Can be used, for example, to retrieve the current :class:`~aiida.manage.configuration.config.Config` instance:
+Can be used, for example, to retrieve the current :class:`~aiida.manage.configuration._config.Config` instance:
 
 .. code-block:: python
 
@@ -504,7 +504,7 @@ Note that the configuration above is not actually functional and the actual conf
 ``aiida_config``
 ------------------
 
-Return the :class:`~aiida.manage.configuration.config.Config` instance that is used for the test session.
+Return the :class:`~aiida.manage.configuration._config.Config` instance that is used for the test session.
 
 .. code-block:: python
 

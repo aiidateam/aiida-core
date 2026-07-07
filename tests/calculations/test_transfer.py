@@ -104,7 +104,7 @@ def test_put_transfer(fixture_sandbox, aiida_localhost, generate_calc_job, tmp_p
 
 def test_validate_instructions():
     """Test the `TransferCalculation` validators."""
-    from aiida.calculations.transfer import validate_instructions
+    from aiida.calculations._transfer import validate_instructions
 
     instructions = orm.Dict(dict={}).store()
     result = validate_instructions(instructions, None)
@@ -140,7 +140,7 @@ def test_validate_instructions():
 
 def test_validate_transfer_inputs(aiida_localhost, tmp_path):
     """Test the `TransferCalculation` validators."""
-    from aiida.calculations.transfer import check_node_type, validate_transfer_inputs
+    from aiida.calculations._transfer import check_node_type, validate_transfer_inputs
     from aiida.orm import Computer
 
     fake_localhost = Computer(
@@ -200,7 +200,7 @@ def test_validate_transfer_inputs(aiida_localhost, tmp_path):
 @pytest.mark.requires_broker
 def test_integration_transfer(aiida_localhost, tmp_path):
     """Test a default `TransferCalculation`."""
-    from aiida.calculations.transfer import TransferCalculation
+    from aiida.calculations._transfer import TransferCalculation
     from aiida.engine import run
 
     content_local = 'Content of local file'

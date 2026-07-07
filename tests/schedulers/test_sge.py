@@ -13,7 +13,7 @@ import unittest
 
 from aiida.common.datastructures import CodeRunMode
 from aiida.schedulers.datastructures import JobState
-from aiida.schedulers.plugins.sge import SgeScheduler
+from aiida.schedulers.plugins._sge import SgeScheduler
 from aiida.schedulers.scheduler import SchedulerError, SchedulerParsingError
 
 text_qstat_ext_urg_xml_test = """<?xml version='1.0'?>

@@ -547,7 +547,7 @@ class TrajectoryData(ArrayData):
         :return: :py:class:`aiida.orm.nodes.data.structure.StructureData` node.
         """
         from aiida.orm.nodes.data.dict import Dict
-        from aiida.tools.data.array.trajectory import _get_aiida_structure_inline
+        from aiida.tools.data.array._trajectory import _get_aiida_structure_inline
 
         param = Dict(kwargs)
 

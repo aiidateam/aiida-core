@@ -17,9 +17,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from aiida.brokers.zmq import ZmqBroker
+from aiida.brokers.zmq._communicator import ZmqCommunicator
+from aiida.brokers.zmq._queue import PersistentQueue
 from aiida.brokers.zmq.broker import ZmqIncomingTask
-from aiida.brokers.zmq.communicator import ZmqCommunicator
-from aiida.brokers.zmq.queue import PersistentQueue
 from tests.conftest import start_zmq_broker, stop_zmq_broker
 
 

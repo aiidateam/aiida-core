@@ -6,14 +6,14 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for ``aiida.brokers.zmq.service.ZmqBrokerService``."""
+"""Tests for ``aiida.brokers.zmq._service.ZmqBrokerService``."""
 
 from __future__ import annotations
 
 import threading
 import time
 
-from aiida.brokers.zmq.service import ZmqBrokerService
+from aiida.brokers.zmq._service import ZmqBrokerService
 
 
 class TestZmqBrokerService:

@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for the :mod:`aiida.orm.utils.serialize` module."""
+"""Tests for the :mod:`aiida.orm.utils.serialization` module."""
 
 import types
 import uuid
@@ -17,7 +17,7 @@ import pytest
 
 from aiida import orm
 from aiida.common.links import LinkType
-from aiida.orm.utils import serialize
+from aiida.orm.utils import serialization
 
 
 def test_serialize_round_trip():
@@ -29,8 +29,8 @@ def test_serialize_round_trip():
 
     data = {'test': 1, 'list': [1, 2, 3, node_a], 'dict': {('Si',): node_b, 'foo': 'bar'}, 'baz': 'aar'}
 
-    serialized_data = serialize.serialize(data)
-    deserialized_data = serialize.deserialize_unsafe(serialized_data)
+    serialized_data = serialization.serialize(data)
+    deserialized_data = serialization.deserialize_unsafe(serialized_data)
 
     # For now manual element-for-element comparison until we come up with general
     # purpose function that can equate two node instances properly
@@ -49,8 +49,8 @@ def test_serialize_group():
 
     data = {'group': group_a}
 
-    serialized_data = serialize.serialize(data)
-    deserialized_data = serialize.deserialize_unsafe(serialized_data)
+    serialized_data = serialization.serialize(data)
+    deserialized_data = serialization.deserialize_unsafe(serialized_data)
 
     assert data['group'].uuid == deserialized_data['group'].uuid
     assert data['group'].label == deserialized_data['group'].label
@@ -59,14 +59,14 @@ def test_serialize_group():
 def test_serialize_node_round_trip():
     """Test you can serialize and deserialize a node"""
     node = orm.Data().store()
-    deserialized = serialize.deserialize_unsafe(serialize.serialize(node))
+    deserialized = serialization.deserialize_unsafe(serialization.serialize(node))
     assert node.uuid == deserialized.uuid
 
 
 def test_serialize_group_round_trip():
     """Test you can serialize and deserialize a group"""
     group = orm.Group(label='test_serialize_group_round_trip').store()
-    deserialized = serialize.deserialize_unsafe(serialize.serialize(group))
+    deserialized = serialization.deserialize_unsafe(serialization.serialize(group))
 
     assert group.uuid == deserialized.uuid
     assert group.label == deserialized.label
@@ -74,7 +74,7 @@ def test_serialize_group_round_trip():
 
 def test_serialize_computer_round_trip(aiida_localhost):
     """Test you can serialize and deserialize a computer"""
-    deserialized = serialize.deserialize_unsafe(serialize.serialize(aiida_localhost))
+    deserialized = serialization.deserialize_unsafe(serialization.serialize(aiida_localhost))
 
     assert aiida_localhost.uuid == deserialized.uuid
     assert aiida_localhost.label == deserialized.label
@@ -85,7 +85,7 @@ def test_serialize_unstored_node():
     node = orm.Data()
 
     with pytest.raises(ValueError):
-        serialize.serialize(node)
+        serialization.serialize(node)
 
 
 def test_serialize_unstored_group():
@@ -93,7 +93,7 @@ def test_serialize_unstored_group():
     group = orm.Group(label='test_serialize_unstored_group')
 
     with pytest.raises(ValueError):
-        serialize.serialize(group)
+        serialization.serialize(group)
 
 
 def test_serialize_unstored_computer():
@@ -101,13 +101,13 @@ def test_serialize_unstored_computer():
     computer = orm.Computer('test_computer', 'test_host')
 
     with pytest.raises(ValueError):
-        serialize.serialize(computer)
+        serialization.serialize(computer)
 
 
 def test_mixed_attribute_normal_dict():
     """Regression test for #3092.
 
-    The yaml mapping constructor in `aiida.orm.utils.serialize` was not properly "deeply" reconstructing nested
+    The yaml mapping constructor in `aiida.orm.utils.serialization` was not properly "deeply" reconstructing nested
     mappings, causing a mix of attribute dictionaries and normal dictionaries to lose information in a round-trip.
 
     If a nested `AttributeDict` contained a normal dictionary, the content of the latter would be lost during the
@@ -122,8 +122,8 @@ def test_mixed_attribute_normal_dict():
     # Now add a normal dictionary in the attribute dictionary
     attribute_dict['nested']['normal'] = {'a': 2}
 
-    serialized = serialize.serialize(attribute_dict)
-    deserialized = serialize.deserialize_unsafe(serialized)
+    serialized = serialization.serialize(attribute_dict)
+    deserialized = serialization.deserialize_unsafe(serialized)
 
     assert attribute_dict, deserialized
 
@@ -135,8 +135,8 @@ def test_serialize_numpy():
     """
     data = np.array([1, 2, 3])
 
-    serialized = serialize.serialize(data)
-    deserialized = serialize.deserialize_unsafe(serialized)
+    serialized = serialization.serialize(data)
+    deserialized = serialization.deserialize_unsafe(serialized)
     assert np.all(data == deserialized)
 
 
@@ -147,18 +147,18 @@ def test_serialize_simplenamespace():
     """
     data = types.SimpleNamespace(a=1, b=2.1)
 
-    serialized = serialize.serialize(data)
-    deserialized = serialize.deserialize_unsafe(serialized)
+    serialized = serialization.serialize(data)
+    deserialized = serialization.deserialize_unsafe(serialized)
     assert data == deserialized
 
 
 def test_enum():
     """Test serialization and deserialization of an ``Enum``."""
     enum = LinkType.RETURN
-    serialized = serialize.serialize(enum)
+    serialized = serialization.serialize(enum)
     assert isinstance(serialized, str)
 
-    deserialized = serialize.deserialize_unsafe(serialized)
+    deserialized = serialization.deserialize_unsafe(serialized)
     assert deserialized == enum
 
 
@@ -172,10 +172,10 @@ class DataClass:
 def test_dataclass():
     """Test serialization and deserialization of a ``dataclass``."""
     obj = DataClass(1)
-    serialized = serialize.serialize(obj)
+    serialized = serialization.serialize(obj)
     assert isinstance(serialized, str)
 
-    deserialized = serialize.deserialize_unsafe(serialized)
+    deserialized = serialization.deserialize_unsafe(serialized)
     assert deserialized == obj
 
 
@@ -185,7 +185,7 @@ def test_serialize_node_links_manager():
 
     node = orm.Data().store()
     node_links_manager = NodeLinksManager(node=node, link_type=LinkType.CREATE, incoming=False)
-    deserialized = serialize.deserialize_unsafe(serialize.serialize(node_links_manager))
+    deserialized = serialization.deserialize_unsafe(serialization.serialize(node_links_manager))
     assert isinstance(deserialized, NodeLinksManager)
     assert deserialized._node.uuid == node.uuid
     assert deserialized._link_type == LinkType.CREATE

@@ -272,7 +272,7 @@ def set_process_state_change_timestamp(node: 'ProcessNode') -> None:
     """
     from sqlalchemy.exc import OperationalError
 
-    from aiida.common import timezone
+    from aiida.common import _timezone as timezone
     from aiida.manage import get_manager
     from aiida.orm import CalculationNode, ProcessNode, WorkflowNode
 

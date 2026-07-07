@@ -8,7 +8,7 @@ Import
 +++++++
 
 The base class that defines the API for the importers can
-be found here: :py:class:`~aiida.tools.dbimporters.baseclasses.DbImporter`.
+be found here: :py:class:`~aiida.tools._dbimporters.baseclasses.DbImporter`.
 
 Below is a list of available plugins:
 

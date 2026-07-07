@@ -52,7 +52,8 @@ from aiida.orm.implementation.querybuilder import (
     QueryDictType,
 )
 
-from . import authinfos, comments, computers, convert, entities, fields, groups, logs, nodes, users
+from . import _convert as convert
+from . import authinfos, comments, computers, entities, fields, groups, logs, nodes, users
 
 if TYPE_CHECKING:
     from aiida.engine import Process

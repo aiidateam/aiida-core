@@ -977,7 +977,7 @@ This data can be safely deleted at any time.
 This includes, notably:
 
 * *Node extras*: These can be deleted using :py:attr:`Node.base.extras <aiida.orm.extras.EntityExtras>`.
-* *Node comments*: These can be removed using :py:attr:`Node.base.comments <aiida.orm.nodes.comments.NodeComments>`.
+* *Node comments*: These can be removed using :py:attr:`Node.base.comments <aiida.orm.nodes._comments.NodeComments>`.
 * *Groups*: These can be deleted using :py:meth:`Group.objects.delete() <aiida.orm.groups.GroupCollection.delete>`.
   This command will only delete the group, not the nodes contained in the group.
 
@@ -1009,7 +1009,7 @@ That means that if the remote folder gets deleted, there will be no way to retri
 The ``CalcJob`` plugin can for that reason specify some files that should be :ref:`retrieved<topics:calculations:usage:calcjobs:file_lists_retrieve>` and stored locally in a :py:class:`~aiida.orm.nodes.data.folder.FolderData` node for safekeeing, which is attached to the calculation node as an output with the label ``retrieved_folder``.
 
 Although the :ref:`retrieve_list<topics:calculations:usage:calcjobs:file_lists_retrieve>` allows to specify what output files are to be retrieved locally, this has to be done *before* the calculation is submitted.
-In order to provide more flexibility in deciding what files of completed calculation jobs are to be stored locally, even after it has terminated, AiiDA ships with a the :py:class:`~aiida.calculations.transfer.TransferCalculation` plugin.
+In order to provide more flexibility in deciding what files of completed calculation jobs are to be stored locally, even after it has terminated, AiiDA ships with a the :py:class:`~aiida.calculations._transfer.TransferCalculation` plugin.
 This calculation plugin enables to retrieve files from a remote machine and save them in a local :py:class:`~aiida.orm.nodes.data.folder.FolderData`.
 The specifications of what to copy are provided through an input of type
 

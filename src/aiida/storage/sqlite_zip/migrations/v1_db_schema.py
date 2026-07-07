@@ -22,7 +22,7 @@ from sqlalchemy.dialects.sqlite import JSON
 from sqlalchemy.schema import Column, UniqueConstraint
 from sqlalchemy.types import CHAR, Boolean, DateTime, Integer, String, Text
 
-from aiida.common import timezone
+from aiida.common import _timezone as timezone
 from aiida.common.utils import get_new_uuid
 
 # see https://alembic.sqlalchemy.org/en/latest/naming.html

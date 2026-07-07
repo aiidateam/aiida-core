@@ -21,7 +21,7 @@ from aiida.common import lang
 from aiida.orm import AuthInfo
 
 if TYPE_CHECKING:
-    from aiida.engine.transports import TransportQueue
+    from aiida.engine._transports import TransportQueue
     from aiida.schedulers.datastructures import JobInfo
 
 __all__ = ('JobManager', 'JobsList')

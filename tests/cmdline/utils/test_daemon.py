@@ -6,11 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Unit tests for ``aiida.cmdline.utils.daemon`` formatter helpers."""
+"""Unit tests for ``aiida.cmdline.utils._daemon`` formatter helpers."""
 
 import pytest
 
-from aiida.cmdline.utils.daemon import (
+from aiida.cmdline.utils._daemon import (
     format_package_state_change_lines,
     format_package_version_info,
 )

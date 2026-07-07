@@ -373,7 +373,7 @@ The provenance graph in AiiDA is a :ref:`directed graph <topics:provenance:conce
 The vertices of the graph are the *nodes*, and the edges that connect them are called *links*.
 Since the graph is directed, any node can have *incoming* and *outgoing* links that connect it to neighboring nodes.
 
-To discover the neighbors of a given node, you can use the methods :meth:`~aiida.orm.nodes.links.NodeLinks.get_incoming` and :meth:`~aiida.orm.nodes.links.NodeLinks.get_outgoing`.
+To discover the neighbors of a given node, you can use the methods :meth:`~aiida.orm.nodes._links.NodeLinks.get_incoming` and :meth:`~aiida.orm.nodes._links.NodeLinks.get_outgoing`.
 They have the exact same interface but will return the neighbors connected to the current node with a link coming into it or with links going out of it, respectively.
 For example, for a given ``node``, to inspect all the neighboring nodes from which a link is incoming to the ``node``:
 
@@ -401,7 +401,7 @@ For example, to list all the neighbors of a node from which a link is incoming:
 
 Note that the :class:`~aiida.orm.utils.links.LinkManager` provides many convenience methods to get information from the neigboring nodes, such as :meth:`~aiida.orm.utils.links.LinkManager.all_link_labels` if you only need the list of link labels.
 
-The :meth:`~aiida.orm.nodes.links.NodeLinks.get_incoming` and :meth:`~aiida.orm.nodes.links.NodeLinks.get_outgoing` methods accept various arguments that allow one to filter what neighboring nodes should be matched:
+The :meth:`~aiida.orm.nodes._links.NodeLinks.get_incoming` and :meth:`~aiida.orm.nodes._links.NodeLinks.get_outgoing` methods accept various arguments that allow one to filter what neighboring nodes should be matched:
 
 * ``node_class``: accepts a subclass of :class:`~aiida.orm.nodes.node.Node`, only neighboring nodes with a class that matches this will be returned
 * ``link_type``: accepts a value of :class:`~aiida.common.links.LinkType`, only neighboring nodes that are linked with this link type will be returned
@@ -423,10 +423,10 @@ These two special characters can be escaped by prepending them with a backslash 
 Inputs and outputs of processes
 -------------------------------
 
-The :meth:`~aiida.orm.nodes.links.NodeLinks.get_incoming` and :meth:`~aiida.orm.nodes.links.NodeLinks.get_outgoing` methods, described in the :ref:`previous section <how-to:query:shortcuts:incoming-outgoing>`, can be used to access all neighbors from a certain node and provide advanced filtering options.
+The :meth:`~aiida.orm.nodes._links.NodeLinks.get_incoming` and :meth:`~aiida.orm.nodes._links.NodeLinks.get_outgoing` methods, described in the :ref:`previous section <how-to:query:shortcuts:incoming-outgoing>`, can be used to access all neighbors from a certain node and provide advanced filtering options.
 However, often one doesn't need this expressivity and simply wants to retrieve all neighboring nodes with a syntax that is as succint as possible.
 A prime example is to retrieve the *inputs* or *outputs* of :ref:`a process <topics:processes:concepts>`.
-Instead of using :meth:`~aiida.orm.nodes.links.NodeLinks.get_incoming` and :meth:`~aiida.orm.nodes.links.NodeLinks.get_outgoing`, to get the inputs and outputs of a ``process_node`` one can do:
+Instead of using :meth:`~aiida.orm.nodes._links.NodeLinks.get_incoming` and :meth:`~aiida.orm.nodes._links.NodeLinks.get_outgoing`, to get the inputs and outputs of a ``process_node`` one can do:
 
 .. code-block:: python
 
@@ -482,7 +482,7 @@ Calculation job results
 :class:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode`'s provide the :meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.res` property, that can give easy access to the results of the calculation job.
 The requirement is that the :class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob` class that produced the node, defines a *default output node* in its spec.
 This node should be a :class:`~aiida.orm.nodes.data.dict.Dict` output that will always be created.
-An example is the :class:`~aiida.calculations.templatereplacer.TemplatereplacerCalculation` plugin, that has the ``output_parameters`` output that is specified as its default output node.
+An example is the :class:`~aiida.calculations._templatereplacer.TemplatereplacerCalculation` plugin, that has the ``output_parameters`` output that is specified as its default output node.
 
 The :meth:`~aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.res` property will give direct easy access to all the keys within this dictionary output.
 For example, the following:

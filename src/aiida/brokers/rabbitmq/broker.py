@@ -60,6 +60,17 @@ class RabbitmqBroker(Broker):
         for task in self.get_communicator().task_queue(get_launch_queue_name(self._prefix)):
             yield task
 
+    def revive_process(self, pid: int) -> None:
+        """Re-enqueue a continuation task for a zombie process via the live RabbitMQ broker.
+
+        Requires the RabbitMQ server to be reachable. The daemon may be in any state — RabbitMQ
+        runs as an independent service, not managed by the daemon, unlike the ZMQ broker.
+        """
+        from plumpy.process_comms import RemoteProcessThreadController
+
+        controller = RemoteProcessThreadController(self.get_communicator())
+        controller.continue_process(pid)
+
     def get_communicator(self) -> 'RmqThreadCommunicator':
         if self._communicator is None:
             self._communicator = self._create_communicator()

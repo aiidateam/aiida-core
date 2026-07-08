@@ -6,7 +6,9 @@ import json
 import shutil
 import time
 import typing as t
+import uuid
 from contextlib import contextmanager
+from functools import cached_property
 from pathlib import Path
 
 import psutil
@@ -44,6 +46,7 @@ class ZmqBroker(Broker):
         self._communicator: ZmqCommunicator | None = None
         self._broker_dir = broker_dir
         self._storage_path = broker_dir / 'storage'
+        self._queue_path = self._storage_path / 'tasks'
         self._service_pid_file = broker_dir / 'broker.pid'
         self._service_status_file = broker_dir / 'broker.status'
         self._service_sockets_file = broker_dir / 'broker.sockets'
@@ -168,14 +171,36 @@ class ZmqBroker(Broker):
 
         return self._communicator
 
+    @cached_property
+    def _queue(self) -> PersistentQueue:
+        """Lazily-instantiated persistent queue.
+
+        Cached so that crash-recovery (run by :meth:`PersistentQueue._load`) happens once per
+        broker instance and the in-memory pending deque stays consistent across
+        :meth:`iterate_tasks` and :meth:`revive_process`.
+        """
+        return PersistentQueue(self._queue_path)
+
     def iterate_tasks(self) -> t.Iterator['ZmqIncomingTask']:
-        queue_path = self._storage_path / 'tasks'
-        if not queue_path.exists():
+        if not self._queue_path.exists():
             return
 
-        queue = PersistentQueue(queue_path)
-        for task_id, task_data in queue.get_all_pending():
-            yield ZmqIncomingTask(task_id, task_data, queue)
+        for task_id, task_data in self._queue.get_all_pending():
+            yield ZmqIncomingTask(task_id, task_data, self._queue)
+
+    def revive_process(self, pid: int) -> None:
+        """Re-enqueue a continuation task for a zombie process.
+
+        Writes the task directly to the persistent queue on disk. The ZMQ broker is a subprocess
+        managed by the daemon (via circus), and ``verdi process repair`` requires the daemon to
+        be stopped, so a live broker is not available; the task will be picked up when the broker
+        is next started.
+        """
+        from plumpy.process_comms import create_continue_body
+
+        task_id = uuid.uuid4().hex
+        body = create_continue_body(pid=pid, nowait=True)
+        self._queue.push(task_id, {'body': body, 'no_reply': True})
 
     def close(self) -> None:
         if self._communicator is not None:

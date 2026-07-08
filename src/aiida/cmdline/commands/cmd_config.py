@@ -57,18 +57,19 @@ def verdi_config_list(ctx, prefix, description: bool, advanced: bool):
             return '\n'.join(str(v) for v in val)
         return val
 
+    def is_included(name, option):
+        return name.startswith(prefix) and option.deprecated_by is None and not (option.advanced and not advanced)
+
     if description:
         table = [
             [name, source, _join(value), '\n'.join(textwrap.wrap(c.description))]
             for name, (c, source, value) in option_values.items()
-            if name.startswith(prefix) and not (c.advanced and not advanced)
+            if is_included(name, c)
         ]
         headers = ['name', 'source', 'value', 'description']
     else:
         table = [
-            [name, source, _join(value)]
-            for name, (c, source, value) in option_values.items()
-            if name.startswith(prefix) and not (c.advanced and not advanced)
+            [name, source, _join(value)] for name, (c, source, value) in option_values.items() if is_included(name, c)
         ]
         headers = ['name', 'source', 'value']
 

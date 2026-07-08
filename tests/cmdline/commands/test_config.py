@@ -141,6 +141,7 @@ def test_config_list(run_cli_command, config_with_profile_factory):
     result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
 
     assert 'daemon.timeout' in result.output
+    assert 'logging.db_loglevel' not in result.output
     assert 'Timeout in seconds' not in result.output
 
 
@@ -222,3 +223,4 @@ def test_config_list_advanced_flag(run_cli_command, config_with_profile_factory)
 
     result_advanced = run_cli_command(cmd_verdi.verdi, ['config', 'list', '--advanced'], use_subprocess=False)
     assert 'Use `verdi config list --advanced`' not in result_advanced.output
+    assert 'logging.db_loglevel' not in result_advanced.output

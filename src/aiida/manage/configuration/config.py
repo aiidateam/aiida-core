@@ -760,6 +760,33 @@ class Config:
     def options(self, value):
         self._options = value
 
+    @staticmethod
+    def _resolve_deprecated_option_name(option_name: str) -> str:
+        """Resolve a deprecated option name to its replacement.
+
+        If the option identified by ``option_name`` carries a ``deprecated_by`` marker, a
+        ``DeprecationWarning`` is emitted and the name of the replacement option is returned, so that
+        both reads and writes operate on the replacement's storage. Otherwise ``option_name`` is
+        returned unchanged. This mirrors the redirect performed on read in :meth:`Manager.get_option`
+        so that setting, unsetting and getting a deprecated option all behave consistently.
+
+        :param option_name: the name of the configuration option, possibly deprecated.
+        :return: the name of the option that should actually be used.
+        """
+        import warnings
+
+        option = get_option(option_name)
+
+        if option.deprecated_by is None:
+            return option_name
+
+        warnings.warn(
+            f'`{option_name}` is deprecated, use `{option.deprecated_by}` instead.',
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        return option.deprecated_by
+
     def set_option(self, option_name, option_value, scope=None, override=True):
         """Set a configuration option for a certain scope.
 
@@ -770,6 +797,7 @@ class Config:
 
         :returns: the parsed value (potentially cast to a valid type)
         """
+        option_name = self._resolve_deprecated_option_name(option_name)
         option, parsed_value = parse_option(option_name, option_value)
 
         if parsed_value is not None:
@@ -792,6 +820,7 @@ class Config:
         :param option_name: the name of the configuration option
         :param scope: unset the option for this profile or globally if not specified
         """
+        option_name = self._resolve_deprecated_option_name(option_name)
         option = get_option(option_name)
 
         if scope is not None:
@@ -807,6 +836,7 @@ class Config:
         :param default: boolean, If True will return the option default, even if not defined within the given scope
         :return: the option value or None if not set for the given scope
         """
+        option_name = self._resolve_deprecated_option_name(option_name)
         option = get_option(option_name)
         default_value = option.default if default else None
 

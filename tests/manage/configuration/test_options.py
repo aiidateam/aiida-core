@@ -47,6 +47,32 @@ class TestConfigurationOptions:
         with pytest.raises(ConfigurationError):
             parse_option('logging.aiida_loglevel', 'INVALID_LOG_LEVEL')
 
+    def test_parse_option_rejects_inherit_for_aiida_loglevel(self):
+        """Test ``logging.aiida_loglevel`` does not accept ``INHERIT``."""
+        with pytest.raises(ConfigurationError):
+            parse_option('logging.aiida_loglevel', 'INHERIT')
+
+    @pytest.mark.parametrize(
+        'option_name',
+        (
+            'logging.aiida_core_loglevel',
+            'logging.verdi_loglevel',
+            'logging.disk_objectstore_loglevel',
+            'logging.plumpy_loglevel',
+            'logging.kiwipy_loglevel',
+            'logging.paramiko_loglevel',
+            'logging.alembic_loglevel',
+            'logging.sqlalchemy_loglevel',
+            'logging.circus_loglevel',
+            'logging.aiopika_loglevel',
+        ),
+    )
+    def test_parse_option_accepts_inherit(self, option_name):
+        """Test inheriting logger options accept ``INHERIT``."""
+        option, value = parse_option(option_name, 'INHERIT')
+        assert option.name == option_name
+        assert value == 'INHERIT'
+
     def test_options(self):
         """Test that all defined options can be converted into Option namedtuples."""
         for option_name in get_option_names():

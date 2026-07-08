@@ -11,8 +11,6 @@
 from __future__ import annotations
 
 import logging
-import os
-import sys
 import textwrap
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Sequence
@@ -22,7 +20,6 @@ from click import style
 from . import echo
 
 if TYPE_CHECKING:
-    from collections.abc import MutableMapping
     from datetime import datetime
 
     import plumpy
@@ -49,26 +46,6 @@ def is_verbose() -> bool:
 
     """
     return echo.CMDLINE_LOGGER.getEffectiveLevel() <= logging.INFO
-
-
-def get_env_with_venv_bin() -> MutableMapping:
-    """Create a clone of the current running environment with the AIIDA_PATH variable set directory of the config."""
-    from aiida.common.warnings import warn_deprecation
-    from aiida.manage.configuration import get_config
-
-    warn_deprecation(
-        '`get_env_with_venv_bin` function is deprecated use `aiida.engine.daemon.client.DaemonClient.get_env` instead.',
-        version=3,
-    )
-
-    config = get_config()
-
-    currenv = os.environ.copy()
-    currenv['PATH'] = f"{os.path.dirname(sys.executable)}:{currenv['PATH']}"
-    currenv['AIIDA_PATH'] = config.dirpath
-    currenv['PYTHONUNBUFFERED'] = 'True'
-
-    return currenv
 
 
 def format_local_time(timestamp: datetime | float, format_str: str = '%Y-%m-%d %H:%M:%S') -> str:

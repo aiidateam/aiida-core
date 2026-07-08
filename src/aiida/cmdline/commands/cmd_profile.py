@@ -37,7 +37,6 @@ def command_create_profile(
     last_name: str | None = None,
     institution: str | None = None,
     broker: str = 'rabbitmq',
-    use_rabbitmq: bool | None = None,
     **kwargs,
 ):
     """Create a new profile, initialise its storage and create a default user.
@@ -53,16 +52,8 @@ def command_create_profile(
     :param last_name: Last name for the default user.
     :param institution: Institution for the default user.
     :param broker: Message broker backend ('rabbitmq', 'zmq', or 'none').
-    :param use_rabbitmq: Deprecated. Use ``broker`` instead. If False, equivalent to ``broker='none'``.
     :param kwargs: Arguments to initialise instance of the selected storage implementation.
     """
-    # Handle deprecated --use-rabbitmq/--no-use-rabbitmq option
-    if use_rabbitmq is not None:
-        from aiida.common.warnings import warn_deprecation
-
-        warn_deprecation('The `--use-rabbitmq` option is deprecated. Use `--broker` instead.', version=3)
-        if not use_rabbitmq:
-            broker = 'none'
     from aiida.common import docs
     from aiida.plugins.entry_point import get_entry_point_from_class
 
@@ -142,7 +133,6 @@ def command_create_profile(
         setup.SETUP_USER_LAST_NAME(),
         setup.SETUP_USER_INSTITUTION(),
         setup.SETUP_BROKER_BACKEND(),
-        setup.SETUP_USE_RABBITMQ(),  # Deprecated, for backward compatibility
     ],
 )
 def profile_setup():
@@ -255,13 +245,6 @@ def profile_show(profile):
     echo.echo_report(f'Profile: {profile.name}')
     config = _strip_private_keys(profile.dictionary)
     echo.echo_dictionary(config, fmt='yaml')
-
-
-@verdi_profile.command('setdefault', deprecated='Please use `verdi profile set-default` instead.')
-@arguments.PROFILE(required=True, default=None)
-def profile_setdefault(profile):
-    """Set a profile as the default profile."""
-    _profile_set_default(profile)
 
 
 @verdi_profile.command('set-default')

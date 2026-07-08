@@ -200,7 +200,7 @@ See also the `RabbitMQ Troubleshooting <https://www.rabbitmq.com/troubleshooting
 Ensuring a UTF-8 locale
 .......................
 
-For some reasons, on some machines (notably often on Mac OS X) there is no default locale defined, and when you run ``verdi setup`` for the first time it fails (see also `this issue`_ of django).
+For some reasons, on some machines (notably often on Mac OS X) there is no default locale defined, and when you run ``verdi profile setup`` for the first time it fails (see also `this issue`_ of django).
 Run in your terminal (or maybe even better, add to your ``.bashrc``, but then remember to open a new shell window!):
 
 .. code-block:: bash
@@ -208,7 +208,7 @@ Run in your terminal (or maybe even better, add to your ``.bashrc``, but then re
    export LANG="en_US.UTF-8"
    export LC_ALL="en_US.UTF-8"
 
-and then run ``verdi setup`` again.
+and then run ``verdi profile setup`` again.
 
 .. _this issue: https://code.djangoproject.com/ticket/16017
 

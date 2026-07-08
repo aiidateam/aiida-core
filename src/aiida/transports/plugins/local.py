@@ -18,7 +18,6 @@ import subprocess
 import sys
 from typing import Optional
 
-from aiida.common.warnings import warn_deprecation
 from aiida.transports import cli as transport_cli
 from aiida.transports.transport import BlockingTransport, TransportInternalError, TransportPath, has_magic
 
@@ -95,42 +94,12 @@ class LocalTransport(BlockingTransport):
 
         raise TransportInternalError('Error, local method called for LocalTransport without opening the channel first')
 
-    def chdir(self, path: TransportPath):
-        """
-        PLEASE DON'T USE `chdir()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
-        `chdir()` is DEPRECATED and will be removed in the next major version.
-
-        Changes directory to path, emulated internally.
-        :param path: path to cd into
-        :raise OSError: if the directory does not have read attributes.
-        """
-        warn_deprecation(
-            '`chdir()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
-            version=3,
-        )
-        path = str(path)
-        new_path = os.path.join(self.curdir, path)
-        if not os.path.isdir(new_path):
-            raise OSError(f"'{new_path}' is not a valid directory")
-        elif not os.access(new_path, os.R_OK):
-            raise OSError(f"Do not have read permission to '{new_path}'")
-
-        self._internal_dir = os.path.normpath(new_path)
-
     def normalize(self, path: TransportPath = '.'):
         """Normalizes path, eliminating double slashes, etc..
         :param path: path to normalize
         """
         path = str(path)
         return os.path.realpath(os.path.join(self.curdir, path))
-
-    def getcwd(self):
-        """
-        PLEASE DON'T USE `getcwd()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
-        `getcwd()` is DEPRECATED and will be removed in the next major version.
-
-        Returns the current working directory, emulated by the transport"""
-        return self.curdir
 
     @staticmethod
     def _os_path_split_asunder(path: TransportPath):
@@ -244,14 +213,6 @@ class LocalTransport(BlockingTransport):
         """
         localpath = str(localpath)
         remotepath = str(remotepath)
-        from aiida.common.warnings import warn_deprecation
-
-        if 'ignore_noexisting' in kwargs:
-            # Backwards compatibility check for old keyword that was misspelled
-            warn_deprecation(
-                'Detected `ignore_noexisting` which is now deprecated. Use `ignore_nonexisting` instead.', version=3
-            )
-            ignore_nonexisting = kwargs.get('ignore_noexisting', args[2] if len(args) > 2 else False)
 
         dereference = kwargs.get('dereference', args[0] if args else True)
         overwrite = kwargs.get('overwrite', args[1] if len(args) > 1 else True)
@@ -754,8 +715,8 @@ class LocalTransport(BlockingTransport):
             already escaped using :py:func:`aiida.common.escaping.escape_for_bash`.
         :param workdir: (optional, default=None) if set, the command will be executed
                 in the specified working directory.
-                if None, the command will be executed in the current working directory,
-                from DEPRECATED `self.getcwd()`.
+                if None, the command will be executed in the default working directory
+                of the spawned shell.
 
         :return: a tuple with (stdin, stdout, stderr, proc),
             where stdin, stdout and stderr behave as file-like objects,
@@ -774,7 +735,7 @@ class LocalTransport(BlockingTransport):
         if workdir:
             cwd = workdir
         else:
-            cwd = self.getcwd()
+            cwd = None
 
         if sys.platform == 'win32':
             shell = False
@@ -798,8 +759,8 @@ class LocalTransport(BlockingTransport):
         :param command: the command to execute
         :param workdir: (optional, default=None) if set, the command will be executed
                 in the specified working directory.
-                if None, the command will be executed in the current working directory,
-                from DEPRECATED `self.getcwd()`.
+                if None, the command will be executed in the default working directory
+                of the spawned shell.
 
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
             are both bytes and the return_value is an int.

@@ -82,27 +82,6 @@ def archive_info(path, detailed):
     echo.echo_dictionary(data, sort_keys=False, fmt='yaml')
 
 
-@verdi_archive.command(
-    'inspect', hidden=True, deprecated='Use `verdi archive version` or `verdi archive info` instead.'
-)
-@click.argument('archive', nargs=1, type=click.Path(exists=True, readable=True))
-@click.option('-v', '--version', is_flag=True, help='Print the archive format version and exit.')
-@click.option('-m', '--meta-data', is_flag=True, help='Print the meta data contents and exit.')
-@click.option('-d', '--database', is_flag=True, help='Include information on entities in the database.')
-@click.pass_context
-def inspect(ctx, archive, version, meta_data, database):
-    """Inspect contents of an archive without importing it.
-
-    .. deprecated:: v2.0.0, use `verdi archive version` or `verdi archive info` instead.
-    """
-    if version:
-        ctx.invoke(archive_version, path=archive)
-    elif database:
-        ctx.invoke(archive_info, path=archive, detailed=True)
-    else:
-        ctx.invoke(archive_info, path=archive, detailed=False)
-
-
 @verdi_archive.command('create')
 @arguments.OUTPUT_FILE(type=click.Path(exists=False))
 @options.ALL()

@@ -99,7 +99,7 @@ class Dict(Data):
         """Return whether the node contains a key."""
         return key in self.base.attributes
 
-    def get(self, key: str, default: t.Any | None = None, /):  # type: ignore[override]
+    def get(self, key: str, default: t.Any | None = None, /):
         """Return the value for key if key is in the dictionary, else default.
 
         :param key: The key whose value to return.

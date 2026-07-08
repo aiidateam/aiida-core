@@ -14,7 +14,6 @@ to access members of other classes via TAB-completable attributes
 from aiida.common import AttributeDict
 from aiida.common.exceptions import NotExistent, NotExistentAttributeError, NotExistentKeyError
 from aiida.common.links import LinkType
-from aiida.common.warnings import warn_deprecation
 
 __all__ = ('AttributeManager', 'NodeLinksManager')
 
@@ -66,20 +65,11 @@ class NodeLinksManager:
     def _get_node_by_link_label(self, label):
         """Return the linked node with a given link label.
 
-        Nested namespaces in link labels get represented by double underscores in the database. Up until now, the link
-        manager didn't automatically unroll these again into nested namespaces and so a user was forced to pass the link
-        with double underscores to dereference the corresponding node. For example, when used with the ``inputs``
-        attribute of a ``ProcessNode`` one had to do:
-
-            node.inputs.nested__sub__namespace
-
-        Now it is possible to do
+        Nested namespaces in link labels get represented by double underscores in the database, but are unrolled into
+        nested namespaces so that they can be dereferenced with dotted attribute access. For example, when used with the
+        ``inputs`` attribute of a ``ProcessNode`` one can do:
 
             node.inputs.nested.sub.namespace
-
-        which is more intuitive since the double underscore replacement is just for the database and the user shouldn't
-        even have to know about it. For compatibility we support the old version a bit longer and it will emit a
-        deprecation warning.
 
         :param label: the link label connecting the current node to the node to get.
         """
@@ -87,32 +77,6 @@ class NodeLinksManager:
         try:
             node = attribute_dict[label]
         except KeyError as exception:
-            # Check whether the label contains a double underscore, in which case we want to warn the user that this is
-            # deprecated. However, we need to exclude labels that corresponds to dunder methods, i.e., those that start
-            # and end with a double underscore.
-            if self._namespace_separator in label and not (
-                label.startswith(self._namespace_separator) and label.endswith(self._namespace_separator)
-            ):
-                import functools
-
-                warn_deprecation(
-                    'dereferencing nodes with links containing double underscores is deprecated, simply replace '
-                    'the double underscores with a single dot instead. For example: \n'
-                    '`node.inputs.some__label` can be written as `node.inputs.some.label` instead.\n',
-                    stacklevel=4,
-                    version=3,
-                )
-                namespaces = label.split(self._namespace_separator)
-                try:
-                    return functools.reduce(lambda d, namespace: d.get(namespace), namespaces, attribute_dict)
-                except TypeError as exc:
-                    # This can be raised if part of the `namespaces` correspond to an actual leaf node, but is treated
-                    # like a namespace
-                    raise NotExistent from exc
-                except AttributeError as exc:
-                    # This will be raised if any of the intermediate namespaces don't exist, and so the label node does
-                    # not exist.
-                    raise NotExistent from exc
             raise NotExistent from exception
 
         return node
@@ -141,23 +105,7 @@ class NodeLinksManager:
             ) from exception
 
     def __contains__(self, key):
-        """Override the operator of the base class to emit deprecation warning if double underscore is used in key."""
-        if self._namespace_separator in key:
-            warn_deprecation(
-                'The use of double underscores in keys is deprecated. Please expand the namespaces manually:\n'
-                'instead of `nested__key in node.inputs`, use `nested in node.inputs and `key in node.inputs.nested`.',
-                version=3,
-            )
-            namespaces = key.split(self._namespace_separator)
-            leaf = namespaces.pop()
-            subdictionary = self
-            for namespace in namespaces:
-                try:
-                    subdictionary = subdictionary[namespace]
-                except KeyError:
-                    return False
-            return leaf in subdictionary
-
+        """Return whether the manager contains a link with the given label."""
         return key in self._get_keys()
 
     def __getitem__(self, name):

@@ -75,20 +75,6 @@ def test_list(run_cli_command, mock_profiles):
     assert profile_list[1] in result.output
 
 
-def test_setdefault(run_cli_command, mock_profiles):
-    """Test the ``verdi profile setdefault`` command."""
-    profile_list = mock_profiles()
-    setdefault_result = run_cli_command(cmd_profile.profile_setdefault, [profile_list[1]], use_subprocess=False)
-    result = run_cli_command(cmd_profile.profile_list, use_subprocess=False)
-
-    assert 'Report: configuration folder:' in result.output
-    assert f'* {profile_list[1]}' in result.output
-
-    # test if deprecation warning is printed
-    assert 'Deprecated:' in setdefault_result.output
-    assert 'Deprecated:' in setdefault_result.stderr
-
-
 def test_set_default(run_cli_command, mock_profiles):
     """Test the ``verdi profile set-default`` command."""
     profile_list = mock_profiles()
@@ -361,10 +347,10 @@ def test_setup_email_required(run_cli_command, isolated_config, tmp_path, entry_
         assert 'Invalid value for --email: The option is required for storages that are not read-only.' in result.output
 
 
-def test_setup_no_use_rabbitmq(run_cli_command, isolated_config):
-    """Test the ``--no-use-rabbitmq`` option."""
+def test_setup_broker_none(run_cli_command, isolated_config):
+    """Test the ``--broker none`` option."""
     profile_name = 'profile-no-broker'
-    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', 'none']
 
     result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
     assert f'Created new profile `{profile_name}`.' in result.output
@@ -379,7 +365,7 @@ def test_configure_rabbitmq(run_cli_command, isolated_config):
     profile_name = 'profile'
 
     # First setup a profile without a broker configured
-    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', 'none']
     run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
     profile = isolated_config.get_profile(profile_name)
     assert profile.process_control_backend is None

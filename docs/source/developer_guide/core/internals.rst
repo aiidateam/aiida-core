@@ -121,7 +121,7 @@ In the following example, we load a specific node and we list its incoming and o
 
   In [1]: c = load_node(139168)  # Let's load a node with a specific pk
 
-  In [2]: c.get_incoming().all()
+  In [2]: c.base.links.get_incoming().all()
   Out[2]:
   [
     LinkTriple(link_type='inputlink', label='code', node=<Code: Remote code 'cp-5.1' on daint, pk: 75709, uuid: 3c9cdb7f-0cda-402e-b898-4dd0d06aa5a4>),

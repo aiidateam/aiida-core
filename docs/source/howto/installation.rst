@@ -31,7 +31,7 @@ In this particular example, there are two configured profiles, ``project-one`` a
 The first one is highlighted and marked with a ``*`` symbol, meaning it is the default profile.
 A profile being the default means simply that any ``verdi`` command will always be executed for that profile.
 You can :ref:`change the profile on a per-call basis<topics:cli:profile>` with the ``--p/--profile`` option.
-To change the default profile use ``verdi profile setdefault PROFILE``.
+To change the default profile use ``verdi profile set-default PROFILE``.
 
 Showing profiles
 ----------------

@@ -217,9 +217,6 @@ jobs:
     - name: Test new pytest fixtures
       run: pytest -v --cov aiida --noconftest tests/tools/pytest_fixtures/
 
-    - name: Test legacy pytest fixtures
-      run: pytest --cov aiida --noconftest .github/test_legacy_pytest_fixtures.py
-
     - name: Upload coverage report
       if: github.repository == 'aiidateam/aiida-core'
       uses: codecov/codecov-action@v5

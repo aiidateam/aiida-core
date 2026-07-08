@@ -410,11 +410,11 @@ The module provides the following fixtures:
 * :ref:`started_daemon_client <topics:plugins:testfixtures:started-daemon-client>`: Same as ``daemon_client`` but the daemon is guaranteed to be running
 * :ref:`stopped_daemon_client <topics:plugins:testfixtures:stopped-daemon-client>`: Same as ``daemon_client`` but the daemon is guaranteed to *not* be running
 * :ref:`daemon_client <topics:plugins:testfixtures:daemon-client>`: Return a :class:`~aiida.engine.daemon.client.DaemonClient` instance to control the daemon
-* :ref:`entry_points <topics:plugins:testfixtures:entry-points>`: Return a :class:`~aiida.manage.tests.pytest_fixtures.EntryPointManager` instance to add and remove entry points
+* :ref:`entry_points <topics:plugins:testfixtures:entry-points>`: Return a :class:`~aiida.tools.pytest_fixtures.EntryPointManager` instance to add and remove entry points
 
 .. note::
 
-    Before v2.6, test fixtures were located in :mod:`aiida.manage.tests.pytest_fixtures`.
+    Before v2.6, test fixtures were located in :mod:`aiida.tools.pytest_fixtures`.
     This module is now deprecated and will be removed in the future.
     Some fixtures have analogs in :mod:`aiida.tools.pytest_fixtures` that are drop-in replacements, but in general, there are differences in the interface and functionality.
 
@@ -825,7 +825,7 @@ At the end of the test session, this fixture automatically shuts down the daemon
 ``entry_points``
 ----------------
 
-Return a :class:`~aiida.manage.tests.pytest_fixtures.EntryPointManager` instance to add and remove entry points.
+Return a :class:`~aiida.tools.pytest_fixtures.EntryPointManager` instance to add and remove entry points.
 
 .. code-block:: python
 

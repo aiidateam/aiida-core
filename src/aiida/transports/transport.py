@@ -20,7 +20,6 @@ from typing import Optional, Union
 
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
-from aiida.common.warnings import warn_deprecation
 
 __all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath')
 
@@ -346,30 +345,6 @@ class Transport(abc.ABC):
         :type mode: int
         """
 
-    def chown(self, path: TransportPath, uid: int, gid: int):
-        """Change the owner (uid) and group (gid) of a file.
-        As with python's os.chown function, you must pass both arguments,
-        so if you only want to change one, use stat first to retrieve the
-        current owner and group.
-
-        .. deprecated:: 2.7
-            This method is deprecated and will be removed in a future version.
-            It is not used internally by AiiDA and has no test coverage.
-
-        :param path: path to the file to change the owner and group of
-        :param uid: new owner's uid
-        :param gid: new group id
-
-        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
-        :type uid: int
-        :type gid: int
-        """
-        warn_deprecation(
-            'The `Transport.chown` method is deprecated and will be removed. ' 'It is not used internally by AiiDA.',
-            version=3,
-        )
-        raise NotImplementedError('chown is not implemented for this transport.')
-
     @abc.abstractmethod
     def copy(self, remotesource: TransportPath, remotedestination: TransportPath, dereference=False, recursive=True):
         """Copy a file or a directory from remote source to remote destination
@@ -608,20 +583,6 @@ class Transport(abc.ABC):
         :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
 
-    def getcwd(self):
-        """
-        DEPRECATED: This method is deprecated and should be removed in the next major version.
-            PLEASE DON'T USE IT IN THE INTERFACE!!
-
-        Get working directory
-        :return: a string identifying the current working directory
-        """
-
-        warn_deprecation(
-            '`getcwd()` is deprecated and will be removed in the next major version.',
-            version=3,
-        )
-
     @abc.abstractmethod
     def get_attribute(self, path: TransportPath):
         """Return an object FixedFieldsAttributeDict for file in a given path,
@@ -705,9 +666,7 @@ class Transport(abc.ABC):
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
 
-        :param path: path to list (default to '.')
-            if using a relative path, it is relative to the current working directory,
-            taken from DEPRECATED `self.getcwd()`.
+        :param path: path to list. Relative paths are not supported; the path must be absolute.
         :param pattern: if used, listdir returns a list of files matching
                             filters in Unix style. Unix only.
         :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
@@ -727,16 +686,10 @@ class Transport(abc.ABC):
             transport.get_attribute(); isdir is a boolean indicating if the object is a directory or not.
         """
         path = str(path)
+        if not path.startswith('/'):
+            raise ValueError('listdir_withattributes() requires an absolute path.')
+        cwd = Path(path).resolve().as_posix()
         retlist = []
-        if path.startswith('/'):
-            cwd = Path(path).resolve().as_posix()
-        else:
-            warn_deprecation(
-                'Using relative paths in `listdir_withattributes` is no longer supported '
-                'and will be removed in the next major version.',
-                version=3,
-            )
-            cwd = self.getcwd()
         for file_name in self.listdir(cwd):
             filepath = os.path.join(cwd, file_name)
             attributes = self.get_attribute(filepath)
@@ -936,7 +889,6 @@ class Transport(abc.ABC):
 
         :param pathname: the pathname pattern to match.
             It should only be an absolute path.
-            DEPRECATED: using relative path is deprecated.
 
         :type pathname:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
@@ -944,11 +896,7 @@ class Transport(abc.ABC):
         """
         pathname = str(pathname)
         if not pathname.startswith('/'):
-            warn_deprecation(
-                'Using relative paths across transport in `glob` is deprecated '
-                'and will be removed in the next major version.',
-                version=3,
-            )
+            raise ValueError('glob() only supports absolute pathname patterns.')
         return list(self.iglob(pathname))
 
     def iglob(self, pathname):
@@ -966,10 +914,7 @@ class Transport(abc.ABC):
             return
         dirname, basename = os.path.split(pathname)
         if not dirname:
-            # for name in self.glob1(os.curdir, basename): # ORIGINAL
-            for name in self.glob1(self.getcwd(), basename):
-                yield name
-            return
+            raise ValueError('iglob() only supports absolute pathname patterns.')
 
         if has_magic(dirname):
             dirs = [d for d in self.iglob(dirname) if self.isdir(d)]
@@ -995,7 +940,7 @@ class Transport(abc.ABC):
         :param pattern: pattern to match against
         """
         if not dirname:
-            dirname = self.getcwd()
+            raise ValueError('glob1() requires a non-empty (absolute) dirname.')
         if isinstance(pattern, str) and not isinstance(dirname, str):
             dirname = dirname.decode(sys.getfilesystemencoding() or sys.getdefaultencoding())
         try:
@@ -1100,28 +1045,6 @@ class Transport(abc.ABC):
         :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         :type mode: int
         """
-
-    async def chown_async(self, path: TransportPath, uid: int, gid: int):
-        """Change the owner (uid) and group (gid) of a file.
-
-        .. deprecated:: 2.7
-            This method is deprecated and will be removed in a future version.
-            It is not used internally by AiiDA and has no test coverage.
-
-        :param path: path to file
-        :param uid: user id of the new owner
-        :param gid: group id of the new owner
-
-        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
-        :type uid: int
-        :type gid: int
-        """
-        warn_deprecation(
-            'The `Transport.chown_async` method is deprecated and will be removed. '
-            'It is not used internally by AiiDA.',
-            version=3,
-        )
-        raise NotImplementedError('chown_async is not implemented for this transport.')
 
     @abc.abstractmethod
     async def copy_async(self, remotesource, remotedestination, dereference=False, recursive=True):
@@ -1739,10 +1662,6 @@ class BlockingTransport(Transport):
         """Counterpart to chmod() that is async."""
         return self.chmod(path, mode)
 
-    async def chown_async(self, path, uid, gid):
-        """Counterpart to chown() that is async."""
-        return self.chown(path, uid, gid)
-
     async def copy_async(self, remotesource, remotedestination, dereference=False, recursive=True):
         """Counterpart to copy() that is async."""
         return self.copy(remotesource, remotedestination, dereference, recursive)
@@ -1933,9 +1852,6 @@ class AsyncTransport(Transport):
 
     def chmod(self, *args, **kwargs):
         return self.run_command_blocking(self.chmod_async, *args, **kwargs)
-
-    def chown(self, path, uid, gid):
-        return self.run_command_blocking(self.chown_async, path, uid, gid)
 
     def copy(self, *args, **kwargs):
         return self.run_command_blocking(self.copy_async, *args, **kwargs)

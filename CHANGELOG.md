@@ -2,6 +2,86 @@
 
 ## Unreleased
 
+### Removed deprecated API ([#7409](https://github.com/aiidateam/aiida-core/pull/7409))
+
+The tables below list every removed entry alongside its replacement.
+
+The load-only compatibility shims `legacy.Code`, `UpfData`, and `convert_potentially_deprecated_entry_point` are intentionally kept, so that data and entry points created with older versions of AiiDA continue to load.
+
+#### Python API
+
+| Removed | Use instead |
+|---|---|
+| `aiida.get_strict_version()` | `aiida.get_version()` |
+| `Entity.objects` | `Entity.collection` |
+| `Entity.get(...)` | `Entity.collection.get(...)` |
+| `Entity.id` | `Entity.pk` |
+| `Node.objects` | `aiida.orm.nodes.node.NodeCollection` |
+| `Node.is_valid_cache` (getter and setter) | `Node.base.caching.is_valid_cache` |
+| Legacy `Node` proxy methods for extras / attributes / repository / comments / caching / links | `Node.base.{extras,attributes,repository,comments,caching,links}.<method>` |
+| Legacy `Group` extras proxy methods | `Group.base.extras.<method>` |
+| `Group(type_string=...)` argument | Omit it — the type string is determined automatically |
+| `NodeCaching._get_objects_to_hash()` | `NodeCaching.get_objects_to_hash()` |
+| `QueryBuilder(debug=...)` argument | Configure the log level of the AiiDA logger |
+| `QueryBuilder.set_debug()` | Configure the log level of the AiiDA logger |
+| `QueryBuilder.debug()` | Configure the log level of the AiiDA logger |
+| `QueryBuilder.queryhelp` | `QueryBuilder.as_dict()` |
+| `CodeBuilder` | Instantiate the code class directly via its constructor |
+| `FunctionCalculationMixin.get_function_source_code()` | `FunctionCalculationMixin.get_source_code_file()` |
+| `ProcessDumper` | `orm.ProcessNode.dump()` |
+| `Profile.repository_path` | Removed, no replacement |
+| `Profile.filepaths` | `Config.filepaths` |
+| `Manager.get_backend()` | `Manager.get_profile_storage()` |
+| Double-underscore link dereferencing (e.g. `node.inputs.some__label`) | Dotted access (e.g. `node.inputs.some.label`) |
+| Double-underscore keys in membership tests (e.g. `'a__b' in node.inputs`) | Expand the namespaces manually |
+| `BaseRestartWorkChain`: boolean values in `handler_overrides` | `{'<handler_name>': {'enabled': <bool>}}` |
+| `ComputerBuilder`: `default_mpiprocs_per_machine=0` | Leave it unset (`None`; specify `!` in interactive CLI mode) |
+| `TrajectoryData.set_trajectory()` without `pbc` when `cells` is given | Pass `pbc` explicitly (now raises `ValueError`) |
+| `Scheduler._get_submit_script_environment_variables()` | Removed — environment variables are handled automatically by the base `Scheduler` |
+| `Transport.chdir()`, `Transport.getcwd()` | Pass absolute paths |
+| `Transport.chown()`, `Transport.chown_async()` | Removed (not used internally by AiiDA) |
+| `Transport.glob()` / `Transport.listdir_withattributes()` with relative paths | Use absolute paths (now raises `ValueError`) |
+| `ignore_noexisting` keyword | `ignore_nonexisting` |
+
+#### Moved modules (import path changes)
+
+| Removed module | Use instead |
+|---|---|
+| `aiida.manage.tests.pytest_fixtures` (and `aiida.manage.tests`) | `aiida.tools.pytest_fixtures` |
+| `aiida.cmdline.utils.query.calculation` | `aiida.tools.query.calculation` |
+| `aiida.cmdline.utils.query.formatting` | `aiida.tools.query.formatting` |
+| `aiida.cmdline.utils.query.mapping` | `aiida.tools.query.mapping` |
+
+#### Test fixtures
+
+| Removed fixture | Use instead |
+|---|---|
+| `clear_database_after_test` | `aiida_profile_clean` |
+| `clear_database_before_test` | `aiida_profile_clean` |
+| `clear_database_before_test_class` | `aiida_profile_clean_class` |
+| `temp_dir` | pytest's `tmp_path` |
+
+#### CLI utilities
+
+| Removed | Use instead |
+|---|---|
+| `get_env_with_venv_bin()` | `aiida.engine.daemon.client.DaemonClient.get_env()` |
+| `deprecated_command` decorator | Pass `deprecated=<message>` to the click `command` decorator |
+| Reliance on `_get_cli_options` in `DynamicEntryPointCommandGroup` | Define the options through a `CliModel` |
+
+#### CLI commands and options
+
+| Removed | Use instead |
+|---|---|
+| `verdi setup` | `verdi profile setup` |
+| `verdi quicksetup` | `verdi presto --use-postgres` (automated) or `verdi profile setup core.psql_dos` (full control) |
+| `verdi code setup` | `verdi code create` |
+| `verdi profile setdefault` | `verdi profile set-default` |
+| `verdi archive inspect` | `verdi archive version` or `verdi archive info` |
+| `verdi rabbitmq tasks analyze` | `verdi process repair` |
+| `verdi profile setup --use-rabbitmq/--no-use-rabbitmq` | `--broker` (`--no-use-rabbitmq` is equivalent to `--broker none`) |
+| `verdi status --no-rmq` | Configure a profile whose `process_control.backend` is set to `None` |
+
 ### Behavior changes
 
 **`verdi presto`: auto-starts the daemon** ([#7351](https://github.com/aiidateam/aiida-core/pull/7351))

@@ -167,17 +167,27 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
         value = [value]
 
     # Warn about deprecated option names
+    option_name = option.name
     if option.deprecated_by:
-        echo.echo_warning(f'`{option.name}` is deprecated, use `{option.deprecated_by}` instead.')
+        option_name = option.deprecated_by
+        echo.echo_warning(f'`{option.name}` is deprecated using `{option.deprecated_by}` instead.')
 
     # Set the specified option
     try:
-        value = config.set_option(option.name, value, scope=scope)
+        value = config.set_option(option_name, value, scope=scope)
     except ConfigurationError as error:
         echo.echo_critical(str(error))
 
     config.store()
-    echo.echo_success(f"'{option.name}' set to {value} {scope_text}")
+
+    # Warn if a handler-side filter was set more verbose than any logger level, in which case it has no effect until
+    # a logger level is lowered as well.
+    from aiida.common.log import validate_handler
+
+    if warning := validate_handler(config, option_name, scope):
+        echo.echo_warning(warning)
+
+    echo.echo_success(f"'{option_name}' set to {value} {scope_text}")
 
 
 @verdi_config.command('unset')

@@ -10,6 +10,7 @@
 
 import logging
 import logging.config
+from unittest.mock import Mock
 
 import pytest
 
@@ -51,6 +52,24 @@ def test_capture_logging():
     with capture_logging(logger) as stream:
         logging.getLogger().error(message)
         assert stream.getvalue().strip() == message
+
+
+class TestValidateHandler:
+    """Tests for :func:`aiida.common.log.validate_handler`."""
+
+    def test_warns_when_more_verbose_than_loggers(self):
+        """A handler level below every logger level cannot take effect and should return a warning."""
+        levels = {'logging.terminal_handler': 'DEBUG', 'logging.aiida_loglevel': 'INFO'}
+        config = Mock(get_option=lambda name, scope=None: levels.get(name, 'WARNING'))
+        message = log.validate_handler(config, 'logging.terminal_handler')
+        assert message is not None
+        assert 'take effect' in message
+
+    def test_no_warning_when_effective(self):
+        """A handler level a logger actually emits at (here equal to it) is effective and should return ``None``."""
+        levels = {'logging.database_handler': 'INFO', 'logging.aiida_loglevel': 'INFO'}
+        config = Mock(get_option=lambda name, scope=None: levels.get(name, 'WARNING'))
+        assert log.validate_handler(config, 'logging.database_handler') is None
 
 
 @pytest.mark.presto

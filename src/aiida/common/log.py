@@ -151,6 +151,60 @@ def get_logging_config() -> dict[str, t.Any]:
     }
 
 
+# Maps each handler-side filter option to the logger-level ``*_loglevel`` options whose messages it filters.
+_HANDLER_TO_LOGGER: dict[str, tuple[str, ...]] = {
+    'logging.terminal_handler': (
+        'logging.aiida_loglevel',
+        'logging.verdi_loglevel',
+        'logging.disk_objectstore_loglevel',
+        'logging.plumpy_loglevel',
+        'logging.kiwipy_loglevel',
+        'logging.paramiko_loglevel',
+        'logging.alembic_loglevel',
+        'logging.aiopika_loglevel',
+        'logging.sqlalchemy_loglevel',
+    ),
+    'logging.database_handler': ('logging.aiida_loglevel',),
+}
+
+
+def validate_handler(config, option_name: str, scope: str | None = None) -> str | None:
+    """Validate that a handler-side filter can take effect given the configured logger levels.
+
+    ``logging.terminal_handler`` and ``logging.database_handler`` filter messages at the output handler, so they can
+    only surface messages that a logger actually emits (a record must clear both its logger's level and the handler's
+    level). If the handler level is set more verbose (i.e. a lower level) than every relevant logger level
+    (``*_loglevel``), no additional messages reach the handler and the setting has no effect until a logger level is
+    lowered as well.
+
+    :param config: the loaded configuration, queried through ``config.get_option(name, scope=scope)``.
+    :param option_name: name of the option to validate (dotted form, e.g. ``logging.terminal_handler``). Names that
+        are not a handler filter are ignored.
+    :param scope: the profile name to query the levels for, or ``None`` for the global scope. Must match the scope the
+        option was set for, so the check reflects the values that were actually written.
+    :returns: a warning message if the handler filter cannot take effect, or ``None`` if it is fine (or not a handler
+        option).
+    """
+    logger_level_options = _HANDLER_TO_LOGGER.get(option_name)
+    if logger_level_options is None:
+        return None
+
+    handler_level = config.get_option(option_name, scope=scope)
+
+    # The most verbose logger is the one with the lowest numeric level.
+    most_verbose_logger = min(logger_level_options, key=lambda name: LOG_LEVELS[config.get_option(name, scope=scope)])
+    most_verbose_level = config.get_option(most_verbose_logger, scope=scope)
+
+    if LOG_LEVELS[handler_level] < LOG_LEVELS[most_verbose_level]:
+        return (
+            f'`{option_name}` is set to `{handler_level}` but no logger emits messages at that level: the most '
+            f'verbose logger level is `{most_verbose_logger}` (`{most_verbose_level}`). Lower a logger level such as '
+            f'`logging.aiida_loglevel` for this setting to take effect.'
+        )
+
+    return None
+
+
 def evaluate_logging_configuration(dictionary: collections.abc.Mapping[t.Any, t.Any]) -> dict[t.Any, t.Any]:
     """Recursively evaluate the logging configuration, calling lambdas when encountered.
 

@@ -117,6 +117,19 @@ def test_config_unset_option(run_cli_command, config_with_profile_factory):
     assert result.output.strip() == str(get_option(option_name).default)  # back to the default
 
 
+def test_config_set_handler_warns_when_ineffective(run_cli_command, config_with_profile_factory):
+    """`verdi config set` should warn when a handler filter is set more verbose than any logger level.
+
+    ``logging.aiida_loglevel`` defaults to ``REPORT``, so setting ``terminal_handler`` to ``DEBUG`` cannot surface any
+    additional messages until a logger level is lowered as well.
+    """
+    config_with_profile_factory()
+    options = ['config', 'set', 'logging.terminal_handler', 'DEBUG']
+    result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
+    assert 'Warning' in result.output
+    assert 'take effect' in result.output
+
+
 def test_config_set_option_global_only(run_cli_command, config_with_profile_factory):
     """Test that `global_only` options are only set globally even if the `--global` flag is not set."""
     config_with_profile_factory()

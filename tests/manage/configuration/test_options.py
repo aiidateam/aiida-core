@@ -87,6 +87,30 @@ class TestConfigurationOptions:
         option_value = get_config_option(option_name)
         assert option_value == option_value_global
 
+    def test_set_option_redirects_deprecated_to_replacement(self):
+        """Setting/unsetting a deprecated option should redirect to its replacement option.
+
+        Regression test: the ``deprecated_by`` redirect used to be applied only on read, so setting a
+        deprecated option silently wrote to a key that nothing consulted. Both write and unset should
+        now warn and operate on the replacement's storage, consistent with the read redirect.
+        """
+        config = get_config()
+
+        # ``logging.db_loglevel`` is deprecated in favor of ``logging.database_handler``.
+        assert get_option('logging.db_loglevel').deprecated_by == 'logging.database_handler'
+
+        with pytest.warns(DeprecationWarning, match='logging.db_loglevel'):
+            config.set_option('logging.db_loglevel', 'DEBUG')
+
+        # The value should have been written to, and be readable from, the replacement option.
+        assert get_config_option('logging.database_handler') == 'DEBUG'
+
+        # Unsetting the deprecated option should likewise clear the replacement.
+        with pytest.warns(DeprecationWarning, match='logging.db_loglevel'):
+            config.unset_option('logging.db_loglevel')
+
+        assert get_config_option('logging.database_handler') == get_option('logging.database_handler').default
+
 
 @pytest.mark.presto
 def test_option_advanced_property():

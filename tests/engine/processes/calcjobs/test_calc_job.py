@@ -1373,6 +1373,8 @@ def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_a
         if time.time() - start_time >= timeout:
             raise AssertionError(f'process failed to terminate within timeout, current state: {node.process_state}')
 
+        time.sleep(0.1)
+
     assert node.is_finished, node.process_state
     assert node.is_finished_ok, node.exit_status
 

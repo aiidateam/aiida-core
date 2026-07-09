@@ -274,19 +274,10 @@ class Manager:
         :raises `aiida.common.exceptions.ConfigurationError`: if the option is not found
         """
         from aiida.common.exceptions import ConfigurationError
-        from aiida.manage.configuration.options import get_option
+        from aiida.manage.configuration.options import get_option, resolve_deprecated_option_name
 
+        option_name = resolve_deprecated_option_name(option_name)
         option = get_option(option_name)
-
-        if option.deprecated_by is not None:
-            import warnings
-
-            warnings.warn(
-                f'`{option_name}` is deprecated, use `{option.deprecated_by}` instead.',
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            option_name = option.deprecated_by
 
         # try the profile
         if self._profile and option_name in self._profile.options:

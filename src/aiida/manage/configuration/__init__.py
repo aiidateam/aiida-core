@@ -33,6 +33,7 @@ __all__ = (
     'get_option',
     'get_option_names',
     'parse_option',
+    'resolve_deprecated_option_name',
     'upgrade_config',
 )
 

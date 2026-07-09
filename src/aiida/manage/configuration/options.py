@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Tuple
 
 from aiida.common.exceptions import ConfigurationError
 
-__all__ = ('Option', 'get_option', 'get_option_names', 'parse_option')
+__all__ = ('Option', 'get_option', 'get_option_names', 'parse_option', 'resolve_deprecated_option_name')
 
 
 class Option:
@@ -87,7 +87,7 @@ class Option:
                 try:
                     messages.append(str(error['ctx']['error']))
                 except KeyError:
-                    messages.append(f"Invalid value for `{error['loc'][0]}`: {error['msg']}")
+                    messages.append(f'Invalid value for `{error["loc"][0]}`: {error["msg"]}')
 
             raise ConfigurationError('\n'.join(messages)) from exception
 
@@ -111,6 +111,31 @@ def get_option(name: str) -> Option:
     if option_name not in options:
         raise ConfigurationError(f'the option {name} does not exist')
     return Option(name, GlobalOptionsSchema.model_json_schema()['properties'][option_name], options[option_name])
+
+
+def resolve_deprecated_option_name(option_name: str, stacklevel: int = 4) -> str:
+    """Resolve a deprecated option name to its replacement.
+
+    If the option identified by ``option_name`` carries a ``deprecated_by`` marker, an
+    :class:`aiida.common.warnings.AiidaDeprecationWarning` is emitted through
+    :func:`aiida.common.warnings.warn_deprecation` and the name of the replacement option is
+    returned. Otherwise ``option_name`` is returned unchanged.
+
+    :param option_name: the name of the configuration option, possibly deprecated.
+    :param stacklevel: stacklevel forwarded to :func:`aiida.common.warnings.warn_deprecation`.
+    :return: the name of the option that should actually be used.
+    """
+    from aiida.common.warnings import warn_deprecation
+
+    option = get_option(option_name)
+
+    if option.deprecated_by is None:
+        return option_name
+
+    warn_deprecation(
+        f'`{option_name}` is deprecated, use `{option.deprecated_by}` instead.', version=3, stacklevel=stacklevel
+    )
+    return option.deprecated_by
 
 
 def parse_option(option_name: str, option_value: Any) -> Tuple[Option, Any]:

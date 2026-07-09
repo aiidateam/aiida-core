@@ -73,6 +73,7 @@ __all__ = (
     'FILTER_BY_LAST_DUMP_TIME',
     'FLAT',
     'FORCE',
+    'FORCE_CACHE',
     'FORMULA_MODE',
     'FREQUENCY',
     'GROUP',
@@ -129,6 +130,7 @@ __all__ = (
     'USER_FIRST_NAME',
     'USER_INSTITUTION',
     'USER_LAST_NAME',
+    'USE_CACHE',
     'VERBOSITY',
     'VISUALIZATION_FORMAT',
     'WITH_ELEMENTS',
@@ -259,6 +261,44 @@ PROFILE = OverridableOption(
     default=defaults.get_default_profile,
     cls=CallableDefaultOption,
     help='Execute the command for this profile instead of the default profile.',
+)
+
+
+def set_use_cache(ctx: click.Context, _param: click.Parameter, value: bool) -> bool:
+    """Set the ``use_cache`` flag on the context user object, to be picked up during profile loading."""
+    if value:
+        ctx.obj.use_cache = True
+    return value
+
+
+def set_force_cache(ctx: click.Context, _param: click.Parameter, value: bool) -> bool:
+    """Set the ``force_cache`` flag on the context user object, to be picked up during profile loading."""
+    if value:
+        ctx.obj.force_cache = True
+    return value
+
+
+USE_CACHE = OverridableOption(
+    '--use-cache',
+    is_flag=True,
+    default=False,
+    is_eager=True,
+    expose_value=False,
+    callback=set_use_cache,
+    help='For profiles using the `core.sqlite_zip` storage: store the database file extracted from the archive in '
+    'the local cache, such that subsequent loads do not need to extract (or download) it again.',
+)
+
+FORCE_CACHE = OverridableOption(
+    '--force-cache',
+    is_flag=True,
+    default=False,
+    is_eager=True,
+    expose_value=False,
+    callback=set_force_cache,
+    help='For profiles using the `core.sqlite_zip` storage with a recorded cached database: use the cached database '
+    'directly, without validating it against the archive. Allows working when the archive is unreachable, but the '
+    'data may be outdated and repository files may not be accessible.',
 )
 
 CALCULATION = OverridableOption(

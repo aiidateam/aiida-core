@@ -199,6 +199,9 @@ if __name__ == '__main__':
         'manage': ['tests'],
         # skipped since we don't want to expose the implementation at the top-level
         'storage': ['psql_dos', 'sqlite_zip', 'sqlite_temp'],
+        # skipped since the generic helper names are easily confused with the calculation-caching machinery; they
+        # remain importable from `aiida.storage.sqlite_zip.cache` directly
+        'storage/sqlite_zip': ['cache'],
         'orm': ['implementation'],
         # skip all since the module requires extra requirements
         'restapi': ['*'],

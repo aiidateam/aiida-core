@@ -85,10 +85,56 @@ class ProfileParamType(LabelStringType):
                 if self._cannot_exist:
                     self.fail(str(f'the profile `{value}` already exists'))
 
+        profile = self._apply_cache_flags(profile, ctx)
+
         if self._load_profile:
             load_profile(profile)
 
         ctx.obj.profile = profile  # type: ignore[union-attr]
+
+        return profile
+
+    @staticmethod
+    def _apply_cache_flags(profile: Profile, ctx: click.Context | None) -> Profile:
+        """Record the ``--use-cache``/``--force-cache`` flags from the context in the profile, if they were set.
+
+        For profiles using the ``core.sqlite_zip`` storage backend, the flags are recorded in the storage
+        configuration of a detached copy of the profile, such that they are never persisted to the configuration
+        file. For other storage backends the flags do not apply and are ignored with a warning.
+        """
+        import copy
+
+        from aiida.manage.configuration import Profile
+
+        use_cache = getattr(ctx.obj, 'use_cache', False) if ctx else False
+        force_cache = getattr(ctx.obj, 'force_cache', False) if ctx else False
+
+        if not (use_cache or force_cache):
+            return profile
+
+        try:
+            storage_backend = profile.storage_backend
+        except KeyError:
+            return profile
+
+        if storage_backend != 'core.sqlite_zip':
+            from aiida.cmdline.utils import echo
+
+            names = [name for name, passed in (('--use-cache', use_cache), ('--force-cache', force_cache)) if passed]
+            flags = ' and '.join(f'`{name}`' for name in names)
+            echo.echo_warning(
+                f'The {flags} option{"s" if len(names) > 1 else ""} only appl{"y" if len(names) > 1 else "ies"} to '
+                f'profiles using the `core.sqlite_zip` storage backend, but profile `{profile.name}` uses '
+                f'`{storage_backend}`: ignoring.'
+            )
+            return profile
+
+        profile = Profile(profile.name, copy.deepcopy(profile.dictionary))
+
+        if use_cache:
+            profile.storage_config['use_cache'] = True
+        if force_cache:
+            profile.storage_config['force_cache'] = True
 
         return profile
 

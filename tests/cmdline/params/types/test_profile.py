@@ -105,6 +105,29 @@ def test_convert_archive_location_not_accepted_by_default(ctx):
         ProfileParamType().convert('file:///some/path/export.aiida', None, ctx)
 
 
+def test_apply_cache_flags_wrong_backend(caplog):
+    """Test the warning when a cache flag is used with a profile not using ``core.sqlite_zip``, naming the flag."""
+    import logging
+
+    from aiida.manage.configuration import Profile
+
+    profile = Profile(
+        'test',
+        {'storage': {'backend': 'core.psql_dos', 'config': {}}, 'process_control': {'backend': None, 'config': {}}},
+        validate=False,
+    )
+    context = click.Context(click.Command('test'))
+    context.obj = types.SimpleNamespace(use_cache=True)
+
+    with caplog.at_level(logging.WARNING, logger='verdi'):
+        converted = ProfileParamType._apply_cache_flags(profile, context)
+    assert converted is profile
+
+    messages = [record.message for record in caplog.records]
+    assert any('The `--use-cache` option only applies' in message for message in messages)
+    assert not any('--force-cache' in message for message in messages)
+
+
 def test_convert_archive_url_cannot_exist(ctx):
     """Test that URL values are not converted to archive profiles when ``cannot_exist=True``.
 
@@ -148,3 +171,41 @@ def test_verdi_ephemeral_archive_profile(filepath_archive, tmp_path):
     config_file = filepath_config / '.aiida' / 'config.json'
     assert config_file.exists(), 'the configuration file was not created'
     assert 'archive' not in config_file.read_text()
+
+
+def test_verdi_ephemeral_archive_profile_use_cache(filepath_archive, tmp_path):
+    """Test ``verdi --use-cache -p file://<archive> <command>`` end-to-end in a subprocess.
+
+    The first invocation should populate the cache in the configuration folder, and the second invocation, even
+    without ``--use-cache``, should use it.
+    """
+    filepath_config = tmp_path / 'aiida_config'
+
+    env = os.environ.copy()
+    env['AIIDA_PATH'] = str(filepath_config)
+
+    result = subprocess.run(
+        ['verdi', '--use-cache', '-p', f'file://{filepath_archive}', 'user', 'list'],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+
+    dirpath_cache = filepath_config / '.aiida' / 'cache' / 'sqlite_zip'
+    filepaths_cached = list(dirpath_cache.iterdir())
+    assert len(filepaths_cached) == 1
+
+    # The second invocation without ``--use-cache`` reuses the cached file instead of rewriting it
+    mtime = filepaths_cached[0].stat().st_mtime_ns
+
+    result = subprocess.run(
+        ['verdi', '-p', f'file://{filepath_archive}', 'user', 'list'],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert filepaths_cached[0].stat().st_mtime_ns == mtime

@@ -320,6 +320,205 @@ def test_initialise_remote_reset():
         SqliteZipBackend.initialise(profile, reset=True)
 
 
+@pytest.fixture
+def cache_dirpath(tmp_path, monkeypatch):
+    """Redirect the ``sqlite_zip`` database cache to a temporary directory and return its path."""
+    dirpath = tmp_path / 'cache'
+    monkeypatch.setattr('aiida.storage.sqlite_zip.cache.get_cache_dirpath', lambda: dirpath)
+    return dirpath
+
+
+@pytest.fixture
+def filepath_archive(tmp_path):
+    """Return the filepath of an initialised, empty archive."""
+    filepath = tmp_path / 'archive.aiida'
+    SqliteZipBackend.initialise(SqliteZipBackend.create_profile(filepath))
+    return filepath
+
+
+def test_cache_use_cache(filepath_archive, cache_dirpath):
+    """Test that with ``use_cache`` the database is cached, and subsequent loads use the cache."""
+    profile = SqliteZipBackend.create_profile(filepath_archive)
+    profile.storage_config['use_cache'] = True
+
+    backend = SqliteZipBackend(profile)
+    backend.get_session()
+    assert backend._resources.db_file is None, 'the database should have been cached, not extracted to a temporary file'
+    filepaths_cached = list(cache_dirpath.iterdir())
+    assert len(filepaths_cached) == 1
+    backend.close()
+
+    # The cached file survives closing the backend and is reused, not rewritten, by a second backend
+    assert filepaths_cached[0].is_file()
+    mtime = filepaths_cached[0].stat().st_mtime_ns
+
+    backend = SqliteZipBackend(profile)
+    backend.get_session()
+    assert backend._resources.db_file is None
+    assert filepaths_cached[0].stat().st_mtime_ns == mtime
+    backend.close()
+
+
+def test_cache_default_disabled(filepath_archive, cache_dirpath):
+    """Test that without ``use_cache`` the database is extracted to a temporary file and the cache is not written."""
+    backend = SqliteZipBackend(SqliteZipBackend.create_profile(filepath_archive))
+    backend.get_session()
+    assert backend._resources.db_file is not None
+    assert not cache_dirpath.exists()
+    backend.close()
+
+
+def test_cache_read_always(filepath_archive, cache_dirpath):
+    """Test that an existing cache entry is used even when ``use_cache`` is not set."""
+    profile = SqliteZipBackend.create_profile(filepath_archive)
+    SqliteZipBackend.refresh_cache(profile)
+
+    backend = SqliteZipBackend(SqliteZipBackend.create_profile(filepath_archive))
+    backend.get_session()
+    assert backend._resources.db_file is None, 'the cached database should have been used'
+    backend.close()
+
+
+def test_initialise_use_cache(tmp_path, cache_dirpath):
+    """Test that ``initialise`` with ``use_cache`` populates the cache and records the ``cached_database``."""
+    profile = SqliteZipBackend.create_profile(tmp_path / 'archive.aiida')
+    profile.storage_config['use_cache'] = True
+    SqliteZipBackend.initialise(profile)
+
+    filename = profile.storage_config['cached_database']
+    assert (cache_dirpath / filename).is_file()
+
+
+def test_cache_pointer_refill(filepath_archive, cache_dirpath):
+    """Test that a missing cache file is repopulated for a profile that records a ``cached_database``."""
+    profile = SqliteZipBackend.create_profile(filepath_archive)
+    filename = SqliteZipBackend.refresh_cache(profile)
+
+    (cache_dirpath / filename).unlink()
+
+    backend = SqliteZipBackend(profile)
+    backend.get_session()
+    assert (cache_dirpath / filename).is_file()
+    assert backend._resources.db_file is None
+    backend.close()
+
+
+def test_cache_pointer_mismatch(filepath_archive, cache_dirpath):
+    """Test that a recorded ``cached_database`` that does not correspond to the archive content raises."""
+    from aiida.common.exceptions import ConfigurationError
+
+    profile = SqliteZipBackend.create_profile(filepath_archive)
+    profile.storage_config['cached_database'] = '00000000-1.sqlite3'
+
+    backend = SqliteZipBackend(profile)
+    with pytest.raises(ConfigurationError, match=r'.*verdi profile cache-refresh.*'):
+        backend.get_session()
+    backend.close()
+
+
+def test_cache_force(filepath_archive, tmp_path, cache_dirpath):
+    """Test that with ``force_cache`` the recorded cached database is used without accessing the archive."""
+    profile = SqliteZipBackend.create_profile(filepath_archive)
+    SqliteZipBackend.refresh_cache(profile)
+    profile.storage_config['force_cache'] = True
+
+    # Move the archive away: with ``force_cache`` it should not be accessed at all
+    filepath_archive.rename(tmp_path / 'moved-away.aiida')
+
+    backend = SqliteZipBackend(profile)
+    backend.get_session()
+    assert backend._resources.db_file is None
+    backend.close()
+
+
+def test_cache_force_no_pointer(filepath_archive, cache_dirpath):
+    """Test that ``force_cache`` raises if the profile does not record a ``cached_database``."""
+    from aiida.common.exceptions import ConfigurationError
+
+    profile = SqliteZipBackend.create_profile(filepath_archive)
+    profile.storage_config['force_cache'] = True
+
+    backend = SqliteZipBackend(profile)
+    with pytest.raises(ConfigurationError, match=r'.*does not record one.*'):
+        backend.get_session()
+    backend.close()
+
+
+def test_cache_force_missing_file(filepath_archive, cache_dirpath):
+    """Test that ``force_cache`` raises if the recorded cached database file does not exist."""
+    from aiida.common.exceptions import UnreachableStorage
+
+    profile = SqliteZipBackend.create_profile(filepath_archive)
+    filename = SqliteZipBackend.refresh_cache(profile)
+    profile.storage_config['force_cache'] = True
+
+    (cache_dirpath / filename).unlink()
+
+    backend = SqliteZipBackend(profile)
+    with pytest.raises(UnreachableStorage, match=r'.*does not exist.*'):
+        backend.get_session()
+    backend.close()
+
+
+def test_cache_entry_read_only(filepath_archive, cache_dirpath):
+    """Test that a session over a cached database cannot write to it.
+
+    Cache entries are shared between all profiles and processes whose archives have the same content, so a stray
+    write must not be able to corrupt them.
+    """
+    from sqlalchemy import text
+    from sqlalchemy.exc import OperationalError
+
+    profile = SqliteZipBackend.create_profile(filepath_archive)
+    profile.storage_config['use_cache'] = True
+
+    backend = SqliteZipBackend(profile)
+    session = backend.get_session()
+    with pytest.raises(OperationalError, match='readonly database'):
+        session.execute(text('CREATE TABLE sneaky (id INTEGER)'))
+    session.rollback()
+    backend.close()
+
+
+def test_cache_force_stale_version(filepath_archive, cache_dirpath):
+    """Test that ``force_cache`` raises if the cached database was recorded for a different archive schema version."""
+    from aiida.common.exceptions import IncompatibleStorageSchema
+
+    profile = SqliteZipBackend.create_profile(filepath_archive)
+    SqliteZipBackend.refresh_cache(profile)
+    assert profile.storage_config['cached_database_version'] == SqliteZipBackend.version_head()
+
+    # Simulate an aiida-core upgrade since the cache was recorded, i.e. the recorded version is no longer current
+    profile.storage_config['cached_database_version'] = '0.1'
+    profile.storage_config['force_cache'] = True
+
+    backend = SqliteZipBackend(profile)
+    with pytest.raises(IncompatibleStorageSchema, match=r'.*verdi profile cache-refresh.*'):
+        backend.get_session()
+    backend.close()
+
+
+def test_cache_remote(tmp_path, cache_dirpath, serve_over_http):
+    """Test caching of the database of a remote archive."""
+    filepath_archive = tmp_path / 'archive.aiida'
+    SqliteZipBackend.initialise(SqliteZipBackend.create_profile(filepath_archive))
+
+    url = f'{serve_over_http}/archive.aiida'
+    profile = SqliteZipBackend.create_profile(url)
+    profile.storage_config['use_cache'] = True
+
+    backend = SqliteZipBackend(profile)
+    backend.get_session()
+    assert backend._resources.db_file is None
+    assert len(list(cache_dirpath.iterdir())) == 1
+    backend.close()
+
+    backend = SqliteZipBackend(profile)
+    backend.get_session()
+    assert backend._resources.db_file is None
+    backend.close()
+
+
 def test_initialise_migration_needed(tmp_path, caplog, monkeypatch):
     """Test :meth:`aiida.storage.sqlite_zip.backend.SqliteZipBackend.initialise` when migration is triggered."""
     filepath_archive = tmp_path / 'archive.zip'

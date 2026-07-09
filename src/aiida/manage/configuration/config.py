@@ -654,6 +654,14 @@ class Config:
         :param profile: the profile instance to update
         :return: self
         """
+        # The ``force_cache`` key of the ``core.sqlite_zip`` storage configuration is transient: it is injected into
+        # a detached profile copy by the ``verdi --force-cache`` flag and must never be persisted, since a persisted
+        # ``force_cache`` would permanently and silently skip the validation of the archive on every load.
+        try:
+            profile.storage_config.pop('force_cache', None)
+        except KeyError:
+            # The profile does not define a storage configuration at all, e.g. a new empty profile.
+            pass
         self._profiles[profile.name] = profile
         return self
 

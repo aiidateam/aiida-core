@@ -47,6 +47,38 @@ verdi -p https://example.com/process.aiida shell
 
 This creates a temporary profile that mounts the archive for the duration of the command only: nothing is added to the AiiDA configuration file and any temporary files are cleaned up when the command finishes.
 
+## Caching the database
+
+By default, the SQLite database contained in the archive is extracted (and for remote archives, downloaded) again for every Python session.
+For large or remote archives this can be avoided by caching the extracted database locally, in the `cache/sqlite_zip` subdirectory of the AiiDA configuration folder.
+Cache entries are named after the checksum and size of the database recorded in the archive, so validating the cache only requires reading the table of contents of the archive (for remote archives, a small range request), never the database itself.
+
+An existing valid cache entry is always used automatically.
+The cache is only *written* when explicitly requested, either for a single invocation with the top-level `--use-cache` option:
+
+```{code-block} console
+verdi --use-cache -p https://example.com/process.aiida process list -a
+```
+
+or when creating a profile, in which case the cached database is also recorded for the profile in the configuration file:
+
+```{code-block} console
+verdi profile setup core.sqlite_zip -n --profile-name archive --filepath process.aiida --use-cache
+```
+
+For such profiles, a deleted cache entry is transparently recreated on the next load.
+If instead the *archive itself* changed since the cache was created, loading the profile stops with an error, and the recorded cache can be updated explicitly with:
+
+```{code-block} console
+verdi profile cache-refresh archive
+```
+
+When the archive is unreachable (e.g. working offline with a remote archive), a profile with a recorded cached database can still be used by passing the top-level `--force-cache` option.
+Note that in this case the data is not validated against the archive, and repository files, which are always read directly from the archive, may not be accessible.
+
+The cache can be deleted at any time with `verdi profile cache-clear`: entries are recreated on the next load of a profile configured for caching.
+Note however that recreating an entry requires access to the archive: if you rely on `--force-cache` to work with an unreachable archive, clearing the cache deletes your only usable copy of the data.
+
 You can now inspect the contents of the `process.aiida` archive by using the `archive` profile in the same way you would a standard AiiDA profile.
 For example, you can start an interactive shell using `verdi -p archive shell` or if you are already in a notebook simply load the profile:
 

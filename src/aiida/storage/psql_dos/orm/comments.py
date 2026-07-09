@@ -85,7 +85,8 @@ class SqlaComment(entities.SqlaModelEntity[models.DbComment], BackendComment):
         return self.backend.users.ENTITY_CLASS.from_dbmodel(self.model.user, self.backend)
 
     def set_user(self, value):
-        self.model.user = value
+        lang.type_check(value, self.USER_CLASS)
+        self.model.user = value.bare_model
 
     @property
     def content(self):

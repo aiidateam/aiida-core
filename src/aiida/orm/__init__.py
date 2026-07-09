@@ -119,6 +119,7 @@ __all__ = (
     'load_node',
     'load_node_class',
     'pycifrw_from_cif',
+    'shallow_copy_nested_dict',
     'to_aiida_type',
     'validate_link',
 )

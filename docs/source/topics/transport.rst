@@ -7,10 +7,10 @@ Transport plugins
 The term `transport` in AiiDA refers to a class that the engine uses to perform operations on local or remote machines where its :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob` are submitted.
 The base class :py:class:`~aiida.transports.transport.Transport` defines an interface for these operations, such as copying files and executing commands.
 A `transport plugin` is a class that implements this base class for a specific connection method.
-The ``aiida-core`` package ships with two transport plugins: the :py:class:`~aiida.transports.plugins.local.LocalTransport` and :py:class:`~aiida.transports.plugins.ssh_async.AsyncSshTransport` classes.
+The ``aiida-core`` package ships with two transport plugins: the :py:class:`~aiida.transports.plugins.local.LocalTransport` and :py:class:`~aiida.transports.plugins.ssh.AsyncSshTransport` classes.
 The ``core.local`` transport can be used to connect with the `localhost` and makes use only of some standard python modules like ``os`` and ``shutil``.
-The ``core.ssh_async`` transport, which can be used for machines that can be connected to over ssh, is built on top of the `asyncssh <https://asyncssh.readthedocs.io/>`_ library that is installed as a required dependency of ``aiida-core``.
-Its connection details are taken from the user's ``~/.ssh/config`` file.
+The ``core.ssh`` transport, which can be used for machines that can be connected to over ssh, is built by default on top of the `asyncssh <https://asyncssh.readthedocs.io/>`_ library that is installed as a required dependency of ``aiida-core``; configured with ``--backend openssh`` it calls the ``ssh`` and ``scp`` commands instead.
+Its connection details are taken from the user's ``~/.ssh/config`` file, or, for a computer migrated from AiiDA v2, from the configuration the migration wrote for it (see :ref:`how-to:ssh:migrated`).
 
 .. _topics:transport:develop_plugin:
 

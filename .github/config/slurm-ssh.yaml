@@ -1,7 +1,7 @@
 label: slurm-ssh
 description: slurm container
 hostname: localhost
-transport: core.ssh_async
+transport: core.ssh
 scheduler: core.slurm
 shebang: '#!/bin/bash'
 work_dir: /home/{username}/workdir

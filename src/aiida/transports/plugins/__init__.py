@@ -12,7 +12,7 @@
 
 # fmt: off
 
-from aiida.transports.plugins.ssh_async import *
+from aiida.transports.plugins.ssh import *
 
 __all__ = (
     'AsyncSshTransport',

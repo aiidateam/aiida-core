@@ -52,7 +52,7 @@ def command_create_profile(
     :param first_name: First name for the default user.
     :param last_name: Last name for the default user.
     :param institution: Institution for the default user.
-    :param broker: Message broker backend ('rabbitmq', 'zmq', or 'none').
+    :param broker: Message broker backend ('rabbitmq', 'zeromq', or 'none').
     :param use_rabbitmq: Deprecated. Use ``broker`` instead. If False, equivalent to ``broker='none'``.
     :param kwargs: Arguments to initialise instance of the selected storage implementation.
     """
@@ -91,11 +91,11 @@ def command_create_profile(
 
         echo.echo_report('RabbitMQ can be reconfigured with `verdi profile configure-rabbitmq`.')
 
-    elif broker == 'zmq':
-        broker_backend = 'core.zmq'
+    elif broker == 'zeromq':
+        broker_backend = 'core.zeromq'
         broker_config = {}
-        echo.echo_success('ZMQ broker configured (no external service required).')
-        echo.echo_report('The ZMQ broker service will be started automatically with the daemon.')
+        echo.echo_success('ZeroMQ broker configured (no external service required).')
+        echo.echo_report('The ZeroMQ broker service will be started automatically with the daemon.')
 
     else:  # broker == 'none'
         echo.echo_report('Creating profile without a message broker.')

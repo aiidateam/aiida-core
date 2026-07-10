@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for ``aiida.brokers.zmq.broker.ZmqBroker`` and ``ZmqIncomingTask``."""
+"""Tests for ``aiida.brokers.zeromq.broker.ZeromqBroker`` and ``ZeromqIncomingTask``."""
 
 from __future__ import annotations
 
@@ -16,20 +16,20 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from aiida.brokers.zmq import ZmqBroker
-from aiida.brokers.zmq.broker import ZmqIncomingTask
-from aiida.brokers.zmq.communicator import ZmqCommunicator
-from aiida.brokers.zmq.queue import PersistentQueue
-from tests.conftest import start_zmq_broker, stop_zmq_broker
+from aiida.brokers.zeromq import ZeromqBroker
+from aiida.brokers.zeromq.broker import ZeromqIncomingTask
+from aiida.brokers.zeromq.communicator import ZeromqCommunicator
+from aiida.brokers.zeromq.queue import PersistentQueue
+from tests.conftest import start_zeromq_broker, stop_zeromq_broker
 
 
-def _create_broker_with_base_path(base_path: Path) -> ZmqBroker:
-    with patch('aiida.brokers.zmq.broker.get_broker_base_path', return_value=base_path):
-        return ZmqBroker(MagicMock())
+def _create_broker_with_base_path(base_path: Path) -> ZeromqBroker:
+    with patch('aiida.brokers.zeromq.broker.get_broker_base_path', return_value=base_path):
+        return ZeromqBroker(MagicMock())
 
 
-class TestZmqBrokerStatusQueries:
-    """Tests for ZmqBroker status queries (file-based)."""
+class TestZeromqBrokerStatusQueries:
+    """Tests for ZeromqBroker status queries (file-based)."""
 
     def test_is_running_no_pid_file(self, tmp_path):
         """Test is_running returns False when no PID file exists."""
@@ -54,59 +54,59 @@ class TestZmqBrokerStatusQueries:
     def test_start_stop_cycle(self, tmp_path):
         """Test querying a running broker service."""
         broker = _create_broker_with_base_path(tmp_path)
-        start_zmq_broker(broker)
+        start_zeromq_broker(broker)
 
         try:
             assert broker.is_running
             assert broker.get_service_pid() is not None
             assert broker.router_endpoint is not None
         finally:
-            stop_zmq_broker(broker)
+            stop_zeromq_broker(broker)
 
         assert not broker.is_running
 
     def test_start_already_running(self, tmp_path):
         """Test starting when already running is idempotent."""
         broker = _create_broker_with_base_path(tmp_path)
-        start_zmq_broker(broker)
+        start_zeromq_broker(broker)
 
         try:
-            start_zmq_broker(broker)  # idempotent
+            start_zeromq_broker(broker)  # idempotent
             assert broker.is_running
         finally:
-            stop_zmq_broker(broker)
+            stop_zeromq_broker(broker)
 
     def test_stop_not_running(self, tmp_path):
         """Test stopping when not running is a no-op."""
         broker = _create_broker_with_base_path(tmp_path)
-        stop_zmq_broker(broker)  # Should not raise
+        stop_zeromq_broker(broker)  # Should not raise
 
     def test_restart(self, tmp_path):
         """Test restarting the broker service."""
         broker = _create_broker_with_base_path(tmp_path)
-        start_zmq_broker(broker)
+        start_zeromq_broker(broker)
 
         try:
             old_pid = broker.get_service_pid()
-            stop_zmq_broker(broker)
-            start_zmq_broker(broker)
+            stop_zeromq_broker(broker)
+            start_zeromq_broker(broker)
             assert broker.is_running
 
             new_pid = broker.get_service_pid()
             assert new_pid != old_pid
         finally:
-            stop_zmq_broker(broker)
+            stop_zeromq_broker(broker)
 
     def test_str_running(self, tmp_path):
         """Test __str__ when running."""
         broker = _create_broker_with_base_path(tmp_path)
-        start_zmq_broker(broker)
+        start_zeromq_broker(broker)
         try:
             s = str(broker)
-            assert 'ZMQ Broker' in s
+            assert 'ZeroMQ Broker' in s
             assert 'PID' in s
         finally:
-            stop_zmq_broker(broker)
+            stop_zeromq_broker(broker)
 
     def test_str_not_running(self, tmp_path):
         """Test __str__ when not running."""
@@ -140,7 +140,7 @@ class TestZmqBrokerStatusQueries:
         """Test PID file with sentinel format."""
         broker = _create_broker_with_base_path(tmp_path)
         pid_file = tmp_path / 'broker.pid'
-        pid_file.write_text('aiida-zmq-broker 12345')
+        pid_file.write_text('aiida-zeromq-broker 12345')
         assert broker.get_service_pid() == 12345
 
     def test_get_service_pid_bare_format(self, tmp_path):
@@ -161,7 +161,7 @@ class TestZmqBrokerStatusQueries:
         """Test is_running with stale PID."""
         broker = _create_broker_with_base_path(tmp_path)
         pid_file = tmp_path / 'broker.pid'
-        pid_file.write_text('aiida-zmq-broker 999999')  # Non-existent PID
+        pid_file.write_text('aiida-zeromq-broker 999999')  # Non-existent PID
         assert not broker.is_running
 
     def test_get_service_status_valid(self, tmp_path):
@@ -184,7 +184,7 @@ class TestZmqBrokerStatusQueries:
         """Test _cleanup_stale_service_files removes all stale files."""
         broker = _create_broker_with_base_path(tmp_path)
 
-        (tmp_path / 'broker.pid').write_text('aiida-zmq-broker 1')
+        (tmp_path / 'broker.pid').write_text('aiida-zeromq-broker 1')
         (tmp_path / 'broker.status').write_text('{}')
         sockets_dir = tmp_path / 'test_sockets'
         sockets_dir.mkdir()
@@ -198,13 +198,13 @@ class TestZmqBrokerStatusQueries:
         assert not sockets_dir.exists()
 
 
-class TestZmqBrokerCommunicator:
-    """Tests for ZmqBroker communicator management."""
+class TestZeromqBrokerCommunicator:
+    """Tests for ZeromqBroker communicator management."""
 
     def test_get_communicator_and_close(self, tmp_path):
         """Test get_communicator and close."""
         broker = _create_broker_with_base_path(tmp_path)
-        start_zmq_broker(broker)
+        start_zeromq_broker(broker)
 
         try:
             with patch('aiida.manage.configuration.get_config_option', return_value=None):
@@ -217,7 +217,7 @@ class TestZmqBrokerCommunicator:
                 assert comm2 is comm
         finally:
             broker.close()
-            stop_zmq_broker(broker)
+            stop_zeromq_broker(broker)
 
     def test_get_communicator_timeout(self, tmp_path):
         """Test get_communicator raises on timeout when broker not running."""
@@ -232,8 +232,8 @@ class TestZmqBrokerCommunicator:
             assert b is broker
 
 
-class TestZmqBrokerTasks:
-    """Tests for ZmqBroker task iteration."""
+class TestZeromqBrokerTasks:
+    """Tests for ZeromqBroker task iteration."""
 
     def test_iterate_tasks_no_queue(self, tmp_path):
         """Test iterate_tasks when queue path doesn't exist."""
@@ -251,18 +251,18 @@ class TestZmqBrokerTasks:
 
         tasks = list(broker.iterate_tasks())
         assert len(tasks) == 2
-        assert all(isinstance(t, ZmqIncomingTask) for t in tasks)
+        assert all(isinstance(t, ZeromqIncomingTask) for t in tasks)
 
 
-class TestZmqIncomingTask:
-    """Tests for ZmqIncomingTask."""
+class TestZeromqIncomingTask:
+    """Tests for ZeromqIncomingTask."""
 
     def test_processing_context_manager(self, tmp_path):
-        """Test ZmqIncomingTask.processing context manager."""
+        """Test ZeromqIncomingTask.processing context manager."""
         queue = PersistentQueue(tmp_path)
         queue.push('t1', {'body': 'test_body'})
 
-        task = ZmqIncomingTask('t1', {'body': 'test_body'}, queue)
+        task = ZeromqIncomingTask('t1', {'body': 'test_body'}, queue)
         assert task.body == 'test_body'
 
         with task.processing() as outcome:
@@ -272,32 +272,32 @@ class TestZmqIncomingTask:
         assert queue.remove_pending('t1') is False
 
 
-class TestZmqBrokerIntegration:
-    """Integration tests for the ZMQ broker with AiiDA."""
+class TestZeromqBrokerIntegration:
+    """Integration tests for the ZeroMQ broker with AiiDA."""
 
     @pytest.fixture
-    def zmq_broker(self, tmp_path):
-        """Create a ZMQ broker for testing."""
+    def zeromq_broker(self, tmp_path):
+        """Create a ZeroMQ broker for testing."""
         broker_dir = tmp_path / 'broker' / 'test-uuid'
         broker = _create_broker_with_base_path(broker_dir)
-        start_zmq_broker(broker)
+        start_zeromq_broker(broker)
 
         yield broker
 
-        stop_zmq_broker(broker)
+        stop_zeromq_broker(broker)
 
-    def test_broker_lifecycle(self, zmq_broker):
+    def test_broker_lifecycle(self, zeromq_broker):
         """Test the broker lifecycle."""
-        assert zmq_broker.is_running
+        assert zeromq_broker.is_running
 
-        status = zmq_broker.get_service_status()
+        status = zeromq_broker.get_service_status()
         assert status is not None
         assert 'pid' in status
 
-    def test_communicator_connection(self, zmq_broker):
+    def test_communicator_connection(self, zeromq_broker):
         """Test connecting a communicator to the broker."""
-        communicator = ZmqCommunicator(
-            router_endpoint=zmq_broker.router_endpoint,
+        communicator = ZeromqCommunicator(
+            router_endpoint=zeromq_broker.router_endpoint,
         )
         communicator.start()
 

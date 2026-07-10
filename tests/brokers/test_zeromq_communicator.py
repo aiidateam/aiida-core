@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for ``aiida.brokers.zmq.communicator.ZmqCommunicator``."""
+"""Tests for ``aiida.brokers.zeromq.communicator.ZeromqCommunicator``."""
 
 from __future__ import annotations
 
@@ -18,26 +18,26 @@ from unittest.mock import MagicMock, patch
 import kiwipy
 import pytest
 
-from aiida.brokers.zmq import ZmqBroker
-from aiida.brokers.zmq.communicator import ZmqCommunicator
-from tests.conftest import start_zmq_broker, stop_zmq_broker
+from aiida.brokers.zeromq import ZeromqBroker
+from aiida.brokers.zeromq.communicator import ZeromqCommunicator
+from tests.conftest import start_zeromq_broker, stop_zeromq_broker
 
 
-def _create_broker_with_base_path(base_path: Path) -> ZmqBroker:
-    with patch('aiida.brokers.zmq.broker.get_broker_base_path', return_value=base_path):
-        return ZmqBroker(MagicMock())
+def _create_broker_with_base_path(base_path: Path) -> ZeromqBroker:
+    with patch('aiida.brokers.zeromq.broker.get_broker_base_path', return_value=base_path):
+        return ZeromqBroker(MagicMock())
 
 
-class TestZmqCommunicatorLifecycle:
+class TestZeromqCommunicatorLifecycle:
     """Tests for communicator initialization and lifecycle."""
 
     def test_init(self, tmp_path):
         """Test communicator initialization."""
         broker = _create_broker_with_base_path(tmp_path)
-        start_zmq_broker(broker)
+        start_zeromq_broker(broker)
 
         try:
-            communicator = ZmqCommunicator(router_endpoint=broker.router_endpoint)
+            communicator = ZeromqCommunicator(router_endpoint=broker.router_endpoint)
             communicator.start()
 
             try:
@@ -47,57 +47,57 @@ class TestZmqCommunicatorLifecycle:
 
             assert communicator.is_closed() is True
         finally:
-            stop_zmq_broker(broker)
+            stop_zeromq_broker(broker)
 
     def test_context_manager(self, tmp_path):
         """Test communicator as context manager."""
         broker = _create_broker_with_base_path(tmp_path)
-        start_zmq_broker(broker)
+        start_zeromq_broker(broker)
 
         try:
-            with ZmqCommunicator(router_endpoint=broker.router_endpoint) as communicator:
+            with ZeromqCommunicator(router_endpoint=broker.router_endpoint) as communicator:
                 assert communicator.is_closed() is False
 
             assert communicator.is_closed() is True
         finally:
-            stop_zmq_broker(broker)
+            stop_zeromq_broker(broker)
 
     def test_close_idempotent(self, tmp_path):
         """Test close is idempotent."""
         broker = _create_broker_with_base_path(tmp_path)
-        start_zmq_broker(broker)
+        start_zeromq_broker(broker)
 
         try:
-            comm = ZmqCommunicator(router_endpoint=broker.router_endpoint)
+            comm = ZeromqCommunicator(router_endpoint=broker.router_endpoint)
             comm.start()
             comm.close()
             comm.close()  # should not raise
             assert comm.is_closed()
         finally:
-            stop_zmq_broker(broker)
+            stop_zeromq_broker(broker)
 
     def test_ensure_open_raises_when_closed(self):
         """Test _ensure_open raises when communicator is closed."""
-        comm = ZmqCommunicator(router_endpoint='ipc:///tmp/fake')
+        comm = ZeromqCommunicator(router_endpoint='ipc:///tmp/fake')
         with pytest.raises(RuntimeError, match='closed'):
             comm.task_send({'x': 1})
 
 
-class TestZmqCommunicatorMessaging:
+class TestZeromqCommunicatorMessaging:
     """Tests for communicator messaging operations with a real broker."""
 
     @pytest.fixture
     def broker_and_comm(self, tmp_path):
         broker = _create_broker_with_base_path(tmp_path / 'broker')
-        start_zmq_broker(broker)
+        start_zeromq_broker(broker)
 
-        comm = ZmqCommunicator(router_endpoint=broker.router_endpoint)
+        comm = ZeromqCommunicator(router_endpoint=broker.router_endpoint)
         comm.start()
 
         yield broker, comm
 
         comm.close()
-        stop_zmq_broker(broker)
+        stop_zeromq_broker(broker)
 
     def test_task_send_no_reply(self, broker_and_comm):
         """Test task_send with no_reply=True returns None."""
@@ -152,25 +152,25 @@ class TestZmqCommunicatorMessaging:
         comm.remove_broadcast_subscriber('my-bcast')
 
 
-class TestZmqCommunicatorRoundTrip:
+class TestZeromqCommunicatorRoundTrip:
     """Integration tests for full task, RPC, and broadcast round-trips."""
 
     @pytest.fixture
     def sender_and_worker(self, tmp_path):
         broker = _create_broker_with_base_path(tmp_path / 'broker')
-        start_zmq_broker(broker)
+        start_zeromq_broker(broker)
 
-        sender = ZmqCommunicator(router_endpoint=broker.router_endpoint, client_id='sender')
+        sender = ZeromqCommunicator(router_endpoint=broker.router_endpoint, client_id='sender')
         sender.start()
 
-        worker = ZmqCommunicator(router_endpoint=broker.router_endpoint, client_id='worker')
+        worker = ZeromqCommunicator(router_endpoint=broker.router_endpoint, client_id='worker')
         worker.start()
 
         yield broker, sender, worker
 
         worker.close()
         sender.close()
-        stop_zmq_broker(broker)
+        stop_zeromq_broker(broker)
 
     def test_task_round_trip(self, sender_and_worker):
         """Test task send gets immediate broker acknowledgment.

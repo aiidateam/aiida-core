@@ -6,11 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Application-level message protocol for the ZMQ broker.
+"""Application-level message protocol for the ZeroMQ broker.
 
 This protocol implements the subset of AMQP semantics that AiiDA requires
 (via kiwipy's ``Communicator`` interface, originally designed for RabbitMQ)
-using ZMQ as the transport layer instead of raw TCP.
+using ZeroMQ as the transport layer instead of raw TCP.
 
 Socket architecture:
     A single ROUTER/DEALER pair carries all traffic (tasks, RPC, broadcasts).
@@ -19,13 +19,13 @@ Socket architecture:
     to specific clients. Broadcasts are sent by the server to all connected
     clients (derived from subscriber registries).
 
-What ZMQ provides (transport layer):
+What ZeroMQ provides (transport layer):
     - Identity-based routing (ROUTER auto-prepends sender identity to messages)
     - Automatic reconnection and async I/O
     - ZMTP heartbeats for dead peer detection
     - IPC transport for same-machine communication
 
-What ZMQ does NOT provide (requiring this protocol):
+What ZeroMQ does NOT provide (requiring this protocol):
     - Request-reply correlation (matching responses to requests)
     - Task acknowledgment and redelivery on worker death
     - Persistent/durable queues
@@ -35,7 +35,7 @@ What ZMQ does NOT provide (requiring this protocol):
 
 AMQP concepts mapped to message types:
     ========================  ================================
-    AMQP concept              ZMQ broker message type
+    AMQP concept              ZeroMQ broker message type
     ========================  ================================
     ``basic.ack``             ``TASK_ACK``
     ``basic.nack``            ``TASK_NACK``
@@ -47,7 +47,7 @@ AMQP concepts mapped to message types:
     ========================  ================================
 
 Why not use an AMQP library directly: the goal is to eliminate the RabbitMQ
-server dependency. ZMQ provides the transport primitives; this module adds
+server dependency. ZeroMQ provides the transport primitives; this module adds
 only the AMQP-like semantics that ``kiwipy.Communicator`` requires.
 """
 
@@ -60,7 +60,7 @@ from typing import Any
 
 
 class MessageType(str, Enum):
-    """Message types for the ZMQ broker protocol."""
+    """Message types for the ZeroMQ broker protocol."""
 
     # Task messages
     TASK = 'task'

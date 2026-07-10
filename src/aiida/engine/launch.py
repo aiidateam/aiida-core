@@ -130,15 +130,16 @@ def submit(
     current_manager = manager.get_manager()
     profile = current_manager.get_profile()
 
-    if profile is not None and profile.process_control_backend == 'core.zmq':
+    if profile is not None and profile.process_control_backend == 'core.zeromq':
         daemon_client = current_manager.get_daemon_client()
         # Note: ``is_daemon_running`` only checks for a PID file, so a stale PID from a crashed daemon will let this
         # check pass.
         if not daemon_client.is_daemon_running:
             msg = (
-                'Cannot submit because the daemon is not running. The ZMQ broker is bundled into the daemon for this '
-                'profile, so submission requires `verdi daemon start`. To run the process locally without the daemon '
-                'instead, use `aiida.engine.run` (or `run_get_node`).'
+                'Cannot submit because the daemon is not running. The ZeroMQ broker is bundled into the daemon for '
+                'this profile, so submission requires `verdi daemon start`. To run the process locally without the '
+                'daemon instead, '
+                'use `aiida.engine.run` (or `run_get_node`).'
             )
             raise InvalidOperation(msg)
 

@@ -115,13 +115,13 @@ class TestRestApi:
             {
                 'label': 'test1',
                 'hostname': 'test1.epfl.ch',
-                'transport_type': 'core.ssh',
+                'transport_type': 'core.ssh_async',
                 'scheduler_type': 'core.pbspro',
             },
             {
                 'label': 'test2',
                 'hostname': 'test2.epfl.ch',
-                'transport_type': 'core.ssh',
+                'transport_type': 'core.ssh_async',
                 'scheduler_type': 'core.torque',
             },
             {
@@ -133,7 +133,7 @@ class TestRestApi:
             {
                 'label': 'test4',
                 'hostname': 'test4.epfl.ch',
-                'transport_type': 'core.ssh',
+                'transport_type': 'core.ssh_async',
                 'scheduler_type': 'core.slurm',
             },
         ]
@@ -533,7 +533,7 @@ class TestRestApi:
         node_pk = self.get_dummy_data()['computers'][0]['id']
         self.process_test(
             'computers',
-            f'/computers?transport_type="core.ssh"&pk>{node_pk!s}&orderby=scheduler_type',
+            f'/computers?transport_type="core.ssh_async"&pk>{node_pk!s}&orderby=scheduler_type',
             expected_list_ids=[1, 4, 2],
         )
 
@@ -544,7 +544,7 @@ class TestRestApi:
         node_pk = self.get_dummy_data()['computers'][0]['id']
         self.process_test(
             'computers',
-            f'/computers?transport_type="core.ssh"&pk>{node_pk!s}&orderby=+scheduler_type',
+            f'/computers?transport_type="core.ssh_async"&pk>{node_pk!s}&orderby=+scheduler_type',
             expected_list_ids=[1, 4, 2],
         )
 
@@ -555,7 +555,7 @@ class TestRestApi:
         node_pk = self.get_dummy_data()['computers'][0]['id']
         self.process_test(
             'computers',
-            f'/computers?pk>{node_pk!s}&transport_type="core.ssh"&orderby=-scheduler_type',
+            f'/computers?pk>{node_pk!s}&transport_type="core.ssh_async"&orderby=-scheduler_type',
             expected_list_ids=[2, 4, 1],
         )
 
@@ -622,7 +622,7 @@ class TestRestApi:
         node_pk = self.get_dummy_data()['computers'][0]['id']
         self.process_test(
             'computers',
-            f'/computers?id>{node_pk!s}&hostname="test3.epfl.ch"&transport_type="core.ssh"',
+            f'/computers?id>{node_pk!s}&hostname="test3.epfl.ch"&transport_type="core.ssh_async"',
             empty_list=True,
         )
 
@@ -644,7 +644,7 @@ class TestRestApi:
         node_pk = self.get_dummy_data()['computers'][0]['id']
         self.process_test(
             'computers',
-            f'/computers?id>={node_pk!s}&transport_type="core.ssh"&orderby=-id&limit=2',
+            f'/computers?id>={node_pk!s}&transport_type="core.ssh_async"&orderby=-id&limit=2',
             expected_list_ids=[4, 2],
         )
 

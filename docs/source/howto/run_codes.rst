@@ -136,7 +136,7 @@ The second step configures private connection details using:
 
     $ verdi computer configure TRANSPORTTYPE COMPUTERLABEL
 
-Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of chosen transport type, i.e., ``core.local`` for the localhost computer and ``core.ssh`` for any remote computer.
+Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of chosen transport type, i.e., ``core.local`` for the localhost computer and ``core.ssh_async`` for any remote computer.
 
 After the setup and configuration have been completed, let's check that everything is working properly:
 
@@ -174,7 +174,7 @@ Some compute resources, particularly large supercomputing centers, may not toler
 
     .. code-block:: bash
 
-        verdi computer configure core.ssh --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
+        verdi computer configure core.ssh_async --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
 
 .. important::
 

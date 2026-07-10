@@ -121,7 +121,7 @@ class TestComputerConfigure:
     def test_configure_ssh(self):
         """Configure a computer for ssh transport and check it is configured."""
         self.comp_builder.label = str(uuid.uuid4())
-        self.comp_builder.transport = 'core.ssh'
+        self.comp_builder.transport = 'core.ssh_async'
         comp = self.comp_builder.new()
         comp.store()
 
@@ -131,7 +131,7 @@ class TestComputerConfigure:
     def test_configure_ssh_invalid(self):
         """Try to configure computer with invalid auth params and check it fails."""
         self.comp_builder.label = str(uuid.uuid4())
-        self.comp_builder.transport = 'core.ssh'
+        self.comp_builder.transport = 'core.ssh_async'
         comp = self.comp_builder.new()
         comp.store()
 

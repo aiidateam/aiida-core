@@ -42,7 +42,7 @@ def test_aiida_localhost_no_literal_collision(request):
     Computer(
         label='localhost',
         hostname='localhost',
-        transport_type='core.ssh',
+        transport_type='core.ssh_async',
         scheduler_type='core.direct',
         workdir='/tmp',
     ).store()
@@ -60,7 +60,6 @@ def test_aiida_localhost_no_literal_collision(request):
 @pytest.mark.parametrize(
     'fixture_name, transport_cls, transport_type',
     [
-        ('aiida_computer_ssh', BlockingTransport, 'core.ssh'),
         ('aiida_computer_local', BlockingTransport, 'core.local'),
     ],
 )

@@ -15,7 +15,6 @@ import click
 from aiida.cmdline.params import options, types
 from aiida.cmdline.params.options.interactive import InteractiveOption, TemplateInteractiveOption
 from aiida.cmdline.params.options.overridable import OverridableOption
-from aiida.cmdline.utils import echo
 
 if t.TYPE_CHECKING:
     from aiida.schedulers.datastructures import JobResource
@@ -89,18 +88,7 @@ DESCRIPTION = options.DESCRIPTION.clone(
 )
 
 
-def transport_callback(ctx: click.Context, param: click.Parameter, value: t.Any) -> t.Any:
-    """Callback for the transport option that shows a deprecation warning for core.ssh."""
-    if value is not None and value.name == 'core.ssh':
-        echo.echo_deprecated(
-            'The `core.ssh` transport plugin is deprecated and will be removed in v3.0. '
-            'Use `core.ssh_async` instead, which is significantly faster and provides an '
-            'easier configuration interface.'
-        )
-    return value
-
-
-TRANSPORT = options.TRANSPORT.clone(prompt='Transport plugin', cls=InteractiveOption, callback=transport_callback)
+TRANSPORT = options.TRANSPORT.clone(prompt='Transport plugin', cls=InteractiveOption)
 
 SCHEDULER = options.SCHEDULER.clone(prompt='Scheduler plugin', cls=InteractiveOption)
 

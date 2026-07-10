@@ -624,32 +624,44 @@ def aiida_computer_local(aiida_computer) -> t.Callable[[], Computer]:
 
 
 @pytest.fixture
-def aiida_computer_ssh(aiida_computer, ssh_key) -> t.Callable[[], Computer]:
-    """Factory to return a :class:`aiida.orm.computers.Computer` instance with ``core.ssh`` transport."""
+def aiida_computer_ssh_async(aiida_computer) -> t.Callable[[], Computer]:
+    """Factory to return a :class:`aiida.orm.computers.Computer` instance with ``core.ssh_async`` transport.
 
-    def factory(label: t.Optional[str] = None, configure: bool = True) -> Computer:
-        """Return a :class:`aiida.orm.computers.Computer` instance representing localhost with ``core.ssh`` transport.
+    The connection details are taken from the user's ``~/.ssh/config``, so the localhost has to be set up for a
+    password-less SSH connection for the transport to actually connect.
 
-        The database is queried for an existing computer with the given label. If it exists, it is returned, otherwise a
-        new instance is created.
+    :param label: The computer label. If not specified, a random UUID4 is used.
+    :param configure: Boolean, if ``True``, ensures the computer is configured, otherwise the computer is returned
+        as is. Note that if a computer with the given label already exists and it was configured before, the
+        computer will not be "un-"configured. If an unconfigured computer is absolutely required, make sure to first
+        delete the existing computer or specify another label.
+    :param backend: The backend to use for the SSH transport, either ``asyncssh`` or ``openssh``. If not specified,
+        a ``ValueError`` is raised.
+    :return: A stored computer instance.
+    """
 
-        If ``configure=True``, an SSH key pair is automatically added to the ``.ssh`` folder of the user, allowing an
-        actual SSH connection to be made to the localhost.
+    def factory(label: t.Optional[str] = None, configure: bool = True, backend: t.Optional[str] = None) -> Computer:
+        def if_exists_and_is_configured(label):
+            from aiida.common.exceptions import NotExistent
+            from aiida.orm.utils import load_computer
 
-        :param label: The computer label. If not specified, a random UUID4 is used.
-        :param configure: Boolean, if ``True``, ensures the computer is configured, otherwise the computer is returned
-            as is. Note that if a computer with the given label already exists and it was configured before, the
-            computer will not be "un-"configured. If an unconfigured computer is absolutely required, make sure to first
-            delete the existing computer or specify another label.
-        :return: A stored computer instance.
-        """
-        computer = aiida_computer(label=label, hostname='localhost', transport_type='core.ssh')
+            try:
+                computer = load_computer(label=label)
+                if computer.is_configured:
+                    return True
+            except NotExistent:
+                pass
+            return False
 
-        if configure:
-            computer.configure(
-                key_filename=str(ssh_key),
-                key_policy='AutoAddPolicy',
+        if configure and backend is None and not if_exists_and_is_configured(label):
+            # For accurate testing, we don't set a default value for this.
+            # It should be explicitly specified to error nasty bugs.
+            raise ValueError(
+                'The `backend` argument must be specified when configuring a computer with `core.ssh_async` transport.'
             )
+        computer = aiida_computer(label=label, hostname='localhost', transport_type='core.ssh_async')
+        if configure:
+            computer.configure(backend=backend)
 
         return computer
 

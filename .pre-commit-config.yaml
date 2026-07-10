@@ -135,7 +135,6 @@ repos:
         src/aiida/tools/dbimporters/plugins/.*|
         src/aiida/transports/cli.py|
         src/aiida/transports/plugins/local.py|
-        src/aiida/transports/plugins/ssh.py|
       )$
 
   - id: generate-conda-environment

@@ -339,7 +339,7 @@ class TestVerdiComputerConfigure:
     def test_top_help(self):
         """Test help option of verdi computer configure."""
         result = self.cli_runner(computer_configure, ['--help'])
-        assert 'core.ssh' in result.output
+        assert 'core.ssh_async' in result.output
         assert 'core.local' in result.output
 
     def test_reachable(self):
@@ -348,7 +348,7 @@ class TestVerdiComputerConfigure:
 
         sp.check_output(['verdi', 'computer', 'configure', '--help'])
         sp.check_output(['verdi', 'computer', 'configure', 'core.local', '--help'])
-        sp.check_output(['verdi', 'computer', 'configure', 'core.ssh', '--help'])
+        sp.check_output(['verdi', 'computer', 'configure', 'core.ssh_async', '--help'])
         sp.check_output(['verdi', 'computer', 'configure', 'show', '--help'])
 
     def test_local_ni_empty(self):
@@ -369,13 +369,13 @@ class TestVerdiComputerConfigure:
         assert comp.is_configured, result.output
 
         self.comp_builder.label = 'test_local_ni_empty_mismatch'
-        self.comp_builder.transport = 'core.ssh'
+        self.comp_builder.transport = 'core.ssh_async'
         comp_mismatch = self.comp_builder.new()
         comp_mismatch.store()
 
         options = ['core.local', comp_mismatch.label, '--non-interactive']
         result = self.cli_runner(computer_configure, options, raises=True)
-        assert 'core.ssh' in result.output
+        assert 'core.ssh_async' in result.output
         assert 'core.local' in result.output
 
     def test_local_interactive(self):
@@ -397,31 +397,26 @@ class TestVerdiComputerConfigure:
     def test_ssh_interactive(self):
         """Check that the interactive prompt is accepting the correct values.
 
-        Actually, even passing a shorter set of options should work:
-        ``verdi computer configure ssh`` is able to provide sensible default
-        parameters reading from the ssh config file.
-        We are here therefore only checking some of them.
+        The remaining prompts can simply be accepted with their default value.
         """
         self.comp_builder.label = 'test_ssh_interactive'
-        self.comp_builder.transport = 'core.ssh'
+        self.comp_builder.transport = 'core.ssh_async'
         comp = self.comp_builder.new()
         comp.store()
 
-        remote_username = 'some_remote_user'
-        port = 345
-        look_for_keys = False
+        host = 'some-ssh-config-host'
+        max_io_allowed = 4
 
-        # I just pass the first four arguments:
-        # the username, the port, look_for_keys, and the key_filename
-        # This testing also checks that an empty key_filename is ok
-        command_input = f"{remote_username}\n{port}\n{'yes' if look_for_keys else 'no'}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        # The prompts are, in order: host, max_io_allowed, authentication_script, backend, and then the options
+        # common to every transport: use_login_shell and safe_interval. Only the first two are given explicitly.
+        command_input = f'{host}\n{max_io_allowed}\n\n\n\n\n'
 
-        result = self.cli_runner(computer_configure, ['core.ssh', comp.label], user_input=command_input)
+        result = self.cli_runner(computer_configure, ['core.ssh_async', comp.label], user_input=command_input)
         assert comp.is_configured, result.output
         new_auth_params = comp.get_authinfo(self.user).get_auth_params()
-        assert new_auth_params['username'] == remote_username
-        assert new_auth_params['port'] == port
-        assert new_auth_params['look_for_keys'] == look_for_keys
+        assert new_auth_params['host'] == host
+        assert new_auth_params['max_io_allowed'] == max_io_allowed
+        assert new_auth_params['backend'] == 'asyncssh'
         assert new_auth_params['use_login_shell'] is True
 
     def test_local_from_config(self):
@@ -453,7 +448,7 @@ class TestVerdiComputerConfigure:
         assert computer.get_configuration()['use_login_shell'] == use_login_shell
 
     def test_ssh_ni_empty(self):
-        """Test verdi computer configure core.ssh <comp>
+        """Test verdi computer configure core.ssh_async <comp>
 
         Test twice, with comp setup for ssh or local.
 
@@ -461,11 +456,11 @@ class TestVerdiComputerConfigure:
          * with computer setup for local: should fail
         """
         self.comp_builder.label = 'test_ssh_ni_empty'
-        self.comp_builder.transport = 'core.ssh'
+        self.comp_builder.transport = 'core.ssh_async'
         comp = self.comp_builder.new()
         comp.store()
 
-        options = ['core.ssh', comp.label, '--non-interactive', '--safe-interval', '1']
+        options = ['core.ssh_async', comp.label, '--non-interactive', '--safe-interval', '1']
         result = self.cli_runner(computer_configure, options)
         assert comp.is_configured, result.output
 
@@ -474,43 +469,43 @@ class TestVerdiComputerConfigure:
         comp_mismatch = self.comp_builder.new()
         comp_mismatch.store()
 
-        options = ['core.ssh', comp_mismatch.label, '--non-interactive']
+        options = ['core.ssh_async', comp_mismatch.label, '--non-interactive']
         result = self.cli_runner(computer_configure, options, raises=True)
         assert 'core.local' in result.output
-        assert 'core.ssh' in result.output
+        assert 'core.ssh_async' in result.output
 
-    def test_ssh_ni_username(self):
-        """Test verdi computer configure core.ssh <comp> --username=<username>."""
-        self.comp_builder.label = 'test_ssh_ni_username'
-        self.comp_builder.transport = 'core.ssh'
+    def test_ssh_ni_host(self):
+        """Test verdi computer configure core.ssh_async <comp> --host=<host>."""
+        self.comp_builder.label = 'test_ssh_ni_host'
+        self.comp_builder.transport = 'core.ssh_async'
         comp = self.comp_builder.new()
         comp.store()
 
-        username = 'TEST'
-        options = ['core.ssh', comp.label, '--non-interactive', f'--username={username}', '--safe-interval', '1']
+        host = 'TEST'
+        options = ['core.ssh_async', comp.label, '--non-interactive', f'--host={host}', '--safe-interval', '1']
         result = self.cli_runner(computer_configure, options)
         auth_info = orm.AuthInfo.collection.get(dbcomputer_id=comp.pk, aiidauser_id=self.user.pk)
         assert comp.is_configured, result.output
-        assert auth_info.get_auth_params()['username'] == username
+        assert auth_info.get_auth_params()['host'] == host
 
     def test_show(self):
         """Test verdi computer configure show <comp>."""
         self.comp_builder.label = 'test_show'
-        self.comp_builder.transport = 'core.ssh'
+        self.comp_builder.transport = 'core.ssh_async'
         comp = self.comp_builder.new()
         comp.store()
 
         result = self.cli_runner(computer_configure, ['show', comp.label])
 
         result = self.cli_runner(computer_configure, ['show', comp.label, '--defaults'])
-        assert '* username' in result.output
+        assert '* host' in result.output
 
         result = self.cli_runner(
             computer_configure, ['show', comp.label, '--defaults', '--as-option-string'], suppress_warnings=True
         )
-        assert '--username=' in result.output
+        assert '--host=' in result.output
 
-        config_cmd = ['core.ssh', comp.label, '--non-interactive']
+        config_cmd = ['core.ssh_async', comp.label, '--non-interactive']
         config_cmd.extend(result.output.replace("'", '').split(' '))
         result_config = self.cli_runner(computer_configure, config_cmd, suppress_warnings=True)
         assert comp.is_configured, result_config.output
@@ -518,7 +513,7 @@ class TestVerdiComputerConfigure:
         result_cur = self.cli_runner(
             computer_configure, ['show', comp.label, '--as-option-string'], suppress_warnings=True
         )
-        assert '--username=' in result.output
+        assert '--host=' in result.output
         assert result_cur.output == result.output
 
     def _make_ssh_async_computer(self, label, *, migrated):
@@ -628,7 +623,7 @@ class TestVerdiComputerConfigure:
         """Test if `verdi computer export setup` command works"""
         self.comp_builder.label = f'test_computer_export_setup{sort_option}'
         # Label needs to be unique during parametrization
-        self.comp_builder.transport = 'core.ssh'
+        self.comp_builder.transport = 'core.ssh_async'
         comp = self.comp_builder.new()
         comp.store()
 
@@ -653,7 +648,7 @@ class TestVerdiComputerConfigure:
         """Test if overwriting behavior of `verdi computer export setup` command works as expected"""
 
         self.comp_builder.label = 'test_computer_export_setup'
-        self.comp_builder.transport = 'core.ssh'
+        self.comp_builder.transport = 'core.ssh_async'
         comp = self.comp_builder.new()
         comp.store()
 
@@ -684,7 +679,7 @@ class TestVerdiComputerConfigure:
         comp_label = 'test_computer_export_setup_default'
         self.comp_builder.label = comp_label
         # Label needs to be unique during parametrization
-        self.comp_builder.transport = 'core.ssh'
+        self.comp_builder.transport = 'core.ssh_async'
         comp = self.comp_builder.new()
         comp.store()
 
@@ -696,7 +691,7 @@ class TestVerdiComputerConfigure:
     def test_computer_export_config(self, tmp_path):
         """Test if 'verdi computer export config' command works"""
         self.comp_builder.label = 'test_computer_export_config'
-        self.comp_builder.transport = 'core.ssh'
+        self.comp_builder.transport = 'core.ssh_async'
         comp = self.comp_builder.new()
         comp.store()
 
@@ -743,7 +738,7 @@ class TestVerdiComputerConfigure:
     def test_computer_export_config_overwrite(self, tmp_path):
         """Test if overwrite behavior of `verdi computer export config` command works"""
         self.comp_builder.label = 'test_computer_export_config_overwrite'
-        self.comp_builder.transport = 'core.ssh'
+        self.comp_builder.transport = 'core.ssh_async'
         comp = self.comp_builder.new()
         comp.store()
         comp.configure(safe_interval=0.0)
@@ -775,7 +770,7 @@ class TestVerdiComputerConfigure:
         """Test that default filename is as expected when not specified for `verdi computer export config`."""
         comp_label = 'test_computer_export_config_default'
         self.comp_builder.label = comp_label
-        self.comp_builder.transport = 'core.ssh'
+        self.comp_builder.transport = 'core.ssh_async'
         comp = self.comp_builder.new()
         comp.store()
         comp.configure(safe_interval=0.0)

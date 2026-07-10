@@ -21,7 +21,6 @@ dependencies:
 - jinja2~=3.0
 - kiwipy[rmq]~=0.9.0
 - numpy<3,>=1.21
-- paramiko~=3.0
 - pgsu~=0.3.0
 - psutil~=7.0
 - psycopg[binary]<4,>=3.0.2

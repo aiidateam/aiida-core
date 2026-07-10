@@ -86,20 +86,20 @@ def test_filepath_executable(aiida_localhost, bash_path, cat_path):
 
 
 @pytest.fixture
-def computer(request, aiida_computer_local, aiida_computer_ssh):
-    """Return a computer configured for ``core.local`` and ``core.ssh`` transport."""
+def computer(request, aiida_computer_local, aiida_computer_ssh_async):
+    """Return a computer configured for ``core.local`` and ``core.ssh_async`` transport."""
     if request.param == 'core.local':
         return aiida_computer_local(configure=False)
 
-    if request.param == 'core.ssh':
-        return aiida_computer_ssh(configure=False)
+    if request.param == 'core.ssh_async':
+        return aiida_computer_ssh_async(configure=False)
 
     raise ValueError(f'unsupported request parameter: {request.param}')
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-@pytest.mark.parametrize('computer', ('core.local', 'core.ssh'), indirect=True)
-def test_validate_filepath_executable(ssh_key, computer, bash_path, tmp_path):
+@pytest.mark.parametrize('computer', ('core.local', 'core.ssh_async'), indirect=True)
+def test_validate_filepath_executable(computer, bash_path, tmp_path):
     """Test the :meth:`aiida.orm.nodes.data.code.installed.InstalledCode.validate_filepath_executable` method."""
 
     filepath_executable = '/usr/bin/not-existing'
@@ -112,8 +112,10 @@ def test_validate_filepath_executable(ssh_key, computer, bash_path, tmp_path):
     with pytest.raises(ValidationError, match=r'Could not connect to the configured computer.*'):
         code.validate_filepath_executable()
 
-    if computer.transport_type == 'core.ssh':
-        computer.configure(key_filename=str(ssh_key), key_policy='AutoAddPolicy')
+    if computer.transport_type == 'core.ssh_async':
+        # The connection details are taken from ``~/.ssh/config``, which has to allow a password-less
+        # connection to the localhost.
+        computer.configure(backend='asyncssh')
     else:
         computer.configure()
 

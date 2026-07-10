@@ -259,23 +259,22 @@ In both cases, this should allow you to directly connect to the *TARGET* server 
 AiiDA configuration
 ^^^^^^^^^^^^^^^^^^^
 
-When :ref:`configuring the computer in AiiDA <how-to:run-codes:computer:configuration>`, AiiDA will automatically parse most of required information from your ``~/.ssh/config`` file. A notable exception to this is the ``proxy_jump`` directive, which **must** be specified manually.
-
-Simply copy & paste the same instructions as you have used for ``ProxyJump`` in your ``~/.ssh/config`` to the input for ``proxy_jump``:
+The ``core.ssh_async`` transport takes all of its connection details from your ``~/.ssh/config`` file, including the ``ProxyJump`` and ``ProxyCommand`` directives.
+There is therefore nothing to specify on the AiiDA side: as long as
 
 .. code-block:: console
 
-   $ verdi computer configure core.ssh SHORTNAME_TARGET
+   $ ssh SHORTNAME_TARGET
+
+connects without asking for a password, :ref:`configuring the computer in AiiDA <how-to:run-codes:computer:configuration>` only requires you to point it at that host:
+
+.. code-block:: console
+
+   $ verdi computer configure core.ssh_async SHORTNAME_TARGET
    ...
-   Allow ssh agent [True]:
-   SSH proxy jump []: USER_PROXY@FULLHOSTNAME_PROXY
+   Host as in 'ssh <HOST>' (needs to be a password-less setup in your ssh config) [SHORTNAME_TARGET]:
 
-.. note:: A chain of proxies can be specified as a comma-separated list. If you need to specify a different username, you can so with ``USER_PROXY@...``. If no username is specified for the proxy the same username as for the *TARGET* is used.
-
-.. important:: Specifying the ``proxy_command`` manually
-
-    When specifying or updating the ``proxy_command`` option via ``verdi computer configure ssh``, please **do not use placeholders** ``%h`` and ``%p`` but provide the *actual* hostname and port.
-    AiiDA replaces them only when parsing from the ``~/.ssh/config`` file.
+.. note:: A chain of proxies can be specified with a comma-separated ``ProxyJump`` directive in your ``~/.ssh/config``. If no username is specified for the proxy, the same username as for the *TARGET* is used.
 
 
 .. _how-to:ssh:2fa:

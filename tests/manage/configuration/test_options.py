@@ -161,3 +161,13 @@ def test_option_advanced_property():
     """Test that ``Option.advanced`` defaults to False when not explicitly set."""
     assert get_option('daemon.timeout').advanced is False
     assert isinstance(get_option('daemon.timeout').advanced, bool)
+
+
+@pytest.mark.presto
+def test_option_requires_daemon_restart_property():
+    """Test that ``Option.requires_daemon_restart`` reflects the schema metadata."""
+    assert get_option('daemon.default_workers').requires_daemon_restart is True
+    assert get_option('logging.aiida_loglevel').requires_daemon_restart is True
+    assert get_option('caching.default_enabled').requires_daemon_restart is True
+    assert get_option('daemon.timeout').requires_daemon_restart is False
+    assert isinstance(get_option('daemon.timeout').requires_daemon_restart, bool)

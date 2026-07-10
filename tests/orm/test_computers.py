@@ -121,22 +121,22 @@ class TestComputerConfigure:
     def test_configure_ssh(self):
         """Configure a computer for ssh transport and check it is configured."""
         self.comp_builder.label = str(uuid.uuid4())
-        self.comp_builder.transport = 'core.ssh'
+        self.comp_builder.transport = 'core.ssh_async'
         comp = self.comp_builder.new()
         comp.store()
 
-        comp.configure(username='radames', port='22')
+        comp.configure(host='radames', backend='asyncssh')
         assert comp.is_user_configured(self.user)
 
     def test_configure_ssh_invalid(self):
         """Try to configure computer with invalid auth params and check it fails."""
         self.comp_builder.label = str(uuid.uuid4())
-        self.comp_builder.transport = 'core.ssh'
+        self.comp_builder.transport = 'core.ssh_async'
         comp = self.comp_builder.new()
         comp.store()
 
         with pytest.raises(ValueError):
-            comp.configure(username='radames', invalid_auth_param='TEST')
+            comp.configure(host='radames', invalid_auth_param='TEST')
 
     def test_non_configure_error(self):
         """Configure a computer for local transport and check it is configured."""

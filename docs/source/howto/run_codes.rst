@@ -138,11 +138,6 @@ The second step configures private connection details using:
 
 Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of chosen transport type, i.e., ``core.local`` for the localhost computer and ``core.ssh_async`` for any remote computer.
 
-.. deprecated:: 2.8
-
-    The ``core.ssh`` transport plugin is deprecated and will be removed in v3.0.
-    Use ``core.ssh_async`` instead, which is significantly faster and provides an easier configuration interface.
-
 After the setup and configuration have been completed, let's check that everything is working properly:
 
 .. code-block:: console

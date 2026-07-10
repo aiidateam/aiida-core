@@ -353,6 +353,24 @@ def test_aiida_v3_migration_round_trip():
     }
 
 
+def test_aiida_v3_migration_drops_paramiko_level():
+    """The paramiko level should be dropped, not merged: the `core.ssh` plugin no longer uses paramiko."""
+    config = {
+        'CONFIG_VERSION': {'CURRENT': 10, 'OLDEST_COMPATIBLE': 10},
+        'profiles': {
+            'default': {
+                'options': {'logging.paramiko_loglevel': 'DEBUG'},
+            }
+        },
+        'options': {'logging.paramiko_loglevel': 'ERROR'},
+    }
+
+    migrated = upgrade_config(config, 11)
+
+    assert migrated['options'] == {}
+    assert migrated['profiles']['default']['options'] == {}
+
+
 def test_aiida_v3_migration_preserves_explicit_aiida_core_level():
     """An existing aiida-core level should take precedence over the removed plumpy and kiwipy levels."""
     config = {

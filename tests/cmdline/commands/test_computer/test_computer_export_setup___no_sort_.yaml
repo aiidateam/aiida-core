@@ -1,7 +1,7 @@
 label: test_computer_export_setup--no-sort
 hostname: localhost
 description: Test Computer
-transport: core.ssh
+transport: core.ssh_async
 scheduler: core.direct
 shebang: '#!xonsh'
 work_dir: /tmp/aiida

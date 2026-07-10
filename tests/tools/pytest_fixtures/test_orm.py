@@ -26,7 +26,6 @@ def test_aiida_localhost(aiida_localhost):
 @pytest.mark.parametrize(
     'fixture_name, transport_cls, transport_type',
     [
-        ('aiida_computer_ssh', BlockingTransport, 'core.ssh'),
         ('aiida_computer_local', BlockingTransport, 'core.local'),
     ],
 )

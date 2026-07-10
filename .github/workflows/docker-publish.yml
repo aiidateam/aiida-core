@@ -65,6 +65,18 @@ jobs:
         tag="${{ github.ref_name }}"
         echo "AIIDA_VERSION=${tag#v}" >> $GITHUB_OUTPUT
 
+    - id: get-latest-tag
+      if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
+      continue-on-error: true # never let the `latest` logic block the real release tags
+      env:
+        TAG: ${{ github.ref_name }}
+      run: |
+        # `latest` only if this tag is the highest final release: metadata-action sees this tag alone,
+        # so without comparing we would tag `latest` on the most recently pushed tag, not the highest.
+        highest=$(git ls-remote --tags --refs origin | sed 's|.*refs/tags/||' |
+          { grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true; } | sort -V | tail -n1)
+        echo "IS_LATEST=$([[ -n "$highest" && "$TAG" == "$highest" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+
     - name: Docker meta
       id: meta
       uses: docker/metadata-action@v5
@@ -76,7 +88,7 @@ jobs:
           type=ref,event=branch,enable=${{ github.ref_name != 'main' }}
           type=edge,enable={{is_default_branch}}
           type=raw,value=aiida-${{ steps.get-version.outputs.AIIDA_VERSION }},enable=${{ github.ref_type == 'tag'  && startsWith(github.ref_name, 'v') }}
-          type=raw,value=latest,enable=${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') && !contains(github.ref_name, 'rc') }}
+          type=raw,value=latest,enable=${{ steps.get-latest-tag.outputs.IS_LATEST == 'true' }}
           type=raw,value=python-${{ env.PYTHON_VERSION }},enable=${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
           type=raw,value=postgresql-${{ env.PGSQL_VERSION }},enable=${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
           type=match,pattern=v(\d{4}\.\d{4}(-.+)?),group=1

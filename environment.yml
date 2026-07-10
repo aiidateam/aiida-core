@@ -25,7 +25,6 @@ dependencies:
 - jinja2~=3.0
 - numpy<3,>=1.21
 - pamqp~=3.2
-- paramiko~=3.0
 - pytray<0.4.0,>=0.3.4
 - pgsu~=0.3.0
 - psutil~=7.0

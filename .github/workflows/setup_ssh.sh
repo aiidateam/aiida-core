@@ -5,7 +5,7 @@ ssh-keygen -q -t rsa -b 4096 -N "" -f "${HOME}/.ssh/id_rsa"
 ssh-keygen -y -f "${HOME}/.ssh/id_rsa" >> "${HOME}/.ssh/authorized_keys"
 ssh-keyscan -H localhost >> "${HOME}/.ssh/known_hosts"
 
-# Define the `slurm-ssh` host used by the `core.ssh_async` transport. The connection details are no
+# Define the `slurm-ssh` host used by the `core.ssh` transport. The connection details are no
 # longer stored in the computer's `auth_params`; the transport takes them from `~/.ssh/config`.
 cat >> "${HOME}/.ssh/config" <<EOF
 Host slurm-ssh

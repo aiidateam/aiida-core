@@ -102,7 +102,7 @@ New computers are configured entirely through ``~/.ssh/config`` as shown above.
 
 A computer that was migrated from the legacy (v2) ``core.ssh`` plugin instead keeps the connection
 parameters (user, port, key file, proxy, GSS, ...) that were stored when it was originally
-configured. ``verdi computer configure core.ssh_async <COMPUTER>`` offers those stored values as
+configured. ``verdi computer configure core.ssh <COMPUTER>`` offers those stored values as
 defaults, and only such a migrated computer is prompted for them. For a migrated computer
 ``~/.ssh/config`` is **ignored**: the stored parameters are the single source of truth, reproducing
 how the legacy plugin connected. If you would rather drive the connection through ``~/.ssh/config``,
@@ -259,7 +259,7 @@ In both cases, this should allow you to directly connect to the *TARGET* server 
 AiiDA configuration
 ^^^^^^^^^^^^^^^^^^^
 
-The ``core.ssh_async`` transport takes all of its connection details from your ``~/.ssh/config`` file, including the ``ProxyJump`` and ``ProxyCommand`` directives.
+The ``core.ssh`` transport takes all of its connection details from your ``~/.ssh/config`` file, including the ``ProxyJump`` and ``ProxyCommand`` directives.
 There is therefore nothing to specify on the AiiDA side: as long as
 
 .. code-block:: console
@@ -270,7 +270,7 @@ connects without asking for a password, :ref:`configuring the computer in AiiDA 
 
 .. code-block:: console
 
-   $ verdi computer configure core.ssh_async SHORTNAME_TARGET
+   $ verdi computer configure core.ssh SHORTNAME_TARGET
    ...
    Host as in 'ssh <HOST>' (needs to be a password-less setup in your ssh config) [SHORTNAME_TARGET]:
 
@@ -279,7 +279,7 @@ connects without asking for a password, :ref:`configuring the computer in AiiDA 
 
 .. _how-to:ssh:2fa:
 
-Using two-factor authentication (2FA) with ``core.ssh_async``
+Using two-factor authentication (2FA) with ``core.ssh``
 =============================================================
 
 .. danger::
@@ -290,7 +290,7 @@ Using two-factor authentication (2FA) with ``core.ssh_async``
 
 Some HPC centers require two-factor authentication where you must first authenticate via an API using your credentials and a TOTP (Time-based One-Time Password) code, which then provides you with short-lived signed SSH keys for the actual connection.
 
-The ``core.ssh_async`` transport plugin provides an ``authentication_script`` option that runs a local script before each SSH connection is opened.
+The ``core.ssh`` transport plugin provides an ``authentication_script`` option that runs a local script before each SSH connection is opened.
 This script must be provided by the user and is responsible for obtaining fresh SSH credentials so that the subsequent connection can succeed.
 
 .. warning::
@@ -472,11 +472,11 @@ Then modify the script to read from the keyring:
 Configuring AiiDA
 ^^^^^^^^^^^^^^^^^
 
-When configuring your computer with the ``core.ssh_async`` transport, specify the script path:
+When configuring your computer with the ``core.ssh`` transport, specify the script path:
 
 .. code-block:: console
 
-   $ verdi computer configure core.ssh_async YOURCOMPUTER
+   $ verdi computer configure core.ssh YOURCOMPUTER
    ...
    Local script to run before opening connection (path) [None]: /home/YOURUSERNAME/bin/get_hpc_keys.sh
    ...

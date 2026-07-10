@@ -100,11 +100,11 @@ def _expand_proxy_command(proxy_command: str, host: str, params: dict) -> str:
 
 
 def build_asyncssh_connect_kwargs(host: str, params: Optional[dict], logger: logging.LoggerAdapter) -> dict:
-    """Translate the legacy ``core.ssh`` connection parameters into ``asyncssh.connect()`` kwargs.
+    """Translate the legacy v2 ``core.ssh`` (paramiko) connection parameters into ``asyncssh.connect()`` kwargs.
 
     :param host: the target host, used to expand ``%h`` in a proxy command.
-    :param params: the ``auth_params`` of a computer migrated from ``core.ssh``, or ``None`` for a
-        natively configured computer.
+    :param params: the ``auth_params`` of a computer migrated from the legacy v2 ``core.ssh`` (paramiko)
+        plugin, or ``None`` for a natively configured computer.
     :param logger: used to report on the host key of a computer with a permissive ``key_policy``.
     :return: keyword arguments for :func:`asyncssh.connect`; empty for a native computer, which is
         then opened exactly as before (asyncssh reads ``~/.ssh/config``).
@@ -355,8 +355,9 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         connection_params: Optional[dict] = None,
     ):
         super().__init__(machine, logger, bash_command)
-        # Legacy parameters carried over from a migrated ``core.ssh`` computer; ``None`` for a
-        # natively configured computer, whose connection details live in ``~/.ssh/config``.
+        # Legacy parameters carried over from a computer migrated from the legacy v2 ``core.ssh``
+        # (paramiko) plugin; ``None`` for a natively configured computer, whose connection details
+        # live in ``~/.ssh/config``.
         self.connection_params = connection_params
 
     async def open(self):

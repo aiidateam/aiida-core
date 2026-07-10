@@ -42,7 +42,7 @@ def test_aiida_localhost_no_literal_collision(request):
     Computer(
         label='localhost',
         hostname='localhost',
-        transport_type='core.ssh_async',
+        transport_type='core.ssh',
         scheduler_type='core.direct',
         workdir='/tmp',
     ).store()
@@ -165,7 +165,7 @@ def test_aiida_computer_integrity_error_rebuild(aiida_computer):
 def test_aiida_computer_fixtures_async(backend, backend_class, request):
     """Test the computer fixtures."""
 
-    aiida_computer = request.getfixturevalue('aiida_computer_ssh_async')
+    aiida_computer = request.getfixturevalue('aiida_computer_ssh')
 
     # check if the fixture works for configuration parameters, if any
     computer = aiida_computer(label=str(uuid.uuid4()), configure=True, backend=backend)
@@ -173,7 +173,7 @@ def test_aiida_computer_fixtures_async(backend, backend_class, request):
     assert isinstance(computer, Computer)
     assert computer.is_configured
     assert computer.hostname == 'localhost'
-    assert computer.transport_type == 'core.ssh_async'
+    assert computer.transport_type == 'core.ssh'
 
     with computer.get_transport() as transport:
         assert isinstance(transport, AsyncTransport)

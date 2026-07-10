@@ -12,7 +12,7 @@
 
 # fmt: off
 
-from .ssh_async import *
+from .ssh import *
 
 __all__ = (
     'AsyncSshTransport',

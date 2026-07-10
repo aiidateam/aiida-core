@@ -54,7 +54,7 @@ def validate_backend(ctx, param, value: str):
 
 
 def _computer_was_migrated(ctx) -> bool:
-    """Return whether the computer being configured carries legacy ``core.ssh`` parameters.
+    """Return whether the computer being configured carries legacy v2 ``core.ssh`` (paramiko) parameters.
 
     The answer is memoised on ``ctx.meta`` to avoid one database query per legacy option.
     """
@@ -70,7 +70,7 @@ def _computer_was_migrated(ctx) -> bool:
 
 
 class _LegacyOption(InteractiveOption):
-    """Auth option for a legacy ``core.ssh`` parameter, dropped unless the computer was migrated."""
+    """Auth option for a legacy v2 ``core.ssh`` (paramiko) parameter, dropped unless the computer was migrated."""
 
     def handle_parse_result(self, ctx, opts, args):
         result = super().handle_parse_result(ctx, opts, args)
@@ -80,9 +80,9 @@ class _LegacyOption(InteractiveOption):
         return result
 
 
-# Connection/authentication options inherited from the legacy ``core.ssh`` plugin. They are hidden
-# (no prompt, not in ``--help``, not in ``configure show``) unless the computer was migrated from
-# ``core.ssh``, i.e. already has such parameters stored; new computers configure everything through
+# Connection/authentication options inherited from the legacy v2 ``core.ssh`` (paramiko) plugin. They
+# are hidden (no prompt, not in ``--help``, not in ``configure show``) unless the computer was migrated
+# from that plugin, i.e. already has such parameters stored; new computers configure everything through
 # ``~/.ssh/config``. The translation into ``asyncssh.connect()`` kwargs lives in ``async_backend``.
 _LEGACY_AUTH_OPTIONS = [
     (
@@ -315,10 +315,10 @@ class AsyncSshTransport(AsyncTransport):
         # the machine is passed as `machine=computer.hostname` in the codebase
         # 'machine' is immutable.
         # 'host' is mutable, so it can be changed via command:
-        # 'verdi computer configure core.ssh_async <LABEL>'.
+        # 'verdi computer configure core.ssh <LABEL>'.
         # by default, 'host' is set to 'machine' in the __init__ method, if not provided.
         # NOTE: to guarantee a connection,
-        # a computer with core.ssh_async transport plugin should be configured before any instantiation.
+        # a computer with core.ssh transport plugin should be configured before any instantiation.
         # 'machine' must always be popped; 'host' may legitimately be an empty string.
         machine = kwargs.pop('machine')
         self.machine = kwargs.pop('host', None) or machine
@@ -329,8 +329,9 @@ class AsyncSshTransport(AsyncTransport):
             # for backward compatibility
             self.auth_script = kwargs.pop('script_before', 'None')
 
-        # Legacy connection parameters carried over from a migrated ``core.ssh`` computer. A non-empty
-        # dict (even with only empty values) marks a migrated computer; ``None`` marks a native one.
+        # Legacy connection parameters carried over from a computer migrated from the legacy v2
+        # ``core.ssh`` (paramiko) plugin. A non-empty dict (even with only empty values) marks a
+        # migrated computer; ``None`` marks a native one.
         self._legacy_params = {k: kwargs.pop(k) for k in _LEGACY_OPTION_NAMES if k in kwargs} or None
 
         if self._legacy_params and self._legacy_params.get('proxy_jump') and self._legacy_params.get('proxy_command'):
@@ -343,7 +344,7 @@ class AsyncSshTransport(AsyncTransport):
             # settings, so a migrated computer always uses `asyncssh`.
             self.logger.warning(
                 'The `openssh` backend cannot honor the connection parameters migrated from '
-                '`core.ssh`; using the `asyncssh` backend for this computer instead.'
+                'the legacy `core.ssh` (paramiko) plugin; using the `asyncssh` backend for this computer instead.'
             )
             backend = 'asyncssh'
 

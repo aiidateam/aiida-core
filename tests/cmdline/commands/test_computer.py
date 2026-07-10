@@ -33,7 +33,7 @@ from aiida.cmdline.commands.cmd_computer import (
 )
 from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.transports.plugins.ssh_async import _LEGACY_OPTION_NAMES
+from aiida.transports.plugins.ssh import _LEGACY_OPTION_NAMES
 
 
 def generate_setup_options_dict(replace_args=None, non_interactive=True):
@@ -339,7 +339,7 @@ class TestVerdiComputerConfigure:
     def test_top_help(self):
         """Test help option of verdi computer configure."""
         result = self.cli_runner(computer_configure, ['--help'])
-        assert 'core.ssh_async' in result.output
+        assert 'core.ssh' in result.output
         assert 'core.local' in result.output
 
     def test_reachable(self):
@@ -348,7 +348,7 @@ class TestVerdiComputerConfigure:
 
         sp.check_output(['verdi', 'computer', 'configure', '--help'])
         sp.check_output(['verdi', 'computer', 'configure', 'core.local', '--help'])
-        sp.check_output(['verdi', 'computer', 'configure', 'core.ssh_async', '--help'])
+        sp.check_output(['verdi', 'computer', 'configure', 'core.ssh', '--help'])
         sp.check_output(['verdi', 'computer', 'configure', 'show', '--help'])
 
     def test_local_ni_empty(self):
@@ -369,13 +369,13 @@ class TestVerdiComputerConfigure:
         assert comp.is_configured, result.output
 
         self.comp_builder.label = 'test_local_ni_empty_mismatch'
-        self.comp_builder.transport = 'core.ssh_async'
+        self.comp_builder.transport = 'core.ssh'
         comp_mismatch = self.comp_builder.new()
         comp_mismatch.store()
 
         options = ['core.local', comp_mismatch.label, '--non-interactive']
         result = self.cli_runner(computer_configure, options, raises=True)
-        assert 'core.ssh_async' in result.output
+        assert 'core.ssh' in result.output
         assert 'core.local' in result.output
 
     def test_local_interactive(self):
@@ -400,7 +400,7 @@ class TestVerdiComputerConfigure:
         The remaining prompts can simply be accepted with their default value.
         """
         self.comp_builder.label = 'test_ssh_interactive'
-        self.comp_builder.transport = 'core.ssh_async'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
@@ -411,7 +411,7 @@ class TestVerdiComputerConfigure:
         # common to every transport: use_login_shell and safe_interval. Only the first two are given explicitly.
         command_input = f'{host}\n{max_io_allowed}\n\n\n\n\n'
 
-        result = self.cli_runner(computer_configure, ['core.ssh_async', comp.label], user_input=command_input)
+        result = self.cli_runner(computer_configure, ['core.ssh', comp.label], user_input=command_input)
         assert comp.is_configured, result.output
         new_auth_params = comp.get_authinfo(self.user).get_auth_params()
         assert new_auth_params['host'] == host
@@ -448,7 +448,7 @@ class TestVerdiComputerConfigure:
         assert computer.get_configuration()['use_login_shell'] == use_login_shell
 
     def test_ssh_ni_empty(self):
-        """Test verdi computer configure core.ssh_async <comp>
+        """Test verdi computer configure core.ssh <comp>
 
         Test twice, with comp setup for ssh or local.
 
@@ -456,11 +456,11 @@ class TestVerdiComputerConfigure:
          * with computer setup for local: should fail
         """
         self.comp_builder.label = 'test_ssh_ni_empty'
-        self.comp_builder.transport = 'core.ssh_async'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
-        options = ['core.ssh_async', comp.label, '--non-interactive', '--safe-interval', '1']
+        options = ['core.ssh', comp.label, '--non-interactive', '--safe-interval', '1']
         result = self.cli_runner(computer_configure, options)
         assert comp.is_configured, result.output
 
@@ -469,20 +469,20 @@ class TestVerdiComputerConfigure:
         comp_mismatch = self.comp_builder.new()
         comp_mismatch.store()
 
-        options = ['core.ssh_async', comp_mismatch.label, '--non-interactive']
+        options = ['core.ssh', comp_mismatch.label, '--non-interactive']
         result = self.cli_runner(computer_configure, options, raises=True)
         assert 'core.local' in result.output
-        assert 'core.ssh_async' in result.output
+        assert 'core.ssh' in result.output
 
     def test_ssh_ni_host(self):
-        """Test verdi computer configure core.ssh_async <comp> --host=<host>."""
+        """Test verdi computer configure core.ssh <comp> --host=<host>."""
         self.comp_builder.label = 'test_ssh_ni_host'
-        self.comp_builder.transport = 'core.ssh_async'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
         host = 'TEST'
-        options = ['core.ssh_async', comp.label, '--non-interactive', f'--host={host}', '--safe-interval', '1']
+        options = ['core.ssh', comp.label, '--non-interactive', f'--host={host}', '--safe-interval', '1']
         result = self.cli_runner(computer_configure, options)
         auth_info = orm.AuthInfo.collection.get(dbcomputer_id=comp.pk, aiidauser_id=self.user.pk)
         assert comp.is_configured, result.output
@@ -491,7 +491,7 @@ class TestVerdiComputerConfigure:
     def test_show(self):
         """Test verdi computer configure show <comp>."""
         self.comp_builder.label = 'test_show'
-        self.comp_builder.transport = 'core.ssh_async'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
@@ -505,7 +505,7 @@ class TestVerdiComputerConfigure:
         )
         assert '--host=' in result.output
 
-        config_cmd = ['core.ssh_async', comp.label, '--non-interactive']
+        config_cmd = ['core.ssh', comp.label, '--non-interactive']
         config_cmd.extend(result.output.replace("'", '').split(' '))
         result_config = self.cli_runner(computer_configure, config_cmd, suppress_warnings=True)
         assert comp.is_configured, result_config.output
@@ -516,14 +516,14 @@ class TestVerdiComputerConfigure:
         assert '--host=' in result.output
         assert result_cur.output == result.output
 
-    def _make_ssh_async_computer(self, label, *, migrated):
-        """Create a ``core.ssh_async`` computer, optionally migrated from ``core.ssh``.
+    def _make_ssh_computer(self, label, *, migrated):
+        """Create a ``core.ssh`` computer, optionally migrated from the legacy v2 ``core.ssh`` (paramiko) plugin.
 
         A migrated computer is built by storing the legacy ``auth_params`` directly, exactly as the
         storage migration does.
         """
         self.comp_builder.label = label
-        self.comp_builder.transport = 'core.ssh_async'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
         if migrated:
@@ -554,56 +554,56 @@ class TestVerdiComputerConfigure:
             comp.configure(safe_interval=1.0)
         return comp
 
-    def test_ssh_async_native_no_legacy_params(self):
-        """A native ``core.ssh_async`` computer never acquires the legacy ``core.ssh`` parameters."""
-        comp = self._make_ssh_async_computer('test_ssh_async_native_ni', migrated=False)
+    def test_ssh_native_no_legacy_params(self):
+        """A native ``core.ssh`` computer never acquires the legacy v2 ``core.ssh`` (paramiko) parameters."""
+        comp = self._make_ssh_computer('test_ssh_native_ni', migrated=False)
 
-        options = ['core.ssh_async', comp.label, '--non-interactive', '--safe-interval', '1']
+        options = ['core.ssh', comp.label, '--non-interactive', '--safe-interval', '1']
         result = self.cli_runner(computer_configure, options)
         assert comp.is_configured, result.output
 
         auth_params = comp.get_authinfo(self.user).get_auth_params()
         assert all(name not in auth_params for name in _LEGACY_OPTION_NAMES)
 
-    def test_ssh_async_native_no_legacy_prompts(self):
+    def test_ssh_native_no_legacy_prompts(self):
         """A native computer is never prompted for the legacy connection options."""
-        comp = self._make_ssh_async_computer('test_ssh_async_native_prompts', migrated=False)
+        comp = self._make_ssh_computer('test_ssh_native_prompts', migrated=False)
 
-        result = self.cli_runner(computer_configure, ['core.ssh_async', comp.label], user_input='\n' * 20)
+        result = self.cli_runner(computer_configure, ['core.ssh', comp.label], user_input='\n' * 20)
         assert comp.is_configured, result.output
         for prompt in ('User name', 'Look for keys', 'GSS host', 'Key policy'):
             assert prompt not in result.output
 
-    def test_ssh_async_native_show_hides_legacy(self):
+    def test_ssh_native_show_hides_legacy(self):
         """``configure show`` does not list the hidden legacy options for a native computer."""
-        comp = self._make_ssh_async_computer('test_ssh_async_native_show', migrated=False)
+        comp = self._make_ssh_computer('test_ssh_native_show', migrated=False)
 
         result = self.cli_runner(computer_configure, ['show', comp.label])
         assert '* host' in result.output
         assert '* username' not in result.output
         assert '* key_policy' not in result.output
 
-    def test_ssh_async_migrated_show_lists_legacy(self):
+    def test_ssh_migrated_show_lists_legacy(self):
         """``configure show`` lists the legacy options for a migrated computer."""
-        comp = self._make_ssh_async_computer('test_ssh_async_migrated_show', migrated=True)
+        comp = self._make_ssh_computer('test_ssh_migrated_show', migrated=True)
 
         result = self.cli_runner(computer_configure, ['show', comp.label])
         for name in ('username', 'port', 'key_policy'):
             assert f'* {name}' in result.output
 
-    def test_ssh_async_migrated_prompts_for_legacy(self):
+    def test_ssh_migrated_prompts_for_legacy(self):
         """A migrated computer is prompted for the legacy options."""
-        comp = self._make_ssh_async_computer('test_ssh_async_migrated_prompts', migrated=True)
+        comp = self._make_ssh_computer('test_ssh_migrated_prompts', migrated=True)
 
-        result = self.cli_runner(computer_configure, ['core.ssh_async', comp.label], user_input='\n' * 40)
+        result = self.cli_runner(computer_configure, ['core.ssh', comp.label], user_input='\n' * 40)
         assert comp.is_configured, result.output
         assert 'User name' in result.output
 
-    def test_ssh_async_migrated_keeps_legacy_params(self):
+    def test_ssh_migrated_keeps_legacy_params(self):
         """Reconfiguring a migrated computer keeps its legacy parameters, including falsy ones."""
-        comp = self._make_ssh_async_computer('test_ssh_async_migrated_ni', migrated=True)
+        comp = self._make_ssh_computer('test_ssh_migrated_ni', migrated=True)
 
-        options = ['core.ssh_async', comp.label, '--non-interactive', '--safe-interval', '2']
+        options = ['core.ssh', comp.label, '--non-interactive', '--safe-interval', '2']
         result = self.cli_runner(computer_configure, options)
         assert comp.is_configured, result.output
 
@@ -623,7 +623,7 @@ class TestVerdiComputerConfigure:
         """Test if `verdi computer export setup` command works"""
         self.comp_builder.label = f'test_computer_export_setup{sort_option}'
         # Label needs to be unique during parametrization
-        self.comp_builder.transport = 'core.ssh_async'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
@@ -648,7 +648,7 @@ class TestVerdiComputerConfigure:
         """Test if overwriting behavior of `verdi computer export setup` command works as expected"""
 
         self.comp_builder.label = 'test_computer_export_setup'
-        self.comp_builder.transport = 'core.ssh_async'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
@@ -679,7 +679,7 @@ class TestVerdiComputerConfigure:
         comp_label = 'test_computer_export_setup_default'
         self.comp_builder.label = comp_label
         # Label needs to be unique during parametrization
-        self.comp_builder.transport = 'core.ssh_async'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
@@ -691,7 +691,7 @@ class TestVerdiComputerConfigure:
     def test_computer_export_config(self, tmp_path):
         """Test if 'verdi computer export config' command works"""
         self.comp_builder.label = 'test_computer_export_config'
-        self.comp_builder.transport = 'core.ssh_async'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
@@ -738,7 +738,7 @@ class TestVerdiComputerConfigure:
     def test_computer_export_config_overwrite(self, tmp_path):
         """Test if overwrite behavior of `verdi computer export config` command works"""
         self.comp_builder.label = 'test_computer_export_config_overwrite'
-        self.comp_builder.transport = 'core.ssh_async'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
         comp.configure(safe_interval=0.0)
@@ -770,7 +770,7 @@ class TestVerdiComputerConfigure:
         """Test that default filename is as expected when not specified for `verdi computer export config`."""
         comp_label = 'test_computer_export_config_default'
         self.comp_builder.label = comp_label
-        self.comp_builder.transport = 'core.ssh_async'
+        self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
         comp.configure(safe_interval=0.0)
@@ -1111,12 +1111,12 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
     assert 'computer is configured to use a login shell, which is slower compared to a normal shell' in result.output
 
 
-# comment on 'core.ssh_async':
+# comment on 'core.ssh':
 # It is important that 'ssh localhost' is functional in your test environment.
 # It should connect without asking for a password.
-@pytest.mark.parametrize('transport_type, config', [('core.ssh_async', ['--host', 'localhost', '-n'])])
+@pytest.mark.parametrize('transport_type, config', [('core.ssh', ['--host', 'localhost', '-n'])])
 def test_computer_setup_with_various_transport(run_cli_command, aiida_computer, transport_type, config):
-    """Test setup of computer with ``core.ssh_async`` entry points.
+    """Test setup of computer with ``core.ssh`` entry points.
 
     pass any config option the setup needs in the parameter section``.
     """

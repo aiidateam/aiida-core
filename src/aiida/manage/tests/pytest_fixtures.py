@@ -624,8 +624,8 @@ def aiida_computer_local(aiida_computer) -> t.Callable[[], Computer]:
 
 
 @pytest.fixture
-def aiida_computer_ssh_async(aiida_computer) -> t.Callable[[], Computer]:
-    """Factory to return a :class:`aiida.orm.computers.Computer` instance with ``core.ssh_async`` transport.
+def aiida_computer_ssh(aiida_computer) -> t.Callable[[], Computer]:
+    """Factory to return a :class:`aiida.orm.computers.Computer` instance with ``core.ssh`` transport.
 
     The connection details are taken from the user's ``~/.ssh/config``, so the localhost has to be set up for a
     password-less SSH connection for the transport to actually connect.
@@ -657,9 +657,9 @@ def aiida_computer_ssh_async(aiida_computer) -> t.Callable[[], Computer]:
             # For accurate testing, we don't set a default value for this.
             # It should be explicitly specified to error nasty bugs.
             raise ValueError(
-                'The `backend` argument must be specified when configuring a computer with `core.ssh_async` transport.'
+                'The `backend` argument must be specified when configuring a computer with `core.ssh` transport.'
             )
-        computer = aiida_computer(label=label, hostname='localhost', transport_type='core.ssh_async')
+        computer = aiida_computer(label=label, hostname='localhost', transport_type='core.ssh')
         if configure:
             computer.configure(backend=backend)
 

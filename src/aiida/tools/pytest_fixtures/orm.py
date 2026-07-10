@@ -192,14 +192,14 @@ def aiida_computer_local(aiida_computer) -> t.Callable[[], Computer]:
 
 
 @pytest.fixture
-def aiida_computer_ssh_async(aiida_computer) -> t.Callable[[], 'Computer']:
-    """Factory to return a :class:`aiida.orm.computers.Computer` instance with ``core.ssh_async`` transport.
+def aiida_computer_ssh(aiida_computer) -> t.Callable[[], 'Computer']:
+    """Factory to return a :class:`aiida.orm.computers.Computer` instance with ``core.ssh`` transport.
 
     Usage::
 
-        def test(aiida_computer_ssh_async):
-            computer = aiida_computer_ssh_async(label='some-label', configure=True, backend='asyncssh')
-            assert computer.transport_type == 'core.ssh_async'
+        def test(aiida_computer_ssh):
+            computer = aiida_computer_ssh(label='some-label', configure=True, backend='asyncssh')
+            assert computer.transport_type == 'core.ssh'
             assert computer.is_configured
 
     The factory has the following signature:
@@ -214,7 +214,7 @@ def aiida_computer_ssh_async(aiida_computer) -> t.Callable[[], 'Computer']:
 
     def factory(label: str | None = None, configure: bool = True, backend: str | None = None) -> 'Computer':
         """
-        Create or load a computer with the ``core.ssh_async`` transport.
+        Create or load a computer with the ``core.ssh`` transport.
         :param label: The computer label. If not specified, a random UUID4 is used.
         :param configure: Boolean, if ``True``, ensures the computer is configured.
         :param backend: The backend to use for the async SSH transport. it can be either `asyncssh` or `openssh`
@@ -237,9 +237,9 @@ def aiida_computer_ssh_async(aiida_computer) -> t.Callable[[], 'Computer']:
             # For accurate testing, we don't set a default value for this.
             # It should be explicitly specified to error nasty bugs.
             raise ValueError(
-                'The `backend` argument must be specified when configuring a computer with `core.ssh_async` transport.'
+                'The `backend` argument must be specified when configuring a computer with `core.ssh` transport.'
             )
-        computer = aiida_computer(label=label, hostname='localhost', transport_type='core.ssh_async')
+        computer = aiida_computer(label=label, hostname='localhost', transport_type='core.ssh')
         if configure:
             computer.configure(backend=backend)
 

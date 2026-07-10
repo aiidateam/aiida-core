@@ -728,8 +728,8 @@ def computer_config_show(computer, user, defaults, as_option_string):
         for param in transport_cli.create_configure_cmd(computer.transport_type).params
         if isinstance(param, click.core.Option) and param.name in transport_cls.get_valid_auth_params()
     ]
-    # Hidden options (e.g. the legacy ``core.ssh`` connection parameters) are only relevant to a
-    # migrated computer; drop them unless this computer actually has them stored.
+    # Hidden options (e.g. the legacy v2 ``core.ssh`` (paramiko) connection parameters) are only
+    # relevant to a migrated computer; drop them unless this computer actually has them stored.
     hidden_unset = {option.name for option in option_list if option.hidden and option.name not in configuration}
     option_list = [option for option in option_list if option.name not in hidden_unset]
 

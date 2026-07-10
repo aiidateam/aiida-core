@@ -46,17 +46,17 @@ def file_hierarchy_simple():
     scope='function',
     params=[
         ('core.local', None),
-        ('core.ssh_async', 'asyncssh'),
-        ('core.ssh_async', 'openssh'),
+        ('core.ssh', 'asyncssh'),
+        ('core.ssh', 'openssh'),
     ],
 )
-def node_and_calc_info(aiida_localhost, aiida_computer_ssh_async, aiida_code_installed, request):
+def node_and_calc_info(aiida_localhost, aiida_computer_ssh, aiida_code_installed, request):
     """Return a ``CalcJobNode`` and associated ``CalcInfo`` instance."""
 
     if request.param[0] == 'core.local':
         node = CalcJobNode(computer=aiida_localhost)
-    elif request.param[0] == 'core.ssh_async':
-        node = CalcJobNode(computer=aiida_computer_ssh_async(backend=request.param[1]))
+    elif request.param[0] == 'core.ssh':
+        node = CalcJobNode(computer=aiida_computer_ssh(backend=request.param[1]))
     else:
         raise ValueError(f'unsupported transport: {request.param}')
 

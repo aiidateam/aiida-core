@@ -61,12 +61,12 @@ def test_leak_local_calcjob(aiida_code_installed):
 
 
 @pytest.mark.usefixtures('aiida_profile', 'check_memory_leaks')
-def test_leak_ssh_calcjob(aiida_computer_ssh_async):
+def test_leak_ssh_calcjob(aiida_computer_ssh):
     """Test whether running a CalcJob over SSH leaks memory.
 
     Note: This relies on the localhost configuring an SSH server and allowing to connect to it from localhost.
     """
-    computer = aiida_computer_ssh_async(backend='asyncssh')
+    computer = aiida_computer_ssh(backend='asyncssh')
 
     # Ensure a connection can be opened before launching the calcjob or it will get stuck in the EBM.
     with computer.get_transport() as transport:

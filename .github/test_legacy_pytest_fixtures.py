@@ -80,13 +80,13 @@ def test_aiida_computer_fixtures(fixture_name, transport_cls, transport_type, re
 
 @pytest.mark.parametrize('backend', ('asyncssh', 'openssh'))
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_aiida_computer_ssh_async_fixture(backend, aiida_computer_ssh_async):
-    """Test the ``aiida_computer_ssh_async`` fixture."""
-    computer = aiida_computer_ssh_async(label=str(uuid.uuid4()), configure=True, backend=backend)
+def test_aiida_computer_ssh_fixture(backend, aiida_computer_ssh):
+    """Test the ``aiida_computer_ssh`` fixture."""
+    computer = aiida_computer_ssh(label=str(uuid.uuid4()), configure=True, backend=backend)
     assert isinstance(computer, Computer)
     assert computer.is_configured
     assert computer.hostname == 'localhost'
-    assert computer.transport_type == 'core.ssh_async'
+    assert computer.transport_type == 'core.ssh'
 
     with computer.get_transport() as transport:
         assert isinstance(transport, AsyncTransport)

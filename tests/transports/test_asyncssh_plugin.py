@@ -16,7 +16,7 @@ from aiida.transports.plugins.async_backend import (
 from aiida.transports.plugins.async_backend import (
     build_asyncssh_connect_kwargs as _build_asyncssh_connect_kwargs,
 )
-from aiida.transports.plugins.ssh_async import _LEGACY_OPTION_NAMES, AsyncSshTransport
+from aiida.transports.plugins.ssh import _LEGACY_OPTION_NAMES, AsyncSshTransport
 
 
 class TestAuthenticationScript:
@@ -396,7 +396,7 @@ class TestLegacyConnectionOptions:
         valid = set(AsyncSshTransport.get_valid_auth_params())
         assert valid.issuperset(_LEGACY_OPTION_NAMES)
 
-        params = {p.name: p for p in create_configure_cmd('core.ssh_async').params}
+        params = {p.name: p for p in create_configure_cmd('core.ssh').params}
         assert all(params[name].hidden for name in _LEGACY_OPTION_NAMES)
         assert params['host'].hidden is False
 

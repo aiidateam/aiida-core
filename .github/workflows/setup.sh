@@ -22,7 +22,7 @@ verdi code create core.code.containerized --non-interactive --config "${CONFIG}/
 
 # set up slurm-ssh computer
 verdi computer setup --non-interactive --config "${CONFIG}/slurm-ssh.yaml"
-verdi computer configure core.ssh_async slurm-ssh --non-interactive --config "${CONFIG}/slurm-ssh-config.yaml" -n  # needs slurm container
+verdi computer configure core.ssh slurm-ssh --non-interactive --config "${CONFIG}/slurm-ssh-config.yaml" -n  # needs slurm container
 verdi computer test slurm-ssh --print-traceback
 
 verdi profile setdefault test_aiida

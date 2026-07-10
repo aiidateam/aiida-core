@@ -202,7 +202,7 @@ requires-python = '>=3.10'
 
 [project.entry-points.'aiida.transports']
 'core.local' = 'aiida.transports.plugins.local:LocalTransport'
-'core.ssh_async' = 'aiida.transports.plugins.ssh_async:AsyncSshTransport'
+'core.ssh' = 'aiida.transports.plugins.ssh:AsyncSshTransport'
 
 [project.entry-points.'aiida.workflows']
 'core.arithmetic.add_multiply' = 'aiida.workflows.arithmetic.add_multiply:add_multiply'

@@ -308,7 +308,7 @@ Usage: The scheduler is used in the familiar way by entering 'myscheduler' as th
 ``aiida.transports``
 --------------------
 
-``aiida-core`` ships with two modes of transporting files and folders to remote computers: ``core.ssh_async`` and ``core.local`` (stub for when the remote computer is actually the same).
+``aiida-core`` ships with two modes of transporting files and folders to remote computers: ``core.ssh`` and ``core.local`` (stub for when the remote computer is actually the same).
 We recommend naming the plugin package after the mode of transport (e.g. ``aiida-mytransport``), so that the entry point name can simply equal the name of the transport:
 
 Spec::
@@ -359,7 +359,7 @@ The module provides the following fixtures:
 * :ref:`postgres_cluster <topics:plugins:testfixtures:postgres-cluster>`: Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yielder
 * :ref:`aiida_computer <topics:plugins:testfixtures:aiida-computer>`: Setup a :class:`~aiida.orm.computers.Computer` instance
 * :ref:`aiida_computer_local <topics:plugins:testfixtures:aiida-computer-local>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using local transport
-* :ref:`aiida_computer_ssh_async <topics:plugins:testfixtures:aiida-computer-ssh-async>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using the asynchronous SSH transport
+* :ref:`aiida_computer_ssh <topics:plugins:testfixtures:aiida-computer-ssh>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using the asynchronous SSH transport
 * :ref:`aiida_localhost <topics:plugins:testfixtures:aiida-localhost>`: Shortcut for <topics:plugins:testfixtures:aiida-computer-local> that immediately returns a :class:`~aiida.orm.computers.Computer` instance for the ``localhost`` computer instead of a factory
 * :ref:`aiida_code <topics:plugins:testfixtures:aiida-code>`: Setup a :class:`~aiida.orm.nodes.data.code.abstract.AbstractCode` instance
 * :ref:`aiida_code_installed <topics:plugins:testfixtures:aiida-code-installed>`: Setup a :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` instance on a given computer
@@ -638,9 +638,9 @@ If you need a guarantee that the computer is not configured, make sure to clean 
         assert not localhost.is_configured
 
 
-.. _topics:plugins:testfixtures:aiida-computer-ssh-async:
+.. _topics:plugins:testfixtures:aiida-computer-ssh:
 
-``aiida_computer_ssh_async``
+``aiida_computer_ssh``
 ----------------------------
 
 This fixture is a shortcut for ``aiida_computer`` to setup the localhost with the asynchronous SSH transport.
@@ -648,18 +648,18 @@ When configuring the computer, the ``backend`` (``asyncssh`` or ``openssh``) has
 
 .. code-block:: python
 
-    def test(aiida_computer_ssh_async):
-        localhost = aiida_computer_ssh_async(backend='asyncssh')
+    def test(aiida_computer_ssh):
+        localhost = aiida_computer_ssh(backend='asyncssh')
         assert localhost.hostname == 'localhost'
-        assert localhost.transport_type == 'core.ssh_async'
+        assert localhost.transport_type == 'core.ssh'
 
 This can be useful if the functionality that needs to be tested involves testing the SSH transport, but these use-cases should be rare outside of `aiida-core`.
 To leave a newly created computer unconfigured, pass ``configure=False``:
 
 .. code-block:: python
 
-    def test(aiida_computer_ssh_async):
-        localhost = aiida_computer_ssh_async(configure=False)
+    def test(aiida_computer_ssh):
+        localhost = aiida_computer_ssh(configure=False)
         assert not localhost.is_configured
 
 Note that if the computer already exists and was configured before, it won't be unconfigured.
@@ -667,9 +667,9 @@ If you need a guarantee that the computer is not configured, make sure to clean 
 
 .. code-block:: python
 
-    def test(aiida_computer_ssh_async):
+    def test(aiida_computer_ssh):
         import uuid
-        localhost = aiida_computer_ssh_async(label=str(uuid.uuid4()), configure=False)
+        localhost = aiida_computer_ssh(label=str(uuid.uuid4()), configure=False)
         assert not localhost.is_configured
 
 

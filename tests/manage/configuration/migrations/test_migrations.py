@@ -15,9 +15,15 @@ import uuid
 
 import pytest
 
-from aiida.common.exceptions import ConfigurationError
+from aiida.common.exceptions import ConfigurationError, ConfigurationVersionError
 from aiida.manage.configuration.migrations import check_and_migrate_config
-from aiida.manage.configuration.migrations.migrations import MIGRATIONS, Initial, downgrade_config, upgrade_config
+from aiida.manage.configuration.migrations.migrations import (
+    CURRENT_CONFIG_VERSION,
+    MIGRATIONS,
+    Initial,
+    downgrade_config,
+    upgrade_config,
+)
 
 
 class CircularMigration(Initial):
@@ -62,6 +68,16 @@ def test_downgrade_path_fail(load_config_sample):
     # circular dependency
     with pytest.raises(ConfigurationError):
         downgrade_config(config_initial, 4, migrations=[CircularMigration])
+
+
+def test_config_needs_migrating_incompatible_version():
+    """An incompatible configuration version should raise with downgrade guidance."""
+    config = {
+        'CONFIG_VERSION': {'CURRENT': CURRENT_CONFIG_VERSION + 1, 'OLDEST_COMPATIBLE': CURRENT_CONFIG_VERSION + 1}
+    }
+
+    with pytest.raises(ConfigurationVersionError, match=r'verdi config downgrade'):
+        check_and_migrate_config(config, filepath='/tmp/config.json')
 
 
 def test_migrate_full(load_config_sample, monkeypatch):

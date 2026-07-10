@@ -295,6 +295,7 @@ class Config:
             config.store()
         else:
             migrated = False
+            current_version = config.get(cls.KEY_VERSION, {}).get(cls.KEY_VERSION_CURRENT, 0)
 
             # If the configuration file needs to be migrated first create a specific backup so it can easily be reverted
             if config_needs_migrating(config, filepath):
@@ -306,6 +307,9 @@ class Config:
             config = Config(filepath, check_and_migrate_config(config))
 
             if migrated:
+                echo.echo_report(
+                    f'configuration file `{filepath}` migrated from v{current_version} to v{config.version}'
+                )
                 config.store()
 
         return config

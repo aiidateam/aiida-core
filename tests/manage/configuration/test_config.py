@@ -12,6 +12,7 @@ import json
 import os
 import pathlib
 import uuid
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -166,11 +167,13 @@ def compare_config_in_memory_and_on_disk(config, filepath):
     assert in_memory == on_disk
 
 
-def test_from_file(tmp_path):
+def test_from_file(tmp_path, monkeypatch):
     """Test the `Config.from_file` class method.
 
     Regression test for #3790: make sure configuration is written to disk after it is loaded and migrated.
     """
+    mock_report = MagicMock()
+    monkeypatch.setattr('aiida.cmdline.utils.echo.echo_report', mock_report)
     # If the config file does not exist, a completely new file is created with a migrated config
     filepath_nonexisting = tmp_path / 'config_nonexisting.json'
     config = Config.from_file(filepath_nonexisting)
@@ -195,6 +198,10 @@ def test_from_file(tmp_path):
 
         config = Config.from_file(handle.name)
         compare_config_in_memory_and_on_disk(config, handle.name)
+
+    mock_report.assert_called_once_with(
+        f'configuration file `{handle.name}` migrated from v0 to v{CURRENT_CONFIG_VERSION}'
+    )
 
 
 def test_from_file_no_migrate(config_with_profile):

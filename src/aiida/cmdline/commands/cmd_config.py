@@ -134,6 +134,7 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
     import typing
 
     from aiida.common.exceptions import ConfigurationError
+    from aiida.manage.configuration.options import get_option
 
     if typing.TYPE_CHECKING:
         from aiida.manage.configuration import Profile
@@ -167,14 +168,13 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
         value = [value]
 
     # Warn about deprecated option names
-    option_name = option.name
     if option.deprecated_by:
-        option_name = option.deprecated_by
         echo.echo_warning(f'`{option.name}` is deprecated using `{option.deprecated_by}` instead.')
+        option = get_option(option.deprecated_by)
 
     # Set the specified option
     try:
-        value = config.set_option(option_name, value, scope=scope)
+        value = config.set_option(option.name, value, scope=scope)
     except ConfigurationError as error:
         echo.echo_critical(str(error))
 
@@ -184,10 +184,13 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
     # a logger level is lowered as well.
     from aiida.common.log import validate_handler
 
-    if warning := validate_handler(config, option_name, scope):
+    if warning := validate_handler(config, option.name, scope):
         echo.echo_warning(warning)
 
-    echo.echo_success(f"'{option_name}' set to {value} {scope_text}")
+    echo.echo_success(f"'{option.name}' set to {value} {scope_text}")
+
+    if option.requires_daemon_restart:
+        echo.echo_report('Run `verdi daemon restart` for this change to take effect.')
 
 
 @verdi_config.command('unset')
@@ -213,6 +216,9 @@ def verdi_config_unset(ctx, option, globally):
     config.unset_option(option.name, scope=scope)
     config.store()
     echo.echo_success(f"'{option.name}' unset {scope_text}")
+
+    if option.requires_daemon_restart:
+        echo.echo_report('Run `verdi daemon restart` for this change to take effect.')
 
 
 @verdi_config.command('caching')

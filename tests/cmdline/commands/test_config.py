@@ -93,13 +93,20 @@ def test_config_get_option(run_cli_command, config_with_profile_factory):
     assert option_value in result.output.strip()
 
 
-def test_config_unset_option(run_cli_command, config_with_profile_factory):
+@pytest.mark.parametrize(
+    'option_name, option_value, requires_daemon_restart',
+    (
+        ('daemon.timeout', '30', False),
+        ('daemon.default_workers', '2', True),
+    ),
+)
+def test_config_unset_option(
+    run_cli_command, config_with_profile_factory, option_name, option_value, requires_daemon_restart
+):
     """Test the `verdi config` command when unsetting an option."""
     from aiida.manage.configuration.options import get_option
 
     config_with_profile_factory()
-    option_name = 'daemon.timeout'
-    option_value = str(30)
 
     options = ['config', 'set', option_name, str(option_value)]
     result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
@@ -111,6 +118,11 @@ def test_config_unset_option(run_cli_command, config_with_profile_factory):
     options = ['config', 'unset', option_name]
     result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
     assert f"'{option_name}' unset" in result.output.strip()
+
+    if requires_daemon_restart:
+        assert 'verdi daemon restart' in result.output
+    else:
+        assert 'verdi daemon restart' not in result.output
 
     options = ['config', 'get', option_name]
     result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
@@ -128,6 +140,41 @@ def test_config_set_handler_warns_when_ineffective(run_cli_command, config_with_
     result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
     assert 'Warning' in result.output
     assert 'take effect' in result.output
+
+
+@pytest.mark.parametrize(
+    'option_name, value, effective_option_name, requires_daemon_restart',
+    (
+        ('daemon.default_workers', '2', 'daemon.default_workers', True),
+        ('daemon.timeout', '10', 'daemon.timeout', False),
+        ('logging.aiida_loglevel', 'DEBUG', 'logging.aiida_loglevel', True),
+        ('logging.db_loglevel', 'DEBUG', 'logging.database_handler', True),
+        ('caching.default_enabled', 'True', 'caching.default_enabled', True),
+        ('rmq.task_timeout', '5', 'broker.task_timeout', True),
+    ),
+)
+def test_config_set_option_requires_daemon_restart(
+    run_cli_command,
+    config_with_profile_factory,
+    option_name,
+    value,
+    effective_option_name,
+    requires_daemon_restart,
+):
+    """Test that `verdi config set` reports when an option requires restarting the daemon."""
+    config_with_profile_factory()
+    options = ['config', 'set', option_name, value]
+    result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
+
+    assert f"'{effective_option_name}' set to" in result.output
+
+    if option_name != effective_option_name:
+        assert 'deprecated using' in result.output
+
+    if requires_daemon_restart:
+        assert 'verdi daemon restart' in result.output
+    else:
+        assert 'verdi daemon restart' not in result.output
 
 
 def test_config_set_option_global_only(run_cli_command, config_with_profile_factory):

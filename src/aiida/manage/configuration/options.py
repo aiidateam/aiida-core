@@ -62,6 +62,15 @@ class Option:
         """Return True if this option should be hidden from default ``verdi config list`` output."""
         return self._schema.get('advanced', False)
 
+    @property
+    def requires_daemon_restart(self) -> bool:
+        """Return whether changing this option requires restarting the daemon.
+
+        :return: Whether the option value is only picked up when daemon processes are started and therefore remains
+            stale in already running workers.
+        """
+        return self._schema.get('requires_daemon_restart', False)
+
     def validate(self, value: Any) -> Any:
         """Validate a value
 

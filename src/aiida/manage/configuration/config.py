@@ -53,18 +53,30 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
 
     model_config = ConfigDict(use_enum_values=True)
 
-    runner__poll__interval: int = Field(60, description='Polling interval in seconds to be used by process runners.')
+    runner__poll__interval: int = Field(
+        60,
+        description='Polling interval in seconds to be used by process runners.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
     daemon__default_workers: int = Field(
-        1, description='Default number of workers to be launched by `verdi daemon start`.'
+        1,
+        description='Default number of workers to be launched by `verdi daemon start`.',
+        json_schema_extra={'requires_daemon_restart': True},
     )
     daemon__timeout: int = Field(
         2,
         description='Used to set default timeout in the `DaemonClient` for calls to the daemon.',
     )
     daemon__worker_process_slots: int = Field(
-        200, description='Maximum number of concurrent process tasks that each daemon worker can handle.'
+        200,
+        description='Maximum number of concurrent process tasks that each daemon worker can handle.',
+        json_schema_extra={'requires_daemon_restart': True},
     )
-    daemon__recursion_limit: int = Field(3000, description='Maximum recursion depth for the daemon workers.')
+    daemon__recursion_limit: int = Field(
+        3000,
+        description='Maximum recursion depth for the daemon workers.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
     db__batch_size: int = Field(
         100000,
         description='Batch size for bulk CREATE operations in the database. Avoids hitting MaxAllocSize of PostgreSQL '
@@ -89,22 +101,22 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
             'Minimum level for the AiiDA logging stack. Can be changed for individual aiida packages in the advanced'
             ' options.'
         ),
-        json_schema_extra={'advanced': False},
+        json_schema_extra={'advanced': False, 'requires_daemon_restart': True},
     )
     logging__aiida_core_loglevel: AdvancedLogLevels = Field(
         cast(AdvancedLogLevels, 'INHERIT'),
         description='Minimum level for the aiida-core logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
-        json_schema_extra={'advanced': True},
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     logging__verdi_loglevel: AdvancedLogLevels = Field(
         cast(AdvancedLogLevels, 'INHERIT'),
         description='Minimum level for the `verdi` command logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
-        json_schema_extra={'advanced': True},
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     logging__disk_objectstore_loglevel: AdvancedLogLevels = Field(
         cast(AdvancedLogLevels, 'INHERIT'),
         description='Minimum level for the `disk_objectstore` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
-        json_schema_extra={'advanced': True},
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     logging__database_handler: LogLevels = Field(
         cast(LogLevels, 'REPORT'),
@@ -114,72 +126,94 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
             'the actual emitted log messages. To take effect you need to also change one of the log levels '
             'to the same or higher verbosity (e.g. `logging.aiida_loglevel`).'
         ),
-        json_schema_extra={'advanced': False},
+        json_schema_extra={'advanced': False, 'requires_daemon_restart': True},
     )
     logging__db_loglevel: LogLevels = Field(
         cast(LogLevels, 'REPORT'),
         description='Deprecated: use ``logging.database_handler`` instead.',
-        json_schema_extra={'deprecated_by': 'logging.database_handler', 'advanced': True},
+        json_schema_extra={
+            'deprecated_by': 'logging.database_handler',
+            'advanced': True,
+            'requires_daemon_restart': True,
+        },
     )
     logging__plumpy_loglevel: AdvancedLogLevels = Field(
         cast(AdvancedLogLevels, 'INHERIT'),
         description='Minimum level for the `plumpy` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
-        json_schema_extra={'advanced': True},
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     logging__kiwipy_loglevel: AdvancedLogLevels = Field(
         cast(AdvancedLogLevels, 'INHERIT'),
         description='Minimum level for the `kiwipy` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
-        json_schema_extra={'advanced': True},
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     logging__paramiko_loglevel: AdvancedLogLevels = Field(
         cast(AdvancedLogLevels, 'WARNING'),
         description='Minimum level for the `paramiko` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
-        json_schema_extra={'advanced': True},
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     logging__alembic_loglevel: AdvancedLogLevels = Field(
         cast(AdvancedLogLevels, 'WARNING'),
         description='Minimum level for the `alembic` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
-        json_schema_extra={'advanced': True},
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     logging__sqlalchemy_loglevel: AdvancedLogLevels = Field(
         cast(AdvancedLogLevels, 'WARNING'),
         description='Minimum level for the `sqlalchemy` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
-        json_schema_extra={'advanced': True},
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     logging__circus_loglevel: AdvancedLogLevels = Field(
         cast(AdvancedLogLevels, 'INFO'),
         description='Minimum level for the `circus` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
-        json_schema_extra={'advanced': True},
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     logging__aiopika_loglevel: AdvancedLogLevels = Field(
         cast(AdvancedLogLevels, 'WARNING'),
         description='Minimum level for the `aio_pika` logger. If `INHERIT`, inherits `logging.aiida_loglevel`.',
-        json_schema_extra={'advanced': True},
+        json_schema_extra={'advanced': True, 'requires_daemon_restart': True},
     )
     warnings__showdeprecations: bool = Field(True, description='Whether to print AiiDA deprecation warnings.')
     warnings__rabbitmq_version: bool = Field(
         True, description='Whether to print a warning when an incompatible version of RabbitMQ is configured.'
     )
     transport__task_retry_initial_interval: int = Field(
-        20, description='Initial time interval for the exponential backoff mechanism.'
+        20,
+        description='Initial time interval for the exponential backoff mechanism.',
+        json_schema_extra={'requires_daemon_restart': True},
     )
     transport__task_maximum_attempts: int = Field(
-        5, description='Maximum number of transport task attempts before a Process is Paused.'
+        5,
+        description='Maximum number of transport task attempts before a Process is Paused.',
+        json_schema_extra={'requires_daemon_restart': True},
     )
     broker__task_timeout: int = Field(
-        10, description='Timeout in seconds for task/RPC communications with the message broker.'
+        10,
+        description='Timeout in seconds for task/RPC communications with the message broker.',
+        json_schema_extra={'requires_daemon_restart': True},
     )
     rmq__task_timeout: int = Field(
         10,
         description='Timeout in seconds for communications with RabbitMQ.',
-        json_schema_extra={'deprecated_by': 'broker.task_timeout'},
+        json_schema_extra={'deprecated_by': 'broker.task_timeout', 'requires_daemon_restart': True},
     )
     storage__sandbox: Optional[str] = Field(
         None, description='Absolute path to the directory to store sandbox folders.'
     )
-    caching__default_enabled: bool = Field(False, description='Enable calculation caching by default.')
-    caching__enabled_for: List[str] = Field([], description='Calculation entry points to enable caching on.')
-    caching__disabled_for: List[str] = Field([], description='Calculation entry points to disable caching on.')
+    caching__default_enabled: bool = Field(
+        False,
+        description='Enable calculation caching by default.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
+    caching__enabled_for: List[str] = Field(
+        [],
+        description='Calculation entry points to enable caching on.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
+    caching__disabled_for: List[str] = Field(
+        [],
+        description='Calculation entry points to disable caching on.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
 
     @field_validator('caching__enabled_for', 'caching__disabled_for')
     @classmethod

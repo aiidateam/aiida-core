@@ -1,11 +1,11 @@
 Configuration schema compatibility
 ==================================
 
-The AiiDA configuration file is stored in ``<AIIDA_PATH>/.aiida/config.json``.
+The AiiDA configuration file is stored in ``<AIIDA_PATH>/config.json``.
 
 Whenever AiiDA accesses the configuration file, it automatically upgrades the configuration file for the newest schema version compatible with the current AiiDA version.
 
-If an older AiiDA installation cannot read the configuration anymore, run ``verdi config downgrade <SCHEMA_VERSION>`` with the newer installation before switching back.
+If a newer AiiDA version rewrites the configuration file to a schema that an older installation cannot read, run ``verdi config downgrade <SCHEMA_VERSION>`` with the newer installation before switching back.
 
 The table below summarizes the released ``aiida-core`` version series and the configuration schema versions they write and read.
 
@@ -24,6 +24,8 @@ The table below summarizes the released ``aiida-core`` version series and the co
      - 8
    * - 2.1 - 2.8
      - 9
+   * - 2.9
+     - 9 - 10
 
 Schema versions 6 and 7 were only used by development snapshots.
 They were not part of a stable ``aiida-core`` release series.

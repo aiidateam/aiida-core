@@ -103,10 +103,22 @@ class AsyncSshTransport(AsyncTransport):
                 'default': 'asyncssh',
                 'prompt': 'Type of async backend to use, `asyncssh` or `openssh`',
                 'help': '`openssh` uses the `ssh` command line tool to connect to the remote machine,'
-                'e.g. it is useful in case of multiplexing. '
+                'e.g. it is useful in case of multiplexing, or server not having SFTP implemented.'
                 'The `asyncssh` backend is the default and is recommended for most use cases.',
                 'non_interactive_default': True,
                 'callback': validate_backend,
+            },
+        ),
+        (
+            'use_sftp',
+            {
+                'default': True,
+                'switch': True,
+                'prompt': 'Server supports SFTP? (Only applies to `openssh` backend)',
+                'help': 'Some HPC centers do not allow SFTP protocol for file transfer.'
+                ' In this case, you should use `openssh` as connection backend, with having this setting as `False`.'
+                ' In that it applies `-O` to scp',
+                'non_interactive_default': True,
             },
         ),
     ]
@@ -144,7 +156,9 @@ class AsyncSshTransport(AsyncTransport):
         if kwargs.get('backend') == 'openssh':
             from .async_backend import _OpenSSH
 
-            self.async_backend = _OpenSSH(self.machine, self.logger, self._bash_command_str)
+            self.async_backend = _OpenSSH(
+                self.machine, self.logger, self._bash_command_str, use_sftp=kwargs.pop('use_sftp', True)
+            )
         else:
             # default backend is asyncssh
             from .async_backend import _AsyncSSH

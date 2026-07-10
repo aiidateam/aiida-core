@@ -99,7 +99,7 @@ def computer(request, aiida_computer_local, aiida_computer_ssh):
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 @pytest.mark.parametrize('computer', ('core.local', 'core.ssh'), indirect=True)
-def test_validate_filepath_executable(ssh_key, computer, bash_path, tmp_path):
+def test_validate_filepath_executable(computer, bash_path, tmp_path):
     """Test the :meth:`aiida.orm.nodes.data.code.installed.InstalledCode.validate_filepath_executable` method."""
 
     filepath_executable = '/usr/bin/not-existing'
@@ -113,7 +113,9 @@ def test_validate_filepath_executable(ssh_key, computer, bash_path, tmp_path):
         code.validate_filepath_executable()
 
     if computer.transport_type == 'core.ssh':
-        computer.configure(key_filename=str(ssh_key), key_policy='AutoAddPolicy')
+        # The connection details are taken from ``~/.ssh/config``, which has to allow a password-less
+        # connection to the localhost.
+        computer.configure(backend='asyncssh')
     else:
         computer.configure()
 

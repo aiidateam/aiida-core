@@ -93,6 +93,21 @@ replacing ``QUEUE_VISUALIZATION_COMMAND`` by ``squeue`` (SLURM), ``qstat`` (PBSp
 
         $ ssh YOURCLUSTERADDRESS 'echo $PATH'
 
+.. _how-to:ssh:migrated:
+
+Computers migrated from the legacy ``core.ssh`` plugin
+======================================================
+
+New computers are configured entirely through ``~/.ssh/config`` as shown above.
+
+A computer that was migrated from the legacy (v2) ``core.ssh`` plugin instead keeps the connection
+parameters (user, port, key file, proxy, GSS, ...) that were stored when it was originally
+configured. ``verdi computer configure core.ssh <COMPUTER>`` offers those stored values as
+defaults, and only such a migrated computer is prompted for them. For a migrated computer
+``~/.ssh/config`` is **ignored**: the stored parameters are the single source of truth, reproducing
+how the legacy plugin connected. If you would rather drive the connection through ``~/.ssh/config``,
+set up a fresh computer instead.
+
 .. _how-to:ssh:passphrase:
 
 Using passphrase-protected keys *via* an ssh-agent
@@ -244,28 +259,27 @@ In both cases, this should allow you to directly connect to the *TARGET* server 
 AiiDA configuration
 ^^^^^^^^^^^^^^^^^^^
 
-When :ref:`configuring the computer in AiiDA <how-to:run-codes:computer:configuration>`, AiiDA will automatically parse most of required information from your ``~/.ssh/config`` file. A notable exception to this is the ``proxy_jump`` directive, which **must** be specified manually.
+The ``core.ssh`` transport takes all of its connection details from your ``~/.ssh/config`` file, including the ``ProxyJump`` and ``ProxyCommand`` directives.
+There is therefore nothing to specify on the AiiDA side: as long as
 
-Simply copy & paste the same instructions as you have used for ``ProxyJump`` in your ``~/.ssh/config`` to the input for ``proxy_jump``:
+.. code-block:: console
+
+   $ ssh SHORTNAME_TARGET
+
+connects without asking for a password, :ref:`configuring the computer in AiiDA <how-to:run-codes:computer:configuration>` only requires you to point it at that host:
 
 .. code-block:: console
 
    $ verdi computer configure core.ssh SHORTNAME_TARGET
    ...
-   Allow ssh agent [True]:
-   SSH proxy jump []: USER_PROXY@FULLHOSTNAME_PROXY
+   Host as in 'ssh <HOST>' (needs to be a password-less setup in your ssh config) [SHORTNAME_TARGET]:
 
-.. note:: A chain of proxies can be specified as a comma-separated list. If you need to specify a different username, you can so with ``USER_PROXY@...``. If no username is specified for the proxy the same username as for the *TARGET* is used.
-
-.. important:: Specifying the ``proxy_command`` manually
-
-    When specifying or updating the ``proxy_command`` option via ``verdi computer configure ssh``, please **do not use placeholders** ``%h`` and ``%p`` but provide the *actual* hostname and port.
-    AiiDA replaces them only when parsing from the ``~/.ssh/config`` file.
+.. note:: A chain of proxies can be specified with a comma-separated ``ProxyJump`` directive in your ``~/.ssh/config``. If no username is specified for the proxy, the same username as for the *TARGET* is used.
 
 
 .. _how-to:ssh:2fa:
 
-Using two-factor authentication (2FA) with ``core.ssh_async``
+Using two-factor authentication (2FA) with ``core.ssh``
 =============================================================
 
 .. danger::
@@ -276,7 +290,7 @@ Using two-factor authentication (2FA) with ``core.ssh_async``
 
 Some HPC centers require two-factor authentication where you must first authenticate via an API using your credentials and a TOTP (Time-based One-Time Password) code, which then provides you with short-lived signed SSH keys for the actual connection.
 
-The ``core.ssh_async`` transport plugin provides an ``authentication_script`` option that runs a local script before each SSH connection is opened.
+The ``core.ssh`` transport plugin provides an ``authentication_script`` option that runs a local script before each SSH connection is opened.
 This script must be provided by the user and is responsible for obtaining fresh SSH credentials so that the subsequent connection can succeed.
 
 .. warning::
@@ -458,11 +472,11 @@ Then modify the script to read from the keyring:
 Configuring AiiDA
 ^^^^^^^^^^^^^^^^^
 
-When configuring your computer with the ``core.ssh_async`` transport, specify the script path:
+When configuring your computer with the ``core.ssh`` transport, specify the script path:
 
 .. code-block:: console
 
-   $ verdi computer configure core.ssh_async YOURCOMPUTER
+   $ verdi computer configure core.ssh YOURCOMPUTER
    ...
    Local script to run before opening connection (path) [None]: /home/YOURUSERNAME/bin/get_hpc_keys.sh
    ...

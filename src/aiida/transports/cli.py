@@ -27,12 +27,6 @@ def match_comp_transport(ctx, param, computer, transport_type):
         echo.echo_critical(
             f'Computer {computer.label} has transport of type "{computer.transport_type}", not {transport_type}!'
         )
-    if transport_type == 'core.ssh':
-        echo.echo_deprecated(
-            'The `core.ssh` transport plugin is deprecated and will be removed in v3.0. '
-            'Use `core.ssh_async` instead, which is significantly faster and provides an '
-            'easier configuration interface.'
-        )
     return computer
 
 
@@ -104,7 +98,12 @@ def interactive_default(key, also_non_interactive=False):
 
         auth_params = authinfo.get_auth_params()
         suggestion = auth_params.get(key)
-        suggestion = suggestion or transport_option_default(key, computer)
+
+        # Only an unset parameter falls back to the plugin default. A stored ``False`` or ``0`` is a
+        # deliberate choice and must survive a reconfiguration.
+        if suggestion is None or suggestion == '':
+            suggestion = transport_option_default(key, computer)
+
         return suggestion
 
     return get_default
@@ -149,11 +148,16 @@ def transport_options(transport_type):
         """Decorate the command function with the appropriate options for the transport type."""
         options_list = list_transport_options(transport_type)
         options_list.reverse()
-        func = arguments.COMPUTER(callback=partial(match_comp_transport, transport_type=transport_type))(func)
+        # ``COMPUTER`` and ``USER`` are eager so ``ctx.params['computer']`` and ``ctx.params['user']``
+        # are available to every auth option (e.g. to decide whether a hidden legacy option should be
+        # prompted for, keyed on the per-user configuration) in every parsing path.
+        func = arguments.COMPUTER(is_eager=True, callback=partial(match_comp_transport, transport_type=transport_type))(
+            func
+        )
         func = options.NON_INTERACTIVE()(func)
         for option in options_list:
             func = option(func)
-        func = options.USER()(func)
+        func = options.USER(is_eager=True)(func)
         func = options.CONFIG_FILE()(func)
         return func
 

@@ -33,6 +33,7 @@ from aiida.cmdline.commands.cmd_computer import (
 )
 from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.transports.plugins.ssh import _LEGACY_OPTION_NAMES
 
 
 def generate_setup_options_dict(replace_args=None, non_interactive=True):
@@ -396,31 +397,26 @@ class TestVerdiComputerConfigure:
     def test_ssh_interactive(self):
         """Check that the interactive prompt is accepting the correct values.
 
-        Actually, even passing a shorter set of options should work:
-        ``verdi computer configure ssh`` is able to provide sensible default
-        parameters reading from the ssh config file.
-        We are here therefore only checking some of them.
+        The remaining prompts can simply be accepted with their default value.
         """
         self.comp_builder.label = 'test_ssh_interactive'
         self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
-        remote_username = 'some_remote_user'
-        port = 345
-        look_for_keys = False
+        host = 'some-ssh-config-host'
+        max_io_allowed = 4
 
-        # I just pass the first four arguments:
-        # the username, the port, look_for_keys, and the key_filename
-        # This testing also checks that an empty key_filename is ok
-        command_input = f"{remote_username}\n{port}\n{'yes' if look_for_keys else 'no'}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        # The prompts are, in order: host, max_io_allowed, authentication_script, backend, and then the options
+        # common to every transport: use_login_shell and safe_interval. Only the first two are given explicitly.
+        command_input = f'{host}\n{max_io_allowed}\n\n\n\n\n'
 
         result = self.cli_runner(computer_configure, ['core.ssh', comp.label], user_input=command_input)
         assert comp.is_configured, result.output
         new_auth_params = comp.get_authinfo(self.user).get_auth_params()
-        assert new_auth_params['username'] == remote_username
-        assert new_auth_params['port'] == port
-        assert new_auth_params['look_for_keys'] == look_for_keys
+        assert new_auth_params['host'] == host
+        assert new_auth_params['max_io_allowed'] == max_io_allowed
+        assert new_auth_params['backend'] == 'asyncssh'
         assert new_auth_params['use_login_shell'] is True
 
     def test_local_from_config(self):
@@ -478,19 +474,19 @@ class TestVerdiComputerConfigure:
         assert 'core.local' in result.output
         assert 'core.ssh' in result.output
 
-    def test_ssh_ni_username(self):
-        """Test verdi computer configure core.ssh <comp> --username=<username>."""
-        self.comp_builder.label = 'test_ssh_ni_username'
+    def test_ssh_ni_host(self):
+        """Test verdi computer configure core.ssh <comp> --host=<host>."""
+        self.comp_builder.label = 'test_ssh_ni_host'
         self.comp_builder.transport = 'core.ssh'
         comp = self.comp_builder.new()
         comp.store()
 
-        username = 'TEST'
-        options = ['core.ssh', comp.label, '--non-interactive', f'--username={username}', '--safe-interval', '1']
+        host = 'TEST'
+        options = ['core.ssh', comp.label, '--non-interactive', f'--host={host}', '--safe-interval', '1']
         result = self.cli_runner(computer_configure, options)
         auth_info = orm.AuthInfo.collection.get(dbcomputer_id=comp.pk, aiidauser_id=self.user.pk)
         assert comp.is_configured, result.output
-        assert auth_info.get_auth_params()['username'] == username
+        assert auth_info.get_auth_params()['host'] == host
 
     def test_show(self):
         """Test verdi computer configure show <comp>."""
@@ -502,12 +498,12 @@ class TestVerdiComputerConfigure:
         result = self.cli_runner(computer_configure, ['show', comp.label])
 
         result = self.cli_runner(computer_configure, ['show', comp.label, '--defaults'])
-        assert '* username' in result.output
+        assert '* host' in result.output
 
         result = self.cli_runner(
             computer_configure, ['show', comp.label, '--defaults', '--as-option-string'], suppress_warnings=True
         )
-        assert '--username=' in result.output
+        assert '--host=' in result.output
 
         config_cmd = ['core.ssh', comp.label, '--non-interactive']
         config_cmd.extend(result.output.replace("'", '').split(' '))
@@ -517,8 +513,110 @@ class TestVerdiComputerConfigure:
         result_cur = self.cli_runner(
             computer_configure, ['show', comp.label, '--as-option-string'], suppress_warnings=True
         )
-        assert '--username=' in result.output
+        assert '--host=' in result.output
         assert result_cur.output == result.output
+
+    def _make_ssh_computer(self, label, *, migrated):
+        """Create a ``core.ssh`` computer, optionally migrated from the legacy v2 ``core.ssh`` (paramiko) plugin.
+
+        A migrated computer is built by storing the legacy ``auth_params`` directly, exactly as the
+        storage migration does.
+        """
+        self.comp_builder.label = label
+        self.comp_builder.transport = 'core.ssh'
+        comp = self.comp_builder.new()
+        comp.store()
+        if migrated:
+            authinfo = orm.AuthInfo(computer=comp, user=self.user)
+            authinfo.set_auth_params(
+                {
+                    'safe_interval': 1.0,
+                    'use_login_shell': False,
+                    'username': 'alice',
+                    'port': 2222,
+                    'look_for_keys': False,
+                    'key_filename': '',
+                    'timeout': 60,
+                    'allow_agent': True,
+                    'proxy_jump': '',
+                    'proxy_command': '',
+                    'compress': False,
+                    'gss_auth': False,
+                    'gss_kex': False,
+                    'gss_deleg_creds': False,
+                    'gss_host': '',
+                    'load_system_host_keys': False,
+                    'key_policy': 'AutoAddPolicy',
+                }
+            )
+            authinfo.store()
+        else:
+            comp.configure(safe_interval=1.0)
+        return comp
+
+    def test_ssh_native_no_legacy_params(self):
+        """A native ``core.ssh`` computer never acquires the legacy v2 ``core.ssh`` (paramiko) parameters."""
+        comp = self._make_ssh_computer('test_ssh_native_ni', migrated=False)
+
+        options = ['core.ssh', comp.label, '--non-interactive', '--safe-interval', '1']
+        result = self.cli_runner(computer_configure, options)
+        assert comp.is_configured, result.output
+
+        auth_params = comp.get_authinfo(self.user).get_auth_params()
+        assert all(name not in auth_params for name in _LEGACY_OPTION_NAMES)
+
+    def test_ssh_native_no_legacy_prompts(self):
+        """A native computer is never prompted for the legacy connection options."""
+        comp = self._make_ssh_computer('test_ssh_native_prompts', migrated=False)
+
+        result = self.cli_runner(computer_configure, ['core.ssh', comp.label], user_input='\n' * 20)
+        assert comp.is_configured, result.output
+        for prompt in ('User name', 'Look for keys', 'GSS host', 'Key policy'):
+            assert prompt not in result.output
+
+    def test_ssh_native_show_hides_legacy(self):
+        """``configure show`` does not list the hidden legacy options for a native computer."""
+        comp = self._make_ssh_computer('test_ssh_native_show', migrated=False)
+
+        result = self.cli_runner(computer_configure, ['show', comp.label])
+        assert '* host' in result.output
+        assert '* username' not in result.output
+        assert '* key_policy' not in result.output
+
+    def test_ssh_migrated_show_lists_legacy(self):
+        """``configure show`` lists the legacy options for a migrated computer."""
+        comp = self._make_ssh_computer('test_ssh_migrated_show', migrated=True)
+
+        result = self.cli_runner(computer_configure, ['show', comp.label])
+        for name in ('username', 'port', 'key_policy'):
+            assert f'* {name}' in result.output
+
+    def test_ssh_migrated_prompts_for_legacy(self):
+        """A migrated computer is prompted for the legacy options."""
+        comp = self._make_ssh_computer('test_ssh_migrated_prompts', migrated=True)
+
+        result = self.cli_runner(computer_configure, ['core.ssh', comp.label], user_input='\n' * 40)
+        assert comp.is_configured, result.output
+        assert 'User name' in result.output
+
+    def test_ssh_migrated_keeps_legacy_params(self):
+        """Reconfiguring a migrated computer keeps its legacy parameters, including falsy ones."""
+        comp = self._make_ssh_computer('test_ssh_migrated_ni', migrated=True)
+
+        options = ['core.ssh', comp.label, '--non-interactive', '--safe-interval', '2']
+        result = self.cli_runner(computer_configure, options)
+        assert comp.is_configured, result.output
+
+        auth_params = comp.get_authinfo(self.user).get_auth_params()
+        assert auth_params['username'] == 'alice'
+        assert auth_params['port'] == 2222
+        assert auth_params['key_policy'] == 'AutoAddPolicy'
+        # A stored `False` must not be reset to the plugin default, which would change how the
+        # computer authenticates.
+        assert auth_params['look_for_keys'] is False
+        assert auth_params['compress'] is False
+        assert auth_params['load_system_host_keys'] is False
+        assert auth_params['use_login_shell'] is False
 
     @pytest.mark.parametrize('sort_option', ('--sort', '--no-sort'))
     def test_computer_export_setup(self, tmp_path, file_regression, sort_option):
@@ -1013,12 +1111,12 @@ def test_computer_test_use_login_shell(run_cli_command, aiida_localhost, monkeyp
     assert 'computer is configured to use a login shell, which is slower compared to a normal shell' in result.output
 
 
-# comment on 'core.ssh_async':
+# comment on 'core.ssh':
 # It is important that 'ssh localhost' is functional in your test environment.
 # It should connect without asking for a password.
-@pytest.mark.parametrize('transport_type, config', [('core.ssh_async', ['--host', 'localhost', '-n'])])
+@pytest.mark.parametrize('transport_type, config', [('core.ssh', ['--host', 'localhost', '-n'])])
 def test_computer_setup_with_various_transport(run_cli_command, aiida_computer, transport_type, config):
-    """Test setup of computer with ``core.ssh_async`` entry points.
+    """Test setup of computer with ``core.ssh`` entry points.
 
     pass any config option the setup needs in the parameter section``.
     """

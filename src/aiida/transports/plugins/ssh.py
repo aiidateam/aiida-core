@@ -6,1037 +6,450 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Plugin for transport over SSH (and SFTP for file transfer)."""
+"""Plugin for transport over SSH asynchronously."""
 
+## TODO: put & get methods could be simplified with the asyncssh.sftp.mget() & put() method or sftp.glob()
+## https://github.com/aiidateam/aiida-core/issues/6719
+import asyncio
 import glob
-import io
 import os
-import re
-from stat import S_ISDIR, S_ISREG
-from typing import Optional
+import subprocess
+from pathlib import Path, PurePath
+from typing import Optional, Union
 
 import click
 
 from aiida.cmdline.params import options
+from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
 from aiida.common.escaping import escape_for_bash
-from aiida.common.warnings import warn_deprecation
+from aiida.common.exceptions import InvalidOperation
+from aiida.transports.transport import (
+    AsyncTransport,
+    Transport,
+    TransportPath,
+    has_magic,
+    validate_positive_number,
+)
 
-from ..transport import BlockingTransport, TransportInternalError, TransportPath, has_magic
-
-__all__ = ('SshTransport', 'convert_to_bool', 'parse_sshconfig')
+__all__ = ('AsyncSshTransport',)
 
 
-def parse_sshconfig(computername):
-    """Return the ssh configuration for a given computer name.
+def validate_script(ctx, param, value: str):
+    if value == 'None':
+        return value
+    if not os.path.isabs(value):
+        raise click.BadParameter(f'{value} is not an absolute path')
+    if not os.path.isfile(value):
+        raise click.BadParameter(f'The script file: {value} does not exist')
+    if not os.access(value, os.X_OK):
+        raise click.BadParameter(f'The script {value} is not executable')
+    return value
 
-    This parses the ``.ssh/config`` file in the home directory and
-    returns the part of configuration of the given computer name.
 
-    :param computername: the computer name for which we want the configuration.
+def validate_backend(ctx, param, value: str):
+    if value not in ['asyncssh', 'openssh']:
+        raise click.BadParameter(f'{value} is not a valid backend, choose either `asyncssh` or `openssh`')
+    return value
+
+
+def _computer_was_migrated(ctx) -> bool:
+    """Return whether the computer being configured carries legacy v2 ``core.ssh`` (paramiko) parameters.
+
+    The answer is memoised on ``ctx.meta`` to avoid one database query per legacy option.
     """
-    import paramiko
-
-    config = paramiko.SSHConfig()
-    try:
-        with open(os.path.expanduser('~/.ssh/config'), encoding='utf8') as fhandle:
-            config.parse(fhandle)
-    except OSError:
-        # No file found, so empty configuration
-        pass
-
-    return config.lookup(computername)
+    key = 'ssh_legacy_migrated'
+    if key not in ctx.meta:
+        computer = ctx.params.get('computer')
+        if computer is None:
+            ctx.meta[key] = False
+        else:
+            config = computer.get_configuration(ctx.params.get('user'))
+            ctx.meta[key] = any(name in config for name in _LEGACY_OPTION_NAMES)
+    return ctx.meta[key]
 
 
-def convert_to_bool(string):
-    """Convert a string passed in the CLI to a valid bool.
+class _LegacyOption(InteractiveOption):
+    """Auth option for a legacy v2 ``core.ssh`` (paramiko) parameter, dropped unless the computer was migrated."""
 
-    :return: the parsed bool value.
-    :raise ValueError: If the value is not parsable as a bool
-    """
-    upstring = str(string).upper()
-
-    if upstring in ['Y', 'YES', 'T', 'TRUE']:
-        return True
-    if upstring in ['N', 'NO', 'F', 'FALSE']:
-        return False
-    raise ValueError('Invalid boolean value provided')
+    def handle_parse_result(self, ctx, opts, args):
+        result = super().handle_parse_result(ctx, opts, args)
+        if not _computer_was_migrated(ctx):
+            # Native computer: never let the legacy parameter reach ``Computer.configure``.
+            ctx.params.pop(self.name, None)
+        return result
 
 
-class SshTransport(BlockingTransport):
-    """(Deprecated!) Support connection, command execution and data transfer
-    to remote computers via SSH+SFTP (using paramiko)."""
+# Connection/authentication options inherited from the legacy v2 ``core.ssh`` (paramiko) plugin. They
+# are hidden (no prompt, not in ``--help``, not in ``configure show``) unless the computer was migrated
+# from that plugin, i.e. already has such parameters stored; new computers configure everything through
+# ``~/.ssh/config``. The translation into ``asyncssh.connect()`` kwargs lives in ``async_backend``.
+_LEGACY_AUTH_OPTIONS = [
+    (
+        'username',
+        {
+            'default': '',
+            'prompt': 'User name',
+            'help': 'Login user name on the remote machine.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'port',
+        {'option': options.PORT, 'default': 22, 'prompt': 'Port number', 'non_interactive_default': True},
+    ),
+    (
+        'look_for_keys',
+        {
+            'default': True,
+            'switch': True,
+            'prompt': 'Look for keys',
+            'help': 'Automatically look for private keys in the ~/.ssh folder.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'key_filename',
+        {
+            'type': AbsolutePathOrEmptyParamType(dir_okay=False, exists=True),
+            'default': '',
+            'prompt': 'SSH key file',
+            'help': 'Absolute path to your private SSH key. Leave empty to use the path set in the SSH config.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'timeout',
+        {
+            'type': int,
+            'default': 60,
+            'prompt': 'Connection timeout in s',
+            'help': 'Time in seconds to wait for connection before giving up. Leave empty to use default value.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'allow_agent',
+        {
+            'default': False,
+            'switch': True,
+            'prompt': 'Allow ssh agent',
+            'help': 'Switch to allow or disallow using an SSH agent.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'proxy_jump',
+        {
+            'default': '',
+            'prompt': 'SSH proxy jump',
+            'help': 'SSH proxy jump for tunneling through other SSH hosts.'
+            ' Use a comma-separated list of hosts of the form [user@]host[:port].'
+            ' If user or port are not specified for a host, the user & port values from the target host are used.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'proxy_command',
+        {
+            'default': '',
+            'prompt': 'SSH proxy command',
+            'help': 'SSH proxy command for tunneling through a proxy server.'
+            ' For tunneling through another SSH host, consider using the "SSH proxy jump" option instead!',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'compress',
+        {
+            'default': True,
+            'switch': True,
+            'prompt': 'Compress file transfers',
+            'help': 'Turn file transfer compression on or off.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'gss_auth',
+        {
+            'default': False,
+            'type': bool,
+            'prompt': 'GSS auth',
+            'help': 'Enable when using GSS kerberos token to connect.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'gss_kex',
+        {
+            'default': False,
+            'type': bool,
+            'prompt': 'GSS kex',
+            'help': 'GSS kex for kerberos, if not configured in SSH config file.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'gss_deleg_creds',
+        {
+            'default': False,
+            'type': bool,
+            'prompt': 'GSS deleg_creds',
+            'help': 'GSS deleg_creds for kerberos, if not configured in SSH config file.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'gss_host',
+        {
+            'default': '',
+            'prompt': 'GSS host',
+            'help': 'GSS host for kerberos, if not configured in SSH config file.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'load_system_host_keys',
+        {
+            'default': True,
+            'switch': True,
+            'prompt': 'Load system host keys',
+            'help': 'Load system host keys from default SSH location.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'key_policy',
+        {
+            'default': 'RejectPolicy',
+            'type': click.Choice(['RejectPolicy', 'WarningPolicy', 'AutoAddPolicy']),
+            'prompt': 'Key policy',
+            'help': 'SSH key policy if host is not known.',
+            'non_interactive_default': True,
+        },
+    ),
+]
+_LEGACY_AUTH_OPTIONS = [
+    (name, dict(spec, cls=_LegacyOption, prompt_fn=_computer_was_migrated, hidden=True))
+    for name, spec in _LEGACY_AUTH_OPTIONS
+]
+_LEGACY_OPTION_NAMES = tuple(name for name, _ in _LEGACY_AUTH_OPTIONS)
 
-    # Valid keywords accepted by the connect method of paramiko.SSHClient
-    # I disable 'password' and 'pkey' to avoid these data to get logged in the
-    # aiida log file.
-    _valid_connect_options = [
+
+class AsyncSshTransport(AsyncTransport):
+    """(Recommended)  Asynchronous SSH transport plugin. Supports both OpenSSH and AsyncSSH as backends."""
+
+    _DEFAULT_max_io_allowed = 8
+
+    # note, I intentionally wanted to keep connection parameters as simple as possible.
+    _valid_auth_options = [
         (
-            'username',
-            {'prompt': 'User name', 'help': 'Login user name on the remote machine.', 'non_interactive_default': True},
-        ),
-        (
-            'port',
+            # the underscore is added to avoid conflict with the machine property
+            # which is passed to __init__ as parameter `machine=computer.hostname`
+            'host',
             {
-                'option': options.PORT,
-                'prompt': 'Port number',
+                'type': str,
+                'prompt': "Host as in 'ssh <HOST>' (needs to be a password-less setup in your ssh config)",
+                'help': (
+                    'Password-less host-setup to connect, as in command `ssh <HOST>`.'
+                    ' You need to have a `Host <HOST>` entry defined in your `~/.ssh/config` file.'
+                    " Note, if not provided, we will use the 'hostname' that was set by you during setup."
+                ),
                 'non_interactive_default': True,
             },
         ),
         (
-            'look_for_keys',
-            {
-                'default': True,
-                'switch': True,
-                'prompt': 'Look for keys',
-                'help': 'Automatically look for private keys in the ~/.ssh folder.',
-                'non_interactive_default': True,
-            },
-        ),
-        (
-            'key_filename',
-            {
-                'type': AbsolutePathOrEmptyParamType(dir_okay=False, exists=True),
-                'prompt': 'SSH key file',
-                'help': 'Absolute path to your private SSH key. Leave empty to use the path set in the SSH config.',
-                'non_interactive_default': True,
-            },
-        ),
-        (
-            'timeout',
+            'max_io_allowed',
             {
                 'type': int,
-                'prompt': 'Connection timeout in s',
-                'help': 'Time in seconds to wait for connection before giving up. Leave empty to use default value.',
+                'default': _DEFAULT_max_io_allowed,
+                'prompt': 'Maximum number of concurrent I/O operations',
+                'help': 'Depends on various factors, such as your network bandwidth, the server load, etc.'
+                ' (An experimental number)',
                 'non_interactive_default': True,
+                'callback': validate_positive_number,
             },
         ),
         (
-            'allow_agent',
+            'authentication_script',
             {
-                'default': False,
-                'switch': True,
-                'prompt': 'Allow ssh agent',
-                'help': 'Switch to allow or disallow using an SSH agent.',
+                'type': str,
+                'default': 'None',
+                'prompt': 'Local script to run before opening connection (path)',
+                'help': ' (optional) This can be helpful for connection with complex authentication '
+                'methods (e.g. 2FA, etc). The script should be executable',
                 'non_interactive_default': True,
+                'callback': validate_script,
             },
         ),
         (
-            'proxy_jump',
+            'backend',
             {
-                'prompt': 'SSH proxy jump',
-                'help': 'SSH proxy jump for tunneling through other SSH hosts.'
-                ' Use a comma-separated list of hosts of the form [user@]host[:port].'
-                ' If user or port are not specified for a host, the user & port values from the target host are used.'
-                ' This option must be provided explicitly and is not parsed from the SSH config file when left empty.',
+                'type': str,
+                'default': 'asyncssh',
+                'prompt': 'Type of async backend to use, `asyncssh` or `openssh`',
+                'help': '`openssh` uses the `ssh` command line tool to connect to the remote machine,'
+                'e.g. it is useful in case of multiplexing. '
+                'The `asyncssh` backend is the default and is recommended for most use cases.',
                 'non_interactive_default': True,
-            },
-        ),  # Managed 'manually' in connect
-        (
-            'proxy_command',
-            {
-                'prompt': 'SSH proxy command',
-                'help': 'SSH proxy command for tunneling through a proxy server.'
-                ' For tunneling through another SSH host, consider using the "SSH proxy jump" option instead!'
-                ' Leave empty to parse the proxy command from the SSH config file.',
-                'non_interactive_default': True,
-            },
-        ),  # Managed 'manually' in connect
-        (
-            'compress',
-            {
-                'default': True,
-                'switch': True,
-                'prompt': 'Compress file transfers',
-                'help': 'Turn file transfer compression on or off.',
-                'non_interactive_default': True,
+                'callback': validate_backend,
             },
         ),
-        (
-            'gss_auth',
-            {
-                'default': False,
-                'type': bool,
-                'prompt': 'GSS auth',
-                'help': 'Enable when using GSS kerberos token to connect.',
-                'non_interactive_default': True,
-            },
-        ),
-        (
-            'gss_kex',
-            {
-                'default': False,
-                'type': bool,
-                'prompt': 'GSS kex',
-                'help': 'GSS kex for kerberos, if not configured in SSH config file.',
-                'non_interactive_default': True,
-            },
-        ),
-        (
-            'gss_deleg_creds',
-            {
-                'default': False,
-                'type': bool,
-                'prompt': 'GSS deleg_creds',
-                'help': 'GSS deleg_creds for kerberos, if not configured in SSH config file.',
-                'non_interactive_default': True,
-            },
-        ),
-        (
-            'gss_host',
-            {
-                'prompt': 'GSS host',
-                'help': 'GSS host for kerberos, if not configured in SSH config file.',
-                'non_interactive_default': True,
-            },
-        ),
-        # for Kerberos support through python-gssapi
-    ]
-
-    _valid_connect_params = [i[0] for i in _valid_connect_options]
-
-    # Valid parameters for the ssh transport
-    # For each param, a class method with name
-    # _convert_PARAMNAME_fromstring
-    # should be defined, that returns the value converted from a string to
-    # a correct type, or raise a ValidationError
-    #
-    # moreover, if you want to help in the default configuration, you can
-    # define a _get_PARAMNAME_suggestion_string
-    # to return a suggestion; it must accept only one parameter, being a Computer
-    # instance
-    _valid_auth_options = _valid_connect_options + [
-        (
-            'load_system_host_keys',
-            {
-                'default': True,
-                'switch': True,
-                'prompt': 'Load system host keys',
-                'help': 'Load system host keys from default SSH location.',
-                'non_interactive_default': True,
-            },
-        ),
-        (
-            'key_policy',
-            {
-                'default': 'RejectPolicy',
-                'type': click.Choice(['RejectPolicy', 'WarningPolicy', 'AutoAddPolicy']),
-                'prompt': 'Key policy',
-                'help': 'SSH key policy if host is not known.',
-                'non_interactive_default': True,
-            },
-        ),
-    ]
-
-    # Max size of log message to print in _exec_command_internal.
-    # Unlimited by default, but can be cropped by a subclass
-    # if too large commands are sent, clogging the outputs or logs
-    _MAX_EXEC_COMMAND_LOG_SIZE = None
+    ] + _LEGACY_AUTH_OPTIONS
 
     @classmethod
-    def _get_username_suggestion_string(cls, computer):
-        """Return a suggestion for the specific field."""
-        import getpass
-
-        config = parse_sshconfig(computer.hostname)
-        # Either the configured user in the .ssh/config, or the current username
-        return str(config.get('user', getpass.getuser()))
-
-    @classmethod
-    def _get_port_suggestion_string(cls, computer):
-        """Return a suggestion for the specific field."""
-        config = parse_sshconfig(computer.hostname)
-        # Either the configured user in the .ssh/config, or the default SSH port
-        return str(config.get('port', 22))
-
-    @classmethod
-    def _get_key_filename_suggestion_string(cls, computer):
-        """Return a suggestion for the specific field."""
-        config = parse_sshconfig(computer.hostname)
-
-        try:
-            identities = config['identityfile']
-            # In paramiko > 0.10, identity file is a list of strings.
-            if isinstance(identities, str):
-                identity = identities
-            elif isinstance(identities, (list, tuple)):
-                if not identities:
-                    # An empty list should not be provided; to be sure,
-                    # anyway, behave as if no identityfile were defined
-                    raise KeyError
-                # By default we suggest only the first one
-                identity = identities[0]
-            else:
-                # If the parser provides an unknown type, just skip to
-                # the 'except KeyError' section, as if no identityfile
-                # were provided (hopefully, this should never happen)
-                raise KeyError
-        except KeyError:
-            # No IdentityFile defined: return an empty string
-            return ''
-
-        return os.path.expanduser(identity)
-
-    @classmethod
-    def _get_timeout_suggestion_string(cls, computer):
-        """Return a suggestion for the specific field.
-
-        Provide 60s as a default timeout for connections.
+    def _get_host_suggestion_string(cls, computer):
+        """Return a suggestion for the parameter 'host'.
+        Note: the name of this methood is not arbitrary! In order to be picked up during
+        `verdi computer configure` command, it has to be in the following format:
+        `_get_<PARAMETER_NAME>_suggestion_string`
         """
-        config = parse_sshconfig(computer.hostname)
-        return str(config.get('connecttimeout', '60'))
-
-    @classmethod
-    def _get_allow_agent_suggestion_string(cls, computer):
-        """Return a suggestion for the specific field."""
-        config = parse_sshconfig(computer.hostname)
-        return convert_to_bool(str(config.get('allow_agent', 'yes')))
-
-    @classmethod
-    def _get_look_for_keys_suggestion_string(cls, computer):
-        """Return a suggestion for the specific field."""
-        config = parse_sshconfig(computer.hostname)
-        return convert_to_bool(str(config.get('look_for_keys', 'yes')))
-
-    @classmethod
-    def _get_proxy_command_suggestion_string(cls, computer):
-        """Return a suggestion for the specific field."""
-        config = parse_sshconfig(computer.hostname)
-        # Either the configured user in the .ssh/config, or the default SSH port
-        raw_string = str(config.get('proxycommand', ''))
-        # Note: %h and %p get already automatically substituted with
-        # hostname and port by the config parser!
-
-        pieces = raw_string.split()
-        new_pieces = []
-        for piece in pieces:
-            if '>' in piece:
-                # If there is a piece with > to readdress stderr or stdout,
-                # skip from here on (anything else can only be readdressing)
-                break
-
-            new_pieces.append(piece)
-
-        return ' '.join(new_pieces)
-
-    @classmethod
-    def _get_proxy_jump_suggestion_string(cls, _):
-        """Return an empty suggestion since Paramiko does not parse ProxyJump from the SSH config."""
-        return ''
-
-    @classmethod
-    def _get_compress_suggestion_string(cls, computer):
-        """Return a suggestion for the specific field."""
-        return 'True'
-
-    @classmethod
-    def _get_load_system_host_keys_suggestion_string(cls, computer):
-        """Return a suggestion for the specific field."""
-        return 'True'
-
-    @classmethod
-    def _get_key_policy_suggestion_string(cls, computer):
-        """Return a suggestion for the specific field."""
-        return 'RejectPolicy'
-
-    @classmethod
-    def _get_gss_auth_suggestion_string(cls, computer):
-        """Return a suggestion for the specific field."""
-        config = parse_sshconfig(computer.hostname)
-        return convert_to_bool(str(config.get('gssapiauthentication', 'no')))
-
-    @classmethod
-    def _get_gss_kex_suggestion_string(cls, computer):
-        """Return a suggestion for the specific field."""
-        config = parse_sshconfig(computer.hostname)
-        return convert_to_bool(str(config.get('gssapikeyexchange', 'no')))
-
-    @classmethod
-    def _get_gss_deleg_creds_suggestion_string(cls, computer):
-        """Return a suggestion for the specific field."""
-        config = parse_sshconfig(computer.hostname)
-        return convert_to_bool(str(config.get('gssapidelegatecredentials', 'no')))
-
-    @classmethod
-    def _get_gss_host_suggestion_string(cls, computer):
-        """Return a suggestion for the specific field."""
-        config = parse_sshconfig(computer.hostname)
-        return str(config.get('gssapihostname', computer.hostname))
+        # Originally set as 'Hostname' during `verdi computer setup`
+        # and is passed as `machine=computer.hostname` in the codebase
+        # unfortunately, name of hostname and machine are used interchangeably in the aiida-core codebase
+        # TODO: an issue is open: https://github.com/aiidateam/aiida-core/issues/6726
+        return computer.hostname
 
     def __init__(self, *args, **kwargs):
-        """Initialize the SshTransport class.
-
-        :param machine: the machine to connect to
-        :param load_system_host_keys: (optional, default False)
-           if False, do not load the system host keys
-        :param key_policy: (optional, default = paramiko.RejectPolicy())
-           the policy to use for unknown keys
-
-        Other parameters valid for the ssh connect function (see the
-        self._valid_connect_params list) are passed to the connect
-        function (as port, username, password, ...); taken from the
-        accepted paramiko.SSHClient.connect() params.
-        """
-        import paramiko
-
         super().__init__(*args, **kwargs)
+        # the machine is passed as `machine=computer.hostname` in the codebase
+        # 'machine' is immutable.
+        # 'host' is mutable, so it can be changed via command:
+        # 'verdi computer configure core.ssh <LABEL>'.
+        # by default, 'host' is set to 'machine' in the __init__ method, if not provided.
+        # NOTE: to guarantee a connection,
+        # a computer with core.ssh transport plugin should be configured before any instantiation.
+        # 'machine' must always be popped; 'host' may legitimately be an empty string.
+        machine = kwargs.pop('machine')
+        self.machine = kwargs.pop('host', None) or machine
+        self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
+        self._semaphore = asyncio.Semaphore(self._max_io_allowed)
+        self.auth_script = kwargs.pop('authentication_script', 'None')
+        if self.auth_script == 'None':
+            # for backward compatibility
+            self.auth_script = kwargs.pop('script_before', 'None')
 
-        self._sftp = None
-        self._proxy = None
-        self._proxies = []
+        # Legacy connection parameters carried over from a computer migrated from the legacy v2
+        # ``core.ssh`` (paramiko) plugin. A non-empty dict (even with only empty values) marks a
+        # migrated computer; ``None`` marks a native one.
+        self._legacy_params = {k: kwargs.pop(k) for k in _LEGACY_OPTION_NAMES if k in kwargs} or None
 
-        self._machine = kwargs.pop('machine')
+        if self._legacy_params and self._legacy_params.get('proxy_jump') and self._legacy_params.get('proxy_command'):
+            msg = '`proxy_jump` and `proxy_command` are mutually exclusive, please provide only one.'
+            raise ValueError(msg)
 
-        self._client = paramiko.SSHClient()
-        self._load_system_host_keys = kwargs.pop('load_system_host_keys', False)
-        if self._load_system_host_keys:
-            self._client.load_system_host_keys()
+        backend = kwargs.get('backend')
+        if self._legacy_params and backend == 'openssh':
+            # The `openssh` backend drives the `ssh`/`scp` clients, which cannot be given these
+            # settings, so a migrated computer always uses `asyncssh`.
+            self.logger.warning(
+                'The `openssh` backend cannot honor the connection parameters migrated from '
+                'the legacy `core.ssh` (paramiko) plugin; using the `asyncssh` backend for this computer instead.'
+            )
+            backend = 'asyncssh'
 
-        self._missing_key_policy = kwargs.pop('key_policy', 'RejectPolicy')  # This is paramiko default
-        if self._missing_key_policy == 'RejectPolicy':
-            self._client.set_missing_host_key_policy(paramiko.RejectPolicy())
-        elif self._missing_key_policy == 'WarningPolicy':
-            self._client.set_missing_host_key_policy(paramiko.WarningPolicy())
-        elif self._missing_key_policy == 'AutoAddPolicy':
-            self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        if backend == 'openssh':
+            from .async_backend import _OpenSSH
+
+            self.async_backend = _OpenSSH(self.machine, self.logger, self._bash_command_str)
         else:
-            raise ValueError(
-                'Unknown value of the key policy, allowed values ' 'are: RejectPolicy, WarningPolicy, AutoAddPolicy'
+            # default backend is asyncssh
+            from .async_backend import _AsyncSSH
+
+            self.async_backend = _AsyncSSH(  # type: ignore[assignment]
+                self.machine, self.logger, self._bash_command_str, self._legacy_params
             )
 
-        self._connect_args = {}
-        for k in self._valid_connect_params:
-            try:
-                self._connect_args[k] = kwargs.pop(k)
-            except KeyError:
-                pass
+    @property
+    def max_io_allowed(self):
+        return self._max_io_allowed
 
-    def open(self):
-        """Open a SSHClient to the machine possibly using the parameters given
-        in the __init__.
+    async def open_async(self):
+        """Open the transport.
+        This plugin supports running scripts before and during the connection.
+        The scripts are run locally, not on the remote machine.
 
-        Also opens a sftp channel, ready to be used.
-        The current working directory is set explicitly, so it is not None.
-
-        :raise aiida.common.InvalidOperation: if the channel is already open
+        :raises InvalidOperation: if the transport is already open
         """
-        import paramiko
-        from paramiko.ssh_exception import SSHException
-
-        from aiida.common.exceptions import InvalidOperation
-        from aiida.transports.util import _DetachedProxyCommand
-
         if self._is_open:
+            # That means the transport is already open, while it should not
             raise InvalidOperation('Cannot open the transport twice')
-        # Open a SSHClient
-        connection_arguments = self._connect_args.copy()
-        if 'key_filename' in connection_arguments and not connection_arguments['key_filename']:
-            connection_arguments.pop('key_filename')
 
-        proxyjumpstring = connection_arguments.pop('proxy_jump', None)
-        proxycmdstring = connection_arguments.pop('proxy_command', None)
-
-        if proxyjumpstring and proxycmdstring:
-            raise ValueError('The SSH proxy jump and SSH proxy command options can not be used together')
-
-        if proxyjumpstring:
-            matcher = re.compile(r'^(?:(?P<username>[^@]+)@)?(?P<host>[^@:]+)(?::(?P<port>\d+))?\s*$')
-            try:
-                # don't use a generator here to have everything evaluated
-                proxies = [matcher.match(s).groupdict() for s in proxyjumpstring.split(',')]
-            except AttributeError:
-                raise ValueError('The given configuration for the SSH proxy jump option could not be parsed')
-
-            # proxy_jump supports a list of jump hosts, each jump host is another Paramiko SSH connection
-            # but when opening a forward channel on a connection, we have to give the next hop.
-            # So we go through adjacent pairs and by adding the final target to the list we make it universal.
-            for proxy, target in zip(
-                proxies,
-                proxies[1:]
-                + [
-                    {
-                        'host': self._machine,
-                        'port': connection_arguments.get('port', 22),
-                    }
-                ],
-            ):
-                proxy_connargs = connection_arguments.copy()
-
-                if proxy['username']:
-                    proxy_connargs['username'] = proxy['username']
-                if proxy['port']:
-                    proxy_connargs['port'] = int(proxy['port'])
-                if not target['port']:  # the target port for the channel can not be None
-                    target['port'] = connection_arguments.get('port', 22)
-
-                proxy_client = paramiko.SSHClient()
-                if self._load_system_host_keys:
-                    proxy_client.load_system_host_keys()
-                if self._missing_key_policy == 'RejectPolicy':
-                    proxy_client.set_missing_host_key_policy(paramiko.RejectPolicy())
-                elif self._missing_key_policy == 'WarningPolicy':
-                    proxy_client.set_missing_host_key_policy(paramiko.WarningPolicy())
-                elif self._missing_key_policy == 'AutoAddPolicy':
-                    proxy_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-                try:
-                    proxy_client.connect(proxy['host'], **proxy_connargs)
-                except Exception as exc:
-                    self.logger.error(
-                        f"Error connecting to proxy '{proxy['host']}' through SSH: [{self.__class__.__name__}] {exc}, "
-                        f'connect_args were: {proxy_connargs}'
-                    )
-                    self._close_proxies()  # close all since we're going to start anew on the next open() (if any)
-                    raise
-                connection_arguments['sock'] = proxy_client.get_transport().open_channel(
-                    'direct-tcpip', (target['host'], target['port']), ('', 0)
+        if self.auth_script != 'None':
+            result = subprocess.run(self.auth_script, shell=True, capture_output=True, text=True, check=False)
+            if result.returncode != 0:
+                self.async_backend.logger.error(
+                    f'Authentication script {self.auth_script} failed with exit code {result.returncode}\n'
+                    f'stdout: {result.stdout}\n'
+                    f'stderr: {result.stderr}'
                 )
-                self._proxies.append(proxy_client)
-
-        if proxycmdstring:
-            self._proxy = _DetachedProxyCommand(proxycmdstring)
-            connection_arguments['sock'] = self._proxy
+                raise OSError(f'Authentication script {self.auth_script} failed with exit code {result.returncode}')
+            self.async_backend.logger.info(f'Authentication script {self.auth_script} executed successfully\n')
 
         try:
-            self._client.connect(self._machine, **connection_arguments)
-        except Exception as exc:
-            self.logger.error(
-                f"Error connecting to '{self._machine}' through SSH: "
-                + f'[{self.__class__.__name__}] {exc}, '
-                + f'connect_args were: {self._connect_args}'
-            )
-            self._close_proxies()
-            raise
-
-        # Open the SFTP channel, and handle error by directing customer to try another transport
-        try:
-            self._sftp = self._client.open_sftp()
-        except SSHException:
-            self._close_proxies()
-            raise InvalidOperation(
-                'Error in ssh transport plugin. This may be due to the remote computer not supporting SFTP. '
-                'Try setting it up with the core.ssh_async transport plugin with openssh backend, instead.'
-            )
+            await self.async_backend.open()
+        except OSError as exc:
+            raise OSError(f'Error while opening the transport: {exc}')
 
         self._is_open = True
 
-        # Set the current directory to a explicit path, and not to None
-        self._sftp.chdir(self._sftp.normalize('.'))
-
         return self
 
-    def _close_proxies(self):
-        """Close all proxy connections (proxy_jump and proxy_command)"""
-        # Paramiko only closes the channel when closing the main connection, but not the connection itself.
-        while self._proxies:
-            self._proxies.pop().close()
+    async def close_async(self):
+        """Close the transport.
 
-        if self._proxy:
-            # Paramiko should close this automatically when closing the channel,
-            # but since the process is started in __init__this might not happen correctly.
-            self._proxy.close()
-            self._proxy = None
-
-    def close(self):
-        """Close the SFTP channel, and the SSHClient.
-
-        :todo: correctly manage exceptions
-
-        :raise aiida.common.InvalidOperation: if the channel is already open
+        :raises InvalidOperation: if the transport is already closed
         """
-        from aiida.common.exceptions import InvalidOperation
-
         if not self._is_open:
             raise InvalidOperation('Cannot close the transport: it is already closed')
 
-        self._sftp.close()
-        self._client.close()
-        self._close_proxies()
+        try:
+            await self.async_backend.close()
+        except Exception as exc:
+            raise OSError(f'Error while closing the transport: {exc}')
 
         self._is_open = False
 
-    @property
-    def sshclient(self):
-        if not self._is_open:
-            raise TransportInternalError('Error, ssh method called for SshTransport without opening the channel first')
-        return self._client
-
-    @property
-    def sftp(self):
-        if not self._is_open:
-            raise TransportInternalError('Error, sftp method called for SshTransport without opening the channel first')
-        return self._sftp
-
     def __str__(self):
-        """Return a useful string."""
-        conn_info = self._machine
-        try:
-            conn_info = f"{self._connect_args['username']}@{conn_info}"
-        except KeyError:
-            # No username explicitly defined: ignore
-            pass
-        try:
-            conn_info += f":{self._connect_args['port']}"
-        except KeyError:
-            # No port explicitly defined: ignore
-            pass
+        return f"{'OPEN' if self._is_open else 'CLOSED'} [AsyncSshTransport]"
 
-        return f"{'OPEN' if self._is_open else 'CLOSED'} [{conn_info}]"
-
-    def chdir(self, path: TransportPath):
-        """
-        PLEASE DON'T USE `chdir()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
-        `chdir()` is DEPRECATED and will be removed in the next major version.
-
-        Change directory of the SFTP session. Emulated internally by paramiko.
-
-        Differently from paramiko, if you pass None to chdir, nothing
-        happens and the cwd is unchanged.
-        """
-        warn_deprecation(
-            '`chdir()` is deprecated and will be removed in the next major version. Use absolute paths instead.',
-            version=3,
-        )
-        from paramiko.sftp import SFTPError
-
-        path = str(path)
-        old_path = self.sftp.getcwd()
-        if path is not None:
-            try:
-                self.sftp.chdir(path)
-            except SFTPError as exc:
-                # e.args[0] is an error code. For instance,
-                # 20 is 'the object is not a directory'
-                # Here I just re-raise the message as OSError
-                raise OSError(exc.args[1])
-
-        # Paramiko already checked that path is a folder, otherwise I would
-        # have gotten an exception. Now, I want to check that I have read
-        # permissions in this folder (nothing is said on write permissions,
-        # though).
-        # Otherwise, if I do _exec_command_internal, that as a first operation
-        # cd's in a folder, I get a wrong retval, that is an unwanted behavior.
-        #
-        # Note: I don't store the result of the function; if I have no
-        # read permissions, this will raise an exception.
-        try:
-            self.stat('.')
-        except OSError as exc:
-            if 'Permission denied' in str(exc):
-                self.chdir(old_path)
-            raise OSError(str(exc))
-
-    def normalize(self, path: TransportPath = '.'):
-        """Returns the normalized path (removing double slashes, etc...)"""
-        path = str(path)
-
-        return self.sftp.normalize(path)
-
-    def stat(self, path: TransportPath):
-        """Retrieve information about a file on the remote system.  The return
-        value is an object whose attributes correspond to the attributes of
-        Python's ``stat`` structure as returned by ``os.stat``, except that it
-        contains fewer fields.
-        The fields supported are: ``st_mode``, ``st_size``, ``st_uid``,
-        ``st_gid``, ``st_atime``, and ``st_mtime``.
-
-        :param str path: the filename to stat
-
-        :return: a `paramiko.sftp_attr.SFTPAttributes` object containing
-            attributes about the given file.
-        """
-        path = str(path)
-
-        return self.sftp.stat(path)
-
-    def lstat(self, path: TransportPath):
-        """Retrieve information about a file on the remote system, without
-        following symbolic links (shortcuts). This otherwise behaves exactly
-        the same as `stat`.
-
-        :param str path: the filename to stat
-
-        :return: a `paramiko.sftp_attr.SFTPAttributes` object containing
-            attributes about the given file.
-        """
-        path = str(path)
-
-        return self.sftp.lstat(path)
-
-    def getcwd(self):
-        """
-        PLEASE DON'T USE `getcwd()` IN NEW DEVELOPMENTS, INSTEAD DIRECTLY PASS ABSOLUTE PATHS TO INTERFACE.
-        `getcwd()` is DEPRECATED and will be removed in the next major version.
-
-        Return the current working directory for this SFTP session, as
-        emulated by paramiko. If no directory has been set with chdir,
-        this method will return None. But in __enter__ this is set explicitly,
-        so this should never happen within this class.
-        """
-        return self.sftp.getcwd()
-
-    def makedirs(self, path: TransportPath, ignore_existing: bool = False):
-        """Super-mkdir; create a leaf directory and all intermediate ones.
-        Works like mkdir, except that any intermediate path segment (not
-        just the rightmost) will be created if it does not exist.
-
-        NOTE: since os.path.split uses the separators as the host system
-        (that could be windows), I assume the remote computer is Linux-based
-        and use '/' as separators!
-
-        :param path: directory to create (string)
-        :param ignore_existing: if set to true, it doesn't give any error
-            if the leaf directory does already exist (bool)
-
-        :raise OSError: If the directory already exists.
-        """
-        path = str(path)
-
-        # check to avoid creation of empty dirs
-        path = os.path.normpath(path)
-
-        if path.startswith('/'):
-            to_create = path.strip().split('/')[1:]
-            this_dir = '/'
-        else:
-            to_create = path.strip().split('/')
-            this_dir = ''
-
-        for count, element in enumerate(to_create):
-            if count > 0:
-                this_dir += '/'
-            this_dir += element
-            if count + 1 == len(to_create) and self.isdir(this_dir) and ignore_existing:
-                return
-            if count + 1 == len(to_create) and self.isdir(this_dir) and not ignore_existing:
-                self.mkdir(this_dir)
-            if not self.isdir(this_dir):
-                self.mkdir(this_dir)
-
-    def mkdir(self, path: TransportPath, ignore_existing: bool = False):
-        """Create a folder (directory) named path.
-
-        :param path: name of the folder to create
-        :param ignore_existing: if True, does not give any error if the directory
-                  already exists
-
-        :raise OSError: If the directory already exists.
-        """
-        path = str(path)
-
-        if ignore_existing and self.isdir(path):
-            return
-
-        try:
-            self.sftp.mkdir(path)
-        except OSError as exc:
-            if os.path.isabs(path):
-                raise OSError(
-                    "Error during mkdir of '{}', "
-                    "maybe you don't have the permissions to do it, "
-                    'or the directory already exists? ({})'.format(path, exc)
-                )
-            else:
-                raise OSError(
-                    "Error during mkdir of '{}' from folder '{}', "
-                    "maybe you don't have the permissions to do it, "
-                    'or the directory already exists? ({})'.format(path, self.getcwd(), exc)
-                )
-
-    def rmtree(self, path: TransportPath):
-        """Remove a file or a directory at path, recursively
-        Flags used: -r: recursive copy; -f: force, makes the command non interactive;
-
-        :param path: remote path to delete
-
-        :raise OSError: if the rm execution failed.
-        """
-        path = str(path)
-        # Assuming linux rm command!
-
-        rm_exe = 'rm'
-        rm_flags = '-r -f'
-        # if in input I give an invalid object raise ValueError
-        if not path:
-            raise ValueError('Input to rmtree() must be a non empty string. ' + f'Found instead {path} as path')
-
-        command = f'{rm_exe} {rm_flags} {escape_for_bash(path)}'
-
-        retval, stdout, stderr = self.exec_command_wait_bytes(command)
-
-        if retval == 0:
-            if stderr.strip():
-                self.logger.warning(f'There was nonempty stderr in the rm command: {stderr}')
-            return True
-        self.logger.error(f"Problem executing rm. Exit code: {retval}, stdout: '{stdout}', stderr: '{stderr}'")
-        raise OSError(f'Error while executing rm. Exit code: {retval}')
-
-    def rmdir(self, path: TransportPath):
-        """Remove the folder named 'path' if empty."""
-        path = str(path)
-        self.sftp.rmdir(path)
-
-    def isdir(self, path: TransportPath):
-        """Return True if the given path is a directory, False otherwise.
-        Return False also if the path does not exist.
-        """
-        # Return False on empty string (paramiko would map this to the local
-        # folder instead)
-        path = str(path)
-
-        if not path:
-            return False
-        path = str(path)
-        try:
-            return S_ISDIR(self.stat(path).st_mode)
-        except OSError as exc:
-            if getattr(exc, 'errno', None) == 2:
-                # errno=2 means path does not exist: I return False
-                return False
-            raise  # Typically if I don't have permissions (errno=13)
-
-    def chmod(self, path: TransportPath, mode):
-        """Change permissions of a path.
-
-        :param path: Path to the file or directory.
-        :param mode: New permissions as an integer, for example 0o700 (octal) or 448 (decimal) results in `-rwx------`
-            for a file.
-        """
-        path = str(path)
-
-        if not path:
-            raise OSError('Input path is an empty argument.')
-        return self.sftp.chmod(path, mode)
-
-    @staticmethod
-    def _os_path_split_asunder(path: TransportPath):
-        """Used by makedirs. Takes path
-        and returns a list deconcatenating the path
-        """
-        path = str(path)
-        parts = []
-        while True:
-            newpath, tail = os.path.split(path)
-            if newpath == path:
-                assert not tail
-                if path:
-                    parts.append(path)
-                break
-            parts.append(tail)
-            path = newpath
-        parts.reverse()
-        return parts
-
-    def put(
-        self,
-        localpath: TransportPath,
-        remotepath: TransportPath,
-        callback=None,
-        dereference: bool = True,
-        overwrite: bool = True,
-        ignore_nonexisting: bool = False,
-    ):
-        """Put a file or a folder from local to remote.
-        Redirects to putfile or puttree.
-
-        :param localpath: an (absolute) local path
-        :param remotepath: a remote path
-        :param dereference: follow symbolic links (boolean).
-            Default = True (default behaviour in paramiko). False is not implemented.
-        :param  overwrite: if True overwrites files and folders (boolean).
-            Default = False.
-
-        :raise ValueError: if local path is invalid
-        :raise OSError: if the localpath does not exist
-        """
-        localpath = str(localpath)
-        remotepath = str(remotepath)
-
-        if not dereference:
-            raise NotImplementedError
-
-        if not os.path.isabs(localpath):
-            raise ValueError('The localpath must be an absolute path')
-
-        if has_magic(localpath):
-            if has_magic(remotepath):
-                raise ValueError('Pathname patterns are not allowed in the destination')
-
-            # use the imported glob to analyze the path locally
-            to_copy_list = glob.glob(localpath)
-
-            rename_remote = False
-            if len(to_copy_list) > 1:
-                # I can't scp more than one file on a single file
-                if self.isfile(remotepath):
-                    raise OSError('Remote destination is not a directory')
-                # I can't scp more than one file in a non existing directory
-                elif not self.path_exists(remotepath):  # questo dovrebbe valere solo per file
-                    raise OSError('Remote directory does not exist')
-                else:  # the remote path is a directory
-                    rename_remote = True
-
-            for file in to_copy_list:
-                if os.path.isfile(file):
-                    if rename_remote:  # copying more than one file in one directory
-                        # here is the case isfile and more than one file
-                        remotefile = os.path.join(remotepath, os.path.split(file)[1])
-                        self.putfile(file, remotefile, callback, dereference, overwrite)
-
-                    elif self.isdir(remotepath):  # one file to copy in '.'
-                        remotefile = os.path.join(remotepath, os.path.split(file)[1])
-                        self.putfile(file, remotefile, callback, dereference, overwrite)
-                    else:  # one file to copy on one file
-                        self.putfile(file, remotepath, callback, dereference, overwrite)
-                else:
-                    self.puttree(file, remotepath, callback, dereference, overwrite)
-
-        elif os.path.isdir(localpath):
-            self.puttree(localpath, remotepath, callback, dereference, overwrite)
-        elif os.path.isfile(localpath):
-            if self.isdir(remotepath):
-                remote = os.path.join(remotepath, os.path.split(localpath)[1])
-                self.putfile(localpath, remote, callback, dereference, overwrite)
-            else:
-                self.putfile(localpath, remotepath, callback, dereference, overwrite)
-        elif not ignore_nonexisting:
-            raise OSError(f'The local path {localpath} does not exist')
-
-    def putfile(
-        self,
-        localpath: TransportPath,
-        remotepath: TransportPath,
-        callback=None,
-        dereference: bool = True,
-        overwrite: bool = True,
-    ):
-        """Put a file from local to remote.
-
-        :param localpath: an (absolute) local path
-        :param remotepath: a remote path
-        :param overwrite: if True overwrites files and folders (boolean).
-            Default = True.
-
-        :raise ValueError: if local path is invalid
-        :raise OSError: if the localpath does not exist,
-                    or unintentionally overwriting
-        """
-        localpath = str(localpath)
-        remotepath = str(remotepath)
-
-        if not dereference:
-            raise NotImplementedError
-
-        if not os.path.isabs(localpath):
-            raise ValueError('The localpath must be an absolute path')
-
-        if self.isfile(remotepath) and not overwrite:
-            raise OSError('Destination already exists: not overwriting it')
-
-        return self.sftp.put(localpath, remotepath, callback=callback)
-
-    def puttree(
-        self,
-        localpath: TransportPath,
-        remotepath: TransportPath,
-        callback=None,
-        dereference: bool = True,
-        overwrite: bool = True,
-    ):
-        """Put a folder recursively from local to remote.
-
-        By default, overwrite.
-
-        :param localpath: an (absolute) local path
-        :param remotepath: a remote path
-        :param dereference: follow symbolic links (boolean)
-            Default = True (default behaviour in paramiko). False is not implemented.
-        :param overwrite: if True overwrites files and folders (boolean).
-            Default = True
-
-        :raise ValueError: if local path is invalid
-        :raise OSError: if the localpath does not exist, or trying to overwrite
-        :raise OSError: if remotepath is invalid
-
-        .. note:: setting dereference equal to True could cause infinite loops.
-              see os.walk() documentation
-        """
-        localpath = str(localpath)
-        remotepath = str(remotepath)
-
-        if not dereference:
-            raise NotImplementedError
-
-        if not os.path.isabs(localpath):
-            raise ValueError('The localpath must be an absolute path')
-
-        if not os.path.exists(localpath):
-            raise OSError('The localpath does not exists')
-
-        if not os.path.isdir(localpath):
-            raise ValueError(f'Input localpath is not a folder: {localpath}')
-
-        if not remotepath:
-            raise OSError('remotepath must be a non empty string')
-
-        if self.path_exists(remotepath) and not overwrite:
-            raise OSError("Can't overwrite existing files")
-        if self.isfile(remotepath):
-            raise OSError('Cannot copy a directory into a file')
-
-        if not self.isdir(remotepath):  # in this case copy things in the remotepath directly
-            self.makedirs(remotepath)  # and make a directory at its place
-        else:  # remotepath exists already: copy the folder inside of it!
-            remotepath = os.path.join(remotepath, os.path.split(localpath)[1])
-            self.makedirs(remotepath, ignore_existing=overwrite)  # create a nested folder
-
-        for this_source in os.walk(localpath):
-            # Get the relative path
-            this_basename = os.path.relpath(path=this_source[0], start=localpath)
-
-            try:
-                self.stat(os.path.join(remotepath, this_basename))
-            except OSError as exc:
-                import errno
-
-                if exc.errno == errno.ENOENT:  # Missing file
-                    self.mkdir(os.path.join(remotepath, this_basename))
-                else:
-                    raise
-
-            for this_file in this_source[2]:
-                this_local_file = os.path.join(localpath, this_basename, this_file)
-                this_remote_file = os.path.join(remotepath, this_basename, this_file)
-                self.putfile(this_local_file, this_remote_file)
-
-    def get(
+    async def get_async(
         self,
         remotepath: TransportPath,
         localpath: TransportPath,
-        callback=None,
-        dereference: bool = True,
-        overwrite: bool = True,
-        ignore_nonexisting: bool = False,
+        dereference=True,
+        overwrite=True,
+        ignore_nonexisting=False,
+        preserve=False,
+        *args,
+        **kwargs,
     ):
         """Get a file or folder from remote to local.
         Redirects to getfile or gettree.
 
-        :param remotepath: a remote path
-        :param localpath: an (absolute) local path
+        :param remotepath: an absolute remote path
+        :param localpath: an absolute local path
         :param dereference: follow symbolic links.
-            Default = True (default behaviour in paramiko).
-            False is not implemented.
+            Default = True
         :param overwrite: if True overwrites files and folders.
             Default = False
+        :param ignore_nonexisting: if True, does not raise an error if the remotepath does not exist
+            Default = False
+        :param preserve: preserve file attributes
+            Default = False
+
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type dereference: bool
+        :type overwrite: bool
+        :type ignore_nonexisting: bool
+        :type preserve: bool
 
         :raise ValueError: if local path is invalid
         :raise OSError: if the remotepath is not found
         """
         remotepath = str(remotepath)
         localpath = str(localpath)
-
-        if not dereference:
-            raise NotImplementedError
 
         if not os.path.isabs(localpath):
             raise ValueError('The localpath must be an absolute path')
@@ -1045,7 +458,7 @@ class SshTransport(BlockingTransport):
             if has_magic(localpath):
                 raise ValueError('Pathname patterns are not allowed in the destination')
             # use the self glob to analyze the path remotely
-            to_copy_list = self.glob(remotepath)
+            to_copy_list = await self.glob_async(remotepath)
 
             rename_local = False
             if len(to_copy_list) > 1:
@@ -1059,43 +472,55 @@ class SshTransport(BlockingTransport):
                     rename_local = True
 
             for file in to_copy_list:
-                if self.isfile(file):
+                if await self.isfile_async(file):
                     if rename_local:  # copying more than one file in one directory
                         # here is the case isfile and more than one file
                         remote = os.path.join(localpath, os.path.split(file)[1])
-                        self.getfile(file, remote, callback, dereference, overwrite)
+                        await self.getfile_async(file, remote, dereference, overwrite, preserve)
                     else:  # one file to copy on one file
-                        self.getfile(file, localpath, callback, dereference, overwrite)
+                        await self.getfile_async(file, localpath, dereference, overwrite, preserve)
                 else:
-                    self.gettree(file, localpath, callback, dereference, overwrite)
+                    await self.gettree_async(file, localpath, dereference, overwrite, preserve)
 
-        elif self.isdir(remotepath):
-            self.gettree(remotepath, localpath, callback, dereference, overwrite)
-        elif self.isfile(remotepath):
+        elif await self.isdir_async(remotepath):
+            await self.gettree_async(remotepath, localpath, dereference, overwrite, preserve)
+        elif await self.isfile_async(remotepath):
             if os.path.isdir(localpath):
                 remote = os.path.join(localpath, os.path.split(remotepath)[1])
-                self.getfile(remotepath, remote, callback, dereference, overwrite)
+                await self.getfile_async(remotepath, remote, dereference, overwrite, preserve)
             else:
-                self.getfile(remotepath, localpath, callback, dereference, overwrite)
+                await self.getfile_async(remotepath, localpath, dereference, overwrite, preserve)
         elif ignore_nonexisting:
             pass
         else:
             raise OSError(f'The remote path {remotepath} does not exist')
 
-    def getfile(
+    async def getfile_async(
         self,
         remotepath: TransportPath,
         localpath: TransportPath,
-        callback=None,
-        dereference: bool = True,
-        overwrite: bool = True,
+        dereference=True,
+        overwrite=True,
+        preserve=False,
+        *args,
+        **kwargs,
     ):
         """Get a file from remote to local.
 
-        :param remotepath: a remote path
-        :param  localpath: an (absolute) local path
-        :param  overwrite: if True overwrites files and folders.
-                Default = False
+        :param remotepath: an absolute remote path
+        :param localpath: an absolute local path
+        :param overwrite: if True overwrites files and folders.
+            Default = False
+        :param dereference: follow symbolic links.
+            Default = True
+        :param preserve: preserve file attributes
+            Default = False
+
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type dereference: bool
+        :type overwrite: bool
+        :type preserve: bool
 
         :raise ValueError: if local path is invalid
         :raise OSError: if unintentionally overwriting
@@ -1109,36 +534,44 @@ class SshTransport(BlockingTransport):
         if os.path.isfile(localpath) and not overwrite:
             raise OSError('Destination already exists: not overwriting it')
 
-        if not dereference:
-            raise NotImplementedError
-
-        # Workaround for bug #724 in paramiko -- remove localpath on OSError
-        try:
-            return self.sftp.get(remotepath, localpath, callback)
-        except OSError:
+        async with self._semaphore:
             try:
-                os.remove(localpath)
-            except OSError:
-                pass
-            raise
+                await self.async_backend.get(
+                    remotepath=remotepath,
+                    localpath=localpath,
+                    dereference=dereference,
+                    preserve=preserve,
+                    recursive=False,
+                )
+            except OSError as exc:
+                raise OSError(f'Error while downloading file {remotepath}: {exc}')
 
-    def gettree(
+    async def gettree_async(
         self,
         remotepath: TransportPath,
         localpath: TransportPath,
-        callback=None,
-        dereference: bool = True,
-        overwrite: bool = True,
+        dereference=True,
+        overwrite=True,
+        preserve=False,
+        *args,
+        **kwargs,
     ):
         """Get a folder recursively from remote to local.
 
-        :param remotepath: a remote path
-        :param localpath: an (absolute) local path
+        :param remotepath: an absolute remote path
+        :param localpath: an absolute local path
         :param dereference: follow symbolic links.
-            Default = True (default behaviour in paramiko).
-            False is not implemented.
+            Default = True
         :param  overwrite: if True overwrites files and folders.
             Default = True
+        :param preserve: preserve file attributes
+            Default = False
+
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type dereference: bool
+        :type overwrite: bool
+        :type preserve: bool
 
         :raise ValueError: if local path is invalid
         :raise OSError: if the remotepath is not found
@@ -1146,8 +579,6 @@ class SshTransport(BlockingTransport):
         """
         remotepath = str(remotepath)
         localpath = str(localpath)
-        if not dereference:
-            raise NotImplementedError
 
         if not remotepath:
             raise OSError('Remotepath must be a non empty string')
@@ -1157,7 +588,7 @@ class SshTransport(BlockingTransport):
         if not os.path.isabs(localpath):
             raise ValueError('Localpaths must be an absolute path')
 
-        if not self.isdir(remotepath):
+        if not await self.isdir_async(remotepath):
             raise OSError(f'Input remotepath is not a folder: {localpath}')
 
         if os.path.exists(localpath) and not overwrite:
@@ -1171,464 +602,914 @@ class SshTransport(BlockingTransport):
             localpath = os.path.join(localpath, os.path.split(remotepath)[1])
             os.makedirs(localpath, exist_ok=overwrite)  # create a nested folder
 
-        item_list = self.listdir(remotepath)
-        dest = str(localpath)
+        content_list = await self.listdir_async(remotepath)
+        for content_ in content_list:
+            parentpath = str(PurePath(remotepath) / content_)
+            async with self._semaphore:
+                try:
+                    await self.async_backend.get(
+                        remotepath=parentpath,
+                        localpath=localpath,
+                        dereference=dereference,
+                        preserve=preserve,
+                        recursive=True,
+                    )
+                except OSError as exc:
+                    raise OSError(f'Error while downloading file {parentpath}: {exc}')
 
-        for item in item_list:
-            item = str(item)  # noqa: PLW2901
+    async def put_async(
+        self,
+        localpath: TransportPath,
+        remotepath: TransportPath,
+        dereference=True,
+        overwrite=True,
+        ignore_nonexisting=False,
+        preserve=False,
+        *args,
+        **kwargs,
+    ):
+        """Put a file or a folder from local to remote.
+        Redirects to putfile or puttree.
 
-            if self.isdir(os.path.join(remotepath, item)):
-                self.gettree(os.path.join(remotepath, item), os.path.join(dest, item))
-            else:
-                self.getfile(os.path.join(remotepath, item), os.path.join(dest, item))
+        :param remotepath: an absolute remote path
+        :param localpath: an absolute local path
+        :param dereference: follow symbolic links
+            Default = True
+        :param  overwrite: if True overwrites files and folders
+            Default = False
+        :param ignore_nonexisting: if True, does not raise an error if the localpath does not exist
+            Default = False
+        :param preserve: preserve file attributes
+            Default = False
 
-    def get_attribute(self, path: TransportPath):
-        """Returns the object Fileattribute, specified in aiida.transports
-        Receives in input the path of a given file.
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type dereference: bool
+        :type overwrite: bool
+        :type ignore_nonexisting: bool
+        :type preserve: bool
+
+        :raise ValueError: if local path is invalid
+        :raise OSError: if the localpath does not exist
         """
-        path = str(path)
-        from aiida.transports.util import FileAttribute
+        localpath = str(localpath)
+        remotepath = str(remotepath)
 
-        paramiko_attr = self.lstat(path)
-        aiida_attr = FileAttribute()
-        # map the paramiko class into the aiida one
-        # note that paramiko object contains more informations than the aiida
-        for key in aiida_attr._valid_fields:
-            aiida_attr[key] = getattr(paramiko_attr, key)
-        return aiida_attr
+        if not os.path.isabs(localpath):
+            raise ValueError('The localpath must be an absolute path')
 
-    def copyfile(self, remotesource: TransportPath, remotedestination: TransportPath, dereference: bool = False):
-        remotesource = str(remotesource)
-        remotedestination = str(remotedestination)
+        if not os.path.isabs(remotepath):
+            # Historically remotepath could be a relative path, but it is not supported anymore.
+            raise OSError('The remotepath must be an absolute path')
 
-        return self.copy(remotesource, remotedestination, dereference)
+        if has_magic(localpath):
+            if has_magic(remotepath):
+                raise ValueError('Pathname patterns are not allowed in the destination')
 
-    def copytree(self, remotesource: TransportPath, remotedestination: TransportPath, dereference: bool = False):
-        remotesource = str(remotesource)
-        remotedestination = str(remotedestination)
+            # use the imported glob to analyze the path locally
+            to_copy_list = glob.glob(localpath)
 
-        return self.copy(remotesource, remotedestination, dereference, recursive=True)
+            rename_remote = False
+            if len(to_copy_list) > 1:
+                # I can't scp more than one file on a single file
+                if await self.isfile_async(remotepath):
+                    raise OSError('Remote destination is not a directory')
+                # I can't scp more than one file in a non existing directory
+                elif not await self.path_exists_async(remotepath):
+                    raise OSError('Remote directory does not exist')
+                else:  # the remote path is a directory
+                    rename_remote = True
 
-    def copy(
+            for file in to_copy_list:
+                if os.path.isfile(file):
+                    if rename_remote:  # copying more than one file in one directory
+                        # here is the case isfile and more than one file
+                        remotefile = os.path.join(remotepath, os.path.split(file)[1])
+                        await self.putfile_async(file, remotefile, dereference, overwrite, preserve)
+
+                    elif await self.isdir_async(remotepath):  # one file to copy in '.'
+                        remotefile = os.path.join(remotepath, os.path.split(file)[1])
+                        await self.putfile_async(file, remotefile, dereference, overwrite, preserve)
+                    else:  # one file to copy on one file
+                        await self.putfile_async(file, remotepath, dereference, overwrite, preserve)
+                else:
+                    await self.puttree_async(file, remotepath, dereference, overwrite, preserve)
+
+        elif os.path.isdir(localpath):
+            await self.puttree_async(localpath, remotepath, dereference, overwrite, preserve)
+        elif os.path.isfile(localpath):
+            if await self.isdir_async(remotepath):
+                remote = os.path.join(remotepath, os.path.split(localpath)[1])
+                await self.putfile_async(localpath, remote, dereference, overwrite, preserve)
+            else:
+                await self.putfile_async(localpath, remotepath, dereference, overwrite, preserve)
+        elif not ignore_nonexisting:
+            raise OSError(f'The local path {localpath} does not exist')
+
+    async def putfile_async(
+        self,
+        localpath: TransportPath,
+        remotepath: TransportPath,
+        dereference=True,
+        overwrite=True,
+        preserve=False,
+        *args,
+        **kwargs,
+    ):
+        """Put a file from local to remote.
+
+        :param remotepath: an absolute remote path
+        :param localpath: an absolute local path
+        :param overwrite: if True overwrites files and folders
+            Default = True
+        :param preserve: preserve file attributes
+            Default = False
+
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type dereference: bool
+        :type overwrite: bool
+        :type preserve: bool
+
+        :raise ValueError: if local path is invalid
+        :raise OSError: if the localpath does not exist,
+                    or unintentionally overwriting
+        """
+        localpath = str(localpath)
+        remotepath = str(remotepath)
+
+        if not os.path.isabs(localpath):
+            raise ValueError('The localpath must be an absolute path')
+
+        if not os.path.isabs(remotepath):
+            # Historically remotepath could be a relative path, but it is not supported anymore.
+            raise OSError('The remotepath must be an absolute path')
+
+        if await self.isfile_async(remotepath) and not overwrite:
+            raise OSError('Destination already exists: not overwriting it')
+
+        async with self._semaphore:
+            try:
+                await self.async_backend.put(
+                    localpath=localpath,
+                    remotepath=remotepath,
+                    dereference=dereference,
+                    preserve=preserve,
+                    recursive=False,
+                )
+            except OSError as exc:
+                raise OSError(f'Error while uploading file {localpath}: {exc}')
+
+    async def puttree_async(
+        self,
+        localpath: TransportPath,
+        remotepath: TransportPath,
+        dereference=True,
+        overwrite=True,
+        preserve=False,
+        *args,
+        **kwargs,
+    ):
+        """Put a folder recursively from local to remote.
+
+        :param localpath: an absolute local path
+        :param remotepath: an absolute remote path
+        :param dereference: follow symbolic links
+            Default = True
+        :param overwrite: if True overwrites files and folders (boolean).
+            Default = True
+        :param preserve: preserve file attributes
+            Default = False
+
+        :type localpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotepath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type dereference: bool
+        :type overwrite: bool
+        :type preserve: bool
+
+        :raise ValueError: if local path is invalid
+        :raise OSError: if the localpath does not exist, or trying to overwrite
+        :raise OSError: if remotepath is invalid
+        """
+        localpath = str(localpath)
+        remotepath = str(remotepath)
+
+        if not os.path.isabs(localpath):
+            raise ValueError('The localpath must be an absolute path')
+
+        if not os.path.exists(localpath):
+            raise OSError('The localpath does not exists')
+
+        if not os.path.isdir(localpath):
+            raise ValueError(f'Input localpath is not a folder: {localpath}')
+
+        if not remotepath:
+            raise OSError('remotepath must be a non empty string')
+
+        if await self.path_exists_async(remotepath) and not overwrite:
+            raise OSError("Can't overwrite existing files")
+        if await self.isfile_async(remotepath):
+            raise OSError('Cannot copy a directory into a file')
+
+        if not await self.isdir_async(remotepath):  # in this case copy things in the remotepath directly
+            await self.makedirs_async(remotepath)  # and make a directory at its place
+        else:  # remotepath exists already: copy the folder inside of it!
+            remotepath = os.path.join(remotepath, os.path.split(localpath)[1])
+            await self.makedirs_async(remotepath, ignore_existing=overwrite)  # create a nested folder
+
+        # This is written in this way, only because AiiDA expects to put file inside an existing folder
+        # Or to put and rename the parent folder at the same time
+        content_list = os.listdir(localpath)
+        for content_ in content_list:
+            parentpath = str(PurePath(localpath) / content_)
+            async with self._semaphore:
+                try:
+                    await self.async_backend.put(
+                        localpath=parentpath,
+                        remotepath=remotepath,
+                        dereference=dereference,
+                        preserve=preserve,
+                        recursive=True,
+                    )
+                except OSError as exc:
+                    raise OSError(f'Error while uploading file {parentpath}: {exc}')
+
+    async def copy_async(
         self,
         remotesource: TransportPath,
         remotedestination: TransportPath,
         dereference: bool = False,
         recursive: bool = True,
+        preserve: bool = False,
     ):
-        """Copy a file or a directory from remote source to remote destination.
-        Flags used: ``-r``: recursive copy; ``-f``: force, makes the command non interactive;
-        ``-L`` follows symbolic links
+        """Copy a file or a folder from remote to remote.
 
-        :param remotesource: file to copy from
-        :param remotedestination: file to copy to
-        :param dereference: if True, copy content instead of copying the symlinks only
-            Default = False.
-        :param recursive: if True copy directories recursively.
-            Note that if the `remotesource` is a directory, `recursive` should always be set to True.
-            Default = True.
+        :param remotesource: abs path to the remote source directory / file
+        :param remotedestination: abs path to the remote destination directory / file
+        :param dereference: follow symbolic links
+        :param recursive: copy recursively
+        :param preserve: preserve file attributes
+            Default = False
+
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type dereference: bool
         :type recursive: bool
-        :raise OSError: if the cp execution failed.
+        :type preserve: bool
 
-        .. note:: setting dereference equal to True could cause infinite loops.
+        :raises: OSError, src does not exist or if the copy execution failed.
+        :raises: FileNotFoundError, if either remotesource does not exists
+            or remotedestination's parent path does not exists
         """
+
         remotesource = str(remotesource)
         remotedestination = str(remotedestination)
-
-        # In the majority of cases, we should deal with linux cp commands
-        cp_flags = '-f'
-        if recursive:
-            cp_flags += ' -r'
-
-        # For the moment, this is hardcoded. May become a parameter
-        cp_exe = 'cp'
-
-        # To evaluate if we also want -p: preserves mode,ownership and timestamp
-        if dereference:
-            # use -L; --dereference is not supported on mac
-            cp_flags += ' -L'
-
-        # if in input I give an invalid object raise ValueError
-        if not remotesource:
-            raise ValueError(
-                'Input to copy() must be a non empty string. ' + f'Found instead {remotesource} as remotesource'
-            )
-
-        if not remotedestination:
-            raise ValueError(
-                'Input to copy() must be a non empty string. '
-                + f'Found instead {remotedestination} as remotedestination'
-            )
-
         if has_magic(remotedestination):
             raise ValueError('Pathname patterns are not allowed in the destination')
 
-        if has_magic(remotesource):
-            to_copy_list = self.glob(remotesource)
+        if not remotedestination:
+            raise ValueError('remotedestination must be a non empty string')
+        if not remotesource:
+            raise ValueError('remotesource must be a non empty string')
 
-            if len(to_copy_list) > 1:
-                if not self.path_exists(remotedestination) or self.isfile(remotedestination):
-                    raise OSError("Can't copy more than one file in the same destination file")
+        await self.async_backend.copy(
+            remotesource=remotesource,
+            remotedestination=remotedestination,
+            dereference=dereference,
+            recursive=recursive,
+            preserve=preserve,
+        )
 
-            for file in to_copy_list:
-                self._exec_cp(cp_exe, cp_flags, file, remotedestination)
+    async def copyfile_async(
+        self,
+        remotesource: TransportPath,
+        remotedestination: TransportPath,
+        dereference: bool = False,
+        preserve: bool = False,
+    ):
+        """Copy a file from remote to remote.
 
-        else:
-            self._exec_cp(cp_exe, cp_flags, remotesource, remotedestination)
+        :param remotesource: path to the remote source file
+        :param remotedestination: path to the remote destination file
+        :param dereference: follow symbolic links
+        :param preserve: preserve file attributes
+            Default = False
 
-    def _exec_cp(self, cp_exe: str, cp_flags: str, src: str, dst: str):
-        """Execute the ``cp`` command on the remote machine."""
-        # to simplify writing the above copy function
-        command = f'{cp_exe} {cp_flags} {escape_for_bash(src)} {escape_for_bash(dst)}'
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type dereference: bool
+        :type preserve: bool
 
-        retval, stdout, stderr = self.exec_command_wait_bytes(command)
+        :raises: OSError, src does not exist or if the copy execution failed.
+        """
+        return await self.copy_async(remotesource, remotedestination, dereference, recursive=False, preserve=preserve)
+
+    async def copytree_async(
+        self,
+        remotesource: TransportPath,
+        remotedestination: TransportPath,
+        dereference: bool = False,
+        preserve: bool = False,
+    ):
+        """Copy a folder from remote to remote.
+
+        :param remotesource: path to the remote source directory
+        :param remotedestination: path to the remote destination directory
+        :param dereference: follow symbolic links
+        :param preserve: preserve file attributes
+            Default = False
+
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type dereference: bool
+        :type preserve: bool
+
+        :raises: OSError, src does not exist or if the copy execution failed.
+        """
+        return await self.copy_async(remotesource, remotedestination, dereference, recursive=True, preserve=preserve)
+
+    async def compress_async(
+        self,
+        format: str,
+        remotesources: Union[TransportPath, list[TransportPath]],
+        remotedestination: TransportPath,
+        root_dir: TransportPath,
+        overwrite: bool = True,
+        dereference: bool = False,
+    ):
+        """Compress a remote directory.
+
+        This method supports `remotesources` with glob patterns.
+
+        :param format: format of compression, should support: 'tar', 'tar.gz', 'tar.bz', 'tar.xz'
+        :param remotesources: path (list of paths) to the remote directory(ies) (and/)or file(s) to compress
+        :param remotedestination: path to the remote destination file (including file name).
+        :param root_dir: the path that compressed files will be relative to.
+        :param overwrite: if True, overwrite the file at remotedestination if it already exists.
+        :param dereference: if True, follow symbolic links.
+            Compress where they point to, instead of the links themselves.
+
+        :raises ValueError: if format is not supported
+        :raises OSError: if remotesource does not exist, or a matching file/folder cannot be found
+        :raises OSError: if remotedestination already exists and overwrite is False. Or if it is a directory.
+        :raises OSError: if cannot create remotedestination
+        :raises OSError: if root_dir is not a directory
+        """
+        if not await self.isdir_async(root_dir):
+            raise OSError(f'The relative root {root_dir} does not exist, or is not a directory.')
+
+        if await self.isdir_async(remotedestination):
+            raise OSError(f'The remote destination {remotedestination} is a directory, should include a filename.')
+
+        if not overwrite and await self.path_exists_async(remotedestination):
+            raise OSError(f'The remote destination {remotedestination} already exists.')
+
+        if format not in ['tar', 'tar.gz', 'tar.bz2', 'tar.xz']:
+            raise ValueError(f'Unsupported compression format: {format}')
+
+        await self.makedirs_async(Path(remotedestination).parent, ignore_existing=True)
+
+        compression_flag = {
+            'tar': '',
+            'tar.gz': 'z',
+            'tar.bz2': 'j',
+            'tar.xz': 'J',
+        }[format]
+
+        if not isinstance(remotesources, list):
+            remotesources = [remotesources]
+
+        copy_list = []
+
+        for source in remotesources:
+            if has_magic(source):
+                copy_list += await self.glob_async(source, ignore_nonexisting=False)
+            else:
+                if not await self.path_exists_async(source):
+                    raise OSError(f'The remote path {source} does not exist')
+
+                copy_list.append(source)
+
+        copy_items = ' '.join([escape_for_bash(str(Path(item).relative_to(root_dir))) for item in copy_list])
+        # note: order of the flags is important
+        tar_command = (
+            f'tar -c{compression_flag!s}{"h" if dereference else ""}f '
+            f'{escape_for_bash(str(remotedestination))} -C {escape_for_bash(str(root_dir))} ' + copy_items
+        )
+
+        retval, stdout, stderr = await self.exec_command_wait_async(tar_command)
 
         if retval == 0:
             if stderr.strip():
-                self.logger.warning(f'There was nonempty stderr in the cp command: {stderr}')
+                self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing cp. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
-                    retval, stdout, stderr, command
+                "Problem executing tar. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
+                    retval, stdout, stderr, tar_command
                 )
             )
-            if 'No such file or directory' in str(stderr):
-                raise FileNotFoundError(f'Error while executing cp: {stderr}')
+            raise OSError(f'Error while creating the tar archive. Exit code: {retval}')
 
-            raise OSError(
-                'Error while executing cp. Exit code: {}, ' "stdout: '{}', stderr: '{}', " "command: '{}'".format(
-                    retval, stdout, stderr, command
+    async def extract_async(
+        self,
+        remotesource: TransportPath,
+        remotedestination: TransportPath,
+        overwrite: bool = True,
+        strip_components: int = 0,
+    ):
+        """Extract a remote archive.
+
+        Does not accept glob patterns, as it doesn't make much sense and we don't have a usecase for it.
+
+        :param remotesource: path to the remote archive to extract
+        :param remotedestination: path to the remote destination directory
+        :param overwrite: if True, overwrite the file at remotedestination if it already exists
+            (we don't have a usecase for False, sofar. The parameter is kept for clarity.)
+        :param strip_components: strip NUMBER leading components from file names on extraction
+
+        :raises OSError: if the remotesource does not exist.
+        :raises OSError: if the extraction fails.
+        """
+        if not overwrite:
+            raise NotImplementedError('The overwrite=False is not implemented yet')
+
+        if not await self.path_exists_async(remotesource):
+            raise OSError(f'The remote path {remotesource} does not exist')
+
+        await self.makedirs_async(remotedestination, ignore_existing=True)
+
+        tar_command = (
+            f'tar --strip-components {strip_components} -xf '
+            f'{escape_for_bash(str(remotesource))} -C {escape_for_bash(str(remotedestination))} '
+        )
+
+        retval, stdout, stderr = await self.exec_command_wait_async(tar_command)
+
+        if retval == 0:
+            if stderr.strip():
+                self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
+        else:
+            self.logger.error(
+                "Problem executing tar. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
+                    retval, stdout, stderr, tar_command
                 )
             )
+            raise OSError(f'Error while extracting the tar archive. Exit code: {retval}')
 
-    @staticmethod
-    def _local_listdir(path: str, pattern=None):
-        """Acts on the local folder, for the rest, same as listdir"""
-        if not pattern:
-            return os.listdir(path)
-        if path.startswith('/'):  # always this is the case in the local case
-            base_dir = path
-        else:
-            base_dir = os.path.join(os.getcwd(), path)
+    async def exec_command_wait_async(
+        self,
+        command: str,
+        stdin: Optional[str] = None,
+        encoding: str = 'utf-8',
+        workdir: Optional[TransportPath] = None,
+        timeout: Optional[float] = None,
+        **kwargs,
+    ):
+        """Execute a command on the remote machine and wait for it to finish.
 
-        filtered_list = glob.glob(os.path.join(base_dir, pattern))
-        if not base_dir.endswith(os.sep):
-            base_dir += os.sep
-        return [re.sub(base_dir, '', i) for i in filtered_list]
+        :param command: the command to execute
+        :param stdin: the input to pass to the command
+            Default = None
+        :param encoding: (IGNORED) this is here just to keep the same signature as the one in `Transport` class
+            Default = 'utf-8'
+        :param workdir: the working directory where to execute the command
+            Default = None
+        :param timeout: the timeout in seconds
+            Default = None
 
-    def listdir(self, path: TransportPath = '.', pattern=None):
-        """Get the list of files at path.
+        :type command: str
+        :type stdin: str
+        :type encoding: str
+        :type workdir:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type timeout: float
 
-        :param path: default = '.'
-        :param pattern: returns the list of files matching pattern.
-                             Unix only. (Use to emulate ``ls *`` for example)
+        :return: a tuple with the return code, the stdout and the stderr of the command
+        :rtype: tuple(int, str, str)
+        """
+
+        if workdir:
+            workdir = str(workdir)
+            command = f'cd {escape_for_bash(workdir)} && ( {command} )'
+
+        async with self._semaphore:
+            try:
+                result = await self.async_backend.run(
+                    command=command,
+                    stdin=stdin,
+                    timeout=timeout,
+                )
+            except Exception as exc:
+                self.logger.warning(f'Failed to execute command on remote connection: {exc}')
+                raise
+
+        return result
+
+    async def get_attribute_async(self, path: TransportPath):
+        """Return an object FixedFieldsAttributeDict for file in a given path,
+        as defined in aiida.common.extendeddicts
+        Each attribute object consists in a dictionary with the following keys:
+
+        * st_size: size of files, in bytes
+
+        * st_uid: user id of owner
+
+        * st_gid: group id of owner
+
+        * st_mode: protection bits
+
+        * st_atime: time of most recent access
+
+        * st_mtime: time of most recent modification
+
+        :param path: path to file
+
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+
+        :return: object FixedFieldsAttributeDict
         """
         path = str(path)
+        from aiida.transports.util import FileAttribute
 
-        if path.startswith('/'):
-            abs_dir = path
-        else:
-            abs_dir = os.path.join(self.getcwd(), path)
+        obj_stat = await self.async_backend.lstat(path)
+        aiida_attr = FileAttribute()
+        for key in aiida_attr._valid_fields:
+            if key == 'st_size':
+                aiida_attr[key] = obj_stat.size
+            elif key == 'st_uid':
+                aiida_attr[key] = obj_stat.uid
+            elif key == 'st_gid':
+                aiida_attr[key] = obj_stat.gid
+            elif key == 'st_mode':
+                aiida_attr[key] = obj_stat.permissions
+            elif key == 'st_atime':
+                aiida_attr[key] = obj_stat.atime
+            elif key == 'st_mtime':
+                aiida_attr[key] = obj_stat.mtime
+            else:
+                raise NotImplementedError(f'Mapping the {key} attribute is not implemented')
+        return aiida_attr
 
-        if not pattern:
-            return self.sftp.listdir(abs_dir)
-
-        filtered_list = self.glob(os.path.join(abs_dir, pattern))
-        if not abs_dir.endswith('/'):
-            abs_dir += '/'
-        return [re.sub(abs_dir, '', i) for i in filtered_list]
-
-    def remove(self, path: TransportPath):
-        """Remove a single file at 'path'"""
-        path = str(path)
-        return self.sftp.remove(path)
-
-    def rename(self, oldpath: TransportPath, newpath: TransportPath):
-        """Rename a file or folder from oldpath to newpath.
-
-        :param str oldpath: existing name of the file or folder
-        :param str newpath: new name for the file or folder
-
-        :raises OSError: if oldpath is not found or newpath already exists
-        :raises ValueError: if oldpath/newpath is not a valid path
-        """
-        if not oldpath:
-            raise ValueError(f'Source {oldpath} is not a valid path')
-        if not newpath:
-            raise ValueError(f'Destination {newpath} is not a valid path')
-
-        oldpath = str(oldpath)
-        newpath = str(newpath)
-
-        if not self.isfile(oldpath):
-            if not self.isdir(oldpath):
-                raise OSError(f'Source {oldpath} does not exist')
-
-        if self.path_exists(newpath):
-            raise OSError(f'Destination {newpath} already exist')
-
-        return self.sftp.rename(oldpath, newpath)
-
-    def isfile(self, path: TransportPath):
-        """Return True if the given path is a file, False otherwise.
+    async def isdir_async(self, path: TransportPath):
+        """Return True if the given path is a directory, False otherwise.
         Return False also if the path does not exist.
+
+        :param path: the absolute path to check
+
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+
+        :return: True if the path is a directory, False otherwise
         """
-        # This should not be needed for files, since an empty string should
-        # be mapped by paramiko to the local directory - which is not a file -
-        # but this is just to be sure
+        # Return False on empty string
         if not path:
             return False
 
         path = str(path)
-        try:
-            self.logger.debug(
-                f"stat for path '{path}' ('{self.normalize(path)}'): {self.stat(path)} [{self.stat(path).st_mode}]"
-            )
-            return S_ISREG(self.stat(path).st_mode)
-        except OSError as exc:
-            if getattr(exc, 'errno', None) == 2:
-                # errno=2 means path does not exist: I return False
-                return False
-            raise  # Typically if I don't have permissions (errno=13)
 
-    def _exec_command_internal(self, command, combine_stderr=False, bufsize=-1, workdir=None):
-        """Executes the specified command in bash login shell.
+        return await self.async_backend.isdir(path)
 
+    async def isfile_async(self, path: TransportPath):
+        """Return True if the given path is a file, False otherwise.
+        Return False also if the path does not exist.
 
-        For executing commands and waiting for them to finish, use
-        exec_command_wait.
+        :param path: the absolute path to check
 
-        :param  command: the command to execute. The command is assumed to be
-            already escaped using :py:func:`aiida.common.escaping.escape_for_bash`.
-        :param combine_stderr: (default False) if True, combine stdout and
-                stderr on the same buffer (i.e., stdout).
-                Note: If combine_stderr is True, stderr will always be empty.
-        :param bufsize: same meaning of the one used by paramiko.
-        :param workdir: (optional, default=None) if set, the command will be executed
-                in the specified working directory.
-                if None, the command will be executed in the current working directory,
-                from DEPRECATED `self.getcwd()`, if that has a value.
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
 
-        :return: a tuple with (stdin, stdout, stderr, channel),
-            where stdin, stdout and stderr behave as file-like objects,
-            plus the methods provided by paramiko, and channel is a
-            paramiko.Channel object.
+        :return: True if the path is a file, False otherwise
         """
-        channel = self.sshclient.get_transport().open_session()
-        channel.set_combine_stderr(combine_stderr)
-
-        if workdir is not None:
-            command_to_execute = f'cd {workdir} &&  ( {command} )'
-        elif (cwd := self.getcwd()) is not None:
-            escaped_folder = escape_for_bash(cwd)
-            command_to_execute = f'cd {escaped_folder} && ( {command} )'
-        else:
-            command_to_execute = command
-
-        self.logger.debug(f'Command to be executed: {command_to_execute[:self._MAX_EXEC_COMMAND_LOG_SIZE]}')
-
-        # Note: The default shell will eat one level of escaping, while
-        # 'bash -l -c ...' will eat another. Thus, we need to escape again.
-        bash_commmand = self._bash_command_str + '-c '
-
-        channel.exec_command(bash_commmand + escape_for_bash(command_to_execute))
-
-        stdin = channel.makefile('wb', bufsize)
-        stdout = channel.makefile('rb', bufsize)
-        stderr = channel.makefile_stderr('rb', bufsize)
-
-        return stdin, stdout, stderr, channel
-
-    def exec_command_wait_bytes(
-        self, command, stdin=None, combine_stderr=False, bufsize=-1, timeout=0.01, workdir: TransportPath = None
-    ):
-        """Executes the specified command and waits for it to finish.
-
-        :param command: the command to execute
-        :param stdin: (optional,default=None) can be a string or a
-                   file-like object.
-        :param combine_stderr: (optional, default=False) see docstring of
-                   self._exec_command_internal()
-        :param bufsize: same meaning of paramiko.
-        :param timeout: ssh channel timeout for stdout, stderr.
-        :param workdir: (optional, default=None) if set, the command will be executed
-                in the specified working directory.
-
-        :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
-            are both bytes and the return_value is an int.
-        """
-        import socket
-        import time
-
-        if workdir:
-            workdir = str(workdir)
-
-        ssh_stdin, stdout, stderr, channel = self._exec_command_internal(
-            command, combine_stderr, bufsize=bufsize, workdir=workdir
-        )
-
-        if stdin is not None:
-            if isinstance(stdin, str):
-                filelike_stdin = io.StringIO(stdin)
-            elif isinstance(stdin, bytes):
-                filelike_stdin = io.BytesIO(stdin)
-            elif isinstance(stdin, (io.BufferedIOBase, io.TextIOBase)):
-                # It seems both StringIO and BytesIO work correctly when doing ssh_stdin.write(line)?
-                # (The ChannelFile is opened with mode 'b', but until now it always has been a StringIO)
-                filelike_stdin = stdin
-            else:
-                raise ValueError('You can only pass strings, bytes, BytesIO or StringIO objects')
-
-            for line in filelike_stdin:
-                ssh_stdin.write(line)
-
-        # I flush and close them anyway; important to call shutdown_write
-        # to avoid hangouts
-        ssh_stdin.flush()
-        ssh_stdin.channel.shutdown_write()
-
-        # Now I get the output
-        stdout_bytes = []
-        stderr_bytes = []
-        # 100kB buffer (note that this should be smaller than the window size of paramiko)
-        # Also, apparently if the data is coming slowly, the read() command will not unlock even for
-        # times much larger than the timeout. Therefore we don't want to have very large buffers otherwise
-        # you risk that a lot of output is sent to both stdout and stderr, and stderr goes beyond the
-        # window size and blocks.
-        # Note that this is different than the bufsize of paramiko.
-        internal_bufsize = 100 * 1024
-
-        # Set a small timeout on the channels, so that if we get data from both
-        # stderr and stdout, and the connection is slow, we interleave the receive and don't hang
-        # NOTE: Timeouts and sleep time below, as well as the internal_bufsize above, have been benchmarked
-        # to try to optimize the overall throughput. I could get ~100MB/s on a localhost via ssh (and 3x slower
-        # if compression is enabled).
-        # It's important to mention that, for speed benchmarks, it's important to disable compression
-        # in the SSH transport settings, as it will cap the max speed.
-        stdout.channel.settimeout(timeout)
-        stderr.channel.settimeout(timeout)  # Maybe redundant, as this could be the same channel.
-
-        while True:
-            chunk_exists = False
-
-            if stdout.channel.recv_ready():  # True means that the next .read call will at least receive 1 byte
-                chunk_exists = True
-                try:
-                    piece = stdout.read(internal_bufsize)
-                    stdout_bytes.append(piece)
-                except socket.timeout:
-                    # There was a timeout: I continue as there should still be data
-                    pass
-
-            if stderr.channel.recv_stderr_ready():  # True means that the next .read call will at least receive 1 byte
-                chunk_exists = True
-                try:
-                    piece = stderr.read(internal_bufsize)
-                    stderr_bytes.append(piece)
-                except socket.timeout:
-                    # There was a timeout: I continue as there should still be data
-                    pass
-
-            # If chunk_exists, there is data (either already read and put in the std*_bytes lists, or
-            # still in the buffer because of a timeout). I need to loop.
-            # Otherwise, there is no data in the buffers, and I enter this block.
-            if not chunk_exists:
-                # Both channels have no data in the buffer
-                if channel.exit_status_ready():
-                    # The remote execution is over
-
-                    # I think that in some corner cases there might still be some data,
-                    # in case the data arrived between the previous calls and this check.
-                    # So we do a final read. Since the execution is over, I think all data is in the buffers,
-                    # so we can just read the whole buffer without loops
-                    stdout_bytes.append(stdout.read())
-                    stderr_bytes.append(stderr.read())
-                    # And we go out of the `while True` loop
-                    break
-                # The exit status is not ready:
-                # I just put a small sleep to avoid infinite fast loops when data
-                # is not available on a slow connection, and loop
-                time.sleep(0.01)
-
-        # I get the return code (blocking)
-        # However, if I am here, the exit status is ready so this should be returning very quickly
-        retval = channel.recv_exit_status()
-
-        return (retval, b''.join(stdout_bytes), b''.join(stderr_bytes))
-
-    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
-        """Specific gotocomputer string to connect to a given remote computer via
-        ssh and directly go to the calculation folder.
-        """
-        further_params = []
-        if 'username' in self._connect_args:
-            further_params.append(f"-l {escape_for_bash(self._connect_args['username'])}")
-
-        if self._connect_args.get('port'):
-            further_params.append(f"-p {self._connect_args['port']}")
-
-        if self._connect_args.get('key_filename'):
-            further_params.append(f"-i {escape_for_bash(self._connect_args['key_filename'])}")
-
-        if self._connect_args.get('proxy_jump'):
-            further_params.append(f"-o ProxyJump={escape_for_bash(self._connect_args['proxy_jump'])}")
-
-        if self._connect_args.get('proxy_command'):
-            further_params.append(f"-o ProxyCommand={escape_for_bash(self._connect_args['proxy_command'])}")
-
-        further_params_str = ' '.join(further_params)
-
-        connect_string = self._gotocomputer_string(remotedir=remotedir)
-        cmd = f'ssh -t {self._machine} {further_params_str} {connect_string}'
-        return cmd
-
-    def _symlink(self, source: TransportPath, dest: TransportPath):
-        """Wrap SFTP symlink call without breaking API
-
-        :param source: source of link
-        :param dest: link to create
-        """
-        source = str(source)
-        dest = str(dest)
-        self.sftp.symlink(source, dest)
-
-    def symlink(self, remotesource: TransportPath, remotedestination: TransportPath):
-        """Create a symbolic link between the remote source and the remote
-        destination.
-
-        :param remotesource: remote source. Can contain a pattern.
-        :param remotedestination: remote destination
-        """
-        remotesource = str(remotesource)
-        remotedestination = str(remotedestination)
-        # paramiko gives some errors if path is starting with '.'
-        source = os.path.normpath(remotesource)
-        dest = os.path.normpath(remotedestination)
-
-        if has_magic(source):
-            if has_magic(dest):
-                # if there are patterns in dest, I don't know which name to assign
-                raise ValueError('`remotedestination` cannot have patterns')
-
-            # find all files matching pattern
-            for this_source in self.glob(source):
-                # create the name of the link: take the last part of the path
-                this_dest = os.path.join(remotedestination, os.path.split(this_source)[-1])
-                self._symlink(this_source, this_dest)
-        else:
-            self._symlink(source, dest)
-
-    def path_exists(self, path: TransportPath):
-        """Check if path exists"""
-        import errno
+        # Return False on empty string
+        if not path:
+            return False
 
         path = str(path)
 
-        try:
-            self.stat(path)
-        except OSError as exc:
-            if exc.errno == errno.ENOENT:
-                return False
-            raise
+        return await self.async_backend.isfile(path)
+
+    async def listdir_async(self, path: TransportPath, pattern=None):
+        """Return a list of the names of the entries in the given path.
+        The list is in arbitrary order. It does not include the special
+        entries '.' and '..' even if they are present in the directory.
+
+        :param path: an absolute path
+        :param pattern: if used, listdir returns a list of files matching
+                        filters in Unix style. Unix only.
+
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+
+        :return: a list of strings
+        """
+        path = str(path)
+        if not pattern:
+            list_ = await self.async_backend.listdir(path)
         else:
-            return True
+            patterned_path = pattern if pattern.startswith('/') else Path(path).joinpath(pattern)
+            # I put the type ignore here because the asyncssh.sftp.glob()
+            # method always returns a sequence of str, if input is str
+            list_ = list(await self.glob_async(patterned_path))
+
+        for item in ['..', '.']:
+            if item in list_:
+                list_.remove(item)
+
+        return list_
+
+    async def listdir_withattributes_async(self, path: TransportPath, pattern: Optional[str] = None):
+        """Return a list of the names of the entries in the given path.
+        The list is in arbitrary order. It does not include the special
+        entries '.' and '..' even if they are present in the directory.
+
+        :param path: absolute path to list
+        :param pattern: if used, listdir returns a list of files matching
+                            filters in Unix style. Unix only.
+
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type pattern: str
+        :return: a list of dictionaries, one per entry.
+            The schema of the dictionary is
+            the following::
+
+                {
+                   'name': String,
+                   'attributes': FileAttributeObject,
+                   'isdir': Bool
+                }
+
+            where 'name' is the file or folder directory, and any other information is metadata
+            (if the file is a folder, a directory, ...). 'attributes' behaves as the output of
+            transport.get_attribute(); isdir is a boolean indicating if the object is a directory or not.
+        """
+        path = str(path)
+        retlist = []
+        listdir = await self.listdir_async(path, pattern)
+        for file_name in listdir:
+            filepath = os.path.join(path, file_name)
+            attributes = await self.get_attribute_async(filepath)
+            retlist.append({'name': file_name, 'attributes': attributes, 'isdir': await self.isdir_async(filepath)})
+
+        return retlist
+
+    async def makedirs_async(self, path, ignore_existing=False):
+        """Super-mkdir; create a leaf directory and all intermediate ones.
+        Works like mkdir, except that any intermediate path segment (not
+        just the rightmost) will be created if it does not exist.
+
+        :param path: absolute path to directory to create
+        :param bool ignore_existing: if set to true, it doesn't give any error
+                if the directory already exists
+
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+
+        :raises: OSError, if directory at path already exists
+        """
+        path = str(path)
+        try:
+            await self.async_backend.mkdir(path=path, exist_ok=ignore_existing, parents=True)
+        except FileExistsError as exc:
+            raise OSError(f'Error while creating directory {path}: {exc}, directory already exists')
+
+    async def mkdir_async(self, path: TransportPath, ignore_existing=False):
+        """Create a directory.
+
+        :param path: absolute path to directory to create
+        :param bool ignore_existing: if set to true, it doesn't give any error
+                if the directory already exists
+
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+
+        :raises: OSError, if directory at path already exists
+        """
+        path = str(path)
+        try:
+            await self.async_backend.mkdir(path=path, exist_ok=ignore_existing, parents=False)
+        except FileExistsError as exc:
+            raise OSError(f'Error while creating directory {path}: {exc}, directory already exists')
+
+    async def normalize_async(self, path: TransportPath):
+        raise NotImplementedError('Not implemented, waiting for a use case.')
+
+    async def remove_async(self, path: TransportPath):
+        """Remove the file at the given path. This only works on files;
+        for removing folders (directories), use rmdir.
+
+        :param path: path to file to remove
+
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+
+        :raise OSError: if the path is a directory
+        """
+        path = str(path)
+        await self.async_backend.remove(path)
+
+    async def rename_async(self, oldpath: TransportPath, newpath: TransportPath):
+        """
+        Rename a file or folder from oldpath to newpath.
+
+        :param oldpath: existing name of the file or folder
+        :param newpath: new name for the file or folder
+
+        :type oldpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type newpath:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+
+        :raises OSError: if oldpath/newpath is not found
+        :raises ValueError: if oldpath/newpath is not a valid string
+        """
+        oldpath = str(oldpath)
+        newpath = str(newpath)
+        if not oldpath or not newpath:
+            raise ValueError('oldpath and newpath must be non-empty strings')
+
+        if await self.path_exists_async(newpath):
+            raise OSError(f'Cannot rename {oldpath} to {newpath}: destination exists')
+
+        await self.async_backend.rename(oldpath, newpath)
+
+    async def rmdir_async(self, path: TransportPath):
+        """Remove the folder named path.
+        This works only for empty folders. For recursive remove, use rmtree.
+
+        :param str path: absolute path to the folder to remove
+
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        """
+        path = str(path)
+        await self.async_backend.rmdir(path)
+
+    async def rmtree_async(self, path: TransportPath):
+        """Remove the folder named path, and all its contents.
+
+        :param str path: absolute path to the folder to remove
+
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+
+        :raises OSError: if the operation fails
+        """
+        path = str(path)
+        await self.async_backend.rmtree(path)
+
+    async def path_exists_async(self, path: TransportPath):
+        """Returns True if path exists, False otherwise.
+
+        :param path: path to check
+
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        """
+        path = str(path)
+        return await self.async_backend.path_exists(path)
+
+    async def whoami_async(self):
+        """Get the remote username
+
+        :return: username (str),
+
+        :raises OSError: if the command fails
+        """
+        command = 'whoami'
+        # Assuming here that the username is either ASCII or UTF-8 encoded
+        # This should be true essentially always
+        retval, username, stderr = await self.exec_command_wait_async(command)
+        if retval == 0:
+            if stderr.strip():
+                self.logger.warning(f'There was nonempty stderr in the whoami command: {stderr}')
+            return username.strip()
+
+        self.logger.error(f"Problem executing whoami. Exit code: {retval}, stdout: '{username}', stderr: '{stderr}'")
+        raise OSError(f'Error while executing whoami. Exit code: {retval}')
+
+    async def symlink_async(self, remotesource: TransportPath, remotedestination: TransportPath):
+        """Create a symbolic link between the remote source and the remote
+        destination.
+
+        :param remotesource: absolute path to remote source
+        :param remotedestination: absolute path to remote destination
+
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+
+        :raises ValueError: if remotedestination has patterns
+        """
+        remotesource = str(remotesource)
+        remotedestination = str(remotedestination)
+
+        if has_magic(remotesource):
+            if has_magic(remotedestination):
+                raise ValueError('`remotedestination` cannot have patterns')
+
+            # find all files matching pattern
+            for this_source in await self.glob_async(remotesource):
+                # create the name of the link: take the last part of the path
+                this_dest = os.path.join(remotedestination, os.path.split(this_source)[-1])
+                # in the line above I am sure that this_source is a string,
+                # since asyncssh.sftp.glob() returns only str if argument remotesource is a str
+                await self.async_backend.symlink(this_source, this_dest)
+        else:
+            await self.async_backend.symlink(remotesource, remotedestination)
+
+    async def glob_async(self, pathname: TransportPath, ignore_nonexisting: bool = True):
+        """Return a list of paths matching a pathname pattern.
+
+        The pattern may contain simple shell-style wildcards a la fnmatch.
+
+        :param pathname: the pathname pattern to match.
+            It should only be absolute path.
+        :param ignore_nonexisting: if True, it will not raise and returns an empty list.
+
+        :type pathname:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+
+        :return: a list of paths matching the pattern.
+        """
+        pathname = str(pathname)
+        return await self.async_backend.glob(pathname, ignore_nonexisting=ignore_nonexisting)
+
+    async def chmod_async(self, path: TransportPath, mode: int, follow_symlinks: bool = True):
+        """Change permissions of a path.
+
+        :param path: Path to the file or directory.
+        :param mode: New permissions as an integer, for example 0o700 (octal) or 448 (decimal) results in `-rwx------`
+            for a file.
+        :param bool follow_symlinks: if True, follow symbolic links
+
+        :type path:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type mode: int
+        :type follow_symlinks: bool
+
+        :raises OSError: if the path is empty
+        """
+        path = str(path)
+        if not path:
+            raise OSError('Input path is an empty argument.')
+        if await self.path_exists_async(path):
+            await self.async_backend.chmod(path, mode, follow_symlinks=follow_symlinks)
+        else:
+            raise OSError(f'Error, path {path} does not exist')
+
+    async def copy_from_remote_to_remote_async(
+        self,
+        transportdestination: Transport,
+        remotesource: TransportPath,
+        remotedestination: TransportPath,
+        **kwargs,
+    ):
+        """Copy files or folders from a remote computer to another remote computer, asynchronously.
+
+        :param transportdestination: transport to be used for the destination computer
+        :param remotesource: path to the remote source directory / file
+        :param remotedestination: path to the remote destination directory / file
+        :param kwargs: keyword parameters passed to the call to transportdestination.put,
+            except for 'dereference' that is passed to self.get
+
+        :type transportdestination: :class:`Transport <aiida.transports.transport.Transport>`,
+        :type remotesource:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        :type remotedestination:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+
+        .. note:: the keyword 'dereference' SHOULD be set to False for the
+         final put (onto the destination), while it can be set to the
+         value given in kwargs for the get from the source. In that
+         way, a symbolic link would never be followed in the final
+         copy to the remote destination. That way we could avoid getting
+         unknown (potentially malicious) files into the destination computer.
+         HOWEVER, since dereference=False is currently NOT
+         supported by all plugins, we still force it to True for the final put.
+
+        .. note:: the supported keys in kwargs are callback, dereference,
+           overwrite and ignore_nonexisting.
+        """
+        from aiida.common.folders import SandboxFolder
+
+        kwargs_get = {
+            'callback': None,
+            'dereference': kwargs.pop('dereference', True),
+            'overwrite': True,
+            'ignore_nonexisting': False,
+        }
+        kwargs_put = {
+            'callback': kwargs.pop('callback', None),
+            'dereference': True,
+            'overwrite': kwargs.pop('overwrite', True),
+            'ignore_nonexisting': kwargs.pop('ignore_nonexisting', False),
+        }
+
+        if kwargs:
+            self.logger.error('Unknown parameters passed to copy_from_remote_to_remote')
+
+        with SandboxFolder() as sandbox:
+            await self.get_async(remotesource, sandbox.abspath, **kwargs_get)  # type: ignore[arg-type]
+            # Then we scan the full sandbox directory with get_content_list,
+            # because copying directly from sandbox.abspath would not work
+            # to copy a single file into another single file, and copying
+            # from sandbox.get_abs_path('*') would not work for files
+            # beginning with a dot ('.').
+            for filename in sandbox.get_content_list():
+                await transportdestination.put_async(
+                    os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put
+                )
+
+    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
+        """Return a string to be used to connect to the remote computer.
+
+        :param remotedir: the remote directory to connect to
+
+        :type remotedir:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
+        """
+        connect_string = self._gotocomputer_string(remotedir=remotedir)
+        cmd = f'ssh -t {self.machine} {connect_string}'
+        return cmd

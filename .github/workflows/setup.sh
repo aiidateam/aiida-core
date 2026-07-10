@@ -9,7 +9,6 @@ CONFIG="${GITHUB_WORKSPACE}/.github/config"
 cp "${CONFIG}/slurm_rsa" "${HOME}/.ssh/slurm_rsa"
 sed -i "s|PLACEHOLDER_WORK_DIR|${GITHUB_WORKSPACE}|" "${CONFIG}/localhost.yaml"
 sed -i "s|PLACEHOLDER_REMOTE_ABS_PATH_DOUBLER|${CONFIG}/doubler.sh|" "${CONFIG}/doubler.yaml"
-sed -i "s|PLACEHOLDER_SSH_KEY|${HOME}/.ssh/slurm_rsa|" "${CONFIG}/slurm-ssh-config.yaml"
 
 verdi setup --non-interactive --config "${CONFIG}/profile.yaml"
 

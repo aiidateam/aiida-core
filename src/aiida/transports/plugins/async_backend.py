@@ -21,10 +21,13 @@ import logging
 import posixpath
 import re
 import subprocess
+from functools import partial
+from pathlib import Path
 from typing import Optional
 
 import asyncssh
 from asyncssh import SFTPFileAlreadyExists
+from asyncssh.known_hosts import match_known_hosts
 
 from aiida.common.escaping import escape_for_bash
 from aiida.transports.transport import (
@@ -47,6 +50,123 @@ def get_openssh_version() -> Optional[int]:
     except Exception:
         pass
     return None
+
+
+class _AcceptUnknownHostKey(asyncssh.SSHClient):
+    """Client reproducing paramiko's ``AutoAddPolicy`` and ``WarningPolicy``.
+
+    Both accept the key of a host that is absent from ``known_hosts``, but neither accepts a
+    *changed* key for a host that is present. asyncssh calls this hook only when the presented key is
+    not among the trusted ones, i.e. exactly in those two situations; ``known_hosts=None`` would
+    instead accept both.
+    """
+
+    def __init__(self, warn: bool, logger: logging.LoggerAdapter):
+        self._warn = warn
+        self._logger = logger
+
+    def validate_host_public_key(self, host: str, addr: str, port: int, key: asyncssh.SSHKey) -> bool:
+        known_hosts = Path('~/.ssh/known_hosts').expanduser()
+
+        if known_hosts.is_file():
+            host_keys, ca_keys = match_known_hosts(str(known_hosts), host, addr, port)[:2]
+            if host_keys or ca_keys:
+                self._logger.error(f'The host key of `{host}` has changed, refusing to connect.')
+                return False
+
+        if self._warn:
+            self._logger.warning(f'Unknown host key for `{host}`, connecting anyway.')
+
+        return True
+
+
+def _expand_proxy_command(proxy_command: str, host: str, params: dict) -> str:
+    """Expand the OpenSSH ``%h``/``%p``/``%r``/``%%`` tokens in a proxy command.
+
+    asyncssh does not expand these for a ``proxy_command`` argument (unlike the OpenSSH client),
+    so we do it here to keep both backends behaving identically.
+    """
+    port = params.get('port')
+    tokens = {
+        '%h': str(host),
+        '%p': str(port) if port not in (None, '') else '22',
+        '%r': str(params.get('username') or ''),
+    }
+    placeholder = '\0'
+    proxy_command = proxy_command.replace('%%', placeholder)
+    for token, value in tokens.items():
+        proxy_command = proxy_command.replace(token, value)
+    return proxy_command.replace(placeholder, '%')
+
+
+def build_asyncssh_connect_kwargs(host: str, params: Optional[dict], logger: logging.LoggerAdapter) -> dict:
+    """Translate the legacy v2 ``core.ssh`` (paramiko) connection parameters into ``asyncssh.connect()`` kwargs.
+
+    :param host: the target host, used to expand ``%h`` in a proxy command.
+    :param params: the ``auth_params`` of a computer migrated from the legacy v2 ``core.ssh`` (paramiko)
+        plugin, or ``None`` for a natively configured computer.
+    :param logger: used to report on the host key of a computer with a permissive ``key_policy``.
+    :return: keyword arguments for :func:`asyncssh.connect`; empty for a native computer, which is
+        then opened exactly as before (asyncssh reads ``~/.ssh/config``).
+    """
+    if params is None:
+        return {}
+
+    # For a migrated computer the stored parameters are the single source of truth: the legacy
+    # paramiko plugin never read ``~/.ssh/config`` at connect time, so ``config=None`` disables it.
+    kwargs: dict = {'config': None}
+
+    if params.get('username'):
+        kwargs['username'] = params['username']
+    if params.get('port') not in (None, ''):
+        kwargs['port'] = int(params['port'])
+    if params.get('timeout') not in (None, ''):
+        kwargs['connect_timeout'] = int(params['timeout'])
+
+    # Public-key auth: asyncssh derives everything from ``client_keys``. A list offers exactly those
+    # keys (agent still used); ``None`` disables keys *and* the agent; the default searches ~/.ssh.
+    # paramiko's ``look_for_keys=False`` with ``allow_agent=True`` has no equivalent, so we keep the
+    # default (agent works; default keys merely offered after it).
+    key_filename = params.get('key_filename')
+    if key_filename:
+        kwargs['client_keys'] = [str(key_filename)]
+    elif params.get('look_for_keys') is False and params.get('allow_agent') is False:
+        kwargs['client_keys'] = None
+
+    if params.get('allow_agent') is False:
+        kwargs['agent_path'] = None
+
+    if params.get('compress') is True:
+        kwargs['compression_algs'] = ('zlib@openssh.com', 'zlib', 'none')
+    elif params.get('compress') is False:
+        kwargs['compression_algs'] = None
+
+    # Host-key policy. Without loaded host keys nothing is known: a permissive policy then accepts
+    # every host and a strict one rejects every host. Otherwise `~/.ssh/known_hosts` is consulted, as
+    # asyncssh does by default, and a permissive policy additionally accepts a host missing from it.
+    permissive = params.get('key_policy') in ('AutoAddPolicy', 'WarningPolicy')
+    if params.get('load_system_host_keys') is False:
+        kwargs['known_hosts'] = None if permissive else ([], [], [])
+    elif permissive:
+        kwargs['client_factory'] = partial(
+            _AcceptUnknownHostKey, warn=params['key_policy'] == 'WarningPolicy', logger=logger
+        )
+
+    if params.get('proxy_jump'):
+        kwargs['tunnel'] = params['proxy_jump']
+    if params.get('proxy_command'):
+        kwargs['proxy_command'] = _expand_proxy_command(params['proxy_command'], host, params)
+
+    if params.get('gss_host'):
+        kwargs['gss_host'] = params['gss_host']
+    if params.get('gss_auth') is not None:
+        kwargs['gss_auth'] = bool(params['gss_auth'])
+    if params.get('gss_kex') is not None:
+        kwargs['gss_kex'] = bool(params['gss_kex'])
+    if params.get('gss_deleg_creds') is not None:
+        kwargs['gss_delegate_creds'] = bool(params['gss_deleg_creds'])
+
+    return kwargs
 
 
 class _AsynchronousSSHBackend(abc.ABC):
@@ -227,11 +347,22 @@ class _AsyncSSH(_AsynchronousSSHBackend):
     Note: This class is not part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
+    def __init__(
+        self,
+        machine: str,
+        logger: logging.LoggerAdapter,
+        bash_command: str,
+        connection_params: Optional[dict] = None,
+    ):
         super().__init__(machine, logger, bash_command)
+        # Legacy parameters carried over from a computer migrated from the legacy v2 ``core.ssh``
+        # (paramiko) plugin; ``None`` for a natively configured computer, whose connection details
+        # live in ``~/.ssh/config``.
+        self.connection_params = connection_params
 
     async def open(self):
-        self._conn = await asyncssh.connect(self.machine)
+        connect_kwargs = build_asyncssh_connect_kwargs(self.machine, self.connection_params, self.logger)
+        self._conn = await asyncssh.connect(self.machine, **connect_kwargs)
         self._sftp = await self._conn.start_sftp_client()
 
     async def close(self):
@@ -398,7 +529,7 @@ class _AsyncSSH(_AsynchronousSSHBackend):
                 'The SSH server does not support SFTP remote copy (SFTP >= v9.0), '
                 'falling back on the `cp` command to copy the file/folder.'
             )
-            # I copy pasted the whole logic below from SshTransport class:
+            # Fall back to a remote `cp` command for SFTP servers without remote-copy support.
 
             async def _exec_cp(cp_exe: str, cp_flags: str, src: str, dst: str):
                 """Execute the ``cp`` command on the remote machine."""

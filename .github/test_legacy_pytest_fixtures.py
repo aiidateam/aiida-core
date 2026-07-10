@@ -8,7 +8,7 @@ import pytest
 from aiida.manage.configuration import get_config, load_config
 from aiida.manage.configuration.settings import DEFAULT_CONFIG_FILE_NAME
 from aiida.orm import Computer
-from aiida.transports import BlockingTransport
+from aiida.transports import AsyncTransport, BlockingTransport
 
 pytest_plugins = ['aiida.manage.tests.pytest_fixtures']
 
@@ -51,7 +51,6 @@ def test_aiida_localhost(aiida_localhost):
 @pytest.mark.parametrize(
     'fixture_name, transport_cls, transport_type',
     [
-        ('aiida_computer_ssh', BlockingTransport, 'core.ssh'),
         ('aiida_computer_local', BlockingTransport, 'core.local'),
     ],
 )
@@ -77,6 +76,20 @@ def test_aiida_computer_fixtures(fixture_name, transport_cls, transport_type, re
 
     computer_unconfigured = aiida_computer(label=str(uuid.uuid4()), configure=False)
     assert not computer_unconfigured.is_configured
+
+
+@pytest.mark.parametrize('backend', ('asyncssh', 'openssh'))
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_aiida_computer_ssh_fixture(backend, aiida_computer_ssh):
+    """Test the ``aiida_computer_ssh`` fixture."""
+    computer = aiida_computer_ssh(label=str(uuid.uuid4()), configure=True, backend=backend)
+    assert isinstance(computer, Computer)
+    assert computer.is_configured
+    assert computer.hostname == 'localhost'
+    assert computer.transport_type == 'core.ssh'
+
+    with computer.get_transport() as transport:
+        assert isinstance(transport, AsyncTransport)
 
 
 def test_deamon_client(daemon_client):

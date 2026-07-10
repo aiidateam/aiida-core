@@ -76,7 +76,6 @@ def devel_check_undesired_imports():
         'requests',
         'plumpy',
         'disk_objectstore',
-        'paramiko',
         'seekpath',
         'CifFile',
         'ase',

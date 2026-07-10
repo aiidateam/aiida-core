@@ -66,7 +66,7 @@ def test_leak_ssh_calcjob(aiida_computer_ssh):
 
     Note: This relies on the localhost configuring an SSH server and allowing to connect to it from localhost.
     """
-    computer = aiida_computer_ssh()
+    computer = aiida_computer_ssh(backend='asyncssh')
 
     # Ensure a connection can be opened before launching the calcjob or it will get stuck in the EBM.
     with computer.get_transport() as transport:

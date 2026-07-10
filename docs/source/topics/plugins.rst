@@ -359,7 +359,7 @@ The module provides the following fixtures:
 * :ref:`postgres_cluster <topics:plugins:testfixtures:postgres-cluster>`: Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yielder
 * :ref:`aiida_computer <topics:plugins:testfixtures:aiida-computer>`: Setup a :class:`~aiida.orm.computers.Computer` instance
 * :ref:`aiida_computer_local <topics:plugins:testfixtures:aiida-computer-local>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using local transport
-* :ref:`aiida_computer_ssh <topics:plugins:testfixtures:aiida-computer-ssh>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using SSH transport
+* :ref:`aiida_computer_ssh <topics:plugins:testfixtures:aiida-computer-ssh>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using the asynchronous SSH transport
 * :ref:`aiida_localhost <topics:plugins:testfixtures:aiida-localhost>`: Shortcut for <topics:plugins:testfixtures:aiida-computer-local> that immediately returns a :class:`~aiida.orm.computers.Computer` instance for the ``localhost`` computer instead of a factory
 * :ref:`aiida_code <topics:plugins:testfixtures:aiida-code>`: Setup a :class:`~aiida.orm.nodes.data.code.abstract.AbstractCode` instance
 * :ref:`aiida_code_installed <topics:plugins:testfixtures:aiida-code-installed>`: Setup a :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` instance on a given computer
@@ -641,14 +641,15 @@ If you need a guarantee that the computer is not configured, make sure to clean 
 .. _topics:plugins:testfixtures:aiida-computer-ssh:
 
 ``aiida_computer_ssh``
-----------------------
+----------------------------
 
-This fixture is a shortcut for ``aiida_computer`` to setup the localhost with SSH transport:
+This fixture is a shortcut for ``aiida_computer`` to setup the localhost with the asynchronous SSH transport.
+When configuring the computer, the ``backend`` (``asyncssh`` or ``openssh``) has to be specified explicitly:
 
 .. code-block:: python
 
     def test(aiida_computer_ssh):
-        localhost = aiida_computer_ssh()
+        localhost = aiida_computer_ssh(backend='asyncssh')
         assert localhost.hostname == 'localhost'
         assert localhost.transport_type == 'core.ssh'
 

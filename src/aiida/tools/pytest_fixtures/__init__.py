@@ -28,7 +28,7 @@ from aiida.tools.pytest_fixtures.orm import (
     aiida_code_installed,
     aiida_computer,
     aiida_computer_local,
-    aiida_computer_ssh_async,
+    aiida_computer_ssh,
     aiida_localhost,
     ssh_key,
 )
@@ -39,7 +39,7 @@ __all__ = (
     'aiida_code_installed',
     'aiida_computer',
     'aiida_computer_local',
-    'aiida_computer_ssh_async',
+    'aiida_computer_ssh',
     'aiida_config',
     'aiida_config_factory',
     'aiida_config_tmp',

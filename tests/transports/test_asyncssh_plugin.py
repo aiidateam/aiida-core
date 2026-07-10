@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from aiida.transports.plugins.async_backend import _AsyncSSH, _OpenSSH, get_openssh_version
-from aiida.transports.plugins.ssh_async import AsyncSshTransport
+from aiida.transports.plugins.ssh import AsyncSshTransport
 
 
 class TestAuthenticationScript:

@@ -55,17 +55,17 @@ class TestPluginParamType:
         and try to map it onto a valid entry point that is part of the groups defined for the parameter.
         """
         param = PluginParamType(group='transports')
-        entry_point = get_entry_point_from_string('aiida.transports:core.ssh_async')
+        entry_point = get_entry_point_from_string('aiida.transports:core.ssh')
 
         # Invalid entry point strings
         with pytest.raises(ValueError):
-            param.get_entry_point_from_string('aiida.transport:core.ssh_async')
+            param.get_entry_point_from_string('aiida.transport:core.ssh')
 
         with pytest.raises(ValueError):
-            param.get_entry_point_from_string('aiid.transports:core.ssh_async')
+            param.get_entry_point_from_string('aiid.transports:core.ssh')
 
         with pytest.raises(ValueError):
-            param.get_entry_point_from_string('aiida..transports:core.ssh_async')
+            param.get_entry_point_from_string('aiida..transports:core.ssh')
 
         # Unsupported entry points for all formats
         with pytest.raises(ValueError):
@@ -88,9 +88,9 @@ class TestPluginParamType:
             param.get_entry_point_from_string('not_existent')
 
         # Valid entry point strings
-        assert param.get_entry_point_from_string('aiida.transports:core.ssh_async').name == entry_point.name
-        assert param.get_entry_point_from_string('transports:core.ssh_async').name == entry_point.name
-        assert param.get_entry_point_from_string('core.ssh_async').name == entry_point.name
+        assert param.get_entry_point_from_string('aiida.transports:core.ssh').name == entry_point.name
+        assert param.get_entry_point_from_string('transports:core.ssh').name == entry_point.name
+        assert param.get_entry_point_from_string('core.ssh').name == entry_point.name
 
     def test_get_entry_point_from_ambiguous(self):
         """Test the functionality of the get_entry_point_from_string which will take an entry point string
@@ -111,14 +111,14 @@ class TestPluginParamType:
         """Test that the convert method returns the correct entry point"""
         param = PluginParamType(group=('transports', 'data'))
 
-        entry_point = param.convert('aiida.transports:core.ssh_async', None, None)
-        assert entry_point.name == 'core.ssh_async'
+        entry_point = param.convert('aiida.transports:core.ssh', None, None)
+        assert entry_point.name == 'core.ssh'
 
-        entry_point = param.convert('transports:core.ssh_async', None, None)
-        assert entry_point.name == 'core.ssh_async'
+        entry_point = param.convert('transports:core.ssh', None, None)
+        assert entry_point.name == 'core.ssh'
 
-        entry_point = param.convert('core.ssh_async', None, None)
-        assert entry_point.name == 'core.ssh_async'
+        entry_point = param.convert('core.ssh', None, None)
+        assert entry_point.name == 'core.ssh'
 
         entry_point = param.convert('aiida.data:core.structure', None, None)
         assert entry_point.name == 'core.structure'
@@ -135,16 +135,16 @@ class TestPluginParamType:
     def test_convert_load(self):
         """Test that the convert method returns the loaded entry point if load=True at construction time of parameter"""
         param = PluginParamType(group=('transports', 'data'), load=True)
-        entry_point_ssh = get_entry_point_from_string('aiida.transports:core.ssh_async')
+        entry_point_ssh = get_entry_point_from_string('aiida.transports:core.ssh')
         entry_point_structure = get_entry_point_from_string('aiida.data:core.structure')
 
-        entry_point = param.convert('aiida.transports:core.ssh_async', None, None)
+        entry_point = param.convert('aiida.transports:core.ssh', None, None)
         assert entry_point, entry_point_ssh
 
-        entry_point = param.convert('transports:core.ssh_async', None, None)
+        entry_point = param.convert('transports:core.ssh', None, None)
         assert entry_point, entry_point_ssh
 
-        entry_point = param.convert('core.ssh_async', None, None)
+        entry_point = param.convert('core.ssh', None, None)
         assert entry_point, entry_point_ssh
 
         entry_point = param.convert('aiida.data:core.structure', None, None)
@@ -165,26 +165,26 @@ class TestPluginParamType:
         when the user decides to user either a FULL or PARTIAL string anyway, the completion should match that syntax
         """
         param = PluginParamType(group='transports')
-        entry_point_minimal = 'core.ssh_async'
-        entry_point_partial = 'transports:core.ssh_async'
-        entry_point_full = 'aiida.transports:core.ssh_async'
+        entry_point_minimal = 'core.ssh'
+        entry_point_partial = 'transports:core.ssh'
+        entry_point_full = 'aiida.transports:core.ssh'
 
         options = [item.value for item in param.shell_complete(None, None, 'core.ss')]
         assert entry_point_minimal in options
 
-        options = [item.value for item in param.shell_complete(None, None, 'core.ssh_async')]
+        options = [item.value for item in param.shell_complete(None, None, 'core.ssh')]
         assert entry_point_minimal in options
 
         options = [item.value for item in param.shell_complete(None, None, 'transports:core.ss')]
         assert entry_point_partial in options
 
-        options = [item.value for item in param.shell_complete(None, None, 'transports:core.ssh_async')]
+        options = [item.value for item in param.shell_complete(None, None, 'transports:core.ssh')]
         assert entry_point_partial in options
 
         options = [item.value for item in param.shell_complete(None, None, 'aiida.transports:core.ss')]
         assert entry_point_full in options
 
-        options = [item.value for item in param.shell_complete(None, None, 'aiida.transports:core.ssh_async')]
+        options = [item.value for item in param.shell_complete(None, None, 'aiida.transports:core.ssh')]
         assert entry_point_full in options
 
     def test_complete_amibguity(self):

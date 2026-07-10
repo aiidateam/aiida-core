@@ -9,7 +9,7 @@ There are three ways of setting up an SSH connection for AiiDA:
 
 #. Using a passwordless SSH key (easier, less safe)
 #. Using a password-protected SSH key through ``ssh-agent`` (one more step, safer)
-#. Using :ref:`two-factor authentication <how-to:ssh:2fa>` with the ``core.ssh_async`` transport and a configured ``authentication_script``, if your compute resource requires it and allows automation
+#. Using :ref:`two-factor authentication <how-to:ssh:2fa>` with the ``core.ssh`` transport and a configured ``authentication_script``, if your compute resource requires it and allows automation
 
 .. _how-to:ssh:passwordless:
 
@@ -178,7 +178,7 @@ To instruct ssh to look in the OSX keychain for key passphrases, add the followi
 AiiDA configuration
 ^^^^^^^^^^^^^^^^^^^
 
-With the recommended ``core.ssh_async`` transport, no extra configuration is needed: the agent is picked up through the ``SSH_AUTH_SOCK`` environment variable, just like the ``ssh`` command does.
+With the ``core.ssh`` transport, no extra configuration is needed: the agent is picked up through the ``SSH_AUTH_SOCK`` environment variable, just like the ``ssh`` command does.
 
 .. _how-to:ssh:proxy:
 
@@ -245,18 +245,18 @@ In both cases, this should allow you to directly connect to the *TARGET* server 
 AiiDA configuration
 ^^^^^^^^^^^^^^^^^^^
 
-With the recommended ``core.ssh_async`` transport, nothing else is needed: the plugin connects as ``ssh SHORTNAME_TARGET`` would, so the ``ProxyJump``/``ProxyCommand`` directives of your ``~/.ssh/config`` are honoured directly.
+With the ``core.ssh`` transport, nothing else is needed: the plugin connects as ``ssh SHORTNAME_TARGET`` would, so the ``ProxyJump``/``ProxyCommand`` directives of your ``~/.ssh/config`` are honoured directly.
 
 .. code-block:: console
 
-   $ verdi computer configure core.ssh_async SHORTNAME_TARGET
+   $ verdi computer configure core.ssh SHORTNAME_TARGET
 
 .. note:: A chain of proxies can be specified with a comma-separated ``ProxyJump`` directive in your ``~/.ssh/config``. If no username is specified for the proxy, the same username as for the *TARGET* is used.
 
 
 .. _how-to:ssh:2fa:
 
-Using two-factor authentication (2FA) with ``core.ssh_async``
+Using two-factor authentication (2FA) with ``core.ssh``
 =============================================================
 
 .. danger::
@@ -267,7 +267,7 @@ Using two-factor authentication (2FA) with ``core.ssh_async``
 
 Some HPC centers require two-factor authentication where you must first authenticate via an API using your credentials and a TOTP (Time-based One-Time Password) code, which then provides you with short-lived signed SSH keys for the actual connection.
 
-The ``core.ssh_async`` transport plugin provides an ``authentication_script`` option that runs a local script before each SSH connection is opened.
+The ``core.ssh`` transport plugin provides an ``authentication_script`` option that runs a local script before each SSH connection is opened.
 This script must be provided by the user and is responsible for obtaining fresh SSH credentials so that the subsequent connection can succeed.
 
 .. warning::
@@ -449,11 +449,11 @@ Then modify the script to read from the keyring:
 Configuring AiiDA
 ^^^^^^^^^^^^^^^^^
 
-When configuring your computer with the ``core.ssh_async`` transport, specify the script path:
+When configuring your computer with the ``core.ssh`` transport, specify the script path:
 
 .. code-block:: console
 
-   $ verdi computer configure core.ssh_async YOURCOMPUTER
+   $ verdi computer configure core.ssh YOURCOMPUTER
    ...
    Local script to run before opening connection (path) [None]: /home/YOURUSERNAME/bin/get_hpc_keys.sh
    ...
@@ -474,11 +474,11 @@ Security considerations
 
 .. _how-to:ssh:data-node:
 
-Using a dedicated data transfer node with ``core.ssh_async``
-============================================================
+Using a dedicated data transfer node with ``core.ssh``
+======================================================
 
 Some HPC centers provide a dedicated *data transfer node*, tuned for moving large amounts of data, and ask their users not to run heavy transfers on the login node.
-The ``core.ssh_async`` transport plugin can perform your file transfers there, while still submitting and monitoring your calculations on the login node.
+The ``core.ssh`` transport plugin can perform your file transfers there, while still submitting and monitoring your calculations on the login node.
 
 Configuring AiiDA
 ^^^^^^^^^^^^^^^^^
@@ -488,7 +488,7 @@ Once that works, pass it to the ``data_node_host`` option:
 
 .. code-block:: console
 
-   $ verdi computer configure core.ssh_async YOURCOMPUTER
+   $ verdi computer configure core.ssh YOURCOMPUTER
    ...
    Login host as in 'ssh <HOST>' (needs a password-less setup, with the host key in known_hosts) [<HPC>]: <HPC>
    Data transfer host as in 'ssh <HOST>', also requires a password-less SSH setup in your SSH config ('None' to use the login host) [None]: <HPC-DATA>
@@ -498,6 +498,68 @@ or ``--data-node-host <HPC-DATA>`` non-interactively.
 Leaving it at ``None`` keeps the previous behaviour, where both the file transfers and the calculation commands run through the login host.
 
 
+.. _how-to:ssh:migrated:
+
+Computers migrated from the v2 ``core.ssh`` plugin
+==================================================
+
+Until AiiDA v3, the ``core.ssh`` transport was a paramiko-based plugin that stored every connection
+detail (user name, port, key file, proxy, Kerberos settings, host key policy) with the computer
+itself, and ignored ``~/.ssh/config`` entirely. That plugin is gone, and its name is now taken by
+the asynchronous transport described above, which connects to a host defined in an SSH client
+configuration like any other SSH tool does.
+
+Migrating a profile to v3 therefore writes those stored parameters out as a configuration entry, one
+per configured computer, under a host name of the form ``<hostname>_<uuid>``:
+
+.. code-block:: console
+
+   Host daint.cscs.ch_2f8a1c7e-...
+       Hostname daint.cscs.ch
+       User aiidauser
+       Port 2222
+       IdentityFile /home/aiida/.ssh/id_daint
+       ProxyJump ela.cscs.ch
+       Compression yes
+
+Each entry goes into its own file, ``_migration_ssh_config/<host>.conf`` in your AiiDA configuration
+directory. The computer then records two things: its ``host``, set to the name the entry defines,
+and the path of that file. Your ``~/.ssh/config`` is neither read nor written -- AiiDA passes the
+file to the client instead, as the configuration ``asyncssh`` reads and as ``ssh -F``. That is what
+the legacy plugin effectively did, since it took the whole connection from what it had stored.
+
+.. note::
+
+   - These are ordinary SSH configuration files. Edit one as you would any other, and check a change
+     with ``ssh -F ~/.aiida/_migration_ssh_config/<host>.conf <host>``.
+   - A setting that only restates what every client already does is left out, so that the file stays
+     readable by a client built without the GSSAPI key exchange patch, such as the one macOS ships.
+     A computer that used the default host key policy therefore carries no ``StrictHostKeyChecking``,
+     and one that did not use Kerberos key exchange carries no ``GSSAPIKeyExchange``.
+   - Both backends read the same file, so switching a migrated computer with
+     ``verdi computer configure core.ssh <COMPUTER> --backend openssh`` works as it would for any
+     other computer.
+   - Settings in your own ``~/.ssh/config`` do **not** apply to a migrated computer. If you want them
+     to, move the computer over to one of your own entries with
+     ``verdi computer configure core.ssh <COMPUTER> --host <YOUR-HOST>``; the migrated file is then
+     no longer used, and can be deleted.
+   - Do not delete the file while the computer still points at it. AiiDA records where it is, so you
+     get a message saying it is missing rather than a confusing name lookup failure, but it cannot be
+     written again: the parameters it was rendered from were replaced by it. Restore it from a
+     backup, or move the computer to an entry of your own.
+
+.. warning::
+
+   The legacy ``AutoAddPolicy`` and ``WarningPolicy`` host key policies are migrated to
+   ``StrictHostKeyChecking no``, which is **more permissive** than they were. Both accepted a host
+   missing from ``known_hosts``, but still refused a *changed* key for a host already in it; ``no``
+   accepts that too. The migration lists the computers this applies to. To tighten one again, set
+   ``StrictHostKeyChecking yes`` in its configuration file and add the host key to ``known_hosts``
+   with ``ssh-keyscan``. The in-between ``accept-new`` is honoured by the ``openssh`` backend only:
+   ``asyncssh`` has no handler for this directive, so AiiDA reads it back itself and treats anything
+   other than ``no`` as strict.
+
+
 Connecting to a server without SFTP support
 ===========================================
 
@@ -505,11 +567,11 @@ A few HPC centers do not provide SFTP at all, in which case every file transfer 
 The best course of action is to ask your HPC center to enable SFTP.
 If that is not possible, AiiDA can fall back to the legacy protocol.
 
-To do so, configure the computer with the ``openssh`` backend of the ``core.ssh_async`` transport and pass ``--no-use-sftp``, which adds the ``-O`` flag to every ``scp`` invocation:
+To do so, configure the computer with the ``openssh`` backend of the ``core.ssh`` transport and pass ``--no-use-sftp``, which adds the ``-O`` flag to every ``scp`` invocation:
 
 .. code-block:: console
 
-   $ verdi computer configure core.ssh_async <COMPUTER> --backend openssh --no-use-sftp
+   $ verdi computer configure core.ssh <COMPUTER> --backend openssh --no-use-sftp
 
 .. note::
 
@@ -521,7 +583,7 @@ To do so, configure the computer with the ``openssh`` backend of the ``core.ssh_
 Using kerberos tokens
 =====================
 
-If the remote machine requires authentication through a Kerberos token (that you need to obtain before using ssh), the simplest option is to use the ``core.ssh_async`` transport with the ``openssh`` backend, which shells out to the ``ssh`` command and therefore honours the ``GSSAPI`` options of your ``~/.ssh/config`` directly.
+If the remote machine requires authentication through a Kerberos token (that you need to obtain before using ssh), the simplest option is to use the ``core.ssh`` transport with the ``openssh`` backend, which shells out to the ``ssh`` command and therefore honours the ``GSSAPI`` options of your ``~/.ssh/config`` directly.
 
 For a real-world SSH troubleshooting walkthrough and a deep dive into secure SSH agent forwarding for cloud-based AiiDA deployments, see also these blog posts:
 

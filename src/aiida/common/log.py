@@ -137,11 +137,6 @@ def get_logging_config() -> dict[str, t.Any]:
                 'level': lambda: get_config_option('logging.disk_objectstore_loglevel'),
                 'propagate': False,
             },
-            'paramiko': {
-                'handlers': ['console'],
-                'level': lambda: get_config_option('logging.paramiko_loglevel'),
-                'propagate': False,
-            },
             'alembic': {
                 'handlers': ['console'],
                 'level': lambda: get_config_option('logging.alembic_loglevel'),
@@ -172,7 +167,6 @@ _HANDLER_TO_LOGGER: dict[str, tuple[str, ...]] = {
         'logging.verdi_loglevel',
         'logging.aiida_core_loglevel',
         'logging.disk_objectstore_loglevel',
-        'logging.paramiko_loglevel',
         'logging.alembic_loglevel',
         'logging.aiopika_loglevel',
         'logging.sqlalchemy_loglevel',

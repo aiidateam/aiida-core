@@ -180,8 +180,6 @@ AiiDA configuration
 
 With the recommended ``core.ssh_async`` transport, no extra configuration is needed: the agent is picked up through the ``SSH_AUTH_SOCK`` environment variable, just like the ``ssh`` command does.
 
-With the deprecated ``core.ssh`` transport, when :ref:`configuring the computer in AiiDA <how-to:run-codes:computer:configuration>`, simply make sure that ``Allow ssh agent`` is set to ``true`` (default).
-
 .. _how-to:ssh:proxy:
 
 Connecting to a remote computer *via* a proxy server
@@ -253,30 +251,7 @@ With the recommended ``core.ssh_async`` transport, nothing else is needed: the p
 
    $ verdi computer configure core.ssh_async SHORTNAME_TARGET
 
-.. dropdown:: :fa:`plus-circle` With the deprecated ``core.ssh`` transport
-
-   .. deprecated:: 2.8
-
-       The ``core.ssh`` transport plugin is deprecated and will be removed in v3.0.
-       Use ``core.ssh_async`` instead, which is significantly faster and provides an easier configuration interface.
-
-   When :ref:`configuring the computer in AiiDA <how-to:run-codes:computer:configuration>`, AiiDA will automatically parse most of required information from your ``~/.ssh/config`` file. A notable exception to this is the ``proxy_jump`` directive, which **must** be specified manually.
-
-   Simply copy & paste the same instructions as you have used for ``ProxyJump`` in your ``~/.ssh/config`` to the input for ``proxy_jump``:
-
-   .. code-block:: console
-
-      $ verdi computer configure core.ssh SHORTNAME_TARGET
-      ...
-      Allow ssh agent [True]:
-      SSH proxy jump []: USER_PROXY@FULLHOSTNAME_PROXY
-
-   .. note:: A chain of proxies can be specified as a comma-separated list. If you need to specify a different username, you can so with ``USER_PROXY@...``. If no username is specified for the proxy the same username as for the *TARGET* is used.
-
-   .. important:: Specifying the ``proxy_command`` manually
-
-       When specifying or updating the ``proxy_command`` option via ``verdi computer configure core.ssh``, please **do not use placeholders** ``%h`` and ``%p`` but provide the *actual* hostname and port.
-       AiiDA replaces them only when parsing from the ``~/.ssh/config`` file.
+.. note:: A chain of proxies can be specified with a comma-separated ``ProxyJump`` directive in your ``~/.ssh/config``. If no username is specified for the proxy, the same username as for the *TARGET* is used.
 
 
 .. _how-to:ssh:2fa:
@@ -547,15 +522,6 @@ Using kerberos tokens
 =====================
 
 If the remote machine requires authentication through a Kerberos token (that you need to obtain before using ssh), the simplest option is to use the ``core.ssh_async`` transport with the ``openssh`` backend, which shells out to the ``ssh`` command and therefore honours the ``GSSAPI`` options of your ``~/.ssh/config`` directly.
-
-.. dropdown:: :fa:`plus-circle` With the deprecated ``core.ssh`` transport
-
-   You typically need to
-
-   * install ``libffi`` (``sudo apt-get install libffi-dev`` under Ubuntu)
-   * install the ``ssh_kerberos`` extra during the installation of aiida-core (see :ref:`installation:guide-complete:python-package:optional-requirements`).
-
-   If you provide all necessary ``GSSAPI`` options in your ``~/.ssh/config`` file, ``verdi computer configure`` should already pick up the appropriate values for all the gss-related options.
 
 For a real-world SSH troubleshooting walkthrough and a deep dive into secure SSH agent forwarding for cloud-based AiiDA deployments, see also these blog posts:
 

@@ -62,9 +62,9 @@ def tmp_path_local(tmp_path_factory):
     scope='function',
     params=[
         ('core.local', None),
-        ('core.ssh_async', 'asyncssh'),
+        ('core.ssh', 'asyncssh'),
         pytest.param(
-            ('core.ssh_async', 'openssh'),
+            ('core.ssh', 'openssh'),
             marks=pytest.mark.skipif(
                 sys.platform == 'darwin',
                 reason='openssh transport uses GNU stat -c, unavailable on macOS localhost',
@@ -76,7 +76,7 @@ def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
     """Fixture that parametrizes over all the registered implementations of the transport plugins."""
     plugin = TransportFactory(request.param[0])
 
-    if request.param[0] == 'core.ssh_async':
+    if request.param[0] == 'core.ssh':
         kwargs = {
             'machine': 'localhost',
             'backend': request.param[1],
@@ -554,7 +554,7 @@ def test_put_get_empty_string_file(custom_transport, tmp_path_remote, tmp_path_l
 
         # Check st_mtime_ns to sure it is overwritten
         # Note: this test will fail if getfile() would preserve the remote timestamp,
-        # this is supported by core.ssh_async, but the default value is False
+        # this is supported by core.ssh, but the default value is False
         assert t2 > t1
 
 

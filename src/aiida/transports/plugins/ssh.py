@@ -163,10 +163,10 @@ class AsyncSshTransport(AsyncTransport):
         # the machine is passed as `machine=computer.hostname` in the codebase
         # 'machine' is immutable.
         # 'host' is mutable, so it can be changed via command:
-        # 'verdi computer configure core.ssh_async <LABEL>'.
+        # 'verdi computer configure core.ssh <LABEL>'.
         # by default, 'host' is set to 'machine' in the __init__ method, if not provided.
         # NOTE: to guarantee a connection,
-        # a computer with core.ssh_async transport plugin should be configured before any instantiation.
+        # a computer with core.ssh transport plugin should be configured before any instantiation.
         self.machine = kwargs.pop('host', kwargs.pop('machine'))
         data_node_host = kwargs.pop('data_node_host', 'None')
         self.data_machine = self.machine if not data_node_host or data_node_host == 'None' else data_node_host

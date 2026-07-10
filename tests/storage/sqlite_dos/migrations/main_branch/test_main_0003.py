@@ -22,7 +22,7 @@ from aiida.storage.migrations import legacy_ssh
 from aiida.storage.sqlite_dos.backend import SqliteDosMigrator
 from aiida.storage.sqlite_zip.models import SqliteBase
 from aiida.storage.sqlite_zip.utils import create_sqla_engine
-from aiida.transports.plugins.ssh_async import AsyncSshTransport
+from aiida.transports.plugins.ssh import AsyncSshTransport
 
 LEGACY_AUTH_PARAMS = {
     'username': 'alice',

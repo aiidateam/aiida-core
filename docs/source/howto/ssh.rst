@@ -93,6 +93,21 @@ replacing ``QUEUE_VISUALIZATION_COMMAND`` by ``squeue`` (SLURM), ``qstat`` (PBSp
 
         $ ssh YOURCLUSTERADDRESS 'echo $PATH'
 
+.. _how-to:ssh:migrated:
+
+Computers migrated from the legacy ``core.ssh`` plugin
+======================================================
+
+New computers are configured entirely through ``~/.ssh/config`` as shown above.
+
+A computer that was migrated from the legacy (v2) ``core.ssh`` plugin instead keeps the connection
+parameters (user, port, key file, proxy, GSS, ...) that were stored when it was originally
+configured. ``verdi computer configure core.ssh_async <COMPUTER>`` offers those stored values as
+defaults, and only such a migrated computer is prompted for them. For a migrated computer
+``~/.ssh/config`` is **ignored**: the stored parameters are the single source of truth, reproducing
+how the legacy plugin connected. If you would rather drive the connection through ``~/.ssh/config``,
+set up a fresh computer instead.
+
 .. _how-to:ssh:passphrase:
 
 Using passphrase-protected keys *via* an ssh-agent

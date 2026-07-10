@@ -33,6 +33,7 @@ from aiida.cmdline.commands.cmd_computer import (
 )
 from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.warnings import AiidaDeprecationWarning
+from aiida.transports.plugins.ssh_async import _LEGACY_OPTION_NAMES
 
 
 def generate_setup_options_dict(replace_args=None, non_interactive=True):
@@ -519,6 +520,108 @@ class TestVerdiComputerConfigure:
         )
         assert '--username=' in result.output
         assert result_cur.output == result.output
+
+    def _make_ssh_async_computer(self, label, *, migrated):
+        """Create a ``core.ssh_async`` computer, optionally migrated from ``core.ssh``.
+
+        A migrated computer is built by storing the legacy ``auth_params`` directly, exactly as the
+        storage migration does.
+        """
+        self.comp_builder.label = label
+        self.comp_builder.transport = 'core.ssh_async'
+        comp = self.comp_builder.new()
+        comp.store()
+        if migrated:
+            authinfo = orm.AuthInfo(computer=comp, user=self.user)
+            authinfo.set_auth_params(
+                {
+                    'safe_interval': 1.0,
+                    'use_login_shell': False,
+                    'username': 'alice',
+                    'port': 2222,
+                    'look_for_keys': False,
+                    'key_filename': '',
+                    'timeout': 60,
+                    'allow_agent': True,
+                    'proxy_jump': '',
+                    'proxy_command': '',
+                    'compress': False,
+                    'gss_auth': False,
+                    'gss_kex': False,
+                    'gss_deleg_creds': False,
+                    'gss_host': '',
+                    'load_system_host_keys': False,
+                    'key_policy': 'AutoAddPolicy',
+                }
+            )
+            authinfo.store()
+        else:
+            comp.configure(safe_interval=1.0)
+        return comp
+
+    def test_ssh_async_native_no_legacy_params(self):
+        """A native ``core.ssh_async`` computer never acquires the legacy ``core.ssh`` parameters."""
+        comp = self._make_ssh_async_computer('test_ssh_async_native_ni', migrated=False)
+
+        options = ['core.ssh_async', comp.label, '--non-interactive', '--safe-interval', '1']
+        result = self.cli_runner(computer_configure, options)
+        assert comp.is_configured, result.output
+
+        auth_params = comp.get_authinfo(self.user).get_auth_params()
+        assert all(name not in auth_params for name in _LEGACY_OPTION_NAMES)
+
+    def test_ssh_async_native_no_legacy_prompts(self):
+        """A native computer is never prompted for the legacy connection options."""
+        comp = self._make_ssh_async_computer('test_ssh_async_native_prompts', migrated=False)
+
+        result = self.cli_runner(computer_configure, ['core.ssh_async', comp.label], user_input='\n' * 20)
+        assert comp.is_configured, result.output
+        for prompt in ('User name', 'Look for keys', 'GSS host', 'Key policy'):
+            assert prompt not in result.output
+
+    def test_ssh_async_native_show_hides_legacy(self):
+        """``configure show`` does not list the hidden legacy options for a native computer."""
+        comp = self._make_ssh_async_computer('test_ssh_async_native_show', migrated=False)
+
+        result = self.cli_runner(computer_configure, ['show', comp.label])
+        assert '* host' in result.output
+        assert '* username' not in result.output
+        assert '* key_policy' not in result.output
+
+    def test_ssh_async_migrated_show_lists_legacy(self):
+        """``configure show`` lists the legacy options for a migrated computer."""
+        comp = self._make_ssh_async_computer('test_ssh_async_migrated_show', migrated=True)
+
+        result = self.cli_runner(computer_configure, ['show', comp.label])
+        for name in ('username', 'port', 'key_policy'):
+            assert f'* {name}' in result.output
+
+    def test_ssh_async_migrated_prompts_for_legacy(self):
+        """A migrated computer is prompted for the legacy options."""
+        comp = self._make_ssh_async_computer('test_ssh_async_migrated_prompts', migrated=True)
+
+        result = self.cli_runner(computer_configure, ['core.ssh_async', comp.label], user_input='\n' * 40)
+        assert comp.is_configured, result.output
+        assert 'User name' in result.output
+
+    def test_ssh_async_migrated_keeps_legacy_params(self):
+        """Reconfiguring a migrated computer keeps its legacy parameters, including falsy ones."""
+        comp = self._make_ssh_async_computer('test_ssh_async_migrated_ni', migrated=True)
+
+        options = ['core.ssh_async', comp.label, '--non-interactive', '--safe-interval', '2']
+        result = self.cli_runner(computer_configure, options)
+        assert comp.is_configured, result.output
+
+        auth_params = comp.get_authinfo(self.user).get_auth_params()
+        assert auth_params['username'] == 'alice'
+        assert auth_params['port'] == 2222
+        assert auth_params['key_policy'] == 'AutoAddPolicy'
+        # A stored `False` must not be reset to the plugin default, which would change how the
+        # computer authenticates.
+        assert auth_params['look_for_keys'] is False
+        assert auth_params['compress'] is False
+        assert auth_params['load_system_host_keys'] is False
+        assert auth_params['use_login_shell'] is False
 
     @pytest.mark.parametrize('sort_option', ('--sort', '--no-sort'))
     def test_computer_export_setup(self, tmp_path, file_regression, sort_option):

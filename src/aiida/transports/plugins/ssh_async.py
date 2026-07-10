@@ -19,6 +19,9 @@ from typing import Optional, Union
 
 import click
 
+from aiida.cmdline.params import options
+from aiida.cmdline.params.options.interactive import InteractiveOption
+from aiida.cmdline.params.types.path import AbsolutePathOrEmptyParamType
 from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import InvalidOperation
 from aiida.transports.transport import (
@@ -48,6 +51,189 @@ def validate_backend(ctx, param, value: str):
     if value not in ['asyncssh', 'openssh']:
         raise click.BadParameter(f'{value} is not a valid backend, choose either `asyncssh` or `openssh`')
     return value
+
+
+def _computer_was_migrated(ctx) -> bool:
+    """Return whether the computer being configured carries legacy ``core.ssh`` parameters.
+
+    The answer is memoised on ``ctx.meta`` to avoid one database query per legacy option.
+    """
+    key = 'ssh_legacy_migrated'
+    if key not in ctx.meta:
+        computer = ctx.params.get('computer')
+        if computer is None:
+            ctx.meta[key] = False
+        else:
+            config = computer.get_configuration(ctx.params.get('user'))
+            ctx.meta[key] = any(name in config for name in _LEGACY_OPTION_NAMES)
+    return ctx.meta[key]
+
+
+class _LegacyOption(InteractiveOption):
+    """Auth option for a legacy ``core.ssh`` parameter, dropped unless the computer was migrated."""
+
+    def handle_parse_result(self, ctx, opts, args):
+        result = super().handle_parse_result(ctx, opts, args)
+        if not _computer_was_migrated(ctx):
+            # Native computer: never let the legacy parameter reach ``Computer.configure``.
+            ctx.params.pop(self.name, None)
+        return result
+
+
+# Connection/authentication options inherited from the legacy ``core.ssh`` plugin. They are hidden
+# (no prompt, not in ``--help``, not in ``configure show``) unless the computer was migrated from
+# ``core.ssh``, i.e. already has such parameters stored; new computers configure everything through
+# ``~/.ssh/config``. The translation into ``asyncssh.connect()`` kwargs lives in ``async_backend``.
+_LEGACY_AUTH_OPTIONS = [
+    (
+        'username',
+        {
+            'default': '',
+            'prompt': 'User name',
+            'help': 'Login user name on the remote machine.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'port',
+        {'option': options.PORT, 'default': 22, 'prompt': 'Port number', 'non_interactive_default': True},
+    ),
+    (
+        'look_for_keys',
+        {
+            'default': True,
+            'switch': True,
+            'prompt': 'Look for keys',
+            'help': 'Automatically look for private keys in the ~/.ssh folder.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'key_filename',
+        {
+            'type': AbsolutePathOrEmptyParamType(dir_okay=False, exists=True),
+            'default': '',
+            'prompt': 'SSH key file',
+            'help': 'Absolute path to your private SSH key. Leave empty to use the path set in the SSH config.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'timeout',
+        {
+            'type': int,
+            'default': 60,
+            'prompt': 'Connection timeout in s',
+            'help': 'Time in seconds to wait for connection before giving up. Leave empty to use default value.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'allow_agent',
+        {
+            'default': False,
+            'switch': True,
+            'prompt': 'Allow ssh agent',
+            'help': 'Switch to allow or disallow using an SSH agent.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'proxy_jump',
+        {
+            'default': '',
+            'prompt': 'SSH proxy jump',
+            'help': 'SSH proxy jump for tunneling through other SSH hosts.'
+            ' Use a comma-separated list of hosts of the form [user@]host[:port].'
+            ' If user or port are not specified for a host, the user & port values from the target host are used.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'proxy_command',
+        {
+            'default': '',
+            'prompt': 'SSH proxy command',
+            'help': 'SSH proxy command for tunneling through a proxy server.'
+            ' For tunneling through another SSH host, consider using the "SSH proxy jump" option instead!',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'compress',
+        {
+            'default': True,
+            'switch': True,
+            'prompt': 'Compress file transfers',
+            'help': 'Turn file transfer compression on or off.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'gss_auth',
+        {
+            'default': False,
+            'type': bool,
+            'prompt': 'GSS auth',
+            'help': 'Enable when using GSS kerberos token to connect.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'gss_kex',
+        {
+            'default': False,
+            'type': bool,
+            'prompt': 'GSS kex',
+            'help': 'GSS kex for kerberos, if not configured in SSH config file.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'gss_deleg_creds',
+        {
+            'default': False,
+            'type': bool,
+            'prompt': 'GSS deleg_creds',
+            'help': 'GSS deleg_creds for kerberos, if not configured in SSH config file.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'gss_host',
+        {
+            'default': '',
+            'prompt': 'GSS host',
+            'help': 'GSS host for kerberos, if not configured in SSH config file.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'load_system_host_keys',
+        {
+            'default': True,
+            'switch': True,
+            'prompt': 'Load system host keys',
+            'help': 'Load system host keys from default SSH location.',
+            'non_interactive_default': True,
+        },
+    ),
+    (
+        'key_policy',
+        {
+            'default': 'RejectPolicy',
+            'type': click.Choice(['RejectPolicy', 'WarningPolicy', 'AutoAddPolicy']),
+            'prompt': 'Key policy',
+            'help': 'SSH key policy if host is not known.',
+            'non_interactive_default': True,
+        },
+    ),
+]
+_LEGACY_AUTH_OPTIONS = [
+    (name, dict(spec, cls=_LegacyOption, prompt_fn=_computer_was_migrated, hidden=True))
+    for name, spec in _LEGACY_AUTH_OPTIONS
+]
+_LEGACY_OPTION_NAMES = tuple(name for name, _ in _LEGACY_AUTH_OPTIONS)
 
 
 class AsyncSshTransport(AsyncTransport):
@@ -109,7 +295,7 @@ class AsyncSshTransport(AsyncTransport):
                 'callback': validate_backend,
             },
         ),
-    ]
+    ] + _LEGACY_AUTH_OPTIONS
 
     @classmethod
     def _get_host_suggestion_string(cls, computer):
@@ -133,7 +319,9 @@ class AsyncSshTransport(AsyncTransport):
         # by default, 'host' is set to 'machine' in the __init__ method, if not provided.
         # NOTE: to guarantee a connection,
         # a computer with core.ssh_async transport plugin should be configured before any instantiation.
-        self.machine = kwargs.pop('host', kwargs.pop('machine'))
+        # 'machine' must always be popped; 'host' may legitimately be an empty string.
+        machine = kwargs.pop('machine')
+        self.machine = kwargs.pop('host', None) or machine
         self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
         self._semaphore = asyncio.Semaphore(self._max_io_allowed)
         self.auth_script = kwargs.pop('authentication_script', 'None')
@@ -141,7 +329,25 @@ class AsyncSshTransport(AsyncTransport):
             # for backward compatibility
             self.auth_script = kwargs.pop('script_before', 'None')
 
-        if kwargs.get('backend') == 'openssh':
+        # Legacy connection parameters carried over from a migrated ``core.ssh`` computer. A non-empty
+        # dict (even with only empty values) marks a migrated computer; ``None`` marks a native one.
+        self._legacy_params = {k: kwargs.pop(k) for k in _LEGACY_OPTION_NAMES if k in kwargs} or None
+
+        if self._legacy_params and self._legacy_params.get('proxy_jump') and self._legacy_params.get('proxy_command'):
+            msg = '`proxy_jump` and `proxy_command` are mutually exclusive, please provide only one.'
+            raise ValueError(msg)
+
+        backend = kwargs.get('backend')
+        if self._legacy_params and backend == 'openssh':
+            # The `openssh` backend drives the `ssh`/`scp` clients, which cannot be given these
+            # settings, so a migrated computer always uses `asyncssh`.
+            self.logger.warning(
+                'The `openssh` backend cannot honor the connection parameters migrated from '
+                '`core.ssh`; using the `asyncssh` backend for this computer instead.'
+            )
+            backend = 'asyncssh'
+
+        if backend == 'openssh':
             from .async_backend import _OpenSSH
 
             self.async_backend = _OpenSSH(self.machine, self.logger, self._bash_command_str)
@@ -149,7 +355,9 @@ class AsyncSshTransport(AsyncTransport):
             # default backend is asyncssh
             from .async_backend import _AsyncSSH
 
-            self.async_backend = _AsyncSSH(self.machine, self.logger, self._bash_command_str)  # type: ignore[assignment]
+            self.async_backend = _AsyncSSH(  # type: ignore[assignment]
+                self.machine, self.logger, self._bash_command_str, self._legacy_params
+            )
 
     @property
     def max_io_allowed(self):

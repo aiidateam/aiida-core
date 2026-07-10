@@ -722,17 +722,21 @@ def computer_config_show(computer, user, defaults, as_option_string):
     from aiida.transports import cli as transport_cli
 
     transport_cls = computer.get_transport_class()
+    configuration = computer.get_configuration(user)
     option_list = [
         param
         for param in transport_cli.create_configure_cmd(computer.transport_type).params
-        if isinstance(param, click.core.Option)
+        if isinstance(param, click.core.Option) and param.name in transport_cls.get_valid_auth_params()
     ]
-    option_list = [option for option in option_list if option.name in transport_cls.get_valid_auth_params()]
+    # Hidden options (e.g. the legacy ``core.ssh`` connection parameters) are only relevant to a
+    # migrated computer; drop them unless this computer actually has them stored.
+    hidden_unset = {option.name for option in option_list if option.hidden and option.name not in configuration}
+    option_list = [option for option in option_list if option.name not in hidden_unset]
 
     if defaults:
         config = {option.name: transport_cli.transport_option_default(option.name, computer) for option in option_list}
     else:
-        config = computer.get_configuration(user)
+        config = configuration
 
     option_items = []
     if as_option_string:
@@ -756,6 +760,8 @@ def computer_config_show(computer, user, defaults, as_option_string):
     else:
         table = []
         for name in transport_cls.get_valid_auth_params():
+            if name in hidden_unset:
+                continue
             if name in config:
                 table.append((f'* {name}', config[name]))
             else:

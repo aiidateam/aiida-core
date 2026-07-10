@@ -4,10 +4,19 @@ import stat
 import subprocess
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import asyncssh
 import pytest
 
-from aiida.transports.plugins.async_backend import _OpenSSH, get_openssh_version
-from aiida.transports.plugins.ssh_async import AsyncSshTransport
+from aiida.transports.plugins.async_backend import (
+    _AcceptUnknownHostKey,
+    _AsyncSSH,
+    _OpenSSH,
+    get_openssh_version,
+)
+from aiida.transports.plugins.async_backend import (
+    build_asyncssh_connect_kwargs as _build_asyncssh_connect_kwargs,
+)
+from aiida.transports.plugins.ssh_async import _LEGACY_OPTION_NAMES, AsyncSshTransport
 
 
 class TestAuthenticationScript:
@@ -265,3 +274,239 @@ def test_scp_with_special_chars(tmp_path):
         escaped = backend._escape_for_rcp(str(source))
         result = subprocess.run(['scp', '-O', f'localhost:{escaped}', str(dest_rcp)], capture_output=True, check=False)
         assert result.returncode == 0 and dest_rcp.read_text() == f'content of {filename}'
+
+
+def build_asyncssh_connect_kwargs(host, params):
+    """Call the translator with a dummy logger."""
+    return _build_asyncssh_connect_kwargs(host, params, MagicMock())
+
+
+class TestLegacyConnectionOptions:
+    """Legacy ``core.ssh`` connection options, honored only for a migrated computer."""
+
+    def test_asyncssh_translation(self):
+        """Each legacy parameter maps to the correct ``asyncssh.connect()`` keyword."""
+        params = {
+            'username': 'alice',
+            'port': 2222,
+            'timeout': 30,
+            'key_filename': '/home/alice/.ssh/id_ed25519',
+            'proxy_jump': 'gw@bastion',
+            'key_policy': 'AutoAddPolicy',
+            'allow_agent': False,
+            'compress': False,
+            'gss_host': 'kdc.example',
+            'gss_auth': False,
+            'gss_kex': True,
+            'gss_deleg_creds': False,
+        }
+        kwargs = build_asyncssh_connect_kwargs('target', params)
+        assert kwargs.pop('client_factory').func is _AcceptUnknownHostKey
+        assert kwargs == {
+            'config': None,
+            'username': 'alice',
+            'port': 2222,
+            'connect_timeout': 30,
+            'client_keys': ['/home/alice/.ssh/id_ed25519'],
+            'tunnel': 'gw@bastion',
+            'agent_path': None,
+            'compression_algs': None,
+            'gss_host': 'kdc.example',
+            'gss_auth': False,
+            'gss_kex': True,
+            'gss_delegate_creds': False,
+        }
+
+    def test_native_computer_returns_no_kwargs(self):
+        """``params=None`` (native computer) yields no overrides: asyncssh reads ``~/.ssh/config``."""
+        assert build_asyncssh_connect_kwargs('host', None) == {}
+
+    def test_migrated_computer_ignores_ssh_config(self):
+        """A migrated computer sets ``config=None`` so ``~/.ssh/config`` is never read."""
+        assert build_asyncssh_connect_kwargs('host', {'username': 'alice'})['config'] is None
+
+    def test_key_policy(self):
+        """A permissive policy installs the client that accepts an unknown host but not a changed key."""
+        for policy, warn in (('AutoAddPolicy', False), ('WarningPolicy', True)):
+            kwargs = build_asyncssh_connect_kwargs('h', {'key_policy': policy})
+            client_factory = kwargs.pop('client_factory')
+            assert kwargs == {'config': None}
+            assert client_factory.func is _AcceptUnknownHostKey
+            assert client_factory.keywords['warn'] is warn
+            # Host-key validation stays on: `known_hosts` is not disabled.
+            assert 'known_hosts' not in kwargs
+
+        # A strict policy keeps the asyncssh defaults, which already reject an unknown host.
+        assert build_asyncssh_connect_kwargs('h', {'key_policy': 'RejectPolicy'}) == {'config': None}
+
+    def test_look_for_keys(self):
+        """``look_for_keys`` controls automatic discovery of ``~/.ssh/id_*`` keys."""
+        # True is asyncssh's own default: nothing to pass.
+        assert 'client_keys' not in build_asyncssh_connect_kwargs('h', {'look_for_keys': True})
+        # An explicit key wins: only that key is offered, agent still used.
+        assert build_asyncssh_connect_kwargs('h', {'look_for_keys': False, 'key_filename': '/k'})['client_keys'] == [
+            '/k'
+        ]
+        # No discovery and no agent -> public-key auth disabled entirely.
+        assert build_asyncssh_connect_kwargs('h', {'look_for_keys': False, 'allow_agent': False})['client_keys'] is None
+        # No discovery but agent allowed: not expressible without killing the agent, so keep default.
+        assert 'client_keys' not in build_asyncssh_connect_kwargs('h', {'look_for_keys': False, 'allow_agent': True})
+
+    def test_allow_agent(self):
+        """``allow_agent=False`` disables the ssh-agent but leaves key discovery alone."""
+        kwargs = build_asyncssh_connect_kwargs('h', {'allow_agent': False})
+        assert kwargs['agent_path'] is None
+        assert 'client_keys' not in kwargs
+        assert 'agent_path' not in build_asyncssh_connect_kwargs('h', {'allow_agent': True})
+
+    def test_load_system_host_keys(self):
+        """With no host keys loaded, a strict policy rejects every host and a permissive one accepts any."""
+        assert 'known_hosts' not in build_asyncssh_connect_kwargs('h', {'load_system_host_keys': True})
+        assert build_asyncssh_connect_kwargs('h', {'load_system_host_keys': False})['known_hosts'] == ([], [], [])
+        # Nothing is known, so there is no key that could have changed: accept every host.
+        kwargs = build_asyncssh_connect_kwargs('h', {'load_system_host_keys': False, 'key_policy': 'AutoAddPolicy'})
+        assert kwargs['known_hosts'] is None
+        assert 'client_factory' not in kwargs
+
+    def test_compress(self):
+        """``compress`` enables or disables the asyncssh compression algorithms."""
+        assert build_asyncssh_connect_kwargs('h', {'compress': True}) == {
+            'config': None,
+            'compression_algs': ('zlib@openssh.com', 'zlib', 'none'),
+        }
+        assert build_asyncssh_connect_kwargs('h', {'compress': False}) == {'config': None, 'compression_algs': None}
+
+    def test_proxy_command_token_expansion(self):
+        """``%h``/``%p``/``%r``/``%%`` are expanded in a proxy command using the target host."""
+        params = {'proxy_command': 'ssh -W %h:%p %r@gw # 100%%', 'port': 2222, 'username': 'alice'}
+        assert (
+            build_asyncssh_connect_kwargs('target.host', params)['proxy_command']
+            == 'ssh -W target.host:2222 alice@gw # 100%'
+        )
+        # Without a port, ``%p`` falls back to the default SSH port.
+        assert (
+            build_asyncssh_connect_kwargs('target.host', {'proxy_command': 'nc %h %p'})['proxy_command']
+            == 'nc target.host 22'
+        )
+
+    def test_legacy_options_are_hidden_on_the_cli(self):
+        """The legacy options are valid auth params but hidden on ``verdi computer configure``."""
+        from aiida.transports.cli import create_configure_cmd
+
+        valid = set(AsyncSshTransport.get_valid_auth_params())
+        assert valid.issuperset(_LEGACY_OPTION_NAMES)
+
+        params = {p.name: p for p in create_configure_cmd('core.ssh_async').params}
+        assert all(params[name].hidden for name in _LEGACY_OPTION_NAMES)
+        assert params['host'].hidden is False
+
+    def test_init_collects_legacy_params(self):
+        """``__init__`` collects every legacy parameter present, even empty ones (a migration marker)."""
+        transport = AsyncSshTransport(
+            machine='remote.host', username='alice', port='2222', key_filename='', proxy_jump='gw@bastion'
+        )
+        assert transport._legacy_params == {
+            'username': 'alice',
+            'port': '2222',
+            'key_filename': '',
+            'proxy_jump': 'gw@bastion',
+        }
+        assert transport.machine == 'remote.host'
+
+    def test_native_computer_has_no_legacy_params(self):
+        """A computer with none of the legacy parameters is native: ``_legacy_params`` is ``None``."""
+        assert AsyncSshTransport(machine='remote.host').async_backend.connection_params is None
+
+    def test_host_alias_takes_precedence_over_machine(self):
+        """When set, the ``host`` SSH-config alias is used instead of the machine hostname."""
+        assert AsyncSshTransport(machine='real.host', host='myalias').machine == 'myalias'
+        # An empty host falls back to the machine hostname.
+        assert AsyncSshTransport(machine='real.host', host='').machine == 'real.host'
+
+    def test_proxy_jump_and_command_are_mutually_exclusive(self):
+        with pytest.raises(ValueError, match='mutually exclusive'):
+            AsyncSshTransport(machine='h', proxy_jump='a', proxy_command='b')
+
+    def test_migrated_computer_forces_the_asyncssh_backend(self):
+        """A migrated computer always uses asyncssh: the openssh backend cannot honor its params."""
+        transport = AsyncSshTransport(machine='remote.host', backend='openssh', username='alice')
+        assert isinstance(transport.async_backend, _AsyncSSH)
+        assert transport.async_backend.connection_params == {'username': 'alice'}
+
+    def test_native_computer_keeps_the_requested_backend(self):
+        """Without legacy parameters the ``openssh`` backend is honored as before."""
+        assert isinstance(AsyncSshTransport(machine='remote.host', backend='openssh').async_backend, _OpenSSH)
+
+    def test_asyncssh_backend_open_passes_kwargs(self):
+        """The asyncssh backend forwards the translated options to ``asyncssh.connect()``."""
+        backend = _AsyncSSH('remote.host', MagicMock(), 'bash ', {'username': 'alice', 'port': 2222})
+        with patch('aiida.transports.plugins.async_backend.asyncssh') as mock_asyncssh:
+            mock_conn = MagicMock()
+            mock_conn.start_sftp_client = AsyncMock()
+            mock_asyncssh.connect = AsyncMock(return_value=mock_conn)
+            asyncio.run(backend.open())
+        mock_asyncssh.connect.assert_awaited_once_with('remote.host', config=None, username='alice', port=2222)
+
+    def test_asyncssh_backend_open_native_reads_ssh_config(self):
+        """A native computer is opened exactly as before: host only, no overrides."""
+        backend = _AsyncSSH('remote.host', MagicMock(), 'bash ', None)
+        with patch('aiida.transports.plugins.async_backend.asyncssh') as mock_asyncssh:
+            mock_conn = MagicMock()
+            mock_conn.start_sftp_client = AsyncMock()
+            mock_asyncssh.connect = AsyncMock(return_value=mock_conn)
+            asyncio.run(backend.open())
+        mock_asyncssh.connect.assert_awaited_once_with('remote.host')
+
+
+class TestAcceptUnknownHostKey:
+    """``_AcceptUnknownHostKey`` reproduces paramiko's permissive host-key policies.
+
+    Both accept a host that is absent from ``known_hosts``; neither accepts a key that changed.
+    Exercised against a real in-process ``asyncssh`` server.
+    """
+
+    @staticmethod
+    def _connect(server_key, known_hosts_content, tmp_path, monkeypatch):
+        """Connect to a throwaway server and return whether its host key was accepted."""
+        monkeypatch.setenv('HOME', str(tmp_path))
+        ssh_dir = tmp_path / '.ssh'
+        ssh_dir.mkdir(exist_ok=True)
+        (ssh_dir / 'known_hosts').write_text(known_hosts_content)
+
+        async def run():
+            server = await asyncssh.listen('127.0.0.1', 0, server_host_keys=[server_key])
+            port = server.sockets[0].getsockname()[1]
+            kwargs = build_asyncssh_connect_kwargs('127.0.0.1', {'key_policy': 'AutoAddPolicy'})
+            kwargs.pop('config')
+            try:
+                connection = await asyncssh.connect('127.0.0.1', port=port, username='u', password='p', **kwargs)
+                connection.close()
+                return True, port
+            except asyncssh.PermissionDenied:
+                # The host key was accepted; only the (absent) user authentication failed.
+                return True, port
+            except asyncssh.HostKeyNotVerifiable:
+                return False, port
+            finally:
+                server.close()
+
+        return asyncio.run(run())
+
+    def test_unknown_host_is_accepted(self, tmp_path, monkeypatch):
+        key = asyncssh.generate_private_key('ssh-ed25519')
+        accepted, _ = self._connect(key, '', tmp_path, monkeypatch)
+        assert accepted
+
+    def test_matching_host_key_is_accepted(self, tmp_path, monkeypatch):
+        key = asyncssh.generate_private_key('ssh-ed25519')
+        # The port is unknown before the server starts, so trust the key on every port of the host.
+        entry = '127.0.0.1 ' + key.export_public_key().decode()
+        accepted, _ = self._connect(key, entry, tmp_path, monkeypatch)
+        assert accepted
+
+    def test_changed_host_key_is_rejected(self, tmp_path, monkeypatch):
+        """The security property that ``known_hosts=None`` would have silently dropped."""
+        key = asyncssh.generate_private_key('ssh-ed25519')
+        stale = asyncssh.generate_private_key('ssh-ed25519').export_public_key().decode()
+        accepted, _ = self._connect(key, '127.0.0.1 ' + stale, tmp_path, monkeypatch)
+        assert not accepted

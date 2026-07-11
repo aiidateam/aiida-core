@@ -28,11 +28,13 @@ import typing as t
 import warnings
 from enum import Enum
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import click
 import pytest
 
 from aiida import get_profile, orm
+from aiida.brokers import ZeromqBroker
 from aiida.common.folders import Folder
 from aiida.common.links import LinkType
 from aiida.manage import get_manager
@@ -65,6 +67,12 @@ class TestBrokerBackend(Enum):
     RMQ = 'rmq'
     ZEROMQ = 'zmq'
     NONE = 'none'
+
+
+@pytest.fixture
+def zeromq_broker(tmp_path):
+    with patch('aiida.brokers.zeromq.broker.get_broker_base_path', return_value=tmp_path):
+        yield ZeromqBroker(MagicMock())
 
 
 def start_zeromq_broker(broker, timeout: float = 10.0):

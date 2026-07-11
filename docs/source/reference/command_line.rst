@@ -334,7 +334,7 @@ Below is a list with all available subcommands.
 
       When the `--use-zeromq` flag is toggled, the command skips the RabbitMQ auto-detection
       and directly configures the ZeroMQ broker. To switch to RabbitMQ later, use `verdi
-      profile configure-rabbitmq`.
+      profile configure-broker core.rabbitmq`.
 
     Options:
       -p, --profile-name TEXT         Name of the profile. By default, a unique name starting
@@ -352,7 +352,8 @@ Below is a list with all available subcommands.
                                       automatically with the daemon. When not specified, the
                                       command automatically tries RabbitMQ first and falls
                                       back to ZeroMQ if unavailable. To switch to RabbitMQ
-                                      later, use `verdi profile configure-rabbitmq`.
+                                      later, use `verdi profile configure-broker
+                                      core.rabbitmq`.
       --no-broker                     When toggled on, no message broker is configured. This
                                       means the daemon cannot be started and processes cannot
                                       be submitted. Useful for profiles used only for data
@@ -412,7 +413,9 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      configure-rabbitmq  Configure RabbitMQ for a profile.
+      configure-broker    Configure the process control broker for a profile.
+      configure-rabbitmq  Configure RabbitMQ for a profile. (DEPRECATED: Please use `verdi
+                          profile configure-broker core.rabbitmq` instead.)
       delete              Delete one or more profiles.
       dump                Dump all data in an AiiDA profile's storage to disk.
       list                Display a list of all available profiles.

@@ -149,8 +149,9 @@ def submit(
         raise InvalidOperation(
             'Cannot submit because the runner does not have a process controller, probably because the profile does '
             'not define a broker like RabbitMQ. If a RabbitMQ server is available, the profile can be configured to '
-            'use it with `verdi profile configure-rabbitmq`. Otherwise, use :meth:`aiida.engine.launch.run` instead to '
-            'run the process in the local Python interpreter instead of submitting it to the daemon. '
+            'use it with `verdi profile configure-broker core.rabbitmq`. Otherwise, use '
+            ':meth:`aiida.engine.launch.run` instead to run the process in the local Python interpreter instead of '
+            'submitting it to the daemon. '
             f'See {URL_NO_BROKER} for more details.'
         )
 

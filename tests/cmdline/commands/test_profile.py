@@ -418,7 +418,7 @@ def test_setup_broker_core_zeromq(run_cli_command, isolated_config):
 
 
 @pytest.mark.requires_rmq
-def test_configure_broker_rmq(run_cli_command, isolated_config):
+def test_configure_broker_rmq(run_cli_command, isolated_config, monkeypatch):
     """Test the ``verdi profile configure-broker core.rabbitmq`` command."""
     profile_name = 'profile'
 
@@ -434,18 +434,6 @@ def test_configure_broker_rmq(run_cli_command, isolated_config):
     cli_result = run_cli_command(cmd_profile.profile_configure_broker, options, use_subprocess=False)
     assert profile.process_control_backend == 'core.rabbitmq'
     assert 'Connected to RabbitMQ with the provided connection parameters' in cli_result.stdout
-
-    # Verify that running in non-interactive mode is the default
-    options = ['core.rabbitmq', profile_name]
-    cli_result = run_cli_command(cmd_profile.profile_configure_broker, options, use_subprocess=True)
-    assert profile.process_control_backend == 'core.rabbitmq'
-    assert 'Connected to RabbitMQ with the provided connection parameters' in cli_result.stdout
-
-    # Verify that configuring with incorrect options and `--force` raises a warning but still configures the broker
-    options = ['core.rabbitmq', profile_name, '-f', '--broker-port', '1234']
-    cli_result = run_cli_command(cmd_profile.profile_configure_broker, options, use_subprocess=False)
-    assert 'Unable to connect to RabbitMQ server: Failed to connect' in cli_result.stdout
-    assert profile.process_control_config['broker_port'] == 1234
 
     # Call it again to check it works to reconfigure existing broker connection parameters
     options = ['core.rabbitmq', profile_name, '-n', '--broker-port', '5672']
@@ -523,8 +511,38 @@ def test_configure_rabbitmq_deprecated(run_cli_command, isolated_config):
     assert 'Please use `verdi profile configure-broker core.rabbitmq` instead.' in cli_result.output
 
 
+def test_configure_broker_rabbitmq_interactive_defaults_use_detected_config(
+    run_cli_command, isolated_config, monkeypatch
+):
+    """Test interactive RabbitMQ prompts are seeded from detected connection parameters."""
+    profile_name = 'profile-rmq-interactive-defaults'
+
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+
+    detected_config = {
+        'broker_protocol': 'amqps',
+        'broker_username': 'detected-user',
+        'broker_password': 'detected-password',
+        'broker_host': 'detected-host',
+        'broker_port': 4321,
+        'broker_virtual_host': 'detected-vhost',
+    }
+    monkeypatch.setattr('aiida.brokers.rabbitmq.defaults.detect_rabbitmq_config', lambda **_kwargs: detected_config)
+
+    cli_result = run_cli_command(
+        cmd_profile.profile_configure_broker,
+        ['core.rabbitmq', profile_name],
+        use_subprocess=False,
+        user_input='\n\n\n\n\n\n',
+    )
+    assert cli_result.exception is None, cli_result.output
+    assert 'Broker protocol (amqp, amqps)' in cli_result.output
+    assert '[amqps]' in cli_result.output
+
+
 def test_configure_broker_rmq_non_interactive_failed_validation(run_cli_command, isolated_config, monkeypatch):
-    """Test ``configure-broker core.rabbitmq`` still prompts on failed validation."""
+    """Test ``configure-broker core.rabbitmq`` aborts on failed validation in non-interactive mode."""
     profile_name = 'profile-rmq-non-interactive'
 
     options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
@@ -540,15 +558,16 @@ def test_configure_broker_rmq_non_interactive_failed_validation(run_cli_command,
         cmd_profile.profile_configure_broker,
         ['core.rabbitmq', profile_name, '-n', '--broker-port', '1234'],
         use_subprocess=False,
-        user_input='y\n',
+        raises=True,
     )
     assert 'Unable to connect to RabbitMQ server: Failed to connect' in cli_result.output
-    assert 'Do you want to continue with the provided configuration?' in cli_result.output
-    assert profile.process_control_config['broker_port'] == 1234
+    assert f'Aborting RabbitMQ configuration for `{profile.name}`.' in cli_result.output
+    assert 'Rerun with `--force` to store them anyway.' in cli_result.output
+    assert profile.process_control_config == {}
 
 
 def test_configure_broker_zmq_non_interactive_restart(run_cli_command, isolated_config, monkeypatch):
-    """Test ``configure-broker core.zeromq`` still prompts before restarting the daemon."""
+    """Test ``configure-broker core.zeromq -n`` does not prompt before restarting the daemon."""
     profile_name = 'profile-zmq-non-interactive'
 
     options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', 'core.zeromq']
@@ -575,15 +594,14 @@ def test_configure_broker_zmq_non_interactive_restart(run_cli_command, isolated_
         cmd_profile.profile_configure_broker,
         ['core.zeromq', profile_name, '-n'],
         use_subprocess=False,
-        user_input='y\n',
     )
     assert (
         'The daemon is currently running. It will need to be restarted for changes to take effect.' in cli_result.output
     )
-    assert 'Do you want to apply the configuration and restart the daemon?' in cli_result.output
-    assert 'Restarting the daemon...' in cli_result.output
-    assert 'Daemon restarted successfully.' in cli_result.output
-    assert called['restart_daemon'] is True
+    assert 'Do you want to apply the configuration and restart the daemon?' not in cli_result.output
+    assert 'Restarting the daemon...' not in cli_result.output
+    assert 'Daemon restarted successfully.' not in cli_result.output
+    assert called['restart_daemon'] is False
 
 
 def test_configure_broker_invalid_backend():
@@ -592,7 +610,7 @@ def test_configure_broker_invalid_backend():
     profile = configuration.get_profile()
 
     with pytest.raises(click.BadParameter, match='unsupported broker backend: invalid'):
-        cmd_profile._configure_profile_broker(ctx, profile, 'invalid', False)
+        cmd_profile._configure_profile_broker(ctx, profile, 'invalid', False, False)
 
 
 def test_configure_broker_uses_loaded_profile_when_default_profile_is_missing(run_cli_command, isolated_config):

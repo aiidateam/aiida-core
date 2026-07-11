@@ -361,6 +361,34 @@ def test_setup_email_required(run_cli_command, isolated_config, tmp_path, entry_
         assert 'Invalid value for --email: The option is required for storages that are not read-only.' in result.output
 
 
+@pytest.mark.parametrize('broker', ('core.rabbitmq', 'core.zeromq', 'none'))
+def test_setup_broker(run_cli_command, isolated_config, monkeypatch, broker):
+    """Test the ``--broker`` option only accepts the new broker entry-point names."""
+    if broker == 'core.rabbitmq':
+        rabbitmq_config = {
+            'broker_protocol': 'amqp',
+            'broker_username': 'guest',
+            'broker_password': 'guest',
+            'broker_host': '127.0.0.1',
+            'broker_port': 5672,
+            'broker_virtual_host': '',
+        }
+        monkeypatch.setattr('aiida.brokers.rabbitmq.defaults.detect_rabbitmq_config', lambda: rabbitmq_config)
+
+    profile_name = f'profile-{broker.replace(".", "-")}'
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', broker]
+
+    result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    assert f'Created new profile `{profile_name}`.' in result.output
+    assert profile_name in isolated_config.profile_names
+
+    profile = isolated_config.get_profile(profile_name)
+    if broker == 'none':
+        assert profile.process_control_backend is None
+    else:
+        assert profile.process_control_backend == broker
+
+
 def test_setup_no_use_rabbitmq(run_cli_command, isolated_config):
     """Test the ``--no-use-rabbitmq`` option."""
     profile_name = 'profile-no-broker'

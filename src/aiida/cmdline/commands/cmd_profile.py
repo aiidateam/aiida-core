@@ -89,7 +89,7 @@ def command_create_profile(
             echo.echo_success(f'RabbitMQ server detected with connection parameters: {broker_config}')
             broker_backend = broker
 
-        echo.echo_report('RabbitMQ can be reconfigured with `verdi profile configure-rabbitmq`.')
+        echo.echo_report('RabbitMQ can be reconfigured with `verdi profile configure-broker core.rabbitmq`.')
 
     elif broker == 'core.zeromq':
         broker_backend = broker
@@ -99,7 +99,9 @@ def command_create_profile(
 
     else:  # broker == 'none'
         echo.echo_report('Creating profile without a message broker.')
-        echo.echo_report('It can be configured at a later point in time with `verdi profile configure-rabbitmq`.')
+        echo.echo_report(
+            'It can be configured at a later point in time with `verdi profile configure-broker core.rabbitmq`.'
+        )
         echo.echo_report(f'See {docs.URL_NO_BROKER} for details on the limitations of running without a broker.')
 
     try:
@@ -149,7 +151,143 @@ def profile_setup():
     """Set up a new profile."""
 
 
-@verdi_profile.command('configure-rabbitmq')
+def _update_profile_broker_configuration(
+    ctx: click.Context,
+    profile: Profile,
+    *,
+    backend: str | None,
+    config: dict | None,
+) -> None:
+    """Update the broker configuration for a profile."""
+    profile.set_process_controller(name=backend, config=config)
+    ctx.obj.config.update_profile(profile)
+    ctx.obj.config.store()
+
+
+def _configure_profile_broker(ctx: click.Context, profile: Profile | None, backend: str, force: bool, **kwargs) -> None:
+    """Configure a broker for a profile."""
+    if profile is None:
+        profile = ctx.obj.profile
+
+    if profile is None:
+        echo.echo_critical('no profile to configure')
+
+    from aiida.engine.daemon.client import DaemonClient
+
+    daemon_client = DaemonClient(profile)
+    daemon_running = profile.process_control_backend is not None and daemon_client.is_daemon_running
+
+    if backend == 'core.rabbitmq':
+        from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
+
+        broker_config = {key: value for key, value in kwargs.items() if key.startswith('broker_')}
+        connection_params = {key.removeprefix('broker_'): value for key, value in broker_config.items()}
+
+        try:
+            broker_config = detect_rabbitmq_config(**connection_params)
+        except ConnectionError as exception:
+            echo.echo_warning(f'Unable to connect to RabbitMQ server: {exception}')
+            if not force:
+                click.confirm('Do you want to continue with the provided configuration?', abort=True)
+        else:
+            echo.echo_success('Connected to RabbitMQ with the provided connection parameters')
+
+        _update_profile_broker_configuration(ctx, profile, backend=backend, config=broker_config)
+        echo.echo_success(f'RabbitMQ configuration for `{profile.name}` updated to: {broker_config}')
+
+        if daemon_running:
+            echo.echo_warning(
+                'The daemon is currently running. It will need to be restarted for changes to take effect.'
+            )
+            if not force:
+                click.confirm('Do you want to apply the configuration and restart the daemon?', abort=True)
+                echo.echo_report('Restarting the daemon...')
+                daemon_client.restart_daemon()
+                echo.echo_success('Daemon restarted successfully.')
+
+        return
+
+    if backend == 'core.zeromq':
+        _update_profile_broker_configuration(ctx, profile, backend=backend, config={})
+        echo.echo_success(f'ZeroMQ configuration for `{profile.name}` updated.')
+        echo.echo_report('The ZeroMQ broker service will be started automatically with the daemon.')
+
+        if daemon_running:
+            echo.echo_warning(
+                'The daemon is currently running. It will need to be restarted for changes to take effect.'
+            )
+            if not force:
+                click.confirm('Do you want to apply the configuration and restart the daemon?', abort=True)
+                echo.echo_report('Restarting the daemon...')
+                daemon_client.restart_daemon()
+                echo.echo_success('Daemon restarted successfully.')
+
+        return
+
+    if backend == 'none':
+        from aiida.common import docs
+
+        _update_profile_broker_configuration(ctx, profile, backend=None, config=None)
+        echo.echo_report(f'Broker disabled for `{profile.name}`.')
+
+        if daemon_running:
+            echo.echo_warning('The daemon is currently running. It will need to be stopped for changes to take effect.')
+            click.confirm('Do you want to apply the configuration and stop the daemon?', abort=True)
+            echo.echo_report('Stopping the daemon...')
+            daemon_client.stop_daemon(wait=True)
+            echo.echo_success('Daemon stopped successfully.')
+
+        echo.echo_report(f'See {docs.URL_NO_BROKER} for details on the limitations of running without a broker.')
+        return
+
+    msg = f'unsupported broker backend: {backend}'
+    raise click.BadParameter(msg, param_hint='backend')
+
+
+@verdi_profile.group('configure-broker')
+def profile_configure_broker():
+    """Configure the process control broker for a profile."""
+
+
+@profile_configure_broker.command('core.rabbitmq')
+@arguments.PROFILE(default=defaults.get_default_profile)
+@options.FORCE()
+@setup.SETUP_BROKER_PROTOCOL()
+@setup.SETUP_BROKER_USERNAME()
+@setup.SETUP_BROKER_PASSWORD()
+@setup.SETUP_BROKER_HOST()
+@setup.SETUP_BROKER_PORT()
+@setup.SETUP_BROKER_VIRTUAL_HOST()
+@options.NON_INTERACTIVE(default=True, show_default='--non-interactive')
+@click.pass_context
+def profile_configure_broker_rabbitmq(ctx, /, profile, force, non_interactive, **kwargs):
+    """Configure RabbitMQ for a profile."""
+    _configure_profile_broker(ctx, profile, 'core.rabbitmq', force, **kwargs)
+
+
+@profile_configure_broker.command('core.zeromq')
+@arguments.PROFILE(default=defaults.get_default_profile)
+@options.FORCE()
+@options.NON_INTERACTIVE(default=True, show_default='--non-interactive')
+@click.pass_context
+def profile_configure_broker_zeromq(ctx, /, profile, force, non_interactive):
+    """Configure ZeroMQ for a profile."""
+    _configure_profile_broker(ctx, profile, 'core.zeromq', force)
+
+
+@profile_configure_broker.command('none')
+@arguments.PROFILE(default=defaults.get_default_profile)
+@options.FORCE()
+@options.NON_INTERACTIVE(default=True, show_default='--non-interactive')
+@click.pass_context
+def profile_configure_broker_none(ctx, /, profile, force, non_interactive):
+    """Disable the broker for a profile."""
+    _configure_profile_broker(ctx, profile, 'none', force)
+
+
+@verdi_profile.command(
+    'configure-rabbitmq', deprecated='Please use `verdi profile configure-broker core.rabbitmq` instead.'
+)
 @arguments.PROFILE(default=defaults.get_default_profile)
 @options.FORCE()
 @setup.SETUP_BROKER_PROTOCOL()
@@ -163,47 +301,12 @@ def profile_setup():
 def profile_configure_rabbitmq(ctx, /, profile, non_interactive, force, **kwargs):
     """Configure RabbitMQ for a profile.
 
+    .. deprecated:: 2.9
+       Use ``verdi profile configure-broker core.rabbitmq`` instead.
+
     Enable RabbitMQ for a profile that was created without a broker, or reconfigure existing connection details.
     """
-    from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
-
-    broker_config = {key: value for key, value in kwargs.items() if key.startswith('broker_')}
-    connection_params = {key.lstrip('broker_'): value for key, value in broker_config.items()}
-
-    try:
-        broker_config = detect_rabbitmq_config(**connection_params)
-    except ConnectionError as exception:
-        echo.echo_warning(f'Unable to connect to RabbitMQ server: {exception}')
-        if not force:
-            click.confirm('Do you want to continue with the provided configuration?', abort=True)
-    else:
-        echo.echo_success('Connected to RabbitMQ with the provided connection parameters')
-
-    daemon_client = None
-    daemon_running = False
-
-    # Only check daemon status if the profile already has a broker configured.
-    # If no broker is configured yet, there can't be a daemon running.
-    if profile.process_control_backend is not None:
-        from aiida.engine.daemon.client import DaemonClient
-
-        daemon_client = DaemonClient(profile)
-        daemon_running = daemon_client.is_daemon_running
-
-    if daemon_running:
-        echo.echo_warning('The daemon is currently running. It will need to be restarted for changes to take effect.')
-        click.confirm('Do you want to apply the configuration and restart the daemon?', abort=True)
-
-    profile.set_process_controller(name='core.rabbitmq', config=broker_config)
-    ctx.obj.config.update_profile(profile)
-    ctx.obj.config.store()
-
-    echo.echo_success(f'RabbitMQ configuration for `{profile.name}` updated to: {broker_config}')
-
-    if daemon_running and daemon_client is not None:
-        echo.echo_report('Restarting the daemon...')
-        daemon_client.restart_daemon()
-        echo.echo_success('Daemon restarted successfully.')
+    _configure_profile_broker(ctx, profile, 'core.rabbitmq', force, **kwargs)
 
 
 @verdi_profile.command('list')

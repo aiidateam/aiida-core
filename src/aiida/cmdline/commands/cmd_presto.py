@@ -132,7 +132,7 @@ def detect_postgres_config(
     is_flag=True,
     help='When toggled on, the profile uses the ZeroMQ broker, which requires no external services and is started '
     'automatically with the daemon. When not specified, the command automatically tries RabbitMQ first and falls back '
-    'to ZeroMQ if unavailable. To switch to RabbitMQ later, use `verdi profile configure-rabbitmq`.',
+    'to ZeroMQ if unavailable. To switch to RabbitMQ later, use `verdi profile configure-broker core.rabbitmq`.',
 )
 @click.option(
     '--no-broker',
@@ -196,7 +196,7 @@ def verdi_presto(
     created profile uses the new PostgreSQL database instead of SQLite.
 
     When the `--use-zeromq` flag is toggled, the command skips the RabbitMQ auto-detection and directly configures the
-    ZeroMQ broker. To switch to RabbitMQ later, use `verdi profile configure-rabbitmq`.
+    ZeroMQ broker. To switch to RabbitMQ later, use `verdi profile configure-broker core.rabbitmq`.
     """
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
     from aiida.common import exceptions

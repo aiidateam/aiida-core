@@ -306,7 +306,7 @@ The exact options available for the ``verdi profile setup`` command depend on th
   The default is ``rabbitmq``, in which case the command tries to connect to RabbitMQ running on the localhost with default connection parameters.
   If this fails, a warning is issued and the profile is configured without a broker.
   Use ``zeromq`` for the built-in ZeroMQ broker (no external services required), or ``none`` to disable the broker entirely.
-  Once the profile is created, RabbitMQ can still be enabled through ``verdi profile configure-rabbitmq`` which allows to customize the connection parameters.
+  Once the profile is created, RabbitMQ can still be enabled through ``verdi profile configure-broker core.rabbitmq``, which allows customizing the connection parameters.
 
   .. versionadded:: 2.9
       The ``--broker`` option replaces the deprecated ``--use-rabbitmq/--no-use-rabbitmq`` flags.

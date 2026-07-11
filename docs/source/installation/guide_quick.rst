@@ -100,7 +100,7 @@ A profile **without any broker** has the following limitations:
 
 .. tip::
     A profile created by ``verdi presto`` can easily start using RabbitMQ as the broker at a later stage.
-    Once a RabbitMQ service is available (see :ref:`install RabbitMQ <installation:guide-complete:rabbitmq>` for instructions to install it), run ``verdi profile configure-rabbitmq`` to configure its use for the profile.
+    Once a RabbitMQ service is available (see :ref:`install RabbitMQ <installation:guide-complete:rabbitmq>` for instructions to install it), run ``verdi profile configure-broker core.rabbitmq`` to configure its use for the profile.
 
 .. _installation:guide-quick:limitations:postgresql:
 

@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for ZMQ single-layer JSON encoding.
+"""Tests for ZeroMQ single-layer JSON encoding.
 
 This module tests that the message protocol uses a single JSON encoding layer
 for both the envelope and payload, including UUID serialization support.
@@ -20,13 +20,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from aiida.brokers.zmq.protocol import (
+from aiida.brokers.zeromq.protocol import (
     MessageType,
     _UUIDEncoder,
     decode_message,
     encode_message,
 )
-from aiida.brokers.zmq.server import ZmqBrokerServer
+from aiida.brokers.zeromq.server import ZeromqBrokerServer
 
 
 @pytest.mark.presto
@@ -112,9 +112,9 @@ class TestCommunicatorPayloadEncoding:
 
     def test_send_encodes_body_as_json_native(self):
         """Test that _send passes body through as a JSON-native object (no pre-encoding)."""
-        from aiida.brokers.zmq.communicator import ZmqCommunicator
+        from aiida.brokers.zeromq.communicator import ZeromqCommunicator
 
-        comm = ZmqCommunicator(router_endpoint='ipc://test')
+        comm = ZeromqCommunicator(router_endpoint='ipc://test')
         comm._dealer = MagicMock()
         comm._closed = False
 
@@ -139,9 +139,9 @@ class TestCommunicatorPayloadEncoding:
 
     def test_send_encodes_result_as_json_native(self):
         """Test that _send passes result through as a JSON-native object."""
-        from aiida.brokers.zmq.communicator import ZmqCommunicator
+        from aiida.brokers.zeromq.communicator import ZeromqCommunicator
 
-        comm = ZmqCommunicator(router_endpoint='ipc://test')
+        comm = ZeromqCommunicator(router_endpoint='ipc://test')
         comm._dealer = MagicMock()
         comm._closed = False
 
@@ -167,9 +167,9 @@ class TestCommunicatorPayloadEncoding:
 
     def test_send_ignores_none_body(self):
         """Test that _send doesn't fail with None body."""
-        from aiida.brokers.zmq.communicator import ZmqCommunicator
+        from aiida.brokers.zeromq.communicator import ZeromqCommunicator
 
-        comm = ZmqCommunicator(router_endpoint='ipc://test')
+        comm = ZeromqCommunicator(router_endpoint='ipc://test')
         comm._dealer = MagicMock()
         comm._closed = False
 
@@ -191,9 +191,9 @@ class TestCommunicatorPayloadEncoding:
 
     def test_dispatch_passes_body_directly(self):
         """Test that _dispatch_dealer_message passes body directly (no post-decode)."""
-        from aiida.brokers.zmq.communicator import ZmqCommunicator
+        from aiida.brokers.zeromq.communicator import ZeromqCommunicator
 
-        comm = ZmqCommunicator(router_endpoint='ipc://test')
+        comm = ZeromqCommunicator(router_endpoint='ipc://test')
         comm._dealer = MagicMock()
         comm._closed = False
 
@@ -217,12 +217,12 @@ class TestCommunicatorPayloadEncoding:
         assert received_body == original_body
 
     def test_communicator_no_encoder_decoder_params(self):
-        """Verify ZmqCommunicator.__init__ has no encoder/decoder parameters."""
+        """Verify ZeromqCommunicator.__init__ has no encoder/decoder parameters."""
         import inspect
 
-        from aiida.brokers.zmq.communicator import ZmqCommunicator
+        from aiida.brokers.zeromq.communicator import ZeromqCommunicator
 
-        sig = inspect.signature(ZmqCommunicator.__init__)
+        sig = inspect.signature(ZeromqCommunicator.__init__)
         param_names = [p for p in sig.parameters.keys() if p != 'self']
         assert 'encoder' not in param_names
         assert 'decoder' not in param_names
@@ -233,10 +233,10 @@ class TestServerInitializationOptimization:
     """Tests for server.py encoder/decoder parameter removal."""
 
     def test_server_init_no_encoder_parameter(self, tmp_path):
-        """Test ZmqBrokerServer.__init__ has no encoder/decoder parameters."""
+        """Test ZeromqBrokerServer.__init__ has no encoder/decoder parameters."""
         import inspect
 
-        sig = inspect.signature(ZmqBrokerServer.__init__)
+        sig = inspect.signature(ZeromqBrokerServer.__init__)
         param_names = [p for p in sig.parameters.keys() if p != 'self']
         assert 'storage_path' in param_names
         assert 'sockets_path' in param_names
@@ -248,7 +248,7 @@ class TestServerInitializationOptimization:
         storage_path = tmp_path / 'storage'
         sockets_path = tmp_path / 'sockets'
 
-        server = ZmqBrokerServer(storage_path, sockets_path)
+        server = ZeromqBrokerServer(storage_path, sockets_path)
         assert server.storage_path == storage_path
         assert server.sockets_path == sockets_path
 
@@ -259,7 +259,7 @@ class TestQueueCompressionOptimization:
 
     def test_queue_push_no_indent(self, tmp_path):
         """Test that queue.push writes JSON without indent."""
-        from aiida.brokers.zmq.queue import PersistentQueue
+        from aiida.brokers.zeromq.queue import PersistentQueue
 
         queue = PersistentQueue(tmp_path / 'queue')
 
@@ -287,7 +287,7 @@ class TestQueueCompressionOptimization:
 
     def test_queue_pop_handles_minified_json(self, tmp_path):
         """Test that queue.pop can read minified JSON."""
-        from aiida.brokers.zmq.queue import PersistentQueue
+        from aiida.brokers.zeromq.queue import PersistentQueue
 
         queue = PersistentQueue(tmp_path / 'queue')
 
@@ -318,12 +318,12 @@ class TestQueueCompressionOptimization:
 
 @pytest.mark.presto
 class TestTaskBodyPreEncoding:
-    """Tests for task body handling in ZmqIncomingTask."""
+    """Tests for task body handling in ZeromqIncomingTask."""
 
-    def test_zmq_incoming_task_reads_body_directly(self):
-        """Test that ZmqIncomingTask reads body directly as a JSON-native object."""
-        from aiida.brokers.zmq.broker import ZmqIncomingTask
-        from aiida.brokers.zmq.queue import PersistentQueue
+    def test_zeromq_incoming_task_reads_body_directly(self):
+        """Test that ZeromqIncomingTask reads body directly as a JSON-native object."""
+        from aiida.brokers.zeromq.broker import ZeromqIncomingTask
+        from aiida.brokers.zeromq.queue import PersistentQueue
 
         original_body = {'function': 'test_function', 'args': [1, 2, 3]}
 
@@ -335,14 +335,14 @@ class TestTaskBodyPreEncoding:
         }
 
         queue = MagicMock(spec=PersistentQueue)
-        task = ZmqIncomingTask(task_id='task-123', task_data=task_data, queue=queue)
+        task = ZeromqIncomingTask(task_id='task-123', task_data=task_data, queue=queue)
 
         assert task.body == original_body
 
-    def test_zmq_incoming_task_handles_none_body(self):
-        """Test that ZmqIncomingTask handles None body."""
-        from aiida.brokers.zmq.broker import ZmqIncomingTask
-        from aiida.brokers.zmq.queue import PersistentQueue
+    def test_zeromq_incoming_task_handles_none_body(self):
+        """Test that ZeromqIncomingTask handles None body."""
+        from aiida.brokers.zeromq.broker import ZeromqIncomingTask
+        from aiida.brokers.zeromq.queue import PersistentQueue
 
         task_data = {
             'id': 'task-456',
@@ -351,7 +351,7 @@ class TestTaskBodyPreEncoding:
         }
 
         queue = MagicMock(spec=PersistentQueue)
-        task = ZmqIncomingTask(task_id='task-456', task_data=task_data, queue=queue)
+        task = ZeromqIncomingTask(task_id='task-456', task_data=task_data, queue=queue)
 
         assert task.body is None
 

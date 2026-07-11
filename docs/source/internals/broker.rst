@@ -1,45 +1,45 @@
 .. _internal_architecture:broker:
 
-**********
-ZMQ Broker
-**********
+*************
+ZeroMQ Broker
+*************
 
 .. versionadded:: 2.9
 
-The ZMQ broker is AiiDA's built-in message broker, replacing the need for an external RabbitMQ service.
+The ZeroMQ broker is AiiDA's built-in message broker, replacing the need for an external RabbitMQ service.
 It implements the subset of AMQP semantics that AiiDA requires (tasks, RPC, broadcasts) using ZeroMQ as the transport layer.
 
 This page documents the internal architecture for developers working on the broker itself.
-For user-facing documentation, see the :ref:`installation guide <installation:guide-complete:broker:zmq>`.
+For user-facing documentation, see the :ref:`installation guide <installation:guide-complete:broker:zeromq>`.
 
 
 Process and thread architecture
 ===============================
 
-When ``verdi daemon start`` is run with a ZMQ-configured profile, circus launches two types of processes:
+When ``verdi daemon start`` is run with a ZeroMQ-configured profile, circus launches two types of processes:
 
 .. code-block:: text
 
     verdi daemon start
     └── circus (daemon supervisor)
-        ├── verdi devel zmq-broker      ← broker process (1 instance)
-        │   └── ZmqBrokerService
-        │       └── ZmqBrokerServer     (single-threaded, zmq.Poller event loop)
+        ├── verdi devel zeromq-broker      ← broker process (1 instance)
+        │   └── ZeromqBrokerService
+        │       └── ZeromqBrokerServer     (single-threaded poller event loop)
         │           └── PersistentQueue (file-based task durability)
         │
         └── verdi daemon worker         ← worker process(es) (1..N instances)
             └── Runner
-                └── ZmqBroker
-                    └── ZmqCommunicator
+                └── ZeromqBroker
+                    └── ZeromqCommunicator
                         ├── main thread     (public API: task_send, rpc_send, ...)
-                        └── loop thread     (private asyncio loop with ZMQ DEALER socket)
+                        └── loop thread     (private asyncio loop with ZeroMQ DEALER socket)
 
 Key points:
 
 - The **broker process** is single-threaded.
-  ``ZmqBrokerServer`` uses a ``zmq.Poller`` event loop (non-blocking I/O via epoll/kqueue underneath) — no asyncio, no threads.
-- Each **worker process** creates a ``ZmqCommunicator`` that runs a private asyncio event loop on a dedicated **background thread**.
-  All ZMQ socket I/O happens on that thread; public methods schedule work via ``call_soon_threadsafe``, so no locks are needed.
+  ``ZeromqBrokerServer`` uses a poller event loop (non-blocking I/O via epoll/kqueue underneath) — no asyncio, no threads.
+- Each **worker process** creates a ``ZeromqCommunicator`` that runs a private asyncio event loop on a dedicated **background thread**.
+  All ZeroMQ socket I/O happens on that thread; public methods schedule work via ``call_soon_threadsafe``, so no locks are needed.
 - The broker process is started **before** workers by circus, so its IPC socket is ready when workers connect.
   If it isn't ready yet, ``get_communicator()`` polls until the socket file appears.
 
@@ -47,16 +47,16 @@ Key points:
 Module overview
 ===============
 
-``ZmqCommunicator`` implements ``kiwipy.Communicator`` — the same interface that ``RmqThreadCommunicator`` implements for RabbitMQ.
+``ZeromqCommunicator`` implements ``kiwipy.Communicator`` — the same interface that ``RmqThreadCommunicator`` implements for RabbitMQ.
 plumpy and the AiiDA engine are unaware of which broker backend is in use; they only interact through this interface.
 
 .. code-block:: text
 
-    src/aiida/brokers/zmq/
-    ├── broker.py         ZmqBroker — the Broker interface for workers
-    ├── communicator.py   ZmqCommunicator — kiwipy.Communicator over ZMQ
-    ├── server.py         ZmqBrokerServer — the broker's message router
-    ├── service.py        ZmqBrokerService — process wrapper (PID, signals, status files)
+    src/aiida/brokers/zeromq/
+    ├── broker.py         ZeromqBroker — the Broker interface for workers
+    ├── communicator.py   ZeromqCommunicator — kiwipy.Communicator over ZeroMQ
+    ├── server.py         ZeromqBrokerServer — the broker's message router
+    ├── service.py        ZeromqBrokerService — process wrapper (PID, signals, status files)
     ├── queue.py          PersistentQueue — file-based durable task queue
     ├── protocol.py       Message types, encoding/decoding, factory functions
     └── defaults.py       Developer-tunable constants (not user-facing)
@@ -65,21 +65,21 @@ plumpy and the AiiDA engine are unaware of which broker backend is in use; they 
 Endpoint discovery
 ==================
 
-Unlike RabbitMQ, the ZMQ broker requires no connection configuration (no host, port, or credentials).
+Unlike RabbitMQ, the ZeroMQ broker requires no connection configuration (no host, port, or credentials).
 Discovery is file-based: both sides derive the broker directory from the profile UUID.
 
 1. On startup, the broker process writes the IPC socket path to ``~/.aiida/broker/{profile-uuid}/broker.sockets``.
-2. When a worker calls ``get_communicator()``, it reads that file to obtain the endpoint (e.g. ``ipc:///tmp/aiida_zmq_xyz/router.sock``).
+2. When a worker calls ``get_communicator()``, it reads that file to obtain the endpoint (e.g. ``ipc:///tmp/aiida_zeromq_xyz/router.sock``).
 3. The worker connects its DEALER socket to that endpoint.
 
-This means the ZMQ broker is **local-only** — IPC sockets do not work across machines.
+This means the ZeroMQ broker is **local-only** — IPC sockets do not work across machines.
 For distributed setups (workers on different hosts), use RabbitMQ.
 
 
 Socket architecture
 ===================
 
-All traffic flows through a single ZMQ ROUTER/DEALER socket pair over IPC:
+All traffic flows through a single ZeroMQ ROUTER/DEALER socket pair over IPC:
 
 .. code-block:: text
 
@@ -98,7 +98,7 @@ All traffic flows through a single ZMQ ROUTER/DEALER socket pair over IPC:
                  │     Broker process       │
                  │  ┌────────────────────┐  │
                  │  │   ROUTER socket    │  │
-                 │  │  (sync, zmq.Poller)│  │
+                 │  │  (sync, poller)    │  │
                  │  └────────────────────┘  │
                  │  ┌────────────────────┐  │
                  │  │  PersistentQueue   │  │
@@ -107,14 +107,14 @@ All traffic flows through a single ZMQ ROUTER/DEALER socket pair over IPC:
                  └──────────────────────────┘
 
 The ROUTER socket auto-prepends the sender's identity to incoming frames, enabling the broker to route replies back to specific clients.
-``ROUTER_MANDATORY`` is set so that sending to a disconnected identity raises ``ZMQError`` immediately rather than silently dropping the message.
+``ROUTER_MANDATORY`` is set so that sending to a disconnected identity raises a socket error immediately rather than silently dropping the message.
 
 
 Message protocol
 ================
 
 The protocol is defined in ``protocol.py``.
-All messages are JSON-encoded dicts sent as single ZMQ frames.
+All messages are JSON-encoded dicts sent as single ZeroMQ frames.
 Every message has a ``type`` field (a ``MessageType`` enum value) and an ``id`` (UUID hex).
 
 Message types
@@ -169,11 +169,11 @@ Message types
 AMQP mapping
 ------------
 
-The protocol maps AMQP concepts to ZMQ message types:
+The protocol maps AMQP concepts to ZeroMQ message types:
 
 .. code-block:: text
 
-    AMQP concept              ZMQ broker equivalent
+    AMQP concept              ZeroMQ broker equivalent
     ────────────────────────  ──────────────────────────────────
     publisher confirm         TASK_RESPONSE (immediate broker ack)
     basic.ack                 TASK_ACK
@@ -187,7 +187,7 @@ The protocol maps AMQP concepts to ZMQ message types:
 Wire format
 -----------
 
-Messages travel as ZMQ multipart frames:
+Messages travel as ZeroMQ multipart frames:
 
 .. code-block:: text
 
@@ -195,7 +195,7 @@ Messages travel as ZMQ multipart frames:
     Broker (ROUTER) receives:     [ client-identity | empty-delimiter | json-payload ]
     Broker (ROUTER) sends:        [ target-identity | empty-delimiter | json-payload ]
 
-The empty delimiter frame is a ZMQ convention for ROUTER/DEALER interop.
+The empty delimiter frame is a ZeroMQ convention for ROUTER/DEALER interop.
 The ROUTER socket automatically prepends the sender's identity on receive and uses the first frame as the routing target on send.
 
 Payload fields like ``body`` and ``result`` are opaque to the broker — they are pre-encoded by the sender (typically as YAML strings by plumpy/kiwipy) and passed through without inspection.
@@ -263,7 +263,7 @@ Deferred ACK pattern
 ====================
 
 The kiwipy/plumpy stack requires that task subscribers can return ``Future`` objects — plumpy's process runner does this because AiiDA processes are long-running and asynchronous.
-The ZMQ communicator must support this to be a compatible ``kiwipy.Communicator``.
+The ZeroMQ communicator must support this to be a compatible ``kiwipy.Communicator``.
 
 When a task subscriber returns a result, two paths are possible:
 
@@ -289,18 +289,18 @@ The same pattern applies to RPC: if the subscriber returns a ``Future``, the res
 Dead worker detection
 =====================
 
-Dead worker detection combines ZMQ transport features with application-level logic.
+Dead worker detection combines ZeroMQ transport features with application-level logic.
 
-**Detection** (ZMQ built-in):
+**Detection** (ZeroMQ built-in):
 the ROUTER socket is configured with ``HEARTBEAT_IVL`` and ``HEARTBEAT_TIMEOUT``.
-ZMQ sends periodic ping frames at the transport level; if a worker stops responding within the timeout, ZMQ disconnects it internally and emits an ``EVENT_DISCONNECTED`` on the monitor socket we attached to the ROUTER.
+ZeroMQ sends periodic ping frames at the transport level; if a worker stops responding within the timeout, ZeroMQ disconnects it internally and emits an ``EVENT_DISCONNECTED`` on the monitor socket we attached to the ROUTER.
 
 The problem is that this event only reports the file descriptor, not which client identity disconnected.
 So the event is just a **trigger** — it tells us *someone* died, but not *who*.
 
 **Identification** (our logic):
 on each ``EVENT_DISCONNECTED``, ``_handle_disconnect_event`` calls ``_probe_workers``, which sends a ``PING`` message to every worker identity that has in-flight tasks.
-With ``ROUTER_MANDATORY`` set on the socket, sending to a dead identity immediately raises ``ZMQError(EHOSTUNREACH)``.
+With ``ROUTER_MANDATORY`` set on the socket, sending to a dead identity immediately raises a socket error (``EHOSTUNREACH``).
 Any worker that fails the probe is removed via ``_remove_dead_worker``, which requeues all its assigned tasks and cleans up the subscriber registries.
 
 
@@ -327,17 +327,17 @@ Persistent queue (crash recovery)
 Service files
 =============
 
-``ZmqBrokerService`` manages the broker process lifecycle and writes files that ``ZmqBroker`` (in worker processes) reads to discover the broker:
+``ZeromqBrokerService`` manages the broker process lifecycle and writes files that ``ZeromqBroker`` (in worker processes) reads to discover the broker:
 
 .. code-block:: text
 
     ~/.aiida/broker/{profile-uuid}/
-    ├── broker.pid         "aiida-zmq-broker {pid}" — sentinel + PID for ownership check
+    ├── broker.pid         "aiida-zeromq-broker {pid}" — sentinel + PID for ownership check
     ├── broker.status      JSON with task counts, updated every STATUS_INTERVAL seconds
     ├── broker.sockets     path to the temp socket directory
     └── storage/           PersistentQueue data
 
-    /tmp/aiida_zmq_{random}/
+    /tmp/aiida_zeromq_{random}/
     └── router.sock        IPC socket (temp dir avoids 107-byte Unix path limit)
 
 
@@ -384,7 +384,7 @@ Timeouts
      - Peer considered dead after no heartbeat response for this duration.
    * - ``POLL_TIMEOUT``
      - 1s
-     - Server-side ``zmq.Poller`` timeout per iteration. Controls how quickly the broker responds to shutdown signals.
+     - Server-side poll timeout per iteration. Controls how quickly the broker responds to shutdown signals.
    * - ``STATUS_INTERVAL``
      - 5s
      - How often the broker service writes its status JSON to disk.

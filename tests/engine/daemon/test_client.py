@@ -30,7 +30,7 @@ pytestmark = pytest.mark.requires_broker
 def test_ipc_socket_file_length_limit():
     """The maximum length of socket filepaths is often limited by the operating system.
     For MacOS it is limited to 103 bytes, versus 107 bytes on Unix. This limit is
-    exposed by the Zmq library which is used by Circus library that is used to
+    exposed by the ZeroMQ library which is used by Circus library that is used to
     daemonize the daemon runners. This test verifies that the three endpoints used
     for the Circus client have a filepath that does not exceed that path limit.
 

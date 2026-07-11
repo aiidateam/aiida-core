@@ -1,4 +1,4 @@
-"""ZMQ Broker Service - process wrapper for ZmqBrokerServer.
+"""ZeroMQ Broker Service - process wrapper for ZeromqBrokerServer.
 
 Manages PID/status files, socket directory, and signal handling.
 Circus handles process lifecycle (daemonization, keepalive, log capture).
@@ -17,13 +17,13 @@ import typing as t
 from pathlib import Path
 
 from .defaults import POLL_TIMEOUT, STATUS_INTERVAL
-from .server import ZmqBrokerServer
+from .server import ZeromqBrokerServer
 
 _LOGGER = logging.getLogger(__name__)
 
 
-class ZmqBrokerService:
-    """Process wrapper for ZmqBrokerServer.
+class ZeromqBrokerService:
+    """Process wrapper for ZeromqBrokerServer.
 
     Directory structure:
         {base_path}/
@@ -43,7 +43,7 @@ class ZmqBrokerService:
         self._sockets_file = self._base_path / 'broker.sockets'
         self._pid_file = self._base_path / 'broker.pid'
         self._status_file = self._base_path / 'broker.status'
-        self._server: ZmqBrokerServer | None = None
+        self._server: ZeromqBrokerServer | None = None
         self._running = False
 
     @property
@@ -74,15 +74,15 @@ class ZmqBrokerService:
                 pass
 
         # Use temp directory for sockets (Unix IPC path limit ~107 bytes)
-        self._sockets_path = Path(tempfile.mkdtemp(prefix='aiida_zmq_'))
+        self._sockets_path = Path(tempfile.mkdtemp(prefix='aiida_zeromq_'))
         self._sockets_file.write_text(str(self._sockets_path))
 
-        self._server = ZmqBrokerServer(
+        self._server = ZeromqBrokerServer(
             storage_path=self._storage_path,
             sockets_path=self._sockets_path,
         )
 
-        self._pid_file.write_text(f'aiida-zmq-broker {os.getpid()}')
+        self._pid_file.write_text(f'aiida-zeromq-broker {os.getpid()}')
 
         # SIGINT (ctrl-c / circus graceful) + SIGTERM (circus stop)
         signal.signal(signal.SIGINT, self._handle_shutdown)
@@ -133,7 +133,7 @@ class ZmqBrokerService:
 
 def run_broker_service(base_path: str | Path) -> None:
     """Entry point for ``verdi daemon broker``."""
-    ZmqBrokerService(base_path=base_path).run_forever()
+    ZeromqBrokerService(base_path=base_path).run_forever()
 
 
 if __name__ == '__main__':

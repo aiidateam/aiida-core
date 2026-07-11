@@ -323,7 +323,7 @@ Below is a list with all available subcommands.
 
       By default the command creates a profile that uses SQLite for the database. For the
       message broker, it automatically checks for RabbitMQ running on localhost. If found, it
-      configures RabbitMQ as the broker. Otherwise, it falls back to the ZMQ broker, which
+      configures RabbitMQ as the broker. Otherwise, it falls back to the ZeroMQ broker, which
       requires no external services and is started automatically with the daemon.
 
       When the `--use-postgres` flag is toggled, the command tries to connect to the
@@ -332,9 +332,9 @@ Below is a list with all available subcommands.
       these credentials to try and automatically create a user and database. If successful,
       the newly created profile uses the new PostgreSQL database instead of SQLite.
 
-      When the `--use-zmq` flag is toggled, the command skips the RabbitMQ auto-detection and
-      directly configures the ZMQ broker. To switch to RabbitMQ later, use `verdi profile
-      configure-rabbitmq`.
+      When the `--use-zeromq` flag is toggled, the command skips the RabbitMQ auto-detection
+      and directly configures the ZeroMQ broker. To switch to RabbitMQ later, use `verdi
+      profile configure-rabbitmq`.
 
     Options:
       -p, --profile-name TEXT         Name of the profile. By default, a unique name starting
@@ -347,12 +347,12 @@ Below is a list with all available subcommands.
                                       options. The command attempts to automatically create a
                                       user and database to use for the profile, but this can
                                       fail depending on the configuration of the server.
-      --use-zmq                       When toggled on, the profile uses the ZMQ broker, which
-                                      requires no external services and is started
+      --use-zeromq                    When toggled on, the profile uses the ZeroMQ broker,
+                                      which requires no external services and is started
                                       automatically with the daemon. When not specified, the
                                       command automatically tries RabbitMQ first and falls
-                                      back to ZMQ if unavailable. To switch to RabbitMQ later,
-                                      use `verdi profile configure-rabbitmq`.
+                                      back to ZeroMQ if unavailable. To switch to RabbitMQ
+                                      later, use `verdi profile configure-rabbitmq`.
       --no-broker                     When toggled on, no message broker is configured. This
                                       means the daemon cannot be started and processes cannot
                                       be submitted. Useful for profiles used only for data

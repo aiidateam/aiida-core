@@ -113,39 +113,39 @@ This way, the daemon helps AiiDA to scale as it is possible to run many processe
 
 AiiDA supports two broker backends:
 
-.. _installation:guide-complete:broker:zmq:
+.. _installation:guide-complete:broker:zeromq:
 
-ZMQ broker (built-in)
----------------------
+ZeroMQ broker (built-in)
+------------------------
 
 .. versionadded:: 2.9
 
-The ZMQ broker is a lightweight, built-in message broker that uses `ZeroMQ <https://zeromq.org/>`_ for communication.
+The ZeroMQ broker is a lightweight, built-in message broker that uses `ZeroMQ <https://zeromq.org/>`_ for communication.
 It requires no external services: the broker process is started and stopped automatically together with the daemon.
 
-The ZMQ broker is the easiest way to get a fully functional AiiDA installation with daemon support.
+The ZeroMQ broker is the easiest way to get a fully functional AiiDA installation with daemon support.
 No additional installation steps are needed beyond installing ``aiida-core`` itself.
 
-To create a profile that uses the ZMQ broker:
+To create a profile that uses the ZeroMQ broker:
 
 .. code-block:: console
 
-    verdi presto --use-zmq
+    verdi presto --use-zeromq
 
 Or when using ``verdi profile setup``:
 
 .. code-block:: console
 
-    verdi profile setup core.sqlite_dos --broker zmq
+    verdi profile setup core.sqlite_dos --broker zeromq
 
 .. note::
 
-    The ``verdi presto`` command automatically falls back to the ZMQ broker when RabbitMQ is not available on the localhost.
+    The ``verdi presto`` command automatically falls back to the ZeroMQ broker when RabbitMQ is not available on the localhost.
 
 .. tip::
 
     The ``broker.task_timeout`` configuration option controls how long a caller waits for a response from the broker (default: 10 seconds).
-    This option applies to both the ZMQ and RabbitMQ backends.
+    This option applies to both the ZeroMQ and RabbitMQ backends.
     It can be changed with ``verdi config set broker.task_timeout <seconds>``.
 
 .. _installation:guide-complete:rabbitmq:
@@ -153,9 +153,9 @@ Or when using ``verdi profile setup``:
 RabbitMQ
 --------
 
-`RabbitMQ <https://www.rabbitmq.com/>`_ is an external message broker service that can be used as an alternative to the built-in ZMQ broker.
+`RabbitMQ <https://www.rabbitmq.com/>`_ is an external message broker service that can be used as an alternative to the built-in ZeroMQ broker.
 
-Although it is possible to run AiiDA without RabbitMQ (using the ZMQ broker or no broker at all), RabbitMQ remains a well-tested option for production setups.
+Although it is possible to run AiiDA without RabbitMQ (using the ZeroMQ broker or no broker at all), RabbitMQ remains a well-tested option for production setups.
 
 .. tab-set::
 
@@ -302,10 +302,10 @@ The exact options available for the ``verdi profile setup`` command depend on th
 * ``--first-name``: First name for the default user that is created.
 * ``--last-name``: Last name for the default user that is created.
 * ``--institution``: Institution for the default user that is created.
-* ``--broker [rabbitmq|zmq|none]``: Which message broker backend to use.
+* ``--broker [rabbitmq|zeromq|none]``: Which message broker backend to use.
   The default is ``rabbitmq``, in which case the command tries to connect to RabbitMQ running on the localhost with default connection parameters.
   If this fails, a warning is issued and the profile is configured without a broker.
-  Use ``zmq`` for the built-in ZMQ broker (no external services required), or ``none`` to disable the broker entirely.
+  Use ``zeromq`` for the built-in ZeroMQ broker (no external services required), or ``none`` to disable the broker entirely.
   Once the profile is created, RabbitMQ can still be enabled through ``verdi profile configure-rabbitmq`` which allows to customize the connection parameters.
 
   .. versionadded:: 2.9

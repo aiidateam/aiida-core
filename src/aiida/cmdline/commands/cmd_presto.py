@@ -128,11 +128,11 @@ def detect_postgres_config(
     'user and database to use for the profile, but this can fail depending on the configuration of the server.',
 )
 @click.option(
-    '--use-zmq',
+    '--use-zeromq',
     is_flag=True,
-    help='When toggled on, the profile uses the ZMQ broker, which requires no external services and is started '
+    help='When toggled on, the profile uses the ZeroMQ broker, which requires no external services and is started '
     'automatically with the daemon. When not specified, the command automatically tries RabbitMQ first and falls back '
-    'to ZMQ if unavailable. To switch to RabbitMQ later, use `verdi profile configure-rabbitmq`.',
+    'to ZeroMQ if unavailable. To switch to RabbitMQ later, use `verdi profile configure-rabbitmq`.',
 )
 @click.option(
     '--no-broker',
@@ -161,7 +161,7 @@ def verdi_presto(
     profile_name,
     email,
     use_postgres,
-    use_zmq,
+    use_zeromq,
     no_broker,
     postgres_hostname,
     postgres_port,
@@ -188,15 +188,15 @@ def verdi_presto(
 
     By default the command creates a profile that uses SQLite for the database. For the message broker, it automatically
     checks for RabbitMQ running on localhost. If found, it configures RabbitMQ as the broker. Otherwise, it falls back
-    to the ZMQ broker, which requires no external services and is started automatically with the daemon.
+    to the ZeroMQ broker, which requires no external services and is started automatically with the daemon.
 
     When the `--use-postgres` flag is toggled, the command tries to connect to the PostgreSQL server with connection
     paramaters taken from the `--postgres-hostname`, `--postgres-port`, `--postgres-username` and `--postgres-password`
     options. It uses these credentials to try and automatically create a user and database. If successful, the newly
     created profile uses the new PostgreSQL database instead of SQLite.
 
-    When the `--use-zmq` flag is toggled, the command skips the RabbitMQ auto-detection and directly configures the ZMQ
-    broker. To switch to RabbitMQ later, use `verdi profile configure-rabbitmq`.
+    When the `--use-zeromq` flag is toggled, the command skips the RabbitMQ auto-detection and directly configures the
+    ZeroMQ broker. To switch to RabbitMQ later, use `verdi profile configure-rabbitmq`.
     """
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
     from aiida.common import exceptions
@@ -235,20 +235,20 @@ def verdi_presto(
         echo.echo_report('`--no-broker` enabled: configuring the profile without a broker.')
         broker_backend = None
         broker_config = None
-    elif use_zmq:
-        echo.echo_report('`--use-zmq` enabled: configuring the profile with ZMQ broker.')
-        broker_backend = 'core.zmq'
+    elif use_zeromq:
+        echo.echo_report('`--use-zeromq` enabled: configuring the profile with ZeroMQ broker.')
+        broker_backend = 'core.zeromq'
         broker_config = {}
     else:
         try:
             broker_config = detect_rabbitmq_config()
         except ConnectionError:
-            echo.echo_report('RabbitMQ server not found: falling back to ZMQ broker.')
+            echo.echo_report('RabbitMQ server not found: falling back to ZeroMQ broker.')
             echo.echo_warning(
-                'The ZMQ broker is a new feature. If you experience issues, '
+                'The ZeroMQ broker is a new feature. If you experience issues, '
                 'recreate the profile with `verdi presto --no-broker`.'
             )
-            broker_backend = 'core.zmq'
+            broker_backend = 'core.zeromq'
             broker_config = {}
         else:
             echo.echo_report('RabbitMQ server detected: configuring the profile with RabbitMQ broker.')

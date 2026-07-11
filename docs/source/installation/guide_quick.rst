@@ -51,7 +51,7 @@ A setup that is ideal for production work requires the PostgreSQL service and a 
 By default, ``verdi presto`` creates a profile that allows running AiiDA without these:
 
 * **Database**: The PostgreSQL database that is used to store queryable data, is replaced by SQLite.
-* **Broker**: The message broker that allows communication with and between processes is either set to the built-in ZMQ broker (automatic fallback) or disabled entirely.
+* **Broker**: The message broker that allows communication with and between processes is either set to the built-in ZeroMQ broker (automatic fallback) or disabled entirely.
 
 The following matrix shows the possible combinations of the database and broker options and their use cases:
 
@@ -60,13 +60,13 @@ The following matrix shows the possible combinations of the database and broker 
 +======================+====================================================+=============================================================+
 | **No broker**        | Quick start with AiiDA                             | [*not really relevant for any usecase*]                     |
 +----------------------+----------------------------------------------------+-------------------------------------------------------------+
-| **ZMQ broker**       | Getting started, light production                  | Production (no external services required)                  |
+| **ZeroMQ broker**    | Getting started, light production                  | Production (no external services required)                  |
 +----------------------+----------------------------------------------------+-------------------------------------------------------------+
 | **RabbitMQ**         | Production (low-throughput; beta, has limitations) | Production (maximum performance, ideal for high-throughput) |
 +----------------------+----------------------------------------------------+-------------------------------------------------------------+
 
 .. versionadded:: 2.9
-    The ZMQ broker row was added. Previously, only RabbitMQ and no-broker configurations were available.
+    The ZeroMQ broker row was added. Previously, only RabbitMQ and no-broker configurations were available.
 
 The sections below provide details on the use of the PostgreSQL and RabbitMQ services and the limitations when running AiiDA without them.
 
@@ -79,17 +79,17 @@ Part of AiiDA's functionality requires a `message broker <https://en.wikipedia.o
 The message broker is used to allow communication with processes and the :ref:`daemon <topics:daemon>` as well as between themselves.
 AiiDA supports two broker backends:
 
-* **ZMQ broker** (built-in): A lightweight broker that uses `ZeroMQ <https://zeromq.org/>`_ for inter-process communication.
+* **ZeroMQ broker** (built-in): A lightweight broker that uses `ZeroMQ <https://zeromq.org/>`_ for inter-process communication.
   It requires no external services and is started automatically with the daemon.
 * **RabbitMQ**: An external `message broker service <https://www.rabbitmq.com/>`_ that must be installed and managed separately.
 
 .. versionadded:: 2.9
-    The built-in ZMQ broker was added as an alternative to RabbitMQ.
+    The built-in ZeroMQ broker was added as an alternative to RabbitMQ.
 
 .. note::
     The ``verdi presto`` command automatically checks if RabbitMQ is running on the localhost.
     If it can successfully connect, it configures the profile with RabbitMQ.
-    Otherwise, it falls back to the built-in ZMQ broker.
+    Otherwise, it falls back to the built-in ZeroMQ broker.
     If you do not want to use a broker at all, use ``verdi presto --no-broker``.
 
 A profile **without any broker** has the following limitations:

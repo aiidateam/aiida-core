@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Default constants for the ZMQ broker.
+"""Default constants for the ZeroMQ broker.
 
 These are **developer-tunable** defaults, not exposed to end users via
 ``verdi config``.  User-facing options live in the config schema
@@ -34,7 +34,7 @@ BROKER_READY_TIMEOUT: float = 10.0
 
 # -- Server (broker-side) -----------------------------------------------------
 
-# ZMQ socket polling interval in seconds.
+# ZeroMQ socket polling interval in seconds.
 POLL_TIMEOUT: float = 1.0
 
 # ZMTP heartbeat interval (seconds) — how often the broker pings connected peers.

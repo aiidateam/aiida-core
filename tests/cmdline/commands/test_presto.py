@@ -43,7 +43,7 @@ def test_get_default_presto_profile_name(monkeypatch, profile_names, expected):
 
 @pytest.mark.usefixtures('empty_config', 'mock_daemon_client')
 def test_presto_without_rmq(run_cli_command, monkeypatch):
-    """Test the ``verdi presto`` without RabbitMQ falls back to ZMQ."""
+    """Test the ``verdi presto`` without RabbitMQ falls back to ZeroMQ."""
     from aiida.brokers.rabbitmq import defaults
 
     def detect_rabbitmq_config(**kwargs):
@@ -59,13 +59,13 @@ def test_presto_without_rmq(run_cli_command, monkeypatch):
         assert profile.name == 'presto'
         localhost = Computer.collection.get(label='localhost')
         assert localhost.is_configured
-        # When RabbitMQ is not available, presto falls back to ZMQ broker
-        assert profile.process_control_backend == 'core.zmq'
+        # When RabbitMQ is not available, presto falls back to ZeroMQ broker
+        assert profile.process_control_backend == 'core.zeromq'
 
 
 @pytest.mark.usefixtures('empty_config', 'mock_daemon_client')
 def test_presto(run_cli_command):
-    """Test that ``verdi presto`` configures a broker (RabbitMQ if available, otherwise ZMQ)."""
+    """Test that ``verdi presto`` configures a broker (RabbitMQ if available, otherwise ZeroMQ)."""
     result = run_cli_command(verdi_presto, ['--non-interactive'])
     assert 'Created new profile `presto`.' in result.output
 
@@ -73,8 +73,8 @@ def test_presto(run_cli_command):
         assert profile.name == 'presto'
         localhost = Computer.collection.get(label='localhost')
         assert localhost.is_configured
-        # Presto auto-detects RabbitMQ, falls back to ZMQ if not available
-        assert profile.process_control_backend in ('core.rabbitmq', 'core.zmq')
+        # Presto auto-detects RabbitMQ, falls back to ZeroMQ if not available
+        assert profile.process_control_backend in ('core.rabbitmq', 'core.zeromq')
 
 
 @pytest.mark.requires_psql

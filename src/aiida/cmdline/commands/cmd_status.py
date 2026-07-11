@@ -134,12 +134,12 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     # Getting the daemon and broker status
     broker = manager.get_broker()
 
-    from aiida.brokers.zmq.broker import ZmqBroker
+    from aiida.brokers.zeromq.broker import ZeromqBroker
 
     if broker:
         # For RabbitMQ: verify broker connectivity as a separate status line
-        # For ZMQ: broker info is shown alongside the daemon status below
-        if not isinstance(broker, ZmqBroker):
+        # For ZeroMQ: broker info is shown alongside the daemon status below
+        if not isinstance(broker, ZeromqBroker):
             try:
                 broker.get_communicator()
             except Exception as exc:
@@ -179,9 +179,9 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     else:
         daemon_status = ServiceStatus.UP
         daemon_msg = f'Daemon is running with PID {status["pid"]}'
-        # Append broker info for managed brokers (e.g., ZMQ)
+        # Append broker info for managed brokers (e.g., ZeroMQ)
 
-        if broker and isinstance(broker, ZmqBroker):
+        if broker and isinstance(broker, ZeromqBroker):
             if broker.is_running:
                 status_info = broker.get_service_status()
                 if status_info:

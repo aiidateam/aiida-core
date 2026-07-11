@@ -31,8 +31,8 @@ from .queue import PersistentQueue
 _LOGGER = logging.getLogger(__name__)
 
 
-class ZmqBrokerServer:
-    """Standalone ZMQ message broker server.
+class ZeromqBrokerServer:
+    """Standalone ZeroMQ message broker server.
 
     Uses a single ROUTER socket for all communication (tasks, RPC, broadcasts).
 
@@ -68,7 +68,7 @@ class ZmqBrokerServer:
         # Derive endpoint from sockets_path
         self._router_endpoint = f'ipc://{self._sockets_path}/router.sock'
 
-        # ZMQ context and sockets
+        # ZeroMQ context and sockets
         self._context: zmq.Context | None = None  # type: ignore[type-arg]
         self._router: zmq.Socket | None = None  # type: ignore[type-arg]
         self._poller: zmq.Poller | None = None
@@ -138,11 +138,11 @@ class ZmqBrokerServer:
         if self._running:
             return
 
-        _LOGGER.info('Starting ZMQ Broker Server')
+        _LOGGER.info('Starting ZeroMQ Broker Server')
         _LOGGER.info('Storage path: %s', self._storage_path)
         _LOGGER.info('ROUTER endpoint: %s', self._router_endpoint)
 
-        # Create ZMQ context
+        # Create ZeroMQ context
         self._context = zmq.Context()
 
         # ROUTER socket for request-reply
@@ -162,7 +162,7 @@ class ZmqBrokerServer:
         self._poller.register(self._monitor, zmq.POLLIN)
 
         self._running = True
-        _LOGGER.info('ZMQ Broker Server started')
+        _LOGGER.info('ZeroMQ Broker Server started')
 
     def stop(self) -> None:
         """Stop the broker server.
@@ -172,7 +172,7 @@ class ZmqBrokerServer:
         if not self._running:
             return
 
-        _LOGGER.info('Stopping ZMQ Broker Server')
+        _LOGGER.info('Stopping ZeroMQ Broker Server')
         self._running = False
 
         if self._poller:
@@ -194,7 +194,7 @@ class ZmqBrokerServer:
             self._context.term()
             self._context = None
 
-        _LOGGER.info('ZMQ Broker Server stopped')
+        _LOGGER.info('ZeroMQ Broker Server stopped')
 
     def run_forever(self, poll_timeout: float = POLL_TIMEOUT) -> None:
         """Run the broker event loop.
@@ -549,7 +549,7 @@ class ZmqBrokerServer:
 
         Sends a PING to each worker identity that has tasks assigned.
         With ROUTER_MANDATORY, sending to a dead identity raises
-        ZMQError(EHOSTUNREACH), identifying the dead worker.
+        a socket error with ``EHOSTUNREACH``, identifying the dead worker.
         """
         if not self._task_worker_assignments:
             return

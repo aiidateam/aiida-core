@@ -6,10 +6,10 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Module to test ZMQ broker process control.
+"""Module to test ZeroMQ broker process control.
 
 These tests mirror tests/engine/test_rmq.py but use the requires_broker marker
-so they run with the ZMQ broker backend.
+so they run with the ZeroMQ broker backend.
 """
 
 import asyncio
@@ -25,7 +25,7 @@ from tests.utils import processes as test_processes
 
 @pytest.mark.requires_broker
 class TestProcessControl:
-    """Test process control with ZMQ broker."""
+    """Test process control with ZeroMQ broker."""
 
     TIMEOUT = 2.0
 

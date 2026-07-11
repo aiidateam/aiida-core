@@ -283,7 +283,7 @@ class DaemonClient:
 
     @property
     def cmd_start_broker(self) -> list[str]:
-        """Return the command to start the ZMQ broker server process."""
+        """Return the command to start the ZeroMQ broker server process."""
         return [self._verdi_bin, '-p', self.profile.name, 'daemon', 'broker']
 
     @property
@@ -942,9 +942,9 @@ class DaemonClient:
 
         watchers = []
 
-        # Start ZMQ broker before workers so its sockets are ready when workers connect.
+        # Start ZeroMQ broker before workers so its sockets are ready when workers connect.
         # Skip if a broker is already running (e.g. started by the test fixture).
-        if self.profile.process_control_backend == 'core.zmq':
+        if self.profile.process_control_backend == 'core.zeromq':
             from aiida.manage.manager import get_manager
 
             broker_instance = get_manager().get_broker()

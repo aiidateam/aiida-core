@@ -84,7 +84,7 @@ def execute_client_command(
 @options.TIMEOUT(default=None, required=False, type=int)
 @decorators.with_dbenv()
 @decorators.requires_broker
-@decorators.check_circus_zmq_version
+@decorators.check_circus_zeromq_version
 def start(foreground, number, timeout):
     """Start the daemon with NUMBER workers.
 
@@ -152,12 +152,12 @@ def status(ctx, all_profiles, timeout):
 
         start_time = format_local_time(daemon_response['info']['create_time'])
 
-        # Build broker status lines for managed brokers (e.g., ZMQ)
+        # Build broker status lines for managed brokers (e.g., ZeroMQ)
         broker_lines: list[str] = []
         broker = get_manager().get_broker()
-        from aiida.brokers.zmq.broker import ZmqBroker
+        from aiida.brokers.zeromq.broker import ZeromqBroker
 
-        if isinstance(broker, ZmqBroker):
+        if isinstance(broker, ZeromqBroker):
             if broker.is_running:
                 status_info = broker.get_service_status()
                 if status_info:
@@ -293,7 +293,7 @@ def restart(ctx, reset, no_wait, timeout):
 @click.argument('number', required=False, type=int, callback=validate_daemon_workers)
 @decorators.with_dbenv()
 @decorators.requires_broker
-@decorators.check_circus_zmq_version
+@decorators.check_circus_zeromq_version
 def start_circus(foreground, number):
     """This will actually launch the circus daemon, either daemonized in the background or in the foreground.
 
@@ -320,12 +320,12 @@ def worker():
 @decorators.with_dbenv()
 @decorators.requires_broker
 def broker():
-    """Run the ZMQ broker server in the current process.
+    """Run the ZeroMQ broker server in the current process.
 
     .. note:: this should not be called directly from the commandline!
     """
-    from aiida.brokers.zmq.broker import get_broker_base_path
-    from aiida.brokers.zmq.service import run_broker_service
+    from aiida.brokers.zeromq.broker import get_broker_base_path
+    from aiida.brokers.zeromq.service import run_broker_service
     from aiida.manage.manager import get_manager
 
     profile = get_manager().get_profile()

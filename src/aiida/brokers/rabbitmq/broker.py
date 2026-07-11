@@ -7,7 +7,8 @@ import sys
 import typing as t
 from collections.abc import Iterator
 
-from aiida.brokers.broker import Broker
+from aiida.brokers.broker import Broker, BrokerConfigField
+from aiida.brokers.rabbitmq import defaults
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import get_config_option
 
@@ -26,6 +27,59 @@ __all__ = ('RabbitmqBroker',)
 
 class RabbitmqBroker(Broker):
     """Implementation of the message broker interface using RabbitMQ through ``kiwipy``."""
+
+    _config_fields = (
+        BrokerConfigField(
+            name='broker_protocol',
+            prompt='Broker protocol',
+            help='Protocol to use for the message broker.',
+            default=defaults.BROKER_DEFAULTS.protocol,
+            param_type='choice',
+            choices=('amqp', 'amqps'),
+        ),
+        BrokerConfigField(
+            name='broker_username',
+            prompt='Broker username',
+            help='Username to use for authentication with the message broker.',
+            default=defaults.BROKER_DEFAULTS.username,
+            param_type='non_empty_string',
+        ),
+        BrokerConfigField(
+            name='broker_password',
+            prompt='Broker password',
+            help='Password to use for authentication with the message broker.',
+            default=defaults.BROKER_DEFAULTS.password,
+            param_type='non_empty_string',
+            hide_input=True,
+        ),
+        BrokerConfigField(
+            name='broker_host',
+            prompt='Broker host',
+            help='Hostname for the message broker.',
+            default=defaults.BROKER_DEFAULTS.host,
+            param_type='hostname',
+        ),
+        BrokerConfigField(
+            name='broker_port',
+            prompt='Broker port',
+            help='Port for the message broker.',
+            default=defaults.BROKER_DEFAULTS.port,
+            param_type='int',
+        ),
+        BrokerConfigField(
+            name='broker_virtual_host',
+            prompt='Broker virtual host',
+            help='Name of the virtual host for the message broker without leading forward slash.',
+            default=defaults.BROKER_DEFAULTS.virtual_host,
+            param_type='string',
+        ),
+    )
+
+    @classmethod
+    def get_detected_config(cls, get_value: t.Callable[[str], t.Any]) -> dict[str, t.Any]:
+        """Return detected RabbitMQ configuration values for CLI defaults."""
+        connection_params = {field.name.removeprefix('broker_'): get_value(field.name) for field in cls._config_fields}
+        return defaults.detect_rabbitmq_config(**connection_params)
 
     def __init__(self, profile: Profile) -> None:
         """Construct a new instance.

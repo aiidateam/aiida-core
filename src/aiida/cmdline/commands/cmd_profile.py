@@ -36,7 +36,7 @@ def command_create_profile(
     first_name: str | None = None,
     last_name: str | None = None,
     institution: str | None = None,
-    broker: str = 'rabbitmq',
+    broker: str = 'core.rabbitmq',
     use_rabbitmq: bool | None = None,
     **kwargs,
 ):
@@ -52,7 +52,7 @@ def command_create_profile(
     :param first_name: First name for the default user.
     :param last_name: Last name for the default user.
     :param institution: Institution for the default user.
-    :param broker: Message broker backend ('rabbitmq', 'zeromq', or 'none').
+    :param broker: Message broker backend ('core.rabbitmq', 'core.zeromq', or 'none').
     :param use_rabbitmq: Deprecated. Use ``broker`` instead. If False, equivalent to ``broker='none'``.
     :param kwargs: Arguments to initialise instance of the selected storage implementation.
     """
@@ -78,7 +78,7 @@ def command_create_profile(
     broker_backend = None
     broker_config = None
 
-    if broker == 'rabbitmq':
+    if broker == 'core.rabbitmq':
         from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
 
         try:
@@ -87,12 +87,12 @@ def command_create_profile(
             echo.echo_warning(f'RabbitMQ server not reachable: {exception}.')
         else:
             echo.echo_success(f'RabbitMQ server detected with connection parameters: {broker_config}')
-            broker_backend = 'core.rabbitmq'
+            broker_backend = broker
 
         echo.echo_report('RabbitMQ can be reconfigured with `verdi profile configure-rabbitmq`.')
 
-    elif broker == 'zeromq':
-        broker_backend = 'core.zeromq'
+    elif broker == 'core.zeromq':
+        broker_backend = broker
         broker_config = {}
         echo.echo_success('ZeroMQ broker configured (no external service required).')
         echo.echo_report('The ZeroMQ broker service will be started automatically with the daemon.')

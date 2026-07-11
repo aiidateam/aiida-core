@@ -351,11 +351,11 @@ SETUP_USE_RABBITMQ = options.OverridableOption(
 SETUP_BROKER_BACKEND = options.OverridableOption(
     '--broker',
     prompt='Message broker',
-    type=click.Choice(['rabbitmq', 'zeromq', 'none']),
-    default='rabbitmq',
+    type=click.Choice(['core.rabbitmq', 'core.zeromq', 'none']),
+    default='core.rabbitmq',
     cls=options.interactive.InteractiveOption,
-    help='Message broker backend for process control. Use "rabbitmq" for RabbitMQ (requires external server), '
-    '"zeromq" for ZeroMQ (built-in, no external dependencies), or "none" to disable (limited functionality).',
+    help='Message broker backend for process control. Use "core.rabbitmq" for RabbitMQ (requires external server), '
+    '"core.zeromq" for ZeroMQ (built-in, no external dependencies), or "none" to disable (limited functionality).',
 )
 
 SETUP_BROKER_PROTOCOL = QUICKSETUP_BROKER_PROTOCOL.clone(

@@ -252,7 +252,14 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         description='Timeout in seconds for communications with RabbitMQ.',
         json_schema_extra={'deprecated_by': 'broker.task_timeout', 'requires_daemon_restart': True},
     )
-    storage__sandbox: str | None = Field(None, description='Absolute path to the directory to store sandbox folders.')
+    storage__sandbox: Optional[str] = Field(
+        None, description='Absolute path to the directory to store sandbox folders.'
+    )
+    storage__remote_archive_timeout: int = Field(
+        60,
+        description='Timeout in seconds for HTTP requests when reading a remote archive, i.e. a `core.sqlite_zip` '
+        'storage with a URL as filepath.',
+    )
     caching__default_enabled: bool = Field(
         False,
         description='Enable calculation caching by default.',
@@ -774,6 +781,8 @@ class Config:
         else:
             LOGGER.debug('Profile `%s` has no broker configured, skipping daemon shutdown.', profile.name)
         if delete_storage:
+            from aiida.storage.sqlite_zip.utils import is_url
+
             storage_cls = StorageFactory(profile.storage_backend)
             if profile.storage_backend == 'core.sqlite_zip':
                 filepath = profile.storage_config.get('filepath')
@@ -781,6 +790,10 @@ class Config:
                     LOGGER.warning(
                         f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but no filepath is configured. '
                         'Profile deletion will proceed anyway.'
+                    )
+                elif is_url(filepath):
+                    LOGGER.report(
+                        f'Profile `{profile.name}` points to the remote archive `{filepath}`, which is left untouched.'
                     )
                 elif not Path(filepath).exists():
                     LOGGER.warning(

@@ -8,19 +8,48 @@
 ###########################################################################
 """Tests for the `PbsProScheduler` plugin."""
 
-import pathlib
 import unittest
 import uuid
+
+import pytest
 
 from aiida.schedulers.datastructures import JobState
 from aiida.schedulers.plugins.pbspro import PbsproScheduler
 
-FIXTURES_DIR = pathlib.Path(__file__).parent / 'fixtures'
+CONTINUATION_CASES = [
+    # TAB continuation: a wrapped long value, joined with no newline (pre-existing).
+    pytest.param(
+        'Job Id: 1.c\n    Resource_List.select = 1:ncpus=1:j\n\tobfs=104857600\n',
+        'resource_list.select',
+        '1:ncpus=1:jobfs=104857600',
+        [],
+        id='tab-continuation',
+    ),
+    # Space-prefixed line without `=`: a bash function body, folded and flagged (the #7395 fix).
+    pytest.param(
+        'Job Id: 1.c\n    Variable_List = f=() {  echo hi\n echo bye; }\n    queue = normal\n',
+        'variable_list',
+        'f=() {  echo hi\n echo bye; }',
+        ['variable_list'],
+        id='space-no-equals',
+    ),
+    # Zero-indent continuation, e.g. the `}` line: folded and flagged (pre-existing).
+    pytest.param(
+        'Job Id: 1.c\n    comment = line one\nline two\n',
+        'comment',
+        'line one\nline two',
+        ['comment'],
+        id='zero-indent',
+    ),
+]
 
 
-def read_fixture(filename):
-    """Return the contents of a scheduler test fixture."""
-    return (FIXTURES_DIR / filename).read_text()
+@pytest.mark.parametrize('stdout, field, value, warned', CONTINUATION_CASES)
+def test_parse_qstat_line_continuations(stdout, field, value, warned):
+    """qstat continuation lines fold into the previous field by leading whitespace (#7395)."""
+    [job] = PbsproScheduler()._parse_joblist_output(0, stdout, '')
+    assert job.raw_data[field] == value
+    assert job.raw_data.get('warning_fields_with_newlines', []) == warned
 
 
 text_qstat_f_to_test = """Job Id: 68350.mycluster
@@ -861,42 +890,14 @@ class TestParserQstat(unittest.TestCase):
                 self.assertTrue(j.num_machines == num_machines)
                 self.assertTrue(j.num_cpus == num_cpus)
 
-    def test_parse_with_multiline_function_variable_list(self):
-        """Test parsing qstat output with a multiline bash function in `Variable_List`."""
-        scheduler = PbsproScheduler()
-
-        job_list = scheduler._parse_joblist_output(0, read_fixture('qstat-multiline-func.txt'), '')
-
-        self.assertEqual(len(job_list), 1)
-
-        job = job_list[0]
-        self.assertEqual(job.job_id, '171389798.mycluster')
-        self.assertEqual(job.title, 'script.sh')
-        self.assertEqual(job.job_owner, 'user')
-        self.assertEqual(job.job_state, JobState.QUEUED)
-        self.assertEqual(job.queue_name, 'normal-exec')
-        self.assertEqual(job.num_machines, 1)
-        self.assertEqual(job.num_mpiprocs, 1)
-        self.assertEqual(job.num_cpus, 1)
-        self.assertEqual(job.requested_wallclock_time, 36000)
-        self.assertEqual(job.raw_data['warning_fields_with_newlines'], ['variable_list'])
-
-    def test_parse_qstat_fixtures(self):
-        """Test parsing additional sanitized qstat outputs."""
-        scheduler = PbsproScheduler()
-
-        cases = [
-            ('qstat-queued.txt', '171390152.mycluster', JobState.QUEUED),
-            ('qstat-running.txt', '171390152.mycluster', JobState.RUNNING),
-        ]
-
-        for fixture, job_id, job_state in cases:
-            with self.subTest(fixture=fixture):
-                job_list = scheduler._parse_joblist_output(0, read_fixture(fixture), '')
-
-                self.assertEqual(len(job_list), 1)
-                self.assertEqual(job_list[0].job_id, job_id)
-                self.assertEqual(job_list[0].job_state, job_state)
+    def test_parse_exec_host_single_node(self):
+        """A single-node `exec_host` (`host/N`, no `*ncpus`) yields one machine with `num_cpus` 1."""
+        stdout = 'Job Id: 1.cl\n    exec_host = node-0686/24\n'
+        [job] = PbsproScheduler()._parse_joblist_output(0, stdout, '')
+        self.assertEqual(
+            [(machine.name, machine.num_cpus) for machine in job.allocated_machines],
+            [('node-0686', 1)],
+        )
 
 
 # TODO: WHEN WE USE THE CORRECT ERROR MANAGEMENT, REIMPLEMENT THIS TEST

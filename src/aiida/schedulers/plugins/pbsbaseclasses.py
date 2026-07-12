@@ -386,8 +386,9 @@ class PbsBaseClass(BashCliScheduler):
                     # _LOGGER.warning("I found some text before the "
                     # "first job: {}".format(l))
                 elif line.startswith(' '):
-                    # If it starts with a space, it is a new field. However, multi-line values such as bash
-                    # functions in `Variable_List` may contain space-indented lines without an equals sign.
+                    # If it starts with a space, it is usually a new field. However, multi-line values such as
+                    # bash functions in `Variable_List` may contain space-indented lines without an equals sign.
+                    # Append as-is when this is the first line, to avoid indexing an empty list.
                     if '=' in line or not jobdata_raw[-1]['lines']:
                         jobdata_raw[-1]['lines'].append(line)
                     else:

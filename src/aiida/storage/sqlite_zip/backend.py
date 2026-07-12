@@ -10,20 +10,25 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
+import re
 import shutil
 import tarfile
 import tempfile
+import weakref
 import zipfile
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import Any, BinaryIO, NoReturn, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, BinaryIO, NoReturn, Optional, Tuple, Union, cast
 from zipfile import ZipFile, is_zipfile
 
 from pydantic import field_validator
+from sqlalchemy.future.engine import Engine
 from sqlalchemy.orm import Session
 
 from aiida import __version__
@@ -32,6 +37,7 @@ from aiida.common.exceptions import (
     CorruptStorage,
     IncompatibleExternalDependencies,
     StorageMigrationError,
+    UnreachableStorage,
 )
 from aiida.common.log import AIIDA_LOGGER
 from aiida.common.pydantic import AiiDABaseModel, MetadataField
@@ -48,8 +54,13 @@ from .utils import (
     ReadOnlyError,
     create_sqla_engine,
     extract_metadata,
+    is_url,
+    open_remote_zip,
     read_version,
 )
+
+if TYPE_CHECKING:
+    from remotezip import RemoteZip
 
 __all__ = ('SqliteZipBackend',)
 
@@ -74,6 +85,41 @@ def validate_sqlite_version() -> None:
         raise IncompatibleExternalDependencies(message)
 
 
+class _ArchiveResources:
+    """Container for the resources opened by a :class:`SqliteZipBackend` instance.
+
+    The container is registered with :func:`weakref.finalize`, such that the resources are released both when the
+    backend is garbage collected and at interpreter exit. To that end, it must not hold a reference to the backend
+    instance itself, as that would keep the backend alive until interpreter exit.
+    """
+
+    def __init__(self) -> None:
+        self.db_file: Optional[Path] = None
+        self.session: Optional[Session] = None
+        self.repo: Optional['_RoBackendRepository'] = None
+        self.remote_zip: Optional['RemoteZip'] = None
+
+    def close(self) -> None:
+        """Release all resources: close the session and any open zip handle, and delete the temporary database."""
+        if self.session:
+            self.session.close()
+            bind = self.session.get_bind()
+            if isinstance(bind, Engine):
+                # Fully dispose of the connection pool, so the database file is no longer held open by a pooled
+                # connection and can be deleted also on platforms that refuse to delete open files (Windows).
+                bind.dispose()
+        if self.db_file and self.db_file.exists():
+            self.db_file.unlink()
+        if self.repo:
+            self.repo.close()
+        if self.remote_zip:
+            self.remote_zip.close()
+        self.session = None
+        self.db_file = None
+        self.repo = None
+        self.remote_zip = None
+
+
 class SqliteZipBackend(StorageBackend):
     """A read-only backend for a sqlite/zip format.
 
@@ -96,14 +142,20 @@ class SqliteZipBackend(StorageBackend):
     class CliModel(AiiDABaseModel):
         """Model describing required information to configure an instance of the storage."""
 
-        filepath: str = MetadataField(title='Filepath of the archive', description='Filepath of the archive.')
+        filepath: str = MetadataField(
+            title='Filepath of the archive', description='Filepath or URL (http/https) of the archive.'
+        )
 
         @field_validator('filepath')
         @classmethod
         def filepath_exists_and_is_absolute(cls, value: str) -> str:
-            """Validate the filepath exists and return the resolved and absolute filepath."""
+            """Validate the filepath exists and return the resolved and absolute filepath, unless it is a URL."""
+            if is_url(value):
+                return value
             filepath = Path(value)
-            assert filepath.is_file(), f'The archive `{value}` does not exist.'
+            if not filepath.is_file():
+                msg = f'The archive `{value}` does not exist.'
+                raise ValueError(msg)
             return str(filepath.resolve().absolute())
 
     @classmethod
@@ -114,8 +166,22 @@ class SqliteZipBackend(StorageBackend):
 
     @staticmethod
     def create_profile(filepath: str | Path, options: dict | None = None) -> Profile:
-        """Create a new profile instance for this backend, from the path to the zip file."""
-        profile_name = Path(filepath).name
+        """Create a new profile instance for this backend, from the path or URL of the zip file.
+
+        The profile name is derived from the archive filename, with any character that is not alphanumeric or an
+        underscore replaced by an underscore, followed by a short hash of the full location, such that distinct
+        locations sharing the same filename map to distinct (but deterministic) profile names.
+        """
+        location = str(filepath)
+        if is_url(filepath):
+            from urllib.parse import urlsplit
+
+            name = urlsplit(location).path.rstrip('/').rsplit('/', 1)[-1] or 'remote_archive'
+        else:
+            name = Path(filepath).name
+        digest = hashlib.sha256(location.encode()).hexdigest()[:8]
+        sanitized = re.sub(r'\W', '_', name)
+        profile_name = f'{sanitized}_{digest}'
         return Profile(
             profile_name,
             {
@@ -141,7 +207,28 @@ class SqliteZipBackend(StorageBackend):
         validate_sqlite_version()
         from archive_path import ZipPath
 
-        filepath_archive = Path(profile.storage_config['filepath'])
+        filepath = profile.storage_config['filepath']
+
+        if is_url(filepath):
+            # A remote archive cannot be created, reset or migrated in place: it can only be validated to already
+            # be at the target schema version.
+            if reset:
+                msg = f'cannot reset a remote archive: {filepath}'
+                raise ReadOnlyError(msg)
+            target_version = cls.version_head()
+            current_version = cls.get_current_archive_version(inpath=filepath)
+            cls.validate_archive_versions(current_version=current_version, target_version=target_version)
+            if current_version != target_version:
+                msg = (
+                    f'The remote archive at `{filepath}` has version {current_version} but version {target_version} '
+                    'is required, and a remote archive cannot be migrated in place. Download the file and migrate it '
+                    'locally with `verdi archive migrate`.'
+                )
+                raise StorageMigrationError(msg)
+            LOGGER.report(f'Remote {cls.__name__} is already at target version {target_version}.')
+            return False
+
+        filepath_archive = Path(filepath)
 
         if filepath_archive.exists() and not reset:
             from .migrator import migrate
@@ -210,12 +297,20 @@ class SqliteZipBackend(StorageBackend):
 
         validate_sqlite_version()
         super().__init__(profile)
-        self._path = Path(profile.storage_config['filepath'])
-        validate_storage(self._path)
-        # lazy open the archive zipfile and extract the database file
-        self._db_file: Optional[Path] = None
-        self._session: Optional[Session] = None
-        self._repo: Optional[_RoBackendRepository] = None
+        filepath = profile.storage_config['filepath']
+        self._path: Union[Path, str] = filepath if is_url(filepath) else Path(filepath)
+        # The resources (database session, temporary database file, repository, remote zip handle) are opened lazily
+        # and kept in a separate container, registered with ``weakref.finalize``: this releases them both when the
+        # backend is garbage collected and at interpreter exit, without keeping the backend instance alive (as e.g.
+        # ``atexit.register(self.close)`` would) and without calling ``close`` during interpreter finalization (as
+        # ``__del__`` would).
+        self._resources = _ArchiveResources()
+        self._finalizer = weakref.finalize(self, self._resources.close)
+        if is_url(filepath):
+            # Open a single handle to the remote zip file, reused for the metadata, the database and the repository:
+            # each new handle downloads the full central directory of the zip file, which can be expensive.
+            self._resources.remote_zip = open_remote_zip(filepath)
+        validate_storage(self._path, zip_handle=self._resources.remote_zip)
         self._closed = False
 
     def __str__(self) -> str:
@@ -224,19 +319,15 @@ class SqliteZipBackend(StorageBackend):
 
     @property
     def is_closed(self) -> bool:
-        return self._closed
+        # A dead finalizer means the resources were already released, e.g. by the interpreter-exit hook of
+        # ``weakref.finalize``, in which case the backend is effectively closed even if ``close`` was never called.
+        return self._closed or not self._finalizer.alive
 
     def close(self) -> None:
         """Close the backend"""
-        if self._session:
-            self._session.close()
-        if self._db_file and self._db_file.exists():
-            self._db_file.unlink()
-        if self._repo:
-            self._repo.close()
-        self._session = None
-        self._db_file = None
-        self._repo = None
+        # Calling the finalizer releases the resources and marks it dead, so it will not fire again on garbage
+        # collection or at interpreter exit; calling it on an already closed backend is a no-op.
+        self._finalizer()
         self._closed = True
 
     def get_session(self) -> Session:
@@ -245,33 +336,61 @@ class SqliteZipBackend(StorageBackend):
 
         if self._closed:
             raise ClosedStorage(str(self))
-        if self._session is None:
-            if is_zipfile(self._path):
-                _, path = tempfile.mkstemp()
-                db_file = self._db_file = Path(path)
-                with db_file.open('wb') as handle:
-                    try:
-                        extract_file_in_zip(self._path, DB_FILENAME, handle, search_limit=4)
-                    except Exception as exc:
-                        raise CorruptStorage(f'database could not be read: {exc}') from exc
+        if self._resources.session is None:
+            if is_url(self._path) or is_zipfile(self._path):
+                fd, path = tempfile.mkstemp()
+                os.close(fd)
+                db_file = self._resources.db_file = Path(path)
+                try:
+                    with db_file.open('wb') as handle:
+                        if is_url(self._path):
+                            import requests
+                            from remotezip import RemoteZipError
+
+                            # Fetch only the database file from the remote zip, using HTTP range requests. The
+                            # handle is always set in the constructor for URL paths.
+                            zip_handle = cast('RemoteZip', self._resources.remote_zip)
+                            try:
+                                with zip_handle.open(DB_FILENAME) as source:
+                                    shutil.copyfileobj(source, handle)
+                            except (RemoteZipError, requests.RequestException) as exc:
+                                msg = f'Could not read the database from the remote archive `{self._path}`: {exc}'
+                                raise UnreachableStorage(msg) from exc
+                            except Exception as exc:
+                                msg = f'database could not be read: {exc}'
+                                raise CorruptStorage(msg) from exc
+                        else:
+                            try:
+                                extract_file_in_zip(self._path, DB_FILENAME, handle, search_limit=4)
+                            except Exception as exc:
+                                msg = f'database could not be read: {exc}'
+                                raise CorruptStorage(msg) from exc
+                except BaseException:
+                    # Do not leave the temporary file behind if the extraction fails: a subsequent call would
+                    # create a new temporary file, orphaning this one forever.
+                    db_file.unlink(missing_ok=True)
+                    self._resources.db_file = None
+                    raise
             else:
-                db_file = self._path / DB_FILENAME
+                db_file = Path(self._path) / DB_FILENAME
                 if not db_file.exists():
                     raise CorruptStorage(f'database could not be read: non-existent {db_file}')
-            self._session = Session(create_sqla_engine(db_file), future=True)
-        return self._session
+            self._resources.session = Session(create_sqla_engine(db_file), future=True)
+        return self._resources.session
 
     def get_repository(self) -> '_RoBackendRepository':
         if self._closed:
             raise ClosedStorage(str(self))
-        if self._repo is None:
-            if is_zipfile(self._path):
-                self._repo = ZipfileBackendRepository(self._path)
-            elif (self._path / REPO_FOLDER).exists():
-                self._repo = FolderBackendRepository(self._path / REPO_FOLDER)
+        if self._resources.repo is None:
+            if is_url(self._path):
+                self._resources.repo = ZipfileBackendRepository(self._path, zip_handle=self._resources.remote_zip)
+            elif is_zipfile(self._path):
+                self._resources.repo = ZipfileBackendRepository(self._path)
+            elif (Path(self._path) / REPO_FOLDER).exists():
+                self._resources.repo = FolderBackendRepository(Path(self._path) / REPO_FOLDER)
             else:
-                raise CorruptStorage(f'repository could not be read: non-existent {self._path / REPO_FOLDER}')
-        return self._repo
+                raise CorruptStorage(f'repository could not be read: non-existent {Path(self._path) / REPO_FOLDER}')
+        return self._resources.repo
 
     def query(self) -> orm.SqliteQueryBuilder:
         return orm.SqliteQueryBuilder(self)
@@ -337,7 +456,11 @@ class SqliteZipBackend(StorageBackend):
 
     def delete(self) -> None:
         """Delete the storage and all the data."""
-        filepath = Path(self.profile.storage_config['filepath'])
+        filepath = self.profile.storage_config['filepath']
+        if is_url(filepath):
+            LOGGER.report(f'Profile pointed to the remote archive `{filepath}`, which is left untouched.')
+            return
+        filepath = Path(filepath)
         if filepath.exists():
             filepath.unlink()
             LOGGER.report(f'Deleted archive at `{filepath}`.')
@@ -358,7 +481,7 @@ class SqliteZipBackend(StorageBackend):
 
     def get_info(self, detailed: bool = False) -> dict[str, Any]:
         # since extracting the database file is expensive, we only do it if detailed is True
-        results = {'metadata': extract_metadata(self._path)}
+        results = {'metadata': extract_metadata(self._path, zip_handle=self._resources.remote_zip)}
 
         # Truncate entities_starting_set in metadata if not detailed
         if not detailed:
@@ -387,9 +510,10 @@ class SqliteZipBackend(StorageBackend):
     def get_current_archive_version(inpath: Union[str, Path]) -> str:
         """Return the current version from metadata, raising if invalid/corrupt."""
 
-        inpath = Path(inpath)
-        if not (tarfile.is_tarfile(str(inpath)) or zipfile.is_zipfile(str(inpath))):
-            raise CorruptStorage(f'The input file is neither a tar nor a zip file: {inpath}')
+        if not is_url(inpath):
+            inpath = Path(inpath)
+            if not (tarfile.is_tarfile(str(inpath)) or zipfile.is_zipfile(str(inpath))):
+                raise CorruptStorage(f'The input file is neither a tar nor a zip file: {inpath}')
 
         metadata = extract_metadata(inpath, search_limit=None)
 
@@ -423,9 +547,9 @@ class _RoBackendRepository(AbstractRepositoryBackend):
     def __init__(self, path: str | Path):
         """Initialise the repository backend.
 
-        :param path: the path to the zip file
+        :param path: the path to the zip file or folder, or the URL of a remote zip file
         """
-        self._path = Path(path)
+        self._path: Union[Path, str] = path if is_url(path) else Path(path)
         self._closed = False
 
     def close(self) -> None:
@@ -481,13 +605,21 @@ class ZipfileBackendRepository(_RoBackendRepository):
     i.e. files named by the sha256 hash of the file contents, inside a ``repo`` directory.
     """
 
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, zip_handle: Optional[ZipFile] = None):
+        """Initialise the repository backend.
+
+        :param path: the path to the zip file, or the URL of a remote zip file.
+        :param zip_handle: optionally, an already-open zip file handle for ``path``, which is reused instead of
+            opening a new one. The caller remains responsible for closing it: the repository only closes the
+            handle if it opened it itself.
+        """
         super().__init__(path)
         self._folder = REPO_FOLDER
-        self.__zipfile: None | ZipFile = None
+        self.__zipfile: None | ZipFile = zip_handle
+        self.__owns_zipfile: bool = zip_handle is None
 
     def close(self) -> None:
-        if self.__zipfile:
+        if self.__zipfile and self.__owns_zipfile:
             self.__zipfile.close()
         super().close()
 
@@ -497,10 +629,13 @@ class ZipfileBackendRepository(_RoBackendRepository):
         if self._closed:
             raise ClosedStorage(f'repository is closed: {self._path}')
         if self.__zipfile is None:
-            try:
-                self.__zipfile = ZipFile(self._path, mode='r')
-            except Exception as exc:
-                raise CorruptStorage(f'repository could not be read {self._path}: {exc}') from exc
+            if is_url(self._path):
+                self.__zipfile = open_remote_zip(str(self._path))
+            else:
+                try:
+                    self.__zipfile = ZipFile(self._path, mode='r')
+                except Exception as exc:
+                    raise CorruptStorage(f'repository could not be read {self._path}: {exc}') from exc
         return self.__zipfile
 
     def has_object(self, key: str) -> bool:
@@ -537,16 +672,17 @@ class FolderBackendRepository(_RoBackendRepository):
     """
 
     def has_object(self, key: str) -> bool:
-        return self._path.joinpath(key).is_file()
+        return Path(self._path).joinpath(key).is_file()
 
     def list_objects(self) -> Iterable[str]:
-        for subpath in self._path.iterdir():
+        for subpath in Path(self._path).iterdir():
             if subpath.is_file():
                 yield subpath.name
 
     @contextmanager
     def open(self, key: str) -> Iterator[BinaryIO]:
-        if not self._path.joinpath(key).is_file():
+        filepath = Path(self._path).joinpath(key)
+        if not filepath.is_file():
             raise FileNotFoundError(f'object with key `{key}` does not exist.')
-        with self._path.joinpath(key).open('rb', encoding='utf-8') as handle:
+        with filepath.open('rb') as handle:
             yield cast(BinaryIO, handle)

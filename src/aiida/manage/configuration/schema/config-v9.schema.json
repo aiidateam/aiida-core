@@ -160,6 +160,11 @@
           "type": "string",
           "description": "Absolute path to the directory to store sandbox folders."
         },
+        "storage.remote_archive_timeout": {
+          "type": "integer",
+          "default": 60,
+          "description": "Timeout in seconds for HTTP requests when reading a remote archive, i.e. a `core.sqlite_zip` storage with a URL as filepath."
+        },
         "caching.default_enabled": {
           "type": "boolean",
           "default": false,

@@ -532,7 +532,7 @@ def test_delete_profile_sqlite_zip(
     from aiida.storage.sqlite_zip import migrator
     from aiida.storage.sqlite_zip.backend import SqliteZipBackend
 
-    monkeypatch.setattr(migrator, 'validate_storage', lambda path: None)
+    monkeypatch.setattr(migrator, 'validate_storage', lambda path, **kwargs: None)
 
     config = config_with_profile
     profile_name = 'sqlite-zip-test-profile'

@@ -22,7 +22,7 @@ When ``verdi daemon start`` is run with a ZeroMQ-configured profile, circus laun
 
     verdi daemon start
     └── circus (daemon supervisor)
-        ├── verdi devel zeromq-broker      ← broker process (1 instance)
+        ├── verdi daemon broker         ← broker process (1 instance, hidden command)
         │   └── ZeromqBrokerService
         │       └── ZeromqBrokerServer     (single-threaded poller event loop)
         │           └── PersistentQueue (file-based task durability)
@@ -40,8 +40,9 @@ Key points:
   ``ZeromqBrokerServer`` uses a poller event loop (non-blocking I/O via epoll/kqueue underneath) — no asyncio, no threads.
 - Each **worker process** creates a ``ZeromqCommunicator`` that runs a private asyncio event loop on a dedicated **background thread**.
   All ZeroMQ socket I/O happens on that thread; public methods schedule work via ``call_soon_threadsafe``, so no locks are needed.
-- The broker process is started **before** workers by circus, so its IPC socket is ready when workers connect.
-  If it isn't ready yet, ``get_communicator()`` polls until the socket file appears.
+- The broker watcher is added **before** the worker watcher in circus, so its IPC socket is usually ready when workers connect.
+  If it isn't ready yet, ``get_communicator()`` polls until the socket file appears (``BROKER_READY_TIMEOUT``).
+  The broker watcher is skipped entirely if a broker is already running for the profile (e.g. one started by a test fixture).
 
 
 Module overview
@@ -66,10 +67,10 @@ Endpoint discovery
 ==================
 
 Unlike RabbitMQ, the ZeroMQ broker requires no connection configuration (no host, port, or credentials).
-Discovery is file-based: both sides derive the broker directory from the profile UUID.
+Discovery is file-based: both sides derive the broker directory from the profile UUID as ``{config_dir}/broker/{profile-uuid}`` (typically ``~/.aiida/broker/{profile-uuid}``).
 
-1. On startup, the broker process writes the IPC socket path to ``~/.aiida/broker/{profile-uuid}/broker.sockets``.
-2. When a worker calls ``get_communicator()``, it reads that file to obtain the endpoint (e.g. ``ipc:///tmp/aiida_zeromq_xyz/router.sock``).
+1. On startup, the broker process creates a temporary socket directory (e.g. ``/tmp/aiida_zeromq_xyz``) and writes its path to ``{config_dir}/broker/{profile-uuid}/broker.sockets``.
+2. When a worker calls ``get_communicator()``, it reads that file and derives the endpoint as ``ipc://{sockets_dir}/router.sock``.
 3. The worker connects its DEALER socket to that endpoint.
 
 This means the ZeroMQ broker is **local-only** — IPC sockets do not work across machines.
@@ -137,10 +138,11 @@ Message types
      - worker → broker
      - Negative acknowledgment. Broker requeues the task for redelivery.
    * - ``TASK_RESPONSE``
-     - broker → client
-     - Immediate acknowledgment that the task was persisted to the queue
+     - broker → client |br| worker → broker
+     - From broker to client: immediate acknowledgment that the task was persisted to the queue
        (matches RabbitMQ publisher-confirm semantics).
-       The worker's eventual result is not forwarded back to the sender.
+       Workers also send a ``TASK_RESPONSE`` with the task result when it completes,
+       but the broker logs and discards it — the result is not forwarded back to the sender.
    * - ``RPC``
      - client → broker → recipient
      - Remote procedure call to a named recipient. Broker routes by subscriber ID.
@@ -149,7 +151,10 @@ Message types
      - Return RPC result. Broker forwards to original caller.
    * - ``BROADCAST``
      - client → broker → all
-     - Fan-out to all connected clients (derived from subscriber registries).
+     - Fan-out to all connected clients.
+       The broker derives the recipient set from its task and RPC subscriber registries;
+       broadcast subscriptions themselves are client-local and never sent to the broker
+       (see :ref:`broadcast semantics <internal_architecture:broker:broadcast>`).
    * - ``SUBSCRIBE_TASK``
      - worker → broker
      - Register as a task consumer. Broker adds worker to dispatch pool.
@@ -252,8 +257,10 @@ The ACK only affects the ``PersistentQueue`` (removing the task from disk), not 
 
     while available_workers AND pending_tasks:
         worker = available_workers.popleft()
+        if worker no longer subscribed:      # stale entry
+            continue
         task   = task_queue.pop()           # pending → processing
-        send task to worker
+        send task to worker                  # on failure: requeue + remove dead worker
         available_workers.append(worker)     # immediately re-available
 
 
@@ -284,6 +291,22 @@ When a task subscriber returns a result, two paths are possible:
                 └── send TASK_ACK + TASK_RESPONSE
 
 The same pattern applies to RPC: if the subscriber returns a ``Future``, the response is deferred until it resolves.
+
+
+.. _internal_architecture:broker:broadcast:
+
+Broadcast semantics
+===================
+
+Broadcasts are asymmetric between sending and receiving:
+
+- **Sending**: ``broadcast_send()`` sends a single ``BROADCAST`` message to the broker,
+  which fans it out to every client identity found in its task and RPC subscriber registries.
+- **Receiving**: ``add_broadcast_subscriber()`` is purely **client-local** — no message is sent to the broker.
+  The communicator simply registers the callback and invokes it for any ``BROADCAST`` message that arrives on its DEALER socket.
+
+Consequently, a client only *receives* broadcasts if it is registered with the broker as a task or RPC subscriber.
+This is sufficient for AiiDA: daemon workers always hold task and RPC subscriptions, and any client running a process holds an RPC subscription for it (registered by plumpy).
 
 
 Dead worker detection
@@ -331,7 +354,7 @@ Service files
 
 .. code-block:: text
 
-    ~/.aiida/broker/{profile-uuid}/
+    {config_dir}/broker/{profile-uuid}/      (config_dir is typically ~/.aiida)
     ├── broker.pid         "aiida-zeromq-broker {pid}" — sentinel + PID for ownership check
     ├── broker.status      JSON with task counts, updated every STATUS_INTERVAL seconds
     ├── broker.sockets     path to the temp socket directory
@@ -348,6 +371,7 @@ Known limitations
 - **Local-only**: IPC sockets do not work across machines. For distributed setups with workers on different hosts, use RabbitMQ.
 - **No message TTL**: tasks remain in the queue indefinitely until consumed or manually cleared.
 - **No dead letter queue**: NACKed tasks are requeued to the front of the queue. There is no mechanism to route repeatedly-failing tasks to a separate queue.
+- **Broadcast delivery requires a broker-side subscription**: a client only receives broadcasts if it holds at least one task or RPC subscription (see :ref:`broadcast semantics <internal_architecture:broker:broadcast>`).
 - **Single ROUTER socket**: all traffic (tasks, RPC, broadcasts) shares one socket. This is sufficient for AiiDA's workload but could become a throughput bottleneck under extreme fan-out.
 
 

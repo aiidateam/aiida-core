@@ -1,13 +1,13 @@
 .. _internal_architecture:broker:
 
 *************
-ZeroMQ Broker
+ZeroMQ broker
 *************
 
 .. versionadded:: 2.9
 
-The ZeroMQ broker is AiiDA's built-in message broker, replacing the need for an external RabbitMQ service.
-It implements the subset of AMQP semantics that AiiDA requires (tasks, RPC, broadcasts) using ZeroMQ as the transport layer.
+The ZeroMQ broker is AiiDA's built-in message broker.
+It implements the subset of AMQP semantics that AiiDA actually uses (tasks, RPC, broadcasts) on top of ZeroMQ, so a profile can run without an external RabbitMQ service.
 
 This page documents the internal architecture for developers working on the broker itself.
 For user-facing documentation, see the :ref:`installation guide <installation:guide-complete:broker:zeromq>`.
@@ -34,22 +34,23 @@ When ``verdi daemon start`` is run with a ZeroMQ-configured profile, circus laun
                         ├── main thread     (public API: task_send, rpc_send, ...)
                         └── loop thread     (private asyncio loop with ZeroMQ DEALER socket)
 
-Key points:
+The broker process is single-threaded.
+``ZeromqBrokerServer`` runs a plain poller loop (epoll/kqueue under the hood); there is no asyncio and there are no threads on this side.
 
-- The **broker process** is single-threaded.
-  ``ZeromqBrokerServer`` uses a poller event loop (non-blocking I/O via epoll/kqueue underneath) — no asyncio, no threads.
-- Each **worker process** creates a ``ZeromqCommunicator`` that runs a private asyncio event loop on a dedicated **background thread**.
-  All ZeroMQ socket I/O happens on that thread; public methods schedule work via ``call_soon_threadsafe``, so no locks are needed.
-- The broker watcher is added **before** the worker watcher in circus, so its IPC socket is usually ready when workers connect.
-  If it isn't ready yet, ``get_communicator()`` polls until the socket file appears (``BROKER_READY_TIMEOUT``).
-  The broker watcher is skipped entirely if a broker is already running for the profile (e.g. one started by a test fixture).
+Worker processes talk to the broker through a ``ZeromqCommunicator``.
+The communicator runs a private asyncio loop on a dedicated background thread, and all ZeroMQ socket I/O happens on that thread.
+Public methods hand work to the loop via ``call_soon_threadsafe``, which is why the communicator needs no locks.
+
+Circus adds the broker watcher before the worker watcher, so in practice the broker's IPC socket exists by the time workers connect.
+When it does not, ``get_communicator()`` polls for the socket file for up to ``BROKER_READY_TIMEOUT``.
+If a broker is already running for the profile (for example one started by a test fixture), the broker watcher is skipped entirely.
 
 
 Module overview
 ===============
 
-``ZeromqCommunicator`` implements ``kiwipy.Communicator`` — the same interface that ``RmqThreadCommunicator`` implements for RabbitMQ.
-plumpy and the AiiDA engine are unaware of which broker backend is in use; they only interact through this interface.
+``ZeromqCommunicator`` implements ``kiwipy.Communicator``, the same interface that ``RmqThreadCommunicator`` implements for RabbitMQ.
+plumpy and the AiiDA engine only ever see this interface; they do not know which broker backend they are talking to.
 
 .. code-block:: text
 
@@ -66,15 +67,16 @@ plumpy and the AiiDA engine are unaware of which broker backend is in use; they 
 Endpoint discovery
 ==================
 
-Unlike RabbitMQ, the ZeroMQ broker requires no connection configuration (no host, port, or credentials).
-Discovery is file-based: both sides derive the broker directory from the profile UUID as ``{config_dir}/broker/{profile-uuid}`` (typically ``~/.aiida/broker/{profile-uuid}``).
+Unlike RabbitMQ, the ZeroMQ broker needs no connection configuration: no host, no port, no credentials.
+Discovery is file-based.
+Both sides derive the broker directory from the profile UUID as ``{config_dir}/broker/{profile-uuid}`` (typically ``~/.aiida/broker/{profile-uuid}``).
 
 1. On startup, the broker process creates a temporary socket directory (e.g. ``/tmp/aiida_zeromq_xyz``) and writes its path to ``{config_dir}/broker/{profile-uuid}/broker.sockets``.
 2. When a worker calls ``get_communicator()``, it reads that file and derives the endpoint as ``ipc://{sockets_dir}/router.sock``.
 3. The worker connects its DEALER socket to that endpoint.
 
-This means the ZeroMQ broker is **local-only** — IPC sockets do not work across machines.
-For distributed setups (workers on different hosts), use RabbitMQ.
+The flip side is that the broker is local-only, since IPC sockets do not cross machine boundaries.
+If you need workers on other hosts, use RabbitMQ.
 
 
 Socket architecture
@@ -107,8 +109,8 @@ All traffic flows through a single ZeroMQ ROUTER/DEALER socket pair over IPC:
                  │  └────────────────────┘  │
                  └──────────────────────────┘
 
-The ROUTER socket auto-prepends the sender's identity to incoming frames, enabling the broker to route replies back to specific clients.
-``ROUTER_MANDATORY`` is set so that sending to a disconnected identity raises a socket error immediately rather than silently dropping the message.
+The ROUTER socket prepends the sender's identity to every incoming message, which is what lets the broker route replies back to the right client.
+We set ``ROUTER_MANDATORY`` so that sending to a disconnected identity raises a socket error immediately instead of silently dropping the message.
 
 
 Message protocol
@@ -200,10 +202,11 @@ Messages travel as ZeroMQ multipart frames:
     Broker (ROUTER) receives:     [ client-identity | empty-delimiter | json-payload ]
     Broker (ROUTER) sends:        [ target-identity | empty-delimiter | json-payload ]
 
-The empty delimiter frame is a ZeroMQ convention for ROUTER/DEALER interop.
-The ROUTER socket automatically prepends the sender's identity on receive and uses the first frame as the routing target on send.
+The empty delimiter frame is the standard ZeroMQ convention for ROUTER/DEALER interop.
+The ROUTER socket prepends the sender's identity on receive and uses the first frame as the routing target on send.
 
-Payload fields like ``body`` and ``result`` are opaque to the broker — they are pre-encoded by the sender (typically as YAML strings by plumpy/kiwipy) and passed through without inspection.
+Payload fields like ``body`` and ``result`` are opaque to the broker.
+They are pre-encoded by the sender (typically as YAML strings by plumpy/kiwipy) and passed through without inspection.
 
 
 Message flow: task submission
@@ -226,30 +229,29 @@ Message flow: task submission
           │                             │──── TASK_ACK ───────▶│  ack: remove from queue
           │                             │                      │
 
-Key details:
+The broker replies with ``TASK_RESPONSE`` as soon as the task is persisted to the queue on disk, before any worker has seen it.
+This mirrors RabbitMQ's publisher confirms: the caller's ``Future`` resolves right away.
+Without it, ``task_send`` would block until ``broker.task_timeout`` whenever no workers are connected — which is exactly the situation ``verdi process repair`` runs in.
 
-- The broker sends an **immediate** ``TASK_RESPONSE`` back to the sender as soon as the task
-  is persisted to the queue on disk.  This matches RabbitMQ's publisher-confirm semantics:
-  the caller's ``Future`` resolves without waiting for a worker to process the task.
-  Without this, ``task_send`` would block until ``broker.task_timeout`` when no workers are connected
-  (e.g. during ``verdi process repair``).
-- The broker persists the task to disk **before** dispatching it.
-  If the broker crashes, tasks are recovered from disk on restart.
-- Workers delay the ACK until the task Future resolves (see :ref:`deferred ACK <internal_architecture:broker:deferred_ack>` below).
-  If a worker dies before ACK'ing, the broker detects the disconnect (via ZMTP heartbeats + PING probing) and requeues the task.
-- If ``no_reply=True``, no ``TASK_RESPONSE`` is sent (fire-and-forget, used by ``submit()``).
+Persisting before dispatching means a broker crash cannot lose a task; whatever was in the queue is recovered from disk on restart.
+
+Workers hold back the ACK until the task's ``Future`` resolves (see :ref:`deferred ACK <internal_architecture:broker:deferred_ack>` below).
+If a worker dies mid-task, the ACK never arrives; the broker notices the disconnect (ZMTP heartbeats plus PING probing) and requeues the task.
+
+With ``no_reply=True`` the task stays fully fire-and-forget: the broker sends no immediate persistence confirmation, and the worker sends no completion ``TASK_RESPONSE`` later either.
+``submit()`` always uses this mode while RPC messages do send a completion response.
 
 
 Task dispatch strategy
 ======================
 
-The broker maintains a ``_available_workers`` deque.
-When a worker sends ``SUBSCRIBE_TASK``, it is added to this pool.
-The ROUTER socket provides identity-based routing — the broker picks the next available worker from the deque and sends directly to it.
+The broker keeps a deque of available workers, ``_available_workers``.
+A worker joins the pool when it sends ``SUBSCRIBE_TASK``.
+Since the ROUTER socket routes by identity, dispatching a task is just picking the next worker from the deque and sending to its identity.
 
-After dispatching a task, the worker is **immediately re-added** to the available pool — it does not wait for the ACK.
-This means a single worker can have multiple tasks in flight concurrently, matching RabbitMQ's multi-prefetch behavior.
-The ACK only affects the ``PersistentQueue`` (removing the task from disk), not worker availability.
+After dispatching, the worker goes straight back into the pool; the broker does not wait for the ACK.
+A single worker can therefore have several tasks in flight at once, which matches RabbitMQ's multi-prefetch behavior.
+The ACK only affects the ``PersistentQueue`` (removing the task from disk), never worker availability.
 
 .. code-block:: text
 
@@ -269,28 +271,33 @@ The ACK only affects the ``PersistentQueue`` (removing the task from disk), not 
 Deferred ACK pattern
 ====================
 
-The kiwipy/plumpy stack requires that task subscribers can return ``Future`` objects — plumpy's process runner does this because AiiDA processes are long-running and asynchronous.
-The ZeroMQ communicator must support this to be a compatible ``kiwipy.Communicator``.
+kiwipy allows a task subscriber to return a ``Future`` instead of a result, and plumpy's process runner relies on this because AiiDA processes are long-running and asynchronous.
+Any compatible ``kiwipy.Communicator`` has to support it, so ours does too.
 
-When a task subscriber returns a result, two paths are possible:
+When a task subscriber returns, there are two cases:
 
-- **Direct result**: the communicator sends ``TASK_ACK`` and ``TASK_RESPONSE`` immediately.
-- **Future**: the communicator stores the task in ``_in_progress_tasks`` and registers a done-callback on the Future.
-  The ACK is deferred until the Future resolves. This is critical for reliability — if the worker process dies before the Future completes, no ACK is sent, and the broker requeues the task.
+- The subscriber returned a direct result: the communicator sends ``TASK_ACK`` immediately and sends a completion ``TASK_RESPONSE`` only if ``no_reply=False``.
+- The subscriber returned a ``Future``: the communicator stores the task in ``_in_progress_tasks`` and attaches a done-callback that sends the ACK once the ``Future`` resolves and sends a completion ``TASK_RESPONSE`` only if ``no_reply=False``.
+
+The deferral is what makes delivery reliable.
+If the worker process dies before the ``Future`` completes, no ACK was ever sent, and the broker requeues the task.
 
 .. code-block:: text
 
     Worker receives TASK
     │
     ├── subscriber returns result directly
-    │   └── send TASK_ACK + TASK_RESPONSE immediately
+    │   └── send TASK_ACK immediately
+    │       └── if no_reply=False: send completion TASK_RESPONSE
     │
     └── subscriber returns Future
         └── store in _in_progress_tasks
             └── Future resolves → _finalize_task()
-                └── send TASK_ACK + TASK_RESPONSE
+                ├── send TASK_ACK
+                └── if no_reply=False: send completion TASK_RESPONSE
 
-The same pattern applies to RPC: if the subscriber returns a ``Future``, the response is deferred until it resolves.
+For ``no_reply=False``, that completion ``TASK_RESPONSE`` goes from worker to broker and is currently discarded there, because the original sender already received the broker's immediate persistence confirmation.
+RPC works the same way: if the subscriber returns a ``Future``, the response is deferred until it resolves.
 
 
 .. _internal_architecture:broker:broadcast:
@@ -298,33 +305,31 @@ The same pattern applies to RPC: if the subscriber returns a ``Future``, the res
 Broadcast semantics
 ===================
 
-Broadcasts are asymmetric between sending and receiving:
+Broadcasts are asymmetric between sending and receiving.
 
-- **Sending**: ``broadcast_send()`` sends a single ``BROADCAST`` message to the broker,
-  which fans it out to every client identity found in its task and RPC subscriber registries.
-- **Receiving**: ``add_broadcast_subscriber()`` is purely **client-local** — no message is sent to the broker.
-  The communicator simply registers the callback and invokes it for any ``BROADCAST`` message that arrives on its DEALER socket.
+Sending goes through the broker: ``broadcast_send()`` sends a single ``BROADCAST`` message, and the broker fans it out to every client identity found in its task and RPC subscriber registries.
 
-Consequently, a client only *receives* broadcasts if it is registered with the broker as a task or RPC subscriber.
-This is sufficient for AiiDA: daemon workers always hold task and RPC subscriptions, and any client running a process holds an RPC subscription for it (registered by plumpy).
+Receiving is purely client-local: ``add_broadcast_subscriber()`` sends nothing to the broker.
+The communicator just registers the callback and invokes it for any ``BROADCAST`` message that arrives on its DEALER socket.
+
+The catch is that a client only receives broadcasts if the broker knows about it, i.e. if it is registered as a task or RPC subscriber.
+That is enough for AiiDA: daemon workers always hold task and RPC subscriptions, and any client running a process holds an RPC subscription for it (registered by plumpy).
 
 
 Dead worker detection
 =====================
 
-Dead worker detection combines ZeroMQ transport features with application-level logic.
+Detecting a dead worker takes two steps, because ZeroMQ tells us *that* someone disconnected but not *who*.
 
-**Detection** (ZeroMQ built-in):
-the ROUTER socket is configured with ``HEARTBEAT_IVL`` and ``HEARTBEAT_TIMEOUT``.
-ZeroMQ sends periodic ping frames at the transport level; if a worker stops responding within the timeout, ZeroMQ disconnects it internally and emits an ``EVENT_DISCONNECTED`` on the monitor socket we attached to the ROUTER.
+The detection itself is built into ZeroMQ.
+The ROUTER socket is configured with ``HEARTBEAT_IVL`` and ``HEARTBEAT_TIMEOUT``, so ZeroMQ pings connected peers at the transport level.
+When a worker stops responding, ZeroMQ disconnects it internally and emits an ``EVENT_DISCONNECTED`` on the monitor socket we attached to the ROUTER.
+That event only carries a file descriptor, though — it does not say which client identity is gone.
 
-The problem is that this event only reports the file descriptor, not which client identity disconnected.
-So the event is just a **trigger** — it tells us *someone* died, but not *who*.
-
-**Identification** (our logic):
-on each ``EVENT_DISCONNECTED``, ``_handle_disconnect_event`` calls ``_probe_workers``, which sends a ``PING`` message to every worker identity that has in-flight tasks.
-With ``ROUTER_MANDATORY`` set on the socket, sending to a dead identity immediately raises a socket error (``EHOSTUNREACH``).
-Any worker that fails the probe is removed via ``_remove_dead_worker``, which requeues all its assigned tasks and cleans up the subscriber registries.
+Identifying the dead worker is our job.
+On each ``EVENT_DISCONNECTED``, ``_handle_disconnect_event`` calls ``_probe_workers``, which sends a ``PING`` to every worker identity that has in-flight tasks.
+Because the socket has ``ROUTER_MANDATORY`` set, sending to a dead identity fails immediately with ``EHOSTUNREACH``.
+Every worker that fails the probe is removed via ``_remove_dead_worker``, which requeues all its assigned tasks and cleans up the subscriber registries.
 
 
 Persistent queue (crash recovery)
@@ -367,12 +372,15 @@ Service files
 Known limitations
 =================
 
-- **Single point of failure**: the broker is a single process. If it crashes, no tasks are dispatched until it restarts (circus auto-restarts it). Tasks in the persistent queue survive the crash.
-- **Local-only**: IPC sockets do not work across machines. For distributed setups with workers on different hosts, use RabbitMQ.
-- **No message TTL**: tasks remain in the queue indefinitely until consumed or manually cleared.
-- **No dead letter queue**: NACKed tasks are requeued to the front of the queue. There is no mechanism to route repeatedly-failing tasks to a separate queue.
-- **Broadcast delivery requires a broker-side subscription**: a client only receives broadcasts if it holds at least one task or RPC subscription (see :ref:`broadcast semantics <internal_architecture:broker:broadcast>`).
-- **Single ROUTER socket**: all traffic (tasks, RPC, broadcasts) shares one socket. This is sufficient for AiiDA's workload but could become a throughput bottleneck under extreme fan-out.
+- The broker is a single process and therefore a single point of failure.
+  If it crashes, no tasks are dispatched until circus restarts it; tasks in the persistent queue survive the crash.
+- IPC sockets do not work across machines, so the broker only serves workers on the same host.
+  For distributed setups, use RabbitMQ.
+- There is no message TTL: tasks stay in the queue indefinitely until consumed or manually cleared.
+- There is no dead letter queue: NACKed tasks are requeued to the front of the queue, and a task that keeps failing keeps coming back.
+- A client only receives broadcasts if it holds at least one task or RPC subscription (see :ref:`broadcast semantics <internal_architecture:broker:broadcast>`).
+- All traffic — tasks, RPC, broadcasts — shares one ROUTER socket.
+  Fine for AiiDA's workload, but it could become a throughput bottleneck under extreme fan-out.
 
 
 Timeouts

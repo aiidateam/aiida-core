@@ -258,17 +258,17 @@ class ProfileStorageConfig(BaseModel, defer_build=True):
 
 
 class ProcessControlConfig(BaseModel, defer_build=True):
-    """Schema for the process control configuration of an AiiDA profile."""
+    """Schema for the process control configuration of an AiiDA profile.
 
-    broker_protocol: str = Field('amqp', description='Protocol for connecting to the message broker.')
-    broker_username: str = Field('guest', description='Username for message broker authentication.')
-    broker_password: str = Field('guest', description='Password for message broker.')
-    broker_host: str = Field('127.0.0.1', description='Hostname of the message broker.')
-    broker_port: int = Field(5432, description='Port of the message broker.')
-    broker_virtual_host: str = Field('', description='Virtual host to use for the message broker.')
-    broker_parameters: dict[str, Any] = Field(
-        default_factory=dict, description='Arguments to be encoded as query parameters.'
+    The ``config`` entries are broker plugin specific: each broker plugin declares its supported fields and their
+    defaults through ``aiida.brokers.broker.Broker._config_fields``, which is the source of truth for its
+    configuration.
+    """
+
+    backend: Optional[str] = Field(
+        None, description='Entry point name of the broker plugin, or ``None`` if no broker is configured.'
     )
+    config: Optional[Dict[str, Any]] = Field(None, description='Configuration of the broker plugin.')
 
 
 class ProfileSchema(BaseModel, defer_build=True):

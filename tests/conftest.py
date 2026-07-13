@@ -92,12 +92,12 @@ def zeromq_broker_server(zeromq_broker):
 @contextmanager
 def _run_zeromq_broker_server(zeromq_broker, timeout: float = 10.0):
     """Run a ZeroMQ broker service subprocess for the duration of a context."""
+    if zeromq_broker.is_running:
+        raise ValueError('Broker server already running')
+
     zeromq_broker.service_dir.mkdir(parents=True, exist_ok=True)
 
-    if zeromq_broker.check_is_service_running():
-        return
-
-    subprocess.Popen(
+    process = subprocess.Popen(
         [sys.executable, '-m', 'aiida.brokers.zeromq.service', '--service-dir', str(zeromq_broker.service_dir)],
         start_new_session=True,
         stdout=subprocess.DEVNULL,
@@ -105,38 +105,31 @@ def _run_zeromq_broker_server(zeromq_broker, timeout: float = 10.0):
         stdin=subprocess.DEVNULL,
     )
 
-    start_time = time.time()
-    while time.time() - start_time < 10:
-        if zeromq_broker.is_running:
-            yield
-        time.sleep(0.1)
-
-    if not zeromq_broker.is_running:
-        raise TimeoutError(f'ZeroMQ broker did not start within {timeout}s')
-
-    pid = zeromq_broker.get_service_pid()
-    if pid is None or not zeromq_broker.is_running:
-        zeromq_broker._cleanup_stale_service_files()
-        return
-
     try:
-        os.kill(pid, signal.SIGINT)
-    except OSError:
-        zeromq_broker._cleanup_stale_service_files()
-        return
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            if process.poll() is not None:
+                msg = f'ZeroMQ broker exited before becoming ready with code {process.returncode}'
+                raise RuntimeError(msg)
+            if zeromq_broker.is_running:
+                break
+            time.sleep(0.1)
+        else:
+            msg = f'ZeroMQ broker did not start within {timeout}s'
+            raise TimeoutError(msg)
 
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        if not zeromq_broker.is_running:
+        yield process
+    finally:
+        try:
+            if process.poll() is None:
+                process.send_signal(signal.SIGINT)
+                try:
+                    process.wait(timeout=timeout)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+        finally:
             zeromq_broker._cleanup_stale_service_files()
-            return
-        time.sleep(0.1)
-
-    try:
-        os.kill(pid, signal.SIGKILL)
-    except OSError:
-        pass
-    zeromq_broker._cleanup_stale_service_files()
 
 
 def pytest_collection_modifyitems(items, config):

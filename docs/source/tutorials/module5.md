@@ -35,9 +35,9 @@ After this module, you will be able to:
 - Reconstruct an analysis directly from the database, without keeping Python references to the original results
 
 ```{code-cell} ipython3
-:tags: ["remove-cell"]
-
-# Tutorial profile setup (shared across modules).
+# Set up the tutorial's isolated sandbox profile (same as Module 1).
+# `%load_ext aiida` enables the `%verdi` magic; `%run` creates or loads the
+# shared `tutorial-<hash>` profile, so data from earlier modules is available.
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```

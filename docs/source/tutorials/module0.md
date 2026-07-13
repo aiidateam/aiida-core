@@ -48,6 +48,15 @@ The interplay of these processes, controlled primarily by the feed rate F and ki
 Identical starting conditions (same initial grid) can produce wildly different patterns just by tweaking F and k.
 :::
 
+:::{note} Setup
+This first module uses only the `gsrd` simulator, no AiiDA yet.
+Install it with:
+
+```bash
+pip install git+https://github.com/aiidateam/gsrd
+```
+:::
+
 ## Running the simulation
 
 <!-- MOTIVATION: Show the typical experience of running a scientific code.
@@ -72,38 +81,20 @@ seed: 42         # RNG seed for the initial perturbation
 :::
 
 ```{code-cell} ipython3
-:tags: ["remove-cell"]
-
-import tempfile
-from pathlib import Path
-
-work_dir = Path(tempfile.mkdtemp(prefix='aiida_tutorial_m0_'))
-input_src = Path('include/input.yaml').resolve()
-input_bad_src = Path('include/input_bad.yaml').resolve()
-import shutil
-shutil.copy(input_src, work_dir / 'input.yaml')
+# In a Jupyter notebook, a line starting with `!` runs a shell command.
+# Make a scratch directory to work in and copy the example input into it.
+!mkdir -p tmp
+!cp include/input.yaml tmp/input.yaml
 ```
 
-```console
-$ gsrd input.yaml
-```
+Now run `gsrd` on that input:
 
 ```{code-cell} ipython3
-:tags: ["remove-input", "hide-output"]
+:tags: ["hide-output"]
 
-# Actually run the simulation in a clean working directory (hidden from
-# rendered output, since the real banner+progress block is too noisy).
-import subprocess
-result = subprocess.run(
-    ['gsrd', 'input.yaml'],
-    cwd=work_dir,
-    capture_output=True, text=True,
-)
-print(result.stdout)
-if result.stderr:
-    print('--- stderr ---')
-    print(result.stderr)
-print(f'Exit code: {result.returncode}')
+# gsrd reads input.yaml and writes its results into the directory it runs
+# in. Expand the output to see what it prints.
+!cd tmp && gsrd input.yaml
 ```
 
 Expand the output above to see what `gsrd` prints during a run: a banner, a citation block, per-iteration progress, and a diagnostics box at the end, all on stdout.
@@ -111,11 +102,8 @@ Expand the output above to see what `gsrd` prints during a run: a banner, a cita
 Let's see what `gsrd` actually wrote to disk:
 
 ```{code-cell} ipython3
-:tags: ["remove-input"]
-
-print('Files in working directory:')
-for p in sorted(work_dir.iterdir()):
-    print(f'  {p.name}')
+# List the files gsrd created.
+!ls tmp
 ```
 
 The simulation produced `results.npz`.
@@ -124,15 +112,12 @@ These are **variance(V)**, which measures how sharply contrasted the pattern is 
 They are *not* in `results.npz`:
 
 ```{code-cell} ipython3
-:tags: ["remove-input"]
-
+# results.npz is a binary NumPy archive. Load it and list what it holds.
 import numpy as np
-with np.load(work_dir / 'results.npz') as data:
-    print('results.npz contents:')
-    for key in data.files:
-        arr = data[key]
-        kind = f'array shape={arr.shape}' if arr.ndim else f'scalar ({arr.dtype})'
-        print(f'  {key:<10}  {kind}')
+
+data = np.load('tmp/results.npz')
+for name in data.files:
+    print(name, data[name].shape)
 ```
 
 So the two summary numbers of the run are only in the log.
@@ -144,10 +129,8 @@ There is also a `params` entry, however, it's not a structured record, but a sin
 Let's print it:
 
 ```{code-cell} ipython3
-:tags: ["remove-input"]
-
-with np.load(work_dir / 'results.npz') as data:
-    print(repr(data['params'].item()))
+# The `params` entry stores the inputs, but as one opaque string.
+print(repr(data['params'].item()))
 ```
 
 So the inputs *are* in the output file, but as an opaque JSON-serialised string with no schema.
@@ -172,24 +155,26 @@ The natural thing to do is to open `input.yaml` in a text editor and change `F` 
 Editing inputs by hand like this is convenient, but it has its own hazard: many scientific codes (`gsrd` included) silently ignore keys they don't recognize, so a mistyped parameter name runs cleanly using the default value instead of raising an error.
 
 ```{code-cell} ipython3
-:tags: ["remove-cell"]
-
-# Simulate editing the input file in place (the user would do this
-# in a text editor). This overwrites the original parameters.
+# Change the feed rate F from 0.04 to 0.055.
+# In practice you would edit input.yaml in a text editor; here we do it in
+# code so the notebook runs top to bottom on its own.
 import yaml
 
-input_path = work_dir / 'input.yaml'
-with open(input_path) as f:
+with open('tmp/input.yaml') as f:
     params = yaml.safe_load(f)
+
 params['F'] = 0.055
-with open(input_path, 'w') as f:
+
+with open('tmp/input.yaml', 'w') as f:
     yaml.dump(params, f)
 ```
 
 Then run the same command again:
 
-```console
-$ gsrd input.yaml
+```{code-cell} ipython3
+:tags: ["hide-output"]
+
+!cd tmp && gsrd input.yaml
 ```
 
 With `F=0.055`, the pattern looks completely different:
@@ -223,29 +208,23 @@ Quickly tweaking parameters and re-running like this is exactly how the explorat
 
 What happens when things go wrong?
 The explicit time-integration scheme `gsrd` uses is only stable up to a certain timestep size; push it past that, and the field values blow up.
-Let's deliberately set an oversized timestep (`dt=100`) to trigger that path:
-
-```console
-$ gsrd input.yaml
-```
+Let's trigger that by running with an oversized timestep (`dt=100`), using a prepared `input_bad.yaml`:
 
 ```{code-cell} ipython3
-:tags: ["remove-input"]
+# Copy in an input with an oversized timestep (dt=100). The integration
+# blows up; watch how gsrd reports the failure.
+!cp include/input_bad.yaml tmp/input_bad.yaml
 
-# Actually run with the bad input (show only its tail, plus stderr and
-# the exit code, so the failure mode is visible without the banner noise).
-result_bad = subprocess.run(
-    ['gsrd', str(input_bad_src)],
-    cwd=work_dir,
-    capture_output=True, text=True,
+import subprocess
+
+result = subprocess.run(
+    ['gsrd', 'input_bad.yaml'],
+    cwd='tmp',
+    capture_output=True,
+    text=True,
 )
-stdout_tail = ''.join(result_bad.stdout.splitlines(keepends=True)[-4:])
-print('... (banner and progress lines hidden) ...')
-print(stdout_tail, end='')
-if result_bad.stderr:
-    print('--- stderr ---')
-    print(result_bad.stderr, end='')
-print(f'Exit code: {result_bad.returncode}')
+print('Exit code:', result.returncode)
+print(result.stderr)
 ```
 
 Three things are simultaneously wrong with that failure mode:

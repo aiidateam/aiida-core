@@ -12,10 +12,12 @@ The broker and daemon configuration matches what ``verdi presto`` sets up
 on a fresh machine, so ``verdi status`` in the tutorial mirrors what users
 will see locally.
 
-Every tutorial module runs this in a hidden cell so that data created in
-earlier modules is available in later ones.
+Every tutorial module runs this in a visible setup cell, so that data created
+in earlier modules is available in later ones. The profile is an isolated
+sandbox: it never interferes with any AiiDA profile you already use, and stale
+tutorial profiles from previous builds are cleaned up automatically.
 
-If you are running locally with your own profile (e.g. from ``verdi presto``),
+If you would rather use your own existing profile (e.g. from ``verdi presto``),
 replace the ``%run -i`` cell with::
 
     from aiida import load_profile
@@ -27,11 +29,13 @@ import os
 import pathlib
 import shutil
 import time
+from contextlib import suppress
 
 from aiida import load_profile
 from aiida.brokers import ZmqBroker
 from aiida.common.exceptions import NotExistent
 from aiida.engine import get_daemon_client
+from aiida.engine.daemon.client import DaemonNotRunningException
 from aiida.manage import get_manager
 from aiida.manage.configuration import create_profile, get_config
 from aiida.orm import Computer, InstalledCode, load_code, load_computer
@@ -43,7 +47,25 @@ _include_dir = pathlib.Path(__file__).parent
 _mtimes = sorted(int(p.stat().st_mtime) for p in _include_dir.glob('setup_*.py'))
 _session_hash = hashlib.sha1(str(_mtimes).encode()).hexdigest()[:8]
 profile_name = f'tutorial-{_session_hash}'
-config = get_config()
+# ``create=True`` so a fresh machine (a new reader, or CI with no ~/.aiida yet)
+# gets a config file created instead of raising. Existing configs are loaded
+# untouched.
+config = get_config(create=True)
+
+# Remove stale tutorial profiles left over from previous builds: any
+# ``tutorial-*`` profile whose hash differs from the current one. Safe to run
+# from every module's setup cell, since it never touches the current profile
+# (so data created in earlier modules survives) nor any of your own,
+# non-tutorial profiles.
+for _stale_name in [n for n in config.profile_names if n.startswith('tutorial-') and n != profile_name]:
+    _stale_client = get_daemon_client(_stale_name)
+    if _stale_client.is_daemon_running:
+        # ``is_daemon_running`` only checks the PID file; the underlying circus
+        # process may already be gone, in which case ``stop_daemon`` cleans the
+        # PID file and then raises. Tolerate that.
+        with suppress(DaemonNotRunningException):
+            _stale_client.stop_daemon(wait=True)
+    config.delete_profile(_stale_name, delete_storage=True)
 
 if profile_name not in config.profile_names:
     create_profile(

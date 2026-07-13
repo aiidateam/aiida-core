@@ -30,15 +30,9 @@ After this module, you will be able to:
 - Combine these features into a single workflow whose shape **emerges at runtime** from its own intermediate results.
 
 ```{code-cell} ipython3
-:tags: ["remove-cell"]
-
-# Auto-generated tutorial profile for docs build.
-# If running locally with your own profile (e.g. from ``verdi presto``),
-# replace this cell with:
-#
-#     from aiida import load_profile
-#     load_profile()
-
+# Set up the tutorial's isolated sandbox profile (same as Module 1).
+# `%load_ext aiida` enables the `%verdi` magic; `%run` creates or loads the
+# shared `tutorial-<hash>` profile, so data from earlier modules is available.
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```

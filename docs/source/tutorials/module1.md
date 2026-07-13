@@ -42,47 +42,29 @@ An AiiDA **profile** defines the configuration for an AiiDA instance:
 
 Before running any calculations, you need one.
 
-If you are working on your own machine, the easiest way is:
+For your own work, the easiest way to create a profile is `verdi presto`:
 
 ```console
 $ verdi presto
 ```
 
-This creates a lightweight local profile with sensible defaults for all three: SQLite for the database, [disk-objectstore](https://github.com/aiidateam/disk-objectstore) for file storage, and the built-in **ZMQ message broker**.
+It sets up a lightweight local profile with sensible defaults for all three: SQLite for the database, [disk-objectstore](https://github.com/aiidateam/disk-objectstore) for file storage, and the built-in **ZMQ message broker**.
 For more advanced high-throughput production setups, see the {ref}`installation guide <installation>`.
 
-```{code-cell} ipython3
-:tags: ["remove-cell"]
+This tutorial, though, runs in its own **isolated sandbox profile**, kept separate from any profile you already have, so the data you create here never mixes with your real work and every module reproduces exactly.
+Run the cell below to create it (later modules load the same one):
 
-# Auto-generated tutorial profile for docs build.
-# If running locally with your own profile (e.g. from ``verdi presto``),
-# replace this cell with:
+```{code-cell} ipython3
+# Create (or load) the tutorial's isolated sandbox profile. It stays separate
+# from any AiiDA profile you already have, so nothing here touches your real
+# work. Every module loads this same profile, so data you create now is still
+# there in later modules.
+# `%load_ext aiida` enables the `%verdi` magic used throughout the tutorial.
 #
+# Prefer to use your own existing profile? Replace the `%run` line with:
 #     from aiida import load_profile
 #     load_profile()
-
 %load_ext aiida
-
-# Stop any leftover daemon and delete any past tutorial profiles created by
-# this script, so each docs build starts fresh. Modules 2+ reuse the profile
-# created here. Legacy bare `tutorial` profiles (without a hash suffix) are
-# left alone, since they predate the current setup and should be cleaned up
-# manually with `verdi profile delete tutorial`.
-from contextlib import suppress
-
-from aiida.engine.daemon.client import DaemonNotRunningException, get_daemon_client
-from aiida.manage.configuration import get_config
-_config = get_config()
-for _stale_name in [n for n in _config.profile_names if n.startswith('tutorial-')]:
-    _daemon_client = get_daemon_client(_stale_name)
-    if _daemon_client.is_daemon_running:
-        # Tolerate the case where the daemon's PID file is stale: `is_daemon_running`
-        # checks pidfile presence, but the underlying circus process may already be
-        # gone, in which case `stop_daemon` cleans the pidfile and then raises.
-        with suppress(DaemonNotRunningException):
-            _daemon_client.stop_daemon(wait=True)
-    _config.delete_profile(_stale_name, delete_storage=True)
-
 %run -i include/setup_tutorial.py
 ```
 
@@ -106,7 +88,7 @@ Now let's run it through AiiDA, so the inputs, outputs, and execution metadata g
 AiiDA uses the **{ref}`CalcJob <topics:calculations:concepts:calcjobs>`** class to manage external executables by preparing input files, executing the code (locally or on a remote cluster), retrieving output files, and optionally parsing the results.
 
 The fastest way to run a CalcJob is with [`aiida-shell`](https://aiida-shell.readthedocs.io), which wraps any shell command without requiring additional plugin code.
-Below, we use its `launch_shell_job` helper with the same input file as in {ref}`Module 0 <tutorial:module0>` and a pre-registered `gsrd_code` object: an `InstalledCode` pointing at the `gsrd` CLI binary, set up by a hidden cell above (see {download}`include/setup_tutorial.py`) and registered under the AiiDA label `gsrd@localhost` (which is what you will see in `verdi` output later on; the Python variable `gsrd_code` is just a local handle for the same Code object).
+Below, we use its `launch_shell_job` helper with the same input file as in {ref}`Module 0 <tutorial:module0>` and a pre-registered `gsrd_code` object: an `InstalledCode` pointing at the `gsrd` CLI binary, set up by the setup cell above (see {download}`include/setup_tutorial.py`) and registered under the AiiDA label `gsrd@localhost` (which is what you will see in `verdi` output later on; the Python variable `gsrd_code` is just a local handle for the same Code object).
 
 ```{code-cell} ipython3
 # Run the simulation through AiiDA using aiida-shell's launch_shell_job.

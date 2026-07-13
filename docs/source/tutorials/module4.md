@@ -44,18 +44,19 @@ After this module, you will be able to:
 - Switch a workflow between local and remote execution without changing the workflow itself
 
 ```{code-cell} ipython3
-:tags: ["remove-cell"]
-
-# Tutorial profile setup (shared across modules).
+# Set up the tutorial's isolated sandbox profile (same as Module 1).
+# `%load_ext aiida` enables the `%verdi` magic; `%run` creates or loads the
+# shared `tutorial-<hash>` profile, so data from earlier modules is available.
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```
 
 ```{code-cell} ipython3
-:tags: ["remove-cell"]
+:tags: ["hide-input"]
 
-# SSH plumbing for the SLURM container (key + ~/.ssh/config).
-# If running locally, you would configure SSH to your own cluster instead.
+# Configure SSH to the tutorial's containerized SLURM cluster (writes an SSH
+# key and a `~/.ssh/config` entry). This is specific to the tutorial's CI
+# container; on your own cluster you would set up SSH access the usual way.
 %run -i include/setup_slurm.py
 ```
 
@@ -89,7 +90,7 @@ We include the relevant code via dropdowns below.
 
 :::{note}
 This tutorial uses a SLURM container reachable over SSH so that every cell executes automatically during the docs build.
-A hidden cell handles the SSH plumbing (key and `~/.ssh/config`); all `verdi` commands below run live.
+A folded cell just below handles the SSH plumbing (key and `~/.ssh/config`); expand it to see what it does. All `verdi` commands below run live.
 In practice, you would register whichever HPC cluster you actually have access to.
 :::
 
@@ -98,7 +99,7 @@ In practice, you would register whichever HPC cluster you actually have access t
 `verdi computer setup` registers the machine in AiiDA's database:
 
 ```{code-cell} ipython3
-:tags: ["remove-cell"]
+:tags: ["hide-input"]
 
 # Clean up any slurm-ssh computer left over from a previous build so the
 # live `verdi computer setup` cell is idempotent across rebuilds.
@@ -236,9 +237,9 @@ It requires configuring username, port, key path, and other SSH parameters throu
 :::
 
 ```{code-cell} ipython3
-:tags: ["remove-cell"]
+:tags: ["hide-input"]
 
-# Hidden: drop the scheduler-poll interval to 1s so the SLURM-container
+# Drop the scheduler-poll interval to 1s so the SLURM-container
 # round-trip below finishes quickly during the docs build. Not something
 # you would normally tweak; the default value is fine on real clusters.
 from aiida.orm import load_computer
@@ -261,7 +262,7 @@ All checks must pass before the computer is usable:
 ```
 
 ```{code-cell} ipython3
-:tags: ["remove-cell"]
+:tags: ["hide-input"]
 
 # Fail-fast assertion: `verdi computer test` only WARNS on failure, so a
 # broken connection sails past that cell and any later cell that actually

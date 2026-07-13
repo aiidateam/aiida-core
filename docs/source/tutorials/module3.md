@@ -43,15 +43,9 @@ After this module, you will be able to:
 - Run a workflow over multiple input sets in parallel to replace plain Python `for`-loops with tracked, fan-out execution
 
 ```{code-cell} ipython3
-:tags: ["remove-cell"]
-
-# Auto-generated tutorial profile for docs build.
-# If running locally with your own profile (e.g. from ``verdi presto``),
-# replace this cell with:
-#
-#     from aiida import load_profile
-#     load_profile()
-
+# Set up the tutorial's isolated sandbox profile (same as Module 1).
+# `%load_ext aiida` enables the `%verdi` magic; `%run` creates or loads the
+# shared `tutorial-<hash>` profile, so data from earlier modules is available.
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```
@@ -425,7 +419,7 @@ A few things to keep in mind about `Map`:
 
 That's the blueprint; no execution yet.
 We need a `param_sweep` dict with one entry per iteration.
-The hidden cell below constructs it; the visible cell prints what's about to flow in:
+The folded cell below constructs it; the visible cell prints what's about to flow in:
 
 ```{code-cell} ipython3
 :tags: ["hide-cell"]
@@ -532,7 +526,7 @@ with sweep_node.outputs.transition_plot.open(mode='rb') as fh:
 Image(img_bytes)
 ```
 
-`verdi process show` works on the sweep workflow node too, but its per-node table is long, so it's hidden here:
+`verdi process show` works on the sweep workflow node too, but its per-node table is long, so its output is folded here:
 
 ```{code-cell} ipython3
 :tags: ["hide-output"]

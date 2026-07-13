@@ -85,15 +85,15 @@ def zeromq_broker(tmp_path):
 def start_zeromq_broker(broker, timeout: float = 10.0):
     """Start a ZeroMQ broker service subprocess for testing.
 
-    :param broker: A ``ZeromqBroker`` instance (has ``base_path``, ``is_running``, etc.)
+    :param broker: A ``ZeromqBroker`` instance (has ``service_dir``, ``is_running``, etc.)
     """
-    broker.base_path.mkdir(parents=True, exist_ok=True)
+    broker.service_dir.mkdir(parents=True, exist_ok=True)
 
     if broker.is_running:
         return
 
     subprocess.Popen(
-        [sys.executable, '-m', 'aiida.brokers.zeromq.service', '--base-path', str(broker.base_path)],
+        [sys.executable, '-m', 'aiida.brokers.zeromq.service', '--service-dir', str(broker.service_dir)],
         start_new_session=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,

@@ -70,7 +70,7 @@ class ZeromqBroker(Broker):
         zmq_broker_service_dir = get_config().filepaths(profile)['zmq_broker_service']['dir']
         zmq_broker_service_log_path = get_config().filepaths(profile)['zmq_broker_service']['log']
         layout = ZeromqBrokerService.FilepathLayout(zmq_broker_service_dir, zmq_broker_service_log_path)
-        self._broker_dir = layout.base_path
+        self._service_dir = layout.service_dir
         self._service_pid_file = layout.pid_file
         self._service_status_file = layout.status_file
         self._service_sockets_file = layout.sockets_file
@@ -80,16 +80,16 @@ class ZeromqBroker(Broker):
         if self.is_running:
             status = self.get_service_status()
             pid = status.get('pid', '?') if status else '?'
-            return f'ZeroMQ Broker (PID {pid}) @ {self._broker_dir}'
-        return f'ZeroMQ Broker @ {self._broker_dir} <not running>'
+            return f'ZeroMQ Broker (PID {pid}) @ {self._service_dir}'
+        return f'ZeroMQ Broker @ {self._service_dir} <not running>'
 
     @property
     def storage_path(self) -> Path:
         return self._storage_path
 
     @property
-    def base_path(self) -> Path:
-        return self._broker_dir
+    def service_dir(self) -> Path:
+        return self._service_dir
 
     # --- Status queries (read PID/status/socket files) ---
 

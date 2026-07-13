@@ -23,6 +23,7 @@ DEFAULT_AIIDA_USER = 'aiida@localhost'
 DEFAULT_CONFIG_DIR_NAME = '.aiida'
 DEFAULT_CONFIG_FILE_NAME = 'config.json'
 DEFAULT_CONFIG_INDENT_SIZE = 4
+DEFAULT_ZMQ_BROKER_SERVICE_BASE_DIR_NAME = 'broker'
 DEFAULT_DAEMON_DIR_NAME = 'daemon'
 DEFAULT_DAEMON_LOG_DIR_NAME = 'log'
 DEFAULT_PROFILE_LOG_DIR_NAME = 'log'
@@ -81,6 +82,10 @@ class AiiDAConfigPathResolver:
         return self._aiida_path / DEFAULT_DAEMON_DIR_NAME / DEFAULT_DAEMON_LOG_DIR_NAME
 
     @property
+    def zmq_broker_service_base_dir(self) -> pathlib.Path:
+        return self._aiida_path / DEFAULT_ZMQ_BROKER_SERVICE_BASE_DIR_NAME
+
+    @property
     def profile_log_dir(self) -> pathlib.Path:
         return self._aiida_path / DEFAULT_PROFILE_LOG_DIR_NAME
 
@@ -104,6 +109,7 @@ def _create_instance_directories(aiida_config_folder: pathlib.Path | None) -> No
         path_resolver.aiida_path,
         path_resolver.daemon_dir,
         path_resolver.daemon_log_dir,
+        path_resolver.zmq_broker_service_base_dir,
         path_resolver.profile_log_dir,
         path_resolver.access_control_dir,
     ]

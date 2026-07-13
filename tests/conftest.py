@@ -71,8 +71,13 @@ class TestBrokerBackend(Enum):
 
 @pytest.fixture
 def zeromq_broker(tmp_path):
-    with patch('aiida.brokers.zeromq.broker.get_broker_base_path', return_value=tmp_path):
-        yield ZeromqBroker(MagicMock())
+    """Create a ZMQ broker instance rooted in ``tmp_path``."""
+    profile = MagicMock()
+    config = MagicMock()
+    config.filepaths.return_value = {'zmq_broker_service': {'dir': str(tmp_path), 'log': str(tmp_path / 'broker.log')}}
+
+    with patch('aiida.manage.configuration.get_config', return_value=config):
+        yield ZeromqBroker(profile)
 
 
 def start_zeromq_broker(broker, timeout: float = 10.0):

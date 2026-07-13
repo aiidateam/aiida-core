@@ -1,7 +1,7 @@
 """ZeroMQ Broker Service - process wrapper for ZeromqBrokerServer.
 
-Manages PID/status files, socket directory, and signal handling.
-Circus handles process lifecycle (daemonization, keepalive, log capture).
+Manages PID/status files, socket directory, signal handling, and broker logging.
+Circus handles process lifecycle (daemonization and keepalive).
 """
 
 from __future__ import annotations
@@ -16,10 +16,14 @@ import time
 import typing as t
 from pathlib import Path
 
+from aiida.common.log import configure_logging
+
 from .defaults import POLL_TIMEOUT, STATUS_INTERVAL
 from .server import ZeromqBrokerServer
 
 _LOGGER = logging.getLogger(__name__)
+
+PID_SENTINEL = 'aiida-zeromq-broker'
 
 
 class ZeromqBrokerService:
@@ -28,6 +32,7 @@ class ZeromqBrokerService:
     Directory structure:
         {base_path}/
         ├── storage/        # Task queue persistence
+        ├── broker.log      # Broker log file, location is configurable
         ├── broker.pid      # PID file
         ├── broker.status   # Status JSON file
         └── broker.sockets  # Path to temp socket directory
@@ -36,19 +41,57 @@ class ZeromqBrokerService:
         └── router.sock
     """
 
-    def __init__(self, base_path: Path | str):
-        self._base_path = Path(base_path)
-        self._storage_path = self._base_path / 'storage'
+    class FilepathLayout:
+        """Canonical filesystem layout for the ZMQ broker state files."""
+
+        def __init__(self, base_path: Path | str, log_file_path: Path | str | None = None) -> None:
+            self.base_path = Path(base_path)
+            self._log_file_path = None if log_file_path is None else Path(log_file_path)
+
+        @property
+        def storage_path(self) -> Path:
+            """Return the persistent storage directory."""
+            return self.base_path / 'storage'
+
+        @property
+        def log_file(self) -> Path:
+            """Return the broker log file."""
+            return self.base_path / 'broker.log' if self._log_file_path is None else self._log_file_path
+
+        @property
+        def pid_file(self) -> Path:
+            """Return the broker PID file."""
+            return self.base_path / 'broker.pid'
+
+        @property
+        def status_file(self) -> Path:
+            """Return the broker status file."""
+            return self.base_path / 'broker.status'
+
+        @property
+        def sockets_file(self) -> Path:
+            """Return the file containing the temporary sockets directory path."""
+            return self.base_path / 'broker.sockets'
+
+    def __init__(self, base_path: Path | str, log_file_path: Path | str | None = None):
+        self._layout = self.FilepathLayout(base_path, log_file_path=log_file_path)
+        self._base_path = self._layout.base_path
+        self._storage_path = self._layout.storage_path
         self._sockets_path: Path | None = None
-        self._sockets_file = self._base_path / 'broker.sockets'
-        self._pid_file = self._base_path / 'broker.pid'
-        self._status_file = self._base_path / 'broker.status'
+        self._log_file = self._layout.log_file
+        self._sockets_file = self._layout.sockets_file
+        self._pid_file = self._layout.pid_file
+        self._status_file = self._layout.status_file
         self._server: ZeromqBrokerServer | None = None
         self._running = False
 
     @property
     def base_path(self) -> Path:
         return self._base_path
+
+    @property
+    def log_file(self) -> Path:
+        return self._log_file
 
     @property
     def pid_file(self) -> Path:
@@ -82,7 +125,7 @@ class ZeromqBrokerService:
             sockets_path=self._sockets_path,
         )
 
-        self._pid_file.write_text(f'aiida-zeromq-broker {os.getpid()}')
+        self._pid_file.write_text(f'{PID_SENTINEL} {os.getpid()}')
 
         # SIGINT (ctrl-c / circus graceful) + SIGTERM (circus stop)
         signal.signal(signal.SIGINT, self._handle_shutdown)
@@ -131,9 +174,12 @@ class ZeromqBrokerService:
         temp_file.rename(self._status_file)
 
 
-def run_broker_service(base_path: str | Path) -> None:
-    """Entry point for ``verdi daemon broker``."""
-    ZeromqBrokerService(base_path=base_path).run_forever()
+def run_broker_service(base_path: str | Path, log_file_path: Path | str | None = None) -> None:
+    """Run the ZeroMQ broker service."""
+    service = ZeromqBrokerService(base_path=base_path, log_file_path=log_file_path)
+    service.base_path.mkdir(parents=True, exist_ok=True)
+    configure_logging(daemon=True, daemon_log_file=service.log_file)
+    service.run_forever()
 
 
 if __name__ == '__main__':
@@ -141,5 +187,6 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--base-path', '-b', required=True)
+    parser.add_argument('--log-file-path', '-l', required=False)
     args = parser.parse_args()
-    run_broker_service(base_path=args.base_path)
+    run_broker_service(base_path=args.base_path, log_file_path=args.log_file_path)

@@ -167,7 +167,7 @@ def status(ctx, all_profiles, timeout):
                     broker_lines.append(
                         f'Broker is running as PID {broker_pid} [{pending} pending, {processing} processing]'
                     )
-                    broker_lines.append(f'Broker directory: {broker.base_path}')
+                    broker_lines.append(f'Broker directory: {broker.broker_dir}')
             else:
                 broker_lines.append('Broker is NOT running')
 
@@ -317,18 +317,28 @@ def worker():
 
 
 @verdi_daemon.command('broker', hidden=True)
+@click.option('--base-path', 'base_path', required=True)
+@click.option('--log-file-path', 'log_file_path', required=False)
 @decorators.with_dbenv()
 @decorators.requires_broker
-def broker():
-    """Run the ZeroMQ broker server in the current process.
+def broker(base_path, log_file_path):
+    """Run the ZeroMQ broker service in the current process.
+
+    Sets up the profile enviromment (e.g. logging configuration) before running the broker.
 
     .. note:: this should not be called directly from the commandline!
     """
-    from aiida.brokers.zeromq.broker import get_broker_base_path
+    from aiida.brokers.zeromq.broker import ZeromqBroker
     from aiida.brokers.zeromq.service import run_broker_service
     from aiida.manage.manager import get_manager
 
     profile = get_manager().get_profile()
     if profile is None:
         echo.echo_critical('No profile loaded.')
-    run_broker_service(base_path=get_broker_base_path(profile))
+
+    broker = get_manager().get_broker()
+    if not isinstance(broker, ZeromqBroker):
+        msg = f'Only ZeromqBroker can be started through verdi but got broker of type {type(broker)}.'
+        raise TypeError(msg)
+
+    run_broker_service(base_path=base_path, log_file_path=log_file_path)

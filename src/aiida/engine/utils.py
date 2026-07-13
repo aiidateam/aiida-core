@@ -80,7 +80,7 @@ def instantiate_process(
         inputs.update(**builder._inputs(prune=True))
     elif is_process_function(process):
         process_class = process.process_class  # type: ignore[attr-defined]
-    elif inspect.isclass(process) and issubclass(process, Process):
+    elif inspect.isclass(process) and issubclass(process, Process):  # type: ignore[redundant-expr]
         process_class = process
     else:
         raise ValueError(f'invalid process {type(process)}, needs to be Process or ProcessBuilder')

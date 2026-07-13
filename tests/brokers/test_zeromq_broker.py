@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
+import psutil
 import pytest
 
 from aiida.brokers.zeromq.broker import ZeromqBroker, ZeromqIncomingTask
@@ -82,8 +83,10 @@ class TestZeromqBrokerStatusQueries:
     def test_is_running_stale_pid(self, zeromq_broker):
         """Test is_running with stale PID."""
         pid_file = zeromq_broker.service_dir / 'broker.pid'
-        pid_file.write_text('aiida-zeromq-broker 999999')  # Non-existent PID
-        assert not zeromq_broker.is_service_running()
+        pid_file.write_text('aiida-zeromq-broker 12345')
+
+        with patch('aiida.brokers.zeromq.broker.psutil.Process', side_effect=psutil.NoSuchProcess(pid=12345)):
+            assert not zeromq_broker.is_service_running()
 
     def test_get_service_status_valid(self, zeromq_broker):
         """Test get_service_status with valid JSON."""

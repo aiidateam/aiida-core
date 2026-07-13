@@ -74,7 +74,7 @@ To determine exactly what might be going wrong, first :ref:`increase the logging
     $ verdi config set logging.aiida_loglevel DEBUG
     $ verdi daemon restart
 
-You can find the daemon log file in ``<AIIDA_PATH>/.aiida/daemon/log/aiida-<PROFILE_NAME>.log``.
+You can find the daemon log file in ``<AIIDA_PATH>/daemon/log/aiida-<PROFILE_NAME>.log``.
 Alternatively you can run ``verdi daemon logshow`` in a separate terminal to see the daemon log output and submit the problematic calculation or workflow again.
 The daemon log file does not have such a filter in place and logs everything.
 

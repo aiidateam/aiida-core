@@ -59,7 +59,7 @@ class TestZeromqBrokerStatusQueries:
 
     def test_is_running_no_pid_file(self, zeromq_broker):
         """Test is_running returns False when no PID file exists."""
-        assert not zeromq_broker.is_running
+        assert not zeromq_broker.is_service_running()
 
     def test_get_service_status_no_file(self, zeromq_broker):
         """Test get_service_status returns None when no status file exists."""
@@ -88,7 +88,7 @@ class TestZeromqBrokerStatusQueries:
         """Test is_running with stale PID."""
         pid_file = zeromq_broker.service_dir / 'broker.pid'
         pid_file.write_text('aiida-zeromq-broker 999999')  # Non-existent PID
-        assert not zeromq_broker.is_running
+        assert not zeromq_broker.is_service_running()
 
     def test_get_service_status_valid(self, zeromq_broker):
         """Test get_service_status with valid JSON."""
@@ -178,7 +178,7 @@ class TestZeromqBrokerIntegration:
 
     def test_broker_lifecycle(self, zeromq_broker_with_server):
         """Test the zeromq_broker lifecycle."""
-        assert zeromq_broker_with_server.is_running
+        assert zeromq_broker_with_server.is_service_running()
 
         status = zeromq_broker_with_server.get_service_status()
         assert status is not None

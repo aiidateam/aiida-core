@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import shutil
 import time
 import typing as t
 from contextlib import contextmanager
@@ -148,14 +147,6 @@ class ZeromqBroker(Broker):
             return json.loads(self._service_status_file.read_text())  # type: ignore[no-any-return]
         except (json.JSONDecodeError, OSError):
             return None
-
-    def _cleanup_stale_service_files(self) -> None:
-        self._service_pid_file.unlink(missing_ok=True)
-        self._service_status_file.unlink(missing_ok=True)
-        sockets_path = self._get_sockets_path()
-        if sockets_path is not None and sockets_path.exists():
-            shutil.rmtree(sockets_path, ignore_errors=True)
-        self._service_sockets_file.unlink(missing_ok=True)
 
     # --- Communicator ---
 

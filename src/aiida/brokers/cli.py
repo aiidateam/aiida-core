@@ -26,6 +26,7 @@ __all__ = ('configure_broker_options',)
 ParamTypeFactory = Callable[[t.Any], click.ParamType | t.Any]
 
 _PARAM_TYPES: dict[str, ParamTypeFactory] = {
+    'bool': lambda _field: click.BOOL,
     'choice': lambda field: click.Choice(field.choices or ()),
     'non_empty_string': lambda _field: types.NonEmptyStringParamType(),
     'hostname': lambda _field: types.HostnameType(),
@@ -104,6 +105,7 @@ def configure_broker_options(
                 ),
             )
             for field in broker_cls._config_fields
+            if field.expose_cli
         ]
 
         for decorator in reversed(decorators):

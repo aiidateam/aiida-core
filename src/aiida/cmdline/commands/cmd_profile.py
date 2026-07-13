@@ -93,8 +93,10 @@ def command_create_profile(
         echo.echo_report('RabbitMQ can be reconfigured with `verdi profile configure-broker core.rabbitmq`.')
 
     elif broker == 'core.zeromq':
+        from aiida.plugins import BrokerFactory
+
         broker_backend = broker
-        broker_config = {}
+        broker_config = BrokerFactory(broker).get_default_config()
         echo.echo_success('ZeroMQ broker configured (no external service required).')
         echo.echo_report('The ZeroMQ broker service will be started automatically with the daemon.')
 
@@ -231,7 +233,11 @@ def _configure_profile_broker(
         return
 
     if backend == 'core.zeromq':
-        _update_profile_broker_configuration(ctx, profile, backend=backend, config={})
+        from aiida.plugins import BrokerFactory
+
+        _update_profile_broker_configuration(
+            ctx, profile, backend=backend, config=BrokerFactory(backend).get_default_config()
+        )
         echo.echo_success(f'ZeroMQ configuration for `{profile.name}` updated.')
         echo.echo_report('The ZeroMQ broker service will be started automatically with the daemon.')
 

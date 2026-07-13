@@ -11,14 +11,30 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from aiida.brokers.zeromq.broker import ZeromqIncomingTask
+from aiida.brokers.zeromq.broker import ZeromqBroker, ZeromqIncomingTask
 from aiida.brokers.zeromq.communicator import ZeromqCommunicator
 from aiida.brokers.zeromq.queue import PersistentQueue
 from tests.conftest import start_zeromq_broker, stop_zeromq_broker
+
+
+def test_get_default_config():
+    """Test that the default broker settings declare the service as managed by the daemon."""
+    assert ZeromqBroker.get_default_config() == {'supervised_by_daemon': True}
+
+
+def test_not_supervised_by_daemon_raises():
+    """Test that broker construction fails when the service is not managed by the daemon."""
+    from aiida.common.exceptions import ConfigurationError
+
+    profile = MagicMock()
+    profile.process_control_config = {'supervised_by_daemon': False}
+
+    with pytest.raises(ConfigurationError, match='not managed by the daemon'):
+        ZeromqBroker(profile)
 
 
 class TestZeromqBrokerStatusQueries:

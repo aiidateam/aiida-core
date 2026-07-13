@@ -414,7 +414,7 @@ def test_setup_broker_core_zeromq(run_cli_command, isolated_config):
     assert f'Created new profile `{profile_name}`.' in result.output
     profile = isolated_config.get_profile(profile_name)
     assert profile.process_control_backend == 'core.zeromq'
-    assert profile.process_control_config == {}
+    assert profile.process_control_config == {'supervised_by_daemon': True}
 
 
 @pytest.mark.requires_rmq
@@ -456,7 +456,7 @@ def test_configure_broker_zeromq(run_cli_command, isolated_config):
         cmd_profile.profile_configure_broker, ['core.zeromq', profile_name, '-n'], use_subprocess=False
     )
     assert profile.process_control_backend == 'core.zeromq'
-    assert profile.process_control_config == {}
+    assert profile.process_control_config == {'supervised_by_daemon': True}
     assert f'ZeroMQ configuration for `{profile.name}` updated.' in cli_result.stdout
     assert 'The ZeroMQ broker service will be started automatically with the daemon.' in cli_result.stdout
 

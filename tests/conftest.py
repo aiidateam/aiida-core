@@ -73,6 +73,8 @@ class TestBrokerBackend(Enum):
 def zeromq_broker(tmp_path):
     """Create a ZMQ broker instance rooted in ``tmp_path``."""
     profile = MagicMock()
+    profile.process_control_config = {'supervised_by_daemon': True}
+    profile.name = 'test-profile'
     config = MagicMock()
     config.filepaths.return_value = {'zmq_broker_service': {'dir': str(tmp_path), 'log': str(tmp_path / 'broker.log')}}
 

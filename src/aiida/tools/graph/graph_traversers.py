@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional,
 from aiida import orm
 from aiida.common import exceptions
 from aiida.common.links import GraphTraversalRules, LinkType
+from aiida.common.progress_reporter import get_progress_reporter
 from aiida.tools.graph.age_entities import Basket
 from aiida.tools.graph.age_rules import RuleSaveWalkers, RuleSequence, RuleSetWalkers, UpdateRule
 
@@ -282,9 +283,18 @@ def traverse_graph(
         rule_incoming = UpdateRule(query_incoming, max_iterations=1, track_edges=get_links)
         rules += [rule_incoming]
 
-    rulesequence = RuleSequence(rules, max_iterations=max_iterations)
+    # The total number of nodes to traverse is unknown upfront, so the progress bar is a plain
+    # counter of the nodes visited, updated after each traversal iteration.
+    with get_progress_reporter()(total=None, desc='Traversing provenance graph') as progress:
 
-    results = rulesequence.run(basket)
+        def update_progress(iterations_done: int, visits: Basket) -> None:
+            # refresh=False: the throttled update() below redraws anyway; an unconditional refresh
+            # per iteration would flood non-TTY output (e.g. CI logs) with one redraw per level.
+            progress.set_description_str(f'Traversing provenance graph: iteration {iterations_done}', refresh=False)
+            progress.update(len(visits.nodes.keyset) - progress.n)
+
+        rulesequence = RuleSequence(rules, max_iterations=max_iterations, callback=update_progress)
+        results = rulesequence.run(basket)
 
     output: TraverseGraphOutput = {}
     output['nodes'] = results.nodes.keyset

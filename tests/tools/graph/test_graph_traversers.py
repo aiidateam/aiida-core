@@ -11,6 +11,7 @@
 import pytest
 
 from aiida.common.links import LinkType
+from aiida.common.progress_reporter import ProgressReporterAbstract, set_progress_reporter
 from aiida.tools.graph.graph_traversers import get_nodes_delete, traverse_graph
 
 
@@ -414,3 +415,50 @@ class TestTraverseGraph:
 
         with pytest.raises(ValueError):
             _ = get_nodes_delete([nodes_dict['data_o'].pk], create_backward=False)
+
+
+@pytest.fixture
+def recording_progress_reporter():
+    """Install a progress reporter that records its instances and description updates."""
+
+    class RecordingReporter(ProgressReporterAbstract):
+        instances: list['RecordingReporter'] = []
+
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.descriptions: list[str | None] = []
+            RecordingReporter.instances.append(self)
+
+        def set_description_str(self, text=None, refresh=True):
+            super().set_description_str(text, refresh)
+            self.descriptions.append(text)
+
+    set_progress_reporter(RecordingReporter)
+    try:
+        yield RecordingReporter
+    finally:
+        set_progress_reporter(None)
+
+
+class TestTraversalProgress:
+    """Tests for progress reporting during graph traversal."""
+
+    def test_progress_reported_per_iteration(self, recording_progress_reporter):
+        """Each traversal iteration must update the progress reporter, counting the nodes visited so far."""
+        nodes_dict = create_minimal_graph()
+
+        result = traverse_graph(
+            [nodes_dict['data_i'].pk],
+            links_forward=[LinkType.INPUT_CALC, LinkType.CREATE],
+        )
+
+        # Three iterations: data_i -> calc_0, calc_0 -> data_o, data_o -> nothing new
+        assert result['nodes'] == {nodes_dict['data_i'].pk, nodes_dict['calc_0'].pk, nodes_dict['data_o'].pk}
+        (reporter,) = recording_progress_reporter.instances
+        assert reporter.n == len(result['nodes'])
+        assert reporter.descriptions == [f'Traversing provenance graph: iteration {i}' for i in (1, 2, 3)]
+
+    def test_progress_skipped_for_empty_start(self, recording_progress_reporter):
+        """No progress reporter should be created when there is nothing to traverse."""
+        traverse_graph([], links_forward=[LinkType.CREATE])
+        assert recording_progress_reporter.instances == []

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import time
 from concurrent.futures import Future
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import kiwipy
@@ -20,6 +21,12 @@ import pytest
 from aiida.brokers.zeromq.broker import ZeromqBroker
 from aiida.brokers.zeromq.communicator import ZeromqCommunicator
 from tests.conftest import _run_zeromq_broker_server
+
+
+def get_router_endpoint(broker: ZeromqBroker) -> str:
+    """Construct the router endpoint from the broker service socket file."""
+    sockets_path = Path((broker.service_dir / 'broker.sockets').read_text().strip())
+    return f'ipc://{sockets_path}/router.sock'
 
 
 @pytest.fixture(scope='module')
@@ -45,7 +52,7 @@ class TestZeromqCommunicatorLifecycle:
 
     def test_init(self, zeromq_broker_with_server):
         """Test communicator initialization."""
-        communicator = ZeromqCommunicator(router_endpoint=zeromq_broker_with_server.router_endpoint)
+        communicator = ZeromqCommunicator(router_endpoint=get_router_endpoint(zeromq_broker_with_server))
         communicator.start()
 
         try:
@@ -57,14 +64,14 @@ class TestZeromqCommunicatorLifecycle:
 
     def test_context_manager(self, zeromq_broker_with_server):
         """Test communicator as context manager."""
-        with ZeromqCommunicator(router_endpoint=zeromq_broker_with_server.router_endpoint) as communicator:
+        with ZeromqCommunicator(router_endpoint=get_router_endpoint(zeromq_broker_with_server)) as communicator:
             assert communicator.is_closed() is False
 
         assert communicator.is_closed() is True
 
     def test_close_idempotent(self, zeromq_broker_with_server):
         """Test close is idempotent."""
-        comm = ZeromqCommunicator(router_endpoint=zeromq_broker_with_server.router_endpoint)
+        comm = ZeromqCommunicator(router_endpoint=get_router_endpoint(zeromq_broker_with_server))
         comm.start()
         comm.close()
         comm.close()  # should not raise
@@ -81,65 +88,57 @@ class TestZeromqCommunicatorMessaging:
     """Tests for communicator messaging operations with a real zeromq_broker."""
 
     @pytest.fixture
-    def zeromq_broker_and_comm(self, zeromq_broker_with_server):
-        comm = ZeromqCommunicator(router_endpoint=zeromq_broker_with_server.router_endpoint)
+    def zeromq_comm(self, zeromq_broker_with_server):
+        comm = ZeromqCommunicator(router_endpoint=get_router_endpoint(zeromq_broker_with_server))
         comm.start()
 
-        yield zeromq_broker_with_server, comm
+        yield comm
 
         comm.close()
 
-    def test_task_send_no_reply(self, zeromq_broker_and_comm):
+    def test_task_send_no_reply(self, zeromq_comm):
         """Test task_send with no_reply=True returns None."""
-        _, comm = zeromq_broker_and_comm
-        result = comm.task_send({'cmd': 'test'}, no_reply=True)
+        result = zeromq_comm.task_send({'cmd': 'test'}, no_reply=True)
         assert result is None
 
-    def test_task_send_with_reply(self, zeromq_broker_and_comm):
+    def test_task_send_with_reply(self, zeromq_comm):
         """Test task_send returns a Future."""
-        _, comm = zeromq_broker_and_comm
-        future = comm.task_send({'cmd': 'test'}, no_reply=False)
+        future = zeromq_comm.task_send({'cmd': 'test'}, no_reply=False)
         assert isinstance(future, Future)
 
-    def test_add_remove_task_subscriber(self, zeromq_broker_and_comm):
+    def test_add_remove_task_subscriber(self, zeromq_comm):
         """Test task subscriber management."""
-        _, comm = zeromq_broker_and_comm
-        ident = comm.add_task_subscriber(lambda c, t: None, identifier='test-worker')
+        ident = zeromq_comm.add_task_subscriber(lambda c, t: None, identifier='test-worker')
         assert ident == 'test-worker'
-        comm.remove_task_subscriber('test-worker')
+        zeromq_comm.remove_task_subscriber('test-worker')
 
-    def test_rpc_send(self, zeromq_broker_and_comm):
+    def test_rpc_send(self, zeromq_comm):
         """Test rpc_send returns a Future."""
-        _, comm = zeromq_broker_and_comm
-        future = comm.rpc_send('some-recipient', {'action': 'ping'})
+        future = zeromq_comm.rpc_send('some-recipient', {'action': 'ping'})
         assert isinstance(future, Future)
 
-    def test_add_remove_rpc_subscriber(self, zeromq_broker_and_comm):
+    def test_add_remove_rpc_subscriber(self, zeromq_comm):
         """Test RPC subscriber management."""
-        _, comm = zeromq_broker_and_comm
-        ident = comm.add_rpc_subscriber(lambda c, m: 'ok', identifier='my-rpc')
+        ident = zeromq_comm.add_rpc_subscriber(lambda c, m: 'ok', identifier='my-rpc')
         assert ident == 'my-rpc'
-        comm.remove_rpc_subscriber('my-rpc')
+        zeromq_comm.remove_rpc_subscriber('my-rpc')
 
-    def test_duplicate_rpc_subscriber(self, zeromq_broker_and_comm):
+    def test_duplicate_rpc_subscriber(self, zeromq_comm):
         """Test duplicate RPC subscriber raises."""
-        _, comm = zeromq_broker_and_comm
-        comm.add_rpc_subscriber(lambda c, m: None, identifier='dup')
+        zeromq_comm.add_rpc_subscriber(lambda c, m: None, identifier='dup')
         with pytest.raises(kiwipy.DuplicateSubscriberIdentifier):
-            comm.add_rpc_subscriber(lambda c, m: None, identifier='dup')
+            zeromq_comm.add_rpc_subscriber(lambda c, m: None, identifier='dup')
 
-    def test_broadcast_send(self, zeromq_broker_and_comm):
+    def test_broadcast_send(self, zeromq_comm):
         """Test broadcast_send returns True."""
-        _, comm = zeromq_broker_and_comm
-        result = comm.broadcast_send(body='hello', subject='test.subject')
+        result = zeromq_comm.broadcast_send(body='hello', subject='test.subject')
         assert result is True
 
-    def test_add_remove_broadcast_subscriber(self, zeromq_broker_and_comm):
+    def test_add_remove_broadcast_subscriber(self, zeromq_comm):
         """Test broadcast subscriber management."""
-        _, comm = zeromq_broker_and_comm
-        ident = comm.add_broadcast_subscriber(lambda c, b, s, subj, cid: None, identifier='my-bcast')
+        ident = zeromq_comm.add_broadcast_subscriber(lambda c, b, s, subj, cid: None, identifier='my-bcast')
         assert ident == 'my-bcast'
-        comm.remove_broadcast_subscriber('my-bcast')
+        zeromq_comm.remove_broadcast_subscriber('my-bcast')
 
 
 class TestZeromqCommunicatorRoundTrip:
@@ -147,13 +146,13 @@ class TestZeromqCommunicatorRoundTrip:
 
     @pytest.fixture
     def sender_and_worker(self, zeromq_broker_with_server):
-        sender = ZeromqCommunicator(router_endpoint=zeromq_broker_with_server.router_endpoint, client_id='sender')
+        sender = ZeromqCommunicator(router_endpoint=get_router_endpoint(zeromq_broker_with_server), client_id='sender')
         sender.start()
 
-        worker = ZeromqCommunicator(router_endpoint=zeromq_broker_with_server.router_endpoint, client_id='worker')
+        worker = ZeromqCommunicator(router_endpoint=get_router_endpoint(zeromq_broker_with_server), client_id='worker')
         worker.start()
 
-        yield zeromq_broker_with_server, sender, worker
+        yield sender, worker
 
         worker.close()
         sender.close()
@@ -165,7 +164,7 @@ class TestZeromqCommunicatorRoundTrip:
         (matching RabbitMQ publisher-confirm semantics).  The worker processes
         the task independently.
         """
-        _, sender, worker = sender_and_worker
+        sender, worker = sender_and_worker
 
         worker.add_task_subscriber(lambda comm, body: body.get('x', 0) * 2, identifier='worker')
         time.sleep(0.5)
@@ -179,7 +178,7 @@ class TestZeromqCommunicatorRoundTrip:
 
     def test_rpc_round_trip(self, sender_and_worker):
         """Test full RPC send -> subscribe -> handle -> response cycle."""
-        _, sender, worker = sender_and_worker
+        sender, worker = sender_and_worker
 
         def handle_rpc(comm, msg):
             return f'echo: {msg}'
@@ -193,7 +192,7 @@ class TestZeromqCommunicatorRoundTrip:
 
     def test_broadcast_round_trip(self, sender_and_worker):
         """Test broadcast send and receive."""
-        _, sender, worker = sender_and_worker
+        sender, worker = sender_and_worker
         received = []
 
         def on_broadcast(comm, body, bsender, subject, cid):
@@ -211,7 +210,7 @@ class TestZeromqCommunicatorRoundTrip:
 
     def test_task_with_deferred_future(self, sender_and_worker):
         """Test task send with deferred handler gets immediate zeromq_broker ack."""
-        _, sender, worker = sender_and_worker
+        sender, worker = sender_and_worker
 
         def handle_task(comm, body):
             f = Future()
@@ -228,7 +227,7 @@ class TestZeromqCommunicatorRoundTrip:
 
     def test_rpc_with_deferred_future(self, sender_and_worker):
         """Test RPC handler returning a Future."""
-        _, sender, worker = sender_and_worker
+        sender, worker = sender_and_worker
 
         def handle_rpc(comm, msg):
             f = Future()
@@ -244,7 +243,7 @@ class TestZeromqCommunicatorRoundTrip:
 
     def test_rpc_subscriber_exception(self, sender_and_worker):
         """Test RPC handler that raises an exception propagates error."""
-        _, sender, worker = sender_and_worker
+        sender, worker = sender_and_worker
 
         def handle_rpc(comm, msg):
             raise ValueError('handler error')

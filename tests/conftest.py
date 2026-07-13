@@ -71,16 +71,32 @@ class TestBrokerBackend(Enum):
     NONE = 'none'
 
 
+@contextmanager
+def _patch_zmq_broker_service_filepaths(profile, service_dir: Path):
+    """Patch only the ZeroMQ broker-service filepaths for a test profile."""
+    config = get_config()
+    original_filepaths = config.filepaths
+
+    def filepaths(current_profile):
+        result = copy.deepcopy(original_filepaths(current_profile))
+
+        if current_profile is profile:
+            result['zmq_broker_service'] = {'dir': str(service_dir), 'log': str(service_dir / 'broker.log')}
+
+        return result
+
+    with patch.object(config, 'filepaths', side_effect=filepaths):
+        yield
+
+
 @pytest.fixture
 def zeromq_broker(tmp_path):
     """Create a ZMQ broker instance rooted in ``tmp_path``."""
     profile = MagicMock()
     profile.process_control_config = {'supervised_by_daemon': True}
     profile.name = 'test-profile'
-    config = MagicMock()
-    config.filepaths.return_value = {'zmq_broker_service': {'dir': str(tmp_path), 'log': str(tmp_path / 'broker.log')}}
 
-    with patch('aiida.manage.configuration.get_config', return_value=config):
+    with _patch_zmq_broker_service_filepaths(profile, tmp_path):
         yield ZeromqBroker(profile)
 
 

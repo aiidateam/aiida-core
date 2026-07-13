@@ -72,7 +72,7 @@ import yaml
 from aiida_shell import launch_shell_job
 
 # Fixed Gray-Scott parameters; we vary only the feed rate F below.
-base_params = {
+BASE_PARAMS = {
     'grid_size': 64,
     'du': 0.16,
     'dv': 0.08,
@@ -83,16 +83,16 @@ base_params = {
     'seed': 42,
 }
 # Feed-rate values to scan, denser around the F ~ 0.043 transition.
-f_values = [0.038, 0.040, 0.042, 0.044, 0.046, 0.050, 0.055, 0.060]
+F_VALUES = [0.038, 0.040, 0.042, 0.044, 0.046, 0.050, 0.055, 0.060]
 
 !mkdir -p tmp
 calc_nodes = []
 
-for f_val in f_values:
+for f_val in F_VALUES:
     # Write one input file per F value into the tmp/ folder.
     label = f'F{f_val:.3f}'.replace('.', '_')  # e.g. F0_038
     input_path = f'tmp/input_{label}.yaml'
-    params = base_params | {'F': f_val}
+    params = BASE_PARAMS | {'F': f_val}
     with open(input_path, 'w') as fh:
         yaml.dump(params, fh)
 
@@ -112,13 +112,13 @@ So to get the numbers for plotting, we read each run's stdout, same regex as bef
 # Extract and print the variance from each run's stdout.
 import re
 
-variance_re = re.compile(r'Variance of V field\s*:\s*([\d.eE+-]+)')
+VARIANCE_RE = re.compile(r'Variance of V field\s*:\s*([\d.eE+-]+)')
 
 sweep_results = []
 
 for f_val, calc_node in calc_nodes:
     text = calc_node.outputs.stdout.get_content()
-    variance_v = float(variance_re.search(text).group(1))
+    variance_v = float(VARIANCE_RE.search(text).group(1))
     sweep_results.append({'F': f_val, 'variance_V': variance_v})
 
 for r in sweep_results:
@@ -266,8 +266,8 @@ We declare the two return keys as a {class}`~typing.TypedDict` so the function's
 import re
 from typing import TypedDict
 
-variance_re = re.compile(r'Variance of V field\s*:\s*([\d.eE+-]+)')
-mean_re = re.compile(r'Mean\s+of V field\s*=\s*([\d.eE+-]+)')
+VARIANCE_RE = re.compile(r'Variance of V field\s*:\s*([\d.eE+-]+)')
+MEAN_RE = re.compile(r'Mean\s+of V field\s*=\s*([\d.eE+-]+)')
 
 
 class ParseOutputs(TypedDict):
@@ -281,8 +281,8 @@ def parse_output(stdout: orm.SinglefileData) -> ParseOutputs:
     with stdout.open(mode='r') as f:
         text = f.read()
 
-    variance_v = float(variance_re.search(text).group(1))
-    mean_v = float(mean_re.search(text).group(1))
+    variance_v = float(VARIANCE_RE.search(text).group(1))
+    mean_v = float(MEAN_RE.search(text).group(1))
 
     return {
         'variance_V': orm.Float(variance_v),
@@ -306,7 +306,7 @@ Each step is tracked, and the inputs and outputs are stored as structured, query
 
 ```{code-cell} ipython3
 # Run the enriched pipeline: prepare_input → ShellJob → parse_output.
-input_file = prepare_input(orm.Dict(base_params))
+input_file = prepare_input(orm.Dict(BASE_PARAMS))
 
 results, node = launch_shell_job(
     gsrd_code,
@@ -351,8 +351,8 @@ Scaling that up to the full sweep, with the same structured data at every step:
 # Re-run the full sweep with the enriched pipeline (structured data at every step).
 enriched_results = []
 
-for f_val in f_values:
-    input_file = prepare_input(base_params | {'F': f_val})
+for f_val in F_VALUES:
+    input_file = prepare_input(BASE_PARAMS | {'F': f_val})
 
     results, calc_node = launch_shell_job(
         gsrd_code,

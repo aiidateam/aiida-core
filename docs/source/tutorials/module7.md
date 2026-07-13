@@ -34,6 +34,16 @@ Specifically:
 
 This module is a survey, not a deep dive: each section is a concrete demo or sketch plus a pointer to the canonical reference.
 
+:::{note} Setup
+This module touches AiiDA, `aiida-shell`, and `aiida-workgraph`:
+
+```bash
+pip install aiida-core aiida-shell aiida-workgraph
+```
+
+Install `aiida-core`, not `aiida` (the latter is an old meta-package).
+:::
+
 ```{code-cell} ipython3
 # Set up the tutorial's isolated sandbox profile (same as Module 1).
 # `%load_ext aiida` enables the `%verdi` magic; `%run` creates or loads the
@@ -74,7 +84,17 @@ import yaml
 from aiida import orm
 from aiida_shell import launch_shell_job
 
-from include.constants import BASE_PARAMS
+# The default Gray-Scott parameters (same as earlier modules).
+BASE_PARAMS = {
+    'grid_size': 64,
+    'du': 0.16,
+    'dv': 0.08,
+    'F': 0.04,
+    'k': 0.065,
+    'dt': 1.0,
+    'n_steps': 3000,
+    'seed': 42,
+}
 
 unstable_params = {**BASE_PARAMS, 'dt': 10.0, 'n_steps': 500}
 input_file = orm.SinglefileData(
@@ -357,18 +377,27 @@ The `ShellJob<gsrd@localhost>` rows include both runs; the second one carries th
 
 Caching also composes with everything WorkGraph builds on top. Re-running a sweep with identical inputs is essentially free:
 
+:::{dropdown} `gray_scott_pipeline` (from Module 3a, in `include/workflows.py`)
+```{literalinclude} include/workflows.py
+:language: python
+:pyobject: gray_scott_pipeline
+```
+:::
+
 ```{code-cell} ipython3
 :tags: [hide-output]
 :mystnb:
 :    code_prompt_show: 'Show cached sweep'
 :    code_prompt_hide: 'Hide cached sweep'
 
-from aiida_workgraph import Map, task
 from typing import Annotated
-from aiida_workgraph import dynamic
 
-from include.constants import F_VALUES
+from aiida_workgraph import Map, dynamic, task
+
 from include.workflows import gray_scott_pipeline
+
+# Feed-rate values to scan (same as Module 2).
+F_VALUES = [0.038, 0.040, 0.042, 0.044, 0.046, 0.050, 0.055, 0.060]
 
 
 @task.graph()
@@ -579,7 +608,7 @@ Some natural next steps:
 
 - **Write a CalcJob plugin** for a code you already use. The {ref}`how-to:plugin-codes` guide and the [aiida-plugin-cutter](https://github.com/aiidateam/aiida-plugin-cutter) template will get a skeleton working in an afternoon.
 - **Write a parser** for an existing CalcJob plugin that does not have one for the output you care about. Drop-in parsers are a great low-friction way to contribute back.
-- **Try one of the domain plugins** on a real problem from your work. `aiida-quantumespresso`'s `PwBaseWorkChain` is a good starting point if your domain is electronic structure.
+- **Try one of the domain plugins** on a real problem from your work. `aiida-quantumespresso`'s `PwBaseWorkChain` is a good starting point if your domain is electronic structure; the [aiida-qe-demo](https://github.com/aiidateam/aiida-qe-demo) walks through a full Quantum ESPRESSO example end to end.
 - **Browse the plugin registry** for adjacent tools (workflow controllers, queue managers, GUI front-ends) before you write something yourself. The answer is often "someone already did this".
 - **Connect with the community.** Questions, ideas, and feedback go on the [AiiDA Discourse](https://aiida.discourse.group). Bug reports and feature requests go on the relevant GitHub repository.
 - **Contribute back.** AiiDA is community-maintained. Improvements to docs, tutorials, plugins, and the core engine itself all start from the same place: the [CONTRIBUTING.md guide](https://github.com/aiidateam/aiida-core/blob/main/CONTRIBUTING.md) in the aiida-core repository.

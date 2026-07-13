@@ -43,6 +43,14 @@ After this module, you will be able to:
 - Set per-job scheduler options (resources, queue, account, wall-time) via `metadata.options`
 - Switch a workflow between local and remote execution without changing the workflow itself
 
+:::{note} Setup
+This module uses AiiDA and `aiida-shell`, plus SSH access to a cluster:
+
+```bash
+pip install aiida-core aiida-shell
+```
+:::
+
 ```{code-cell} ipython3
 # Set up the tutorial's isolated sandbox profile (same as Module 1).
 # `%load_ext aiida` enables the `%verdi` magic; `%run` creates or loads the
@@ -379,17 +387,15 @@ from aiida.orm import load_code
 gsrd_remote = load_code('gsrd@slurm-ssh')
 ```
 
-The submission itself is then byte-for-byte identical to the local run from {ref}`Module 1 <tutorial:module1>`. We just pass `gsrd_remote` as the code argument to `launch_shell_job`.
+The submission itself is then exactly the same as the local run from {ref}`Module 1 <tutorial:module1>`. We just pass `gsrd_remote` as the code argument to `launch_shell_job`.
 Expand the cell below to see the call and its output:
 
 ```{code-cell} ipython3
 :tags: ["hide-cell"]
 
-from pathlib import Path
-
 from aiida_shell import launch_shell_job
 
-input_path = Path('include/input.yaml').resolve()
+input_path = 'include/input.yaml'
 
 results, node = launch_shell_job(
     gsrd_remote,
@@ -427,10 +433,12 @@ Click *Show cell* below to expand the same parsing code we used in Module 1 and 
 
 # Inspect the outputs (same parsing as Module 1).
 import io
+import re
 
 import numpy as np
 
-from include.constants import MEAN_RE, VARIANCE_RE
+VARIANCE_RE = re.compile(r'Variance of V field\s*:\s*([\d.eE+-]+)')
+MEAN_RE = re.compile(r'Mean\s+of V field\s*=\s*([\d.eE+-]+)')
 
 with node.outputs.results_npz.open(mode='rb') as fh:
     arrays = np.load(io.BytesIO(fh.read()))
@@ -445,7 +453,7 @@ print(f"variance(V) = {var_v:.4e}")
 print(f"mean(V)     = {mean_v:.4e}")
 ```
 
-The same swap also isn't specific to `launch_shell_job`: it works for the pipeline from {ref}`Module 2 <tutorial:module2>`, the `gray_scott_sweep` workflow from {ref}`Module 3 <tutorial:module3>`, and any {ref}`CalcJob <topics:calculations:concepts:calcjobs>` or {ref}`WorkChain <topics:workflows>` you may write in the future.
+The same swap also isn't specific to `launch_shell_job`: it works for the pipeline from {ref}`Module 2 <tutorial:module2>`, the `gray_scott_sweep` workflow from {ref}`Module 3b <tutorial:module3b>`, and any {ref}`CalcJob <topics:calculations:concepts:calcjobs>` or {ref}`WorkChain <topics:workflows>` you may write in the future.
 
 ### Per-calculation scheduler options
 

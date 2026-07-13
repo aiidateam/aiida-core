@@ -34,6 +34,16 @@ After this module, you will be able to:
 - Walk the provenance graph from any node to its inputs, outputs, ancestors, or descendants
 - Reconstruct an analysis directly from the database, without keeping Python references to the original results
 
+:::{note} Setup
+This module only needs AiiDA:
+
+```bash
+pip install aiida-core
+```
+
+It reuses the sweep data created in {ref}`Module 2 <tutorial:module2>`.
+:::
+
 ```{code-cell} ipython3
 # Set up the tutorial's isolated sandbox profile (same as Module 1).
 # `%load_ext aiida` enables the `%verdi` magic; `%run` creates or loads the
@@ -82,7 +92,7 @@ qb = (
     orm.QueryBuilder()
     .append(
         orm.Float,
-        filters={'attributes.value': {'>': 0.01}},
+        filters=orm.Float.fields.value > 0.01,
         project='attributes.value',
     )
 )
@@ -93,12 +103,12 @@ print(f'Values: {[round(v, 4) for v in values]}')
 
 A few things to notice:
 
-- `filters=` is a dict keyed by *column path*; `attributes.value` digs into the JSON `attributes` column of the node table.
-- `project=` takes the same column path syntax and returns those columns instead of full node objects.
+- `filters=` takes a condition written as `orm.<NodeType>.fields.<name> <op> <value>`; here `orm.Float.fields.value > 0.01` keeps only the `Float` nodes whose stored `value` exceeds `0.01`. It expands to the older dict form `{'attributes.value': {'>': 0.01}}`, which you may still see in existing code; both work.
+- `project=` takes a *column path* string like `'attributes.value'` and returns those columns instead of full node objects.
 - `.all()` returns a list of rows, each row a list of projected columns.
 - `.count()` skips materialisation entirely; the database returns just an integer.
 
-The same column-path syntax works on **extras**, the mutable per-node metadata you can attach at any time.
+The same `fields` syntax reaches **extras**, the mutable per-node metadata you can attach at any time, via `orm.<NodeType>.fields.extras['<key>']`.
 Module 2 tagged each `parse_output` calcfunction with `F` (the feed rate) and `sweep='F_scan'`; we can pick out exactly those nodes now:
 
 ```{code-cell} ipython3
@@ -106,7 +116,7 @@ qb = (
     orm.QueryBuilder()
     .append(
         orm.CalcFunctionNode,
-        filters={'extras.sweep': 'F_scan'},
+        filters=orm.CalcFunctionNode.fields.extras['sweep'] == 'F_scan',
         project=['extras.F', 'pk'],
     )
 )
@@ -147,7 +157,7 @@ qb = (
     .append(
         orm.CalcFunctionNode,
         tag='parse',
-        filters={'extras.sweep': 'F_scan'},
+        filters=orm.CalcFunctionNode.fields.extras['sweep'] == 'F_scan',
         project='extras.F',
     )
     .append(
@@ -180,7 +190,7 @@ qb = (
     orm.QueryBuilder()
     .append(
         orm.Group,
-        filters={'label': 'tutorial/F-sweep'},
+        filters=orm.Group.fields.label == 'tutorial/F-sweep',
         tag='grp',
     )
     .append(
@@ -231,15 +241,16 @@ mystnb:
 tags: [hide-cell]
 ---
 # File-based baseline: the Module 1 / Module 2 regex on every stdout. Not
-# AiiDA-related, hidden here to keep the comparison focused on the QB side.
+# AiiDA-related, folded here to keep the comparison focused on the QB side.
+import re
 import time
 
-from include.constants import VARIANCE_RE
+VARIANCE_RE = re.compile(r'Variance of V field\s*:\s*([\d.eE+-]+)')
 
 t0 = time.perf_counter()
 stdout_qb = orm.QueryBuilder().append(
     orm.SinglefileData,
-    filters={'attributes.filename': 'stdout'},
+    filters=orm.SinglefileData.fields.filename == 'stdout',
 )
 file_values = []
 for (sfd,) in stdout_qb.iterall():
@@ -317,7 +328,7 @@ qb = (
     .append(
         orm.CalcFunctionNode,
         tag='parse',
-        filters={'extras.sweep': 'F_scan'},
+        filters=orm.CalcFunctionNode.fields.extras['sweep'] == 'F_scan',
         project='extras.F',
     )
     .append(

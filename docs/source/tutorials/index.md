@@ -99,15 +99,15 @@ Go to Module 2
 ```
 :::
 
-:::{grid-item-card} {fa}`diagram-project;mr-1` Module 3: Writing simple workflows
+:::{grid-item-card} {fa}`diagram-project;mr-1` Module 3: Writing workflows
 :text-align: center
 :shadow: md
 
-Chain calculations into automated workflows with WorkGraph, including parameter sweeps with Map.
+Chain calculations into an automated workflow with WorkGraph (3a), then run it over many inputs in parallel with `Map`, no hand-written `for`-loop (3b).
 
 +++
 
-```{button-ref} module3
+```{button-ref} module3a
 :ref-type: doc
 :click-parent:
 :expand:
@@ -171,11 +171,11 @@ Go to Module 5
 :text-align: center
 :shadow: md
 
-Conditional logic (If/While), nested sub-workflows, and dynamic workflow construction.
+Conditional logic and loops with `If`/`While` (6a), then workflows whose shape emerges at runtime (6b).
 
 +++
 
-```{button-ref} module6
+```{button-ref} module6a
 :ref-type: doc
 :click-parent:
 :expand:
@@ -239,10 +239,12 @@ teaser
 module0
 module1
 module2
-module3
+module3a
+module3b
 module4
 module5
-module6
+module6a
+module6b
 module7
 basic
 ```

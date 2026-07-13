@@ -256,8 +256,8 @@ import numpy as np
 
 # gsrd prints its two summary numbers only to stdout, so we read them with a
 # small regex. (Module 2 turns this hand-parsing into a tracked calcfunction.)
-variance_re = re.compile(r'Variance of V field\s*:\s*([\d.eE+-]+)')
-mean_re = re.compile(r'Mean\s+of V field\s*=\s*([\d.eE+-]+)')
+VARIANCE_RE = re.compile(r'Variance of V field\s*:\s*([\d.eE+-]+)')
+MEAN_RE = re.compile(r'Mean\s+of V field\s*=\s*([\d.eE+-]+)')
 
 with node.outputs.results_npz.open(mode='rb') as fh:
     arrays = np.load(io.BytesIO(fh.read()))
@@ -266,8 +266,8 @@ with node.outputs.results_npz.open(mode='rb') as fh:
 print(f"V field shape: {v_field.shape}")
 
 stdout_text = node.outputs.stdout.get_content()
-var_v = float(variance_re.search(stdout_text).group(1))
-mean_v = float(mean_re.search(stdout_text).group(1))
+var_v = float(VARIANCE_RE.search(stdout_text).group(1))
+mean_v = float(MEAN_RE.search(stdout_text).group(1))
 print(f"variance(V) = {var_v:.4e}")
 print(f"mean(V)     = {mean_v:.4e}")
 ```

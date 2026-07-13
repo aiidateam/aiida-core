@@ -415,11 +415,12 @@ To change it one can set it with the config option:
 
     $ verdi config set logging.aiida_loglevel DEBUG
 
-Each profile has three log files:
+Each profile has four log files:
 
-- ``<AIIDA_PATH>/log/aiida-<profile_name>.log`` -- client-side logs (task submissions, pause/play/kill messages, and process execution in running mode)
-- ``<AIIDA_PATH>/daemon/log/aiida-<profile_name>.log`` -- daemon worker logs
-- ``<AIIDA_PATH>/daemon/log/circus-<profile_name>.log`` -- circus supervisor internals
+- ``<AIIDA_PATH>/log/aiida-<PROFILE_NAME>.log`` -- client-side logs (task submissions, pause/play/kill messages, and process execution in running mode)
+- ``<AIIDA_PATH>/daemon/log/aiida-<PROFILE_NAME>.log`` -- daemon worker logs
+- ``<AIIDA_PATH>/daemon/log/circus-<PROFILE_NAME>.log`` -- circus supervisor internals
+- ``<AIIDA_PATH>/broker/<PROFILE_NAME>/broker.log`` --  ZeroMQ service log it ``core.zeromq`` is used as broker plugin
 
 By default, only messages at the ``REPORT`` level and above are shown in the terminal, while the log files capture all messages.
 AiiDA provides separate options to control the verbosity of what is also directed to the terminal and database:

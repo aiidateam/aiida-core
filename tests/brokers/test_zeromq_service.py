@@ -22,8 +22,8 @@ class TestZeromqBrokerService:
 
     def test_init(self, tmp_path):
         """Test service initialization."""
-        service = ZeromqBrokerService(base_path=tmp_path)
-        assert service.base_path == tmp_path
+        service = ZeromqBrokerService(service_dir=tmp_path)
+        assert service.service_dir == tmp_path
         assert service.log_file == tmp_path / 'broker.log'
         assert service.pid_file == tmp_path / 'broker.pid'
         assert service.status_file == tmp_path / 'broker.status'
@@ -34,7 +34,7 @@ class TestZeromqBrokerService:
             patch('aiida.brokers.zeromq.service.configure_logging') as mock_configure_logging,
             patch.object(ZeromqBrokerService, 'run_forever') as mock_run_forever,
         ):
-            run_broker_service(base_path=tmp_path)
+            run_broker_service(service_dir=tmp_path)
 
         mock_configure_logging.assert_called_once_with(daemon=True, daemon_log_file=tmp_path / 'broker.log')
         mock_run_forever.assert_called_once_with()
@@ -42,7 +42,7 @@ class TestZeromqBrokerService:
 
     def test_start_stop(self, tmp_path):
         """Test starting and stopping the service."""
-        service = ZeromqBrokerService(base_path=tmp_path)
+        service = ZeromqBrokerService(service_dir=tmp_path)
         service.start()
 
         try:
@@ -56,7 +56,7 @@ class TestZeromqBrokerService:
 
     def test_start_idempotent(self, tmp_path):
         """Test start is idempotent."""
-        service = ZeromqBrokerService(base_path=tmp_path)
+        service = ZeromqBrokerService(service_dir=tmp_path)
         service.start()
         try:
             service.start()  # should be no-op
@@ -66,7 +66,7 @@ class TestZeromqBrokerService:
 
     def test_stop_idempotent(self, tmp_path):
         """Test stop when not running is no-op."""
-        service = ZeromqBrokerService(base_path=tmp_path)
+        service = ZeromqBrokerService(service_dir=tmp_path)
         service.stop()  # should not raise
 
     def test_orphaned_sockets_cleanup(self, tmp_path):
@@ -76,7 +76,7 @@ class TestZeromqBrokerService:
         old_sockets.mkdir()
         sockets_file.write_text(str(old_sockets))
 
-        service = ZeromqBrokerService(base_path=tmp_path)
+        service = ZeromqBrokerService(service_dir=tmp_path)
         service.start()
         try:
             assert not old_sockets.exists()
@@ -85,7 +85,7 @@ class TestZeromqBrokerService:
 
     def test_run_forever_with_early_stop(self, tmp_path):
         """Test run_forever exits when _running is set to False."""
-        service = ZeromqBrokerService(base_path=tmp_path)
+        service = ZeromqBrokerService(service_dir=tmp_path)
 
         def stop_after_delay():
             time.sleep(0.5)

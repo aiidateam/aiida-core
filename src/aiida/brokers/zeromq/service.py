@@ -30,7 +30,7 @@ class ZeromqBrokerService:
     """Process wrapper for ZeromqBrokerServer.
 
     Directory structure:
-        {base_path}/
+        {service_dir}/
         ├── storage/        # Task queue persistence
         ├── broker.log      # Broker log file, location is configurable
         ├── broker.pid      # PID file
@@ -44,38 +44,38 @@ class ZeromqBrokerService:
     class FilepathLayout:
         """Canonical filesystem layout for the ZMQ broker state files."""
 
-        def __init__(self, base_path: Path | str, log_file_path: Path | str | None = None) -> None:
-            self.base_path = Path(base_path)
+        def __init__(self, service_dir: Path | str, log_file_path: Path | str | None = None) -> None:
+            self.service_dir = Path(service_dir)
             self._log_file_path = None if log_file_path is None else Path(log_file_path)
 
         @property
         def storage_path(self) -> Path:
             """Return the persistent storage directory."""
-            return self.base_path / 'storage'
+            return self.service_dir / 'storage'
 
         @property
         def log_file(self) -> Path:
             """Return the broker log file."""
-            return self.base_path / 'broker.log' if self._log_file_path is None else self._log_file_path
+            return self.service_dir / 'broker.log' if self._log_file_path is None else self._log_file_path
 
         @property
         def pid_file(self) -> Path:
             """Return the broker PID file."""
-            return self.base_path / 'broker.pid'
+            return self.service_dir / 'broker.pid'
 
         @property
         def status_file(self) -> Path:
             """Return the broker status file."""
-            return self.base_path / 'broker.status'
+            return self.service_dir / 'broker.status'
 
         @property
         def sockets_file(self) -> Path:
             """Return the file containing the temporary sockets directory path."""
-            return self.base_path / 'broker.sockets'
+            return self.service_dir / 'broker.sockets'
 
-    def __init__(self, base_path: Path | str, log_file_path: Path | str | None = None):
-        self._layout = self.FilepathLayout(base_path, log_file_path=log_file_path)
-        self._base_path = self._layout.base_path
+    def __init__(self, service_dir: Path | str, log_file_path: Path | str | None = None):
+        self._layout = self.FilepathLayout(service_dir, log_file_path=log_file_path)
+        self._service_dir = self._layout.service_dir
         self._storage_path = self._layout.storage_path
         self._sockets_path: Path | None = None
         self._log_file = self._layout.log_file
@@ -86,8 +86,8 @@ class ZeromqBrokerService:
         self._running = False
 
     @property
-    def base_path(self) -> Path:
-        return self._base_path
+    def service_dir(self) -> Path:
+        return self._service_dir
 
     @property
     def log_file(self) -> Path:
@@ -105,7 +105,7 @@ class ZeromqBrokerService:
         if self._running:
             return
 
-        self._base_path.mkdir(parents=True, exist_ok=True)
+        self._service_dir.mkdir(parents=True, exist_ok=True)
 
         # Clean up any orphaned socket directory from a previous unclean shutdown
         if self._sockets_file.exists():
@@ -174,10 +174,10 @@ class ZeromqBrokerService:
         temp_file.rename(self._status_file)
 
 
-def run_broker_service(base_path: str | Path, log_file_path: Path | str | None = None) -> None:
+def run_broker_service(service_dir: str | Path, log_file_path: Path | str | None = None) -> None:
     """Run the ZeroMQ broker service."""
-    service = ZeromqBrokerService(base_path=base_path, log_file_path=log_file_path)
-    service.base_path.mkdir(parents=True, exist_ok=True)
+    service = ZeromqBrokerService(service_dir=service_dir, log_file_path=log_file_path)
+    service.service_dir.mkdir(parents=True, exist_ok=True)
     configure_logging(daemon=True, daemon_log_file=service.log_file)
     service.run_forever()
 
@@ -186,7 +186,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--base-path', '-b', required=True)
+    parser.add_argument('--service-dir', '-s', required=True)
     parser.add_argument('--log-file-path', '-l', required=False)
     args = parser.parse_args()
-    run_broker_service(base_path=args.base_path, log_file_path=args.log_file_path)
+    run_broker_service(service_dir=args.service_dir, log_file_path=args.log_file_path)

@@ -167,7 +167,7 @@ def status(ctx, all_profiles, timeout):
                     broker_lines.append(
                         f'Broker is running as PID {broker_pid} [{pending} pending, {processing} processing]'
                     )
-                    broker_lines.append(f'Broker directory: {broker.broker_dir}')
+                    broker_lines.append(f'Broker directory: {broker.service_dir}')
             else:
                 broker_lines.append('Broker is NOT running')
 
@@ -317,11 +317,11 @@ def worker():
 
 
 @verdi_daemon.command('broker', hidden=True)
-@click.option('--base-path', 'base_path', required=True)
+@click.option('--service-dir', 'service_dir', required=True)
 @click.option('--log-file-path', 'log_file_path', required=False)
 @decorators.with_dbenv()
 @decorators.requires_broker
-def broker(base_path, log_file_path):
+def broker(service_dir, log_file_path):
     """Run the ZeroMQ broker service in the current process.
 
     Sets up the profile enviromment (e.g. logging configuration) before running the broker.
@@ -341,4 +341,4 @@ def broker(base_path, log_file_path):
         msg = f'Only ZeromqBroker can be started through verdi but got broker of type {type(broker)}.'
         raise TypeError(msg)
 
-    run_broker_service(base_path=base_path, log_file_path=log_file_path)
+    run_broker_service(service_dir=service_dir, log_file_path=log_file_path)

@@ -306,7 +306,7 @@ class DaemonClient:
             self.profile.name,
             'daemon',
             'broker',
-            '--base-path',
+            '--service-dir',
             shlex.quote(self.zmq_broker_service_dir),
             '--log-file-path',
             shlex.quote(self.zmq_broker_service_log_file),

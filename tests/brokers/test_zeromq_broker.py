@@ -117,9 +117,9 @@ class TestZeromqBrokerStatusQueries:
         """Test storage_path property."""
         assert zeromq_broker.storage_path == tmp_path / 'storage'
 
-    def test_base_path(self, zeromq_broker, tmp_path):
-        """Test base_path property."""
-        assert zeromq_broker.base_path == tmp_path
+    def test_service_dir(self, zeromq_broker, tmp_path):
+        """Test service_dir property."""
+        assert zeromq_broker.service_dir == tmp_path
 
     def test_get_sockets_path_no_file(self, zeromq_broker):
         """Test _get_sockets_path when file missing."""
@@ -127,37 +127,37 @@ class TestZeromqBrokerStatusQueries:
 
     def test_get_sockets_path_os_error(self, zeromq_broker):
         """Test _get_sockets_path when read fails."""
-        sockets_file = zeromq_broker.base_path / 'broker.sockets'
+        sockets_file = zeromq_broker.service_dir / 'broker.sockets'
         sockets_file.mkdir()  # directory instead of file => OSError on read_text
         assert zeromq_broker._get_sockets_path() is None
 
     def test_get_service_pid_sentinel_format(self, zeromq_broker):
         """Test PID file with sentinel format."""
-        pid_file = zeromq_broker.base_path / 'broker.pid'
+        pid_file = zeromq_broker.service_dir / 'broker.pid'
         pid_file.write_text('aiida-zeromq-broker 12345')
         assert zeromq_broker.get_service_pid() == 12345
 
     def test_get_service_pid_bare_format(self, zeromq_broker):
         """Test PID file with bare PID fallback."""
-        pid_file = zeromq_broker.base_path / 'broker.pid'
+        pid_file = zeromq_broker.service_dir / 'broker.pid'
         pid_file.write_text('54321')
         assert zeromq_broker.get_service_pid() == 54321
 
     def test_get_service_pid_invalid(self, zeromq_broker):
         """Test PID file with invalid content."""
-        pid_file = zeromq_broker.base_path / 'broker.pid'
+        pid_file = zeromq_broker.service_dir / 'broker.pid'
         pid_file.write_text('garbage text')
         assert zeromq_broker.get_service_pid() is None
 
     def test_is_running_stale_pid(self, zeromq_broker):
         """Test is_running with stale PID."""
-        pid_file = zeromq_broker.base_path / 'broker.pid'
+        pid_file = zeromq_broker.service_dir / 'broker.pid'
         pid_file.write_text('aiida-zeromq-broker 999999')  # Non-existent PID
         assert not zeromq_broker.is_running
 
     def test_get_service_status_valid(self, zeromq_broker):
         """Test get_service_status with valid JSON."""
-        status_file = zeromq_broker.base_path / 'broker.status'
+        status_file = zeromq_broker.service_dir / 'broker.status'
         status_file.write_text(json.dumps({'pid': 123, 'running': True}))
         status = zeromq_broker.get_service_status()
         assert status is not None
@@ -165,25 +165,25 @@ class TestZeromqBrokerStatusQueries:
 
     def test_get_service_status_invalid_json(self, zeromq_broker):
         """Test get_service_status with invalid JSON."""
-        status_file = zeromq_broker.base_path / 'broker.status'
+        status_file = zeromq_broker.service_dir / 'broker.status'
         status_file.write_text('{INVALID JSON')
         assert zeromq_broker.get_service_status() is None
 
     def test_cleanup_stale_service_files(self, zeromq_broker):
         """Test _cleanup_stale_service_files removes all stale files."""
 
-        broker_dir = zeromq_broker.base_path
-        (broker_dir / 'broker.pid').write_text('aiida-zeromq-broker 1')
-        (broker_dir / 'broker.status').write_text('{}')
-        sockets_dir = broker_dir / 'test_sockets'
+        service_dir = zeromq_broker.service_dir
+        (service_dir / 'broker.pid').write_text('aiida-zeromq-broker 1')
+        (service_dir / 'broker.status').write_text('{}')
+        sockets_dir = service_dir / 'test_sockets'
         sockets_dir.mkdir()
-        (broker_dir / 'broker.sockets').write_text(str(sockets_dir))
+        (service_dir / 'broker.sockets').write_text(str(sockets_dir))
 
         zeromq_broker._cleanup_stale_service_files()
 
-        assert not (broker_dir / 'broker.pid').exists()
-        assert not (broker_dir / 'broker.status').exists()
-        assert not (broker_dir / 'broker.sockets').exists()
+        assert not (service_dir / 'broker.pid').exists()
+        assert not (service_dir / 'broker.status').exists()
+        assert not (service_dir / 'broker.sockets').exists()
         assert not sockets_dir.exists()
 
 

@@ -371,7 +371,7 @@ Service files
 
 .. code-block:: text
 
-    {config_dir}/broker/{profile-uuid}/      (config_dir is typically ~/.aiida)
+    {config_dir}/broker/{profile-uuid}-{profile-name}/      (config_dir is typically ~/.aiida)
     ├── broker.pid         "aiida-zeromq-broker {pid}" — sentinel + PID for ownership check
     ├── broker.status      JSON with task counts, updated every STATUS_INTERVAL seconds
     ├── broker.sockets     path to the temp socket directory

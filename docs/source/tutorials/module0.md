@@ -83,8 +83,8 @@ seed: 42         # RNG seed for the initial perturbation
 ```{code-cell} ipython3
 # In a Jupyter notebook, a line starting with `!` runs a shell command.
 # Make a scratch directory to work in and copy the example input into it.
-!mkdir -p tmp
-!cp include/input.yaml tmp/input.yaml
+!mkdir -p /tmp/aiida-tutorial
+!cp include/input.yaml /tmp/aiida-tutorial/input.yaml
 ```
 
 Now run `gsrd` on that input:
@@ -94,7 +94,7 @@ Now run `gsrd` on that input:
 
 # gsrd reads input.yaml and writes its results into the directory it runs
 # in. Expand the output to see what it prints.
-!cd tmp && gsrd input.yaml
+!cd /tmp/aiida-tutorial && gsrd input.yaml
 ```
 
 Expand the output above to see what `gsrd` prints during a run: a banner, a citation block, per-iteration progress, and a diagnostics box at the end, all on stdout.
@@ -103,7 +103,7 @@ Let's see what `gsrd` actually wrote to disk:
 
 ```{code-cell} ipython3
 # List the files gsrd created.
-!ls tmp
+!ls /tmp/aiida-tutorial
 ```
 
 The simulation produced `results.npz`.
@@ -115,7 +115,7 @@ They are *not* in `results.npz`:
 # results.npz is a binary NumPy archive. Load it and list what it holds.
 import numpy as np
 
-data = np.load('tmp/results.npz')
+data = np.load('/tmp/aiida-tutorial/results.npz')
 for name in data.files:
     print(name, data[name].shape)
 ```
@@ -160,12 +160,12 @@ Editing inputs by hand like this is convenient, but it has its own hazard: many 
 # code so the notebook runs top to bottom on its own.
 import yaml
 
-with open('tmp/input.yaml') as f:
+with open('/tmp/aiida-tutorial/input.yaml') as f:
     params = yaml.safe_load(f)
 
 params['F'] = 0.055
 
-with open('tmp/input.yaml', 'w') as f:
+with open('/tmp/aiida-tutorial/input.yaml', 'w') as f:
     yaml.dump(params, f)
 ```
 
@@ -174,7 +174,7 @@ Then run the same command again:
 ```{code-cell} ipython3
 :tags: ["hide-output"]
 
-!cd tmp && gsrd input.yaml
+!cd /tmp/aiida-tutorial && gsrd input.yaml
 ```
 
 With `F=0.055`, the pattern looks completely different:
@@ -213,13 +213,13 @@ Let's trigger that by running with an oversized timestep (`dt=100`), using a pre
 ```{code-cell} ipython3
 # Copy in an input with an oversized timestep (dt=100). The integration
 # blows up; watch how gsrd reports the failure.
-!cp include/input_bad.yaml tmp/input_bad.yaml
+!cp include/input_bad.yaml /tmp/aiida-tutorial/input_bad.yaml
 
 import subprocess
 
 result = subprocess.run(
     ['gsrd', 'input_bad.yaml'],
-    cwd='tmp',
+    cwd='/tmp/aiida-tutorial',
     capture_output=True,
     text=True,
 )

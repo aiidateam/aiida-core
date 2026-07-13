@@ -53,8 +53,6 @@ _build/
 docs/html/
 docs/jupyter_execute/
 sphinx.log
-# Scratch dir the tutorial notebooks run gsrd in (created at build time)
-docs/source/tutorials/tmp/
 
 pplot_out/
 

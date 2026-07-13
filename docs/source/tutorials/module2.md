@@ -85,13 +85,13 @@ BASE_PARAMS = {
 # Feed-rate values to scan, denser around the F ~ 0.043 transition.
 F_VALUES = [0.038, 0.040, 0.042, 0.044, 0.046, 0.050, 0.055, 0.060]
 
-!mkdir -p tmp
+!mkdir -p /tmp/aiida-tutorial
 calc_nodes = []
 
 for f_val in F_VALUES:
-    # Write one input file per F value into the tmp/ folder.
+    # Write one input file per F value into the /tmp/aiida-tutorial/ folder.
     label = f'F{f_val:.3f}'.replace('.', '_')  # e.g. F0_038
-    input_path = f'tmp/input_{label}.yaml'
+    input_path = f'/tmp/aiida-tutorial/input_{label}.yaml'
     params = BASE_PARAMS | {'F': f_val}
     with open(input_path, 'w') as fh:
         yaml.dump(params, fh)

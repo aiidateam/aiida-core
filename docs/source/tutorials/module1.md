@@ -304,14 +304,14 @@ AiiDA stores everything in its internal database and file repository (efficient 
 ```{code-cell} ipython3
 :tags: ["hide-output"]
 
-# Export the full calculation (inputs, outputs, logs) into a `tmp/` folder.
-!mkdir -p tmp
-%verdi process dump {node.pk} --path tmp/dump -o
+# Export the full calculation (inputs, outputs, logs) into a `/tmp/aiida-tutorial/` folder.
+!mkdir -p /tmp/aiida-tutorial
+%verdi process dump {node.pk} --path /tmp/aiida-tutorial/dump -o
 ```
 
 ```{code-cell} ipython3
 # Show the directory tree of the dumped calculation data.
-!tree tmp/dump
+!tree /tmp/aiida-tutorial/dump
 ```
 
 All the relevant entities of the calculation are there: the input file, the simulation script, the submission script, captured stdout and stderr, and AiiDA metadata.

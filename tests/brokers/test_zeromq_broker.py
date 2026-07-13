@@ -17,7 +17,7 @@ import pytest
 
 from aiida.brokers.zeromq.broker import ZeromqBroker, ZeromqIncomingTask
 from aiida.brokers.zeromq.queue import PersistentQueue
-from tests.conftest import _run_zeromq_broker_server
+from tests.conftest import _patch_zmq_broker_service_filepaths, _run_zeromq_broker_server
 
 
 @pytest.fixture(scope='module')
@@ -27,12 +27,7 @@ def zeromq_broker_with_server(tmp_path_factory):
     profile = MagicMock()
     profile.process_control_config = {'supervised_by_daemon': True}
     profile.name = 'test-profile'
-    config = MagicMock()
-    config.filepaths.return_value = {
-        'zmq_broker_service': {'dir': str(service_dir), 'log': str(service_dir / 'broker.log')}
-    }
-
-    with patch('aiida.manage.configuration.get_config', return_value=config):
+    with _patch_zmq_broker_service_filepaths(profile, service_dir):
         broker = ZeromqBroker(profile)
         with _run_zeromq_broker_server(broker):
             yield broker

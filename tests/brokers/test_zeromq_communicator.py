@@ -12,19 +12,40 @@ from __future__ import annotations
 
 import time
 from concurrent.futures import Future
+from unittest.mock import MagicMock, patch
 
 import kiwipy
 import pytest
 
+from aiida.brokers.zeromq.broker import ZeromqBroker
 from aiida.brokers.zeromq.communicator import ZeromqCommunicator
+from tests.conftest import _run_zeromq_broker_server
+
+
+@pytest.fixture(scope='module')
+def zeromq_broker_with_server(tmp_path_factory):
+    """Create a ZMQ broker instance with a ZMQ server running in the background."""
+    service_dir = tmp_path_factory.mktemp('zeromq-broker')
+    profile = MagicMock()
+    profile.process_control_config = {'supervised_by_daemon': True}
+    profile.name = 'test-profile'
+    config = MagicMock()
+    config.filepaths.return_value = {
+        'zmq_broker_service': {'dir': str(service_dir), 'log': str(service_dir / 'broker.log')}
+    }
+
+    with patch('aiida.manage.configuration.get_config', return_value=config):
+        broker = ZeromqBroker(profile)
+        with _run_zeromq_broker_server(broker):
+            yield broker
 
 
 class TestZeromqCommunicatorLifecycle:
     """Tests for communicator initialization and lifecycle."""
 
-    def test_init(self, zeromq_broker_server):
+    def test_init(self, zeromq_broker_with_server):
         """Test communicator initialization."""
-        communicator = ZeromqCommunicator(router_endpoint=zeromq_broker_server.router_endpoint)
+        communicator = ZeromqCommunicator(router_endpoint=zeromq_broker_with_server.router_endpoint)
         communicator.start()
 
         try:
@@ -34,16 +55,16 @@ class TestZeromqCommunicatorLifecycle:
 
         assert communicator.is_closed() is True
 
-    def test_context_manager(self, zeromq_broker_server):
+    def test_context_manager(self, zeromq_broker_with_server):
         """Test communicator as context manager."""
-        with ZeromqCommunicator(router_endpoint=zeromq_broker_server.router_endpoint) as communicator:
+        with ZeromqCommunicator(router_endpoint=zeromq_broker_with_server.router_endpoint) as communicator:
             assert communicator.is_closed() is False
 
         assert communicator.is_closed() is True
 
-    def test_close_idempotent(self, zeromq_broker_server):
+    def test_close_idempotent(self, zeromq_broker_with_server):
         """Test close is idempotent."""
-        comm = ZeromqCommunicator(router_endpoint=zeromq_broker_server.router_endpoint)
+        comm = ZeromqCommunicator(router_endpoint=zeromq_broker_with_server.router_endpoint)
         comm.start()
         comm.close()
         comm.close()  # should not raise
@@ -60,11 +81,11 @@ class TestZeromqCommunicatorMessaging:
     """Tests for communicator messaging operations with a real zeromq_broker."""
 
     @pytest.fixture
-    def zeromq_broker_and_comm(self, zeromq_broker_server):
-        comm = ZeromqCommunicator(router_endpoint=zeromq_broker_server.router_endpoint)
+    def zeromq_broker_and_comm(self, zeromq_broker_with_server):
+        comm = ZeromqCommunicator(router_endpoint=zeromq_broker_with_server.router_endpoint)
         comm.start()
 
-        yield zeromq_broker_server, comm
+        yield zeromq_broker_with_server, comm
 
         comm.close()
 
@@ -125,14 +146,14 @@ class TestZeromqCommunicatorRoundTrip:
     """Integration tests for full task, RPC, and broadcast round-trips."""
 
     @pytest.fixture
-    def sender_and_worker(self, zeromq_broker_server):
-        sender = ZeromqCommunicator(router_endpoint=zeromq_broker_server.router_endpoint, client_id='sender')
+    def sender_and_worker(self, zeromq_broker_with_server):
+        sender = ZeromqCommunicator(router_endpoint=zeromq_broker_with_server.router_endpoint, client_id='sender')
         sender.start()
 
-        worker = ZeromqCommunicator(router_endpoint=zeromq_broker_server.router_endpoint, client_id='worker')
+        worker = ZeromqCommunicator(router_endpoint=zeromq_broker_with_server.router_endpoint, client_id='worker')
         worker.start()
 
-        yield zeromq_broker_server, sender, worker
+        yield zeromq_broker_with_server, sender, worker
 
         worker.close()
         sender.close()

@@ -83,14 +83,8 @@ def zeromq_broker(tmp_path):
         yield ZeromqBroker(profile)
 
 
-@pytest.fixture
-def zeromq_broker_server(zeromq_broker):
-    with _run_zeromq_broker_server(zeromq_broker) as started_broker:
-        yield started_broker
-
-
 @contextmanager
-def _run_zeromq_broker_server(zeromq_broker, timeout: float = 10.0):
+def _run_zeromq_broker_server(zeromq_broker: ZeromqBroker, timeout: float = 10.0):
     """Run a ZeroMQ broker service subprocess for the duration of a context."""
     if zeromq_broker.is_running:
         raise ValueError('Broker server already running')
@@ -115,7 +109,7 @@ def _run_zeromq_broker_server(zeromq_broker, timeout: float = 10.0):
                 break
             time.sleep(0.1)
         else:
-            msg = f'ZeroMQ broker did not start within {timeout}s'
+            msg = f'ZeroMQ broker did not become ready within {timeout}s'
             raise TimeoutError(msg)
 
         yield process

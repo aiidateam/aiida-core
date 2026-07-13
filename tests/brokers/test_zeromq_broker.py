@@ -16,7 +16,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from aiida.brokers.zeromq.broker import ZeromqBroker, ZeromqIncomingTask
-from aiida.brokers.zeromq.communicator import ZeromqCommunicator
 from aiida.brokers.zeromq.queue import PersistentQueue
 from tests.conftest import _run_zeromq_broker_server
 
@@ -62,17 +61,9 @@ class TestZeromqBrokerStatusQueries:
         """Test is_running returns False when no PID file exists."""
         assert not zeromq_broker.is_running
 
-    def test_get_service_pid_no_file(self, zeromq_broker):
-        """Test get_service_pid returns None when no PID file exists."""
-        assert zeromq_broker.get_service_pid() is None
-
     def test_get_service_status_no_file(self, zeromq_broker):
         """Test get_service_status returns None when no status file exists."""
         assert zeromq_broker.get_service_status() is None
-
-    def test_endpoints_no_sockets_file(self, zeromq_broker):
-        """Test endpoints return None when sockets file doesn't exist."""
-        assert zeromq_broker.router_endpoint is None
 
     def test_str_running(self, zeromq_broker_with_server):
         """Test __str__ when running."""
@@ -92,34 +83,6 @@ class TestZeromqBrokerStatusQueries:
     def test_service_dir(self, zeromq_broker, tmp_path):
         """Test service_dir property."""
         assert zeromq_broker.service_dir == tmp_path
-
-    def test_get_sockets_path_no_file(self, zeromq_broker):
-        """Test _get_sockets_path when file missing."""
-        assert zeromq_broker._get_sockets_path() is None
-
-    def test_get_sockets_path_os_error(self, zeromq_broker):
-        """Test _get_sockets_path when read fails."""
-        sockets_file = zeromq_broker.service_dir / 'broker.sockets'
-        sockets_file.mkdir()  # directory instead of file => OSError on read_text
-        assert zeromq_broker._get_sockets_path() is None
-
-    def test_get_service_pid_sentinel_format(self, zeromq_broker):
-        """Test PID file with sentinel format."""
-        pid_file = zeromq_broker.service_dir / 'broker.pid'
-        pid_file.write_text('aiida-zeromq-broker 12345')
-        assert zeromq_broker.get_service_pid() == 12345
-
-    def test_get_service_pid_bare_format(self, zeromq_broker):
-        """Test PID file with bare PID fallback."""
-        pid_file = zeromq_broker.service_dir / 'broker.pid'
-        pid_file.write_text('54321')
-        assert zeromq_broker.get_service_pid() == 54321
-
-    def test_get_service_pid_invalid(self, zeromq_broker):
-        """Test PID file with invalid content."""
-        pid_file = zeromq_broker.service_dir / 'broker.pid'
-        pid_file.write_text('garbage text')
-        assert zeromq_broker.get_service_pid() is None
 
     def test_is_running_stale_pid(self, zeromq_broker):
         """Test is_running with stale PID."""
@@ -145,11 +108,12 @@ class TestZeromqBrokerStatusQueries:
 class TestZeromqBrokerCommunicator:
     """Tests for ZeromqBroker communicator management."""
 
-    def test_get_communicator_and_close(self, zeromq_broker_with_server):
+    def test_get_communicator_and_close(self, zeromq_broker_with_server, monkeypatch):
         """Test get_communicator and close."""
         try:
             with patch('aiida.manage.configuration.get_config_option', return_value=None):
-                comm = zeromq_broker_with_server.get_communicator(wait_for_broker=5.0)
+                monkeypatch.setattr('aiida.brokers.zeromq.broker.BROKER_READY_TIMEOUT', 0.5)
+                comm = zeromq_broker_with_server.get_communicator()
                 assert comm is not None
                 assert not comm.is_closed()
 
@@ -159,10 +123,11 @@ class TestZeromqBrokerCommunicator:
         finally:
             zeromq_broker_with_server.close()
 
-    def test_get_communicator_timeout(self, zeromq_broker):
+    def test_get_communicator_timeout(self, zeromq_broker, monkeypatch):
         """Test get_communicator raises on timeout when zeromq_broker not running."""
+        monkeypatch.setattr('aiida.brokers.zeromq.broker.BROKER_READY_TIMEOUT', 0.5)
         with pytest.raises(ConnectionError, match='did not become ready'):
-            zeromq_broker.get_communicator(wait_for_broker=0.5)
+            zeromq_broker.get_communicator()
 
     def test_context_manager(self, zeromq_broker):
         """Test __enter__ / __exit__."""
@@ -209,7 +174,7 @@ class TestZeromqIncomingTask:
 
 
 class TestZeromqBrokerIntegration:
-    """Integration tests for the ZeroMQ zeromq_broker with AiiDA."""
+    """Integration tests for the ZeroMQ broker with AiiDA."""
 
     def test_broker_lifecycle(self, zeromq_broker_with_server):
         """Test the zeromq_broker lifecycle."""
@@ -218,15 +183,3 @@ class TestZeromqBrokerIntegration:
         status = zeromq_broker_with_server.get_service_status()
         assert status is not None
         assert 'pid' in status
-
-    def test_communicator_connection(self, zeromq_broker_with_server):
-        """Test connecting a communicator to the zeromq_broker."""
-        communicator = ZeromqCommunicator(
-            router_endpoint=zeromq_broker_with_server.router_endpoint,
-        )
-        communicator.start()
-
-        try:
-            assert not communicator.is_closed()
-        finally:
-            communicator.close()

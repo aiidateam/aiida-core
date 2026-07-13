@@ -21,7 +21,7 @@ import os
 import shutil
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Literal, Optional, Tuple, TypeAlias, TypedDict, cast
 
 from pydantic import (
     BaseModel,
@@ -39,6 +39,62 @@ from .options import Option, get_option, get_option_names, parse_option, resolve
 from .profile import Profile
 
 LOGGER = AIIDA_LOGGER.getChild('manage.configuration.config')
+
+
+CircusEndpointName: TypeAlias = Literal['controller', 'pubsub', 'stats']
+
+
+class CircusEndpointFilepaths(TypedDict):
+    """Typed dictionary for Circus endpoint socket file names."""
+
+    controller: str
+    pubsub: str
+    stats: str
+
+
+class CircusSocketFilepaths(CircusEndpointFilepaths):
+    """Typed dictionary for Circus socket file paths."""
+
+    file: str
+
+
+class ProfileFilepaths(TypedDict):
+    """Typed dictionary for profile log file paths."""
+
+    log: str
+
+
+class CircusFilepaths(TypedDict):
+    """Typed dictionary for Circus file paths."""
+
+    log: str
+    pid: str
+    port: str
+    socket: CircusSocketFilepaths
+
+
+class DaemonFilepaths(TypedDict):
+    """Typed dictionary for daemon file paths."""
+
+    log: str
+    pid: str
+    daemon_env_info: str
+
+
+class ZeromqBrokerServiceFilepaths(TypedDict):
+    """Typed dictionary for ZeroMQ broker file paths."""
+
+    dir: str
+    log: str
+
+
+class ConfigFilepaths(TypedDict):
+    """Typed dictionary for profile-related file paths."""
+
+    profile: ProfileFilepaths
+    circus: CircusFilepaths
+    daemon: DaemonFilepaths
+    zmq_broker_service: ZeromqBrokerServiceFilepaths
 
 
 class ConfigVersionSchema(BaseModel, defer_build=True):
@@ -954,7 +1010,7 @@ class Config:
             handle.close()
             shutil.move(handle.name, self.filepath)
 
-    def filepaths(self, profile: Profile):
+    def filepaths(self, profile: Profile) -> ConfigFilepaths:
         """Return the filepaths used by a profile.
 
         :return: a dictionary of filepaths

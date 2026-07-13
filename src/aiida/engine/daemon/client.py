@@ -39,6 +39,8 @@ from aiida.manage.manager import get_manager
 if TYPE_CHECKING:
     from circus.client import CircusClient
 
+    from aiida.manage.configuration.config import CircusEndpointFilepaths, CircusEndpointName
+
 LOGGER = AIIDA_LOGGER.getChild('engine.daemon.client')
 
 VERDI_BIN = shutil.which('verdi')
@@ -335,8 +337,13 @@ class DaemonClient:
         return self._config.filepaths(self.profile)['circus']['socket']['file']
 
     @property
-    def circus_socket_endpoints(self) -> dict[str, str]:
-        return self._config.filepaths(self.profile)['circus']['socket']
+    def circus_socket_endpoints(self) -> 'CircusEndpointFilepaths':
+        socket_filepaths = self._config.filepaths(self.profile)['circus']['socket']
+        return {
+            'controller': socket_filepaths['controller'],
+            'pubsub': socket_filepaths['pubsub'],
+            'stats': socket_filepaths['stats'],
+        }
 
     @property
     def daemon_log_file(self) -> str:
@@ -528,7 +535,7 @@ class DaemonClient:
 
         return endpoint
 
-    def get_ipc_endpoint(self, endpoint):
+    def get_ipc_endpoint(self, endpoint: 'CircusEndpointName'):
         """Get the ipc endpoint string for a circus daemon endpoint for a given socket.
 
         :param endpoint: The circus endpoint for which to return a socket.
@@ -537,9 +544,9 @@ class DaemonClient:
         filepath = self.get_circus_socket_directory()
         filename = self.circus_socket_endpoints[endpoint]
         template = 'ipc://{filepath}/{filename}'
-        endpoint = template.format(filepath=filepath, filename=filename)
+        endpoint_string = template.format(filepath=filepath, filename=filename)
 
-        return endpoint
+        return endpoint_string
 
     def get_tcp_endpoint(self, port=None):
         """Get the tcp endpoint string for a circus daemon endpoint.

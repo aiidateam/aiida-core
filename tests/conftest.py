@@ -26,6 +26,7 @@ import time
 import types
 import typing as t
 import warnings
+from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -82,18 +83,22 @@ def zeromq_broker(tmp_path):
         yield ZeromqBroker(profile)
 
 
-def start_zeromq_broker(broker, timeout: float = 10.0):
-    """Start a ZeroMQ broker service subprocess for testing.
+@pytest.fixture
+def zeromq_broker_server(zeromq_broker):
+    with _run_zeromq_broker_server(zeromq_broker) as started_broker:
+        yield started_broker
 
-    :param broker: A ``ZeromqBroker`` instance (has ``service_dir``, ``is_running``, etc.)
-    """
-    broker.service_dir.mkdir(parents=True, exist_ok=True)
 
-    if broker.is_running:
+@contextmanager
+def _run_zeromq_broker_server(zeromq_broker, timeout: float = 10.0):
+    """Run a ZeroMQ broker service subprocess for the duration of a context."""
+    zeromq_broker.service_dir.mkdir(parents=True, exist_ok=True)
+
+    if zeromq_broker.check_is_service_running():
         return
 
     subprocess.Popen(
-        [sys.executable, '-m', 'aiida.brokers.zeromq.service', '--service-dir', str(broker.service_dir)],
+        [sys.executable, '-m', 'aiida.brokers.zeromq.service', '--service-dir', str(zeromq_broker.service_dir)],
         start_new_session=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -101,34 +106,29 @@ def start_zeromq_broker(broker, timeout: float = 10.0):
     )
 
     start_time = time.time()
-    while time.time() - start_time < timeout:
-        if broker.is_running:
-            return
+    while time.time() - start_time < 10:
+        if zeromq_broker.is_running:
+            yield
         time.sleep(0.1)
 
-    raise TimeoutError(f'ZeroMQ broker did not start within {timeout}s')
+    if not zeromq_broker.is_running:
+        raise TimeoutError(f'ZeroMQ broker did not start within {timeout}s')
 
-
-def stop_zeromq_broker(broker, timeout: float = 5.0):
-    """Stop a ZeroMQ broker service subprocess for testing.
-
-    :param broker: A ``ZeromqBroker`` instance
-    """
-    pid = broker.get_service_pid()
-    if pid is None or not broker.is_running:
-        broker._cleanup_stale_service_files()
+    pid = zeromq_broker.get_service_pid()
+    if pid is None or not zeromq_broker.is_running:
+        zeromq_broker._cleanup_stale_service_files()
         return
 
     try:
         os.kill(pid, signal.SIGINT)
     except OSError:
-        broker._cleanup_stale_service_files()
+        zeromq_broker._cleanup_stale_service_files()
         return
 
     start_time = time.time()
     while time.time() - start_time < timeout:
-        if not broker.is_running:
-            broker._cleanup_stale_service_files()
+        if not zeromq_broker.is_running:
+            zeromq_broker._cleanup_stale_service_files()
             return
         time.sleep(0.1)
 
@@ -136,7 +136,7 @@ def stop_zeromq_broker(broker, timeout: float = 5.0):
         os.kill(pid, signal.SIGKILL)
     except OSError:
         pass
-    broker._cleanup_stale_service_files()
+    zeromq_broker._cleanup_stale_service_files()
 
 
 def pytest_collection_modifyitems(items, config):
@@ -333,12 +333,9 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
     ) as profile:
         # Start ZeroMQ broker service if needed (tests don't use circus)
         broker_instance = get_manager().get_broker()
-        if broker_instance is not None and hasattr(broker_instance, 'is_running'):
-            start_zeromq_broker(broker_instance)
-            try:
+        if isinstance(broker_instance, ZeromqBroker):
+            with _run_zeromq_broker_server(broker_instance):
                 yield profile
-            finally:
-                stop_zeromq_broker(broker_instance)
         else:
             yield profile
 

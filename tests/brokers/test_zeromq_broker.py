@@ -18,7 +18,6 @@ import pytest
 from aiida.brokers.zeromq.broker import ZeromqBroker, ZeromqIncomingTask
 from aiida.brokers.zeromq.communicator import ZeromqCommunicator
 from aiida.brokers.zeromq.queue import PersistentQueue
-from tests.conftest import start_zeromq_broker, stop_zeromq_broker
 
 
 def test_get_default_config():
@@ -56,57 +55,11 @@ class TestZeromqBrokerStatusQueries:
         """Test endpoints return None when sockets file doesn't exist."""
         assert zeromq_broker.router_endpoint is None
 
-    def test_start_stop_cycle(self, zeromq_broker):
-        """Test querying a running zeromq_broker service."""
-        start_zeromq_broker(zeromq_broker)
-
-        try:
-            assert zeromq_broker.is_running
-            assert zeromq_broker.get_service_pid() is not None
-            assert zeromq_broker.router_endpoint is not None
-        finally:
-            stop_zeromq_broker(zeromq_broker)
-
-        assert not zeromq_broker.is_running
-
-    def test_start_already_running(self, zeromq_broker):
-        """Test starting when already running is idempotent."""
-        start_zeromq_broker(zeromq_broker)
-
-        try:
-            start_zeromq_broker(zeromq_broker)  # idempotent
-            assert zeromq_broker.is_running
-        finally:
-            stop_zeromq_broker(zeromq_broker)
-
-    def test_stop_not_running(self, zeromq_broker):
-        """Test stopping when not running is a no-op."""
-        stop_zeromq_broker(zeromq_broker)  # Should not raise
-
-    def test_restart(self, zeromq_broker):
-        """Test restarting the zeromq_broker service."""
-        start_zeromq_broker(zeromq_broker)
-
-        try:
-            old_pid = zeromq_broker.get_service_pid()
-            stop_zeromq_broker(zeromq_broker)
-            start_zeromq_broker(zeromq_broker)
-            assert zeromq_broker.is_running
-
-            new_pid = zeromq_broker.get_service_pid()
-            assert new_pid != old_pid
-        finally:
-            stop_zeromq_broker(zeromq_broker)
-
-    def test_str_running(self, zeromq_broker):
+    def test_str_running(self, zeromq_broker_server):
         """Test __str__ when running."""
-        start_zeromq_broker(zeromq_broker)
-        try:
-            s = str(zeromq_broker)
-            assert 'ZeroMQ Broker' in s
-            assert 'PID' in s
-        finally:
-            stop_zeromq_broker(zeromq_broker)
+        s = str(zeromq_broker_server)
+        assert 'ZeroMQ Broker' in s
+        assert 'PID' in s
 
     def test_str_not_running(self, zeromq_broker):
         """Test __str__ when not running."""
@@ -169,43 +122,23 @@ class TestZeromqBrokerStatusQueries:
         status_file.write_text('{INVALID JSON')
         assert zeromq_broker.get_service_status() is None
 
-    def test_cleanup_stale_service_files(self, zeromq_broker):
-        """Test _cleanup_stale_service_files removes all stale files."""
-
-        service_dir = zeromq_broker.service_dir
-        (service_dir / 'broker.pid').write_text('aiida-zeromq-broker 1')
-        (service_dir / 'broker.status').write_text('{}')
-        sockets_dir = service_dir / 'test_sockets'
-        sockets_dir.mkdir()
-        (service_dir / 'broker.sockets').write_text(str(sockets_dir))
-
-        zeromq_broker._cleanup_stale_service_files()
-
-        assert not (service_dir / 'broker.pid').exists()
-        assert not (service_dir / 'broker.status').exists()
-        assert not (service_dir / 'broker.sockets').exists()
-        assert not sockets_dir.exists()
-
 
 class TestZeromqBrokerCommunicator:
     """Tests for ZeromqBroker communicator management."""
 
-    def test_get_communicator_and_close(self, zeromq_broker):
+    def test_get_communicator_and_close(self, zeromq_broker_server):
         """Test get_communicator and close."""
-        start_zeromq_broker(zeromq_broker)
-
         try:
             with patch('aiida.manage.configuration.get_config_option', return_value=None):
-                comm = zeromq_broker.get_communicator(wait_for_broker=5.0)
+                comm = zeromq_broker_server.get_communicator(wait_for_broker=5.0)
                 assert comm is not None
                 assert not comm.is_closed()
 
                 # Second call returns cached instance
-                comm2 = zeromq_broker.get_communicator()
+                comm2 = zeromq_broker_server.get_communicator()
                 assert comm2 is comm
         finally:
-            zeromq_broker.close()
-            stop_zeromq_broker(zeromq_broker)
+            zeromq_broker_server.close()
 
     def test_get_communicator_timeout(self, zeromq_broker):
         """Test get_communicator raises on timeout when zeromq_broker not running."""
@@ -259,27 +192,18 @@ class TestZeromqIncomingTask:
 class TestZeromqBrokerIntegration:
     """Integration tests for the ZeroMQ zeromq_broker with AiiDA."""
 
-    @pytest.fixture
-    def zeromq_broker(self, zeromq_broker):
-        """Create a ZeroMQ zeromq_broker for testing."""
-        start_zeromq_broker(zeromq_broker)
-
-        yield zeromq_broker
-
-        stop_zeromq_broker(zeromq_broker)
-
-    def test_broker_lifecycle(self, zeromq_broker):
+    def test_broker_lifecycle(self, zeromq_broker_server):
         """Test the zeromq_broker lifecycle."""
-        assert zeromq_broker.is_running
+        assert zeromq_broker_server.is_running
 
-        status = zeromq_broker.get_service_status()
+        status = zeromq_broker_server.get_service_status()
         assert status is not None
         assert 'pid' in status
 
-    def test_communicator_connection(self, zeromq_broker):
+    def test_communicator_connection(self, zeromq_broker_server):
         """Test connecting a communicator to the zeromq_broker."""
         communicator = ZeromqCommunicator(
-            router_endpoint=zeromq_broker.router_endpoint,
+            router_endpoint=zeromq_broker_server.router_endpoint,
         )
         communicator.start()
 

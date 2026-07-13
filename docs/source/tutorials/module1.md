@@ -32,6 +32,16 @@ After this module, you will be able to:
 - Explore and visualize the provenance graph
 - Dump calculation data to disk with `verdi process dump`
 
+:::{note} Setup
+This module needs AiiDA and `aiida-shell`:
+
+```bash
+pip install aiida-core aiida-shell
+```
+
+It also uses the small `gsrd` simulator introduced in {ref}`Module 0 <tutorial:module0>`.
+:::
+
 ## Setting up your AiiDA profile
 
 An AiiDA **profile** defines the configuration for an AiiDA instance:
@@ -92,11 +102,10 @@ Below, we use its `launch_shell_job` helper with the same input file as in {ref}
 
 ```{code-cell} ipython3
 # Run the simulation through AiiDA using aiida-shell's launch_shell_job.
-from pathlib import Path
-
 from aiida_shell import launch_shell_job
 
-input_path = Path('include/input.yaml').resolve()
+# aiida-shell accepts a path to the input file, relative to this notebook.
+input_path = 'include/input.yaml'
 
 results, node = launch_shell_job(
     gsrd_code,
@@ -157,6 +166,7 @@ This graph answers questions like *"Where did this number come from?"* and *"Wha
 :::{tip}
 Open the image in a new tab for a larger view.
 You can also generate provenance graphs from the command line with `verdi node graph generate <PK or UUID>`.
+The `plot_provenance` helper is a thin wrapper we ship in {download}`include/plotting.py`, where all of the tutorial's `plot_*` helpers live. Plotting is not the focus here, so we keep that boilerplate out of the way; open the file if you are curious.
 :::
 
 ## Inspecting the calculation
@@ -233,19 +243,21 @@ We collapse the cell output here, since it is the same wall of text as before:
 print(node.outputs.stdout.get_content())
 ```
 
-In later modules we extract just the diagnostics block from this text, so the banner and progress lines are hidden from the displayed output. They are always present in the captured stdout node, just collapsed for readability.
+In later modules we extract just the diagnostics block from this text, so the banner and progress lines are folded out of the displayed output. They are always present in the captured stdout node, just collapsed for readability.
 
 Here is how we extract the actual values:
 
 ```{code-cell} ipython3
-:tags: ["hide-input"]
-
-# Pull the final V field out of the .npz, and grep the scalars out of stdout.
+# Pull the final V field out of the .npz, and read the scalars from stdout.
 import io
+import re
 
 import numpy as np
 
-from include.constants import MEAN_RE, VARIANCE_RE
+# gsrd prints its two summary numbers only to stdout, so we read them with a
+# small regex. (Module 2 turns this hand-parsing into a tracked calcfunction.)
+variance_re = re.compile(r'Variance of V field\s*:\s*([\d.eE+-]+)')
+mean_re = re.compile(r'Mean\s+of V field\s*=\s*([\d.eE+-]+)')
 
 with node.outputs.results_npz.open(mode='rb') as fh:
     arrays = np.load(io.BytesIO(fh.read()))
@@ -254,8 +266,8 @@ with node.outputs.results_npz.open(mode='rb') as fh:
 print(f"V field shape: {v_field.shape}")
 
 stdout_text = node.outputs.stdout.get_content()
-var_v = float(VARIANCE_RE.search(stdout_text).group(1))
-mean_v = float(MEAN_RE.search(stdout_text).group(1))
+var_v = float(variance_re.search(stdout_text).group(1))
+mean_v = float(mean_re.search(stdout_text).group(1))
 print(f"variance(V) = {var_v:.4e}")
 print(f"mean(V)     = {mean_v:.4e}")
 ```
@@ -292,16 +304,14 @@ AiiDA stores everything in its internal database and file repository (efficient 
 ```{code-cell} ipython3
 :tags: ["hide-output"]
 
-# Export the full calculation (inputs, outputs, logs) to a directory.
-import tempfile
-
-dump_path = tempfile.mkdtemp(prefix='aiida_tutorial_dump_')
-%verdi process dump {node.pk} --path {dump_path} -o
+# Export the full calculation (inputs, outputs, logs) into a `tmp/` folder.
+!mkdir -p tmp
+%verdi process dump {node.pk} --path tmp/dump -o
 ```
 
 ```{code-cell} ipython3
 # Show the directory tree of the dumped calculation data.
-!tree {dump_path}
+!tree tmp/dump
 ```
 
 All the relevant entities of the calculation are there: the input file, the simulation script, the submission script, captured stdout and stderr, and AiiDA metadata.

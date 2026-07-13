@@ -43,6 +43,14 @@ After this module, you will be able to:
 - Add input preparation and output parsing as tracked Python steps to the simulation's provenance
 - Organize results with extras and groups for quick retrieval
 
+:::{note} Setup
+Same requirements as {ref}`Module 1 <tutorial:module1>`:
+
+```bash
+pip install aiida-core aiida-shell
+```
+:::
+
 ```{code-cell} ipython3
 # Set up the tutorial's isolated sandbox profile (same as Module 1).
 # `%load_ext aiida` enables the `%verdi` magic; `%run` creates or loads the
@@ -59,21 +67,34 @@ Let's start varying our simulation parameters: scan the feed rate `F` and see ho
 
 ```{code-cell} ipython3
 # Sweep the feed rate F using aiida-shell.
-import tempfile
-from pathlib import Path
-
 import yaml
 
 from aiida_shell import launch_shell_job
 
-from include.constants import BASE_PARAMS, F_VALUES
+# Fixed Gray-Scott parameters; we vary only the feed rate F below.
+base_params = {
+    'grid_size': 64,
+    'du': 0.16,
+    'dv': 0.08,
+    'F': 0.04,
+    'k': 0.065,
+    'dt': 1.0,
+    'n_steps': 3000,
+    'seed': 42,
+}
+# Feed-rate values to scan, denser around the F ~ 0.043 transition.
+f_values = [0.038, 0.040, 0.042, 0.044, 0.046, 0.050, 0.055, 0.060]
 
-work_dir = Path(tempfile.mkdtemp(prefix='aiida_tutorial_m2_'))
+!mkdir -p tmp
 calc_nodes = []
 
-for f_val in F_VALUES:
-    input_path = work_dir / (f'input_F{f_val:.3f}'.replace('.', '_') + '.yaml')
-    input_path.write_text(yaml.dump(BASE_PARAMS | {'F': f_val}))
+for f_val in f_values:
+    # Write one input file per F value into the tmp/ folder.
+    label = f'F{f_val:.3f}'.replace('.', '_')  # e.g. F0_038
+    input_path = f'tmp/input_{label}.yaml'
+    params = base_params | {'F': f_val}
+    with open(input_path, 'w') as fh:
+        yaml.dump(params, fh)
 
     results, calc_node = launch_shell_job(
         gsrd_code,
@@ -85,19 +106,19 @@ for f_val in F_VALUES:
 ```
 
 We saw in {ref}`Module 1 <tutorial:module1>` that `gsrd` only prints its scalar diagnostics (`variance(V)`, `mean(V)`) to stdout.
-So to get the numbers for plotting, we have to grep stdout for each run, same regex as before, just inside a `for` loop now:
+So to get the numbers for plotting, we read each run's stdout, same regex as before, just inside a `for` loop now:
 
 ```{code-cell} ipython3
-# Extract and print results from each run by regexing stdout.
-# VARIANCE_RE / MEAN_RE live in `include/constants.py` so every module that
-# needs to scrape gsrd's diagnostics can import the same patterns.
-from include.constants import VARIANCE_RE
+# Extract and print the variance from each run's stdout.
+import re
+
+variance_re = re.compile(r'Variance of V field\s*:\s*([\d.eE+-]+)')
 
 sweep_results = []
 
 for f_val, calc_node in calc_nodes:
     text = calc_node.outputs.stdout.get_content()
-    variance_v = float(VARIANCE_RE.search(text).group(1))
+    variance_v = float(variance_re.search(text).group(1))
     sweep_results.append({'F': f_val, 'variance_V': variance_v})
 
 for r in sweep_results:
@@ -235,16 +256,18 @@ When *calling* the function, AiiDA auto-serializes plain Python types (`int`, `f
 :::
 
 This also starts to address one of {ref}`Module 0 <tutorial:module0>`'s pain points: the parameters now live in a single `Dict` node, stored with full provenance and reviewable in one place, rather than a hand-edited YAML file whose mistyped keys vanish silently.
-The `Dict` alone still doesn't validate the keys, but real {ref}`CalcJob <topics:calculations:concepts:calcjobs>` plugins do: they declare typed, validated input ports in their process spec, rejecting unknown or malformed parameters before the calculation ever runs.
+The `Dict` alone still doesn't validate the keys, but real {ref}`CalcJob <topics:calculations:concepts:calcjobs>` plugins do: they check the inputs for you and reject unknown or malformed parameters before the calculation ever runs.
 
 The second, `parse_output`, takes the captured stdout of a `gsrd` run and extracts the two scalar diagnostics as `Float` nodes.
 We declare the two return keys as a {class}`~typing.TypedDict` so the function's return type is self-documenting (and so that {ref}`Module 3 <tutorial:module3>` can reuse the same annotation):
 
 ```{code-cell} ipython3
-# Define parse_output: a calcfunction that regexes scalars out of gsrd stdout.
+# Define parse_output: a calcfunction that reads the scalars from gsrd stdout.
+import re
 from typing import TypedDict
 
-from include.constants import MEAN_RE, VARIANCE_RE
+variance_re = re.compile(r'Variance of V field\s*:\s*([\d.eE+-]+)')
+mean_re = re.compile(r'Mean\s+of V field\s*=\s*([\d.eE+-]+)')
 
 
 class ParseOutputs(TypedDict):
@@ -258,8 +281,8 @@ def parse_output(stdout: orm.SinglefileData) -> ParseOutputs:
     with stdout.open(mode='r') as f:
         text = f.read()
 
-    variance_v = float(VARIANCE_RE.search(text).group(1))
-    mean_v = float(MEAN_RE.search(text).group(1))
+    variance_v = float(variance_re.search(text).group(1))
+    mean_v = float(mean_re.search(text).group(1))
 
     return {
         'variance_V': orm.Float(variance_v),
@@ -283,7 +306,7 @@ Each step is tracked, and the inputs and outputs are stored as structured, query
 
 ```{code-cell} ipython3
 # Run the enriched pipeline: prepare_input → ShellJob → parse_output.
-input_file = prepare_input(orm.Dict(BASE_PARAMS))
+input_file = prepare_input(orm.Dict(base_params))
 
 results, node = launch_shell_job(
     gsrd_code,
@@ -328,8 +351,8 @@ Scaling that up to the full sweep, with the same structured data at every step:
 # Re-run the full sweep with the enriched pipeline (structured data at every step).
 enriched_results = []
 
-for f_val in F_VALUES:
-    input_file = prepare_input(BASE_PARAMS | {'F': f_val})
+for f_val in f_values:
+    input_file = prepare_input(base_params | {'F': f_val})
 
     results, calc_node = launch_shell_job(
         gsrd_code,

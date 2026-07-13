@@ -11,7 +11,8 @@ from pathlib import Path
 
 import psutil
 
-from aiida.brokers.broker import Broker
+from aiida.brokers.broker import Broker, BrokerConfigField
+from aiida.common.exceptions import ConfigurationError
 from aiida.common.log import AIIDA_LOGGER
 
 from .communicator import ZeromqCommunicator
@@ -37,11 +38,35 @@ class ZeromqBroker(Broker):
     # Class attribute for type discovery
     Communicator = ZeromqCommunicator
 
-    def __init__(self, profile: 'Profile') -> None:
-        from aiida.manage.configuration import get_config
+    _config_fields = (
+        BrokerConfigField(
+            name='supervised_by_daemon',
+            prompt='Managed by daemon',
+            help='Whether the lifecycle of the broker service is managed by the daemon.',
+            default=True,
+            param_type='bool',
+            # Running the broker service outside of the daemon is not yet supported, so the setting is not
+            # configurable and always stored with its default.
+            expose_cli=False,
+        ),
+    )
 
+    def __init__(self, profile: 'Profile') -> None:
         super().__init__(profile)
         self._communicator: ZeromqCommunicator | None = None
+
+        # The broker service determines this location, not this client. Currently the service is always managed by
+        # the daemon, so the daemon client is the authority for the directory.
+        if not profile.process_control_config.get('supervised_by_daemon', True):
+            msg = (
+                'The ZeroMQ broker service is not managed by the daemon (`supervised_by_daemon` is false in the broker '
+                'settings), so the location of its state files is unknown. Running the broker service outside of the '
+                'daemon is not yet supported.'
+            )
+            raise ConfigurationError(msg)
+
+        from aiida.manage.configuration import get_config
+
         zmq_broker_service_dir = get_config().filepaths(profile)['zmq_broker_service']['dir']
         zmq_broker_service_log_path = get_config().filepaths(profile)['zmq_broker_service']['log']
         layout = ZeromqBrokerService.FilepathLayout(zmq_broker_service_dir, zmq_broker_service_log_path)

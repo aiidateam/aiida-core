@@ -971,35 +971,37 @@ class DaemonClient:
         from aiida.brokers.zeromq import ZeromqBroker
         from aiida.manage.manager import get_manager
 
-        try:
-            broker_instance = get_manager().get_broker()
-        except Exception:
-            LOGGER.warning('Could not load the broker instance while preparing daemon watchers.', exc_info=True)
-            broker_instance = None
-        if isinstance(broker_instance, ZeromqBroker) and not broker_instance.is_running:
-            # prepare zmq broker service profile directory
-            pathlib.Path(self.zmq_broker_service_dir).mkdir(parents=True, exist_ok=True)
+        supervised_by_daemon = self.profile.process_control_config.get('supervised_by_daemon', True)
+        if self.profile.process_control_backend == 'core.zeromq' and supervised_by_daemon:
+            try:
+                broker_instance = get_manager().get_broker()
+            except Exception:
+                LOGGER.warning('Could not load the broker instance while preparing daemon watchers.', exc_info=True)
+                broker_instance = None
+            if isinstance(broker_instance, ZeromqBroker) and not broker_instance.is_running:
+                # prepare zmq broker service profile directory
+                pathlib.Path(self.zmq_broker_service_dir).mkdir(parents=True, exist_ok=True)
 
-            watchers.append(
-                {
-                    'cmd': ' '.join(self._cmd_start_zmq_broker),
-                    'name': f'{self.daemon_name}-zmq-broker-service',
-                    'numprocesses': 1,
-                    'virtualenv': self.virtualenv,
-                    'copy_env': True,
-                    'stdout_stream': {
-                        'class': 'FileStream',
-                        'filename': self.zmq_broker_service_log_file,
-                        'time_format': '%Y-%m-%d %H:%M:%S',
-                    },
-                    'stderr_stream': {
-                        'class': 'FileStream',
-                        'filename': self.zmq_broker_service_log_file,
-                        'time_format': '%Y-%m-%d %H:%M:%S',
-                    },
-                    'env': self.get_env(),
-                }
-            )
+                watchers.append(
+                    {
+                        'cmd': ' '.join(self._cmd_start_zmq_broker),
+                        'name': f'{self.daemon_name}-zmq-broker-service',
+                        'numprocesses': 1,
+                        'virtualenv': self.virtualenv,
+                        'copy_env': True,
+                        'stdout_stream': {
+                            'class': 'FileStream',
+                            'filename': self.zmq_broker_service_log_file,
+                            'time_format': '%Y-%m-%d %H:%M:%S',
+                        },
+                        'stderr_stream': {
+                            'class': 'FileStream',
+                            'filename': self.zmq_broker_service_log_file,
+                            'time_format': '%Y-%m-%d %H:%M:%S',
+                        },
+                        'env': self.get_env(),
+                    }
+                )
 
         watchers.append(
             {

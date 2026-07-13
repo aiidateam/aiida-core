@@ -25,6 +25,8 @@ class BrokerConfigField:
     param_type: str
     choices: tuple[str, ...] | None = None
     hide_input: bool = False
+    expose_cli: bool = True
+    """Whether the field is exposed as a CLI option. If ``False``, the default value is always used."""
 
 
 class Broker(abc.ABC):
@@ -38,6 +40,14 @@ class Broker(abc.ABC):
         :param profile: The profile.
         """
         self._profile = profile
+
+    @classmethod
+    def get_default_config(cls) -> dict[str, t.Any]:
+        """Return the default broker configuration derived from the declared config fields.
+
+        :return: Mapping of configuration field names to their default values.
+        """
+        return {field.name: field.default for field in cls._config_fields}
 
     @classmethod
     def get_detected_config(cls, get_value: 'Callable[[str], t.Any]') -> dict[str, t.Any]:

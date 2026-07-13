@@ -202,6 +202,7 @@ def verdi_presto(
     from aiida.common import exceptions
     from aiida.manage.configuration import create_profile, load_profile
     from aiida.orm import Computer
+    from aiida.plugins import BrokerFactory
 
     if profile_name in ctx.obj.config.profile_names:
         raise click.BadParameter(f'The profile `{profile_name}` already exists.', param_hint='--profile-name')
@@ -238,7 +239,7 @@ def verdi_presto(
     elif use_zeromq:
         echo.echo_report('`--use-zeromq` enabled: configuring the profile with ZeroMQ broker.')
         broker_backend = 'core.zeromq'
-        broker_config = {}
+        broker_config = BrokerFactory(broker_backend).get_default_config()
     else:
         try:
             broker_config = detect_rabbitmq_config()
@@ -249,7 +250,7 @@ def verdi_presto(
                 'recreate the profile with `verdi presto --no-broker`.'
             )
             broker_backend = 'core.zeromq'
-            broker_config = {}
+            broker_config = BrokerFactory(broker_backend).get_default_config()
         else:
             echo.echo_report('RabbitMQ server detected: configuring the profile with RabbitMQ broker.')
             broker_backend = 'core.rabbitmq'

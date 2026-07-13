@@ -60,10 +60,6 @@ jobs:
         echo "vars=$vars" | tee -a "${GITHUB_OUTPUT}"
 
     - id: tag-check
-      # Single source of truth for "this build is a version tag" (v-prefixed). The
-      # version-gated steps and tag rules below reference this instead of each
-      # re-deriving the same condition. Computed as a GitHub expression so no ref
-      # name is interpolated into the shell.
       run: echo "IS_VERSION_TAG=${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}" >> "$GITHUB_OUTPUT"
 
     - id: get-version
@@ -78,11 +74,7 @@ jobs:
       env:
         TAG: ${{ github.ref_name }}
       run: |
-        # `latest` only if this tag is the highest final release. metadata-action sees
-        # only the tag being built, so we compare against the remote's tags ourselves;
-        # otherwise `latest` would follow the most recently pushed tag, not the highest.
         remote_tags=$(git ls-remote --tags --refs origin | sed 's|.*refs/tags/||')
-        # Keep final releases only (vX.Y.Z, no rc/pre/... suffix); `|| true` so "no match" is empty, not an error.
         release_tags=$(grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' <<<"$remote_tags" || true)
         highest=$(sort -V <<<"$release_tags" | tail -n1)
         if [[ -n "$highest" && "$TAG" == "$highest" ]]; then
@@ -90,7 +82,6 @@ jobs:
         else
           is_latest=false
         fi
-        # Surface the decision in the run summary so a skipped `latest` is never a mystery.
         echo "latest tag: this release $TAG, highest final on origin ${highest:-none}, IS_LATEST=$is_latest" >> "$GITHUB_STEP_SUMMARY"
         echo "IS_LATEST=$is_latest" >> "$GITHUB_OUTPUT"
 

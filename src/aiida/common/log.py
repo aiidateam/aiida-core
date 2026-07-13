@@ -231,7 +231,6 @@ def validate_handler(config: t.Any, option_name: str, scope: str | None = None) 
         return (
             f'`{option_name}` is set to `{log_level.value}` but no logger emits messages at that level: '
             f'the most verbose logger level is `{most_verbose_logger}` (`{most_verbose_level.value}`). '
-            f'Lower a logger level such as `logging.aiida_loglevel` for this setting to take effect.'
         )
 
     return None

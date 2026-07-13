@@ -139,7 +139,9 @@ def test_config_set_handler_warns_when_ineffective(run_cli_command, config_with_
     options = ['config', 'set', 'logging.terminal_handler', 'DEBUG']
     result = run_cli_command(cmd_verdi.verdi, options, use_subprocess=False)
     assert 'Warning' in result.output
-    assert 'take effect' in result.output
+    assert 'no logger emits messages at that level' in result.output
+    assert 'logging.aiida_loglevel' in result.output
+    assert 'REPORT' in result.output
 
 
 @pytest.mark.parametrize(

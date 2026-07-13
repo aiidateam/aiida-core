@@ -19,6 +19,7 @@ import dataclasses
 import logging
 import os
 import pathlib
+import shutil
 import signal
 import subprocess
 import sys
@@ -123,7 +124,7 @@ def _run_zeromq_broker_server(zeromq_broker: ZeromqBroker, timeout: float = 10.0
                     process.kill()
                     process.wait()
         finally:
-            zeromq_broker._cleanup_stale_service_files()
+            shutil.rmtree(zeromq_broker.service_dir, ignore_errors=True)
 
 
 def pytest_collection_modifyitems(items, config):

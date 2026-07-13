@@ -33,7 +33,7 @@
 .. grid:: 1 2 2 2
    :gutter: 3
 
-   .. grid-item-card:: :fa:`circle-play;mr-1` Introduction
+   .. grid-item-card:: :fa:`circle-play;mr-1` About
       :text-align: center
       :shadow: md
 
@@ -48,7 +48,7 @@
          :color: primary
          :outline:
 
-         To the introduction
+         To the overview
 
    .. grid-item-card:: :fa:`rocket;mr-1` Installation
       :text-align: center

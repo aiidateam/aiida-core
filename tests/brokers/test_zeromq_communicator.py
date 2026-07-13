@@ -17,53 +17,37 @@ import kiwipy
 import pytest
 
 from aiida.brokers.zeromq.communicator import ZeromqCommunicator
-from tests.conftest import start_zeromq_broker, stop_zeromq_broker
 
 
 class TestZeromqCommunicatorLifecycle:
     """Tests for communicator initialization and lifecycle."""
 
-    def test_init(self, zeromq_broker):
+    def test_init(self, zeromq_broker_server):
         """Test communicator initialization."""
-        start_zeromq_broker(zeromq_broker)
+        communicator = ZeromqCommunicator(router_endpoint=zeromq_broker_server.router_endpoint)
+        communicator.start()
 
         try:
-            communicator = ZeromqCommunicator(router_endpoint=zeromq_broker.router_endpoint)
-            communicator.start()
-
-            try:
-                assert communicator.is_closed() is False
-            finally:
-                communicator.close()
-
-            assert communicator.is_closed() is True
+            assert communicator.is_closed() is False
         finally:
-            stop_zeromq_broker(zeromq_broker)
+            communicator.close()
 
-    def test_context_manager(self, zeromq_broker):
+        assert communicator.is_closed() is True
+
+    def test_context_manager(self, zeromq_broker_server):
         """Test communicator as context manager."""
-        start_zeromq_broker(zeromq_broker)
+        with ZeromqCommunicator(router_endpoint=zeromq_broker_server.router_endpoint) as communicator:
+            assert communicator.is_closed() is False
 
-        try:
-            with ZeromqCommunicator(router_endpoint=zeromq_broker.router_endpoint) as communicator:
-                assert communicator.is_closed() is False
+        assert communicator.is_closed() is True
 
-            assert communicator.is_closed() is True
-        finally:
-            stop_zeromq_broker(zeromq_broker)
-
-    def test_close_idempotent(self, zeromq_broker):
+    def test_close_idempotent(self, zeromq_broker_server):
         """Test close is idempotent."""
-        start_zeromq_broker(zeromq_broker)
-
-        try:
-            comm = ZeromqCommunicator(router_endpoint=zeromq_broker.router_endpoint)
-            comm.start()
-            comm.close()
-            comm.close()  # should not raise
-            assert comm.is_closed()
-        finally:
-            stop_zeromq_broker(zeromq_broker)
+        comm = ZeromqCommunicator(router_endpoint=zeromq_broker_server.router_endpoint)
+        comm.start()
+        comm.close()
+        comm.close()  # should not raise
+        assert comm.is_closed()
 
     def test_ensure_open_raises_when_closed(self):
         """Test _ensure_open raises when communicator is closed."""
@@ -76,16 +60,13 @@ class TestZeromqCommunicatorMessaging:
     """Tests for communicator messaging operations with a real zeromq_broker."""
 
     @pytest.fixture
-    def zeromq_broker_and_comm(self, zeromq_broker):
-        start_zeromq_broker(zeromq_broker)
-
-        comm = ZeromqCommunicator(router_endpoint=zeromq_broker.router_endpoint)
+    def zeromq_broker_and_comm(self, zeromq_broker_server):
+        comm = ZeromqCommunicator(router_endpoint=zeromq_broker_server.router_endpoint)
         comm.start()
 
-        yield zeromq_broker, comm
+        yield zeromq_broker_server, comm
 
         comm.close()
-        stop_zeromq_broker(zeromq_broker)
 
     def test_task_send_no_reply(self, zeromq_broker_and_comm):
         """Test task_send with no_reply=True returns None."""
@@ -144,20 +125,17 @@ class TestZeromqCommunicatorRoundTrip:
     """Integration tests for full task, RPC, and broadcast round-trips."""
 
     @pytest.fixture
-    def sender_and_worker(self, zeromq_broker):
-        start_zeromq_broker(zeromq_broker)
-
-        sender = ZeromqCommunicator(router_endpoint=zeromq_broker.router_endpoint, client_id='sender')
+    def sender_and_worker(self, zeromq_broker_server):
+        sender = ZeromqCommunicator(router_endpoint=zeromq_broker_server.router_endpoint, client_id='sender')
         sender.start()
 
-        worker = ZeromqCommunicator(router_endpoint=zeromq_broker.router_endpoint, client_id='worker')
+        worker = ZeromqCommunicator(router_endpoint=zeromq_broker_server.router_endpoint, client_id='worker')
         worker.start()
 
-        yield zeromq_broker, sender, worker
+        yield zeromq_broker_server, sender, worker
 
         worker.close()
         sender.close()
-        stop_zeromq_broker(zeromq_broker)
 
     def test_task_round_trip(self, sender_and_worker):
         """Test task send gets immediate zeromq_broker acknowledgment.

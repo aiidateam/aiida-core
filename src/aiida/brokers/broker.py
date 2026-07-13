@@ -11,7 +11,8 @@ if t.TYPE_CHECKING:
 
     from aiida.manage.configuration.profile import Profile
 
-__all__ = ('Broker', 'BrokerConfigField')
+# We intentionally do not expose BrokerConfigField to public API, because we might change it later
+__all__ = ('Broker',)
 
 
 @dataclass(frozen=True)

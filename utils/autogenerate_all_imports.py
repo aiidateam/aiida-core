@@ -203,7 +203,6 @@ if __name__ == '__main__':
         'orm': ['implementation'],
         # skipped since re-exporting CLI helpers from the package root can trigger cyclic imports see issue #7429
         'brokers': ['cli'],
-        'brokers/broker': ['BrokerConfigField'],
         # skip all since the module requires extra requirements
         'restapi': ['*'],
     }

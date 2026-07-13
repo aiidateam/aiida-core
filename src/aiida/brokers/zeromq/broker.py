@@ -76,7 +76,7 @@ class ZeromqBroker(Broker):
         self._storage_path = layout.storage_path
 
     def __str__(self) -> str:
-        if self.is_running:
+        if self.is_service_running():
             status = self.get_service_status()
             pid = status.get('pid', '?') if status else '?'
             return f'ZeroMQ Broker (PID {pid}) @ {self._service_dir}'
@@ -127,8 +127,7 @@ class ZeromqBroker(Broker):
         except (ValueError, OSError):
             return None
 
-    @property
-    def is_running(self) -> bool:
+    def is_service_running(self) -> bool:
         """Check if the ZeromqBrokerService process is running."""
         pid = self._get_service_pid()
         if pid is None:

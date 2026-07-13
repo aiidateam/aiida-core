@@ -103,7 +103,7 @@ def zeromq_broker(tmp_path):
 @contextmanager
 def _run_zeromq_broker_server(zeromq_broker: ZeromqBroker, timeout: float = 10.0):
     """Run a ZeroMQ broker service subprocess for the duration of a context."""
-    if zeromq_broker.is_running:
+    if zeromq_broker.is_service_running():
         raise ValueError('Broker server already running')
 
     zeromq_broker.service_dir.mkdir(parents=True, exist_ok=True)
@@ -122,7 +122,7 @@ def _run_zeromq_broker_server(zeromq_broker: ZeromqBroker, timeout: float = 10.0
             if process.poll() is not None:
                 msg = f'ZeroMQ broker exited before becoming ready with code {process.returncode}'
                 raise RuntimeError(msg)
-            if zeromq_broker.is_running:
+            if zeromq_broker.is_service_running():
                 break
             time.sleep(0.1)
         else:

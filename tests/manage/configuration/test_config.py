@@ -232,13 +232,17 @@ def test_basic_properties(config_with_profile):
     assert isinstance(config.dictionary, dict)
 
 
-def test_filepaths_includes_daemon_env_info(config_with_profile):
-    """Test that ``filepaths`` returns a ``daemon_env_info`` entry for the daemon."""
+def test_filepaths_include_daemon_and_zmq_broker_entries(config_with_profile):
+    """Test that ``filepaths`` returns the daemon env info and ZMQ broker entries."""
     config = config_with_profile
     profile = config.get_profile(config.default_profile_name)
     filepaths = config.filepaths(profile)
     assert 'daemon_env_info' in filepaths['daemon']
     assert filepaths['daemon']['daemon_env_info'].endswith('-env-info.json')
+    assert 'zmq_broker_service' in filepaths
+    expected_dir_suffix = f'{profile.uuid}-{profile.name}'
+    assert filepaths['zmq_broker_service']['dir'].endswith(expected_dir_suffix)
+    assert filepaths['zmq_broker_service']['log'].endswith(f'{expected_dir_suffix}/broker.log')
 
 
 def test_setting_versions(config_with_profile):

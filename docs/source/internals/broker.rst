@@ -69,7 +69,7 @@ Endpoint discovery
 
 Unlike RabbitMQ, the ZeroMQ broker needs no connection configuration: no host, no port, no credentials.
 Discovery is file-based.
-Both sides derive the broker directory from the profile UUID as ``{config_dir}/broker/{profile-uuid}`` (typically ``~/.aiida/broker/{profile-uuid}``).
+Both sides derive the broker directory from the profile UUID as ``{config_dir}/broker/{profile-uuid}-{profile-name}``.
 
 1. On startup, the broker process creates a temporary socket directory (e.g. ``/tmp/aiida_zeromq_xyz``) and writes its path to ``{config_dir}/broker/{profile-uuid}/broker.sockets``.
 2. When a worker calls ``get_communicator()``, it reads that file and derives the endpoint as ``ipc://{sockets_dir}/router.sock``.

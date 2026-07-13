@@ -965,6 +965,7 @@ class Config:
         daemon_dir = _config_path_resolver.daemon_dir
         daemon_log_dir = _config_path_resolver.daemon_log_dir
         profile_log_dir = _config_path_resolver.profile_log_dir
+        zmq_broker_service_base_dir = _config_path_resolver.zmq_broker_service_base_dir
 
         return {
             'profile': {
@@ -985,5 +986,9 @@ class Config:
                 'log': str(daemon_log_dir / f'aiida-{profile.name}.log'),
                 'pid': str(daemon_dir / f'aiida-{profile.name}.pid'),
                 'daemon_env_info': str(daemon_dir / f'aiida-{profile.name}-env-info.json'),
+            },
+            'zmq_broker_service': {
+                'dir': str(zmq_broker_service_base_dir / f'{profile.uuid}-{profile.name}'),
+                'log': str(zmq_broker_service_base_dir / f'{profile.uuid}-{profile.name}' / 'broker.log'),
             },
         }

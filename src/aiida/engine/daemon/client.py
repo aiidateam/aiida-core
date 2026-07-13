@@ -15,6 +15,7 @@ import enum
 import json
 import os
 import pathlib
+import shlex
 import shutil
 import socket
 import subprocess
@@ -282,9 +283,32 @@ class DaemonClient:
         return [self._verdi_bin, '-p', self.profile.name, 'daemon', 'worker']
 
     @property
-    def cmd_start_broker(self) -> list[str]:
-        """Return the command to start the ZeroMQ broker server process."""
-        return [self._verdi_bin, '-p', self.profile.name, 'daemon', 'broker']
+    def zmq_broker_service_dir(self) -> str:
+        """Return the directory for the ZMQ broker service files, derived from the settings.
+
+        The daemon manages the broker service and therefore determines where the service writes its state files.
+        """
+        return self._config.filepaths(self.profile)['zmq_broker_service']['dir']
+
+    @property
+    def zmq_broker_service_log_file(self) -> str:
+        """Return the log file of the ZMQ broker service, derived from the settings."""
+        return self._config.filepaths(self.profile)['zmq_broker_service']['log']
+
+    @property
+    def _cmd_start_zmq_broker(self) -> list[str]:
+        """Return the command to start the ZMQ broker service process."""
+        return [
+            self._verdi_bin,
+            '-p',
+            self.profile.name,
+            'daemon',
+            'broker',
+            '--base-path',
+            shlex.quote(self.zmq_broker_service_dir),
+            '--log-file-path',
+            shlex.quote(self.zmq_broker_service_log_file),
+        ]
 
     @property
     def loglevel(self) -> str:
@@ -944,35 +968,38 @@ class DaemonClient:
 
         # Start ZeroMQ broker before workers so its sockets are ready when workers connect.
         # Skip if a broker is already running (e.g. started by the test fixture).
-        if self.profile.process_control_backend == 'core.zeromq':
-            from aiida.manage.manager import get_manager
+        from aiida.brokers.zeromq import ZeromqBroker
+        from aiida.manage.manager import get_manager
 
+        try:
             broker_instance = get_manager().get_broker()
-            broker_already_running = (
-                broker_instance is not None and hasattr(broker_instance, 'is_running') and broker_instance.is_running
-            )
+        except Exception:
+            LOGGER.warning('Could not load the broker instance while preparing daemon watchers.', exc_info=True)
+            broker_instance = None
+        if isinstance(broker_instance, ZeromqBroker) and not broker_instance.is_running:
+            # prepare zmq broker service profile directory
+            pathlib.Path(self.zmq_broker_service_dir).mkdir(parents=True, exist_ok=True)
 
-            if not broker_already_running:
-                watchers.append(
-                    {
-                        'cmd': ' '.join(self.cmd_start_broker),
-                        'name': f'{self.daemon_name}-broker',
-                        'numprocesses': 1,
-                        'virtualenv': self.virtualenv,
-                        'copy_env': True,
-                        'stdout_stream': {
-                            'class': 'FileStream',
-                            'filename': self.daemon_log_file,
-                            'time_format': '%Y-%m-%d %H:%M:%S',
-                        },
-                        'stderr_stream': {
-                            'class': 'FileStream',
-                            'filename': self.daemon_log_file,
-                            'time_format': '%Y-%m-%d %H:%M:%S',
-                        },
-                        'env': self.get_env(),
-                    }
-                )
+            watchers.append(
+                {
+                    'cmd': ' '.join(self._cmd_start_zmq_broker),
+                    'name': f'{self.daemon_name}-zmq-broker-service',
+                    'numprocesses': 1,
+                    'virtualenv': self.virtualenv,
+                    'copy_env': True,
+                    'stdout_stream': {
+                        'class': 'FileStream',
+                        'filename': self.zmq_broker_service_log_file,
+                        'time_format': '%Y-%m-%d %H:%M:%S',
+                    },
+                    'stderr_stream': {
+                        'class': 'FileStream',
+                        'filename': self.zmq_broker_service_log_file,
+                        'time_format': '%Y-%m-%d %H:%M:%S',
+                    },
+                    'env': self.get_env(),
+                }
+            )
 
         watchers.append(
             {

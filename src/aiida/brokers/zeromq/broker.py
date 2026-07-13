@@ -17,6 +17,7 @@ from aiida.common.log import AIIDA_LOGGER
 from .communicator import ZeromqCommunicator
 from .defaults import BROKER_READY_TIMEOUT
 from .queue import PersistentQueue
+from .service import PID_SENTINEL, ZeromqBrokerService
 
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.profile import Profile
@@ -37,16 +38,18 @@ class ZeromqBroker(Broker):
     Communicator = ZeromqCommunicator
 
     def __init__(self, profile: 'Profile') -> None:
-        super().__init__(profile)
-        self._init_paths(get_broker_base_path(profile))
+        from aiida.manage.configuration import get_config
 
-    def _init_paths(self, broker_dir: Path) -> None:
+        super().__init__(profile)
         self._communicator: ZeromqCommunicator | None = None
-        self._broker_dir = broker_dir
-        self._storage_path = broker_dir / 'storage'
-        self._service_pid_file = broker_dir / 'broker.pid'
-        self._service_status_file = broker_dir / 'broker.status'
-        self._service_sockets_file = broker_dir / 'broker.sockets'
+        zmq_broker_service_dir = get_config().filepaths(profile)['zmq_broker_service']['dir']
+        zmq_broker_service_log_path = get_config().filepaths(profile)['zmq_broker_service']['log']
+        layout = ZeromqBrokerService.FilepathLayout(zmq_broker_service_dir, zmq_broker_service_log_path)
+        self._broker_dir = layout.base_path
+        self._service_pid_file = layout.pid_file
+        self._service_status_file = layout.status_file
+        self._service_sockets_file = layout.sockets_file
+        self._storage_path = layout.storage_path
 
     def __str__(self) -> str:
         if self.is_running:
@@ -80,7 +83,8 @@ class ZeromqBroker(Broker):
             return None
         return f'ipc://{sockets_path}/router.sock'
 
-    _PID_SENTINEL = 'aiida-zeromq-broker'
+    # protects from global overwrites
+    _PID_SENTINEL = PID_SENTINEL
 
     def get_service_pid(self) -> int | None:
         """Read the ZeromqBrokerService PID from its PID file.
@@ -207,10 +211,3 @@ class ZeromqIncomingTask:
 
         yield _Outcome()
         self._queue.remove_pending(self._task_id)
-
-
-def get_broker_base_path(profile: 'Profile') -> Path:
-    from aiida.manage.configuration import get_config_path
-
-    config_dir = Path(get_config_path()).parent  # type: ignore[no-untyped-call]
-    return config_dir / 'broker' / profile.uuid

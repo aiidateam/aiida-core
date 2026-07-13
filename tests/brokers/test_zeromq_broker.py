@@ -87,7 +87,7 @@ class TestZeromqBrokerStatusQueries:
         start_zeromq_broker(zeromq_broker)
         try:
             s = str(zeromq_broker)
-            assert 'ZeroMQ zeromq_broker' in s
+            assert 'ZeroMQ Broker' in s
             assert 'PID' in s
         finally:
             stop_zeromq_broker(zeromq_broker)
@@ -109,64 +109,65 @@ class TestZeromqBrokerStatusQueries:
         """Test _get_sockets_path when file missing."""
         assert zeromq_broker._get_sockets_path() is None
 
-    def test_get_sockets_path_os_error(self, zeromq_broker, tmp_path):
+    def test_get_sockets_path_os_error(self, zeromq_broker):
         """Test _get_sockets_path when read fails."""
-        sockets_file = tmp_path / 'broker.sockets'
+        sockets_file = zeromq_broker.base_path / 'broker.sockets'
         sockets_file.mkdir()  # directory instead of file => OSError on read_text
         assert zeromq_broker._get_sockets_path() is None
 
-    def test_get_service_pid_sentinel_format(self, zeromq_broker, tmp_path):
+    def test_get_service_pid_sentinel_format(self, zeromq_broker):
         """Test PID file with sentinel format."""
-        pid_file = tmp_path / 'broker.pid'
+        pid_file = zeromq_broker.base_path / 'broker.pid'
         pid_file.write_text('aiida-zeromq-broker 12345')
         assert zeromq_broker.get_service_pid() == 12345
 
-    def test_get_service_pid_bare_format(self, zeromq_broker, tmp_path):
+    def test_get_service_pid_bare_format(self, zeromq_broker):
         """Test PID file with bare PID fallback."""
-        pid_file = tmp_path / 'broker.pid'
+        pid_file = zeromq_broker.base_path / 'broker.pid'
         pid_file.write_text('54321')
         assert zeromq_broker.get_service_pid() == 54321
 
-    def test_get_service_pid_invalid(self, zeromq_broker, tmp_path):
+    def test_get_service_pid_invalid(self, zeromq_broker):
         """Test PID file with invalid content."""
-        pid_file = tmp_path / 'broker.pid'
+        pid_file = zeromq_broker.base_path / 'broker.pid'
         pid_file.write_text('garbage text')
         assert zeromq_broker.get_service_pid() is None
 
-    def test_is_running_stale_pid(self, zeromq_broker, tmp_path):
+    def test_is_running_stale_pid(self, zeromq_broker):
         """Test is_running with stale PID."""
-        pid_file = tmp_path / 'broker.pid'
+        pid_file = zeromq_broker.base_path / 'broker.pid'
         pid_file.write_text('aiida-zeromq-broker 999999')  # Non-existent PID
         assert not zeromq_broker.is_running
 
-    def test_get_service_status_valid(self, zeromq_broker, tmp_path):
+    def test_get_service_status_valid(self, zeromq_broker):
         """Test get_service_status with valid JSON."""
-        status_file = tmp_path / 'broker.status'
+        status_file = zeromq_broker.base_path / 'broker.status'
         status_file.write_text(json.dumps({'pid': 123, 'running': True}))
         status = zeromq_broker.get_service_status()
         assert status is not None
         assert status['pid'] == 123
 
-    def test_get_service_status_invalid_json(self, zeromq_broker, tmp_path):
+    def test_get_service_status_invalid_json(self, zeromq_broker):
         """Test get_service_status with invalid JSON."""
-        status_file = tmp_path / 'broker.status'
+        status_file = zeromq_broker.base_path / 'broker.status'
         status_file.write_text('{INVALID JSON')
         assert zeromq_broker.get_service_status() is None
 
-    def test_cleanup_stale_service_files(self, zeromq_broker, tmp_path):
+    def test_cleanup_stale_service_files(self, zeromq_broker):
         """Test _cleanup_stale_service_files removes all stale files."""
 
-        (tmp_path / 'broker.pid').write_text('aiida-zeromq-broker 1')
-        (tmp_path / 'broker.status').write_text('{}')
-        sockets_dir = tmp_path / 'test_sockets'
+        broker_dir = zeromq_broker.base_path
+        (broker_dir / 'broker.pid').write_text('aiida-zeromq-broker 1')
+        (broker_dir / 'broker.status').write_text('{}')
+        sockets_dir = broker_dir / 'test_sockets'
         sockets_dir.mkdir()
-        (tmp_path / 'broker.sockets').write_text(str(sockets_dir))
+        (broker_dir / 'broker.sockets').write_text(str(sockets_dir))
 
         zeromq_broker._cleanup_stale_service_files()
 
-        assert not (tmp_path / 'broker.pid').exists()
-        assert not (tmp_path / 'broker.status').exists()
-        assert not (tmp_path / 'broker.sockets').exists()
+        assert not (broker_dir / 'broker.pid').exists()
+        assert not (broker_dir / 'broker.status').exists()
+        assert not (broker_dir / 'broker.sockets').exists()
         assert not sockets_dir.exists()
 
 
@@ -209,9 +210,9 @@ class TestZeromqBrokerTasks:
         tasks = list(zeromq_broker.iterate_tasks())
         assert tasks == []
 
-    def test_iterate_tasks_with_data(self, zeromq_broker, tmp_path):
+    def test_iterate_tasks_with_data(self, zeromq_broker):
         """Test iterate_tasks with pending tasks."""
-        queue_path = tmp_path / 'storage' / 'tasks'
+        queue_path = zeromq_broker.storage_path / 'tasks'
         queue = PersistentQueue(queue_path)
         queue.push('task-1', {'body': 'hello'})
         queue.push('task-2', {'body': 'world'})

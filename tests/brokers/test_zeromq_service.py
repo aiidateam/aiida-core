@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import threading
 import time
+from unittest.mock import patch
 
-from aiida.brokers.zeromq.service import ZeromqBrokerService
+from aiida.brokers.zeromq.service import ZeromqBrokerService, run_broker_service
 
 
 class TestZeromqBrokerService:
@@ -23,8 +24,21 @@ class TestZeromqBrokerService:
         """Test service initialization."""
         service = ZeromqBrokerService(base_path=tmp_path)
         assert service.base_path == tmp_path
+        assert service.log_file == tmp_path / 'broker.log'
         assert service.pid_file == tmp_path / 'broker.pid'
         assert service.status_file == tmp_path / 'broker.status'
+
+    def test_run_broker_service_configures_logging(self, tmp_path):
+        """Test ``run_broker_service`` configures persistent broker logging."""
+        with (
+            patch('aiida.brokers.zeromq.service.configure_logging') as mock_configure_logging,
+            patch.object(ZeromqBrokerService, 'run_forever') as mock_run_forever,
+        ):
+            run_broker_service(base_path=tmp_path)
+
+        mock_configure_logging.assert_called_once_with(daemon=True, daemon_log_file=tmp_path / 'broker.log')
+        mock_run_forever.assert_called_once_with()
+        assert tmp_path.is_dir()
 
     def test_start_stop(self, tmp_path):
         """Test starting and stopping the service."""

@@ -70,7 +70,9 @@ class TestValidateHandler:
         config = Mock(get_option=lambda name, scope=None: levels.get(name, 'WARNING'))
         message = log.validate_handler(config, 'logging.terminal_handler')
         assert message is not None
-        assert 'take effect' in message
+        assert 'no logger emits messages at that level' in message
+        assert 'logging.aiida_loglevel' in message
+        assert 'INFO' in message
 
     def test_no_warning_when_effective(self):
         """A handler level a logger actually emits at (here equal to it) is effective and should return ``None``."""

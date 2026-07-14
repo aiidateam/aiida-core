@@ -581,11 +581,14 @@ def config_needs_migrating(config, filepath: Optional[str] = None):
     if oldest_compatible_version > CURRENT_CONFIG_VERSION:
         filepath = filepath if filepath else ''
         msg = (
-            f'The AiiDA configuration file {filepath} has version {current_version} which is not compatible with '
-            f'the current aiida version supporting up to version {CURRENT_CONFIG_VERSION}. '
-            'Before switching to an older AiiDA version, use a newer AiiDA version that supports '
-            f' at least version {CURRENT_CONFIG_VERSION} and run `verdi config downgrade {CURRENT_CONFIG_VERSION}` '
-            f' to rewrite it for an older version. See {URL_CONFIG_SCHEMA_COMPATIBILITY} for the compatibility table.'
+            f'The AiiDA configuration file {filepath} has version {current_version}, which is not compatible with '
+            f'the current AiiDA version that supports configuration versions up to {CURRENT_CONFIG_VERSION}. '
+            'Before switching to an older AiiDA version, stop the daemon and avoid other AiiDA interactions. '
+            'Then use a newer AiiDA version that still supports '
+            f'configuration version {current_version} and run `verdi config downgrade {CURRENT_CONFIG_VERSION}` '
+            f'to rewrite the configuration file to version {CURRENT_CONFIG_VERSION}. See '
+            f'{URL_CONFIG_SCHEMA_COMPATIBILITY} for the compatibility '
+            'table.'
         )
         raise exceptions.ConfigurationVersionError(msg)
 

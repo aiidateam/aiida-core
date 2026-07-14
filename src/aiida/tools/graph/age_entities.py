@@ -477,14 +477,11 @@ class Basket:
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Basket):
-            return False
+            return NotImplemented
         for key in self._dict:
             if self[key] != other[key]:  # type: ignore[call-overload]
                 return False
         return True
-
-    def __ne__(self, other: object) -> bool:
-        return not self == other
 
     def __repr__(self) -> str:
         """Return string representation."""

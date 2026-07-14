@@ -27,7 +27,7 @@ repos:
   - id: check-github-workflows
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.8.6
+  rev: v0.9.10
   hooks:
   - id: ruff-format
   - id: ruff

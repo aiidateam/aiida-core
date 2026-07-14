@@ -215,13 +215,13 @@ def default_node_sublabels(node: orm.Node) -> str:
     """
     class_node_type = node.class_node_type
     if class_node_type == 'data.core.int.Int.':
-        sublabel = f"value: {node.base.attributes.get('value', '')}"
+        sublabel = f'value: {node.base.attributes.get("value", "")}'
     elif class_node_type == 'data.core.float.Float.':
-        sublabel = f"value: {node.base.attributes.get('value', '')}"
+        sublabel = f'value: {node.base.attributes.get("value", "")}'
     elif class_node_type == 'data.core.str.Str.':
-        sublabel = f"{node.base.attributes.get('value', '')}"
+        sublabel = f'{node.base.attributes.get("value", "")}'
     elif class_node_type == 'data.core.bool.Bool.':
-        sublabel = f"{node.base.attributes.get('value', '')}"
+        sublabel = f'{node.base.attributes.get("value", "")}'
     elif class_node_type == 'data.core.code.Code.':
         label = '?' if node.computer is None else node.computer.label
         sublabel = f'{os.path.basename(node.get_execname())}@{label}'
@@ -241,7 +241,7 @@ def default_node_sublabels(node: orm.Node) -> str:
             sublabel_lines.append(', '.join(sg_numbers))
         sublabel = '; '.join(sublabel_lines)
     elif class_node_type == 'data.core.upf.UpfData.':
-        sublabel = f"{node.base.attributes.get('element', '')}"
+        sublabel = f'{node.base.attributes.get("element", "")}'
     elif isinstance(node, orm.ProcessNode):
         sublabel_list = []
         if node.process_state is not None:

@@ -364,20 +364,20 @@ class TestVerdiGroup:
         # The current `verdi group show` does not support ordering so we cannot rely on that for now to test if only
         # one of the nodes is shown
         assert len(result.output.strip().split('\n')) == 1
-        assert _pk_in_output(nodes[0].pk, result.output) or _pk_in_output(
-            nodes[1].pk, result.output
-        ), f'Neither found PK {nodes[0].pk} nor {nodes[1].pk} in expression {result.output!r}'
+        assert _pk_in_output(nodes[0].pk, result.output) or _pk_in_output(nodes[1].pk, result.output), (
+            f'Neither found PK {nodes[0].pk} nor {nodes[1].pk} in expression {result.output!r}'
+        )
 
         # Repeat test with `limit=1` but without the `--raw` flag as it has a different code path that is affected
         result = run_cli_command(cmd_group.group_show, [label, '--limit', '1'], use_subprocess=True)
 
         # Check that one, and only one pk appears in the output
-        assert _pk_in_output(nodes[0].pk, result.output) or _pk_in_output(
-            nodes[1].pk, result.output
-        ), f'Neither found PK {nodes[0].pk} nor PK {nodes[1].pk} in expression {result.output!r}'
-        assert not (
-            _pk_in_output(nodes[0].pk, result.output) and _pk_in_output(nodes[1].pk, result.output)
-        ), f'Found both PKs {nodes[0].pk} and {nodes[1].pk} (but only one is allowed) in expression {result.output!r}'
+        assert _pk_in_output(nodes[0].pk, result.output) or _pk_in_output(nodes[1].pk, result.output), (
+            f'Neither found PK {nodes[0].pk} nor PK {nodes[1].pk} in expression {result.output!r}'
+        )
+        assert not (_pk_in_output(nodes[0].pk, result.output) and _pk_in_output(nodes[1].pk, result.output)), (
+            f'Found both PKs {nodes[0].pk} and {nodes[1].pk} (but only one is allowed) in expression {result.output!r}'
+        )
 
     def test_description(self, run_cli_command):
         """Test `verdi group description` command."""

@@ -212,7 +212,7 @@ class WorkChain(Process, metaclass=Protect):
             if type(ctx) is not AttributeDict:
                 raise ValueError(
                     f'Can not update the context for key `{key}`:'
-                    f' found instance of `{type(ctx)}` at `{".".join(ctx_path[:index+1])}`, expected AttributeDict'
+                    f' found instance of `{type(ctx)}` at `{".".join(ctx_path[: index + 1])}`, expected AttributeDict'
                 )
 
         return ctx, ctx_path[-1]
@@ -286,7 +286,7 @@ class WorkChain(Process, metaclass=Protect):
     def _update_process_status(self) -> None:
         """Set the process status with a message accounting the current sub processes that we are waiting for."""
         if self._awaitables:
-            status = f"Waiting for child processes: {', '.join([str(_.pk) for _ in self._awaitables])}"
+            status = f'Waiting for child processes: {", ".join([str(_.pk) for _ in self._awaitables])}'
         else:
             status = None
         if self.paused:

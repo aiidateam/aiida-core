@@ -19,7 +19,7 @@ def test_migrate_external(migrate_from_func):
     illegal_label = '_return'
     for link in data.get('links_uuid'):
         assert link['label'] != illegal_label, (
-            f'The illegal link label {illegal_label} was not expected to be present - ' "it should now be 'result'"
+            f"The illegal link label {illegal_label} was not expected to be present - it should now be 'result'"
         )
 
 

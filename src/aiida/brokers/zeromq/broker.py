@@ -10,7 +10,7 @@ from pathlib import Path
 
 import psutil
 
-from aiida.brokers.broker import Broker, BrokerConfigField
+from aiida.brokers.broker import Broker, BrokerConfigField, BrokerServiceStatus
 from aiida.common.exceptions import ConfigurationError
 from aiida.common.log import AIIDA_LOGGER
 
@@ -138,12 +138,12 @@ class ZeromqBroker(Broker):
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             return False
 
-    def get_service_status(self) -> dict[str, t.Any] | None:
+    def get_service_status(self) -> BrokerServiceStatus | None:
         """Read the ZeromqBrokerService status from its status file."""
         if not self._service_status_file.exists():
             return None
         try:
-            return json.loads(self._service_status_file.read_text())  # type: ignore[no-any-return]
+            return t.cast(BrokerServiceStatus, json.loads(self._service_status_file.read_text()))
         except (json.JSONDecodeError, OSError):
             return None
 

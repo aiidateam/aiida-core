@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import psutil
 import pytest
@@ -105,6 +105,54 @@ class TestZeromqBrokerStatusQueries:
 
 class TestZeromqBrokerCommunicator:
     """Tests for ZeromqBroker communicator management."""
+
+    def test_get_communicator_breaks_when_endpoint_becomes_available(self, zeromq_broker, monkeypatch):
+        """Test get_communicator stops polling once the router endpoint appears."""
+        endpoint = 'ipc:///tmp/router.sock'
+
+        monkeypatch.setattr('aiida.brokers.zeromq.broker.BROKER_READY_TIMEOUT', 10.0)
+
+        with (
+            patch.object(ZeromqBroker, '_router_endpoint', new_callable=PropertyMock) as router_endpoint,
+            patch('aiida.brokers.zeromq.broker.time.monotonic', side_effect=[100.0, 100.1]),
+            patch('aiida.brokers.zeromq.broker.time.sleep') as sleep,
+            patch('aiida.manage.configuration.get_config_option', return_value=None),
+            patch('aiida.brokers.zeromq.broker.ZeromqCommunicator') as communicator_cls,
+        ):
+            router_endpoint.side_effect = [None, endpoint]
+            communicator = communicator_cls.return_value
+
+            result = zeromq_broker.get_communicator()
+
+            assert result is communicator
+            sleep.assert_called_once_with(0.2)
+            communicator_cls.assert_called_once_with(router_endpoint=endpoint, task_timeout=None)
+            communicator.start.assert_called_once()
+
+    def test_get_communicator_warns_while_waiting_for_endpoint(self, zeromq_broker, monkeypatch):
+        """Test get_communicator logs a warning after waiting for five seconds."""
+        endpoint = 'ipc:///tmp/router.sock'
+
+        monkeypatch.setattr('aiida.brokers.zeromq.broker.BROKER_READY_TIMEOUT', 10.0)
+
+        with (
+            patch.object(ZeromqBroker, '_router_endpoint', new_callable=PropertyMock) as router_endpoint,
+            patch('aiida.brokers.zeromq.broker.time.monotonic', side_effect=[100.0, 100.1, 105.1, 105.2]),
+            patch('aiida.brokers.zeromq.broker.time.sleep') as sleep,
+            patch('aiida.brokers.zeromq.broker.AIIDA_LOGGER.warning') as warning,
+            patch('aiida.manage.configuration.get_config_option', return_value=None),
+            patch('aiida.brokers.zeromq.broker.ZeromqCommunicator') as communicator_cls,
+        ):
+            router_endpoint.side_effect = [None, None, endpoint]
+            communicator = communicator_cls.return_value
+
+            result = zeromq_broker.get_communicator()
+
+            assert result is communicator
+            assert sleep.call_count == 2
+            warning.assert_called_once_with('Still waiting for broker to become ready...')
+            communicator_cls.assert_called_once_with(router_endpoint=endpoint, task_timeout=None)
+            communicator.start.assert_called_once()
 
     def test_get_communicator_and_close(self, zeromq_broker_with_server, monkeypatch):
         """Test get_communicator and close."""

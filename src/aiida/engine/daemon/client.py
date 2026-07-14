@@ -985,7 +985,7 @@ class DaemonClient:
             except Exception:
                 LOGGER.warning('Could not load the broker instance while preparing daemon watchers.', exc_info=True)
                 broker_instance = None
-            if isinstance(broker_instance, ZeromqBroker) and not broker_instance.is_service_running():
+            if isinstance(broker_instance, ZeromqBroker) and not broker_instance.is_service_reachable():
                 # prepare zmq broker service profile directory
                 pathlib.Path(self.zmq_broker_service_dir).mkdir(parents=True, exist_ok=True)
 

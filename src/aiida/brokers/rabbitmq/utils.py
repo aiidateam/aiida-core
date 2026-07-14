@@ -33,15 +33,15 @@ def get_rmq_url(
     :param kwargs: remaining keyword arguments that will be encoded as query parameters.
     :returns: the connection URL string.
     """
-    from urllib.parse import urlencode, urlunparse
+    from urllib.parse import quote, urlencode, urlunparse
 
     if 'heartbeat' not in kwargs:
         kwargs['heartbeat'] = defaults.BROKER_DEFAULTS.heartbeat
 
     scheme = protocol or defaults.BROKER_DEFAULTS.protocol
     netloc = '{username}:{password}@{host}:{port}'.format(
-        username=username or defaults.BROKER_DEFAULTS.username,
-        password=password or defaults.BROKER_DEFAULTS.password,
+        username=quote(username or defaults.BROKER_DEFAULTS.username, safe=''),
+        password=quote(password or defaults.BROKER_DEFAULTS.password, safe=''),
         host=host or defaults.BROKER_DEFAULTS.host,
         port=port or defaults.BROKER_DEFAULTS.port,
     )

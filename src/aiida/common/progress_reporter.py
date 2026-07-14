@@ -51,10 +51,10 @@ class ProgressReporterAbstract:
 
     """
 
-    def __init__(self, *, total: int, desc: Optional[str] = None, **kwargs: Any):
+    def __init__(self, *, total: Optional[int], desc: Optional[str] = None, **kwargs: Any):
         """Initialise the progress reporting contextmanager.
 
-        :param total: The number of expected iterations.
+        :param total: The number of expected iterations, or None if unknown in advance.
         :param desc: A description of the process
 
         """
@@ -63,7 +63,7 @@ class ProgressReporterAbstract:
         self._increment: int = 0
 
     @property
-    def total(self) -> int:
+    def total(self) -> Optional[int]:
         """Return the total iterations expected."""
         return self._total
 
@@ -186,7 +186,16 @@ def set_progress_bar_tqdm(
     """
     from tqdm import tqdm
 
-    set_progress_reporter(tqdm, bar_format=bar_format, leave=leave, **kwargs)
+    class TqdmProgressReporter(tqdm):  # type: ignore[type-arg]
+        def __init__(self, *args: Any, **kwargs: Any):
+            # A bar format with a percentage is meaningless when the total is unknown; fall back
+            # to tqdm's native counter display (`123it [00:01, 12.3it/s]`) in that case. Only an
+            # explicit `total=None` counts: an absent total is derived from the iterable by tqdm.
+            if 'total' in kwargs and kwargs['total'] is None:
+                kwargs['bar_format'] = None
+            super().__init__(*args, **kwargs)
+
+    set_progress_reporter(TqdmProgressReporter, bar_format=bar_format, leave=leave, **kwargs)
 
 
 def create_callback(progress_reporter: ProgressReporterAbstract | tqdm[Any]) -> Callable[[str, Any], None]:

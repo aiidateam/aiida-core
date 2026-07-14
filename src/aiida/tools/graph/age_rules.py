@@ -19,7 +19,7 @@ from aiida.common.lang import type_check
 from aiida.tools.graph.age_entities import Basket
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
     from aiida.orm import QueryBuilder
     from aiida.orm.implementation.querybuilder import QueryDictType
@@ -362,13 +362,31 @@ class RuleSequence(Operation):
     the first (see RuleSetWalkers and RuleSaveWalkers).
     """
 
-    def __init__(self, rules: Iterable[Operation], max_iterations: int = 1):
+    def __init__(
+        self,
+        rules: Iterable[Operation],
+        max_iterations: int = 1,
+        callback: Callable[[int, Basket], None] | None = None,
+    ):
+        """Initialization method
+
+        :param rules: the rules to apply in order on each iteration.
+        :param max_iterations: maximum number of iterations to perform.
+        :param callback: called after each iteration with the number of iterations done so far and the
+            basket of all entities visited so far, e.g. to report progress of long traversals. The basket
+            is the live internal accumulator and must be treated as read-only; mutating or retaining it
+            corrupts the traversal state.
+        """
+        # Materialize before validating: run() iterates the rules once per iteration, so a
+        # generator input would otherwise be consumed by the validation loop already.
+        rules = list(rules)
         for rule in rules:
             if not isinstance(rule, Operation):
                 raise TypeError('rule has to be an instance of Operation-subclass')
         self._rules = rules
         self._accumulator_set: Basket | None = None
         self._visits_set: Basket | None = None
+        self._callback = callback
         super().__init__(max_iterations, track_edges=False)
 
     def run(self, operational_set: Basket) -> Basket:
@@ -402,6 +420,9 @@ class RuleSequence(Operation):
             # I set the operational set to all results that have not been visited yet.
             operational_set = new_results - self._accumulator_set
             self._accumulator_set += new_results
+
+            if self._callback is not None:
+                self._callback(self._iterations_done, self._visits_set)
 
         return self._visits_set.copy()
 

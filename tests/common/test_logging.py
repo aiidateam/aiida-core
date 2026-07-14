@@ -104,7 +104,7 @@ def test_configure_logging_inherits_aiida_loglevel_for_inherited_loggers(monkeyp
     isolated_config.set_option('logging.aiida_loglevel', 'ERROR')
 
     captured_config = {}
-    monkeypatch.setattr(logging.config, 'dictConfig', lambda config: captured_config.update(config))
+    monkeypatch.setattr(logging.config, 'dictConfig', captured_config.update)
 
     log.configure_logging()
 
@@ -123,7 +123,7 @@ def test_configure_logging_respects_explicit_inherited_logger_levels(monkeypatch
     isolated_config.set_option('logging.plumpy_loglevel', 'WARNING')
 
     captured_config = {}
-    monkeypatch.setattr(logging.config, 'dictConfig', lambda config: captured_config.update(config))
+    monkeypatch.setattr(logging.config, 'dictConfig', captured_config.update)
 
     log.configure_logging()
 

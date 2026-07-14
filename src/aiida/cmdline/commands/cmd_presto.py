@@ -109,7 +109,7 @@ def detect_postgres_config(
 @click.option(
     '-p',
     '--profile-name',
-    default=lambda: get_default_presto_profile_name(),
+    default=get_default_presto_profile_name,
     show_default=True,
     help=f'Name of the profile. By default, a unique name starting with `{DEFAULT_PROFILE_NAME_PREFIX}` is '
     'automatically generated.',

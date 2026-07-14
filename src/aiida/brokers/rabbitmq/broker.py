@@ -7,7 +7,7 @@ import sys
 import typing as t
 from collections.abc import Iterator
 
-from aiida.brokers.broker import Broker, BrokerConfigField
+from aiida.brokers.broker import Broker, BrokerConfigField, BrokerServiceStatus, JsonValue
 from aiida.brokers.rabbitmq import defaults
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage.configuration import get_config_option
@@ -97,6 +97,14 @@ class RabbitmqBroker(Broker):
             return f'RabbitMQ v{self.get_rabbitmq_version()} @ {url}'
         except ConnectionError:
             return f'RabbitMQ @ {url} <Connection failed>'
+
+    def get_service_status(self) -> BrokerServiceStatus | None:
+        """Return status information reported by the RabbitMQ server."""
+        properties = self.get_communicator().server_properties
+        return {
+            key: t.cast(JsonValue, value.decode('utf-8') if isinstance(value, bytes) else value)
+            for key, value in properties.items()
+        }
 
     def close(self) -> None:
         """Close the broker."""

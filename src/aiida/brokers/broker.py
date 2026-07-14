@@ -6,12 +6,16 @@ import abc
 import typing as t
 from dataclasses import dataclass
 
+JsonPrimitive = str | int | float | bool | None
+JsonValue = JsonPrimitive | list['JsonValue'] | dict[str, 'JsonValue']
+BrokerServiceStatus = dict[str, JsonValue]
+
 if t.TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
     from aiida.manage.configuration.profile import Profile
 
-# We intentionally do not expose BrokerConfigField to public API, because we might change it later
+# We intentionally do not expose all entities to public API, because we might change it later
 __all__ = ('Broker',)
 
 
@@ -67,6 +71,10 @@ class Broker(abc.ABC):
     @abc.abstractmethod
     def iterate_tasks(self) -> Iterator[t.Any]:
         """Return an iterator over the tasks in the launch queue."""
+
+    @abc.abstractmethod
+    def get_service_status(self) -> BrokerServiceStatus | None:
+        """Return service status information for the broker, if available."""
 
     @abc.abstractmethod
     def close(self) -> None:

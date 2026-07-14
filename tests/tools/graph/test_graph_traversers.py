@@ -8,6 +8,8 @@
 ###########################################################################
 """Tests for aiida.tools.graph.graph_traversers"""
 
+from typing import ClassVar
+
 import pytest
 
 from aiida.common.links import LinkType
@@ -422,7 +424,7 @@ def recording_progress_reporter():
     """Install a progress reporter that records its instances and description updates."""
 
     class RecordingReporter(ProgressReporterAbstract):
-        instances: list['RecordingReporter'] = []
+        instances: ClassVar[list['RecordingReporter']] = []
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)

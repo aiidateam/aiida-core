@@ -377,6 +377,9 @@ class RuleSequence(Operation):
             is the live internal accumulator and must be treated as read-only; mutating or retaining it
             corrupts the traversal state.
         """
+        # Materialize before validating: run() iterates the rules once per iteration, so a
+        # generator input would otherwise be consumed by the validation loop already.
+        rules = list(rules)
         for rule in rules:
             if not isinstance(rule, Operation):
                 raise TypeError('rule has to be an instance of Operation-subclass')

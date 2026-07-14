@@ -106,7 +106,7 @@ class RabbitmqBroker(Broker):
             for key, value in properties.items()
         }
 
-    def is_service_running(self) -> bool:
+    def is_service_reachable(self) -> bool:
         """Return whether the RabbitMQ service is reachable."""
         had_communicator = self._communicator is not None
 

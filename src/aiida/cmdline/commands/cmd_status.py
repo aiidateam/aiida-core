@@ -182,7 +182,7 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
         # Append broker info for managed brokers (e.g., ZeroMQ)
 
         if broker and isinstance(broker, ZeromqBroker):
-            if broker.is_service_running():
+            if broker.is_service_reachable():
                 status_info = broker.get_service_status()
                 if status_info:
                     broker_pid = status_info.get('pid', '?')

@@ -75,7 +75,7 @@ def _make_zeromq_broker(service_dir: pathlib.Path, is_running: bool, status: dic
     """Create a ``ZeromqBroker`` instance without invoking its constructor."""
     broker = ZeromqBroker.__new__(ZeromqBroker)
     broker._service_dir = service_dir
-    broker.is_service_running = lambda: is_running
+    broker.is_service_reachable = lambda: is_running
     broker.get_service_status = lambda: status
     return broker
 

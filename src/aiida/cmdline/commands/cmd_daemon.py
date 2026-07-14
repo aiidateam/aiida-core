@@ -158,7 +158,7 @@ def status(ctx, all_profiles, timeout):
         from aiida.brokers.zeromq.broker import ZeromqBroker
 
         if isinstance(broker, ZeromqBroker):
-            if broker.is_service_running():
+            if broker.is_service_reachable():
                 status_info = broker.get_service_status()
                 if status_info:
                     broker_pid = status_info.get('pid', '?')

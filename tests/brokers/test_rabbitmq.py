@@ -11,6 +11,7 @@
 import logging
 import pathlib
 import uuid
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -133,6 +134,28 @@ def test_get_rmq_url(args, kwargs, expected):
     else:
         with pytest.raises(expected):
             utils.get_rmq_url(*args, **kwargs)
+
+
+def test_get_rmq_url_quotes_credentials():
+    """Test RabbitMQ URLs quote reserved characters in credentials."""
+    url = utils.get_rmq_url(username='user/name', password='pass?word#fragment')
+
+    assert url.startswith('amqp://user%2Fname:pass%3Fword%23fragment@127.0.0.1:5672?')
+
+
+def test_get_url_safe_quotes_then_redacts_credentials():
+    """Test safe broker URLs redact credentials after quoting reserved characters."""
+    profile = SimpleNamespace(
+        uuid='uuid',
+        is_test_profile=False,
+        process_control_config={
+            'broker_username': 'user/name',
+            'broker_password': 'pass?word#fragment',
+        },
+    )
+    broker = RabbitmqBroker(profile)
+
+    assert broker.get_url(safe=True).startswith('amqp://user%2Fname:***@127.0.0.1:5672?')
 
 
 @pytest.mark.parametrize('url', ('amqp://guest:guest@127.0.0.1:5672',))

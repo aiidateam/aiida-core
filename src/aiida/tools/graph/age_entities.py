@@ -12,9 +12,10 @@ from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
-from typing import Any, Literal, TypedDict, overload
+from typing import Any, Literal, overload
 
-from typing_extensions import Self, TypeAlias
+# Import TypedDict from typing_extensions to get "closed" support (PEP728)
+from typing_extensions import Self, TypeAlias, TypedDict
 
 from aiida import orm
 from aiida.orm.utils.links import LinkQuadruple
@@ -316,12 +317,7 @@ class DirectedEdgeSet(AbstractSetContainer):
         return self._edge_identifiers
 
 
-# NOTE: Lot of the remaining type-ignores in the Basket class
-# will be removed once we can mark this TypedDict as "closed" per PEP728:
-# https://peps.python.org/pep-0728/#the-closed-class-parameter
-# https://github.com/python/mypy/issues/18176
-# https://github.com/python/mypy/issues/7981#issuecomment-2080161813
-class _BasketDict(TypedDict):
+class _BasketDict(TypedDict, closed=True, total=True):
     nodes: AiidaEntitySet
     groups: AiidaEntitySet
     nodes_nodes: DirectedEdgeSet
@@ -402,7 +398,7 @@ class Basket:
         groups = get_check_set_entity_set(groups, 'groups', orm.Group)
         nodes_nodes = get_check_set_directed_edge_set(nodes_nodes, 'nodes-nodes', orm.Node, orm.Node)
         groups_nodes = get_check_set_directed_edge_set(groups_nodes, 'groups-nodes', orm.Node, orm.Group)
-        self._dict: _BasketDict = dict(nodes=nodes, groups=groups, nodes_nodes=nodes_nodes, groups_nodes=groups_nodes)
+        self._dict = _BasketDict(nodes=nodes, groups=groups, nodes_nodes=nodes_nodes, groups_nodes=groups_nodes)
 
     @property
     def sets(self) -> tuple[Any, ...]:
@@ -437,51 +433,61 @@ class Basket:
     def __getitem__(self, key: _BasketKeys) -> _BasketValues:
         return self._dict[key]
 
+    @overload
+    def __setitem__(self, key: Literal['nodes', 'groups'], val: AiidaEntitySet) -> None: ...
+
+    @overload
+    def __setitem__(self, key: Literal['nodes_nodes', 'groups_nodes'], val: DirectedEdgeSet) -> None: ...
+
     def __setitem__(self, key: _BasketKeys, val: _BasketValues) -> None:
         self._dict[key] = val
 
-    def __add__(self, other: Self) -> 'Basket':
+    def __add__(self, other: object) -> 'Basket':
+        if not isinstance(other, Basket):
+            return NotImplemented
         new_dict = {}
         for key, value in self._dict.items():
             new_dict[key] = value + other.dict[key]  # type: ignore[literal-required]
         return Basket(**new_dict)
 
-    def __iadd__(self, other: Self) -> Self:
+    def __iadd__(self, other: object) -> Self:
+        if not isinstance(other, Basket):
+            return NotImplemented
         for key in self._dict:
-            self[key] += other[key]  # type: ignore[index,call-overload]
+            self[key] += other[key]  # type: ignore[call-overload]
         return self
 
-    def __sub__(self, other: Self) -> 'Basket':
+    def __sub__(self, other: object) -> 'Basket':
+        if not isinstance(other, Basket):
+            return NotImplemented
         new_dict = {}
         for key in self._dict:
             new_dict[key] = self[key] - other[key]  # type: ignore[call-overload]
         return Basket(**new_dict)
 
-    def __isub__(self, other: Self) -> Self:
+    def __isub__(self, other: object) -> Self:
+        if not isinstance(other, Basket):
+            return NotImplemented
         for key in other.dict:
-            self[key] -= other[key]  # type: ignore[call-overload,index]
+            self[key] -= other[key]  # type: ignore[call-overload]
         return self
 
     def __len__(self) -> int:
         return sum(len(s) for s in self.sets)
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         if not isinstance(other, Basket):
-            return False
+            return NotImplemented
         for key in self._dict:
             if self[key] != other[key]:  # type: ignore[call-overload]
                 return False
         return True
 
-    def __ne__(self, other: Any) -> bool:
-        return not self == other
-
     def __repr__(self) -> str:
         """Return string representation."""
         ret_str = ''
         for key, val in self._dict.items():
-            ret_str += f'  {key}: '
-            ret_str += f'{val!s}\n'
+            ret_str += f'  {key}: {val!s}\n'
         return ret_str
 
     def empty(self) -> None:

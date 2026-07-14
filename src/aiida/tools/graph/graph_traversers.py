@@ -10,7 +10,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, cast
+
+from typing_extensions import TypedDict
 
 from aiida import orm
 from aiida.common import exceptions
@@ -24,7 +26,7 @@ if TYPE_CHECKING:
     from aiida.tools.graph.age_rules import Operation
 
 
-class TraverseGraphOutput(TypedDict, total=False):
+class TraverseGraphOutput(TypedDict, total=False, closed=True):
     nodes: set[int]
     links: set[LinkQuadruple] | None
     rules: dict[str, bool]
@@ -64,13 +66,11 @@ def get_nodes_delete(
         missing_callback=missing_callback,
     )
 
-    function_output: TraverseGraphOutput = {
-        'nodes': traverse_output['nodes'],
-        'links': traverse_output['links'],
-        'rules': traverse_links['rules_applied'],
-    }
-
-    return function_output
+    return TraverseGraphOutput(
+        nodes=traverse_output['nodes'],
+        links=traverse_output['links'],
+        rules=traverse_links['rules_applied'],
+    )
 
 
 def get_nodes_export(
@@ -106,13 +106,11 @@ def get_nodes_export(
         links_backward=traverse_links['backward'],
     )
 
-    function_output: TraverseGraphOutput = {
-        'nodes': traverse_output['nodes'],
-        'links': traverse_output['links'],
-        'rules': traverse_links['rules_applied'],
-    }
-
-    return function_output
+    return TraverseGraphOutput(
+        nodes=traverse_output['nodes'],
+        links=traverse_output['links'],
+        rules=traverse_links['rules_applied'],
+    )
 
 
 def validate_traversal_rules(
@@ -286,10 +284,7 @@ def traverse_graph(
 
     results = rulesequence.run(basket)
 
-    output: TraverseGraphOutput = {}
-    output['nodes'] = results.nodes.keyset
-    output['links'] = None
-    if get_links:
-        output['links'] = results['nodes_nodes'].keyset
-
-    return output
+    return TraverseGraphOutput(
+        nodes=results.nodes.keyset,
+        links=results['nodes_nodes'].keyset if get_links else None,
+    )

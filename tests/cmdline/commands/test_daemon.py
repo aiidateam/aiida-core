@@ -39,13 +39,16 @@ def test_daemon_start(run_cli_command, stopped_daemon_client):
     run_cli_command(cmd_daemon.start)
 
     daemon_response = stopped_daemon_client.get_daemon_info()
-    worker_response = stopped_daemon_client.get_worker_info()
 
     assert 'status' in daemon_response
     assert daemon_response['status'] == 'ok'
 
-    assert 'info' in worker_response
-    assert len(worker_response['info']) == 1
+    # The daemon start command only waits for the circus daemon itself to be up, not for all workers to have been
+    # spawned, so poll for the expected number of workers instead of asserting on a single snapshot.
+    stopped_daemon_client._await_condition(
+        lambda: stopped_daemon_client.get_number_of_workers() == 1,
+        DaemonTimeoutException('The daemon failed to start 1 worker.'),
+    )
 
 
 @pytest.mark.parametrize('options', ([], ['--reset']))
@@ -69,13 +72,14 @@ def test_daemon_start_number(run_cli_command, stopped_daemon_client):
     run_cli_command(cmd_daemon.start, [str(number)])
 
     daemon_response = stopped_daemon_client.get_daemon_info()
-    worker_response = stopped_daemon_client.get_worker_info()
 
     assert 'status' in daemon_response
     assert daemon_response['status'] == 'ok'
 
-    assert 'info' in worker_response
-    assert len(worker_response['info']) == number
+    stopped_daemon_client._await_condition(
+        lambda: stopped_daemon_client.get_number_of_workers() == number,
+        DaemonTimeoutException(f'The daemon failed to start {number} workers.'),
+    )
 
 
 def test_daemon_start_number_config(run_cli_command, stopped_daemon_client, isolated_config):
@@ -87,13 +91,14 @@ def test_daemon_start_number_config(run_cli_command, stopped_daemon_client, isol
     run_cli_command(cmd_daemon.start, use_subprocess=False)
 
     daemon_response = stopped_daemon_client.get_daemon_info()
-    worker_response = stopped_daemon_client.get_worker_info()
 
     assert 'status' in daemon_response
     assert daemon_response['status'] == 'ok'
 
-    assert 'info' in worker_response
-    assert len(worker_response['info']) == number
+    stopped_daemon_client._await_condition(
+        lambda: stopped_daemon_client.get_number_of_workers() == number,
+        DaemonTimeoutException(f'The daemon failed to start {number} workers.'),
+    )
 
 
 def test_daemon_stop(run_cli_command, started_daemon_client):

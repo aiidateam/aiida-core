@@ -91,10 +91,12 @@ class RabbitmqBroker(Broker):
         self._prefix = f'aiida-{self._profile.uuid}'
 
     def __str__(self) -> str:
+        url = self.get_url(safe=True)
+
         try:
-            return f'RabbitMQ v{self.get_rabbitmq_version()} @ {self.get_url()}'
+            return f'RabbitMQ v{self.get_rabbitmq_version()} @ {url}'
         except ConnectionError:
-            return f'RabbitMQ @ {self.get_url()} <Connection failed>'
+            return f'RabbitMQ @ {url} <Connection failed>'
 
     def close(self) -> None:
         """Close the broker."""
@@ -156,15 +158,38 @@ class RabbitmqBroker(Broker):
 
         return version, True
 
-    def get_url(self) -> str:
-        """Return the RMQ url for this profile."""
+    def get_url(self, safe: bool = False) -> str:
+        """Return the RMQ url for this profile.
+
+        :param safe: If ``True``, redact embedded credentials in the returned URL.
+        """
+        from urllib.parse import urlsplit, urlunsplit
+
         from .utils import get_rmq_url
 
         kwargs = {
             key[7:]: val for key, val in self._profile.process_control_config.items() if key.startswith('broker_')
         }
         additional_kwargs = kwargs.pop('parameters', {})
-        return get_rmq_url(**kwargs, **additional_kwargs)
+        url = get_rmq_url(**kwargs, **additional_kwargs)
+
+        if not safe:
+            return url
+
+        parsed = urlsplit(url)
+
+        if parsed.hostname is None:
+            return url
+
+        netloc = parsed.hostname
+
+        if parsed.username is not None:
+            netloc = f'{parsed.username}:***@{netloc}'
+
+        if parsed.port is not None:
+            netloc = f'{netloc}:{parsed.port}'
+
+        return urlunsplit((parsed.scheme, netloc, parsed.path, parsed.query, parsed.fragment))
 
     def is_rabbitmq_version_supported(self) -> bool:
         """Return whether the version of RabbitMQ configured for the current profile is supported.

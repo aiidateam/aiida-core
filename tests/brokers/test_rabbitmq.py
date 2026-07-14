@@ -32,10 +32,17 @@ def test_str_method(monkeypatch, manager):
         raise ConnectionError
 
     broker = manager.get_broker()
-    assert 'RabbitMQ v' in str(broker)
+    unsafe_url = broker.get_url()
+    broker_string = str(broker)
+    assert 'RabbitMQ v' in broker_string
+    assert ':***@' in broker_string
+    assert unsafe_url not in broker_string
 
     monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
-    assert 'RabbitMQ @' in str(broker)
+    broker_string = str(broker)
+    assert 'RabbitMQ @' in broker_string
+    assert ':***@' in broker_string
+    assert unsafe_url not in broker_string
 
 
 def test_del_closes_broker_when_not_finalizing(aiida_profile, monkeypatch, caplog):

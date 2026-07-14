@@ -55,6 +55,33 @@ def test_get_service_status(monkeypatch, manager):
     assert broker.get_service_status() == {'product': 'RabbitMQ', 'version': '3.12.0'}
 
 
+def test_is_service_running(monkeypatch, manager):
+    """Test RabbitMQ service reachability checks open and close a fresh communicator."""
+    broker = manager.get_broker()
+    communicator = MagicMock()
+    close = MagicMock()
+    monkeypatch.setattr(broker, 'get_communicator', lambda: communicator)
+    monkeypatch.setattr(broker, 'close', close)
+
+    assert broker.is_service_running() is True
+    close.assert_called_once_with()
+
+
+def test_is_service_running_false(monkeypatch, manager):
+    """Test RabbitMQ service reachability returns false on connection errors."""
+    broker = manager.get_broker()
+    close = MagicMock()
+
+    def raise_connection_error():
+        raise ConnectionError
+
+    monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
+    monkeypatch.setattr(broker, 'close', close)
+
+    assert broker.is_service_running() is False
+    close.assert_called_once_with()
+
+
 def test_del_closes_broker_when_not_finalizing(aiida_profile, monkeypatch, caplog):
     """Test `__del__` closes the broker when Python is not finalizing."""
     broker = RabbitmqBroker(aiida_profile)

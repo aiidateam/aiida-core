@@ -73,6 +73,10 @@ class Broker(abc.ABC):
         """Return an iterator over the tasks in the launch queue."""
 
     @abc.abstractmethod
+    def is_service_reachable(self) -> bool:
+        """Return whether the broker service is reachable from this client."""
+
+    @abc.abstractmethod
     def get_service_status(self) -> BrokerServiceStatus | None:
         """Return service status information for the broker, if available."""
 

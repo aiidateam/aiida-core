@@ -11,8 +11,46 @@
 import unittest
 import uuid
 
+import pytest
+
 from aiida.schedulers.datastructures import JobState
 from aiida.schedulers.plugins.pbspro import PbsproScheduler
+
+CONTINUATION_CASES = [
+    # TAB continuation: a wrapped long value, joined with no newline (pre-existing).
+    pytest.param(
+        'Job Id: 1.c\n    Resource_List.select = 1:ncpus=1:j\n\tobfs=104857600\n',
+        'resource_list.select',
+        '1:ncpus=1:jobfs=104857600',
+        [],
+        id='tab-continuation',
+    ),
+    # Space-prefixed line without `=`: a bash function body, folded and flagged (the #7395 fix).
+    pytest.param(
+        'Job Id: 1.c\n    Variable_List = f=() {  echo hi\n echo bye; }\n    queue = normal\n',
+        'variable_list',
+        'f=() {  echo hi\n echo bye; }',
+        ['variable_list'],
+        id='space-no-equals',
+    ),
+    # Zero-indent continuation, e.g. the `}` line: folded and flagged (pre-existing).
+    pytest.param(
+        'Job Id: 1.c\n    comment = line one\nline two\n',
+        'comment',
+        'line one\nline two',
+        ['comment'],
+        id='zero-indent',
+    ),
+]
+
+
+@pytest.mark.parametrize('stdout, field, value, warned', CONTINUATION_CASES)
+def test_parse_qstat_line_continuations(stdout, field, value, warned):
+    """qstat continuation lines fold into the previous field by leading whitespace (#7395)."""
+    [job] = PbsproScheduler()._parse_joblist_output(0, stdout, '')
+    assert job.raw_data[field] == value
+    assert job.raw_data.get('warning_fields_with_newlines', []) == warned
+
 
 text_qstat_f_to_test = """Job Id: 68350.mycluster
     Job_Name = cell-Qnormal
@@ -851,6 +889,15 @@ class TestParserQstat(unittest.TestCase):
 
                 self.assertTrue(j.num_machines == num_machines)
                 self.assertTrue(j.num_cpus == num_cpus)
+
+    def test_parse_exec_host_single_node(self):
+        """A single-node `exec_host` (`host/N`, no `*ncpus`) yields one machine with `num_cpus` 1."""
+        stdout = 'Job Id: 1.cl\n    exec_host = node-0686/24\n'
+        [job] = PbsproScheduler()._parse_joblist_output(0, stdout, '')
+        self.assertEqual(
+            [(machine.name, machine.num_cpus) for machine in job.allocated_machines],
+            [('node-0686', 1)],
+        )
 
 
 # TODO: WHEN WE USE THE CORRECT ERROR MANAGEMENT, REIMPLEMENT THIS TEST

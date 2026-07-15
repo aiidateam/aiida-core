@@ -62,6 +62,20 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         )
         self.shared_options = shared_options
 
+    def _supports_cli_creation(self, entry_point: str) -> bool:
+        """Return whether the plugin under ``entry_point`` supports CLI-based creation.
+
+        Reads the ``supports_cli_model`` classproperty, defaulting to ``True`` for plugins that do not declare it
+        (anything outside the ``Node`` model system, e.g. storage backends). Node-based classes without a CLI
+        model, such as the abstract base ``AbstractCode``, report ``False`` and are excluded, as building their
+        options would crash the group help.
+
+        :param entry_point: The entry point name.
+        :returns: ``True`` if the plugin supports CLI-based creation, ``False`` otherwise.
+        :raises ~aiida.common.exceptions.EntryPointError: If no plugin is registered under the entry point name.
+        """
+        return getattr(self.factory(entry_point), 'supports_cli_model', True)
+
     def list_commands(self, ctx: click.Context) -> list[str]:
         """Return the sorted list of subcommands for this group.
 
@@ -74,6 +88,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
                 for entry_point in get_entry_point_names(self.entry_point_group)
                 if re.match(self.entry_point_name_filter, entry_point)
                 and getattr(self.factory(entry_point), 'cli_exposed', True)
+                and self._supports_cli_creation(entry_point)
             ]
         )
         return sorted(commands)
@@ -86,6 +101,11 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         :returns: The :class:`click.Command`.
         """
         try:
+            # Resolution is gated on the CLI-creation capability only, not ``cli_exposed``: a plugin that opts out
+            # of the listing (``cli_exposed = False``) can still be created when invoked explicitly by name.
+            # TODO: if ``cli_exposed = False`` should instead mean fully non-CLI, also gate on ``cli_exposed`` here.
+            if not self._supports_cli_creation(cmd_name):
+                return super().get_command(ctx, cmd_name)
             command: click.Command | None = self.create_command(ctx, cmd_name)
         except exceptions.EntryPointError:
             command = super().get_command(ctx, cmd_name)

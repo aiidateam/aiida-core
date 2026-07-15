@@ -223,12 +223,12 @@ def print_status(
     :param msg:  message string
     """
     symbol = STATUS_SYMBOLS[status]
-    echo.echo(f" {symbol['string']} ", fg=symbol['color'], nl=False)
-    echo.echo(f"{service + ':':12s} ", nl=False)
+    echo.echo(f' {symbol["string"]} ', fg=symbol['color'], nl=False)
+    echo.echo(f'{service + ":":12s} ', nl=False)
     lines = msg.split('\n')
     echo.echo(lines[0])
     for line in lines[1:]:
-        echo.echo(f"{'':15s} {line}")
+        echo.echo(f'{"":15s} {line}')
 
     if exception is not None:
         echo.echo_error(f'{type(exception).__name__}: {exception}')

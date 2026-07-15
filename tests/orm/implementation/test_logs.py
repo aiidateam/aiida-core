@@ -156,9 +156,9 @@ class TestBackendLog:
 
         # Make sure they exist
         count_logs_found = orm.QueryBuilder().append(orm.Log, filters={'uuid': {'in': log_uuids}}).count()
-        assert count_logs_found == len(
-            log_uuids
-        ), f'There should be {len(log_uuids)} Logs, instead {count_logs_found} Log(s) was/were found'
+        assert count_logs_found == len(log_uuids), (
+            f'There should be {len(log_uuids)} Logs, instead {count_logs_found} Log(s) was/were found'
+        )
 
         # Delete last two logs (log2, log3)
         filters = {'or': [{'id': log2.id}, {'uuid': str(log3.uuid)}]}
@@ -185,9 +185,9 @@ class TestBackendLog:
 
         # Make sure they exist
         count_logs_found = orm.QueryBuilder().append(orm.Log, filters={'uuid': {'in': log_uuids}}).count()
-        assert count_logs_found == len(
-            log_uuids
-        ), f'There should be {len(log_uuids)} Logs, instead {count_logs_found} Log(s) was/were found'
+        assert count_logs_found == len(log_uuids), (
+            f'There should be {len(log_uuids)} Logs, instead {count_logs_found} Log(s) was/were found'
+        )
 
         # Delete logs for self.node
         filters = {'dbnode_id': self.node.id}
@@ -300,8 +300,7 @@ class TestBackendLog:
         self.backend.logs.delete_many(filters=filters)
         log_count_after = orm.QueryBuilder().append(orm.Log).count()
         assert log_count_after == log_count_before, (
-            'The number of logs changed after performing `delete_many`, '
-            "while filtering for a non-existing 'dbnode_id'"
+            "The number of logs changed after performing `delete_many`, while filtering for a non-existing 'dbnode_id'"
         )
 
     def test_delete_many_same_twice(self):

@@ -284,7 +284,7 @@ class LsfScheduler(BashCliScheduler):
         jobnum, state, walltime, queue[=partition], user, numnodes, numcores, title
         """
 
-        command = ['bjobs', '-noheader', f"-o '{' '.join(self._joblist_fields)} delimiter=\"{_FIELD_SEPARATOR}\"'"]
+        command = ['bjobs', '-noheader', f'-o \'{" ".join(self._joblist_fields)} delimiter="{_FIELD_SEPARATOR}"\'']
 
         if user and jobs:
             raise FeatureNotAvailable('Cannot query by user and job(s) in LSF')
@@ -413,7 +413,7 @@ class LsfScheduler(BashCliScheduler):
                     raise ValueError
             except ValueError as exc:
                 raise ValueError(
-                    'max_wallclock_seconds must be ' "a positive integer (in seconds)! It is instead '{}'" ''.format(
+                    "max_wallclock_seconds must be a positive integer (in seconds)! It is instead '{}'".format(
                         (job_tmpl.max_wallclock_seconds)
                     )
                 ) from exc

@@ -45,9 +45,9 @@ class NnincDbImporter(DbImporter):
                     get_parts.append(value[1](self, value[0], key, values))
 
         if kwargs:
-            raise NotImplementedError(f"following keyword(s) are not implemented: {', '.join(kwargs.keys())}")
+            raise NotImplementedError(f'following keyword(s) are not implemented: {", ".join(kwargs.keys())}')
 
-        return f"{self._query_url}?{'&'.join(get_parts)}"
+        return f'{self._query_url}?{"&".join(get_parts)}'
 
     def query(self, **kwargs):
         """Performs a query on the NNIN/C Pseudopotential Virtual Vault using
@@ -125,7 +125,7 @@ class NnincSearchResults(DbSearchResults):
 
         :param result_dict: dictionary, describing an entry in the results.
         """
-        return f"{self._base_url + result_dict['id']}.UPF"
+        return f'{self._base_url + result_dict["id"]}.UPF'
 
 
 class NnincEntry(UpfEntry):

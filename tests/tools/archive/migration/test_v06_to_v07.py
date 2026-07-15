@@ -28,24 +28,24 @@ def test_migrate_external(migrate_from_func):
         if data['export_data']['Node'][node_pk]['node_type'].startswith('process.'):
             # Check if illegal attributes were removed successfully
             for attr in illegal_attrs:
-                assert (
-                    attr not in attrs
-                ), f"key '{attr}' should have been removed from attributes for Node <pk={node_pk}>"
+                assert attr not in attrs, (
+                    f"key '{attr}' should have been removed from attributes for Node <pk={node_pk}>"
+                )
 
             # Check new attributes were added successfully
             for attr, attr_value in new_attrs.items():
                 assert attr in attrs, f"key '{attr}' was not added to attributes for Node <pk={node_pk}>"
-                assert (
-                    attrs[attr] == attr_value
-                ), f"key '{attr}' should have had the value {attr_value}, but did instead have {attrs[attr]}"
+                assert attrs[attr] == attr_value, (
+                    f"key '{attr}' should have had the value {attr_value}, but did instead have {attrs[attr]}"
+                )
 
     # Check Attribute and Link have been removed
     illegal_entities = {'Attribute', 'Link'}
     for dict_ in ('unique_identifiers', 'all_fields_info'):
         for entity in illegal_entities:
-            assert (
-                entity not in metadata[dict_]
-            ), f"key '{entity}' should have been removed from '{dict_}' in metadata.json"
+            assert entity not in metadata[dict_], (
+                f"key '{entity}' should have been removed from '{dict_}' in metadata.json"
+            )
 
 
 def test_migration_0040_corrupt_archive():

@@ -17,7 +17,7 @@ import tempfile
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Union
 
 from alembic.command import upgrade
 from alembic.config import Config
@@ -34,7 +34,10 @@ from aiida.storage.sqlite_zip.backend import SqliteZipBackend
 from .migrations.legacy import FINAL_LEGACY_VERSION, LEGACY_MIGRATE_FUNCTIONS
 from .migrations.legacy_to_main import LEGACY_TO_MAIN_REVISION, perform_v1_migration
 from .migrations.utils import copy_tar_to_zip, copy_zip_to_zip, update_metadata
-from .utils import DB_FILENAME, META_FILENAME, REPO_FOLDER, create_sqla_engine, extract_metadata, read_version
+from .utils import DB_FILENAME, META_FILENAME, REPO_FOLDER, create_sqla_engine, extract_metadata, is_url, read_version
+
+if TYPE_CHECKING:
+    from remotezip import RemoteZip
 
 
 def get_schema_version_head() -> str:
@@ -49,9 +52,12 @@ def list_versions() -> List[str]:
     return legacy_versions + alembic_versions
 
 
-def validate_storage(inpath: Path) -> None:
+def validate_storage(inpath: Union[str, Path], *, zip_handle: Optional['RemoteZip'] = None) -> None:
     """Validate that the storage is at the head version.
 
+    :param inpath: path to the storage instance, or URL of a remote zip file.
+    :param zip_handle: for a remote URL ``inpath``, optionally an already-open handle of the remote zip file, which
+        is reused (and not closed) instead of opening a new connection.
     :raises: :class:`aiida.common.exceptions.UnreachableStorage` if the file does not exist
     :raises: :class:`aiida.common.exceptions.CorruptStorage`
         if the version cannot be read from the storage.
@@ -59,14 +65,23 @@ def validate_storage(inpath: Path) -> None:
         if the storage is not compatible with the code API.
     """
     schema_version_code = get_schema_version_head()
-    schema_version_archive = read_version(inpath)
+    schema_version_archive = read_version(inpath, zip_handle=zip_handle)
     if schema_version_archive != schema_version_code:
-        raise IncompatibleStorageSchema(
+        if is_url(inpath):
+            hint = (
+                'A remote archive cannot be migrated in place: '
+                'download the file and run `verdi archive migrate` on the local copy.'
+            )
+        else:
+            hint = (
+                'To migrate the archive schema version to the current one, '
+                f'run the following command: verdi archive migrate {str(inpath)!r}'
+            )
+        msg = (
             f'Archive schema version `{schema_version_archive}` '
-            f'is incompatible with the required schema version `{schema_version_code}`. '
-            'To migrate the archive schema version to the current one, '
-            f'run the following command: verdi archive migrate {str(inpath)!r}'
+            f'is incompatible with the required schema version `{schema_version_code}`. ' + hint
         )
+        raise IncompatibleStorageSchema(msg)
 
 
 def migrate(

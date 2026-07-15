@@ -36,6 +36,9 @@ class ProfileParamType(LabelStringType):
     def __init__(self, *args: t.Any, **kwargs: t.Any):
         self._cannot_exist = kwargs.pop('cannot_exist', False)
         self._load_profile = kwargs.pop('load_profile', False)  # If True, will load the profile converted from value
+        # If True, a value that looks like an archive location (``http(s)://`` URL or ``file://`` path) is converted
+        # to an ephemeral archive profile, instead of being interpreted as the name of a configured profile.
+        self._accept_archive_location = kwargs.pop('accept_archive_location', False)
         super().__init__(*args, **kwargs)
 
     @staticmethod
@@ -60,26 +63,69 @@ class ProfileParamType(LabelStringType):
         if isinstance(value, Profile):
             return value
 
-        value = super().convert(value, param, ctx)
-
-        try:
-            profile = config.get_profile(value)
-        except (MissingConfigurationError, ProfileConfigurationError) as exception:
-            if not self._cannot_exist:
-                self.fail(str(exception))
-
-            # Create a new empty profile
-            profile = Profile(value, {}, validate=False)
+        if (
+            self._accept_archive_location
+            and not self._cannot_exist
+            and isinstance(value, str)
+            and value.lower().startswith(('http://', 'https://', 'file://'))
+        ):
+            profile = self._convert_archive_location(value, param, ctx)
         else:
-            if self._cannot_exist:
-                self.fail(str(f'the profile `{value}` already exists'))
+            value = super().convert(value, param, ctx)
+
+            try:
+                profile = config.get_profile(value)
+            except (MissingConfigurationError, ProfileConfigurationError) as exception:
+                if not self._cannot_exist:
+                    self.fail(str(exception))
+
+                # Create a new empty profile
+                profile = Profile(value, {}, validate=False)
+            else:
+                if self._cannot_exist:
+                    self.fail(str(f'the profile `{value}` already exists'))
 
         if self._load_profile:
-            load_profile(profile.name)
+            load_profile(profile)
 
         ctx.obj.profile = profile  # type: ignore[union-attr]
 
-        return profile  # type: ignore[no-any-return]
+        return profile
+
+    def _convert_archive_location(
+        self, value: str, param: click.Parameter | None, ctx: click.Context | None
+    ) -> Profile:
+        """Create an ephemeral profile mounting the ``.aiida`` archive at the given location as its storage.
+
+        The profile uses the read-only ``core.sqlite_zip`` storage backend and is not added to the configuration
+        file, so it only lives for the duration of the current interpreter.
+
+        :param value: the location of the archive: an ``http(s)://`` URL of a remote archive, or a ``file://`` URL
+            of a local one. The latter must be of the form ``file:///absolute/path`` (an empty or ``localhost`` host
+            is accepted); percent-encoded characters in the path are decoded.
+        """
+        from pathlib import Path
+        from urllib.parse import urlsplit
+
+        from aiida.common.utils import url2pathname
+        from aiida.storage.sqlite_zip.backend import SqliteZipBackend
+
+        filepath: str | Path = value
+
+        if value.lower().startswith('file://'):
+            parts = urlsplit(value)
+            if parts.netloc not in ('', 'localhost'):
+                self.fail(
+                    f'unsupported host `{parts.netloc}` in the file URL `{value}`: '
+                    'use the form `file:///absolute/path`.',
+                    param,
+                    ctx,
+                )
+            filepath = Path(url2pathname(parts.path))
+            if not filepath.is_file():
+                self.fail(f'the archive `{filepath}` does not exist.', param, ctx)
+
+        return SqliteZipBackend.create_profile(filepath)
 
     def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: str) -> list[CompletionItem]:
         """Return possible completions based on an incomplete value

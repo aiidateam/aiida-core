@@ -55,6 +55,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pytz" },
     { name = "pyyaml" },
+    { name = "remotezip" },
     { name = "requests" },
     { name = "sqlalchemy" },
     { name = "tabulate" },
@@ -257,6 +258,7 @@ requires-dist = [
     { name = "python-memcached", marker = "extra == 'rest'", specifier = "~=1.59" },
     { name = "pytz", specifier = "~=2021.1" },
     { name = "pyyaml", specifier = "~=6.0" },
+    { name = "remotezip", specifier = "~=0.12.3" },
     { name = "requests", specifier = "~=2.0" },
     { name = "seekpath", marker = "extra == 'atomic-tools'", specifier = "~=1.9,>=1.9.3" },
     { name = "seekpath", marker = "extra == 'rest'", specifier = "~=1.9,>=1.9.3" },
@@ -4849,6 +4851,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/22/f5/df4e9027acead3ecc63e50fe1e36aca1523e1719559c499951bb4b53188f/referencing-0.37.0.tar.gz", hash = "sha256:44aefc3142c5b842538163acb373e24cce6632bd54bdb01b21ad5863489f50d8", size = 78036, upload-time = "2025-10-13T15:30:48.871Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2c/58/ca301544e1fa93ed4f80d724bf5b194f6e4b945841c5bfd555878eea9fcb/referencing-0.37.0-py3-none-any.whl", hash = "sha256:381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231", size = 26766, upload-time = "2025-10-13T15:30:47.625Z" },
+]
+
+[[package]]
+name = "remotezip"
+version = "0.12.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fa/8d/908ad46bff752568a409ee6ac797c3c6817501db06f142989e3208414569/remotezip-0.12.3.tar.gz", hash = "sha256:bf1ebe2be9f07a6e1c14d0e52ecffccd7a3e808dff4f9ba523c5e84d867a3fe3", size = 7835, upload-time = "2024-02-26T19:51:04.917Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7b/18/22316545b712dbed0119c7d3b8683a566c7da26353e344a4188b99f12692/remotezip-0.12.3-py3-none-any.whl", hash = "sha256:f70a4026879439ecb0a2cf848a7c176ae5ee142bbe51ec69e3344e150b2a52de", size = 8099, upload-time = "2024-02-26T19:51:02.968Z" },
 ]
 
 [[package]]

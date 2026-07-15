@@ -55,7 +55,7 @@ __all__ += (
 import os
 import warnings
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from aiida.common.warnings import AiidaDeprecationWarning
 
@@ -152,12 +152,13 @@ def _merge_deprecated_cache_yaml(config, filepath):
     shutil.move(cache_path, cache_path_backup)
 
 
-def load_profile(profile: Optional[str] = None, allow_switch=False) -> 'Profile':
+def load_profile(profile: Union[None, str, 'Profile'] = None, allow_switch=False) -> 'Profile':
     """Load a global profile, unloading any previously loaded profile.
 
     .. note:: if a profile is already loaded and no explicit profile is specified, nothing will be done
 
-    :param profile: the name of the profile to load, by default will use the one marked as default in the config
+    :param profile: the name of the profile, or the ``Profile`` instance, to load, by default will use the one marked
+        as default in the config
     :param allow_switch: if True, will allow switching to a different profile when storage is already loaded
 
     :return: the loaded `Profile` instance

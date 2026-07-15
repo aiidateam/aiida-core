@@ -581,6 +581,11 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return hasattr(cls, 'ConstructorArgsModel')
 
     @classproperty
+    def supports_cli_model(cls) -> bool:  # noqa: N805
+        """Return whether this node class supports CLI-based creation."""
+        return cls._CliModel is not None
+
+    @classproperty
     def class_node_type(cls) -> str:  # noqa: N805
         """Returns the node type of this node (sub) class."""
         return cls._plugin_type_string

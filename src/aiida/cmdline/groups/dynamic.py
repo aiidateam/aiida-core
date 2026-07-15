@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import functools
-import inspect
 import re
 import typing as t
 
@@ -64,19 +63,20 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         self.shared_options = shared_options
 
     def _is_exposed(self, entry_point: str) -> bool:
-        """Return whether the plugin registered under ``entry_point`` should be exposed as a subcommand.
+        """Return whether the plugin registered under ``entry_point`` should be listed as a subcommand.
 
-        A plugin is exposed only if its class opts in to CLI exposure (through the ``cli_exposed`` attribute,
-        which defaults to ``True``) and is not abstract. Abstract classes cannot be instantiated and so do not
-        support CLI-based creation; attempting to build their options would raise an exception and break the
-        rendering of the entire group (see https://github.com/aiidateam/aiida-core/issues/7379).
+        A plugin is listed only if it supports CLI-based creation (through the ``supports_cli_model`` capability,
+        which defaults to ``True`` for plugins that do not declare it) and opts in to CLI exposure (through the
+        ``cli_exposed`` attribute, which defaults to ``True``). Classes that do not support CLI-based creation, such
+        as the abstract base ``AbstractCode``, cannot build their options and would otherwise break the rendering of
+        the entire group (see https://github.com/aiidateam/aiida-core/issues/7379).
 
         :param entry_point: The entry point name.
-        :returns: ``True`` if the plugin should be exposed as a subcommand, ``False`` otherwise.
+        :returns: ``True`` if the plugin should be listed as a subcommand, ``False`` otherwise.
         :raises ~aiida.common.exceptions.EntryPointError: If no plugin is registered under the entry point name.
         """
         cls = self.factory(entry_point)
-        return getattr(cls, 'cli_exposed', True) and not inspect.isabstract(cls)
+        return getattr(cls, 'cli_exposed', True) and getattr(cls, 'supports_cli_model', True)
 
     def list_commands(self, ctx: click.Context) -> list[str]:
         """Return the sorted list of subcommands for this group.
@@ -101,7 +101,9 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         :returns: The :class:`click.Command`.
         """
         try:
-            if not self._is_exposed(cmd_name):
+            # Resolution is gated on the CLI-creation capability only, not ``cli_exposed``: a plugin that opts out
+            # of the listing (``cli_exposed = False``) can still be created when invoked explicitly by name.
+            if not getattr(self.factory(cmd_name), 'supports_cli_model', True):
                 return super().get_command(ctx, cmd_name)
             command: click.Command | None = self.create_command(ctx, cmd_name)
         except exceptions.EntryPointError:

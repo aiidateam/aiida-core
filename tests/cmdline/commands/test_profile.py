@@ -291,7 +291,7 @@ def test_delete_storage(run_cli_command, isolated_config, tmp_path, entry_point)
     assert profile_name not in isolated_config.profile_names
 
 
-@pytest.mark.parametrize('entry_point', ('core.psql_dos', 'core.sqlite_dos', 'core.sqlite_zip'))
+@pytest.mark.parametrize('entry_point', ('core.psql_dos', 'core.sqlite_temp', 'core.sqlite_dos', 'core.sqlite_zip'))
 def test_setup(config_psql_dos, run_cli_command, isolated_config, tmp_path, entry_point):
     """Test the ``verdi profile setup`` command.
 

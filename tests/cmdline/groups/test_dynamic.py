@@ -12,7 +12,9 @@ from aiida.common.pydantic import AiiDABaseModel, MetadataField
 
 
 class CustomClass:
-    """Test plugin class."""
+    """Test plugin class that supports CLI-based creation."""
+
+    supports_cli_model = True
 
     class CliModel(AiiDABaseModel):
         optional_type: t.Union[int, float] = MetadataField(title='Optional type')
@@ -23,19 +25,19 @@ class CustomClass:
 
 
 class AbstractCustomClass(abc.ABC):
-    """Abstract test plugin class that cannot be instantiated and so should not be exposed on the CLI."""
+    """Test plugin class that does not support CLI-based creation (mirrors ``AbstractCode``)."""
+
+    supports_cli_model = False
 
     @abc.abstractmethod
     def required(self) -> None:
         """An abstract method that prevents the class from being instantiated."""
 
-    class CliModel(AiiDABaseModel):
-        some_option: str = MetadataField(title='Some option')
-
 
 class HiddenCustomClass:
-    """Test plugin class that opts out of being exposed on the CLI."""
+    """Test plugin class that supports creation but opts out of being listed on the CLI."""
 
+    supports_cli_model = True
     cli_exposed = False
 
     class CliModel(AiiDABaseModel):
@@ -65,25 +67,26 @@ def custom_group(entry_points):
 
 
 @pytest.mark.parametrize(
-    'cmd_name, exposed',
+    'cmd_name, listed, resolvable',
     [
-        pytest.param('custom', True, id='concrete'),
-        pytest.param('abstract', False, id='abstract'),
-        pytest.param('hidden', False, id='cli_exposed_false'),
-        pytest.param('non_existent', False, id='unknown'),
+        pytest.param('custom', True, True, id='concrete'),
+        pytest.param('abstract', False, False, id='no_cli_model'),
+        pytest.param('hidden', False, True, id='cli_exposed_false'),
+        pytest.param('non_existent', False, False, id='unknown'),
     ],
 )
-def test_subcommand_exposure(custom_group, cmd_name, exposed):
-    """Only exposed plugins are listed and resolvable; abstract / ``cli_exposed = False`` / unknown are excluded.
+def test_subcommand_exposure(custom_group, cmd_name, listed, resolvable):
+    """Listing is gated on ``supports_cli_model`` *and* ``cli_exposed``; resolution only on ``supports_cli_model``.
 
-    Regression test for https://github.com/aiidateam/aiida-core/issues/7379: an abstract entry point cannot be
-    instantiated, so building its CLI options raised ``UnsupportedSchemaError`` and broke rendering of the whole
-    group. Such plugins must be silently dropped from the listing and resolve to the regular user-facing
-    :class:`click.exceptions.UsageError` instead of an internal traceback.
+    Regression test for https://github.com/aiidateam/aiida-core/issues/7379: a plugin that does not support
+    CLI-based creation (``supports_cli_model = False``, e.g. ``AbstractCode``) used to crash the group with an
+    ``UnsupportedSchemaError``; it must now be dropped from the listing and resolve to a user-facing
+    :class:`click.exceptions.UsageError`. A ``cli_exposed = False`` plugin, being capable, stays resolvable when
+    invoked explicitly, it is only kept out of the listing.
     """
     ctx = click.Context(custom_group)
-    assert (cmd_name in custom_group.list_commands(ctx)) is exposed
-    if exposed:
+    assert (cmd_name in custom_group.list_commands(ctx)) is listed
+    if resolvable:
         assert custom_group.get_command(ctx, cmd_name) is not None
     else:
         with pytest.raises(click.exceptions.UsageError):

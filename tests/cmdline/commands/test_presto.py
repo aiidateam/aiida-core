@@ -50,7 +50,7 @@ def test_presto_without_rmq(run_cli_command, monkeypatch):
         raise ConnectionError()
 
     # Patch the RabbitMQ detection function to pretend it could not find the service
-    monkeypatch.setattr(defaults, 'detect_rabbitmq_config', lambda: detect_rabbitmq_config())
+    monkeypatch.setattr(defaults, 'detect_rabbitmq_config', detect_rabbitmq_config)
 
     result = run_cli_command(verdi_presto, ['--non-interactive'])
     assert 'Created new profile `presto`.' in result.output

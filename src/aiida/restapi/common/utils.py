@@ -277,7 +277,7 @@ class Utils:
         if total_count == 0:
             last_page = 1
         else:
-            last_page = int(ceil(total_count / perpage))
+            last_page = ceil(total_count / perpage)
 
         ## Check validity of required page and calculate limit, offset,
         # previous,

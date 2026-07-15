@@ -74,7 +74,7 @@ def verdi_process():
 
 
 @verdi_process.command('list')
-@options.PROJECT(type=types.LazyChoice(valid_projections), default=lambda: default_projections())
+@options.PROJECT(type=types.LazyChoice(valid_projections), default=default_projections)
 @options.ORDER_BY()
 @options.ORDER_DIRECTION()
 @options.GROUP(help='Only include entries that are a member of this group.')

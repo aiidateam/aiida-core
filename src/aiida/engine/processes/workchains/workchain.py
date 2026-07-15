@@ -62,7 +62,7 @@ class Protect(ProcessStateMachineMeta):
 
     __SENTINEL = object()
 
-    def __new__(mcs, name, bases, namespace, **kwargs):  # noqa: N804
+    def __new__(mcs, name, bases, namespace, **kwargs):
         """Collect all methods that were marked as protected and raise if the subclass defines it.
 
         :raises RuntimeError: If the new class defines (i.e. overrides) a method that was decorated with ``final``.

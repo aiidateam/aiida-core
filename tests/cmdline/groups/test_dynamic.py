@@ -1,6 +1,5 @@
 """Tests for :mod:`aiida.cmdline.groups.dynamic`."""
 
-import abc
 import typing as t
 
 import click
@@ -12,9 +11,7 @@ from aiida.common.pydantic import AiiDABaseModel, MetadataField
 
 
 class CustomClass:
-    """Test plugin class that supports CLI-based creation."""
-
-    supports_cli_model = True
+    """Test plugin class."""
 
     class CliModel(AiiDABaseModel):
         optional_type: t.Union[int, float] = MetadataField(title='Optional type')
@@ -24,14 +21,10 @@ class CustomClass:
         with_default_factory: str = MetadataField(title='With default factory', default_factory=lambda: True)
 
 
-class AbstractCustomClass(abc.ABC):
-    """Test plugin class that does not support CLI-based creation (mirrors ``AbstractCode``)."""
+class NoCliModelCustomClass:
+    """Test plugin class that does not support CLI-based creation (like the abstract base ``AbstractCode``)."""
 
     supports_cli_model = False
-
-    @abc.abstractmethod
-    def required(self) -> None:
-        """An abstract method that prevents the class from being instantiated."""
 
 
 class HiddenCustomClass:
@@ -57,25 +50,16 @@ def test_list_options(entry_points):
         assert option.type == t.get_args(field.annotation) or field.annotation
 
 
-@pytest.fixture
-def custom_group(entry_points):
-    """A dynamic group with one concrete, one abstract, and one ``cli_exposed = False`` plugin registered."""
-    entry_points.add(CustomClass, 'aiida.custom:custom')
-    entry_points.add(AbstractCustomClass, 'aiida.custom:abstract')
-    entry_points.add(HiddenCustomClass, 'aiida.custom:hidden')
-    return DynamicEntryPointCommandGroup(lambda *args, **kwargs: True, name='create', entry_point_group='aiida.custom')
-
-
 @pytest.mark.parametrize(
     'cmd_name, listed, resolvable',
     [
         pytest.param('custom', True, True, id='concrete'),
-        pytest.param('abstract', False, False, id='no_cli_model'),
+        pytest.param('no_cli_model', False, False, id='no_cli_model'),
         pytest.param('hidden', False, True, id='cli_exposed_false'),
         pytest.param('non_existent', False, False, id='unknown'),
     ],
 )
-def test_subcommand_exposure(custom_group, cmd_name, listed, resolvable):
+def test_subcommand_exposure(entry_points, cmd_name, listed, resolvable):
     """Listing is gated on ``supports_cli_model`` *and* ``cli_exposed``; resolution only on ``supports_cli_model``.
 
     Regression test for https://github.com/aiidateam/aiida-core/issues/7379: a plugin that does not support
@@ -84,10 +68,15 @@ def test_subcommand_exposure(custom_group, cmd_name, listed, resolvable):
     :class:`click.exceptions.UsageError`. A ``cli_exposed = False`` plugin, being capable, stays resolvable when
     invoked explicitly, it is only kept out of the listing.
     """
-    ctx = click.Context(custom_group)
-    assert (cmd_name in custom_group.list_commands(ctx)) is listed
+    entry_points.add(CustomClass, 'aiida.custom:custom')
+    entry_points.add(NoCliModelCustomClass, 'aiida.custom:no_cli_model')
+    entry_points.add(HiddenCustomClass, 'aiida.custom:hidden')
+    group = DynamicEntryPointCommandGroup(lambda *args, **kwargs: True, name='create', entry_point_group='aiida.custom')
+
+    ctx = click.Context(group)
+    assert (cmd_name in group.list_commands(ctx)) is listed
     if resolvable:
-        assert custom_group.get_command(ctx, cmd_name) is not None
+        assert group.get_command(ctx, cmd_name) is not None
     else:
         with pytest.raises(click.exceptions.UsageError):
-            custom_group.get_command(ctx, cmd_name)
+            group.get_command(ctx, cmd_name)

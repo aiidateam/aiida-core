@@ -52,7 +52,19 @@ def test_probe_service_status(monkeypatch, manager):
     communicator = MagicMock(server_properties={'product': b'RabbitMQ', 'version': '3.12.0'})
     monkeypatch.setattr(broker, 'get_communicator', lambda: communicator)
 
-    assert broker.probe_service_status() == {'product': 'RabbitMQ', 'version': '3.12.0'}
+    assert broker.probe_service_status() == {'connected': True, 'product': 'RabbitMQ', 'version': '3.12.0'}
+
+
+def test_probe_service_status_failure(monkeypatch, manager):
+    """Test RabbitMQ service status captures connection failures in the payload."""
+    broker = manager.get_broker()
+
+    def raise_connection_error():
+        raise ConnectionError('connection failed')
+
+    monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
+
+    assert broker.probe_service_status() == {'connected': False, 'error': 'ConnectionError: connection failed'}
 
 
 def test_is_service_reachable(monkeypatch, manager):

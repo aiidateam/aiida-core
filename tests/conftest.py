@@ -81,7 +81,7 @@ def _patch_zmq_broker_service_filepaths(profile, service_dir: Path):
         result = copy.deepcopy(original_filepaths(current_profile))
 
         if current_profile is profile:
-            result['zmq_broker_service'] = {'dir': str(service_dir), 'log': str(service_dir / 'broker.log')}
+            result['broker_service'] = {'dir': str(service_dir), 'log': str(service_dir / 'broker.log')}
 
         return result
 

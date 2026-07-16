@@ -111,7 +111,7 @@ def _make_filepaths(dirpath: pathlib.Path) -> dict:
         'profile': {'log': str(dirpath / 'profile.log')},
         'daemon': {'log': str(dirpath / 'daemon.log')},
         'circus': {'log': str(dirpath / 'circus.log')},
-        'zmq_broker_service': {'dir': str(dirpath / 'broker'), 'log': str(dirpath / 'broker' / 'broker.log')},
+        'broker_service': {'dir': str(dirpath / 'broker'), 'log': str(dirpath / 'broker' / 'broker.log')},
     }
 
 

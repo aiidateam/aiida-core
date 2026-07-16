@@ -219,7 +219,7 @@ def _get_log_files() -> list[pathlib.Path]:
         filepaths['profile']['log'],
         filepaths['circus']['log'],
         filepaths['daemon']['log'],
-        filepaths['zmq_broker_service']['log'],
+        filepaths['broker_service']['log'],
     ]
 
     for log_filepath in log_filepaths:

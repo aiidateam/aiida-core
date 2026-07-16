@@ -94,7 +94,7 @@ class ConfigFilepaths(TypedDict):
     profile: ProfileFilepaths
     circus: CircusFilepaths
     daemon: DaemonFilepaths
-    zmq_broker_service: ZeromqBrokerServiceFilepaths
+    broker_service: ZeromqBrokerServiceFilepaths
 
 
 class ConfigVersionSchema(BaseModel, defer_build=True):
@@ -1043,7 +1043,7 @@ class Config:
                 'pid': str(daemon_dir / f'aiida-{profile.name}.pid'),
                 'daemon_env_info': str(daemon_dir / f'aiida-{profile.name}-env-info.json'),
             },
-            'zmq_broker_service': {
+            'broker_service': {
                 'dir': str(zmq_broker_service_base_dir / f'{profile.uuid}-{profile.name}'),
                 'log': str(zmq_broker_service_base_dir / f'{profile.uuid}-{profile.name}' / 'broker.log'),
             },

@@ -66,8 +66,8 @@ class ZeromqBroker(Broker):
 
         from aiida.manage.configuration import get_config
 
-        zmq_broker_service_dir = get_config().filepaths(profile)['zmq_broker_service']['dir']
-        zmq_broker_service_log_path = get_config().filepaths(profile)['zmq_broker_service']['log']
+        zmq_broker_service_dir = get_config().filepaths(profile)['broker_service']['dir']
+        zmq_broker_service_log_path = get_config().filepaths(profile)['broker_service']['log']
         layout = ZeromqBrokerService.FilepathLayout(zmq_broker_service_dir, zmq_broker_service_log_path)
         self._service_dir = layout.service_dir
         self._service_pid_file = layout.pid_file

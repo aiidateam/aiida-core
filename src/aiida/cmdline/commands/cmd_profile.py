@@ -263,7 +263,7 @@ def _configure_profile_broker(
         daemon_client = get_daemon_client()
         if daemon_client and daemon_client.is_daemon_running:
             echo.echo_warning('The daemon is currently running. It is no longer needed and can be stopped.')
-            if not force:
+            if not non_interactive:
                 click.confirm('Do you want to stop the daemon?', abort=True)
                 echo.echo_report('Stopping the daemon...')
                 daemon_client.stop_daemon(wait=True)

@@ -161,14 +161,14 @@ def status(ctx, all_profiles, timeout):
             status_info = broker.probe_service_status()
             if status_info.get('connected', False):
                 broker_pid = status_info.get('pid', '?')
-                pending = status_info.get('pending_tasks', 0)
-                processing = status_info.get('processing_tasks', 0)
+                pending = status_info.get('pending_tasks', '?')
+                processing = status_info.get('processing_tasks', '?')
                 broker_lines.append(
                     f'Broker is running as PID {broker_pid} [{pending} pending, {processing} processing]'
                 )
-                broker_lines.append(f'Broker directory: {broker.service_dir}')
             else:
-                broker_lines.append(str(status_info.get('error', 'Broker is NOT running')))
+                broker_lines.append('Broker is NOT running.')
+            broker_lines.append(f'Broker directory: {broker.service_dir}')
 
         lines = [
             f'Daemon is running as PID {daemon_response["info"]["pid"]} since {start_time}',

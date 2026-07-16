@@ -185,12 +185,12 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
             status_info = broker.probe_service_status()
             if status_info.get('connected', False):
                 broker_pid = status_info.get('pid', '?')
-                pending = status_info.get('pending_tasks', 0)
-                processing = status_info.get('processing_tasks', 0)
+                pending = status_info.get('pending_tasks', '?')
+                processing = status_info.get('processing_tasks', '?')
                 daemon_msg += f', Broker PID {broker_pid} [{pending} pending, {processing} processing]'
             else:
-                error = status_info.get('error', 'Broker is NOT running')
-                daemon_msg += f', {error}'
+                daemon_status = ServiceStatus.WARNING
+                daemon_msg += ', Broker is NOT running (run `verdi daemon status` for more information)'
 
         daemon_lines = [daemon_msg]
 

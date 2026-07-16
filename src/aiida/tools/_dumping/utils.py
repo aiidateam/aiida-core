@@ -35,7 +35,7 @@ REGISTRY_TO_ORM_TYPE: dict[str, type[orm.CalculationNode | orm.WorkflowNode | or
     'groups': orm.Group,
 }
 
-ORM_TYPE_TO_REGISTRY = {
+ORM_TYPE_TO_REGISTRY: dict[type, RegistryNameType] = {
     orm.CalculationNode: 'calculations',
     orm.CalcFunctionNode: 'calculations',
     orm.CalcJobNode: 'calculations',
@@ -44,6 +44,27 @@ ORM_TYPE_TO_REGISTRY = {
     orm.WorkChainNode: 'workflows',
     orm.Group: 'groups',
 }
+
+
+def registry_name_for(node: orm.Node | orm.Group) -> RegistryNameType:
+    """Resolve the dump registry an ORM entity belongs to, honouring subclasses.
+
+    Plugins routinely register ``WorkChainNode``/``CalcJobNode`` subclasses (for example
+    ``aiida-workgraph``'s ``WorkGraphNode``). An exact-type lookup in
+    :data:`ORM_TYPE_TO_REGISTRY` misses those, making such nodes invisible to
+    ``verdi profile dump``. Walking the MRO instead means the closest registered
+    base class wins, so any subclass resolves to the same registry as its parent.
+
+    :param node: The ORM entity (process node or group) to classify.
+    :return: The registry name (``'calculations'``, ``'workflows'`` or ``'groups'``).
+    :raises KeyError: If no base class of ``node`` is registered.
+    """
+    for base in type(node).__mro__:
+        registry_name = ORM_TYPE_TO_REGISTRY.get(base)
+        if registry_name is not None:
+            return registry_name
+    msg = f'No dump registry is registered for {type(node)} or any of its base classes.'
+    raise KeyError(msg)
 
 
 logger = AIIDA_LOGGER.getChild('tools._dumping.utils')

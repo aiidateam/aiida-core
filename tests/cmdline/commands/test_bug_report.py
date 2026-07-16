@@ -44,7 +44,7 @@ class DummyBroker:
         return object()
 
     def probe_service_status(self):
-        return {'product': 'RabbitMQ', 'version': '3.12.0'}
+        return {'connected': True, 'product': 'RabbitMQ', 'version': '3.12.0'}
 
     def close(self):
         self.closed = True
@@ -71,7 +71,7 @@ class BrokenStorageCloseBackend(DummyStorageBackend):
         raise RuntimeError('storage close unavailable')
 
 
-def _make_zeromq_broker(service_dir: pathlib.Path, is_running: bool, status: dict | None) -> ZeromqBroker:
+def _make_zeromq_broker(service_dir: pathlib.Path, is_running: bool, status: dict) -> ZeromqBroker:
     """Create a ``ZeromqBroker`` instance without invoking its constructor."""
     broker = ZeromqBroker.__new__(ZeromqBroker)
     broker._service_dir = service_dir
@@ -170,7 +170,10 @@ def test_collect_diagnostics(monkeypatch, tmp_path):
             _get_daemon_client_ok,
             {
                 'storage': {'connected': True, 'status': 'DummyStorageBackend'},
-                'broker': {'connected': True, 'status': {'product': 'RabbitMQ', 'version': '3.12.0'}},
+                'broker': {
+                    'connected': True,
+                    'status': {'connected': True, 'product': 'RabbitMQ', 'version': '3.12.0'},
+                },
                 'daemon': {'connected': True, 'status': {'pid': 1234}},
             },
             id='connected',
@@ -206,8 +209,8 @@ def test_collect_diagnostics_services(
 @pytest.mark.parametrize(
     ('is_running', 'status'),
     [
-        (True, {'pid': 4321, 'pending_tasks': 0}),
-        (False, None),
+        (True, {'connected': True, 'pid': 4321, 'pending_tasks': 0}),
+        (False, {'connected': False, 'error': 'Broker is NOT running'}),
     ],
 )
 def test_check_broker_zeromq_status(monkeypatch, tmp_path, is_running, status):
@@ -218,7 +221,7 @@ def test_check_broker_zeromq_status(monkeypatch, tmp_path, is_running, status):
 
     result = cmd_bug_report._check_broker()
 
-    assert result['connected'] is (status is not None)
+    assert result['connected'] is status['connected']
     assert result['status'] == status
 
 
@@ -375,7 +378,10 @@ def test_check_broker_reset_failure_is_logged(monkeypatch, caplog):
 
     result = cmd_bug_report._check_broker()
 
-    assert result == {'connected': True, 'status': {'product': 'RabbitMQ', 'version': '3.12.0'}}
+    assert result == {
+        'connected': True,
+        'status': {'connected': True, 'product': 'RabbitMQ', 'version': '3.12.0'},
+    }
     assert 'Failed to reset broker while collecting bug report diagnostics' in caplog.text
 
 
@@ -393,7 +399,10 @@ def test_check_broker_does_not_reset_preloaded_broker(monkeypatch):
 
     result = cmd_bug_report._check_broker()
 
-    assert result == {'connected': True, 'status': {'product': 'RabbitMQ', 'version': '3.12.0'}}
+    assert result == {
+        'connected': True,
+        'status': {'connected': True, 'product': 'RabbitMQ', 'version': '3.12.0'},
+    }
     assert reset_called is False
     assert broker.closed is False
 

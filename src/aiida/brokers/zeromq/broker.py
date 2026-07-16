@@ -138,14 +138,23 @@ class ZeromqBroker(Broker):
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             return False
 
-    def probe_service_status(self) -> BrokerServiceStatus | None:
+    def probe_service_status(self) -> BrokerServiceStatus:
         """Read the ZeromqBrokerService status from its status file."""
+        connected = self.is_service_reachable()
+
         if not self._service_status_file.exists():
-            return None
+            return {
+                'connected': connected,
+                'error': f'Status file `{self._service_status_file}` does not exist.',
+            }
+
         try:
-            return t.cast(BrokerServiceStatus, json.loads(self._service_status_file.read_text()))
-        except (json.JSONDecodeError, OSError):
-            return None
+            status = t.cast(BrokerServiceStatus, json.loads(self._service_status_file.read_text()))
+        except (json.JSONDecodeError, OSError) as exception:
+            return {'connected': connected, 'error': f'{type(exception).__name__}: {exception}'}
+
+        status['connected'] = connected
+        return status
 
     # --- Communicator ---
 

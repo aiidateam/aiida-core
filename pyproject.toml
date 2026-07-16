@@ -483,6 +483,7 @@ select = [
   'E',  # pydocstyle
   'W',  # pydocstyle
   'F',  # pyflakes
+  'UP',  # pyupgrade
   'I',  # isort
   'N',  # pep8-naming
   'PLC',  # pylint-convention

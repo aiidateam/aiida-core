@@ -17,7 +17,7 @@ from aiida.brokers.zeromq.broker import ZeromqBroker
 from aiida.cmdline.commands import cmd_status
 from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.warnings import AiidaDeprecationWarning
-from aiida.engine.daemon.client import DaemonClient
+from aiida.engine.daemon.client import DaemonClient, DaemonException
 from aiida.manage import get_manager
 from aiida.storage.psql_dos import migrator
 
@@ -81,6 +81,19 @@ def test_status_no_broker(run_cli_command):
 
     assert result.exit_code is ExitCode.SUCCESS.value
     assert 'No broker defined for this profile: The daemon has no functionality' in result.output
+
+
+def test_status_daemon_exception(run_cli_command, monkeypatch):
+    """Test `verdi status` returns a critical exit code on daemon errors."""
+
+    def raise_daemon_exception(self):
+        raise DaemonException('Connection failed.')
+
+    monkeypatch.setattr(DaemonClient, 'get_status', raise_daemon_exception)
+
+    result = run_cli_command(cmd_status.verdi_status, raises=True, use_subprocess=False)
+    assert 'Connection failed.' in result.output
+    assert result.exit_code is ExitCode.CRITICAL
 
 
 @pytest.mark.requires_psql

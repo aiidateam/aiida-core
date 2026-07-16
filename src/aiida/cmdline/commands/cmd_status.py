@@ -183,7 +183,7 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
 
         if broker and isinstance(broker, ZeromqBroker):
             if broker.is_service_reachable():
-                status_info = broker.get_service_status()
+                status_info = broker.probe_service_status()
                 if status_info:
                     broker_pid = status_info.get('pid', '?')
                     pending = status_info.get('pending_tasks', 0)

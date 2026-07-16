@@ -98,7 +98,7 @@ class RabbitmqBroker(Broker):
         except ConnectionError:
             return f'RabbitMQ @ {url} <Connection failed>'
 
-    def get_service_status(self) -> BrokerServiceStatus | None:
+    def probe_service_status(self) -> BrokerServiceStatus | None:
         """Return status information reported by the RabbitMQ server."""
         properties = self.get_communicator().server_properties
         return {

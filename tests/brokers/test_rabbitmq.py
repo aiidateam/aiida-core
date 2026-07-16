@@ -46,13 +46,13 @@ def test_str_method(monkeypatch, manager):
     assert unsafe_url not in broker_string
 
 
-def test_get_service_status(monkeypatch, manager):
+def test_probe_service_status(monkeypatch, manager):
     """Test RabbitMQ service status is derived from server properties."""
     broker = manager.get_broker()
     communicator = MagicMock(server_properties={'product': b'RabbitMQ', 'version': '3.12.0'})
     monkeypatch.setattr(broker, 'get_communicator', lambda: communicator)
 
-    assert broker.get_service_status() == {'product': 'RabbitMQ', 'version': '3.12.0'}
+    assert broker.probe_service_status() == {'product': 'RabbitMQ', 'version': '3.12.0'}
 
 
 def test_is_service_reachable(monkeypatch, manager):

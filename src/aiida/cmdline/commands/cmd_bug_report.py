@@ -105,7 +105,7 @@ def _check_broker() -> dict[str, Any]:
         if broker is None:
             return {'connected': False, 'status': 'No broker configured for this profile.'}
 
-        status = broker.get_service_status()
+        status = broker.probe_service_status()
         connected = status is not None
     except Exception as exception:
         connected = False

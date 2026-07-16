@@ -1,36 +1,34 @@
-attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.data.array.kpoints.KpointsData.AttributesModel'>,
-  doc='The node attributes')
-cell: QbArrayField('attributes.cell', dtype=list[list[float]] | None, doc='Unit cell
-  of the crystal, in Angstroms')
-computer: QbNumericField('computer', dtype=int | None, doc='The PK of the computer')
-ctime: QbNumericField('ctime', dtype=<class 'datetime.datetime'>, doc='The creation
-  time of the node')
-description: QbStrField('description', dtype=<class 'str'>, doc='The node description')
-extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The node extras')
-label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
-label_numbers: QbArrayField('attributes.label_numbers', dtype=list[int] | None, doc='Index
-  of the labels in the list of kpoints')
-labels: QbArrayField('attributes.labels', dtype=list[str] | None, doc='Labels associated
-  with the list of kpoints')
-mesh: QbArrayField('attributes.mesh', dtype=list[int] | None, doc='Mesh of kpoints')
-mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
-  time of the node')
-node_type: QbStrField('node_type', dtype=typing.Literal['data.core.array.kpoints.KpointsData.'],
+attributes: QbAttributesField(dtype=KpointsData.AttributesModel, doc='The node attributes')
+cell: QbArrayField(backend_key=attributes.cell, is_attribute=True, dtype=list[list[float]]
+  | None, root=list, doc='Unit cell of the crystal, in Angstroms')
+computer: QbNumericField(dtype=int | None, root=int, doc='The PK of the computer')
+ctime: QbNumericField(dtype=datetime, doc='The creation time of the node')
+description: QbStrField(dtype=str, doc='The node description')
+extras: QbDictField(dtype=dict[str, Any], root=dict, doc='The node extras')
+label: QbStrField(dtype=str, doc='The node label')
+label_numbers: QbArrayField(backend_key=attributes.label_numbers, is_attribute=True,
+  dtype=list[int] | None, root=list, doc='Index of the labels in the list of kpoints')
+labels: QbArrayField(backend_key=attributes.labels, is_attribute=True, dtype=list[str]
+  | None, root=list, doc='Labels associated with the list of kpoints')
+mesh: QbArrayField(backend_key=attributes.mesh, is_attribute=True, dtype=list[int]
+  | None, root=list, doc='Mesh of kpoints')
+mtime: QbNumericField(dtype=datetime, doc='The modification time of the node')
+node_type: QbStrField(dtype=Literal['data.core.array.kpoints.KpointsData.'], root=Literal,
   doc='The type of the node.')
-offset: QbArrayField('attributes.offset', dtype=list[float] | None, doc='Offset of
-  kpoints')
-pbc1: QbAnyField('attributes.pbc1', dtype=bool | None, doc='Periodicity in the first
-  lattice vector direction')
-pbc2: QbAnyField('attributes.pbc2', dtype=bool | None, doc='Periodicity in the second
-  lattice vector direction')
-pbc3: QbAnyField('attributes.pbc3', dtype=bool | None, doc='Periodicity in the third
-  lattice vector direction')
-pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
-process_type: QbStrField('process_type', dtype=str | None, doc='The process type of
-  the node')
-repository_metadata: QbDictField('repository_metadata', dtype=dict[str, typing.Any],
-  doc='Virtual hierarchy of the file repository')
-source: QbDictField('attributes.source', dtype=dict | None, doc='Source of the data')
-user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
-  the node')
-uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+offset: QbArrayField(backend_key=attributes.offset, is_attribute=True, dtype=list[float]
+  | None, root=list, doc='Offset of kpoints')
+pbc1: QbAnyField(backend_key=attributes.pbc1, is_attribute=True, dtype=bool | None,
+  root=bool, doc='Periodicity in the first lattice vector direction')
+pbc2: QbAnyField(backend_key=attributes.pbc2, is_attribute=True, dtype=bool | None,
+  root=bool, doc='Periodicity in the second lattice vector direction')
+pbc3: QbAnyField(backend_key=attributes.pbc3, is_attribute=True, dtype=bool | None,
+  root=bool, doc='Periodicity in the third lattice vector direction')
+pk: QbNumericField(dtype=int, doc='The primary key of the entity')
+process_type: QbStrField(dtype=str | None, root=str, doc='The process type of the
+  node')
+repository_metadata: QbDictField(dtype=dict[str, Any], root=dict, doc='Virtual hierarchy
+  of the file repository')
+source: QbDictField(backend_key=attributes.source, is_attribute=True, dtype=dict |
+  None, root=dict, doc='Source of the data')
+user: QbNumericField(dtype=int, doc='The PK of the user who owns the node')
+uuid: QbAnyField(dtype=UUID, doc='The UUID of the node')

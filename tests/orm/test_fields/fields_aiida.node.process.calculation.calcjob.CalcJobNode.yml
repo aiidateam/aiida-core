@@ -1,57 +1,56 @@
-attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.process.calculation.calcjob.CalcJobNode.AttributesModel'>,
-  doc='The node attributes')
-computer: QbNumericField('computer', dtype=int | None, doc='The PK of the computer')
-ctime: QbNumericField('ctime', dtype=<class 'datetime.datetime'>, doc='The creation
-  time of the node')
-description: QbStrField('description', dtype=<class 'str'>, doc='The node description')
-detailed_job_info: QbDictField('attributes.detailed_job_info', dtype=dict | None,
-  doc='The detailed job info returned by the scheduler')
-exception: QbStrField('attributes.exception', dtype=str | None, doc='The process exception
-  message')
-exit_message: QbStrField('attributes.exit_message', dtype=str | None, doc='The process
-  exit message')
-exit_status: QbNumericField('attributes.exit_status', dtype=int | None, doc='The process
-  exit status')
-extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The node extras')
-imported: QbAnyField('attributes.imported', dtype=bool | None, doc='Whether the node
-  has been migrated')
-job_id: QbStrField('attributes.job_id', dtype=str | None, doc='The scheduler job id')
-label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
-last_job_info: QbDictField('attributes.last_job_info', dtype=dict | None, doc='The
-  last job info returned by the scheduler')
-mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
-  time of the node')
-node_type: QbStrField('node_type', dtype=typing.Literal['process.calculation.calcjob.CalcJobNode.'],
+attributes: QbAttributesField(dtype=CalcJobNode.AttributesModel, doc='The node attributes')
+computer: QbNumericField(dtype=int | None, root=int, doc='The PK of the computer')
+ctime: QbNumericField(dtype=datetime, doc='The creation time of the node')
+description: QbStrField(dtype=str, doc='The node description')
+detailed_job_info: QbDictField(backend_key=attributes.detailed_job_info, is_attribute=True,
+  dtype=dict | None, root=dict, doc='The detailed job info returned by the scheduler')
+exception: QbStrField(backend_key=attributes.exception, is_attribute=True, dtype=str
+  | None, root=str, doc='The process exception message')
+exit_message: QbStrField(backend_key=attributes.exit_message, is_attribute=True, dtype=str
+  | None, root=str, doc='The process exit message')
+exit_status: QbNumericField(backend_key=attributes.exit_status, is_attribute=True,
+  dtype=int | None, root=int, doc='The process exit status')
+extras: QbDictField(dtype=dict[str, Any], root=dict, doc='The node extras')
+imported: QbAnyField(backend_key=attributes.imported, is_attribute=True, dtype=bool
+  | None, root=bool, doc='Whether the node has been migrated')
+job_id: QbStrField(backend_key=attributes.job_id, is_attribute=True, dtype=str | None,
+  root=str, doc='The scheduler job id')
+label: QbStrField(dtype=str, doc='The node label')
+last_job_info: QbDictField(backend_key=attributes.last_job_info, is_attribute=True,
+  dtype=dict | None, root=dict, doc='The last job info returned by the scheduler')
+mtime: QbNumericField(dtype=datetime, doc='The modification time of the node')
+node_type: QbStrField(dtype=Literal['process.calculation.calcjob.CalcJobNode.'], root=Literal,
   doc='The type of the node.')
-paused: QbAnyField('attributes.paused', dtype=bool | None, doc='Whether the process
-  is paused')
-pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
-process_label: QbStrField('attributes.process_label', dtype=str | None, doc='The process
-  label')
-process_state: QbStrField('attributes.process_state', dtype=str | None, doc='The process
-  state enum')
-process_status: QbStrField('attributes.process_status', dtype=str | None, doc='The
-  process status is a generic status message')
-process_type: QbStrField('process_type', dtype=str | None, doc='The process type of
-  the node')
-remote_workdir: QbStrField('attributes.remote_workdir', dtype=str | None, doc='The
-  path to the remote (on cluster) scratch folder')
-repository_metadata: QbDictField('repository_metadata', dtype=dict[str, typing.Any],
-  doc='Virtual hierarchy of the file repository')
-retrieve_list: QbAnyField('attributes.retrieve_list', dtype=collections.abc.Sequence[str
-  | tuple[str, str, int]] | None, doc='The list of files to retrieve from the remote
+paused: QbAnyField(backend_key=attributes.paused, is_attribute=True, dtype=bool |
+  None, root=bool, doc='Whether the process is paused')
+pk: QbNumericField(dtype=int, doc='The primary key of the entity')
+process_label: QbStrField(backend_key=attributes.process_label, is_attribute=True,
+  dtype=str | None, root=str, doc='The process label')
+process_state: QbStrField(backend_key=attributes.process_state, is_attribute=True,
+  dtype=str | None, root=str, doc='The process state enum')
+process_status: QbStrField(backend_key=attributes.process_status, is_attribute=True,
+  dtype=str | None, root=str, doc='The process status is a generic status message')
+process_type: QbStrField(dtype=str | None, root=str, doc='The process type of the
+  node')
+remote_workdir: QbStrField(backend_key=attributes.remote_workdir, is_attribute=True,
+  dtype=str | None, root=str, doc='The path to the remote (on cluster) scratch folder')
+repository_metadata: QbDictField(dtype=dict[str, Any], root=dict, doc='Virtual hierarchy
+  of the file repository')
+retrieve_list: QbAnyField(backend_key=attributes.retrieve_list, is_attribute=True,
+  dtype=collections.abc.Sequence[str | tuple[str, str, int]] | None, root=Sequence,
+  doc='The list of files to retrieve from the remote cluster')
+retrieve_temporary_list: QbAnyField(backend_key=attributes.retrieve_temporary_list,
+  is_attribute=True, dtype=collections.abc.Sequence[str | tuple[str, str, int]] |
+  None, root=Sequence, doc='The list of temporary files to retrieve from the remote
   cluster')
-retrieve_temporary_list: QbAnyField('attributes.retrieve_temporary_list', dtype=collections.abc.Sequence[str
-  | tuple[str, str, int]] | None, doc='The list of temporary files to retrieve from
-  the remote cluster')
-scheduler_lastchecktime: QbNumericField('attributes.scheduler_lastchecktime', dtype=datetime.datetime
-  | None, doc='The last time the scheduler was checked, in isoformat')
-scheduler_state: QbStrField('attributes.scheduler_state', dtype=str | None, doc='The
-  state of the scheduler')
-sealed: QbAnyField('attributes.sealed', dtype=<class 'bool'>, doc='Whether the node
-  is sealed')
-state: QbStrField('attributes.state', dtype=str | None, doc='The active state of the
-  calculation job')
-user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
-  the node')
-uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+scheduler_lastchecktime: QbNumericField(backend_key=attributes.scheduler_lastchecktime,
+  is_attribute=True, dtype=datetime.datetime | None, root=datetime, doc='The last
+  time the scheduler was checked, in isoformat')
+scheduler_state: QbStrField(backend_key=attributes.scheduler_state, is_attribute=True,
+  dtype=str | None, root=str, doc='The state of the scheduler')
+sealed: QbAnyField(backend_key=attributes.sealed, is_attribute=True, dtype=bool, doc='Whether
+  the node is sealed')
+state: QbStrField(backend_key=attributes.state, is_attribute=True, dtype=str | None,
+  root=str, doc='The active state of the calculation job')
+user: QbNumericField(dtype=int, doc='The PK of the user who owns the node')
+uuid: QbAnyField(dtype=UUID, doc='The UUID of the node')

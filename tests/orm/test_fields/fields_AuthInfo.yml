@@ -1,9 +1,7 @@
-auth_params: QbDictField('auth_params', dtype=dict[str, typing.Any], doc='Dictionary
-  of authentication parameters')
-computer: QbNumericField('computer', dtype=<class 'int'>, doc='The PK of the computer')
-enabled: QbAnyField('enabled', dtype=<class 'bool'>, doc='Whether the instance is
-  enabled')
-metadata: QbDictField('metadata', dtype=dict[str, typing.Any], doc='Dictionary of
-  metadata')
-pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
-user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user')
+auth_params: QbDictField(dtype=dict[str, Any], root=dict, doc='Dictionary of authentication
+  parameters')
+computer: QbNumericField(dtype=int, doc='The PK of the computer')
+enabled: QbAnyField(dtype=bool, doc='Whether the instance is enabled')
+metadata: QbDictField(dtype=dict[str, Any], root=dict, doc='Dictionary of metadata')
+pk: QbNumericField(dtype=int, doc='The primary key of the entity')
+user: QbNumericField(dtype=int, doc='The PK of the user')

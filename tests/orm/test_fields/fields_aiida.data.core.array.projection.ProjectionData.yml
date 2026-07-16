@@ -1,21 +1,19 @@
-attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.data.array.projection.ProjectionData.AttributesModel'>,
-  doc='The node attributes')
-computer: QbNumericField('computer', dtype=int | None, doc='The PK of the computer')
-ctime: QbNumericField('ctime', dtype=<class 'datetime.datetime'>, doc='The creation
-  time of the node')
-description: QbStrField('description', dtype=<class 'str'>, doc='The node description')
-extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The node extras')
-label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
-mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
-  time of the node')
-node_type: QbStrField('node_type', dtype=typing.Literal['data.core.array.projection.ProjectionData.'],
-  doc='The type of the node.')
-pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
-process_type: QbStrField('process_type', dtype=str | None, doc='The process type of
-  the node')
-repository_metadata: QbDictField('repository_metadata', dtype=dict[str, typing.Any],
-  doc='Virtual hierarchy of the file repository')
-source: QbDictField('attributes.source', dtype=dict | None, doc='Source of the data')
-user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
-  the node')
-uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+attributes: QbAttributesField(dtype=ProjectionData.AttributesModel, doc='The node
+  attributes')
+computer: QbNumericField(dtype=int | None, root=int, doc='The PK of the computer')
+ctime: QbNumericField(dtype=datetime, doc='The creation time of the node')
+description: QbStrField(dtype=str, doc='The node description')
+extras: QbDictField(dtype=dict[str, Any], root=dict, doc='The node extras')
+label: QbStrField(dtype=str, doc='The node label')
+mtime: QbNumericField(dtype=datetime, doc='The modification time of the node')
+node_type: QbStrField(dtype=Literal['data.core.array.projection.ProjectionData.'],
+  root=Literal, doc='The type of the node.')
+pk: QbNumericField(dtype=int, doc='The primary key of the entity')
+process_type: QbStrField(dtype=str | None, root=str, doc='The process type of the
+  node')
+repository_metadata: QbDictField(dtype=dict[str, Any], root=dict, doc='Virtual hierarchy
+  of the file repository')
+source: QbDictField(backend_key=attributes.source, is_attribute=True, dtype=dict |
+  None, root=dict, doc='Source of the data')
+user: QbNumericField(dtype=int, doc='The PK of the user who owns the node')
+uuid: QbAnyField(dtype=UUID, doc='The UUID of the node')

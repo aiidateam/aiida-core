@@ -8,16 +8,57 @@
 ###########################################################################
 """Test for entity fields"""
 
+import typing as t
 from importlib.metadata import entry_points
 
 import pytest
 
 from aiida import orm
-from aiida.orm.fields import add_field
+from aiida.orm.fields import QbField, add_field
 from aiida.orm.pydantic import OrmMetadataField
 from aiida.plugins import load_entry_point
 
 EPS = entry_points()
+
+
+def format_dtype(dtype: t.Any) -> str | None:
+    """Return a stable, human-readable rendering of a field dtype.
+
+    Plain classes are rendered by qualified name, everything else by ``str`` with the ``typing.`` prefix stripped.
+    The ``get_origin`` guard is required: on Python 3.10 ``isinstance(dict[str, Any], type)`` is ``True``, so without
+    it a parametrized generic would render as a bare ``dict`` there and as ``dict[str, Any]`` from 3.11 on.
+    """
+    if dtype is None:
+        return None
+    if t.get_origin(dtype) is None and isinstance(dtype, type):
+        return dtype.__qualname__
+    return str(dtype).replace('typing.', '')
+
+
+def field_spec(field: QbField) -> str:
+    """Return a one-line description of a field, for comparison against a reference file.
+
+    The field key is not included: it is the mapping key in the reference file. Everything else is only emitted when
+    it carries information, to keep the files readable:
+
+    * ``backend_key`` only when it differs from the key, which is exactly when ``is_attribute`` is set, since a
+      non-attribute field may not be aliased and so always stores under its own key;
+    * ``root``, the ``extract_root_type`` of the dtype, only when it differs from the dtype itself. It selects the
+      ``QbField`` subclass and is otherwise only covered implicitly, via that choice.
+    """
+    parts = []
+    if field.backend_key != field.key:
+        parts.append(f'backend_key={field.backend_key}')
+    if field._is_attribute:
+        parts.append('is_attribute=True')
+    dtype = format_dtype(field._dtype)
+    root = format_dtype(field.dtype)
+    parts.append(f'dtype={dtype}')
+    if root != dtype:
+        parts.append(f'root={root}')
+    if field._doc:
+        parts.append(f'doc={field._doc!r}')
+    return f'{type(field).__name__}({", ".join(parts)})'
 
 
 @pytest.mark.parametrize(
@@ -26,7 +67,7 @@ EPS = entry_points()
 )
 def test_all_entity_fields(entity_cls, data_regression):
     data_regression.check(
-        {key: repr(value) for key, value in entity_cls.fields._dict.items()},
+        {key: field_spec(value) for key, value in entity_cls.fields._dict.items()},
         basename=f'fields_{entity_cls.__name__}',
     )
 
@@ -46,7 +87,7 @@ def test_all_node_fields(node_and_data_entry_points: list[tuple[str, str]], data
     for group, name in node_and_data_entry_points:
         node_cls = load_entry_point(group, name)
         data_regression.check(
-            {key: repr(value) for key, value in node_cls.fields._dict.items()},
+            {key: field_spec(value) for key, value in node_cls.fields._dict.items()},
             basename=f'fields_{group}.{name}.{node_cls.__name__}',
         )
 

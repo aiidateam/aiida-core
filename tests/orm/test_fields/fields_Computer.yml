@@ -1,12 +1,8 @@
-description: QbStrField('description', dtype=<class 'str'>, doc='Description of the
-  computer')
-hostname: QbStrField('hostname', dtype=<class 'str'>, doc='Hostname of the computer')
-label: QbStrField('label', dtype=<class 'str'>, doc='Label for the computer')
-metadata: QbDictField('metadata', dtype=dict[str, typing.Any], doc='Metadata of the
-  computer')
-pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
-scheduler_type: QbStrField('scheduler_type', dtype=<class 'str'>, doc='Scheduler type
-  of the computer')
-transport_type: QbStrField('transport_type', dtype=<class 'str'>, doc='Transport type
-  of the computer')
-uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the computer')
+description: QbStrField(dtype=str, doc='Description of the computer')
+hostname: QbStrField(dtype=str, doc='Hostname of the computer')
+label: QbStrField(dtype=str, doc='Label for the computer')
+metadata: QbDictField(dtype=dict[str, Any], root=dict, doc='Metadata of the computer')
+pk: QbNumericField(dtype=int, doc='The primary key of the entity')
+scheduler_type: QbStrField(dtype=str, doc='Scheduler type of the computer')
+transport_type: QbStrField(dtype=str, doc='Transport type of the computer')
+uuid: QbAnyField(dtype=UUID, doc='The UUID of the computer')

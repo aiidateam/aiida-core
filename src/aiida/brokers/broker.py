@@ -66,20 +66,32 @@ class Broker(abc.ABC):
 
     @abc.abstractmethod
     def get_communicator(self) -> t.Any:
-        """Return an instance of :class:`kiwipy.Communicator`."""
+        """Return a communicator instance for the broker.
+
+        :return: An instance of :class:`kiwipy.Communicator`.
+        """
 
     @abc.abstractmethod
     def iterate_tasks(self) -> Iterator[t.Any]:
-        """Return an iterator over the tasks in the launch queue."""
+        """Return an iterator over the tasks in the launch queue.
+
+        :return: Iterator over broker-specific task objects.
+        """
 
     @abc.abstractmethod
     def is_service_reachable(self) -> bool:
-        """Return whether the broker service is reachable from this client."""
+        """Return whether the broker service is reachable from this client.
+
+        :return: ``True`` if the broker service can be reached, ``False`` otherwise.
+        """
 
     @abc.abstractmethod
     def get_service_status(self) -> BrokerServiceStatus | None:
-        """Return service status information for the broker, if available."""
+        """Return service status information for the broker, if available.
+
+        :return: Structured service status information, or ``None`` if no status is available.
+        """
 
     @abc.abstractmethod
     def close(self) -> None:
-        """Close the broker."""
+        """Close broker resources held by this instance."""

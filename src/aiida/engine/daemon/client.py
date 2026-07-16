@@ -285,7 +285,7 @@ class DaemonClient:
         return [self._verdi_bin, '-p', self.profile.name, 'daemon', 'worker']
 
     @property
-    def zmq_broker_service_dir(self) -> str:
+    def _zmq_broker_service_dir(self) -> str:
         """Return the directory for the ZMQ broker service files, derived from the settings.
 
         The daemon manages the broker service and therefore determines where the service writes its state files.
@@ -293,7 +293,7 @@ class DaemonClient:
         return self._config.filepaths(self.profile)['broker_service']['dir']
 
     @property
-    def zmq_broker_service_log_file(self) -> str:
+    def _zmq_broker_service_log_file(self) -> str:
         """Return the log file of the ZMQ broker service, derived from the settings."""
         return self._config.filepaths(self.profile)['broker_service']['log']
 
@@ -307,9 +307,9 @@ class DaemonClient:
             'daemon',
             'broker',
             '--service-dir',
-            shlex.quote(self.zmq_broker_service_dir),
+            shlex.quote(self._zmq_broker_service_dir),
             '--log-file-path',
-            shlex.quote(self.zmq_broker_service_log_file),
+            shlex.quote(self._zmq_broker_service_log_file),
         ]
 
     @property
@@ -987,7 +987,7 @@ class DaemonClient:
                 broker_instance = None
             if isinstance(broker_instance, ZeromqBroker) and not broker_instance.check_service_reachable():
                 # prepare zmq broker service profile directory
-                pathlib.Path(self.zmq_broker_service_dir).mkdir(parents=True, exist_ok=True)
+                pathlib.Path(self._zmq_broker_service_dir).mkdir(parents=True, exist_ok=True)
 
                 watchers.append(
                     {
@@ -998,12 +998,12 @@ class DaemonClient:
                         'copy_env': True,
                         'stdout_stream': {
                             'class': 'FileStream',
-                            'filename': self.zmq_broker_service_log_file,
+                            'filename': self._zmq_broker_service_log_file,
                             'time_format': '%Y-%m-%d %H:%M:%S',
                         },
                         'stderr_stream': {
                             'class': 'FileStream',
-                            'filename': self.zmq_broker_service_log_file,
+                            'filename': self._zmq_broker_service_log_file,
                             'time_format': '%Y-%m-%d %H:%M:%S',
                         },
                         'env': self.get_env(),

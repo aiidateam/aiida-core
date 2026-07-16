@@ -126,7 +126,6 @@ def status(ctx, all_profiles, timeout):
     from aiida.cmdline.utils.common import format_local_time
     from aiida.cmdline.utils.daemon import validate_daemon_env
     from aiida.engine.daemon.client import DaemonException, get_daemon_client
-    from aiida.manage.manager import get_manager
 
     if all_profiles is True:
         profiles = [profile for profile in ctx.obj.config.profiles if not profile.is_test_profile]
@@ -169,7 +168,11 @@ def status(ctx, all_profiles, timeout):
 
         # Build broker status lines for managed brokers (e.g., ZeroMQ)
         broker_lines: list[str] = []
-        broker = get_manager().get_broker()
+        broker = None
+        if profile.process_control_backend is not None:
+            from aiida.plugins import BrokerFactory
+
+            broker = BrokerFactory(profile.process_control_backend)(profile)
 
         from aiida.brokers.zeromq.broker import ZeromqBroker
 

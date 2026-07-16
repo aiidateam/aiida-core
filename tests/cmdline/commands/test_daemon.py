@@ -14,8 +14,10 @@ from unittest.mock import patch
 import pytest
 
 from aiida import get_profile
+from aiida.brokers.zeromq.broker import ZeromqBroker
 from aiida.cmdline.commands import cmd_daemon
 from aiida.engine.daemon.client import DaemonClient, DaemonTimeoutException
+from aiida.manage import get_manager
 
 pytestmark = pytest.mark.requires_broker
 
@@ -195,6 +197,26 @@ def get_worker_info_broken(_):
         'info': {'4990': 'No such process (stopped?)'},
         'id': '4e1d768a522a44b59f85039806f9af14',
     }
+
+
+@patch.object(DaemonClient, 'get_status', lambda *_, **__: {'status': 'running'})
+@patch.object(DaemonClient, 'get_daemon_info', get_daemon_info)
+@patch.object(DaemonClient, 'get_worker_info', get_worker_info)
+@patch('aiida.cmdline.utils.common.format_local_time', format_local_time)
+def test_daemon_status_surfaces_zeromq_probe_error(run_cli_command, monkeypatch, tmp_path):
+    """Test ``verdi daemon status`` surfaces ZeroMQ probe errors even when the broker is reachable."""
+    broker = ZeromqBroker.__new__(ZeromqBroker)
+    broker._service_dir = tmp_path
+    broker._service_log_file = tmp_path / 'broker.log'
+    broker._service_status_file = tmp_path / 'broker.status'
+    broker._service_status_file.write_text('{INVALID JSON')
+    broker.check_service_reachable = lambda: True
+    monkeypatch.setattr(get_manager(), 'get_broker', lambda: broker)
+
+    result = run_cli_command(cmd_daemon.status, use_subprocess=False)
+
+    assert 'Failed to probe broker status: JSONDecodeError' in result.output
+    assert 'Broker is running as PID ? [? pending, ? processing]' in result.output
 
 
 @patch.object(DaemonClient, 'get_status', lambda *_, **__: {'status': 'running'})

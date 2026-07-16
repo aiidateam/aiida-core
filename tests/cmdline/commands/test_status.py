@@ -13,10 +13,12 @@ import sys
 import pytest
 
 from aiida import __version__, get_profile
+from aiida.brokers.zeromq.broker import ZeromqBroker
 from aiida.cmdline.commands import cmd_status
 from aiida.cmdline.utils.echo import ExitCode
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.engine.daemon.client import DaemonClient
+from aiida.manage import get_manager
 from aiida.storage.psql_dos import migrator
 
 
@@ -133,6 +135,25 @@ def test_sqlite_version(run_cli_command, monkeypatch):
         monkeypatch.setattr('aiida.storage.sqlite_zip.backend.validate_sqlite_version', mock_)
         result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
         assert mock_.call_count == 0
+
+
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_status_surfaces_zeromq_probe_error(run_cli_command, monkeypatch, tmp_path):
+    """Test ``verdi status`` surfaces ZeroMQ probe errors even when the broker is reachable."""
+    broker = ZeromqBroker.__new__(ZeromqBroker)
+    broker._service_dir = tmp_path
+    broker._service_log_file = tmp_path / 'broker.log'
+    broker._service_status_file = tmp_path / 'broker.status'
+    broker._service_status_file.write_text('{INVALID JSON')
+    broker.check_service_reachable = lambda: True
+    monkeypatch.setattr(get_manager(), 'get_broker', lambda: broker)
+    monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
+    monkeypatch.setattr(DaemonClient, 'get_daemon_env_info', lambda self: None)
+
+    result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
+
+    assert 'Failed to probe broker status: JSONDecodeError' in result.output
+    assert 'Broker is running as PID ? [? pending, ? processing]' not in result.output
 
 
 @pytest.mark.usefixtures('stopped_daemon_client')

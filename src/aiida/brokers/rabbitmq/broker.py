@@ -113,7 +113,9 @@ class RabbitmqBroker(Broker):
             )
             return status
         except Exception as exception:
-            return {'connected': False, 'error': f'{type(exception).__name__}: {exception}'}
+            error = f'{type(exception).__name__}: {exception}'
+            LOGGER.error('Failed to probe broker status: %s', error)
+            return {'connected': False, 'error': error}
         finally:
             if not had_communicator:
                 self.close()

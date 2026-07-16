@@ -143,22 +143,23 @@ class ZeromqBroker(Broker):
         connected = self.check_service_reachable()
 
         if not self._service_status_file.exists():
-            return {
-                'connected': connected,
-                'error': f'Status file `{self._service_status_file}` does not exist.',
-            }
+            error = f'Status file `{self._service_status_file}` does not exist.'
+            LOGGER.warning('Failed to probe broker status: %s', error)
+            return {'connected': connected, 'error': error}
 
         try:
             loaded_status = json.loads(self._service_status_file.read_text())
             if not isinstance(loaded_status, dict):
                 msg = f'Invalid ZeroMQ service status file found: {loaded_status}'
-                LOGGER.warning(msg)
+                LOGGER.warning('Failed to probe broker status: %s', msg)
                 status: BrokerServiceStatus = {'error': msg}
             else:
                 status = t.cast(BrokerServiceStatus, loaded_status)
                 status['error'] = None
         except (json.JSONDecodeError, OSError) as exception:
-            return {'connected': connected, 'error': f'{type(exception).__name__}: {exception}'}
+            error = f'{type(exception).__name__}: {exception}'
+            LOGGER.warning('Failed to probe broker status: %s', error)
+            return {'connected': connected, 'error': error}
 
         status['connected'] = connected
         return status

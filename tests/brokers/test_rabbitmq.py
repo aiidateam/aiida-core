@@ -67,7 +67,7 @@ def test_probe_service_status_failure(monkeypatch, manager):
     assert broker.probe_service_status() == {'connected': False, 'error': 'ConnectionError: connection failed'}
 
 
-def test_is_service_reachable(monkeypatch, manager):
+def test_check_service_reachable(monkeypatch, manager):
     """Test RabbitMQ service reachability checks open and close a fresh communicator."""
     broker = manager.get_broker()
     communicator = MagicMock()
@@ -75,7 +75,7 @@ def test_is_service_reachable(monkeypatch, manager):
     monkeypatch.setattr(broker, 'get_communicator', lambda: communicator)
     monkeypatch.setattr(broker, 'close', close)
 
-    assert broker.is_service_reachable() is True
+    assert broker.check_service_reachable() is True
     close.assert_called_once_with()
 
 
@@ -90,7 +90,7 @@ def test_is_service_reachable_false(monkeypatch, manager):
     monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
     monkeypatch.setattr(broker, 'close', close)
 
-    assert broker.is_service_reachable() is False
+    assert broker.check_service_reachable() is False
     close.assert_called_once_with()
 
 

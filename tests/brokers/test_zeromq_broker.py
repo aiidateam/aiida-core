@@ -55,7 +55,7 @@ class TestZeromqBrokerStatusQueries:
 
     def test_is_running_no_pid_file(self, zeromq_broker):
         """Test is_running returns False when no PID file exists."""
-        assert not zeromq_broker.is_service_reachable()
+        assert not zeromq_broker.check_service_reachable()
 
     def test_probe_service_status_no_file(self, zeromq_broker):
         """Test probe_service_status captures a missing status file in the payload."""
@@ -89,7 +89,7 @@ class TestZeromqBrokerStatusQueries:
         pid_file.write_text('aiida-zeromq-broker 12345')
 
         with patch('aiida.brokers.zeromq.broker.psutil.Process', side_effect=psutil.NoSuchProcess(pid=12345)):
-            assert not zeromq_broker.is_service_reachable()
+            assert not zeromq_broker.check_service_reachable()
 
     def test_probe_service_status_valid(self, zeromq_broker):
         """Test probe_service_status with valid JSON."""
@@ -239,7 +239,7 @@ class TestZeromqBrokerIntegration:
 
     def test_broker_lifecycle(self, zeromq_broker_with_server):
         """Test the zeromq_broker lifecycle."""
-        assert zeromq_broker_with_server.is_service_reachable()
+        assert zeromq_broker_with_server.check_service_reachable()
 
         status = zeromq_broker_with_server.probe_service_status()
         assert status['connected'] is True

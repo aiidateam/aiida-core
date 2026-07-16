@@ -76,7 +76,7 @@ class ZeromqBroker(Broker):
         self._storage_path = layout.storage_path
 
     def __str__(self) -> str:
-        if self.is_service_reachable():
+        if self.check_service_reachable():
             status = self.probe_service_status()
             pid = status.get('pid', '?') if status else '?'
             return f'ZeroMQ Broker (PID {pid}) @ {self._service_dir}'
@@ -127,7 +127,7 @@ class ZeromqBroker(Broker):
         except (ValueError, OSError):
             return None
 
-    def is_service_reachable(self) -> bool:
+    def check_service_reachable(self) -> bool:
         """Check if the ZeromqBrokerService process is running."""
         pid = self._get_service_pid()
         if pid is None:
@@ -140,7 +140,7 @@ class ZeromqBroker(Broker):
 
     def probe_service_status(self) -> BrokerServiceStatus:
         """Read the ZeromqBrokerService status from its status file."""
-        connected = self.is_service_reachable()
+        connected = self.check_service_reachable()
 
         if not self._service_status_file.exists():
             return {

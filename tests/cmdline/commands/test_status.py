@@ -60,6 +60,29 @@ def test_status_no_rmq(run_cli_command):
         assert string in result.output
 
 
+def test_status_no_broker(run_cli_command):
+    """Test `verdi status` reports that daemon functionality is unavailable without a broker."""
+    from aiida.manage.manager import get_manager
+
+    manager = get_manager()
+    profile = manager.get_profile()
+    assert profile is not None
+
+    old_backend = profile.process_control_backend
+    old_config = profile.process_control_config
+
+    try:
+        profile.set_process_controller(None, None)
+        manager.reset_broker()
+        result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
+    finally:
+        profile.set_process_controller(old_backend, old_config)
+        manager.reset_broker()
+
+    assert result.exit_code is ExitCode.SUCCESS.value
+    assert 'No broker defined for this profile: The daemon has no functionality' in result.output
+
+
 @pytest.mark.requires_psql
 def test_storage_unable_to_connect(run_cli_command):
     """Test `verdi status` when there is an unknown error while connecting to the storage."""

@@ -229,19 +229,11 @@ class DaemonClient:
 
         :param profile: The profile instance.
         """
-        from aiida.common.docs import URL_NO_BROKER
-
         type_check(profile, Profile)
         self._config = get_config()
         self._profile = profile
         self._socket_directory: str | None = None
         self._daemon_timeout: int = self._config.get_option('daemon.timeout', scope=profile.name)
-
-        if self._profile.process_control_backend is None:
-            raise ConfigurationError(
-                f'profile `{self._profile.name}` does not define a broker so the daemon cannot be used. '
-                f'See {URL_NO_BROKER} for more details.'
-            )
 
     @property
     def profile(self) -> Profile:

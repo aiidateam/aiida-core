@@ -60,8 +60,8 @@ def test_status_no_rmq(run_cli_command):
         assert string in result.output
 
 
-def test_status_no_broker(run_cli_command):
-    """Test `verdi status` reports that daemon functionality is unavailable without a broker."""
+def test_status_no_broker(run_cli_command, monkeypatch):
+    """Test `verdi status` reports when a brokerless profile still has a running daemon."""
     from aiida.manage.manager import get_manager
 
     manager = get_manager()
@@ -74,13 +74,14 @@ def test_status_no_broker(run_cli_command):
     try:
         profile.set_process_controller(None, None)
         manager.reset_broker()
+        monkeypatch.setattr(DaemonClient, 'is_daemon_running', property(lambda self: True))
         result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
     finally:
         profile.set_process_controller(old_backend, old_config)
         manager.reset_broker()
 
     assert result.exit_code is ExitCode.SUCCESS.value
-    assert 'No broker defined for this profile: The daemon has no functionality' in result.output
+    assert 'Daemon appears to be running but no broker is defined for this profile' in result.output
 
 
 def test_status_daemon_exception(run_cli_command, monkeypatch):

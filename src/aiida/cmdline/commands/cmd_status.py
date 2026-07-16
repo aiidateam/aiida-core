@@ -149,12 +149,6 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
                 print_status(ServiceStatus.UP, 'broker', str(broker))
             finally:
                 broker.close()
-    if not broker:
-        print_status(
-            ServiceStatus.WARNING,
-            'broker',
-            f'No broker defined for this profile: certain functionality not available.\nSee {URL_NO_BROKER}',
-        )
 
     # Getting the daemon status
     if profile.process_control_backend is None:
@@ -170,16 +164,8 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
                 print_status(
                     ServiceStatus.WARNING,
                     'daemon',
-                    'Daemon appears to be running but no broker is defined for this profile: '
-                    'The daemon has no functionality because it cannot pass messages to workers.\n'
-                    f'See {URL_NO_BROKER}.',
-                )
-            else:
-                print_status(
-                    ServiceStatus.WARNING,
-                    'daemon',
-                    'No broker defined for this profile: '
-                    'The daemon has no functionality because it cannot pass messages to workers.\n'
+                    'Daemon appears to be running but no broker is defined for this profile. '
+                    'The daemon has no functionality because messages cannot passed to workers.\n'
                     f'See {URL_NO_BROKER}.',
                 )
     else:

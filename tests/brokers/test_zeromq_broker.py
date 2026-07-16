@@ -107,6 +107,16 @@ class TestZeromqBrokerStatusQueries:
         assert status['connected'] is False
         assert 'JSONDecodeError:' in str(status['error'])
 
+    def test_probe_service_status_invalid_payload_type(self, zeromq_broker, caplog):
+        """Test probe_service_status captures valid JSON with an invalid top-level type."""
+        status_file = zeromq_broker.service_dir / 'broker.status'
+        status_file.write_text(json.dumps(['invalid']))
+
+        status = zeromq_broker.probe_service_status()
+
+        assert status == {'connected': False, 'error': "Invalid ZeroMQ service status file found: ['invalid']"}
+        assert "Invalid ZeroMQ service status file found: ['invalid']" in caplog.text
+
 
 class TestZeromqBrokerCommunicator:
     """Tests for ZeromqBroker communicator management."""

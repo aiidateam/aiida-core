@@ -149,7 +149,14 @@ class ZeromqBroker(Broker):
             }
 
         try:
-            status = t.cast(BrokerServiceStatus, json.loads(self._service_status_file.read_text()))
+            loaded_status = json.loads(self._service_status_file.read_text())
+            if not isinstance(loaded_status, dict):
+                msg = f'Invalid ZeroMQ service status file found: {loaded_status}'
+                LOGGER.warning(msg)
+                status: BrokerServiceStatus = {'error': msg}
+            else:
+                status = t.cast(BrokerServiceStatus, loaded_status)
+                status['error'] = None
         except (json.JSONDecodeError, OSError) as exception:
             return {'connected': connected, 'error': f'{type(exception).__name__}: {exception}'}
 

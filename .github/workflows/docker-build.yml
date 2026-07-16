@@ -77,7 +77,7 @@ jobs:
 
     - name: Write metadata output to a json file
       run: |
-        cat << EOF > bake_metadata.json
+        cat << 'EOF' > bake_metadata.json
         ${{ steps.build.outputs.metadata }}
         EOF
 

@@ -132,7 +132,7 @@ def _merge_deprecated_cache_yaml(config, filepath):
         stacklevel=2,
     )
 
-    with open(cache_path, 'r', encoding='utf8') as handle:
+    with open(cache_path, encoding='utf8') as handle:
         cache_config = yaml.safe_load(handle)
     for profile_name, data in cache_config.items():
         if profile_name not in config.profile_names:
@@ -152,7 +152,7 @@ def _merge_deprecated_cache_yaml(config, filepath):
     shutil.move(cache_path, cache_path_backup)
 
 
-def load_profile(profile: Optional[str] = None, allow_switch=False) -> 'Profile':
+def load_profile(profile: str | None = None, allow_switch=False) -> 'Profile':
     """Load a global profile, unloading any previously loaded profile.
 
     .. note:: if a profile is already loaded and no explicit profile is specified, nothing will be done
@@ -202,9 +202,9 @@ def profile_context(profile: 'Profile | str | None' = None, allow_switch=False) 
 def create_default_user(
     profile: Profile,
     email: str,
-    first_name: Optional[str] = None,
-    last_name: Optional[str] = None,
-    institution: Optional[str] = None,
+    first_name: str | None = None,
+    last_name: str | None = None,
+    institution: str | None = None,
 ) -> 'User':
     """Create a default user for the given profile.
 
@@ -249,9 +249,9 @@ def create_profile(
     broker_config: 'dict[str, Any] | None' = None,
     name: str,
     email: str,
-    first_name: Optional[str] = None,
-    last_name: Optional[str] = None,
-    institution: Optional[str] = None,
+    first_name: str | None = None,
+    last_name: str | None = None,
+    institution: str | None = None,
     is_test_profile: bool = False,
 ) -> Profile:
     """Create a new profile, initialise its storage and create a default user.

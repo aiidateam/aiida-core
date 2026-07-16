@@ -172,7 +172,7 @@ class ProfileAccessManager:
                 if path.read_text() != str(process.cmdline()):
                     path.unlink()
 
-    def _get_tracking_files(self, ext_string: str, exclude_self: bool = False) -> typing.List[Path]:
+    def _get_tracking_files(self, ext_string: str, exclude_self: bool = False) -> list[Path]:
         """Return a list of all files that track the accessing and locking of the profile.
 
         :param ext_string:

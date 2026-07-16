@@ -20,13 +20,9 @@ from typing import (
     Any,
     ClassVar,
     Generic,
-    List,
     Literal,
     NoReturn,
-    Optional,
-    Type,
     TypeVar,
-    Union,
 )
 
 import pydantic as pdt
@@ -75,12 +71,12 @@ class Collection(abc.ABC, Generic[EntityType]):
 
     @staticmethod
     @abc.abstractmethod
-    def _entity_base_cls() -> Type[EntityType]:
+    def _entity_base_cls() -> type[EntityType]:
         """The allowed entity class or subclasses thereof."""
 
     @classmethod
     @lru_cache(maxsize=100)
-    def get_cached(cls, entity_class: Type[EntityType], backend: 'StorageBackend') -> Self:
+    def get_cached(cls, entity_class: type[EntityType], backend: StorageBackend) -> Self:
         """Get the cached collection instance for the given entity class and backend.
 
         :param backend: the backend instance to get the collection for
@@ -90,7 +86,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         type_check(backend, StorageBackend)
         return cls(entity_class, backend=backend)
 
-    def __init__(self, entity_class: Type[EntityType], backend: Optional['StorageBackend'] = None) -> None:
+    def __init__(self, entity_class: type[EntityType], backend: StorageBackend | None = None) -> None:
         """Construct a new entity collection.
 
         :param entity_class: the entity type e.g. User, Computer, etc
@@ -110,24 +106,24 @@ class Collection(abc.ABC, Generic[EntityType]):
         return self.get_cached(self.entity_type, backend=backend)
 
     @property
-    def entity_type(self) -> Type[EntityType]:
+    def entity_type(self) -> type[EntityType]:
         """The entity type for this instance."""
         return self._entity_type
 
     @property
-    def backend(self) -> 'StorageBackend':
+    def backend(self) -> StorageBackend:
         """Return the backend."""
         return self._backend
 
     def query(
         self,
-        filters: Optional['FilterType'] = None,
-        order_by: Optional['OrderByType'] = None,
-        project: Optional[Union[list[str], str]] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        filters: FilterType | None = None,
+        order_by: OrderByType | None = None,
+        project: list[str] | str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
         subclassing: bool = True,
-    ) -> 'QueryBuilder':
+    ) -> QueryBuilder:
         """Get a query builder for the objects of this collection.
 
         :param filters: the keyword value pair filters to match
@@ -159,11 +155,11 @@ class Collection(abc.ABC, Generic[EntityType]):
 
     def find(
         self,
-        filters: Optional['FilterType'] = None,
-        order_by: Optional['OrderByType'] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-    ) -> List[EntityType]:
+        filters: FilterType | None = None,
+        order_by: OrderByType | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> list[EntityType]:
         """Find collection entries matching the filter criteria.
 
         :param filters: the keyword value pair filters to match
@@ -176,14 +172,14 @@ class Collection(abc.ABC, Generic[EntityType]):
         query = self.query(filters=filters, order_by=order_by, limit=limit, offset=offset)
         return query.all(flat=True)
 
-    def all(self) -> List[EntityType]:
+    def all(self) -> list[EntityType]:
         """Get all entities in this collection.
 
         :return: A list of all entities
         """
         return self.query().all(flat=True)
 
-    def count(self, filters: Optional['FilterType'] = None) -> int:
+    def count(self, filters: FilterType | None = None) -> int:
         """Count entities in this collection according to criteria.
 
         :param filters: the keyword value pair filters to match
@@ -196,7 +192,7 @@ class Collection(abc.ABC, Generic[EntityType]):
 class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
     """An AiiDA entity"""
 
-    _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
+    _CLS_COLLECTION: type[CollectionType] = Collection  # type: ignore[assignment]
     _logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
     identity_field = 'pk'
@@ -322,7 +318,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         return cls._CLS_COLLECTION.get_cached(cls, get_manager().get_profile_storage())
 
     @classmethod
-    def get_collection(cls, backend: 'StorageBackend') -> CollectionType:
+    def get_collection(cls, backend: StorageBackend) -> CollectionType:
         """Get a collection for objects of this type for a given backend.
 
         .. note:: Use the ``collection`` class property instead if the currently loaded backend or backend of the
@@ -409,7 +405,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         return self._backend_entity.is_stored
 
     @property
-    def backend(self) -> 'StorageBackend':
+    def backend(self) -> StorageBackend:
         """Get the backend for this entity"""
         return self._backend_entity.backend
 
@@ -598,7 +594,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         return get_model_field_values(schema or self.ReadModel)
 
 
-def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntity) -> EntityType:
+def from_backend_entity(cls: type[EntityType], backend_entity: BackendEntity) -> EntityType:
     """Construct an entity from a backend entity instance
 
     :param backend_entity: the backend entity

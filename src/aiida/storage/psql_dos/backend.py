@@ -14,7 +14,7 @@ import functools
 import pathlib
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
-from typing import TYPE_CHECKING, Any, List, Optional, Set, Union
+from typing import TYPE_CHECKING, Any
 
 from disk_objectstore import Container, backup_utils
 from sqlalchemy import column, insert, update
@@ -114,7 +114,7 @@ class PsqlDosBackend(StorageBackend):
         return cls.migrator.get_schema_version_head()
 
     @classmethod
-    def version_profile(cls, profile: Profile) -> Optional[str]:
+    def version_profile(cls, profile: Profile) -> str | None:
         with cls.migrator(profile) as migrator:
             return migrator.get_schema_version_profile(check_legacy=True)
 
@@ -135,7 +135,7 @@ class PsqlDosBackend(StorageBackend):
         with self.migrator(profile) as migrator:
             migrator.validate_storage()
 
-        self._session_factory: Optional[scoped_session] = None
+        self._session_factory: scoped_session | None = None
         self._initialise_session()
         # save the URL of the database, for use in the __str__ method
         self._db_url = self.get_session().get_bind().url  # type: ignore[union-attr]
@@ -214,7 +214,7 @@ class PsqlDosBackend(StorageBackend):
                     DbSetting.__table__.update().where(DbSetting.key == REPOSITORY_UUID_KEY).values(val=repository_uuid)
                 )
 
-    def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
+    def get_repository(self) -> DiskObjectStoreRepositoryBackend:
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
         container = Container(get_filepath_container(self.profile))
@@ -306,7 +306,7 @@ class PsqlDosBackend(StorageBackend):
         keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
         return mapper, keys
 
-    def bulk_insert(self, entity_type: EntityTypes, rows: List[dict], allow_defaults: bool = False) -> List[int]:
+    def bulk_insert(self, entity_type: EntityTypes, rows: list[dict], allow_defaults: bool = False) -> list[int]:
         mapper, keys = self._get_mapper_from_entity(entity_type, False)
         if not rows:
             return []
@@ -329,7 +329,7 @@ class PsqlDosBackend(StorageBackend):
             result = session.execute(insert(mapper).returning(mapper, column('id')), rows).fetchall()
         return [row.id for row in result]
 
-    def bulk_update(self, entity_type: EntityTypes, rows: List[dict]) -> None:
+    def bulk_update(self, entity_type: EntityTypes, rows: list[dict]) -> None:
         mapper, keys = self._get_mapper_from_entity(entity_type, True)
         if not rows:
             return None
@@ -405,7 +405,7 @@ class PsqlDosBackend(StorageBackend):
         return convert.get_backend_entity(model, self)
 
     def set_global_variable(
-        self, key: str, value: Union[None, str, int, float], description: Optional[str] = None, overwrite: bool = True
+        self, key: str, value: None | str | int | float, description: str | None = None, overwrite: bool = True
     ) -> None:
         from aiida.storage.psql_dos.models.settings import DbSetting
 
@@ -419,7 +419,7 @@ class PsqlDosBackend(StorageBackend):
             else:
                 session.add(DbSetting(key=key, val=value, description=description or ''))
 
-    def get_global_variable(self, key: str) -> Union[None, str, int, float]:
+    def get_global_variable(self, key: str) -> None | str | int | float:
         from aiida.storage.psql_dos.models.settings import DbSetting
 
         session = self.get_session()
@@ -492,7 +492,7 @@ class PsqlDosBackend(StorageBackend):
             STORAGE_LOGGER.info('Starting repository-specific operations ...')
             repository.maintain(live=not full, dry_run=dry_run, **kwargs)
 
-    def get_unreferenced_keyset(self, check_consistency: bool = True) -> Set[str]:
+    def get_unreferenced_keyset(self, check_consistency: bool = True) -> set[str]:
         """Returns the keyset of objects that exist in the repository but are not tracked by AiiDA.
 
         This should be all the soft-deleted files.
@@ -531,7 +531,7 @@ class PsqlDosBackend(StorageBackend):
         self,
         manager: backup_utils.BackupManager,
         path: pathlib.Path,
-        prev_backup: Optional[pathlib.Path] = None,
+        prev_backup: pathlib.Path | None = None,
     ) -> None:
         """Create a backup of the postgres database and disk-objectstore to the provided path.
 
@@ -604,7 +604,7 @@ class PsqlDosBackend(StorageBackend):
     def _backup(
         self,
         dest: str,
-        keep: Optional[int] = None,
+        keep: int | None = None,
     ) -> None:
         try:
             backup_manager = backup_utils.BackupManager(dest, keep=keep)

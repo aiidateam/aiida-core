@@ -22,7 +22,7 @@ def test_get_or_create(backend):
     # Check that there are no groups to begin with
     queryb = QueryBuilder(backend).append(AutoGroup, filters={'label': label_prefix})
     assert not list(queryb.all())
-    queryb = QueryBuilder(backend).append(AutoGroup, filters={'label': {'like': r'{}\_%'.format(label_prefix)}})
+    queryb = QueryBuilder(backend).append(AutoGroup, filters={'label': {'like': rf'{label_prefix}\_%'}})
     assert not list(queryb.all())
 
     # First group (no existing one)
@@ -87,7 +87,7 @@ def test_get_or_create_invalid_prefix(backend):
     # Check that there are no groups to begin with
     queryb = QueryBuilder(backend).append(AutoGroup, filters={'label': label_prefix})
     assert not list(queryb.all())
-    queryb = QueryBuilder(backend).append(AutoGroup, filters={'label': {'like': r'{}\_%'.format(label_prefix)}})
+    queryb = QueryBuilder(backend).append(AutoGroup, filters={'label': {'like': rf'{label_prefix}\_%'}})
     assert not list(queryb.all())
 
     # First group (no existing one)

@@ -12,22 +12,17 @@ from __future__ import annotations
 
 import datetime
 import pathlib
+from collections.abc import Callable, Iterator
 from copy import deepcopy
 from functools import cached_property
 from typing import (
     TYPE_CHECKING,
     Any,
     BinaryIO,
-    Callable,
     ClassVar,
     Generic,
-    Iterator,
-    List,
     Literal,
     NoReturn,
-    Optional,
-    Tuple,
-    Type,
     TypeVar,
     cast,
 )
@@ -81,7 +76,7 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
     collection_type: ClassVar[str] = 'nodes'
 
     @staticmethod
-    def _entity_base_cls() -> Type[Node]:  # type: ignore[override]
+    def _entity_base_cls() -> type[Node]:  # type: ignore[override]
         return Node
 
     def delete(self, pk: int) -> None:
@@ -103,7 +98,7 @@ class NodeCollection(EntityCollection[NodeType], Generic[NodeType]):
         self._backend.nodes.delete(pk)
 
     def iter_repo_keys(
-        self, filters: Optional[dict] = None, subclassing: bool = True, batch_size: int = 100
+        self, filters: dict | None = None, subclassing: bool = True, batch_size: int = 100
     ) -> Iterator[str]:
         """Iterate over all repository object keys for this ``Node`` class
 
@@ -204,10 +199,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     # A tuple of attribute names that can be updated even after node is stored
     # Requires Sealable mixin, but needs empty tuple for base class
-    _updatable_attributes: Tuple[str, ...] = tuple()
+    _updatable_attributes: tuple[str, ...] = tuple()
 
     # A tuple of attribute names that will be ignored when creating the hash.
-    _hash_ignored_attributes: Tuple[str, ...] = tuple()
+    _hash_ignored_attributes: tuple[str, ...] = tuple()
 
     # Flag that determines whether the class can be cached.
     _cachable = False
@@ -265,7 +260,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             read_only=True,
             examples=['123e4567-e89b-12d3-a456-426614174000'],
         )
-        process_type: Optional[str] = OrmMetadataField(
+        process_type: str | None = OrmMetadataField(
             None,
             description='The process type of the node',
             read_only=True,
@@ -281,7 +276,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             read_only=True,
             examples=['2024-01-02T12:00:00+00:00'],
         )
-        computer: Optional[int] = OrmMetadataField(
+        computer: int | None = OrmMetadataField(
             None,
             description='The PK of the computer',
             orm_to_model=lambda node: cast(Node, node).get_computer_pk(),
@@ -352,10 +347,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     def __init__(
         self,
-        backend: Optional['StorageBackend'] = None,
-        user: Optional[User] = None,
-        computer: Optional[Computer] = None,
-        extras: Optional[dict[str, Any]] = None,
+        backend: StorageBackend | None = None,
+        user: User | None = None,
+        computer: Computer | None = None,
+        extras: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
         backend_entity = create_backend_node(self.class_node_type, backend, user, computer, **kwargs)
@@ -508,7 +503,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
         self.base.repository.put_object_from_filelike(fileobj, filepath)  # type: ignore[arg-type]
 
-    def _check_mutability_attributes(self, keys: Optional[List[str]] = None) -> None:
+    def _check_mutability_attributes(self, keys: list[str] | None = None) -> None:
         """Check if the entity is mutable and raise an exception if not.
 
         This is called from `NodeAttributes` methods that modify the attributes.
@@ -591,7 +586,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return cls._plugin_type_string
 
     @classproperty
-    def entry_point(cls) -> Optional['EntryPoint']:  # noqa: N805
+    def entry_point(cls) -> EntryPoint | None:  # noqa: N805
         """Return the entry point associated this node class.
 
         :return: the associated entry point or ``None`` if it isn't known.
@@ -625,7 +620,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return self.backend_entity.node_type
 
     @property
-    def process_type(self) -> Optional[str]:
+    def process_type(self) -> str | None:
         """Return the node process type.
 
         :return: the process type
@@ -673,7 +668,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         self.backend_entity.description = value
 
     @property
-    def computer(self) -> Optional[Computer]:
+    def computer(self) -> Computer | None:
         """Return the computer of this node."""
         if self.backend_entity.computer:
             return from_backend_entity(Computer, self.backend_entity.computer)
@@ -681,7 +676,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return None
 
     @computer.setter
-    def computer(self, computer: Optional[Computer]) -> None:
+    def computer(self, computer: Computer | None) -> None:
         """Set the computer of this node.
 
         :param computer: a `Computer`
@@ -852,7 +847,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
         return ''
 
-    def get_computer_pk(self) -> Optional[int]:
+    def get_computer_pk(self) -> int | None:
         """Get the pk of the computer of this node.
 
         :return: The computer pk or None if no computer is set.
@@ -1282,9 +1277,9 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
 def create_backend_node(
     node_type: str,
-    backend: Optional['StorageBackend'] = None,
-    user: Optional[User] = None,
-    computer: Optional[Computer] = None,
+    backend: StorageBackend | None = None,
+    user: User | None = None,
+    computer: Computer | None = None,
     **kwargs: Any,
 ) -> BackendNode:
     backend = backend or get_manager().get_profile_storage()

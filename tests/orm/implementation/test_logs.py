@@ -139,8 +139,8 @@ class TestBackendLog:
         with pytest.raises(exceptions.ValidationError):
             self.backend.logs.delete_many({})
         assert len(orm.Log.collection.all()) == count, (
-            'No Logs should have been deleted. There should still be {} Log(s), '
-            'however {} Log(s) was/were found.'.format(count, len(orm.Log.collection.all()))
+            f'No Logs should have been deleted. There should still be {count} Log(s), '
+            f'however {len(orm.Log.collection.all())} Log(s) was/were found.'
         )
 
     def test_delete_many_ids(self):

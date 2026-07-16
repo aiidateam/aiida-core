@@ -102,19 +102,15 @@ def test_node_repository(perform_migrations: PsqlDosMigrator):
             'o': {
                 'sub': {
                     'o': {
-                        'path': {'o': {'file_b.txt': {'k': hashlib.sha256('b'.encode('utf-8')).hexdigest()}}},
-                        'file_a.txt': {'k': hashlib.sha256('a'.encode('utf-8')).hexdigest()},
+                        'path': {'o': {'file_b.txt': {'k': hashlib.sha256(b'b').hexdigest()}}},
+                        'file_a.txt': {'k': hashlib.sha256(b'a').hexdigest()},
                     }
                 }
             }
         }
-        assert node_02.repository_metadata == {
-            'o': {'output.txt': {'k': hashlib.sha256('output'.encode('utf-8')).hexdigest()}}
-        }
+        assert node_02.repository_metadata == {'o': {'output.txt': {'k': hashlib.sha256(b'output').hexdigest()}}}
         assert node_03.repository_metadata == {}
-        assert node_04.repository_metadata == {
-            'o': {'input.txt': {'k': hashlib.sha256('input'.encode('utf-8')).hexdigest()}}
-        }
+        assert node_04.repository_metadata == {'o': {'input.txt': {'k': hashlib.sha256(b'input').hexdigest()}}}
 
         for hashkey, content in (
             (node_01.repository_metadata['o']['sub']['o']['path']['o']['file_b.txt']['k'], b'b'),

@@ -235,7 +235,7 @@ class PluginParamType(EntryPointType):
 
     def convert(  # type: ignore[override]
         self, value: t.Any, param: click.Parameter | None, ctx: click.Context | None
-    ) -> t.Union[EntryPoint, t.Any]:
+    ) -> EntryPoint | t.Any:
         """Convert the string value to an entry point instance, if the value can be successfully parsed
         into an actual entry point. Will raise click.BadParameter if validation fails.
         """

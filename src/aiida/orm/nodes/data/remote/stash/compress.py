@@ -10,8 +10,6 @@
 
 from __future__ import annotations
 
-from typing import List, Tuple, Union
-
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
 from aiida.orm.pydantic import OrmMetadataField
@@ -45,7 +43,7 @@ class RemoteStashCompressedData(RemoteStashData):
         self,
         stash_mode: StashMode,
         target_basepath: str,
-        source_list: List[str],
+        source_list: list[str],
         dereference: bool,
         fail_on_missing: bool = False,
         **kwargs,
@@ -113,7 +111,7 @@ class RemoteStashCompressedData(RemoteStashData):
         self.base.attributes.set('target_basepath', value)
 
     @property
-    def source_list(self) -> Union[List, Tuple]:
+    def source_list(self) -> list | tuple:
         """Return the list of source files that were stashed.
 
         :return: the list of source files.
@@ -121,7 +119,7 @@ class RemoteStashCompressedData(RemoteStashData):
         return self.base.attributes.get('source_list')
 
     @source_list.setter
-    def source_list(self, value: Union[List, Tuple]):
+    def source_list(self, value: list | tuple):
         """Set the list of source files that were stashed.
 
         :param value: the list of source files.

@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Optional, Tuple, Type
+from typing import TYPE_CHECKING, ClassVar
 
 from aiida.common import exceptions
 from aiida.manage import get_manager
@@ -31,10 +31,10 @@ class UserCollection(entities.Collection['User']):
     collection_type: ClassVar[str] = 'users'
 
     @staticmethod
-    def _entity_base_cls() -> Type[User]:
+    def _entity_base_cls() -> type[User]:
         return User
 
-    def get_or_create(self, email: str, **kwargs) -> Tuple[bool, User]:
+    def get_or_create(self, email: str, **kwargs) -> tuple[bool, User]:
         """Get the existing user with a given email address or create an unstored one
 
         :param kwargs: The properties of the user to get or create
@@ -47,7 +47,7 @@ class UserCollection(entities.Collection['User']):
         except exceptions.NotExistent:
             return True, User(backend=self.backend, email=email, **kwargs)
 
-    def get_default(self) -> Optional[User]:
+    def get_default(self) -> User | None:
         """Get the current default user"""
         return self.backend.default_user
 
@@ -84,7 +84,7 @@ class User(entities.Entity['BackendUser', UserCollection]):
         first_name: str = '',
         last_name: str = '',
         institution: str = '',
-        backend: Optional['StorageBackend'] = None,
+        backend: StorageBackend | None = None,
     ):
         """Create a new `User`."""
         backend = backend or get_manager().get_profile_storage()

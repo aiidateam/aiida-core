@@ -23,7 +23,7 @@ x_name: QbStrField('attributes.x_name', dtype=<class 'str'>, doc='The name of th
   x array')
 x_units: QbStrField('attributes.x_units', dtype=<class 'str'>, doc='The units of the
   x array')
-y_names: QbAnyField('attributes.y_names', dtype=typing.Sequence[str], doc='The names
-  of the y arrays')
-y_units: QbAnyField('attributes.y_units', dtype=typing.Sequence[str], doc='The units
-  of the y arrays')
+y_names: QbAnyField('attributes.y_names', dtype=collections.abc.Sequence[str], doc='The
+  names of the y arrays')
+y_units: QbAnyField('attributes.y_units', dtype=collections.abc.Sequence[str], doc='The
+  units of the y arrays')

@@ -20,8 +20,6 @@ from __future__ import annotations
 
 import enum
 import re
-import sys
-import typing as t
 
 import pytest
 
@@ -682,9 +680,9 @@ def test_type_hinting_spec_inference():
         b: str,
         c: bool,
         d: orm.Str,
-        e: t.Union[orm.Str, orm.Int],
-        f: t.Union[str, int],
-        g: t.Optional[t.Dict] = None,
+        e: orm.Str | orm.Int,
+        f: str | int,
+        g: dict | None = None,
     ):
         pass
 
@@ -728,19 +726,11 @@ def test_type_hinting_spec_inference_pep_604(caplog):
 
     # Since the PEP 604 union syntax is only available starting from Python 3.10 the type inference will not be
     # available for older versions, and so the valid type will be the default ``(orm.Data,)``.
-    if sys.version_info[:2] >= (3, 10):
-        expected = (
-            ('a', (orm.Str, orm.Int)),
-            ('b', (orm.Str, orm.Int)),
-            ('c', (orm.Dict, type(None))),
-        )
-    else:
-        assert 'function `function` has invalid type hints: unsupported operand type' in caplog.records[0].message
-        expected = (
-            ('a', (orm.Data,)),
-            ('b', (orm.Data,)),
-            ('c', (orm.Data, type(None))),
-        )
+    expected = (
+        ('a', (orm.Str, orm.Int)),
+        ('b', (orm.Str, orm.Int)),
+        ('c', (orm.Dict, type(None))),
+    )
 
     for key, valid_types in expected:
         assert key in input_namespace
@@ -751,7 +741,7 @@ def test_type_hinting_validation():
     """Test that type hints are converted to automatic type checking through the process specification."""
 
     @calcfunction  # type: ignore[misc]
-    def function_type_hinting(a: t.Union[int, float]):
+    def function_type_hinting(a: int | float):
         return a + 1
 
     with pytest.raises(ValueError, match=r'.*value \'a\' is not of the right type.*'):

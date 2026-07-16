@@ -11,11 +11,11 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Collection
+from collections.abc import Collection, Generator
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Literal, Optional
+from typing import Any, Literal
 
 from aiida.common import AIIDA_LOGGER, timezone
 from aiida.tools._dumping.mapping import GroupNodeMapping
@@ -29,10 +29,10 @@ class DumpRecord:
     """Represents a single dump log entry."""
 
     path: Path
-    symlinks: List[Path] = field(default_factory=list)
-    duplicates: List[Path] = field(default_factory=list)
-    dir_mtime: Optional[datetime] = None
-    dir_size: Optional[int] = None
+    symlinks: list[Path] = field(default_factory=list)
+    duplicates: list[Path] = field(default_factory=list)
+    dir_mtime: datetime | None = None
+    dir_size: int | None = None
 
     def to_dict(self) -> dict:
         """Returns a serialized dictionary representation of the entry."""
@@ -45,7 +45,7 @@ class DumpRecord:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'DumpRecord':
+    def from_dict(cls, data: dict) -> DumpRecord:
         """Returns a populated ``DumpRecord`` entry from a serialized dictionary representation.
 
         :param data: Dictionary with ``DumpRecord`` content (usually obtained from the log JSON file)
@@ -117,7 +117,7 @@ class DumpRecord:
         if path in self.duplicates:
             self.duplicates.remove(path)
 
-    def update_stats(self, path: Optional[Path]) -> None:
+    def update_stats(self, path: Path | None) -> None:
         """Update directory stats from the path of the ``DumpRecord`` or an optional given path.
 
         :param path: An optional path. If not given, the path of the ``DumpRecord`` instance is used
@@ -132,7 +132,7 @@ class DumpRecord:
 class DumpRegistry:
     """A registry for ``DumpRecord`` entries, indexed by UUID."""
 
-    entries: Dict[str, DumpRecord] = field(default_factory=dict)
+    entries: dict[str, DumpRecord] = field(default_factory=dict)
 
     def add_entry(self, uuid: str, entry: DumpRecord) -> None:
         """Add a single ``DumpRecord`` entry to the registry.
@@ -145,7 +145,7 @@ class DumpRegistry:
             raise ValueError(f"UUID '{uuid}' already exists in the registry")
         self.entries[uuid] = entry
 
-    def add_entries(self, entries: Dict[str, DumpRecord]) -> None:
+    def add_entries(self, entries: dict[str, DumpRecord]) -> None:
         """Add a collection of ``DumpRecord`` entries to the container.
 
         :param entries: Dictionary of ``DumpRecord`` entries indexed by the AiiDA node UUIDs
@@ -182,7 +182,7 @@ class DumpRegistry:
             raise ValueError(f"UUID '{uuid}' not found in the registry")
         return self.entries[uuid]
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Get a serialized dictionary representation of the ``DumpRegistry``
 
         :return: Serialized dictionary representation of the ``DumpRegistry``
@@ -190,7 +190,7 @@ class DumpRegistry:
         return {uuid: entry.to_dict() for uuid, entry in self.entries.items()}
 
     @classmethod
-    def from_dict(cls, data: Dict) -> DumpRegistry:
+    def from_dict(cls, data: dict) -> DumpRegistry:
         """Obtain a ``DumpRegistry`` instance from a serialized dictionary representation
 
         :param data: Serialized dictionary representation of ``DumpRegistry`` contents
@@ -216,9 +216,9 @@ class DumpTracker:
     def __init__(
         self,
         dump_paths: DumpPaths,
-        dump_times: Optional[DumpTimes] = None,
-        previous_mapping: Optional[GroupNodeMapping] = None,
-        current_mapping: Optional[GroupNodeMapping] = None,
+        dump_times: DumpTimes | None = None,
+        previous_mapping: GroupNodeMapping | None = None,
+        current_mapping: GroupNodeMapping | None = None,
     ) -> None:
         """Initialize the DumpTracker. Typically be instantiated via `load`.
 
@@ -228,7 +228,7 @@ class DumpTracker:
         :param current_mapping: The current ``GroupNodeMapping`` obtained from AiiDA's DB state, defaults to None
         """
         self.dump_paths: DumpPaths = dump_paths
-        self.registries: Dict[str, DumpRegistry] = {
+        self.registries: dict[str, DumpRegistry] = {
             'calculations': DumpRegistry(),
             'workflows': DumpRegistry(),
             'groups': DumpRegistry(),
@@ -393,7 +393,7 @@ class DumpTracker:
         yield ('workflows', self.registries['workflows'])
         yield ('groups', self.registries['groups'])
 
-    def _serialize_registry(self, registry: DumpRegistry) -> Dict[str, Dict[str, Any]]:
+    def _serialize_registry(self, registry: DumpRegistry) -> dict[str, dict[str, Any]]:
         """Serialize log entries to a dictionary format with paths relative to the dump base_output_path.
 
         :param registry: Instance of the ``DumpRegistry`` to be serialized
@@ -431,7 +431,7 @@ class DumpTracker:
 
         return serialized
 
-    def _deserialize_registry(self, data: Dict[str, Dict[str, Any]]) -> DumpRegistry:
+    def _deserialize_registry(self, data: dict[str, dict[str, Any]]) -> DumpRegistry:
         """Deserialize log entries using ``DumpRecord.from_dict`` and make paths absolute for internal handling.
 
         :param data: Serialized dictionary with UUIDs as keys and entry data as values

@@ -62,7 +62,7 @@ class Folder:
             if not os.path.commonprefix([abspath, folder_limit]) == folder_limit:
                 raise ValueError(
                     'The absolute path for this folder is not within the '
-                    'folder_limit. abspath={}, folder_limit={}.'.format(abspath, folder_limit)
+                    f'folder_limit. abspath={abspath}, folder_limit={folder_limit}.'
                 )
 
         self._abspath = abspath

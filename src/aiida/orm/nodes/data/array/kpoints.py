@@ -41,42 +41,42 @@ class KpointsData(ArrayData):
     """
 
     class AttributesModel(ArrayData.AttributesModel):
-        labels: t.Optional[list[str]] = OrmMetadataField(
+        labels: list[str] | None = OrmMetadataField(
             None,
             description='Labels associated with the list of kpoints',
             orm_to_model=lambda node: t.cast(KpointsData, node).base.attributes.get('labels', None),
         )
-        label_numbers: t.Optional[list[int]] = OrmMetadataField(
+        label_numbers: list[int] | None = OrmMetadataField(
             None,
             description='Index of the labels in the list of kpoints',
             orm_to_model=lambda node: t.cast(KpointsData, node).base.attributes.get('label_numbers', None),
         )
-        cell: t.Optional[list[list[float]]] = OrmMetadataField(
+        cell: list[list[float]] | None = OrmMetadataField(
             None,
             description='Unit cell of the crystal, in Angstroms',
             orm_to_model=lambda node: t.cast(KpointsData, node).base.attributes.get('cell', None),
         )
-        pbc1: t.Optional[bool] = OrmMetadataField(
+        pbc1: bool | None = OrmMetadataField(
             None,
             description='Periodicity in the first lattice vector direction',
             orm_to_model=lambda node: t.cast(KpointsData, node).pbc[0],
         )
-        pbc2: t.Optional[bool] = OrmMetadataField(
+        pbc2: bool | None = OrmMetadataField(
             None,
             description='Periodicity in the second lattice vector direction',
             orm_to_model=lambda node: t.cast(KpointsData, node).pbc[1],
         )
-        pbc3: t.Optional[bool] = OrmMetadataField(
+        pbc3: bool | None = OrmMetadataField(
             None,
             description='Periodicity in the third lattice vector direction',
             orm_to_model=lambda node: t.cast(KpointsData, node).pbc[2],
         )
-        mesh: t.Optional[list[int]] = OrmMetadataField(
+        mesh: list[int] | None = OrmMetadataField(
             None,
             description='Mesh of kpoints',
             orm_to_model=lambda node: t.cast(KpointsData, node).base.attributes.get('mesh', None),
         )
-        offset: t.Optional[list[float]] = OrmMetadataField(
+        offset: list[float] | None = OrmMetadataField(
             None,
             description='Offset of kpoints',
             orm_to_model=lambda node: t.cast(KpointsData, node).base.attributes.get('offset', None),
@@ -142,8 +142,9 @@ class KpointsData(ArrayData):
         """
         try:
             mesh = self.get_kpoints_mesh()
-            return 'Kpoints mesh: {}x{}x{} (+{:.1f},{:.1f},{:.1f})'.format(
-                mesh[0][0], mesh[0][1], mesh[0][2], mesh[1][0], mesh[1][1], mesh[1][2]
+            return (
+                f'Kpoints mesh: {mesh[0][0]}x{mesh[0][1]}x{mesh[0][2]} '
+                f'(+{mesh[1][0]:.1f},{mesh[1][1]:.1f},{mesh[1][2]:.1f})'
             )
         except AttributeError:
             try:
@@ -284,9 +285,8 @@ class KpointsData(ArrayData):
 
         if not isinstance(structuredata, StructureData):
             raise ValueError(
-                'An instance of StructureData should be passed to the KpointsData, found instead {}'.format(
-                    structuredata.__class__
-                )
+                'An instance of StructureData should be passed to the KpointsData, '
+                f'found instead {structuredata.__class__}'
             )
         cell = structuredata.cell
         self.set_cell(cell, structuredata.pbc)
@@ -441,9 +441,8 @@ class KpointsData(ArrayData):
                 kpoints = numpy.array([[0.0, 0.0, 0.0]])
             else:
                 raise ValueError(
-                    'empty kpoints list is valid only in zero dimension; instead here with have {} dimensions'.format(
-                        self._dimension
-                    )
+                    'empty kpoints list is valid only in zero dimension; '
+                    f'instead here with have {self._dimension} dimensions'
                 )
 
         if len(kpoints.shape) <= 1:
@@ -459,9 +458,8 @@ class KpointsData(ArrayData):
 
         if kpoints.shape[1] < self._dimension:
             raise ValueError(
-                'In a system which has {0} dimensions, kpoint needmore than {0} coordinates (found instead {1})'.format(
-                    self._dimension, kpoints.shape[1]
-                )
+                f'In a system which has {self._dimension} dimensions, '
+                f'kpoint needmore than {self._dimension} coordinates (found instead {kpoints.shape[1]})'
             )
 
         if weights is not None:

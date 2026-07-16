@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from aiida.common.log import AIIDA_LOGGER
 from aiida.tools._dumping.config import GroupDumpConfig, ProcessDumpConfig, ProfileDumpConfig
@@ -29,7 +29,7 @@ class DeletionExecutor:
 
     def __init__(
         self,
-        config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig],
+        config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig,
         dump_paths: DumpPaths,
         dump_tracker: DumpTracker,
         dump_changes: DumpChanges,
@@ -44,7 +44,7 @@ class DeletionExecutor:
         :param previous_mapping: Instance of ``GroupNodeMapping`` if exists from a previous dump
         """
 
-        self.config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig] = config
+        self.config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig = config
         self.dump_paths: DumpPaths = dump_paths
         self.dump_tracker: DumpTracker = dump_tracker
         self.dump_changes: DumpChanges = dump_changes

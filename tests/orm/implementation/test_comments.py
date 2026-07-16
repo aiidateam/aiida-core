@@ -147,8 +147,8 @@ class TestBackendComment:
         with pytest.raises(exceptions.ValidationError):
             self.backend.comments.delete_many({})
         assert len(orm.Comment.collection.all()) == count, (
-            'No Comments should have been deleted. There should still be {} Comment(s), '
-            'however {} Comment(s) was/were found.'.format(count, len(orm.Comment.collection.all()))
+            f'No Comments should have been deleted. There should still be {count} Comment(s), '
+            f'however {len(orm.Comment.collection.all())} Comment(s) was/were found.'
         )
 
     def test_delete_many_ids(self):

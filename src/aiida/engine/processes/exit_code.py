@@ -8,7 +8,7 @@
 ###########################################################################
 """A namedtuple and namespace for ExitCodes that can be used to exit from Processes."""
 
-from typing import NamedTuple, Optional, Union
+from typing import NamedTuple
 
 from aiida.common.extendeddicts import AttributeDict
 
@@ -28,7 +28,7 @@ class ExitCode(NamedTuple):
     """
 
     status: int = 0
-    message: Optional[str] = None
+    message: str | None = None
     invalidates_cache: bool = False
 
     def format(self, **kwargs: str) -> 'ExitCode':
@@ -55,7 +55,7 @@ class ExitCodesNamespace(AttributeDict):
     `ExitCode` that needs to be retrieved or the key in the collection.
     """
 
-    def __call__(self, identifier: Union[int, str]) -> ExitCode:
+    def __call__(self, identifier: int | str) -> ExitCode:
         """Return a specific exit code identified by either its exit status or label.
 
         :param identifier: the identifier of the exit code. If the type is integer, it will be interpreted as the exit

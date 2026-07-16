@@ -2,7 +2,8 @@
 
 import contextlib
 import pathlib
-from typing import Any, BinaryIO, Dict, Iterable, Iterator, List, Optional, Tuple, Union
+from collections.abc import Iterable, Iterator
+from typing import Any, BinaryIO
 
 from aiida.common.hashing import make_hash
 from aiida.common.lang import type_check
@@ -30,7 +31,7 @@ class Repository:
 
     _file_cls = File
 
-    def __init__(self, backend: Optional[AbstractRepositoryBackend] = None):
+    def __init__(self, backend: AbstractRepositoryBackend | None = None):
         """Construct a new instance with empty metadata.
 
         :param backend: instance of repository backend to use to actually store the file objects. By default, an
@@ -47,7 +48,7 @@ class Repository:
         return f'Repository<{self.backend!s}>'
 
     @property
-    def uuid(self) -> Optional[str]:
+    def uuid(self) -> str | None:
         """Return the unique identifier of the repository backend or ``None`` if it doesn't have one."""
         return self.backend.uuid
 
@@ -57,7 +58,7 @@ class Repository:
         return self.backend.is_initialised
 
     @classmethod
-    def from_serialized(cls, backend: AbstractRepositoryBackend, serialized: Dict[str, Any]) -> 'Repository':
+    def from_serialized(cls, backend: AbstractRepositoryBackend, serialized: dict[str, Any]) -> 'Repository':
         """Construct an instance where the metadata is initialized from the serialized content.
 
         :param backend: instance of repository backend to use to actually store the file objects.
@@ -74,7 +75,7 @@ class Repository:
     def reset(self) -> None:
         self._directory = self._file_cls()
 
-    def serialize(self) -> Dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         """Serialize the metadata into a JSON-serializable format.
 
         :return: dictionary with the content metadata.
@@ -82,7 +83,7 @@ class Repository:
         return self._directory.serialize()
 
     @classmethod
-    def flatten(cls, serialized: Optional[Dict[str, Any]], delimiter: str = '/') -> Dict[str, Optional[str]]:
+    def flatten(cls, serialized: dict[str, Any] | None, delimiter: str = '/') -> dict[str, str | None]:
         """Flatten the serialized content of a repository into a mapping of path -> key or None (if folder).
 
         Note, all folders are represented in the flattened output, and their path is suffixed with the delimiter.
@@ -93,7 +94,7 @@ class Repository:
         """
         if serialized is None:
             return {}
-        items: Dict[str, Optional[str]] = {}
+        items: dict[str, str | None] = {}
         stack = [('', serialized)]
         while stack:
             path, sub_dict = stack.pop()
@@ -115,7 +116,7 @@ class Repository:
 
         :return: the hash representing the contents of the repository.
         """
-        objects: Dict[str, Any] = {}
+        objects: dict[str, Any] = {}
         for root, dirnames, filenames in self.walk():
             objects['__dirnames__'] = dirnames
             for filename in filenames:
@@ -126,7 +127,7 @@ class Repository:
         return make_hash(objects)
 
     @staticmethod
-    def _pre_process_path(path: Optional[FilePath] = None) -> pathlib.PurePath:
+    def _pre_process_path(path: FilePath | None = None) -> pathlib.PurePath:
         """Validate and convert the path to instance of ``pathlib.PurePath``.
 
         This should be called by every method of this class before doing anything, such that it can safely assume that
@@ -201,12 +202,12 @@ class Repository:
 
         return directory
 
-    def get_file_keys(self) -> List[str]:
+    def get_file_keys(self) -> list[str]:
         """Return the keys of all file objects contained within this repository.
 
         :return: list of keys, which map a file to its content in the backend repository.
         """
-        file_keys: List[str] = []
+        file_keys: list[str] = []
 
         def _add_file_keys(keys: list[str], objects: dict[str, File]) -> None:
             """Recursively add keys of all file objects to the keys list."""
@@ -220,7 +221,7 @@ class Repository:
 
         return file_keys
 
-    def get_object(self, path: Optional[FilePath] = None) -> File:
+    def get_object(self, path: FilePath | None = None) -> File:
         """Return the object at the given path.
 
         :param path: the relative path where to store the object in the repository.
@@ -242,7 +243,7 @@ class Repository:
 
         return file_object
 
-    def get_directory(self, path: Optional[FilePath] = None) -> File:
+    def get_directory(self, path: FilePath | None = None) -> File:
         """Return the directory object at the given path.
 
         :param path: the relative path of the directory.
@@ -279,7 +280,7 @@ class Repository:
 
         return file_object
 
-    def list_objects(self, path: Optional[FilePath] = None) -> List[File]:
+    def list_objects(self, path: FilePath | None = None) -> list[File]:
         """Return a list of the objects contained in this repository sorted by name, optionally in given sub directory.
 
         :param path: the relative path of the directory.
@@ -291,7 +292,7 @@ class Repository:
         directory = self.get_directory(path)
         return sorted(directory.objects.values(), key=lambda obj: obj.name)
 
-    def list_object_names(self, path: Optional[FilePath] = None) -> List[str]:
+    def list_object_names(self, path: FilePath | None = None) -> list[str]:
         """Return a sorted list of the object names contained in this repository, optionally in the given sub directory.
 
         :param path: the relative path of the directory.
@@ -323,7 +324,7 @@ class Repository:
         with open(filepath, 'rb') as handle:
             self.put_object_from_filelike(handle, path)
 
-    def put_object_from_tree(self, filepath: FilePath, path: Optional[FilePath] = None) -> None:
+    def put_object_from_tree(self, filepath: FilePath, path: FilePath | None = None) -> None:
         """Store the entire contents of `filepath` on the local file system in the repository with under given `path`.
 
         :param filepath: absolute path of the directory whose contents to copy to the repository.
@@ -459,7 +460,7 @@ class Repository:
                 with source.open(root / filename) as handle:
                     self.put_object_from_filelike(handle, root / filename)
 
-    def walk(self, path: Optional[FilePath] = None) -> Iterable[Tuple[pathlib.PurePath, List[str], List[str]]]:
+    def walk(self, path: FilePath | None = None) -> Iterable[tuple[pathlib.PurePath, list[str], list[str]]]:
         """Walk over the directories and files contained within this repository.
 
         .. note:: the order of the dirname and filename lists that are returned is not necessarily sorted. This is in
@@ -482,7 +483,7 @@ class Repository:
 
         yield path, dirnames, filenames
 
-    def copy_tree(self, target: Union[str, pathlib.Path], path: Optional[FilePath] = None) -> None:
+    def copy_tree(self, target: str | pathlib.Path, path: FilePath | None = None) -> None:
         """Copy the contents of the entire node repository to another location on the local file system.
 
         .. note:: If ``path`` is specified, only its contents are copied, and the relative path with respect to the

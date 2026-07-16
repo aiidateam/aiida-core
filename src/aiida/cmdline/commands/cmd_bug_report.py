@@ -238,7 +238,7 @@ def _read_log_tail(filepath: pathlib.Path, max_bytes: int = MAX_LOG_BYTES) -> by
         if size <= max_bytes:
             return handle.read()
 
-        header = f'... (truncated from {size} bytes)\n'.encode('utf-8')
+        header = f'... (truncated from {size} bytes)\n'.encode()
 
         if len(header) >= max_bytes:
             return header[:max_bytes]

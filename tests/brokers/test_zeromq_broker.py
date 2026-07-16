@@ -57,9 +57,9 @@ class TestZeromqBrokerStatusQueries:
         """Test is_running returns False when no PID file exists."""
         assert not zeromq_broker.is_service_reachable()
 
-    def test_get_service_status_no_file(self, zeromq_broker):
-        """Test get_service_status returns None when no status file exists."""
-        assert zeromq_broker.get_service_status() is None
+    def test_probe_service_status_no_file(self, zeromq_broker):
+        """Test probe_service_status returns None when no status file exists."""
+        assert zeromq_broker.probe_service_status() is None
 
     def test_str_running(self, zeromq_broker_with_server):
         """Test __str__ when running."""
@@ -88,19 +88,19 @@ class TestZeromqBrokerStatusQueries:
         with patch('aiida.brokers.zeromq.broker.psutil.Process', side_effect=psutil.NoSuchProcess(pid=12345)):
             assert not zeromq_broker.is_service_reachable()
 
-    def test_get_service_status_valid(self, zeromq_broker):
-        """Test get_service_status with valid JSON."""
+    def test_probe_service_status_valid(self, zeromq_broker):
+        """Test probe_service_status with valid JSON."""
         status_file = zeromq_broker.service_dir / 'broker.status'
         status_file.write_text(json.dumps({'pid': 123, 'running': True}))
-        status = zeromq_broker.get_service_status()
+        status = zeromq_broker.probe_service_status()
         assert status is not None
         assert status['pid'] == 123
 
-    def test_get_service_status_invalid_json(self, zeromq_broker):
-        """Test get_service_status with invalid JSON."""
+    def test_probe_service_status_invalid_json(self, zeromq_broker):
+        """Test probe_service_status with invalid JSON."""
         status_file = zeromq_broker.service_dir / 'broker.status'
         status_file.write_text('{INVALID JSON')
-        assert zeromq_broker.get_service_status() is None
+        assert zeromq_broker.probe_service_status() is None
 
 
 class TestZeromqBrokerCommunicator:
@@ -226,6 +226,6 @@ class TestZeromqBrokerIntegration:
         """Test the zeromq_broker lifecycle."""
         assert zeromq_broker_with_server.is_service_reachable()
 
-        status = zeromq_broker_with_server.get_service_status()
+        status = zeromq_broker_with_server.probe_service_status()
         assert status is not None
         assert 'pid' in status

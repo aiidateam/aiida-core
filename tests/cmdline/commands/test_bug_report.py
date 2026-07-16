@@ -43,7 +43,7 @@ class DummyBroker:
     def get_communicator(self):
         return object()
 
-    def get_service_status(self):
+    def probe_service_status(self):
         return {'product': 'RabbitMQ', 'version': '3.12.0'}
 
     def close(self):
@@ -76,7 +76,7 @@ def _make_zeromq_broker(service_dir: pathlib.Path, is_running: bool, status: dic
     broker = ZeromqBroker.__new__(ZeromqBroker)
     broker._service_dir = service_dir
     broker.is_service_reachable = lambda: is_running
-    broker.get_service_status = lambda: status
+    broker.probe_service_status = lambda: status
     return broker
 
 

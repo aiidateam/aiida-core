@@ -77,7 +77,7 @@ class ZeromqBroker(Broker):
 
     def __str__(self) -> str:
         if self.is_service_reachable():
-            status = self.get_service_status()
+            status = self.probe_service_status()
             pid = status.get('pid', '?') if status else '?'
             return f'ZeroMQ Broker (PID {pid}) @ {self._service_dir}'
         return f'ZeroMQ Broker @ {self._service_dir} <not running>'
@@ -138,7 +138,7 @@ class ZeromqBroker(Broker):
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             return False
 
-    def get_service_status(self) -> BrokerServiceStatus | None:
+    def probe_service_status(self) -> BrokerServiceStatus | None:
         """Read the ZeromqBrokerService status from its status file."""
         if not self._service_status_file.exists():
             return None

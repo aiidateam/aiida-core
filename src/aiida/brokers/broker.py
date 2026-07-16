@@ -86,7 +86,7 @@ class Broker(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_service_status(self) -> BrokerServiceStatus | None:
+    def probe_service_status(self) -> BrokerServiceStatus | None:
         """Return service status information for the broker, if available.
 
         :return: Structured service status information, or ``None`` if no status is available.

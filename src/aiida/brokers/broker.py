@@ -79,7 +79,7 @@ class Broker(abc.ABC):
         """
 
     @abc.abstractmethod
-    def is_service_reachable(self) -> bool:
+    def check_service_reachable(self) -> bool:
         """Return whether the broker service is reachable from this client.
 
         :return: ``True`` if the broker service can be reached, ``False`` otherwise.

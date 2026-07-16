@@ -141,13 +141,13 @@ def submit_and_await(started_daemon_client):
         else:
             raise ValueError(f'type of submittable `{type(submittable)}` is not supported.')
 
-        start_time = time.time()
+        start_time = time.monotonic()
 
         while node.process_state is not state:
             if node.is_excepted:
                 raise RuntimeError(f'The process excepted: {node.exception}')
 
-            if time.time() - start_time >= timeout:
+            if time.monotonic() - start_time >= timeout:
                 daemon_log_file = pathlib.Path(started_daemon_client.daemon_log_file).read_text(encoding='utf-8')
                 daemon_status = 'running' if started_daemon_client.is_daemon_running else 'stopped'
                 raise RuntimeError(

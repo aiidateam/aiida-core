@@ -190,6 +190,7 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
             print_status(ServiceStatus.WARNING, 'daemon', str(exception))
         except DaemonException as exception:
             print_status(ServiceStatus.ERROR, 'daemon', str(exception))
+            exit_code = ExitCode.CRITICAL
         except Exception as exception:
             message = 'Error getting daemon status'
             print_status(ServiceStatus.ERROR, 'daemon', message, exception=exception, print_traceback=print_traceback)

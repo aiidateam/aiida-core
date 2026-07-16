@@ -290,12 +290,12 @@ class DaemonClient:
 
         The daemon manages the broker service and therefore determines where the service writes its state files.
         """
-        return self._config.filepaths(self.profile)['zmq_broker_service']['dir']
+        return self._config.filepaths(self.profile)['broker_service']['dir']
 
     @property
     def zmq_broker_service_log_file(self) -> str:
         """Return the log file of the ZMQ broker service, derived from the settings."""
-        return self._config.filepaths(self.profile)['zmq_broker_service']['log']
+        return self._config.filepaths(self.profile)['broker_service']['log']
 
     @property
     def _cmd_start_zmq_broker(self) -> list[str]:

@@ -59,7 +59,7 @@ def ssh_key(tmp_path_factory) -> t.Generator[pathlib.Path, None, None]:
 
 
 @pytest.fixture
-def aiida_computer(tmp_path) -> t.Callable[[], 'Computer']:
+def aiida_computer(tmp_path) -> t.Callable[[], Computer]:
     """Return a factory to create a new or load an existing :class:`aiida.orm.computers.Computer` instance.
 
     The database is queried for an existing computer with the same ``label``, ``hostname``, ``scheduler_type`` and
@@ -89,7 +89,7 @@ def aiida_computer(tmp_path) -> t.Callable[[], 'Computer']:
         minimum_job_poll_interval: int = 0,
         default_mpiprocs_per_machine: int = 1,
         configuration_kwargs: dict[t.Any, t.Any] | None = None,
-    ) -> 'Computer':
+    ) -> Computer:
         import uuid
 
         from aiida.common.exceptions import IntegrityError, NotExistent
@@ -97,7 +97,7 @@ def aiida_computer(tmp_path) -> t.Callable[[], 'Computer']:
 
         label = label or f'test-computer-{uuid.uuid4().hex}'
 
-        def _build() -> 'Computer':
+        def _build() -> Computer:
             return Computer(
                 label=label,
                 hostname=hostname,
@@ -192,7 +192,7 @@ def aiida_computer_local(aiida_computer) -> t.Callable[[], Computer]:
 
 
 @pytest.fixture
-def aiida_computer_ssh(aiida_computer, ssh_key) -> t.Callable[[], 'Computer']:
+def aiida_computer_ssh(aiida_computer, ssh_key) -> t.Callable[[], Computer]:
     """Factory to return a :class:`aiida.orm.computers.Computer` instance with ``core.ssh`` transport.
 
     If ``configure=True``, an SSH key pair is automatically added to the ``.ssh`` folder of the user, allowing an
@@ -215,7 +215,7 @@ def aiida_computer_ssh(aiida_computer, ssh_key) -> t.Callable[[], 'Computer']:
     :return: A stored computer instance.
     """
 
-    def factory(label: str | None = None, configure: bool = True) -> 'Computer':
+    def factory(label: str | None = None, configure: bool = True) -> Computer:
         computer = aiida_computer(label=label, hostname='localhost', transport_type='core.ssh')
 
         if configure:
@@ -231,7 +231,7 @@ def aiida_computer_ssh(aiida_computer, ssh_key) -> t.Callable[[], 'Computer']:
 
 
 @pytest.fixture
-def aiida_computer_ssh_async(aiida_computer) -> t.Callable[[], 'Computer']:
+def aiida_computer_ssh_async(aiida_computer) -> t.Callable[[], Computer]:
     """Factory to return a :class:`aiida.orm.computers.Computer` instance with ``core.ssh_async`` transport.
 
     Usage::
@@ -251,7 +251,7 @@ def aiida_computer_ssh_async(aiida_computer) -> t.Callable[[], 'Computer']:
     :return: A stored computer instance.
     """
 
-    def factory(label: str | None = None, configure: bool = True, backend: str | None = None) -> 'Computer':
+    def factory(label: str | None = None, configure: bool = True, backend: str | None = None) -> Computer:
         """
         Create or load a computer with the ``core.ssh_async`` transport.
         :param label: The computer label. If not specified, a random UUID4 is used.
@@ -288,7 +288,7 @@ def aiida_computer_ssh_async(aiida_computer) -> t.Callable[[], 'Computer']:
 
 
 @pytest.fixture
-def aiida_localhost(aiida_computer_local) -> 'Computer':
+def aiida_localhost(aiida_computer_local) -> Computer:
     """Return a :class:`aiida.orm.computers.Computer` instance representing localhost with ``core.local`` transport.
 
     The computer's label is suffixed with the pytest-xdist worker id (e.g. ``localhost-gw0``,

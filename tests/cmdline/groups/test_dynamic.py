@@ -14,8 +14,8 @@ class CustomClass:
     """Test plugin class."""
 
     class CliModel(AiiDABaseModel):
-        optional_type: t.Union[int, float] = MetadataField(title='Optional type')
-        union_type: t.Union[int, float] = MetadataField(title='Union type')
+        optional_type: int | float = MetadataField(title='Optional type')
+        union_type: int | float = MetadataField(title='Union type')
         without_default: str = MetadataField(title='Without default')
         with_default: str = MetadataField(title='With default', default='default')
         with_default_factory: str = MetadataField(title='With default factory', default_factory=lambda: True)

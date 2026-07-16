@@ -58,7 +58,7 @@ class OrmModel(AiiDABaseModel):
         return fields
 
     @classmethod
-    def _as_minimal_model(cls: t.Type[OrmModel]) -> type[OrmModel]:
+    def _as_minimal_model(cls: type[OrmModel]) -> type[OrmModel]:
         """Return a derived model class excluding fields marked as "may_be_large"."""
         cached = cls.__dict__.get('_AIIDA_MINIMAL_MODEL')
         if isinstance(cached, type) and issubclass(cached, OrmModel):

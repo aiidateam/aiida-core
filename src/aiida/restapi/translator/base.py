@@ -461,9 +461,8 @@ class BaseTranslator:
             raise RestInputValidationError('More than one node found. Provide longer starting pattern for id.')
         except NotExistent:
             raise RestInputValidationError(
-                "either no object's id starts with '{}' or the corresponding object is not of type aiida.orm.{}".format(
-                    node_id, self._aiida_type
-                )
+                f"either no object's id starts with '{node_id}' "
+                f'or the corresponding object is not of type aiida.orm.{self._aiida_type}'
             )
         else:
             # create a permanent filter

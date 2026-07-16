@@ -10,7 +10,6 @@
 
 import os
 import pathlib
-import typing as t
 
 from aiida.common import exceptions
 from aiida.common.log import override_log_level
@@ -48,25 +47,23 @@ class Code(AbstractCode):
             '',
             description='The code that will be put in the scheduler script after the execution of the code',
         )
-        input_plugin: t.Optional[str] = OrmMetadataField(
-            description='The name of the input plugin to be used for this code'
-        )
-        local_executable: t.Optional[str] = OrmMetadataField(
+        input_plugin: str | None = OrmMetadataField(description='The name of the input plugin to be used for this code')
+        local_executable: str | None = OrmMetadataField(
             description='Path to a local executable',
         )
-        remote_exec_path: t.Optional[str] = OrmMetadataField(
+        remote_exec_path: str | None = OrmMetadataField(
             description='Remote path to executable',
         )
-        is_local: t.Optional[bool] = OrmMetadataField(
+        is_local: bool | None = OrmMetadataField(
             description='Whether the code is local or remote',
         )
 
     def __init__(
         self,
-        remote_computer_exec: t.Optional[str] = None,
-        local_executable: t.Optional[str] = None,
-        input_plugin_name: t.Optional[str] = None,
-        files: t.Optional[t.List[str]] = None,
+        remote_computer_exec: str | None = None,
+        local_executable: str | None = None,
+        input_plugin_name: str | None = None,
+        files: list[str] | None = None,
         **kwargs,
     ):
         super().__init__(**kwargs)

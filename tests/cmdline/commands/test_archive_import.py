@@ -94,9 +94,8 @@ def test_import_to_group(run_cli_command, newest_archive):
     options = ['-G', group.label] + [archives[1]]
     run_cli_command(cmd_archive.import_archive, options)
     assert group.count() > nodes_in_group, (
-        'There should now be more than {} nodes in group {} , instead there are {}'.format(
-            nodes_in_group, group_label, group.count()
-        )
+        f'There should now be more than {nodes_in_group} nodes in group {group_label} , '
+        f'instead there are {group.count()}'
     )
 
 

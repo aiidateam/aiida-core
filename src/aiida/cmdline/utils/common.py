@@ -14,8 +14,9 @@ import logging
 import os
 import sys
 import textwrap
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Sequence
+from typing import TYPE_CHECKING, Any, Literal
 
 from click import style
 

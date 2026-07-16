@@ -10,7 +10,8 @@
 
 import functools
 import keyword
-from typing import Any, Callable, Generic, TypeVar
+from collections.abc import Callable
+from typing import Any, Generic, TypeVar
 
 
 def isidentifier(identifier: str) -> bool:

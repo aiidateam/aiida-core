@@ -117,8 +117,7 @@ class MaterialsProjectImporter(DbImporter):
 
         :param query: a dictionary with the query parameters
         """
-        for entry in self._mpr.query(criteria=query, properties=properties):
-            yield entry
+        yield from self._mpr.query(criteria=query, properties=properties)
 
 
 class MaterialsProjectCifEntry(CifEntry):

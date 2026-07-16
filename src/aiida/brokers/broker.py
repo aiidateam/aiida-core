@@ -39,7 +39,7 @@ class Broker(abc.ABC):
 
     _config_fields: tuple[BrokerConfigField, ...] = ()
 
-    def __init__(self, profile: 'Profile') -> None:
+    def __init__(self, profile: Profile) -> None:
         """Construct a new instance.
 
         :param profile: The profile.
@@ -55,7 +55,7 @@ class Broker(abc.ABC):
         return {field.name: field.default for field in cls._config_fields}
 
     @classmethod
-    def get_detected_config(cls, get_value: 'Callable[[str], t.Any]') -> dict[str, t.Any]:
+    def get_detected_config(cls, get_value: Callable[[str], t.Any]) -> dict[str, t.Any]:
         """Return detected configuration values for CLI defaults.
 
         The callable should return the current value for a config field name.

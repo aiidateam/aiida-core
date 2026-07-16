@@ -21,7 +21,7 @@ import os
 import shutil
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Tuple, TypeAlias, TypedDict, cast
+from typing import Any, Literal, TypeAlias, TypedDict, cast
 
 from pydantic import (
     BaseModel,
@@ -252,20 +252,18 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         description='Timeout in seconds for communications with RabbitMQ.',
         json_schema_extra={'deprecated_by': 'broker.task_timeout', 'requires_daemon_restart': True},
     )
-    storage__sandbox: Optional[str] = Field(
-        None, description='Absolute path to the directory to store sandbox folders.'
-    )
+    storage__sandbox: str | None = Field(None, description='Absolute path to the directory to store sandbox folders.')
     caching__default_enabled: bool = Field(
         False,
         description='Enable calculation caching by default.',
         json_schema_extra={'requires_daemon_restart': True},
     )
-    caching__enabled_for: List[str] = Field(
+    caching__enabled_for: list[str] = Field(
         [],
         description='Calculation entry points to enable caching on.',
         json_schema_extra={'requires_daemon_restart': True},
     )
-    caching__disabled_for: List[str] = Field(
+    caching__disabled_for: list[str] = Field(
         [],
         description='Calculation entry points to disable caching on.',
         json_schema_extra={'requires_daemon_restart': True},
@@ -273,7 +271,7 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
 
     @field_validator('caching__enabled_for', 'caching__disabled_for')
     @classmethod
-    def validate_caching_identifier_pattern(cls, value: List[str]) -> List[str]:
+    def validate_caching_identifier_pattern(cls, value: list[str]) -> list[str]:
         """Validate the caching identifier patterns."""
         from aiida.manage.caching import _validate_identifier_pattern
 
@@ -285,16 +283,14 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
 class GlobalOptionsSchema(ProfileOptionsSchema, defer_build=True):
     """Schema for the global options of an AiiDA instance."""
 
-    autofill__user__email: Optional[str] = Field(
-        None, description='Default user email to use when creating new profiles.'
-    )
-    autofill__user__first_name: Optional[str] = Field(
+    autofill__user__email: str | None = Field(None, description='Default user email to use when creating new profiles.')
+    autofill__user__first_name: str | None = Field(
         None, description='Default user first name to use when creating new profiles.'
     )
-    autofill__user__last_name: Optional[str] = Field(
+    autofill__user__last_name: str | None = Field(
         None, description='Default user last name to use when creating new profiles.'
     )
-    autofill__user__institution: Optional[str] = Field(
+    autofill__user__institution: str | None = Field(
         None, description='Default user institution to use when creating new profiles.'
     )
     rest_api__profile_switching: bool = Field(
@@ -310,7 +306,7 @@ class ProfileStorageConfig(BaseModel, defer_build=True):
     """Schema for the storage backend configuration of an AiiDA profile."""
 
     backend: str
-    config: Dict[str, Any]
+    config: dict[str, Any]
 
 
 class ProcessControlConfig(BaseModel, defer_build=True):
@@ -321,10 +317,10 @@ class ProcessControlConfig(BaseModel, defer_build=True):
     configuration.
     """
 
-    backend: Optional[str] = Field(
+    backend: str | None = Field(
         None, description='Entry point name of the broker plugin, or ``None`` if no broker is configured.'
     )
-    config: Optional[Dict[str, Any]] = Field(None, description='Configuration of the broker plugin.')
+    config: dict[str, Any] | None = Field(None, description='Configuration of the broker plugin.')
 
 
 class ProfileSchema(BaseModel, defer_build=True):
@@ -333,9 +329,9 @@ class ProfileSchema(BaseModel, defer_build=True):
     uuid: str = Field(description='A UUID that uniquely identifies the profile.', default_factory=uuid.uuid4)
     storage: ProfileStorageConfig
     process_control: ProcessControlConfig
-    default_user_email: Optional[str] = None
+    default_user_email: str | None = None
     test_profile: bool = False
-    options: Optional[ProfileOptionsSchema] = None
+    options: ProfileOptionsSchema | None = None
 
     @field_serializer('uuid')
     def serialize_dt(self, value: uuid.UUID, _info):
@@ -345,10 +341,10 @@ class ProfileSchema(BaseModel, defer_build=True):
 class ConfigSchema(BaseModel, defer_build=True):
     """Schema for the configuration of an AiiDA instance."""
 
-    CONFIG_VERSION: Optional[ConfigVersionSchema] = None
-    profiles: Optional[dict[str, ProfileSchema]] = None
-    options: Optional[GlobalOptionsSchema] = None
-    default_profile: Optional[str] = None
+    CONFIG_VERSION: ConfigVersionSchema | None = None
+    profiles: dict[str, ProfileSchema] | None = None
+    options: GlobalOptionsSchema | None = None
+    default_profile: str | None = None
 
 
 class Config:
@@ -426,7 +422,7 @@ class Config:
         return filepath_backup
 
     @staticmethod
-    def validate(config: dict, filepath: Optional[str] = None):
+    def validate(config: dict, filepath: str | None = None):
         """Validate a configuration dictionary."""
         try:
             ConfigSchema(**config)
@@ -585,7 +581,7 @@ class Config:
         if name not in self.profile_names:
             raise exceptions.ProfileConfigurationError(f'profile `{name}` does not exist')
 
-    def get_profile(self, name: Optional[str] = None) -> Profile:
+    def get_profile(self, name: str | None = None) -> Profile:
         """Return the profile for the given name or the default one if not specified.
 
         :return: the profile instance or None if it does not exist
@@ -788,11 +784,9 @@ class Config:
                     )
                 elif not Path(filepath).exists():
                     LOGGER.warning(
-                        (
-                            f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but the aiida archive file '
-                            f"at `{filepath}` doesn't exist anymore. "
-                            'Possibly the file was manually removed before? Profile deletion will proceed anyway.'
-                        )
+                        f'Profile `{profile.name}` has the `core.sqlite_zip` backend, but the aiida archive file '
+                        f"at `{filepath}` doesn't exist anymore. "
+                        'Possibly the file was manually removed before? Profile deletion will proceed anyway.'
                     )
                 else:
                     storage = storage_cls(profile)
@@ -922,7 +916,7 @@ class Config:
 
         return value
 
-    def get_options(self, scope: Optional[str] = None) -> Dict[str, Tuple[Option, str, Any]]:
+    def get_options(self, scope: str | None = None) -> dict[str, tuple[Option, str, Any]]:
         """Return a dictionary of all option values and their source ('profile', 'global', or 'default').
 
         :param scope: the profile name or globally if not specified

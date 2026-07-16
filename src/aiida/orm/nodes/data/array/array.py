@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator, Sequence
-from typing import Any, BinaryIO, Union
+from typing import Any, BinaryIO
 
 import numpy as np
 from pydantic import ConfigDict, field_validator
@@ -66,7 +66,7 @@ class ArrayData(Data):
     class ConstructorArgsModel(OrmModel):
         model_config = ConfigDict(arbitrary_types_allowed=True)
 
-        arrays: Union[Sequence, dict[str, Sequence]] = OrmMetadataField(
+        arrays: Sequence | dict[str, Sequence] = OrmMetadataField(
             description='A single (or dictionary of) array(s) to store',
             write_only=True,
         )

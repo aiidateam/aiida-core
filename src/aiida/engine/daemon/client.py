@@ -190,7 +190,7 @@ class DaemonStalePidException(DaemonException):
     """Raised when a connection to the daemon is attempted but it fails and the PID file appears to be stale."""
 
 
-def get_daemon_client(profile_name: str | None = None) -> 'DaemonClient':
+def get_daemon_client(profile_name: str | None = None) -> DaemonClient:
     """Return the daemon client for the given profile or the currently loaded profile if not specified.
 
     :param profile_name: Optional profile name.
@@ -337,7 +337,7 @@ class DaemonClient:
         return self._config.filepaths(self.profile)['circus']['socket']['file']
 
     @property
-    def circus_socket_endpoints(self) -> 'CircusEndpointFilepaths':
+    def circus_socket_endpoints(self) -> CircusEndpointFilepaths:
         socket_filepaths = self._config.filepaths(self.profile)['circus']['socket']
         return {
             'controller': socket_filepaths['controller'],
@@ -371,7 +371,7 @@ class DaemonClient:
         """
         if self.is_daemon_running:
             try:
-                with open(self.circus_port_file, 'r', encoding='utf8') as fhandle:
+                with open(self.circus_port_file, encoding='utf8') as fhandle:
                     return int(fhandle.read().strip())
             except (ValueError, OSError):
                 raise RuntimeError('daemon is running so port file should have been there but could not read it')
@@ -419,7 +419,7 @@ class DaemonClient:
         """
         if self.is_daemon_running:
             try:
-                with open(self.circus_socket_file, 'r', encoding='utf8') as fhandle:
+                with open(self.circus_socket_file, encoding='utf8') as fhandle:
                     content = fhandle.read().strip()
                 return content
             except (ValueError, OSError):
@@ -443,7 +443,7 @@ class DaemonClient:
         """
         if os.path.isfile(self.circus_pid_file):
             try:
-                with open(self.circus_pid_file, 'r', encoding='utf8') as fhandle:
+                with open(self.circus_pid_file, encoding='utf8') as fhandle:
                     content = fhandle.read().strip()
                 return int(content)
             except (ValueError, OSError):
@@ -535,7 +535,7 @@ class DaemonClient:
 
         return endpoint
 
-    def get_ipc_endpoint(self, endpoint: 'CircusEndpointName'):
+    def get_ipc_endpoint(self, endpoint: CircusEndpointName):
         """Get the ipc endpoint string for a circus daemon endpoint for a given socket.
 
         :param endpoint: The circus endpoint for which to return a socket.
@@ -565,7 +565,7 @@ class DaemonClient:
         return endpoint
 
     @contextlib.contextmanager
-    def get_client(self, timeout: int | None = None) -> 'CircusClient':
+    def get_client(self, timeout: int | None = None) -> CircusClient:
         """Return an instance of the CircusClient.
 
         The endpoint is defined by the controller endpoint, which used the port that was written to the port file upon

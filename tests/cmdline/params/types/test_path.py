@@ -72,11 +72,10 @@ def test_fail_unreachable_url():
 
 def test_fail_timeout(monkeypatch):
     """Test the parameter in case of a valid URL that times out."""
-    import socket
     from urllib import request
 
     def raise_timeout(*args, **kwargs):
-        raise socket.timeout
+        raise TimeoutError
 
     monkeypatch.setattr(request, 'urlopen', raise_timeout)
 

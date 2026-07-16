@@ -807,7 +807,7 @@ class CliResult:
 
     stderr_bytes: bytes
     stdout_bytes: bytes
-    exc_info: tuple[t.Type[BaseException], BaseException, types.TracebackType] | tuple[None, None, None] = (
+    exc_info: tuple[type[BaseException], BaseException, types.TracebackType] | tuple[None, None, None] = (
         None,
         None,
         None,
@@ -1149,8 +1149,8 @@ def construct_calculation_node_add(tmp_path_factory):
         output_content = f'{x + y}\n'.encode()
         retrieved_folder.put_object_from_bytes(output_content, 'aiida.out')
 
-        scheduler_stdout = '\n'.encode()
-        scheduler_stderr = '\n'.encode()
+        scheduler_stdout = b'\n'
+        scheduler_stderr = b'\n'
         retrieved_folder.base.repository.put_object_from_bytes(scheduler_stdout, '_scheduler-stdout.txt')
         retrieved_folder.base.repository.put_object_from_bytes(scheduler_stderr, '_scheduler-stderr.txt')
         retrieved_folder.store()
@@ -1206,7 +1206,7 @@ def create_file_hierarchy():
     :param target: the target where the hierarchy should be created.
     """
 
-    def _create_file_hierarchy(hierarchy: t.Dict, target: t.Union[pathlib.Path, Folder]) -> None:
+    def _create_file_hierarchy(hierarchy: dict, target: pathlib.Path | Folder) -> None:
         for filename, value in hierarchy.items():
             if isinstance(value, dict):
                 if isinstance(target, pathlib.Path):

@@ -320,7 +320,7 @@ def test_read_log_tail(tmp_path):
 def test_read_log_tail_handles_partial_utf8(tmp_path):
     """Test ``_read_log_tail`` drops incomplete UTF-8 bytes at the truncation boundary."""
     log_file = tmp_path / 'test.log'
-    log_file.write_bytes(b'a' * 30 + '🙂'.encode('utf-8') + b'b' * 2)
+    log_file.write_bytes(b'a' * 30 + '🙂'.encode() + b'b' * 2)
 
     truncated = cmd_bug_report._read_log_tail(log_file, max_bytes=34)
 

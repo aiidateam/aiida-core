@@ -1,5 +1,5 @@
-array_labels: QbArrayField('attributes.array_labels', dtype=typing.List[str] | None,
-  doc='Labels associated with the band arrays')
+array_labels: QbArrayField('attributes.array_labels', dtype=list[str] | None, doc='Labels
+  associated with the band arrays')
 attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.data.array.bands.BandsData.AttributesModel'>,
   doc='The node attributes')
 cell: QbArrayField('attributes.cell', dtype=list[list[float]] | None, doc='Unit cell

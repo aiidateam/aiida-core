@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Union
 
 from aiida import orm
 from aiida.common import AIIDA_LOGGER
@@ -36,9 +35,9 @@ class DumpEngine:
 
     def __init__(
         self,
-        dump_target_entity: Union[orm.ProcessNode, orm.Group, Profile],
+        dump_target_entity: orm.ProcessNode | orm.Group | Profile,
         base_output_path: Path,
-        config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig],
+        config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig,
     ):
         """Engine constructor that initializes all entities needed for dumping.
 
@@ -47,7 +46,7 @@ class DumpEngine:
         :param config: Populated config instance, defaults to None
         """
 
-        self.config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig] = config
+        self.config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig = config
         self.dump_target_entity = dump_target_entity
 
         self.dump_paths = DumpPaths(

@@ -50,7 +50,7 @@ class ZeromqBroker(Broker):
         ),
     )
 
-    def __init__(self, profile: 'Profile') -> None:
+    def __init__(self, profile: Profile) -> None:
         super().__init__(profile)
         self._communicator: ZeromqCommunicator | None = None
 
@@ -181,7 +181,7 @@ class ZeromqBroker(Broker):
 
         return self._communicator
 
-    def iterate_tasks(self) -> t.Iterator['ZeromqIncomingTask']:
+    def iterate_tasks(self) -> t.Iterator[ZeromqIncomingTask]:
         queue_path = self._storage_path / 'tasks'
         if not queue_path.exists():
             return
@@ -195,7 +195,7 @@ class ZeromqBroker(Broker):
             self._communicator.close()
             self._communicator = None
 
-    def __enter__(self) -> 'ZeromqBroker':
+    def __enter__(self) -> ZeromqBroker:
         return self
 
     def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: t.Any) -> None:

@@ -8,7 +8,7 @@
 ###########################################################################
 """Classes and methods for Django specific backend entities"""
 
-from typing import Generic, Set, TypeVar
+from typing import Generic, TypeVar
 
 from aiida.common.lang import type_check
 from aiida.storage.psql_dos.models.base import Base
@@ -89,6 +89,6 @@ class SqlaModelEntity(Generic[ModelType]):
         self.model.save()
         return self
 
-    def _flush_if_stored(self, fields: Set[str]) -> None:
+    def _flush_if_stored(self, fields: set[str]) -> None:
         if self.model.is_saved():
             self.model._flush(fields)

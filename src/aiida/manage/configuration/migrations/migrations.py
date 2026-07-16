@@ -8,7 +8,8 @@
 ###########################################################################
 """Define the current configuration version and migrations."""
 
-from typing import Any, Dict, Iterable, Optional, Protocol, Type
+from collections.abc import Iterable
+from typing import Any, Protocol
 
 from aiida.common import exceptions
 from aiida.common.docs import URL_CONFIG_SCHEMA_COMPATIBILITY
@@ -25,7 +26,7 @@ __all__ = (
     'upgrade_config',
 )
 
-ConfigType = Dict[str, Any]
+ConfigType = dict[str, Any]
 
 # The expected version of the configuration file and the oldest backwards compatible configuration version.
 # If the configuration file format is changed, the current version number should be upped and a migration added.
@@ -498,7 +499,7 @@ def get_oldest_compatible_version(config):
 
 
 def upgrade_config(
-    config: ConfigType, target: int = CURRENT_CONFIG_VERSION, migrations: Iterable[Type[SingleMigration]] = MIGRATIONS
+    config: ConfigType, target: int = CURRENT_CONFIG_VERSION, migrations: Iterable[type[SingleMigration]] = MIGRATIONS
 ) -> ConfigType:
     """Run the registered configuration migrations up to the target version.
 
@@ -526,7 +527,7 @@ def upgrade_config(
 
 
 def downgrade_config(
-    config: ConfigType, target: int, migrations: Iterable[Type[SingleMigration]] = MIGRATIONS
+    config: ConfigType, target: int, migrations: Iterable[type[SingleMigration]] = MIGRATIONS
 ) -> ConfigType:
     """Run the registered configuration migrations down to the target version.
 
@@ -552,7 +553,7 @@ def downgrade_config(
     return config
 
 
-def check_and_migrate_config(config, filepath: Optional[str] = None):
+def check_and_migrate_config(config, filepath: str | None = None):
     """Checks if the config needs to be migrated, and performs the migration if needed.
 
     :param config: the configuration dictionary
@@ -565,7 +566,7 @@ def check_and_migrate_config(config, filepath: Optional[str] = None):
     return config
 
 
-def config_needs_migrating(config, filepath: Optional[str] = None):
+def config_needs_migrating(config, filepath: str | None = None):
     """Checks if the config needs to be migrated.
 
     If the oldest compatible version of the configuration is higher than the current configuration version defined

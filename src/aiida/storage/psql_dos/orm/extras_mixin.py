@@ -8,7 +8,8 @@
 ###########################################################################
 """Mixin class for SQL implementations of ``extras``."""
 
-from typing import Any, Dict, Iterable, Tuple
+from collections.abc import Iterable
+from typing import Any
 
 from aiida.orm.implementation.utils import clean_value, validate_attribute_extra_key
 
@@ -21,7 +22,7 @@ class ExtrasMixin:
     is_stored: bool
 
     @property
-    def extras(self) -> Dict[str, Any]:
+    def extras(self) -> dict[str, Any]:
         return self.model.extras
 
     def get_extra(self, key: str) -> Any:
@@ -39,7 +40,7 @@ class ExtrasMixin:
         self.model.extras[key] = value
         self._flush_if_stored({'extras'})
 
-    def set_extra_many(self, extras: Dict[str, Any]) -> None:
+    def set_extra_many(self, extras: dict[str, Any]) -> None:
         for key in extras:
             validate_attribute_extra_key(key)
 
@@ -51,7 +52,7 @@ class ExtrasMixin:
 
         self._flush_if_stored({'extras'})
 
-    def reset_extras(self, extras: Dict[str, Any]) -> None:
+    def reset_extras(self, extras: dict[str, Any]) -> None:
         for key in extras:
             validate_attribute_extra_key(key)
 
@@ -84,10 +85,8 @@ class ExtrasMixin:
         self.model.extras = {}
         self._flush_if_stored({'extras'})
 
-    def extras_items(self) -> Iterable[Tuple[str, Any]]:
-        for key, value in self.model.extras.items():
-            yield key, value
+    def extras_items(self) -> Iterable[tuple[str, Any]]:
+        yield from self.model.extras.items()
 
     def extras_keys(self) -> Iterable[str]:
-        for key in self.model.extras.keys():
-            yield key
+        yield from self.model.extras.keys()

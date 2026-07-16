@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Optional, cast
+from typing import cast
 
 from aiida.orm import AuthInfo
 from aiida.orm.computers import Computer
@@ -36,7 +36,7 @@ class RemoteData(Data):
     KEY_EXTRA_CLEANED = 'cleaned'
 
     class AttributesModel(Data.AttributesModel):
-        remote_path: Optional[str] = OrmMetadataField(
+        remote_path: str | None = OrmMetadataField(
             None,
             title='Remote path',
             description='Filepath on the remote computer',
@@ -51,7 +51,7 @@ class RemoteData(Data):
             orm_class=Computer,
         )
 
-    def __init__(self, remote_path: Optional[str] = None, **kwargs):
+    def __init__(self, remote_path: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if remote_path is not None:
             self.set_remote_path(remote_path)
@@ -97,9 +97,8 @@ class RemoteData(Data):
             except OSError as exception:
                 if exception.errno == 2:  # file does not exist
                     raise OSError(
-                        'The required remote file {} on {} does not exist or has been deleted.'.format(
-                            full_path, self.computer.label
-                        )
+                        f'The required remote file {full_path} on {self.computer.label} '
+                        'does not exist or has been deleted.'
                     ) from exception
                 raise
 

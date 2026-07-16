@@ -15,6 +15,7 @@ import typing as t
 from copy import deepcopy
 from functools import singledispatchmethod
 from pprint import pformat
+from types import UnionType
 
 from aiida.common.lang import isidentifier
 
@@ -30,10 +31,16 @@ def extract_root_type(dtype: t.Any) -> t.Any:
 
     >>> extract_root_type(List[str]) -> list
     >>> extract_root_type(Optional[List[str]]) -> list
+    >>> extract_root_type(str | None) -> str
     """
     origin = t.get_origin(dtype)
     if origin:
-        if origin is t.Union:
+        # `t.Union` is the origin of `Optional[X]`/`Union[X, Y]`; `UnionType` that of the PEP 604
+        # `X | Y` spelling, which pydantic preserves on the annotations feeding this function.
+        # Both checks are required below Python 3.14: only there do the two unify
+        # (`t.Union is UnionType`), so dropping either silently degrades every `X | None`
+        # annotation to `QbAnyField` on 3.10-3.13.
+        if origin is t.Union or origin is UnionType:
             return extract_root_type(t.get_args(dtype)[0])
         else:
             return origin
@@ -55,9 +62,9 @@ class QbField:
     def __init__(
         self,
         key: str,
-        alias: t.Optional[str] = None,
+        alias: str | None = None,
         *,
-        dtype: t.Optional[t.Any] = None,
+        dtype: t.Any | None = None,
         doc: str = '',
         is_attribute: bool = True,
     ) -> None:
@@ -86,7 +93,7 @@ class QbField:
         return self._backend_key
 
     @property
-    def dtype(self) -> t.Optional[t.Any]:
+    def dtype(self) -> t.Any | None:
         """Return the primitive root type."""
         return extract_root_type(self._dtype)
 
@@ -125,7 +132,7 @@ class QbField:
 
     if t.TYPE_CHECKING:
 
-        def __getitem__(self, key: str) -> 'QbField': ...
+        def __getitem__(self, key: str) -> QbField: ...
 
 
 class QbNumericField(QbField):
@@ -201,7 +208,7 @@ class QbDictField(QbField):
         """Return a filter for only values with these keys"""
         return QbFieldFilters(((self, 'has_key', value),))
 
-    def __getitem__(self, key: str) -> 'QbAnyField':
+    def __getitem__(self, key: str) -> QbAnyField:
         """Return a new `QbField` with a nested key."""
         return QbAnyField(
             key=f'{self.key}.{key}',
@@ -223,7 +230,7 @@ class QbAttributesField(QbDictField):
 
     _typed_children: dict[str, QbField]
 
-    def __getattr__(self, key: str) -> 'QbField':
+    def __getattr__(self, key: str) -> QbField:
         """Return a typed child field if known; otherwise raise AttributeError.
 
         This enables autocomplete on fields such as:
@@ -261,12 +268,12 @@ class QbFieldFilters:
 
     def __init__(
         self,
-        filters: t.Union[t.Sequence[tuple[QbField, str, t.Any]], dict],
+        filters: t.Sequence[tuple[QbField, str, t.Any]] | dict,
     ):
-        self.filters: t.Dict[str, t.Any] = {}
+        self.filters: dict[str, t.Any] = {}
         self.add_filters(filters)
 
-    def as_dict(self) -> t.Dict[str, t.Any]:
+    def as_dict(self) -> dict[str, t.Any]:
         """Return the filters dictionary."""
         return self.filters
 
@@ -307,15 +314,15 @@ class QbFieldFilters:
             raise TypeError(f'cannot compare QbFieldFilters to {type(other)}')
         return self.filters == other.filters
 
-    def __and__(self, other: 'QbFieldFilters') -> 'QbFieldFilters':
+    def __and__(self, other: QbFieldFilters) -> QbFieldFilters:
         """``a & b`` -> {'and': [`a.filters`, `b.filters`]}."""
         return self._resolve_redundancy(other, 'and') or QbFieldFilters({'and': [self.filters, other.filters]})
 
-    def __or__(self, other: 'QbFieldFilters') -> 'QbFieldFilters':
+    def __or__(self, other: QbFieldFilters) -> QbFieldFilters:
         """``a | b`` -> {'or': [`a.filters`, `b.filters`]}."""
         return self._resolve_redundancy(other, 'or') or QbFieldFilters({'or': [self.filters, other.filters]})
 
-    def __invert__(self) -> 'QbFieldFilters':
+    def __invert__(self) -> QbFieldFilters:
         """~(a > b) -> a !> b; ~(a !> b) -> a > b"""
         filters = deepcopy(self.filters)
         if 'and' in filters:
@@ -333,7 +340,7 @@ class QbFieldFilters:
             filters[key] = {operator: value}
         return QbFieldFilters(filters)
 
-    def _resolve_redundancy(self, other: 'QbFieldFilters', logical: str) -> t.Optional['QbFieldFilters']:
+    def _resolve_redundancy(self, other: QbFieldFilters, logical: str) -> QbFieldFilters | None:
         """Resolve redundant filters and nested logical operators."""
 
         if not isinstance(other, QbFieldFilters):
@@ -363,7 +370,7 @@ class QbFields:
 
     __isabstractmethod__ = False
 
-    def __init__(self, fields: t.Optional[dict[str, QbField]] = None):
+    def __init__(self, fields: dict[str, QbField] | None = None):
         self._fields = fields or {}
 
     def keys(self) -> list[str]:
@@ -411,17 +418,17 @@ class QbFields:
 
 class QbFieldArguments(t.TypedDict):
     key: str
-    alias: t.Optional[str]
-    dtype: t.Optional[t.Any]
+    alias: str | None
+    dtype: t.Any | None
     doc: str
     is_attribute: bool
 
 
 def add_field(
     key: str,
-    alias: t.Optional[str] = None,
+    alias: str | None = None,
     *,
-    dtype: t.Optional[t.Any] = None,
+    dtype: t.Any | None = None,
     doc: str = '',
     is_attribute: bool = False,
 ) -> QbField:

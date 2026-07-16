@@ -252,11 +252,11 @@ def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...
         valid_type_map = {
             bool: Bool,
             dict: Dict,
-            t.Dict: Dict,
+            t.Dict: Dict,  # noqa: UP006
             float: Float,
             int: Int,
             list: List,
-            t.List: List,
+            t.List: List,  # noqa: UP006
             str: Str,
         }
 

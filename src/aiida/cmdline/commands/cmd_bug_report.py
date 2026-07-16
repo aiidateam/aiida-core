@@ -74,10 +74,10 @@ def _check_storage() -> dict[str, Any]:
     try:
         storage = manager.get_profile_storage()
         status = str(storage)
-        connected = True
+        error = None
     except Exception as exception:
-        connected = False
-        status = _format_exception(exception)
+        status = None
+        error = _format_exception(exception)
     finally:
         if not storage_loaded:
             try:
@@ -85,7 +85,7 @@ def _check_storage() -> dict[str, Any]:
             except Exception as exception:
                 LOGGER.warning(f'Failed to reset storage while collecting bug report diagnostics: {exception}')
 
-    return {'connected': connected, 'status': status}
+    return {'retrieval_error': error, 'status': status}
 
 
 def _check_broker() -> dict[str, Any]:
@@ -97,19 +97,22 @@ def _check_broker() -> dict[str, Any]:
     # this to avoid resetting a broker that was already loaded before running diagnostics, so use the private cache
     # attribute here and only reset brokers that this check caused to be loaded.
     broker_loaded = manager._broker is not None
-    status: dict[str, Any] | str | None = None
+    status: dict[str, Any] | None = None
 
     try:
         broker = manager.get_broker()
 
         if broker is None:
-            return {'connected': False, 'status': 'No broker configured for this profile.'}
+            return {
+                'retrieval_error': 'No broker configured for this profile.',
+                'status': None,
+            }
 
         status = broker.probe_service_status()
-        connected = bool(status.get('connected', False))
+        error = None
     except Exception as exception:
-        connected = False
-        status = _format_exception(exception)
+        status = None
+        error = _format_exception(exception)
     finally:
         if not broker_loaded:
             try:
@@ -117,7 +120,7 @@ def _check_broker() -> dict[str, Any]:
             except Exception as exception:
                 LOGGER.warning(f'Failed to reset broker while collecting bug report diagnostics: {exception}')
 
-    return {'connected': connected, 'status': status}
+    return {'retrieval_error': error, 'status': status}
 
 
 def _check_daemon() -> dict[str, Any]:
@@ -127,9 +130,9 @@ def _check_daemon() -> dict[str, Any]:
     try:
         status = get_manager().get_daemon_client().get_status()
     except Exception as exception:
-        return {'connected': False, 'status': _format_exception(exception)}
+        return {'retrieval_error': _format_exception(exception), 'status': None}
 
-    return {'connected': True, 'status': status}
+    return {'retrieval_error': None, 'status': status}
 
 
 def _collect_python_info() -> dict[str, Any]:

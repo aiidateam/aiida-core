@@ -169,25 +169,28 @@ def test_collect_diagnostics(monkeypatch, tmp_path):
             DummyBroker,
             _get_daemon_client_ok,
             {
-                'storage': {'connected': True, 'status': 'DummyStorageBackend'},
+                'storage': {'retrieval_error': None, 'status': 'DummyStorageBackend'},
                 'broker': {
-                    'connected': True,
+                    'retrieval_error': None,
                     'status': {'connected': True, 'product': 'RabbitMQ', 'version': '3.12.0'},
                 },
-                'daemon': {'connected': True, 'status': {'pid': 1234}},
+                'daemon': {'retrieval_error': None, 'status': {'pid': 1234}},
             },
-            id='connected',
+            id='status-retrieved',
         ),
         pytest.param(
             BrokenStorageBackend,
             None,
             _get_daemon_client_error,
             {
-                'storage': {'connected': False, 'status': 'RuntimeError: storage unavailable'},
-                'broker': {'connected': False, 'status': 'No broker configured for this profile.'},
-                'daemon': {'connected': False, 'status': 'RuntimeError: daemon unavailable'},
+                'storage': {'retrieval_error': 'RuntimeError: storage unavailable', 'status': None},
+                'broker': {
+                    'retrieval_error': 'No broker configured for this profile.',
+                    'status': None,
+                },
+                'daemon': {'retrieval_error': 'RuntimeError: daemon unavailable', 'status': None},
             },
-            id='not-connected',
+            id='status-not-retrieved',
         ),
     ],
 )
@@ -221,8 +224,7 @@ def test_check_broker_zeromq_status(monkeypatch, tmp_path, is_running, status):
 
     result = cmd_bug_report._check_broker()
 
-    assert result['connected'] is status['connected']
-    assert result['status'] == status
+    assert result == {'retrieval_error': None, 'status': status}
 
 
 def test_get_config_data(monkeypatch, tmp_path):
@@ -345,8 +347,8 @@ def test_check_storage_failure_after_instantiation(monkeypatch):
     monkeypatch.setattr('aiida.manage.get_manager', lambda: manager)
 
     assert cmd_bug_report._check_storage() == {
-        'connected': False,
-        'status': 'RuntimeError: storage string unavailable',
+        'retrieval_error': 'RuntimeError: storage string unavailable',
+        'status': None,
     }
 
 
@@ -362,7 +364,7 @@ def test_check_storage_close_failure_is_logged(monkeypatch, caplog):
 
     result = cmd_bug_report._check_storage()
 
-    assert result == {'connected': True, 'status': 'DummyStorageBackend'}
+    assert result == {'retrieval_error': None, 'status': 'DummyStorageBackend'}
     assert 'Failed to reset storage while collecting bug report diagnostics' in caplog.text
 
 
@@ -379,7 +381,7 @@ def test_check_broker_reset_failure_is_logged(monkeypatch, caplog):
     result = cmd_bug_report._check_broker()
 
     assert result == {
-        'connected': True,
+        'retrieval_error': None,
         'status': {'connected': True, 'product': 'RabbitMQ', 'version': '3.12.0'},
     }
     assert 'Failed to reset broker while collecting bug report diagnostics' in caplog.text
@@ -400,7 +402,7 @@ def test_check_broker_does_not_reset_preloaded_broker(monkeypatch):
     result = cmd_bug_report._check_broker()
 
     assert result == {
-        'connected': True,
+        'retrieval_error': None,
         'status': {'connected': True, 'product': 'RabbitMQ', 'version': '3.12.0'},
     }
     assert reset_called is False
@@ -425,7 +427,7 @@ def test_check_storage_does_not_reset_preloaded_storage(monkeypatch):
 
     result = cmd_bug_report._check_storage()
 
-    assert result == {'connected': True, 'status': 'DummyStorageBackend'}
+    assert result == {'retrieval_error': None, 'status': 'DummyStorageBackend'}
     assert reset_called is False
     assert storage.closed is False
 
@@ -444,7 +446,7 @@ def test_bug_report_command(run_cli_command, tmp_path):
 
     assert diagnostics['aiida_version'] == aiida.__version__
     assert diagnostics['profile'] is not None
-    assert diagnostics['services']['storage']['connected'] is True
+    assert diagnostics['services']['storage']['retrieval_error'] is None
 
 
 def test_bug_report_command_default_output(run_cli_command, monkeypatch, tmp_path):

@@ -138,6 +138,31 @@ def test_daemon_status_no_profile(run_cli_command):
     assert 'No profile loaded: make sure at least one profile is configured and a default is set.' in result.output
 
 
+@pytest.mark.usefixtures('stopped_daemon_client')
+def test_daemon_status_no_broker(run_cli_command):
+    """Test ``verdi daemon status`` warns if the profile does not define a broker and still checks status."""
+    from aiida.manage.manager import get_manager
+
+    manager = get_manager()
+    profile = manager.get_profile()
+    assert profile is not None
+
+    old_backend = profile.process_control_backend
+    old_config = profile.process_control_config
+
+    try:
+        profile.set_process_controller(None, None)
+        manager.reset_broker()
+        result = run_cli_command(cmd_daemon.status, raises=True, use_subprocess=False)
+    finally:
+        profile.set_process_controller(old_backend, old_config)
+        manager.reset_broker()
+
+    assert result.exit_code == 3
+    assert 'the daemon has no functionality because it cannot pass messages to workers' in result.output
+    assert 'The daemon is not running.' in result.output
+
+
 @pytest.mark.usefixtures('started_daemon_client', 'isolated_config')
 def test_daemon_status_timeout(run_cli_command):
     """Test ``verdi daemon status`` with the ``--timeout`` option.

@@ -21,6 +21,20 @@ from aiida.cmdline.params import options
 from aiida.cmdline.utils import decorators, echo
 
 
+def _warn_daemon_functionless_when_no_broker(profile_name: str, has_broker: bool) -> bool:
+    """Return whether daemon functionality is available for the profile, warning if not."""
+    if has_broker:
+        return True
+
+    from aiida.common.docs import URL_NO_BROKER
+
+    echo.echo_warning(
+        f'Profile `{profile_name}` does not define a broker, so the daemon has no functionality because it '
+        f'cannot pass messages to workers. See {URL_NO_BROKER} for more details.'
+    )
+    return False
+
+
 def validate_daemon_workers(ctx, param, value):
     """Validate the value for the number of daemon workers to start with default set by config."""
     if value is None:
@@ -102,7 +116,6 @@ def start(foreground, number, timeout):
 @options.TIMEOUT(default=None, required=False, type=int)
 @click.pass_context
 @decorators.requires_loaded_profile()
-@decorators.requires_broker
 def status(ctx, all_profiles, timeout):
     """Print the status of the current daemon or all daemons.
 
@@ -126,6 +139,8 @@ def status(ctx, all_profiles, timeout):
         client = get_daemon_client(profile.name)
         echo.echo('Profile: ', fg=echo.COLORS['report'], bold=True, nl=False)
         echo.echo(f'{profile.name}', bold=True)
+
+        _warn_daemon_functionless_when_no_broker(profile.name, profile.process_control_backend is not None)
 
         try:
             client.get_status(timeout=timeout)
@@ -155,6 +170,7 @@ def status(ctx, all_profiles, timeout):
         # Build broker status lines for managed brokers (e.g., ZeroMQ)
         broker_lines: list[str] = []
         broker = get_manager().get_broker()
+
         from aiida.brokers.zeromq.broker import ZeromqBroker
 
         if isinstance(broker, ZeromqBroker):
@@ -224,6 +240,8 @@ def logshow():
 
     client = get_daemon_client()
 
+    _warn_daemon_functionless_when_no_broker(client.profile.name, client.profile.process_control_backend is not None)
+
     with subprocess.Popen(['tail', '-f', client.daemon_log_file], env=client.get_env()) as process:
         process.wait()
 
@@ -232,7 +250,6 @@ def logshow():
 @click.option('--no-wait', is_flag=True, help='Do not wait for confirmation.')
 @click.option('--all', 'all_profiles', is_flag=True, help='Stop all daemons.')
 @options.TIMEOUT(default=None, required=False, type=int)
-@decorators.requires_broker
 @click.pass_context
 def stop(ctx, no_wait, all_profiles, timeout):
     """Stop the daemon.
@@ -291,7 +308,6 @@ def restart(ctx, reset, no_wait, timeout):
 @click.option('--foreground', is_flag=True, help='Run in foreground.')
 @click.argument('number', required=False, type=int, callback=validate_daemon_workers)
 @decorators.with_dbenv()
-@decorators.requires_broker
 @decorators.check_circus_zeromq_version
 def start_circus(foreground, number):
     """This will actually launch the circus daemon, either daemonized in the background or in the foreground.

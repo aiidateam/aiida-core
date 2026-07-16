@@ -67,6 +67,18 @@ def test_probe_service_status_failure(monkeypatch, manager):
     assert broker.probe_service_status() == {'connected': False, 'error': 'ConnectionError: connection failed'}
 
 
+def test_probe_service_status_invalid_property_encoding(monkeypatch, manager):
+    """Test RabbitMQ service status captures non-UTF-8 server properties in the payload."""
+    broker = manager.get_broker()
+    communicator = MagicMock(server_properties={'product': b'\xff'})
+    monkeypatch.setattr(broker, 'get_communicator', lambda: communicator)
+
+    status = broker.probe_service_status()
+
+    assert status['connected'] is False
+    assert str(status['error']).startswith('UnicodeDecodeError:')
+
+
 def test_check_service_reachable(monkeypatch, manager):
     """Test RabbitMQ service reachability checks open and close a fresh communicator."""
     broker = manager.get_broker()

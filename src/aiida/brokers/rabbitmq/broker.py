@@ -104,20 +104,19 @@ class RabbitmqBroker(Broker):
 
         try:
             properties = self.get_communicator().server_properties
+            status: BrokerServiceStatus = {'connected': True}
+            status.update(
+                {
+                    key: t.cast(JsonValue, value.decode('utf-8') if isinstance(value, bytes) else value)
+                    for key, value in properties.items()
+                }
+            )
+            return status
         except Exception as exception:
             return {'connected': False, 'error': f'{type(exception).__name__}: {exception}'}
         finally:
             if not had_communicator:
                 self.close()
-
-        status: BrokerServiceStatus = {'connected': True}
-        status.update(
-            {
-                key: t.cast(JsonValue, value.decode('utf-8') if isinstance(value, bytes) else value)
-                for key, value in properties.items()
-            }
-        )
-        return status
 
     def check_service_reachable(self) -> bool:
         """Return whether the RabbitMQ service is reachable."""

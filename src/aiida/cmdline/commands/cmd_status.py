@@ -207,15 +207,17 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
                     processing = status_info.get('processing_tasks', '?')
                     daemon_msg += f', Broker PID {broker_pid} [{pending} pending, {processing} processing]'
                 else:
-                    daemon_status = ServiceStatus.WARNING
                     daemon_msg += ', Broker is NOT running (run `verdi daemon status` for more information)'
+                    daemon_status = ServiceStatus.ERROR
+                    exit_code = ExitCode.CRITICAL
 
             daemon_lines = [daemon_msg]
 
             # Check for package mismatches
             drift_error = validate_daemon_env(daemon_client)
             if drift_error is not None:
-                daemon_status = ServiceStatus.WARNING
+                if daemon_status == ServiceStatus.UP:
+                    daemon_status = ServiceStatus.WARNING
                 daemon_lines.append(drift_error)
 
             print_status(daemon_status, 'daemon', '\n'.join(daemon_lines))

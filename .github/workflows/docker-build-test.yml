@@ -22,6 +22,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     if: ${{ github.event.pull_request.head.repo.fork }}
@@ -36,12 +39,14 @@ jobs:
 
     - name: Checkout Repo
       uses: actions/checkout@v6
+      with:
+        persist-credentials: false
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f   # v3.12.0
 
     - name: Build images
-      uses: docker/bake-action@v6.10.0
+      uses: docker/bake-action@5be5f02ff8819ecd3092ea6b2e6261c31774f2b4   # v6.10.0
       with:
         # Load to Docker engine for testing
         load: true

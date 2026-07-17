@@ -16,6 +16,9 @@ on:
     tags:
     - v[0-9]+.[0-9]+.[0-9]+*
 
+permissions:
+  contents: read
+
 env:
   FORCE_COLOR: 1
 
@@ -29,6 +32,8 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@v6
+      with:
+        persist-credentials: false
 
     - name: Set up Python 3.10
       uses: actions/setup-python@v6
@@ -46,6 +51,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
 
     - name: Install aiida-core and pre-commit
       uses: ./.github/actions/install-aiida-core
@@ -65,6 +72,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
 
     - name: Install aiida-core
       uses: ./.github/actions/install-aiida-core
@@ -90,6 +99,8 @@ jobs:
     steps:
     - name: Checkout source
       uses: actions/checkout@v6
+      with:
+        persist-credentials: false
     - name: Set up Python 3.10
       uses: actions/setup-python@v6
       with:
@@ -99,7 +110,7 @@ jobs:
     - name: Build
       run: flit build
     - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+      uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b   # v1.14.0
 
 
   publish-testpypi:
@@ -118,6 +129,8 @@ jobs:
     steps:
     - name: Checkout source
       uses: actions/checkout@v6
+      with:
+        persist-credentials: false
     - name: Set up Python 3.10
       uses: actions/setup-python@v6
       with:
@@ -127,6 +140,6 @@ jobs:
     - name: Build
       run: flit build
     - name: Publish to TestPyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+      uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b   # v1.14.0
       with:
         repository-url: https://test.pypi.org/legacy/

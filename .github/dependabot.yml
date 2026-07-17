@@ -2,7 +2,12 @@ version: 2
 updates:
 # Maintain dependencies for GitHub Actions
 - package-ecosystem: github-actions
-  directory: /
+  # The root directory covers .github/workflows/ but not the local composite
+  # actions, which need to be listed explicitly.
+  directories:
+  - /
+  - /.github/actions/install-aiida-core
+  - /.github/actions/slack-notification
   schedule:
     interval: monthly
   groups:

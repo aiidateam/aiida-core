@@ -35,13 +35,13 @@ jobs:
     steps:
 
     - name: Checkout Repo
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
 
     - name: Build images
-      uses: docker/bake-action@v6.10.0
+      uses: docker/bake-action@v7.3.0
       with:
         # Load to Docker engine for testing
         load: true

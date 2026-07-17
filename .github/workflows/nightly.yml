@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 30
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install aiida-core and pre-commit
       uses: ./.github/actions/install-aiida-core
@@ -74,7 +74,7 @@ jobs:
         - 5001:22
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql
@@ -145,7 +145,7 @@ jobs:
         - 15672:15672
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install aiida-core
       id: install

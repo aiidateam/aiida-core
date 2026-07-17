@@ -146,7 +146,7 @@ async def task_submit_job(node: CalcJobNode, transport_queue: TransportQueue, ca
     async def do_submit():
         async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
-            return execmanager.submit_calculation(node, transport)
+            return await execmanager.submit_calculation(node, transport)
 
     try:
         logger.info(f'scheduled request to submit CalcJob<{node.pk}>')
@@ -312,7 +312,7 @@ async def task_retrieve_job(
                 retrieved = await execmanager.retrieve_calculation(node, transport, retrieved_temporary_folder)
             else:
                 try:
-                    detailed_job_info = scheduler.get_detailed_job_info(job_id)
+                    detailed_job_info = await scheduler.get_detailed_job_info_async(job_id)
                 except FeatureNotAvailable:
                     logger.info(f'detailed job info not available for scheduler of CalcJob<{node.pk}>')
                     node.set_detailed_job_info(None)
@@ -456,7 +456,7 @@ async def task_kill_job(node: CalcJobNode, transport_queue: TransportQueue, canc
     async def do_kill():
         async with transport_queue.request_transport(authinfo) as request:
             transport = await cancellable.with_interrupt(request)
-            return execmanager.kill_calculation(node, transport)
+            return await execmanager.kill_calculation(node, transport)
 
     try:
         logger.info(f'scheduled request to kill CalcJob<{node.pk}>')

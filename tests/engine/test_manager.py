@@ -111,9 +111,9 @@ class TestJobsList:
         # Request update for job_id_a
         future1 = jobs_list._job_update_requests.setdefault(str(job_id_a), asyncio.Future())
 
-        # Patch the scheduler's get_jobs
+        # Patch the scheduler's get_jobs_async
         scheduler = self.auth_info.computer.get_scheduler()
-        with patch.object(scheduler.__class__, 'get_jobs', side_effect=mock_get_jobs):
+        with patch.object(scheduler.__class__, 'get_jobs_async', side_effect=mock_get_jobs):
             self.loop.run_until_complete(jobs_list._update_job_info())
 
         # Verify job_id_a was resolved correctly
@@ -132,7 +132,7 @@ class TestJobsList:
             # but not being in the scheduler anymore.
             return {}
 
-        with patch.object(scheduler.__class__, 'get_jobs', side_effect=mock_get_jobs):
+        with patch.object(scheduler.__class__, 'get_jobs_async', side_effect=mock_get_jobs):
             self.loop.run_until_complete(jobs_list._update_job_info())
 
         assert future2.done(), 'job_id_b future should be resolved'

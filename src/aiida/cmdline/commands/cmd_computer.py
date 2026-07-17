@@ -57,7 +57,14 @@ def _computer_test_get_jobs(transport, scheduler, authinfo, computer):
     :param authinfo: the AuthInfo object (from which one can get computer and aiidauser)
     :return: tuple of boolean indicating success or failure and an optional string message
     """
-    found_jobs = scheduler.get_jobs(as_dict=True)
+
+    from plumpy import run_until_complete
+
+    from aiida.manage import get_manager
+
+    loop = get_manager().get_runner().loop
+    found_jobs = run_until_complete(loop, scheduler.get_jobs_async(as_dict=True))
+
     return True, f'{len(found_jobs)} jobs found in the queue'
 
 

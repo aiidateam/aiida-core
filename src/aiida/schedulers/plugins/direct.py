@@ -270,7 +270,7 @@ class DirectScheduler(BashCliScheduler):
         return job_list
 
     @t.overload
-    def get_jobs(
+    async def get_jobs_async(
         self,
         jobs: list[str] | None = None,
         user: str | None = None,
@@ -278,7 +278,7 @@ class DirectScheduler(BashCliScheduler):
     ) -> list[JobInfo]: ...
 
     @t.overload
-    def get_jobs(
+    async def get_jobs_async(
         self,
         jobs: list[str] | None = None,
         user: str | None = None,
@@ -286,7 +286,7 @@ class DirectScheduler(BashCliScheduler):
     ) -> dict[str, JobInfo]: ...
 
     @override
-    def get_jobs(
+    async def get_jobs_async(
         self,
         jobs: list[str] | None = None,
         user: str | None = None,
@@ -295,7 +295,7 @@ class DirectScheduler(BashCliScheduler):
         """Overrides original method from BashScheduler in order to list
         missing processes as DONE.
         """
-        job_stats = super().get_jobs(jobs=jobs, user=user, as_dict=True)
+        job_stats = await super().get_jobs_async(jobs=jobs, user=user, as_dict=True)
 
         # Get the list of known jobs
         found_jobs = job_stats.keys()

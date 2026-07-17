@@ -77,10 +77,11 @@ def test_submit_script_with_num_cores_per_mpiproc(scheduler, template):
 _FORK_WARNING = 'This process .* is multi-threaded, use of fork\\(\\) may lead to deadlocks in the child'
 
 
+@pytest.mark.asyncio
 @pytest.mark.timeout(timeout=10)
 @pytest.mark.filterwarnings(f'ignore:{_FORK_WARNING}:DeprecationWarning')
-def test_kill_job(scheduler, tmpdir):
-    """Test if kill_job kill all descendant children from the process.
+async def test_kill_job(scheduler, tmpdir):
+    """Test if kill_job_async kill all descendant children from the process.
     For that we spawn a new process that runs a sleep command, then we
     kill it and check if the sleep process is still alive.
 
@@ -114,7 +115,7 @@ def test_kill_job(scheduler, tmpdir):
     sleep_process = forked_process_children[1]
     with LocalTransport() as transport:
         scheduler.set_transport(transport)
-        scheduler.kill_job(forked_process.pid)
+        await scheduler.kill_job_async(forked_process.pid)
     while bash_process.is_running() or sleep_process.is_running():
         time.sleep(0.1)
     forked_process.join()

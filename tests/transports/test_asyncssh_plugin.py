@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from aiida.transports.plugins.async_backend import _OpenSSH, get_openssh_version
+from aiida.transports.plugins.async_backend import _AsyncSSH, _OpenSSH, get_openssh_version
 from aiida.transports.plugins.ssh_async import AsyncSshTransport
 
 
@@ -74,6 +74,88 @@ class TestAuthenticationScript:
         await transport.open_async()
 
         assert transport.auth_script == 'None'
+
+
+class TestDataNodeHost:
+    """Tests for performing file transfers on a dedicated data transfer node."""
+
+    @staticmethod
+    def _patch_connect():
+        """Patch `asyncssh.connect`, returning the `host -> connection mock` mapping it fills in."""
+        connections = {}
+
+        async def fake_connect(host):
+            connection = AsyncMock()
+            # `close()` is called synchronously, only `wait_closed()` is awaited.
+            connection.close = MagicMock()
+            connections[host] = connection
+            return connection
+
+        return connections, patch('aiida.transports.plugins.async_backend.asyncssh.connect', side_effect=fake_connect)
+
+    @pytest.mark.asyncio
+    async def test_asyncssh_starts_sftp_client_on_data_node(self):
+        """The SFTP client is started on the data node, so that all SFTP traffic is carried out there."""
+        connections, patcher = self._patch_connect()
+        backend = _AsyncSSH('login.hpc', 'dtn.hpc', MagicMock(), 'bash -l ')
+
+        with patcher:
+            await backend.open()
+
+        assert sorted(connections) == ['dtn.hpc', 'login.hpc']
+        connections['dtn.hpc'].start_sftp_client.assert_awaited_once()
+        connections['login.hpc'].start_sftp_client.assert_not_awaited()
+
+        await backend.close()
+
+        connections['dtn.hpc'].close.assert_called_once()
+        connections['login.hpc'].close.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_asyncssh_opens_a_single_connection_without_data_node(self):
+        """Without a data node, the SFTP client shares the login connection, no second one is opened."""
+        connections, patcher = self._patch_connect()
+        backend = _AsyncSSH('login.hpc', 'login.hpc', MagicMock(), 'bash -l ')
+
+        with patcher:
+            await backend.open()
+
+        assert list(connections) == ['login.hpc']
+        assert backend._data_conn is backend._conn
+        connections['login.hpc'].start_sftp_client.assert_awaited_once()
+
+        await backend.close()
+
+        connections['login.hpc'].close.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_openssh_addresses_scp_to_data_node_and_ssh_to_login_node(self):
+        """`scp` transfers are addressed to the data node, while `ssh` commands stay on the login node."""
+        backend = _OpenSSH('login.hpc', 'dtn.hpc', MagicMock(), 'bash -l ')
+        executed = []
+
+        async def fake_execute(commands, stdin=None, timeout=None):
+            executed.append(commands)
+            return 0, '', ''
+
+        backend.openssh_execute = fake_execute
+
+        await backend.get('/remote/x', '/local/x', dereference=False, preserve=False, recursive=False)
+        await backend.put('/local/x', '/remote/x', dereference=False, preserve=False, recursive=False)
+        await backend.copy('/remote/x', '/remote/y', dereference=False, recursive=False, preserve=False)
+        await backend.run('squeue -u aiida-user')
+
+        scp_commands = [command for command in executed if command[0] == 'scp']
+        ssh_commands = [command for command in executed if command[0] == 'ssh']
+
+        assert len(scp_commands) == 3, 'get(), put() and copy() should each issue exactly one scp'
+        for command in scp_commands:
+            assert any(argument.startswith('dtn.hpc:') for argument in command)
+            assert not any(argument.startswith('login.hpc:') for argument in command)
+
+        assert ssh_commands, 'run() should still be executed over ssh'
+        for command in ssh_commands:
+            assert command[1] == 'login.hpc'
 
 
 class TestSemaphoreBehavior:

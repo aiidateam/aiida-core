@@ -55,9 +55,10 @@ class _AsynchronousSSHBackend(abc.ABC):
     Note: Subclasses should not be part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
+    def __init__(self, machine: str, data_machine: str, logger: logging.LoggerAdapter, bash_command: str):
         self.bash_command = bash_command + '-c '
         self.machine = machine
+        self.data_machine = data_machine
         self.logger = logger
 
     @abc.abstractmethod
@@ -226,14 +227,15 @@ class _AsyncSSH(_AsynchronousSSHBackend):
     Note: This class is not part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
-        super().__init__(machine, logger, bash_command)
-
     async def open(self):
         self._conn = await asyncssh.connect(self.machine)
-        self._sftp = await self._conn.start_sftp_client()
+        self._data_conn = self._conn if self.data_machine == self.machine else await asyncssh.connect(self.data_machine)
+        self._sftp = await self._data_conn.start_sftp_client()
 
     async def close(self):
+        if self._data_conn is not self._conn:
+            self._data_conn.close()
+            await self._data_conn.wait_closed()
         self._conn.close()
         await self._conn.wait_closed()
 
@@ -455,8 +457,8 @@ class _OpenSSH(_AsynchronousSSHBackend):
     Note: This class is not part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
-        super().__init__(machine, logger, bash_command)
+    def __init__(self, machine: str, data_machine: str, logger: logging.LoggerAdapter, bash_command: str):
+        super().__init__(machine, data_machine, logger, bash_command)
 
         # Check if the local OpenSSH client version is 9.0 or higher.
         # OpenSSH 9.0+ changed scp to use SFTP protocol by default instead of RCP.
@@ -710,7 +712,12 @@ class _OpenSSH(_AsynchronousSSHBackend):
             options.append('-r')
 
         returncode, stdout, stderr = await self.openssh_execute(
-            ['scp', *options, f'{self.machine}:{self._escape_for_scp(remotepath)}', self._escape_for_scp(localpath)]
+            [
+                'scp',
+                *options,
+                f'{self.data_machine}:{self._escape_for_scp(remotepath)}',
+                self._escape_for_scp(localpath),
+            ]
         )
         if returncode != 0:
             raise OSError({stderr})
@@ -727,7 +734,12 @@ class _OpenSSH(_AsynchronousSSHBackend):
             options.append('-r')
 
         returncode, stdout, stderr = await self.openssh_execute(
-            ['scp', *options, self._escape_for_scp(localpath), f'{self.machine}:{self._escape_for_scp(remotepath)}']
+            [
+                'scp',
+                *options,
+                self._escape_for_scp(localpath),
+                f'{self.data_machine}:{self._escape_for_scp(remotepath)}',
+            ]
         )
         if returncode != 0:
             raise OSError({stderr})
@@ -779,8 +791,8 @@ class _OpenSSH(_AsynchronousSSHBackend):
             [
                 'scp',
                 *options,
-                f'{self.machine}:{self._escape_for_scp(remotesource)}',
-                f'{self.machine}:{self._escape_for_scp(remotedestination)}',
+                f'{self.data_machine}:{self._escape_for_scp(remotesource)}',
+                f'{self.data_machine}:{self._escape_for_scp(remotedestination)}',
             ]
         )
         if returncode != 0:

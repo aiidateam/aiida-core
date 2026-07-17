@@ -481,6 +481,32 @@ Security considerations
 * On shared systems, ensure your credential files and downloaded keys are not readable by others.
 
 
+.. _how-to:ssh:data-node:
+
+Using a dedicated data transfer node with ``core.ssh_async``
+============================================================
+
+Some HPC centers provide a dedicated *data transfer node*, tuned for moving large amounts of data, and ask their users not to run heavy transfers on the login node.
+The ``core.ssh_async`` transport plugin can perform your file transfers there, while still submitting and monitoring your calculations on the login node.
+
+Configuring AiiDA
+^^^^^^^^^^^^^^^^^
+
+The data transfer node needs a password-less setup, exactly like the login host: a ``Host <HOST>`` entry in your ``~/.ssh/config``, and ``ssh <HOST>`` connecting without prompting you.
+Once that works, pass it to the ``data_node_host`` option:
+
+.. code-block:: console
+
+   $ verdi computer configure core.ssh_async YOURCOMPUTER
+   ...
+   Login host as in 'ssh <HOST>' (needs to be a password-less setup in your ssh config) [<HPC>]: <HPC>
+   Data transfer host as in 'ssh <HOST>' ('None' to use the login host) [None]: <HPC-DATA>
+   ...
+
+or ``--data-node-host <HPC-DATA>`` non-interactively.
+Leaving it at ``None`` keeps the previous behaviour, where everything is done on the login host over a single connection.
+
+
 
 Using kerberos tokens
 =====================

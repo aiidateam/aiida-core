@@ -62,12 +62,27 @@ class AsyncSshTransport(AsyncTransport):
             'host',
             {
                 'type': str,
-                'prompt': "Host as in 'ssh <HOST>' (needs to be a password-less setup in your ssh config)",
+                'prompt': "Login host as in 'ssh <HOST>', requires a passwordless SSH setup in your SSH config",
                 'help': (
                     'Password-less host-setup to connect, as in command `ssh <HOST>`.'
                     ' You need to have a `Host <HOST>` entry defined in your `~/.ssh/config` file.'
                     " Note, if not provided, we will use the 'hostname' that was set by you during setup."
                 ),
+                'non_interactive_default': True,
+            },
+        ),
+        (
+            'data_node_host',
+            {
+                'type': str,
+                'default': 'None',
+                'prompt': "Data transfer host as in 'ssh <HOST>', also requires a passwordless SSH setup in your"
+                " SSH config ('None' to use the login host)",
+                'help': ' (optional) Some HPC centers provide a dedicated data transfer node in order to not'
+                ' overwhelm their login node. If set, all file operations (SFTP or scp) are performed on this'
+                ' host, while shell commands are still executed on the login host.'
+                ' As for `host`, this requires a password-less setup, with a `Host <HOST>` entry defined in your'
+                ' `~/.ssh/config` file.',
                 'non_interactive_default': True,
             },
         ),
@@ -133,6 +148,9 @@ class AsyncSshTransport(AsyncTransport):
         # NOTE: to guarantee a connection,
         # a computer with core.ssh_async transport plugin should be configured before any instantiation.
         self.machine = kwargs.pop('host', kwargs.pop('machine'))
+        data_node_host = kwargs.pop('data_node_host', 'None')
+        self.data_machine = self.machine if not data_node_host or data_node_host == 'None' else data_node_host
+
         self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
         self._semaphore = asyncio.Semaphore(self._max_io_allowed)
         self.auth_script = kwargs.pop('authentication_script', 'None')
@@ -143,12 +161,14 @@ class AsyncSshTransport(AsyncTransport):
         if kwargs.get('backend') == 'openssh':
             from .async_backend import _OpenSSH
 
-            self.async_backend = _OpenSSH(self.machine, self.logger, self._bash_command_str)
+            self.async_backend = _OpenSSH(self.machine, self.data_machine, self.logger, self._bash_command_str)
         else:
             # default backend is asyncssh
             from .async_backend import _AsyncSSH
 
-            self.async_backend = _AsyncSSH(self.machine, self.logger, self._bash_command_str)  # type: ignore[assignment]
+            self.async_backend = _AsyncSSH(  # type: ignore[assignment]
+                self.machine, self.data_machine, self.logger, self._bash_command_str
+            )
 
     @property
     def max_io_allowed(self):

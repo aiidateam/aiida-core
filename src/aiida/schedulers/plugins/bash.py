@@ -24,19 +24,19 @@ __all__ = ('BashCliScheduler',)
 class BashCliScheduler(Scheduler, metaclass=abc.ABCMeta):
     """Job scheduler that is interacted with through a CLI in bash."""
 
-    def submit_job(self, working_directory: str, filename: str) -> str | ExitCode:
+    async def submit_job_async(self, working_directory: str, filename: str) -> str | ExitCode:
         """Submit a job.
 
         :param working_directory: The absolute filepath to the working directory where the job is to be executed.
         :param filename: The filename of the submission script relative to the working directory.
         """
-        result = self.transport.exec_command_wait(
+        result = await self.transport.exec_command_wait_async(
             self._get_submit_command(escape_for_bash(filename)), workdir=working_directory
         )
         return self._parse_submit_output(*result)
 
     @t.overload
-    def get_jobs(
+    async def get_jobs_async(
         self,
         jobs: list[str] | None = None,
         user: str | None = None,
@@ -44,14 +44,14 @@ class BashCliScheduler(Scheduler, metaclass=abc.ABCMeta):
     ) -> list[JobInfo]: ...
 
     @t.overload
-    def get_jobs(
+    async def get_jobs_async(
         self,
         jobs: list[str] | None = None,
         user: str | None = None,
         as_dict: t.Literal[True] = ...,
     ) -> dict[str, JobInfo]: ...
 
-    def get_jobs(
+    async def get_jobs_async(
         self,
         jobs: list[str] | None = None,
         user: str | None = None,
@@ -65,8 +65,10 @@ class BashCliScheduler(Scheduler, metaclass=abc.ABCMeta):
             returned, where the ``job_id`` is the key and the values are the ``JobInfo`` objects.
         :returns: List of active jobs.
         """
-        with self.transport:
-            retval, stdout, stderr = self.transport.exec_command_wait(self._get_joblist_command(jobs=jobs, user=user))
+        async with self.transport:
+            retval, stdout, stderr = await self.transport.exec_command_wait_async(
+                self._get_joblist_command(jobs=jobs, user=user)
+            )
 
         joblist = self._parse_joblist_output(retval, stdout, stderr)
         if as_dict:
@@ -77,7 +79,7 @@ class BashCliScheduler(Scheduler, metaclass=abc.ABCMeta):
 
         return joblist
 
-    def kill_job(self, jobid: str) -> bool:
+    async def kill_job_async(self, jobid: str) -> bool:
         """Kill a remote job and parse the return value of the scheduler to check if the command succeeded.
 
         ..note::
@@ -88,7 +90,7 @@ class BashCliScheduler(Scheduler, metaclass=abc.ABCMeta):
         :param jobid: the job ID to be killed
         :returns: True if everything seems ok, False otherwise.
         """
-        retval, stdout, stderr = self.transport.exec_command_wait(self._get_kill_command(jobid))
+        retval, stdout, stderr = await self.transport.exec_command_wait_async(self._get_kill_command(jobid))
         return self._parse_kill_output(retval, stdout, stderr)
 
     @abc.abstractmethod

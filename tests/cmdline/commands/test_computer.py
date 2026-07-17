@@ -968,7 +968,7 @@ def test_computer_test_stderr(run_cli_command, aiida_localhost, monkeypatch):
     aiida_localhost.configure()
     stderr = 'spurious output in standard error'
 
-    def exec_command_wait(self, command, **kwargs):
+    def exec_command_wait(self, command, *args, **kwargs):
         return 0, '', stderr
 
     monkeypatch.setattr(LocalTransport, 'exec_command_wait', exec_command_wait)
@@ -985,7 +985,7 @@ def test_computer_test_stdout(run_cli_command, aiida_localhost, monkeypatch):
     aiida_localhost.configure()
     stdout = 'spurious output in standard output'
 
-    def exec_command_wait(self, command, **kwargs):
+    def exec_command_wait(self, command, *args, **kwargs):
         return 0, stdout, ''
 
     monkeypatch.setattr(LocalTransport, 'exec_command_wait', exec_command_wait)

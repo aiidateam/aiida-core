@@ -398,7 +398,7 @@ async def _copy_sandbox_files(logger, node, transport, folder, workdir: Path):
         await transport.put_async(folder.get_abs_path(filename), workdir.joinpath(filename))
 
 
-def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | ExitCode:
+async def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | ExitCode:
     """Submit a previously uploaded `CalcJob` to the scheduler.
 
     :param calculation: the instance of CalcJobNode to submit.
@@ -420,7 +420,7 @@ def submit_calculation(calculation: CalcJobNode, transport: Transport) -> str | 
 
     submit_script_filename = calculation.get_option('submit_script_filename')
     workdir = calculation.get_remote_workdir()
-    result = scheduler.submit_job(workdir, submit_script_filename)
+    result = await scheduler.submit_job_async(workdir, submit_script_filename)
 
     if isinstance(result, str):
         calculation.set_job_id(result)
@@ -791,7 +791,7 @@ async def retrieve_calculation(
     return retrieved_files
 
 
-def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
+async def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     """Kill the calculation through the scheduler
 
     :param calculation: the instance of CalcJobNode to kill.
@@ -808,19 +808,19 @@ def kill_calculation(calculation: CalcJobNode, transport: Transport) -> None:
     scheduler.set_transport(transport)
 
     # Call the proper kill method for the job ID of this calculation
-    result = scheduler.kill_job(job_id)
+    result = await scheduler.kill_job_async(job_id)
 
     if result is not True:
         # Failed to kill because the job might have already been completed
-        running_jobs = scheduler.get_jobs(jobs=[job_id], as_dict=True)
+        running_jobs = await scheduler.get_jobs_async(jobs=[job_id], as_dict=True)
         job = running_jobs.get(job_id, None)
 
         # If the job is returned it is still running and the kill really failed, so we raise
         if job is not None and job.job_state != JobState.DONE:
-            raise exceptions.RemoteOperationError(f'scheduler.kill_job({job_id}) was unsuccessful')
+            raise exceptions.RemoteOperationError(f'scheduler.kill_job_async({job_id}) was unsuccessful')
         else:
             EXEC_LOGGER.warning(
-                'scheduler.kill_job() failed but job<{%s}> no longer seems to be running regardless', job_id
+                'scheduler.kill_job_async() failed but job<{%s}> no longer seems to be running regardless', job_id
             )
 
 

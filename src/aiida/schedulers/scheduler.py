@@ -126,16 +126,15 @@ class Scheduler(metaclass=abc.ABCMeta):
         return cls._job_resource_class(**kwargs)
 
     @abc.abstractmethod
-    def submit_job(self, working_directory: str, filename: str) -> str | ExitCode:
+    async def submit_job_async(self, working_directory: str, filename: str) -> str | ExitCode:
         """Submit a job.
 
         :param working_directory: The absolute filepath to the working directory where the job is to be executed.
         :param filename: The filename of the submission script relative to the working directory.
-        :returns:
         """
 
     @t.overload
-    def get_jobs(
+    async def get_jobs_async(
         self,
         jobs: list[str] | None = None,
         user: str | None = None,
@@ -143,7 +142,7 @@ class Scheduler(metaclass=abc.ABCMeta):
     ) -> list[JobInfo]: ...
 
     @t.overload
-    def get_jobs(
+    async def get_jobs_async(
         self,
         jobs: list[str] | None = None,
         user: str | None = None,
@@ -151,7 +150,7 @@ class Scheduler(metaclass=abc.ABCMeta):
     ) -> dict[str, JobInfo]: ...
 
     @abc.abstractmethod
-    def get_jobs(
+    async def get_jobs_async(
         self,
         jobs: list[str] | None = None,
         user: str | None = None,
@@ -167,7 +166,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         """
 
     @abc.abstractmethod
-    def kill_job(self, jobid: str) -> bool:
+    async def kill_job_async(self, jobid: str) -> bool:
         """Kill a remote job and parse the return value of the scheduler to check if the command succeeded.
 
         ..note::
@@ -352,7 +351,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         """
         raise exceptions.FeatureNotAvailable('Cannot get detailed job info')
 
-    def get_detailed_job_info(self, job_id: str) -> dict[str, str | int]:
+    async def get_detailed_job_info_async(self, job_id: str) -> dict[str, str | int]:
         """Return the detailed job info.
 
         This will be a dictionary with the return value, stderr and stdout content returned by calling the command that
@@ -362,7 +361,7 @@ class Scheduler(metaclass=abc.ABCMeta):
         :return: dictionary with `retval`, `stdout` and `stderr`.
         """
         command = self._get_detailed_job_info_command(job_id)
-        retval, stdout, stderr = self.transport.exec_command_wait(command)
+        retval, stdout, stderr = await self.transport.exec_command_wait_async(command)
 
         detailed_job_info = {
             'retval': retval,

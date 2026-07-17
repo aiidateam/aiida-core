@@ -1227,7 +1227,8 @@ for i in range({}):
         assert retcode == 0
 
 
-def test_asynchronous_execution(custom_transport, tmp_path):
+@pytest.mark.asyncio
+async def test_asynchronous_execution(custom_transport, tmp_path):
     """Test that the execution of a long(ish) command via the direct scheduler does not block.
 
     This is a regression test for #3094, where running a long job on the direct scheduler
@@ -1251,7 +1252,7 @@ def test_asynchronous_execution(custom_transport, tmp_path):
                 transport.putfile(tmpf.name, tmp_path / script_fname)
 
             timestamp_before = time.time()
-            job_id_string = scheduler.submit_job(tmp_path, script_fname)
+            job_id_string = await scheduler.submit_job_async(tmp_path, script_fname)
 
             elapsed_time = time.time() - timestamp_before
             # We want to get back control. If it takes < 5 seconds, it means that it is not blocking

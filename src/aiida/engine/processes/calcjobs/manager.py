@@ -106,9 +106,9 @@ class JobsList:
             self._polling_jobs = frozenset([str(job_id) for job_id in self._job_update_requests.keys()])
 
             if scheduler.get_feature('can_query_by_user'):
-                scheduler_response = scheduler.get_jobs(user='$USER', as_dict=True)
+                scheduler_response = await scheduler.get_jobs_async(user='$USER', as_dict=True)
             else:
-                scheduler_response = scheduler.get_jobs(jobs=list(self._polling_jobs), as_dict=True)
+                scheduler_response = await scheduler.get_jobs_async(jobs=list(self._polling_jobs), as_dict=True)
 
             # Update the last update time and clear the jobs cache
             self._last_updated = time.time()

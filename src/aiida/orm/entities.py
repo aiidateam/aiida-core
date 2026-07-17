@@ -23,6 +23,7 @@ from typing import (
     Literal,
     NoReturn,
     TypeVar,
+    cast,
 )
 
 import pydantic as pdt
@@ -467,11 +468,14 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
             }
 
             name = model_cls.__name__.replace(suffix, 'WriteModel')
-            WriteModel = pdt.create_model(  # noqa: N806
-                name,
-                __base__=tuple(bases),
-                __module__=model_cls.__module__,
-                **model_fields,
+            WriteModel = cast(  # noqa: N806
+                type[OrmModel],
+                pdt.create_model(
+                    name,
+                    __base__=tuple(bases),
+                    __module__=model_cls.__module__,
+                    **model_fields,
+                ),
             )
             WriteModel.__qualname__ = model_cls.__qualname__.replace(suffix, 'WriteModel')
             WriteModel.__pydantic_decorators__.field_serializers = serializers

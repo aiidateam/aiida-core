@@ -62,7 +62,7 @@ class AsyncSshTransport(AsyncTransport):
             'host',
             {
                 'type': str,
-                'prompt': "Login host as in 'ssh <HOST>' (needs to be a password-less setup in your ssh config)",
+                'prompt': "Login host as in 'ssh <HOST>', requires a passwordless SSH setup in your SSH config",
                 'help': (
                     'Password-less host-setup to connect, as in command `ssh <HOST>`.'
                     ' You need to have a `Host <HOST>` entry defined in your `~/.ssh/config` file.'
@@ -76,7 +76,8 @@ class AsyncSshTransport(AsyncTransport):
             {
                 'type': str,
                 'default': 'None',
-                'prompt': "Data transfer host as in 'ssh <HOST>' ('None' to use the login host)",
+                'prompt': "Data transfer host as in 'ssh <HOST>', also requires a passwordless SSH setup in your"
+                " SSH config ('None' to use the login host)",
                 'help': ' (optional) Some HPC centers provide a dedicated data transfer node in order to not'
                 ' overwhelm their login node. If set, all file operations (SFTP or scp) are performed on this'
                 ' host, while shell commands are still executed on the login host.'

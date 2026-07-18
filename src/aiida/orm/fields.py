@@ -17,6 +17,7 @@ from copy import deepcopy
 from functools import singledispatchmethod
 from pprint import pformat
 from types import UnionType
+from uuid import UUID
 
 from aiida.common.lang import isidentifier
 
@@ -468,7 +469,7 @@ def add_field(
         return QbBoolField(**kwargs)
     elif root_type in (list, tuple, Sequence):
         return QbArrayField(**kwargs)
-    elif root_type in (str, t.Literal):
+    elif root_type in (str, t.Literal, UUID):
         return QbStrField(**kwargs)
     elif root_type is dict:
         return QbDictField(**kwargs)

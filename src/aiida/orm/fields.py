@@ -151,6 +151,13 @@ class QbNumericField(QbField):
         return QbFieldFilters(((self, '>=', value),))
 
 
+class QbBoolField(QbField):
+    """A boolean (`bool`) flavor of `QbField`.
+
+    Currently not implementing any additional functionality but here for future expansion.
+    """
+
+
 class QbArrayField(QbField):
     """An array (`list`) flavor of `QbField`."""
 
@@ -456,7 +463,8 @@ def add_field(
     root_type = extract_root_type(dtype) if dtype else None
     if root_type in (int, float, datetime.datetime):
         return QbNumericField(**kwargs)
-    elif root_type in (list, tuple):
+    elif root_type is bool:
+        return QbBoolField(**kwargs)
         return QbArrayField(**kwargs)
     elif root_type in (str, t.Literal):
         return QbStrField(**kwargs)

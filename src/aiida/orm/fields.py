@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import datetime
 import typing as t
+from collections.abc import Sequence
 from copy import deepcopy
 from functools import singledispatchmethod
 from pprint import pformat
@@ -465,6 +466,7 @@ def add_field(
         return QbNumericField(**kwargs)
     elif root_type is bool:
         return QbBoolField(**kwargs)
+    elif root_type in (list, tuple, Sequence):
         return QbArrayField(**kwargs)
     elif root_type in (str, t.Literal):
         return QbStrField(**kwargs)

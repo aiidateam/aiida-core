@@ -7,4 +7,4 @@ node: QbNumericField('node', dtype=<class 'int'>, doc='Node PK that the comment 
   attached to')
 pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
 user: QbNumericField('user', dtype=<class 'int'>, doc='User PK that created the comment')
-uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the comment')
+uuid: QbStrField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the comment')

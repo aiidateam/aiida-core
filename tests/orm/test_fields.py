@@ -220,3 +220,45 @@ def test_query_subscriptable():
         .all()
     )
     assert result == [[1, 2]]
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_boolean_query():
+    """Test using boolean fields in a query."""
+    orm.Bool(True).store()
+    orm.Bool(False).store()
+
+    def query(filters):
+        return (
+            orm.QueryBuilder()
+            .append(
+                orm.Bool,
+                filters=filters,
+                project=orm.Bool.fields.value,
+            )
+            .all(flat=True)
+        )
+
+    result = query(filters=orm.Bool.fields.value)
+    assert len(result) == 1
+    assert result == [True]
+
+    result = query(filters=~orm.Bool.fields.value)
+    assert len(result) == 1
+    assert result == [False]
+
+    result = query(filters=orm.Bool.fields.value | ~orm.Bool.fields.value)
+    assert len(result) == 2
+    assert result == [True, False]
+
+    result = query(filters=~orm.Bool.fields.value & orm.Bool.fields.value)
+    assert len(result) == 0
+    assert result == []
+
+    result = query(filters=(orm.Bool.fields.pk == 1) & orm.Bool.fields.value)
+    assert len(result) == 1
+    assert result == [True]
+
+    result = query(filters=~orm.Bool.fields.value & (orm.Bool.fields.pk == 2))
+    assert len(result) == 1
+    assert result == [False]

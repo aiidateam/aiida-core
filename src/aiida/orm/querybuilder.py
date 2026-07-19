@@ -706,6 +706,8 @@ class QueryBuilder:
     @staticmethod
     def _process_filters(filters: FilterType) -> dict[str, Any]:
         """Process filters."""
+        if isinstance(filters, fields.QbBoolField):
+            filters = filters.as_filter()
         if not isinstance(filters, (dict, fields.QbFieldFilters)):
             raise TypeError('Filters must be either a dictionary or QbFieldFilters')
 

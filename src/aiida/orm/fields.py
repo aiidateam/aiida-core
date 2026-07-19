@@ -339,14 +339,14 @@ class QbFieldFilters:
     def __and__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
         """``a & b`` -> {'and': [`a.filters`, `b.filters`]}."""
         qb_filters = other.as_filter() if isinstance(other, QbBoolField) else other
-        qb_filters = self._resolve_redundancy(qb_filters, 'and')
-        return qb_filters or QbFieldFilters({'and': [self.filters, qb_filters.filters]})
+        resolved = self._resolve_redundancy(qb_filters, 'and')
+        return resolved or QbFieldFilters({'and': [self.filters, qb_filters.filters]})
 
     def __or__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
         """``a | b`` -> {'or': [`a.filters`, `b.filters`]}."""
         qb_filters = other.as_filter() if isinstance(other, QbBoolField) else other
-        qb_filters = self._resolve_redundancy(qb_filters, 'or')
-        return qb_filters or QbFieldFilters({'or': [self.filters, qb_filters.filters]})
+        resolved = self._resolve_redundancy(qb_filters, 'or')
+        return resolved or QbFieldFilters({'or': [self.filters, qb_filters.filters]})
 
     def __invert__(self) -> QbFieldFilters:
         """~(a > b) -> a !> b; ~(a !> b) -> a > b"""

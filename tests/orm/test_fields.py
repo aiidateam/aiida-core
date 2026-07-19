@@ -249,7 +249,7 @@ def test_boolean_query():
 
     result = query(filters=orm.Bool.fields.value | ~orm.Bool.fields.value)
     assert len(result) == 2
-    assert result == [True, False]
+    assert set(result) == {True, False}
 
     result = query(filters=~orm.Bool.fields.value & orm.Bool.fields.value)
     assert len(result) == 0

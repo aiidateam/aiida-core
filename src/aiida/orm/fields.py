@@ -154,10 +154,23 @@ class QbNumericField(QbField):
 
 
 class QbBoolField(QbField):
-    """A boolean (`bool`) flavor of `QbField`.
+    """A boolean (`bool`) flavor of `QbField`."""
 
-    Currently not implementing any additional functionality but here for future expansion.
-    """
+    def as_filter(self):
+        """Return a filter for only values that are True."""
+        return QbFieldFilters(((self, '==', True),))
+
+    def __and__(self, other):
+        """Return a filter for only values that are True and satisfy the other filter."""
+        return self.as_filter() & other
+
+    def __or__(self, other):
+        """Return a filter for only values that are True or satisfy the other filter."""
+        return self.as_filter() | other
+
+    def __invert__(self):
+        """Return a filter for only values that are False."""
+        return QbFieldFilters(((self, '==', False),))
 
 
 class QbArrayField(QbField):
@@ -323,12 +336,16 @@ class QbFieldFilters:
             raise TypeError(f'cannot compare QbFieldFilters to {type(other)}')
         return self.filters == other.filters
 
-    def __and__(self, other: QbFieldFilters) -> QbFieldFilters:
+    def __and__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
         """``a & b`` -> {'and': [`a.filters`, `b.filters`]}."""
+        if isinstance(other, QbBoolField):
+            other = other.as_filter()
         return self._resolve_redundancy(other, 'and') or QbFieldFilters({'and': [self.filters, other.filters]})
 
-    def __or__(self, other: QbFieldFilters) -> QbFieldFilters:
+    def __or__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
         """``a | b`` -> {'or': [`a.filters`, `b.filters`]}."""
+        if isinstance(other, QbBoolField):
+            other = other.as_filter()
         return self._resolve_redundancy(other, 'or') or QbFieldFilters({'or': [self.filters, other.filters]})
 
     def __invert__(self) -> QbFieldFilters:

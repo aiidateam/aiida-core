@@ -56,7 +56,7 @@ __all__ = ('QueryBuilder',)
 # re-usable type annotations
 EntityClsType = type[Union[entities.Entity, 'Process']]
 ProjectType = str | dict | Sequence[str | dict]
-FilterType = dict[str, Any] | fields.QbFieldFilters
+FilterType = dict[str, Any] | fields.QbFieldFilters | fields.QbBoolField
 OrderByType = dict | list[dict] | tuple[dict, ...]
 
 LOGGER = AIIDA_LOGGER.getChild('querybuilder')

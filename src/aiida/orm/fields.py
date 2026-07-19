@@ -156,19 +156,19 @@ class QbNumericField(QbField):
 class QbBoolField(QbField):
     """A boolean (`bool`) flavor of `QbField`."""
 
-    def as_filter(self):
+    def as_filter(self) -> QbFieldFilters:
         """Return a filter for only values that are True."""
         return QbFieldFilters(((self, '==', True),))
 
-    def __and__(self, other):
+    def __and__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
         """Return a filter for only values that are True and satisfy the other filter."""
         return self.as_filter() & other
 
-    def __or__(self, other):
+    def __or__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
         """Return a filter for only values that are True or satisfy the other filter."""
         return self.as_filter() | other
 
-    def __invert__(self):
+    def __invert__(self) -> QbFieldFilters:
         """Return a filter for only values that are False."""
         return QbFieldFilters(((self, '==', False),))
 

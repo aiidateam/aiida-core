@@ -225,8 +225,8 @@ def test_query_subscriptable():
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_boolean_query():
     """Test using boolean fields in a query."""
-    orm.Bool(True).store()
-    orm.Bool(False).store()
+    orm.Bool(True, label='true').store()
+    orm.Bool(False, label='false').store()
 
     def query(filters):
         return (
@@ -255,10 +255,10 @@ def test_boolean_query():
     assert len(result) == 0
     assert result == []
 
-    result = query(filters=(orm.Bool.fields.pk == 1) & orm.Bool.fields.value)
+    result = query(filters=(orm.Bool.fields.label == 'true') & orm.Bool.fields.value)
     assert len(result) == 1
     assert result == [True]
 
-    result = query(filters=~orm.Bool.fields.value & (orm.Bool.fields.pk == 2))
+    result = query(filters=~orm.Bool.fields.value & (orm.Bool.fields.label == 'false'))
     assert len(result) == 1
     assert result == [False]

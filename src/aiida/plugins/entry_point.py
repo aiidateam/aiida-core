@@ -22,7 +22,7 @@ from aiida.common.warnings import warn_deprecation
 from . import factories
 
 if TYPE_CHECKING:
-    from importlib.metadata import EntryPoint, EntryPoints
+    from importlib_metadata import EntryPoint, EntryPoints
 
 __all__ = ('get_entry_points', 'load_entry_point', 'load_entry_point_from_string', 'parse_entry_point')
 
@@ -41,16 +41,9 @@ def eps() -> EntryPoints:
     which will always iterate over all entry points since it looks for
     possible duplicate entries.
     """
-    import sys
-    from importlib.metadata import EntryPoints, entry_points
+    from importlib_metadata import EntryPoints, entry_points
 
-    all_eps: list[EntryPoint] | EntryPoints
-    if sys.version_info >= (3, 12):
-        all_eps = entry_points()
-    else:
-        # Python <3.12: entry_points() returns SelectableGroups (dict subclass)
-        # that iterates group names, not EntryPoints. Flatten via .values().
-        all_eps = [ep for group_eps in entry_points().values() for ep in group_eps]
+    all_eps = entry_points()
     return EntryPoints(sorted(all_eps, key=lambda x: x.group))
 
 
@@ -160,7 +153,7 @@ ENTRY_POINT_GROUP_FACTORY_MAPPING = {
 
 def parse_entry_point(group: str, spec: str) -> EntryPoint:
     """Return an entry point, given its group and spec (as formatted in the setup)"""
-    from importlib.metadata import EntryPoint
+    from importlib_metadata import EntryPoint
 
     name, value = spec.split('=', maxsplit=1)
     return EntryPoint(group=group, name=name.strip(), value=value.strip())

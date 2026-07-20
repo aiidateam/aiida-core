@@ -29,7 +29,7 @@ from . import convert, entities, extras, users
 from .pydantic import OrmMetadataField
 
 if TYPE_CHECKING:
-    from importlib.metadata import EntryPoint
+    from importlib_metadata import EntryPoint
 
     from aiida.orm import Node, User
     from aiida.orm.implementation import StorageBackend

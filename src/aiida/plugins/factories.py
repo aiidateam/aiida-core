@@ -33,7 +33,7 @@ __all__ = (
 )
 
 if TYPE_CHECKING:
-    from importlib.metadata import EntryPoint
+    from importlib_metadata import EntryPoint
 
     from aiida.brokers import Broker
     from aiida.engine import CalcJob, CalcJobImporter, WorkChain

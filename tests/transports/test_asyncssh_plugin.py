@@ -179,6 +179,15 @@ class _TestOpenSSH(_OpenSSH):
         self.bash_command = 'bash -c '
 
 
+def test_openssh_path_exists_raises_on_unexpected_return_code():
+    """`_OpenSSH.path_exists` raises on a return code other than 0/1 (255 = SSH connection failure)."""
+    backend = _TestOpenSSH()
+    backend.openssh_execute = AsyncMock(return_value=(255, '', ''))
+
+    with pytest.raises(OSError, match='Failed to check whether path exists'):
+        asyncio.run(backend.path_exists('/remote/path'))
+
+
 class TestSshCommandGenerator:
     """Tests for ssh_command_generator escaping."""
 

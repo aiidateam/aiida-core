@@ -13,14 +13,26 @@ from __future__ import annotations
 import time
 from concurrent.futures import Future
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import kiwipy
 import pytest
 
 from aiida.brokers.zeromq.broker import ZeromqBroker
 from aiida.brokers.zeromq.communicator import ZeromqCommunicator
-from tests.conftest import _patch_zmq_broker_service_filepaths, _run_zeromq_broker_server
+
+
+@pytest.fixture(scope='module')
+def aiida_broker():
+    """Returns the broker for the aiida_profile session fixture with a running service."""
+    from aiida.manage import get_manager
+
+    broker = get_manager().get_broker()
+
+    if not isinstance(broker, ZeromqBroker):
+        pytest.skip('Requires a profile with a ZeroMQ broker.')
+
+    yield broker
+    broker.close()
 
 
 def get_router_endpoint(broker: ZeromqBroker) -> str:
@@ -29,26 +41,12 @@ def get_router_endpoint(broker: ZeromqBroker) -> str:
     return f'ipc://{sockets_path}/router.sock'
 
 
-@pytest.fixture(scope='module')
-def zeromq_broker_with_server(tmp_path_factory):
-    """Create a ZMQ broker instance with a ZMQ server running in the background."""
-    service_dir = tmp_path_factory.mktemp('zeromq-broker')
-    profile = MagicMock()
-    profile.process_control_config = {'supervised_by_daemon': True}
-    profile.name = 'test-profile'
-
-    with _patch_zmq_broker_service_filepaths(profile, service_dir):
-        broker = ZeromqBroker(profile)
-        with _run_zeromq_broker_server(broker):
-            yield broker
-
-
 class TestZeromqCommunicatorLifecycle:
     """Tests for communicator initialization and lifecycle."""
 
-    def test_init(self, zeromq_broker_with_server):
+    def test_init(self, aiida_broker):
         """Test communicator initialization."""
-        communicator = ZeromqCommunicator(router_endpoint=get_router_endpoint(zeromq_broker_with_server))
+        communicator = ZeromqCommunicator(router_endpoint=get_router_endpoint(aiida_broker))
         communicator.start()
 
         try:
@@ -58,16 +56,16 @@ class TestZeromqCommunicatorLifecycle:
 
         assert communicator.is_closed() is True
 
-    def test_context_manager(self, zeromq_broker_with_server):
+    def test_context_manager(self, aiida_broker):
         """Test communicator as context manager."""
-        with ZeromqCommunicator(router_endpoint=get_router_endpoint(zeromq_broker_with_server)) as communicator:
+        with ZeromqCommunicator(router_endpoint=get_router_endpoint(aiida_broker)) as communicator:
             assert communicator.is_closed() is False
 
         assert communicator.is_closed() is True
 
-    def test_close_idempotent(self, zeromq_broker_with_server):
+    def test_close_idempotent(self, aiida_broker):
         """Test close is idempotent."""
-        comm = ZeromqCommunicator(router_endpoint=get_router_endpoint(zeromq_broker_with_server))
+        comm = ZeromqCommunicator(router_endpoint=get_router_endpoint(aiida_broker))
         comm.start()
         comm.close()
         comm.close()  # should not raise
@@ -84,8 +82,8 @@ class TestZeromqCommunicatorMessaging:
     """Tests for communicator messaging operations with a real zeromq_broker."""
 
     @pytest.fixture
-    def zeromq_comm(self, zeromq_broker_with_server):
-        comm = ZeromqCommunicator(router_endpoint=get_router_endpoint(zeromq_broker_with_server))
+    def zeromq_comm(self, aiida_broker):
+        comm = ZeromqCommunicator(router_endpoint=get_router_endpoint(aiida_broker))
         comm.start()
 
         yield comm
@@ -141,11 +139,11 @@ class TestZeromqCommunicatorRoundTrip:
     """Integration tests for full task, RPC, and broadcast round-trips."""
 
     @pytest.fixture
-    def sender_and_worker(self, zeromq_broker_with_server):
-        sender = ZeromqCommunicator(router_endpoint=get_router_endpoint(zeromq_broker_with_server), client_id='sender')
+    def sender_and_worker(self, aiida_broker):
+        sender = ZeromqCommunicator(router_endpoint=get_router_endpoint(aiida_broker), client_id='sender')
         sender.start()
 
-        worker = ZeromqCommunicator(router_endpoint=get_router_endpoint(zeromq_broker_with_server), client_id='worker')
+        worker = ZeromqCommunicator(router_endpoint=get_router_endpoint(aiida_broker), client_id='worker')
         worker.start()
 
         yield sender, worker

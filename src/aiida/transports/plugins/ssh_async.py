@@ -62,10 +62,12 @@ class AsyncSshTransport(AsyncTransport):
             'host',
             {
                 'type': str,
-                'prompt': "Host as in 'ssh <HOST>' (needs to be a password-less setup in your ssh config)",
+                'prompt': "Host as in 'ssh <HOST>' (needs a password-less setup, with the host key in known_hosts)",
                 'help': (
                     'Password-less host-setup to connect, as in command `ssh <HOST>`.'
                     ' You need to have a `Host <HOST>` entry defined in your `~/.ssh/config` file.'
+                    ' The remote host key must also already be present in your `~/.ssh/known_hosts` file;'
+                    ' connect once manually (e.g. run `ssh <HOST>`) to add it, otherwise the connection could fail.'
                     " Note, if not provided, we will use the 'hostname' that was set by you during setup."
                 ),
                 'non_interactive_default': True,

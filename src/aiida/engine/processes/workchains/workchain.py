@@ -174,12 +174,34 @@ class WorkChain(Process, metaclass=Protect):
         self._stepper = None
         stepper_state = saved_state.get(self._STEPPER_STATE, None)
         if stepper_state is not None:
-            self._stepper = self.spec().get_outline().recreate_stepper(stepper_state, self)  # type: ignore[arg-type]
+            self._stepper = self._recreate_stepper(stepper_state)
 
         self.set_logger(self.node.logger)
 
         if self._awaitables:
             self._action_awaitables()
+
+    def _create_stepper(self) -> Stepper:
+        """Return the stepper that drives this work chain.
+
+        This is the seam for supplying a different execution strategy. The default steps through the outline declared
+        on the spec, but a subclass may return any :class:`plumpy.workchains.Stepper`, for example one that derives the
+        order of execution from a graph of data dependencies instead of a static outline.
+
+        A subclass that overrides this should also override :meth:`_recreate_stepper`, otherwise its processes cannot
+        be restored from a checkpoint.
+        """
+        return self.spec().get_outline().create_stepper(self)  # type: ignore[arg-type]
+
+    def _recreate_stepper(self, saved_state: t.Any) -> Stepper:
+        """Restore the stepper from the state it wrote to the checkpoint.
+
+        The counterpart of :meth:`_create_stepper`, called when a process is loaded from a checkpoint rather than
+        started fresh.
+
+        :param saved_state: the state previously returned by ``Stepper.save()``
+        """
+        return self.spec().get_outline().recreate_stepper(saved_state, self)  # type: ignore[arg-type]
 
     @Protect.final
     def on_run(self):
@@ -299,7 +321,7 @@ class WorkChain(Process, metaclass=Protect):
     @override
     @Protect.final
     async def run(self) -> t.Any:
-        self._stepper = self.spec().get_outline().create_stepper(self)  # type: ignore[arg-type]
+        self._stepper = self._create_stepper()
         return await run_with_portal(self._do_step)
 
     def _do_step(self) -> t.Any:

@@ -1769,3 +1769,111 @@ def test_illegal_override_run():
 
             async def run(self):
                 pass
+
+
+class SequenceStepper(plumpy.workchains.Stepper):
+    """A minimal alternative execution strategy, running a work chain's `STEPS` in order.
+
+    Stands in for a stepper that derives its order from something other than the outline, such as a graph of data
+    dependencies.
+    """
+
+    POSITION = 'position'
+
+    def __init__(self, workchain, position=0):
+        super().__init__(workchain)
+        self._position = position
+
+    def save_instance_state(self, out_state, save_context):
+        super().save_instance_state(out_state, save_context)
+        out_state[self.POSITION] = self._position
+
+    def load_instance_state(self, saved_state, load_context):
+        super().load_instance_state(saved_state, load_context)
+        self._position = saved_state[self.POSITION]
+
+    def step(self):
+        steps = self._workchain.STEPS
+        getattr(self._workchain, steps[self._position])()
+        self._position += 1
+        return self._position >= len(steps), None
+
+    def __str__(self):
+        return f'{self._position}/{len(self._workchain.STEPS)}'
+
+
+class CustomStepperWorkChain(WorkChain):
+    """A work chain whose execution is driven by its own stepper instead of the outline."""
+
+    STEPS = ('step_a', 'step_b', 'step_c')
+
+    @classmethod
+    def define(cls, spec):
+        super().define(spec)
+        # Deliberately an outline that fails if it is ever stepped through.
+        spec.outline(cls.outline_must_not_run)
+        spec.output('result', valid_type=Int)
+
+    def _create_stepper(self):
+        return SequenceStepper(self)
+
+    def _recreate_stepper(self, saved_state):
+        return SequenceStepper(self, position=saved_state[SequenceStepper.POSITION])
+
+    def outline_must_not_run(self):
+        raise AssertionError('the outline drove execution instead of the custom stepper')
+
+    def step_a(self):
+        self.ctx.trail = 'a'
+
+    def step_b(self):
+        self.ctx.trail += 'b'
+
+    def step_c(self):
+        self.ctx.trail += 'c'
+        self.out('result', Int(len(self.ctx.trail)).store())
+
+
+class PausingStepperWorkChain(CustomStepperWorkChain):
+    """As above, but pauses after the first step so the checkpoint path can be exercised."""
+
+    def step_a(self):
+        super().step_a()
+        self.pause()
+
+
+class TestCustomStepper:
+    """Test that a `WorkChain` subclass can supply its own stepping strategy."""
+
+    def test_custom_stepper_drives_execution(self):
+        """The stepper returned by `_create_stepper` runs, and the outline does not."""
+        result, node = launch.run_get_node(CustomStepperWorkChain)
+        assert node.is_finished_ok, node.exit_status
+        assert result['result'] == 3
+
+    def test_custom_stepper_survives_checkpoint(self):
+        """`_recreate_stepper` restores position, so a resumed process does not redo completed steps."""
+        runner = get_manager().get_runner()
+        workchain = PausingStepperWorkChain()
+        runner.schedule(workchain)
+
+        async def run_async(wc):
+            await run_until_paused(wc)
+            assert wc.ctx.trail == 'a'
+
+            bundle = plumpy.Bundle(wc)
+            wc.close()
+
+            reloaded = bundle.unbundle()
+            assert reloaded.ctx.trail == 'a'
+
+            runner.schedule(reloaded)
+            reloaded.play()
+            await reloaded.future()
+
+            # 'aabc' would mean the stepper restarted rather than resumed
+            assert reloaded.ctx.trail == 'abc'
+
+            wc.future().set_result(None)
+
+        runner.loop.run_until_complete(run_async(workchain))

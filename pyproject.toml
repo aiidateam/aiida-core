@@ -38,6 +38,7 @@ dependencies = [
   'disk-objectstore~=1.5.0',
   'docstring-parser',
   'graphviz~=0.19',
+  'importlib-metadata~=6.0',
   'plumpy~=0.26.0',
   'ipython>=7.6',
   'jedi<0.19',

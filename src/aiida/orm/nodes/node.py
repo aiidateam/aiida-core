@@ -57,7 +57,7 @@ from .comments import NodeComments
 from .links import NodeLinks
 
 if TYPE_CHECKING:
-    from importlib.metadata import EntryPoint
+    from importlib_metadata import EntryPoint
 
     from aiida.common.log import AiidaLoggerType
 

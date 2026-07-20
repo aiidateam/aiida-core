@@ -8,9 +8,8 @@
 ###########################################################################
 """Test for entity fields"""
 
-from importlib.metadata import entry_points
-
 import pytest
+from importlib_metadata import entry_points
 
 from aiida import orm
 from aiida.orm.fields import add_field

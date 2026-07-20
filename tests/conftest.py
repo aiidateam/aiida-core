@@ -19,24 +19,20 @@ import dataclasses
 import logging
 import os
 import pathlib
-import shutil
-import signal
 import subprocess
 import sys
-import time
 import types
 import typing as t
 import warnings
 from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import click
 import pytest
 
 from aiida import get_profile, orm
-from aiida.brokers import ZeromqBroker
 from aiida.common.folders import Folder
 from aiida.common.links import LinkType
 from aiida.manage import get_manager
@@ -87,60 +83,6 @@ def _patch_zmq_broker_service_filepaths(profile, service_dir: Path):
 
     with patch.object(config, 'filepaths', side_effect=filepaths):
         yield
-
-
-@pytest.fixture
-def zeromq_broker(tmp_path):
-    """Create a ZMQ broker instance rooted in ``tmp_path``."""
-    profile = MagicMock()
-    profile.process_control_config = {'supervised_by_daemon': True}
-    profile.name = 'test-profile'
-
-    with _patch_zmq_broker_service_filepaths(profile, tmp_path):
-        yield ZeromqBroker(profile)
-
-
-@contextmanager
-def _run_zeromq_broker_server(zeromq_broker: ZeromqBroker, timeout: float = 10.0):
-    """Run a ZeroMQ broker service subprocess for the duration of a context."""
-    if zeromq_broker.check_service_reachable():
-        raise ValueError('Broker server already running')
-
-    zeromq_broker.service_dir.mkdir(parents=True, exist_ok=True)
-
-    process = subprocess.Popen(
-        [sys.executable, '-m', 'aiida.brokers.zeromq.service', '--service-dir', str(zeromq_broker.service_dir)],
-        start_new_session=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        stdin=subprocess.DEVNULL,
-    )
-
-    try:
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            if process.poll() is not None:
-                msg = f'ZeroMQ broker exited before becoming ready with code {process.returncode}'
-                raise RuntimeError(msg)
-            if zeromq_broker.check_service_reachable():
-                break
-            time.sleep(0.1)
-        else:
-            msg = f'ZeroMQ broker did not become ready within {timeout}s'
-            raise TimeoutError(msg)
-
-        yield process
-    finally:
-        try:
-            if process.poll() is None:
-                process.send_signal(signal.SIGINT)
-                try:
-                    process.wait(timeout=timeout)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait()
-        finally:
-            shutil.rmtree(zeromq_broker.service_dir, ignore_errors=True)
 
 
 def pytest_collection_modifyitems(items, config):
@@ -335,13 +277,7 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
     with aiida_profile_factory(
         aiida_config, storage_backend=storage, storage_config=config, broker_backend=broker
     ) as profile:
-        # Start ZeroMQ broker service if needed (tests don't use circus)
-        broker_instance = get_manager().get_broker()
-        if isinstance(broker_instance, ZeromqBroker):
-            with _run_zeromq_broker_server(broker_instance):
-                yield profile
-        else:
-            yield profile
+        yield profile
 
 
 @pytest.fixture()
@@ -926,7 +862,6 @@ def run_cli_command(reset_log_level, aiida_config, aiida_profile):
 def run_cli_command_subprocess(command, parameters, user_input, profile_name, suppress_warnings):
     """Run CLI command through ``subprocess``."""
     import subprocess
-    import sys
 
     env = os.environ.copy()
     command_path = cli_command_map()[command]

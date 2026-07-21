@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://storage.googleapis.com/coderabbit_public_assets/schema.v2.json
+#
+# CodeRabbit config for aiida-core: on-demand only, driven by PR comments.
+# Reference: https://docs.coderabbit.ai/reference/configuration
+#
+#   @coderabbitai review         incremental review
+#   @coderabbitai full review    full re-review
+#   @coderabbitai summary        (re)write the PR summary
+#   @coderabbitai resolve        resolve all its comments
+#   @coderabbitai configuration  print the effective config
+#   @coderabbitai help           list every command
+#
+# AGENTS.md / CLAUDE.md already steer reviews as guidance (default); no config needed.
+
+language: en-US
+
+reviews:
+  # Higher-signal comments only; raise to `chill` (default) or `assertive` for more.
+  profile: quiet
+
+  auto_review:
+    # No auto-review on open/push; trigger with `@coderabbitai review`.
+    enabled: false
+    drafts: false  # never review drafts (default)
+
+  # Don't auto-edit the PR description; use `@coderabbitai summary` on demand.
+  high_level_summary: false
+
+  tools:
+    ruff:
+      enabled: false  # already enforced by pre-commit and CI; avoids duplicate comments
+    languagetool:
+      enabled: false  # possibly noisy grammar/spell checks on prose and docstrings

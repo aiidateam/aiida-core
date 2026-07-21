@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 from unittest.mock import MagicMock, PropertyMock, patch
 
@@ -18,7 +19,7 @@ import pytest
 
 from aiida.brokers.zeromq.broker import ZeromqBroker, ZeromqIncomingTask
 from aiida.brokers.zeromq.queue import PersistentQueue
-from tests.conftest import _patch_zmq_broker_service_filepaths
+from aiida.manage.configuration import get_config
 
 
 @pytest.fixture(scope='module')
@@ -41,7 +42,18 @@ def zeromq_broker(tmp_path):
     profile = MagicMock()
     profile.name = 'test-profile'
 
-    with _patch_zmq_broker_service_filepaths(profile, tmp_path):
+    config = get_config()
+    original_filepaths = config.filepaths
+
+    def filepaths(current_profile):
+        result = copy.deepcopy(original_filepaths(current_profile))
+
+        if current_profile is profile:
+            result['broker_service'] = {'dir': str(tmp_path), 'log': str(tmp_path / 'broker.log')}
+
+        return result
+
+    with patch.object(config, 'filepaths', side_effect=filepaths):
         yield ZeromqBroker(profile)
 
 

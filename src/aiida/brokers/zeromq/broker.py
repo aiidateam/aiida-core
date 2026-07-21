@@ -11,7 +11,6 @@ from pathlib import Path
 import psutil
 
 from aiida.brokers.broker import Broker, BrokerConfigField, BrokerServiceStatus
-from aiida.common.exceptions import ConfigurationError
 from aiida.common.log import AIIDA_LOGGER
 
 from .communicator import ZeromqCommunicator
@@ -44,8 +43,9 @@ class ZeromqBroker(Broker):
             help='Whether the lifecycle of the broker service is managed by the daemon.',
             default=True,
             param_type='bool',
-            # Running the broker service outside of the daemon is not yet supported, so the setting is not
-            # configurable and always stored with its default.
+            # Regular profiles always let the daemon supervise the service, so the setting is not exposed on the CLI and
+            # is stored with its default. Running the service outside of the daemon is used by the pytest fixtures,
+            # which set this to ``False`` and manage the service lifecycle themselves.
             expose_cli=False,
         ),
     )
@@ -53,16 +53,6 @@ class ZeromqBroker(Broker):
     def __init__(self, profile: Profile) -> None:
         super().__init__(profile)
         self._communicator: ZeromqCommunicator | None = None
-
-        # The broker service determines this location, not this client. Currently the service is always managed by
-        # the daemon, so the daemon client is the authority for the directory.
-        if not profile.process_control_config.get('supervised_by_daemon', True):
-            msg = (
-                'The ZeroMQ broker service is not managed by the daemon (`supervised_by_daemon` is false in the broker '
-                'settings), so the location of its state files is unknown. Running the broker service outside of the '
-                'daemon is not yet supported.'
-            )
-            raise ConfigurationError(msg)
 
         from aiida.manage.configuration import get_config
 

@@ -39,17 +39,6 @@ def test_get_default_config():
     assert ZeromqBroker.get_default_config() == {'supervised_by_daemon': True}
 
 
-def test_not_supervised_by_daemon_raises():
-    """Test that broker construction fails when the service is not managed by the daemon."""
-    from aiida.common.exceptions import ConfigurationError
-
-    profile = MagicMock()
-    profile.process_control_config = {'supervised_by_daemon': False}
-
-    with pytest.raises(ConfigurationError, match='not managed by the daemon'):
-        ZeromqBroker(profile)
-
-
 class TestZeromqBrokerStatusQueries:
     """Tests for ZeromqBroker status queries (file-based)."""
 

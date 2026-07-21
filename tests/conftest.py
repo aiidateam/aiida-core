@@ -24,10 +24,8 @@ import sys
 import types
 import typing as t
 import warnings
-from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
-from unittest.mock import patch
 
 import click
 import pytest
@@ -65,24 +63,6 @@ class TestBrokerBackend(Enum):
     RMQ = 'rmq'
     ZEROMQ = 'zmq'
     NONE = 'none'
-
-
-@contextmanager
-def _patch_zmq_broker_service_filepaths(profile, service_dir: Path):
-    """Patch only the ZeroMQ broker-service filepaths for a test profile."""
-    config = get_config()
-    original_filepaths = config.filepaths
-
-    def filepaths(current_profile):
-        result = copy.deepcopy(original_filepaths(current_profile))
-
-        if current_profile is profile:
-            result['broker_service'] = {'dir': str(service_dir), 'log': str(service_dir / 'broker.log')}
-
-        return result
-
-    with patch.object(config, 'filepaths', side_effect=filepaths):
-        yield
 
 
 def pytest_collection_modifyitems(items, config):

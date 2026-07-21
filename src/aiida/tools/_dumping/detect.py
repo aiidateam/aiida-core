@@ -220,7 +220,9 @@ class DumpChangeDetector:
             logger.error(f"Error getting registry for '{store_type}': {e}")
             return nodes
 
-    def _apply_behavioral_filters(self, nodes: list[orm.ProcessNode], store_type: str) -> list[orm.ProcessNode]:
+    def _apply_behavioral_filters(
+        self, nodes: list[orm.ProcessNode], store_type: RegistryNameType
+    ) -> list[orm.ProcessNode]:
         """Apply top-level and caller filters based on configuration.
 
         :param nodes: Initial list of nodes

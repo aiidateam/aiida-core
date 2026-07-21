@@ -187,7 +187,7 @@ def status(ctx, all_profiles, timeout):
                 )
             else:
                 broker_lines.append('Broker is NOT running.')
-            broker_lines.append(f'Broker directory: {broker.service_dir}')
+            broker_lines.append(f'Broker directory: {broker._service_dir}')
 
         lines = [
             f'Daemon is running as PID {daemon_response["info"]["pid"]} since {start_time}',

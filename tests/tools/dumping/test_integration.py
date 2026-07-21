@@ -20,6 +20,9 @@ from aiida.tools._dumping.utils import DumpPaths
 
 from .utils import compare_tree
 
+# Slow, DB-heavy integration tests that write full dump trees to disk; run only in nightly CI.
+pytestmark = pytest.mark.nightly
+
 logger = AIIDA_LOGGER.getChild('tools._dumping.tests')
 
 profile_dump_label = 'profile-dump'

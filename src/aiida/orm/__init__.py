@@ -104,6 +104,7 @@ __all__ = (
     'User',
     'WorkChainNode',
     'WorkFunctionNode',
+    'WorkGraphNode',
     'WorkflowNode',
     'XyData',
     'cif_from_ase',

@@ -152,6 +152,7 @@ requires-python = '>=3.10'
 'process.workflow' = 'aiida.orm.nodes.process.workflow.workflow:WorkflowNode'
 'process.workflow.workchain' = 'aiida.orm.nodes.process.workflow.workchain:WorkChainNode'
 'process.workflow.workfunction' = 'aiida.orm.nodes.process.workflow.workfunction:WorkFunctionNode'
+'process.workflow.workgraph' = 'aiida.orm.nodes.process.workflow.workgraph:WorkGraphNode'
 
 [project.entry-points.'aiida.orm']
 'core.auth_info' = 'aiida.orm.authinfos:AuthInfo'

@@ -62,6 +62,7 @@ __all__ = (
     'UpfData',
     'WorkChainNode',
     'WorkFunctionNode',
+    'WorkGraphNode',
     'WorkflowNode',
     'XyData',
     'cif_from_ase',

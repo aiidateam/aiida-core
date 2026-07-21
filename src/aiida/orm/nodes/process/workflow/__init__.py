@@ -15,10 +15,12 @@
 from .workchain import *
 from .workflow import *
 from .workfunction import *
+from .workgraph import *
 
 __all__ = (
     'WorkChainNode',
     'WorkFunctionNode',
+    'WorkGraphNode',
     'WorkflowNode',
 )
 

@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import click
 
@@ -182,7 +182,9 @@ class DumpChangeDetector:
 
         return qb.all(flat=True)
 
-    def _exclude_tracked_nodes(self, nodes: list[orm.ProcessNode], store_type: str) -> list[orm.ProcessNode]:
+    def _exclude_tracked_nodes(
+        self, nodes: list[orm.ProcessNode], store_type: RegistryNameType
+    ) -> list[orm.ProcessNode]:
         """Exclude nodes that are already tracked in the dump tracker.
 
         :param nodes: Initial list of nodes
@@ -193,7 +195,7 @@ class DumpChangeDetector:
             return nodes
 
         try:
-            registry = self.dump_tracker.registries[cast(RegistryNameType, store_type)]
+            registry = self.dump_tracker.registries[store_type]
             tracked_uuids = set(registry.entries.keys())
 
             if not tracked_uuids:
@@ -218,7 +220,9 @@ class DumpChangeDetector:
             logger.error(f"Error getting registry for '{store_type}': {e}")
             return nodes
 
-    def _apply_behavioral_filters(self, nodes: list[orm.ProcessNode], store_type: str) -> list[orm.ProcessNode]:
+    def _apply_behavioral_filters(
+        self, nodes: list[orm.ProcessNode], store_type: RegistryNameType
+    ) -> list[orm.ProcessNode]:
         """Apply top-level and caller filters based on configuration.
 
         :param nodes: Initial list of nodes

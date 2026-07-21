@@ -15,11 +15,11 @@ from collections.abc import Collection, Generator
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from aiida.common import AIIDA_LOGGER, timezone
 from aiida.tools._dumping.mapping import GroupNodeMapping
-from aiida.tools._dumping.utils import DumpPaths, DumpTimes
+from aiida.tools._dumping.utils import DumpPaths, DumpTimes, RegistryNameType
 
 logger = AIIDA_LOGGER.getChild('tools._dumping.tracking')
 
@@ -228,7 +228,7 @@ class DumpTracker:
         :param current_mapping: The current ``GroupNodeMapping`` obtained from AiiDA's DB state, defaults to None
         """
         self.dump_paths: DumpPaths = dump_paths
-        self.registries: dict[str, DumpRegistry] = {
+        self.registries: dict[RegistryNameType, DumpRegistry] = {
             'calculations': DumpRegistry(),
             'workflows': DumpRegistry(),
             'groups': DumpRegistry(),
@@ -378,16 +378,10 @@ class DumpTracker:
         """
         self.current_mapping = current_mapping
 
-    def iter_by_type(
-        self,
-    ) -> Generator[
-        tuple[Literal['calculations'], DumpRegistry]
-        | tuple[Literal['workflows'], DumpRegistry]
-        | tuple[Literal['groups'], DumpRegistry]
-    ]:
+    def iter_by_type(self) -> Generator[tuple[RegistryNameType, DumpRegistry]]:
         """Iterate over node registries
 
-        :yield: Tuple with the registry key string Literal and the corresponding ``DumpRegistry``
+        :yield: Tuple with the registry name and the corresponding ``DumpRegistry``
         """
         yield ('calculations', self.registries['calculations'])
         yield ('workflows', self.registries['workflows'])

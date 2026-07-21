@@ -1877,3 +1877,85 @@ class TestCustomStepper:
             wc.future().set_result(None)
 
         runner.loop.run_until_complete(run_async(workchain))
+
+
+class OneShotStepper(plumpy.workchains.Stepper):
+    """A stepper that finishes in a single step, used to drive `_do_step` once in isolation."""
+
+    def step(self):
+        return True, None
+
+
+class StreamingStepper(OneShotStepper):
+    """A stepper in the streaming (data-dependency) model, where awaitables persist across steps."""
+
+    awaitable_barrier = False
+
+
+class TestAwaitableBarrier:
+    """The awaitable barrier is a property of the stepping strategy.
+
+    Under the barrier model (the outline default) each step waits for every child it launched before the next
+    begins; a streaming stepper keeps its awaitables so independent children stay in flight. The switch lives on
+    the stepper (``awaitable_barrier``), and the work chain reads it.
+    """
+
+    @staticmethod
+    def _work_chain():
+        class _WorkChain(WorkChain):
+            @classmethod
+            def define(cls, spec):
+                super().define(spec)
+                spec.outline(cls._noop)
+
+            def _noop(self):
+                pass
+
+        return _WorkChain()
+
+    @pytest.mark.parametrize(
+        'stepper_cls, expected',
+        [(OneShotStepper, []), (StreamingStepper, ['keep'])],
+        ids=['barrier', 'streaming'],
+    )
+    def test_do_step_clears_awaitables_only_under_barrier(self, stepper_cls, expected):
+        """`_do_step` clears the awaitables at the start of a step under the barrier model, and keeps them under
+        the streaming model. The clearing is what forces an outline step to wait for all its children."""
+        work_chain = self._work_chain()
+        work_chain._stepper = stepper_cls(work_chain)
+        work_chain._awaitables = ['keep']
+
+        work_chain._do_step()
+
+        assert work_chain._awaitables == expected
+
+    def test_barrier_is_the_default(self):
+        """A stepper that does not declare the flag (every outline stepper) gets the barrier."""
+        work_chain = self._work_chain()
+        work_chain._stepper = OneShotStepper(work_chain)
+        assert work_chain._awaitable_barrier is True
+
+    def test_action_awaitables_registers_each_awaitable_once(self, monkeypatch):
+        """A streaming stepper sees the same awaitable on every pass through the waiting state, so the callback
+        must be registered once, not once per pass, and again only after the awaitable is resolved."""
+        from types import SimpleNamespace
+
+        from aiida.engine.processes.workchains.awaitable import AwaitableTarget
+
+        work_chain = self._work_chain()
+        work_chain._stepper = StreamingStepper(work_chain)
+
+        registered: list[int] = []
+        monkeypatch.setattr(work_chain.runner, 'call_on_process_finish', lambda pk, callback: registered.append(pk))
+
+        awaitable = SimpleNamespace(pk=123, target=AwaitableTarget.PROCESS)
+        work_chain._awaitables = [awaitable]
+
+        work_chain._action_awaitables()
+        work_chain._action_awaitables()
+        assert registered == [123], 'the persisting awaitable was registered more than once'
+
+        # Once resolved, its pk is forgotten and a fresh awaitable reusing it would register again.
+        work_chain._registered_awaitable_pks.discard(123)
+        work_chain._action_awaitables()
+        assert registered == [123, 123]

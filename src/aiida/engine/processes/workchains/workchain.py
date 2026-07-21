@@ -131,6 +131,9 @@ class WorkChain(Process, metaclass=Protect):
 
         self._stepper: Stepper | None = None
         self._awaitables: list[Awaitable] = []
+        # The pks of awaitables whose completion callback is already registered. This is runtime state, callbacks
+        # do not survive a checkpoint, so it is not persisted and is reset in `load_instance_state`.
+        self._registered_awaitable_pks: set[int] = set()
         self._context = AttributeDict()
 
     @classmethod
@@ -178,6 +181,8 @@ class WorkChain(Process, metaclass=Protect):
 
         self.set_logger(self.node.logger)
 
+        # Callbacks do not survive the checkpoint, so nothing is registered yet on the reloaded process.
+        self._registered_awaitable_pks = set()
         if self._awaitables:
             self._action_awaitables()
 
@@ -202,6 +207,20 @@ class WorkChain(Process, metaclass=Protect):
         :param saved_state: the state previously returned by ``Stepper.save()``
         """
         return self.spec().get_outline().recreate_stepper(saved_state, self)  # type: ignore[arg-type]
+
+    @property
+    def _awaitable_barrier(self) -> bool:
+        """Whether each step waits for everything it launched before the next one begins.
+
+        This is the difference between the two execution models, and it is a property of the stepping strategy, so
+        the value is taken from the stepper. ``True``, the default, is the outline model: :meth:`_do_step` clears
+        the awaitables at the start of every step, so a step forms a barrier over the children it launched and the
+        process only resumes once all of them have finished. A stepper that schedules by data dependencies wants
+        ``False``: the awaitables persist across steps and the process resumes as each child finishes, so
+        independent branches stay in flight together. A stepper opts into the streaming model by defining
+        ``awaitable_barrier = False`` on itself.
+        """
+        return getattr(self._stepper, 'awaitable_barrier', True)
 
     @Protect.final
     def on_run(self):
@@ -334,7 +353,11 @@ class WorkChain(Process, metaclass=Protect):
         """
         from .context import ToContext
 
-        self._awaitables = []
+        # Under the barrier model the awaitables belong to a single step and are cleared before the next one, which
+        # is what forces every step to wait for all the children it launched. A streaming stepper keeps them, so
+        # children launched in earlier steps stay in flight while later steps run.
+        if self._awaitable_barrier:
+            self._awaitables = []
         result: t.Any = None
 
         try:
@@ -402,24 +425,41 @@ class WorkChain(Process, metaclass=Protect):
             self.call_soon(self.resume)
 
     def _action_awaitables(self) -> None:
-        """Handle the awaitables that are currently registered with the work chain.
+        """Register the completion callback for each awaitable that does not already have one.
 
         Depending on the class type of the awaitable's target a different callback
         function will be bound with the awaitable and the runner will be asked to
-        call it when the target is completed
+        call it when the target is completed.
+
+        The registration is guarded against duplicates: under the barrier model the awaitables are cleared each
+        step so the same one is never seen twice, but a streaming stepper keeps its awaitables across steps and
+        would otherwise register a further callback for the same awaitable on every pass through the waiting state.
         """
         for awaitable in self._awaitables:
+            if awaitable.pk in self._registered_awaitable_pks:
+                continue
             if awaitable.target == AwaitableTarget.PROCESS:
                 callback = functools.partial(self.call_soon, self._on_awaitable_finished, awaitable)
                 self.runner.call_on_process_finish(awaitable.pk, callback)
+                self._registered_awaitable_pks.add(awaitable.pk)
             else:
                 raise AssertionError(f"invalid awaitable target '{awaitable.target}'")
+
+    def _on_awaitable_resolved(self, awaitable: Awaitable) -> None:
+        """Hook called once a finished awaitable has been resolved onto the context, before the resume decision.
+
+        Defaults to doing nothing. A subclass can use it to run bookkeeping that must see the resolved value and
+        must happen before the process is resumed, without having to reimplement :meth:`_on_awaitable_finished`.
+
+        :param awaitable: the awaitable that has just been resolved
+        """
 
     def _on_awaitable_finished(self, awaitable: Awaitable) -> None:
         """Callback function, for when an awaitable process instance is completed.
 
-        The awaitable will be effectuated on the context of the work chain and removed from the internal list. If all
-        awaitables have been dealt with, the work chain process is resumed.
+        The awaitable will be effectuated on the context of the work chain and removed from the internal list. The
+        process is then resumed: under the barrier model only once every awaitable has finished, and under the
+        streaming model as soon as this one does, so a finished child can unblock its dependents while others run.
 
         :param awaitable: an Awaitable instance
         """
@@ -436,6 +476,8 @@ class WorkChain(Process, metaclass=Protect):
             value = node  # type: ignore[assignment]
 
         self._resolve_awaitable(awaitable, value)
+        self._registered_awaitable_pks.discard(awaitable.pk)
+        self._on_awaitable_resolved(awaitable)
 
-        if self.state == ProcessState.WAITING and not self._awaitables:
+        if self.state == ProcessState.WAITING and (not self._awaitable_barrier or not self._awaitables):
             self.resume()

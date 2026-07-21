@@ -475,8 +475,7 @@ ignore = [
   'PLR2004',  # Magic value used in comparison
   'PLW1641',  # Checks for classes that implement `__eq__` but not `__hash__`
   'RUF005',  # Consider iterable unpacking instead of concatenation
-  'RUF012',  # Mutable class attributes should be annotated with `typing.ClassVar`
-  'RUF059'  # Unpacked variable is never used
+  'RUF012'  # Mutable class attributes should be annotated with `typing.ClassVar`
 ]
 select = [
   'E',  # pydocstyle

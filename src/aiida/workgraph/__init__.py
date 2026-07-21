@@ -18,6 +18,7 @@ node-graph dependency, which the (optional) workgraph install provides.
 # fmt: off
 
 from .enums import *
+from .utils import *
 
 __all__ = (
     'TERMINAL_TASK_STATES',
@@ -25,6 +26,10 @@ __all__ = (
     'TaskAction',
     'TaskActionMessage',
     'TaskState',
+    'get_nested_dict',
+    'resolve_node_link_managers',
+    'update_nested_dict',
+    'update_nested_dict_with_special_keys',
 )
 
 # fmt: on

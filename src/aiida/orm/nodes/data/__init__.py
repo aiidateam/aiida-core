@@ -25,6 +25,7 @@ from .folder import *
 from .int import *
 from .jsonable import *
 from .list import *
+from .none import *
 from .numeric import *
 from .orbital import *
 from .remote import *
@@ -53,6 +54,7 @@ __all__ = (
     'Kind',
     'KpointsData',
     'List',
+    'NoneData',
     'NumericType',
     'OrbitalData',
     'PortableCode',

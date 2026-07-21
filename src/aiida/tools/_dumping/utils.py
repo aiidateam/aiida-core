@@ -24,29 +24,25 @@ from aiida.common import AIIDA_LOGGER, timezone
 from aiida.manage.configuration import Profile
 from aiida.tools._dumping.config import DumpMode, GroupDumpConfig, ProcessDumpConfig, ProfileDumpConfig
 
+logger = AIIDA_LOGGER.getChild('tools._dumping.utils')
+
 RegistryNameType = Literal['calculations', 'workflows', 'groups']
 
 # Progress bar format for dump operations - wider description field to avoid truncation
 DUMP_PROGRESS_BAR_FORMAT = '{desc:60.60}{percentage:6.1f}%|{bar}| {n_fmt}/{total_fmt}'
 
-REGISTRY_TO_ORM_TYPE: dict[str, type[orm.CalculationNode | orm.WorkflowNode | orm.Group]] = {
+REGISTRY_TO_ORM_TYPE: dict[RegistryNameType, type[orm.Entity]] = {
     'calculations': orm.CalculationNode,
     'workflows': orm.WorkflowNode,
     'groups': orm.Group,
 }
 
-ORM_TYPE_TO_REGISTRY: dict[type, RegistryNameType] = {
-    orm.CalculationNode: 'calculations',
-    orm.CalcFunctionNode: 'calculations',
-    orm.CalcJobNode: 'calculations',
-    orm.WorkflowNode: 'workflows',
-    orm.WorkFunctionNode: 'workflows',
-    orm.WorkChainNode: 'workflows',
-    orm.Group: 'groups',
+ORM_TYPE_TO_REGISTRY: dict[type[orm.Entity], RegistryNameType] = {
+    orm_type: registry_name for registry_name, orm_type in REGISTRY_TO_ORM_TYPE.items()
 }
 
 
-def registry_name_for(node: orm.Node | orm.Group) -> RegistryNameType:
+def registry_name_for(entity: orm.Node | orm.Group) -> RegistryNameType:
     """Resolve the dump registry an ORM entity belongs to, honouring subclasses.
 
     Plugins routinely register ``WorkChainNode``/``CalcJobNode`` subclasses (for example
@@ -55,19 +51,16 @@ def registry_name_for(node: orm.Node | orm.Group) -> RegistryNameType:
     ``verdi profile dump``. Walking the MRO instead means the closest registered
     base class wins, so any subclass resolves to the same registry as its parent.
 
-    :param node: The ORM entity (process node or group) to classify.
+    :param entity: The ORM entity (process node or group) to classify.
     :return: The registry name (``'calculations'``, ``'workflows'`` or ``'groups'``).
-    :raises KeyError: If no base class of ``node`` is registered.
+    :raises NotImplementedError: If no base class of ``entity`` is registered.
     """
-    for base in type(node).__mro__:
+    for base in type(entity).__mro__:
         registry_name = ORM_TYPE_TO_REGISTRY.get(base)
         if registry_name is not None:
             return registry_name
-    msg = f'No dump registry is registered for {type(node)} or any of its base classes.'
-    raise KeyError(msg)
-
-
-logger = AIIDA_LOGGER.getChild('tools._dumping.utils')
+    msg = f'No dump registry is registered for {type(entity)} or any of its base classes.'
+    raise NotImplementedError(msg)
 
 
 @dataclass(frozen=True)

@@ -1,9 +1,12 @@
 """Tests for the :class:`aiida.orm.nodes.data.jsonable.JsonableData` data type."""
 
+import dataclasses
 import datetime
 import math
 
+import numpy
 import pytest
+from pydantic import BaseModel
 from pymatgen.core.structure import Molecule
 
 from aiida.orm import load_node
@@ -45,12 +48,12 @@ def test_construct():
 
 
 def test_invalid_class_no_as_dict():
-    """Test the ``JsonableData`` constructor raises if object does not implement ``as_dict``."""
+    """Test the ``JsonableData`` constructor raises if object implements no supported serialization method."""
 
     class InvalidClass:
         pass
 
-    with pytest.raises(TypeError, match=r'the `obj` argument does not have the required `as_dict` method.'):
+    with pytest.raises(TypeError, match=r'does not implement any of the supported serialization methods'):
         JsonableData(InvalidClass())
 
 
@@ -147,3 +150,62 @@ def test_msonable():
     loaded = load_node(node.pk)
     assert loaded is not node
     assert loaded.obj == obj
+
+
+class ToDictClass:
+    """Object that follows the ``to_dict`` / ``from_dict`` convention instead of ``as_dict``."""
+
+    def __init__(self, value):
+        self.value = value
+
+    def to_dict(self):
+        return {'value': self.value}
+
+    @classmethod
+    def from_dict(cls, dictionary):
+        return cls(dictionary['value'])
+
+
+@dataclasses.dataclass
+class DataclassObj:
+    """A plain dataclass, wrapped via ``dataclasses.asdict`` and rebuilt through its constructor."""
+
+    x: int
+    y: str
+
+
+class PydanticObj(BaseModel):
+    """A pydantic model, wrapped via ``model_dump`` and rebuilt through ``model_validate``."""
+
+    a: int
+    b: str
+
+
+def test_wrap_object_with_to_dict():
+    """An object exposing ``to_dict`` (not ``as_dict``) round-trips."""
+    node = JsonableData(ToDictClass(7)).store()
+    loaded = load_node(node.pk)
+    assert isinstance(loaded.obj, ToDictClass)
+    assert loaded.obj.value == 7
+
+
+def test_wrap_dataclass():
+    """A dataclass instance round-trips through ``asdict`` and its constructor."""
+    node = JsonableData(DataclassObj(x=1, y='a')).store()
+    loaded = load_node(node.pk)
+    assert loaded.obj == DataclassObj(x=1, y='a')
+
+
+def test_wrap_pydantic_model():
+    """A pydantic model round-trips through ``model_dump`` and ``model_validate``."""
+    node = JsonableData(PydanticObj(a=2, b='b')).store()
+    loaded = load_node(node.pk)
+    assert loaded.obj == PydanticObj(a=2, b='b')
+
+
+def test_numpy_values_are_coerced():
+    """Numpy scalars and arrays in the serialized dictionary are stored as JSON-native types."""
+    obj = JsonableClass({'arr': numpy.array([1, 2, 3]), 'scalar': numpy.int64(5)})
+    node = JsonableData(obj).store()
+    loaded = load_node(node.pk)
+    assert loaded.obj.data == {'arr': [1, 2, 3], 'scalar': 5}

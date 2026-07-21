@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import dataclasses
 import importlib
 import json
 import typing
 
-from pydantic import ConfigDict, WithJsonSchema
+import numpy as np
+from pydantic import BaseModel, ConfigDict, WithJsonSchema
 
 from aiida.orm.pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
 
@@ -50,6 +52,13 @@ class JsonableData(Data):
 
     Of course, this requires that the class of the originally wrapped instance can be imported in the current
     environment, or an ``ImportError`` will be raised.
+
+    Besides the ``as_dict`` / ``from_dict`` contract above, the wrapper also accepts objects whose dictionary is
+    produced by ``to_dict`` / ``todict`` / ``asdict``, as well as :func:`dataclasses.dataclass` instances and
+    ``pydantic.BaseModel`` instances (reconstructed with the constructor and ``model_validate`` respectively). Numpy
+    scalars and arrays returned in the dictionary are coerced to their JSON-native counterparts. This broader support
+    is what lets it act as the generic fallback for arbitrary-Python-value serialization; the ``as_dict`` /
+    ``from_dict`` path is unchanged.
     """
 
     class AttributesModel(OrmFieldsAsModelDump, Data.AttributesModel):
@@ -89,24 +98,29 @@ class JsonableData(Data):
             ),
         ]
 
+    #: Method names, tried in order, that an object may implement to produce its serializable dictionary. ``as_dict``
+    #: (the historical, MSONable-style contract) is tried first so existing behaviour is unchanged.
+    _DICT_METHODS = ('as_dict', 'to_dict', 'todict', 'asdict')
+
+    #: Class-method names, tried in order, that a class may implement to rebuild an instance from its dictionary.
+    _FROM_DICT_METHODS = ('from_dict', 'fromdict')
+
     def __init__(self, obj: JsonSerializableProtocol, *args, **kwargs):
         """Construct the node for the to be wrapped object."""
         if obj is None:
             raise TypeError('the `obj` argument cannot be `None`.')
 
-        if not hasattr(obj, 'as_dict') or not callable(getattr(obj, 'as_dict')):
-            raise TypeError('the `obj` argument does not have the required `as_dict` method.')
+        dictionary = self._extract_dict(obj)
 
         super().__init__(*args, **kwargs)
 
         self._obj = obj
-        dictionary = obj.as_dict()
 
-        if '@class' not in dictionary:
-            dictionary['@class'] = obj.__class__.__name__
+        dictionary.setdefault('@class', obj.__class__.__name__)
+        dictionary.setdefault('@module', obj.__class__.__module__)
 
-        if '@module' not in dictionary:
-            dictionary['@module'] = obj.__class__.__module__
+        # Coerce numpy scalars and arrays that ``as_dict`` may return into JSON-native types before the round-trip.
+        dictionary = self._make_jsonable(dictionary)
 
         # Even though the dictionary returned by ``as_dict`` should be JSON-serializable and therefore this should be
         # sufficient to be able to generate a JSON representation and thus store it in the database, there is a
@@ -124,6 +138,83 @@ class JsonableData(Data):
             raise TypeError(f'the object `{obj}` is not JSON-serializable and therefore cannot be stored.') from exc
 
         self.base.attributes.set_many(serialized)
+
+    def _extract_dict(self, obj: typing.Any) -> dict:
+        """Return the serializable dictionary for ``obj``.
+
+        Pydantic models (``model_dump``) and dataclasses (``dataclasses.asdict``) are supported natively; any other
+        object must implement one of :attr:`_DICT_METHODS`. Raises ``TypeError`` if none applies.
+        """
+        if self._is_pydantic_instance(obj):
+            return obj.model_dump(exclude_none=False)
+        if self._is_dataclass_instance(obj):
+            return dataclasses.asdict(obj)
+        for method_name in self._DICT_METHODS:
+            method = getattr(obj, method_name, None)
+            if callable(method):
+                return method()
+        raise TypeError(
+            f'the `obj` argument does not implement any of the supported serialization methods '
+            f'({", ".join(self._DICT_METHODS)}), nor is it a dataclass or pydantic model.'
+        )
+
+    @classmethod
+    def _make_jsonable(cls, data: typing.Any) -> typing.Any:
+        """Recursively coerce numpy scalars and arrays in ``data`` into JSON-native types (``ndarray`` to ``list``,
+        ``numpy.generic`` to its Python scalar), leaving everything else untouched."""
+        if isinstance(data, dict):
+            return {key: cls._make_jsonable(value) for key, value in data.items()}
+        if isinstance(data, list):
+            return [cls._make_jsonable(value) for value in data]
+        if isinstance(data, tuple):
+            return tuple(cls._make_jsonable(value) for value in data)
+        if isinstance(data, np.ndarray):
+            return data.tolist()
+        if isinstance(data, np.generic):
+            return data.item()
+        return data
+
+    def _rebuild_object(self, cls_: typing.Any, attributes: dict) -> typing.Any:
+        """Reconstruct an instance of ``cls_`` from its stored ``attributes``.
+
+        Pydantic types (``model_validate`` / ``parse_obj``) and dataclasses (constructor) are handled natively; any
+        other class is rebuilt through one of :attr:`_FROM_DICT_METHODS`, falling back to the plain constructor.
+        """
+        if self._is_pydantic_type(cls_):
+            if hasattr(cls_, 'model_validate'):
+                return cls_.model_validate(attributes)
+            if hasattr(cls_, 'parse_obj'):
+                return cls_.parse_obj(attributes)
+            return cls_(**attributes)
+        if self._is_dataclass_type(cls_):
+            return cls_(**attributes)
+        for method_name in self._FROM_DICT_METHODS:
+            from_dict = getattr(cls_, method_name, None)
+            if callable(from_dict):
+                return from_dict(attributes)
+        try:
+            return cls_(**attributes)
+        except TypeError as exc:
+            raise TypeError(
+                f'cannot rebuild an object of type `{cls_}`: it implements none of the from-dict methods '
+                f'({", ".join(self._FROM_DICT_METHODS)}) and its constructor does not accept the stored attributes.'
+            ) from exc
+
+    @staticmethod
+    def _is_pydantic_instance(obj: typing.Any) -> bool:
+        return isinstance(obj, BaseModel)
+
+    @staticmethod
+    def _is_pydantic_type(cls_: typing.Any) -> bool:
+        return isinstance(cls_, type) and issubclass(cls_, BaseModel)
+
+    @staticmethod
+    def _is_dataclass_instance(obj: typing.Any) -> bool:
+        return dataclasses.is_dataclass(obj) and not isinstance(obj, type)
+
+    @staticmethod
+    def _is_dataclass_type(cls_: typing.Any) -> bool:
+        return isinstance(cls_, type) and dataclasses.is_dataclass(cls_)
 
     @property
     def the_module(self) -> str:
@@ -198,7 +289,7 @@ class JsonableData(Data):
                 ) from exc
 
             deserialized = self._deserialize_float_constants(attributes)
-            self._obj = cls.from_dict(deserialized)
+            self._obj = self._rebuild_object(cls, deserialized)
 
             return self._obj
 
@@ -215,5 +306,5 @@ class JsonableData(Data):
             schema=schema,
         )
         if schema and issubclass(schema, self.WritableFields):
-            fields['attributes'] |= self.obj.as_dict()
+            fields['attributes'] |= self._extract_dict(self.obj)
         return fields

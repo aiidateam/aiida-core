@@ -46,16 +46,42 @@ def test_str_method(monkeypatch, manager):
     assert unsafe_url not in broker_string
 
 
-def test_get_service_status(monkeypatch, manager):
+def test_probe_service_status(monkeypatch, manager):
     """Test RabbitMQ service status is derived from server properties."""
     broker = manager.get_broker()
     communicator = MagicMock(server_properties={'product': b'RabbitMQ', 'version': '3.12.0'})
     monkeypatch.setattr(broker, 'get_communicator', lambda: communicator)
 
-    assert broker.get_service_status() == {'product': 'RabbitMQ', 'version': '3.12.0'}
+    assert broker.probe_service_status() == {'connected': True, 'product': 'RabbitMQ', 'version': '3.12.0'}
 
 
-def test_is_service_reachable(monkeypatch, manager):
+def test_probe_service_status_failure(monkeypatch, manager, caplog):
+    """Test RabbitMQ service status captures connection failures in the payload."""
+    broker = manager.get_broker()
+
+    def raise_connection_error():
+        raise ConnectionError('connection failed')
+
+    monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
+
+    assert broker.probe_service_status() == {'connected': False, 'error': 'ConnectionError: connection failed'}
+    assert 'Failed to probe broker status: ConnectionError: connection failed' in caplog.text
+
+
+def test_probe_service_status_invalid_property_encoding(monkeypatch, manager, caplog):
+    """Test RabbitMQ service status captures non-UTF-8 server properties in the payload."""
+    broker = manager.get_broker()
+    communicator = MagicMock(server_properties={'product': b'\xff'})
+    monkeypatch.setattr(broker, 'get_communicator', lambda: communicator)
+
+    status = broker.probe_service_status()
+
+    assert status['connected'] is False
+    assert str(status['error']).startswith('UnicodeDecodeError:')
+    assert 'Failed to probe broker status: UnicodeDecodeError:' in caplog.text
+
+
+def test_check_service_reachable(monkeypatch, manager):
     """Test RabbitMQ service reachability checks open and close a fresh communicator."""
     broker = manager.get_broker()
     communicator = MagicMock()
@@ -63,7 +89,7 @@ def test_is_service_reachable(monkeypatch, manager):
     monkeypatch.setattr(broker, 'get_communicator', lambda: communicator)
     monkeypatch.setattr(broker, 'close', close)
 
-    assert broker.is_service_reachable() is True
+    assert broker.check_service_reachable() is True
     close.assert_called_once_with()
 
 
@@ -78,7 +104,7 @@ def test_is_service_reachable_false(monkeypatch, manager):
     monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
     monkeypatch.setattr(broker, 'close', close)
 
-    assert broker.is_service_reachable() is False
+    assert broker.check_service_reachable() is False
     close.assert_called_once_with()
 
 

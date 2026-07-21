@@ -76,8 +76,8 @@ class ZeromqBroker(Broker):
         self._storage_path = layout.storage_path
 
     def __str__(self) -> str:
-        if self.is_service_reachable():
-            status = self.get_service_status()
+        if self.check_service_reachable():
+            status = self.probe_service_status()
             pid = status.get('pid', '?') if status else '?'
             return f'ZeroMQ Broker (PID {pid}) @ {self._service_dir}'
         return f'ZeroMQ Broker @ {self._service_dir} <not running>'
@@ -127,7 +127,7 @@ class ZeromqBroker(Broker):
         except (ValueError, OSError):
             return None
 
-    def is_service_reachable(self) -> bool:
+    def check_service_reachable(self) -> bool:
         """Check if the ZeromqBrokerService process is running."""
         pid = self._get_service_pid()
         if pid is None:
@@ -138,14 +138,31 @@ class ZeromqBroker(Broker):
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             return False
 
-    def get_service_status(self) -> BrokerServiceStatus | None:
+    def probe_service_status(self) -> BrokerServiceStatus:
         """Read the ZeromqBrokerService status from its status file."""
+        connected = self.check_service_reachable()
+
         if not self._service_status_file.exists():
-            return None
+            error = f'Status file `{self._service_status_file}` does not exist.'
+            LOGGER.warning('Failed to probe broker status: %s', error)
+            return {'connected': connected, 'error': error}
+
         try:
-            return t.cast(BrokerServiceStatus, json.loads(self._service_status_file.read_text()))
-        except (json.JSONDecodeError, OSError):
-            return None
+            loaded_status = json.loads(self._service_status_file.read_text())
+            if not isinstance(loaded_status, dict):
+                msg = f'Invalid ZeroMQ service status file found: {loaded_status}'
+                LOGGER.warning('Failed to probe broker status: %s', msg)
+                status: BrokerServiceStatus = {'error': msg}
+            else:
+                status = t.cast(BrokerServiceStatus, loaded_status)
+                status['error'] = None
+        except (json.JSONDecodeError, OSError) as exception:
+            error = f'{type(exception).__name__}: {exception}'
+            LOGGER.warning('Failed to probe broker status: %s', error)
+            return {'connected': connected, 'error': error}
+
+        status['connected'] = connected
+        return status
 
     # --- Communicator ---
 

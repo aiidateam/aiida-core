@@ -79,17 +79,19 @@ class Broker(abc.ABC):
         """
 
     @abc.abstractmethod
-    def is_service_reachable(self) -> bool:
+    def check_service_reachable(self) -> bool:
         """Return whether the broker service is reachable from this client.
 
         :return: ``True`` if the broker service can be reached, ``False`` otherwise.
         """
 
     @abc.abstractmethod
-    def get_service_status(self) -> BrokerServiceStatus | None:
-        """Return service status information for the broker, if available.
+    def probe_service_status(self) -> BrokerServiceStatus:
+        """Return service status information for the broker.
 
-        :return: Structured service status information, or ``None`` if no status is available.
+        Retrieval failures should be captured in the returned status payload instead of raising.
+
+        :return: Structured service status information.
         """
 
     @abc.abstractmethod

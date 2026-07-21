@@ -229,19 +229,11 @@ class DaemonClient:
 
         :param profile: The profile instance.
         """
-        from aiida.common.docs import URL_NO_BROKER
-
         type_check(profile, Profile)
         self._config = get_config()
         self._profile = profile
         self._socket_directory: str | None = None
         self._daemon_timeout: int = self._config.get_option('daemon.timeout', scope=profile.name)
-
-        if self._profile.process_control_backend is None:
-            raise ConfigurationError(
-                f'profile `{self._profile.name}` does not define a broker so the daemon cannot be used. '
-                f'See {URL_NO_BROKER} for more details.'
-            )
 
     @property
     def profile(self) -> Profile:
@@ -285,7 +277,7 @@ class DaemonClient:
         return [self._verdi_bin, '-p', self.profile.name, 'daemon', 'worker']
 
     @property
-    def zmq_broker_service_dir(self) -> str:
+    def _zmq_broker_service_dir(self) -> str:
         """Return the directory for the ZMQ broker service files, derived from the settings.
 
         The daemon manages the broker service and therefore determines where the service writes its state files.
@@ -293,7 +285,7 @@ class DaemonClient:
         return self._config.filepaths(self.profile)['broker_service']['dir']
 
     @property
-    def zmq_broker_service_log_file(self) -> str:
+    def _zmq_broker_service_log_file(self) -> str:
         """Return the log file of the ZMQ broker service, derived from the settings."""
         return self._config.filepaths(self.profile)['broker_service']['log']
 
@@ -307,9 +299,9 @@ class DaemonClient:
             'daemon',
             'broker',
             '--service-dir',
-            shlex.quote(self.zmq_broker_service_dir),
+            shlex.quote(self._zmq_broker_service_dir),
             '--log-file-path',
-            shlex.quote(self.zmq_broker_service_log_file),
+            shlex.quote(self._zmq_broker_service_log_file),
         ]
 
     @property
@@ -985,9 +977,9 @@ class DaemonClient:
             except Exception:
                 LOGGER.warning('Could not load the broker instance while preparing daemon watchers.', exc_info=True)
                 broker_instance = None
-            if isinstance(broker_instance, ZeromqBroker) and not broker_instance.is_service_reachable():
+            if isinstance(broker_instance, ZeromqBroker) and not broker_instance.check_service_reachable():
                 # prepare zmq broker service profile directory
-                pathlib.Path(self.zmq_broker_service_dir).mkdir(parents=True, exist_ok=True)
+                pathlib.Path(self._zmq_broker_service_dir).mkdir(parents=True, exist_ok=True)
 
                 watchers.append(
                     {
@@ -998,12 +990,12 @@ class DaemonClient:
                         'copy_env': True,
                         'stdout_stream': {
                             'class': 'FileStream',
-                            'filename': self.zmq_broker_service_log_file,
+                            'filename': self._zmq_broker_service_log_file,
                             'time_format': '%Y-%m-%d %H:%M:%S',
                         },
                         'stderr_stream': {
                             'class': 'FileStream',
-                            'filename': self.zmq_broker_service_log_file,
+                            'filename': self._zmq_broker_service_log_file,
                             'time_format': '%Y-%m-%d %H:%M:%S',
                         },
                         'env': self.get_env(),

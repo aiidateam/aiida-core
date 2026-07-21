@@ -55,11 +55,14 @@ class TestZeromqBrokerStatusQueries:
 
     def test_is_running_no_pid_file(self, zeromq_broker):
         """Test is_running returns False when no PID file exists."""
-        assert not zeromq_broker.is_service_reachable()
+        assert not zeromq_broker.check_service_reachable()
 
-    def test_get_service_status_no_file(self, zeromq_broker):
-        """Test get_service_status returns None when no status file exists."""
-        assert zeromq_broker.get_service_status() is None
+    def test_probe_service_status_no_file(self, zeromq_broker):
+        """Test probe_service_status captures a missing status file in the payload."""
+        assert zeromq_broker.probe_service_status() == {
+            'connected': False,
+            'error': f'Status file `{zeromq_broker.service_dir / "broker.status"}` does not exist.',
+        }
 
     def test_str_running(self, zeromq_broker_with_server):
         """Test __str__ when running."""
@@ -86,21 +89,33 @@ class TestZeromqBrokerStatusQueries:
         pid_file.write_text('aiida-zeromq-broker 12345')
 
         with patch('aiida.brokers.zeromq.broker.psutil.Process', side_effect=psutil.NoSuchProcess(pid=12345)):
-            assert not zeromq_broker.is_service_reachable()
+            assert not zeromq_broker.check_service_reachable()
 
-    def test_get_service_status_valid(self, zeromq_broker):
-        """Test get_service_status with valid JSON."""
+    def test_probe_service_status_valid(self, zeromq_broker):
+        """Test probe_service_status with valid JSON."""
         status_file = zeromq_broker.service_dir / 'broker.status'
         status_file.write_text(json.dumps({'pid': 123, 'running': True}))
-        status = zeromq_broker.get_service_status()
-        assert status is not None
+        status = zeromq_broker.probe_service_status()
+        assert status['connected'] is False
         assert status['pid'] == 123
 
-    def test_get_service_status_invalid_json(self, zeromq_broker):
-        """Test get_service_status with invalid JSON."""
+    def test_probe_service_status_invalid_json(self, zeromq_broker):
+        """Test probe_service_status captures invalid JSON in the payload."""
         status_file = zeromq_broker.service_dir / 'broker.status'
         status_file.write_text('{INVALID JSON')
-        assert zeromq_broker.get_service_status() is None
+        status = zeromq_broker.probe_service_status()
+        assert status['connected'] is False
+        assert 'JSONDecodeError:' in str(status['error'])
+
+    def test_probe_service_status_invalid_payload_type(self, zeromq_broker, caplog):
+        """Test probe_service_status captures valid JSON with an invalid top-level type."""
+        status_file = zeromq_broker.service_dir / 'broker.status'
+        status_file.write_text(json.dumps(['invalid']))
+
+        status = zeromq_broker.probe_service_status()
+
+        assert status == {'connected': False, 'error': "Invalid ZeroMQ service status file found: ['invalid']"}
+        assert "Invalid ZeroMQ service status file found: ['invalid']" in caplog.text
 
 
 class TestZeromqBrokerCommunicator:
@@ -224,8 +239,8 @@ class TestZeromqBrokerIntegration:
 
     def test_broker_lifecycle(self, zeromq_broker_with_server):
         """Test the zeromq_broker lifecycle."""
-        assert zeromq_broker_with_server.is_service_reachable()
+        assert zeromq_broker_with_server.check_service_reachable()
 
-        status = zeromq_broker_with_server.get_service_status()
-        assert status is not None
+        status = zeromq_broker_with_server.probe_service_status()
+        assert status['connected'] is True
         assert 'pid' in status

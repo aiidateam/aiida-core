@@ -8,10 +8,8 @@
 ###########################################################################
 """Test for entity fields"""
 
-import sys
-from importlib.metadata import entry_points
-
 import pytest
+from importlib_metadata import entry_points
 
 from aiida import orm
 from aiida.orm.fields import add_field
@@ -20,16 +18,7 @@ from aiida.plugins import load_entry_point
 
 EPS = entry_points()
 
-# These regression tests compare ``repr()`` output of field objects against YAML reference
-# files. Since ``repr()`` of ``typing`` generics is not stable across Python versions
-# (e.g. Python 3.14 renders ``typing.Dict`` as ``dict`` and ``typing.Optional[X]`` as
-# ``X | None``), the reference files are only valid for the Python version they were
-# generated with. Rather than maintaining two sets of reference files, we skip on
-# Python versions that don't match.
-skip_below_py314 = pytest.mark.skipif(sys.version_info < (3, 14), reason='typing repr fixtures require Python >=3.14.0')
 
-
-@skip_below_py314
 @pytest.mark.parametrize(
     'entity_cls',
     (orm.AuthInfo, orm.Comment, orm.Computer, orm.Group, orm.Log, orm.User),
@@ -47,11 +36,10 @@ def node_and_data_entry_points() -> list[tuple[str, str]]:
     _eps: list[tuple[str, str]] = []
     eps = entry_points()
     for group in ['aiida.node', 'aiida.data']:
-        _eps.extend((group, ep.name) for ep in eps.select(group=group) if ep.name.startswith('core.'))
+        _eps.extend((group, ep.name) for ep in eps.select(group=group))
     return _eps
 
 
-@skip_below_py314
 def test_all_node_fields(node_and_data_entry_points: list[tuple[str, str]], data_regression):
     """Test that all the node fields are correctly registered."""
     for group, name in node_and_data_entry_points:

@@ -98,15 +98,29 @@ class RabbitmqBroker(Broker):
         except ConnectionError:
             return f'RabbitMQ @ {url} <Connection failed>'
 
-    def get_service_status(self) -> BrokerServiceStatus | None:
+    def probe_service_status(self) -> BrokerServiceStatus:
         """Return status information reported by the RabbitMQ server."""
-        properties = self.get_communicator().server_properties
-        return {
-            key: t.cast(JsonValue, value.decode('utf-8') if isinstance(value, bytes) else value)
-            for key, value in properties.items()
-        }
+        had_communicator = self._communicator is not None
 
-    def is_service_reachable(self) -> bool:
+        try:
+            properties = self.get_communicator().server_properties
+            status: BrokerServiceStatus = {'connected': True}
+            status.update(
+                {
+                    key: t.cast(JsonValue, value.decode('utf-8') if isinstance(value, bytes) else value)
+                    for key, value in properties.items()
+                }
+            )
+            return status
+        except Exception as exception:
+            error = f'{type(exception).__name__}: {exception}'
+            LOGGER.error('Failed to probe broker status: %s', error)
+            return {'connected': False, 'error': error}
+        finally:
+            if not had_communicator:
+                self.close()
+
+    def check_service_reachable(self) -> bool:
         """Return whether the RabbitMQ service is reachable."""
         had_communicator = self._communicator is not None
 

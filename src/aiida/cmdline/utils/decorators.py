@@ -330,7 +330,7 @@ def requires_broker(wrapped, _, args, kwargs):
 
     if manager.get_broker() is None:
         echo.echo_critical(
-            f'profile `{profile.name}` does not define a broker and so cannot use this functionality.'
+            f'profile `{profile.name}` does not define a broker and so cannot use this functionality. '
             f'See {URL_NO_BROKER} for more details.'
         )
 

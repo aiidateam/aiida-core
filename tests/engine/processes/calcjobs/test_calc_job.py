@@ -1361,8 +1361,8 @@ def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_a
 
     daemon_client.restart_daemon(wait=True)
 
-    # The full stop/restart/reload/resume/finish cycle is heavy, so allow more than the fixture default: on a
-    # contended runner the post-restart wait alone has been measured at ~9s.
+    # The full stop/restart/reload/resume/finish cycle is heavy, so allow more than the fixture default: under CPU
+    # contention the post-restart wait alone approaches the 10 seconds this test used to allow.
     submit_and_await(node, plumpy.ProcessState.FINISHED, timeout=30)
 
     assert node.is_finished_ok, node.exit_status

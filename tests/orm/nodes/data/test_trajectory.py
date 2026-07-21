@@ -279,7 +279,7 @@ class TestTrajectory:
                 'pbc': [True, False],
             }
         )
-        with pytest.raises(ValueError, match='`pbc` must be a list/tuple of length three with boolean values.'):
+        with pytest.raises(ValueError, match=r'`pbc` must be a list/tuple of length three with boolean values.'):
             trajectory.set_trajectory(**data)
 
         assert trajectory.get_step_structure(0).pbc == (True, False, False)

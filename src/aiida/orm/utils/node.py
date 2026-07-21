@@ -22,7 +22,7 @@ __all__ = (
 )
 
 
-def load_node_class(type_string):
+def load_node_class(type_string):  # noqa: PLR0911
     """Return the `Node` sub class that corresponds to the given type string.
 
     :param type_string: the `type` string of the node

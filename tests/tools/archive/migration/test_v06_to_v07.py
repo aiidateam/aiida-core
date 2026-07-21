@@ -61,7 +61,7 @@ def test_migration_0040_corrupt_archive():
         'export_data': {'Node': {42: {'node_type': 'data.core.int.Int.'}, 52: {'node_type': 'data.core.dict.Dict.'}}},
     }
 
-    with pytest.raises(CorruptStorage, match='Your export archive is corrupt! Org. exception:'):
+    with pytest.raises(CorruptStorage, match=r'Your export archive is corrupt! Org. exception:'):
         data_migration_legacy_process_attributes(data)
 
     # data has one "valid" entry, in the form of Node <PK=52>.

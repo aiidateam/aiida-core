@@ -208,7 +208,7 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
             raise ValueError(f'Unknown casting key {cast}')
         return entity
 
-    def get_filter_expr_from_jsonb(
+    def get_filter_expr_from_jsonb(  # noqa: PLR0911
         self, operator: str, value, attr_key: list[str], column=None, column_name=None, alias=None
     ):
         """Return a filter expression.

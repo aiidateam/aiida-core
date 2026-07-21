@@ -27,7 +27,7 @@ def test_constructor_raises(aiida_localhost):
         path = pathlib.Path('bash')
         ContainerizedCode(computer=aiida_localhost, filepath_executable=path, engine_command='docker', image_name='img')
 
-    with pytest.raises(ValueError, match="the '{image_name}' template field should be in engine command."):
+    with pytest.raises(ValueError, match=r"the '{image_name}' template field should be in engine command."):
         ContainerizedCode(computer=aiida_localhost, filepath_executable='ls', engine_command='docker', image_name='img')
 
 

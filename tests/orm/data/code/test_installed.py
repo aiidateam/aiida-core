@@ -43,7 +43,7 @@ def test_validate(aiida_localhost, bash_path):
     code.computer = aiida_localhost
     code.base.attributes.set(code._KEY_ATTRIBUTE_FILEPATH_EXECUTABLE, None)
 
-    with pytest.raises(ValidationError, match='The `filepath_executable` is not set.'):
+    with pytest.raises(ValidationError, match=r'The `filepath_executable` is not set.'):
         code.store()
 
     code.filepath_executable = filepath_executable

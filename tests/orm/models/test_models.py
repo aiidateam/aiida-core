@@ -91,7 +91,7 @@ class RequiredNodeArguments(t.TypedDict):
 
 
 @pytest.fixture
-def required_arguments(request, default_user, aiida_localhost, tmp_path):
+def required_arguments(request, default_user, aiida_localhost, tmp_path):  # noqa: PLR0911
     if request.param is orm.AuthInfo:
         random_email = f'user{orm.User.collection.count() + 1}@aiida'
         return {

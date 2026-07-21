@@ -252,7 +252,7 @@ class BaseRestartWorkChain(WorkChain):
 
         return ToContext(children=append_(node))
 
-    def inspect_process(self) -> ExitCode | None:
+    def inspect_process(self) -> ExitCode | None:  # noqa: PLR0911
         """Analyse the results of the previous process and call the handlers when necessary.
 
         If the process is excepted or killed, the work chain will abort. Otherwise any attached handlers will be called

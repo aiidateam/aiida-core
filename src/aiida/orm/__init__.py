@@ -110,6 +110,7 @@ __all__ = (
     'XyData',
     'cif_from_ase',
     'find_bandgap',
+    'general_serializer',
     'get_loader',
     'get_query_type_from_type_string',
     'get_type_string_from_class',
@@ -121,6 +122,7 @@ __all__ = (
     'load_node',
     'load_node_class',
     'pycifrw_from_cif',
+    'serialize_to_aiida_nodes',
     'to_aiida_type',
     'validate_link',
 )

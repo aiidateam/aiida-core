@@ -68,8 +68,10 @@ __all__ = (
     'XyData',
     'cif_from_ase',
     'find_bandgap',
+    'general_serializer',
     'has_pycifrw',
     'pycifrw_from_cif',
+    'serialize_to_aiida_nodes',
     'to_aiida_type',
 )
 

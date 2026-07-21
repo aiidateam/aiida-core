@@ -29,6 +29,7 @@ from .none import *
 from .numeric import *
 from .orbital import *
 from .remote import *
+from .serializer import *
 from .singlefile import *
 from .str import *
 from .structure import *
@@ -73,8 +74,10 @@ __all__ = (
     'XyData',
     'cif_from_ase',
     'find_bandgap',
+    'general_serializer',
     'has_pycifrw',
     'pycifrw_from_cif',
+    'serialize_to_aiida_nodes',
     'to_aiida_type',
 )
 

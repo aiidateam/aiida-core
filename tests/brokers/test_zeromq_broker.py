@@ -181,8 +181,8 @@ class TestZeromqBrokerCommunicator:
             communicator_cls.assert_called_once_with(router_endpoint=endpoint, task_timeout=None)
             communicator.start.assert_called_once()
 
-    def test_get_communicator_and_close(self, aiida_broker, monkeypatch):
-        """Test get_communicator and close."""
+    def test_get_communicator(self, aiida_broker, monkeypatch):
+        """Test get_communicator."""
         monkeypatch.setattr('aiida.brokers.zeromq.broker.BROKER_READY_TIMEOUT', 0.5)
         comm = aiida_broker.get_communicator()
         assert comm is not None

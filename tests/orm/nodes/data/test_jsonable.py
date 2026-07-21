@@ -118,7 +118,7 @@ def test_unimportable_module():
 
     loaded = load_node(node.pk)
 
-    with pytest.raises(ImportError, match=r'the objects module `not.existing` can not be imported.'):
+    with pytest.raises(ImportError, match='the objects module `not\\.existing` can not be imported'):
         _ = loaded.obj
 
 

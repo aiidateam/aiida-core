@@ -1336,7 +1336,7 @@ def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: P
             transport.compress('tar', tmp_path_remote, tmp_path_remote / 'already_exist.tar', '/', overwrite=False)
 
         # if the remotedestination is a directory, raise a sensible error.
-        with pytest.raises(OSError, match=r' is a directory, should include a filename.'):
+        with pytest.raises(OSError, match=' is a directory, should include a filename'):
             transport.compress('tar', tmp_path_remote, tmp_path_remote, '/')
 
         # if the root_dir is not a directory
@@ -1359,7 +1359,7 @@ def test_compress_error_handling(custom_transport: Transport, tmp_path_remote: P
         monkeypatch.setattr(transport, 'exec_command_wait', mock_exec_command_wait)
         monkeypatch.setattr(transport, 'exec_command_wait_async', mock_exec_command_wait_async)
 
-        with pytest.raises(OSError, match=r'Error while creating the tar archive.'):
+        with pytest.raises(OSError, match=r'Error while creating the tar archive'):
             Path(tmp_path_remote / 'file').touch()
             transport.compress('tar', tmp_path_remote, tmp_path_remote / 'archive.tar', '/')
 
@@ -1517,7 +1517,7 @@ def test_extract(
     monkeypatch.setattr(transport, 'exec_command_wait', mock_exec_command_wait)
     monkeypatch.setattr(transport, 'exec_command_wait_async', mock_exec_command_wait_async)
 
-    with pytest.raises(OSError, match=r'Error while extracting the tar archive.'):
+    with pytest.raises(OSError, match='Error while extracting the tar archive'):
         with custom_transport as transport:
             transport.extract(tmp_path_remote / archive_name, tmp_path_remote / 'extracted_1')
 

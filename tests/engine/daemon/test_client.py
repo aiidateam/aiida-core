@@ -91,7 +91,7 @@ def test_get_daemon_client_does_not_switch_profile(empty_config, profile_factory
 
 def test_get_status_daemon_not_running(stopped_daemon_client):
     """Test ``DaemonClient.get_status`` output when the daemon is not running."""
-    with pytest.raises(DaemonNotRunningException, match=r'The daemon is not running.'):
+    with pytest.raises(DaemonNotRunningException, match='The daemon is not running'):
         stopped_daemon_client.get_status()
 
 
@@ -103,7 +103,7 @@ def raise_daemon_timeout():
 @patch.object(DaemonClient, 'get_status', lambda _: raise_daemon_timeout())
 def test_get_status_timeout(stopped_daemon_client):
     """Test ``DaemonClient.get_status`` output when the circus daemon process cannot be reached."""
-    with pytest.raises(DaemonTimeoutException, match=r'Connection to the daemon timed out.'):
+    with pytest.raises(DaemonTimeoutException, match='Connection to the daemon timed out'):
         stopped_daemon_client.get_status()
 
 

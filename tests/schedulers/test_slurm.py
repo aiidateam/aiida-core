@@ -42,7 +42,7 @@ def test_resource_validation():
     """Tests to verify that resources are correctly validated."""
     with pytest.raises(
         ValueError,
-        match=r'At least two among `num_machines`, `num_mpiprocs_per_machine` or `tot_num_mpiprocs` must be specified.',
+        match='At least two among `num_machines`, `num_mpiprocs_per_machine` or `tot_num_mpiprocs` must be specified',
     ):
         SlurmJobResource()
 
@@ -56,11 +56,11 @@ def test_resource_validation():
     }
 
     with pytest.raises(
-        ValueError, match=r'`tot_num_mpiprocs` is not equal to `num_mpiprocs_per_machine \\* num_machines`.'
+        ValueError, match='`tot_num_mpiprocs` is not equal to `num_mpiprocs_per_machine \\* num_machines`'
     ):
         SlurmJobResource(num_cores_per_machine=1, tot_num_mpiprocs=1, num_mpiprocs_per_machine=2)
 
-    with pytest.raises(ValueError, match=r'num_cores_per_machine must be greater than or equal to one.'):
+    with pytest.raises(ValueError, match='num_cores_per_machine must be greater than or equal to one'):
         SlurmJobResource(num_machines=1, tot_num_mpiprocs=1, num_cores_per_machine=0)
 
     with pytest.raises(
@@ -182,13 +182,13 @@ def test_time_conversion_errors(caplog):
 
     # Disable logging to avoid excessive output during test
     with caplog.at_level(logging.CRITICAL):
-        with pytest.raises(ValueError, match=r'Unrecognized format for time string.'):
+        with pytest.raises(ValueError, match='Unrecognized format for time string'):
             # Empty string not valid
             scheduler._convert_time('')
-        with pytest.raises(ValueError, match=r'Unrecognized format for time string.'):
+        with pytest.raises(ValueError, match='Unrecognized format for time string'):
             # there should be something after the dash
             scheduler._convert_time('1-')
-        with pytest.raises(ValueError, match=r'Unrecognized format for time string.'):
+        with pytest.raises(ValueError, match='Unrecognized format for time string'):
             # there should be something after the dash
             # there cannot be a dash after the colons
             scheduler._convert_time('1:2-3')

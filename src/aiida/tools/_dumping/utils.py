@@ -24,6 +24,15 @@ from aiida.common import AIIDA_LOGGER, timezone
 from aiida.manage.configuration import Profile
 from aiida.tools._dumping.config import DumpMode, GroupDumpConfig, ProcessDumpConfig, ProfileDumpConfig
 
+# Optional support for aiida-workgraph
+try:
+    from aiida_workgraph.orm.workgraph import WorkGraphNode  # type: ignore[import-not-found]
+    # `type: ignore` due to untyped package
+
+    wg_available = True
+except ImportError:
+    wg_available = False
+
 RegistryNameType = Literal['calculations', 'workflows', 'groups']
 
 # Progress bar format for dump operations - wider description field to avoid truncation
@@ -45,6 +54,10 @@ ORM_TYPE_TO_REGISTRY = {
     orm.Group: 'groups',
 }
 
+# Register WorkGraphNode if aiida-workgraph is available
+# Note: WorkGraphNode inherits from WorkChainNode, so isinstance checks throughout the codebase work correctly
+if wg_available:
+    ORM_TYPE_TO_REGISTRY[WorkGraphNode] = 'workflows'
 
 logger = AIIDA_LOGGER.getChild('tools._dumping.utils')
 

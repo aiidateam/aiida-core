@@ -52,13 +52,13 @@ def run_aiida_broker_service_for_profile() -> t.Callable[..., t.ContextManager[Z
         broker = ZeromqBroker(profile)
 
         if broker.check_service_reachable():
-            msg = f'The ZeroMQ broker service is already running at `{broker.service_dir}`.'
+            msg = f'The ZeroMQ broker service is already running at `{broker._service_dir}`.'
             raise RuntimeError(msg)
 
-        broker.service_dir.mkdir(exist_ok=False)
+        broker._service_dir.mkdir(exist_ok=False)
 
         process = subprocess.Popen(
-            [sys.executable, '-m', 'aiida.brokers.zeromq.service', '--service-dir', str(broker.service_dir)],
+            [sys.executable, '-m', 'aiida.brokers.zeromq.service', '--service-dir', str(broker._service_dir)],
             start_new_session=True,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
@@ -86,7 +86,7 @@ def run_aiida_broker_service_for_profile() -> t.Callable[..., t.ContextManager[Z
                     process.kill()
                     process.wait()
 
-            shutil.rmtree(broker.service_dir, ignore_errors=True)
+            shutil.rmtree(broker._service_dir, ignore_errors=True)
 
     return run_broker_service
 

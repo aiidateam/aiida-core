@@ -73,7 +73,7 @@ class TestZeromqBrokerStatusQueries:
         """Test probe_service_status captures a missing status file in the payload."""
         assert zeromq_broker.probe_service_status() == {
             'connected': False,
-            'error': f'Status file `{zeromq_broker.service_dir / "broker.status"}` does not exist.',
+            'error': f'Status file `{zeromq_broker._service_dir / "broker.status"}` does not exist.',
         }
 
     def test_str_running(self, aiida_broker):
@@ -87,17 +87,17 @@ class TestZeromqBrokerStatusQueries:
         s = str(zeromq_broker)
         assert 'not running' in s
 
-    def test_storage_path(self, zeromq_broker, tmp_path):
-        """Test storage_path property."""
-        assert zeromq_broker.storage_path == tmp_path / 'storage'
+    def test__storage_path(self, zeromq_broker, tmp_path):
+        """Test internal storage path."""
+        assert zeromq_broker._storage_path == tmp_path / 'storage'
 
-    def test_service_dir(self, zeromq_broker, tmp_path):
-        """Test service_dir property."""
-        assert zeromq_broker.service_dir == tmp_path
+    def test__service_dir(self, zeromq_broker, tmp_path):
+        """Test internal service directory."""
+        assert zeromq_broker._service_dir == tmp_path
 
     def test_is_running_stale_pid(self, zeromq_broker):
         """Test is_running with stale PID."""
-        pid_file = zeromq_broker.service_dir / 'broker.pid'
+        pid_file = zeromq_broker._service_dir / 'broker.pid'
         pid_file.write_text('aiida-zeromq-broker 12345')
 
         with patch('aiida.brokers.zeromq.broker.psutil.Process', side_effect=psutil.NoSuchProcess(pid=12345)):
@@ -105,7 +105,7 @@ class TestZeromqBrokerStatusQueries:
 
     def test_probe_service_status_valid(self, zeromq_broker):
         """Test probe_service_status with valid JSON."""
-        status_file = zeromq_broker.service_dir / 'broker.status'
+        status_file = zeromq_broker._service_dir / 'broker.status'
         status_file.write_text(json.dumps({'pid': 123, 'running': True}))
         status = zeromq_broker.probe_service_status()
         assert status['connected'] is False
@@ -113,7 +113,7 @@ class TestZeromqBrokerStatusQueries:
 
     def test_probe_service_status_invalid_json(self, zeromq_broker):
         """Test probe_service_status captures invalid JSON in the payload."""
-        status_file = zeromq_broker.service_dir / 'broker.status'
+        status_file = zeromq_broker._service_dir / 'broker.status'
         status_file.write_text('{INVALID JSON')
         status = zeromq_broker.probe_service_status()
         assert status['connected'] is False
@@ -121,7 +121,7 @@ class TestZeromqBrokerStatusQueries:
 
     def test_probe_service_status_invalid_payload_type(self, zeromq_broker, caplog):
         """Test probe_service_status captures valid JSON with an invalid top-level type."""
-        status_file = zeromq_broker.service_dir / 'broker.status'
+        status_file = zeromq_broker._service_dir / 'broker.status'
         status_file.write_text(json.dumps(['invalid']))
 
         status = zeromq_broker.probe_service_status()
@@ -214,7 +214,7 @@ class TestZeromqBrokerTasks:
 
     def test_iterate_tasks_with_data(self, zeromq_broker):
         """Test iterate_tasks with pending tasks."""
-        queue_path = zeromq_broker.storage_path / 'tasks'
+        queue_path = zeromq_broker._storage_path / 'tasks'
         queue = PersistentQueue(queue_path)
         queue.push('task-1', {'body': 'hello'})
         queue.push('task-2', {'body': 'world'})

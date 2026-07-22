@@ -249,7 +249,7 @@ class TestServerInitializationOptimization:
         sockets_path = tmp_path / 'sockets'
 
         server = ZeromqBrokerServer(storage_path, sockets_path)
-        assert server.storage_path == storage_path
+        assert server._storage_path == storage_path
         assert server.sockets_path == sockets_path
 
 

@@ -37,7 +37,7 @@ def aiida_broker():
 
 def get_router_endpoint(broker: ZeromqBroker) -> str:
     """Construct the router endpoint from the broker service socket file."""
-    sockets_path = Path((broker.service_dir / 'broker.sockets').read_text().strip())
+    sockets_path = Path((broker._service_dir / 'broker.sockets').read_text().strip())
     return f'ipc://{sockets_path}/router.sock'
 
 

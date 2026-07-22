@@ -72,14 +72,6 @@ class ZeromqBroker(Broker):
             return f'ZeroMQ Broker (PID {pid}) @ {self._service_dir}'
         return f'ZeroMQ Broker @ {self._service_dir} <not running>'
 
-    @property
-    def storage_path(self) -> Path:
-        return self._storage_path
-
-    @property
-    def service_dir(self) -> Path:
-        return self._service_dir
-
     # --- Status queries (read PID/status/socket files) ---
 
     def _get_sockets_path(self) -> Path | None:
@@ -188,7 +180,7 @@ class ZeromqBroker(Broker):
 
         return self._communicator
 
-    def iterate_tasks(self) -> t.Iterator[ZeromqIncomingTask]:
+    def iterate_tasks(self) -> t.Iterator[t.Any]:
         queue_path = self._storage_path / 'tasks'
         if not queue_path.exists():
             return

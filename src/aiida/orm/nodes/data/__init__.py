@@ -18,10 +18,13 @@ from .bool import *
 from .cif import *
 from .code import *
 from .data import *
+from .datetime import *
+from .deserializer import *
 from .dict import *
 from .enum import *
 from .float import *
 from .folder import *
+from .function import *
 from .int import *
 from .jsonable import *
 from .list import *
@@ -45,10 +48,12 @@ __all__ = (
     'Code',
     'ContainerizedCode',
     'Data',
+    'DateTimeData',
     'Dict',
     'EnumData',
     'Float',
     'FolderData',
+    'FunctionData',
     'InstalledCode',
     'Int',
     'JsonableData',
@@ -73,6 +78,7 @@ __all__ = (
     'UpfData',
     'XyData',
     'cif_from_ase',
+    'deserialize_to_raw_python_data',
     'find_bandgap',
     'general_serializer',
     'has_pycifrw',

@@ -169,7 +169,7 @@ class PluginParamType(EntryPointType):
             entry_point = entry_points_by_name.get(p)
             if entry_point is not None:
                 try:
-                    plugin = entry_point.load()
+                    plugin = entry_point.load()  # type: ignore[no-untyped-call]
                     if plugin.__doc__:
                         # extract the initial/summary paragraph (before double newline)
                         doc_summary = plugin.__doc__.strip().split('\n\n')[0]
@@ -260,7 +260,7 @@ class PluginParamType(EntryPointType):
 
         if self.load:
             try:
-                return entry_point.load()
+                return entry_point.load()  # type: ignore[no-untyped-call]
             except exceptions.LoadingEntryPointError as exception:
                 raise click.BadParameter(str(exception))
         else:

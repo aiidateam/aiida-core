@@ -359,8 +359,6 @@ class Manager:
             # Backwards compatibility. Before adding broker entry points, profiles used to define ``rabbitmq``.
             if entry_point == 'rabbitmq':
                 entry_point = 'core.rabbitmq'
-            elif entry_point == 'zeromq':
-                entry_point = 'core.zeromq'
 
             broker_cls = BrokerFactory(entry_point)
             self._broker = broker_cls(self._profile)

@@ -177,7 +177,7 @@ class TestZeromqBrokerCommunicator:
             patch.object(ZeromqBroker, '_router_endpoint', new_callable=PropertyMock) as router_endpoint,
             patch('aiida.brokers.zeromq.broker.time.monotonic', side_effect=[100.0, 100.1, 105.1, 105.2]),
             patch('aiida.brokers.zeromq.broker.time.sleep') as sleep,
-            patch('aiida.brokers.zeromq.broker.AIIDA_LOGGER.warning') as warning,
+            patch('aiida.brokers.zeromq.broker.LOGGER.warning') as warning,
             patch('aiida.manage.configuration.get_config_option', return_value=None),
             patch('aiida.brokers.zeromq.broker.ZeromqCommunicator') as communicator_cls,
         ):

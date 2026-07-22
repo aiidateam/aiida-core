@@ -173,7 +173,7 @@ class ZeromqBroker(Broker):
                     if router_endpoint is not None:
                         break
                     if not warning_issued and time.monotonic() > warning_deadline:
-                        AIIDA_LOGGER.warning('Still waiting for broker to become ready...')
+                        LOGGER.warning('Still waiting for broker to become ready...')
                         warning_issued = True
                 else:
                     msg = f'Broker did not become ready within {BROKER_READY_TIMEOUT}s: {self}'

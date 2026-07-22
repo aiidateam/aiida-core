@@ -41,10 +41,13 @@ repos:
     exclude: uv.lock
   - id: pretty-format-yaml
     args: [--autofix]
+    # .coderabbit.yaml: the hook strips quotes from `'off'`, which YAML 1.1 then
+    # reads as boolean false and CodeRabbit's schema rejects (it wants the string).
     exclude: >-
       (?x)^(
         tests/.*|
         environment.yml|
+        \.coderabbit\.yaml|
       )$
 
 - repo: https://github.com/astral-sh/uv-pre-commit

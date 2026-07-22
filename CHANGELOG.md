@@ -13,6 +13,21 @@ Scripts that previously ran `verdi daemon start` after `verdi presto` continue t
 
 `verdi storage maintain` now deletes each set of loose files right after the pack to which they were added is written, keeping peak disk usage near the initial size instead of needing roughly double. Pass `--no-incremental-cleanup` to retain the previous behavior (defer cleanup until all packs are written, at the cost of higher peak disk usage).
 
+**ORM model system: use specialized model classes instead of `Model`**
+
+The new ORM model system introduces specialized schemas such as `ReadModel`, `WriteModel`, `ConstructorModel`, and `CliModel` (where supported).
+
+The public `Model` attribute remains available as a deprecated compatibility wrapper for validation and introspection, to give plugin developers time to migrate during the experimental model-system transition. New integrations should use the specialized model classes directly.
+
+Update code as follows:
+
+- use `ReadModel` for read/serialization schemas
+- use `WriteModel` for attribute-based schemas
+- use `ConstructorModel` for constructor-based schemas, where supported
+- use `CliModel` for CLI-oriented schemas, where supported
+
+If existing plugin code still references `Class.Model`, keep it only as a temporary compatibility layer and migrate to the specialized models.
+
 ## v2.8.0 - 2026-03-16
 
 This release brings important improvements to the `BaseRestartWorkChain`, the engine, stashing, typing coverage, and dependency updates.

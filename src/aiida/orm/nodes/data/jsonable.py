@@ -241,6 +241,11 @@ class JsonableData(Data):
         """
         return self._get_object()
 
+    @property
+    def value(self) -> JsonSerializableProtocol:
+        """Alias of :attr:`obj`, mirroring the ``value`` accessor of the simple data types (``Int``, ``Str``, ...)."""
+        return self._get_object()
+
     @classmethod
     def _deserialize_float_constants(cls, data: typing.Any):
         """Deserialize the contents of a dictionary ``data`` deserializing infinity and NaN string constants.

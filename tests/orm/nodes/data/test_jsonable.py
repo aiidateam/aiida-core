@@ -181,6 +181,12 @@ class PydanticObj(BaseModel):
     b: str
 
 
+def test_value_is_alias_of_obj():
+    """``.value`` mirrors ``.obj`` for consistency with the simple data types."""
+    node = JsonableData(JsonableClass({'a': 1}))
+    assert node.value is node.obj
+
+
 def test_wrap_object_with_to_dict():
     """An object exposing ``to_dict`` (not ``as_dict``) round-trips."""
     node = JsonableData(ToDictClass(7)).store()

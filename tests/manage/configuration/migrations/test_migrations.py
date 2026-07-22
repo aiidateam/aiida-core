@@ -15,9 +15,15 @@ import uuid
 
 import pytest
 
-from aiida.common.exceptions import ConfigurationError
+from aiida.common.exceptions import ConfigurationError, ConfigurationVersionError
 from aiida.manage.configuration.migrations import check_and_migrate_config
-from aiida.manage.configuration.migrations.migrations import MIGRATIONS, Initial, downgrade_config, upgrade_config
+from aiida.manage.configuration.migrations.migrations import (
+    CURRENT_CONFIG_VERSION,
+    MIGRATIONS,
+    Initial,
+    downgrade_config,
+    upgrade_config,
+)
 
 
 class CircularMigration(Initial):
@@ -64,10 +70,21 @@ def test_downgrade_path_fail(load_config_sample):
         downgrade_config(config_initial, 4, migrations=[CircularMigration])
 
 
+def test_config_needs_migrating_incompatible_version():
+    """An incompatible configuration version should raise with downgrade guidance."""
+    config = {
+        'CONFIG_VERSION': {'CURRENT': CURRENT_CONFIG_VERSION + 1, 'OLDEST_COMPATIBLE': CURRENT_CONFIG_VERSION + 1}
+    }
+
+    with pytest.raises(ConfigurationVersionError, match=r'verdi config downgrade'):
+        check_and_migrate_config(config, filepath='/tmp/config.json')
+
+
 def test_migrate_full(load_config_sample, monkeypatch):
     """Test the full config migration."""
     config_initial = load_config_sample('input/0.json')
-    config_target = load_config_sample('reference/final.json')
+    # this should be always the most recent version
+    config_target = load_config_sample('reference/10.json')
 
     # This change is necessary for the migration to version 2.
     monkeypatch.setattr(uuid, 'uuid4', lambda: uuid.UUID(hex='0' * 32))
@@ -87,6 +104,176 @@ def test_migrate_individual(load_config_sample, initial, target, monkeypatch):
 
     config_migrated = upgrade_config(config_initial, target)
     assert config_migrated == config_target
+
+
+def test_migrate_rmq_and_logging_leaves_unset_options_implicit():
+    """Upgrade to version 10 should only rename explicit options and leave defaults implicit."""
+    config = {
+        'CONFIG_VERSION': {'CURRENT': 9, 'OLDEST_COMPATIBLE': 9},
+        'profiles': {
+            'default': {
+                'storage': {'backend': 'core.psql_dos', 'config': {}},
+                'process_control': {'backend': 'rabbitmq', 'config': {}},
+            }
+        },
+    }
+
+    migrated = upgrade_config(config, 10)
+
+    assert 'options' not in migrated['profiles']['default']
+    assert 'options' not in migrated
+
+
+def test_migrate_rmq_and_logging_preserves_explicit_values():
+    """Upgrade to version 10 should not overwrite explicitly configured logging options."""
+    config = {
+        'CONFIG_VERSION': {'CURRENT': 9, 'OLDEST_COMPATIBLE': 9},
+        'profiles': {
+            'default': {
+                'storage': {'backend': 'core.psql_dos', 'config': {}},
+                'process_control': {'backend': 'rabbitmq', 'config': {}},
+                'options': {
+                    'logging.verdi_loglevel': 'DEBUG',
+                    'logging.db_loglevel': 'INFO',
+                },
+            }
+        },
+        'options': {
+            'logging.plumpy_loglevel': 'ERROR',
+            'rmq.task_timeout': 5,
+        },
+    }
+
+    migrated = upgrade_config(config, 10)
+
+    assert migrated['profiles']['default']['options'] == {
+        'logging.verdi_loglevel': 'DEBUG',
+        'logging.database_handler': 'INFO',
+    }
+    assert migrated['options'] == {
+        'logging.plumpy_loglevel': 'ERROR',
+        'broker.task_timeout': 5,
+    }
+
+
+def test_rename_rmq_and_logging_upgrade_renames_options():
+    """Upgrade to version 10 should rename deprecated global and profile options."""
+    config = {
+        'CONFIG_VERSION': {'CURRENT': 9, 'OLDEST_COMPATIBLE': 9},
+        'profiles': {
+            'default': {
+                'storage': {'backend': 'core.psql_dos', 'config': {}},
+                'process_control': {'backend': 'rabbitmq', 'config': {}},
+                'options': {
+                    'logging.db_loglevel': 'INFO',
+                    'rmq.task_timeout': 3,
+                },
+            }
+        },
+        'options': {
+            'logging.db_loglevel': 'WARNING',
+            'rmq.task_timeout': 5,
+        },
+    }
+
+    migrated = upgrade_config(config, 10)
+
+    assert migrated['options']['logging.database_handler'] == 'WARNING'
+    assert migrated['options']['broker.task_timeout'] == 5
+    assert 'logging.db_loglevel' not in migrated['options']
+    assert 'rmq.task_timeout' not in migrated['options']
+
+    profile_options = migrated['profiles']['default']['options']
+    assert profile_options['logging.database_handler'] == 'INFO'
+    assert profile_options['broker.task_timeout'] == 3
+    assert 'logging.db_loglevel' not in profile_options
+    assert 'rmq.task_timeout' not in profile_options
+
+
+def test_rename_rmq_and_logging_downgrade_renames_options():
+    """Downgrade to version 9 should rename replacement global and profile options back."""
+    config = {
+        'CONFIG_VERSION': {'CURRENT': 10, 'OLDEST_COMPATIBLE': 9},
+        'profiles': {
+            'default': {
+                'storage': {'backend': 'core.psql_dos', 'config': {}},
+                'process_control': {'backend': 'rabbitmq', 'config': {}},
+                'options': {
+                    'logging.database_handler': 'INFO',
+                    'broker.task_timeout': 3,
+                    'logging.aiida_core_loglevel': 'DEBUG',
+                    'logging.terminal_handler': 'INFO',
+                    'logging.disk_objectstore_loglevel': 'INHERIT',
+                },
+            }
+        },
+        'options': {
+            'logging.database_handler': 'WARNING',
+            'broker.task_timeout': 5,
+            'logging.aiida_core_loglevel': 'DEBUG',
+            'logging.terminal_handler': 'INFO',
+            'logging.disk_objectstore_loglevel': 'INHERIT',
+        },
+    }
+
+    migrated = downgrade_config(config, 9)
+
+    assert migrated['options']['logging.db_loglevel'] == 'WARNING'
+    assert migrated['options']['rmq.task_timeout'] == 5
+    assert 'logging.database_handler' not in migrated['options']
+    assert 'broker.task_timeout' not in migrated['options']
+    assert 'logging.aiida_core_loglevel' not in migrated['options']
+    assert 'logging.terminal_handler' not in migrated['options']
+
+    profile_options = migrated['profiles']['default']['options']
+    assert profile_options['logging.db_loglevel'] == 'INFO'
+    assert profile_options['rmq.task_timeout'] == 3
+    assert 'logging.database_handler' not in profile_options
+    assert 'broker.task_timeout' not in profile_options
+    assert 'logging.aiida_core_loglevel' not in profile_options
+    assert 'logging.terminal_handler' not in profile_options
+
+
+def test_rename_rmq_and_logging_downgrade_resolves_inherit_levels():
+    """Downgrade to version 9 should resolve ``INHERIT`` to the effective ``logging.aiida_loglevel``."""
+    config = {
+        'CONFIG_VERSION': {'CURRENT': 10, 'OLDEST_COMPATIBLE': 9},
+        'profiles': {
+            'default': {
+                'storage': {'backend': 'core.psql_dos', 'config': {}},
+                'process_control': {'backend': 'rabbitmq', 'config': {}},
+                'options': {
+                    'logging.aiida_loglevel': 'INFO',
+                    'logging.kiwipy_loglevel': 'INHERIT',
+                    'logging.paramiko_loglevel': 'INHERIT',
+                },
+            },
+            'other': {
+                'storage': {'backend': 'core.psql_dos', 'config': {}},
+                'process_control': {'backend': 'rabbitmq', 'config': {}},
+                'options': {
+                    'logging.circus_loglevel': 'INHERIT',
+                },
+            },
+        },
+        'options': {
+            'logging.aiida_loglevel': 'ERROR',
+            'logging.verdi_loglevel': 'INHERIT',
+            'logging.plumpy_loglevel': 'INHERIT',
+        },
+    }
+
+    migrated = downgrade_config(config, 9)
+
+    assert migrated['options']['logging.verdi_loglevel'] == 'ERROR'
+    assert migrated['options']['logging.plumpy_loglevel'] == 'ERROR'
+
+    default_options = migrated['profiles']['default']['options']
+    assert default_options['logging.kiwipy_loglevel'] == 'INFO'
+    assert default_options['logging.paramiko_loglevel'] == 'INFO'
+
+    other_options = migrated['profiles']['other']['options']
+    assert other_options['logging.circus_loglevel'] == 'ERROR'
 
 
 def test_merge_storage_backends_downgrade_profile(empty_config, profile_factory, caplog):

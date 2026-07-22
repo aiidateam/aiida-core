@@ -147,9 +147,9 @@ class TestSemaphoreBehavior:
         tasks = [transport.exec_command_wait_async(f'cmd{i}') for i in range(5)]
         await asyncio.gather(*tasks)
 
-        assert (
-            max_concurrent <= max_allowed
-        ), f'Semaphore should limit to {max_allowed} concurrent ops, got {max_concurrent}'
+        assert max_concurrent <= max_allowed, (
+            f'Semaphore should limit to {max_allowed} concurrent ops, got {max_concurrent}'
+        )
         assert max_concurrent == max_allowed, f'Expected {max_allowed} concurrent ops to verify semaphore is being used'
 
 
@@ -177,6 +177,15 @@ class _TestOpenSSH(_OpenSSH):
     def __init__(self):
         self.machine = 'localhost'
         self.bash_command = 'bash -c '
+
+
+def test_openssh_path_exists_raises_on_unexpected_return_code():
+    """`_OpenSSH.path_exists` raises on a return code other than 0/1 (255 = SSH connection failure)."""
+    backend = _TestOpenSSH()
+    backend.openssh_execute = AsyncMock(return_value=(255, '', ''))
+
+    with pytest.raises(OSError, match='Failed to check whether path exists'):
+        asyncio.run(backend.path_exists('/remote/path'))
 
 
 class TestSshCommandGenerator:
@@ -218,9 +227,11 @@ def test_escape_for_glob_preserves_wildcards_escapes_dangerous_chars():
 
 
 def test_escape_for_rcp():
-    """Test RCP mode escapes shell metacharacters."""
+    """Test RCP mode escapes shell metacharacters but preserves globs."""
     backend = _TestOpenSSH()
     assert backend._escape_for_rcp('/path/with spaces/$VAR;cmd') == '/path/with\\ spaces/\\$VAR\\;cmd'
+    # Glob characters pass through so the remote shell can expand them.
+    assert backend._escape_for_rcp('/dir/*.[ch]') == '/dir/*.[ch]'
 
 
 def test_escape_for_scp_version_aware():

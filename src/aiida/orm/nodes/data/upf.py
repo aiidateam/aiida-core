@@ -131,9 +131,9 @@ def upload_upf_family(folder, group_label, group_description, stop_if_existing=T
 
     if group.user.email != default_user.email:
         raise UniquenessError(
-            'There is already a UpfFamily group with label {}'
-            ', but it belongs to user {}, therefore you '
-            'cannot modify it'.format(group_label, group.user.email)
+            f'There is already a UpfFamily group with label {group_label}'
+            f', but it belongs to user {group.user.email}, therefore you '
+            'cannot modify it'
         )
 
     # Always update description, even if the group already existed
@@ -264,9 +264,7 @@ def parse_upf(fname, check_filename=True, encoding='utf-8'):
     if check_filename:
         if not os.path.basename(fname).lower().startswith(element.lower()):
             raise ParsingError(
-                'Filename {0} was recognized for element ' '{1}, but the filename does not start ' 'with {1}'.format(
-                    fname, element
-                )
+                f'Filename {fname} was recognized for element {element}, but the filename does not start with {element}'
             )
 
     parsed_data['element'] = element

@@ -31,8 +31,9 @@ def verdi_config():
 @verdi_config.command('list')
 @click.argument('prefix', metavar='PREFIX', required=False, default='')
 @click.option('-d', '--description', is_flag=True, help='Include description of options')
+@click.option('--advanced', is_flag=True, help='Show all options including advanced per-logger settings.')
 @click.pass_context
-def verdi_config_list(ctx, prefix, description: bool):
+def verdi_config_list(ctx, prefix, description: bool, advanced: bool):
     """List AiiDA options for the current profile.
 
     Optionally filtered by a prefix.
@@ -56,24 +57,29 @@ def verdi_config_list(ctx, prefix, description: bool):
             return '\n'.join(str(v) for v in val)
         return val
 
+    def is_included(name, option):
+        return name.startswith(prefix) and option.deprecated_by is None and not (option.advanced and not advanced)
+
     if description:
         table = [
             [name, source, _join(value), '\n'.join(textwrap.wrap(c.description))]
             for name, (c, source, value) in option_values.items()
-            if name.startswith(prefix)
+            if is_included(name, c)
         ]
         headers = ['name', 'source', 'value', 'description']
     else:
         table = [
-            [name, source, _join(value)]
-            for name, (c, source, value) in option_values.items()
-            if name.startswith(prefix)
+            [name, source, _join(value)] for name, (c, source, value) in option_values.items() if is_included(name, c)
         ]
         headers = ['name', 'source', 'value']
 
     # sort by name
     table = sorted(table, key=lambda x: x[0])
     echo.echo(tabulate(table, headers=headers))
+
+    if not advanced:
+        echo.echo('')
+        echo.echo('Use `verdi config list --advanced` to show all per-logger options.')
 
 
 @verdi_config.command('show')
@@ -128,6 +134,7 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
     import typing
 
     from aiida.common.exceptions import ConfigurationError
+    from aiida.manage.configuration.options import get_option
 
     if typing.TYPE_CHECKING:
         from aiida.manage.configuration import Profile
@@ -157,8 +164,13 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
             value = list(set(current + [value]))
         else:
             value = [item for item in current if item != value]
-    elif option.valid_type == typing.List[str]:
+    elif option.valid_type == list[str]:
         value = [value]
+
+    # Warn about deprecated option names
+    if option.deprecated_by:
+        echo.echo_warning(f'`{option.name}` is deprecated using `{option.deprecated_by}` instead.')
+        option = get_option(option.deprecated_by)
 
     # Set the specified option
     try:
@@ -167,7 +179,18 @@ def verdi_config_set(ctx, option, value, globally, append, remove):
         echo.echo_critical(str(error))
 
     config.store()
+
+    # Warn if a handler-side filter was set more verbose than any logger level, in which case it has no effect until
+    # a logger level is lowered as well.
+    from aiida.common.log import validate_handler
+
+    if warning := validate_handler(config, option.name, scope):
+        echo.echo_warning(warning)
+
     echo.echo_success(f"'{option.name}' set to {value} {scope_text}")
+
+    if option.requires_daemon_restart:
+        echo.echo_report('Run `verdi daemon restart` for this change to take effect.')
 
 
 @verdi_config.command('unset')
@@ -193,6 +216,9 @@ def verdi_config_unset(ctx, option, globally):
     config.unset_option(option.name, scope=scope)
     config.store()
     echo.echo_success(f"'{option.name}' unset {scope_text}")
+
+    if option.requires_daemon_restart:
+        echo.echo_report('Run `verdi daemon restart` for this change to take effect.')
 
 
 @verdi_config.command('caching')

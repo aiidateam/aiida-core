@@ -20,8 +20,6 @@ from __future__ import annotations
 
 import enum
 import re
-import sys
-import typing as t
 
 import pytest
 
@@ -36,7 +34,7 @@ DEFAULT_DESCRIPTION = 'Default description'
 CUSTOM_LABEL = 'Custom label'
 CUSTOM_DESCRIPTION = 'Custom description'
 
-pytest.mark.requires_rmq
+pytestmark = pytest.mark.requires_broker
 
 
 @workfunction
@@ -443,7 +441,13 @@ def test_run_launchers():
 
 @pytest.mark.requires_rmq
 def test_submit_launchers():
-    """Verify that submit to daemon works."""
+    """Verify that submit to daemon works.
+
+    Marked ``requires_rmq`` (not ``requires_broker``) because under the ``core.zeromq`` profile the broker is bundled
+    into the daemon, so ``aiida.engine.launch.submit`` raises ``InvalidOperation`` when the daemon is not up — which a
+    CI run with only the broker started would trip. The ZeroMQ submit-of-process-function path is exercised by the
+    daemon system tests under ``.github/system_tests/test_daemon.py``.
+    """
     # Process function can be submitted and will be run by a daemon worker as long as the function is importable
     # Note that the actual running is not tested here but is done so in `.github/system_tests/test_daemon.py`.
     node = submit(add_multiply, x=orm.Int(1), y=orm.Int(2), z=orm.Int(3))
@@ -676,9 +680,9 @@ def test_type_hinting_spec_inference():
         b: str,
         c: bool,
         d: orm.Str,
-        e: t.Union[orm.Str, orm.Int],
-        f: t.Union[str, int],
-        g: t.Optional[t.Dict] = None,
+        e: orm.Str | orm.Int,
+        f: str | int,
+        g: dict | None = None,
     ):
         pass
 
@@ -722,19 +726,11 @@ def test_type_hinting_spec_inference_pep_604(caplog):
 
     # Since the PEP 604 union syntax is only available starting from Python 3.10 the type inference will not be
     # available for older versions, and so the valid type will be the default ``(orm.Data,)``.
-    if sys.version_info[:2] >= (3, 10):
-        expected = (
-            ('a', (orm.Str, orm.Int)),
-            ('b', (orm.Str, orm.Int)),
-            ('c', (orm.Dict, type(None))),
-        )
-    else:
-        assert 'function `function` has invalid type hints: unsupported operand type' in caplog.records[0].message
-        expected = (
-            ('a', (orm.Data,)),
-            ('b', (orm.Data,)),
-            ('c', (orm.Data, type(None))),
-        )
+    expected = (
+        ('a', (orm.Str, orm.Int)),
+        ('b', (orm.Str, orm.Int)),
+        ('c', (orm.Dict, type(None))),
+    )
 
     for key, valid_types in expected:
         assert key in input_namespace
@@ -745,7 +741,7 @@ def test_type_hinting_validation():
     """Test that type hints are converted to automatic type checking through the process specification."""
 
     @calcfunction  # type: ignore[misc]
-    def function_type_hinting(a: t.Union[int, float]):
+    def function_type_hinting(a: int | float):
         return a + 1
 
     with pytest.raises(ValueError, match=r'.*value \'a\' is not of the right type.*'):

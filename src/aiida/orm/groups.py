@@ -6,23 +6,27 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""AiiDA Group entites"""
+"""AiiDA Group entities"""
+
+from __future__ import annotations
 
 import datetime
 import warnings
+from collections.abc import Sequence
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Sequence, Tuple, Type, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
+from uuid import UUID
 
 from typing_extensions import Self
 
 from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
-from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 
 from . import convert, entities, extras, users
+from .pydantic import OrmMetadataField
 
 if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
@@ -34,7 +38,7 @@ if TYPE_CHECKING:
 __all__ = ('AutoGroup', 'Group', 'ImportGroup', 'UpfFamily')
 
 
-def load_group_class(type_string: str) -> Type['Group']:
+def load_group_class(type_string: str) -> type[Group]:
     """Load the sub class of `Group` that corresponds to the given `type_string`.
 
     .. note:: will fall back on `aiida.orm.groups.Group` if `type_string` cannot be resolved to loadable entry point.
@@ -58,11 +62,13 @@ def load_group_class(type_string: str) -> Type['Group']:
 class GroupCollection(entities.Collection['Group']):
     """Collection of Groups"""
 
+    collection_type: ClassVar[str] = 'groups'
+
     @staticmethod
-    def _entity_base_cls() -> Type['Group']:
+    def _entity_base_cls() -> type[Group]:
         return Group
 
-    def get_or_create(self, label: Optional[str] = None, **kwargs) -> Tuple['Group', bool]:
+    def get_or_create(self, label: str | None = None, **kwargs) -> tuple[Group, bool]:
         """Try to retrieve a group from the DB with the given arguments;
         create (and store) a new group if such a group was not present yet.
 
@@ -95,9 +101,9 @@ class GroupCollection(entities.Collection['Group']):
 class GroupBase:
     """A namespace for group related functionality, that is not directly related to its user-facing properties."""
 
-    def __init__(self, group: 'Group') -> None:
+    def __init__(self, group: Group) -> None:
         """Construct a new instance of the base namespace."""
-        self._group: 'Group' = group
+        self._group: Group = group
 
     @cached_property
     def extras(self) -> extras.EntityExtras:
@@ -108,40 +114,61 @@ class GroupBase:
 class Group(entities.Entity['BackendGroup', GroupCollection]):
     """An AiiDA ORM implementation of group of nodes."""
 
-    __type_string: ClassVar[Optional[str]]
+    __type_string: ClassVar[str | None]
 
-    class Model(entities.Entity.Model):
-        uuid: str = MetadataField(description='The UUID of the group', is_attribute=False, exclude_to_orm=True)
-        type_string: str = MetadataField(description='The type of the group', is_attribute=False, exclude_to_orm=True)
-        user: int = MetadataField(
-            description='The group owner',
-            is_attribute=False,
+    identity_field = 'uuid'
+
+    class ReadModel(entities.Entity.ReadModel):
+        uuid: UUID = OrmMetadataField(
+            description='The UUID of the group',
+            read_only=True,
+            examples=['123e4567-e89b-12d3-a456-426614174000'],
+        )
+        type_string: str = OrmMetadataField(
+            description='The type of the group',
+            read_only=True,
+            examples=['my_custom_group_type'],
+        )
+        user: int = OrmMetadataField(
+            description='The PK of the group owner',
             orm_class='core.user',
-            orm_to_model=lambda group, _: group.user.pk,  # type: ignore[attr-defined]
+            orm_to_model=lambda group: cast(Group, group).user.pk,
+            read_only=True,
+            examples=[1],
         )
-        time: Optional[datetime.datetime] = MetadataField(
-            description='The creation time of the node', is_attribute=False
+        time: datetime.datetime = OrmMetadataField(
+            description='The creation time of the node, defaults to now (timezone-aware)',
+            read_only=True,
+            examples=['2024-01-01T12:00:00+00:00'],
         )
-        label: str = MetadataField(description='The group label', is_attribute=False)
-        description: Optional[str] = MetadataField(description='The group description', is_attribute=False)
-        extras: Optional[Dict[str, Any]] = MetadataField(
+        label: str = OrmMetadataField(
+            description='The group label',
+            examples=['my_group_label'],
+        )
+        description: str = OrmMetadataField(
+            '',
+            description='The group description',
+            examples=['This is my group description.'],
+        )
+        extras: dict[str, Any] = OrmMetadataField(
+            default_factory=dict,
             description='The group extras',
-            is_attribute=False,
-            is_subscriptable=True,
-            orm_to_model=lambda group, _: group.base.extras.all,  # type: ignore[attr-defined]
+            orm_to_model=lambda group: cast(Group, group).base.extras.all,
+            may_be_large=True,
+            examples=[{'key': 'value'}],
         )
 
     _CLS_COLLECTION = GroupCollection
 
     def __init__(
         self,
-        label: Optional[str] = None,
-        user: Optional['User'] = None,
+        label: str | None = None,
+        user: User | None = None,
         description: str = '',
-        type_string: Optional[str] = None,
-        time: Optional[datetime.datetime] = None,
-        extras: Optional[Dict[str, Any]] = None,
-        backend: Optional['StorageBackend'] = None,
+        type_string: str | None = None,
+        time: datetime.datetime | None = None,
+        extras: dict[str, Any] | None = None,
+        backend: StorageBackend | None = None,
     ):
         """Create a new group. Either pass a dbgroup parameter, to reload
         a group from the DB (and then, no further parameters are allowed),
@@ -171,7 +198,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             self.base.extras.set_many(extras)
 
     @classproperty
-    def _type_string(cls) -> Optional[str]:  # noqa: N805
+    def _type_string(cls) -> str | None:  # noqa: N805
         from aiida.plugins.entry_point import get_entry_point_from_class
 
         if hasattr(cls, '__type_string'):
@@ -211,7 +238,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         return super().store()
 
     @classproperty
-    def entry_point(cls) -> Optional['EntryPoint']:  # noqa: N805
+    def entry_point(cls) -> EntryPoint | None:  # noqa: N805
         """Return the entry point associated this group type.
 
         :return: the associated entry point or ``None`` if it isn't known.
@@ -269,12 +296,12 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         return self._backend_entity.time
 
     @property
-    def user(self) -> 'User':
+    def user(self) -> User:
         """:return: the user associated with this group"""
         return entities.from_backend_entity(users.User, self._backend_entity.user)
 
     @user.setter
-    def user(self, user: 'User') -> None:
+    def user(self, user: User) -> None:
         """Set the user.
 
         :param user: the user
@@ -313,7 +340,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
         """Remove all the nodes from this group."""
         return self._backend_entity.clear()
 
-    def add_nodes(self, nodes: Union['Node', Sequence['Node']]) -> None:
+    def add_nodes(self, nodes: Node | Sequence[Node]) -> None:
         """Add a node or a set of nodes to the group.
 
         :note: all the nodes *and* the group itself have to be stored.
@@ -334,7 +361,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
         self._backend_entity.add_nodes([node.backend_entity for node in nodes])
 
-    def remove_nodes(self, nodes: Union['Node', Sequence['Node']]) -> None:
+    def remove_nodes(self, nodes: Node | Sequence[Node]) -> None:
         """Remove a node or a set of nodes to the group.
 
         :note: all the nodes *and* the group itself have to be stored.
@@ -361,14 +388,14 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
     def dump(
         self,
-        output_path: Optional[Union[str, Path]] = None,
+        output_path: str | Path | None = None,
         # Dump mode options
         dry_run: bool = False,
         overwrite: bool = False,
         # Time filtering options
-        past_days: Optional[int] = None,
-        start_date: Optional[datetime.datetime] = None,
-        end_date: Optional[datetime.datetime] = None,
+        past_days: int | None = None,
+        start_date: datetime.datetime | None = None,
+        end_date: datetime.datetime | None = None,
         filter_by_last_dump_time: bool = True,
         # Node collection options
         only_top_level_calcs: bool = True,

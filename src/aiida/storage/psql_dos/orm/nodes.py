@@ -8,8 +8,9 @@
 ###########################################################################
 """SqlAlchemy implementation of the `BackendNode` and `BackendNodeCollection` classes."""
 
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Any, Dict, Iterable, Tuple, Type
+from typing import Any
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.exc import NoResultFound
@@ -250,7 +251,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         self.model.attributes[key] = value
         self._flush_if_stored({'attributes'})
 
-    def set_attribute_many(self, attributes: Dict[str, Any]) -> None:
+    def set_attribute_many(self, attributes: dict[str, Any]) -> None:
         for key in attributes:
             validate_attribute_extra_key(key)
 
@@ -263,7 +264,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
             self.bare_model.attributes[key] = value
         self._flush_if_stored({'attributes'})
 
-    def reset_attributes(self, attributes: Dict[str, Any]) -> None:
+    def reset_attributes(self, attributes: dict[str, Any]) -> None:
         for key in attributes:
             validate_attribute_extra_key(key)
 
@@ -285,7 +286,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         non_existing_keys = [key for key in keys if key not in self.model.attributes]
 
         if non_existing_keys:
-            raise AttributeError(f"attributes `{', '.join(non_existing_keys)}` do not exist")
+            raise AttributeError(f'attributes `{", ".join(non_existing_keys)}` do not exist')
 
         for key in keys:
             self.bare_model.attributes.pop(key)
@@ -296,19 +297,17 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         self.model.attributes = {}
         self._flush_if_stored({'attributes'})
 
-    def attributes_items(self) -> Iterable[Tuple[str, Any]]:
-        for key, value in self.model.attributes.items():
-            yield key, value
+    def attributes_items(self) -> Iterable[tuple[str, Any]]:
+        yield from self.model.attributes.items()
 
     def attributes_keys(self) -> Iterable[str]:
-        for key in self.model.attributes.keys():
-            yield key
+        yield from self.model.attributes.keys()
 
 
 class SqlaNodeCollection(BackendNodeCollection):
     """The collection of Node entries."""
 
-    ENTITY_CLASS: Type[SqlaNode] = SqlaNode
+    ENTITY_CLASS: type[SqlaNode] = SqlaNode
 
     def get(self, pk):
         session = self.backend.get_session()

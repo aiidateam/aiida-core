@@ -15,9 +15,10 @@ import functools
 import inspect
 import logging
 import signal
-import types
 import typing as t
-from typing import TYPE_CHECKING
+from inspect import get_annotations
+from types import UnionType
+from typing import TYPE_CHECKING, ParamSpec
 
 import docstring_parser
 
@@ -40,21 +41,6 @@ from aiida.orm.utils.mixins import FunctionCalculationMixin
 
 from .process import Process
 from .process_spec import ProcessSpec
-
-try:
-    UnionType = types.UnionType
-except AttributeError:
-    # This type is not available for Python 3.9 and older
-    UnionType = None  # type: ignore[assignment,misc]
-
-# Fallback for Python 3.9 and older
-from typing_extensions import ParamSpec
-
-try:
-    get_annotations = inspect.get_annotations
-except AttributeError:
-    # This is the backport for Python 3.9 and older
-    from get_annotations import get_annotations  # type: ignore[no-redef]
 
 if TYPE_CHECKING:
     from .exit_code import ExitCode
@@ -84,9 +70,9 @@ class ProcessFunctionType(t.Protocol, t.Generic[P, R_co, N]):
 
     is_process_function: bool
 
-    node_class: t.Type[N]
+    node_class: type[N]
 
-    process_class: t.Type[Process]
+    process_class: type[Process]
 
     recreate_from: t.Callable[[N], Process]
 
@@ -145,7 +131,7 @@ def workfunction(function: t.Callable[P, R_co]) -> ProcessFunctionType[P, R_co, 
     return process_function(node_class=WorkFunctionNode)(function)  # type: ignore[arg-type]
 
 
-def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionType], FunctionType]:
+def process_function(node_class: type[ProcessNode]) -> t.Callable[[FunctionType], FunctionType]:
     """The base function decorator to create a FunctionProcess out of a normal python function.
 
     :param node_class: the ORM class to be used as the Node record for the FunctionProcess
@@ -159,7 +145,7 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
         """
         process_class = FunctionProcess.build(function, node_class=node_class)
 
-        def run_get_node(*args, **kwargs) -> tuple[dict[str, t.Any] | None, 'ProcessNode']:
+        def run_get_node(*args, **kwargs) -> tuple[dict[str, t.Any] | None, ProcessNode]:
             """Run the FunctionProcess with the supplied inputs in a local runner.
 
             :param args: input arguments to construct the FunctionProcess
@@ -167,7 +153,15 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
             :return: tuple of the outputs of the process and the process node
             """
             manager = get_manager()
-            runner = manager.get_runner()
+            # If called from inside a running process (e.g. a workchain calling a calcfunction), reuse that
+            # process's runner. Otherwise create a new runner without eagerly connecting to the broker since
+            # function processes run locally and don't need a broker connection.
+            # Note: it is safe to create new local runner here without but the explanation can be found in issue #7353
+            current = Process.current()
+            if isinstance(current, Process):
+                runner = current.runner
+            else:
+                runner = manager.create_runner(communicator=None)
             inputs = process_class.create_inputs(*args, **kwargs)
 
             # Remove all the known inputs from the kwargs
@@ -182,7 +176,7 @@ def process_function(node_class: t.Type['ProcessNode']) -> t.Callable[[FunctionT
 
             # Only add handlers for interrupt signal to kill the process if we are in a local and not a daemon runner.
             # Without this check, running process functions in a daemon worker would be killed if the daemon is shutdown
-            current_runner = manager.get_runner()
+            current_runner = runner
             original_handler = None
             kill_signal = signal.SIGINT
 
@@ -253,14 +247,16 @@ def infer_valid_type_from_type_annotation(annotation: t.Any) -> tuple[t.Any, ...
     """
 
     def get_type_from_annotation(annotation):
+        # `t.Dict`/`t.List` are distinct runtime keys from `dict`/`list` (`t.Dict != dict`) and map the
+        # pre-PEP-585 annotation spelling; UP006 would collapse them into duplicate builtin keys.
         valid_type_map = {
             bool: Bool,
             dict: Dict,
-            t.Dict: Dict,
+            t.Dict: Dict,  # noqa: UP006
             float: Float,
             int: Int,
             list: List,
-            t.List: List,
+            t.List: List,  # noqa: UP006
             str: Str,
         }
 
@@ -296,7 +292,7 @@ class FunctionProcess(Process):
         return {}
 
     @staticmethod
-    def build(func: FunctionType, node_class: t.Type['ProcessNode']) -> t.Type['FunctionProcess']:
+    def build(func: FunctionType, node_class: type[ProcessNode]) -> type[FunctionProcess]:
         """Build a Process from the given function.
 
         All function arguments will be assigned as process inputs. If keyword arguments are specified then
@@ -489,7 +485,7 @@ class FunctionProcess(Process):
         return inputs
 
     @classmethod
-    def get_or_create_db_record(cls) -> 'ProcessNode':
+    def get_or_create_db_record(cls) -> ProcessNode:
         return cls._node_class()
 
     def __init__(self, *args, **kwargs) -> None:
@@ -527,7 +523,7 @@ class FunctionProcess(Process):
         self.node.store_source_info(self._func)
 
     @override
-    async def run(self) -> 'ExitCode' | None:
+    async def run(self) -> ExitCode | None:
         """Run the process."""
         from .exit_code import ExitCode
 
@@ -574,8 +570,8 @@ class FunctionProcess(Process):
                 self.out(name, value)
         else:
             raise TypeError(
-                "Function process returned an output with unsupported type '{}'\n"
-                'Must be a Data type or a mapping of {{string: Data}}'.format(result.__class__)
+                f"Function process returned an output with unsupported type '{result.__class__}'\n"
+                'Must be a Data type or a mapping of {string: Data}'
             )
 
         return ExitCode()

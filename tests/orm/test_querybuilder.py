@@ -125,7 +125,7 @@ class TestBasic:
 
     # Tracked in issue #4281
     @pytest.mark.flaky(reruns=2)
-    @pytest.mark.requires_rmq
+    @pytest.mark.requires_broker
     @pytest.mark.usefixtures('aiida_profile_clean')
     def test_process_query(self):
         """Test querying for a process class."""
@@ -903,12 +903,12 @@ class TestQueryBuilderCornerCases:
 
         # AbstractCode query should find all code types
         abstract_results = qb().append(orm.AbstractCode).all(flat=True)
-        assert (
-            installed_code in abstract_results
-        ), f'InstalledCode not found with AbstractCode query. Result: {abstract_results}'
-        assert (
-            portable_code in abstract_results
-        ), f'PortableCode not found with AbstractCode query. Result: {abstract_results}'
+        assert installed_code in abstract_results, (
+            f'InstalledCode not found with AbstractCode query. Result: {abstract_results}'
+        )
+        assert portable_code in abstract_results, (
+            f'PortableCode not found with AbstractCode query. Result: {abstract_results}'
+        )
         assert legacy_code in abstract_results, f'Code not found with AbstractCode query. Result: {abstract_results}'
         assert len(abstract_results) == 3
 

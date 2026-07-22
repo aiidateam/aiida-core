@@ -12,8 +12,8 @@ from __future__ import annotations
 
 import typing as t
 
-from aiida.common.pydantic import MetadataField
 from aiida.common.warnings import warn_deprecation
+from aiida.orm.pydantic import OrmMetadataField
 
 from .array import ArrayData
 
@@ -30,14 +30,18 @@ class TrajectoryData(ArrayData):
     possibly with velocities).
     """
 
-    class Model(ArrayData.Model):
-        units_positions: str = MetadataField(alias='units|positions', description='Unit of positions')
-        units_times: str = MetadataField(alias='units|times', description='Unit of time')
-        symbols: t.List[str] = MetadataField(description='List of symbols')
-        pbc: t.Optional[t.Tuple[bool, bool, bool]] = MetadataField(description='Periodic boundary conditions')
+    class AttributesModel(ArrayData.AttributesModel):
+        symbols: list[str] = OrmMetadataField(
+            description='List of symbols',
+        )
+        pbc: tuple[bool, bool, bool] | None = OrmMetadataField(
+            None,
+            description='Periodic boundary conditions',
+        )
 
     def __init__(self, structurelist: list[StructureData] | None = None, **kwargs: t.Any) -> None:
         super().__init__(**kwargs)
+
         if structurelist is not None:
             self.set_structurelist(structurelist)
 
@@ -87,7 +91,7 @@ class TrajectoryData(ArrayData):
         numatoms = len(symbols)
         if positions.shape != (numsteps, numatoms, 3):
             raise ValueError(
-                'TrajectoryData.positions must have shape (s,n,3), ' 'with s=number of steps and n=number of symbols'
+                'TrajectoryData.positions must have shape (s,n,3), with s=number of steps and n=number of symbols'
             )
         if times is not None:
             if times.shape != (numsteps,):
@@ -439,7 +443,7 @@ class TrajectoryData(ArrayData):
             for k in custom_kinds:
                 if not isinstance(k, Kind):
                     raise TypeError(
-                        'Each element of the custom_kinds list must ' 'be a aiida.orm.nodes.data.structure.Kind object'
+                        'Each element of the custom_kinds list must be a aiida.orm.nodes.data.structure.Kind object'
                     )
                 kind_names.append(k.name)
             if len(kind_names) != len(set(kind_names)):
@@ -449,7 +453,7 @@ class TrajectoryData(ArrayData):
                     'If you pass custom_kinds, you have to '
                     'pass one Kind object for each symbol '
                     'that is present in the trajectory. You '
-                    'passed {}, but the symbols are {}'.format(sorted(kind_names), sorted(symbols))
+                    f'passed {sorted(kind_names)}, but the symbols are {sorted(symbols)}'
                 )
 
         struc = StructureData(cell=cell, pbc=self.pbc)
@@ -597,8 +601,8 @@ class TrajectoryData(ArrayData):
         if positions.shape != (numsteps, numsites, 3):
             raise ValueError(
                 'TrajectoryData.positions must have shape (s,n,3), '
-                'with s=number of steps={} and '
-                'n=number of symbols={}'.format(numsteps, numsites)
+                f'with s=number of steps={numsteps} and '
+                f'n=number of symbols={numsites}'
             )
 
         self.set_array('positions', positions)
@@ -630,8 +634,8 @@ class TrajectoryData(ArrayData):
         if velocities.shape != (numsteps, numsites, 3):
             raise ValueError(
                 'TrajectoryData.positions must have shape (s,n,3), '
-                'with s=number of steps={} and '
-                'n=number of symbols={}'.format(numsteps, numsites)
+                f'with s=number of steps={numsteps} and '
+                f'n=number of symbols={numsites}'
             )
 
         self.set_array('velocities', velocities)
@@ -826,7 +830,7 @@ class TrajectoryData(ArrayData):
             xmin, ymin, zmin = _x.min(), _y.min(), _z.min()
             xmax, ymax, zmax = _x.max(), _y.max(), _z.max()
 
-            _xi, _yi, _zi = np.mgrid[xmin:xmax:60j, ymin:ymax:30j, zmin:zmax:30j]  # type: ignore[misc]
+            _xi, _yi, _zi = np.mgrid[xmin:xmax:60j, ymin:ymax:30j, zmin:zmax:30j]
             coords = np.vstack([item.ravel() for item in [_xi, _yi, _zi]])
             density = kde(coords).reshape(_xi.shape)
 
@@ -908,20 +912,20 @@ def plot_positions_XYZ(  # noqa: N802
     trajectories = zip(*positions.tolist())  # only used in enumerate() below
     fig = plt.figure(figsize=(12, 7))
 
-    plt.suptitle(r'Trajectory of {}'.format(label), fontsize=16)
+    plt.suptitle(rf'Trajectory of {label}', fontsize=16)
     nr_of_axes = 3
     gridspec = GridSpec(nr_of_axes, 1, hspace=0.0)
 
     ax1 = fig.add_subplot(gridspec[0])
-    plt.ylabel(r'X Position $\left[{}\right]$'.format(positions_unit))
+    plt.ylabel(rf'X Position $\left[{positions_unit}\right]$')
     plt.xticks([])
     plt.xlim(*tlim)
     ax2 = fig.add_subplot(gridspec[1])
-    plt.ylabel(r'Y Position $\left[{}\right]$'.format(positions_unit))
+    plt.ylabel(rf'Y Position $\left[{positions_unit}\right]$')
     plt.xticks([])
     plt.xlim(*tlim)
     ax3 = fig.add_subplot(gridspec[2])
-    plt.ylabel(r'Z Position $\left[{}\right]$'.format(positions_unit))
+    plt.ylabel(rf'Z Position $\left[{positions_unit}\right]$')
     plt.xlabel(f'Time [{times_unit}]')
     plt.xlim(*tlim)
     n_labels = np.minimum(n_labels, len(times))  # don't need more labels than times

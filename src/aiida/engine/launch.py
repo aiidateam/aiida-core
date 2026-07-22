@@ -27,9 +27,9 @@ from .utils import instantiate_process, is_process_scoped, prepare_inputs
 
 __all__ = ('await_processes', 'run', 'run_get_node', 'run_get_pk', 'submit')
 
-TYPE_RUN_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
+TYPE_RUN_PROCESS = Process | type[Process] | ProcessBuilder
 # run can also be process function, but it is not clear what type this should be
-TYPE_SUBMIT_PROCESS = t.Union[Process, t.Type[Process], ProcessBuilder]
+TYPE_SUBMIT_PROCESS = Process | type[Process] | ProcessBuilder
 LOGGER = AIIDA_LOGGER.getChild('engine.launch')
 
 
@@ -43,7 +43,8 @@ def run(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None, **kwa
     if isinstance(process, Process):
         runner = process.runner
     else:
-        runner = manager.get_manager().get_runner()
+        # Note: it is safe to create new local runner here without but the explanation can be found in issue #7353
+        runner = manager.get_manager().create_runner(communicator=None)
 
     return runner.run(process, inputs, **kwargs)
 
@@ -60,7 +61,8 @@ def run_get_node(
     if isinstance(process, Process):
         runner = process.runner
     else:
-        runner = manager.get_manager().get_runner()
+        # Note: it is safe to create new local runner here without but the explanation can be found in issue #7353
+        runner = manager.get_manager().create_runner(communicator=None)
 
     return runner.run_get_node(process, inputs, **kwargs)
 
@@ -75,7 +77,8 @@ def run_get_pk(process: TYPE_RUN_PROCESS, inputs: dict[str, t.Any] | None = None
     if isinstance(process, Process):
         runner = process.runner
     else:
-        runner = manager.get_manager().get_runner()
+        # Note: it is safe to create new local runner here without but the explanation can be found in issue #7353
+        runner = manager.get_manager().create_runner(communicator=None)
 
     return runner.run_get_pk(process, inputs, **kwargs)
 
@@ -112,27 +115,49 @@ def submit(
     if is_process_scoped() and not isinstance(Process.current(), FunctionProcess):
         raise InvalidOperation('Cannot use top-level `submit` from within another process, use `self.submit` instead')
 
-    runner = manager.get_manager().get_runner()
+    # If a dry run is requested, simply forward to `run`, because it is not compatible with `submit`. We choose for this
+    # instead of raising, because in this way the user does not have to change the launcher when testing. The same goes
+    # for if `remote_folder` is present in the inputs, which means we are importing an already completed calculation.
+    # Builder inputs need to be merged so that detection works for ``submit(builder)`` too.
+    if isinstance(process, ProcessBuilder):
+        merged_inputs = {**inputs, **process._inputs(prune=True)}
+    else:
+        merged_inputs = inputs
+    if (merged_inputs.get('metadata') or {}).get('dry_run', False) or 'remote_folder' in merged_inputs:
+        _, node = run_get_node(process, inputs)
+        return node
+
+    current_manager = manager.get_manager()
+    profile = current_manager.get_profile()
+
+    if profile is not None and profile.process_control_backend == 'core.zeromq':
+        daemon_client = current_manager.get_daemon_client()
+        # Note: ``is_daemon_running`` only checks for a PID file, so a stale PID from a crashed daemon will let this
+        # check pass.
+        if not daemon_client.is_daemon_running:
+            msg = (
+                'Cannot submit because the daemon is not running. The ZeroMQ broker is bundled into the daemon for '
+                'this profile, so submission requires `verdi daemon start`. To run the process locally without the '
+                'daemon instead, '
+                'use `aiida.engine.run` (or `run_get_node`).'
+            )
+            raise InvalidOperation(msg)
+
+    runner = current_manager.get_runner()
 
     if runner.controller is None:
         raise InvalidOperation(
             'Cannot submit because the runner does not have a process controller, probably because the profile does '
             'not define a broker like RabbitMQ. If a RabbitMQ server is available, the profile can be configured to '
-            'use it with `verdi profile configure-rabbitmq`. Otherwise, use :meth:`aiida.engine.launch.run` instead to '
-            'run the process in the local Python interpreter instead of submitting it to the daemon. '
+            'use it with `verdi profile configure-broker core.rabbitmq`. Otherwise, use '
+            ':meth:`aiida.engine.launch.run` instead to run the process in the local Python interpreter instead of '
+            'submitting it to the daemon. '
             f'See {URL_NO_BROKER} for more details.'
         )
 
     assert runner.persister is not None, 'runner does not have a persister'
 
     process_inited = instantiate_process(runner, process, **inputs)
-
-    # If a dry run is requested, simply forward to `run`, because it is not compatible with `submit`. We choose for this
-    # instead of raising, because in this way the user does not have to change the launcher when testing. The same goes
-    # for if `remote_folder` is present in the inputs, which means we are importing an already completed calculation.
-    if process_inited.metadata.get('dry_run', False) or 'remote_folder' in inputs:
-        _, node = run_get_node(process_inited)
-        return node
 
     if not process_inited.metadata.store_provenance:
         raise InvalidOperation('cannot submit a process with `store_provenance=False`')

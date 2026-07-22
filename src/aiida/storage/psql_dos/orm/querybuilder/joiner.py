@@ -9,8 +9,10 @@
 # ruff: noqa: N802
 """A module containing the logic for creating joined queries."""
 
+import weakref
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional, Protocol, Type
+from typing import Any, Protocol
 
 from sqlalchemy import and_, join, select
 from sqlalchemy.dialects.postgresql import array
@@ -29,41 +31,43 @@ class _EntityMapper(Protocol):
     """Mapping of implemented entity types."""
 
     @property
-    def AuthInfo(self) -> Type[Model]: ...
+    def AuthInfo(self) -> type[Model]: ...
 
     @property
-    def Node(self) -> Type[Model]: ...
+    def Node(self) -> type[Model]: ...
 
     @property
-    def Group(self) -> Type[Model]: ...
+    def Group(self) -> type[Model]: ...
 
     @property
-    def Link(self) -> Type[Model]: ...
+    def Link(self) -> type[Model]: ...
 
     @property
-    def User(self) -> Type[Model]: ...
+    def User(self) -> type[Model]: ...
 
     @property
-    def Computer(self) -> Type[Model]: ...
+    def Computer(self) -> type[Model]: ...
 
     @property
-    def Comment(self) -> Type[Model]: ...
+    def Comment(self) -> type[Model]: ...
 
     @property
-    def Log(self) -> Type[Model]: ...
+    def Log(self) -> type[Model]: ...
 
     @property
-    def table_groups_nodes(self) -> Type[Table]: ...
+    def table_groups_nodes(self) -> type[Table]: ...
+
+    def build_filters(self, alias: AliasedClass, filter_spec: dict[str, Any]) -> ColumnElement[bool] | None: ...
 
 
 @dataclass
 class JoinReturn:
     join: Callable[[Query], Query]
-    aliased_edge: Optional[AliasedClass] = None
+    aliased_edge: AliasedClass | None = None
     edge_tag: str = ''
 
 
-FilterType = Dict[str, Any]
+FilterType = dict[str, Any]
 JoinFuncType = Callable[[Any, Any, bool, FilterType, bool], JoinReturn]
 
 
@@ -73,17 +77,15 @@ class SqlaJoiner:
     def __init__(
         self,
         entity_mapper: _EntityMapper,
-        filter_builder: Callable[[AliasedClass, FilterType], Optional[ColumnElement[bool]]],
     ):
         """Initialise the class"""
-        self._entities = entity_mapper
-        self._build_filters = filter_builder
+        self._entities = weakref.proxy(entity_mapper)
 
     def get_join_func(self, entity_key: str, relationship: str) -> JoinFuncType:
         """Return the function to join two entities"""
         return self._entity_join_map()[entity_key][relationship]
 
-    def _entity_join_map(self) -> Dict[str, Dict[str, JoinFuncType]]:
+    def _entity_join_map(self) -> dict[str, dict[str, JoinFuncType]]:
         """Map relationship type keywords to functions
         The first level defines the entity which has been passed to the qb.append function,
         and the second defines the relationship with respect to a given tag.
@@ -398,7 +400,7 @@ class SqlaJoiner:
         node1 = aliased(self._entities.Node)
 
         link_filters = link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # follow input / create links
-        in_recursive_filters = self._build_filters(node1, filter_dict)
+        in_recursive_filters = self._entities.build_filters(node1, filter_dict)
         if in_recursive_filters is None:
             filters = link_filters
         else:
@@ -465,7 +467,7 @@ class SqlaJoiner:
         node1 = aliased(self._entities.Node)
 
         link_filters = link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # follow input / create links
-        in_recursive_filters = self._build_filters(node1, filter_dict)
+        in_recursive_filters = self._entities.build_filters(node1, filter_dict)
         if in_recursive_filters is None:
             filters = link_filters
         else:
@@ -534,17 +536,12 @@ def _check_dbentities(entities_cls_joined, entities_cls_to_join, relationship: s
     for entity, cls in (entities_cls_joined, entities_cls_to_join):
         if not issubclass(entity._sa_class_manager.class_, cls):
             raise TypeError(
-                "You are attempting to join {} as '{}' of {}\n"
+                f"You are attempting to join {entities_cls_joined[0].__name__} as '{relationship}' "
+                f'of {entities_cls_to_join[0].__name__}\n'
                 'This failed because you passed:\n'
-                ' - {} as entity joined (expected {})\n'
-                ' - {} as entity to join (expected {})\n'
-                '\n'.format(
-                    entities_cls_joined[0].__name__,
-                    relationship,
-                    entities_cls_to_join[0].__name__,
-                    entities_cls_joined[0]._sa_class_manager.class_.__name__,
-                    entities_cls_joined[1].__name__,
-                    entities_cls_to_join[0]._sa_class_manager.class_.__name__,
-                    entities_cls_to_join[1].__name__,
-                )
+                f' - {entities_cls_joined[0]._sa_class_manager.class_.__name__} '
+                f'as entity joined (expected {entities_cls_joined[1].__name__})\n'
+                f' - {entities_cls_to_join[0]._sa_class_manager.class_.__name__} '
+                f'as entity to join (expected {entities_cls_to_join[1].__name__})\n'
+                '\n'
             )

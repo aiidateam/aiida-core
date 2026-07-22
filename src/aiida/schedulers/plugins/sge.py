@@ -226,7 +226,7 @@ class SgeScheduler(BashCliScheduler):
             lines.append('#$ -j y')
             if job_tmpl.sched_error_path:
                 self.logger.info(
-                    'sched_join_files is True, but sched_error_path is set in ' 'SGE script; ignoring sched_error_path'
+                    'sched_join_files is True, but sched_error_path is set in SGE script; ignoring sched_error_path'
                 )
         elif job_tmpl.sched_error_path:
             lines.append(f'#$ -e {job_tmpl.sched_error_path}')
@@ -255,9 +255,8 @@ class SgeScheduler(BashCliScheduler):
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    'max_wallclock_seconds must be ' "a positive integer (in seconds)! It is instead '{}'" ''.format(
-                        (job_tmpl.max_wallclock_seconds)
-                    )
+                    'max_wallclock_seconds must be a positive integer (in seconds)! '
+                    f"It is instead '{job_tmpl.max_wallclock_seconds}'"
                 )
             hours = tot_secs // 3600
             tot_minutes = tot_secs % 3600

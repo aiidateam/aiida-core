@@ -60,7 +60,7 @@ class DataTranslator(NodeTranslator):
 
         else:
             raise RestInputValidationError(
-                'The format {} is not supported. '
+                f'The format {download_format} is not supported. '
                 'The available download formats can be '
-                'queried using the /nodes/download_formats/ endpoint.'.format(download_format)
+                'queried using the /nodes/download_formats/ endpoint.'
             )

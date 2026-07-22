@@ -11,8 +11,10 @@
 from __future__ import annotations
 
 import json
+import logging
 import pathlib
 import uuid
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -20,6 +22,7 @@ from aiida import orm
 from aiida.common import exceptions
 from aiida.common.links import LinkType
 from aiida.orm.entities import EntityTypes
+from aiida.orm.implementation import storage_backend as storage_backend_module
 
 
 class TestBackend:
@@ -166,6 +169,47 @@ class TestBackend:
             orm.Node.collection.get(id=node_pk)
         assert len(calc_node.base.links.get_outgoing().all()) == 0
         assert len(group.nodes) == 0
+
+
+def test_del_closes_backend_when_not_finalizing(aiida_profile, monkeypatch, caplog):
+    """Test ``__del__`` closes the backend when Python is not finalizing."""
+    backend = aiida_profile.storage_cls(aiida_profile)
+    close = MagicMock()
+    monkeypatch.setattr(backend, 'close', close)
+
+    with caplog.at_level(logging.WARNING, logger=storage_backend_module.LOGGER.name):
+        backend.__del__()
+
+    # Note: we do an ``in`` assert because it might be that a backend instance of a
+    # previous test got deleted during the log capture
+    assert (
+        storage_backend_module.LOGGER.name,
+        logging.WARNING,
+        f'StorageBackend {backend!r} was not closed explicitly.',
+    ) in caplog.record_tuples
+
+    close.assert_called_once_with()
+
+
+def test_del_logs_but_skips_close_when_finalizing(aiida_profile, monkeypatch, caplog):
+    """Test ``__del__`` logs but skips close when Python is finalizing."""
+    backend = aiida_profile.storage_cls(aiida_profile)
+    close = MagicMock()
+    monkeypatch.setattr(backend, 'close', close)
+    monkeypatch.setattr('sys.is_finalizing', lambda: True)
+
+    with caplog.at_level(logging.WARNING, logger=storage_backend_module.LOGGER.name):
+        backend.__del__()
+
+    # Note: we do an ``in`` assert because it might be that a backend instance of a
+    # previous test got deleted during the log capture
+    assert (
+        storage_backend_module.LOGGER.name,
+        logging.WARNING,
+        f'StorageBackend {backend!r} was not closed explicitly.',
+    ) in caplog.record_tuples
+
+    close.assert_not_called()
 
 
 def test_backup_not_implemented(aiida_config, backend, monkeypatch, tmp_path):

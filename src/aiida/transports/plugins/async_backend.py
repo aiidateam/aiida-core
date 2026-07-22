@@ -21,7 +21,6 @@ import logging
 import posixpath
 import re
 import subprocess
-from typing import Optional
 
 import asyncssh
 from asyncssh import SFTPFileAlreadyExists
@@ -33,7 +32,7 @@ from aiida.transports.transport import (
 )
 
 
-def get_openssh_version() -> Optional[int]:
+def get_openssh_version() -> int | None:
     """Get the major version of the local OpenSSH client.
 
     Returns the major version number (e.g., 9 for OpenSSH_9.0), or None if detection fails.
@@ -96,7 +95,7 @@ class _AsynchronousSSHBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    async def run(self, command: str, stdin: Optional[str] = None, timeout: Optional[int] = None):
+    async def run(self, command: str, stdin: str | None = None, timeout: int | None = None):
         """Run a command on the remote machine.
         :param command: The command to run
         :param stdin: The input to send to the command
@@ -262,7 +261,7 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         except asyncssh.Error as exc:
             raise OSError from exc
 
-    async def run(self, command: str, stdin: Optional[str] = None, timeout: Optional[int] = None):
+    async def run(self, command: str, stdin: str | None = None, timeout: int | None = None):
         result = await self._conn.run(
             self.bash_command + escape_for_bash(command),
             input=stdin,
@@ -412,17 +411,15 @@ class _AsyncSSH(_AsynchronousSSHBackend):
                         self.logger.warning(f'There was nonempty stderr in the cp command: {stderr}')
                 else:
                     self.logger.error(
-                        "Problem executing cp. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
-                            retval, stdout, stderr, command
-                        )
+                        f'Problem executing cp. Exit code: {retval}, '
+                        f"stdout: '{stdout}', stderr: '{stderr}', command: '{command}'"
                     )
                     if 'No such file or directory' in str(stderr):
                         raise FileNotFoundError(f'Error while executing cp: {stderr}')
 
                     raise OSError(
-                        'Error while executing cp. Exit code: {}, '
-                        "stdout: '{}', stderr: '{}', "
-                        "command: '{}'".format(retval, stdout, stderr, command)
+                        f'Error while executing cp. Exit code: {retval}, '
+                        f"stdout: '{stdout}', stderr: '{stderr}', command: '{command}'"
                     )
 
             cp_exe = 'cp'
@@ -473,7 +470,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
             self.logger.debug(f'Detected OpenSSH version {openssh_version}, using RCP mode for scp commands.')
             self.is_openssh_9_or_higher = False
 
-    async def openssh_execute(self, commands, stdin: Optional[str] = None, timeout: Optional[float] = None):
+    async def openssh_execute(self, commands, stdin: str | None = None, timeout: float | None = None):
         """
         Execute a command using the _OpenSSH command line client.
         :param commands: The list of commands to execute
@@ -502,17 +499,20 @@ class _OpenSSH(_AsynchronousSSHBackend):
         return process.returncode, stdout.decode(), stderr.decode()
 
     def _escape_for_rcp(self, path: str) -> str:
-        """Escape special characters for scp RCP mode using backslashes.
+        """Backslash-escape shell metacharacters for scp's RCP protocol.
 
-        Note: escape_for_bash() does NOT work here because scp's RCP protocol
-        expects backslash-escaped paths, not quote-wrapped strings.
+        Glob characters (``*``, ``?``, ``[``, ``]``) are deliberately left
+        unescaped so the remote shell expands them; the trade-off is that
+        filenames containing literal glob characters cannot be addressed
+        in RCP mode. :func:`escape_for_bash` is unsuitable here because it
+        quote-wraps rather than backslash-escapes.
 
-        :param path: The path to escape
-        :return: The escaped path with backslashes before special characters
+        :param path: The path to escape.
+        :return: The escaped path.
         """
 
         result = []
-        special = set(' \t\n"\'`$\\!#&*?;<>|(){}[]')
+        special = set(' \t\n"\'`$\\!#&;<>|(){}')
         for char in path:
             if char in special:
                 result.append('\\')
@@ -522,11 +522,13 @@ class _OpenSSH(_AsynchronousSSHBackend):
     def _escape_for_scp(self, path: str) -> str:
         """Prepare a path for use in scp commands.
 
-        In OpenSSH < 9.0, scp uses the RCP protocol which passes paths through
-        the remote shell. We must escape shell metacharacters with backslashes
-        to prevent shell expansion/injection.
-
-        OpenSSH 9.0+, however, uses SFTP mode by default - paths are binary data, no shell quoting needed.
+        OpenSSH >= 9.0 uses SFTP mode: paths are sent as binary, no
+        escaping needed. OpenSSH < 9.0 uses RCP mode: paths are interpreted
+        by a shell on both ends (scp itself shells out internally for local
+        paths), so shell metacharacters are backslash-escaped via
+        :meth:`_escape_for_rcp` while glob characters are deliberately
+        preserved for pattern matching. Mode is selected via
+        :attr:`is_openssh_9_or_higher`.
         """
 
         if self.is_openssh_9_or_higher:
@@ -534,7 +536,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         else:
             return f'{self._escape_for_rcp(path)}'
 
-    def ssh_command_generator(self, command_template: str, paths: Optional[list[str]] = None):
+    def ssh_command_generator(self, command_template: str, paths: list[str] | None = None):
         """Generate an SSH command with properly quoted paths.
 
         :param command_template: The command template with {} placeholders for paths
@@ -565,7 +567,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
             if await self.path_exists(path):
                 raise FileExistsError(f'Directory already exists: {path}')
 
-        commands = self.ssh_command_generator(f"mkdir {'-p' if parents else ''} {{}}", paths=[path])
+        commands = self.ssh_command_generator(f'mkdir {"-p" if parents else ""} {{}}', paths=[path])
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
@@ -578,7 +580,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
     async def chmod(self, path: str, mode: int, follow_symlinks: bool = True):
         # chmod works with octal numbers, so we have to convert the mode to octal
         mode = oct(mode)[2:]  # type: ignore[assignment]
-        commands = self.ssh_command_generator(f"chmod {'-h' if not follow_symlinks else ''} {mode} {{}}", paths=[path])
+        commands = self.ssh_command_generator(f'chmod {"-h" if not follow_symlinks else ""} {mode} {{}}', paths=[path])
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if returncode != 0:
@@ -627,9 +629,10 @@ class _OpenSSH(_AsynchronousSSHBackend):
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if stderr:
-            # this should not happen, but just in case for debugging
-            self.logger.debug(f'Unexpected stderr: {stderr}')
-            raise OSError(stderr)
+            self.logger.debug(f'Stderr from `test -e {path}`: {stderr}')
+
+        if returncode not in (0, 1):
+            raise OSError(f'Failed to check whether path exists: {path} (exit code {returncode}): {stderr}')
         return returncode == 0
 
     async def rmtree(self, path: str):
@@ -691,7 +694,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         # order matters
         return Stat(*stdout.split())
 
-    async def run(self, command: str, stdin: Optional[str] = None, timeout: Optional[float] = None):
+    async def run(self, command: str, stdin: str | None = None, timeout: float | None = None):
         commands = self.ssh_command_generator(command)
         returncode, stdout, stderr = await self.openssh_execute(commands, stdin, timeout)
         return returncode, stdout, stderr

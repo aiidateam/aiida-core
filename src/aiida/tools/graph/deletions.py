@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Iterable
+from collections.abc import Callable, Iterable
 
 from aiida.common.log import AIIDA_LOGGER
 from aiida.manage import get_manager

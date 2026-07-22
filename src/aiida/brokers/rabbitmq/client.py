@@ -29,7 +29,7 @@ class RabbitmqManagementClient:
         :param hostname: The hostname of the RabbitMQ server.
         :param virtual_host: The virtual host.
         """
-        import requests
+        import requests.auth
 
         self._username = username
         self._password = password
@@ -60,7 +60,7 @@ class RabbitmqManagementClient:
         url_params: dict[str, str] | None = None,
         method: str = 'GET',
         params: dict[str, t.Any] | None = None,
-    ) -> 'requests.Response':
+    ) -> requests.Response:
         """Make a request.
 
         :param url: The resource path with placeholders, e.g., ``queues/{virtual_host}/{queue}``.

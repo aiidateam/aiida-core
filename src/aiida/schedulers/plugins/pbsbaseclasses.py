@@ -173,7 +173,7 @@ class PbsBaseClass(BashCliScheduler):
                 command.append(f'{escape_for_bash(jobs)}')  # type: ignore[unreachable]
             else:
                 try:
-                    command.append(f"{' '.join(escape_for_bash(j) for j in jobs)}")
+                    command.append(f'{" ".join(escape_for_bash(j) for j in jobs)}')
                 except TypeError:
                     raise TypeError("If provided, the 'jobs' variable must be a string or an iterable of strings")
 
@@ -271,8 +271,7 @@ class PbsBaseClass(BashCliScheduler):
             lines.append('#PBS -j oe')
             if job_tmpl.sched_error_path:
                 _LOGGER.info(
-                    'sched_join_files is True, but sched_error_path is set in '
-                    'PBSPro script; ignoring sched_error_path'
+                    'sched_join_files is True, but sched_error_path is set in PBSPro script; ignoring sched_error_path'
                 )
         elif job_tmpl.sched_error_path:
             lines.append(f'#PBS -e {job_tmpl.sched_error_path}')
@@ -386,8 +385,14 @@ class PbsBaseClass(BashCliScheduler):
                     # _LOGGER.warning("I found some text before the "
                     # "first job: {}".format(l))
                 elif line.startswith(' '):
-                    # If it starts with a space, it is a new field
-                    jobdata_raw[-1]['lines'].append(line)
+                    # If it starts with a space, it is usually a new field. However, multi-line values such as
+                    # bash functions in `Variable_List` may contain space-indented lines without an equals sign.
+                    # Append as-is when this is the first line, to avoid indexing an empty list.
+                    if '=' in line or not jobdata_raw[-1]['lines']:
+                        jobdata_raw[-1]['lines'].append(line)
+                    else:
+                        jobdata_raw[-1]['lines'][-1] += f'\n{line}'
+                        jobdata_raw[-1]['warning_lines_idx'].append(len(jobdata_raw[-1]['lines']) - 1)
                 elif line.startswith('\t'):
                     # If a line starts with a TAB,
                     # I append to the previous string
@@ -531,7 +536,7 @@ class PbsBaseClass(BashCliScheduler):
             except ValueError:
                 _LOGGER.warning(
                     f"'resource_list.ncpus' is not an integer "
-                    f"({raw_data['resource_list.ncpus']}) for job id {this_job.job_id}!"
+                    f'({raw_data["resource_list.ncpus"]}) for job id {this_job.job_id}!'
                 )
 
             try:
@@ -542,7 +547,7 @@ class PbsBaseClass(BashCliScheduler):
             except ValueError:
                 _LOGGER.warning(
                     f"'resource_list.mpiprocs' is not an integer "
-                    f"({raw_data['resource_list.mpiprocs']}) for job id {this_job.job_id}!"
+                    f'({raw_data["resource_list.mpiprocs"]}) for job id {this_job.job_id}!'
                 )
 
             try:
@@ -552,7 +557,7 @@ class PbsBaseClass(BashCliScheduler):
             except ValueError:
                 _LOGGER.warning(
                     f"'resource_list.nodect' is not an integer "
-                    f"{raw_data['resource_list.nodect']}) for job id {this_job.job_id}!"
+                    f'{raw_data["resource_list.nodect"]}) for job id {this_job.job_id}!'
                 )
 
             # Double check of redundant info

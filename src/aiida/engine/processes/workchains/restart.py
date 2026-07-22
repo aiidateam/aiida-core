@@ -11,9 +11,10 @@
 from __future__ import annotations
 
 import functools
+from collections.abc import Mapping
 from inspect import getmembers
 from types import FunctionType
-from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any
 
 from aiida import orm
 from aiida.common import AttributeDict
@@ -46,8 +47,8 @@ def validate_on_unhandled_failure(value: None | orm.Str, _) -> None | str:
 
 
 def validate_handler_overrides(
-    process_class: type['BaseRestartWorkChain'], handler_overrides: Optional[orm.Dict], ctx: 'PortNamespace'
-) -> Optional[str]:
+    process_class: type[BaseRestartWorkChain], handler_overrides: orm.Dict | None, ctx: PortNamespace
+) -> str | None:
     """Validator for the ``handler_overrides`` input port of the ``BaseRestartWorkChain``.
 
     The ``handler_overrides`` should be a dictionary where keys are strings that are the name of a process handler, i.e.
@@ -142,11 +143,11 @@ class BaseRestartWorkChain(WorkChain):
     `inspect_process`. Refer to their respective documentation for details.
     """
 
-    _process_class: Optional[Type['Process']] = None
+    _process_class: type[Process] | None = None
     _considered_handlers_extra = 'considered_handlers'
 
     @property
-    def process_class(self) -> Type['Process']:
+    def process_class(self) -> type[Process]:
         """Return the process class to run in the loop."""
         from ..process import Process
 
@@ -155,7 +156,7 @@ class BaseRestartWorkChain(WorkChain):
         return self._process_class
 
     @classmethod
-    def define(cls, spec: 'ProcessSpec') -> None:  # type: ignore[override]
+    def define(cls, spec: ProcessSpec) -> None:  # type: ignore[override]
         """Define the process specification."""
         super().define(spec)
         spec.input(
@@ -251,7 +252,7 @@ class BaseRestartWorkChain(WorkChain):
 
         return ToContext(children=append_(node))
 
-    def inspect_process(self) -> Optional['ExitCode']:
+    def inspect_process(self) -> ExitCode | None:
         """Analyse the results of the previous process and call the handlers when necessary.
 
         If the process is excepted or killed, the work chain will abort. Otherwise any attached handlers will be called
@@ -428,7 +429,7 @@ class BaseRestartWorkChain(WorkChain):
         """
         return self.exposed_outputs(node, self.process_class)
 
-    def results(self) -> Optional['ExitCode']:
+    def results(self) -> ExitCode | None:
         """Attach the outputs specified in the output specification from the last completed process."""
         node = self.ctx.children[self.ctx.iteration - 1]
 
@@ -470,7 +471,7 @@ class BaseRestartWorkChain(WorkChain):
         self.process_class
 
     @classmethod
-    def is_process_handler(cls, process_handler_name: Union[str, FunctionType]) -> bool:
+    def is_process_handler(cls, process_handler_name: str | FunctionType) -> bool:
         """Return whether the given method name corresponds to a process handler of this class.
 
         :param process_handler_name: string name of the instance method
@@ -484,10 +485,10 @@ class BaseRestartWorkChain(WorkChain):
         return getattr(handler, 'decorator', None) == process_handler
 
     @classmethod
-    def get_process_handlers(cls) -> List[FunctionType]:
+    def get_process_handlers(cls) -> list[FunctionType]:
         return [method[1] for method in getmembers(cls) if cls.is_process_handler(method[1])]
 
-    def get_process_handlers_by_priority(self) -> List[Tuple[int, FunctionType]]:
+    def get_process_handlers_by_priority(self) -> list[tuple[int, FunctionType]]:
         """Return list of process handlers where overrides from ``inputs.handler_overrides`` are taken into account."""
         handlers = []
 
@@ -529,9 +530,9 @@ class BaseRestartWorkChain(WorkChain):
                     pass
 
         if cleaned_calcs:
-            self.report(f"cleaned remote folders of calculations: {' '.join(cleaned_calcs)}")
+            self.report(f'cleaned remote folders of calculations: {" ".join(cleaned_calcs)}')
 
-    def _wrap_bare_dict_inputs(self, port_namespace: 'PortNamespace', inputs: Dict[str, Any]) -> AttributeDict:
+    def _wrap_bare_dict_inputs(self, port_namespace: PortNamespace, inputs: dict[str, Any]) -> AttributeDict:
         """Wrap bare dictionaries in `inputs` in a `Dict` node if dictated by the corresponding inputs portnamespace.
 
         :param port_namespace: a `PortNamespace`

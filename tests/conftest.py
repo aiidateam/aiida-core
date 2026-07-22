@@ -16,9 +16,11 @@ from __future__ import annotations
 
 import copy
 import dataclasses
+import logging
 import os
 import pathlib
 import subprocess
+import sys
 import types
 import typing as t
 import warnings
@@ -55,17 +57,21 @@ class TestDbBackend(Enum):
     PSQL = 'psql'
 
 
-@pytest.fixture(autouse=True)
-def _reset_runner(request):
-    yield
-    get_manager().reset_runner()
+class TestBrokerBackend(Enum):
+    """Options for the '--broker-backend' CLI argument when running pytest."""
+
+    RMQ = 'rmq'
+    ZEROMQ = 'zmq'
+    NONE = 'none'
 
 
 def pytest_collection_modifyitems(items, config):
     """Automatically generate markers for certain tests.
 
     Most notably, we add the 'presto' marker for all tests that
-    are not marked with either requires_rmq or requires_psql.
+    are not marked with requires_rmq, requires_psql, or nightly.
+    Tests marked requires_broker are included in presto since ZeroMQ
+    broker is available without external services.
     """
     filepath_psqldos = Path(__file__).parent / 'storage' / 'psql_dos'
     filepath_django = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'django_branch'
@@ -79,6 +85,24 @@ def pytest_collection_modifyitems(items, config):
         else:
             config.option.markexpr = 'not requires_psql'
 
+    # Handle broker backend selection
+    broker_backend = config.option.broker_backend
+
+    # If using ZeroMQ, skip tests that specifically require RabbitMQ (requires_rmq marker)
+    # but allow tests with requires_broker marker (they work with any broker)
+    if broker_backend is TestBrokerBackend.ZEROMQ:
+        if config.option.markexpr != '':
+            config.option.markexpr += ' and (not requires_rmq)'
+        else:
+            config.option.markexpr = 'not requires_rmq'
+
+    # If no broker, skip all tests that require any broker (both RMQ-specific and general broker tests)
+    if broker_backend is TestBrokerBackend.NONE:
+        if config.option.markexpr != '':
+            config.option.markexpr += ' and (not requires_broker) and (not requires_rmq)'
+        else:
+            config.option.markexpr = 'not requires_broker and not requires_rmq'
+
     for item in items:
         filepath_item = Path(item.fspath)
 
@@ -86,15 +110,17 @@ def pytest_collection_modifyitems(items, config):
         if filepath_item.is_relative_to(filepath_django) or filepath_item.is_relative_to(filepath_sqla):
             item.add_marker('nightly')
 
-        # Add 'requires_rmq' for all tests that depend 'daemon_client' and its dependant fixtures
+        # Add 'requires_broker' for tests that depend on 'daemon_client' fixture (works with RMQ or ZeroMQ)
         if 'daemon_client' in item.fixturenames:
-            item.add_marker('requires_rmq')
+            item.add_marker('requires_broker')
 
         # All tests in 'storage/psql_dos' require PostgreSQL
         if filepath_item.is_relative_to(filepath_psqldos):
             item.add_marker('requires_psql')
 
-        # Add 'presto' marker to all tests that require neither PostgreSQL nor RabbitMQ services.
+        # Add 'presto' marker to tests that don't need external services.
+        # Tests with requires_broker ARE included (ZeroMQ broker needs no external service).
+        # Tests with requires_rmq, requires_psql, or nightly are excluded.
         markers = [marker.name for marker in item.iter_markers()]
         if 'requires_rmq' not in markers and 'requires_psql' not in markers and 'nightly' not in markers:
             item.add_marker('presto')
@@ -113,6 +139,19 @@ def db_backend_type(string):
         raise pytest.UsageError(msg)
 
 
+def broker_backend_type(string):
+    """Conversion function for the custom '--broker-backend' pytest CLI option
+
+    :param string: String provided by the user via CLI
+    :returns: BrokerBackend enum corresponding to user input string
+    """
+    try:
+        return TestBrokerBackend(string)
+    except ValueError:
+        msg = f"Invalid --broker-backend option '{string}'\nMust be one of: {tuple(b.value for b in TestBrokerBackend)}"
+        raise pytest.UsageError(msg)
+
+
 def pytest_addoption(parser):
     parser.addoption(
         '--db-backend',
@@ -122,22 +161,87 @@ def pytest_addoption(parser):
         help=f'Database backend to be used for tests {tuple(db.value for db in TestDbBackend)}',
         type=db_backend_type,
     )
+    parser.addoption(
+        '--broker-backend',
+        action='store',
+        default=TestBrokerBackend.RMQ,
+        required=False,
+        help=f'Broker backend to be used for tests {tuple(b.value for b in TestBrokerBackend)}',
+        type=broker_backend_type,
+    )
+
+
+@pytest.fixture(autouse=True)
+def capture_aiida_and_verdi_logs(request, monkeypatch):
+    """Forward AiiDA and verdi log records to ``caplog`` despite ``propagate=False``.
+
+    The production logging configuration disables propagation for the top-level ``aiida`` and ``verdi`` loggers.
+    For tests that use ``caplog``, attach the pytest log capture handler directly to those loggers and re-attach it
+    after any logging reconfiguration so existing ``caplog``-based assertions keep observing their records.
+    """
+    if 'caplog' not in request.fixturenames:
+        yield
+        return
+
+    from aiida.common import log as common_log
+
+    caplog = request.getfixturevalue('caplog')
+
+    def attach_handler() -> None:
+        for logger_name in ('aiida', 'verdi'):
+            logger = logging.getLogger(logger_name)
+            if caplog.handler not in logger.handlers:
+                logger.addHandler(caplog.handler)
+
+    original_configure_logging = common_log.configure_logging
+
+    def configure_logging(*args, **kwargs):
+        result = original_configure_logging(*args, **kwargs)
+        attach_handler()
+        return result
+
+    monkeypatch.setattr(common_log, 'configure_logging', configure_logging)
+    monkeypatch.setattr('aiida.configure_logging', configure_logging, raising=False)
+    monkeypatch.setattr('aiida.engine.daemon.worker.configure_logging', configure_logging, raising=False)
+    monkeypatch.setattr('aiida.cmdline.params.options.main.configure_logging', configure_logging, raising=False)
+
+    attach_handler()
+
+    try:
+        yield
+    finally:
+        for logger_name in ('aiida', 'verdi'):
+            logger = logging.getLogger(logger_name)
+            if caplog.handler in logger.handlers:
+                logger.removeHandler(caplog.handler)
 
 
 @pytest.fixture(scope='session')
 def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql_dos, config_sqlite_dos):
-    """Create and load a profile with ``core.psql_dos`` as a storage backend and RabbitMQ as the broker.
+    """Create and load a profile with the specified storage and broker backends.
 
     This overrides the ``aiida_profile`` fixture provided by ``aiida-core`` which runs with ``core.sqlite_dos`` and
     without broker. However, tests in this package make use of the daemon which requires a broker and the tests should
     be run against the main storage backend, which is ``core.sqlite_dos``.
+
+    The broker backend can be selected via the ``--broker-backend`` CLI option:
+    - ``rmq``: Use RabbitMQ (default, requires RabbitMQ service)
+    - ``zmq``: Use ZeroMQ (no external service required)
+    - ``none``: No broker (limited functionality, no daemon support)
     """
     marker_opts = pytestconfig.getoption('-m')
     db_backend = pytestconfig.getoption('--db-backend')
+    broker_backend = pytestconfig.getoption('--broker-backend')
 
-    # We use RabbitMQ broker by default unless 'presto' marker is specified
-    broker = 'core.rabbitmq'
-    if 'not requires_rmq' in marker_opts or 'presto' in marker_opts:
+    # Determine broker based on CLI option and markers
+    if 'presto' in marker_opts:
+        # Presto tests use ZeroMQ broker (no external service required)
+        broker = 'core.zeromq'
+    elif broker_backend is TestBrokerBackend.RMQ:
+        broker = 'core.rabbitmq'
+    elif broker_backend is TestBrokerBackend.ZEROMQ:
+        broker = 'core.zeromq'
+    else:  # TestBrokerBackend.NONE
         broker = None
 
     if db_backend is TestDbBackend.SQLITE:
@@ -418,7 +522,7 @@ def profile_factory() -> t.Callable[t.Concatenate[str, P], Profile]:
                     'database_name': kwargs.pop('database_name', name),
                     'database_username': kwargs.pop('database_username', 'user'),
                     'database_password': kwargs.pop('database_password', 'pass'),
-                    'repository_uri': f"file:///{os.path.join(repository_dirpath, f'repository_{name}')}",
+                    'repository_uri': f'file:///{os.path.join(repository_dirpath, f"repository_{name}")}',
                 },
             },
             'process_control': {
@@ -498,8 +602,12 @@ def config_with_profile(config_with_profile_factory):
 @pytest.fixture
 def manager():
     """Get the ``Manager`` instance of the currently loaded profile."""
+    manager = get_manager()
 
-    return get_manager()
+    yield manager
+
+    # close connections
+    manager.reset_profile()
 
 
 @pytest.fixture
@@ -543,19 +651,20 @@ def default_user():
 def override_logging(isolated_config):
     """Temporarily override the log level for the AiiDA logger and the database log handler to ``DEBUG``.
 
-    The changes are made by changing the configuration options ``logging.aiida_loglevel`` and ``logging.db_loglevel``.
-    To ensure the changes are temporary, the are made on an isolated temporary configuration.
+    The changes are made by changing the configuration options ``logging.aiida_loglevel`` and
+    ``logging.database_handler``. To ensure the changes are temporary, they are made on an isolated
+    temporary configuration.
     """
     from aiida.common.log import configure_logging
 
     try:
         isolated_config.set_option('logging.aiida_loglevel', 'DEBUG')
-        isolated_config.set_option('logging.db_loglevel', 'DEBUG')
+        isolated_config.set_option('logging.database_handler', 'DEBUG')
         configure_logging(with_orm=True)
         yield
     finally:
         isolated_config.unset_option('logging.aiida_loglevel')
-        isolated_config.unset_option('logging.db_loglevel')
+        isolated_config.unset_option('logging.database_handler')
         configure_logging(with_orm=True)
 
 
@@ -614,7 +723,7 @@ class CliResult:
 
     stderr_bytes: bytes
     stdout_bytes: bytes
-    exc_info: tuple[t.Type[BaseException], BaseException, types.TracebackType] | tuple[None, None, None] = (
+    exc_info: tuple[type[BaseException], BaseException, types.TracebackType] | tuple[None, None, None] = (
         None,
         None,
         None,
@@ -733,7 +842,6 @@ def run_cli_command(reset_log_level, aiida_config, aiida_profile):
 def run_cli_command_subprocess(command, parameters, user_input, profile_name, suppress_warnings):
     """Run CLI command through ``subprocess``."""
     import subprocess
-    import sys
 
     env = os.environ.copy()
     command_path = cli_command_map()[command]
@@ -953,11 +1061,11 @@ def construct_calculation_node_add(tmp_path_factory):
 
         # Create FolderData node for retrieved
         retrieved_folder = FolderData()
-        output_content = f'{x+y}\n'.encode()
+        output_content = f'{x + y}\n'.encode()
         retrieved_folder.put_object_from_bytes(output_content, 'aiida.out')
 
-        scheduler_stdout = '\n'.encode()
-        scheduler_stderr = '\n'.encode()
+        scheduler_stdout = b'\n'
+        scheduler_stderr = b'\n'
         retrieved_folder.base.repository.put_object_from_bytes(scheduler_stdout, '_scheduler-stdout.txt')
         retrieved_folder.base.repository.put_object_from_bytes(scheduler_stderr, '_scheduler-stderr.txt')
         retrieved_folder.store()
@@ -1013,7 +1121,7 @@ def create_file_hierarchy():
     :param target: the target where the hierarchy should be created.
     """
 
-    def _create_file_hierarchy(hierarchy: t.Dict, target: t.Union[pathlib.Path, Folder]) -> None:
+    def _create_file_hierarchy(hierarchy: dict, target: pathlib.Path | Folder) -> None:
         for filename, value in hierarchy.items():
             if isinstance(value, dict):
                 if isinstance(target, pathlib.Path):

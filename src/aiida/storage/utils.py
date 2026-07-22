@@ -11,8 +11,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from functools import singledispatch
-from typing import TYPE_CHECKING, Sequence, TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 from sqlalchemy import Select, or_, select, type_coerce
 from sqlalchemy import cast as sql_cast
@@ -70,7 +71,7 @@ def _build_select_stmt_sqlite(dialect: SQLiteDialect, coltype: TypeEngine[T], va
 
 
 def _create_smarter_in_clause(
-    session: 'Session', column: ColumnElement[T] | InstrumentedAttribute[T], values: Sequence[T]
+    session: Session, column: ColumnElement[T] | InstrumentedAttribute[T], values: Sequence[T]
 ) -> ColumnElement[bool]:
     """Return an IN condition using database-specific functions to avoid parameter limits.
 

@@ -15,9 +15,10 @@ import shutil
 import tarfile
 import tempfile
 import zipfile
+from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Union
+from typing import Any
 
 from alembic.command import upgrade
 from alembic.config import Config
@@ -42,7 +43,7 @@ def get_schema_version_head() -> str:
     return _alembic_script().revision_map.get_current_head('main') or ''
 
 
-def list_versions() -> List[str]:
+def list_versions() -> list[str]:
     """Return all available schema versions (oldest to latest)."""
     legacy_versions = list(LEGACY_MIGRATE_FUNCTIONS) + [FINAL_LEGACY_VERSION]
     alembic_versions = [entry.revision for entry in reversed(list(_alembic_script().walk_revisions()))]
@@ -70,7 +71,7 @@ def validate_storage(inpath: Path) -> None:
 
 
 def migrate(
-    inpath: Union[str, Path], outpath: Union[str, Path], version: str, *, force: bool = False, compression: int = 6
+    inpath: str | Path, outpath: str | Path, version: str, *, force: bool = False, compression: int = 6
 ) -> None:
     """Migrate an `sqlite_zip` storage file to a specific version.
 
@@ -136,7 +137,7 @@ def migrate(
     metadata['compression'] = compression
 
     # if the archive is a "legacy" format, i.e. has a data.json file, migrate it to the target/final legacy schema
-    data: Optional[Dict[str, Any]] = None
+    data: dict[str, Any] | None = None
     if current_version in LEGACY_MIGRATE_FUNCTIONS:
         MIGRATE_LOGGER.report(f'Legacy migrations required from {"tar" if is_tar else "zip"} format')
         MIGRATE_LOGGER.report('Extracting data.json ...')
@@ -174,7 +175,7 @@ def migrate(
     with tempfile.TemporaryDirectory() as tmpdirname:
         # open the new zip file, within which to write the migrated content
         new_zip_path = Path(tmpdirname) / 'new.zip'
-        central_dir: Dict[str, Any] = {}
+        central_dir: dict[str, Any] = {}
         with ZipPath(
             new_zip_path,
             mode='w',
@@ -216,8 +217,9 @@ def migrate(
                 MIGRATE_LOGGER.report('Performing SQLite migrations:')
                 with _migration_context(db_path) as context:
                     assert context.script is not None
+                    assert context.connection is not None
                     context.stamp(context.script, current_version)
-                    context.connection.commit()  # type: ignore
+                    context.connection.commit()
                 # see https://alembic.sqlalchemy.org/en/latest/batch.html#dealing-with-referencing-foreign-keys
                 # for why we do not enforce foreign keys here
                 with _alembic_connect(db_path, enforce_foreign_keys=False) as config:
@@ -252,10 +254,10 @@ def migrate(
         # move the new zip file to the final location
         if outpath.exists() and force:
             outpath.unlink()
-        shutil.move(new_zip_path, outpath)  # type: ignore[arg-type]
+        shutil.move(new_zip_path, outpath)
 
 
-def _read_json(inpath: Path, filename: str, is_tar: bool) -> Dict[str, Any]:
+def _read_json(inpath: Path, filename: str, is_tar: bool) -> dict[str, Any]:
     """Read a JSON file from the archive."""
     if is_tar:
         with open_file_in_tar(inpath, filename) as handle:
@@ -280,7 +282,7 @@ def _perform_legacy_migrations(current_version: str, to_version: str, metadata: 
     """
     # compute the migration pathway
     prev_version = current_version
-    pathway: List[str] = []
+    pathway: list[str] = []
     while prev_version != to_version:
         if prev_version not in LEGACY_MIGRATE_FUNCTIONS:
             raise StorageMigrationError(f"No migration pathway available for '{current_version}' to '{to_version}'")
@@ -320,7 +322,7 @@ def _alembic_script() -> ScriptDirectory:
 
 
 @contextlib.contextmanager
-def _alembic_connect(db_path: Path, enforce_foreign_keys=True) -> Iterator[Config]:
+def _alembic_connect(db_path: Path, enforce_foreign_keys: bool = True) -> Iterator[Config]:
     """Context manager to return an instance of an Alembic configuration.
 
     The profiles's database connection is added in the `attributes` property, through which it can then also be
@@ -330,7 +332,7 @@ def _alembic_connect(db_path: Path, enforce_foreign_keys=True) -> Iterator[Confi
         config = _alembic_config()
         config.attributes['connection'] = connection
 
-        def _callback(step: MigrationInfo, **kwargs):
+        def _callback(step: MigrationInfo, **kwargs: Any) -> None:
             """Callback to be called after a migration step is executed."""
             from_rev = step.down_revision_ids[0] if step.down_revision_ids else '<base>'
             MIGRATE_LOGGER.report(f'- {from_rev} -> {step.up_revision_id}')

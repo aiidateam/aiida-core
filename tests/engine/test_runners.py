@@ -8,7 +8,6 @@
 ###########################################################################
 """Module to test process runners."""
 
-import asyncio
 import threading
 
 import plumpy
@@ -16,16 +15,20 @@ import pytest
 
 from aiida.calculations.arithmetic.add import ArithmeticAddCalculation
 from aiida.engine import Process, launch
-from aiida.manage import get_manager
 from aiida.manage.caching import enable_caching
 from aiida.orm import Int, Str, WorkflowNode
 
 
 @pytest.fixture
-def runner():
-    """Construct and return a `Runner`."""
-    loop = asyncio.new_event_loop()
-    return get_manager().create_runner(poll_interval=0.5, loop=loop)
+def runner(manager):
+    """Construct and return a ``Runner``.
+
+    This fixture depends on ``manager`` so that the manager teardown resets the global profile state after the test,
+    clearing any shared runner state before later tests run.
+    """
+    runner = manager.create_runner(poll_interval=0.5)
+    yield runner
+    runner.close()
 
 
 class Proc(Process):
@@ -46,7 +49,7 @@ def the_hans_klok_comeback(loop):
     loop.stop()
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 def test_call_on_process_finish(runner):
     """Test call on calculation finish."""
     loop = runner.loop

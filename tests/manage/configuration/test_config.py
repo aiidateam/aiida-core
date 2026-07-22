@@ -12,10 +12,13 @@ import json
 import os
 import pathlib
 import uuid
+from unittest.mock import MagicMock
 
 import pytest
 
 from aiida.common import exceptions
+from aiida.common.log import LOG_LEVEL_REPORT
+from aiida.engine.daemon.client import DaemonException, DaemonTimeoutException
 from aiida.manage.configuration import Profile, settings
 from aiida.manage.configuration.config import Config
 from aiida.manage.configuration.migrations import CURRENT_CONFIG_VERSION, OLDEST_COMPATIBLE_CONFIG_VERSION
@@ -157,18 +160,20 @@ def compare_config_in_memory_and_on_disk(config, filepath):
     in_memory = json.dumps(config.dictionary, indent=settings.DEFAULT_CONFIG_INDENT_SIZE)
 
     # Read the content stored on disk
-    with open(filepath, 'r', encoding='utf8') as handle:
+    with open(filepath, encoding='utf8') as handle:
         on_disk = handle.read()
 
     # Compare content of in memory config and the one on disk
     assert in_memory == on_disk
 
 
-def test_from_file(tmp_path):
+def test_from_file(tmp_path, monkeypatch):
     """Test the `Config.from_file` class method.
 
     Regression test for #3790: make sure configuration is written to disk after it is loaded and migrated.
     """
+    mock_report = MagicMock()
+    monkeypatch.setattr('aiida.cmdline.utils.echo.echo_report', mock_report)
     # If the config file does not exist, a completely new file is created with a migrated config
     filepath_nonexisting = tmp_path / 'config_nonexisting.json'
     config = Config.from_file(filepath_nonexisting)
@@ -193,6 +198,10 @@ def test_from_file(tmp_path):
 
         config = Config.from_file(handle.name)
         compare_config_in_memory_and_on_disk(config, handle.name)
+
+    mock_report.assert_called_once_with(
+        f'configuration file `{handle.name}` migrated from v0 to v{CURRENT_CONFIG_VERSION}'
+    )
 
 
 def test_from_file_no_migrate(config_with_profile):
@@ -221,6 +230,19 @@ def test_basic_properties(config_with_profile):
     assert config.version == CURRENT_CONFIG_VERSION
     assert config.version_oldest_compatible == OLDEST_COMPATIBLE_CONFIG_VERSION
     assert isinstance(config.dictionary, dict)
+
+
+def test_filepaths_include_daemon_and_zmq_broker_entries(config_with_profile):
+    """Test that ``filepaths`` returns the daemon env info and ZMQ broker entries."""
+    config = config_with_profile
+    profile = config.get_profile(config.default_profile_name)
+    filepaths = config.filepaths(profile)
+    assert 'daemon_env_info' in filepaths['daemon']
+    assert filepaths['daemon']['daemon_env_info'].endswith('-env-info.json')
+    assert 'broker_service' in filepaths
+    expected_dir_suffix = f'{profile.uuid}-{profile.name}'
+    assert filepaths['broker_service']['dir'].endswith(expected_dir_suffix)
+    assert filepaths['broker_service']['log'].endswith(f'{expected_dir_suffix}/broker.log')
 
 
 def test_setting_versions(config_with_profile):
@@ -414,14 +436,18 @@ def test_store(config_with_profile):
     config = config_with_profile
     config.store()
 
-    with open(config.filepath, 'r', encoding='utf8') as handle:
+    with open(config.filepath, encoding='utf8') as handle:
         config_recreated = Config(config.filepath, json.load(handle))
 
         assert config.dictionary == config_recreated.dictionary
 
 
-def test_delete_profile(config_with_profile, profile_factory):
+def test_delete_profile(config_with_profile, profile_factory, monkeypatch, caplog):
     """Test the ``delete_profile`` method."""
+    import logging
+
+    from aiida.engine.daemon.client import DaemonClient
+
     config = config_with_profile
     profile_name = 'to-be-deleted'
     profile = profile_factory(name=profile_name)
@@ -432,12 +458,61 @@ def test_delete_profile(config_with_profile, profile_factory):
     # Write the contents to disk so that the to-be-deleted profile is in the config file on disk
     config.store()
 
-    config.delete_profile(profile_name, delete_storage=False)
+    monkeypatch.setattr(DaemonClient, 'stop_daemon', lambda self, **kwargs: {'status': 'ok'})
+
+    logger = logging.getLogger('aiida.manage.configuration.config')
+    logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level(LOG_LEVEL_REPORT, logger='aiida.manage.configuration.config'):
+            config.delete_profile(profile_name, delete_storage=False)
+    finally:
+        logger.removeHandler(caplog.handler)
+
+    assert any(f'Daemon for profile `{profile_name}` stopped.' in record.message for record in caplog.records)
     assert profile_name not in config.profile_names
 
     # Now reload the config from disk to make sure the changes after deletion were persisted to disk
     config_on_disk = Config.from_file(config.filepath)
     assert profile_name not in config_on_disk.profile_names
+
+
+@pytest.mark.parametrize(
+    ('profile_name', 'exception_cls', 'message'),
+    [
+        ('to-be-deleted-timeout', DaemonTimeoutException, 'Connection to the daemon timed out.'),
+        ('to-be-deleted-failure', DaemonException, 'Connection failed.'),
+    ],
+)
+def test_delete_profile_warns_with_daemon_pid(
+    config_with_profile, profile_factory, monkeypatch, caplog, profile_name, exception_cls, message
+):
+    """Test that ``delete_profile`` warns if daemon shutdown does not complete cleanly."""
+    import logging
+
+    from aiida.engine.daemon.client import DaemonClient
+
+    config = config_with_profile
+    profile = profile_factory(name=profile_name)
+
+    config.add_profile(profile)
+    config.store()
+
+    def stop_daemon_raise(self, **kwargs):
+        raise exception_cls(message)
+
+    monkeypatch.setattr(DaemonClient, 'stop_daemon', stop_daemon_raise)
+    monkeypatch.setattr(DaemonClient, 'get_daemon_pid', lambda self: 1234)
+
+    logger = logging.getLogger('aiida.manage.configuration.config')
+    logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level(logging.WARNING, logger='aiida.manage.configuration.config'):
+            config.delete_profile(profile_name, delete_storage=False)
+    finally:
+        logger.removeHandler(caplog.handler)
+
+    assert any('The daemon with PID `1234` may still be running.' in record.message for record in caplog.records)
+    assert profile_name not in config.profile_names
 
 
 @pytest.mark.parametrize(
@@ -479,8 +554,13 @@ def test_delete_profile_sqlite_zip(
 
     caplog.clear()
 
-    with caplog.at_level(logging.INFO):
-        config.delete_profile(profile_name, delete_storage=delete_storage)
+    logger = logging.getLogger('aiida.manage.configuration.config')
+    logger.addHandler(caplog.handler)
+    try:
+        with caplog.at_level(LOG_LEVEL_REPORT, logger='aiida.manage.configuration.config'):
+            config.delete_profile(profile_name, delete_storage=delete_storage)
+    finally:
+        logger.removeHandler(caplog.handler)
 
     # Verify file handling
     if delete_storage and file_exists:

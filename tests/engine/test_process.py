@@ -36,7 +36,7 @@ class NameSpacedProcess(Process):
         spec.input('some.name.space.a', valid_type=orm.Int)
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestProcessNamespace:
     """Test process namespace"""
 
@@ -94,7 +94,7 @@ class ProcessStackTest(Process):
         assert self._thread_id is threading.current_thread().ident
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestProcess:
     """Test AiiDA process."""
 
@@ -192,12 +192,12 @@ class TestProcess:
 
         def on_entered(self, from_state):
             if self._state.LABEL.value == 'finished':
-                assert (
-                    self.node.is_finished_ok
-                ), 'Node state should have been updated before plumpy.Process.on_entered is invoked.'
-                assert (
-                    self.node.outputs.result.value == 2
-                ), 'Outputs should have been attached before plumpy.Process.on_entered is invoked.'
+                assert self.node.is_finished_ok, (
+                    'Node state should have been updated before plumpy.Process.on_entered is invoked.'
+                )
+                assert self.node.outputs.result.value == 2, (
+                    'Outputs should have been attached before plumpy.Process.on_entered is invoked.'
+                )
             original_on_entered(self, from_state)
 
         monkeypatch.setattr(plumpy.Process, 'on_entered', on_entered)

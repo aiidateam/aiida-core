@@ -2,3 +2,4 @@
 
 URL_BASE = 'https://aiida-core.readthedocs.io/en/stable'
 URL_NO_BROKER = f'{URL_BASE}/installation/guide_quick.html#quick-install-limitations'
+URL_CONFIG_SCHEMA_COMPATIBILITY = f'{URL_BASE}/reference/configuration_schema.html'

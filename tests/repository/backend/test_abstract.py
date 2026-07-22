@@ -3,7 +3,8 @@
 import contextlib
 import io
 import tempfile
-from typing import BinaryIO, Iterable, List, Optional
+from collections.abc import Iterable
+from typing import BinaryIO
 
 import pytest
 
@@ -14,11 +15,11 @@ class RepositoryBackend(AbstractRepositoryBackend):
     """Concrete implementation of ``AbstractRepositoryBackend``."""
 
     @property
-    def key_format(self) -> Optional[str]:
+    def key_format(self) -> str | None:
         return None
 
     @property
-    def uuid(self) -> Optional[str]:
+    def uuid(self) -> str | None:
         return None
 
     def initialise(self, **kwargs) -> None:
@@ -34,16 +35,16 @@ class RepositoryBackend(AbstractRepositoryBackend):
     def _put_object_from_filelike(self, handle: BinaryIO) -> str:
         return 'key'
 
-    def delete_objects(self, keys: List[str]) -> None:
+    def delete_objects(self, keys: list[str]) -> None:
         super().delete_objects(keys)
 
-    def has_objects(self, keys: List[str]) -> List[bool]:
+    def has_objects(self, keys: list[str]) -> list[bool]:
         return [True]
 
     def list_objects(self) -> Iterable[str]:
         raise NotImplementedError
 
-    def iter_object_streams(self, keys: List[str]):
+    def iter_object_streams(self, keys: list[str]):
         raise NotImplementedError
 
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:

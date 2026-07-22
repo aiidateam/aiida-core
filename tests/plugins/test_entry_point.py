@@ -15,12 +15,21 @@ from importlib_metadata import EntryPoints
 from aiida.common.exceptions import MissingEntryPointError, MultipleEntryPointError
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.plugins import entry_point
-from aiida.plugins.entry_point import get_entry_point, validate_registered_entry_points
+from aiida.plugins.entry_point import get_entry_point, parse_entry_point, validate_registered_entry_points
 
 
 def test_validate_registered_entry_points():
     """Test the ``validate_registered_entry_points`` function."""
     validate_registered_entry_points()
+
+
+def test_parse_entry_point():
+    """Test the ``parse_entry_point`` function."""
+    entry_point = parse_entry_point('aiida.calculations', ' core.example = aiida.calculations.example:ExampleCalcJob ')
+
+    assert entry_point.group == 'aiida.calculations'
+    assert entry_point.name == 'core.example'
+    assert entry_point.value == 'aiida.calculations.example:ExampleCalcJob'
 
 
 @pytest.mark.parametrize(

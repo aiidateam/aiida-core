@@ -152,7 +152,7 @@ class TestUpfParser:
         # regular upf file version 1 header
         upf_contents = '\n'.join(
             [
-                '<PP_INFO>' 'Human readable section is completely irrelevant for parsing!',
+                '<PP_INFO>Human readable section is completely irrelevant for parsing!',
                 '<PP_HEADER',
                 'contents before element tag',
                 'O                     Element',
@@ -273,7 +273,7 @@ class TestUpfParser:
                 'Human readable section is completely irrelevant for parsing!',
                 '<PP_HEADER',
                 'contents before element tag',
-                'element="Ab"' 'contents following element tag',
+                'element="Ab"contents following element tag',
                 '>',
             ]
         )
@@ -290,7 +290,7 @@ class TestUpfParser:
         # upf file header contents
         upf_contents = '\n'.join(
             [
-                '<PP_INFO>' 'Human readable section is completely irrelevant for parsing!',
+                '<PP_INFO>Human readable section is completely irrelevant for parsing!',
                 '<PP_HEADER',
                 'contents before element tag',
                 'element should be here but is missing',
@@ -309,7 +309,7 @@ class TestUpfParser:
         """Test UPF check Oxygen UPF1 pp conversion"""
         json_string, _ = self.pseudo_carbon._prepare_json()
         filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
-        with open(os.path.join(filepath_base, 'C.json'), 'r') as fhandle:
+        with open(os.path.join(filepath_base, 'C.json')) as fhandle:
             reference_dict = json.load(fhandle)
         pp_dict = json.loads(json_string.decode('utf-8'))
         # remove path information
@@ -321,7 +321,7 @@ class TestUpfParser:
         """Test UPF check Bariium UPF1 pp conversion"""
         json_string, _ = self.pseudo_barium._prepare_json()
         filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
-        with open(os.path.join(filepath_base, 'Ba.json'), 'r') as fhandle:
+        with open(os.path.join(filepath_base, 'Ba.json')) as fhandle:
             reference_dict = json.load(fhandle)
         pp_dict = json.loads(json_string.decode('utf-8'))
         # remove path information
@@ -335,7 +335,7 @@ class TestUpfParser:
         # upf file header contents
         upf_contents = '\n'.join(
             [
-                '<PP_INFO>' 'Human readable section is completely irrelevant for parsing!',
+                '<PP_INFO>Human readable section is completely irrelevant for parsing!',
                 '<PP_HEADER',
                 'contents before element tag',
                 'Ab                     Element',

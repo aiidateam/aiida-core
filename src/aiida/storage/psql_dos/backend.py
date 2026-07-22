@@ -8,21 +8,22 @@
 ###########################################################################
 """SqlAlchemy implementation of `aiida.orm.implementation.backends.Backend`."""
 
+from __future__ import annotations
+
 import functools
-import gc
 import pathlib
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, nullcontext
-from typing import TYPE_CHECKING, List, Optional, Set, Union
+from typing import TYPE_CHECKING, Any
 
 from disk_objectstore import Container, backup_utils
-from pydantic import BaseModel, Field
 from sqlalchemy import column, insert, update
 from sqlalchemy.orm import Session, scoped_session, sessionmaker
 
 from aiida.common import exceptions
 from aiida.common.exceptions import ClosedStorage, ConfigurationError, IntegrityError
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage.configuration.profile import Profile
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation import BackendEntity, StorageBackend
@@ -39,7 +40,7 @@ if TYPE_CHECKING:
 __all__ = ('PsqlDosBackend',)
 
 LOGGER = AIIDA_LOGGER.getChild(__file__)
-CONTAINER_DEFAULTS: dict = {
+CONTAINER_DEFAULTS: dict[str, Any] = {
     'pack_size_target': 4 * 1024 * 1024 * 1024,
     'loose_prefix_len': 2,
     'hash_type': 'sha256',
@@ -78,30 +79,30 @@ class PsqlDosBackend(StorageBackend):
     The `django` backend was removed, to consolidate access to this storage.
     """
 
-    class Model(BaseModel, defer_build=True):
+    class CliModel(AiiDABaseModel):
         """Model describing required information to configure an instance of the storage."""
 
-        database_engine: str = Field(
+        database_engine: str = MetadataField(
             title='PostgreSQL engine',
             description='The engine to use to connect to the database.',
             default='postgresql_psycopg',
         )
-        database_hostname: str = Field(
+        database_hostname: str = MetadataField(
             title='PostgreSQL hostname', description='The hostname of the PostgreSQL server.', default='localhost'
         )
-        database_port: int = Field(
+        database_port: int = MetadataField(
             title='PostgreSQL port', description='The port of the PostgreSQL server.', default=5432
         )
-        database_username: str = Field(
+        database_username: str = MetadataField(
             title='PostgreSQL username', description='The username with which to connect to the PostgreSQL server.'
         )
-        database_password: str = Field(
+        database_password: str = MetadataField(
             title='PostgreSQL password', description='The password with which to connect to the PostgreSQL server.'
         )
-        database_name: str = Field(
+        database_name: str = MetadataField(
             title='PostgreSQL database name', description='The name of the database in the PostgreSQL server.'
         )
-        repository_uri: str = Field(
+        repository_uri: str = MetadataField(
             title='File repository URI',
             description='URI to the file repository.',
         )
@@ -113,37 +114,28 @@ class PsqlDosBackend(StorageBackend):
         return cls.migrator.get_schema_version_head()
 
     @classmethod
-    def version_profile(cls, profile: Profile) -> Optional[str]:
-        with cls.migrator_context(profile) as migrator:
+    def version_profile(cls, profile: Profile) -> str | None:
+        with cls.migrator(profile) as migrator:
             return migrator.get_schema_version_profile(check_legacy=True)
 
     @classmethod
     def initialise(cls, profile: Profile, reset: bool = False) -> bool:
-        with cls.migrator_context(profile) as migrator:
+        with cls.migrator(profile) as migrator:
             return migrator.initialise(reset=reset)
 
     @classmethod
     def migrate(cls, profile: Profile) -> None:
-        with cls.migrator_context(profile) as migrator:
+        with cls.migrator(profile) as migrator:
             migrator.migrate()
-
-    @classmethod
-    @contextmanager
-    def migrator_context(cls, profile: Profile):
-        migrator = cls.migrator(profile)
-        try:
-            yield migrator
-        finally:
-            migrator.close()
 
     def __init__(self, profile: Profile) -> None:
         super().__init__(profile)
 
         # check that the storage is reachable and at the correct version
-        with self.migrator_context(profile) as migrator:
+        with self.migrator(profile) as migrator:
             migrator.validate_storage()
 
-        self._session_factory: Optional[scoped_session] = None
+        self._session_factory: scoped_session | None = None
         self._initialise_session()
         # save the URL of the database, for use in the __str__ method
         self._db_url = self.get_session().get_bind().url  # type: ignore[union-attr]
@@ -164,7 +156,7 @@ class PsqlDosBackend(StorageBackend):
         state = 'closed' if self.is_closed else 'open'
         return f'Storage for {self.profile.name!r} [{state}] @ {self._db_url!r} / {self.get_repository()}'
 
-    def _initialise_session(self):
+    def _initialise_session(self) -> None:
         """Initialise the SQLAlchemy session factory.
 
         Only one session factory is ever associated with a given class instance,
@@ -194,19 +186,15 @@ class PsqlDosBackend(StorageBackend):
         if engine is not None:
             engine.dispose()  # type: ignore[union-attr]
         self._session_factory.expunge_all()
-        self._session_factory.close()
+        self._session_factory.remove()
         self._session_factory = None
-
-        # Without this, sqlalchemy keeps a weakref to a session
-        # in sqlalchemy.orm.session._sessions
-        gc.collect()
 
     def _clear(self) -> None:
         from aiida.storage.psql_dos.models.settings import DbSetting
 
         super()._clear()
 
-        with self.migrator_context(self._profile) as migrator:
+        with self.migrator(self._profile) as migrator:
             # Close the session otherwise the ``delete_tables`` call will hang as there will be an open connection
             # to the PostgreSQL server and it will block the deletion and the command will hang.
             self.get_session().close()
@@ -226,41 +214,41 @@ class PsqlDosBackend(StorageBackend):
                     DbSetting.__table__.update().where(DbSetting.key == REPOSITORY_UUID_KEY).values(val=repository_uuid)
                 )
 
-    def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
+    def get_repository(self) -> DiskObjectStoreRepositoryBackend:
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
         container = Container(get_filepath_container(self.profile))
         return DiskObjectStoreRepositoryBackend(container=container)
 
     @property
-    def authinfos(self):
+    def authinfos(self) -> authinfos.SqlaAuthInfoCollection:
         return self._authinfos
 
     @property
-    def comments(self):
+    def comments(self) -> comments.SqlaCommentCollection:
         return self._comments
 
     @property
-    def computers(self):
+    def computers(self) -> computers.SqlaComputerCollection:
         return self._computers
 
     @property
-    def groups(self):
+    def groups(self) -> groups.SqlaGroupCollection:
         return self._groups
 
     @property
-    def logs(self):
+    def logs(self) -> logs.SqlaLogCollection:
         return self._logs
 
     @property
-    def nodes(self):
+    def nodes(self) -> nodes.SqlaNodeCollection:
         return self._nodes
 
-    def query(self):
+    def query(self) -> querybuilder.SqlaQueryBuilder:
         return querybuilder.SqlaQueryBuilder(self)
 
     @property
-    def users(self):
+    def users(self) -> users.SqlaUserCollection:
         return self._users
 
     @contextmanager
@@ -288,7 +276,7 @@ class PsqlDosBackend(StorageBackend):
 
     @staticmethod
     @functools.lru_cache(maxsize=18)
-    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool):
+    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool) -> tuple[Any, set[Any]]:
         """Return the Sqlalchemy mapper and fields corresponding to the given entity.
 
         :param with_pk: if True, the fields returned will include the primary key
@@ -318,7 +306,7 @@ class PsqlDosBackend(StorageBackend):
         keys = {key for key, col in mapper.c.items() if with_pk or col not in mapper.primary_key}
         return mapper, keys
 
-    def bulk_insert(self, entity_type: EntityTypes, rows: List[dict], allow_defaults: bool = False) -> List[int]:
+    def bulk_insert(self, entity_type: EntityTypes, rows: list[dict], allow_defaults: bool = False) -> list[int]:
         mapper, keys = self._get_mapper_from_entity(entity_type, False)
         if not rows:
             return []
@@ -341,7 +329,7 @@ class PsqlDosBackend(StorageBackend):
             result = session.execute(insert(mapper).returning(mapper, column('id')), rows).fetchall()
         return [row.id for row in result]
 
-    def bulk_update(self, entity_type: EntityTypes, rows: List[dict]) -> None:
+    def bulk_update(self, entity_type: EntityTypes, rows: list[dict]) -> None:
         mapper, keys = self._get_mapper_from_entity(entity_type, True)
         if not rows:
             return None
@@ -417,7 +405,7 @@ class PsqlDosBackend(StorageBackend):
         return convert.get_backend_entity(model, self)
 
     def set_global_variable(
-        self, key: str, value: Union[None, str, int, float], description: Optional[str] = None, overwrite=True
+        self, key: str, value: None | str | int | float, description: str | None = None, overwrite: bool = True
     ) -> None:
         from aiida.storage.psql_dos.models.settings import DbSetting
 
@@ -431,7 +419,7 @@ class PsqlDosBackend(StorageBackend):
             else:
                 session.add(DbSetting(key=key, val=value, description=description or ''))
 
-    def get_global_variable(self, key: str) -> Union[None, str, int, float]:
+    def get_global_variable(self, key: str) -> None | str | int | float:
         from aiida.storage.psql_dos.models.settings import DbSetting
 
         session = self.get_session()
@@ -485,7 +473,7 @@ class PsqlDosBackend(StorageBackend):
 
         return terminated
 
-    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs) -> None:
+    def maintain(self, full: bool = False, dry_run: bool = False, **kwargs: Any) -> None:
         from aiida.manage.profile_access import ProfileAccessManager
 
         repository = self.get_repository()
@@ -504,7 +492,7 @@ class PsqlDosBackend(StorageBackend):
             STORAGE_LOGGER.info('Starting repository-specific operations ...')
             repository.maintain(live=not full, dry_run=dry_run, **kwargs)
 
-    def get_unreferenced_keyset(self, check_consistency: bool = True) -> Set[str]:
+    def get_unreferenced_keyset(self, check_consistency: bool = True) -> set[str]:
         """Returns the keyset of objects that exist in the repository but are not tracked by AiiDA.
 
         This should be all the soft-deleted files.
@@ -534,7 +522,7 @@ class PsqlDosBackend(StorageBackend):
 
         return keyset_repository - keyset_database
 
-    def get_info(self, detailed: bool = False) -> dict:
+    def get_info(self, detailed: bool = False, **kwargs: Any) -> dict[str, Any]:
         results = super().get_info(detailed=detailed)
         results['repository'] = self.get_repository().get_info(detailed)
         return results
@@ -543,7 +531,7 @@ class PsqlDosBackend(StorageBackend):
         self,
         manager: backup_utils.BackupManager,
         path: pathlib.Path,
-        prev_backup: Optional[pathlib.Path] = None,
+        prev_backup: pathlib.Path | None = None,
     ) -> None:
         """Create a backup of the postgres database and disk-objectstore to the provided path.
 
@@ -616,8 +604,8 @@ class PsqlDosBackend(StorageBackend):
     def _backup(
         self,
         dest: str,
-        keep: Optional[int] = None,
-    ):
+        keep: int | None = None,
+    ) -> None:
         try:
             backup_manager = backup_utils.BackupManager(dest, keep=keep)
             backup_manager.backup_auto_folders(lambda path, prev: self._backup_storage(backup_manager, path, prev))

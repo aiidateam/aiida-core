@@ -8,13 +8,16 @@
 ###########################################################################
 """Comment objects and functions"""
 
-from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional, Type, cast
+from __future__ import annotations
 
-from aiida.common.pydantic import MetadataField
+from datetime import datetime
+from typing import TYPE_CHECKING, ClassVar, cast
+from uuid import UUID
+
 from aiida.manage import get_manager
 
 from . import entities
+from .pydantic import OrmMetadataField
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import BackendComment, BackendNode, StorageBackend
@@ -28,8 +31,10 @@ __all__ = ('Comment',)
 class CommentCollection(entities.Collection['Comment']):
     """The collection of Comment entries."""
 
+    collection_type: ClassVar[str] = 'comments'
+
     @staticmethod
-    def _entity_base_cls() -> Type['Comment']:
+    def _entity_base_cls() -> type[Comment]:
         return Comment
 
     def delete(self, pk: int) -> None:
@@ -49,7 +54,7 @@ class CommentCollection(entities.Collection['Comment']):
         """
         self._backend.comments.delete_all()
 
-    def delete_many(self, filters: dict) -> List[int]:
+    def delete_many(self, filters: dict) -> list[int]:
         """Delete Comments from the Collection based on ``filters``
 
         :param filters: similar to QueryBuilder filter
@@ -67,33 +72,42 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
 
     _CLS_COLLECTION = CommentCollection
 
-    class Model(entities.Entity.Model):
-        uuid: Optional[str] = MetadataField(
-            description='The UUID of the comment', is_attribute=False, exclude_to_orm=True
-        )
-        ctime: Optional[datetime] = MetadataField(
-            description='Creation time of the comment', is_attribute=False, exclude_to_orm=True
-        )
-        mtime: Optional[datetime] = MetadataField(
-            description='Modified time of the comment', is_attribute=False, exclude_to_orm=True
-        )
-        node: int = MetadataField(
-            description='Node PK that the comment is attached to',
-            is_attribute=False,
-            orm_class='core.node',
-            orm_to_model=lambda comment, _: cast('Comment', comment).node.pk,
-        )
-        user: int = MetadataField(
-            description='User PK that created the comment',
-            is_attribute=False,
-            orm_class='core.user',
-            orm_to_model=lambda comment, _: cast('Comment', comment).user.pk,
-        )
-        content: str = MetadataField(description='Content of the comment', is_attribute=False)
+    identity_field = 'uuid'
 
-    def __init__(
-        self, node: 'Node', user: 'User', content: Optional[str] = None, backend: Optional['StorageBackend'] = None
-    ):
+    class ReadModel(entities.Entity.ReadModel):
+        uuid: UUID = OrmMetadataField(
+            description='The UUID of the comment',
+            read_only=True,
+            examples=['123e4567-e89b-12d3-a456-426614174000'],
+        )
+        ctime: datetime = OrmMetadataField(
+            description='Creation time of the comment',
+            read_only=True,
+            examples=['2024-01-01T12:00:00+00:00'],
+        )
+        mtime: datetime = OrmMetadataField(
+            description='Modified time of the comment',
+            read_only=True,
+            examples=['2024-01-02T12:00:00+00:00'],
+        )
+        node: int = OrmMetadataField(
+            description='Node PK that the comment is attached to',
+            orm_class='core.node',
+            orm_to_model=lambda comment: cast(Comment, comment).node.pk,
+            examples=[42],
+        )
+        user: int = OrmMetadataField(
+            description='User PK that created the comment',
+            orm_class='core.user',
+            orm_to_model=lambda comment: cast(Comment, comment).user.pk,
+            examples=[7],
+        )
+        content: str = OrmMetadataField(
+            description='Content of the comment',
+            examples=['This is a comment.'],
+        )
+
+    def __init__(self, node: Node, user: User, content: str | None = None, backend: StorageBackend | None = None):
         """Create a Comment for a given node and user
 
         :param node: a Node instance
@@ -139,16 +153,16 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         return self._backend_entity.set_mtime(value)
 
     @property
-    def node(self) -> 'BackendNode':
+    def node(self) -> BackendNode:
         return self._backend_entity.node
 
     @property
-    def user(self) -> 'User':
+    def user(self) -> User:
         from aiida.orm.users import User
 
         return entities.from_backend_entity(User, self._backend_entity.user)
 
-    def set_user(self, value: 'User') -> None:
+    def set_user(self, value: User) -> None:
         # mypy error: Property "user" defined in "BackendComment" is read-only
         self._backend_entity.user = value.backend_entity  # type: ignore[misc]
 

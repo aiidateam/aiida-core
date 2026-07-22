@@ -304,7 +304,7 @@ def _validate_identifier_pattern(*, identifier: str, strict: bool = False):
     # If there is no separator, it must be a fully qualified Python name.
     try:
         module_name = '.'.join(identifier.split('.')[:-1])
-        class_name = identifier.split('.')[-1]
+        class_name = identifier.rsplit('.', maxsplit=1)[-1]
         module = importlib.import_module(module_name)
         getattr(module, class_name)
     except (ModuleNotFoundError, AttributeError, IndexError) as exc:

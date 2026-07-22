@@ -9,7 +9,7 @@
 """The file format implementation"""
 
 from pathlib import Path
-from typing import Any, Literal, Union, overload
+from typing import Any, Literal, overload
 
 from aiida.storage.sqlite_zip.migrator import get_schema_version_head, migrate
 from aiida.storage.sqlite_zip.utils import read_version
@@ -38,7 +38,7 @@ class ArchiveFormatSqlZip(ArchiveFormatAbstract):
     def latest_version(self) -> str:
         return get_schema_version_head()
 
-    def read_version(self, path: Union[str, Path]) -> str:
+    def read_version(self, path: str | Path) -> str:
         return read_version(path)
 
     @property
@@ -47,22 +47,22 @@ class ArchiveFormatSqlZip(ArchiveFormatAbstract):
 
     @overload
     def open(
-        self, path: Union[str, Path], mode: Literal['r'], *, compression: int = 6, **kwargs: Any
+        self, path: str | Path, mode: Literal['r'], *, compression: int = 6, **kwargs: Any
     ) -> ArchiveReaderSqlZip: ...
 
     @overload
     def open(
-        self, path: Union[str, Path], mode: Literal['x', 'w'], *, compression: int = 6, **kwargs: Any
+        self, path: str | Path, mode: Literal['x', 'w'], *, compression: int = 6, **kwargs: Any
     ) -> ArchiveWriterSqlZip: ...
 
     @overload
     def open(
-        self, path: Union[str, Path], mode: Literal['a'], *, compression: int = 6, **kwargs: Any
+        self, path: str | Path, mode: Literal['a'], *, compression: int = 6, **kwargs: Any
     ) -> ArchiveAppenderSqlZip: ...
 
     def open(
-        self, path: Union[str, Path], mode: Literal['r', 'x', 'w', 'a'] = 'r', *, compression: int = 6, **kwargs: Any
-    ) -> Union[ArchiveReaderSqlZip, ArchiveWriterSqlZip, ArchiveAppenderSqlZip]:
+        self, path: str | Path, mode: Literal['r', 'x', 'w', 'a'] = 'r', *, compression: int = 6, **kwargs: Any
+    ) -> ArchiveReaderSqlZip | ArchiveWriterSqlZip | ArchiveAppenderSqlZip:
         if mode == 'r':
             return ArchiveReaderSqlZip(path, **kwargs)
         if mode == 'a':
@@ -71,8 +71,8 @@ class ArchiveFormatSqlZip(ArchiveFormatAbstract):
 
     def migrate(
         self,
-        inpath: Union[str, Path],
-        outpath: Union[str, Path],
+        inpath: str | Path,
+        outpath: str | Path,
         version: str,
         *,
         force: bool = False,

@@ -45,3 +45,5 @@ To see which plugins are installed for any of these categories, pass the categor
 .. code-block:: console
 
     $ verdi plugin list aiida.data
+
+For an overview of plugins that extend AiiDA's core capabilities (e.g. ``aiida-shell``, ``aiida-workgraph``, ``aiida-submission-controller``), see also `Non research-domain specific plugins to extend core functionality <https://aiida.net/news/posts/2024-12-13-core-plugins.html>`__.

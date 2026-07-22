@@ -104,7 +104,7 @@ def aiida_profile_factory():
 
     @contextlib.contextmanager
     def factory(
-        config: 'Config',
+        config: Config,
         *,
         storage_backend: str = 'core.sqlite_dos',
         storage_config: dict[str, t.Any] | None = None,
@@ -121,14 +121,20 @@ def aiida_profile_factory():
         storage_config = storage_config or {'filepath': str(pathlib.Path(config.dirpath) / name / 'storage')}
 
         if broker_backend and broker_config is None:
-            broker_config = {
-                'broker_protocol': 'amqp',
-                'broker_username': 'guest',
-                'broker_password': 'guest',
-                'broker_host': '127.0.0.1',
-                'broker_port': 5672,
-                'broker_virtual_host': '',
-            }
+            if broker_backend == 'core.rabbitmq':
+                broker_config = {
+                    'broker_protocol': 'amqp',
+                    'broker_username': 'guest',
+                    'broker_password': 'guest',
+                    'broker_host': '127.0.0.1',
+                    'broker_port': 5672,
+                    'broker_virtual_host': '',
+                }
+            elif broker_backend == 'core.zeromq':
+                pass
+            else:
+                msg = f'Unsupported broker backend: {broker_backend}'
+                raise ValueError(msg)
 
         profile = create_profile(
             config,
@@ -140,6 +146,7 @@ def aiida_profile_factory():
             email=email,
             is_test_profile=True,
         )
+        profile.set_option('warnings.development_version', False)
         config.set_default_profile(profile.name)
         config.store()
 

@@ -41,9 +41,9 @@ class NodeRepository:
     ``repository_metadata`` does not give accurate information, as long as the node is not yet stored.
     """
 
-    def __init__(self, node: 'Node') -> None:
+    def __init__(self, node: Node) -> None:
         """Construct a new instance of the repository interface."""
-        self._node: 'Node' = node
+        self._node: Node = node
         self._repository_instance: Repository | None = None
 
     @property
@@ -116,7 +116,7 @@ class NodeRepository:
         # update the metadata on the node backend
         self._node.backend_entity.repository_metadata = self.serialize()
 
-    def _copy(self, repo: 'NodeRepository') -> None:
+    def _copy(self, repo: NodeRepository) -> None:
         """Copy a repository from another instance.
 
         This is used when storing cached nodes.
@@ -125,7 +125,7 @@ class NodeRepository:
         """
         self._repository = copy.copy(repo._repository)
 
-    def _clone(self, repo: 'NodeRepository') -> None:
+    def _clone(self, repo: NodeRepository) -> None:
         """Clone the repository from another instance.
 
         This is used when cloning a node.
@@ -285,10 +285,10 @@ class NodeRepository:
         :raises IsADirectoryError: if the object is a directory and not a file.
         :raises OSError: if the file could not be opened.
         """
-        with self.open(path, mode='rb') as handle:
-            handle.seek(0, io.SEEK_END)
-            size = handle.tell()
-        return size
+        import os
+
+        with self.as_path(path) as filepath:
+            return os.path.getsize(filepath)
 
     def get_zipped_objects(self, compression: int = zipfile.ZIP_DEFLATED) -> bytes:
         """Return the zipped content of the repository or a sub path within it.

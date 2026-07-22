@@ -16,7 +16,6 @@ import re
 import sys
 from collections import OrderedDict
 from pathlib import Path, PurePosixPath
-from typing import Optional, Union
 
 from aiida.common.exceptions import InternalError
 from aiida.common.lang import classproperty
@@ -24,7 +23,7 @@ from aiida.common.warnings import warn_deprecation
 
 __all__ = ('AsyncTransport', 'BlockingTransport', 'Transport', 'TransportPath')
 
-TransportPath = Union[str, Path, PurePosixPath]
+TransportPath = str | Path | PurePosixPath
 
 _MAGIC_CHECK = re.compile('[*?[]')
 
@@ -318,7 +317,7 @@ class Transport(abc.ABC):
         """
         return self._safe_open_interval
 
-    def _gotocomputer_string(self, remotedir: Optional[TransportPath] = None):
+    def _gotocomputer_string(self, remotedir: TransportPath | None = None):
         """Command executed when goto computer."""
         if remotedir is None:
             return self._bash_command_str
@@ -327,7 +326,7 @@ class Transport(abc.ABC):
             """ "if [ -d {escaped_remotedir} ] ;"""
             """ then cd {escaped_remotedir} ; {bash_command} ; else echo '  ** The directory' ; """
             """echo '  ** {remotedir}' ; echo '  ** seems to have been deleted, I logout...' ; fi" """.format(
-                bash_command=self._bash_command_str, escaped_remotedir="'{}'".format(remotedir), remotedir=remotedir
+                bash_command=self._bash_command_str, escaped_remotedir=f"'{remotedir}'", remotedir=remotedir
             )
         )
 
@@ -365,7 +364,7 @@ class Transport(abc.ABC):
         :type gid: int
         """
         warn_deprecation(
-            'The `Transport.chown` method is deprecated and will be removed. ' 'It is not used internally by AiiDA.',
+            'The `Transport.chown` method is deprecated and will be removed. It is not used internally by AiiDA.',
             version=3,
         )
         raise NotImplementedError('chown is not implemented for this transport.')
@@ -486,7 +485,7 @@ class Transport(abc.ABC):
                 transportdestination.put(os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put)
 
     @abc.abstractmethod
-    def _exec_command_internal(self, command: str, workdir: Optional[TransportPath] = None, **kwargs):
+    def _exec_command_internal(self, command: str, workdir: TransportPath | None = None, **kwargs):
         """Execute the command on the shell, similarly to os.system.
 
         Enforce the execution to be run from `workdir`.
@@ -506,7 +505,7 @@ class Transport(abc.ABC):
         """
 
     @abc.abstractmethod
-    def exec_command_wait_bytes(self, command: str, stdin=None, workdir: Optional[TransportPath] = None, **kwargs):
+    def exec_command_wait_bytes(self, command: str, stdin=None, workdir: TransportPath | None = None, **kwargs):
         """Execute the command on the shell, waits for it to finish,
         and return the retcode, the stdout and the stderr as bytes.
 
@@ -525,9 +524,7 @@ class Transport(abc.ABC):
         :return: a tuple: the retcode (int), stdout (bytes) and stderr (bytes).
         """
 
-    def exec_command_wait(
-        self, command, stdin=None, encoding='utf-8', workdir: Optional[TransportPath] = None, **kwargs
-    ):
+    def exec_command_wait(self, command, stdin=None, encoding='utf-8', workdir: TransportPath | None = None, **kwargs):
         """Executes the specified command and waits for it to finish.
 
         :note: this function also decodes the bytes received into a string with the specified encoding,
@@ -700,7 +697,7 @@ class Transport(abc.ABC):
         :return: a list of strings
         """
 
-    def listdir_withattributes(self, path: TransportPath = '.', pattern: Optional[str] = None):
+    def listdir_withattributes(self, path: TransportPath = '.', pattern: str | None = None):
         """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
@@ -870,7 +867,7 @@ class Transport(abc.ABC):
         """
 
     @abc.abstractmethod
-    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
+    def gotocomputer_command(self, remotedir: TransportPath | None = None):
         """Return a string to be run using os.system in order to connect
         via the transport to the remote directory.
 
@@ -1000,7 +997,7 @@ class Transport(abc.ABC):
             dirname = dirname.decode(sys.getfilesystemencoding() or sys.getdefaultencoding())
         try:
             names = self.listdir(dirname)
-        except EnvironmentError:
+        except OSError:
             return []
         if pattern[0] != '.':
             names = [name for name in names if name[0] != '.']
@@ -1027,7 +1024,7 @@ class Transport(abc.ABC):
     def compress(
         self,
         format: str,
-        remotesources: Union[TransportPath, list[TransportPath]],
+        remotesources: TransportPath | list[TransportPath],
         remotedestination: TransportPath,
         root_dir: TransportPath,
         overwrite: bool = True,
@@ -1117,8 +1114,7 @@ class Transport(abc.ABC):
         :type gid: int
         """
         warn_deprecation(
-            'The `Transport.chown_async` method is deprecated and will be removed. '
-            'It is not used internally by AiiDA.',
+            'The `Transport.chown_async` method is deprecated and will be removed. It is not used internally by AiiDA.',
             version=3,
         )
         raise NotImplementedError('chown_async is not implemented for this transport.')
@@ -1196,9 +1192,9 @@ class Transport(abc.ABC):
     async def exec_command_wait_async(
         self,
         command: str,
-        stdin: Optional[str] = None,
+        stdin: str | None = None,
         encoding: str = 'utf-8',
-        workdir: Optional[TransportPath] = None,
+        workdir: TransportPath | None = None,
         **kwargs,
     ):
         """Executes the specified command and waits for it to finish.
@@ -1320,7 +1316,7 @@ class Transport(abc.ABC):
         """
 
     @abc.abstractmethod
-    async def listdir_async(self, path: TransportPath, pattern: Optional[str] = None):
+    async def listdir_async(self, path: TransportPath, pattern: str | None = None):
         """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
@@ -1338,7 +1334,7 @@ class Transport(abc.ABC):
     async def listdir_withattributes_async(
         self,
         path: TransportPath,
-        pattern: Optional[str] = None,
+        pattern: str | None = None,
     ):
         """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
@@ -1538,7 +1534,7 @@ class Transport(abc.ABC):
     async def compress_async(
         self,
         format: str,
-        remotesources: Union[TransportPath, list[TransportPath]],
+        remotesources: TransportPath | list[TransportPath],
         remotedestination: TransportPath,
         root_dir: TransportPath,
         overwrite: bool = True,
@@ -1597,7 +1593,7 @@ class BlockingTransport(Transport):
     def compress(
         self,
         format: str,
-        remotesources: Union[TransportPath, list[TransportPath]],
+        remotesources: TransportPath | list[TransportPath],
         remotedestination: TransportPath,
         root_dir: TransportPath,
         overwrite: bool = True,
@@ -1664,7 +1660,7 @@ class BlockingTransport(Transport):
         copy_items = ' '.join([str(Path(item).relative_to(root_dir)) for item in copy_list])
         # note: order of the flags is important
         tar_command = (
-            f"tar -c{compression_flag!s}{'h' if dereference else ''}f {remotedestination!s} -C {root_dir!s} "
+            f'tar -c{compression_flag!s}{"h" if dereference else ""}f {remotedestination!s} -C {root_dir!s} '
             + copy_items
         )
 
@@ -1675,9 +1671,8 @@ class BlockingTransport(Transport):
                 self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing tar. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
-                    retval, stdout, stderr, tar_command
-                )
+                f'Problem executing tar. Exit code: {retval}, '
+                f"stdout: '{stdout}', stderr: '{stderr}', command: '{tar_command}'"
             )
             raise OSError(f'Error while creating the tar archive. Exit code: {retval}')
 
@@ -1721,9 +1716,8 @@ class BlockingTransport(Transport):
                 self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing tar. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
-                    retval, stdout, stderr, tar_command
-                )
+                f'Problem executing tar. Exit code: {retval}, '
+                f"stdout: '{stdout}', stderr: '{stderr}', command: '{tar_command}'"
             )
             raise OSError(f'Error while extracting the tar archive. Exit code: {retval}')
 

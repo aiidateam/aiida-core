@@ -43,8 +43,7 @@ def iterate_process_tasks(broker: Broker) -> collections.abc.Iterator[kiwipy.rmq
 
     :returns: A list of process pks that have a corresponding process task with RabbitMQ.
     """
-    for task in broker.iterate_tasks():
-        yield task
+    yield from broker.iterate_tasks()
 
 
 def get_process_tasks(broker: Broker) -> list[int]:
@@ -206,7 +205,7 @@ def _perform_actions(
     action: t.Callable,
     infinitive: str,
     present: str,
-    timeout: t.Optional[float] = None,
+    timeout: float | None = None,
     **kwargs: t.Any,
 ) -> None:
     """Perform an action on a list of processes.
@@ -237,12 +236,19 @@ def _perform_actions(
 
     _resolve_futures(futures, infinitive, present, timeout)
 
+    # End the current read transaction so that subsequent attribute reads see
+    # the state committed by the daemon.  Without this, SQLite's transaction
+    # snapshot isolation can cause stale reads after the RPC round-trip.
+    storage = get_manager().get_profile_storage()
+    if hasattr(storage, 'get_session'):
+        storage.get_session().commit()
+
 
 def _resolve_futures(
     futures: dict[concurrent.futures.Future, ProcessNode],
     infinitive: str,
     present: str,
-    timeout: t.Optional[float] = None,
+    timeout: float | None = None,
 ) -> None:
     """Process a mapping of futures representing an action on an active process.
 
@@ -259,12 +265,12 @@ def _resolve_futures(
     if not timeout or not futures:
         if futures:
             LOGGER.report(
-                f"Request to {infinitive} process(es) {','.join([str(proc.pk) for proc in futures.values()])}"
+                f'Request to {infinitive} process(es) {",".join([str(proc.pk) for proc in futures.values()])}'
                 ' sent. Skipping waiting for response.'
             )
         return
 
-    LOGGER.report(f"Waiting for process(es) {','.join([str(proc.pk) for proc in futures.values()])}.")
+    LOGGER.report(f'Waiting for process(es) {",".join([str(proc.pk) for proc in futures.values()])}.')
 
     # Ensure that when futures are only are completed if they return an actual value (not a future)
     unwrapped_futures = {unwrap_kiwi_future(future): process for future, process in futures.items()}

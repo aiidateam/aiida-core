@@ -13,7 +13,6 @@ import io
 import os
 import re
 from stat import S_ISDIR, S_ISREG
-from typing import Optional
 
 import click
 
@@ -401,7 +400,7 @@ class SshTransport(BlockingTransport):
             self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         else:
             raise ValueError(
-                'Unknown value of the key policy, allowed values ' 'are: RejectPolicy, WarningPolicy, AutoAddPolicy'
+                'Unknown value of the key policy, allowed values are: RejectPolicy, WarningPolicy, AutoAddPolicy'
             )
 
         self._connect_args = {}
@@ -571,17 +570,17 @@ class SshTransport(BlockingTransport):
         """Return a useful string."""
         conn_info = self._machine
         try:
-            conn_info = f"{self._connect_args['username']}@{conn_info}"
+            conn_info = f'{self._connect_args["username"]}@{conn_info}'
         except KeyError:
             # No username explicitly defined: ignore
             pass
         try:
-            conn_info += f":{self._connect_args['port']}"
+            conn_info += f':{self._connect_args["port"]}'
         except KeyError:
             # No port explicitly defined: ignore
             pass
 
-        return f"{'OPEN' if self._is_open else 'CLOSED'} [{conn_info}]"
+        return f'{"OPEN" if self._is_open else "CLOSED"} [{conn_info}]'
 
     def chdir(self, path: TransportPath):
         """
@@ -732,15 +731,15 @@ class SshTransport(BlockingTransport):
         except OSError as exc:
             if os.path.isabs(path):
                 raise OSError(
-                    "Error during mkdir of '{}', "
+                    f"Error during mkdir of '{path}', "
                     "maybe you don't have the permissions to do it, "
-                    'or the directory already exists? ({})'.format(path, exc)
+                    f'or the directory already exists? ({exc})'
                 )
             else:
                 raise OSError(
-                    "Error during mkdir of '{}' from folder '{}', "
+                    f"Error during mkdir of '{path}' from folder '{self.getcwd()}', "
                     "maybe you don't have the permissions to do it, "
-                    'or the directory already exists? ({})'.format(path, self.getcwd(), exc)
+                    f'or the directory already exists? ({exc})'
                 )
 
     def rmtree(self, path: TransportPath):
@@ -1288,17 +1287,15 @@ class SshTransport(BlockingTransport):
                 self.logger.warning(f'There was nonempty stderr in the cp command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing cp. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
-                    retval, stdout, stderr, command
-                )
+                f'Problem executing cp. Exit code: {retval}, '
+                f"stdout: '{stdout}', stderr: '{stderr}', command: '{command}'"
             )
             if 'No such file or directory' in str(stderr):
                 raise FileNotFoundError(f'Error while executing cp: {stderr}')
 
             raise OSError(
-                'Error while executing cp. Exit code: {}, ' "stdout: '{}', stderr: '{}', " "command: '{}'".format(
-                    retval, stdout, stderr, command
-                )
+                f'Error while executing cp. Exit code: {retval}, '
+                f"stdout: '{stdout}', stderr: '{stderr}', command: '{command}'"
             )
 
     @staticmethod
@@ -1425,7 +1422,7 @@ class SshTransport(BlockingTransport):
         else:
             command_to_execute = command
 
-        self.logger.debug(f'Command to be executed: {command_to_execute[:self._MAX_EXEC_COMMAND_LOG_SIZE]}')
+        self.logger.debug(f'Command to be executed: {command_to_execute[: self._MAX_EXEC_COMMAND_LOG_SIZE]}')
 
         # Note: The default shell will eat one level of escaping, while
         # 'bash -l -c ...' will eat another. Thus, we need to escape again.
@@ -1457,7 +1454,6 @@ class SshTransport(BlockingTransport):
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
             are both bytes and the return_value is an int.
         """
-        import socket
         import time
 
         if workdir:
@@ -1516,7 +1512,7 @@ class SshTransport(BlockingTransport):
                 try:
                     piece = stdout.read(internal_bufsize)
                     stdout_bytes.append(piece)
-                except socket.timeout:
+                except TimeoutError:
                     # There was a timeout: I continue as there should still be data
                     pass
 
@@ -1525,7 +1521,7 @@ class SshTransport(BlockingTransport):
                 try:
                     piece = stderr.read(internal_bufsize)
                     stderr_bytes.append(piece)
-                except socket.timeout:
+                except TimeoutError:
                     # There was a timeout: I continue as there should still be data
                     pass
 
@@ -1556,25 +1552,25 @@ class SshTransport(BlockingTransport):
 
         return (retval, b''.join(stdout_bytes), b''.join(stderr_bytes))
 
-    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
+    def gotocomputer_command(self, remotedir: TransportPath | None = None):
         """Specific gotocomputer string to connect to a given remote computer via
         ssh and directly go to the calculation folder.
         """
         further_params = []
         if 'username' in self._connect_args:
-            further_params.append(f"-l {escape_for_bash(self._connect_args['username'])}")
+            further_params.append(f'-l {escape_for_bash(self._connect_args["username"])}')
 
         if self._connect_args.get('port'):
-            further_params.append(f"-p {self._connect_args['port']}")
+            further_params.append(f'-p {self._connect_args["port"]}')
 
         if self._connect_args.get('key_filename'):
-            further_params.append(f"-i {escape_for_bash(self._connect_args['key_filename'])}")
+            further_params.append(f'-i {escape_for_bash(self._connect_args["key_filename"])}')
 
         if self._connect_args.get('proxy_jump'):
-            further_params.append(f"-o ProxyJump={escape_for_bash(self._connect_args['proxy_jump'])}")
+            further_params.append(f'-o ProxyJump={escape_for_bash(self._connect_args["proxy_jump"])}')
 
         if self._connect_args.get('proxy_command'):
-            further_params.append(f"-o ProxyCommand={escape_for_bash(self._connect_args['proxy_command'])}")
+            further_params.append(f'-o ProxyCommand={escape_for_bash(self._connect_args["proxy_command"])}')
 
         further_params_str = ' '.join(further_params)
 

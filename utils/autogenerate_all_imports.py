@@ -7,7 +7,6 @@ import sys
 from collections import Counter
 from pathlib import Path
 from pprint import pprint
-from typing import Optional
 
 AUTO_GENERATED = 'AUTO-GENERATED'
 # Four-space indentation level (must be compatible with the formatter!)
@@ -94,14 +93,15 @@ def parse_all(folder_path: Path) -> tuple[dict, dict]:
 
 
 def gather_all(
-    cur_path: list[str], cur_dict: dict, skip_children: dict, all_list: Optional[list[str]] = None
+    cur_path: list[str], cur_dict: dict, skip_children: dict, all_list: list[str] | None = None
 ) -> list[str]:
     """Recursively gather __all__ names."""
     all_list = [] if all_list is None else all_list
+    skipped = set(skip_children.get('/'.join(cur_path), []))
     for key, val in cur_dict.items():
         if key == '__all__':
-            all_list.extend(val)
-        elif key not in skip_children.get('/'.join(cur_path), []):
+            all_list.extend(name for name in val if name not in skipped)
+        elif key not in skipped:
             gather_all(cur_path + [key], val, skip_children, all_list)
     return all_list
 
@@ -200,6 +200,8 @@ if __name__ == '__main__':
         # skipped since we don't want to expose the implementation at the top-level
         'storage': ['psql_dos', 'sqlite_zip', 'sqlite_temp'],
         'orm': ['implementation'],
+        # skipped since re-exporting CLI helpers from the package root can trigger cyclic imports see issue #7429
+        'brokers': ['cli'],
         # skip all since the module requires extra requirements
         'restapi': ['*'],
     }

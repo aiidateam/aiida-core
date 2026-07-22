@@ -50,7 +50,7 @@ def storage_version():
         echo.echo_critical(f'Failed to determine the storage version: {exception}')
 
     try:
-        profile.storage_cls(profile)
+        storage = profile.storage_cls(profile)
     except (CorruptStorage, UnreachableStorage) as exception:
         echo.echo_error(f'The storage cannot be reached or is corrupt: {exception}')
         sys.exit(3)
@@ -60,6 +60,8 @@ def storage_version():
             'Run `verdi storage migrate` to migrate the storage.'
         )
         sys.exit(4)
+    else:
+        storage.close()
 
 
 @verdi_storage.command('migrate')
@@ -93,8 +95,9 @@ def storage_migrate(force):
         echo.echo_warning('', nl=False)
 
         expected_answer = 'MIGRATE NOW'
-        confirm_message = 'If you have completed the steps above and want to migrate profile "{}", type {}'.format(
-            profile.name, expected_answer
+        confirm_message = (
+            f'If you have completed the steps above and want to migrate profile "{profile.name}", '
+            f'type {expected_answer}'
         )
 
         try:
@@ -152,9 +155,20 @@ def storage_info(detailed):
 @click.option(
     '--compress', is_flag=True, default=False, help='Use compression if possible when carrying out maintenance tasks.'
 )
+@click.option(
+    '--incremental-cleanup/--no-incremental-cleanup',
+    is_flag=True,
+    default=True,
+    help=(
+        'Remove `loose` files after each `pack` is written during `verdi storage maintain`, '
+        'keeping peak disk usage close to the initial size. [default: enabled]  '
+        'Use `--no-incremental-cleanup` to defer cleanup until all `packs` are written, '
+        'at the cost of temporarily needing roughly double the disk space.'
+    ),
+)
 @decorators.with_dbenv()
 @click.pass_context
-def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
+def storage_maintain(ctx, full, no_repack, force, dry_run, compress, incremental_cleanup):
     """Performs maintenance tasks on the repository."""
     from aiida.common.exceptions import LockingProfileError
     from aiida.common.progress_reporter import set_progress_bar_tqdm, set_progress_reporter
@@ -198,9 +212,15 @@ def storage_maintain(ctx, full, no_repack, force, dry_run, compress):
 
     try:
         if full and no_repack:
-            storage.maintain(full=full, dry_run=dry_run, do_repack=False, compress=compress)
+            storage.maintain(
+                full=full,
+                dry_run=dry_run,
+                do_repack=False,
+                compress=compress,
+                incremental_cleanup=incremental_cleanup,
+            )
         else:
-            storage.maintain(full=full, dry_run=dry_run, compress=compress)
+            storage.maintain(full=full, dry_run=dry_run, compress=compress, incremental_cleanup=incremental_cleanup)
     except LockingProfileError as exception:
         echo.echo_critical(str(exception))
     echo.echo_success('Requested maintenance procedures finished.')

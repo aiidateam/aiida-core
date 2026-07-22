@@ -10,12 +10,16 @@
 
 from unittest.mock import patch
 
+import click
 import pytest
 from pgtest.pgtest import PGTest
 
 from aiida import orm
 from aiida.cmdline.commands import cmd_profile, cmd_verdi
+from aiida.common import docs
+from aiida.engine.daemon.client import DaemonException, DaemonStalePidException, DaemonTimeoutException
 from aiida.manage import configuration
+from aiida.manage.configuration import profile_context
 from aiida.plugins import StorageFactory
 from aiida.tools.archive.create import create_archive
 
@@ -166,6 +170,78 @@ def test_delete_force(run_cli_command, mock_profiles, pg_test_cluster):
     assert 'When the `-f/--force` flag is used either `--delete-data` or `--keep-data`' in result.output
 
 
+def test_delete_stops_running_daemon(run_cli_command, mock_profiles, pg_test_cluster, monkeypatch):
+    """Test that ``verdi profile delete`` stops the daemon if it is running."""
+    from aiida.engine.daemon.client import DaemonClient
+
+    kwargs = {'database_port': pg_test_cluster.dsn['port']}
+    profile_list = mock_profiles(**kwargs)
+    daemon_kwargs = {}
+
+    def stop_daemon(self, **kwargs):
+        daemon_kwargs.update(kwargs)
+        return {'status': 'ok'}
+
+    monkeypatch.setattr(DaemonClient, 'stop_daemon', stop_daemon)
+
+    result = run_cli_command(
+        cmd_profile.profile_delete,
+        ['--force', '--keep-data', profile_list[0]],
+        use_subprocess=False,
+    )
+
+    assert daemon_kwargs == {'wait': True, 'timeout': 5}
+    assert f'Daemon for profile `{profile_list[0]}` stopped.' in result.output
+    assert f'`{profile_list[0]}` was deleted' in result.output
+
+
+@pytest.mark.parametrize(
+    ('exception_cls', 'message'),
+    [
+        (DaemonTimeoutException, 'Connection to the daemon timed out.'),
+        (DaemonException, 'Connection failed.'),
+        (DaemonStalePidException, 'Stale PID file.'),
+    ],
+)
+def test_delete_proceeds_on_daemon_stop_exception(
+    run_cli_command, mock_profiles, pg_test_cluster, monkeypatch, exception_cls, message
+):
+    """Test that ``verdi profile delete`` proceeds when stopping the daemon raises a non-fatal exception."""
+    from aiida.engine.daemon.client import DaemonClient
+
+    kwargs = {'database_port': pg_test_cluster.dsn['port']}
+    profile_list = mock_profiles(**kwargs)
+
+    def stop_daemon_raise(self, **kwargs):
+        raise exception_cls(message)
+
+    monkeypatch.setattr(DaemonClient, 'stop_daemon', stop_daemon_raise)
+
+    result = run_cli_command(
+        cmd_profile.profile_delete,
+        ['--force', '--keep-data', profile_list[0]],
+        use_subprocess=False,
+    )
+
+    assert f'`{profile_list[0]}` was deleted' in result.output
+    config = configuration.get_config()
+    assert profile_list[0] not in config.profile_names
+
+
+def test_delete_no_broker(run_cli_command, mock_profiles, pg_test_cluster):
+    """Test that ``verdi profile delete`` proceeds if no broker is configured."""
+    kwargs = {'database_port': pg_test_cluster.dsn['port'], 'process_control_backend': None}
+    profile_list = mock_profiles(**kwargs)
+
+    result = run_cli_command(
+        cmd_profile.profile_delete,
+        ['--force', '--keep-data', profile_list[0]],
+        use_subprocess=False,
+    )
+
+    assert f'`{profile_list[0]}` was deleted' in result.output
+
+
 @pytest.mark.parametrize('entry_point', ('core.sqlite_dos', 'core.sqlite_zip'))
 def test_setup_with_validating_sqlite_version(run_cli_command, isolated_config, tmp_path, entry_point, monkeypatch):
     """Test the ``verdi profile setup`` command.
@@ -288,6 +364,34 @@ def test_setup_email_required(run_cli_command, isolated_config, tmp_path, entry_
         assert 'Invalid value for --email: The option is required for storages that are not read-only.' in result.output
 
 
+@pytest.mark.parametrize('broker', ('core.rabbitmq', 'core.zeromq', 'none'))
+def test_setup_broker(run_cli_command, isolated_config, monkeypatch, broker):
+    """Test the ``--broker`` option only accepts the new broker entry-point names."""
+    if broker == 'core.rabbitmq':
+        rabbitmq_config = {
+            'broker_protocol': 'amqp',
+            'broker_username': 'guest',
+            'broker_password': 'guest',
+            'broker_host': '127.0.0.1',
+            'broker_port': 5672,
+            'broker_virtual_host': '',
+        }
+        monkeypatch.setattr('aiida.brokers.rabbitmq.defaults.detect_rabbitmq_config', lambda: rabbitmq_config)
+
+    profile_name = f'profile-{broker.replace(".", "-")}'
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', broker]
+
+    result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    assert f'Created new profile `{profile_name}`.' in result.output
+    assert profile_name in isolated_config.profile_names
+
+    profile = isolated_config.get_profile(profile_name)
+    if broker == 'none':
+        assert profile.process_control_backend is None
+    else:
+        assert profile.process_control_backend == broker
+
+
 def test_setup_no_use_rabbitmq(run_cli_command, isolated_config):
     """Test the ``--no-use-rabbitmq`` option."""
     profile_name = 'profile-no-broker'
@@ -301,8 +405,21 @@ def test_setup_no_use_rabbitmq(run_cli_command, isolated_config):
     assert profile.process_control_config == {}
 
 
-def test_configure_rabbitmq(run_cli_command, isolated_config):
-    """Test the ``verdi profile configure-rabbitmq`` command."""
+def test_setup_broker_core_zeromq(run_cli_command, isolated_config):
+    """Test the ``--broker core.zeromq`` option."""
+    profile_name = 'profile-broker-core-zmq'
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', 'core.zeromq']
+
+    result = run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    assert f'Created new profile `{profile_name}`.' in result.output
+    profile = isolated_config.get_profile(profile_name)
+    assert profile.process_control_backend == 'core.zeromq'
+    assert profile.process_control_config == {'supervised_by_daemon': True}
+
+
+@pytest.mark.requires_rmq
+def test_configure_broker_rmq(run_cli_command, isolated_config, monkeypatch):
+    """Test the ``verdi profile configure-broker core.rabbitmq`` command."""
     profile_name = 'profile'
 
     # First setup a profile without a broker configured
@@ -313,30 +430,207 @@ def test_configure_rabbitmq(run_cli_command, isolated_config):
     assert profile.process_control_config == {}
 
     # Now run the command to configure the broker
-    options = [profile_name, '-n']
-    cli_result = run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
+    options = ['core.rabbitmq', profile_name, '-n']
+    cli_result = run_cli_command(cmd_profile.profile_configure_broker, options, use_subprocess=False)
     assert profile.process_control_backend == 'core.rabbitmq'
     assert 'Connected to RabbitMQ with the provided connection parameters' in cli_result.stdout
-
-    # Verify that running in non-interactive mode is the default
-    options = [
-        profile_name,
-    ]
-    run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=True)
-    assert profile.process_control_backend == 'core.rabbitmq'
-    assert 'Connected to RabbitMQ with the provided connection parameters' in cli_result.stdout
-
-    # Verify that configuring with incorrect options and `--force` raises a warning but still configures the broker
-    options = [profile_name, '-f', '--broker-port', '1234']
-    cli_result = run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
-    assert 'Unable to connect to RabbitMQ server: Failed to connect' in cli_result.stdout
-    assert profile.process_control_config['broker_port'] == 1234
 
     # Call it again to check it works to reconfigure existing broker connection parameters
-    options = [profile_name, '-n', '--broker-port', '5672']
-    cli_result = run_cli_command(cmd_profile.profile_configure_rabbitmq, options, use_subprocess=False)
+    options = ['core.rabbitmq', profile_name, '-n', '--broker-port', '5672']
+    cli_result = run_cli_command(cmd_profile.profile_configure_broker, options, use_subprocess=False)
     assert 'Connected to RabbitMQ with the provided connection parameters' in cli_result.stdout
     assert profile.process_control_config['broker_port'] == 5672
+
+
+def test_configure_broker_zeromq(run_cli_command, isolated_config):
+    """Test ``verdi profile configure-broker core.zeromq``."""
+    profile_name = 'profile-zeromq'
+
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    profile = isolated_config.get_profile(profile_name)
+    assert profile.process_control_backend is None
+    assert profile.process_control_config == {}
+
+    cli_result = run_cli_command(
+        cmd_profile.profile_configure_broker, ['core.zeromq', profile_name, '-n'], use_subprocess=False
+    )
+    assert profile.process_control_backend == 'core.zeromq'
+    assert profile.process_control_config == {'supervised_by_daemon': True}
+    assert f'ZeroMQ configuration for `{profile.name}` updated.' in cli_result.stdout
+    assert 'The ZeroMQ broker service will be started automatically with the daemon.' in cli_result.stdout
+
+
+def test_configure_broker_zeromq_rejects_rabbitmq_options(run_cli_command, isolated_config):
+    """Test RabbitMQ options are rejected for the ZeroMQ backend command."""
+    profile_name = 'profile-zeromq-ignored-options'
+
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+
+    cli_result = run_cli_command(
+        cmd_profile.profile_configure_broker,
+        ['core.zeromq', profile_name, '-n', '--broker-port', '1234'],
+        use_subprocess=False,
+        raises=True,
+    )
+
+    assert 'No such option: --broker-port' in cli_result.output
+
+
+def test_configure_broker_none(run_cli_command, isolated_config):
+    """Test ``verdi profile configure-broker none``."""
+    profile_name = 'profile-none'
+
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', 'core.zeromq']
+    run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    profile = isolated_config.get_profile(profile_name)
+    assert profile.process_control_backend == 'core.zeromq'
+
+    cli_result = run_cli_command(
+        cmd_profile.profile_configure_broker, ['none', profile_name, '-n'], use_subprocess=False
+    )
+    assert profile.process_control_backend is None
+    assert profile.process_control_config == {}
+    assert f'Broker disabled for `{profile.name}`.' in cli_result.stdout
+    assert docs.URL_NO_BROKER in cli_result.stdout
+
+
+@pytest.mark.requires_rmq
+def test_configure_rabbitmq_deprecated(run_cli_command, isolated_config):
+    """Test the deprecated ``verdi profile configure-rabbitmq`` command."""
+    profile_name = 'profile-deprecated-rmq'
+
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    profile = isolated_config.get_profile(profile_name)
+
+    cli_result = run_cli_command(cmd_profile.profile_configure_rabbitmq, [profile_name, '-n'], use_subprocess=False)
+    assert profile.process_control_backend == 'core.rabbitmq'
+    assert 'Deprecated:' in cli_result.output
+    assert 'Please use `verdi profile configure-broker core.rabbitmq` instead.' in cli_result.output
+
+
+def test_configure_broker_rabbitmq_interactive_defaults_use_detected_config(
+    run_cli_command, isolated_config, monkeypatch
+):
+    """Test interactive RabbitMQ prompts are seeded from detected connection parameters."""
+    profile_name = 'profile-rmq-interactive-defaults'
+
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+
+    detected_config = {
+        'broker_protocol': 'amqps',
+        'broker_username': 'detected-user',
+        'broker_password': 'detected-password',
+        'broker_host': 'detected-host',
+        'broker_port': 4321,
+        'broker_virtual_host': 'detected-vhost',
+    }
+    monkeypatch.setattr('aiida.brokers.rabbitmq.defaults.detect_rabbitmq_config', lambda **_kwargs: detected_config)
+
+    cli_result = run_cli_command(
+        cmd_profile.profile_configure_broker,
+        ['core.rabbitmq', profile_name],
+        use_subprocess=False,
+        user_input='\n\n\n\n\n\n',
+    )
+    assert cli_result.exception is None, cli_result.output
+    assert 'Broker protocol (amqp, amqps)' in cli_result.output
+    assert '[amqps]' in cli_result.output
+
+
+def test_configure_broker_rmq_non_interactive_failed_validation(run_cli_command, isolated_config, monkeypatch):
+    """Test ``configure-broker core.rabbitmq`` aborts on failed validation in non-interactive mode."""
+    profile_name = 'profile-rmq-non-interactive'
+
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    profile = isolated_config.get_profile(profile_name)
+
+    def detect_rabbitmq_config(**_kwargs):
+        raise ConnectionError('Failed to connect')
+
+    monkeypatch.setattr('aiida.brokers.rabbitmq.defaults.detect_rabbitmq_config', detect_rabbitmq_config)
+
+    cli_result = run_cli_command(
+        cmd_profile.profile_configure_broker,
+        ['core.rabbitmq', profile_name, '-n', '--broker-port', '1234'],
+        use_subprocess=False,
+        raises=True,
+    )
+    assert 'Unable to connect to RabbitMQ server: Failed to connect' in cli_result.output
+    assert f'Aborting RabbitMQ configuration for `{profile.name}`.' in cli_result.output
+    assert 'Rerun with `--force` to store them anyway.' in cli_result.output
+    assert profile.process_control_config == {}
+
+
+def test_configure_broker_zmq_non_interactive_restart(run_cli_command, isolated_config, monkeypatch):
+    """Test ``configure-broker core.zeromq -n`` does not prompt before restarting the daemon."""
+    profile_name = 'profile-zmq-non-interactive'
+
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--broker', 'core.zeromq']
+    run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+
+    called = {'restart_daemon': False}
+
+    class DaemonClient:
+        """Test double for a running daemon client."""
+
+        def __init__(self, profile):
+            self.profile = profile
+
+        @property
+        def is_daemon_running(self):
+            return True
+
+        def restart_daemon(self):
+            called['restart_daemon'] = True
+
+    monkeypatch.setattr('aiida.engine.daemon.client.DaemonClient', DaemonClient)
+
+    cli_result = run_cli_command(
+        cmd_profile.profile_configure_broker,
+        ['core.zeromq', profile_name, '-n'],
+        use_subprocess=False,
+    )
+    assert (
+        'The daemon is currently running. It will need to be restarted for changes to take effect.' in cli_result.output
+    )
+    assert 'Do you want to apply the configuration and restart the daemon?' not in cli_result.output
+    assert 'Restarting the daemon...' not in cli_result.output
+    assert 'Daemon restarted successfully.' not in cli_result.output
+    assert called['restart_daemon'] is False
+
+
+def test_configure_broker_invalid_backend():
+    """Test an invalid backend passed to the helper raises ``BadParameter``."""
+    ctx = type('Context', (), {'obj': type('Object', (), {'profile': configuration.get_profile()})()})()
+    profile = configuration.get_profile()
+
+    with pytest.raises(click.BadParameter, match='unsupported broker backend: invalid'):
+        cmd_profile._configure_profile_broker(ctx, profile, 'invalid', False, False)
+
+
+def test_configure_broker_uses_loaded_profile_when_default_profile_is_missing(run_cli_command, isolated_config):
+    """Test ``configure-broker`` falls back to the loaded profile when no default profile is configured."""
+    profile_name = 'profile-loaded-profile'
+
+    options = ['core.sqlite_dos', '-n', '--email', 'a@a', '--profile-name', profile_name, '--no-use-rabbitmq']
+    run_cli_command(cmd_profile.profile_setup, options, use_subprocess=False)
+    isolated_config._default_profile = None
+
+    with profile_context(profile_name, allow_switch=True):
+        cli_result = run_cli_command(
+            cmd_profile.profile_configure_broker,
+            ['core.zeromq', '-n'],
+            use_subprocess=False,
+        )
+
+    profile = isolated_config.get_profile(profile_name)
+    assert cli_result.exit_code == 0
+    assert profile.process_control_backend == 'core.zeromq'
 
 
 class TestVerdiProfileDumpCLI:
@@ -431,7 +725,7 @@ class TestVerdiProfileDumpCLI:
         run_cli_command(cmd_profile.profile_dump, options)
 
         # Verify the dump method was called with expected arguments
-        args, kwargs = mock_dump.call_args
+        _, kwargs = mock_dump.call_args
         assert kwargs['output_path'] == test_path.resolve()
         assert kwargs['all_entries'] is True
         assert kwargs['groups'] == [group]  # Converted to `orm.Group`

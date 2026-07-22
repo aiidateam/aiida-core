@@ -210,6 +210,7 @@ def tests_storage_maintain_logging(run_cli_command, monkeypatch):
     assert ' > full: True' in message_list
     assert ' > do_repack: False' in message_list
     assert ' > dry_run: False' in message_list
+    assert ' > incremental_cleanup: True' in message_list
 
 
 def tests_storage_backup(run_cli_command, tmp_path):
@@ -232,7 +233,7 @@ def tests_storage_backup_keep(run_cli_command, tmp_path):
         assert 'backed up to' in result.output
         assert result.exit_code == 0
     # make sure only two copies of the backup are kept
-    assert len(list((tmp_path.glob('backup_*')))) == 2
+    assert len(list(tmp_path.glob('backup_*'))) == 2
 
 
 def tests_storage_backup_nonempty_dest(run_cli_command, tmp_path):

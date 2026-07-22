@@ -284,7 +284,7 @@ class LsfScheduler(BashCliScheduler):
         jobnum, state, walltime, queue[=partition], user, numnodes, numcores, title
         """
 
-        command = ['bjobs', '-noheader', f"-o '{' '.join(self._joblist_fields)} delimiter=\"{_FIELD_SEPARATOR}\"'"]
+        command = ['bjobs', '-noheader', f'-o \'{" ".join(self._joblist_fields)} delimiter="{_FIELD_SEPARATOR}"\'']
 
         if user and jobs:
             raise FeatureNotAvailable('Cannot query by user and job(s) in LSF')
@@ -370,7 +370,7 @@ class LsfScheduler(BashCliScheduler):
                 'LSF scheduler does not support joining '
                 'the standard output and standard error '
                 'files; std error file assigned instead '
-                'to the file {}'.format(sched_error_path)
+                f'to the file {sched_error_path}'
             )
 
         if sched_error_path:
@@ -413,9 +413,8 @@ class LsfScheduler(BashCliScheduler):
                     raise ValueError
             except ValueError as exc:
                 raise ValueError(
-                    'max_wallclock_seconds must be ' "a positive integer (in seconds)! It is instead '{}'" ''.format(
-                        (job_tmpl.max_wallclock_seconds)
-                    )
+                    'max_wallclock_seconds must be a positive integer (in seconds)! '
+                    f"It is instead '{job_tmpl.max_wallclock_seconds}'"
                 ) from exc
             hours = tot_secs // 3600
             # The double negation results in the ceiling rather than the floor
@@ -652,8 +651,8 @@ fi
                 if len(this_job.allocated_machines) != this_job.num_machines:
                     self.logger.error(
                         'The length of the list of allocated '
-                        'nodes ({}) is different from the '
-                        'expected number of nodes ({})!'.format(len(this_job.allocated_machines), this_job.num_machines)
+                        f'nodes ({len(this_job.allocated_machines)}) is different from the '
+                        f'expected number of nodes ({this_job.num_machines})!'
                     )
 
             # I append to the list of jobs to return

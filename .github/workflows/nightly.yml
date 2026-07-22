@@ -26,6 +26,24 @@ env:
 
 jobs:
 
+  pre-commit:
+
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install aiida-core and pre-commit
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: '3.11'
+        extras: pre-commit
+        from-lock: 'false'
+
+    - name: Run pre-commit
+      run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
+
   nightly-tests:
 
     if: github.repository == 'aiidateam/aiida-core'  # Prevent running the builds on forks as well
@@ -114,7 +132,10 @@ jobs:
       matrix:
         # Currently supported RMQ versions per:
         # https://www.rabbitmq.com/docs/which-erlang#compatibility-matrix
-        rabbitmq-version: ['3.11', '3.12', '3.13', '4.0']
+        # Version 3.10 is currently used by AiiDAlab.
+        # Version 4.3 broke aiida-core, so the latest supported is 4.2:
+        # https://github.com/aiidateam/aiida-core/issues/7375
+        rabbitmq-version: ['3.10', '4.2']
 
     services:
       rabbitmq:

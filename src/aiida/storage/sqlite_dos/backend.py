@@ -14,17 +14,18 @@ import pathlib
 from functools import cached_property, lru_cache
 from pathlib import Path
 from shutil import rmtree
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from alembic.config import Config
 from disk_objectstore import Container, backup_utils
-from pydantic import BaseModel, Field, field_validator
+from pydantic import field_validator
 from sqlalchemy import insert, inspect, select
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from aiida.common import exceptions
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.pydantic import AiiDABaseModel, MetadataField
 from aiida.manage.configuration.profile import Profile
 from aiida.manage.configuration.settings import AiiDAConfigDir
 from aiida.orm.implementation import BackendEntity
@@ -93,6 +94,7 @@ class SqliteDosMigrator(PsqlDosMigrator):
         This assumes that the database has no schema whatsoever and so the initial schema is created directly from the
         models at the current head version without migrating through all of them one by one.
         """
+        assert self._engine is not None
         models.SqliteBase.metadata.create_all(self._engine)
 
         repository_uuid = self.get_repository_uuid()
@@ -108,7 +110,7 @@ class SqliteDosMigrator(PsqlDosMigrator):
             context.stamp(context.script, 'main@head')  # type: ignore[arg-type]
             self.connection.commit()
 
-    def get_schema_version_profile(self) -> Optional[str]:  # type: ignore[override]
+    def get_schema_version_profile(self) -> str | None:  # type: ignore[override]
         """Return the schema version of the backend instance for this profile.
 
         Note, the version will be None if the database is empty or is a legacy django database.
@@ -117,7 +119,7 @@ class SqliteDosMigrator(PsqlDosMigrator):
             return context.get_current_revision()
 
     @staticmethod
-    def _alembic_config():
+    def _alembic_config() -> Config:
         """Return an instance of an Alembic `Config`."""
         dirpath = pathlib.Path(__file__).resolve().parent
         config = Config()
@@ -198,10 +200,10 @@ class SqliteDosStorage(PsqlDosBackend):
 
     migrator = SqliteDosMigrator
 
-    class Model(BaseModel, defer_build=True):
+    class CliModel(AiiDABaseModel):
         """Model describing required information to configure an instance of the storage."""
 
-        filepath: str = Field(
+        filepath: str = MetadataField(
             title='Directory of the backend',
             description='Filepath of the directory in which to store data for this backend.',
             default_factory=lambda: str(AiiDAConfigDir.get() / 'repository' / f'sqlite_dos_{uuid4().hex}'),
@@ -252,7 +254,7 @@ class SqliteDosStorage(PsqlDosBackend):
         state = 'closed' if self.is_closed else 'open'
         return f'SqliteDosStorage[{self.filepath_root}]: {state},'
 
-    def _initialise_session(self):
+    def _initialise_session(self) -> None:
         """Initialise the SQLAlchemy session factory.
 
         Only one session factory is ever associated with a given class instance,
@@ -271,17 +273,17 @@ class SqliteDosStorage(PsqlDosBackend):
             rmtree(self.filepath_root)
             LOGGER.report(f'Deleted storage directory at `{self.filepath_root}`.')
 
-    def get_container(self) -> 'Container':
+    def get_container(self) -> Container:
         return Container(str(self.filepath_container))
 
-    def get_repository(self) -> 'DiskObjectStoreRepositoryBackend':
+    def get_repository(self) -> DiskObjectStoreRepositoryBackend:
         from aiida.repository.backend import DiskObjectStoreRepositoryBackend
 
         return DiskObjectStoreRepositoryBackend(container=self.get_container())
 
     @classmethod
-    def version_profile(cls, profile: Profile) -> Optional[str]:
-        with cls.migrator_context(profile) as migrator:
+    def version_profile(cls, profile: Profile) -> str | None:
+        with cls.migrator(profile) as migrator:
             return migrator.get_schema_version_profile()
 
     def query(self) -> orm.SqliteQueryBuilder:
@@ -292,36 +294,36 @@ class SqliteDosStorage(PsqlDosBackend):
         return orm.get_backend_entity(model, self)
 
     @cached_property
-    def authinfos(self):
+    def authinfos(self) -> orm.SqliteAuthInfoCollection:
         return orm.SqliteAuthInfoCollection(self)
 
     @cached_property
-    def comments(self):
+    def comments(self) -> orm.SqliteCommentCollection:
         return orm.SqliteCommentCollection(self)
 
     @cached_property
-    def computers(self):
+    def computers(self) -> orm.SqliteComputerCollection:
         return orm.SqliteComputerCollection(self)
 
     @cached_property
-    def groups(self):
+    def groups(self) -> orm.SqliteGroupCollection:
         return orm.SqliteGroupCollection(self)
 
     @cached_property
-    def logs(self):
+    def logs(self) -> orm.SqliteLogCollection:
         return orm.SqliteLogCollection(self)
 
     @cached_property
-    def nodes(self):
+    def nodes(self) -> orm.SqliteNodeCollection:
         return orm.SqliteNodeCollection(self)
 
     @cached_property
-    def users(self):
+    def users(self) -> orm.SqliteUserCollection:
         return orm.SqliteUserCollection(self)
 
     @staticmethod
     @lru_cache(maxsize=18)
-    def _get_mapper_from_entity(entity_type: 'EntityTypes', with_pk: bool):
+    def _get_mapper_from_entity(entity_type: EntityTypes, with_pk: bool) -> tuple[Any, set[Any]]:
         """Return the Sqlalchemy mapper and fields corresponding to the given entity.
 
         :param with_pk: if True, the fields returned will include the primary key
@@ -338,8 +340,8 @@ class SqliteDosStorage(PsqlDosBackend):
     def _backup(
         self,
         dest: str,
-        keep: Optional[int] = None,
-    ):
+        keep: int | None = None,
+    ) -> None:
         """Create a backup of the storage.
 
         :param dest: Path to where the backup will be created. Can be a path on the local file system, or a path on a

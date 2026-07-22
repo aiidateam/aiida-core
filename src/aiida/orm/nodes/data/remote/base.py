@@ -13,10 +13,11 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Union
+from typing import cast
 
-from aiida.common.pydantic import MetadataField
 from aiida.orm import AuthInfo
+from aiida.orm.computers import Computer
+from aiida.orm.pydantic import OrmMetadataField
 from aiida.transports import Transport
 
 from ..data import Data
@@ -34,14 +35,23 @@ class RemoteData(Data):
 
     KEY_EXTRA_CLEANED = 'cleaned'
 
-    class Model(Data.Model):
-        remote_path: Union[str, None] = MetadataField(
+    class AttributesModel(Data.AttributesModel):
+        remote_path: str | None = OrmMetadataField(
+            None,
             title='Remote path',
-            description='Filepath on the remote computer.',
-            orm_to_model=lambda node, _: node.get_remote_path(),
+            description='Filepath on the remote computer',
+            orm_to_model=lambda node: node.get_remote_path(),
         )
 
-    def __init__(self, remote_path: Union[str, None] = None, **kwargs):
+    class ReadModel(Data.ReadModel):
+        computer: int = OrmMetadataField(
+            title='Computer',
+            description='The pk of the remote computer on which the data resides',
+            orm_to_model=lambda node: cast(RemoteData, node).computer.pk,
+            orm_class=Computer,
+        )
+
+    def __init__(self, remote_path: str | None = None, **kwargs):
         super().__init__(**kwargs)
         if remote_path is not None:
             self.set_remote_path(remote_path)
@@ -87,9 +97,8 @@ class RemoteData(Data):
             except OSError as exception:
                 if exception.errno == 2:  # file does not exist
                     raise OSError(
-                        'The required remote file {} on {} does not exist or has been deleted.'.format(
-                            full_path, self.computer.label
-                        )
+                        f'The required remote file {full_path} on {self.computer.label} '
+                        'does not exist or has been deleted.'
                     ) from exception
                 raise
 
@@ -337,7 +346,7 @@ class RemoteData(Data):
             """Helper function for recursive directory traversal."""
 
             total_size = 0
-            contents = self.listdir_withattributes(full_path)
+            contents = transport.listdir_withattributes(str(full_path))
 
             for item in contents:
                 item_path = full_path / item['name']
@@ -356,6 +365,9 @@ class RemoteData(Data):
         try:
             return _get_size_on_disk_stat_recursive(full_path, transport)
 
-        except OSError:
-            # Not a directory or not existing anymore. Exception is captured outside in `get_size_on_disk`.
-            raise
+        except OSError as exception:
+            msg = (
+                f'The required remote folder {full_path} on {self.computer.label} does not exist, is not a '
+                'directory or has been deleted.'
+            )
+            raise OSError(msg) from exception

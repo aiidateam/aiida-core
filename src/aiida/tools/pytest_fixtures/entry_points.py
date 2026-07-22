@@ -77,8 +77,8 @@ class EntryPointManager:
             value = f'{value.__module__}:{value.__name__}'
 
         group, name = self._validate_entry_point(entry_point_string, group, name)
-        entry_point = importlib_metadata.EntryPoint(name, value, group)
-        self.entry_points = importlib_metadata.EntryPoints(self.entry_points + (entry_point,))
+        entry_point = importlib_metadata.EntryPoint(name=name, value=value, group=group)
+        self.entry_points = importlib_metadata.EntryPoints([*self.entry_points, entry_point])
 
     def remove(
         self, entry_point_string: str | None = None, *, name: str | None = None, group: str | None = None
@@ -100,7 +100,7 @@ class EntryPointManager:
         except KeyError:
             raise KeyError(f'entry point `{name}` does not exist in group `{group}`.')
         self.entry_points = importlib_metadata.EntryPoints(
-            (ep for ep in self.entry_points if not (ep.name == name and ep.group == group))
+            ep for ep in self.entry_points if not (ep.name == name and ep.group == group)
         )
 
 

@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import contextlib
 import enum
+import json
 import os
 import pathlib
+import shlex
 import shutil
 import socket
 import subprocess
@@ -21,6 +23,8 @@ import sys
 import tempfile
 import time
 import typing as t
+import urllib.parse
+import urllib.request
 from typing import TYPE_CHECKING
 
 import psutil
@@ -35,6 +39,8 @@ from aiida.manage.manager import get_manager
 if TYPE_CHECKING:
     from circus.client import CircusClient
 
+    from aiida.manage.configuration.config import CircusEndpointFilepaths, CircusEndpointName
+
 LOGGER = AIIDA_LOGGER.getChild('engine.daemon.client')
 
 VERDI_BIN = shutil.which('verdi')
@@ -42,6 +48,123 @@ VERDI_BIN = shutil.which('verdi')
 VIRTUALENV = os.environ.get('VIRTUAL_ENV', None)
 
 __all__ = ('DaemonClient', 'get_daemon_client')
+
+
+class _PackageVersionInfoRequired(t.TypedDict):
+    """Required fields for structured version information of an installed package."""
+
+    version: str
+
+
+class PackageVersionInfo(_PackageVersionInfoRequired, total=False):
+    """Structured version information for an installed package."""
+
+    editable_path: str
+
+
+PackageVersionSnapshot: t.TypeAlias = dict[str, PackageVersionInfo]
+
+
+class DaemonEnvInfo(t.TypedDict):
+    """Content written to the daemon version file."""
+
+    packages: PackageVersionSnapshot
+    python_binary: str
+
+
+class _VcsInfo(t.TypedDict, total=False):
+    """VCS metadata from ``direct_url.json`` (PEP 610)."""
+
+    vcs: str
+    commit_id: str
+    requested_revision: str
+
+
+class _DirInfo(t.TypedDict, total=False):
+    """Directory metadata from ``direct_url.json`` (PEP 610)."""
+
+    editable: bool
+
+
+class _DirectUrlData(t.TypedDict, total=False):
+    """Parsed ``direct_url.json`` structure per PEP 610."""
+
+    url: str
+    vcs_info: _VcsInfo
+    dir_info: _DirInfo
+
+
+def _get_dist_direct_url_data(dist: t.Any) -> _DirectUrlData | None:
+    """Return the parsed ``direct_url.json`` metadata for a distribution, if available."""
+    try:
+        text = dist.read_text('direct_url.json')
+        if text is None:
+            return None
+
+        return json.loads(text)
+    except (AttributeError, TypeError, json.JSONDecodeError) as exc:
+        LOGGER.debug('Failed to determine direct URL metadata for %s: %s', getattr(dist, 'name', '?'), exc)
+        return None
+
+
+def _get_editable_path_from_direct_url_data(data: _DirectUrlData | None) -> str | None:
+    """Return the normalized editable install path recorded in parsed direct URL metadata, if available."""
+    if data is None:
+        return None
+
+    dir_info = data.get('dir_info')
+    if not dir_info or not dir_info.get('editable'):
+        return None
+
+    url = data.get('url')
+    if not isinstance(url, str):
+        return None
+
+    # Only handle file:// URLs with empty or localhost netloc (per PEP 610)
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme != 'file' or parsed.netloc not in ('', 'localhost'):
+        return None
+
+    # url2pathname already percent-decodes on POSIX, so unquote is not needed
+    path = pathlib.Path(urllib.request.url2pathname(parsed.path))
+
+    try:
+        return str(path.resolve())
+    except OSError:
+        return str(path)
+
+
+def _get_dist_editable_path(dist: t.Any, direct_url_data: _DirectUrlData | None = None) -> str | None:
+    """Return the normalized editable install path recorded in the distribution metadata, if available."""
+    if direct_url_data is None:
+        direct_url_data = _get_dist_direct_url_data(dist)
+
+    return _get_editable_path_from_direct_url_data(direct_url_data)
+
+
+def _get_commit_hash_from_direct_url_data(data: _DirectUrlData | None) -> str | None:
+    """Return the git commit hash recorded in parsed direct URL metadata, if available."""
+    if data is None:
+        return None
+
+    vcs_info = data.get('vcs_info')
+    if not vcs_info or vcs_info.get('vcs') != 'git':
+        return None
+
+    commit_id = vcs_info.get('commit_id')
+    return commit_id if isinstance(commit_id, str) else None
+
+
+def _get_dist_commit_hash(dist: t.Any, direct_url_data: _DirectUrlData | None = None) -> str | None:
+    """Return the git commit hash recorded in the distribution metadata, if available.
+
+    This only supports VCS installs where pip recorded ``vcs_info.commit_id`` in
+    ``direct_url.json`` metadata.
+    """
+    if direct_url_data is None:
+        direct_url_data = _get_dist_direct_url_data(dist)
+
+    return _get_commit_hash_from_direct_url_data(direct_url_data)
 
 
 class ControllerProtocol(enum.Enum):
@@ -67,16 +190,28 @@ class DaemonStalePidException(DaemonException):
     """Raised when a connection to the daemon is attempted but it fails and the PID file appears to be stale."""
 
 
-def get_daemon_client(profile_name: str | None = None) -> 'DaemonClient':
-    """Return the daemon client for the given profile or the current profile if not specified.
+def get_daemon_client(profile_name: str | None = None) -> DaemonClient:
+    """Return the daemon client for the given profile or the currently loaded profile if not specified.
 
-    :param profile_name: Optional profile name to load.
+    :param profile_name: Optional profile name.
     :return: The daemon client.
 
     :raises aiida.common.MissingConfigurationError: if the configuration file cannot be found.
     :raises aiida.common.ProfileConfigurationError: if the given profile does not exist.
+    :raises aiida.common.ConfigurationError: if no profile is loaded and ``profile_name`` is not specified.
     """
-    profile = get_manager().load_profile(profile_name)
+    manager = get_manager()
+
+    if profile_name is None:
+        profile = manager.get_profile()
+
+        if profile is None:
+            raise ConfigurationError(
+                'Could not determine the current profile. Consider loading a profile using `aiida.load_profile()`.'
+            )
+    else:
+        profile = get_config().get_profile(profile_name)
+
     return DaemonClient(profile)
 
 
@@ -94,19 +229,11 @@ class DaemonClient:
 
         :param profile: The profile instance.
         """
-        from aiida.common.docs import URL_NO_BROKER
-
         type_check(profile, Profile)
         self._config = get_config()
         self._profile = profile
         self._socket_directory: str | None = None
         self._daemon_timeout: int = self._config.get_option('daemon.timeout', scope=profile.name)
-
-        if self._profile.process_control_backend is None:
-            raise ConfigurationError(
-                f'profile `{self._profile.name}` does not define a broker so the daemon cannot be used. '
-                f'See {URL_NO_BROKER} for more details.'
-            )
 
     @property
     def profile(self) -> Profile:
@@ -150,6 +277,34 @@ class DaemonClient:
         return [self._verdi_bin, '-p', self.profile.name, 'daemon', 'worker']
 
     @property
+    def _zmq_broker_service_dir(self) -> str:
+        """Return the directory for the ZMQ broker service files, derived from the settings.
+
+        The daemon manages the broker service and therefore determines where the service writes its state files.
+        """
+        return self._config.filepaths(self.profile)['broker_service']['dir']
+
+    @property
+    def _zmq_broker_service_log_file(self) -> str:
+        """Return the log file of the ZMQ broker service, derived from the settings."""
+        return self._config.filepaths(self.profile)['broker_service']['log']
+
+    @property
+    def _cmd_start_zmq_broker(self) -> list[str]:
+        """Return the command to start the ZMQ broker service process."""
+        return [
+            self._verdi_bin,
+            '-p',
+            self.profile.name,
+            'daemon',
+            'broker',
+            '--service-dir',
+            shlex.quote(self._zmq_broker_service_dir),
+            '--log-file-path',
+            shlex.quote(self._zmq_broker_service_log_file),
+        ]
+
+    @property
     def loglevel(self) -> str:
         return get_config_option('logging.circus_loglevel')
 
@@ -174,8 +329,13 @@ class DaemonClient:
         return self._config.filepaths(self.profile)['circus']['socket']['file']
 
     @property
-    def circus_socket_endpoints(self) -> dict[str, str]:
-        return self._config.filepaths(self.profile)['circus']['socket']
+    def circus_socket_endpoints(self) -> CircusEndpointFilepaths:
+        socket_filepaths = self._config.filepaths(self.profile)['circus']['socket']
+        return {
+            'controller': socket_filepaths['controller'],
+            'pubsub': socket_filepaths['pubsub'],
+            'stats': socket_filepaths['stats'],
+        }
 
     @property
     def daemon_log_file(self) -> str:
@@ -184,6 +344,13 @@ class DaemonClient:
     @property
     def daemon_pid_file(self) -> str:
         return self._config.filepaths(self.profile)['daemon']['pid']
+
+    @property
+    def daemon_env_info_file(self) -> str:
+        try:
+            return self._config.filepaths(self.profile)['daemon']['daemon_env_info']
+        except KeyError as exc:
+            raise ConfigurationError('daemon env info file path is not configured') from exc
 
     def get_circus_port(self) -> int:
         """Retrieve the port for the circus controller, which should be written to the circus port file.
@@ -196,7 +363,7 @@ class DaemonClient:
         """
         if self.is_daemon_running:
             try:
-                with open(self.circus_port_file, 'r', encoding='utf8') as fhandle:
+                with open(self.circus_port_file, encoding='utf8') as fhandle:
                     return int(fhandle.read().strip())
             except (ValueError, OSError):
                 raise RuntimeError('daemon is running so port file should have been there but could not read it')
@@ -244,7 +411,7 @@ class DaemonClient:
         """
         if self.is_daemon_running:
             try:
-                with open(self.circus_socket_file, 'r', encoding='utf8') as fhandle:
+                with open(self.circus_socket_file, encoding='utf8') as fhandle:
                     content = fhandle.read().strip()
                 return content
             except (ValueError, OSError):
@@ -268,7 +435,7 @@ class DaemonClient:
         """
         if os.path.isfile(self.circus_pid_file):
             try:
-                with open(self.circus_pid_file, 'r', encoding='utf8') as fhandle:
+                with open(self.circus_pid_file, encoding='utf8') as fhandle:
                     content = fhandle.read().strip()
                 return int(content)
             except (ValueError, OSError):
@@ -360,7 +527,7 @@ class DaemonClient:
 
         return endpoint
 
-    def get_ipc_endpoint(self, endpoint):
+    def get_ipc_endpoint(self, endpoint: CircusEndpointName):
         """Get the ipc endpoint string for a circus daemon endpoint for a given socket.
 
         :param endpoint: The circus endpoint for which to return a socket.
@@ -369,9 +536,9 @@ class DaemonClient:
         filepath = self.get_circus_socket_directory()
         filename = self.circus_socket_endpoints[endpoint]
         template = 'ipc://{filepath}/{filename}'
-        endpoint = template.format(filepath=filepath, filename=filename)
+        endpoint_string = template.format(filepath=filepath, filename=filename)
 
-        return endpoint
+        return endpoint_string
 
     def get_tcp_endpoint(self, port=None):
         """Get the tcp endpoint string for a circus daemon endpoint.
@@ -390,7 +557,7 @@ class DaemonClient:
         return endpoint
 
     @contextlib.contextmanager
-    def get_client(self, timeout: int | None = None) -> 'CircusClient':
+    def get_client(self, timeout: int | None = None) -> CircusClient:
         """Return an instance of the CircusClient.
 
         The endpoint is defined by the controller endpoint, which used the port that was written to the port file upon
@@ -491,6 +658,96 @@ class DaemonClient:
         command = {'command': 'dstats', 'properties': {}}
         return self.call_client(command, timeout=timeout)
 
+    @staticmethod
+    def get_package_version_snapshot() -> PackageVersionSnapshot:
+        """Return version information for installed packages that provide ``aiida.*`` entry points.
+
+        For packages installed from a git repository through a VCS URL, the
+        version string includes the recorded commit hash from the distribution
+        metadata. Editable installs from a local path record their normalized
+        source path.
+        """
+        from aiida.plugins.entry_point import ENTRY_POINT_GROUP_PREFIX, eps
+
+        versions: PackageVersionSnapshot = {}
+        for ep in eps():
+            if ep.group.startswith(ENTRY_POINT_GROUP_PREFIX) and ep.dist:
+                if ep.dist.name not in versions:
+                    version_info: PackageVersionInfo = {'version': ep.dist.version}
+                    direct_url_data = _get_dist_direct_url_data(ep.dist)
+                    commit = _get_dist_commit_hash(ep.dist, direct_url_data)
+                    editable_path = _get_dist_editable_path(ep.dist, direct_url_data)
+
+                    if commit:
+                        version_info['version'] = f'{ep.dist.version}+{commit[:8]}'
+
+                    if editable_path:
+                        version_info['editable_path'] = editable_path
+
+                    versions[ep.dist.name] = version_info
+        return versions
+
+    @staticmethod
+    def _validate_package_version_snapshot(snapshot: t.Any) -> PackageVersionSnapshot | None:
+        """Validate a structured package version snapshot."""
+        if not isinstance(snapshot, dict):
+            LOGGER.warning('Daemon env info file has unexpected format; ignoring.')
+            return None
+
+        validated: PackageVersionSnapshot = {}
+
+        for package, value in snapshot.items():
+            if not isinstance(package, str) or not isinstance(value, dict):
+                LOGGER.warning('Daemon env info file has unexpected format; ignoring.')
+                return None
+
+            version = value.get('version')
+            if not isinstance(version, str):
+                LOGGER.warning('Daemon env info file has unexpected format; ignoring.')
+                return None
+
+            package_info: PackageVersionInfo = {'version': version}
+            editable_path = value.get('editable_path')
+            if isinstance(editable_path, str):
+                package_info['editable_path'] = editable_path
+
+            validated[package] = package_info
+
+        return validated
+
+    def _write_version_file(self) -> None:
+        """Write the current package version snapshot to the daemon version file."""
+        env_info: DaemonEnvInfo = {
+            'packages': self.get_package_version_snapshot(),
+            'python_binary': sys.executable,
+        }
+        try:
+            pathlib.Path(self.daemon_env_info_file).write_text(json.dumps(env_info), encoding='utf8')
+        except ConfigurationError:
+            LOGGER.debug('Cannot write daemon version file: version file path is not configured.')
+        except OSError as exc:
+            LOGGER.warning('Failed to write daemon version file: %s', exc)
+
+    def get_daemon_env_info(self) -> DaemonEnvInfo | None:
+        """Read and validate the daemon version file, or return None if unavailable or invalid."""
+        try:
+            data = json.loads(pathlib.Path(self.daemon_env_info_file).read_text(encoding='utf8'))
+        except (ConfigurationError, OSError, json.JSONDecodeError):
+            return None
+
+        if not isinstance(data, dict):
+            return None
+
+        packages = self._validate_package_version_snapshot(data.get('packages'))
+        if packages is None:
+            return None
+
+        python_binary = data.get('python_binary')
+        if not isinstance(python_binary, str):
+            return None
+
+        return DaemonEnvInfo(packages=packages, python_binary=python_binary)
+
     def increase_workers(self, number: int, timeout: int | None = None) -> dict[str, t.Any]:
         """Increase the number of workers.
 
@@ -539,6 +796,7 @@ class DaemonClient:
             raise DaemonException(f'The daemon failed to start with error:\n{exception.stdout.decode()}') from exception
 
         if not wait:
+            self._write_version_file()
             return
 
         self._await_condition(
@@ -546,6 +804,8 @@ class DaemonClient:
             DaemonTimeoutException(f'The daemon failed to start or is unresponsive after {timeout} seconds.'),
             timeout=timeout,
         )
+
+        self._write_version_file()
 
     def restart_daemon(self, wait: bool = True, timeout: int | None = None) -> dict[str, t.Any]:
         """Restart the daemon.
@@ -559,7 +819,10 @@ class DaemonClient:
         :raises DaemonException: If the connection to the daemon failed for any other reason.
         """
         command = {'command': 'restart', 'properties': {'name': self.daemon_name, 'waiting': wait}}
-        return self.call_client(command, timeout=timeout)
+        response = self.call_client(command, timeout=timeout)
+        if response.get('status') == 'ok':
+            self._write_version_file()
+        return response
 
     def stop_daemon(self, wait: bool = True, timeout: int | None = None) -> dict[str, t.Any]:
         """Stop the daemon.
@@ -579,6 +842,14 @@ class DaemonClient:
 
         if self._ENDPOINT_PROTOCOL == ControllerProtocol.IPC:
             self.delete_circus_socket_directory()
+
+        # Best-effort cleanup of version file
+        try:
+            pathlib.Path(self.daemon_env_info_file).unlink(missing_ok=True)
+        except ConfigurationError:
+            LOGGER.debug('Cannot remove daemon version file: version file path is not configured.')
+        except OSError as exc:
+            LOGGER.debug('Failed to remove daemon version file: %s', exc)
 
         return response
 
@@ -692,6 +963,66 @@ class DaemonClient:
         if not foreground:
             logoutput = self.circus_log_file
 
+        watchers = []
+
+        # Start ZeroMQ broker before workers so its sockets are ready when workers connect.
+        # Skip if a broker is already running (e.g. started by the test fixture).
+        from aiida.brokers.zeromq import ZeromqBroker
+        from aiida.manage.manager import get_manager
+
+        supervised_by_daemon = self.profile.process_control_config.get('supervised_by_daemon', True)
+        if self.profile.process_control_backend == 'core.zeromq' and supervised_by_daemon:
+            try:
+                broker_instance = get_manager().get_broker()
+            except Exception:
+                LOGGER.warning('Could not load the broker instance while preparing daemon watchers.', exc_info=True)
+                broker_instance = None
+            if isinstance(broker_instance, ZeromqBroker) and not broker_instance.check_service_reachable():
+                # prepare zmq broker service profile directory
+                pathlib.Path(self._zmq_broker_service_dir).mkdir(parents=True, exist_ok=True)
+
+                watchers.append(
+                    {
+                        'cmd': ' '.join(self._cmd_start_zmq_broker),
+                        'name': f'{self.daemon_name}-zmq-broker-service',
+                        'numprocesses': 1,
+                        'virtualenv': self.virtualenv,
+                        'copy_env': True,
+                        'stdout_stream': {
+                            'class': 'FileStream',
+                            'filename': self._zmq_broker_service_log_file,
+                            'time_format': '%Y-%m-%d %H:%M:%S',
+                        },
+                        'stderr_stream': {
+                            'class': 'FileStream',
+                            'filename': self._zmq_broker_service_log_file,
+                            'time_format': '%Y-%m-%d %H:%M:%S',
+                        },
+                        'env': self.get_env(),
+                    }
+                )
+
+        watchers.append(
+            {
+                'cmd': ' '.join(self.cmd_start_daemon_worker),
+                'name': self.daemon_name,
+                'numprocesses': number_workers,
+                'virtualenv': self.virtualenv,
+                'copy_env': True,
+                'stdout_stream': {
+                    'class': 'FileStream',
+                    'filename': self.daemon_log_file,
+                    'time_format': '%Y-%m-%d %H:%M:%S',
+                },
+                'stderr_stream': {
+                    'class': 'FileStream',
+                    'filename': self.daemon_log_file,
+                    'time_format': '%Y-%m-%d %H:%M:%S',
+                },
+                'env': self.get_env(),
+            }
+        )
+
         arbiter_config = {
             'controller': self.get_controller_endpoint(),
             'pubsub_endpoint': self.get_pubsub_endpoint(),
@@ -701,26 +1032,7 @@ class DaemonClient:
             'debug': False,
             'statsd': True,
             'pidfile': self.circus_pid_file,
-            'watchers': [
-                {
-                    'cmd': ' '.join(self.cmd_start_daemon_worker),
-                    'name': self.daemon_name,
-                    'numprocesses': number_workers,
-                    'virtualenv': self.virtualenv,
-                    'copy_env': True,
-                    'stdout_stream': {
-                        'class': 'FileStream',
-                        'filename': self.daemon_log_file,
-                        'time_format': '%Y-%m-%d %H:%M:%S',
-                    },
-                    'stderr_stream': {
-                        'class': 'FileStream',
-                        'filename': self.daemon_log_file,
-                        'time_format': '%Y-%m-%d %H:%M:%S',
-                    },
-                    'env': self.get_env(),
-                }
-            ],
+            'watchers': watchers,
         }
 
         if not foreground:

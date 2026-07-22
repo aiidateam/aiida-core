@@ -62,6 +62,20 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         )
         self.shared_options = shared_options
 
+    def _supports_cli_creation(self, entry_point: str) -> bool:
+        """Return whether the plugin under ``entry_point`` supports CLI-based creation.
+
+        Reads the ``supports_cli_model`` classproperty, defaulting to ``True`` for plugins that do not declare it
+        (anything outside the ``Node`` model system, e.g. storage backends). Node-based classes without a CLI
+        model, such as the abstract base ``AbstractCode``, report ``False`` and are excluded, as building their
+        options would crash the group help.
+
+        :param entry_point: The entry point name.
+        :returns: ``True`` if the plugin supports CLI-based creation, ``False`` otherwise.
+        :raises ~aiida.common.exceptions.EntryPointError: If no plugin is registered under the entry point name.
+        """
+        return getattr(self.factory(entry_point), 'supports_cli_model', True)
+
     def list_commands(self, ctx: click.Context) -> list[str]:
         """Return the sorted list of subcommands for this group.
 
@@ -74,6 +88,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
                 for entry_point in get_entry_point_names(self.entry_point_group)
                 if re.match(self.entry_point_name_filter, entry_point)
                 and getattr(self.factory(entry_point), 'cli_exposed', True)
+                and self._supports_cli_creation(entry_point)
             ]
         )
         return sorted(commands)
@@ -86,6 +101,11 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         :returns: The :class:`click.Command`.
         """
         try:
+            # Resolution is gated on the CLI-creation capability only, not ``cli_exposed``: a plugin that opts out
+            # of the listing (``cli_exposed = False``) can still be created when invoked explicitly by name.
+            # TODO: if ``cli_exposed = False`` should instead mean fully non-CLI, also gate on ``cli_exposed`` here.
+            if not self._supports_cli_creation(cmd_name):
+                return super().get_command(ctx, cmd_name)
             command: click.Command | None = self.create_command(ctx, cmd_name)
         except exceptions.EntryPointError:
             command = super().get_command(ctx, cmd_name)
@@ -95,20 +115,22 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         """Call the ``command`` after validating the provided inputs."""
         from pydantic import ValidationError
 
-        if hasattr(cls, 'Model'):
-            # The plugin defines a pydantic model: use it to validate the provided arguments
-            try:
-                cls.Model(**kwargs)
-            except ValidationError as exception:
-                param_hint = [
-                    f'--{loc.replace("_", "-")}'  # type: ignore[union-attr]
-                    for loc in exception.errors()[0]['loc']
-                ]
-                message = '\n'.join([str(e['msg']) for e in exception.errors()])
-                raise click.BadParameter(
-                    message,
-                    param_hint=param_hint or 'one or more parameters',  # type: ignore[arg-type]
-                ) from exception
+        CliModel = getattr(cls, 'CliModel', None)  # noqa: N806
+        if not CliModel:
+            return self._command(ctx, cls, **kwargs)
+
+        try:
+            CliModel(**kwargs)
+        except ValidationError as exception:
+            param_hint = [
+                f'--{loc.replace("_", "-")}'  # type: ignore[union-attr]
+                for loc in exception.errors()[0]['loc']
+            ]
+            message = '\n'.join([str(e['msg']) for e in exception.errors()])
+            raise click.BadParameter(
+                message,
+                param_hint=param_hint or 'one or more parameters',  # type: ignore[arg-type]
+            ) from exception
 
         return self._command(ctx, cls, **kwargs)
 
@@ -153,16 +175,14 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
         """
         from pydantic_core import PydanticUndefined
 
-        from aiida.common.pydantic import get_metadata
-
         cls = self.factory(entry_point)
 
-        if not hasattr(cls, 'Model'):
+        CliModel = getattr(cls, 'CliModel', None)  # noqa: N806
+        if not CliModel:
             from aiida.common.warnings import warn_deprecation
 
             warn_deprecation(
-                'Relying on `_get_cli_options` is deprecated. The options should be defined through a '
-                '`pydantic.BaseModel` that should be assigned to the `Model` class attribute.',
+                'Relying on `_get_cli_options` is deprecated. The options should be defined through a `CliModel`.',
                 version=3,
             )
             options_spec = self.factory(entry_point).get_cli_options()  # type: ignore[union-attr]
@@ -170,10 +190,7 @@ class DynamicEntryPointCommandGroup(VerdiCommandGroup):
 
         options_spec = {}
 
-        for key, field_info in cls.Model.model_fields.items():
-            if get_metadata(field_info, 'exclude_from_cli'):
-                continue
-
+        for key, field_info in CliModel.model_fields.items():
             default = field_info.default_factory if field_info.default is PydanticUndefined else field_info.default
 
             # If the annotation has the ``__args__`` attribute it is an instance of a type from ``typing`` and the real

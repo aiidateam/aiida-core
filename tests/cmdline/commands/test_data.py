@@ -8,7 +8,6 @@
 ###########################################################################
 """Test data-related verdi commands."""
 
-import asyncio
 import io
 import os
 import subprocess as sp
@@ -147,9 +146,9 @@ class DummyVerdiDataListable:
 
             options = [flag, '0']
             res = self.cli_runner(listing_cmd, options)
-            assert (
-                search_string_bytes not in res.stdout_bytes
-            ), f'A not expected string {search_string} was found in the listing'
+            assert search_string_bytes not in res.stdout_bytes, (
+                f'A not expected string {search_string} was found in the listing'
+            )
 
         # Check that the group filter works as expected
         # if ids is not None:
@@ -233,19 +232,15 @@ class TestVerdiDataArray:
         assert res.exit_code == 0, 'The command did not finish correctly'
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestVerdiDataBands(DummyVerdiDataListable):
     """Testing verdi data core.bands."""
 
     @pytest.fixture(autouse=True)
     def init_profile(self, aiida_profile_clean, run_cli_command):
         """Initialize the profile."""
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
         self.pks = self.create_structure_bands()
         self.cli_runner = run_cli_command
-        yield
-        self.loop.close()
 
     @staticmethod
     def create_structure_bands():
@@ -362,7 +357,7 @@ class TestVerdiDataBands(DummyVerdiDataListable):
         with CliRunner().isolated_filesystem():
             options = [str(bands.pk), '--format', 'gnuplot', '-o', 'bands.gnu']
             self.cli_runner(cmd_bands.bands_export, options)
-            with open('bands.gnu', 'r', encoding='utf8') as gnu_file:
+            with open('bands.gnu', encoding='utf8') as gnu_file:
                 res = gnu_file.read()
                 assert 'vectors nohead' in res, 'The string "vectors nohead" was not found in the gnuplot script'
 
@@ -388,7 +383,7 @@ class TestVerdiDataDict:
         res = self.cli_runner(cmd_dict.dictionary_show, options)
         assert res.exit_code == 0, 'The command verdi data core.dict show did not finish correctly'
         assert b'"a": 1' in res.stdout_bytes, (
-            'The string "a": 1 was not found in the output' ' of verdi data core.dict show'
+            'The string "a": 1 was not found in the output of verdi data core.dict show'
         )
 
 
@@ -414,12 +409,12 @@ class TestVerdiDataRemote:
         options = [str(self.rmt.pk)]
         res = self.cli_runner(cmd_remote.remote_show, options)
         assert res.exit_code == 0, 'The command verdi data core.upf show did not finish correctly'
-        assert (
-            b'Remote computer name:' in res.stdout_bytes
-        ), 'The string "Remote computer name:" was not found in the output of verdi data core.upf show'
-        assert (
-            b'Remote folder full path:' in res.stdout_bytes
-        ), 'The string "Remote folder full path:" was not found in the output of verdi data core.upf show'
+        assert b'Remote computer name:' in res.stdout_bytes, (
+            'The string "Remote computer name:" was not found in the output of verdi data core.upf show'
+        )
+        assert b'Remote folder full path:' in res.stdout_bytes, (
+            'The string "Remote folder full path:" was not found in the output of verdi data core.upf show'
+        )
 
     def test_remotelshelp(self):
         output = sp.check_output(['verdi', 'data', 'core.remote', 'ls', '--help'])
@@ -430,7 +425,7 @@ class TestVerdiDataRemote:
         res = self.cli_runner(cmd_remote.remote_ls, options)
         assert res.exit_code == 0, 'The command verdi data core.upf ls did not finish correctly'
         assert b'file.txt' in res.stdout_bytes, (
-            'The file "file.txt" was not found in the output' ' of verdi data core.upf ls'
+            'The file "file.txt" was not found in the output of verdi data core.upf ls'
         )
 
     def test_remotecathelp(self):
@@ -442,7 +437,7 @@ class TestVerdiDataRemote:
         res = self.cli_runner(cmd_remote.remote_cat, options)
         assert res.exit_code == 0, 'The command verdi data core.upf cat did not finish correctly'
         assert b'test string' in res.stdout_bytes, (
-            'The string "test string" was not found in the output' ' of verdi data core.upf cat file.txt'
+            'The string "test string" was not found in the output of verdi data core.upf cat file.txt'
         )
 
 
@@ -546,7 +541,7 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
     def test_showhelp(self):
         res = self.cli_runner(cmd_trajectory.trajectory_show, ['--help'])
         assert b'Usage:' in res.stdout_bytes, (
-            'The string "Usage: " was not found in the output' ' of verdi data trajecotry show --help'
+            'The string "Usage: " was not found in the output of verdi data trajecotry show --help'
         )
 
     def test_list(self):
@@ -588,18 +583,6 @@ class TestVerdiDataTrajectory(DummyVerdiDataListable, DummyVerdiDataExportable):
             # function but not the actual commands through a sub process. Note that this mock needs to happen only for
             # these specific formats, because ``matplotlib`` used in the others _also_ calls ``subprocess.check_output``
             monkeypatch.setattr(sp, 'check_output', mock_check_output)
-
-        if fmt in ['mpl_pos']:
-            # This has to be mocked because ``plot_positions_xyz`` imports ``matplotlib.pyplot`` and for some completely
-            # unknown reason, causes ``tests/storage/psql_dos/test_backend.py::test_unload_profile`` to fail. For some
-            # reason, merely importing ``matplotlib`` (even here directly in the test) will cause that test to claim
-            # that there still is something holding on to a reference of an sqlalchemy session that it keeps track of
-            # in the ``sqlalchemy.orm.session._sessions`` weak ref dictionary. Since it is impossible to figure out why
-            # the hell importing matplotlib would interact with sqlalchemy sessions, the function that does the import
-            # is simply mocked out for now.
-            from aiida.orm.nodes.data.array import trajectory
-
-            monkeypatch.setattr(trajectory, 'plot_positions_XYZ', lambda *args, **kwargs: None)
 
         run_cli_command(cmd_trajectory.trajectory_show, options, use_subprocess=False)
 
@@ -668,19 +651,19 @@ class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
     def test_importhelp(self):
         res = self.cli_runner(cmd_structure.structure_import, ['--help'])
         assert b'Usage:' in res.stdout_bytes, (
-            'The string "Usage: " was not found in the output' ' of verdi core.data structure import --help'
+            'The string "Usage: " was not found in the output of verdi core.data structure import --help'
         )
 
     def test_importhelp_ase(self):
         res = self.cli_runner(cmd_structure.import_ase, ['--help'])
         assert b'Usage:' in res.stdout_bytes, (
-            'The string "Usage: " was not found in the output' ' of verdi data core.structure import ase --help'
+            'The string "Usage: " was not found in the output of verdi data core.structure import ase --help'
         )
 
     def test_importhelp_aiida_xyz(self):
         res = self.cli_runner(cmd_structure.import_aiida_xyz, ['--help'])
         assert b'Usage:' in res.stdout_bytes, (
-            'The string "Usage: " was not found in the output' ' of verdi data core.structure import aiida-xyz --help'
+            'The string "Usage: " was not found in the output of verdi data core.structure import aiida-xyz --help'
         )
 
     def test_import_aiida_xyz(self):
@@ -707,10 +690,10 @@ class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
             ]
             res = self.cli_runner(cmd_structure.import_aiida_xyz, options)
             assert b'Successfully imported' in res.stdout_bytes, (
-                'The string "Successfully imported" was not found in the output' ' of verdi data core.structure import.'
+                'The string "Successfully imported" was not found in the output of verdi data core.structure import.'
             )
             assert b'PK' in res.stdout_bytes, (
-                'The string "PK" was not found in the output' ' of verdi data core.structure import.'
+                'The string "PK" was not found in the output of verdi data core.structure import.'
             )
 
     def test_import_aiida_xyz_2(self):
@@ -730,10 +713,10 @@ class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
             ]
             res = self.cli_runner(cmd_structure.import_aiida_xyz, options)
             assert b'Successfully imported' in res.stdout_bytes, (
-                'The string "Successfully imported" was not found in the output' ' of verdi data core.structure import.'
+                'The string "Successfully imported" was not found in the output of verdi data core.structure import.'
             )
             assert b'dry-run' in res.stdout_bytes, (
-                'The string "dry-run" was not found in the output' ' of verdi data core.structure import.'
+                'The string "dry-run" was not found in the output of verdi data core.structure import.'
             )
 
     def test_import_aiida_xyz_w_group_label(self):
@@ -765,10 +748,10 @@ class TestVerdiDataStructure(DummyVerdiDataListable, DummyVerdiDataExportable):
             ]
             res = self.cli_runner(cmd_structure.import_aiida_xyz, options)
             assert b'Successfully imported' in res.stdout_bytes, (
-                'The string "Successfully imported" was not found in the output' ' of verdi data core.structure import.'
+                'The string "Successfully imported" was not found in the output of verdi data core.structure import.'
             )
             assert b'PK' in res.stdout_bytes, (
-                'The string "PK" was not found in the output' ' of verdi data core.structure import.'
+                'The string "PK" was not found in the output of verdi data core.structure import.'
             )
             res = self.cli_runner(cmd_group.group_show, [group_label])
             for grpline in [group_label, 'StructureData']:
@@ -795,10 +778,10 @@ PRIMVEC
             ]
             res = self.cli_runner(cmd_structure.import_ase, options)
             assert b'Successfully imported' in res.stdout_bytes, (
-                'The string "Successfully imported" was not found in the output' ' of verdi data core.structure import.'
+                'The string "Successfully imported" was not found in the output of verdi data core.structure import.'
             )
             assert b'PK' in res.stdout_bytes, (
-                'The string "PK" was not found in the output' ' of verdi data core.structure import.'
+                'The string "PK" was not found in the output of verdi data core.structure import.'
             )
 
     @pytest.mark.skipif(not has_ase(), reason='Unable to import ase')
@@ -821,10 +804,10 @@ PRIMVEC
             options = [fhandle.name, '--label', 'another  structure', '--group', group_label]
             res = self.cli_runner(cmd_structure.import_ase, options)
             assert b'Successfully imported' in res.stdout_bytes, (
-                'The string "Successfully imported" was not found in the output' ' of verdi data core.structure import.'
+                'The string "Successfully imported" was not found in the output of verdi data core.structure import.'
             )
             assert b'PK' in res.stdout_bytes, (
-                'The string "PK" was not found in the output' ' of verdi data core.structure import.'
+                'The string "PK" was not found in the output of verdi data core.structure import.'
             )
             res = self.cli_runner(cmd_group.group_show, [group_label])
             for grpline in [group_label, 'StructureData']:
@@ -904,15 +887,13 @@ class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
     def test_showhelp(self):
         options = ['--help']
         res = self.cli_runner(cmd_cif.cif_show, options)
-        assert b'Usage:' in res.stdout_bytes, (
-            'The string "Usage: " was not found in the output' ' of verdi data show help'
-        )
+        assert b'Usage:' in res.stdout_bytes, 'The string "Usage: " was not found in the output of verdi data show help'
 
     def test_importhelp(self):
         options = ['--help']
         res = self.cli_runner(cmd_cif.cif_import, options)
         assert b'Usage:' in res.stdout_bytes, (
-            'The string "Usage: " was not found in the output' ' of verdi data import help'
+            'The string "Usage: " was not found in the output of verdi data import help'
         )
 
     def test_import(self):
@@ -923,7 +904,7 @@ class TestVerdiDataCif(DummyVerdiDataListable, DummyVerdiDataExportable):
             options = [fhandle.name]
             res = self.cli_runner(cmd_cif.cif_import, options)
             assert b'imported uuid' in res.stdout_bytes, (
-                'The string "imported uuid" was not found in the output' ' of verdi data import.'
+                'The string "imported uuid" was not found in the output of verdi data import.'
             )
 
     def test_content(self):
@@ -982,7 +963,7 @@ class TestVerdiDataUpf:
         options = [self.filepath_pseudos, 'test_group', 'test description']
         res = self.cli_runner(cmd_upf.upf_uploadfamily, options)
         assert b'UPF files found: 4' in res.stdout_bytes, (
-            'The string "UPF files found: 4" was not found in the' ' output of verdi data core.upf uploadfamily'
+            'The string "UPF files found: 4" was not found in the output of verdi data core.upf uploadfamily'
         )
 
     def test_uploadfamilyhelp(self):
@@ -1005,15 +986,15 @@ class TestVerdiDataUpf:
         options = [tmp_path, 'test_group']
         self.cli_runner(cmd_upf.upf_exportfamily, options)
         output = sp.check_output(['ls', tmp_path])
-        assert (
-            b'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF' in output
-        ), f'Sub-command verdi data core.upf exportfamily --help failed: {output}'
-        assert (
-            b'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF' in output
-        ), 'Sub-command verdi data core.upf exportfamily --help failed.'
-        assert (
-            b'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF' in output
-        ), 'Sub-command verdi data core.upf exportfamily --help failed.'
+        assert b'Ba.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF' in output, (
+            f'Sub-command verdi data core.upf exportfamily --help failed: {output}'
+        )
+        assert b'O.pbesol-n-rrkjus_psl.0.1-tested-pslib030.UPF' in output, (
+            'Sub-command verdi data core.upf exportfamily --help failed.'
+        )
+        assert b'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF' in output, (
+            'Sub-command verdi data core.upf exportfamily --help failed.'
+        )
         assert b'C_pbe_v1.2.uspp.F.UPF' in output, 'Sub-command verdi data core.upf exportfamily --help failed.'
 
     def test_listfamilieshelp(self):
@@ -1027,19 +1008,19 @@ class TestVerdiDataUpf:
         options = ['-d', '-e', 'Ba']
         res = self.cli_runner(cmd_upf.upf_listfamilies, options)
 
-        assert (
-            b'test_group' in res.stdout_bytes
-        ), f'The string "test_group" was not found in the output of verdi data core.upf listfamilies: {res.output}'
+        assert b'test_group' in res.stdout_bytes, (
+            f'The string "test_group" was not found in the output of verdi data core.upf listfamilies: {res.output}'
+        )
 
         assert b'test description' in res.stdout_bytes, (
-            'The string "test_group" was not found in the' ' output of verdi data core.upf listfamilies'
+            'The string "test_group" was not found in the output of verdi data core.upf listfamilies'
         )
 
         options = ['-d', '-e', 'Fe']
         res = self.cli_runner(cmd_upf.upf_listfamilies, options)
-        assert (
-            b'No valid UPF pseudopotential' in res.stdout_bytes
-        ), 'The string "No valid UPF pseudopotential" was not found in the output of verdi data core.upf listfamilies'
+        assert b'No valid UPF pseudopotential' in res.stdout_bytes, (
+            'The string "No valid UPF pseudopotential" was not found in the output of verdi data core.upf listfamilies'
+        )
 
     def test_importhelp(self):
         output = sp.check_output(['verdi', 'data', 'core.upf', 'import', '--help'])
@@ -1049,6 +1030,6 @@ class TestVerdiDataUpf:
         options = [os.path.join(self.filepath_pseudos, 'Ti.pbesol-spn-rrkjus_psl.0.2.3-tot-pslib030.UPF')]
         res = self.cli_runner(cmd_upf.upf_import, options)
 
-        assert (
-            b'Imported' in res.stdout_bytes
-        ), f'The string "Imported" was not found in the output of verdi data import: {res.output}'
+        assert b'Imported' in res.stdout_bytes, (
+            f'The string "Imported" was not found in the output of verdi data import: {res.output}'
+        )

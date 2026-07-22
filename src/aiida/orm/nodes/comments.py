@@ -14,11 +14,11 @@ if t.TYPE_CHECKING:
 class NodeComments:
     """Interface for comments of a node instance."""
 
-    def __init__(self, node: 'Node') -> None:
+    def __init__(self, node: Node) -> None:
         """Initialize the comments interface."""
         self._node = node
 
-    def add(self, content: str, user: t.Optional[User] = None) -> Comment:
+    def add(self, content: str, user: User | None = None) -> Comment:
         """Add a new comment.
 
         :param content: string with comment

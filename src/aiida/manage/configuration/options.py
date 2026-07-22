@@ -8,7 +8,7 @@
 ###########################################################################
 """Definition of known configuration options and methods to parse and get option values."""
 
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from aiida.common.exceptions import ConfigurationError
 
@@ -18,7 +18,7 @@ __all__ = ('Option', 'get_option', 'get_option_names', 'parse_option')
 class Option:
     """Represent a configuration option schema."""
 
-    def __init__(self, name: str, schema: Dict[str, Any], field):
+    def __init__(self, name: str, schema: dict[str, Any], field):
         self._name = name
         self._schema = schema
         self._field = field
@@ -35,7 +35,7 @@ class Option:
         return self._field.annotation
 
     @property
-    def schema(self) -> Dict[str, Any]:
+    def schema(self) -> dict[str, Any]:
         return self._schema
 
     @property
@@ -47,10 +47,29 @@ class Option:
         return self._field.description
 
     @property
+    def deprecated_by(self) -> str | None:
+        """Return the name of the option that replaces this one, or ``None``."""
+        return self._schema.get('deprecated_by')
+
+    @property
     def global_only(self) -> bool:
         from .config import ProfileOptionsSchema
 
         return self._name.replace('.', '__') not in ProfileOptionsSchema.model_fields
+
+    @property
+    def advanced(self) -> bool:
+        """Return True if this option should be hidden from default ``verdi config list`` output."""
+        return self._schema.get('advanced', False)
+
+    @property
+    def requires_daemon_restart(self) -> bool:
+        """Return whether changing this option requires restarting the daemon.
+
+        :return: Whether the option value is only picked up when daemon processes are started and therefore remains
+            stale in already running workers.
+        """
+        return self._schema.get('requires_daemon_restart', False)
 
     def validate(self, value: Any) -> Any:
         """Validate a value
@@ -77,7 +96,7 @@ class Option:
                 try:
                     messages.append(str(error['ctx']['error']))
                 except KeyError:
-                    messages.append(f"Invalid value for `{error['loc'][0]}`: {error['msg']}")
+                    messages.append(f'Invalid value for `{error["loc"][0]}`: {error["msg"]}')
 
             raise ConfigurationError('\n'.join(messages)) from exception
 
@@ -85,7 +104,7 @@ class Option:
         return getattr(result, attribute)
 
 
-def get_option_names() -> List[str]:
+def get_option_names() -> list[str]:
     """Return a list of available option names."""
     from .config import GlobalOptionsSchema
 
@@ -103,7 +122,32 @@ def get_option(name: str) -> Option:
     return Option(name, GlobalOptionsSchema.model_json_schema()['properties'][option_name], options[option_name])
 
 
-def parse_option(option_name: str, option_value: Any) -> Tuple[Option, Any]:
+def resolve_deprecated_option_name(option_name: str, stacklevel: int = 4) -> str:
+    """Resolve a deprecated option name to its replacement.
+
+    If the option identified by ``option_name`` carries a ``deprecated_by`` marker, an
+    :class:`aiida.common.warnings.AiidaDeprecationWarning` is emitted through
+    :func:`aiida.common.warnings.warn_deprecation` and the name of the replacement option is
+    returned. Otherwise ``option_name`` is returned unchanged.
+
+    :param option_name: the name of the configuration option, possibly deprecated.
+    :param stacklevel: stacklevel forwarded to :func:`aiida.common.warnings.warn_deprecation`.
+    :return: the name of the option that should actually be used.
+    """
+    from aiida.common.warnings import warn_deprecation
+
+    option = get_option(option_name)
+
+    if option.deprecated_by is None:
+        return option_name
+
+    warn_deprecation(
+        f'`{option_name}` is deprecated, use `{option.deprecated_by}` instead.', version=3, stacklevel=stacklevel
+    )
+    return option.deprecated_by
+
+
+def parse_option(option_name: str, option_value: Any) -> tuple[Option, Any]:
     """Parse and validate a value for a configuration option.
 
     :param option_name: the name of the configuration option

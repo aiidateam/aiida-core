@@ -1488,32 +1488,112 @@ A data type may safely use both the database and file repository in parallel for
 Properties stored in the database are stored as *attributes* of the node.
 The node class has various methods to set these attributes, such as :py:meth:`~aiida.orm.nodes.attributes.NodeAttributes.set` and :py:meth:`~aiida.orm.nodes.attributes.NodeAttributes.set_many`.
 
+Models
+------
+
+.. versionadded:: 2.9
+
+.. note::
+
+   Further details can be found on the original AiiDA Enhancement Proposal (AEP) `here <https://github.com/aiidateam/AEP/blob/983a645c9285ba65c7cf07fe6064c23e7e994c06/010_orm_schema/readme.md>`_.
+
+The schema of a data type can be explicitly defined via one or more Pydantic models, facilitating its validation, serialization, and deserialization.
+A new data type inherits much of its fields from its base ``Data`` class.
+The model system is leveraged in ``serialize`` and ``from_serialized`` respectively for serialization and deserialization of data types.
+Below we describe a series of models that *may* be defined on a new data type to gain the added functionality.
+
+AttributesModel
+^^^^^^^^^^^^^^^
+
+The ``AttributesModel`` defines the schema of the storable/queryable attributes of the new data type.
+
+.. code-block:: python
+
+    from aiida.orm.pydantic import OrmMetadataField
+
+    class NewData(Data):
+        ...
+
+        class AttributesModel(Data.AttributesModel):
+            some_new_field: str = OrmMetadataField(
+                ...
+            )
+
+.. tip::
+
+   The ``AttributesModel`` is used internally for attributes-based node creation (optionally including repository files).
+
+ConstructorArgsModel
+^^^^^^^^^^^^^^^^^^^^
+
+The ``ConstructorArgsModel`` defines the schema of the arguments that can be passed to the constructor of the new data type.
+
+.. code-block:: python
+
+    from aiida.orm.pydantic import OrmMetadataField, OrmModel
+
+    class NewData(Data):
+        ...
+
+        class ConstructorArgsModel(OrmModel):
+            some_constructor_arg: str = OrmMetadataField(
+                ...,
+            )
+
+        ...
+
+        def __init__(self, some_constructor_arg, **kwargs):
+            super().__init__(**kwargs)
+            ...
+
+If defined, the ``ConstructorArgsModel`` is automatically assigned to the new data type's ``ConstructorModel``:
+
+.. code-block:: python
+
+    class ConstructorModel(BaseNodeModel):
+        args: ConstructorArgsModel = OrmMetadataField(
+            description='The arguments to create the node with',
+            write_only=True,
+        )
+
+.. tip::
+
+   The ``ConstructorModel`` is used internally for constructor-based node creation.
+
+.. attention::
+
+   ``ConstructorArgsModel`` is **never used directly!**
+
+CliModel
+^^^^^^^^
+
+.. attention::
+
+   ``CliModel`` is **not defined explicitly**.
+
+The ``CliModel`` is used to define the schema of the arguments that can be passed to the CLI command to create a new instance of the data type.
+In the present version, it is used exclusively to support ``Code`` creation and is derived automatically from the ``ConstructorArgsModel`` of ``AbstractCode`` subclasses.
+
+Controlling model behavior
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In addition to the arguments of Pydantic's ``Field`` function (https://pydantic.dev/docs/validation/latest/api/pydantic/fields/), to control serialization/deserialization behavior, one often would provide the following ``OrmMetadataField`` arguments:
+
+- ``orm_to_model``: a function that transforms the data stored in the database (ORM) to the format expected by the model.
+- ``model_to_orm``: a function that transforms the data from the model to the format expected by the database (ORM).
+
+Furthermore, to customize serialization/deserialization, developers can override the ``serialize`` and ``from_serialized`` methods of the new data type, the ``to_model`` and ``from_model`` methods, which the prior two methods leverage respectively, as well as the ``to_model_field_values`` method for fine control over how model values are converted during serialization.
+
 Fields
 ------
 
 .. versionadded:: 2.6
 
-The attributes of new data types may be exposed to end users by explicitly defining each attribute field under the ``__qb_fields__`` class attribute of the new data class.
+.. note::
 
-.. code-block:: python
+   **New in version 2.9.** ORM fields are now derived fully from the Pydantic model system.
 
-    from aiida.orm.fields import add_field
-
-    class NewData(Data):
-        """A new data type."""
-
-        __qb_fields__ = [
-            add_field(
-              key='frontend_key',
-              alias='backend_key',  # optional mapping to a backend key, if different (only allowed for attribute fields)
-              dtype=str,
-              is_attribute=True,  # signalling if field is an attribute field (default is `True`)
-              is_subscriptable=False,  # signalling subscriptability for dictionary fields
-              doc='An example field',
-            )
-        ]
-
-The internal mechanics of ``aiida.orm.fields`` will dynamically add ``frontend_key`` to the ``fields`` attribute of the new data type. The construction of ``fields`` follows the rules of inheritance, such that other than its own fields, ``NewData.fields`` will also inherit the fields of its parents, following the inheritance tree up to the root ``Entity`` ancestor. This enhances the usability of the new data type, for example, allowing the end user to programmatically define  :ref:`filters<how-to:query:filters:programmatic>` and :ref:`projections<how-to:query:projections:programmatic>` when using AiiDA's :py:class:`~aiida.orm.querybuilder.QueryBuilder`.
+The internal mechanics of ``aiida.orm.fields``, derived from the Pydantic model system, will dynamically add ``frontend_key`` to the ``fields`` attribute of the new data type. The construction of ``fields`` follows the rules of inheritance, such that other than its own fields, ``NewData.fields`` will also inherit the fields of its parents, following the inheritance tree up to the root ``Entity`` ancestor. This enhances the usability of the new data type, for example, allowing the end user to programmatically define  :ref:`filters<how-to:query:filters:programmatic>` and :ref:`projections<how-to:query:projections:programmatic>` when using AiiDA's :py:class:`~aiida.orm.querybuilder.QueryBuilder`.
 
 .. note::
 

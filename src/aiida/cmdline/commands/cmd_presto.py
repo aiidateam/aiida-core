@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import os
 import pathlib
 import re
 import typing as t
@@ -108,7 +109,7 @@ def detect_postgres_config(
 @click.option(
     '-p',
     '--profile-name',
-    default=lambda: get_default_presto_profile_name(),
+    default=get_default_presto_profile_name,
     show_default=True,
     help=f'Name of the profile. By default, a unique name starting with `{DEFAULT_PROFILE_NAME_PREFIX}` is '
     'automatically generated.',
@@ -125,6 +126,19 @@ def detect_postgres_config(
     help='When toggled on, the profile uses a PostgreSQL database instead of an SQLite one. The connection details to '
     'the PostgreSQL server can be configured with the relevant options. The command attempts to automatically create a '
     'user and database to use for the profile, but this can fail depending on the configuration of the server.',
+)
+@click.option(
+    '--use-zeromq',
+    is_flag=True,
+    help='When toggled on, the profile uses the ZeroMQ broker, which requires no external services and is started '
+    'automatically with the daemon. When not specified, the command automatically tries RabbitMQ first and falls back '
+    'to ZeroMQ if unavailable. To switch to RabbitMQ later, use `verdi profile configure-broker core.rabbitmq`.',
+)
+@click.option(
+    '--no-broker',
+    is_flag=True,
+    help='When toggled on, no message broker is configured. This means the daemon cannot be started and processes '
+    'cannot be submitted. Useful for profiles used only for data exploration and querying.',
 )
 @click.option('--postgres-hostname', type=str, default='localhost', help='The hostname of the PostgreSQL server.')
 @click.option('--postgres-port', type=int, default=5432, help='The port of the PostgreSQL server.')
@@ -147,6 +161,8 @@ def verdi_presto(
     profile_name,
     email,
     use_postgres,
+    use_zeromq,
+    no_broker,
     postgres_hostname,
     postgres_port,
     postgres_username,
@@ -168,21 +184,25 @@ def verdi_presto(
     * Create a default user for the profile (email can be configured through the `--email` option)
     * Set up the localhost as a `Computer` and configure it
     * Set a number of configuration options with sensible defaults
+    * Start the daemon (unless `--no-broker` is specified)
 
-    By default the command creates a profile that uses SQLite for the database. It automatically checks for RabbitMQ
-    running on the localhost, and, if it can connect, configures that as the broker for the profile. Otherwise, the
-    profile is created without a broker, in which case some functionality will be unavailable, most notably running the
-    daemon and submitting processes to said daemon.
+    By default the command creates a profile that uses SQLite for the database. For the message broker, it automatically
+    checks for RabbitMQ running on localhost. If found, it configures RabbitMQ as the broker. Otherwise, it falls back
+    to the ZeroMQ broker, which requires no external services and is started automatically with the daemon.
 
     When the `--use-postgres` flag is toggled, the command tries to connect to the PostgreSQL server with connection
     paramaters taken from the `--postgres-hostname`, `--postgres-port`, `--postgres-username` and `--postgres-password`
     options. It uses these credentials to try and automatically create a user and database. If successful, the newly
     created profile uses the new PostgreSQL database instead of SQLite.
+
+    When the `--use-zeromq` flag is toggled, the command skips the RabbitMQ auto-detection and directly configures the
+    ZeroMQ broker. To switch to RabbitMQ later, use `verdi profile configure-broker core.rabbitmq`.
     """
     from aiida.brokers.rabbitmq.defaults import detect_rabbitmq_config
-    from aiida.common import docs, exceptions
+    from aiida.common import exceptions
     from aiida.manage.configuration import create_profile, load_profile
     from aiida.orm import Computer
+    from aiida.plugins import BrokerFactory
 
     if profile_name in ctx.obj.config.profile_names:
         raise click.BadParameter(f'The profile `{profile_name}` already exists.', param_hint='--profile-name')
@@ -212,17 +232,28 @@ def verdi_presto(
     else:
         echo.echo_report('Option `--use-postgres` not enabled: configuring the profile to use SQLite.')
 
-    broker_backend = None
-    broker_config = None
-
-    try:
-        broker_config = detect_rabbitmq_config()
-    except ConnectionError as exception:
-        echo.echo_report(f'RabbitMQ server not found ({exception}): configuring the profile without a broker.')
-        echo.echo_report(f'See {docs.URL_NO_BROKER} for details on the limitations of running without a broker.')
+    if no_broker:
+        echo.echo_report('`--no-broker` enabled: configuring the profile without a broker.')
+        broker_backend = None
+        broker_config = None
+    elif use_zeromq:
+        echo.echo_report('`--use-zeromq` enabled: configuring the profile with ZeroMQ broker.')
+        broker_backend = 'core.zeromq'
+        broker_config = BrokerFactory(broker_backend).get_default_config()
     else:
-        echo.echo_report('RabbitMQ server detected: configuring the profile with a broker.')
-        broker_backend = 'core.rabbitmq'
+        try:
+            broker_config = detect_rabbitmq_config()
+        except ConnectionError:
+            echo.echo_report('RabbitMQ server not found: falling back to ZeroMQ broker.')
+            echo.echo_warning(
+                'The ZeroMQ broker is a new feature. If you experience issues, '
+                'recreate the profile with `verdi presto --no-broker`.'
+            )
+            broker_backend = 'core.zeromq'
+            broker_config = BrokerFactory(broker_backend).get_default_config()
+        else:
+            echo.echo_report('RabbitMQ server detected: configuring the profile with RabbitMQ broker.')
+            broker_backend = 'core.rabbitmq'
 
     try:
         profile = create_profile(
@@ -261,3 +292,20 @@ def verdi_presto(
     computer.set_default_mpiprocs_per_machine(1)
 
     echo.echo_success('Configured the localhost as a computer.')
+
+    # `AIIDA_NO_DAEMON_AUTOSTART` is an internal escape hatch for the Docker init script (see
+    # `.docker/aiida-core-base/s6-assets/init/aiida-prepare.sh`); deliberately undocumented in `--help`.
+    if broker_backend is not None and os.environ.get('AIIDA_NO_DAEMON_AUTOSTART') != '1':
+        from aiida.common.exceptions import ConfigurationError
+        from aiida.engine.daemon.client import DaemonException, get_daemon_client
+
+        echo.echo('Starting the daemon... ', nl=False)
+        try:
+            client = get_daemon_client(profile.name)
+            client.start_daemon()
+        except (DaemonException, ConfigurationError) as exception:
+            echo.echo('FAILED', fg=echo.COLORS['error'], bold=True)
+            echo.echo_warning(f'Failed to start the daemon: {exception}')
+            echo.echo_report('You can start it manually with `verdi daemon start`.')
+        else:
+            echo.echo('OK', fg=echo.COLORS['success'], bold=True)

@@ -32,6 +32,26 @@ Below is a list with all available subcommands.
       version  Print the current version of an archive's schema.
 
 
+.. _reference:command-line:verdi-bug-report:
+
+``verdi bug-report``
+--------------------
+
+.. code:: console
+
+    Usage:  [OPTIONS]
+
+      Create a zip file with diagnostic information for bug reports.
+
+      Bundles profile configuration, service status, and log files into a zip archive that can
+      be attached to a GitHub issue.
+
+    Options:
+      -o, --output PATH  Output zip file path or directory where to put the zip. Defaults to
+                         aiida-bug-report-<timestamp>.zip in current directory.
+      --help             Show this message and exit.
+
+
 .. _reference:command-line:verdi-calcjob:
 
 ``verdi calcjob``
@@ -319,18 +339,22 @@ Below is a list with all available subcommands.
       * Create a default user for the profile (email can be configured through the `--email` option)
       * Set up the localhost as a `Computer` and configure it
       * Set a number of configuration options with sensible defaults
+      * Start the daemon (unless `--no-broker` is specified)
 
-      By default the command creates a profile that uses SQLite for the database. It
-      automatically checks for RabbitMQ running on the localhost, and, if it can connect,
-      configures that as the broker for the profile. Otherwise, the profile is created without
-      a broker, in which case some functionality will be unavailable, most notably running the
-      daemon and submitting processes to said daemon.
+      By default the command creates a profile that uses SQLite for the database. For the
+      message broker, it automatically checks for RabbitMQ running on localhost. If found, it
+      configures RabbitMQ as the broker. Otherwise, it falls back to the ZeroMQ broker, which
+      requires no external services and is started automatically with the daemon.
 
       When the `--use-postgres` flag is toggled, the command tries to connect to the
       PostgreSQL server with connection paramaters taken from the `--postgres-hostname`,
       `--postgres-port`, `--postgres-username` and `--postgres-password` options. It uses
       these credentials to try and automatically create a user and database. If successful,
       the newly created profile uses the new PostgreSQL database instead of SQLite.
+
+      When the `--use-zeromq` flag is toggled, the command skips the RabbitMQ auto-detection
+      and directly configures the ZeroMQ broker. To switch to RabbitMQ later, use `verdi
+      profile configure-broker core.rabbitmq`.
 
     Options:
       -p, --profile-name TEXT         Name of the profile. By default, a unique name starting
@@ -343,6 +367,17 @@ Below is a list with all available subcommands.
                                       options. The command attempts to automatically create a
                                       user and database to use for the profile, but this can
                                       fail depending on the configuration of the server.
+      --use-zeromq                    When toggled on, the profile uses the ZeroMQ broker,
+                                      which requires no external services and is started
+                                      automatically with the daemon. When not specified, the
+                                      command automatically tries RabbitMQ first and falls
+                                      back to ZeroMQ if unavailable. To switch to RabbitMQ
+                                      later, use `verdi profile configure-broker
+                                      core.rabbitmq`.
+      --no-broker                     When toggled on, no message broker is configured. This
+                                      means the daemon cannot be started and processes cannot
+                                      be submitted. Useful for profiles used only for data
+                                      exploration and querying.
       --postgres-hostname TEXT        The hostname of the PostgreSQL server.
       --postgres-port INTEGER         The port of the PostgreSQL server.
       --postgres-username TEXT        The username of the PostgreSQL user that is authorized
@@ -398,7 +433,9 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      configure-rabbitmq  Configure RabbitMQ for a profile.
+      configure-broker    Configure the process control broker for a profile.
+      configure-rabbitmq  Configure RabbitMQ for a profile. (DEPRECATED: Please use `verdi
+                          profile configure-broker core.rabbitmq` instead.)
       delete              Delete one or more profiles.
       dump                Dump all data in an AiiDA profile's storage to disk.
       list                Display a list of all available profiles.

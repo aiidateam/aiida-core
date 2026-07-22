@@ -147,8 +147,8 @@ class TestBackendComment:
         with pytest.raises(exceptions.ValidationError):
             self.backend.comments.delete_many({})
         assert len(orm.Comment.collection.all()) == count, (
-            'No Comments should have been deleted. There should still be {} Comment(s), '
-            'however {} Comment(s) was/were found.'.format(count, len(orm.Comment.collection.all()))
+            f'No Comments should have been deleted. There should still be {count} Comment(s), '
+            f'however {len(orm.Comment.collection.all())} Comment(s) was/were found.'
         )
 
     def test_delete_many_ids(self):
@@ -163,9 +163,9 @@ class TestBackendComment:
 
         # Make sure they exist
         count_comments_found = orm.QueryBuilder().append(orm.Comment, filters={'uuid': {'in': comment_uuids}}).count()
-        assert count_comments_found == len(
-            comment_uuids
-        ), f'There should be {len(comment_uuids)} Comments, instead {count_comments_found} Comment(s) was/were found'
+        assert count_comments_found == len(comment_uuids), (
+            f'There should be {len(comment_uuids)} Comments, instead {count_comments_found} Comment(s) was/were found'
+        )
 
         # Delete last two comments (comment2, comment3)
         filters = {'or': [{'id': comment2.id}, {'uuid': str(comment3.uuid)}]}
@@ -192,9 +192,9 @@ class TestBackendComment:
 
         # Make sure they exist
         count_comments_found = orm.QueryBuilder().append(orm.Comment, filters={'uuid': {'in': comment_uuids}}).count()
-        assert count_comments_found == len(
-            comment_uuids
-        ), f'There should be {len(comment_uuids)} Comments, instead {count_comments_found} Comment(s) was/were found'
+        assert count_comments_found == len(comment_uuids), (
+            f'There should be {len(comment_uuids)} Comments, instead {count_comments_found} Comment(s) was/were found'
+        )
 
         # Delete comments for self.node
         filters = {'dbnode_id': self.node.id}

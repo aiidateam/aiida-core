@@ -15,7 +15,7 @@ from aiida.orm import Int, ProcessNode, Str
 from tests.utils.processes import DummyProcess
 
 
-@pytest.mark.requires_rmq
+@pytest.mark.requires_broker
 class TestRun:
     """Tests for the `run` functions."""
 

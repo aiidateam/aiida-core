@@ -8,9 +8,11 @@
 ###########################################################################
 """Define the current configuration version and migrations."""
 
-from typing import Any, Dict, Iterable, Optional, Protocol, Type
+from collections.abc import Iterable
+from typing import Any, Protocol
 
 from aiida.common import exceptions
+from aiida.common.docs import URL_CONFIG_SCHEMA_COMPATIBILITY
 from aiida.common.log import AIIDA_LOGGER
 
 __all__ = (
@@ -24,15 +26,15 @@ __all__ = (
     'upgrade_config',
 )
 
-ConfigType = Dict[str, Any]
+ConfigType = dict[str, Any]
 
 # The expected version of the configuration file and the oldest backwards compatible configuration version.
 # If the configuration file format is changed, the current version number should be upped and a migration added.
 # When the configuration file format is changed in a backwards-incompatible way, the oldest compatible version should
 # be set to the new current version.
 
-CURRENT_CONFIG_VERSION = 9
-OLDEST_COMPATIBLE_CONFIG_VERSION = 9
+CURRENT_CONFIG_VERSION = 10
+OLDEST_COMPATIBLE_CONFIG_VERSION = 10
 
 CONFIG_LOGGER = AIIDA_LOGGER.getChild('config')
 
@@ -391,6 +393,81 @@ class AddPrefixToStorageBackendTypes(SingleMigration):
                 )
 
 
+class RenameRmqAndLogging(SingleMigration):
+    """Migrate the logging (and related) configuration options introduced in version 10.
+
+    Deprecated options are renamed to their replacements: ``logging.db_loglevel`` becomes ``logging.database_handler``
+    and ``rmq.task_timeout`` becomes ``broker.task_timeout``. Any explicitly set value is moved to the new option.
+    """
+
+    down_revision = 9
+    down_compatible = 9
+    up_revision = 10
+    up_compatible = 10
+
+    option_renames = (
+        ('logging.db_loglevel', 'logging.database_handler'),
+        ('rmq.task_timeout', 'broker.task_timeout'),
+    )
+    advanced_logger_options = (
+        'logging.verdi_loglevel',
+        'logging.disk_objectstore_loglevel',
+        'logging.plumpy_loglevel',
+        'logging.kiwipy_loglevel',
+        'logging.paramiko_loglevel',
+        'logging.alembic_loglevel',
+        'logging.sqlalchemy_loglevel',
+        'logging.circus_loglevel',
+        'logging.aiopika_loglevel',
+    )
+    v10_only_options = (
+        'logging.aiida_core_loglevel',
+        'logging.terminal_handler',
+    )
+
+    @classmethod
+    def _rename_options(cls, options: dict[str, Any], *, downgrade: bool = False) -> None:
+        """Rename deprecated options between the version 9 and 10 names."""
+        for option_v9, option_v10 in cls.option_renames:
+            source, target = (option_v10, option_v9) if downgrade else (option_v9, option_v10)
+            if (value := options.pop(source, None)) is not None:
+                options.setdefault(target, value)
+
+    @classmethod
+    def _remove_v10_only_options(cls, options: dict[str, Any]) -> None:
+        """Remove options that did not exist before version 10."""
+        for option_name in cls.v10_only_options:
+            options.pop(option_name, None)
+
+    @classmethod
+    def _resolve_inherited_logger_options(cls, options: dict[str, Any], fallback_level: str) -> None:
+        """Resolve ``INHERIT`` for advanced logger options to the effective ``logging.aiida_loglevel``."""
+        for option_name in cls.advanced_logger_options:
+            if options.get(option_name) == 'INHERIT':
+                options[option_name] = fallback_level
+
+    def upgrade(self, config: ConfigType) -> None:
+        global_options = config.get('options', {})
+        self._rename_options(global_options)
+
+        for profile in config.get('profiles', {}).values():
+            self._rename_options(profile.get('options', {}))
+
+    def downgrade(self, config: ConfigType) -> None:
+        global_options = config.get('options', {})
+        global_fallback = global_options.get('logging.aiida_loglevel', 'REPORT')
+        self._resolve_inherited_logger_options(global_options, global_fallback)
+        self._rename_options(global_options, downgrade=True)
+        self._remove_v10_only_options(global_options)
+
+        for profile in config.get('profiles', {}).values():
+            options = profile.get('options', {})
+            profile_fallback = options.get('logging.aiida_loglevel', global_fallback)
+            self._resolve_inherited_logger_options(options, profile_fallback)
+            self._rename_options(options, downgrade=True)
+            self._remove_v10_only_options(options)
+
+
 MIGRATIONS = (
     Initial,
     AddProfileUuid,
@@ -401,6 +478,7 @@ MIGRATIONS = (
     MergeStorageBackendTypes,
     AddTestProfileKey,
     AddPrefixToStorageBackendTypes,
+    RenameRmqAndLogging,
 )
 
 
@@ -421,7 +499,7 @@ def get_oldest_compatible_version(config):
 
 
 def upgrade_config(
-    config: ConfigType, target: int = CURRENT_CONFIG_VERSION, migrations: Iterable[Type[SingleMigration]] = MIGRATIONS
+    config: ConfigType, target: int = CURRENT_CONFIG_VERSION, migrations: Iterable[type[SingleMigration]] = MIGRATIONS
 ) -> ConfigType:
     """Run the registered configuration migrations up to the target version.
 
@@ -449,7 +527,7 @@ def upgrade_config(
 
 
 def downgrade_config(
-    config: ConfigType, target: int, migrations: Iterable[Type[SingleMigration]] = MIGRATIONS
+    config: ConfigType, target: int, migrations: Iterable[type[SingleMigration]] = MIGRATIONS
 ) -> ConfigType:
     """Run the registered configuration migrations down to the target version.
 
@@ -475,7 +553,7 @@ def downgrade_config(
     return config
 
 
-def check_and_migrate_config(config, filepath: Optional[str] = None):
+def check_and_migrate_config(config, filepath: str | None = None):
     """Checks if the config needs to be migrated, and performs the migration if needed.
 
     :param config: the configuration dictionary
@@ -488,7 +566,7 @@ def check_and_migrate_config(config, filepath: Optional[str] = None):
     return config
 
 
-def config_needs_migrating(config, filepath: Optional[str] = None):
+def config_needs_migrating(config, filepath: str | None = None):
     """Checks if the config needs to be migrated.
 
     If the oldest compatible version of the configuration is higher than the current configuration version defined
@@ -503,10 +581,16 @@ def config_needs_migrating(config, filepath: Optional[str] = None):
 
     if oldest_compatible_version > CURRENT_CONFIG_VERSION:
         filepath = filepath if filepath else ''
-        raise exceptions.ConfigurationVersionError(
-            f'The configuration file has version {current_version} '
-            f'which is not compatible with the current version {CURRENT_CONFIG_VERSION}: {filepath}\n'
-            'Use a newer version of AiiDA to downgrade this configuration.'
+        msg = (
+            f'The AiiDA configuration file {filepath} has version {current_version}, which is not compatible with '
+            f'the current AiiDA version that supports configuration versions up to {CURRENT_CONFIG_VERSION}. '
+            'Before switching to an older AiiDA version, stop the daemon and avoid other AiiDA interactions. '
+            'Then use a newer AiiDA version that still supports '
+            f'configuration version {current_version} and run `verdi config downgrade {CURRENT_CONFIG_VERSION}` '
+            f'to rewrite the configuration file to version {CURRENT_CONFIG_VERSION}. See '
+            f'{URL_CONFIG_SCHEMA_COMPATIBILITY} for the compatibility '
+            'table.'
         )
+        raise exceptions.ConfigurationVersionError(msg)
 
     return CURRENT_CONFIG_VERSION > current_version

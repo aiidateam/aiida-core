@@ -219,13 +219,13 @@ def only_if_daemon_not_running(echo_function=echo.echo_critical, message: str | 
 
 
 @decorator
-def check_circus_zmq_version(wrapped, _, args, kwargs):
-    """Function decorator to check for the right ZMQ version before trying to run circus.
+def check_circus_zeromq_version(wrapped, _, args, kwargs):
+    """Function decorator to check for the right ZeroMQ version before trying to run circus.
 
     Example::
 
         @click.command()
-        @check_circus_zmq_version
+        @check_circus_zeromq_version
         def do_circus_stuff():
             pass
     """
@@ -236,7 +236,7 @@ def check_circus_zmq_version(wrapped, _, args, kwargs):
         if len(zmq_version) < 2:
             raise ValueError()
     except (AttributeError, ValueError):
-        echo.echo_critical('Unknown PyZQM version - aborting...')
+        echo.echo_critical('Unknown PyZMQ version - aborting...')
 
     if zmq_version[0] < 13 or (zmq_version[0] == 13 and zmq_version[1] < 1):
         echo.echo_critical('AiiDA daemon needs PyZMQ >= 13.1.0 to run - aborting...')
@@ -330,7 +330,7 @@ def requires_broker(wrapped, _, args, kwargs):
 
     if manager.get_broker() is None:
         echo.echo_critical(
-            f'profile `{profile.name}` does not define a broker and so cannot use this functionality.'
+            f'profile `{profile.name}` does not define a broker and so cannot use this functionality. '
             f'See {URL_NO_BROKER} for more details.'
         )
 

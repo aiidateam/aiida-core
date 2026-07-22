@@ -93,7 +93,7 @@ def test_check_service_reachable(monkeypatch, manager):
     close.assert_called_once_with()
 
 
-def test_is_service_reachable_false(monkeypatch, manager):
+def test_check_service_reachable_false(monkeypatch, manager):
     """Test RabbitMQ service reachability returns false on connection errors."""
     broker = manager.get_broker()
     close = MagicMock()

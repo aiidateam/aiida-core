@@ -1,10 +1,21 @@
 """Tests for the :mod:`aiida.manage.configuration` module."""
 
+from pathlib import Path
+
 import pytest
 
 import aiida
-from aiida.manage.configuration import Profile, create_profile, get_profile, profile_context
+from aiida.manage.configuration import (
+    Profile,
+    create_profile,
+    get_config_path,
+    get_profile,
+    load_profile,
+    profile_context,
+    reset_config,
+)
 from aiida.manage.manager import get_manager
+from aiida.storage.sqlite_temp import SqliteTempBackend
 
 
 @pytest.mark.parametrize('entry_point', ('core.sqlite_temp', 'core.sqlite_dos'))
@@ -86,3 +97,21 @@ def test_profile_context(config_with_profile, profile_factory):
         assert get_profile() == profile_alternate
 
     assert get_profile() == profile_original
+
+
+@pytest.mark.filterwarnings('ignore:Creating AiiDA configuration folder')
+def test_load_profile_creates_missing_config_for_temporary_profile(empty_config):
+    """Test loading a temporary profile recreates the configuration file if it is missing."""
+    filepath_config = Path(get_config_path())
+    assert filepath_config.is_file()
+
+    get_manager().unload_profile()
+    reset_config()
+    filepath_config.unlink()
+
+    assert not filepath_config.exists()
+
+    profile = SqliteTempBackend.create_profile('temp-profile')
+
+    assert load_profile(profile, allow_switch=True) == profile
+    assert filepath_config.is_file()

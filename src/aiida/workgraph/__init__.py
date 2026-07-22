@@ -18,6 +18,7 @@ node-graph dependency, which the (optional) workgraph install provides.
 # fmt: off
 
 from .enums import *
+from .serialization import *
 from .utils import *
 
 __all__ = (
@@ -28,6 +29,7 @@ __all__ = (
     'TaskState',
     'get_nested_dict',
     'resolve_node_link_managers',
+    'serialize_ports',
     'update_nested_dict',
     'update_nested_dict_with_special_keys',
 )

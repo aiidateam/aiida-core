@@ -12,7 +12,7 @@ from typing import Any
 
 from aiida.common.exceptions import ConfigurationError
 
-__all__ = ('Option', 'get_option', 'get_option_names', 'parse_option', 'resolve_deprecated_option_name')
+__all__ = ('Option', 'get_option', 'get_option_names', 'parse_option')
 
 
 class Option:

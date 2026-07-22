@@ -45,7 +45,6 @@ __all__ = (
     'get_option_names',
     'get_use_cache',
     'parse_option',
-    'resolve_deprecated_option_name',
     'upgrade_config',
 )
 

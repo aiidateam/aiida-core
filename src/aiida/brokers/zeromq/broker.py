@@ -11,6 +11,7 @@ from pathlib import Path
 import psutil
 
 from aiida.brokers.broker import Broker, BrokerConfigField, BrokerServiceStatus
+from aiida.common.exceptions import ConfigurationError
 from aiida.common.log import AIIDA_LOGGER
 
 from .communicator import ZeromqCommunicator
@@ -52,6 +53,14 @@ class ZeromqBroker(Broker):
 
     def __init__(self, profile: Profile) -> None:
         super().__init__(profile)
+
+        if profile.process_control_backend != 'core.zeromq':
+            msg = (
+                'the profile process control backend should be `core.zeromq` for the `ZeromqBroker`, '
+                f'got: {profile.process_control_backend}'
+            )
+            raise ConfigurationError(msg)
+
         self._communicator: ZeromqCommunicator | None = None
 
         from aiida.manage.configuration import get_config

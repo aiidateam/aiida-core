@@ -19,6 +19,7 @@ import pytest
 
 from aiida.brokers.zeromq.broker import ZeromqBroker, ZeromqIncomingTask
 from aiida.brokers.zeromq.queue import PersistentQueue
+from aiida.common.exceptions import ConfigurationError
 from aiida.manage.configuration import get_config
 
 
@@ -41,6 +42,7 @@ def zeromq_broker(tmp_path):
     """Create a ZMQ broker instance rooted in ``tmp_path``."""
     profile = MagicMock()
     profile.name = 'test-profile'
+    profile.process_control_backend = 'core.zeromq'
 
     config = get_config()
     original_filepaths = config.filepaths
@@ -60,6 +62,15 @@ def zeromq_broker(tmp_path):
 def test_get_default_config():
     """Test that the default broker settings declare the service as managed by the daemon."""
     assert ZeromqBroker.get_default_config() == {'supervised_by_daemon': True}
+
+
+def test_init_invalid_backend():
+    """Test the broker rejects profiles configured for a different backend."""
+    profile = MagicMock()
+    profile.process_control_backend = 'core.rabbitmq'
+
+    with pytest.raises(ConfigurationError, match=r'should be `core\.zeromq`'):
+        ZeromqBroker(profile)
 
 
 class TestZeromqBrokerStatusQueries:

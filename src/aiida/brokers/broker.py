@@ -6,6 +6,8 @@ import abc
 import typing as t
 from dataclasses import dataclass
 
+from aiida.common.lang import classproperty
+
 JsonPrimitive = str | int | float | bool | None
 JsonValue = JsonPrimitive | list['JsonValue'] | dict[str, 'JsonValue']
 BrokerServiceStatus = dict[str, JsonValue]
@@ -37,7 +39,21 @@ class BrokerConfigField:
 class Broker(abc.ABC):
     """Interface for a message broker that facilitates communication with and between process runners."""
 
+    ENTRY_POINT_GROUP = 'aiida.brokers'
     _config_fields: tuple[BrokerConfigField, ...] = ()
+
+    @classproperty
+    def ENTRY_POINT(cls) -> str:  # noqa: N802, N805
+        """Return the entry point name of this broker class."""
+        from aiida.plugins.entry_point import get_entry_point_from_class
+
+        group, entry_point = get_entry_point_from_class(cls.__module__, cls.__name__)
+
+        if group != cls.ENTRY_POINT_GROUP or entry_point is None:
+            msg = f'could not determine entry point for `{cls.__name__}` in group `{cls.ENTRY_POINT_GROUP}`'
+            raise RuntimeError(msg)
+
+        return entry_point.name
 
     def __init__(self, profile: Profile) -> None:
         """Construct a new instance.

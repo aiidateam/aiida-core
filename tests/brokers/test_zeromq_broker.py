@@ -62,6 +62,20 @@ def test_get_default_config():
     assert ZeromqBroker.get_default_config() == {'supervised_by_daemon': True}
 
 
+def test_entry_point():
+    """Test the broker entry point is derived from the class."""
+    assert ZeromqBroker.ENTRY_POINT == 'core.zeromq'
+
+
+def test_init_invalid_backend():
+    """Test the broker rejects profiles configured for a different backend."""
+    profile = MagicMock()
+    profile.process_control_backend = 'core.rabbitmq'
+
+    with pytest.raises(ValueError, match=r'should be `core\.zeromq`'):
+        ZeromqBroker(profile)
+
+
 class TestZeromqBrokerStatusQueries:
     """Tests for ZeromqBroker status queries (file-based)."""
 

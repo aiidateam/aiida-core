@@ -12,6 +12,7 @@ import pytest
 from importlib_metadata import entry_points
 
 from aiida import orm
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm.fields import add_field
 from aiida.orm.pydantic import OrmMetadataField
 from aiida.plugins import load_entry_point
@@ -60,10 +61,20 @@ def test_add_field():
     node = NewNode()
 
     assert 'key1' in node.fields
+    with pytest.warns(AiidaDeprecationWarning, match='QbField.doc'):
+        assert node.fields.key1.doc == ''
     assert node.fields.key1.dtype is str
+    with pytest.warns(AiidaDeprecationWarning, match='QbField.annotation'):
+        assert node.fields.key1.annotation is str
+    with pytest.warns(AiidaDeprecationWarning, match='QbField.is_attribute'):
+        assert node.fields.key1.is_attribute is True
+    with pytest.warns(AiidaDeprecationWarning, match='QbField.is_subscriptable'):
+        assert node.fields.key1.is_subscriptable is False
     assert isinstance(node.fields.key1, orm.fields.QbStrField)
     assert node.fields.key1.backend_key == 'attributes.key1'
     assert node.fields.key1 == node.fields.attributes.key1
+    with pytest.warns(AiidaDeprecationWarning, match='QbField.is_subscriptable'):
+        assert node.fields.attributes.is_subscriptable is True
 
 
 @pytest.mark.parametrize('key', ('|', 'some.field', '1key'))

@@ -807,7 +807,6 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         """
         import json
 
-        from sqlalchemy import cast as sql_cast
         from sqlalchemy import func, type_coerce
 
         batch_threshold = 500_000
@@ -844,21 +843,29 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         elif dialect_name == 'sqlite':
             # SQLite: Use json_each() with JSON array (SQLite has no native array type)
-            # - Serialize Python list to JSON string
-            # - json_each() extracts values from JSON, but returns them as TEXT
-            # - sql_cast: Generate SQL CAST() to convert TEXT to target column type
-            # Result: column IN (SELECT CAST(value AS coltype) FROM json_each(:json_param))
+            # - Serialize each value through the column's bind processor so its JSON
+            #   representation matches how it is stored (e.g. datetimes, which are not
+            #   directly JSON serializable and are stored by SQLite as strings).
+            # - No SQL CAST is applied: SQLite's comparison affinity coerces the json_each
+            #   values when the IN clause is evaluated. Casting the TEXT back to the column
+            #   type would corrupt string-stored values, e.g.
+            #   CAST('2026-07-23 12:00:00' AS DATETIME) evaluates to 2026.
+            # Result: column IN (SELECT value FROM json_each(:json_param))
             coltype: Any = column.type
-            json_array: str = json.dumps(obj=list(values_list))
+            dialect = session.bind.dialect
+            processor = coltype.dialect_impl(dialect).bind_processor(dialect)
+
+            def process(value: Any) -> Any:
+                return processor(value) if processor is not None and value is not None else value
+
+            json_array: str = json.dumps(obj=[process(value) for value in values_list])
 
             # Create table-valued function: json_each(json_array) returns virtual table
             json_each_table: TableValuedAlias = func.json_each(json_array).table_valued('value')
 
-            # Extract the 'value' column and cast from TEXT to target type
+            # Extract the 'value' column and let SQLite apply the column affinity at compare time
             value_col: KeyedColumnElement = json_each_table.c.value
-            subq: ScalarSelect[Any] = (
-                select(sql_cast(expression=value_col, type_=coltype)).select_from(json_each_table).scalar_subquery()
-            )
+            subq: ScalarSelect[Any] = select(value_col).select_from(json_each_table).scalar_subquery()
 
         else:
             msg = f'Unsupported database backend: {dialect_name}. AiiDA only supports PostgreSQL and SQLite.'

@@ -1,5 +1,22 @@
 # Changelog
 
+## v2.7.4 - 2026-07-25
+
+This patch fixes a SQLite QueryBuilder regression where plugin code using filters such as `{'ctime': {'in': [...]}}` or `{'ctime': {'!in': [...]}}` with Python `datetime` values could fail.
+Plugins that compare or exclude nodes by creation/modification time should now work again with SQLite profiles.
+
+### Fixes
+
+#### Storage
+- Fix SQLite `IN` filters for non-JSON-serializable values ([#7486](https://github.com/aiidateam/aiida-core/pull/7486)) [[27d71c131]](https://github.com/aiidateam/aiida-core/commit/27d71c131c59943afa4e1ff58cdbf20d55442384)
+
+#### Configuration
+- Add guidance on how to fix config version error ([#7421](https://github.com/aiidateam/aiida-core/pull/7421)) [[7f1b98214]](https://github.com/aiidateam/aiida-core/commit/7f1b9821454bb46c69025392655accbf873f88d0)
+- Clarify config downgrade error message ([#7436](https://github.com/aiidateam/aiida-core/pull/7436)) [[9d7302c57]](https://github.com/aiidateam/aiida-core/commit/9d7302c5790b9897b15a286cc6620da9acc6ad11)
+- Add a config v10 migration for deprecated logging and broker options ([#7417](https://github.com/aiidateam/aiida-core/pull/7417)) [[4d2978c83]](https://github.com/aiidateam/aiida-core/commit/4d2978c834b27eaaf7b21e628c3c6f161f538af9)
+- Allow config downgrade for known migrations ([#7491](https://github.com/aiidateam/aiida-core/pull/7491)) [[7f36513db]](https://github.com/aiidateam/aiida-core/commit/7f36513db35f05e10d2fec6d6923951c564363d3)
+
+
 ## v2.7.3 - 2026-01-23
 
 ### Fixes

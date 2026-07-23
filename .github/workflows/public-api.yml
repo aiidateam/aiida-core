@@ -1,0 +1,53 @@
+name: public-api
+
+on:
+  pull_request:
+    branches-ignore: [gh-pages]
+    paths:
+    - src/aiida/**
+    - utils/public_api.py
+    - .github/workflows/public-api.yml
+
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: 1
+
+jobs:
+
+  diff:
+
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: Install aiida-core
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: '3.11'
+        from-lock: 'true'
+        extras: ''
+
+    - name: Check public API diff against base branch
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      run: |
+        set -euo pipefail
+
+        worktree_dir="$(mktemp -d)"
+        trap 'git worktree remove --force "$worktree_dir"' EXIT
+
+        git worktree add --detach "$worktree_dir" "$BASE_SHA"
+
+        uv run python utils/public_api.py extract \
+          --src-root "$worktree_dir/src/aiida" \
+          --output /tmp/public_api_base.json
+
+        uv run python utils/public_api.py diff --exit-code /tmp/public_api_base.json

@@ -230,6 +230,43 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
             'write': cls.WriteModel,
         }
 
+    @classmethod
+    def model_to_orm_fields(cls) -> dict[str, pdt.fields.FieldInfo]:
+        """Return the fields that are accepted for ORM construction.
+
+        This compatibility helper mirrors the write schema that is accepted by
+        ``from_model``.
+        """
+        warn_deprecation(
+            '`Entity.model_to_orm_fields()` is deprecated, use `WriteModel.model_fields` instead.',
+            version=3,
+            stacklevel=2,
+        )
+        return dict(cls.WriteModel.model_fields)
+
+    @classmethod
+    def model_to_orm_field_values(cls, model: OrmModel) -> dict[str, Any]:
+        """Return ORM constructor values for a model instance."""
+        warn_deprecation(
+            '`Entity.model_to_orm_field_values()` is deprecated, use `from_model()` to construct an entity '
+            'or call `_to_orm_field_values()` on a specialized model directly if you explicitly need the '
+            'intermediate dictionary.',
+            version=3,
+            stacklevel=2,
+        )
+        compat_model = cls.__dict__.get('_COMPAT_MODEL')
+        if compat_model is not None and isinstance(model, compat_model):
+            from aiida.common.docs import URL_CHANGELOG_ORM_MODELS
+
+            class_name = cast(Any, cls).__name__
+            msg = (
+                f'`{class_name}.Model` is deprecated and only supported for validation/introspection. '
+                f'Use `{class_name}.WriteModel` with `from_model()` instead. '
+                f'See {URL_CHANGELOG_ORM_MODELS}.'
+            )
+            raise ValueError(msg)
+        return model._to_orm_field_values()
+
     def to_model(
         self,
         *,
@@ -275,7 +312,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
             )
             raise ValueError(msg)
 
-        fields = model._to_orm_field_values()
+        fields = cls.model_to_orm_field_values(model)
         return cls(**fields)
 
     def serialize(

@@ -12,10 +12,9 @@ from __future__ import annotations
 
 import json
 from functools import singledispatch
-from typing import TYPE_CHECKING, Sequence, TypeVar
+from typing import TYPE_CHECKING, Any, Sequence, TypeVar
 
 from sqlalchemy import Select, or_, select, type_coerce
-from sqlalchemy import cast as sql_cast
 from sqlalchemy import func as sa_func
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy.dialects.sqlite.base import SQLiteDialect
@@ -63,10 +62,18 @@ def _build_select_stmt_psql(dialect: PGDialect, coltype: TypeEngine[T], values: 
 
 @_build_select_stmt.register
 def _build_select_stmt_sqlite(dialect: SQLiteDialect, coltype: TypeEngine[T], values: Sequence[T]) -> Select[tuple[T]]:
-    """SQLite: ``SELECT CAST(value AS coltype) FROM json_each(:json)`` — passes the list as 1 parameter."""
-    json_each_table = sa_func.json_each(json.dumps(list(values))).table_valued('value')
-    value_col = json_each_table.c.value
-    return select(sql_cast(expression=value_col, type_=coltype)).select_from(json_each_table)
+    """SQLite: ``SELECT value FROM json_each(:json)`` — passes the list as 1 parameter.
+
+    Values are serialized through the column's bind processor so their JSON representation matches
+    how they are stored; SQLite then applies the column's comparison affinity to evaluate the ``IN``.
+    """
+    processor = coltype.dialect_impl(dialect).bind_processor(dialect)
+
+    def process(value: T) -> Any:
+        return processor(value) if processor is not None and value is not None else value
+
+    json_each_table = sa_func.json_each(json.dumps([process(value) for value in values])).table_valued('value')
+    return select(json_each_table.c.value).select_from(json_each_table)
 
 
 def _create_smarter_in_clause(

@@ -1,8 +1,124 @@
 # Changelog
 
-## Unreleased
+## v2.9.0 - 2026-08-03
+
+The headline feature of this release is the new built-in **ZeroMQ broker**, which allows submitting calculations and workflows to the daemon without installing and running an external message broker service such as RabbitMQ.
+The release also adds a `verdi bug-report` command, an overhauled logging system, configuration file versioning with automatic migrations, and warnings when the daemon runs in an outdated Python environment.
+
+**Note:** Support for Python 3.9 has been dropped; the minimum supported Python version is now 3.10.
+
+Highlights:
+- [ZeroMQ broker: run AiiDA without external services](#zeromq-broker-run-aiida-without-external-services)
+- [`verdi bug-report`: bundle diagnostics for bug reports](#verdi-bug-report-bundle-diagnostics-for-bug-reports)
+- [Logging system overhaul](#logging-system-overhaul)
+- [Configuration file versioning and migrations](#configuration-file-versioning-and-migrations)
+- [Daemon environment mismatch warnings](#daemon-environment-mismatch-warnings)
+
+**Behavior changes:** The following changes may affect existing workflows but do not constitute API breaking changes that would warrant a major version bump. See the [Behavior changes](#behavior-changes) section for details.
+- [Python 3.9 support dropped](#behavior-changes)
+- [`verdi presto`: falls back to the ZeroMQ broker when RabbitMQ is not available](#zeromq-broker-run-aiida-without-external-services)
+- [`verdi presto`: auto-starts the daemon](#behavior-changes)
+- [`verdi storage maintain`: incrementally cleans loose files while packing](#behavior-changes)
+- [`logging.db_loglevel` renamed to `logging.database_handler`](#logging-system-overhaul)
+- [`aiida` logger: no longer propagates to the root logger](#behavior-changes)
+- [Configuration file: schema bumped to version 10 with automatic migration](#configuration-file-versioning-and-migrations)
+- [Scheduler: output parse failures now logged as warnings](#behavior-changes)
+- [`ResourceWarning` on unclosed resources replaced by log messages](#behavior-changes)
+
+
+### ZeroMQ broker: run AiiDA without external services
+
+AiiDA requires a message broker to communicate with running processes and the daemon.
+Until now, the only option was RabbitMQ, an external service that has to be installed and managed separately, which complicates installation, especially on machines without administrator rights (e.g., HPC login nodes).
+
+This release adds a built-in **ZeroMQ broker** ([#7284](https://github.com/aiidateam/aiida-core/pull/7284)) as a new broker plugin (`core.zeromq`, next to the existing `core.rabbitmq`).
+It requires no external services: the broker is started and supervised automatically together with the daemon.
+This means full process control—submitting to the daemon with `submit()`, `verdi process play/pause/kill`, `verdi daemon start/stop`—now works out of the box with nothing but `pip install aiida-core`:
+
+```console
+$ pip install aiida-core
+$ verdi presto
+```
+
+`verdi presto` checks whether RabbitMQ is running on localhost: if it can connect, the profile is configured with RabbitMQ as before; otherwise it now **falls back to the ZeroMQ broker** instead of creating a brokerless profile.
+Use `verdi presto --no-broker` if you explicitly want a profile without any broker.
+
+The broker can also be chosen explicitly at profile creation with `verdi profile setup --broker`, and existing profiles can be switched with the new `verdi profile configure-broker` command ([#7428](https://github.com/aiidateam/aiida-core/pull/7428)).
+For example, to move a profile to RabbitMQ once the service is available:
+
+```console
+$ verdi profile configure-broker core.rabbitmq
+```
+
+For high-throughput production workloads, RabbitMQ remains the recommended broker; the ZeroMQ broker is ideal for getting started, light production use, and machines where installing services is not an option.
+See the [installation guide](https://aiida-core.readthedocs.io/en/stable/installation/guide_quick.html) for the updated database/broker compatibility matrix and the new [broker internals documentation](https://aiida-core.readthedocs.io/en/stable/internals/broker.html) for the architecture.
+
+Related changes:
+- The task timeout for both brokers is now controlled by a single `broker.task_timeout` config option ([#7284](https://github.com/aiidateam/aiida-core/pull/7284)).
+- `verdi status` and `verdi daemon status` report the status of whichever broker the profile uses, and daemon commands are available on all broker-enabled profiles ([#7443](https://github.com/aiidateam/aiida-core/pull/7443), [#7445](https://github.com/aiidateam/aiida-core/pull/7445)).
+- `Broker.is_service_running` was added to the public broker API ([#7340](https://github.com/aiidateam/aiida-core/pull/7340)).
+
+
+### `verdi bug-report`: bundle diagnostics for bug reports
+
+The new `verdi bug-report` command ([#7340](https://github.com/aiidateam/aiida-core/pull/7340)) collects the diagnostic information typically needed to triage an issue into a single zip archive:
+
+- AiiDA and Python versions, installed packages, and platform details
+- profile configuration and the AiiDA configuration file
+- service status for storage, broker, and daemon
+- the tails of the profile, daemon, circus, and broker log files (truncated to the last MiB)
+
+Secret values such as passwords are redacted before the configuration is embedded, but do review the archive before posting it publicly.
+Attach the resulting archive when opening an issue on GitHub or asking for help on Discourse.
+
+
+### Logging system overhaul
+
+The logging configuration has been reworked to be easier to understand and control ([#7322](https://github.com/aiidateam/aiida-core/pull/7322), [#7323](https://github.com/aiidateam/aiida-core/pull/7323)).
+
+**Client log file:** output from `verdi` commands and processes run outside the daemon is now also written to a per-profile log file, so each profile has three log files:
+
+- `<AIIDA_PATH>/log/aiida-<profile_name>.log` — client-side logs (task submissions, pause/play/kill messages, and process execution in running mode)
+- `<AIIDA_PATH>/daemon/log/aiida-<profile_name>.log` — daemon worker logs
+- `<AIIDA_PATH>/daemon/log/circus-<profile_name>.log` — circus supervisor internals
+
+**New handler options:** the log files capture all messages, while two new config options control what is additionally shown elsewhere:
+
+- `logging.terminal_handler` — minimum level for messages printed to the terminal (default `REPORT`)
+- `logging.database_handler` — minimum level for messages bound to a stored node to be written to the `DbLog` table, i.e. what `verdi process report` displays (default `REPORT`; renames the previous `logging.db_loglevel` option)
+
+**Simpler per-logger configuration:** the per-library options (e.g. `logging.sqlalchemy_loglevel`) are now marked as advanced and hidden from `verdi config list` by default (use `--advanced` to show them), and they inherit from `logging.aiida_loglevel` unless explicitly set.
+AiiDA now also warns when a logging configuration has no effect ([#7322](https://github.com/aiidateam/aiida-core/pull/7322)).
+
+Deprecated option names (such as `logging.db_loglevel`) are transparently redirected on read, write, and unset, and stored config files are migrated automatically (see the next section).
+See the updated [logging documentation](https://aiida-core.readthedocs.io/en/stable/installation/troubleshooting.html) for details.
+
+
+### Configuration file versioning and migrations
+
+The AiiDA configuration file schema has been bumped to version 10 with a registered migration that renames deprecated logging and broker options to their replacements ([#7417](https://github.com/aiidateam/aiida-core/pull/7417)).
+The migration is applied automatically and `verdi` now reports when the configuration file has been migrated ([#7421](https://github.com/aiidateam/aiida-core/pull/7421)).
+When a configuration file was written by a newer AiiDA version and cannot be read, the error message now explains how to resolve the version mismatch.
+
+In addition, `verdi config set` now tells you when a changed option only takes effect after a daemon restart ([#7422](https://github.com/aiidateam/aiida-core/pull/7422)).
+The compatibility of configuration schema versions with aiida-core versions is now [documented](https://aiida-core.readthedocs.io/en/stable/reference/configuration_schema.html).
+
+
+### Daemon environment mismatch warnings
+
+A common source of confusing bugs is a daemon that keeps running with an outdated environment after `aiida-core` or a plugin has been updated.
+The daemon now records a snapshot of the installed package versions and the Python interpreter when it starts, and `verdi status` and `verdi daemon status` warn when the current environment no longer matches ([#7318](https://github.com/aiidateam/aiida-core/pull/7318), [#7412](https://github.com/aiidateam/aiida-core/pull/7412)).
+
+This covers package version changes, added or removed plugins, editable-install path changes, VCS installs (via the commit hash), and a changed Python binary.
+When you see such a warning, run `verdi daemon restart` so the daemon workers pick up the new environment.
+
 
 ### Behavior changes
+
+**Python 3.9 support dropped** ([b289cfe8f](https://github.com/aiidateam/aiida-core/commit/b289cfe8fb01270300cb802fb20c57e6b424843d))
+
+Support for Python 3.9, which reached end-of-life in October 2025, has been removed.
+The minimum supported Python version is now 3.10.
 
 **`verdi storage maintain`: incrementally cleans loose files while packing** ([#7078](https://github.com/aiidateam/aiida-core/pull/7078))
 
@@ -22,6 +138,254 @@ Update code as follows:
 - use `CliModel` for CLI-oriented schemas, where supported
 
 If existing plugin code still references `Class.Model`, keep it only as a temporary compatibility layer and migrate to the specialized models.
+**`aiida` logger: no longer propagates to the root logger** ([#7319](https://github.com/aiidateam/aiida-core/pull/7319))
+
+Messages emitted through AiiDA's loggers are no longer propagated to the root logger, which previously could lead to duplicated log lines.
+If you attached custom handlers to the root logger to capture AiiDA messages, attach them to the `aiida` logger instead.
+
+**Scheduler: output parse failures now logged as warnings** ([#7323](https://github.com/aiidateam/aiida-core/pull/7323))
+
+Failures to parse scheduler output (e.g. from `qstat`/`squeue`) are now logged at WARNING level instead of being hidden at lower verbosity, making scheduler problems visible in the default daemon log.
+
+**`ResourceWarning` on unclosed resources replaced by log messages** ([#7413](https://github.com/aiidateam/aiida-core/pull/7413))
+
+When storage backends or transports are garbage-collected without having been closed, a log message is now emitted instead of a `ResourceWarning`.
+If you filtered these warnings, the filter is no longer needed.
+
+
+### Features
+
+#### Broker
+
+- Add ZeroMQ broker implementation (#7284) [[e0227d2de]](https://github.com/aiidateam/aiida-core/commit/e0227d2de85816c42320ca4056fb4e2ef9d25c42)
+- Integrate ZeroMQ broker into daemon, status, and CI (#7284) [[bb2034784]](https://github.com/aiidateam/aiida-core/commit/bb2034784f19dc31277de846208c4e730b1d37ef)
+- `verdi presto`: fall back to the ZeroMQ broker (#7284) [[a379dea81]](https://github.com/aiidateam/aiida-core/commit/a379dea8130da2ac23b605c5046268472635eefc)
+- `verdi presto`: add `--no-broker` (#7284) [[602f401b8]](https://github.com/aiidateam/aiida-core/commit/602f401b8cd5ff2c0796b3beed9d63d7d88e4d58)
+- `verdi profile setup`: add `--broker` (#7284) [[e3c5df855]](https://github.com/aiidateam/aiida-core/commit/e3c5df855240108a66f14d6249a36a3afa609d6c)
+- Add `verdi profile configure-broker` command (#7428) [[127c3d48a]](https://github.com/aiidateam/aiida-core/commit/127c3d48a960957163c8d09a0bc75660868b6f93)
+- Add interactive broker configuration CLI (#7428) [[b573c3341]](https://github.com/aiidateam/aiida-core/commit/b573c3341793b5bd3faf35dd7ed21243e3b18a5c)
+- Unify task timeout into `broker.task_timeout` config option (#7284) [[161fda9e4]](https://github.com/aiidateam/aiida-core/commit/161fda9e42796fa88c671499658162e2f7916883)
+- Add `is_service_running` to `Broker` public API (#7340) [[9404e901c]](https://github.com/aiidateam/aiida-core/commit/9404e901cee81aaaf310f626c8d93cd7af750470)
+- Add broker service status API (#7340) [[35a82bb34]](https://github.com/aiidateam/aiida-core/commit/35a82bb34b04819274662bf23816f8c369fe9976)
+- Add `supervised_by_daemon` to the broker settings (#7430) [[6ad93b19b]](https://github.com/aiidateam/aiida-core/commit/6ad93b19bdb63b2b86876995eeb6dc5fc8f98482)
+- Give the ZeroMQ broker its own log and settings paths (#7430) [[bdd0687fc]](https://github.com/aiidateam/aiida-core/commit/bdd0687fc7b148568d2a037b4f083bbe7a8149b0)
+
+#### CLI
+
+- Add `verdi bug-report` command (#7340) [[154727c6f]](https://github.com/aiidateam/aiida-core/commit/154727c6f7809ad228e4b89a5ba881be47b6f89a)
+- `verdi presto`: auto-start daemon (#7351) [[6a6f66a95]](https://github.com/aiidateam/aiida-core/commit/6a6f66a956008ea0163e5a3d5766c10716a8350f)
+- Add daemon package version mismatch warning (#7318) [[023078425]](https://github.com/aiidateam/aiida-core/commit/023078425d509ddfac3a27c09d7692589d81f406)
+- Warn on mismatch of Python binary of daemon (#7412) [[78dd1bbcb]](https://github.com/aiidateam/aiida-core/commit/78dd1bbcb3110069d1ed10d4c8715680c1a55c1b)
+- Report daemon restart for config options (#7422) [[a7693ab4a]](https://github.com/aiidateam/aiida-core/commit/a7693ab4a9a68c028ce222bc4b18ce72f4961b4c)
+- Report config file migrations (#7421) [[b9253548c]](https://github.com/aiidateam/aiida-core/commit/b9253548c7b699ebfce3526793d071e64144c71c)
+- Add guidance how to fix config version error (#7421) [[7f1b98214]](https://github.com/aiidateam/aiida-core/commit/7f1b9821454bb46c69025392655accbf873f88d0)
+- Expose daemon commands when no broker is configured (#7445) [[cec7bf119]](https://github.com/aiidateam/aiida-core/commit/cec7bf11905e87d20b2d08a8e820eaf4537d05a8)
+
+#### Logging
+
+- Add client log file for verdi/non-daemon output (#7323) [[c3625ed3a]](https://github.com/aiidateam/aiida-core/commit/c3625ed3a160cc40bb3f7bac65c0faad59afa178)
+- Add `logging.terminal_handler` config option to filter log messages (#7322) [[fe2d1be93]](https://github.com/aiidateam/aiida-core/commit/fe2d1be930a3c29d4ba6490b23896e49b88faa71)
+- Let advanced log levels inherit from `logging.aiida_loglevel` (#7322) [[4cafd2466]](https://github.com/aiidateam/aiida-core/commit/4cafd2466f9887ce72b1bbb20598412604955cbb)
+- Warn when a logging handler has no effect (#7322) [[06118032f]](https://github.com/aiidateam/aiida-core/commit/06118032f255f5684f621f0e713ce880f54a3b46)
+- Mark non-aiida loglevel options as advanced (#7322) [[79dc3a79d]](https://github.com/aiidateam/aiida-core/commit/79dc3a79df34876ec9e97f9ecd689239281f1a46)
+
+#### Config
+
+- Mark config as v10 and add migration (#7417) [[4d2978c83]](https://github.com/aiidateam/aiida-core/commit/4d2978c834b27eaaf7b21e628c3c6f161f538af9)
+
+#### ORM
+
+- Add workflow tool entry points (#6884) [[57378d699]](https://github.com/aiidateam/aiida-core/commit/57378d699347d84512e2e903a3a431b899b9156d)
+- Update Pydantic model system (#6990) [[f4560285d]](https://github.com/aiidateam/aiida-core/commit/f4560285d611bbf4f2b702338ea466da4e210f4c)
+- Factor out the mutable fields of `BaseNodeModel` as `MutableNodeFields` (#7371) [[1b3636acb]](https://github.com/aiidateam/aiida-core/commit/1b3636acb0056425f1fe52a4135b75d22c561e8f)
+- Only add missing attributes if not minimally serializing (#7370) [[2ed57cfe4]](https://github.com/aiidateam/aiida-core/commit/2ed57cfe430a7b741dc7490c8de9fb7ff8d9195f)
+- Fall back to `ProcessNode` if entry point is missing (#7386) [[9a3f7d203]](https://github.com/aiidateam/aiida-core/commit/9a3f7d203e36ff5864272860e027c36ad336049a)
+- Leave `ProcessNode.ReadModel.node_type` as `str` (#7402) [[cd9024c78]](https://github.com/aiidateam/aiida-core/commit/cd9024c783ab781fd205a6bc32d6e7c8149aa8ce)
+- Leave `Data.ReadModel.node_type` as `str` (#7384) [[186b1defd]](https://github.com/aiidateam/aiida-core/commit/186b1defd248b575e0d4b85397da168d1afc0736)
+
+#### Storage
+
+- `verdi storage maintain`: incremental loose file cleanup (#7078) [[602e9f3ee]](https://github.com/aiidateam/aiida-core/commit/602e9f3ee5d228aa1bb6ed300c53b4c5dae164f3)
+- Make `PsqlDosMigrator` into a context manager (#7177) [[deb83d9ea]](https://github.com/aiidateam/aiida-core/commit/deb83d9eab3b6f0d07223c15361314c94ff42112)
+
+### Fixes
+
+#### Broker
+
+- ZeroMQ broker: send immediate task acknowledgment (#7356) [[06968d437]](https://github.com/aiidateam/aiida-core/commit/06968d43765b3732fa1a7aa43e5208cfc88abb6a)
+- `engine.submit` on ZeroMQ: raise if daemon stopped (#7344) [[6adc2b0eb]](https://github.com/aiidateam/aiida-core/commit/6adc2b0eb12f6ce6a7bbda5c3ec9358a562965c1)
+- `verdi process repair`: fix ZeroMQ broker support (#7350) [[db1a28bd8]](https://github.com/aiidateam/aiida-core/commit/db1a28bd882f589463afaceae26db8ae258e12d8)
+- Fix local launchers without live broker (#7343) [[87ce9b113]](https://github.com/aiidateam/aiida-core/commit/87ce9b11317e3cc18a68d1ced8fd06c29b129368)
+- Fix `ZmqBrokerService.stop()` skipping cleanup when already stopped (#7352) [[282fd7251]](https://github.com/aiidateam/aiida-core/commit/282fd725140cfe33dba222fbf66847b59fab743e)
+- Force-terminate ZeroMQ context on thread join timeout (#7352) [[50981cf0e]](https://github.com/aiidateam/aiida-core/commit/50981cf0ee6051bd8ac9907fa817ed6f3100cd1c)
+- Fix double `close()` in `Manager.reset_broker()` (#7352) [[e5b744f35]](https://github.com/aiidateam/aiida-core/commit/e5b744f35af769ab49fcf454e3d2e7e3f06337f9)
+- Report unreachable ZeroMQ broker as error (#7445) [[464e71296]](https://github.com/aiidateam/aiida-core/commit/464e712969acb0e33214c27bcac0ab4c0876271b)
+- Use profile-specific broker status (#7445) [[e7032649c]](https://github.com/aiidateam/aiida-core/commit/e7032649c34fb4adf7915688756b548a88cc7a5b)
+- Validate ZeroMQ broker status payload (#7443) [[f404634de]](https://github.com/aiidateam/aiida-core/commit/f404634dea3e159b56f6581b5b8b138902d10a4f)
+- Capture broker probe failures in status (#7443) [[1efd09d21]](https://github.com/aiidateam/aiida-core/commit/1efd09d21e9fc714ecf1c2d10ff393a809e51204)
+- Surface broker probe status errors (#7443) [[80b9f6b7b]](https://github.com/aiidateam/aiida-core/commit/80b9f6b7bfe96a9774b9c1fcc1bcaceecf5abacd)
+- Handle invalid RabbitMQ status property encoding (#7443) [[f94b2285f]](https://github.com/aiidateam/aiida-core/commit/f94b2285f31a57a30037f1aebf38760201f72110)
+- Silence RabbitMQ probe failure logs (#7342) [[dcd8d6bb6]](https://github.com/aiidateam/aiida-core/commit/dcd8d6bb6391ecdca8c5ebb7a88bf749d2e897fc)
+- Fix RabbitMQ probe cleanup on Python 3.14 (#7342) [[1a6fe9e24]](https://github.com/aiidateam/aiida-core/commit/1a6fe9e2442d9e351fe023fdf378d261d9c817d5)
+- Lazy-import `aio_pika` in RabbitMQ probe function (#7342) [[2491deb25]](https://github.com/aiidateam/aiida-core/commit/2491deb2527fa0eedc7c047fde60a39da44919ff)
+- Quote RabbitMQ URL credentials (#7340) [[a90cf5489]](https://github.com/aiidateam/aiida-core/commit/a90cf5489b06a5d9a51de2f6fc7d780cd8cc450e)
+- Redact RabbitMQ URL in broker string (#7340) [[f72a462a1]](https://github.com/aiidateam/aiida-core/commit/f72a462a13727b28a176f8220dcb9f9eb3a9ec8f)
+- Fix profile configure state corruption (#7284) [[88c976a6f]](https://github.com/aiidateam/aiida-core/commit/88c976a6f0e6843bd9d6c59630c3ead7b2d014cd)
+
+#### CLI
+
+- `verdi code create`: don't crash with `--help` (#7381) [[f47698ff6]](https://github.com/aiidateam/aiida-core/commit/f47698ff691565e3d2cbdf771bf71f2b32c7d2bf)
+- Fix `verdi daemon stop --all` ignoring profile (#7319) [[be2052dd5]](https://github.com/aiidateam/aiida-core/commit/be2052dd5c088c32f41746c313232a16a4081840)
+- Stop daemon before `verdi profile delete` (#7319) [[f39108653]](https://github.com/aiidateam/aiida-core/commit/f39108653d275bc39fd7ff58e960c33ffbbf395e)
+- Propagate daemon status failures (#7445) [[8d29a35bb]](https://github.com/aiidateam/aiida-core/commit/8d29a35bb0fd94086158eb4abfcda0648673dd5c)
+- Fix non-interactive daemon prompt (#7445) [[ff1869598]](https://github.com/aiidateam/aiida-core/commit/ff18695989ce52909f0be8ef67194c418f0a8bd7)
+- Clarify daemon broker prompts (#7445) [[c076cf85a]](https://github.com/aiidateam/aiida-core/commit/c076cf85a7f1a59da461eb00f9abe184b88737d8)
+- Revise brokerless status message (#7445) [[17485769a]](https://github.com/aiidateam/aiida-core/commit/17485769af88e3b106ce2b6f8298f52d606beec0)
+- Fix broker warning spacing (#7445) [[30b8717bb]](https://github.com/aiidateam/aiida-core/commit/30b8717bbc32dcbf7110878a5156260adf4aac0d)
+- Fix `verdi status` message when no daemon is available (#7304) [[8107b2795]](https://github.com/aiidateam/aiida-core/commit/8107b2795fb81397691bae698d88666a2a6d0c19)
+- Redirect deprecated config options on write and unset (#7322) [[7bbc2be6c]](https://github.com/aiidateam/aiida-core/commit/7bbc2be6cdfcb8d057d45ec852c07b8dc30e145a)
+- Hide deprecated config list options (#7322) [[c789f67fe]](https://github.com/aiidateam/aiida-core/commit/c789f67fee69e2ab2e4c73fad3c6a2b07b6a82b5)
+- Consolidate deprecated option redirects (#7322) [[90c9c6a6c]](https://github.com/aiidateam/aiida-core/commit/90c9c6a6ccfa329fa90253dc0857dd8b5faab0f8)
+- Skip unconfigured computers in remote cleanup (#7385) [[4f897fe0e]](https://github.com/aiidateam/aiida-core/commit/4f897fe0e8e34acf540e50de73c7a91aa74a75f8)
+
+#### Engine
+
+- Disable propagation for aiida logger (#7319) [[8acdefe97]](https://github.com/aiidateam/aiida-core/commit/8acdefe979326c9c20050e792084d248eadb1b6f)
+- Replace `ResourceWarning` with logging in `__del__` (#7413) [[0bc1b508f]](https://github.com/aiidateam/aiida-core/commit/0bc1b508f5f04fdc9ad8f90b85864e0525bdbb83)
+- Avoid importing and calling close in `__del__` during shutdown (#7322) [[e27f55c35]](https://github.com/aiidateam/aiida-core/commit/e27f55c35921928e6e4cfcdf4d136f880e2d328d)
+- Fix resource leaks in storage, runner and broker (#7268) [[46b6f6624]](https://github.com/aiidateam/aiida-core/commit/46b6f662486d40443e310d6fdc4d206d812c5b09)
+- `_get_size_on_disk_stat`: reuse open transport (#7346) [[ad4a70a79]](https://github.com/aiidateam/aiida-core/commit/ad4a70a791162df803d4f39d5f6930c10b437b74)
+
+#### Scheduler
+
+- `PbsBaseClass`: parse multiline `Variable_List` (#7400) [[848090049]](https://github.com/aiidateam/aiida-core/commit/848090049b265cde55c8bb0675a4e30f0a8937e0)
+- Promote scheduler parse failures to WARNING (#7323) [[a2aa81e58]](https://github.com/aiidateam/aiida-core/commit/a2aa81e58202131bf813575f53b60662427707f7)
+- `Scheduler.get_jobs`: fix `as_dict` overload (#7314) [[62f105f5b]](https://github.com/aiidateam/aiida-core/commit/62f105f5bc985c375d12fa0a04e1d451238013cc)
+
+#### Transport
+
+- Remove glob character escaping for SCP RCP protocol (#7335) [[e3aae79b1]](https://github.com/aiidateam/aiida-core/commit/e3aae79b107d4b90443db961016460dc806f9d49)
+
+#### Storage
+
+- Fix session leak: break reference cycle between `SqlaQueryBuilder` and `SqlaJoiner` (#7281) [[8f8ee4e61]](https://github.com/aiidateam/aiida-core/commit/8f8ee4e6134fae3151a1a9b2a38534c7a0d0b6a4)
+
+### Deprecations
+
+- Rename `logging.db_loglevel` to `logging.database_handler` (#7322) [[43ce86200]](https://github.com/aiidateam/aiida-core/commit/43ce86200315c0666f2339b7416daf9f43b5aa67)
+
+### Documentation
+
+- Document ZeroMQ broker in installation and topic pages (#7284) [[625b1b437]](https://github.com/aiidateam/aiida-core/commit/625b1b437c592580af953f381f8949de8ad55fb2)
+- Add internal architecture docs for ZeroMQ broker (#7284) [[df7793531]](https://github.com/aiidateam/aiida-core/commit/df779353164e92bce7d1c0a427f73d52582fe4a3)
+- Sync ZeroMQ broker internals doc with implementation (#7431) [[990e3af1e]](https://github.com/aiidateam/aiida-core/commit/990e3af1e4cef8ae00bab443077db664afb5736f)
+- Rework ZeroMQ broker internals page prose (#7431) [[aaa6a90c3]](https://github.com/aiidateam/aiida-core/commit/aaa6a90c328fcf507255b07a0c1a5959a03db53d)
+- Improve broker internals topology diagram (#7431) [[3202b7ec5]](https://github.com/aiidateam/aiida-core/commit/3202b7ec511aa72bda111f217b2dfa4c9c8f7352)
+- Clarify broker interface docstrings (#7438) [[2438b75af]](https://github.com/aiidateam/aiida-core/commit/2438b75af5e8e2944692461bc610dddc2560c375)
+- Add config schema compatibility docs (#7417) [[950f221da]](https://github.com/aiidateam/aiida-core/commit/950f221da555e93e718810df8c574a5904174cac)
+- Add config schema compatibility docs (#7421) [[c2a8fe96c]](https://github.com/aiidateam/aiida-core/commit/c2a8fe96c8b937e3380ff40061b34f6dfbb7fa3b)
+- Update logging docs for new verbosity options (#7322) [[51e1e1eee]](https://github.com/aiidateam/aiida-core/commit/51e1e1eee338f21a8b4308575967b74531e795bf)
+- Add dedicated performance tuning HowTo (#7162) [[5f9d3fd50]](https://github.com/aiidateam/aiida-core/commit/5f9d3fd50f62557e2e382cd8a6f0b127c17a0cb5)
+- Document workflow tools entry points (#7329) [[3da4fedfa]](https://github.com/aiidateam/aiida-core/commit/3da4fedfaf2191d939d9bbaa582f6db0c5126926)
+- Be consistent with `<AIIDA_PATH>` in RTD (#7434) [[20d4b8434]](https://github.com/aiidateam/aiida-core/commit/20d4b84342cf3c5c3c4df65b2af77918fb48e54f)
+- Link AiiDA blog posts in docs (#7301) [[88826bda0]](https://github.com/aiidateam/aiida-core/commit/88826bda0507a75bc17d9943b3b8e032c28d1898)
+- Add missing double colon in docs (#7329) [[9cff5ffee]](https://github.com/aiidateam/aiida-core/commit/9cff5ffee0278ff4ac9b37b3dfa4ea443ec5a21d)
+
+### Dependencies
+
+- Remove support for Python 3.9 [[b289cfe8f]](https://github.com/aiidateam/aiida-core/commit/b289cfe8fb01270300cb802fb20c57e6b424843d)
+- Add Python 3.14 classifier to project metadata (#7263) [[90997a3e0]](https://github.com/aiidateam/aiida-core/commit/90997a3e094f47217c1c86e87c51a2eea7b6feff)
+- Bump asyncssh to ~=2.22.0 (#7245) [[36aaf8c45]](https://github.com/aiidateam/aiida-core/commit/36aaf8c4563b5da13e8c820fb21b1aecf80a14f2)
+- Use stdlib `importlib.metadata` (#7245) [[85444fbf0]](https://github.com/aiidateam/aiida-core/commit/85444fbf062136b883bc2b2a09f5f53a08ecc3a2)
+- Remove `get-annotations` backport (#7245) [[562faadf5]](https://github.com/aiidateam/aiida-core/commit/562faadf5119f44fa0985d1618ac3262b17fa6ac)
+
+### Devops
+
+#### Typing
+
+- Strict typing for `aiida.brokers` module (#7307) [[15454cd9f]](https://github.com/aiidateam/aiida-core/commit/15454cd9f9e35f91c60a61ec0a009de571a2650c)
+- Add typing to `storage/*/migrator.py` and `storage/sqlite_*/backend.py` (#7293) [[a48ea7d2c]](https://github.com/aiidateam/aiida-core/commit/a48ea7d2ca8225bea731ded1470d53c7d4a1f54c)
+- Add typing to scheduler plugins (#7156) [[8eda41679]](https://github.com/aiidateam/aiida-core/commit/8eda41679a482cb942d31eb53ce5ba8316b6d02c)
+- Type `Config.filepaths` with `ConfigFilepaths` (#7430) [[55a3426ed]](https://github.com/aiidateam/aiida-core/commit/55a3426ed53b1394f3e4c96f4f11b30c264aebc1)
+- Match `ProcessControlConfig` to the stored structure (#7430) [[3e369c347]](https://github.com/aiidateam/aiida-core/commit/3e369c34750688b46c60a16faa42bba435e7f485)
+- Update to mypy 2.3 (#7416) [[5f7fd4bd6]](https://github.com/aiidateam/aiida-core/commit/5f7fd4bd65e552e38f7167e7c900e31c6cb66f9b)
+- Update mypy to v2.1 (#7366) [[ebe69a0fa]](https://github.com/aiidateam/aiida-core/commit/ebe69a0fa8e2ffa302220083ff2fbf044d3a8880)
+
+#### Refactoring
+
+- Rename ZMQ broker to ZeroMQ (#7426) [[b55946e89]](https://github.com/aiidateam/aiida-core/commit/b55946e897396a1c7a7e62d9b59ec07264db8964)
+- Use `core.*` broker names in profile setup (#7428) [[aa74b7054]](https://github.com/aiidateam/aiida-core/commit/aa74b7054220e351fb1c6479b5da2cac2127c59f)
+- Rename broker service reachability checks (#7340) [[3d06d107c]](https://github.com/aiidateam/aiida-core/commit/3d06d107c9882894187551e92bbe14cc425ca32d)
+- Rename broker reachability check method (#7443) [[f299fae7d]](https://github.com/aiidateam/aiida-core/commit/f299fae7d967d7221455ec75c15c36e83b4033ac)
+- Rename broker status probe API (#7443) [[1c5506889]](https://github.com/aiidateam/aiida-core/commit/1c55068894db9d52a8a457ab429cc9fb5e6e6ce7)
+- Clarify bug-report service status fields (#7443) [[85d3e4e0a]](https://github.com/aiidateam/aiida-core/commit/85d3e4e0aba456e1b21a157204f4ec1be5c287dc)
+- Rename `broker_service` config filepaths key (#7444) [[3be1a53f2]](https://github.com/aiidateam/aiida-core/commit/3be1a53f2e70c87e840268bbda20f0003c2c4430)
+- Rename ZeroMQ broker service liveness check (#7435) [[4d47f124d]](https://github.com/aiidateam/aiida-core/commit/4d47f124dfe8254583ca68469fcd6d0ccc3517ea)
+- Privatize ZeroMQ broker endpoint and pid helpers (#7435) [[e450df593]](https://github.com/aiidateam/aiida-core/commit/e450df593d6c37e527aa44ad4a21f74416f9e5e9)
+- Make daemon broker path helpers private (#7454) [[721486ea3]](https://github.com/aiidateam/aiida-core/commit/721486ea3a8f7c4cf977ac1ca09c655b8787c9d2)
+- Drop stale ZeroMQ service file helper (#7420) [[b49038a4d]](https://github.com/aiidateam/aiida-core/commit/b49038a4d59db370542b7aee5b6100383e351566)
+- Clarify ZeroMQ broker service path naming (#7430) [[dbefcfcb2]](https://github.com/aiidateam/aiida-core/commit/dbefcfcb2d7e8db5740495e1902e7ba13213ceeb)
+- Stop exporting `BrokerConfigField` publicly (#7434) [[3e00ac41a]](https://github.com/aiidateam/aiida-core/commit/3e00ac41a6cc751dceb3a97e8325f31811356afe)
+- Trim logger validation warning message (#7434) [[fa30cb91c]](https://github.com/aiidateam/aiida-core/commit/fa30cb91cedfe583fa2d27211155198cea7a8857)
+- Rename daemon version info to daemon env info (#7412) [[8c313bb47]](https://github.com/aiidateam/aiida-core/commit/8c313bb47903317dc70d2b4bcf6f90dc00fd8637)
+- Refactor to single `get_daemon_version_info` public method (#7412) [[d6f2c438d]](https://github.com/aiidateam/aiida-core/commit/d6f2c438d0e8dc47be705b5f2c176fdcd46f18b2)
+- Refactor drift getter into validate functions (#7412) [[c25f8cee2]](https://github.com/aiidateam/aiida-core/commit/c25f8cee275db11ea68868cf8da980633ea9211a)
+- Clarify config downgrade error message (#7436) [[9d7302c57]](https://github.com/aiidateam/aiida-core/commit/9d7302c5790b9897b15a286cc6620da9acc6ad11)
+- Apply ruff `UP` (pyupgrade) modernization (#7254) [[12f88f49c]](https://github.com/aiidateam/aiida-core/commit/12f88f49caa97f0fc68dd187b8df2325de27bdbb)
+- Remove redundant `migrator_context` (#7297) [[26c1c6c14]](https://github.com/aiidateam/aiida-core/commit/26c1c6c144fc1bb549b567593a76742bb5620c7c)
+
+#### CI
+
+- `docker-build`: quote the bake metadata heredoc (#7449) [[c04d9158c]](https://github.com/aiidateam/aiida-core/commit/c04d9158c46bc45878a2e26919e08b9bd55567b5)
+- Docker: publish a `latest` tag for stable releases (#7369) [[984a4f4f3]](https://github.com/aiidateam/aiida-core/commit/984a4f4f33a48ef2c7d8cefa87087fe232902f79)
+- `ci-code`: unique coverage artifact per broker (#7368) [[6c7f0932d]](https://github.com/aiidateam/aiida-core/commit/6c7f0932d17d5d59a6a52d2b6016f7d4566e4e41)
+- Update tested RabbitMQ versions in nightly test (#7373) [[c91007e25]](https://github.com/aiidateam/aiida-core/commit/c91007e254a5fa8235398d33675e58c2ff2d9088)
+- Add workflow_dispatch trigger to test-install (#7330) [[27e91296b]](https://github.com/aiidateam/aiida-core/commit/27e91296b2edf8d0d48fba655d03179f22c6e8b4)
+- Enable memory leak tests on Python 3.14 (#7330) [[2a00b69eb]](https://github.com/aiidateam/aiida-core/commit/2a00b69ebe0799d0ce87c9f3a26922b81cf5775c)
+- Bump tests-presto CI timeout to 25 minutes (#7323) [[82d558571]](https://github.com/aiidateam/aiida-core/commit/82d558571da632bd89fa7a4c9c2cf59491248fca)
+- Simplify RTD configuration (#7397) [[a5be4545c]](https://github.com/aiidateam/aiida-core/commit/a5be4545c274c7c83b002efbf1a98a5c8c5611f0)
+- `ruff`: enable `UP` (pyupgrade) (#7254) [[d5bb1b5fa]](https://github.com/aiidateam/aiida-core/commit/d5bb1b5fa50cf1a27ae87c7aa8a37745097c1f09)
+- Update ruff to v0.15.12 (#7439) [[326a1900f]](https://github.com/aiidateam/aiida-core/commit/326a1900f4dc4cb1dce8a445c2c75973b4b6b6a4)
+- Update ruff to v0.9.19 (#7440) [[21f50ac63]](https://github.com/aiidateam/aiida-core/commit/21f50ac63c9b189315a586b6e248d6a2835588ac)
+
+#### Tests
+
+- Add `requires_broker` marker and ZeroMQ tests (#7284) [[61300af58]](https://github.com/aiidateam/aiida-core/commit/61300af5823a8951436f97392d8f0a6c72a997c8)
+- Cover ZeroMQ broker polling branches (#7434) [[e896d2a2f]](https://github.com/aiidateam/aiida-core/commit/e896d2a2f358a16a3d8a349d6a40b4c8e69a295a)
+- Make stale PID broker test deterministic (#7434) [[b4f2d9822]](https://github.com/aiidateam/aiida-core/commit/b4f2d98227dcf6f151a5ca234ab8191095f6f108)
+- Patch ZeroMQ broker test config (#7435) [[6c5dad097]](https://github.com/aiidateam/aiida-core/commit/6c5dad097dc05054c33c6283dd3d063b018e2879)
+- Make ZeroMQ broker server fixture session-scoped (#7420) [[9083fd896]](https://github.com/aiidateam/aiida-core/commit/9083fd89668061d31ac58bd80e3eed35a76cb082)
+- Reap ZeroMQ broker service subprocesses (#7420) [[d324b9aa0]](https://github.com/aiidateam/aiida-core/commit/d324b9aa0634b59dcfbbf5a7450e4583bfa55f8b)
+- Refactor ZeroMQ broker test fixture (#7420) [[ce3c2dcf4]](https://github.com/aiidateam/aiida-core/commit/ce3c2dcf438f3d60617ba0a25f927aad9a16674e)
+- Refactor ZeroMQ broker tests to use shared fixture (#7430) [[cd1075db4]](https://github.com/aiidateam/aiida-core/commit/cd1075db4b0ba8a37e502ea91adbc71a68a791b7)
+- Remove redundant ZeroMQ umbrella tests (#7427) [[a5b2bc4ba]](https://github.com/aiidateam/aiida-core/commit/a5b2bc4baaecd65303f59e5c314e9a0a55b7c931)
+- Add test for profile setup broker option (#7428) [[912e4a552]](https://github.com/aiidateam/aiida-core/commit/912e4a552ee336aa22a7d0422a5eb76a845a74dc)
+- Poll for worker count in daemon start tests (#7425) [[e0de4fc82]](https://github.com/aiidateam/aiida-core/commit/e0de4fc829f9873bc9cd0df68b13f8fe973f2b49)
+- Add sleep to polling loop in `test_restart_after_daemon_reset` (#7323) [[9dc6a6b7b]](https://github.com/aiidateam/aiida-core/commit/9dc6a6b7b04026e88cbab12a4c98badeb2ef057d)
+- `test_fields`: restore process-node coverage (#7448) [[7f7dff473]](https://github.com/aiidateam/aiida-core/commit/7f7dff4734c2e30210db5ae826d5f9476284fad0)
+- `aiida_localhost`: suffix label with worker id (#7363) [[2068a7d73]](https://github.com/aiidateam/aiida-core/commit/2068a7d73142006c6729d3fbcfb12d9c65f48d65)
+- `aiida_computer`: handle `IntegrityError` races (#7349) [[f87e2415b]](https://github.com/aiidateam/aiida-core/commit/f87e2415b32fe5a76f0809f41f940aa092e7c225)
+- Fix flaky `test_check_version_development` test (#7348) [[662503911]](https://github.com/aiidateam/aiida-core/commit/662503911ebe4bbd86718adef5bb300932fdfe57)
+- Fix flaky `test_check_version_development` test (#7345) [[57aed9712]](https://github.com/aiidateam/aiida-core/commit/57aed9712258c56d50c235e1f1933fbbee8e9a88)
+- Fix flaky `test_fallback_calculation_tools_on_loading_error` (#7341) [[8d8519d79]](https://github.com/aiidateam/aiida-core/commit/8d8519d79273df6ec823f2058294e9ea3bbffc88)
+- `test_folder::test_api`: fix flaky assertion [[981e0b3ec]](https://github.com/aiidateam/aiida-core/commit/981e0b3ecb3b618a6c6c5cead02046eb77323fe7)
+- Fix flaky daemon stop test (#7319) [[fbb209a06]](https://github.com/aiidateam/aiida-core/commit/fbb209a0693c7812895987ce1f5e836807bbf44b)
+- Fix flaky `test_show_limit` PK matching (#7326) [[6b51074e5]](https://github.com/aiidateam/aiida-core/commit/6b51074e5f79fa25888a1734ff533e8059465efa)
+- Fix `test_count_consistency` with clean database (#7326) [[517e8b30f]](https://github.com/aiidateam/aiida-core/commit/517e8b30fbc09a271afb0a920d0a742b4de6a889)
+- Guard shared manager runner in tests (#7279) [[d894b9aac]](https://github.com/aiidateam/aiida-core/commit/d894b9aac78b8d0212de3f09d9a0b58eceb97860)
+- Fix stale callback in shutdown_worker test (#7279) [[42e08ce80]](https://github.com/aiidateam/aiida-core/commit/42e08ce8023b3593c2a3bd75fd5f51180677ef5e)
+- Fix flaky `test_unload_profile` by properly removing scoped session (#7281) [[5391c5767]](https://github.com/aiidateam/aiida-core/commit/5391c5767e260b9f6b79b7781f9421e6b580e408)
+- Remove obsolete `mpl_pos` mock workaround in test_data (#7281) [[82d5ca735]](https://github.com/aiidateam/aiida-core/commit/82d5ca7350767fd7cb2d4a646d73ac8bab5a1fda)
+- Minor updates to `performance_benchmark_base.py` (#7289) [[5974f8b74]](https://github.com/aiidateam/aiida-core/commit/5974f8b7472b8784ee66f71a1899e9ff11e9061a)
+
+#### Misc
+
+- Add `AGENTS.md` and Claude Code skills (#7265) [[cbfd971f0]](https://github.com/aiidateam/aiida-core/commit/cbfd971f035fde633bef54011a032ab457a0d18a)
+- `.gitignore`: add build/cache/docs artifacts (#7278) [[faf0969e3]](https://github.com/aiidateam/aiida-core/commit/faf0969e39dc8c5626f1cf2498360812ef96feef)
+- `.git-blame-ignore-revs`: add bulk reformats (#7450) [[1c8bfde52]](https://github.com/aiidateam/aiida-core/commit/1c8bfde52f258459e589c762b4d8e3ead198837b)
+- Switch `main` version marker to `2.9.0.dev0` (#7396) [[a4a5b013a]](https://github.com/aiidateam/aiida-core/commit/a4a5b013a7b47948f5952849da755c61c2094ab8)
+- Add post-release identifier for `v2.8.0` (#7295) [[95f07b76f]](https://github.com/aiidateam/aiida-core/commit/95f07b76f15c8236107396df8053c34fe977df34)
+
 
 ## v2.8.0 - 2026-03-16
 

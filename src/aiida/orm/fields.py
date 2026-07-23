@@ -18,6 +18,7 @@ from pprint import pformat
 from types import UnionType
 
 from aiida.common.lang import isidentifier
+from aiida.common.warnings import warn_deprecation
 
 __all__ = (
     'QbField',
@@ -93,9 +94,49 @@ class QbField:
         return self._backend_key
 
     @property
+    def doc(self) -> str:
+        """Return the field documentation string."""
+        warn_deprecation(
+            '`QbField.doc` is deprecated. Inspect the corresponding ORM model field description instead.',
+            version=3,
+            stacklevel=2,
+        )
+        return self._doc
+
+    @property
     def dtype(self) -> t.Any | None:
         """Return the primitive root type."""
         return extract_root_type(self._dtype)
+
+    @property
+    def annotation(self) -> t.Any | None:
+        """Return the full type annotation."""
+        warn_deprecation(
+            '`QbField.annotation` is deprecated. Inspect the corresponding ORM model field annotation instead.',
+            version=3,
+            stacklevel=2,
+        )
+        return self._dtype
+
+    @property
+    def is_attribute(self) -> bool:
+        """Return whether the field is stored in the attributes namespace."""
+        warn_deprecation(
+            '`QbField.is_attribute` is deprecated. Inspect the corresponding ORM model field metadata instead.',
+            version=3,
+            stacklevel=2,
+        )
+        return self._is_attribute
+
+    @property
+    def is_subscriptable(self) -> bool:
+        """Return whether nested lookup through ``field['key']`` is supported."""
+        warn_deprecation(
+            '`QbField.is_subscriptable` is deprecated. Inspect the corresponding ORM model field metadata instead.',
+            version=3,
+            stacklevel=2,
+        )
+        return isinstance(self, QbDictField)
 
     def in_(self, value: t.Iterable[t.Any]):
         """Return a filter for only values in the list"""

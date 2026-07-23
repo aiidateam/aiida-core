@@ -91,7 +91,7 @@ class RabbitmqBroker(Broker):
         self._prefix = f'aiida-{self._profile.uuid}'
 
     def __str__(self) -> str:
-        url = self.get_url(safe=True)
+        url = self.get_url(redact_credentials=True)
 
         try:
             return f'RabbitMQ v{self.get_rabbitmq_version()} @ {url}'
@@ -193,10 +193,10 @@ class RabbitmqBroker(Broker):
 
         return version, True
 
-    def get_url(self, safe: bool = False) -> str:
+    def get_url(self, redact_credentials: bool = False) -> str:
         """Return the RMQ url for this profile.
 
-        :param safe: If ``True``, redact embedded credentials in the returned URL.
+        :param redact_credentials: If ``True``, redact embedded credentials in the returned URL.
         """
         from urllib.parse import urlsplit, urlunsplit
 
@@ -208,7 +208,7 @@ class RabbitmqBroker(Broker):
         additional_kwargs = kwargs.pop('parameters', {})
         url = get_rmq_url(**kwargs, **additional_kwargs)
 
-        if not safe:
+        if not redact_credentials:
             return url
 
         parsed = urlsplit(url)

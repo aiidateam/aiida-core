@@ -132,8 +132,19 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
         session = self.backend.get_session()
 
         try:
-            row = session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one()
+            row: DbAuthInfo = session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one()
+            dbcomputer_pk = row.dbcomputer_id
+            dbcomputer_uuid = row.dbcomputer.uuid
             session.delete(row)
             session.commit()
         except NoResultFound:
             raise exceptions.NotExistent(f'AuthInfo<{pk}> does not exist')
+
+        # The password in the secure storage is keyed by the computer and therefore shared between
+        # all authinfos of that computer, so it may only be deleted with the last of them.
+        if not session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(dbcomputer_id=dbcomputer_pk).count():
+            try:
+                SqlaAuthInfo.SecureStorage(dbcomputer_uuid).delete_password()
+            except Exception as exc:
+                msg = f'Unable to delete the password associated to computer {dbcomputer_uuid}: {exc}'
+                raise exceptions.InvalidOperation(msg)

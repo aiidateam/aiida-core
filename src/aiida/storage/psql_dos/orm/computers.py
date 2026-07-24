@@ -122,7 +122,17 @@ class SqlaComputerCollection(BackendComputerCollection):
         try:
             session = self.backend.get_session()
             row = session.get(self.ENTITY_CLASS.MODEL_CLASS, pk)
+            row_uuid = row.uuid
             session.delete(row)
             session.commit()
         except SQLAlchemyError as exc:
             raise exceptions.InvalidOperation(f'Unable to delete the requested computer: {exc}')
+
+        try:
+            # We delete the password from the secure storage if available.
+            from aiida.storage.psql_dos.orm.authinfos import SqlaAuthInfo
+
+            SqlaAuthInfo.SecureStorage(row_uuid).delete_password()
+        except Exception as exc:
+            msg = f'Unable to delete the password associated to requested computer {row_uuid}: {exc}'
+            raise exceptions.InvalidOperation(msg)

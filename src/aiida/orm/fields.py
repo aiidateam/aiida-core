@@ -12,10 +12,12 @@ from __future__ import annotations
 
 import datetime
 import typing as t
+from collections.abc import Sequence
 from copy import deepcopy
 from functools import singledispatchmethod
 from pprint import pformat
 from types import UnionType
+from uuid import UUID
 
 from aiida.common.lang import isidentifier
 from aiida.common.warnings import warn_deprecation
@@ -192,6 +194,26 @@ class QbNumericField(QbField):
         return QbFieldFilters(((self, '>=', value),))
 
 
+class QbBoolField(QbField):
+    """A boolean (`bool`) flavor of `QbField`."""
+
+    def as_filter(self) -> QbFieldFilters:
+        """Return a filter for only values that are True."""
+        return QbFieldFilters(((self, '==', True),))
+
+    def __and__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
+        """Return a filter for only values that are True and satisfy the other filter."""
+        return self.as_filter() & other
+
+    def __or__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
+        """Return a filter for only values that are True or satisfy the other filter."""
+        return self.as_filter() | other
+
+    def __invert__(self) -> QbFieldFilters:
+        """Return a filter for only values that are False."""
+        return QbFieldFilters(((self, '==', False),))
+
+
 class QbArrayField(QbField):
     """An array (`list`) flavor of `QbField`."""
 
@@ -355,13 +377,17 @@ class QbFieldFilters:
             raise TypeError(f'cannot compare QbFieldFilters to {type(other)}')
         return self.filters == other.filters
 
-    def __and__(self, other: QbFieldFilters) -> QbFieldFilters:
+    def __and__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
         """``a & b`` -> {'and': [`a.filters`, `b.filters`]}."""
-        return self._resolve_redundancy(other, 'and') or QbFieldFilters({'and': [self.filters, other.filters]})
+        qb_filters = other.as_filter() if isinstance(other, QbBoolField) else other
+        resolved = self._resolve_redundancy(qb_filters, 'and')
+        return resolved or QbFieldFilters({'and': [self.filters, qb_filters.filters]})
 
-    def __or__(self, other: QbFieldFilters) -> QbFieldFilters:
+    def __or__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
         """``a | b`` -> {'or': [`a.filters`, `b.filters`]}."""
-        return self._resolve_redundancy(other, 'or') or QbFieldFilters({'or': [self.filters, other.filters]})
+        qb_filters = other.as_filter() if isinstance(other, QbBoolField) else other
+        resolved = self._resolve_redundancy(qb_filters, 'or')
+        return resolved or QbFieldFilters({'or': [self.filters, qb_filters.filters]})
 
     def __invert__(self) -> QbFieldFilters:
         """~(a > b) -> a !> b; ~(a !> b) -> a > b"""
@@ -497,9 +523,11 @@ def add_field(
     root_type = extract_root_type(dtype) if dtype else None
     if root_type in (int, float, datetime.datetime):
         return QbNumericField(**kwargs)
-    elif root_type in (list, tuple):
+    elif root_type is bool:
+        return QbBoolField(**kwargs)
+    elif root_type in (list, tuple, Sequence):
         return QbArrayField(**kwargs)
-    elif root_type in (str, t.Literal):
+    elif root_type in (str, t.Literal, UUID):
         return QbStrField(**kwargs)
     elif root_type is dict:
         return QbDictField(**kwargs)

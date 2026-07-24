@@ -56,7 +56,7 @@ __all__ = ('QueryBuilder',)
 # re-usable type annotations
 EntityClsType = type[Union[entities.Entity, 'Process']]
 ProjectType = str | dict | Sequence[str | dict]
-FilterType = dict[str, Any] | fields.QbFieldFilters
+FilterType = dict[str, Any] | fields.QbFieldFilters | fields.QbBoolField
 OrderByType = dict | list[dict] | tuple[dict, ...]
 
 LOGGER = AIIDA_LOGGER.getChild('querybuilder')
@@ -706,6 +706,8 @@ class QueryBuilder:
     @staticmethod
     def _process_filters(filters: FilterType) -> dict[str, Any]:
         """Process filters."""
+        if isinstance(filters, fields.QbBoolField):
+            filters = filters.as_filter()
         if not isinstance(filters, (dict, fields.QbFieldFilters)):
             raise TypeError('Filters must be either a dictionary or QbFieldFilters')
 

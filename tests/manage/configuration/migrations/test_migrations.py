@@ -18,9 +18,10 @@ import pytest
 from aiida.common.exceptions import ConfigurationError, ConfigurationVersionError
 from aiida.manage.configuration.migrations import check_and_migrate_config
 from aiida.manage.configuration.migrations.migrations import (
-    CURRENT_CONFIG_VERSION,
+    MAXIMUM_DOWNGRADE_CONFIG_VERSION,
     MIGRATIONS,
     Initial,
+    config_can_be_downgraded,
     downgrade_config,
     upgrade_config,
 )
@@ -70,14 +71,35 @@ def test_downgrade_path_fail(load_config_sample):
         downgrade_config(config_initial, 4, migrations=[CircularMigration])
 
 
-def test_config_needs_migrating_incompatible_version():
+def test_config_needs_migrating_incompatible_version(monkeypatch):
     """An incompatible configuration version should raise with downgrade guidance."""
+    from aiida.manage.configuration.migrations import migrations
+
+    # Lower the loadable version below the downgrade cap so a config at the cap is unloadable but downgradeable,
+    # exercising the can_downgrade guidance path (config_needs_migrating downgrades to CURRENT_CONFIG_VERSION).
+    monkeypatch.setattr(migrations, 'CURRENT_CONFIG_VERSION', MAXIMUM_DOWNGRADE_CONFIG_VERSION - 1)
     config = {
-        'CONFIG_VERSION': {'CURRENT': CURRENT_CONFIG_VERSION + 1, 'OLDEST_COMPATIBLE': CURRENT_CONFIG_VERSION + 1}
+        'CONFIG_VERSION': {
+            'CURRENT': MAXIMUM_DOWNGRADE_CONFIG_VERSION,
+            'OLDEST_COMPATIBLE': MAXIMUM_DOWNGRADE_CONFIG_VERSION,
+        }
     }
 
-    with pytest.raises(ConfigurationVersionError, match=r'verdi config downgrade'):
+    with pytest.raises(ConfigurationVersionError, match=r'verdi config downgrade') as exception:
         check_and_migrate_config(config, filepath='/tmp/config.json')
+
+    assert exception.value._can_downgrade
+
+
+def test_config_can_be_downgraded():
+    """Test detecting whether a configuration can be downgraded by this AiiDA version."""
+    assert config_can_be_downgraded(
+        {'CONFIG_VERSION': {'CURRENT': MAXIMUM_DOWNGRADE_CONFIG_VERSION, 'OLDEST_COMPATIBLE': 0}},
+        target=MAXIMUM_DOWNGRADE_CONFIG_VERSION - 1,
+    )
+    assert not config_can_be_downgraded(
+        {'CONFIG_VERSION': {'CURRENT': MAXIMUM_DOWNGRADE_CONFIG_VERSION + 1, 'OLDEST_COMPATIBLE': 0}}
+    )
 
 
 def test_migrate_full(load_config_sample, monkeypatch):

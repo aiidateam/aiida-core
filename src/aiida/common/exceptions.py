@@ -180,9 +180,10 @@ class MissingConfigurationError(ConfigurationError):
 
 
 class ConfigurationVersionError(ConfigurationError):
-    """Configuration error raised when the configuration file version is not
-    compatible with the current version.
-    """
+    """Configuration error raised when the configuration file version is not compatible with the current version."""
+
+    # Hotfix see issue #7493
+    _can_downgrade: bool = False
 
 
 class ClosedStorage(AiidaException):

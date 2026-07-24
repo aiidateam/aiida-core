@@ -10,10 +10,12 @@
 
 from __future__ import annotations
 
+import enum
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from aiida.common import exceptions
 from aiida.manage import get_manager
+from aiida.orm.implementation.authinfos import BackendAuthInfo
 from aiida.plugins import TransportFactory
 
 from . import entities, users
@@ -23,7 +25,6 @@ from .users import User
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
-    from aiida.orm.implementation.authinfos import BackendAuthInfo
     from aiida.transports import Transport
 
 __all__ = ('AuthInfo',)
@@ -51,6 +52,7 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
 
     _CLS_COLLECTION = AuthInfoCollection
     PROPERTY_WORKDIR = 'workdir'
+    SecureStorage = BackendAuthInfo.SecureStorage
 
     class ReadModel(entities.Entity.ReadModel):
         computer: int = OrmMetadataField(
@@ -158,15 +160,30 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
     def get_auth_params(self) -> dict[str, Any]:
         """Return the dictionary of authentication parameters
 
+        If a password is stored in the secure storage, the ``password`` key holds the redaction
+        marker ``Password.REDACTED.value`` instead of the actual secret.
+
         :return: a dictionary with authentication parameters
         """
-        return self._backend_entity.get_auth_params()
+        return self._backend_entity.get_auth_params().copy()
 
     def set_auth_params(self, auth_params: dict[str, Any]) -> None:
-        """Set the dictionary of authentication parameters
+        """Set the dictionary of authentication parameters.
+
+        If a password is present, store it in secure storage and persist a redacted marker
+        instead. If the password equals the redaction marker, as returned by
+        ``get_auth_params``, the password currently in secure storage is left untouched, so that
+        round-tripping the auth params does not alter the stored password.
 
         :param auth_params: a dictionary with authentication parameters
         """
+        auth_params = dict(auth_params)
+        password = auth_params.pop('password', None)
+        if password in (Password.REDACTED, Password.REDACTED.value):
+            auth_params['password'] = Password.REDACTED.value
+        elif password:
+            self.secure_storage.set_password(password)
+            auth_params['password'] = Password.REDACTED.value
         self._backend_entity.set_auth_params(auth_params)
 
     def get_metadata(self) -> dict[str, Any]:
@@ -205,4 +222,18 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         except exceptions.EntryPointError as exception:
             raise exceptions.ConfigurationError(f'transport type `{transport_type}` could not be loaded: {exception}')
 
-        return transport_class(machine=computer.hostname, **self.get_auth_params())
+        return transport_class(machine=computer.hostname, secure_storage=self.secure_storage, **self.get_auth_params())
+
+    @property
+    def secure_storage(self) -> BackendAuthInfo.SecureStorage:
+        """Return the secure storage manager for this authinfo."""
+        return self.SecureStorage(self.computer.uuid)
+
+
+class Password(enum.Enum):
+    """Marker used in place of a password that is kept in the system secure storage.
+
+    The member value is what is persisted in the auth params instead of the actual secret.
+    """
+
+    REDACTED = 'REDACTED'

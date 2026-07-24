@@ -69,13 +69,14 @@ def pytest_collection_modifyitems(items, config):
     """Automatically generate markers for certain tests.
 
     Most notably, we add the 'presto' marker for all tests that
-    are not marked with requires_rmq, requires_psql, or nightly.
+    are not marked with requires_rmq, requires_psql, requires_secure_storage, or nightly.
     Tests marked requires_broker are included in presto since ZeroMQ
     broker is available without external services.
     """
     filepath_psqldos = Path(__file__).parent / 'storage' / 'psql_dos'
     filepath_django = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'django_branch'
     filepath_sqla = Path(__file__).parent / 'storage' / 'psql_dos' / 'migrations' / 'sqlalchemy_branch'
+    user_markexpr = config.option.markexpr
 
     # If the user requested the SQLite backend, automatically skip incompatible tests
     if config.option.db_backend is TestDbBackend.SQLITE:
@@ -118,11 +119,20 @@ def pytest_collection_modifyitems(items, config):
         if filepath_item.is_relative_to(filepath_psqldos):
             item.add_marker('requires_psql')
 
+        markers = [marker.name for marker in item.iter_markers()]
+
+        if 'requires_secure_storage' in markers and 'requires_secure_storage' not in user_markexpr:
+            item.add_marker(pytest.mark.skip(reason='requires secure storage; select with -m requires_secure_storage'))
+
         # Add 'presto' marker to tests that don't need external services.
         # Tests with requires_broker ARE included (ZeroMQ broker needs no external service).
-        # Tests with requires_rmq, requires_psql, or nightly are excluded.
-        markers = [marker.name for marker in item.iter_markers()]
-        if 'requires_rmq' not in markers and 'requires_psql' not in markers and 'nightly' not in markers:
+        # Tests with requires_rmq, requires_psql, requires_secure_storage, or nightly are excluded.
+        if (
+            'requires_rmq' not in markers
+            and 'requires_psql' not in markers
+            and 'requires_secure_storage' not in markers
+            and 'nightly' not in markers
+        ):
             item.add_marker('presto')
 
 

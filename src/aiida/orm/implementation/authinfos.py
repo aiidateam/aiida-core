@@ -9,11 +9,14 @@
 """Module for the backend implementation of the `AuthInfo` ORM class."""
 
 import abc
+import sys
 from typing import TYPE_CHECKING, Any
 
 from .entities import BackendCollection, BackendEntity
 
 if TYPE_CHECKING:
+    import keyringrs  # type: ignore[import-untyped]
+
     from .computers import BackendComputer
     from .users import BackendUser
 
@@ -81,6 +84,53 @@ class BackendAuthInfo(BackendEntity):
 
         :param metadata: a dictionary with metadata
         """
+
+    class SecureStorage:
+        """Manager for passwords stored in the system secure storage."""
+
+        _SERVICE_NAME = 'aiida.core.authinfo'
+
+        def __init__(self, uuid: str) -> None:
+            self._uuid = uuid
+
+        def _entry(self) -> 'keyringrs.Entry':
+            """Return the keyring entry for this UUID, importing ``keyringrs`` lazily."""
+            # Imported lazily to avoid loading the native extension on `import aiida.orm`
+            import keyringrs
+
+            return keyringrs.Entry(self._SERVICE_NAME, self._uuid)
+
+        def get_password(self) -> str | None:
+            """Return the stored password if available."""
+            try:
+                return self._entry().get_password()
+            except KeyError:
+                return None
+
+        def set_password(self, password: str) -> None:
+            """Store a password in the system secure storage."""
+            self._entry().set_password(password)
+
+        def delete_password(self) -> None:
+            """Delete the stored password if available."""
+            try:
+                self._entry().delete_credential()
+            except KeyError:
+                pass
+
+        def get_cmd_stdout_password(self) -> str:
+            """Return a command that prints the stored password to stdout."""
+            python_command = (
+                'from keyringrs import Entry;'
+                f'entry = Entry("{self._SERVICE_NAME}", "{self._uuid}");'
+                'print(entry.get_password(), end="")'
+            )
+            return f'"{sys.executable}" -c \'{python_command}\''
+
+    @property
+    def secure_storage(self) -> SecureStorage:
+        """Return the secure storage manager for the associated computer."""
+        return self.SecureStorage(self.computer.uuid)
 
 
 class BackendAuthInfoCollection(BackendCollection[BackendAuthInfo]):

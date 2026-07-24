@@ -466,6 +466,8 @@ quote-style = 'single'
 
 [tool.ruff.lint]
 ignore = [
+  'ASYNC240',  # blocking-path-method-in-async-function
+  'ASYNC230',  # blocking-open-call-in-async-function
   'F403',  # Star imports unable to detect undefined names
   'F405',  # Import may be undefined or defined from star imports
   'PLC0415',  # import-outside-top-level
@@ -487,6 +489,7 @@ select = [
   'UP',  # pyupgrade
   'I',  # isort
   'N',  # pep8-naming
+  'ASYNC',  # flake8-async
   'PLC',  # pylint-convention
   'PLE',  # pylint-error
   'PLR',  # pylint-refactor

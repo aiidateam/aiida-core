@@ -482,6 +482,26 @@ Security considerations
 
 
 
+Connecting to a server without SFTP support
+===========================================
+
+A few HPC centers do not provide SFTP at all, in which case every file transfer fails.
+The best course of action is to ask your HPC center to enable SFTP.
+If that is not possible, AiiDA can fall back to the legacy protocol.
+
+To do so, configure the computer with the ``openssh`` backend of the ``core.ssh_async`` transport and pass ``--no-use-sftp``, which adds the ``-O`` flag to every ``scp`` invocation:
+
+.. code-block:: console
+
+   $ verdi computer configure core.ssh_async <COMPUTER> --backend openssh --no-use-sftp
+
+.. note::
+
+   - ``use_sftp`` only affects the ``openssh`` backend. The default ``asyncssh`` backend speaks SFTP directly and cannot fall back, so it cannot be used against such servers.
+   - In general ``openssh`` backend, performs slower than ``asyncssh`` backend. That's the price to pay, if your server has a complex, and outdated setup.
+   - The option has no effect if your *local* OpenSSH client is older than 9.0, since ``scp`` already uses the legacy protocol there.
+
+
 Using kerberos tokens
 =====================
 

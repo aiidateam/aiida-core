@@ -248,6 +248,49 @@ def test_escape_for_scp_version_aware():
     assert backend._escape_for_scp(path) == '/path/with\\ spaces'
 
 
+@pytest.mark.parametrize(
+    'version, use_sftp, expected_use_sftp, expected_options',
+    (
+        # OpenSSH 9+ transfers over SFTP by default; `-O` forces the legacy RCP protocol.
+        (9, True, True, []),
+        (9, False, False, ['-O']),
+        # OpenSSH < 9 (or an undetectable version) already uses RCP, so `-O` is unnecessary
+        # and `use_sftp` is overridden to False.
+        (8, True, False, []),
+        (8, False, False, []),
+        (None, True, False, []),
+        (None, False, False, []),
+    ),
+)
+def test_use_sftp_selects_scp_mode(version, use_sftp, expected_use_sftp, expected_options):
+    """Test that `use_sftp=False` adds `-O`, but only if the client would otherwise transfer over SFTP."""
+    with patch('aiida.transports.plugins.async_backend.get_openssh_version', return_value=version):
+        backend = _OpenSSH('myhpc', MagicMock(), 'bash ', use_sftp=use_sftp)
+
+    assert backend.use_sftp is expected_use_sftp
+    assert backend.scp_options == expected_options
+
+
+def test_undetectable_openssh_version_warns():
+    """Test that an undetectable client version warns that `use_sftp=False` was not applied."""
+    logger = MagicMock()
+    with patch('aiida.transports.plugins.async_backend.get_openssh_version', return_value=None):
+        backend = _OpenSSH('myhpc', logger, 'bash ', use_sftp=False)
+
+    assert backend.scp_options == []
+    logger.warning.assert_called_once()
+    assert 'Could not detect your OpenSSH version' in logger.warning.call_args[0][0]
+
+
+@pytest.mark.parametrize('use_sftp, expected_options', ((True, []), (False, ['-O'])))
+def test_transport_passes_use_sftp_to_openssh_backend(use_sftp, expected_options):
+    """Test that the `use_sftp` config option reaches the openssh backend."""
+    with patch('aiida.transports.plugins.async_backend.get_openssh_version', return_value=9):
+        transport = AsyncSshTransport(machine='myhpc', backend='openssh', use_sftp=use_sftp)
+
+    assert transport.async_backend.scp_options == expected_options
+
+
 def test_scp_with_special_chars(tmp_path):
     """Test scp in both SFTP and RCP modes with special characters."""
     backend = _TestOpenSSH()

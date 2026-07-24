@@ -93,6 +93,7 @@ __all__ = (
     'NODES',
     'NON_INTERACTIVE',
     'OLDER_THAN',
+    'ONLY_ROOTS',
     'ONLY_TOP_LEVEL_CALCS',
     'ONLY_TOP_LEVEL_WORKFLOWS',
     'ORDER_BY',
@@ -641,6 +642,13 @@ ALL = OverridableOption(
     is_flag=True,
     default=False,
     help='Include all entries, disregarding all other filter options and flags.',
+)
+ONLY_ROOTS = OverridableOption(
+    '--roots',
+    'only_roots',
+    is_flag=True,
+    default=False,
+    help='Only include root processes (those without a caller).',
 )
 
 ALL_STATES = OverridableOption('-A', '--all-states', is_flag=True, help='Do not limit to items in running state.')

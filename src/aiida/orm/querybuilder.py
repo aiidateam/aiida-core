@@ -1300,7 +1300,7 @@ def _get_ormclass_from_str(type_string: str) -> tuple[EntityTypes, Classifier]:
     type_string_lower = type_string.lower()
 
     if type_string_lower.startswith(GROUP_ENTITY_TYPE_PREFIX):
-        classifiers = Classifier('group.core')
+        classifiers = Classifier('type_string')
         ormclass = EntityTypes.GROUP
     elif type_string_lower == EntityTypes.COMPUTER.value:
         classifiers = Classifier('computer')

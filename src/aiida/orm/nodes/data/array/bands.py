@@ -46,7 +46,7 @@ def prepare_header_comment(uuid, plot_info, comment_char='#'):
     return '\n'.join(f'{comment_char} {line}' for line in filetext)
 
 
-def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
+def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):  # noqa: PLR0911
     """Tries to guess whether the bandsdata represent an insulator.
     This method is meant to be used only for electronic bands (not phonons)
     By default, it will try to use the occupations to guess the number of

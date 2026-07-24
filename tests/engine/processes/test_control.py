@@ -17,7 +17,7 @@ def test_processes_all_exclusivity(submit_and_await, action):
     node = submit_and_await(WaitProcess, ProcessState.WAITING)
     assert not node.paused
 
-    with pytest.raises(ValueError, match='cannot specify processes when `all_entries = True`.'):
+    with pytest.raises(ValueError, match='cannot specify processes when `all_entries = True`'):
         action([node], all_entries=True)
 
 

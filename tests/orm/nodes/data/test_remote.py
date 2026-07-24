@@ -153,11 +153,11 @@ def test_get_size_on_disk_excs(remote_data_factory, mode):
     remote_data = remote_data_factory(mode=mode)
 
     # Path/file non-existent
-    with pytest.raises(FileNotFoundError, match='.*does not exist.*'):
+    with pytest.raises(FileNotFoundError, match=r'.*does not exist.*'):
         remote_data.get_size_on_disk(relpath=Path('non-existent'))
 
     # Non-valid method
-    with pytest.raises(ValueError, match='.*is not an valid input. Please choose either.*.'):
+    with pytest.raises(ValueError, match=r'.*is not an valid input. Please choose either.*.'):
         remote_data.get_size_on_disk(method='fake-du')
 
 
@@ -181,7 +181,7 @@ def test_get_size_on_disk_du(remote_data_factory, mode, monkeypatch):
         raise NotImplementedError('`exec_command_wait` not implemented for the current transport plugin.')
 
     monkeypatch.setattr(transport, 'exec_command_wait', mock_exec_command_wait)
-    with pytest.raises(NotImplementedError, match='`exec_command_wait` not implemented.*'):
+    with pytest.raises(NotImplementedError, match=r'`exec_command_wait` not implemented.*'):
         remote_data._get_size_on_disk_du(full_path, transport)
 
     # Monkeypatch transport exec_command_wait command to simulate `du` failure
@@ -189,7 +189,7 @@ def test_get_size_on_disk_du(remote_data_factory, mode, monkeypatch):
         return (1, '', 'Error executing `du` command')
 
     monkeypatch.setattr(transport, 'exec_command_wait', mock_exec_command_wait)
-    with pytest.raises(RuntimeError, match='Error executing `du`.*'):
+    with pytest.raises(RuntimeError, match=r'Error executing `du`.*'):
         remote_data._get_size_on_disk_du(full_path, transport)
 
 
@@ -208,5 +208,5 @@ def test_get_size_on_disk_stat(remote_data_factory, mode):
         assert size_on_disk == 12
 
         # Raises OSError for non-existent directory
-        with pytest.raises(OSError, match='The required remote folder.*'):
+        with pytest.raises(OSError, match=r'The required remote folder.*'):
             remote_data._get_size_on_disk_stat(transport=transport, full_path=full_path / 'non-existent')

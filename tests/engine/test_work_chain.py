@@ -1649,7 +1649,7 @@ class TestDefaultUniqueness:
 
 def test_illegal_override_run():
     """Test that overriding a protected workchain method raises a ``RuntimeError``."""
-    with pytest.raises(RuntimeError, match='the method `run` is protected cannot be overridden.'):
+    with pytest.raises(RuntimeError, match='the method `run` is protected cannot be overridden'):
 
         class IllegalWorkChain(WorkChain):
             """Work chain that illegally overrides the ``run`` method."""

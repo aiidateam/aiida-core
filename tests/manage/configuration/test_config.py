@@ -597,7 +597,7 @@ def test_create_profile_raises(config_with_profile, monkeypatch, entry_points):
     with pytest.raises(ValueError, match=r'The entry point `.*` could not be loaded'):
         config.create_profile(profile_name, 'core.non_existant', {})
 
-    with pytest.raises(exceptions.StorageMigrationError, match='Storage backend initialisation failed.*'):
+    with pytest.raises(exceptions.StorageMigrationError, match=r'Storage backend initialisation failed.*'):
         config.create_profile(profile_name, 'core.sqlite_temp', {})
 
 

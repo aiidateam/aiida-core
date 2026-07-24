@@ -56,7 +56,7 @@ def generate(min_operator_count=3, max_operator_count=5, min_operand_value=-5, m
     return ' '.join(symbols)
 
 
-def validate(expression):
+def validate(expression):  # noqa: PLR0911
     """Validate an expression in Reverse Polish Notation. In addition to normal rules, the following restrictions apply:
 
         * Only integers are supported

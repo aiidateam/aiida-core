@@ -21,7 +21,7 @@ from tests.static import STATIC_DIR
 def generate_class_instance(tmp_path, chdir_tmp_path, aiida_localhost):
     """Generate a dummy `Data` instance for the given sub class."""
 
-    def _generate_class_instance(data_class):
+    def _generate_class_instance(data_class):  # noqa: PLR0911
         if data_class is orm.CifData:
             instance = data_class(file=os.path.join(STATIC_DIR, 'data', 'Si.cif'))
             return instance

@@ -55,7 +55,7 @@ jobs:
         - 5001:22
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql graphviz
@@ -77,7 +77,7 @@ jobs:
 
     - name: Upload coverage report
       if: matrix.python-version == 3.14 && github.repository == 'aiidateam/aiida-core'
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         name: aiida-pytests-py3.14
@@ -106,7 +106,7 @@ jobs:
         database-backend: [sqlite]
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install graphviz
       run: sudo apt update && sudo apt install graphviz
@@ -134,7 +134,7 @@ jobs:
     timeout-minutes: 25
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install graphviz
       run: sudo apt update && sudo apt install graphviz
@@ -159,7 +159,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install aiida-core
       uses: ./.github/actions/install-aiida-core
@@ -202,7 +202,7 @@ jobs:
         - 15672:15672
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Install aiida-core
       uses: ./.github/actions/install-aiida-core
@@ -222,7 +222,7 @@ jobs:
 
     - name: Upload coverage report
       if: github.repository == 'aiidateam/aiida-core'
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         name: test-pytest-fixtures

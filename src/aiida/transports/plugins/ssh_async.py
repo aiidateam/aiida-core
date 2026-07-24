@@ -13,10 +13,13 @@
 import asyncio
 import glob
 import os
+import shutil
 import subprocess
 from pathlib import Path, PurePath
+from typing import TYPE_CHECKING
 
 import click
+from asyncssh import SSHClientConnectionOptions
 
 from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import InvalidOperation
@@ -29,6 +32,38 @@ from aiida.transports.transport import (
 )
 
 __all__ = ('AsyncSshTransport',)
+
+
+if TYPE_CHECKING:
+    from aiida.orm.implementation.authinfos import BackendAuthInfo
+
+
+def validate_os_supports_secure_storage(ctx, param, value: str):
+    """Validate the secure storage is available when configuring a password.
+
+    :param ctx: the click context
+    :param param: the click parameter
+    :param value: the password value to validate
+    :return: the unchanged password value
+    :raises OSError: if the system secure storage cannot be accessed
+    """
+    if not value:
+        return value
+
+    import keyringrs  # type: ignore[import-untyped]
+
+    try:
+        entry = keyringrs.Entry('aiida.transports.ssh_async', 'VALIDATE_OS_SUPPORTS_SECURE_STORAGE')
+        entry.set_password('DUMMY')
+        entry.delete_credential()
+    except Exception as exception:
+        msg = (
+            'Could not access secure storage on your system for storing the password. '
+            'Cannot use password authentication without secure storage.'
+        )
+        raise OSError(msg) from exception
+
+    return value
 
 
 def validate_script(ctx, param, value: str):
@@ -71,6 +106,18 @@ class AsyncSshTransport(AsyncTransport):
                     " Note, if not provided, we will use the 'hostname' that was set by you during setup."
                 ),
                 'non_interactive_default': True,
+            },
+        ),
+        (
+            'password',
+            {
+                'type': str,
+                'default': '',
+                'prompt': 'Password',
+                'hide_input': True,
+                'help': 'Login password for the remote machine.',
+                'non_interactive_default': True,
+                'callback': validate_os_supports_secure_storage,
             },
         ),
         (
@@ -125,7 +172,9 @@ class AsyncSshTransport(AsyncTransport):
         # TODO: an issue is open: https://github.com/aiidateam/aiida-core/issues/6726
         return computer.hostname
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, secure_storage: 'BackendAuthInfo.SecureStorage | None' = None, **kwargs):
+        from aiida.orm.authinfos import Password
+
         super().__init__(*args, **kwargs)
         # the machine is passed as `machine=computer.hostname` in the codebase
         # 'machine' is immutable.
@@ -142,6 +191,37 @@ class AsyncSshTransport(AsyncTransport):
             # for backward compatibility
             self.auth_script = kwargs.pop('script_before', 'None')
 
+        self._secure_storage: BackendAuthInfo.SecureStorage | None = secure_storage
+        self._password: str | Password | None = kwargs.pop('password', None)
+        if self._password == Password.REDACTED.value:
+            # `AuthInfo.get_auth_params` redacts a stored password with the plain marker string
+            self._password = Password.REDACTED
+
+        if self._password and kwargs.get('backend') == 'openssh':
+            msg = (
+                'Password authentication is not supported by the `openssh` backend. '
+                'Use the default `asyncssh` backend or configure key-based authentication.'
+            )
+            raise ValueError(msg)
+
+        if self._password == Password.REDACTED:
+            if self._secure_storage is None:
+                msg = 'No secure storage manager was provided for the redacted password.'
+                raise ValueError(msg)
+            if (connection_password := self._secure_storage.get_password()) is None:
+                msg = f'No registered password has been found in secure storage for host `{self.machine}`.'
+                raise ValueError(msg)
+        else:
+            connection_password = self._password
+
+        connection_options = None
+        if connection_password:
+            connection_options = SSHClientConnectionOptions(
+                password=connection_password,
+                preferred_auth='password',
+                public_key_auth=False,
+            )
+
         if kwargs.get('backend') == 'openssh':
             from .async_backend import _OpenSSH
 
@@ -150,7 +230,12 @@ class AsyncSshTransport(AsyncTransport):
             # default backend is asyncssh
             from .async_backend import _AsyncSSH
 
-            self.async_backend = _AsyncSSH(self.machine, self.logger, self._bash_command_str)  # type: ignore[assignment]
+            self.async_backend = _AsyncSSH(
+                self.machine,
+                self.logger,
+                self._bash_command_str,
+                connection_options=connection_options,
+            )  # type: ignore[assignment]
 
     @property
     def max_io_allowed(self):
@@ -1300,6 +1385,21 @@ class AsyncSshTransport(AsyncTransport):
 
         :type remotedir:  :class:`Path <pathlib.Path>`, :class:`PurePosixPath <pathlib.PurePosixPath>`, or `str`
         """
+        from aiida.orm.authinfos import Password
+
         connect_string = self._gotocomputer_string(remotedir=remotedir)
         cmd = f'ssh -t {self.machine} {connect_string}'
+
+        if self._password == Password.REDACTED:
+            if shutil.which('sshpass') is None:
+                self.logger.info('Command line tool `sshpass` was not found. Continue with manual password entry.')
+            elif self._secure_storage is None or self._secure_storage.get_password() is None:
+                self.logger.info(
+                    f'No registered password has been found in secure storage for host `{self.machine}`. '
+                    'Continue with manual password entry.'
+                )
+            else:
+                cmd_stdout_password = self._secure_storage.get_cmd_stdout_password()
+                cmd = f'sshpass -p "$({cmd_stdout_password})" {cmd}'
+
         return cmd

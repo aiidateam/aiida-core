@@ -226,11 +226,18 @@ class _AsyncSSH(_AsynchronousSSHBackend):
     Note: This class is not part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
+    def __init__(
+        self,
+        machine: str,
+        logger: logging.LoggerAdapter,
+        bash_command: str,
+        connection_options: asyncssh.SSHClientConnectionOptions | None = None,
+    ):
         super().__init__(machine, logger, bash_command)
+        self._connection_options = connection_options
 
     async def open(self):
-        self._conn = await asyncssh.connect(self.machine)
+        self._conn = await asyncssh.connect(self.machine, options=self._connection_options)
         self._sftp = await self._conn.start_sftp_client()
 
     async def close(self):

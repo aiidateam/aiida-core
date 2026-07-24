@@ -27,6 +27,8 @@ import pytest
 from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.plugins import SchedulerFactory, TransportFactory
 from aiida.transports import Transport
+from aiida.transports.plugins import ssh_async
+from aiida.transports.plugins.local import LocalTransport
 
 # TODO : test for copy with pattern
 # TODO : test for copy with/without patterns, overwriting folder
@@ -64,23 +66,40 @@ def tmp_path_local(tmp_path_factory):
         ('core.ssh', None),
         ('core.ssh_async', 'asyncssh'),
         ('core.ssh_async', 'openssh'),
+        ('core.ssh_async', 'password-passed'),
+        ('core.ssh_async', 'password-from-keychain'),
     ],
 )
-def custom_transport(request, tmp_path_factory, monkeypatch) -> Transport:
+def custom_transport(request, aiida_localhost) -> Transport:
     """Fixture that parametrizes over all the registered implementations of the transport plugins."""
-    plugin = TransportFactory(request.param[0])
+    plugin_name, use_case = request.param
+    plugin = TransportFactory(plugin_name)
+    auth_info = None
 
-    if request.param[0] == 'core.ssh':
+    if plugin_name == 'core.ssh':
         kwargs = {'machine': 'localhost', 'timeout': 30, 'load_system_host_keys': True, 'key_policy': 'AutoAddPolicy'}
-    elif request.param[0] == 'core.ssh_async':
-        kwargs = {
-            'machine': 'localhost',
-            'backend': request.param[1],
-        }
+    elif plugin_name == 'core.ssh_async':
+        auth_info = aiida_localhost.configure()
+        kwargs = {'machine': 'localhost', 'secure_storage': auth_info.secure_storage}
+        if use_case in {'asyncssh', 'openssh'}:
+            kwargs['backend'] = use_case
+        elif use_case == 'password-passed':
+            kwargs['backend'] = 'asyncssh'
+            kwargs['password'] = 'password'
+        elif use_case == 'password-from-keychain':
+            from aiida.orm.authinfos import Password
+
+            auth_info.secure_storage.set_password('password')
+            kwargs['backend'] = 'asyncssh'
+            kwargs['password'] = Password.REDACTED
     else:
         kwargs = {}
 
-    return plugin(**kwargs)
+    try:
+        yield plugin(**kwargs)
+    finally:
+        if plugin_name == 'core.ssh_async' and use_case == 'password-from-keychain' and auth_info is not None:
+            auth_info.secure_storage.delete_password()
 
 
 def test_is_open(custom_transport):
@@ -1580,3 +1599,36 @@ def test_glob(custom_transport, tmp_path_local):
         g_list = transport.glob(str(tmp_path_local) + '/folder2/aiida.pdos*')
         paths = [str(tmp_path_local.joinpath('folder2/aiida.pdos_atm#2(Al)_wfc#2(p)'))]
         assert sorted(paths) == sorted(g_list)
+
+
+def test_gotocomputer_command(custom_transport):
+    """Test the generated go-to-computer command."""
+    goto_computer_cmd = custom_transport.gotocomputer_command(Path('/path'))
+
+    if isinstance(custom_transport, LocalTransport):
+        assert 'bash' in goto_computer_cmd
+    else:
+        assert 'ssh' in goto_computer_cmd
+
+
+def test_openssh_backend_rejects_password():
+    """A password cannot be used with the ``openssh`` backend, which has no way to inject it."""
+    with pytest.raises(ValueError, match=r'Password authentication is not supported by the `openssh` backend'):
+        TransportFactory('core.ssh_async')(machine='localhost', backend='openssh', password='secret')
+
+
+def test_validate_os_supports_secure_storage(monkeypatch):
+    """Validate password configuration fails if secure storage is unavailable."""
+    import keyringrs
+
+    class FailingEntry:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def set_password(self, _: str):
+            raise RuntimeError('Could not access secure storage.')
+
+    monkeypatch.setattr(keyringrs, 'Entry', FailingEntry)
+
+    with pytest.raises(OSError, match=r'.*Cannot use password authentication without secure storage.*'):
+        ssh_async.validate_os_supports_secure_storage(None, None, 'pw')

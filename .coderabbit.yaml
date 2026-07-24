@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=https://storage.googleapis.com/coderabbit_public_assets/schema.v2.json
+#
+# CodeRabbit config for aiida-core: on-demand only, driven by PR comments.
+# Reference: https://docs.coderabbit.ai/reference/configuration
+#
+#   @coderabbitai review         incremental review
+#   @coderabbitai full review    full re-review
+#   @coderabbitai summary        (re)write the PR summary
+#   @coderabbitai resolve        resolve all its comments
+#   @coderabbitai configuration  print the effective config
+#   @coderabbitai help           list every command
+#
+# Settings that match CodeRabbit's own defaults are pinned here on purpose, so
+# that org-level settings in the CodeRabbit web app can't change them for us.
+#
+# AGENTS.md / CLAUDE.md already steer reviews as guidance (default); no config needed.
+
+language: en-US
+
+reviews:
+  # Higher-signal comments only; raise to `chill` (default) or `assertive` for more.
+  profile: quiet
+
+  auto_review:
+    # No auto-review on open/push; trigger with `@coderabbitai review`.
+    enabled: false
+    drafts: false  # never review drafts (default)
+
+  # Don't auto-edit the PR description; use `@coderabbitai summary` on demand.
+  high_level_summary: false
+
+  # Keep CodeRabbit out of the checks list. With reviews opt-in, a green
+  # `CodeRabbit / Review completed` on a PR nobody reviewed reads as if it had been.
+  review_progress: false
+  commit_status: false
+
+  # Trim the unsolicited walkthrough comment; CODEOWNERS already picks reviewers.
+  in_progress_fortune: false
+  estimate_code_review_effort: false
+  suggested_reviewers: false
+
+  # Quoted: bare `off` is boolean false in YAML, the schema wants the string.
+  pre_merge_checks:
+    docstrings:
+      mode: 'off'
+    title:
+      mode: 'off'
+    description:
+      mode: 'off'
+    issue_assessment:
+      mode: 'off'
+
+  # Review only. Each of these opens a bot-authored PR or commits to the branch,
+  # and AI_POLICY.md requires a human author for every PR. `autofix` stays on: it
+  # applies a comment a human already read and accepted.
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    fix_ci:
+      enabled: false
+    resolve_merge_conflict:
+      enabled: false
+
+  tools:
+    ruff:
+      enabled: false  # already enforced by pre-commit and CI; avoids duplicate comments
+    languagetool:
+      enabled: false  # possibly noisy grammar/spell checks on prose and docstrings
+
+chat:
+  # Speak when spoken to, rather than replying in threads unprompted.
+  auto_reply: false

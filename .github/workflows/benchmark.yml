@@ -14,12 +14,19 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
 
   run-and-upload:
 
     # Only run if branch or PR base is pointing to the upstream repo
     if: github.repository == 'aiidateam/aiida-core'
+
+    permissions:
+      # Push benchmark results to gh-pages and comment on commits on alerts
+      contents: write
 
     strategy:
       fail-fast: false
@@ -52,6 +59,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
 
     - name: Install aiida-core
       uses: ./.github/actions/install-aiida-core
@@ -63,7 +72,7 @@ jobs:
       run: pytest --db-backend psql --benchmark-only --benchmark-json benchmark.json tests/
 
     - name: Store benchmark result
-      uses: aiidateam/github-action-benchmark@v3
+      uses: aiidateam/github-action-benchmark@8f431658bf624a63bea7dd506756badb1241d48e   # v3.0.0
       with:
         benchmark-data-dir-path: dev/bench/${{ matrix.os }}/psql_dos
         name: pytest-benchmarks:${{ matrix.os }},psql_dos

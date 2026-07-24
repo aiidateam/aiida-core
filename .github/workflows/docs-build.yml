@@ -7,6 +7,9 @@ on:
     branches-ignore: [gh-pages]
     paths: [docs/**]
 
+permissions:
+  contents: read
+
 env:
   FORCE_COLOR: 1
 
@@ -19,6 +22,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
 
     - name: Install aiida-core and docs deps
       uses: ./.github/actions/install-aiida-core
@@ -31,17 +36,23 @@ jobs:
       id: linkcheck
       run: |
         make -C docs html linkcheck 2>&1 | tee check.log
-        echo "::set-output name=broken::$(grep '(line\s*[0-9]*)\(\s\)broken\(\s\)' check.log)"
+        {
+          echo 'broken<<EOF_BROKEN'
+          grep '(line\s*[0-9]*)\(\s\)broken\(\s\)' check.log || true
+          echo 'EOF_BROKEN'
+        } >> "$GITHUB_OUTPUT"
       env:
         SPHINXOPTS: -nW --keep-going
 
     - name: Show docs build check results
+      env:
+        BROKEN_LINKS: ${{ steps.linkcheck.outputs.broken }}
       run: |
-        if [ -z "${{ steps.linkcheck.outputs.broken }}" ]; then
+        if [ -z "$BROKEN_LINKS" ]; then
             echo "No broken links found."
             exit 0
         else
             echo "Broken links found:"
-            echo "${{ steps.linkcheck.outputs.broken }}"
+            echo "$BROKEN_LINKS"
             exit 1
         fi

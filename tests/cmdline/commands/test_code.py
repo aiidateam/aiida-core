@@ -553,7 +553,9 @@ def test_from_config_url(non_interactive_editor, run_cli_command, aiida_localhos
     monkeypatch.setattr(
         request,
         'urlopen',
-        lambda *args, **kwargs: config_file_template.format(label=label, computer=aiida_localhost.label),
+        lambda *args, **kwargs: io.BytesIO(
+            config_file_template.format(label=label, computer=aiida_localhost.label).encode('utf-8')
+        ),
     )
 
     config_file_template = textwrap.dedent(
@@ -760,3 +762,45 @@ def test_code_create(run_cli_command, command_options, non_interactive_editor):
     assert f'Success: Created {cls.__name__}' in result.output
     code = QueryBuilder().append(Code).one()[0]
     assert code.entry_point.name == entry_point
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_code_create_installed_from_template_config(run_cli_command, aiida_localhost, tmp_path):
+    """Test ``verdi code create core.code.installed --config`` with a Jinja2-templated YAML file."""
+    filepath = tmp_path / 'code.yaml'
+    filepath.write_text(
+        textwrap.dedent("""\
+            label: '{{ code_binary_name }}-7.1'
+            description: The code {{ code_binary_name }} of QuantumESPRESSO
+            filepath_executable: /usr/bin/{{ code_binary_name }}
+            prepend_text: ''
+            append_text: ''
+            metadata:
+                template_variables:
+                    code_binary_name:
+                        key_display: Code name
+                        type: list
+                        options:
+                            - pw
+                            - ph
+        """)
+    )
+    result = run_cli_command(
+        cmd_code.code_create,
+        [
+            'core.code.installed',
+            '-n',
+            '--template-vars',
+            '{"code_binary_name": "pw"}',
+            '--config',
+            str(filepath),
+            '--computer',
+            str(aiida_localhost.pk),
+        ],
+    )
+    assert 'Success: Created InstalledCode' in result.output
+
+    code = QueryBuilder().append(Code).one()[0]
+    assert code.label == 'pw-7.1'
+    assert code.description == 'The code pw of QuantumESPRESSO'
+    assert isinstance(code, InstalledCode)

@@ -217,21 +217,31 @@ class TestSshCommandGenerator:
         assert "'/dst'" in result[2]
 
 
-def test_escape_for_glob_preserves_wildcards_escapes_dangerous_chars():
+def test_escape_preserving_glob_escapes_shell_metacharacters():
     """Test wildcards (*, ?, []) preserved while dangerous chars escaped."""
     backend = _TestOpenSSH()
     # Wildcards preserved, dangerous chars escaped
-    assert backend._escape_for_glob('/home/$USER/my files/[0-9]*.log') == '/home/\\$USER/my\\ files/[0-9]*.log'
+    assert backend._escape_preserving_glob('/home/$USER/my files/[0-9]*.log') == '/home/\\$USER/my\\ files/[0-9]*.log'
     # Command injection attempt escaped
-    assert backend._escape_for_glob('/path;rm -rf /*') == '/path\\;rm\\ -rf\\ /*'
+    assert backend._escape_preserving_glob('/path;rm -rf /*') == '/path\\;rm\\ -rf\\ /*'
+    # Braces are shell-significant and should be escaped.
+    assert backend._escape_preserving_glob('/path/{a,b}') == '/path/\\{a,b\\}'
+    # Paths without shell metacharacters are unchanged.
+    assert backend._escape_preserving_glob('/path/without/special_chars') == '/path/without/special_chars'
 
 
-def test_escape_for_rcp():
+def test_escape_for_rcp_and_glob_delegate_to_shared_helper():
     """Test RCP mode escapes shell metacharacters but preserves globs."""
     backend = _TestOpenSSH()
-    assert backend._escape_for_rcp('/path/with spaces/$VAR;cmd') == '/path/with\\ spaces/\\$VAR\\;cmd'
+    path = '/path/with spaces/$VAR;cmd'
+    assert backend._escape_for_rcp(path) == backend._escape_preserving_glob(path)
+    assert backend._escape_for_glob(path) == backend._escape_preserving_glob(path)
     # Glob characters pass through so the remote shell can expand them.
     assert backend._escape_for_rcp('/dir/*.[ch]') == '/dir/*.[ch]'
+    assert backend._escape_for_glob('/dir/*.[ch]') == '/dir/*.[ch]'
+    # Braces are escaped consistently for both former call sites.
+    assert backend._escape_for_rcp('/path/{a,b}') == '/path/\\{a,b\\}'
+    assert backend._escape_for_glob('/path/{a,b}') == '/path/\\{a,b\\}'
 
 
 def test_escape_for_scp_version_aware():

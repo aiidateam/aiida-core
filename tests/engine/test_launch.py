@@ -87,6 +87,54 @@ def test_submit_wait(arithmetic_add_builder):
     assert node.is_finished_ok, node.exit_code
 
 
+@pytest.mark.usefixtures('started_daemon_client')
+def test_submit_wait_with_timeout(arithmetic_add_builder):
+    """Test ``submit`` with ``wait=True`` and a generous ``timeout`` that the process finishes within."""
+    node = launch.submit(arithmetic_add_builder, wait=True, wait_interval=0.1, timeout=60)
+    assert node.is_finished, node.process_state
+    assert node.is_finished_ok, node.exit_code
+
+
+@pytest.mark.parametrize('timeout', [0, -1, -0.5])
+def test_submit_invalid_timeout(timeout):
+    """Test that ``submit`` rejects a non-positive ``timeout`` up front, before the process is submitted."""
+    with pytest.raises(ValueError, match=r'`timeout` must be a positive number'):
+        launch.submit(ArithmeticAddCalculation, wait=True, timeout=timeout)
+
+
+class _NeverTerminatingNode:
+    """Minimal ``ProcessNode`` stand-in that never terminates, to drive the wait loop without a daemon."""
+
+    pk = 1
+    process_state = 'running'
+
+    @property
+    def is_terminated(self) -> bool:
+        return False
+
+
+def test_wait_for_process_termination_timeout(monkeypatch):
+    """Test that the wait loop raises ``TimeoutError`` at the deadline, without overshooting by ``wait_interval``.
+
+    ``time.monotonic`` and ``time.sleep`` are replaced by a virtual clock so the test is fast and fully deterministic
+    (no dependency on real elapsed time). With ``wait_interval=2`` and ``timeout=5`` the loop must fire at exactly
+    ``5`` and not overshoot to ``6``.
+    """
+    clock = {'now': 0.0}
+    monkeypatch.setattr(launch.time, 'monotonic', lambda: clock['now'])
+    monkeypatch.setattr(launch.time, 'sleep', lambda seconds: clock.__setitem__('now', clock['now'] + seconds))
+
+    node = _NeverTerminatingNode()
+    with pytest.raises(
+        launch.ProcessTimeoutError, match=r'Process<1> did not terminate within the 5s timeout.*was not cancelled'
+    ) as excinfo:
+        launch._wait_for_process_termination(node, wait_interval=2, timeout=5)
+
+    assert isinstance(excinfo.value, TimeoutError), '`ProcessTimeoutError` must remain catchable as `TimeoutError`'
+    assert excinfo.value.node is node, 'the timed-out process node should be attached to the exception'
+    assert clock['now'] == pytest.approx(5.0), 'timeout should fire exactly at the deadline, not overshoot'
+
+
 def test_submit_no_broker(arithmetic_add_builder, monkeypatch, manager):
     """Test that ``submit`` raises ``InvalidOperation`` if the runner does not have a controller.
 

@@ -517,6 +517,8 @@ def config_can_be_downgraded(
     """
     target = CURRENT_CONFIG_VERSION if target is None else target
     current = get_current_version(config)
+    # Materialize so the iterable can be searched repeatedly, even if a one-shot iterator was passed.
+    migrations = tuple(migrations)
 
     if current <= target or current > MAXIMUM_DOWNGRADE_CONFIG_VERSION:
         return False
@@ -544,6 +546,8 @@ def upgrade_config(
     :return: the migrated configuration dictionary
     """
     current = get_current_version(config)
+    # Materialize so the iterable can be searched repeatedly, even if a one-shot iterator was passed.
+    migrations = tuple(migrations)
     used = []
     while current < target:
         current = get_current_version(config)
@@ -572,6 +576,8 @@ def downgrade_config(
     :return: the migrated configuration dictionary
     """
     current = get_current_version(config)
+    # Materialize so the iterable can be searched repeatedly, even if a one-shot iterator was passed.
+    migrations = tuple(migrations)
     if current > MAXIMUM_DOWNGRADE_CONFIG_VERSION:
         msg = (
             f'Cannot downgrade configuration version {current}: this AiiDA version can only downgrade configuration '

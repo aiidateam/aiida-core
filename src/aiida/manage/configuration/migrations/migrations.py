@@ -35,6 +35,8 @@ ConfigType = dict[str, Any]
 
 CURRENT_CONFIG_VERSION = 10
 OLDEST_COMPATIBLE_CONFIG_VERSION = 10
+# Highest configuration version for which this code can run downgrade migrations, even if it cannot load it.
+MAXIMUM_DOWNGRADE_CONFIG_VERSION = 10
 
 CONFIG_LOGGER = AIIDA_LOGGER.getChild('config')
 
@@ -498,6 +500,41 @@ def get_oldest_compatible_version(config):
     return config.get('CONFIG_VERSION', {}).get('OLDEST_COMPATIBLE', 0)
 
 
+def config_can_be_downgraded(
+    config: ConfigType,
+    target: int | None = None,
+    migrations: Iterable[type[SingleMigration]] = MIGRATIONS,
+) -> bool:
+    """Return whether the configuration can be downgraded to the target version.
+
+    This is intentionally distinct from :data:`CURRENT_CONFIG_VERSION`: an AiiDA version may not be able to load a
+    configuration for normal operation, but may still know enough migrations to rewrite it for an older version.
+
+    :param config: the configuration dictionary
+    :param target: the version to downgrade to, defaulting to :data:`CURRENT_CONFIG_VERSION`
+    :param migrations: the registered migrations to consider
+    :return: ``True`` if a chain of migrations exists to downgrade the configuration to the target version
+    """
+    target = CURRENT_CONFIG_VERSION if target is None else target
+    current = get_current_version(config)
+
+    if current <= target or current > MAXIMUM_DOWNGRADE_CONFIG_VERSION:
+        return False
+
+    used = []
+    while current > target:
+        try:
+            migrator = next(m for m in migrations if m.up_revision == current)
+        except StopIteration:
+            return False
+        if migrator in used:
+            return False
+        used.append(migrator)
+        current = migrator.down_revision
+
+    return current == target
+
+
 def upgrade_config(
     config: ConfigType, target: int = CURRENT_CONFIG_VERSION, migrations: Iterable[type[SingleMigration]] = MIGRATIONS
 ) -> ConfigType:
@@ -535,6 +572,13 @@ def downgrade_config(
     :return: the migrated configuration dictionary
     """
     current = get_current_version(config)
+    if current > MAXIMUM_DOWNGRADE_CONFIG_VERSION:
+        msg = (
+            f'Cannot downgrade configuration version {current}: this AiiDA version can only downgrade configuration '
+            f'versions up to {MAXIMUM_DOWNGRADE_CONFIG_VERSION}.'
+        )
+        raise exceptions.ConfigurationError(msg)
+
     used = []
     while current > target:
         current = get_current_version(config)
@@ -581,16 +625,25 @@ def config_needs_migrating(config, filepath: str | None = None):
 
     if oldest_compatible_version > CURRENT_CONFIG_VERSION:
         filepath = filepath if filepath else ''
-        msg = (
-            f'The AiiDA configuration file {filepath} has version {current_version}, which is not compatible with '
-            f'the current AiiDA version that supports configuration versions up to {CURRENT_CONFIG_VERSION}. '
-            'Before switching to an older AiiDA version, stop the daemon and avoid other AiiDA interactions. '
-            'Then use a newer AiiDA version that still supports '
-            f'configuration version {current_version} and run `verdi config downgrade {CURRENT_CONFIG_VERSION}` '
-            f'to rewrite the configuration file to version {CURRENT_CONFIG_VERSION}. See '
-            f'{URL_CONFIG_SCHEMA_COMPATIBILITY} for the compatibility '
-            'table.'
-        )
-        raise exceptions.ConfigurationVersionError(msg)
+        can_downgrade = config_can_be_downgraded(config)
+        if can_downgrade:
+            msg = (
+                f'The AiiDA configuration file {filepath} has version {current_version} which is not compatible with '
+                f'the current aiida version supporting up to version {CURRENT_CONFIG_VERSION}. '
+                f'Run `verdi config downgrade {CURRENT_CONFIG_VERSION}` to rewrite it for this version. See '
+                f'{URL_CONFIG_SCHEMA_COMPATIBILITY} for the compatibility table.'
+            )
+        else:
+            msg = (
+                f'The AiiDA configuration file {filepath} has version {current_version} which is not compatible with '
+                f'the current aiida version supporting up to version {CURRENT_CONFIG_VERSION}. '
+                'Before switching to an older AiiDA version, use a newer AiiDA version that supports '
+                f'configuration version {current_version} and run `verdi config downgrade {CURRENT_CONFIG_VERSION}` '
+                'to rewrite it for this version. See '
+                f'{URL_CONFIG_SCHEMA_COMPATIBILITY} for the compatibility table.'
+            )
+        error = exceptions.ConfigurationVersionError(msg)
+        error._can_downgrade = can_downgrade
+        raise error
 
     return CURRENT_CONFIG_VERSION > current_version

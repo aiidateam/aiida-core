@@ -106,31 +106,47 @@ class Transport(abc.ABC):
         ),
     ]
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        *args,
+        machine: str | None = None,
+        safe_interval: float | None = None,
+        use_login_shell: bool | None = None,
+        **_,
+    ):
         """__init__ method of the Transport base class.
 
+        :param machine: the machine to connect to
         :param safe_interval: (optional, default self._DEFAULT_SAFE_OPEN_INTERVAL)
            Minimum time interval in seconds between opening new connections.
         :param use_login_shell: (optional, default True)
            if False, do not use a login shell when executing command
         """
         from aiida.common import AIIDA_LOGGER
+        from aiida.common.warnings import warn_deprecation
 
-        self._safe_open_interval = kwargs.pop('safe_interval', self._DEFAULT_SAFE_OPEN_INTERVAL)
-        self._use_login_shell = kwargs.pop('use_login_shell', True)
+        if args:
+            warn_deprecation(
+                'Passing positional arguments to `Transport.__init__` is deprecated and they are ignored; '
+                'pass all arguments as keyword arguments instead.',
+                version=3,
+            )
+
+        self._safe_open_interval = self._DEFAULT_SAFE_OPEN_INTERVAL if safe_interval is None else safe_interval
+        self._use_login_shell = True if use_login_shell is None else use_login_shell
         if self._use_login_shell:
             self._bash_command_str = 'bash -l '
         else:
             self._bash_command_str = 'bash '
 
         self._logger = AIIDA_LOGGER.getChild('transport').getChild(self.__class__.__name__)
-        self._logger_extra = None
+        self._logger_extra: dict[str, object] | None = None
         self._is_open = False
         self._enters = 0
         self._open_lock = asyncio.Lock()
 
         # for accessing the identity of the underlying machine
-        self.hostname = kwargs.get('machine')
+        self.hostname = machine
 
     def __repr__(self):
         return f'<{self.__class__.__name__}: {self!s}>'

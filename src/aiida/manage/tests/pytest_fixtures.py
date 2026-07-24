@@ -727,7 +727,7 @@ def submit_and_await(started_daemon_client):
     def _factory(
         submittable: Process | ProcessBuilder | ProcessNode,
         state: plumpy.ProcessState = plumpy.ProcessState.FINISHED,
-        timeout: int = 20,
+        timeout: float = 20,
         **kwargs,
     ):
         """Submit a process and wait for it to achieve the given state.
@@ -735,9 +735,10 @@ def submit_and_await(started_daemon_client):
         :param submittable: A process, a process builder or a process node. If it is a process or builder, it is
             submitted first before awaiting the desired state.
         :param state: The process state to wait for, by default it waits for the submittable to be ``FINISHED``.
-        :param timeout: The time to wait for the process to achieve the state.
+        :param timeout: The number of seconds to wait for the process to achieve the state.
         :param kwargs: If the ``submittable`` is a process class, it is instantiated with the ``kwargs`` as inputs.
-        :raises RuntimeError: If the process fails to achieve the specified state before the timeout expires.
+        :raises RuntimeError: If the process terminates in a state other than the one specified, or if it fails to
+            achieve the specified state before the timeout expires.
         """
         if inspect.isclass(submittable) and issubclass(submittable, Process):  # type: ignore[unreachable]
             node = submit(submittable, **kwargs)  # type: ignore[unreachable]
@@ -748,23 +749,34 @@ def submit_and_await(started_daemon_client):
         else:
             raise ValueError(f'type of submittable `{type(submittable)}` is not supported.')
 
-        start_time = time.time()
+        start_time = time.monotonic()
+        # Terminal members of ``ProcessState``, mirroring ``ProcessNode.is_terminated``.
+        terminal_states = (plumpy.ProcessState.EXCEPTED, plumpy.ProcessState.FINISHED, plumpy.ProcessState.KILLED)
 
-        while node.process_state is not state:
-            if node.is_excepted:
-                raise RuntimeError(f'The process excepted: {node.exception}')
+        while True:
+            # Read ``process_state`` once per iteration: each access re-queries the database, so splitting the target
+            # and terminal checks across reads could straddle a transition and fail just as ``state`` is reached.
+            current_state = node.process_state
 
-            if time.time() - start_time >= timeout:
+            if current_state is state:
+                return node
+
+            # A terminal state cannot change, so waiting for a different one would only delay the failure.
+            if current_state in terminal_states:
+                if current_state is plumpy.ProcessState.EXCEPTED:
+                    raise RuntimeError(f'The process excepted: {node.exception}')
+                msg = f'The process terminated in state `{current_state}` while waiting for state `{state}`.'
+                raise RuntimeError(msg)
+
+            if time.monotonic() - start_time >= timeout:
                 daemon_log_file = pathlib.Path(started_daemon_client.daemon_log_file).read_text(encoding='utf-8')
                 daemon_status = 'running' if started_daemon_client.is_daemon_running else 'stopped'
                 raise RuntimeError(
-                    f'Timed out waiting for process with state `{node.process_state}` to enter state `{state}`.\n'
+                    f'Timed out waiting for process with state `{current_state}` to enter state `{state}`.\n'
                     f'Daemon <{started_daemon_client.profile.name}|{daemon_status}> log file content: \n'
                     f'{daemon_log_file}'
                 )
             time.sleep(0.1)
-
-        return node
 
     return _factory
 

@@ -1348,8 +1348,6 @@ def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_a
 
     This is a regression test for https://github.com/aiidateam/aiida-core/issues/5882.
     """
-    import time
-
     import plumpy
 
     daemon_client.start_daemon()
@@ -1363,19 +1361,10 @@ def test_restart_after_daemon_reset(get_calcjob_builder, daemon_client, submit_a
 
     daemon_client.restart_daemon(wait=True)
 
-    start_time = time.time()
-    timeout = 10
+    # The full stop/restart/reload/resume/finish cycle is heavy, so allow more than the fixture default: under CPU
+    # contention the post-restart wait alone approaches the 10 seconds this test used to allow.
+    submit_and_await(node, plumpy.ProcessState.FINISHED, timeout=30)
 
-    while node.process_state not in [plumpy.ProcessState.FINISHED, plumpy.ProcessState.EXCEPTED]:
-        if node.is_excepted:
-            raise AssertionError(f'The process excepted: {node.exception}')
-
-        if time.time() - start_time >= timeout:
-            raise AssertionError(f'process failed to terminate within timeout, current state: {node.process_state}')
-
-        time.sleep(0.1)
-
-    assert node.is_finished, node.process_state
     assert node.is_finished_ok, node.exit_status
 
 

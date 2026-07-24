@@ -67,7 +67,7 @@ def tmp_path_local(tmp_path_factory):
         ('core.ssh_async', 'asyncssh'),
         ('core.ssh_async', 'openssh'),
         ('core.ssh_async', 'password-passed'),
-        ('core.ssh_async', 'password-from-keychain'),
+        pytest.param(('core.ssh_async', 'password-from-keychain'), marks=pytest.mark.requires_secure_storage),
     ],
 )
 def custom_transport(request, aiida_localhost) -> Transport:

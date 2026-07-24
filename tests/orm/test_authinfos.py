@@ -18,6 +18,7 @@ from aiida.orm import authinfos, computers, users
 from aiida.orm.implementation.authinfos import BackendAuthInfo
 
 
+@pytest.mark.requires_secure_storage
 class TestAuthinfo:
     """Unit tests for the AuthInfo ORM class."""
 

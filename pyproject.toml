@@ -444,7 +444,8 @@ markers = [
   'requires_rmq: requires RabbitMQ specifically (not compatible with ZeroMQ broker)',
   'requires_broker: requires a message broker (RabbitMQ or ZeroMQ)',
   'requires_psql: requires a connection to PostgreSQL DB',
-  'presto: automatic marker for tests needing no external services (not requires_rmq, not requires_psql)',
+  'requires_secure_storage: requires a system secure storage backend',
+  'presto: automatic marker for tests needing no external services (not requires_rmq, not requires_psql, not requires_secure_storage)',
   'sphinx: set parameters for the sphinx `app` fixture'
 ]
 minversion = '7.0'

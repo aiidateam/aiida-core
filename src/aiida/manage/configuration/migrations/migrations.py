@@ -11,6 +11,7 @@
 from typing import Any, Dict, Iterable, Optional, Protocol, Type
 
 from aiida.common import exceptions
+from aiida.common.docs import URL_CONFIG_SCHEMA_COMPATIBILITY
 from aiida.common.log import AIIDA_LOGGER
 
 __all__ = (
@@ -33,6 +34,8 @@ ConfigType = Dict[str, Any]
 
 CURRENT_CONFIG_VERSION = 9
 OLDEST_COMPATIBLE_CONFIG_VERSION = 9
+# Highest configuration version for which this code can run downgrade migrations, even if it cannot load it.
+MAXIMUM_DOWNGRADE_CONFIG_VERSION = 10
 
 CONFIG_LOGGER = AIIDA_LOGGER.getChild('config')
 
@@ -391,6 +394,81 @@ class AddPrefixToStorageBackendTypes(SingleMigration):
                 )
 
 
+class RenameRmqAndLogging(SingleMigration):
+    """Migrate the logging (and related) configuration options introduced in version 10.
+
+    Deprecated options are renamed to their replacements: ``logging.db_loglevel`` becomes ``logging.database_handler``
+    and ``rmq.task_timeout`` becomes ``broker.task_timeout``. Any explicitly set value is moved to the new option.
+    """
+
+    down_revision = 9
+    down_compatible = 9
+    up_revision = 10
+    up_compatible = 10
+
+    option_renames = (
+        ('logging.db_loglevel', 'logging.database_handler'),
+        ('rmq.task_timeout', 'broker.task_timeout'),
+    )
+    advanced_logger_options = (
+        'logging.verdi_loglevel',
+        'logging.disk_objectstore_loglevel',
+        'logging.plumpy_loglevel',
+        'logging.kiwipy_loglevel',
+        'logging.paramiko_loglevel',
+        'logging.alembic_loglevel',
+        'logging.sqlalchemy_loglevel',
+        'logging.circus_loglevel',
+        'logging.aiopika_loglevel',
+    )
+    v10_only_options = (
+        'logging.aiida_core_loglevel',
+        'logging.terminal_handler',
+    )
+
+    @classmethod
+    def _rename_options(cls, options: dict[str, Any], *, downgrade: bool = False) -> None:
+        """Rename deprecated options between the version 9 and 10 names."""
+        for option_v9, option_v10 in cls.option_renames:
+            source, target = (option_v10, option_v9) if downgrade else (option_v9, option_v10)
+            if (value := options.pop(source, None)) is not None:
+                options.setdefault(target, value)
+
+    @classmethod
+    def _remove_v10_only_options(cls, options: dict[str, Any]) -> None:
+        """Remove options that did not exist before version 10."""
+        for option_name in cls.v10_only_options:
+            options.pop(option_name, None)
+
+    @classmethod
+    def _resolve_inherited_logger_options(cls, options: dict[str, Any], fallback_level: str) -> None:
+        """Resolve ``INHERIT`` for advanced logger options to the effective ``logging.aiida_loglevel``."""
+        for option_name in cls.advanced_logger_options:
+            if options.get(option_name) == 'INHERIT':
+                options[option_name] = fallback_level
+
+    def upgrade(self, config: ConfigType) -> None:
+        global_options = config.get('options', {})
+        self._rename_options(global_options)
+
+        for profile in config.get('profiles', {}).values():
+            self._rename_options(profile.get('options', {}))
+
+    def downgrade(self, config: ConfigType) -> None:
+        global_options = config.get('options', {})
+        global_fallback = global_options.get('logging.aiida_loglevel', 'REPORT')
+        self._resolve_inherited_logger_options(global_options, global_fallback)
+        self._rename_options(global_options, downgrade=True)
+        self._remove_v10_only_options(global_options)
+
+        for profile in config.get('profiles', {}).values():
+            options = profile.get('options', {})
+            profile_fallback = options.get('logging.aiida_loglevel', global_fallback)
+            self._resolve_inherited_logger_options(options, profile_fallback)
+            self._rename_options(options, downgrade=True)
+            self._remove_v10_only_options(options)
+
+
 MIGRATIONS = (
     Initial,
     AddProfileUuid,
@@ -401,6 +479,7 @@ MIGRATIONS = (
     MergeStorageBackendTypes,
     AddTestProfileKey,
     AddPrefixToStorageBackendTypes,
+    RenameRmqAndLogging,
 )
 
 
@@ -418,6 +497,41 @@ def get_oldest_compatible_version(config):
     :return: current oldest compatible config version or 0 if not defined
     """
     return config.get('CONFIG_VERSION', {}).get('OLDEST_COMPATIBLE', 0)
+
+
+def config_can_be_downgraded(
+    config: ConfigType,
+    target: Optional[int] = None,
+    migrations: Iterable[type[SingleMigration]] = MIGRATIONS,
+) -> bool:
+    """Return whether the configuration can be downgraded to the target version.
+
+    This is intentionally distinct from :data:`CURRENT_CONFIG_VERSION`: an AiiDA version may not be able to load a
+    configuration for normal operation, but may still know enough migrations to rewrite it for an older version.
+
+    :param config: the configuration dictionary
+    :param target: the version to downgrade to, defaulting to :data:`CURRENT_CONFIG_VERSION`
+    :param migrations: the registered migrations to consider
+    :return: ``True`` if a chain of migrations exists to downgrade the configuration to the target version
+    """
+    target = CURRENT_CONFIG_VERSION if target is None else target
+    current = get_current_version(config)
+
+    if current <= target or current > MAXIMUM_DOWNGRADE_CONFIG_VERSION:
+        return False
+
+    used = []
+    while current > target:
+        try:
+            migrator = next(m for m in migrations if m.up_revision == current)
+        except StopIteration:
+            return False
+        if migrator in used:
+            return False
+        used.append(migrator)
+        current = migrator.down_revision
+
+    return current == target
 
 
 def upgrade_config(
@@ -457,6 +571,13 @@ def downgrade_config(
     :return: the migrated configuration dictionary
     """
     current = get_current_version(config)
+    if current > MAXIMUM_DOWNGRADE_CONFIG_VERSION:
+        msg = (
+            f'Cannot downgrade configuration version {current}: this AiiDA version can only downgrade configuration '
+            f'versions up to {MAXIMUM_DOWNGRADE_CONFIG_VERSION}.'
+        )
+        raise exceptions.ConfigurationError(msg)
+
     used = []
     while current > target:
         current = get_current_version(config)
@@ -503,10 +624,25 @@ def config_needs_migrating(config, filepath: Optional[str] = None):
 
     if oldest_compatible_version > CURRENT_CONFIG_VERSION:
         filepath = filepath if filepath else ''
-        raise exceptions.ConfigurationVersionError(
-            f'The configuration file has version {current_version} '
-            f'which is not compatible with the current version {CURRENT_CONFIG_VERSION}: {filepath}\n'
-            'Use a newer version of AiiDA to downgrade this configuration.'
-        )
+        can_downgrade = config_can_be_downgraded(config)
+        if can_downgrade:
+            msg = (
+                f'The AiiDA configuration file {filepath} has version {current_version} which is not compatible with '
+                f'the current aiida version supporting up to version {CURRENT_CONFIG_VERSION}. '
+                f'Run `verdi config downgrade {CURRENT_CONFIG_VERSION}` to rewrite it for this version. See '
+                f'{URL_CONFIG_SCHEMA_COMPATIBILITY} for the compatibility table.'
+            )
+        else:
+            msg = (
+                f'The AiiDA configuration file {filepath} has version {current_version} which is not compatible with '
+                f'the current aiida version supporting up to version {CURRENT_CONFIG_VERSION}. '
+                'Before switching to an older AiiDA version, use a newer AiiDA version that supports '
+                f'configuration version {current_version} and run `verdi config downgrade {CURRENT_CONFIG_VERSION}` '
+                'to rewrite it for this version. See '
+                f'{URL_CONFIG_SCHEMA_COMPATIBILITY} for the compatibility table.'
+            )
+        error = exceptions.ConfigurationVersionError(msg)
+        error._can_downgrade = can_downgrade
+        raise error
 
     return CURRENT_CONFIG_VERSION > current_version

@@ -117,6 +117,7 @@ def test_delete_authinfo_removes_only_its_own_secure_password(aiida_profile_clea
     assert list(store.values()) == ['pw-default']
 
 
+@pytest.mark.requires_secure_storage
 class TestAuthinfo:
     """Unit tests for the AuthInfo ORM class."""
 

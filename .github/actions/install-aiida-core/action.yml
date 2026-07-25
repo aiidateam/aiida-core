@@ -50,7 +50,7 @@ runs:
 
   - name: Set up gnome-keyring
     run: |
-      sudo apt install -y gnome-keyring dbus-x11
+      sudo apt install -y gnome-keyring dbus-x11 sshpass
       # Start a D-Bus session bus and expose it to the following steps (pytest runs in
       # a separate step, so the address must be persisted via GITHUB_ENV).
       eval "$(dbus-launch --sh-syntax)"

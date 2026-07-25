@@ -13,11 +13,14 @@
 import asyncio
 import glob
 import os
+import shutil
 import subprocess
 from pathlib import Path, PurePath
 
 import click
+from asyncssh import SSHClientConnectionOptions
 
+from aiida.common.datastructures import SecureStorage
 from aiida.common.escaping import escape_for_bash
 from aiida.common.exceptions import InvalidOperation
 from aiida.transports.transport import (
@@ -29,6 +32,88 @@ from aiida.transports.transport import (
 )
 
 __all__ = ('AsyncSshTransport',)
+
+
+def validate_password_is_not_redacted_marker(ctx, param, value: str | None):
+    """Validate the password is not the secure-storage redaction marker.
+
+    :param ctx: the click context
+    :param param: the click parameter
+    :param value: the password value to validate
+    :return: the unchanged password value
+    :raises click.BadParameter: if the password equals the redaction marker
+    """
+    if value == SecureStorage.SECURE_STORAGE_PASSWORD_MARKER:
+        msg = 'Password cannot be equal to the secure-storage redaction marker.'
+        raise click.BadParameter(msg)
+
+    return value
+
+
+def validate_os_supports_secure_storage(ctx, param, value: str | None):
+    """Validate secure storage is available when configuring a password.
+
+    :param ctx: the click context
+    :param param: the click parameter
+    :param value: the password value to validate
+    :return: the unchanged password value
+    :raises OSError: if the system secure storage cannot be accessed
+    """
+    # ``None`` means no password authentication; only an actual password (including an
+    # intentionally empty string) needs to be stored and therefore requires secure storage.
+    if value is None:
+        return value
+
+    import keyringrs
+
+    try:
+        entry = keyringrs.Entry(  # type: ignore[attr-defined]
+            'aiida.transports.ssh_async', 'VALIDATE_OS_SUPPORTS_SECURE_STORAGE'
+        )
+        entry.set_password('DUMMY')
+        entry.delete_credential()
+    except Exception as exception:
+        msg = (
+            'Could not access secure storage on your system for storing the password. '
+            'Cannot use password authentication without secure storage.'
+        )
+        raise OSError(msg) from exception
+
+    return value
+
+
+def validate_os_supports_sshpass(ctx, param, value: str | None):
+    """Validate ``sshpass`` is available when configuring a password.
+
+    :param ctx: the click context
+    :param param: the click parameter
+    :param value: the password value to validate
+    :return: the unchanged password value
+    :raises OSError: if ``sshpass`` cannot be found
+    """
+    # ``None`` means no password authentication; an empty string is still a password.
+    if value is None:
+        return value
+
+    if shutil.which('sshpass') is None:
+        msg = 'Command line tool `sshpass` was not found. Cannot use password authentication without `sshpass`.'
+        raise OSError(msg)
+
+    return value
+
+
+def validate_os_supports_password_authentication(ctx, param, value: str | None):
+    """Validate the system supports password authentication for the transport.
+
+    :param ctx: the click context
+    :param param: the click parameter
+    :param value: the password value to validate
+    :return: the unchanged password value
+    """
+    value = validate_password_is_not_redacted_marker(ctx, param, value)
+    value = validate_os_supports_secure_storage(ctx, param, value)
+    value = validate_os_supports_sshpass(ctx, param, value)
+    return value
 
 
 def validate_script(ctx, param, value: str):
@@ -71,6 +156,18 @@ class AsyncSshTransport(AsyncTransport):
                     " Note, if not provided, we will use the 'hostname' that was set by you during setup."
                 ),
                 'non_interactive_default': True,
+            },
+        ),
+        (
+            'password',
+            {
+                'type': str,
+                'default': None,
+                'prompt': 'Password',
+                'hide_input': True,
+                'help': 'Login password for the remote machine.',
+                'non_interactive_default': True,
+                'callback': validate_os_supports_password_authentication,
             },
         ),
         (
@@ -142,6 +239,24 @@ class AsyncSshTransport(AsyncTransport):
             # for backward compatibility
             self.auth_script = kwargs.pop('script_before', 'None')
 
+        self._password: str | None = kwargs.pop('password', None)
+        self._sshpass_password_fds: list[int] = []
+
+        if self._password is not None and kwargs.get('backend') == 'openssh':
+            msg = (
+                'Password authentication is not supported by the `openssh` backend. '
+                'Use the default `asyncssh` backend or configure key-based authentication.'
+            )
+            raise ValueError(msg)
+
+        connection_options = None
+        if self._password is not None:
+            connection_options = SSHClientConnectionOptions(
+                password=self._password,
+                preferred_auth='password',
+                public_key_auth=False,
+            )
+
         if kwargs.get('backend') == 'openssh':
             from .async_backend import _OpenSSH
 
@@ -150,7 +265,12 @@ class AsyncSshTransport(AsyncTransport):
             # default backend is asyncssh
             from .async_backend import _AsyncSSH
 
-            self.async_backend = _AsyncSSH(self.machine, self.logger, self._bash_command_str)  # type: ignore[assignment]
+            self.async_backend = _AsyncSSH(
+                self.machine,
+                self.logger,
+                self._bash_command_str,
+                connection_options=connection_options,
+            )  # type: ignore[assignment]
 
     @property
     def max_io_allowed(self):
@@ -1302,4 +1422,20 @@ class AsyncSshTransport(AsyncTransport):
         """
         connect_string = self._gotocomputer_string(remotedir=remotedir)
         cmd = f'ssh -t {self.machine} {connect_string}'
+
+        if self._password is not None:
+            if shutil.which('sshpass') is None:
+                msg = 'Command line tool `sshpass` was not found. Cannot use password authentication.'
+                raise InvalidOperation(msg)
+            cmd = (
+                f'ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no '
+                f'-t {self.machine} {connect_string}'
+            )
+            read_fd, write_fd = os.pipe()
+            os.write(write_fd, self._password.encode())
+            os.close(write_fd)
+            os.set_inheritable(read_fd, True)
+            self._sshpass_password_fds.append(read_fd)
+            cmd = f'sshpass -d {read_fd} {cmd}'
+
         return cmd

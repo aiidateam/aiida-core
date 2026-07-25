@@ -506,11 +506,11 @@ def config_can_be_downgraded(
 ) -> bool:
     """Return whether the configuration can be downgraded to the target version.
 
-    This is intentionally distinct from :data:`CURRENT_CONFIG_VERSION`: an AiiDA version may not be able to load a
+    This is intentionally distinct from ``CURRENT_CONFIG_VERSION``: an AiiDA version may not be able to load a
     configuration for normal operation, but may still know enough migrations to rewrite it for an older version.
 
     :param config: the configuration dictionary
-    :param target: the version to downgrade to, defaulting to :data:`CURRENT_CONFIG_VERSION`
+    :param target: the version to downgrade to, defaulting to ``CURRENT_CONFIG_VERSION``
     :param migrations: the registered migrations to consider
     :return: ``True`` if a chain of migrations exists to downgrade the configuration to the target version
     """

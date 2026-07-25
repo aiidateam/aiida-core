@@ -1,0 +1,60 @@
+name: public-api
+
+on:
+  pull_request:
+    branches-ignore: [gh-pages]
+    paths:
+    - src/aiida/**
+    - utils/public_api.py
+    - .github/workflows/public-api.yml
+
+# https://docs.github.com/en/actions/using-jobs/using-concurrency
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: 1
+
+jobs:
+
+  diff:
+
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Check public API diff against base branch
+      env:
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      run: |
+        set -euo pipefail
+
+        worktree_dir="$(mktemp -d)"
+        trap 'git worktree remove --force "$worktree_dir"' EXIT
+
+        git worktree add --detach "$worktree_dir" "$BASE_SHA"
+
+        python utils/public_api.py extract \
+          --src-root "$worktree_dir/src/aiida" \
+          --output /tmp/public_api_base.json
+
+        if ! python utils/public_api.py diff --exit-code /tmp/public_api_base.json; then
+          printf '%s\n' \
+            '' \
+            'This check fails whenever the public API changes, so that the change is reviewed explicitly.' \
+            '- Additions: if the new public API is intended, a reviewer can approve the change; no code change' \
+            '  is required to make the check pass.' \
+            '- Removals or signature/kind changes: these break the public API deprecation guarantee. If the' \
+            '  change is intended, follow the deprecation process before merging.' >&2
+          exit 1
+        fi

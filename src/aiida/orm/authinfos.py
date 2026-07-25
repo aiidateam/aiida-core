@@ -13,7 +13,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from aiida.common import exceptions
+from aiida.common.datastructures import SecureStorage
 from aiida.manage import get_manager
+from aiida.orm.implementation.authinfos import BackendAuthInfo
 from aiida.plugins import TransportFactory
 
 from . import entities, users
@@ -23,7 +25,6 @@ from .users import User
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
-    from aiida.orm.implementation.authinfos import BackendAuthInfo
     from aiida.transports import Transport
 
 __all__ = ('AuthInfo',)
@@ -92,11 +93,22 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         :param backend: the backend to use for the instance, or use the default backend if None
         """
         backend = backend or get_manager().get_profile_storage()
+        auth_params = {} if auth_params is None else auth_params.copy()
+
+        secure_storage = SecureStorage(computer.uuid, user.pk)
+        password = auth_params.get('password')
+        if password is not None:
+            if password == SecureStorage.SECURE_STORAGE_PASSWORD_MARKER:
+                msg = 'Password cannot be equal to the secure-storage redaction marker.'
+                raise ValueError(msg)
+            secure_storage.set_password(password)
+            SecureStorage.redact_auth_params(auth_params)
+
         model = backend.authinfos.create(
             computer=computer.backend_entity,
             user=user.backend_entity,
             enabled=enabled,
-            auth_params=auth_params or {},
+            auth_params=auth_params,
             metadata=metadata or {},
         )
         super().__init__(model)
@@ -158,12 +170,20 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
     def get_auth_params(self) -> dict[str, Any]:
         """Return the dictionary of authentication parameters
 
+        If a password is stored in secure storage, the ``password`` key holds a redaction marker instead of the
+        actual secret.
+
         :return: a dictionary with authentication parameters
         """
-        return self._backend_entity.get_auth_params()
+        return self._backend_entity.get_auth_params().copy()
 
     def set_auth_params(self, auth_params: dict[str, Any]) -> None:
-        """Set the dictionary of authentication parameters
+        """Set the dictionary of authentication parameters.
+
+        If a password is present, store it in secure storage and persist a redacted marker
+        instead. If the password equals the redaction marker, as returned by
+        ``get_auth_params``, the password currently in secure storage is left untouched, so that
+        round-tripping the auth params does not alter the stored password.
 
         :param auth_params: a dictionary with authentication parameters
         """
@@ -205,4 +225,15 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         except exceptions.EntryPointError as exception:
             raise exceptions.ConfigurationError(f'transport type `{transport_type}` could not be loaded: {exception}')
 
-        return transport_class(machine=computer.hostname, **self.get_auth_params())
+        auth_params = self.get_auth_params()
+        if SecureStorage.contains_redacted_password(auth_params):
+            if (password := self._get_secure_storage().get_password()) is None:
+                msg = f'No registered password has been found in secure storage for host `{computer.hostname}`.'
+                raise ValueError(msg)
+            auth_params['password'] = password
+
+        return transport_class(machine=computer.hostname, **auth_params)
+
+    def _get_secure_storage(self) -> SecureStorage:
+        """Return the secure storage manager for this authinfo."""
+        return SecureStorage(self.computer.uuid, self.user.pk)

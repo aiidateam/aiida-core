@@ -47,3 +47,26 @@ runs:
     run: |
       uv pip install --resolution ${{ inputs.resolution-strategy }} -e .${{ inputs.extras && format('[{0}]', inputs.extras) || '' }}
     shell: bash
+
+  - name: Set up gnome-keyring
+    run: |
+      sudo apt install -y gnome-keyring dbus-x11
+      # Start a D-Bus session bus and expose it to the following steps (pytest runs in
+      # a separate step, so the address must be persisted via GITHUB_ENV).
+      eval "$(dbus-launch --sh-syntax)"
+      # Create and unlock the "login" keyring by feeding a password on stdin. This is
+      # what registers it as the *default* Secret Service collection; without it the
+      # keyring backend fails with "Secret Service: no result found" because there is
+      # no default collection to store into. The password is arbitrary and only lives
+      # for the duration of the CI run.
+      eval "$(printf '%s' 'some_credentials' | gnome-keyring-daemon --daemonize --login)"
+      # Bring up the secrets (Secret Service) component of the just-initialised daemon.
+      eval "$(gnome-keyring-daemon --start --components=secrets,ssh)"
+      # Persist the session/daemon addresses so the pytest step talks to this same daemon.
+      {
+        echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS"
+        echo "DBUS_SESSION_BUS_PID=$DBUS_SESSION_BUS_PID"
+        echo "GNOME_KEYRING_CONTROL=$GNOME_KEYRING_CONTROL"
+        echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK"
+      } >> "$GITHUB_ENV"
+    shell: bash

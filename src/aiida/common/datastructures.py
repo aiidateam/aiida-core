@@ -10,12 +10,85 @@
 
 from __future__ import annotations
 
+import sys
+from collections.abc import Mapping
 from enum import Enum, IntEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .extendeddicts import DefaultFieldsAttributeDict
 
-__all__ = ('CalcInfo', 'CalcJobState', 'CodeInfo', 'CodeRunMode', 'StashMode', 'UnstashTargetMode')
+__all__ = ('CalcInfo', 'CalcJobState', 'CodeInfo', 'CodeRunMode', 'SecureStorage', 'StashMode', 'UnstashTargetMode')
+
+if TYPE_CHECKING:
+    import keyringrs
+
+
+class SecureStorage:
+    """Manager for passwords stored in the system secure storage."""
+
+    _SERVICE_NAME = 'aiida.core.authinfo'
+    # Appends random string to reduce likelihood of collision with user password.
+    SECURE_STORAGE_PASSWORD_MARKER = 'REDACTED-KHOgfgbI3AVyNoJbkKuLxTl1P'
+
+    @classmethod
+    def contains_redacted_password(cls, auth_params: Mapping[str, Any]) -> bool:
+        """Return whether the auth params contain the secure-storage password marker."""
+        return auth_params.get('password') == cls.SECURE_STORAGE_PASSWORD_MARKER
+
+    def __init__(self, computer_uuid: str, user_pk: int | None) -> None:
+        self._computer_uuid = computer_uuid
+        self._user_pk = user_pk
+
+    @property
+    def _entry_name(self) -> str:
+        """Return the keyring entry name, unique per computer and user (i.e. per authinfo)."""
+        return f'{self._computer_uuid}-{self._user_pk}'
+
+    def _entry(self) -> keyringrs.Entry:  # type: ignore[name-defined]
+        """Return the keyring entry for this authinfo, importing ``keyringrs`` lazily."""
+        # Imported lazily to avoid loading the native extension on `import aiida.orm`.
+        import keyringrs
+
+        return keyringrs.Entry(self._SERVICE_NAME, self._entry_name)  # type: ignore[attr-defined]
+
+    def get_password(self) -> str | None:
+        """Return the stored password if available."""
+        try:
+            return self._entry().get_password()  # type: ignore[no-any-return]
+        except KeyError:
+            return None
+
+    @classmethod
+    def redact_auth_params(cls, auth_params: dict[str, Any]) -> None:
+        """Replace a password in auth params with the secure-storage marker."""
+        if auth_params.get('password') is not None:
+            auth_params['password'] = cls.SECURE_STORAGE_PASSWORD_MARKER
+
+    def set_password(self, password: str) -> None:
+        """Store a password in the system secure storage."""
+        self._entry().set_password(password)
+
+    def delete_password(self) -> None:
+        """Delete the stored password if available.
+
+        :raises OSError: if the system secure storage cannot be accessed
+        """
+        try:
+            self._entry().delete_credential()
+        except KeyError:
+            pass
+        except Exception as exception:
+            msg = f'Unable to delete password from secure storage for `{self._entry_name}`.'
+            raise OSError(msg) from exception
+
+    def get_cmd_stdout_password(self) -> str:
+        """Return a command that prints the stored password to stdout."""
+        python_command = (
+            'from keyringrs import Entry;'
+            f'entry = Entry("{self._SERVICE_NAME}", "{self._entry_name}");'
+            'print(entry.get_password(), end="")'
+        )
+        return f'"{sys.executable}" -c \'{python_command}\''
 
 
 class StashMode(Enum):

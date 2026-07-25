@@ -14,10 +14,14 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.session import make_transient
 
 from aiida.common import exceptions
+from aiida.common.datastructures import SecureStorage
+from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.implementation.computers import BackendComputer, BackendComputerCollection
 from aiida.storage.psql_dos.models.computer import DbComputer
 
 from . import entities, utils
+
+_LOGGER = AIIDA_LOGGER.getChild('storage.orm.computers')
 
 
 class SqlaComputer(entities.SqlaModelEntity[DbComputer], BackendComputer):
@@ -124,7 +128,24 @@ class SqlaComputerCollection(BackendComputerCollection):
             row = session.get(self.ENTITY_CLASS.MODEL_CLASS, pk)
             if row is None:
                 raise exceptions.NotExistent(f'Computer<{pk}> does not exist')
+            row_uuid = row.uuid
+            # Each authinfo that stores a password (i.e. carries the redaction marker) owns a separate credential,
+            # keyed per computer and user. Record the users before the cascade delete removes the authinfos.
+            users_with_password = [
+                authinfo.aiidauser_id
+                for authinfo in row.authinfos
+                if SecureStorage.contains_redacted_password(authinfo.auth_params)
+            ]
             session.delete(row)
             session.commit()
         except SQLAlchemyError as exc:
             raise exceptions.InvalidOperation(f'Unable to delete the requested computer: {exc}')
+
+        # We delete each stored password from the secure storage if available.
+        for user_pk in users_with_password:
+            try:
+                SecureStorage(row_uuid, user_pk).delete_password()
+            except OSError as exception:
+                _LOGGER.warning(
+                    f'Unable to delete password from secure storage for `{row_uuid}-{user_pk}`: {exception}'
+                )

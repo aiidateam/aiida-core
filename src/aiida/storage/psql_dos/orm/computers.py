@@ -122,6 +122,8 @@ class SqlaComputerCollection(BackendComputerCollection):
         try:
             session = self.backend.get_session()
             row = session.get(self.ENTITY_CLASS.MODEL_CLASS, pk)
+            if row is None:
+                raise exceptions.NotExistent(f'Computer<{pk}> does not exist')
             session.delete(row)
             session.commit()
         except SQLAlchemyError as exc:

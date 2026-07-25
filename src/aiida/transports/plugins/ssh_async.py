@@ -165,8 +165,11 @@ class AsyncSshTransport(AsyncTransport):
                 'default': None,
                 'prompt': 'Password',
                 'hide_input': True,
+                'show_default': False,
                 'help': 'Login password for the remote machine.',
                 'non_interactive_default': True,
+                # Allow accepting the ``None`` default (no password) by pressing enter at the prompt.
+                'accept_none_default': True,
                 'callback': validate_os_supports_password_authentication,
             },
         ),

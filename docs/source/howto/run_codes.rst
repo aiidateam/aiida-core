@@ -38,7 +38,8 @@ The second option allows managing multiple remote compute resources (including H
 
 .. note::
 
-    The second option requires access through an SSH keypair.
+    The second option typically uses access through an SSH keypair.
+    If your compute resource does not support key-based authentication, the ``core.ssh_async`` transport can also be :ref:`configured with a login password <how-to:ssh:password>`.
     If your compute resource demands two-factor authentication, you may need to install AiiDA directly on the compute resource instead.
 
 
@@ -51,7 +52,7 @@ Each computer must satisfy the following requirements:
 * It has ``bash`` installed
 * (optional) It has batch scheduler installed (see the :ref:`list of supported schedulers <topics:schedulers>`)
 
-If you are configuring a remote computer, start by :ref:`configuring password-less SSH access <how-to:ssh>` to it.
+If you are configuring a remote computer, start by :ref:`configuring SSH access <how-to:ssh>` to it.
 
 .. note::
 
@@ -136,7 +137,7 @@ The second step configures private connection details using:
 
     $ verdi computer configure TRANSPORTTYPE COMPUTERLABEL
 
-Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of chosen transport type, i.e., ``core.local`` for the localhost computer and ``core.ssh`` for any remote computer.
+Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of chosen transport type, i.e., ``core.local`` for the localhost computer and ``core.ssh`` or ``core.ssh_async`` for remote computers.
 
 After the setup and configuration have been completed, let's check that everything is working properly:
 

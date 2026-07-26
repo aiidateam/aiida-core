@@ -174,9 +174,10 @@ def test_get_openssh_version():
 class _TestOpenSSH(_OpenSSH):
     """Minimal OpenSSH subclass for testing escape methods."""
 
-    def __init__(self):
+    def __init__(self, password=None):
         self.machine = 'localhost'
         self.bash_command = 'bash -c '
+        self._password = password
 
 
 def test_openssh_path_exists_raises_on_unexpected_return_code():

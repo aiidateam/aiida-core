@@ -9,11 +9,16 @@
 """Module for the SqlAlchemy backend implementation of the `AuthInfo` ORM class."""
 
 from aiida.common import exceptions
+from aiida.common.datastructures import SecureStorage
 from aiida.common.lang import type_check
+from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.implementation.authinfos import BackendAuthInfo, BackendAuthInfoCollection
 from aiida.storage.psql_dos.models.authinfo import DbAuthInfo
 
 from . import computers, entities, users, utils
+
+# TODO check if this is a proper _LOGGER
+_LOGGER = AIIDA_LOGGER.getChild('storage.orm.authinfos')
 
 
 class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
@@ -91,6 +96,9 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
     def get_auth_params(self):
         """Return the dictionary of authentication parameters
 
+        If a password is stored in secure storage, the ``password`` key holds a redaction marker instead of the
+        actual secret.
+
         :return: a dictionary with authentication parameters
         """
         return self.model.auth_params
@@ -98,8 +106,20 @@ class SqlaAuthInfo(entities.SqlaModelEntity[DbAuthInfo], BackendAuthInfo):
     def set_auth_params(self, auth_params):
         """Set the dictionary of authentication parameters
 
+        If a password is present, store it in secure storage and persist a redacted marker
+        instead. If the password equals the redaction marker, as returned by
+        ``get_auth_params``, the password currently in secure storage is left untouched, so that
+        round-tripping the auth params does not alter the stored password.
+
         :param auth_params: a dictionary with authentication parameters
         """
+        auth_params = auth_params.copy()
+        password = auth_params.get('password')
+        # When round-tripping the result of ``get_auth_params``, the password is already represented by the
+        # redacted marker. Do not store that marker as the secure-storage password by accident.
+        if password is not None and not SecureStorage.contains_redacted_password(auth_params):
+            SecureStorage(self.model.dbcomputer.uuid, self.model.aiidauser_id).set_password(password)
+        SecureStorage.redact_auth_params(auth_params)
         self.model.auth_params = auth_params
 
     def get_metadata(self):
@@ -132,8 +152,19 @@ class SqlaAuthInfoCollection(BackendAuthInfoCollection):
         session = self.backend.get_session()
 
         try:
-            row = session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one()
+            row: DbAuthInfo = session.query(self.ENTITY_CLASS.MODEL_CLASS).filter_by(id=pk).one()
+            dbcomputer_uuid = row.dbcomputer.uuid
+            user_pk = row.aiidauser_id
+            deleted_authinfo_had_password = SecureStorage.contains_redacted_password(row.auth_params)
             session.delete(row)
             session.commit()
         except NoResultFound:
             raise exceptions.NotExistent(f'AuthInfo<{pk}> does not exist')
+
+        # The password in secure storage is keyed per authinfo (computer and user), so it is removed together with the
+        # authinfo that stored it, if any.
+        if deleted_authinfo_had_password:
+            try:
+                SecureStorage(dbcomputer_uuid, user_pk).delete_password()
+            except OSError as exception:
+                _LOGGER.warning(f'Unable to delete password from secure storage for `{dbcomputer_uuid}`: {exception}')

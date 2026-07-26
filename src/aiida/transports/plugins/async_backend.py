@@ -18,6 +18,7 @@ while the `_OpenSSH` class uses the `ssh` command line client.
 import abc
 import asyncio
 import logging
+import os
 import posixpath
 import re
 import subprocess
@@ -226,11 +227,18 @@ class _AsyncSSH(_AsynchronousSSHBackend):
     Note: This class is not part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
+    def __init__(
+        self,
+        machine: str,
+        logger: logging.LoggerAdapter,
+        bash_command: str,
+        connection_options: asyncssh.SSHClientConnectionOptions | None = None,
+    ):
         super().__init__(machine, logger, bash_command)
+        self._connection_options = connection_options
 
     async def open(self):
-        self._conn = await asyncssh.connect(self.machine)
+        self._conn = await asyncssh.connect(self.machine, options=self._connection_options)
         self._sftp = await self._conn.start_sftp_client()
 
     async def close(self):
@@ -455,8 +463,9 @@ class _OpenSSH(_AsynchronousSSHBackend):
     Note: This class is not part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
+    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str, password: str | None = None):
         super().__init__(machine, logger, bash_command)
+        self._password = password
 
         # Check if the local OpenSSH client version is 9.0 or higher.
         # OpenSSH 9.0+ changed scp to use SFTP protocol by default instead of RCP.
@@ -470,6 +479,34 @@ class _OpenSSH(_AsynchronousSSHBackend):
             self.logger.debug(f'Detected OpenSSH version {openssh_version}, using RCP mode for scp commands.')
             self.is_openssh_9_or_higher = False
 
+    def _wrap_command_with_sshpass(self, commands: list[str]) -> tuple[list[str], int | None]:
+        """Wrap an OpenSSH command with ``sshpass`` if password authentication is configured.
+
+        The password is passed through a file descriptor to avoid exposing it in command-line arguments.
+        The caller is responsible for passing the file descriptor to the child process and closing it afterwards.
+        """
+        if self._password is None:
+            return commands, None
+
+        commands = [
+            commands[0],
+            '-o',
+            'PreferredAuthentications=password',
+            '-o',
+            'PubkeyAuthentication=no',
+            *commands[1:],
+        ]
+        read_fd, write_fd = os.pipe()
+        try:
+            os.write(write_fd, self._password.encode())
+        except Exception:
+            os.close(read_fd)
+            raise
+        finally:
+            os.close(write_fd)
+        os.set_inheritable(read_fd, True)
+        return ['sshpass', '-d', str(read_fd), *commands], read_fd
+
     async def openssh_execute(self, commands, stdin: str | None = None, timeout: float | None = None):
         """
         Execute a command using the _OpenSSH command line client.
@@ -477,9 +514,26 @@ class _OpenSSH(_AsynchronousSSHBackend):
         :param timeout: The timeout in seconds
         :return: The return code, stdout, and stderr
         """
-        process = await asyncio.create_subprocess_exec(
-            *commands, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-        )
+        commands, password_fd = self._wrap_command_with_sshpass(commands)
+        try:
+            if password_fd is None:
+                process = await asyncio.create_subprocess_exec(
+                    *commands,
+                    stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+            else:
+                process = await asyncio.create_subprocess_exec(
+                    *commands,
+                    stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    pass_fds=(password_fd,),
+                )
+        finally:
+            if password_fd is not None:
+                os.close(password_fd)
 
         if stdin:
             process.stdin.write(stdin.encode())  # type: ignore[union-attr]

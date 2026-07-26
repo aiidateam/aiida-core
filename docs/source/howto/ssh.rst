@@ -5,10 +5,11 @@ How to setup SSH connections
 ****************************
 
 AiiDA communicates with remote computers via the SSH protocol.
-There are two ways of setting up an SSH connection for AiiDA:
+There are three ways of setting up an SSH connection for AiiDA:
 
 #. Using a passwordless SSH key (easier, less safe)
 #. Using a password-protected SSH key through ``ssh-agent`` (one more step, safer)
+#. Using a login password with ``core.ssh_async`` (only when key-based authentication is not available)
 
 .. _how-to:ssh:passwordless:
 
@@ -178,6 +179,32 @@ AiiDA configuration
 ^^^^^^^^^^^^^^^^^^^
 
 When :ref:`configuring the computer in AiiDA <how-to:run-codes:computer:configuration>`, simply make sure that ``Allow ssh agent`` is set to ``true`` (default).
+
+.. _how-to:ssh:password:
+
+Using login passwords with ``core.ssh_async``
+=============================================
+
+Key-based authentication is still the recommended way to use SSH with AiiDA.
+If a remote computer does not support key-based authentication, the ``core.ssh_async`` transport can authenticate with a login password.
+
+Passwords configured through ``verdi computer configure core.ssh_async`` are stored in the system secure storage.
+AiiDA stores only a redacted marker in the profile database.
+This requires a working system keyring, such as Secret Service on Linux, Keychain on macOS, or Credential Manager on Windows.
+AiiDA uses ``sshpass`` with a file descriptor so that the password is not exposed in command-line arguments.
+
+To configure a computer with password authentication, use the interactive configuration prompt:
+
+.. code-block:: console
+
+   $ verdi computer configure core.ssh_async YOURCOMPUTER
+   ...
+   Password:
+   ...
+
+Press enter at the password prompt to configure no password.
+To configure an empty password one cannot use the interactive configuration and has to explicitly specify ``--password ''`` as argument.
+
 
 .. _how-to:ssh:proxy:
 

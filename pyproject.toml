@@ -59,7 +59,8 @@ dependencies = [
   'typing-extensions~=4.13',
   'upf_to_json~=0.9.2',
   'wrapt~=1.11',
-  'chardet~=5.2.0;platform_system=="Windows"'
+  'chardet~=5.2.0;platform_system=="Windows"',
+  'keyringrs~=0.4.0'
 ]
 description = 'AiiDA is a workflow manager for computational science with a strong focus on provenance, performance and extensibility.'
 dynamic = ['version']  # read from aiida/__init__.py
@@ -443,7 +444,8 @@ markers = [
   'requires_rmq: requires RabbitMQ specifically (not compatible with ZeroMQ broker)',
   'requires_broker: requires a message broker (RabbitMQ or ZeroMQ)',
   'requires_psql: requires a connection to PostgreSQL DB',
-  'presto: automatic marker for tests needing no external services (not requires_rmq, not requires_psql)',
+  'requires_secure_storage: requires a system secure storage backend',
+  'presto: automatic marker for tests needing no external services (not requires_rmq, not requires_psql, not requires_secure_storage)',
   'sphinx: set parameters for the sphinx `app` fixture'
 ]
 minversion = '7.0'

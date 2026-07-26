@@ -61,6 +61,9 @@ class TestComputer:
         with pytest.raises(exceptions.NotExistent):
             Computer.collection.get(id=comp_pk)
 
+        with pytest.raises(exceptions.NotExistent, match=rf'Computer<{comp_pk}> does not exist'):
+            Computer.collection.delete(comp_pk)
+
     def test_get_minimum_job_poll_interval(self):
         """Test the :meth:`aiida.orm.Computer.get_minimum_job_poll_interval` method."""
         computer = Computer()

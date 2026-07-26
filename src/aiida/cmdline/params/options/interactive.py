@@ -58,6 +58,7 @@ class InteractiveOption(ConditionalOption):
         param_decls: Sequence[str] | None = None,
         prompt_fn: t.Callable[[click.Context], bool] | None = None,
         contextual_default: t.Any | None = None,
+        accept_none_default: bool = False,
         **kwargs: t.Any,
     ):
         """Construct a new instance.
@@ -65,10 +66,15 @@ class InteractiveOption(ConditionalOption):
         :param param_decls: relayed to :class:`click.Option`
         :param prompt_fn: callable(ctx) -> Bool, returns True if the option should be prompted for in interactive mode.
         :param contextual_default: An optional callback function to get a default which is passed the click context.
+        :param accept_none_default: if True, a ``None`` default can be accepted by pressing enter at the prompt. By
+            default click refuses empty input when the default is ``None``, forcing the user to type ``!`` to set no
+            value; enabling this presents the ``None`` default as an empty string while prompting and maps the empty
+            input back to ``None``.
         """
         super().__init__(param_decls=param_decls, **kwargs)
         self._prompt_fn = prompt_fn
         self._contextual_default = contextual_default
+        self._accept_none_default = accept_none_default
 
     @property
     def prompt(self) -> str | None:
@@ -131,6 +137,11 @@ class InteractiveOption(ConditionalOption):
             # raised further down below, forcing the user to specify a valid value.
             value = None
 
+        if self._accept_none_default and value == '' and source is click.core.ParameterSource.PROMPT:
+            # The user accepted the ``None`` default (presented as an empty string by ``get_default``) by pressing
+            # enter, which for this option means "no value": map the empty input back to ``None``.
+            value = None
+
         try:
             return super().process_value(ctx, value)
         except click.BadParameter as exception:
@@ -180,6 +191,13 @@ class InteractiveOption(ConditionalOption):
             default = self.type.deconvert_default(default)  # type: ignore[attr-defined]
         except AttributeError:
             pass
+
+        # When ``accept_none_default`` is set, present a ``None`` default as an empty string while prompting so the
+        # user can accept it by pressing enter (click's prompt loop refuses empty input when the default is ``None``).
+        # The empty value is mapped back to ``None`` in ``process_value``. Only applies in interactive mode, so the
+        # non-interactive default remains ``None``.
+        if self._accept_none_default and default is None and self.is_interactive(ctx):
+            return ''
 
         return default
 

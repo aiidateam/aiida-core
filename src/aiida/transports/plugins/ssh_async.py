@@ -245,13 +245,6 @@ class AsyncSshTransport(AsyncTransport):
         self._password: str | None = kwargs.pop('password', None)
         self._sshpass_password_fds: list[int] = []
 
-        if self._password is not None and kwargs.get('backend') == 'openssh':
-            msg = (
-                'Password authentication is not supported by the `openssh` backend. '
-                'Use the default `asyncssh` backend or configure key-based authentication.'
-            )
-            raise ValueError(msg)
-
         connection_options = None
         if self._password is not None:
             connection_options = SSHClientConnectionOptions(
@@ -263,7 +256,7 @@ class AsyncSshTransport(AsyncTransport):
         if kwargs.get('backend') == 'openssh':
             from .async_backend import _OpenSSH
 
-            self.async_backend = _OpenSSH(self.machine, self.logger, self._bash_command_str)
+            self.async_backend = _OpenSSH(self.machine, self.logger, self._bash_command_str, password=self._password)
         else:
             # default backend is asyncssh
             from .async_backend import _AsyncSSH

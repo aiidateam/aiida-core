@@ -1612,10 +1612,28 @@ def test_gotocomputer_command(custom_transport):
         assert 'ssh' in goto_computer_cmd
 
 
-def test_openssh_backend_rejects_password():
-    """A password cannot be used with the ``openssh`` backend, which has no way to inject it."""
-    with pytest.raises(ValueError, match=r'Password authentication is not supported by the `openssh` backend'):
-        TransportFactory('core.ssh_async')(machine='localhost', backend='openssh', password='secret')
+def test_openssh_backend_accepts_password():
+    """A password can be configured for the ``openssh`` backend."""
+    transport = TransportFactory('core.ssh_async')(machine='localhost', backend='openssh', password='secret')
+
+    assert transport._password == 'secret'
+
+
+def test_openssh_backend_password_authentication():
+    """The ``openssh`` backend can authenticate with a password through ``sshpass``."""
+    if shutil.which('sshpass') is None:
+        pytest.skip('The `sshpass` command line tool is not installed.')
+
+    transport = TransportFactory('core.ssh_async')(machine='localhost', backend='openssh', password='password')
+
+    with transport:
+        returncode, stdout, stderr = transport.exec_command_wait('echo password-auth-ok')
+
+    if returncode == 255 and 'connect to host localhost' in stderr:
+        pytest.skip(f'Local SSH server is not reachable: {stderr}')
+
+    assert returncode == 0, stderr
+    assert stdout.strip() == 'password-auth-ok'
 
 
 def test_gotocomputer_command_uses_sshpass_fd(monkeypatch):

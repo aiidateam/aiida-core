@@ -711,7 +711,7 @@ Computers
                 "id": 3,
                 "name": "Alpha",
                 "scheduler_type": "core.slurm",
-                "transport_type": "core.ssh",
+                "transport_type": "core.ssh_async",
                 "uuid": "9b5c84bb-4575-4fbe-b18c-b23fc30ec55e"
               },
               {
@@ -720,7 +720,7 @@ Computers
                 "id": 4,
                 "name": "Beta",
                 "scheduler_type": "core.slurm",
-                "transport_type": "core.ssh",
+                "transport_type": "core.ssh_async",
                 "uuid": "5d490d77-638d-4d4b-8288-722f930783c8"
               },
               {
@@ -729,7 +729,7 @@ Computers
                 "id": 5,
                 "name": "Gamma",
                 "scheduler_type": "core.slurm",
-                "transport_type": "core.ssh",
+                "transport_type": "core.ssh_async",
                 "uuid": "7a0c3ff9-1caf-405c-8e89-2369cf91b634"
               }
             ]
@@ -764,7 +764,7 @@ Computers
                 "id": 4,
                 "name": "Beta",
                 "scheduler_type": "core.slurm",
-                "transport_type": "core.ssh",
+                "transport_type": "core.ssh_async",
                 "uuid": "5d490d77-638d-4d4b-8288-722f930783c8"
               }
             ]

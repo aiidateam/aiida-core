@@ -39,7 +39,7 @@ The second option allows managing multiple remote compute resources (including H
 .. note::
 
     The second option requires access through an SSH keypair.
-    If your compute resource demands two-factor authentication, the ``core.ssh_async`` transport can obtain fresh credentials before each connection, see :ref:`how-to:ssh:2fa`.
+    If your compute resource demands two-factor authentication, configure the ``authentication_script`` for the ``core.ssh_async`` transport to obtain fresh credentials before each connection; see :ref:`how-to:ssh:2fa`.
 
 
 Computer requirements

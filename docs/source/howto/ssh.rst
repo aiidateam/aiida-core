@@ -9,7 +9,7 @@ There are three ways of setting up an SSH connection for AiiDA:
 
 #. Using a passwordless SSH key (easier, less safe)
 #. Using a password-protected SSH key through ``ssh-agent`` (one more step, safer)
-#. Using :ref:`two-factor authentication <how-to:ssh:2fa>` with the ``core.ssh_async`` transport, if your compute resource requires it, and allows automation
+#. Using :ref:`two-factor authentication <how-to:ssh:2fa>` with the ``core.ssh_async`` transport and a configured ``authentication_script``, if your compute resource requires it and allows automation
 
 .. _how-to:ssh:passwordless:
 

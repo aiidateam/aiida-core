@@ -455,20 +455,40 @@ class _OpenSSH(_AsynchronousSSHBackend):
     Note: This class is not part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
+    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str, use_sftp: bool):
         super().__init__(machine, logger, bash_command)
+        self.use_sftp = use_sftp
+        self.scp_options: list[str] = []
 
         # Check if the local OpenSSH client version is 9.0 or higher.
         # OpenSSH 9.0+ changed scp to use SFTP protocol by default instead of RCP.
         # This affects how paths are interpreted - SFTP treats paths as binary data,
         # so shell quoting is not needed and can cause issues.
         openssh_version = get_openssh_version()
-        if openssh_version is not None and openssh_version >= 9:
+        self.is_openssh_9_or_higher = openssh_version is not None and openssh_version >= 9
+
+        if openssh_version is None:
+            self.logger.warning(
+                'Could not detect your OpenSSH version. '
+                'Not applied: `use_sftp=False`. In addition quoting paths might not function properly. '
+                'Report to maintainers.'
+            )
+            self.use_sftp = False
+        elif self.is_openssh_9_or_higher and self.use_sftp:
             self.logger.debug(f'Detected OpenSSH version {openssh_version}, using SFTP mode for scp commands.')
-            self.is_openssh_9_or_higher = True
+        elif self.is_openssh_9_or_higher and not self.use_sftp:
+            # `-O` forces the legacy protocol, for servers that do not implement SFTP.
+            self.scp_options = ['-O']
+            self.logger.debug(
+                f'Detected OpenSSH version {openssh_version}, using RCP mode for scp commands as configured.'
+            )
         else:
-            self.logger.debug(f'Detected OpenSSH version {openssh_version}, using RCP mode for scp commands.')
-            self.is_openssh_9_or_higher = False
+            self.logger.debug(
+                f'Detected OpenSSH version {openssh_version}, using RCP mode for scp commands. '
+                'Configuration overrides: `use_sftp=False`'
+            )
+            # Override the setting, as in legacy versions are not using sftp anuways
+            self.use_sftp = False
 
     async def openssh_execute(self, commands, stdin: str | None = None, timeout: float | None = None):
         """
@@ -520,7 +540,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         return ''.join(result)
 
     def _escape_for_scp(self, path: str) -> str:
-        """Prepare a path for use in scp commands.
+        """Prepare a remote path for use in scp commands.
 
         OpenSSH >= 9.0 uses SFTP mode: paths are sent as binary, no
         escaping needed. OpenSSH < 9.0 uses RCP mode: paths are interpreted
@@ -700,7 +720,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         return returncode, stdout, stderr
 
     async def get(self, remotepath: str, localpath: str, dereference: bool, preserve: bool, recursive: bool):
-        options = []
+        options = [*self.scp_options]
         if preserve:
             options.append('-p')
         if dereference:
@@ -717,7 +737,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
             raise OSError({stderr})
 
     async def put(self, localpath: str, remotepath: str, dereference: bool, preserve: bool, recursive: bool):
-        options = []
+        options = [*self.scp_options]
         if preserve:
             options.append('-p')
         if dereference:
@@ -747,7 +767,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         recursive: bool,
         preserve: bool,
     ):
-        options = []
+        options = [*self.scp_options]
         if preserve:
             options.append('-p')
         if dereference:

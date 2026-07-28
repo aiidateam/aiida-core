@@ -55,9 +55,10 @@ class _AsynchronousSSHBackend(abc.ABC):
     Note: Subclasses should not be part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
+    def __init__(self, machine: str, data_machine: str, logger: logging.LoggerAdapter, bash_command: str):
         self.bash_command = bash_command + '-c '
         self.machine = machine
+        self.data_machine = data_machine
         self.logger = logger
 
     @abc.abstractmethod
@@ -226,14 +227,29 @@ class _AsyncSSH(_AsynchronousSSHBackend):
     Note: This class is not part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
-        super().__init__(machine, logger, bash_command)
-
     async def open(self):
-        self._conn = await asyncssh.connect(self.machine)
-        self._sftp = await self._conn.start_sftp_client()
+        conn = await asyncssh.connect(self.machine)
+        data_conn = None
+        try:
+            data_conn = conn if self.data_machine == self.machine else await asyncssh.connect(self.data_machine)
+            sftp = await data_conn.start_sftp_client()
+        except BaseException:
+            # `BaseException` rather than `Exception`, to also release them when the open is cancelled.
+            if data_conn is not None and data_conn is not conn:
+                data_conn.close()
+                await data_conn.wait_closed()
+            conn.close()
+            await conn.wait_closed()
+            raise
+
+        self._conn = conn
+        self._data_conn = data_conn
+        self._sftp = sftp
 
     async def close(self):
+        if self._data_conn is not self._conn:
+            self._data_conn.close()
+            await self._data_conn.wait_closed()
         self._conn.close()
         await self._conn.wait_closed()
 
@@ -455,8 +471,15 @@ class _OpenSSH(_AsynchronousSSHBackend):
     Note: This class is not part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str, use_sftp: bool):
-        super().__init__(machine, logger, bash_command)
+    def __init__(
+        self,
+        machine: str,
+        data_machine: str,
+        logger: logging.LoggerAdapter,
+        bash_command: str,
+        use_sftp: bool,
+    ):
+        super().__init__(machine, data_machine, logger, bash_command)
         self.use_sftp = use_sftp
         self.scp_options: list[str] = []
 
@@ -731,7 +754,12 @@ class _OpenSSH(_AsynchronousSSHBackend):
             options.append('-r')
 
         returncode, stdout, stderr = await self.openssh_execute(
-            ['scp', *options, f'{self.machine}:{self._escape_for_scp(remotepath)}', self._escape_for_scp(localpath)]
+            [
+                'scp',
+                *options,
+                f'{self.data_machine}:{self._escape_for_scp(remotepath)}',
+                self._escape_for_scp(localpath),
+            ]
         )
         if returncode != 0:
             raise OSError({stderr})
@@ -748,7 +776,12 @@ class _OpenSSH(_AsynchronousSSHBackend):
             options.append('-r')
 
         returncode, stdout, stderr = await self.openssh_execute(
-            ['scp', *options, self._escape_for_scp(localpath), f'{self.machine}:{self._escape_for_scp(remotepath)}']
+            [
+                'scp',
+                *options,
+                self._escape_for_scp(localpath),
+                f'{self.data_machine}:{self._escape_for_scp(remotepath)}',
+            ]
         )
         if returncode != 0:
             raise OSError({stderr})
@@ -800,8 +833,8 @@ class _OpenSSH(_AsynchronousSSHBackend):
             [
                 'scp',
                 *options,
-                f'{self.machine}:{self._escape_for_scp(remotesource)}',
-                f'{self.machine}:{self._escape_for_scp(remotedestination)}',
+                f'{self.data_machine}:{self._escape_for_scp(remotesource)}',
+                f'{self.data_machine}:{self._escape_for_scp(remotedestination)}',
             ]
         )
         if returncode != 0:

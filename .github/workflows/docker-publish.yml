@@ -39,14 +39,14 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Login to GitHub Container Registry 🔑
-      uses: docker/login-action@v4
+      uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0  # v4
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Login to DockerHub 🔑
-      uses: docker/login-action@v4
+      uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0  # v4
       if: inputs.registry == 'docker.io'
       with:
         registry: docker.io
@@ -87,7 +87,7 @@ jobs:
 
     - name: Docker meta
       id: meta
-      uses: docker/metadata-action@v5
+      uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051  # v5
       env: ${{ fromJSON(steps.build_vars.outputs.vars) }}
       with:
         images: ${{ inputs.registry }}/${{ github.repository_owner }}/${{ matrix.target }}

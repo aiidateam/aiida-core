@@ -17,6 +17,8 @@ execution:
 (tutorial:module6a)=
 # Module 6a: Conditional and iterative workflows
 
+{bdg-secondary}`⏱️ ~75 min read` {bdg-warning}`Advanced`
+
 :::{note}
 This module reuses the tutorial profile and the `gsrd_code` object created in {ref}`Module 1 <tutorial:module1>`, and assumes you have read {ref}`Module 3 <tutorial:module3>` (`@task.graph()`, `Map`, `shelljob`).
 If you are following along locally, run those first.
@@ -31,25 +33,23 @@ After this module, you will be able to:
 
 Composing these into a workflow whose shape **emerges at runtime** (an `If` inside a `Map`, and an adaptive sweep) is the subject of {ref}`Module 6b <tutorial:module6b>`.
 
-:::{note} Setup
+:::{note}
 This module uses AiiDA, `aiida-shell`, and `aiida-workgraph`:
 
 ```bash
-pip install aiida-core aiida-shell aiida-workgraph
+uv pip install aiida-core aiida-shell aiida-workgraph
 ```
 :::
 
 ```{code-cell} ipython3
-# Set up the tutorial's isolated sandbox profile (same as Module 1).
-# `%load_ext aiida` enables the `%verdi` magic; `%run` creates or loads the
-# shared `tutorial-<hash>` profile, so data from earlier modules is available.
+# Set up the tutorial's isolated sandbox profile (see Module 1 for details).
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```
 
 ## When fixed-shape workflows aren't enough
 
-Module 3's `gray_scott_pipeline` and `gray_scott_sweep` had a **fixed shape**: the same three steps for every parameter set, the same map fan-out, the same reduction at the end.
+Module 3's `gray_scott_pipeline` and `gray_scott_sweep` had a **fixed shape**: the same three steps for every parameter set, the same `Map`, the same reduction at the end.
 That's the right shape when you already know what you want to compute.
 Real research is rarely that tidy:
 
@@ -84,17 +84,17 @@ We have everything needed from earlier modules:
 - `variance_V` is computed cheaply by `parse_output` (Module 2). It is a good `is there a pattern at all?` predicate.
 - The full V-field is in `results.npz` (Module 2). The expensive analysis reads it.
 
-We use a small calcfunction that wraps the FFT analysis (from `include/tasks.py`, expand to read it):
+We use a small calcfunction that wraps the FFT analysis (from `include/tasks_module_6.py`, expand to read it):
 
-:::{dropdown} `fft_peak_wavelength` (in `include/tasks.py`)
-```{literalinclude} include/tasks.py
+:::{dropdown} `fft_peak_wavelength`&nbsp;(in&nbsp;`include/tasks_module_6.py`)
+```{literalinclude} include/tasks_module_6.py
 :language: python
 :pyobject: fft_peak_wavelength
 ```
 :::
 
 ```{code-cell} ipython3
-from include.tasks import fft_peak_wavelength
+from include.tasks_module_6 import fft_peak_wavelength
 ```
 
 The recipe is the gating itself.
@@ -319,16 +319,16 @@ from aiida_workgraph import While
 help(While)
 ```
 
-The only new helper we need is one that bumps `n_steps` in a parameters dict between iterations, a small calcfunction in `include/tasks.py`:
+The only new helper we need is one that bumps `n_steps` in a parameters dict between iterations, a small calcfunction in `include/tasks_module_6.py`:
 
-```{literalinclude} include/tasks.py
+```{literalinclude} include/tasks_module_6.py
 :language: python
 :pyobject: bump_n_steps
 ```
 
 ```{code-cell} ipython3
 from aiida_workgraph import While, get_current_graph
-from include.tasks import bump_n_steps
+from include.tasks_module_6 import bump_n_steps
 
 bump_n_steps_task = task(bump_n_steps)
 ```

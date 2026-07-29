@@ -16,6 +16,8 @@ execution:
 (tutorial:module4)=
 # Module 4: Remote submission
 
+{bdg-secondary}`⏱️ ~80 min read` {bdg-primary}`Intermediate`
+
 <!-- TODO: re-enable once the md->ipynb conversion script is verified
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module4.ipynb` {octicon}`download`
@@ -43,18 +45,16 @@ After this module, you will be able to:
 - Set per-job scheduler options (resources, queue, account, wall-time) via `metadata.options`
 - Switch a workflow between local and remote execution without changing the workflow itself
 
-:::{note} Setup
+:::{note}
 This module uses AiiDA and `aiida-shell`, plus SSH access to a cluster:
 
 ```bash
-pip install aiida-core aiida-shell
+uv pip install aiida-core aiida-shell
 ```
 :::
 
 ```{code-cell} ipython3
-# Set up the tutorial's isolated sandbox profile (same as Module 1).
-# `%load_ext aiida` enables the `%verdi` magic; `%run` creates or loads the
-# shared `tutorial-<hash>` profile, so data from earlier modules is available.
+# Set up the tutorial's isolated sandbox profile (see Module 1 for details).
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```

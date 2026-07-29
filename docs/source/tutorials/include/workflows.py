@@ -10,10 +10,9 @@ from __future__ import annotations
 
 from typing import TypedDict
 
+from aiida import orm
 from aiida_workgraph import shelljob, task
 from include.tasks import parse_output, prepare_input
-
-from aiida import orm
 
 # WorkGraph-wrapped variants of the Module 2 calcfunctions. Defined once
 # here so any workflow in this module can plug them into a graph without
@@ -42,26 +41,19 @@ def gray_scott_pipeline(
     parameters: orm.Dict,
     command: orm.AbstractCode,
 ) -> GrayScottOutputs:
-    """Run a single ``gsrd`` simulation and parse its scalar diagnostics.
+    """Run one gsrd simulation and parse its results (variance_V, mean_V, results_npz)."""
 
-    Three-step graph: ``prepare_input`` (calcfunction) builds the YAML input
-    file, ``ShellJob`` runs the ``gsrd`` binary against it, ``parse_output``
-    (calcfunction) recovers the diagnostics from stdout. The graph exposes
-    ``variance_V``, ``mean_V``, and the raw ``results.npz`` file so callers
-    can pick what they need.
-
-    :param parameters: ``Dict`` of Gray-Scott parameters (``F``, ``k``,
-        ``grid_size``, ``n_steps``, ...).
-    :param command: the ``gsrd`` ``InstalledCode`` to run on.
-    """
     prepared = prepare_input_task(parameters=parameters)
+
     simulation = shelljob(
         command=command,
         arguments=['{input}'],
         nodes={'input': prepared.result},
         outputs=['results.npz'],
     )
+
     parsed = parse_output_task(stdout=simulation.stdout)
+
     return {
         'variance_V': parsed.variance_V,
         'mean_V': parsed.mean_V,

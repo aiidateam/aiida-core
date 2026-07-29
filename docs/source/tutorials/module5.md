@@ -14,6 +14,8 @@ kernelspec:
 (tutorial:module5)=
 # Module 5: Querying and analysis
 
+{bdg-secondary}`⏱️ ~50 min read` {bdg-primary}`Intermediate`
+
 :::{note}
 This module reuses the tutorial profile created in {ref}`Module 1 <tutorial:module1>` and the F-sweep data created in {ref}`Module 2 <tutorial:module2>`.
 If you are following along locally, run those modules first.
@@ -34,20 +36,18 @@ After this module, you will be able to:
 - Walk the provenance graph from any node to its inputs, outputs, ancestors, or descendants
 - Reconstruct an analysis directly from the database, without keeping Python references to the original results
 
-:::{note} Setup
+:::{note}
 This module only needs AiiDA:
 
 ```bash
-pip install aiida-core
+uv pip install aiida-core
 ```
 
 It reuses the sweep data created in {ref}`Module 2 <tutorial:module2>`.
 :::
 
 ```{code-cell} ipython3
-# Set up the tutorial's isolated sandbox profile (same as Module 1).
-# `%load_ext aiida` enables the `%verdi` magic; `%run` creates or loads the
-# shared `tutorial-<hash>` profile, so data from earlier modules is available.
+# Set up the tutorial's isolated sandbox profile (see Module 1 for details).
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```

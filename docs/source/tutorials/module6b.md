@@ -16,6 +16,8 @@ execution:
 (tutorial:module6b)=
 # Module 6b: Workflows that build themselves
 
+{bdg-secondary}`⏱️ ~45 min read` {bdg-warning}`Advanced`
+
 :::{note}
 This module continues {ref}`Module 6a <tutorial:module6a>` and reuses its `If`-gated pipeline.
 If you are following along locally, work through {ref}`Module 6a <tutorial:module6a>` first.
@@ -29,18 +31,16 @@ After this module, you will be able to:
 - Build part of a workflow's graph from **data that wasn't known when you wrote it**, using a calcfunction to turn one stage's outputs into the next stage's parameter set.
 - Combine both into a single adaptive sweep whose refined parameters are computed midway through the run.
 
-:::{note} Setup
+:::{note}
 This module uses AiiDA, `aiida-shell`, and `aiida-workgraph`:
 
 ```bash
-pip install aiida-core aiida-shell aiida-workgraph
+uv pip install aiida-core aiida-shell aiida-workgraph
 ```
 :::
 
 ```{code-cell} ipython3
-# Set up the tutorial's isolated sandbox profile (same as Module 1).
-# `%load_ext aiida` enables the `%verdi` magic; `%run` creates or loads the
-# shared `tutorial-<hash>` profile, so data from earlier modules is available.
+# Set up the tutorial's isolated sandbox profile (see Module 1 for details).
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```
@@ -55,7 +55,7 @@ from aiida import orm
 from aiida_workgraph import If, Map, dynamic, namespace, task
 
 from include.workflows import gray_scott_pipeline
-from include.tasks import fft_peak_wavelength, identify_transition_region
+from include.tasks_module_6 import fft_peak_wavelength, identify_transition_region
 
 # The default Gray-Scott parameters and the feed-rate scan (same as Module 2).
 BASE_PARAMS = {
@@ -95,7 +95,7 @@ def pipeline_with_optional_fft(
 Module 3's `gray_scott_sweep` ran the same three-step pipeline for every `F`: every iteration had the **same shape**.
 What happens if we put an `If`-gated pipeline inside the `Map`?
 Each iteration's internal shape is then decided **by that iteration's own data**: one run does the FFT, the next one does not, all from the same `param_sweep`.
-The outer graph builds the loop body once; the engine fans it out at runtime, and the shape of each fan-out branch is independent.
+The outer graph builds the loop body once; the engine expands it into one branch per iteration at runtime, and each branch's shape is independent.
 
 ```{code-cell} ipython3
 @task.graph()
@@ -133,7 +133,7 @@ wg_cond = conditional_sweep.build(
 wg_cond.run()
 ```
 
-Counting how many `fft_peak_wavelength` processes ran shows the fan-out's variable shape directly:
+Counting how many `fft_peak_wavelength` processes ran shows this varying shape directly:
 
 ```{code-cell} ipython3
 fft_runs = sum(
@@ -229,7 +229,7 @@ wg_adaptive = adaptive_sweep.build(
 )
 ```
 
-The graph mirrors the three-step recipe one-to-one: two `map_zone` siblings (the coarse and refined sweeps) bridged by the `identify_transition_region` task. The refined `map_zone` reads its source socket from `identify_transition_region.result`, so the engine cannot begin the refined fan-out until the coarse `Map`'s `variance_V` gather has finished and `identify_transition_region` has produced the new parameter set.
+The graph mirrors the three-step recipe one-to-one: two `map_zone` siblings (the coarse and refined sweeps) bridged by the `identify_transition_region` task. The refined `map_zone` reads its source socket from `identify_transition_region.result`, so the engine cannot begin the refined `Map` until the coarse `Map`'s `variance_V` gather has finished and `identify_transition_region` has produced the new parameter set.
 
 ```{code-cell} ipython3
 :tags: [hide-output]

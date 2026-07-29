@@ -227,3 +227,10 @@ div.highlight-console div.highlight {
 .bd-sidebar-primary {
     overflow-y: hidden;
 }
+
+/* Tutorial module header badges (reading time + difficulty): a bit larger than
+   the default sphinx-design badge so they read at a glance under the title. */
+.sd-badge {
+    font-size: 0.9rem;
+    padding: 0.4em 0.7em;
+}

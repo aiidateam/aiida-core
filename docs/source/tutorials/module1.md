@@ -16,6 +16,8 @@ execution:
 (tutorial:module1)=
 # Module 1: Calculations with AiiDA
 
+{bdg-secondary}`⏱️ ~55 min read` {bdg-success}`Beginner`
+
 <!-- TODO: re-enable once the md->ipynb conversion script is verified
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module1.ipynb` {octicon}`download`
@@ -32,11 +34,11 @@ After this module, you will be able to:
 - Explore and visualize the provenance graph
 - Dump calculation data to disk with `verdi process dump`
 
-:::{note} Setup
+:::{note}
 This module needs AiiDA and `aiida-shell`:
 
 ```bash
-pip install aiida-core aiida-shell
+uv pip install aiida-core aiida-shell
 ```
 
 It also uses the small `gsrd` simulator introduced in {ref}`Module 0 <tutorial:module0>`.
@@ -159,7 +161,7 @@ plot_provenance(node)
 In the graph:
 - **Green ellipses** are data nodes (inputs and outputs)
 - **Rectangles** are process nodes (the computation)
-- **Arrows** show the data flow, annotated with a **link type** (`INPUT_CALC` from data to a calculation, `CREATE` from a calculation to its output data; `INPUT_WORK`, `RETURN`, `CALL_CALC` appear once we move to workflows in {ref}`Module 3 <tutorial:module3>`) and a **link label** (e.g. `input`, `results_npz`, `stdout`). These are the same names you use to access the nodes in Python via `node.inputs.<label>` / `node.outputs.<label>`.
+- **Arrows** show the data flow, annotated with a **link type** (`INPUT_CALC` from data to a calculation, `CREATE` from a calculation to its output data) and a **link label** (e.g. `input`, `results_npz`, `stdout`). These are the same names you use to access the nodes in Python via `node.inputs.<label>` / `node.outputs.<label>`.
 
 This graph answers questions like *"Where did this number come from?"* and *"What parameters produced this result?"*, even months later.
 

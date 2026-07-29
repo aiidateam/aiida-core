@@ -16,6 +16,8 @@ execution:
 (tutorial:module7)=
 # Module 7: Where to go next
 
+{bdg-secondary}`⏱️ ~70 min read` {bdg-primary}`Intermediate`
+
 :::{note}
 This module reuses the tutorial profile and the `gsrd_code` object created in {ref}`Module 1 <tutorial:module1>`.
 If you are following along locally, run that first.
@@ -34,20 +36,18 @@ Specifically:
 
 This module is a survey, not a deep dive: each section is a concrete demo or sketch plus a pointer to the canonical reference.
 
-:::{note} Setup
+:::{note}
 This module touches AiiDA, `aiida-shell`, and `aiida-workgraph`:
 
 ```bash
-pip install aiida-core aiida-shell aiida-workgraph
+uv pip install aiida-core aiida-shell aiida-workgraph
 ```
 
 Install `aiida-core`, not `aiida` (the latter is an old meta-package).
 :::
 
 ```{code-cell} ipython3
-# Set up the tutorial's isolated sandbox profile (same as Module 1).
-# `%load_ext aiida` enables the `%verdi` magic; `%run` creates or loads the
-# shared `tutorial-<hash>` profile, so data from earlier modules is available.
+# Set up the tutorial's isolated sandbox profile (see Module 1 for details).
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```
@@ -377,7 +377,7 @@ The `ShellJob<gsrd@localhost>` rows include both runs; the second one carries th
 
 Caching also composes with everything WorkGraph builds on top. Re-running a sweep with identical inputs is essentially free:
 
-:::{dropdown} `gray_scott_pipeline` (from Module 3a, in `include/workflows.py`)
+:::{dropdown} `gray_scott_pipeline`&nbsp;(from Module 3a, in&nbsp;`include/workflows.py`)
 ```{literalinclude} include/workflows.py
 :language: python
 :pyobject: gray_scott_pipeline

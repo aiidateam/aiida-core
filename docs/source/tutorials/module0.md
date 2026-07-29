@@ -17,6 +17,8 @@ execution:
 (tutorial:intro)=
 # Module 0: Calculations without AiiDA
 
+{bdg-secondary}`⏱️ ~45 min read` {bdg-success}`Beginner`
+
 <!-- TODO: re-enable once the md->ipynb conversion script is verified
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module0.ipynb` {octicon}`download`
@@ -48,12 +50,12 @@ The interplay of these processes, controlled primarily by the feed rate F and ki
 Identical starting conditions (same initial grid) can produce wildly different patterns just by tweaking F and k.
 :::
 
-:::{note} Setup
+:::{note}
 This first module uses only the `gsrd` simulator, no AiiDA yet.
 Install it with:
 
 ```bash
-pip install git+https://github.com/aiidateam/gsrd
+uv pip install git+https://github.com/aiidateam/gsrd
 ```
 :::
 

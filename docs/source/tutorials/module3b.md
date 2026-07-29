@@ -14,7 +14,9 @@ execution:
 ---
 
 (tutorial:module3b)=
-# Module 3b: Turning `for`-loops into workflows with `Map`
+# Module 3b: `for`-loops as workflows
+
+{bdg-secondary}`⏱️ ~70 min read` {bdg-primary}`Intermediate`
 
 <!-- TODO: re-enable once the md->ipynb conversion script is verified
 :::{tip}
@@ -24,29 +26,27 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 
 :::{note}
 This module continues {ref}`Module 3a <tutorial:module3a>`, reusing the same tutorial profile and the `gray_scott_pipeline` workflow built there.
-If you are following along locally, work through {ref}`Module 3a <tutorial:module3a>` first: the sweep below wraps its pipeline.
+If you are following along locally, work through {ref}`Module 3a <tutorial:module3a>` first: this module builds directly on it.
 :::
 
 ## What you will learn
 
 After this module, you will be able to:
 
-- Run a workflow over many input sets at once with WorkGraph's `Map`, replacing a plain Python `for`-loop with tracked, parallel, fan-out execution
+- Run a workflow over many input sets at once with WorkGraph's `Map`, turning a plain Python `for`-loop into a single tracked, parallel workflow
 - Gather per-iteration outputs back into a single result
 - Reuse the same workflow for a 2D scan by changing only its input
 
-:::{note} Setup
+:::{note}
 This module uses AiiDA, `aiida-shell`, and `aiida-workgraph`:
 
 ```bash
-pip install aiida-core aiida-shell aiida-workgraph
+uv pip install aiida-core aiida-shell aiida-workgraph
 ```
 :::
 
 ```{code-cell} ipython3
-# Set up the tutorial's isolated sandbox profile (same as Module 1).
-# `%load_ext aiida` enables the `%verdi` magic; `%run` creates or loads the
-# shared `tutorial-<hash>` profile, so data from earlier modules is available.
+# Set up the tutorial's isolated sandbox profile (see Module 1 for details).
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```
@@ -77,7 +77,7 @@ F_VALUES = [0.038, 0.040, 0.042, 0.044, 0.046, 0.050, 0.055, 0.060]
 
 The pipeline is unchanged from Module 3a; expand it if you need a refresher:
 
-:::{dropdown} `gray_scott_pipeline` (from Module 3a, in `include/workflows.py`)
+:::{dropdown} `gray_scott_pipeline`&nbsp;(from Module 3a, in&nbsp;`include/workflows.py`)
 ```{literalinclude} include/workflows.py
 :language: python
 :pyobject: gray_scott_pipeline
@@ -92,13 +92,10 @@ But a `for` loop is not an AiiDA process: it doesn't show up in the provenance, 
 WorkGraph's {class}`~aiida_workgraph.Map` lets you run the same sub-workflow over multiple input values, like a parallel `for` loop, but as a single AiiDA workflow with full provenance.
 In WorkGraph terminology, a `Map` is a **zone**: a region of the graph that controls how the tasks inside it are scheduled.
 
-:::{important}
-Conceptually, a `Map` zone does three things:
-
-1. It takes a **source collection** of the form `{key: value}` and runs the tasks inside the zone once per entry.
-2. Inside the zone, it exposes the current key/value via `map_zone.item.key` and `map_zone.item.value`. These are sockets, so you can wire them into tasks just like any other output.
-3. At the end of the zone, `map_zone.gather({...})` declares which per-iteration outputs to collect. The gathered outputs become accessible on `map_zone.outputs.<name>` as a namespace keyed by the original source keys.
-:::
+A `Map` zone works in three parts.
+It takes a source mapping of the form `{key: value}` and runs the tasks inside it once per entry.
+Inside the zone, `map_zone.item.key` and `map_zone.item.value` expose the current entry as sockets you wire into tasks like any other output.
+At the end, `map_zone.gather({...})` picks which per-iteration outputs to collect; afterwards they are available as `map_zone.outputs.<name>`, a namespace keyed by the original source keys.
 
 `Map` is imported alongside the rest of the WorkGraph helpers; its signature and docstring are visible via `help(Map)`:
 
@@ -111,30 +108,22 @@ Conceptually, a `Map` zone does three things:
 help(Map)
 ```
 
-To close the loop, we add a final **reduction step** to the workflow: a calcfunction `make_transition_plot` ({download}`include/tasks.py`) that takes the gathered `variance_V` `Float` nodes and renders the transition curve as a `SinglefileData` PNG.
-The workflow's primary output is then that single artifact: the per-iteration variances "fork out" via `Map`, and the plotting task "joins" them back together.
+To close the loop, we add a final **reduction step** to the workflow: a calcfunction `make_transition_plot` ({download}`include/tasks_module_3b.py`) that takes the gathered `variance_V` `Float` nodes and renders the transition curve as a `SinglefileData` PNG.
+The workflow's primary output is then that single artifact: `Map` produces one variance per parameter set, and the plotting task combines them into a single figure.
 
-:::{dropdown} `make_transition_plot` (in `include/tasks.py`)
-```{literalinclude} include/tasks.py
+:::{dropdown} `make_transition_plot`&nbsp;(in&nbsp;`include/tasks_module_3b.py`)
+```{literalinclude} include/tasks_module_3b.py
 :language: python
 :pyobject: make_transition_plot
 ```
 :::
 
-:::{tip}
-The sweep is wrapped as a `@task.graph()` with two inputs: `param_sweep` and the `Code` to run on.
-The blueprint is parameter-agnostic: change the contents of `param_sweep` and you can scan a different parameter (or several at once) without touching the workflow.
-:::
-
-The signature of `gray_scott_sweep` uses two helpers from the WorkGraph type system (both already imported at the top of this module):
-
-- `dynamic(dict)` on the input tells WorkGraph that `param_sweep` is a dict whose keys are not known until runtime. Each value is itself a dict (the parameter set for one iteration).
-- `namespace(...)` on the return type declares multiple named outputs. Some are fixed (`transition_plot`), others are `dynamic(float)`, meaning the engine will create one output per Map iteration under that name.
+Now the graph itself, `gray_scott_sweep`:
 
 ```{code-cell} ipython3
 from typing import Annotated
 
-from include.tasks import make_transition_plot
+from include.tasks_module_3b import make_transition_plot
 
 
 @task.graph()
@@ -166,37 +155,34 @@ def gray_scott_sweep(
     }
 ```
 
-:::{important}
-A few things to keep in mind about `Map`:
+Its signature uses two annotations you have not seen yet:
 
-- The source must be a mapping (a `dict` or a socket of a dynamic namespace). Iterating over a plain list is not supported directly. Wrap it into a dict first, using meaningful keys like `F_0_040` rather than integer indices, because those keys will show up in the provenance graph and as the names of the gathered outputs. **Avoid dots in keys**: WorkGraph treats dots as namespace separators, which will silently collapse your entries.
-- `map_zone.item.value` is the value for the current iteration, `map_zone.item.key` is its key. Both are sockets, so you can pass them as task inputs, but you cannot use them as ordinary Python values inside the graph function (no `if` on them, no string concatenation).
-- After the `with` block, `map_zone.outputs.<name>` gives you a namespace that behaves like a dict of AiiDA nodes, keyed by the original source keys.
+- `dynamic(dict)` marks `param_sweep` as a dict whose keys are only known at runtime, one entry (itself a parameter dict) per iteration.
+- `namespace(...)` declares several named outputs at once: a fixed `transition_plot`, plus `dynamic(float)` outputs that the engine fills in with one value per iteration.
+
+:::{important}
+Two things to watch with `Map`:
+
+- The keys of your source dict become labels in the provenance graph and the names of the gathered outputs, so use meaningful, identifier-safe keys (`F_0_040`, not an integer index). **Avoid dots**: WorkGraph treats them as namespace separators and will silently collapse entries.
+- `map_zone.item.key` and `map_zone.item.value` are sockets, not Python values. You can pass them to tasks, but you cannot branch on them or build strings from them inside the graph function.
 :::
 
 That's the blueprint; no execution yet.
-We need a `param_sweep` dict with one entry per iteration.
-The folded cell below constructs it; the visible cell prints what's about to flow in:
+We build a `param_sweep` dict with one entry per iteration, printing each as we go so you can see what flows into the `Map`:
 
 ```{code-cell} ipython3
-:tags: ["hide-cell"]
-
-# {label: parameters} for Map to iterate over. Keys become the names of
-# each map iteration in the provenance graph.
+# {label: parameters} for Map to iterate over. Each key names one map iteration
+# in the provenance graph; WorkGraph treats '.' as a namespace separator, so
+# encode the F value with underscores (F_0_040, not F_0.040).
 param_sweep = {}
+print(f'{len(F_VALUES)} parameter sets (only F varies):')
 for f_val in F_VALUES:
-    key = f'F_{f_val:.3f}'.replace('.', '_')  # WorkGraph treats `.` as namespace separator, so use `_`
+    key = f'F_{f_val:.3f}'.replace('.', '_')
     param_sweep[key] = BASE_PARAMS | {'F': f_val}
+    print(f'  {key:<10}  ->  F = {f_val}')
 ```
 
-```{code-cell} ipython3
-# Show what's flowing into the Map.
-print(f'{len(param_sweep)} parameter sets (only F varies):')
-for key, val in param_sweep.items():
-    print(f'  {key:<10}  ->  F = {val["F"]}')
-```
-
-Now `.build(...)` with concrete inputs:
+Now `.build(...)` with these concrete inputs:
 
 ```{code-cell} ipython3
 wg_sweep = gray_scott_sweep.build(
@@ -227,34 +213,41 @@ wg_sweep
 wg_sweep.run()
 ```
 
-:::{note}
-We called `.run()`, which blocks your Python session until the whole graph has finished.
-The alternative, `.submit()`, hands the workflow to the AiiDA daemon and returns immediately, freeing your session while the daemon drives execution in the background.
-In both cases the sub-workflows inside the `Map` zone run concurrently (the engine schedules them as independent processes); the only difference is whether *your session* waits for the result or not.
-For a tutorial `.run()` is convenient because the outputs are available right away.
-:::
-
-The per-iteration variances are now reachable directly on the workflow's outputs:
+Running the workflow returns its outputs: the `transition_plot` artifact, plus the gathered `variance_V` and `mean_V`, each a namespace keyed by the `Map` source keys.
 
 ```{code-cell} ipython3
-# Access per-iteration variances via the workflow output namespace.
-# `._value` unwraps the namespace into a plain dict; this is the current
-# WorkGraph API for accessing gathered outputs (may become public in future).
+# `._value` unwraps an output namespace into a plain dict. This is the current
+# WorkGraph API for reading gathered outputs (may become public in future).
+wg_sweep.outputs._value
+```
+
+Reading those values out, variance and mean side by side for each `F`:
+
+```{code-cell} ipython3
 variances = wg_sweep.outputs.variance_V._value
+means = wg_sweep.outputs.mean_V._value
 
 for key in sorted(variances):
-    print(f"  {key}: variance(V) = {float(variances[key].value):.4e}")
+    print(f"{key}: variance(V) = {float(variances[key].value):.4e}, mean(V) = {float(means[key].value):.4e}")
 ```
 
 The numbers are the same as Module 2's sweep (same simulation, same parameters).
-What changed is the *shape* of the provenance: instead of a long flat list of disconnected processes, the sweep is one workflow node that fans out into per-`F` sub-workflows and fans back in through `make_transition_plot`:
+What changed is the *shape* of the provenance: instead of a long flat list of disconnected processes, the sweep is one workflow node that branches into one sub-workflow per `F` value and recombines through `make_transition_plot`:
 
 ```{code-cell} ipython3
 print(f"Sweep WorkGraph PK: {wg_sweep.process.pk}")
 %verdi process status {wg_sweep.process.pk}
 ```
 
-🔭 Time to bring out the binoculars.
+`verdi process show` complements that with the node's full inputs and outputs; the table is long, so it's folded here:
+
+```{code-cell} ipython3
+:tags: ["hide-output"]
+
+%verdi process show {wg_sweep.process.pk}
+```
+
+Time to bring out the magnifying glass. 🔍
 Here's the same hierarchy rendered as a provenance graph:
 
 ```{code-cell} ipython3
@@ -269,7 +262,7 @@ plot_provenance(wg_sweep.process)
 ```
 
 It's deliberately busy: every input, output, and linked sub-process is represented.
-The point is not to read it in detail (you can't, it's tiny in the rendered docs) but to see how rich the provenance becomes *for free* as workflows nest.
+The point here is not to read it in detail but to see how rich the provenance becomes *for free* as workflows nest.
 For a zoomable view, right-click the image and open it in a new tab, or run `verdi node graph generate <PK>` from the command line to get a standalone SVG.
 
 And finally, the workflow's *real* output: the transition curve PNG produced by the reduction step inside the workflow itself, loaded from the database via its process node:
@@ -285,22 +278,14 @@ with sweep_node.outputs.transition_plot.open(mode='rb') as fh:
 Image(img_bytes)
 ```
 
-`verdi process show` works on the sweep workflow node too, but its per-node table is long, so its output is folded here:
-
-```{code-cell} ipython3
-:tags: ["hide-output"]
-
-%verdi process show {wg_sweep.process.pk}
-```
-
 ## A 2D scan: feed rate &times; kill rate
 
-So far the sweep has varied only `F`. The classic Gray-Scott phase diagram is two-dimensional, though: the pattern type depends on both the feed rate `F` and the kill rate `k`.
-The point of wrapping the sweep as a `@task.graph()` was that it is parameter-agnostic; we can scan a 2D grid by changing nothing but the contents of `param_sweep`.
+Now that we have the workflow blueprint, we can expand it to a full 2D scan.
+The classic Gray-Scott phase diagram is two-dimensional: the pattern type depends on both the feed rate `F` and the kill rate `k`, but so far we have varied only `F`.
+Because `gray_scott_sweep` is parameter-agnostic, extending to a 2D grid means changing nothing but the contents of `param_sweep`.
 
 We use a 5&times;5 grid that straddles the **boundary** of the pattern-forming region.
 Inside the band, `variance(V)` is of order `1e-2`; near the edge it drops by an order of magnitude as the V field starts decaying toward a trivial steady state.
-The grid is chosen so that every (F, k) combination still produces a `results.npz` file; points that land fully outside the band cause `gsrd` to skip the output file entirely, which would make the `ShellJob` fail for those iterations.
 
 ```{code-cell} ipython3
 F_GRID = [0.040, 0.045, 0.050, 0.055, 0.060]
@@ -320,7 +305,7 @@ print(f'{len(param_sweep_2d)} parameter sets ({len(F_GRID)} F values x {len(K_GR
 ```
 
 The same `gray_scott_sweep` graph drives both the 1D and 2D scans; only the input dict changes.
-The `make_transition_plot` reduction still runs and produces its 1D transition curve, but for the 2D case we use the gathered `variance_V` outputs directly and reshape them into a 5&times;5 matrix for the heatmap.
+The `make_transition_plot` reduction still runs and produces its 1D transition curve, but for the 2D case we use the gathered `variance_V` outputs directly and reshape them into a 5&times;5 matrix for plotting a heatmap instead.
 
 ```{code-cell} ipython3
 wg_2d = gray_scott_sweep.build(
@@ -360,7 +345,7 @@ plot_2d_variance_heatmap(
 )
 ```
 
-The heatmap shows the edge of the **pattern-forming region** of the classic Gray-Scott phase diagram. High-variance cells (bright) develop the spots, stripes, and labyrinths the system is famous for; toward the upper-right corner, `variance(V)` drops by an order of magnitude as the V field begins decaying toward a trivial steady state.
+The heatmap shows the edge of the **pattern-forming region** of the classic Gray-Scott phase diagram. High-variance cells (bright) develop the spots, stripes, and labyrinths the system is famous for; the low-variance corner is where the pattern dies out.
 Twenty-five simulations, one workflow node, full provenance attached.
 
 ## Next steps

@@ -198,8 +198,9 @@ Cross-references the issue IDs above. `X*` = the whole cross-cutting checklist.
 - Shorter extras access: `node.base.extras.all.items()` to something like `node.extras.items()` (A2).
 - Unified run/submit for WorkGraph: `engine.run(wg)` / `engine.submit(wg)` instead of instance methods (api-discrepancies item 1; PR open).
 - `verdi process dump` support for WorkGraph ([#7196](https://github.com/aiidateam/aiida-core/pull/7196)).
-- Public accessor for gathered `Map` outputs instead of the private `._value` unwrap (M3:490 note).
+- Public accessor for gathered `Map`/dynamic-namespace outputs instead of the private `._value` unwrap. Verified: public `.value` raises `AttributeError` on a namespace socket (`TaskSocketNamespace.__getattr__` treats `.value` as a sub-socket lookup), so `._value` is genuinely the only current way. Not tracked as its own upstream issue. Adjacent: node-graph [#155](https://github.com/scinode/node-graph/issues/155) (dynamic-namespace output can't be iterated in a graph body), [#156](https://github.com/scinode/node-graph/issues/156); aiida-workgraph [#786](https://github.com/aiidateam/aiida-workgraph/issues/786) (`.value` inconsistency), [#779](https://github.com/aiidateam/aiida-workgraph/issues/779) (None entries dropped). Worth a focused issue on node-graph.
 - Confirm aiida-shell accepts plain relative path strings, so tutorials can drop `Path(...).resolve()` (U1).
+- (aiida-workgraph, not aiida-core) Fold `shelljob()` into `task()` dispatch, e.g. `task(ShellJob, outputs=[...])`; only ShellJob's dynamic output namespace (`spec.outputs.dynamic=True`) needs manual naming, everything else comes from `from_aiida_process`. Also resolves the `shelljob`/`ShellJob` case-only name clash. Draft issue: `_notes/aiida-workgraph-shelljob-task-issue.md`.
 - New QueryBuilder filter syntax is already shipped (A1), so it is an adopt-now item, not a wishlist item.
 
 ---

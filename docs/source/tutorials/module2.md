@@ -16,6 +16,8 @@ execution:
 (tutorial:module2)=
 # Module 2: Structured data and calcfunctions
 
+{bdg-secondary}`⏱️ ~75 min read` {bdg-success}`Beginner`
+
 <!-- TODO: re-enable once the md->ipynb conversion script is verified
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module2.ipynb` {octicon}`download`
@@ -43,18 +45,16 @@ After this module, you will be able to:
 - Add input preparation and output parsing as tracked Python steps to the simulation's provenance
 - Organize results with extras and groups for quick retrieval
 
-:::{note} Setup
+:::{note}
 Same requirements as {ref}`Module 1 <tutorial:module1>`:
 
 ```bash
-pip install aiida-core aiida-shell
+uv pip install aiida-core aiida-shell
 ```
 :::
 
 ```{code-cell} ipython3
-# Set up the tutorial's isolated sandbox profile (same as Module 1).
-# `%load_ext aiida` enables the `%verdi` magic; `%run` creates or loads the
-# shared `tutorial-<hash>` profile, so data from earlier modules is available.
+# Set up the tutorial's isolated sandbox profile (see Module 1 for details).
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```

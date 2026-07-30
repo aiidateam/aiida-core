@@ -1,9 +1,8 @@
-"""ZMQ Broker - AiiDA Broker wrapper for ZMQ communicator."""
+"""ZeroMQ Broker - AiiDA Broker wrapper for ZeroMQ communicator."""
 
 from __future__ import annotations
 
 import json
-import shutil
 import time
 import typing as t
 from contextlib import contextmanager
@@ -11,57 +10,85 @@ from pathlib import Path
 
 import psutil
 
-from aiida.brokers.broker import Broker
+from aiida.brokers.broker import Broker, BrokerConfigField, BrokerServiceStatus
+from aiida.common.exceptions import ConfigurationError
 from aiida.common.log import AIIDA_LOGGER
 
-from .communicator import ZmqCommunicator
+from .communicator import ZeromqCommunicator
 from .defaults import BROKER_READY_TIMEOUT
 from .queue import PersistentQueue
+from .service import PID_SENTINEL, ZeromqBrokerService
 
 if t.TYPE_CHECKING:
     from aiida.manage.configuration.profile import Profile
 
-__all__ = ('ZmqBroker',)
+__all__ = ('ZeromqBroker',)
 
-LOGGER = AIIDA_LOGGER.getChild('broker.zmq')
+LOGGER = AIIDA_LOGGER.getChild('broker.zeromq')
 
 
-class ZmqBroker(Broker):
+class ZeromqBroker(Broker):
     """AiiDA Broker implementation using ZeroMQ.
 
-    Connects to a ZmqBrokerService for messaging and reads PID/status/socket
+    Connects to a ZeromqBrokerService for messaging and reads PID/status/socket
     files written by the service to discover endpoints and query status.
     """
 
     # Class attribute for type discovery
-    Communicator = ZmqCommunicator
+    Communicator = ZeromqCommunicator
+
+    _config_fields = (
+        BrokerConfigField(
+            name='supervised_by_daemon',
+            prompt='Managed by daemon',
+            help='Whether the lifecycle of the broker service is managed by the daemon.',
+            default=True,
+            param_type='bool',
+            # Running the broker service outside of the daemon is not yet supported, so the setting is not
+            # configurable and always stored with its default.
+            expose_cli=False,
+        ),
+    )
 
     def __init__(self, profile: 'Profile') -> None:
         super().__init__(profile)
-        self._init_paths(get_broker_base_path(profile))
+        self._communicator: ZeromqCommunicator | None = None
 
-    def _init_paths(self, broker_dir: Path) -> None:
-        self._communicator: ZmqCommunicator | None = None
-        self._broker_dir = broker_dir
-        self._storage_path = broker_dir / 'storage'
-        self._service_pid_file = broker_dir / 'broker.pid'
-        self._service_status_file = broker_dir / 'broker.status'
-        self._service_sockets_file = broker_dir / 'broker.sockets'
+        # The broker service determines this location, not this client. Currently the service is always managed by
+        # the daemon, so the daemon client is the authority for the directory.
+        if not profile.process_control_config.get('supervised_by_daemon', True):
+            msg = (
+                'The ZeroMQ broker service is not managed by the daemon (`supervised_by_daemon` is false in the broker '
+                'settings), so the location of its state files is unknown. Running the broker service outside of the '
+                'daemon is not yet supported.'
+            )
+            raise ConfigurationError(msg)
+
+        from aiida.manage.configuration import get_config
+
+        zmq_broker_service_dir = get_config().filepaths(profile)['zmq_broker_service']['dir']
+        zmq_broker_service_log_path = get_config().filepaths(profile)['zmq_broker_service']['log']
+        layout = ZeromqBrokerService.FilepathLayout(zmq_broker_service_dir, zmq_broker_service_log_path)
+        self._service_dir = layout.service_dir
+        self._service_pid_file = layout.pid_file
+        self._service_status_file = layout.status_file
+        self._service_sockets_file = layout.sockets_file
+        self._storage_path = layout.storage_path
 
     def __str__(self) -> str:
-        if self.is_running:
+        if self.is_service_reachable():
             status = self.get_service_status()
             pid = status.get('pid', '?') if status else '?'
-            return f'ZMQ Broker (PID {pid}) @ {self._broker_dir}'
-        return f'ZMQ Broker @ {self._broker_dir} <not running>'
+            return f'ZeroMQ Broker (PID {pid}) @ {self._service_dir}'
+        return f'ZeroMQ Broker @ {self._service_dir} <not running>'
 
     @property
     def storage_path(self) -> Path:
         return self._storage_path
 
     @property
-    def base_path(self) -> Path:
-        return self._broker_dir
+    def service_dir(self) -> Path:
+        return self._service_dir
 
     # --- Status queries (read PID/status/socket files) ---
 
@@ -74,18 +101,19 @@ class ZmqBroker(Broker):
             return None
 
     @property
-    def router_endpoint(self) -> str | None:
+    def _router_endpoint(self) -> str | None:
         sockets_path = self._get_sockets_path()
         if sockets_path is None:
             return None
         return f'ipc://{sockets_path}/router.sock'
 
-    _PID_SENTINEL = 'aiida-zmq-broker'
+    # protects from global overwrites
+    _PID_SENTINEL = PID_SENTINEL
 
-    def get_service_pid(self) -> int | None:
-        """Read the ZmqBrokerService PID from its PID file.
+    def _get_service_pid(self) -> int | None:
+        """Read the ZeromqBrokerService PID from its PID file.
 
-        The PID file contains ``aiida-zmq-broker <pid>`` as a sentinel so we
+        The PID file contains ``aiida-zeromq-broker <pid>`` as a sentinel so we
         can validate ownership without fragile command-line string matching.
         """
         if not self._service_pid_file.exists():
@@ -99,10 +127,9 @@ class ZmqBroker(Broker):
         except (ValueError, OSError):
             return None
 
-    @property
-    def is_running(self) -> bool:
-        """Check if the ZmqBrokerService process is running."""
-        pid = self.get_service_pid()
+    def is_service_reachable(self) -> bool:
+        """Check if the ZeromqBrokerService process is running."""
+        pid = self._get_service_pid()
         if pid is None:
             return False
         try:
@@ -111,56 +138,42 @@ class ZmqBroker(Broker):
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             return False
 
-    def get_service_status(self) -> dict[str, t.Any] | None:
-        """Read the ZmqBrokerService status from its status file."""
+    def get_service_status(self) -> BrokerServiceStatus | None:
+        """Read the ZeromqBrokerService status from its status file."""
         if not self._service_status_file.exists():
             return None
         try:
-            return json.loads(self._service_status_file.read_text())  # type: ignore[no-any-return]
+            return t.cast(BrokerServiceStatus, json.loads(self._service_status_file.read_text()))
         except (json.JSONDecodeError, OSError):
             return None
 
-    def _cleanup_stale_service_files(self) -> None:
-        self._service_pid_file.unlink(missing_ok=True)
-        self._service_status_file.unlink(missing_ok=True)
-        sockets_path = self._get_sockets_path()
-        if sockets_path is not None and sockets_path.exists():
-            shutil.rmtree(sockets_path, ignore_errors=True)
-        self._service_sockets_file.unlink(missing_ok=True)
-
     # --- Communicator ---
 
-    def get_communicator(self, wait_for_broker: float = BROKER_READY_TIMEOUT) -> ZmqCommunicator:
-        """Get or create a communicator connected to the broker.
-
-        :param wait_for_broker: Seconds to wait for the broker to become ready.
-            When the broker and workers are started concurrently (e.g. by circus),
-            the broker may not have written its socket files yet. This parameter
-            controls how long to poll before giving up.
-        """
+    def get_communicator(self) -> ZeromqCommunicator:
+        """Get or create a communicator connected to the broker."""
         if self._communicator is None:
-            router_endpoint = self.router_endpoint
+            router_endpoint = self._router_endpoint
 
             if router_endpoint is None:
                 # Broker may still be starting — poll until endpoint appears.
-                deadline = time.monotonic() + wait_for_broker
-                warning_deadline = deadline - (wait_for_broker - 5.0)
+                deadline = time.monotonic() + BROKER_READY_TIMEOUT
+                warning_deadline = deadline - (BROKER_READY_TIMEOUT - 5.0)
                 warning_issued = False
                 while time.monotonic() < deadline:
                     time.sleep(0.2)
-                    router_endpoint = self.router_endpoint
+                    router_endpoint = self._router_endpoint
                     if router_endpoint is not None:
                         break
                     if not warning_issued and time.monotonic() > warning_deadline:
                         AIIDA_LOGGER.warning('Still waiting for broker to become ready...')
                         warning_issued = True
                 else:
-                    msg = f'Broker did not become ready within {wait_for_broker}s: {self}'
+                    msg = f'Broker did not become ready within {BROKER_READY_TIMEOUT}s: {self}'
                     raise ConnectionError(msg)
 
             from aiida.manage.configuration import get_config_option
 
-            self._communicator = ZmqCommunicator(
+            self._communicator = ZeromqCommunicator(
                 router_endpoint=router_endpoint,
                 task_timeout=get_config_option('broker.task_timeout'),
             )
@@ -168,28 +181,28 @@ class ZmqBroker(Broker):
 
         return self._communicator
 
-    def iterate_tasks(self) -> t.Iterator['ZmqIncomingTask']:
+    def iterate_tasks(self) -> t.Iterator['ZeromqIncomingTask']:
         queue_path = self._storage_path / 'tasks'
         if not queue_path.exists():
             return
 
         queue = PersistentQueue(queue_path)
         for task_id, task_data in queue.get_all_pending():
-            yield ZmqIncomingTask(task_id, task_data, queue)
+            yield ZeromqIncomingTask(task_id, task_data, queue)
 
     def close(self) -> None:
         if self._communicator is not None:
             self._communicator.close()
             self._communicator = None
 
-    def __enter__(self) -> 'ZmqBroker':
+    def __enter__(self) -> 'ZeromqBroker':
         return self
 
     def __exit__(self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: t.Any) -> None:
         self.close()
 
 
-class ZmqIncomingTask:
+class ZeromqIncomingTask:
     """Wrapper providing an interface compatible with RabbitMQ incoming tasks."""
 
     def __init__(self, task_id: str, task_data: dict[str, t.Any], queue: PersistentQueue) -> None:
@@ -207,10 +220,3 @@ class ZmqIncomingTask:
 
         yield _Outcome()
         self._queue.remove_pending(self._task_id)
-
-
-def get_broker_base_path(profile: 'Profile') -> Path:
-    from aiida.manage.configuration import get_config_path
-
-    config_dir = Path(get_config_path()).parent  # type: ignore[no-untyped-call]
-    return config_dir / 'broker' / profile.uuid

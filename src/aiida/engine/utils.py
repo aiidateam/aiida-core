@@ -80,7 +80,7 @@ def instantiate_process(
         inputs.update(**builder._inputs(prune=True))
     elif is_process_function(process):
         process_class = process.process_class  # type: ignore[attr-defined]
-    elif inspect.isclass(process) and issubclass(process, Process):
+    elif inspect.isclass(process) and issubclass(process, Process):  # type: ignore[redundant-expr]
         process_class = process
     else:
         raise ValueError(f'invalid process {type(process)}, needs to be Process or ProcessBuilder')
@@ -318,7 +318,7 @@ def get_process_state_change_timestamp(process_type: Optional[str] = None) -> Op
     valid_process_types = ['calculation', 'work']
 
     if process_type is not None and process_type not in valid_process_types:
-        raise ValueError(f"invalid value for process_type, valid values are {', '.join(valid_process_types)}")
+        raise ValueError(f'invalid value for process_type, valid values are {", ".join(valid_process_types)}')
 
     if process_type is None:
         process_types = valid_process_types

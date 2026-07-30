@@ -117,6 +117,8 @@ Adding a new entry point consists of the following steps:
 
 Your new entry point should now show up in ``verdi plugin list aiida.calculations``.
 
+For ``CalcJob`` and ``WorkChain`` plugins, you can also register optional helper classes in the :ref:`aiida.tools.calculations <topics:plugins:entrypointgroups:aiida.tools.calculations>` and :ref:`aiida.tools.workflows <topics:plugins:entrypointgroups:aiida.tools.workflows>` entry point groups.
+
 .. note::
 
     Taking a package with the name ``aiida-diff`` as example, what does ``pip install aiida-diff`` do?
@@ -171,7 +173,7 @@ The profile (and configuration directory in which it is hosted) is only temporar
 This ensures that any production profiles on the system are not affected by the tests.
 
 Other fixtures have to be explicitly used in a test to be of use.
-They usually allow creating some resources that are required by the test, such as a ``Code`` node:
+They usually allow creating some resources that are required by the test, such as a ``Code`` node::
 
     def test_calculation(aiida_code_installed):
         """Test running a calculation using a ``CalcJob`` plugin."""

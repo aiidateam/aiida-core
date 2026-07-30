@@ -830,7 +830,7 @@ class TrajectoryData(ArrayData):
             xmin, ymin, zmin = _x.min(), _y.min(), _z.min()
             xmax, ymax, zmax = _x.max(), _y.max(), _z.max()
 
-            _xi, _yi, _zi = np.mgrid[xmin:xmax:60j, ymin:ymax:30j, zmin:zmax:30j]  # type: ignore[misc]
+            _xi, _yi, _zi = np.mgrid[xmin:xmax:60j, ymin:ymax:30j, zmin:zmax:30j]
             coords = np.vstack([item.ravel() for item in [_xi, _yi, _zi]])
             density = kde(coords).reshape(_xi.shape)
 

@@ -105,7 +105,7 @@ def test_submit_no_broker(arithmetic_add_builder, monkeypatch, manager):
 def test_submit_without_daemon(aiida_config_tmp, aiida_profile_factory, config_sqlite_dos):
     """Test ``submit`` raises a meaningful error if the daemon is not running.
 
-    A ZMQ profile is used here because the daemon check is specific to the ZMQ broker.
+    A ZeroMQ profile is used here because the daemon check is specific to the ZeroMQ broker.
     """
     from aiida.manage import get_manager
 
@@ -113,7 +113,7 @@ def test_submit_without_daemon(aiida_config_tmp, aiida_profile_factory, config_s
         aiida_config_tmp,
         storage_backend='core.sqlite_dos',
         storage_config=config_sqlite_dos(),
-        broker_backend='core.zmq',
+        broker_backend='core.zeromq',
         broker_config={},
     ):
         assert not get_manager().get_daemon_client().is_daemon_running

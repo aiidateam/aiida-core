@@ -84,7 +84,7 @@ def execute_client_command(
 @options.TIMEOUT(default=None, required=False, type=int)
 @decorators.with_dbenv()
 @decorators.requires_broker
-@decorators.check_circus_zmq_version
+@decorators.check_circus_zeromq_version
 def start(foreground, number, timeout):
     """Start the daemon with NUMBER workers.
 
@@ -111,7 +111,7 @@ def status(ctx, all_profiles, timeout):
     from tabulate import tabulate
 
     from aiida.cmdline.utils.common import format_local_time
-    from aiida.cmdline.utils.daemon import get_daemon_package_drift_lines
+    from aiida.cmdline.utils.daemon import validate_daemon_env
     from aiida.engine.daemon.client import DaemonException, get_daemon_client
     from aiida.manage.manager import get_manager
 
@@ -152,13 +152,13 @@ def status(ctx, all_profiles, timeout):
 
         start_time = format_local_time(daemon_response['info']['create_time'])
 
-        # Build broker status lines for managed brokers (e.g., ZMQ)
+        # Build broker status lines for managed brokers (e.g., ZeroMQ)
         broker_lines: list[str] = []
         broker = get_manager().get_broker()
-        from aiida.brokers.zmq.broker import ZmqBroker
+        from aiida.brokers.zeromq.broker import ZeromqBroker
 
-        if isinstance(broker, ZmqBroker):
-            if broker.is_running:
+        if isinstance(broker, ZeromqBroker):
+            if broker.is_service_reachable():
                 status_info = broker.get_service_status()
                 if status_info:
                     broker_pid = status_info.get('pid', '?')
@@ -167,7 +167,7 @@ def status(ctx, all_profiles, timeout):
                     broker_lines.append(
                         f'Broker is running as PID {broker_pid} [{pending} pending, {processing} processing]'
                     )
-                    broker_lines.append(f'Broker directory: {broker.base_path}')
+                    broker_lines.append(f'Broker directory: {broker.service_dir}')
             else:
                 broker_lines.append('Broker is NOT running')
 
@@ -179,7 +179,9 @@ def status(ctx, all_profiles, timeout):
             f'Log file: {client.daemon_log_file}',
         ]
 
-        lines.extend(get_daemon_package_drift_lines(client))
+        drift_error = validate_daemon_env(client)
+        if drift_error is not None:
+            lines.append(drift_error)
 
         lines.append('Use `verdi daemon [incr | decr] [num]` to increase / decrease the number of workers')
         echo.echo('\n'.join(lines))
@@ -291,7 +293,7 @@ def restart(ctx, reset, no_wait, timeout):
 @click.argument('number', required=False, type=int, callback=validate_daemon_workers)
 @decorators.with_dbenv()
 @decorators.requires_broker
-@decorators.check_circus_zmq_version
+@decorators.check_circus_zeromq_version
 def start_circus(foreground, number):
     """This will actually launch the circus daemon, either daemonized in the background or in the foreground.
 
@@ -315,18 +317,28 @@ def worker():
 
 
 @verdi_daemon.command('broker', hidden=True)
+@click.option('--service-dir', 'service_dir', required=True)
+@click.option('--log-file-path', 'log_file_path', required=False)
 @decorators.with_dbenv()
 @decorators.requires_broker
-def broker():
-    """Run the ZMQ broker server in the current process.
+def broker(service_dir, log_file_path):
+    """Run the ZeroMQ broker service in the current process.
+
+    Sets up the profile enviromment (e.g. logging configuration) before running the broker.
 
     .. note:: this should not be called directly from the commandline!
     """
-    from aiida.brokers.zmq.broker import get_broker_base_path
-    from aiida.brokers.zmq.service import run_broker_service
+    from aiida.brokers.zeromq.broker import ZeromqBroker
+    from aiida.brokers.zeromq.service import run_broker_service
     from aiida.manage.manager import get_manager
 
     profile = get_manager().get_profile()
     if profile is None:
         echo.echo_critical('No profile loaded.')
-    run_broker_service(base_path=get_broker_base_path(profile))
+
+    broker = get_manager().get_broker()
+    if not isinstance(broker, ZeromqBroker):
+        msg = f'Only ZeromqBroker can be started through verdi but got broker of type {type(broker)}.'
+        raise TypeError(msg)
+
+    run_broker_service(service_dir=service_dir, log_file_path=log_file_path)

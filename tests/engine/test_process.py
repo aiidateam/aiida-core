@@ -192,12 +192,12 @@ class TestProcess:
 
         def on_entered(self, from_state):
             if self._state.LABEL.value == 'finished':
-                assert (
-                    self.node.is_finished_ok
-                ), 'Node state should have been updated before plumpy.Process.on_entered is invoked.'
-                assert (
-                    self.node.outputs.result.value == 2
-                ), 'Outputs should have been attached before plumpy.Process.on_entered is invoked.'
+                assert self.node.is_finished_ok, (
+                    'Node state should have been updated before plumpy.Process.on_entered is invoked.'
+                )
+                assert self.node.outputs.result.value == 2, (
+                    'Outputs should have been attached before plumpy.Process.on_entered is invoked.'
+                )
             original_on_entered(self, from_state)
 
         monkeypatch.setattr(plumpy.Process, 'on_entered', on_entered)

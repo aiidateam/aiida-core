@@ -59,11 +59,31 @@ jobs:
         vars=$(cat build.json | jq -c '[.variable | to_entries[] | {"key": .key, "value": .value.default}] | from_entries')
         echo "vars=$vars" | tee -a "${GITHUB_OUTPUT}"
 
+    - id: tag-check
+      run: echo "IS_VERSION_TAG=${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}" >> "$GITHUB_OUTPUT"
+
     - id: get-version
-      if: ${{ github.ref_type == 'tag'  && startsWith(github.ref_name, 'v') }}
+      if: ${{ steps.tag-check.outputs.IS_VERSION_TAG == 'true' }}
+      env:
+        TAG: ${{ github.ref_name }}
+      run: echo "AIIDA_VERSION=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+    - id: get-latest-tag
+      if: ${{ steps.tag-check.outputs.IS_VERSION_TAG == 'true' }}
+      continue-on-error: true # never let the `latest` logic block the real release tags
+      env:
+        TAG: ${{ github.ref_name }}
       run: |
-        tag="${{ github.ref_name }}"
-        echo "AIIDA_VERSION=${tag#v}" >> $GITHUB_OUTPUT
+        remote_tags=$(git ls-remote --tags --refs origin | sed 's|.*refs/tags/||')
+        release_tags=$(grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' <<<"$remote_tags" || true)
+        highest=$(sort -V <<<"$release_tags" | tail -n1)
+        if [[ -n "$highest" && "$TAG" == "$highest" ]]; then
+          is_latest=true
+        else
+          is_latest=false
+        fi
+        echo "latest tag: this release $TAG, highest final on origin ${highest:-none}, IS_LATEST=$is_latest" >> "$GITHUB_STEP_SUMMARY"
+        echo "IS_LATEST=$is_latest" >> "$GITHUB_OUTPUT"
 
     - name: Docker meta
       id: meta
@@ -75,9 +95,10 @@ jobs:
           type=ref,event=pr
           type=ref,event=branch,enable=${{ github.ref_name != 'main' }}
           type=edge,enable={{is_default_branch}}
-          type=raw,value=aiida-${{ steps.get-version.outputs.AIIDA_VERSION }},enable=${{ github.ref_type == 'tag'  && startsWith(github.ref_name, 'v') }}
-          type=raw,value=python-${{ env.PYTHON_VERSION }},enable=${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
-          type=raw,value=postgresql-${{ env.PGSQL_VERSION }},enable=${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
+          type=raw,value=aiida-${{ steps.get-version.outputs.AIIDA_VERSION }},enable=${{ steps.tag-check.outputs.IS_VERSION_TAG == 'true' }}
+          type=raw,value=latest,enable=${{ steps.get-latest-tag.outputs.IS_LATEST == 'true' }}
+          type=raw,value=python-${{ env.PYTHON_VERSION }},enable=${{ steps.tag-check.outputs.IS_VERSION_TAG == 'true' }}
+          type=raw,value=postgresql-${{ env.PGSQL_VERSION }},enable=${{ steps.tag-check.outputs.IS_VERSION_TAG == 'true' }}
           type=match,pattern=v(\d{4}\.\d{4}(-.+)?),group=1
 
     - name: Determine source image

@@ -86,17 +86,17 @@ def test_import_to_group(run_cli_command, newest_archive):
     # Invoke `verdi import` again, making sure Group count doesn't change
     options = ['-G', group.label] + [archives[0]]
     run_cli_command(cmd_archive.import_archive, options)
-    assert (
-        group.count() == nodes_in_group
-    ), f'The Group count should not have changed from {nodes_in_group}. Instead it is now {group.count()}'
+    assert group.count() == nodes_in_group, (
+        f'The Group count should not have changed from {nodes_in_group}. Instead it is now {group.count()}'
+    )
 
     # Invoke `verdi import` again with new archive, making sure Group count is upped
     options = ['-G', group.label] + [archives[1]]
     run_cli_command(cmd_archive.import_archive, options)
-    assert (
-        group.count() > nodes_in_group
-    ), 'There should now be more than {} nodes in group {} , instead there are {}'.format(
-        nodes_in_group, group_label, group.count()
+    assert group.count() > nodes_in_group, (
+        'There should now be more than {} nodes in group {} , instead there are {}'.format(
+            nodes_in_group, group_label, group.count()
+        )
     )
 
 

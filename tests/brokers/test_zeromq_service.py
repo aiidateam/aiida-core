@@ -6,29 +6,43 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for ``aiida.brokers.zmq.service.ZmqBrokerService``."""
+"""Tests for ``aiida.brokers.zeromq.service.ZeromqBrokerService``."""
 
 from __future__ import annotations
 
 import threading
 import time
+from unittest.mock import patch
 
-from aiida.brokers.zmq.service import ZmqBrokerService
+from aiida.brokers.zeromq.service import ZeromqBrokerService, run_broker_service
 
 
-class TestZmqBrokerService:
-    """Tests for the ZmqBrokerService."""
+class TestZeromqBrokerService:
+    """Tests for the ZeromqBrokerService."""
 
     def test_init(self, tmp_path):
         """Test service initialization."""
-        service = ZmqBrokerService(base_path=tmp_path)
-        assert service.base_path == tmp_path
+        service = ZeromqBrokerService(service_dir=tmp_path)
+        assert service.service_dir == tmp_path
+        assert service.log_file == tmp_path / 'broker.log'
         assert service.pid_file == tmp_path / 'broker.pid'
         assert service.status_file == tmp_path / 'broker.status'
 
+    def test_run_broker_service_configures_logging(self, tmp_path):
+        """Test ``run_broker_service`` configures persistent broker logging."""
+        with (
+            patch('aiida.brokers.zeromq.service.configure_logging') as mock_configure_logging,
+            patch.object(ZeromqBrokerService, 'run_forever') as mock_run_forever,
+        ):
+            run_broker_service(service_dir=tmp_path)
+
+        mock_configure_logging.assert_called_once_with(daemon=True, daemon_log_file=tmp_path / 'broker.log')
+        mock_run_forever.assert_called_once_with()
+        assert tmp_path.is_dir()
+
     def test_start_stop(self, tmp_path):
         """Test starting and stopping the service."""
-        service = ZmqBrokerService(base_path=tmp_path)
+        service = ZeromqBrokerService(service_dir=tmp_path)
         service.start()
 
         try:
@@ -42,7 +56,7 @@ class TestZmqBrokerService:
 
     def test_start_idempotent(self, tmp_path):
         """Test start is idempotent."""
-        service = ZmqBrokerService(base_path=tmp_path)
+        service = ZeromqBrokerService(service_dir=tmp_path)
         service.start()
         try:
             service.start()  # should be no-op
@@ -52,7 +66,7 @@ class TestZmqBrokerService:
 
     def test_stop_idempotent(self, tmp_path):
         """Test stop when not running is no-op."""
-        service = ZmqBrokerService(base_path=tmp_path)
+        service = ZeromqBrokerService(service_dir=tmp_path)
         service.stop()  # should not raise
 
     def test_orphaned_sockets_cleanup(self, tmp_path):
@@ -62,7 +76,7 @@ class TestZmqBrokerService:
         old_sockets.mkdir()
         sockets_file.write_text(str(old_sockets))
 
-        service = ZmqBrokerService(base_path=tmp_path)
+        service = ZeromqBrokerService(service_dir=tmp_path)
         service.start()
         try:
             assert not old_sockets.exists()
@@ -71,7 +85,7 @@ class TestZmqBrokerService:
 
     def test_run_forever_with_early_stop(self, tmp_path):
         """Test run_forever exits when _running is set to False."""
-        service = ZmqBrokerService(base_path=tmp_path)
+        service = ZeromqBrokerService(service_dir=tmp_path)
 
         def stop_after_delay():
             time.sleep(0.5)

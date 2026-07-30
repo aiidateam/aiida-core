@@ -78,9 +78,9 @@ class Runner:
         :param persister: the persister to use to persist processes
 
         """
-        assert not (
-            broker_submit and persister is None
-        ), 'Must supply a persister if you want to submit using communicator'
+        assert not (broker_submit and persister is None), (
+            'Must supply a persister if you want to submit using communicator'
+        )
 
         self._loop = loop if loop else get_or_create_event_loop()
         self._poll_interval = poll_interval

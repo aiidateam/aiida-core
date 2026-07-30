@@ -200,7 +200,7 @@ class BaseTranslator:
         ## Validate input
         if not isinstance(orders, dict):
             raise InputValidationError(
-                'orders has to be a dictionary' "compatible with the 'order_by' section" 'of the query_help'
+                "orders has to be a dictionarycompatible with the 'order_by' sectionof the query_help"
             )
 
         ## Auxiliary_function to get the ordering cryterion
@@ -461,9 +461,9 @@ class BaseTranslator:
             raise RestInputValidationError('More than one node found. Provide longer starting pattern for id.')
         except NotExistent:
             raise RestInputValidationError(
-                "either no object's id starts"
-                " with '{}' or the corresponding object"
-                ' is not of type aiida.orm.{}'.format(node_id, self._aiida_type)
+                "either no object's id starts with '{}' or the corresponding object is not of type aiida.orm.{}".format(
+                    node_id, self._aiida_type
+                )
             )
         else:
             # create a permanent filter

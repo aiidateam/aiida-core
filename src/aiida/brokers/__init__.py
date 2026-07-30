@@ -6,12 +6,12 @@
 
 from .broker import *
 from .rabbitmq import *
-from .zmq import *
+from .zeromq import *
 
 __all__ = (
     'Broker',
     'RabbitmqBroker',
-    'ZmqBroker',
+    'ZeromqBroker',
 )
 
 # fmt: on

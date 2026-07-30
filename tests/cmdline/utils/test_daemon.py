@@ -8,11 +8,14 @@
 ###########################################################################
 """Unit tests for ``aiida.cmdline.utils.daemon`` formatter helpers."""
 
+from unittest.mock import patch
+
 import pytest
 
 from aiida.cmdline.utils.daemon import (
     format_package_state_change_lines,
     format_package_version_info,
+    validate_python_binary,
 )
 
 
@@ -114,3 +117,22 @@ def test_format_package_state_change_lines_editable_path_disappears(tmp_path):
     current = {'aiida-core': {'version': '2.8.0'}}
     expected = [f'Changed packages: aiida-core (2.8.0 @ {tmp_path} -> 2.8.0)']
     assert format_package_state_change_lines(daemon, current) == expected
+
+
+def test_validate_python_binary_match():
+    """No error when binaries match."""
+    version_info = {'packages': {}, 'python_binary': '/usr/bin/python3'}
+    with patch('aiida.cmdline.utils.daemon.sys') as mock_sys:
+        mock_sys.executable = '/usr/bin/python3'
+        assert validate_python_binary(version_info) is None
+
+
+def test_validate_python_binary_mismatch():
+    """Error message is returned when binaries differ."""
+    version_info = {'packages': {}, 'python_binary': '/old/venv/bin/python'}
+    with patch('aiida.cmdline.utils.daemon.sys') as mock_sys:
+        mock_sys.executable = '/new/venv/bin/python'
+        error = validate_python_binary(version_info)
+    assert 'different Python binary' in error
+    assert '/old/venv/bin/python' in error
+    assert '/new/venv/bin/python' in error

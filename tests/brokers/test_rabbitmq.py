@@ -8,8 +8,10 @@
 ###########################################################################
 """Tests for the `aiida.brokers.rabbitmq` module."""
 
+import logging
 import pathlib
 import uuid
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -31,35 +33,94 @@ def test_str_method(monkeypatch, manager):
         raise ConnectionError
 
     broker = manager.get_broker()
-    assert 'RabbitMQ v' in str(broker)
+    unsafe_url = broker.get_url()
+    broker_string = str(broker)
+    assert 'RabbitMQ v' in broker_string
+    assert ':***@' in broker_string
+    assert unsafe_url not in broker_string
 
     monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
-    assert 'RabbitMQ @' in str(broker)
+    broker_string = str(broker)
+    assert 'RabbitMQ @' in broker_string
+    assert ':***@' in broker_string
+    assert unsafe_url not in broker_string
 
 
-def test_del_closes_broker_when_not_finalizing(aiida_profile, monkeypatch):
+def test_get_service_status(monkeypatch, manager):
+    """Test RabbitMQ service status is derived from server properties."""
+    broker = manager.get_broker()
+    communicator = MagicMock(server_properties={'product': b'RabbitMQ', 'version': '3.12.0'})
+    monkeypatch.setattr(broker, 'get_communicator', lambda: communicator)
+
+    assert broker.get_service_status() == {'product': 'RabbitMQ', 'version': '3.12.0'}
+
+
+def test_is_service_reachable(monkeypatch, manager):
+    """Test RabbitMQ service reachability checks open and close a fresh communicator."""
+    broker = manager.get_broker()
+    communicator = MagicMock()
+    close = MagicMock()
+    monkeypatch.setattr(broker, 'get_communicator', lambda: communicator)
+    monkeypatch.setattr(broker, 'close', close)
+
+    assert broker.is_service_reachable() is True
+    close.assert_called_once_with()
+
+
+def test_is_service_reachable_false(monkeypatch, manager):
+    """Test RabbitMQ service reachability returns false on connection errors."""
+    broker = manager.get_broker()
+    close = MagicMock()
+
+    def raise_connection_error():
+        raise ConnectionError
+
+    monkeypatch.setattr(broker, 'get_communicator', raise_connection_error)
+    monkeypatch.setattr(broker, 'close', close)
+
+    assert broker.is_service_reachable() is False
+    close.assert_called_once_with()
+
+
+def test_del_closes_broker_when_not_finalizing(aiida_profile, monkeypatch, caplog):
     """Test `__del__` closes the broker when Python is not finalizing."""
     broker = RabbitmqBroker(aiida_profile)
     broker._communicator = MagicMock()
     close = MagicMock()
     monkeypatch.setattr(broker, 'close', close)
 
-    with pytest.warns(ResourceWarning, match='RabbitmqBroker was not closed explicitly'):
+    with caplog.at_level(logging.WARNING, logger='aiida.broker.rabbitmq'):
         broker.__del__()
+
+    # Note: we do an in assert because it might be that a broker instance of a
+    # previous test got deleted during the log capture
+    assert (
+        'aiida.broker.rabbitmq',
+        logging.WARNING,
+        f'RabbitmqBroker {broker!r} was not closed explicitly.',
+    ) in caplog.record_tuples
 
     close.assert_called_once_with()
 
 
-def test_del_skips_close_when_finalizing(aiida_profile, monkeypatch):
-    """Test ``__del__`` skips close when Python is finalizing."""
+def test_del_logs_but_skips_close_when_finalizing(aiida_profile, monkeypatch, caplog):
+    """Test ``__del__`` logs but skips close when Python is finalizing."""
     broker = RabbitmqBroker(aiida_profile)
-    broker._communicator = MagicMock()
     close = MagicMock()
+    broker._communicator = MagicMock()
     monkeypatch.setattr(broker, 'close', close)
     monkeypatch.setattr('sys.is_finalizing', lambda: True)
 
-    with pytest.warns(ResourceWarning, match='RabbitmqBroker was not closed explicitly'):
+    with caplog.at_level(logging.WARNING, logger='aiida.broker.rabbitmq'):
         broker.__del__()
+
+    # Note: we do an in assert because it might be that a broker instance of a
+    # previous test got deleted during the log capture
+    assert (
+        'aiida.broker.rabbitmq',
+        logging.WARNING,
+        f'RabbitmqBroker {broker!r} was not closed explicitly.',
+    ) in caplog.record_tuples
 
     close.assert_not_called()
 
@@ -109,6 +170,28 @@ def test_get_rmq_url(args, kwargs, expected):
     else:
         with pytest.raises(expected):
             utils.get_rmq_url(*args, **kwargs)
+
+
+def test_get_rmq_url_quotes_credentials():
+    """Test RabbitMQ URLs quote reserved characters in credentials."""
+    url = utils.get_rmq_url(username='user/name', password='pass?word#fragment')
+
+    assert url.startswith('amqp://user%2Fname:pass%3Fword%23fragment@127.0.0.1:5672?')
+
+
+def test_get_url_safe_quotes_then_redacts_credentials():
+    """Test safe broker URLs redact credentials after quoting reserved characters."""
+    profile = SimpleNamespace(
+        uuid='uuid',
+        is_test_profile=False,
+        process_control_config={
+            'broker_username': 'user/name',
+            'broker_password': 'pass?word#fragment',
+        },
+    )
+    broker = RabbitmqBroker(profile)
+
+    assert broker.get_url(safe=True).startswith('amqp://user%2Fname:***@127.0.0.1:5672?')
 
 
 @pytest.mark.parametrize('url', ('amqp://guest:guest@127.0.0.1:5672',))

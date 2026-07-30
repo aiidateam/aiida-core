@@ -65,7 +65,7 @@ def test_merge_deprecated_yaml(tmp_path):
             .parent.joinpath('configuration/migrations/test_samples/reference/6.json')
             .read_text(encoding='utf-8')
         )
-        config_dictionary['profiles']['default']['storage']['config']['repository_uri'] = f"file:///{tmp_path/'repo'}"
+        config_dictionary['profiles']['default']['storage']['config']['repository_uri'] = f'file:///{tmp_path / "repo"}'
         cache_dictionary = {
             'default': {
                 'default': True,

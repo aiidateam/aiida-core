@@ -176,10 +176,10 @@ def validate_link(
 
     type_source, type_target, outdegree, indegree = link_mapping[link_type]
 
-    if not isinstance(source, type_source) or not isinstance(target, type_target):
+    if not isinstance(source, type_source) or not isinstance(target, type_target):  # type: ignore[unreachable]
         raise ValueError(f'cannot add a {link_type} link from {type(source)} to {type(target)}')
 
-    if outdegree == 'unique_triple' or indegree == 'unique_triple':
+    if outdegree == 'unique_triple' or indegree == 'unique_triple':  # type: ignore[unreachable]
         # For a `unique_triple` degree we just have to check if an identical triple already exist, either in the cache
         # or stored, in which case, the new proposed link is a duplicate and thus illegal
         duplicate_link_triple = link_triple_exists(source, target, link_type, link_label, backend)

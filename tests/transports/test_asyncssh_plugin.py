@@ -147,9 +147,9 @@ class TestSemaphoreBehavior:
         tasks = [transport.exec_command_wait_async(f'cmd{i}') for i in range(5)]
         await asyncio.gather(*tasks)
 
-        assert (
-            max_concurrent <= max_allowed
-        ), f'Semaphore should limit to {max_allowed} concurrent ops, got {max_concurrent}'
+        assert max_concurrent <= max_allowed, (
+            f'Semaphore should limit to {max_allowed} concurrent ops, got {max_concurrent}'
+        )
         assert max_concurrent == max_allowed, f'Expected {max_allowed} concurrent ops to verify semaphore is being used'
 
 

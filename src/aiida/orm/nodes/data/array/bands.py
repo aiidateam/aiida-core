@@ -133,7 +133,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                     ]
                 )
             ]
-            number_electrons = int(round(sum(sum(i) for i in occupations) / num_kpoints))
+            number_electrons = round(sum(sum(i) for i in occupations) / num_kpoints)
 
             homo_indexes = [numpy.where(numpy.array([nint(_) for _ in x]) > 0)[0][-1] for x in occupations]
             if len(set(homo_indexes)) > 1:  # there must be intersections of valence and conduction bands

@@ -285,7 +285,7 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         non_existing_keys = [key for key in keys if key not in self.model.attributes]
 
         if non_existing_keys:
-            raise AttributeError(f"attributes `{', '.join(non_existing_keys)}` do not exist")
+            raise AttributeError(f'attributes `{", ".join(non_existing_keys)}` do not exist')
 
         for key in keys:
             self.bare_model.attributes.pop(key)

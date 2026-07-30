@@ -19,6 +19,7 @@ import dataclasses
 import logging
 import os
 import pathlib
+import shutil
 import signal
 import subprocess
 import sys
@@ -26,13 +27,16 @@ import time
 import types
 import typing as t
 import warnings
+from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import click
 import pytest
 
 from aiida import get_profile, orm
+from aiida.brokers import ZeromqBroker
 from aiida.common.folders import Folder
 from aiida.common.links import LinkType
 from aiida.manage import get_manager
@@ -63,65 +67,80 @@ class TestBrokerBackend(Enum):
     """Options for the '--broker-backend' CLI argument when running pytest."""
 
     RMQ = 'rmq'
-    ZMQ = 'zmq'
+    ZEROMQ = 'zmq'
     NONE = 'none'
 
 
-def start_zmq_broker(broker, timeout: float = 10.0):
-    """Start a ZMQ broker service subprocess for testing.
+@contextmanager
+def _patch_zmq_broker_service_filepaths(profile, service_dir: Path):
+    """Patch only the ZeroMQ broker-service filepaths for a test profile."""
+    config = get_config()
+    original_filepaths = config.filepaths
 
-    :param broker: A ``ZmqBroker`` instance (has ``base_path``, ``is_running``, etc.)
-    """
-    broker.base_path.mkdir(parents=True, exist_ok=True)
+    def filepaths(current_profile):
+        result = copy.deepcopy(original_filepaths(current_profile))
 
-    if broker.is_running:
-        return
+        if current_profile is profile:
+            result['zmq_broker_service'] = {'dir': str(service_dir), 'log': str(service_dir / 'broker.log')}
 
-    subprocess.Popen(
-        [sys.executable, '-m', 'aiida.brokers.zmq.service', '--base-path', str(broker.base_path)],
+        return result
+
+    with patch.object(config, 'filepaths', side_effect=filepaths):
+        yield
+
+
+@pytest.fixture
+def zeromq_broker(tmp_path):
+    """Create a ZMQ broker instance rooted in ``tmp_path``."""
+    profile = MagicMock()
+    profile.process_control_config = {'supervised_by_daemon': True}
+    profile.name = 'test-profile'
+
+    with _patch_zmq_broker_service_filepaths(profile, tmp_path):
+        yield ZeromqBroker(profile)
+
+
+@contextmanager
+def _run_zeromq_broker_server(zeromq_broker: ZeromqBroker, timeout: float = 10.0):
+    """Run a ZeroMQ broker service subprocess for the duration of a context."""
+    if zeromq_broker.is_service_reachable():
+        raise ValueError('Broker server already running')
+
+    zeromq_broker.service_dir.mkdir(parents=True, exist_ok=True)
+
+    process = subprocess.Popen(
+        [sys.executable, '-m', 'aiida.brokers.zeromq.service', '--service-dir', str(zeromq_broker.service_dir)],
         start_new_session=True,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         stdin=subprocess.DEVNULL,
     )
 
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        if broker.is_running:
-            return
-        time.sleep(0.1)
-
-    raise TimeoutError(f'ZMQ broker did not start within {timeout}s')
-
-
-def stop_zmq_broker(broker, timeout: float = 5.0):
-    """Stop a ZMQ broker service subprocess for testing.
-
-    :param broker: A ``ZmqBroker`` instance
-    """
-    pid = broker.get_service_pid()
-    if pid is None or not broker.is_running:
-        broker._cleanup_stale_service_files()
-        return
-
     try:
-        os.kill(pid, signal.SIGINT)
-    except OSError:
-        broker._cleanup_stale_service_files()
-        return
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            if process.poll() is not None:
+                msg = f'ZeroMQ broker exited before becoming ready with code {process.returncode}'
+                raise RuntimeError(msg)
+            if zeromq_broker.is_service_reachable():
+                break
+            time.sleep(0.1)
+        else:
+            msg = f'ZeroMQ broker did not become ready within {timeout}s'
+            raise TimeoutError(msg)
 
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        if not broker.is_running:
-            broker._cleanup_stale_service_files()
-            return
-        time.sleep(0.1)
-
-    try:
-        os.kill(pid, signal.SIGKILL)
-    except OSError:
-        pass
-    broker._cleanup_stale_service_files()
+        yield process
+    finally:
+        try:
+            if process.poll() is None:
+                process.send_signal(signal.SIGINT)
+                try:
+                    process.wait(timeout=timeout)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
+        finally:
+            shutil.rmtree(zeromq_broker.service_dir, ignore_errors=True)
 
 
 def pytest_collection_modifyitems(items, config):
@@ -129,7 +148,7 @@ def pytest_collection_modifyitems(items, config):
 
     Most notably, we add the 'presto' marker for all tests that
     are not marked with requires_rmq, requires_psql, or nightly.
-    Tests marked requires_broker are included in presto since ZMQ
+    Tests marked requires_broker are included in presto since ZeroMQ
     broker is available without external services.
     """
     filepath_psqldos = Path(__file__).parent / 'storage' / 'psql_dos'
@@ -147,9 +166,9 @@ def pytest_collection_modifyitems(items, config):
     # Handle broker backend selection
     broker_backend = config.option.broker_backend
 
-    # If using ZMQ, skip tests that specifically require RabbitMQ (requires_rmq marker)
+    # If using ZeroMQ, skip tests that specifically require RabbitMQ (requires_rmq marker)
     # but allow tests with requires_broker marker (they work with any broker)
-    if broker_backend is TestBrokerBackend.ZMQ:
+    if broker_backend is TestBrokerBackend.ZEROMQ:
         if config.option.markexpr != '':
             config.option.markexpr += ' and (not requires_rmq)'
         else:
@@ -169,7 +188,7 @@ def pytest_collection_modifyitems(items, config):
         if filepath_item.is_relative_to(filepath_django) or filepath_item.is_relative_to(filepath_sqla):
             item.add_marker('nightly')
 
-        # Add 'requires_broker' for tests that depend on 'daemon_client' fixture (works with RMQ or ZMQ)
+        # Add 'requires_broker' for tests that depend on 'daemon_client' fixture (works with RMQ or ZeroMQ)
         if 'daemon_client' in item.fixturenames:
             item.add_marker('requires_broker')
 
@@ -178,7 +197,7 @@ def pytest_collection_modifyitems(items, config):
             item.add_marker('requires_psql')
 
         # Add 'presto' marker to tests that don't need external services.
-        # Tests with requires_broker ARE included (ZMQ broker needs no external service).
+        # Tests with requires_broker ARE included (ZeroMQ broker needs no external service).
         # Tests with requires_rmq, requires_psql, or nightly are excluded.
         markers = [marker.name for marker in item.iter_markers()]
         if 'requires_rmq' not in markers and 'requires_psql' not in markers and 'nightly' not in markers:
@@ -294,12 +313,12 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
 
     # Determine broker based on CLI option and markers
     if 'presto' in marker_opts:
-        # Presto tests use ZMQ broker (no external service required)
-        broker = 'core.zmq'
+        # Presto tests use ZeroMQ broker (no external service required)
+        broker = 'core.zeromq'
     elif broker_backend is TestBrokerBackend.RMQ:
         broker = 'core.rabbitmq'
-    elif broker_backend is TestBrokerBackend.ZMQ:
-        broker = 'core.zmq'
+    elif broker_backend is TestBrokerBackend.ZEROMQ:
+        broker = 'core.zeromq'
     else:  # TestBrokerBackend.NONE
         broker = None
 
@@ -316,14 +335,11 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
     with aiida_profile_factory(
         aiida_config, storage_backend=storage, storage_config=config, broker_backend=broker
     ) as profile:
-        # Start ZMQ broker service if needed (tests don't use circus)
+        # Start ZeroMQ broker service if needed (tests don't use circus)
         broker_instance = get_manager().get_broker()
-        if broker_instance is not None and hasattr(broker_instance, 'is_running'):
-            start_zmq_broker(broker_instance)
-            try:
+        if isinstance(broker_instance, ZeromqBroker):
+            with _run_zeromq_broker_server(broker_instance):
                 yield profile
-            finally:
-                stop_zmq_broker(broker_instance)
         else:
             yield profile
 
@@ -719,19 +735,20 @@ def default_user():
 def override_logging(isolated_config):
     """Temporarily override the log level for the AiiDA logger and the database log handler to ``DEBUG``.
 
-    The changes are made by changing the configuration options ``logging.aiida_loglevel`` and ``logging.db_loglevel``.
-    To ensure the changes are temporary, the are made on an isolated temporary configuration.
+    The changes are made by changing the configuration options ``logging.aiida_loglevel`` and
+    ``logging.database_handler``. To ensure the changes are temporary, they are made on an isolated
+    temporary configuration.
     """
     from aiida.common.log import configure_logging
 
     try:
         isolated_config.set_option('logging.aiida_loglevel', 'DEBUG')
-        isolated_config.set_option('logging.db_loglevel', 'DEBUG')
+        isolated_config.set_option('logging.database_handler', 'DEBUG')
         configure_logging(with_orm=True)
         yield
     finally:
         isolated_config.unset_option('logging.aiida_loglevel')
-        isolated_config.unset_option('logging.db_loglevel')
+        isolated_config.unset_option('logging.database_handler')
         configure_logging(with_orm=True)
 
 

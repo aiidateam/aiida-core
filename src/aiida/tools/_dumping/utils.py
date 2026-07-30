@@ -53,7 +53,7 @@ logger = AIIDA_LOGGER.getChild('tools._dumping.utils')
 class DumpTimes:
     """Holds relevant timestamps for a dump operation."""
 
-    current: datetime = field(default_factory=lambda: timezone.now())
+    current: datetime = field(default_factory=timezone.now)
     last: Optional[datetime] = None
 
     @classmethod

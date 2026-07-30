@@ -369,7 +369,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         self, alias: AliasedClass, field_key: str, entityspec: dict
     ) -> Union[ColumnElement, InstrumentedAttribute]:
         """Build the order_by parameter of the query."""
-        column_name = field_key.split('.')[0]
+        column_name = field_key.split('.', maxsplit=1)[0]
         attrpath = field_key.split('.')[1:]
         if attrpath and 'cast' not in entityspec.keys():
             # JSONB fields ar delimited by '.' must be cast
@@ -1166,7 +1166,7 @@ def _get_projection(
 
     :return: The projection
     """
-    column_name = projectable_entity_name.split('.')[0]
+    column_name = projectable_entity_name.split('.', maxsplit=1)[0]
     attr_key = projectable_entity_name.split('.')[1:]
 
     if column_name == '*':

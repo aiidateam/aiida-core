@@ -202,7 +202,7 @@ class AsyncSshTransport(AsyncTransport):
         self._is_open = False
 
     def __str__(self):
-        return f"{'OPEN' if self._is_open else 'CLOSED'} [AsyncSshTransport]"
+        return f'{"OPEN" if self._is_open else "CLOSED"} [AsyncSshTransport]'
 
     async def get_async(
         self,
@@ -841,7 +841,7 @@ class AsyncSshTransport(AsyncTransport):
                 self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing tar. Exit code: {}, stdout: '{}', " "stderr: '{}', command: '{}'".format(
+                "Problem executing tar. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
                     retval, stdout, stderr, tar_command
                 )
             )

@@ -250,8 +250,10 @@ def test_process_kill_failing_ebm_transport(
     with fork_worker_context(monkeypatch.setattr, monkeypatch_args):
         node = submit_and_await(make_a_builder(), ProcessState.WAITING)
         await_condition(
-            lambda: node.process_status
-            == 'Pausing after failed transport task: upload_calculation failed 5 times consecutively',
+            lambda: (
+                node.process_status
+                == 'Pausing after failed transport task: upload_calculation failed 5 times consecutively'
+            ),
             timeout=kill_timeout,
         )
 
@@ -302,8 +304,9 @@ def test_process_kill_failing_ebm_kill(
         # this tests if the old task is cancelled and restarted successfully
         run_cli_command(cmd_process.process_kill, [str(node.pk)])
         await_condition(
-            lambda: 'Found active scheduler job cancelation that will be rescheduled.'
-            in get_process_function_report(node),
+            lambda: (
+                'Found active scheduler job cancelation that will be rescheduled.' in get_process_function_report(node)
+            ),
             timeout=kill_timeout,
         )
 

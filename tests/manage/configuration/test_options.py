@@ -8,10 +8,13 @@
 ###########################################################################
 """Tests for the configuration options."""
 
+import warnings
+
 import pytest
 
 from aiida import get_profile
 from aiida.common.exceptions import ConfigurationError
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.manage.configuration import get_config, get_config_option
 from aiida.manage.configuration.config import GlobalOptionsSchema
 from aiida.manage.configuration.options import Option, get_option, get_option_names, parse_option
@@ -43,6 +46,32 @@ class TestConfigurationOptions:
 
         with pytest.raises(ConfigurationError):
             parse_option('logging.aiida_loglevel', 'INVALID_LOG_LEVEL')
+
+    def test_parse_option_rejects_inherit_for_aiida_loglevel(self):
+        """Test ``logging.aiida_loglevel`` does not accept ``INHERIT``."""
+        with pytest.raises(ConfigurationError):
+            parse_option('logging.aiida_loglevel', 'INHERIT')
+
+    @pytest.mark.parametrize(
+        'option_name',
+        (
+            'logging.aiida_core_loglevel',
+            'logging.verdi_loglevel',
+            'logging.disk_objectstore_loglevel',
+            'logging.plumpy_loglevel',
+            'logging.kiwipy_loglevel',
+            'logging.paramiko_loglevel',
+            'logging.alembic_loglevel',
+            'logging.sqlalchemy_loglevel',
+            'logging.circus_loglevel',
+            'logging.aiopika_loglevel',
+        ),
+    )
+    def test_parse_option_accepts_inherit(self, option_name):
+        """Test inheriting logger options accept ``INHERIT``."""
+        option, value = parse_option(option_name, 'INHERIT')
+        assert option.name == option_name
+        assert value == 'INHERIT'
 
     def test_options(self):
         """Test that all defined options can be converted into Option namedtuples."""
@@ -86,3 +115,59 @@ class TestConfigurationOptions:
         config.set_option(option_name, option_value_global)
         option_value = get_config_option(option_name)
         assert option_value == option_value_global
+
+    def test_deprecated_option_redirects_to_replacement(self):
+        """Deprecated options should warn and redirect to their replacement consistently.
+
+        Regression test: the ``deprecated_by`` redirect used to be applied only on read, so setting a
+        deprecated option silently wrote to a key that nothing consulted. Reads, writes and unsets should now all
+        warn and operate on the replacement's storage through the shared redirect helper.
+        """
+        config = get_config()
+
+        # ``logging.db_loglevel`` is deprecated in favor of ``logging.database_handler``.
+        assert get_option('logging.db_loglevel').deprecated_by == 'logging.database_handler'
+
+        with pytest.warns(AiidaDeprecationWarning, match='logging.db_loglevel'):
+            config.set_option('logging.db_loglevel', 'DEBUG')
+
+        # The value should have been written to, and be readable from, the replacement option.
+        with pytest.warns(AiidaDeprecationWarning, match='logging.db_loglevel'):
+            assert get_config_option('logging.db_loglevel') == 'DEBUG'
+
+        # Unsetting the deprecated option should likewise clear the replacement.
+        with pytest.warns(AiidaDeprecationWarning, match='logging.db_loglevel'):
+            config.unset_option('logging.db_loglevel')
+
+        assert get_config_option('logging.database_handler') == get_option('logging.database_handler').default
+
+    def test_deprecated_option_redirect_respects_showdeprecations(self, monkeypatch):
+        """Deprecated option redirects should respect ``warnings.showdeprecations``."""
+        # ``warn_deprecation`` also honors the ``AIIDA_WARN_v3`` environment variable, which is set in CI. Remove it
+        # here so the test exercises the ``warnings.showdeprecations`` config option in isolation.
+        monkeypatch.delenv('AIIDA_WARN_v3', raising=False)
+        config = get_config()
+        config.set_option('warnings.showdeprecations', False)
+
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            warnings.simplefilter('always')
+            assert get_config_option('logging.db_loglevel') == get_config_option('logging.database_handler')
+
+        assert not any(isinstance(warning.message, AiidaDeprecationWarning) for warning in caught_warnings)
+
+
+@pytest.mark.presto
+def test_option_advanced_property():
+    """Test that ``Option.advanced`` defaults to False when not explicitly set."""
+    assert get_option('daemon.timeout').advanced is False
+    assert isinstance(get_option('daemon.timeout').advanced, bool)
+
+
+@pytest.mark.presto
+def test_option_requires_daemon_restart_property():
+    """Test that ``Option.requires_daemon_restart`` reflects the schema metadata."""
+    assert get_option('daemon.default_workers').requires_daemon_restart is True
+    assert get_option('logging.aiida_loglevel').requires_daemon_restart is True
+    assert get_option('caching.default_enabled').requires_daemon_restart is True
+    assert get_option('daemon.timeout').requires_daemon_restart is False
+    assert isinstance(get_option('daemon.timeout').requires_daemon_restart, bool)

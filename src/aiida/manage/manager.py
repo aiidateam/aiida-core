@@ -140,7 +140,7 @@ class Manager:
         # Reconfigure the logging to make sure that profile specific logging config options are taken into account.
         # Note that we do not configure with `with_orm=True` because that will force the backend to be loaded.
         # This should instead be done lazily in `Manager.get_profile_storage`.
-        configure_logging()
+        configure_logging(daemon_log_file=self.get_config().filepaths(self._profile)['profile']['log'])
 
         # Check whether a development version is being run. Note that needs to be called after ``configure_logging``
         # because this function relies on the logging being properly configured for the warning to show.
@@ -274,19 +274,10 @@ class Manager:
         :raises `aiida.common.exceptions.ConfigurationError`: if the option is not found
         """
         from aiida.common.exceptions import ConfigurationError
-        from aiida.manage.configuration.options import get_option
+        from aiida.manage.configuration.options import get_option, resolve_deprecated_option_name
 
+        option_name = resolve_deprecated_option_name(option_name)
         option = get_option(option_name)
-
-        if option.deprecated_by is not None:
-            import warnings
-
-            warnings.warn(
-                f'`{option_name}` is deprecated, use `{option.deprecated_by}` instead.',
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            option_name = option.deprecated_by
 
         # try the profile
         if self._profile and option_name in self._profile.options:
@@ -344,7 +335,7 @@ class Manager:
 
         # Reconfigure the logging with `with_orm=True` to make sure that profile specific logging configuration options
         # are taken into account and the `DbLogHandler` is configured.
-        configure_logging(with_orm=True)
+        configure_logging(daemon_log_file=self.get_config().filepaths(profile)['profile']['log'], with_orm=True)
 
         return self._profile_storage
 
@@ -368,8 +359,8 @@ class Manager:
             # Backwards compatibility. Before adding broker entry points, profiles used to define ``rabbitmq``.
             if entry_point == 'rabbitmq':
                 entry_point = 'core.rabbitmq'
-            elif entry_point == 'zmq':
-                entry_point = 'core.zmq'
+            elif entry_point == 'zeromq':
+                entry_point = 'core.zeromq'
 
             broker_cls = BrokerFactory(entry_point)
             self._broker = broker_cls(self._profile)
@@ -529,12 +520,12 @@ class Manager:
         return runner
 
     def check_version(self):
-        """Check the currently installed version of ``aiida-core`` and warn if it is a post release development version.
+        """Check the currently installed version of ``aiida-core`` and warn if it is a development version.
 
-        The ``aiida-core`` package maintains the protocol that the ``main`` branch will use a post release version
-        number. This means it will always append `.post0` to the version of the latest release. This should mean that if
-        this protocol is maintained properly, this method will print a warning if the currently installed version is a
-        post release development branch and not an actual release.
+        The ``aiida-core`` package maintains the protocol that the ``main`` branch carries a development version number,
+        appending `.dev0` to the version of the next anticipated release. Support branches that backport fixes on top of
+        a release use a post release number, appending `.post0`. This method prints a warning whenever the currently
+        installed version is such a development or post release and not an actual release.
         """
         from packaging.version import parse
 
@@ -546,8 +537,8 @@ class Manager:
         show_warning = self._profile.get_option('warnings.development_version')
         version = parse(__version__)
 
-        if version.is_postrelease and show_warning:
-            echo.echo_warning(f'You are currently using a post release development version of AiiDA: {version}')
+        if (version.is_prerelease or version.is_postrelease) and show_warning:
+            echo.echo_warning(f'You are currently using a development version of AiiDA: {version}')
             echo.echo_warning('Be aware that this is not recommended for production and is not officially supported.')
             echo.echo_warning('Databases used with this version may not be compatible with future releases of AiiDA')
             echo.echo_warning('as you might not be able to automatically migrate your data.\n')

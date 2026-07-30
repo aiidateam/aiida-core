@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for ``aiida.brokers.zmq.server.ZmqBrokerServer``."""
+"""Tests for ``aiida.brokers.zeromq.server.ZeromqBrokerServer``."""
 
 from __future__ import annotations
 
@@ -17,27 +17,27 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from aiida.brokers.zmq.protocol import MessageType, decode_message, encode_message
-from aiida.brokers.zmq.server import ZmqBrokerServer
+from aiida.brokers.zeromq.protocol import MessageType, decode_message, encode_message
+from aiida.brokers.zeromq.server import ZeromqBrokerServer
 
 
-class TestZmqBrokerServerInit:
-    """Tests for ZmqBrokerServer initialization and lifecycle."""
+class TestZeromqBrokerServerInit:
+    """Tests for ZeromqBrokerServer initialization and lifecycle."""
 
     def test_init(self, tmp_path):
         """Test server initialization."""
         storage_path = tmp_path / 'storage'
         sockets_path = tmp_path / 'sockets'
 
-        server = ZmqBrokerServer(storage_path=storage_path, sockets_path=sockets_path)
+        server = ZeromqBrokerServer(storage_path=storage_path, sockets_path=sockets_path)
         assert server.storage_path == storage_path
         assert server.sockets_path == sockets_path
 
     def test_start_stop(self):
         """Test starting and stopping the server."""
-        with tempfile.TemporaryDirectory(prefix='zmq') as tmp:
+        with tempfile.TemporaryDirectory(prefix='zeromq') as tmp:
             tmp_path = Path(tmp)
-            server = ZmqBrokerServer(storage_path=tmp_path / 's', sockets_path=tmp_path / 'k')
+            server = ZeromqBrokerServer(storage_path=tmp_path / 's', sockets_path=tmp_path / 'k')
             server.start()
 
             try:
@@ -49,9 +49,9 @@ class TestZmqBrokerServerInit:
 
     def test_start_idempotent(self):
         """Test start is idempotent."""
-        with tempfile.TemporaryDirectory(prefix='zmq') as tmp:
+        with tempfile.TemporaryDirectory(prefix='zeromq') as tmp:
             tmp_path = Path(tmp)
-            server = ZmqBrokerServer(storage_path=tmp_path / 's', sockets_path=tmp_path / 'k')
+            server = ZeromqBrokerServer(storage_path=tmp_path / 's', sockets_path=tmp_path / 'k')
             server.start()
             try:
                 server.start()  # should be no-op
@@ -61,19 +61,19 @@ class TestZmqBrokerServerInit:
 
     def test_stop_idempotent(self, tmp_path):
         """Test stop when not running is no-op."""
-        server = ZmqBrokerServer(storage_path=tmp_path / 's', sockets_path=tmp_path / 'k')
+        server = ZeromqBrokerServer(storage_path=tmp_path / 's', sockets_path=tmp_path / 'k')
         server.stop()  # should not raise
 
     def test_run_once_not_running(self, tmp_path):
         """Test run_once when not running returns False."""
-        server = ZmqBrokerServer(storage_path=tmp_path / 's', sockets_path=tmp_path / 'k')
+        server = ZeromqBrokerServer(storage_path=tmp_path / 's', sockets_path=tmp_path / 'k')
         assert server.run_once() is False
 
     def test_get_status(self, tmp_path):
         """Test get_status returns expected keys."""
-        with tempfile.TemporaryDirectory(prefix='zmq') as tmp:
+        with tempfile.TemporaryDirectory(prefix='zeromq') as tmp:
             tmp_path = Path(tmp)
-            server = ZmqBrokerServer(storage_path=tmp_path / 's', sockets_path=tmp_path / 'k')
+            server = ZeromqBrokerServer(storage_path=tmp_path / 's', sockets_path=tmp_path / 'k')
             server.start()
 
             try:
@@ -84,7 +84,7 @@ class TestZmqBrokerServerInit:
                 server.stop()
 
 
-class TestZmqBrokerServerMessageHandling:
+class TestZeromqBrokerServerMessageHandling:
     """Tests for server message handling paths.
 
     Calls handler methods directly to test dispatch logic without real sockets.
@@ -94,7 +94,7 @@ class TestZmqBrokerServerMessageHandling:
     def server(self, tmp_path):
         storage_path = tmp_path / 'storage'
         sockets_path = tmp_path / 'sockets'
-        return ZmqBrokerServer(storage_path=storage_path, sockets_path=sockets_path)
+        return ZeromqBrokerServer(storage_path=storage_path, sockets_path=sockets_path)
 
     # --- Task handling ---
 
@@ -376,14 +376,14 @@ class TestZmqBrokerServerMessageHandling:
         assert status['pending_tasks'] == 0
 
 
-class TestZmqBrokerServerWithSockets:
-    """Tests using a real running server with ZMQ sockets."""
+class TestZeromqBrokerServerWithSockets:
+    """Tests using a real running server with ZeroMQ sockets."""
 
     @pytest.fixture
     def running_server(self):
-        with tempfile.TemporaryDirectory(prefix='zmq') as tmp:
+        with tempfile.TemporaryDirectory(prefix='zeromq') as tmp:
             tmp_path = Path(tmp)
-            server = ZmqBrokerServer(storage_path=tmp_path / 's', sockets_path=tmp_path / 'k')
+            server = ZeromqBrokerServer(storage_path=tmp_path / 's', sockets_path=tmp_path / 'k')
             server.start()
             try:
                 yield server
@@ -397,12 +397,12 @@ class TestZmqBrokerServerWithSockets:
 
     def test_handle_router_message_live(self, running_server):
         """Test sending a message through the actual ROUTER socket."""
-        import zmq as zmq_sync
+        import zmq
 
-        ctx = zmq_sync.Context()
+        ctx = zmq.Context()
         try:
-            dealer = ctx.socket(zmq_sync.DEALER)
-            dealer.setsockopt_string(zmq_sync.IDENTITY, 'test-client')
+            dealer = ctx.socket(zmq.DEALER)
+            dealer.setsockopt_string(zmq.IDENTITY, 'test-client')
             dealer.connect(running_server.router_endpoint)
             time.sleep(0.1)
 
@@ -433,8 +433,8 @@ class TestZmqBrokerServerWithSockets:
             running_server.run_once(timeout=0.5)
 
             # Worker should receive the task (poll with timeout to avoid race)
-            poller = zmq_sync.Poller()
-            poller.register(dealer, zmq_sync.POLLIN)
+            poller = zmq.Poller()
+            poller.register(dealer, zmq.POLLIN)
             socks = dict(poller.poll(timeout=2000))
             assert dealer in socks, 'Worker did not receive dispatched task'
 

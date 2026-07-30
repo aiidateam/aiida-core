@@ -213,10 +213,10 @@ class TestTransportQueue:
 
             # Verify each task got a fresh transport (no existing request in queue)
             for state in transport_states:
-                assert not state[
-                    'had_existing_request'
-                ], f"Task {state['task_id']} should not have found an existing request"
-                assert state['is_open'], f"Task {state['task_id']} transport should be open"
+                assert not state['had_existing_request'], (
+                    f'Task {state["task_id"]} should not have found an existing request'
+                )
+                assert state['is_open'], f'Task {state["task_id"]} transport should be open'
 
         finally:
             transport_class._DEFAULT_SAFE_OPEN_INTERVAL = original_interval

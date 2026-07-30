@@ -9,6 +9,7 @@
 """Tests for the :mod:`aiida.cmdline.utils.log` module."""
 
 import logging
+from io import StringIO
 
 from aiida.cmdline.utils import log
 
@@ -53,3 +54,18 @@ def test_cli_formatter_prefix():
     record = logging.LogRecord('name', logging.INFO, 'pathname', 0, 'Some %s', ('value',), None)
     record.prefix = True
     assert log.CliFormatter().format(record) == '\x1b[34m\x1b[1mInfo\x1b[0m: Some value'
+
+
+def test_cli_handler_emit_when_globals_are_finalized(monkeypatch):
+    """Test ``CliHandler.emit`` falls back to a plain stream write during finalization."""
+    record = logging.LogRecord('name', logging.WARNING, 'pathname', 0, 'Some %s', ('value',), None)
+    handler = log.CliHandler()
+    stream = StringIO()
+    monkeypatch.setattr(log.sys, 'is_finalizing', lambda: True)
+    monkeypatch.setattr(log.sys, '__stdout__', stream)
+    monkeypatch.setattr(log, 'sys', None)
+    monkeypatch.setattr(log, 'click', None)
+
+    handler.emit(record)
+
+    assert stream.getvalue() == 'Warning: Some value\n'

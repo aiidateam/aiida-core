@@ -15,6 +15,7 @@ import enum
 import json
 import os
 import pathlib
+import shlex
 import shutil
 import socket
 import subprocess
@@ -38,6 +39,8 @@ from aiida.manage.manager import get_manager
 if TYPE_CHECKING:
     from circus.client import CircusClient
 
+    from aiida.manage.configuration.config import CircusEndpointFilepaths, CircusEndpointName
+
 LOGGER = AIIDA_LOGGER.getChild('engine.daemon.client')
 
 VERDI_BIN = shutil.which('verdi')
@@ -60,6 +63,13 @@ class PackageVersionInfo(_PackageVersionInfoRequired, total=False):
 
 
 PackageVersionSnapshot: t.TypeAlias = dict[str, PackageVersionInfo]
+
+
+class DaemonEnvInfo(t.TypedDict):
+    """Content written to the daemon version file."""
+
+    packages: PackageVersionSnapshot
+    python_binary: str
 
 
 class _VcsInfo(t.TypedDict, total=False):
@@ -275,9 +285,32 @@ class DaemonClient:
         return [self._verdi_bin, '-p', self.profile.name, 'daemon', 'worker']
 
     @property
-    def cmd_start_broker(self) -> list[str]:
-        """Return the command to start the ZMQ broker server process."""
-        return [self._verdi_bin, '-p', self.profile.name, 'daemon', 'broker']
+    def zmq_broker_service_dir(self) -> str:
+        """Return the directory for the ZMQ broker service files, derived from the settings.
+
+        The daemon manages the broker service and therefore determines where the service writes its state files.
+        """
+        return self._config.filepaths(self.profile)['zmq_broker_service']['dir']
+
+    @property
+    def zmq_broker_service_log_file(self) -> str:
+        """Return the log file of the ZMQ broker service, derived from the settings."""
+        return self._config.filepaths(self.profile)['zmq_broker_service']['log']
+
+    @property
+    def _cmd_start_zmq_broker(self) -> list[str]:
+        """Return the command to start the ZMQ broker service process."""
+        return [
+            self._verdi_bin,
+            '-p',
+            self.profile.name,
+            'daemon',
+            'broker',
+            '--service-dir',
+            shlex.quote(self.zmq_broker_service_dir),
+            '--log-file-path',
+            shlex.quote(self.zmq_broker_service_log_file),
+        ]
 
     @property
     def loglevel(self) -> str:
@@ -304,8 +337,13 @@ class DaemonClient:
         return self._config.filepaths(self.profile)['circus']['socket']['file']
 
     @property
-    def circus_socket_endpoints(self) -> dict[str, str]:
-        return self._config.filepaths(self.profile)['circus']['socket']
+    def circus_socket_endpoints(self) -> 'CircusEndpointFilepaths':
+        socket_filepaths = self._config.filepaths(self.profile)['circus']['socket']
+        return {
+            'controller': socket_filepaths['controller'],
+            'pubsub': socket_filepaths['pubsub'],
+            'stats': socket_filepaths['stats'],
+        }
 
     @property
     def daemon_log_file(self) -> str:
@@ -316,11 +354,11 @@ class DaemonClient:
         return self._config.filepaths(self.profile)['daemon']['pid']
 
     @property
-    def daemon_package_snapshot_file(self) -> str:
+    def daemon_env_info_file(self) -> str:
         try:
-            return self._config.filepaths(self.profile)['daemon']['package_snapshot']
+            return self._config.filepaths(self.profile)['daemon']['daemon_env_info']
         except KeyError as exc:
-            raise ConfigurationError('daemon package snapshot file path is not configured') from exc
+            raise ConfigurationError('daemon env info file path is not configured') from exc
 
     def get_circus_port(self) -> int:
         """Retrieve the port for the circus controller, which should be written to the circus port file.
@@ -497,7 +535,7 @@ class DaemonClient:
 
         return endpoint
 
-    def get_ipc_endpoint(self, endpoint):
+    def get_ipc_endpoint(self, endpoint: 'CircusEndpointName'):
         """Get the ipc endpoint string for a circus daemon endpoint for a given socket.
 
         :param endpoint: The circus endpoint for which to return a socket.
@@ -506,9 +544,9 @@ class DaemonClient:
         filepath = self.get_circus_socket_directory()
         filename = self.circus_socket_endpoints[endpoint]
         template = 'ipc://{filepath}/{filename}'
-        endpoint = template.format(filepath=filepath, filename=filename)
+        endpoint_string = template.format(filepath=filepath, filename=filename)
 
-        return endpoint
+        return endpoint_string
 
     def get_tcp_endpoint(self, port=None):
         """Get the tcp endpoint string for a circus daemon endpoint.
@@ -661,19 +699,19 @@ class DaemonClient:
     def _validate_package_version_snapshot(snapshot: t.Any) -> PackageVersionSnapshot | None:
         """Validate a structured package version snapshot."""
         if not isinstance(snapshot, dict):
-            LOGGER.warning('Daemon package snapshot file has unexpected format; ignoring.')
+            LOGGER.warning('Daemon env info file has unexpected format; ignoring.')
             return None
 
         validated: PackageVersionSnapshot = {}
 
         for package, value in snapshot.items():
             if not isinstance(package, str) or not isinstance(value, dict):
-                LOGGER.warning('Daemon package snapshot file has unexpected format; ignoring.')
+                LOGGER.warning('Daemon env info file has unexpected format; ignoring.')
                 return None
 
             version = value.get('version')
             if not isinstance(version, str):
-                LOGGER.warning('Daemon package snapshot file has unexpected format; ignoring.')
+                LOGGER.warning('Daemon env info file has unexpected format; ignoring.')
                 return None
 
             package_info: PackageVersionInfo = {'version': version}
@@ -687,22 +725,36 @@ class DaemonClient:
 
     def _write_version_file(self) -> None:
         """Write the current package version snapshot to the daemon version file."""
-        version_info = self.get_package_version_snapshot()
+        env_info: DaemonEnvInfo = {
+            'packages': self.get_package_version_snapshot(),
+            'python_binary': sys.executable,
+        }
         try:
-            pathlib.Path(self.daemon_package_snapshot_file).write_text(json.dumps(version_info), encoding='utf8')
+            pathlib.Path(self.daemon_env_info_file).write_text(json.dumps(env_info), encoding='utf8')
         except ConfigurationError:
             LOGGER.debug('Cannot write daemon version file: version file path is not configured.')
         except OSError as exc:
             LOGGER.warning('Failed to write daemon version file: %s', exc)
 
-    def get_daemon_package_snapshot(self) -> PackageVersionSnapshot | None:
-        """Return version info recorded at daemon startup, or None if unavailable."""
+    def get_daemon_env_info(self) -> DaemonEnvInfo | None:
+        """Read and validate the daemon version file, or return None if unavailable or invalid."""
         try:
-            data = json.loads(pathlib.Path(self.daemon_package_snapshot_file).read_text(encoding='utf8'))
+            data = json.loads(pathlib.Path(self.daemon_env_info_file).read_text(encoding='utf8'))
         except (ConfigurationError, OSError, json.JSONDecodeError):
             return None
 
-        return self._validate_package_version_snapshot(data)
+        if not isinstance(data, dict):
+            return None
+
+        packages = self._validate_package_version_snapshot(data.get('packages'))
+        if packages is None:
+            return None
+
+        python_binary = data.get('python_binary')
+        if not isinstance(python_binary, str):
+            return None
+
+        return DaemonEnvInfo(packages=packages, python_binary=python_binary)
 
     def increase_workers(self, number: int, timeout: int | None = None) -> dict[str, t.Any]:
         """Increase the number of workers.
@@ -801,7 +853,7 @@ class DaemonClient:
 
         # Best-effort cleanup of version file
         try:
-            pathlib.Path(self.daemon_package_snapshot_file).unlink(missing_ok=True)
+            pathlib.Path(self.daemon_env_info_file).unlink(missing_ok=True)
         except ConfigurationError:
             LOGGER.debug('Cannot remove daemon version file: version file path is not configured.')
         except OSError as exc:
@@ -921,32 +973,37 @@ class DaemonClient:
 
         watchers = []
 
-        # Start ZMQ broker before workers so its sockets are ready when workers connect.
+        # Start ZeroMQ broker before workers so its sockets are ready when workers connect.
         # Skip if a broker is already running (e.g. started by the test fixture).
-        if self.profile.process_control_backend == 'core.zmq':
-            from aiida.manage.manager import get_manager
+        from aiida.brokers.zeromq import ZeromqBroker
+        from aiida.manage.manager import get_manager
 
-            broker_instance = get_manager().get_broker()
-            broker_already_running = (
-                broker_instance is not None and hasattr(broker_instance, 'is_running') and broker_instance.is_running
-            )
+        supervised_by_daemon = self.profile.process_control_config.get('supervised_by_daemon', True)
+        if self.profile.process_control_backend == 'core.zeromq' and supervised_by_daemon:
+            try:
+                broker_instance = get_manager().get_broker()
+            except Exception:
+                LOGGER.warning('Could not load the broker instance while preparing daemon watchers.', exc_info=True)
+                broker_instance = None
+            if isinstance(broker_instance, ZeromqBroker) and not broker_instance.is_service_reachable():
+                # prepare zmq broker service profile directory
+                pathlib.Path(self.zmq_broker_service_dir).mkdir(parents=True, exist_ok=True)
 
-            if not broker_already_running:
                 watchers.append(
                     {
-                        'cmd': ' '.join(self.cmd_start_broker),
-                        'name': f'{self.daemon_name}-broker',
+                        'cmd': ' '.join(self._cmd_start_zmq_broker),
+                        'name': f'{self.daemon_name}-zmq-broker-service',
                         'numprocesses': 1,
                         'virtualenv': self.virtualenv,
                         'copy_env': True,
                         'stdout_stream': {
                             'class': 'FileStream',
-                            'filename': self.daemon_log_file,
+                            'filename': self.zmq_broker_service_log_file,
                             'time_format': '%Y-%m-%d %H:%M:%S',
                         },
                         'stderr_stream': {
                             'class': 'FileStream',
-                            'filename': self.daemon_log_file,
+                            'filename': self.zmq_broker_service_log_file,
                             'time_format': '%Y-%m-%d %H:%M:%S',
                         },
                         'env': self.get_env(),

@@ -471,9 +471,9 @@ class QueryBuilder:
                     )
                 if joining_keyword:
                     raise ValueError(
-                        'You already specified joining specification {}\n'
-                        'But you now also want to specify {}'
-                        ''.format(joining_keyword, key)
+                        'You already specified joining specification {}\nBut you now also want to specify {}'.format(
+                            joining_keyword, key
+                        )
                     )
 
                 joining_keyword = key
@@ -664,17 +664,16 @@ class QueryBuilder:
                             this_order_spec = orderspec
                         else:
                             raise TypeError(
-                                'I was expecting a string or a dictionary\n' 'You provided {} {}\n' ''.format(
+                                'I was expecting a string or a dictionary\nYou provided {} {}\n'.format(
                                     type(orderspec), orderspec
                                 )
                             )
                         for key in this_order_spec:
                             if key not in allowed_keys:
                                 raise ValueError(
-                                    'The allowed keys for an order specification\n'
-                                    'are {}\n'
-                                    '{} is not valid\n'
-                                    ''.format(', '.join(allowed_keys), key)
+                                    'The allowed keys for an order specification\nare {}\n{} is not valid\n'.format(
+                                        ', '.join(allowed_keys), key
+                                    )
                                 )
                         this_order_spec['order'] = this_order_spec.get('order', 'asc')
                         if this_order_spec['order'] not in possible_orders:

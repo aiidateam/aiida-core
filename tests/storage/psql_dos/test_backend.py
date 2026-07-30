@@ -227,9 +227,9 @@ def test_get_and_terminate_unreferenced_connections():
         # Verify the external connection appears in unreferenced connections
         unreferenced = storage.get_unreferenced_connections()
         unreferenced_ports = [port for _, _, port in unreferenced]
-        assert (
-            external_port in unreferenced_ports
-        ), f'External connection port {external_port} not found in {unreferenced_ports}'
+        assert external_port in unreferenced_ports, (
+            f'External connection port {external_port} not found in {unreferenced_ports}'
+        )
 
         # Terminate only our specific connection (not all unreferenced ones)
         # This prevents killing connections from parallel tests

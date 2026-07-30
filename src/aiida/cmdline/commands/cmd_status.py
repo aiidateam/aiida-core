@@ -60,7 +60,7 @@ STATUS_SYMBOLS = {
 def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     """Print status of AiiDA services."""
     from aiida import __version__
-    from aiida.cmdline.utils.daemon import get_daemon_package_drift_lines
+    from aiida.cmdline.utils.daemon import validate_daemon_env
     from aiida.common.docs import URL_NO_BROKER
     from aiida.common.exceptions import ConfigurationError
     from aiida.engine.daemon.client import DaemonException, DaemonNotRunningException
@@ -134,12 +134,12 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     # Getting the daemon and broker status
     broker = manager.get_broker()
 
-    from aiida.brokers.zmq.broker import ZmqBroker
+    from aiida.brokers.zeromq.broker import ZeromqBroker
 
     if broker:
         # For RabbitMQ: verify broker connectivity as a separate status line
-        # For ZMQ: broker info is shown alongside the daemon status below
-        if not isinstance(broker, ZmqBroker):
+        # For ZeroMQ: broker info is shown alongside the daemon status below
+        if not isinstance(broker, ZeromqBroker):
             try:
                 broker.get_communicator()
             except Exception as exc:
@@ -179,10 +179,10 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     else:
         daemon_status = ServiceStatus.UP
         daemon_msg = f'Daemon is running with PID {status["pid"]}'
-        # Append broker info for managed brokers (e.g., ZMQ)
+        # Append broker info for managed brokers (e.g., ZeroMQ)
 
-        if broker and isinstance(broker, ZmqBroker):
-            if broker.is_running:
+        if broker and isinstance(broker, ZeromqBroker):
+            if broker.is_service_reachable():
                 status_info = broker.get_service_status()
                 if status_info:
                     broker_pid = status_info.get('pid', '?')
@@ -195,10 +195,10 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
         daemon_lines = [daemon_msg]
 
         # Check for package mismatches
-        drift_lines = get_daemon_package_drift_lines(daemon_client)
-        if drift_lines:
+        drift_error = validate_daemon_env(daemon_client)
+        if drift_error is not None:
             daemon_status = ServiceStatus.WARNING
-            daemon_lines.extend(drift_lines)
+            daemon_lines.append(drift_error)
 
         print_status(daemon_status, 'daemon', '\n'.join(daemon_lines))
 
@@ -223,12 +223,12 @@ def print_status(
     :param msg:  message string
     """
     symbol = STATUS_SYMBOLS[status]
-    echo.echo(f" {symbol['string']} ", fg=symbol['color'], nl=False)
-    echo.echo(f"{service + ':':12s} ", nl=False)
+    echo.echo(f' {symbol["string"]} ', fg=symbol['color'], nl=False)
+    echo.echo(f'{service + ":":12s} ', nl=False)
     lines = msg.split('\n')
     echo.echo(lines[0])
     for line in lines[1:]:
-        echo.echo(f"{'':15s} {line}")
+        echo.echo(f'{"":15s} {line}')
 
     if exception is not None:
         echo.echo_error(f'{type(exception).__name__}: {exception}')

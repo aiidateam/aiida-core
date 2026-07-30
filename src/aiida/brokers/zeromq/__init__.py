@@ -7,7 +7,7 @@
 from .broker import *
 
 __all__ = (
-    'ZmqBroker',
+    'ZeromqBroker',
 )
 
 # fmt: on

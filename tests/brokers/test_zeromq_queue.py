@@ -6,11 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Tests for ``aiida.brokers.zmq.queue.PersistentQueue``."""
+"""Tests for ``aiida.brokers.zeromq.queue.PersistentQueue``."""
 
 from __future__ import annotations
 
-from aiida.brokers.zmq.queue import PersistentQueue
+from aiida.brokers.zeromq.queue import PersistentQueue
 
 
 class TestPersistentQueue:

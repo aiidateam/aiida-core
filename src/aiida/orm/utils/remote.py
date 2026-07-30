@@ -15,6 +15,7 @@ import typing as t
 
 from aiida import orm
 from aiida.cmdline.utils import echo
+from aiida.common.exceptions import NotExistent
 from aiida.orm.nodes.data.remote.base import RemoteData
 
 if t.TYPE_CHECKING:
@@ -52,7 +53,7 @@ def clean_mapping_remote_paths(path_mapping, silent=False):
     :param path_mapping: a dictionary where the keys are the computer UUIDs and the values are lists of remote folders
         It's designed to accept the output of `get_calcjob_remote_paths`
     :param transport: the transport to use to clean the remote folders
-    :param silent: if True, the `echo` output will be suppressed
+    :param silent: if True, the success message output will be suppressed
     """
 
     user = orm.User.collection.get_default()
@@ -63,7 +64,16 @@ def clean_mapping_remote_paths(path_mapping, silent=False):
     for computer_uuid, paths in path_mapping.items():
         counter = 0
         computer = orm.load_computer(uuid=computer_uuid)
-        transport = orm.AuthInfo.collection.get(dbcomputer_id=computer.pk, aiidauser_id=user.pk).get_transport()
+        try:
+            authinfo = orm.AuthInfo.collection.get(dbcomputer_id=computer.pk, aiidauser_id=user.pk)
+        except NotExistent:
+            echo.echo_warning(
+                f'Skipping {len(paths)} remote folders on `{computer.label}`: '
+                f'computer is not configured for user `{user.email}`'
+            )
+            continue
+
+        transport = authinfo.get_transport()
 
         with transport:
             for remote_folder in paths:

@@ -33,6 +33,7 @@ __all__ = (
     'get_option',
     'get_option_names',
     'parse_option',
+    'resolve_deprecated_option_name',
     'upgrade_config',
 )
 
@@ -122,7 +123,7 @@ def _merge_deprecated_cache_yaml(config, filepath):
     cache_path_backup = None
     # Keep generating a new backup filename based on the current time until it does not exist
     while not cache_path_backup or os.path.isfile(cache_path_backup):
-        cache_path_backup = f"{cache_path}.{timezone.now().strftime('%Y%m%d-%H%M%S.%f')}"
+        cache_path_backup = f'{cache_path}.{timezone.now().strftime("%Y%m%d-%H%M%S.%f")}'
 
     warnings.warn(
         'cache_config.yml use is deprecated and support will be removed in `v3.0`. Merging into config.json and '
@@ -336,10 +337,21 @@ def get_config_option(option_name: str) -> Any:
     2. The current configuration, if loaded and the option specified
     3. The default value for the option
 
+    If an explicit ``verdi --verbosity`` override is active, logger-level options are resolved to that value so the
+    override applies consistently even when logging is reconfigured later during the command execution.
+
     :param option_name: the name of the option to return
     :return: the value of the option
     :raises `aiida.common.exceptions.ConfigurationError`: if the option is not found
     """
+    from aiida.common import log
     from aiida.manage import get_manager
+
+    if (
+        log.CLI_ACTIVE is True
+        and log.CLI_LOG_LEVEL is not None
+        and option_name in ['logging.aiida_loglevel', 'logging.terminal_handler']
+    ):
+        return log.CLI_LOG_LEVEL
 
     return get_manager().get_option(option_name)

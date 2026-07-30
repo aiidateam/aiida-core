@@ -332,7 +332,7 @@ class ExtrasImportCode(Enum):
     '--extras-mode-new',
     type=click.Choice(EXTRAS_MODE_NEW),
     default='import',
-    help='Specify whether to import extras of new nodes: ' 'import: import extras. ' 'none: do not import extras.',
+    help='Specify whether to import extras of new nodes: import: import extras. none: do not import extras.',
 )
 @click.option(
     '--comment-mode',

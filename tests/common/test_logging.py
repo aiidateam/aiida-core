@@ -9,7 +9,12 @@
 """Tests for the :mod:`aiida.common.log` module."""
 
 import logging
+import logging.config
+from unittest.mock import Mock
 
+import pytest
+
+from aiida.common import log
 from aiida.common.log import capture_logging
 
 
@@ -47,3 +52,138 @@ def test_capture_logging():
     with capture_logging(logger) as stream:
         logging.getLogger().error(message)
         assert stream.getvalue().strip() == message
+
+
+class TestValidateHandler:
+    """Tests for :func:`aiida.common.log.validate_handler`."""
+
+    def test_warns_when_more_verbose_than_loggers(self):
+        """A handler level below every logger level cannot take effect and should return a warning."""
+        levels = {
+            'logging.terminal_handler': 'DEBUG',
+            'logging.aiida_loglevel': 'INFO',
+            'logging.aiida_core_loglevel': 'INHERIT',
+            'logging.disk_objectstore_loglevel': 'INHERIT',
+            'logging.plumpy_loglevel': 'INHERIT',
+            'logging.kiwipy_loglevel': 'INHERIT',
+        }
+        config = Mock(get_option=lambda name, scope=None: levels.get(name, 'WARNING'))
+        message = log.validate_handler(config, 'logging.terminal_handler')
+        assert message is not None
+        assert 'no logger emits messages at that level' in message
+        assert 'logging.aiida_loglevel' in message
+        assert 'INFO' in message
+
+    def test_no_warning_when_effective(self):
+        """A handler level a logger actually emits at (here equal to it) is effective and should return ``None``."""
+        levels = {
+            'logging.database_handler': 'INFO',
+            'logging.aiida_loglevel': 'INFO',
+            'logging.aiida_core_loglevel': 'INHERIT',
+        }
+        config = Mock(get_option=lambda name, scope=None: levels.get(name, 'WARNING'))
+        assert log.validate_handler(config, 'logging.database_handler') is None
+
+    def test_warns_when_aiida_core_logger_overrides_fallback(self):
+        """An explicit ``logging.aiida_core_loglevel`` should be respected for handler validation."""
+        levels = {
+            'logging.database_handler': 'INFO',
+            'logging.aiida_loglevel': 'INFO',
+            'logging.aiida_core_loglevel': 'CRITICAL',
+        }
+        config = Mock(get_option=lambda name, scope=None: levels.get(name, 'WARNING'))
+        message = log.validate_handler(config, 'logging.database_handler')
+        assert message is not None
+        assert 'logging.aiida_core_loglevel' in message
+        assert 'CRITICAL' in message
+
+
+@pytest.mark.usefixtures('reset_log_level')
+def test_configure_logging_inherits_aiida_loglevel_for_inherited_loggers(monkeypatch, isolated_config):
+    """Inherited logger options should inherit ``logging.aiida_loglevel`` when configuring logging."""
+    isolated_config.set_option('logging.aiida_loglevel', 'ERROR')
+
+    captured_config = {}
+    monkeypatch.setattr(logging.config, 'dictConfig', captured_config.update)
+
+    log.configure_logging()
+
+    assert captured_config['loggers']['aiida']['level'] == 'ERROR'
+    assert captured_config['loggers']['verdi']['level'] == 'ERROR'
+    assert captured_config['loggers']['disk_objectstore']['level'] == 'ERROR'
+    assert captured_config['loggers']['plumpy']['level'] == 'ERROR'
+    assert captured_config['loggers']['kiwipy']['level'] == 'ERROR'
+
+
+@pytest.mark.usefixtures('reset_log_level')
+def test_configure_logging_respects_explicit_inherited_logger_levels(monkeypatch, isolated_config):
+    """Explicit logger levels should override the inherited ``logging.aiida_loglevel``."""
+    isolated_config.set_option('logging.aiida_loglevel', 'ERROR')
+    isolated_config.set_option('logging.aiida_core_loglevel', 'CRITICAL')
+    isolated_config.set_option('logging.plumpy_loglevel', 'WARNING')
+
+    captured_config = {}
+    monkeypatch.setattr(logging.config, 'dictConfig', captured_config.update)
+
+    log.configure_logging()
+
+    assert captured_config['loggers']['aiida']['level'] == 'CRITICAL'
+    assert captured_config['loggers']['plumpy']['level'] == 'WARNING'
+    assert captured_config['loggers']['disk_objectstore']['level'] == 'ERROR'
+
+
+@pytest.mark.presto
+class TestVerbosityOverridesCliHandler:
+    """Tests for ``--verbosity`` also overriding the ``cli`` handler level."""
+
+    def test_cli_log_level_overrides_cli_handler(self):
+        """When ``CLI_LOG_LEVEL`` is set, the ``cli`` handler level should also be overridden."""
+        captured_config = {}
+
+        def capture_dict_config(config):
+            captured_config.update(config)
+
+        import logging.config
+
+        original_dict_config = logging.config.dictConfig
+        original_cli_active = log.CLI_ACTIVE
+        original_cli_log_level = log.CLI_LOG_LEVEL
+
+        try:
+            log.CLI_ACTIVE = True
+            log.CLI_LOG_LEVEL = 'DEBUG'
+            logging.config.dictConfig = capture_dict_config
+            log.configure_logging()
+        finally:
+            logging.config.dictConfig = original_dict_config
+            log.CLI_ACTIVE = original_cli_active
+            log.CLI_LOG_LEVEL = original_cli_log_level
+
+        # The cli handler level should be overridden to DEBUG
+        assert captured_config['handlers']['cli']['level'] == 'DEBUG'
+
+    def test_cli_log_level_none_keeps_default(self):
+        """When ``CLI_LOG_LEVEL`` is None, the ``cli`` handler level should remain the default."""
+        captured_config = {}
+
+        def capture_dict_config(config):
+            captured_config.update(config)
+
+        import logging.config
+
+        original_dict_config = logging.config.dictConfig
+        original_cli_active = log.CLI_ACTIVE
+        original_cli_log_level = log.CLI_LOG_LEVEL
+
+        try:
+            log.CLI_ACTIVE = True
+            log.CLI_LOG_LEVEL = None
+            logging.config.dictConfig = capture_dict_config
+            log.configure_logging()
+        finally:
+            logging.config.dictConfig = original_dict_config
+            log.CLI_ACTIVE = original_cli_active
+            log.CLI_LOG_LEVEL = original_cli_log_level
+
+        # The cli handler level should remain REPORT (from terminal_handler default)
+        assert captured_config['handlers']['cli']['level'] == 'REPORT'

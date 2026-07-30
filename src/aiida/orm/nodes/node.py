@@ -581,6 +581,11 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return hasattr(cls, 'ConstructorArgsModel')
 
     @classproperty
+    def supports_cli_model(cls) -> bool:  # noqa: N805
+        """Return whether this node class supports CLI-based creation."""
+        return cls._CliModel is not None
+
+    @classproperty
     def class_node_type(cls) -> str:  # noqa: N805
         """Returns the node type of this node (sub) class."""
         return cls._plugin_type_string
@@ -1078,7 +1083,12 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     def _get_patched_node_type_field(cls):
         """Return a copy of the `node_type` field cast as the literal type for this class."""
         node_type_field = deepcopy(cls.BaseNodeModel.model_fields['node_type'])
-        return (Literal[cls.class_node_type], node_type_field)
+        if cls.__name__ in ('Data', 'ProcessNode'):
+            # `Data` and `ProcessNode` are not to be used directly! They do, however, surface when
+            # a subclass from a plugin regresses due to the plugin not being installed, in which
+            # case, the node type should not be validated against a `Literal`, only as a `str`.
+            return str, node_type_field
+        return Literal[cls.class_node_type], node_type_field
 
     @classmethod
     def _patch_read_model(cls):

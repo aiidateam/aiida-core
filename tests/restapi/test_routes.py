@@ -403,7 +403,7 @@ class TestRestApi:
         """If we use the page, limit and offset at same time, it
         would return the error message.
         """
-        expected_error = 'requesting a specific page is incompatible with ' 'limit and offset'
+        expected_error = 'requesting a specific page is incompatible with limit and offset'
         self.process_test(
             'computers', '/computers/page/2?offset=2&limit=1&orderby=+id', expected_errormsg=expected_error
         )
@@ -439,7 +439,7 @@ class TestRestApi:
         If we request the page which exceeds the total no. of pages then
         it would return the error message.
         """
-        expected_error = 'Non existent page requested. The page range is [1 : ' '3]'
+        expected_error = 'Non existent page requested. The page range is [1 : 3]'
         self.process_test('computers', '/computers/page/4?perpage=2&orderby=+id', expected_errormsg=expected_error)
 
     ############### list filters ########################

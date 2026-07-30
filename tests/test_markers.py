@@ -22,7 +22,7 @@ def test_presto_mark_and_another_mark(request):
 
 @pytest.mark.requires_broker
 def test_presto_mark_with_requires_broker(request):
-    """Test that presto marker IS added for requires_broker tests (ZMQ needs no external service)"""
+    """Test that presto marker IS added for requires_broker tests (ZeroMQ needs no external service)"""
     own_markers = [marker.name for marker in request.node.own_markers]
 
     assert len(own_markers) == 2

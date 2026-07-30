@@ -8,7 +8,7 @@
 ###########################################################################
 """ZeroMQ Communicator - client implementing kiwipy Communicator interface.
 
-Uses an internal asyncio event loop on a background thread for all ZMQ I/O.
+Uses an internal asyncio event loop on a background thread for all ZeroMQ I/O.
 Public methods schedule work onto the loop via ``call_soon_threadsafe``,
 eliminating the need for locks around shared state.  This follows the same
 pattern as kiwipy's ``RmqThreadCommunicator``.
@@ -47,10 +47,10 @@ _LOGGER = logging.getLogger(__name__)
 _T = TypeVar('_T')
 
 
-class ZmqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
-    """ZMQ client implementing kiwipy Communicator interface.
+class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
+    """ZeroMQ client implementing kiwipy Communicator interface.
 
-    Connects to a ZmqBrokerService to send/receive messages.
+    Connects to a ZeromqBrokerService to send/receive messages.
 
     Socket architecture:
         DEALER - Connects to broker ROUTER for all communication
@@ -58,7 +58,7 @@ class ZmqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
 
     Threading model:
         A private asyncio event loop runs on a dedicated background thread.
-        All ZMQ socket I/O and mutable-state access happen exclusively on
+        All ZeroMQ socket I/O and mutable-state access happen exclusively on
         that loop, so no locks are needed.  Public methods schedule work
         onto the loop and block until the result is ready.
     """
@@ -73,7 +73,7 @@ class ZmqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         self._client_id = client_id or f'client-{uuid.uuid4().hex[:8]}'
         self._task_timeout = task_timeout
 
-        # ZMQ sockets (created on the event loop thread)
+        # ZeroMQ sockets (created on the event loop thread)
         self._context: zmq.asyncio.Context | None = None
         self._dealer: zmq.asyncio.Socket | None = None
 
@@ -119,12 +119,12 @@ class ZmqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         """Start the communicator.
 
         Creates a background thread running an asyncio event loop, connects
-        ZMQ sockets, and starts polling coroutines.
+        ZeroMQ sockets, and starts polling coroutines.
         """
         if not self._closed:
             return
 
-        _LOGGER.info('Starting ZMQ Communicator: %s', self._client_id)
+        _LOGGER.info('Starting ZeroMQ Communicator: %s', self._client_id)
 
         self._loop = asyncio.new_event_loop()
         ready: Future[bool] = Future()
@@ -134,7 +134,7 @@ class ZmqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
 
         # Block until the loop thread has set up sockets and is polling.
         ready.result(timeout=LOOP_TIMEOUT)
-        _LOGGER.info('ZMQ Communicator started')
+        _LOGGER.info('ZeroMQ Communicator started')
 
     def _run_loop(self, ready: Future[bool]) -> None:
         """Entry point for the background thread."""
@@ -180,7 +180,7 @@ class ZmqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         if self._closed:
             return
 
-        _LOGGER.info('Closing ZMQ Communicator: %s', self._client_id)
+        _LOGGER.info('Closing ZeroMQ Communicator: %s', self._client_id)
         self._closed = True
 
         if self._loop is not None and self._loop.is_running():
@@ -206,9 +206,9 @@ class ZmqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
                 self._loop_thread.join(timeout=LOOP_JOIN_TIMEOUT)
 
                 if self._loop_thread.is_alive():
-                    _LOGGER.warning('ZMQ loop thread did not join in time, terminating ZMQ context')
-                    # Force-terminate the ZMQ context to unblock the poll loop.
-                    # This causes recv_multipart to raise ZMQError, exiting the thread.
+                    _LOGGER.warning('ZeroMQ loop thread did not join in time, terminating ZeroMQ context')
+                    # Force-terminate the ZeroMQ context to unblock the poll loop.
+                    # This causes recv_multipart to raise a socket error, exiting the thread.
                     if self._context is not None:
                         self._context.term()
                         self._context = None
@@ -217,7 +217,7 @@ class ZmqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         self._loop = None
         self._loop_thread = None
 
-        _LOGGER.info('ZMQ Communicator closed')
+        _LOGGER.info('ZeroMQ Communicator closed')
 
     def _do_close_on_loop(self) -> None:
         """Cleanup that must run on the event loop thread."""
@@ -252,7 +252,7 @@ class ZmqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
                 future.cancel()
         self._pending_futures.clear()
 
-    def __enter__(self) -> 'ZmqCommunicator':
+    def __enter__(self) -> 'ZeromqCommunicator':
         self.start()
         return self
 
@@ -478,7 +478,7 @@ class ZmqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
                 self._dispatch_dealer_message(msg)
             except zmq.ZMQError:
                 if not self._closed:
-                    _LOGGER.error('ZMQ error in dealer poll')
+                    _LOGGER.error('ZeroMQ error in dealer poll')
                 break
             except asyncio.CancelledError:
                 break

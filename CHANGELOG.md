@@ -1,14 +1,246 @@
 # Changelog
 
-## Unreleased
+## v2.9.0 - 2026-08-06
+
+The big feature of this release is the new built-in **ZeroMQ broker**, which allows submitting calculations and workflows to the daemon workers without installing and running an external message broker service such as RabbitMQ.
+The release also adds a `verdi bug-report` command, an overhauled logging system, warnings when the daemon runs in an outdated Python environment and updates the configuration file schema.
+It also modernizes the ORM with a new Pydantic-based model system that exposes specialized `ReadModel`, `WriteModel`, `ConstructorModel`, and `CliModel` schemas, while retaining the previous `Model` attribute as a deprecated compatibility wrapper for plugins to migrate against.
+
+**Table of content:**
+
+- [New features](#new-features)
+  - [ZeroMQ broker: run AiiDA without external services](#zeromq-broker-run-aiida-without-external-services)
+  - [`verdi bug-report`: bundle diagnostics for bug reports](#verdi-bug-report-bundle-diagnostics-for-bug-reports)
+  - [Logging system overhaul](#logging-system-overhaul)
+  - [ORM model system](#orm-model-system)
+  - [Transport: dedicated data transfer node](#transport-dedicated-data-transfer-node)
+  - [Scheduler improvements](#scheduler-improvements)
+  - [WorkChain tools](#workchain-tools)
+  - [Daemon client: worker scaling with wait parameter](#daemon-client-worker-scaling-with-wait-parameter)
+- [Behavior changes](#behavior-changes)
+  - [Python 3.9 support dropped](#python-39-support-dropped)
+  - [`verdi storage maintain`: incrementally cleans loose files while packing](#verdi-storage-maintain-incrementally-cleans-loose-files-while-packing-7078)
+  - [`logging.db_loglevel` renamed to `logging.database_handler`](#loggingdb_loglevel-renamed-to-loggingdatabase_handler-7322)
+  - [ORM model system: use specialized model classes instead of `Model`](#orm-model-system-use-specialized-model-classes-instead-of-model-6990)
+  - [`aiida` logger: no longer propagates to the root logger](#aiida-logger-no-longer-propagates-to-the-root-logger-8acdefe97)
+  - [Configuration file: schema bumped to version 10](#configuration-file-schema-bumped-to-version-10)
+- [Fixes](#fixes)
+  - [Engine and processes](#engine-and-processes)
+  - [QueryBuilder and ORM](#querybuilder-and-orm)
+  - [Schedulers and transports](#schedulers-and-transports)
+  - [Command line](#command-line)
+- [Deprecations](#deprecations)
+  - [Python API](#python-api)
+  - [Command line](#command-line-1)
+  - [Configuration options](#configuration-options)
+
+### New features
+
+#### ZeroMQ broker: run AiiDA without external services
+
+AiiDA requires a message broker to communicate with the daemon workers.
+Until now, the only option was RabbitMQ, an external service that has to be installed and managed separately, which complicates installation, especially on machines without administrator rights (e.g., HPC login nodes).
+This release adds a broker service based on ZeroMQ for the communication layer that can be accessed with the new broker plugin (`core.zeromq`, next to the existing `core.rabbitmq`).
+It requires no external services: the broker is started and supervised automatically by the daemon.
+This means full process control—submitting to the daemon workers with `submit()`, `verdi process play/pause/kill`, `verdi daemon start/stop`—now works out of the box with nothing but `pip install aiida-core`.
+`verdi presto` checks whether RabbitMQ is running on localhost: if it can connect, the profile is configured with RabbitMQ as before; otherwise it now **falls back to the ZeroMQ broker** instead of creating a brokerless profile.
+Use `verdi presto --no-broker` if you explicitly want a profile without any broker.
+
+The broker can also be chosen explicitly at profile creation with `verdi profile setup --broker`, and existing profiles can be switched with the new `verdi profile configure-broker` command.
+For example, to move a profile to RabbitMQ once the service is available:
+
+```console
+$ verdi profile configure-broker core.rabbitmq
+```
+
+For high-throughput production workloads, RabbitMQ remains the recommended broker; the ZeroMQ broker is ideal for getting started, light production use, and machines where installing services is not an option.
+See the [installation guide](https://aiida-core.readthedocs.io/en/v2.9.0/installation/guide_quick.html) for the updated database/broker compatibility matrix and the new [broker internals documentation](https://aiida-core.readthedocs.io/en/v2.9.0/internals/broker.html) for the architecture.
+
+Related interface extensions:
+
+- The task timeout for both brokers is now controlled by a single `broker.task_timeout` config option.
+- `verdi status` and `verdi daemon status` report the status of the ZeroMQ broker.
+- `aiida.brokers.Broker.check_service_reachable` ([#7340](https://github.com/aiidateam/aiida-core/pull/7340))
+- `aiida.brokers.Broker.get_default_config` ([#7340](https://github.com/aiidateam/aiida-core/pull/7340))
+- `aiida.brokers.Broker.get_detected_config` ([#7340](https://github.com/aiidateam/aiida-core/pull/7340))
+- `aiida.brokers.Broker.probe_service_status` ([#7340](https://github.com/aiidateam/aiida-core/pull/7340))
+- `aiida.brokers.RabbitmqBroker.check_service_reachable` ([#7340](https://github.com/aiidateam/aiida-core/pull/7340))
+- `aiida.brokers.RabbitmqBroker.get_detected_config` ([#7340](https://github.com/aiidateam/aiida-core/pull/7340))
+- `aiida.brokers.RabbitmqBroker.probe_service_status` ([#7340](https://github.com/aiidateam/aiida-core/pull/7340))
+- `aiida.brokers.RabbitmqBroker.get_url` `redact_credentials` parameter ([#7484](https://github.com/aiidateam/aiida-core/pull/7484))
+- `aiida.brokers.ZeromqBroker` ([#7340](https://github.com/aiidateam/aiida-core/pull/7340))
+- `aiida.brokers.ZeromqBroker.Communicator` ([#7340](https://github.com/aiidateam/aiida-core/pull/7340))
+- `aiida.brokers.ZeromqBroker.check_service_reachable` ([#7340](https://github.com/aiidateam/aiida-core/pull/7340))
+- `aiida.brokers.ZeromqBroker.close` ([#7340](https://github.com/aiidateam/aiida-core/pull/7340))
+- `aiida.brokers.ZeromqBroker.get_communicator` ([#7340](https://github.com/aiidateam/aiida-core/pull/7340))
+- `aiida.brokers.ZeromqBroker.iterate_tasks` ([#7340](https://github.com/aiidateam/aiida-core/pull/7340))
+- `aiida.brokers.ZeromqBroker.probe_service_status` ([#7340](https://github.com/aiidateam/aiida-core/pull/7340))
+
+#### `verdi bug-report`: bundle diagnostics for bug reports
+
+The new `verdi bug-report` command collects the diagnostic information typically needed to triage an issue into a single zip archive:
+
+- AiiDA and Python versions, installed packages, and platform details
+- profile configuration and the AiiDA configuration file
+- service status for storage, broker, and daemon
+- the tails of the profile, daemon, circus, and broker log files (truncated to the last MiB)
+
+Secret values such as passwords are redacted before the configuration is embedded, but do review the archive before posting it publicly.
+Attach the resulting archive when asking for help on Discourse or opening an issue on GitHub.
+
+#### Logging system overhaul
+
+The logging configuration has been reworked to be easier to understand and control.
+
+**Client log file:** output from `verdi` commands and processes run outside the daemon is now also written to a per-profile log file, so each profile has three log files:
+
+- `<AIIDA_PATH>/log/aiida-<profile_name>.log` — client-side logs (task submissions, pause/play/kill messages, and process execution in running mode)
+- `<AIIDA_PATH>/daemon/log/aiida-<profile_name>.log` — daemon worker logs
+- `<AIIDA_PATH>/daemon/log/circus-<profile_name>.log` — circus supervisor internals
+
+**New handler options:** the log files capture all messages, while two new config options control what is additionally shown elsewhere:
+
+- `logging.terminal_handler` — minimum level for messages printed to the terminal (default `REPORT`)
+- `logging.database_handler` — minimum level for messages bound to a stored node to be written to the `DbLog` table, i.e. what `verdi process report` displays (default `REPORT`; renames the previous `logging.db_loglevel` option)
+
+**Simpler per-logger configuration:** the per-library options (e.g. `logging.sqlalchemy_loglevel`) are now marked as advanced and hidden from `verdi config list` by default (use `--advanced` to show them). Logging levels that affect aiidateam packages (e.g. `logging.plumpy`) inherit now from `logging.aiida_loglevel` unless explicitly set.
+AiiDA now also warns when a logging configuration has no effect because no handler logs at that level.
+
+Deprecated option names (such as `logging.db_loglevel`) are transparently redirected on read, write, and unset, and stored config files are migrated automatically (see the next section).
+See the updated [logging documentation](https://aiida-core.readthedocs.io/en/v2.9.0/installation/troubleshooting.html) for details.
+
+Related interface extensions:
+
+- `aiida.common.UnsupportedSchemaError` ([#7417](https://github.com/aiidateam/aiida-core/pull/7417))
+- `aiida.manage.AiiDAConfigPathResolver.profile_log_dir` ([#7322](https://github.com/aiidateam/aiida-core/pull/7322))
+- `aiida.manage.Option.advanced` ([#7322](https://github.com/aiidateam/aiida-core/pull/7322))
+- `aiida.manage.Option.deprecated_by` ([#7322](https://github.com/aiidateam/aiida-core/pull/7322))
+- `aiida.manage.Option.requires_daemon_restart` ([#7322](https://github.com/aiidateam/aiida-core/pull/7322))
+
+#### ORM model system
+
+AiiDA's ORM entities now expose their schema through a new Pydantic-based model system, making it possible to programmatically introspect entities and (de)serialize them to and from formats such as JSON.
+Instead of a single `Model`, each entity now provides specialized schemas for the context in which it is used:
+
+- `ReadModel` for read/serialization schemas
+- `WriteModel` for attribute-based schemas
+- `ConstructorModel` for constructor-based schemas, where supported
+- `CliModel` for CLI-oriented schemas, where supported
+
+The previous public `Model` attribute remains available as a deprecated compatibility wrapper for validation and introspection, so existing plugins keep working while the model system stabilizes; new integrations should use the specialized classes directly.
+See the [Behavior changes](#behavior-changes) section for migration guidance.
+
+Related interface extensions:
+
+- `aiida.orm.AbstractCode.serialize` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.AbstractCode.to_model` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.AbstractCode.attach_file` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.ArrayData.attach_file` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.ArrayData.to_model_field_values` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.CalcJobNode.imported` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.CifData.parse_policy` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.CifData.scan_type` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Collection.collection_type` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Comment.identity_field` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Dict.to_model_field_values` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Entity.fields` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Entity.from_model` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Entity.identity_field` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Entity.to_model` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Entity.to_model_field_values` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.EnumData.identifier` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.EnumData.member` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Group.identity_field` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.JsonableData.the_class` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.JsonableData.the_module` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.JsonableData.to_model_field_values` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Log.identity_field` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Log.node` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Node.attach_file` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Node.from_model` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Node.from_serialized` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Node.get_computer_pk` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Node.identity_field` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Node.serialize` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Node.supports_cli_model` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Node.supports_constructor_model` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Node.to_model` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.Node.to_model_field_values` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.QbFields.keys` ([#7463](https://github.com/aiidateam/aiida-core/pull/7463))
+- `aiida.orm.SinglefileData.attach_file` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.WorkChainNode.tools` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.XyData.x_name` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.XyData.x_units` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.XyData.y_names` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.XyData.y_units` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `aiida.orm.FolderData` `tree` parameter ([#7441](https://github.com/aiidateam/aiida-core/pull/7441))
+- `aiida.orm.InstalledCode` accepts `computer` as `str` or `Computer` ([#7441](https://github.com/aiidateam/aiida-core/pull/7441))
+- `aiida.orm.KpointsData` keyword arguments ([#7441](https://github.com/aiidateam/aiida-core/pull/7441))
+
+#### Transport: dedicated data transfer node
+
+Many HPC centers provide a dedicated data transfer node and ask users not to run heavy file transfers on the login node.
+The asynchronous SSH transport (`core.ssh_async`) now accepts a `data_node_host` option that routes SFTP/scp transfers to such a node while calculations are still submitted and monitored on the login host.
+Both backends support it—`asyncssh` opens a second connection for its SFTP client and `openssh` points its `scp` invocations at the data node—and leaving the option unset keeps the previous behavior.
+
+Relatedly, the `openssh` backend gained a `use_sftp` option: since OpenSSH 9.0 `scp` transfers over SFTP by default, so configuring a computer with `--no-use-sftp` now passes `-O` to force the legacy RCP protocol for servers without SFTP support.
+
+See the [SSH how-to](https://aiida-core.readthedocs.io/en/v2.9.0/howto/ssh.html) for details.
+
+Related interface extensions:
+
+- `core.ssh_async` `data_node_host` option ([#7460](https://github.com/aiidateam/aiida-core/pull/7460))
+- `core.ssh_async` `openssh` backend `use_sftp` option ([#7423](https://github.com/aiidateam/aiida-core/pull/7423))
+
+#### Scheduler improvements
+
+Schedulers can now declare whether they support retrieving detailed job information via the `can_get_detailed_job_info` property, allowing AiiDA to gracefully handle schedulers that don't implement detailed job status parsing.
+
+Related interface extensions:
+
+- `aiida.schedulers.Scheduler.can_get_detailed_job_info` ([#7463](https://github.com/aiidateam/aiida-core/pull/7463))
+
+#### WorkChain tools
+
+A new `aiida.tools.WorkflowTools` class provides utilities for working with WorkChains and their execution context.
+This tool exposes methods to introspect and manipulate workflow state, helping developers build more sophisticated workflow orchestration logic.
+
+Related interface extensions:
+
+- `aiida.tools.WorkflowTools` ([#7329](https://github.com/aiidateam/aiida-core/pull/7329))
+
+#### Daemon client: worker scaling with wait parameter
+
+The daemon client now supports waiting for worker scaling operations to complete.
+`DaemonClient.increase_workers()` and `DaemonClient.decrease_workers()` accept a new `wait` parameter that blocks until the requested number of workers is active, providing synchronous control over daemon worker scaling.
+
+Related interface extensions:
+
+- `aiida.engine.DaemonClient.increase_workers` `wait` parameter ([#7502](https://github.com/aiidateam/aiida-core/pull/7502))
+- `aiida.engine.DaemonClient.decrease_workers` `wait` parameter ([#7502](https://github.com/aiidateam/aiida-core/pull/7502))
 
 ### Behavior changes
 
-**`verdi storage maintain`: incrementally cleans loose files while packing** ([#7078](https://github.com/aiidateam/aiida-core/pull/7078))
+#### Python 3.9 support dropped
+
+Support for Python 3.9, which reached end-of-life in October 2025, has been removed.
+The minimum supported Python version is now 3.10.
+
+#### `verdi storage maintain`: incrementally cleans loose files while packing ([#7078](https://github.com/aiidateam/aiida-core/pull/7078))
 
 `verdi storage maintain` now deletes each set of loose files right after the pack to which they were added is written, keeping peak disk usage near the initial size instead of needing roughly double. Pass `--no-incremental-cleanup` to retain the previous behavior (defer cleanup until all packs are written, at the cost of higher peak disk usage).
 
-**ORM model system: use specialized model classes instead of `Model`**
+Related interface extensions:
+
+- `aiida.repository.DiskObjectStoreRepositoryBackend.maintain` `incremental_cleanup` parameter ([#7078](https://github.com/aiidateam/aiida-core/pull/7078))
+
+#### `logging.db_loglevel` renamed to `logging.database_handler` ([#7322](https://github.com/aiidateam/aiida-core/pull/7322))
+
+The configuration option `logging.db_loglevel` has been renamed to `logging.database_handler` for consistency with the new logging configuration system.
+The old name is deprecated but still works transparently—it is automatically redirected to the new name and will be migrated in stored configuration files.
+See the [Logging system overhaul](#logging-system-overhaul) section for details on the new logging configuration.
+
+#### ORM model system: use specialized model classes instead of `Model` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 
 The new ORM model system introduces specialized schemas such as `ReadModel`, `WriteModel`, `ConstructorModel`, and `CliModel` (where supported).
 
@@ -23,9 +255,77 @@ Update code as follows:
 
 If existing plugin code still references `Class.Model`, keep it only as a temporary compatibility layer and migrate to the specialized models.
 
-**`QbField` `str` and `repr` output**
+`QbField.is_subscriptable` is deprecated and has been removed from `str` and `repr` output.
+The runtime value is `True` only for `QbDictField` and its subclasses, which support nested lookup.
 
-`QbField.is_subscriptable` is deprecated and has been removed from `str` and `repr` output. The runtime value is `True` only for `QbDictField` and its subclasses, which support nested lookup.
+#### `aiida` logger: no longer propagates to the root logger ([8acdefe97](https://github.com/aiidateam/aiida-core/commit/8acdefe979326c9c20050e792084d248eadb1b6f))
+
+Messages emitted through AiiDA's loggers are no longer propagated to the root logger, which previously could lead to duplicated log lines.
+If you attached custom handlers to the root logger to capture AiiDA messages, attach them to the `aiida` logger instead.
+
+#### Configuration file: schema bumped to version 10
+
+The AiiDA configuration file schema has been bumped to version 10 with a registered migration that renames deprecated logging and broker options to their replacements.
+The migration is applied automatically when the configuration file is accessed.
+We added to aiida-core v2.7.4 and v2.8.1 migrations to downgrade the configuration file without requiring aiida-core >=v2.9.0.
+
+### Fixes
+
+#### Engine and processes
+
+- Process listeners were never notified when a process excepted: `Process.on_entered` returned early for the `EXCEPTED` state without calling `super().on_entered()`, so `on_process_excepted` never fired and the `state_changed.<from>.excepted` broadcast was never sent ([#7153](https://github.com/aiidateam/aiida-core/pull/7153))
+- `run()`/`run_get_node()` failed when a broker was configured in the profile but not reachable; local launchers no longer require a live broker ([#7343](https://github.com/aiidateam/aiida-core/pull/7343))
+- Scheduler output parse failures were logged at `INFO` and so never appeared in `verdi process report`; they are now logged at `WARNING` ([#7323](https://github.com/aiidateam/aiida-core/pull/7323))
+- A spurious `could not parse scheduler output` warning was emitted for schedulers that never implement detailed job info parsing, such as `core.direct` ([#7521](https://github.com/aiidateam/aiida-core/pull/7521))
+
+#### QueryBuilder and ORM
+
+- Fixed a session leak caused by a reference cycle between `SqlaQueryBuilder` and `SqlaJoiner`, which kept SQLAlchemy sessions alive after `storage.close()` ([#7281](https://github.com/aiidateam/aiida-core/pull/7281))
+- Fixed resource leaks of storage backends, runners and broker connections in `verdi status`, `verdi storage version`, profile deletion and daemon worker shutdown ([#7268](https://github.com/aiidateam/aiida-core/pull/7268))
+- Loading a process node whose plugin entry point is not installed now falls back to `ProcessNode` instead of raising, mirroring the existing behavior for `Data` nodes ([#7386](https://github.com/aiidateam/aiida-core/pull/7386))
+- `QbField`: corrected field type assignments, added `QbBoolField`, and made dot access and indexing consistent ([#7463](https://github.com/aiidateam/aiida-core/pull/7463))
+- Fixed `Exception ignored in __del__` errors during interpreter shutdown ([#7322](https://github.com/aiidateam/aiida-core/pull/7322))
+
+#### Schedulers and transports
+
+- `PbsBaseClass`: multiline `Variable_List` values in `qstat -f` output (e.g. exported bash functions) raised `SchedulerParsingError` and broke job polling on affected clusters ([#7400](https://github.com/aiidateam/aiida-core/pull/7400))
+- `core.ssh_async` (`openssh` backend): `path_exists` failed on benign SSH host-key warnings ([#7313](https://github.com/aiidateam/aiida-core/pull/7313))
+- `core.ssh_async` (`openssh` backend): glob characters were incorrectly escaped for the SCP/RCP protocol ([#7335](https://github.com/aiidateam/aiida-core/pull/7335))
+- `RemoteData.get_size_on_disk()` opened a new transport connection for every directory, exhausting SSH connections and file descriptors on large directory trees ([#7346](https://github.com/aiidateam/aiida-core/pull/7346))
+
+#### Command line
+
+- `verdi daemon stop --all` ignored the profile and repeatedly stopped the current profile's daemon instead of the daemon of each profile ([#7319](https://github.com/aiidateam/aiida-core/pull/7319))
+- `verdi profile delete` now gracefully stops a running daemon first, preventing orphaned circus arbiter and worker processes and stale PID files ([#7319](https://github.com/aiidateam/aiida-core/pull/7319))
+- `verdi code create --help` crashed while rendering the group help ([#7381](https://github.com/aiidateam/aiida-core/pull/7381))
+- Remote cleanup (`verdi calcjob cleanworkdir`) aborted entirely when a computer was not configured for the current user, leaving the other computers in the same batch uncleaned; such computers are now skipped with a warning ([#7385](https://github.com/aiidateam/aiida-core/pull/7385))
+- `verdi profile dump` raised `KeyError` for plugin `WorkChainNode`/`CalcJobNode` subclasses, such as aiida-workgraph's `WorkGraphNode` ([#7451](https://github.com/aiidateam/aiida-core/pull/7451))
+- RabbitMQ usernames and passwords containing reserved URL characters (`@`, `:`, `/`) produced a malformed broker connection URL ([#7340](https://github.com/aiidateam/aiida-core/pull/7340))
+- RabbitMQ credentials were exposed when the broker was rendered as a string in CLI diagnostics ([#7340](https://github.com/aiidateam/aiida-core/pull/7340))
+- `verdi status` reported success even when retrieving the daemon status failed with an unexpected error ([#7445](https://github.com/aiidateam/aiida-core/pull/7445))
+
+### Deprecations
+
+#### Python API
+
+- `Entity.Model` is deprecated in favor of the specialized `ReadModel`/`WriteModel` classes and is retained only as a compatibility wrapper for validation and introspection. See [Behavior changes](#behavior-changes) section for migration guidance ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `Entity.model_to_orm_fields()` is deprecated, use `WriteModel.model_fields` instead ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `Entity.model_to_orm_field_values()` is deprecated, use `from_model()` to construct an entity, or call `_to_orm_field_values()` on a specialized model directly if you explicitly need the intermediate dictionary ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `QbField.annotation` is deprecated, inspect the corresponding ORM model field annotation instead ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `QbField.is_attribute` and `QbField.is_subscriptable` are deprecated, inspect the corresponding ORM model field metadata instead ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
+- `ArrayData.save_arrays()` and `ArrayData.load_arrays()` are deprecated, use `numpy.save`/`numpy.load` with `io.BytesIO` directly instead ([#7480](https://github.com/aiidateam/aiida-core/pull/7480))
+
+#### Command line
+
+- `verdi profile setup --use-rabbitmq/--no-use-rabbitmq` is deprecated, use `--broker` instead. `--no-use-rabbitmq` is equivalent to `--broker none` ([#7284](https://github.com/aiidateam/aiida-core/pull/7284))
+- `verdi profile configure-rabbitmq` is deprecated, use `verdi profile configure-broker core.rabbitmq` instead ([#7428](https://github.com/aiidateam/aiida-core/pull/7428))
+
+#### Configuration options
+
+- `logging.db_loglevel` is deprecated, use `logging.database_handler` instead ([#7322](https://github.com/aiidateam/aiida-core/pull/7322))
+- `rmq.task_timeout` is deprecated, use `broker.task_timeout` instead ([#7284](https://github.com/aiidateam/aiida-core/pull/7284))
+
+Both configuration options are renamed automatically by the migration to config schema version 10, see [Configuration file: schema bumped to version 10](#configuration-file-schema-bumped-to-version-10).
 
 
 ## v2.8.1 - 2026-07-25

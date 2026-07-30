@@ -1,0 +1,61 @@
+name: Build and test Docker images
+description: Build AiiDA Docker images locally and run tests without publishing them.
+
+inputs:
+  platform:
+    description: Docker platform to build and test
+    default: amd64
+    required: false
+  python-version:
+    description: Python version used to run Docker image tests
+    default: '3.11'
+    required: false
+
+runs:
+  using: composite
+  steps:
+  - name: Set up Docker Buildx
+    uses: docker/setup-buildx-action@v3
+
+  - name: Build images
+    uses: docker/bake-action@v6.10.0
+    env:
+      BUILDKIT_PROGRESS: plain
+    with:
+      # Load to Docker engine for testing
+      load: true
+      workdir: .docker/
+      source: .
+      set: |
+        *.platform=${{ inputs.platform }}
+        *.cache-to=type=gha,scope=${{ github.workflow }},mode=min
+        *.cache-from=type=gha,scope=${{ github.workflow }}
+      files: |
+        docker-bake.hcl
+        build.json
+
+  - name: Set Up Python
+    uses: actions/setup-python@v6
+    with:
+      python-version: ${{ inputs.python-version }}
+      cache: pip
+
+  - name: Install dependencies
+    run: pip install -r requirements.txt
+    shell: bash
+    working-directory: .docker
+
+  - name: Test aiida-core-base
+    run: pytest -s --variant aiida-core-base tests/
+    shell: bash
+    working-directory: .docker
+
+  - name: Test aiida-core-with-services
+    run: pytest -s --variant aiida-core-with-services tests/
+    shell: bash
+    working-directory: .docker
+
+  - name: Test aiida-core-dev
+    run: pytest -s --variant aiida-core-dev tests/
+    shell: bash
+    working-directory: .docker

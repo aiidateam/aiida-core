@@ -748,26 +748,37 @@ class DaemonClient:
 
         return DaemonEnvInfo(packages=packages, python_binary=python_binary)
 
-    def increase_workers(self, number: int, timeout: int | None = None) -> dict[str, t.Any]:
+    def increase_workers(self, number: int, timeout: int | None = None, wait: bool = False) -> dict[str, t.Any]:
         """Increase the number of workers.
 
         :param number: The number of workers to add.
         :param timeout: Optional timeout to set for trying to reach the circus daemon. Default is set on the client upon
             instantiation taken from the ``daemon.timeout`` config option.
+        :param wait: If ``False``, return as soon as the daemon acknowledged the command, i.e. before the workers have
+            been spawned. If ``True``, return only once they have and include the resulting ``numprocesses`` in the
+            response. Note that the workers still need to boot before they start consuming tasks.
         :return: The client call response.
+        :raises DaemonTimeoutException: If ``wait`` is ``True`` and spawning takes longer than ``timeout``. The workers
+            are still spawned in that case, only the response is not awaited.
         """
-        command = {'command': 'incr', 'properties': {'name': self.daemon_name, 'nb': number}}
+        command = {'command': 'incr', 'properties': {'name': self.daemon_name, 'nb': number, 'waiting': wait}}
         return self.call_client(command, timeout=timeout)
 
-    def decrease_workers(self, number: int, timeout: int | None = None) -> dict[str, t.Any]:
+    def decrease_workers(self, number: int, timeout: int | None = None, wait: bool = False) -> dict[str, t.Any]:
         """Decrease the number of workers.
 
         :param number: The number of workers to remove.
         :param timeout: Optional timeout to set for trying to reach the circus daemon. Default is set on the client upon
             instantiation taken from the ``daemon.timeout`` config option.
+        :param wait: If ``False``, return as soon as the daemon acknowledged the command, i.e. before the workers have
+            been stopped. If ``True``, return only once they have and include the resulting ``numprocesses`` in the
+            response. Since workers are shut down gracefully, this can take a while for a worker that is still running
+            processes, in which case ``timeout`` needs to be increased beyond the ``daemon.timeout`` default.
         :return: The client call response.
+        :raises DaemonTimeoutException: If ``wait`` is ``True`` and stopping takes longer than ``timeout``. The workers
+            are still stopped in that case, only the response is not awaited.
         """
-        command = {'command': 'decr', 'properties': {'name': self.daemon_name, 'nb': number}}
+        command = {'command': 'decr', 'properties': {'name': self.daemon_name, 'nb': number, 'waiting': wait}}
         return self.call_client(command, timeout=timeout)
 
     def start_daemon(

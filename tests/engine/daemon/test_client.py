@@ -393,3 +393,60 @@ class TestDaemonEnvInfo:
             ),
         ):
             assert stopped_daemon_client.restart_daemon() == {'status': 'ok'}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_change_workers_without_wait(started_daemon_client):
+    """Test that by default the calls return on acknowledgement, before the workers have been spawned or stopped."""
+    client = started_daemon_client
+    number_workers = client.get_numprocesses()['numprocesses']
+
+    def await_workers(target):
+        """Let the daemon settle, since while acting on a command it holds a lock that fails any concurrent one."""
+        client._await_condition(
+            lambda: client.get_number_of_workers() == target,
+            DaemonTimeoutException(f'The number of workers failed to reach {target}.'),
+            timeout=15,
+        )
+
+    # The acknowledgement carries no ``numprocesses``, as the daemon replies before having acted on the command
+    response = client.increase_workers(1)
+    assert response['status'] == 'ok'
+    assert 'numprocesses' not in response
+    await_workers(number_workers + 1)
+
+    response = client.decrease_workers(1)
+    assert response['status'] == 'ok'
+    assert 'numprocesses' not in response
+    await_workers(number_workers)
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_change_workers_with_wait(started_daemon_client):
+    """Test that with ``wait=True`` the workers have been spawned or stopped by the time the call returns."""
+    number_workers = started_daemon_client.get_numprocesses()['numprocesses']
+
+    response = started_daemon_client.increase_workers(1, timeout=10, wait=True)
+    assert response['numprocesses'] == number_workers + 1
+    assert started_daemon_client.get_number_of_workers() == number_workers + 1
+
+    response = started_daemon_client.decrease_workers(1, timeout=10, wait=True)
+    assert response['numprocesses'] == number_workers
+    assert started_daemon_client.get_number_of_workers() == number_workers
+
+
+@pytest.mark.parametrize('method', ('increase_workers', 'decrease_workers'))
+def test_change_workers_with_wait_timeout(stopped_daemon_client, method):
+    """Test that with ``wait=True`` a call that outlasts the timeout raises, since the response is only sent once the
+    daemon acted on the command."""
+    from circus.exc import CallError
+
+    with (
+        patch.object(DaemonClient, 'get_daemon_pid', return_value=1),
+        patch.object(DaemonClient, '_is_pid_file_stale', False),
+        patch.object(DaemonClient, 'get_client') as get_client,
+    ):
+        get_client.return_value.__enter__.return_value.call.side_effect = CallError('Timed out.')
+
+        with pytest.raises(DaemonTimeoutException, match='Connection to the daemon timed out.'):
+            getattr(stopped_daemon_client, method)(1, timeout=1, wait=True)

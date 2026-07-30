@@ -33,7 +33,7 @@ import time
 from contextlib import suppress
 
 from aiida import load_profile
-from aiida.brokers import ZmqBroker
+from aiida.brokers import ZeromqBroker
 from aiida.common.exceptions import NotExistent
 from aiida.engine import get_daemon_client
 from aiida.engine.daemon.client import DaemonNotRunningException
@@ -75,7 +75,7 @@ if profile_name not in config.profile_names:
         email='tutorial@aiida.net',
         storage_backend='core.sqlite_dos',
         storage_config={},
-        broker_backend='core.zmq',
+        broker_backend='core.zeromq',
         broker_config={},
     )
     config.set_option('runner.poll.interval', 1, scope=profile_name)
@@ -95,9 +95,9 @@ if not _daemon_client.is_daemon_running:
 # `start_daemon` only waits for circusd itself, not for its child watchers,
 # so a verdi status call right after can still see "Broker is NOT running".
 _broker = get_manager().get_broker()
-if isinstance(_broker, ZmqBroker):
+if isinstance(_broker, ZeromqBroker):
     _deadline = time.monotonic() + 10.0
-    while not _broker.is_running and time.monotonic() < _deadline:
+    while not _broker.check_service_reachable() and time.monotonic() < _deadline:
         time.sleep(0.2)
 
 # Ensure a localhost Computer exists (create_profile does not create one,

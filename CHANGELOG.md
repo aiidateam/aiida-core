@@ -27,6 +27,33 @@ If existing plugin code still references `Class.Model`, keep it only as a tempor
 
 `QbField.is_subscriptable` is deprecated and has been removed from `str` and `repr` output. The runtime value is `True` only for `QbDictField` and its subclasses, which support nested lookup.
 
+
+## v2.8.1 - 2026-07-25
+
+This patch fixes a SQLite QueryBuilder regression where plugin code using filters such as `{'ctime': {'in': [...]}}` or `{'ctime': {'!in': [...]}}` with Python `datetime` values could fail.
+Plugins that compare or exclude nodes by creation/modification time should now work again with SQLite profiles.
+It also adds a downgrade migration so that a v10 configuration schema — introduced in aiida-core v2.9 — can be brought back to the v9 schema used in aiida-core v2.8.
+
+### Full list of changes
+
+#### Features
+- Add a config v10 migration for deprecated logging and broker options ([#7417](https://github.com/aiidateam/aiida-core/pull/7417)) [[fded1e6e0]](https://github.com/aiidateam/aiida-core/commit/fded1e6e0c31f5425650c8135ca5867e09e79d1a)
+
+#### Fixes
+- Fix SQLite `IN` filters for non-JSON-serializable values ([#7486](https://github.com/aiidateam/aiida-core/pull/7486)) [[e74cc55e5]](https://github.com/aiidateam/aiida-core/commit/e74cc55e5adfbd28fb0025596cc8ada5d77283aa)
+
+#### Improvements
+- Add guidance on how to fix config version error ([#7421](https://github.com/aiidateam/aiida-core/pull/7421)) [[fb17c71d7]](https://github.com/aiidateam/aiida-core/commit/fb17c71d7e197247e1830615a9590b52617f0c32)
+- Allow config downgrade for known migrations ([#7491](https://github.com/aiidateam/aiida-core/pull/7491)) [[b2ef6058f]](https://github.com/aiidateam/aiida-core/commit/b2ef6058f054b3d00e0adbfda7542be8cb2d5be3)
+- Run only mypy in the unlocked release checks to avoid formatter-version noise ([#7490](https://github.com/aiidateam/aiida-core/pull/7490)) [[19058b1c9]](https://github.com/aiidateam/aiida-core/commit/19058b1c912f117954982524ffc1037ffec16da1)
+
+#### Refactoring
+- Clarify config downgrade error message ([#7436](https://github.com/aiidateam/aiida-core/pull/7436)) [[fd3f87b52]](https://github.com/aiidateam/aiida-core/commit/fd3f87b52311d1a46c0888db3d922460c996b535)
+
+#### Tests & CI
+- Quote the Docker bake metadata heredoc ([#7449](https://github.com/aiidateam/aiida-core/pull/7449)) [[67a767e19]](https://github.com/aiidateam/aiida-core/commit/67a767e192fb6cdaa19955aecdd314cab260f743)
+
+
 ## v2.8.0 - 2026-03-16
 
 This release brings important improvements to the `BaseRestartWorkChain`, the engine, stashing, typing coverage, and dependency updates.

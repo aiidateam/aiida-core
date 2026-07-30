@@ -10,8 +10,6 @@
 
 from __future__ import annotations
 
-from typing import Dict, Optional
-
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
@@ -42,14 +40,14 @@ class Data(Node):
     # By default, if not found here,
     # The fileformat string is assumed to match the extension.
     # Example: {'dat': 'dat_multicolumn'}
-    _export_format_replacements: Dict[str, str] = {}
+    _export_format_replacements: dict[str, str] = {}
 
     # Data nodes are storable
     _storable = True
     _unstorable_message = 'storing for this node has been disabled'
 
     class AttributesModel(Node.AttributesModel):
-        source: Optional[dict] = OrmMetadataField(
+        source: dict | None = OrmMetadataField(
             None,
             description='Source of the data',
         )
@@ -86,7 +84,7 @@ class Data(Node):
         return clone
 
     @property
-    def source(self) -> Optional[dict]:
+    def source(self) -> dict | None:
         """Gets the dictionary describing the source of Data object. Possible fields:
 
         * **db_name**: name of the source database.
@@ -170,9 +168,8 @@ class Data(Node):
                 )
             else:
                 raise ValueError(
-                    'The format {} is not implemented for {}. No formats are implemented yet.'.format(
-                        fileformat, self.__class__.__name__
-                    )
+                    f'The format {fileformat} is not implemented for {self.__class__.__name__}. '
+                    'No formats are implemented yet.'
                 )
 
         string, dictionary = func(main_file_name=main_file_name, **kwargs)
@@ -278,9 +275,8 @@ class Data(Node):
                 )
             else:
                 raise ValueError(
-                    'The format {} is not implemented for {}. No formats are implemented yet.'.format(
-                        fileformat, self.__class__.__name__
-                    )
+                    f'The format {fileformat} is not implemented for {self.__class__.__name__}. '
+                    'No formats are implemented yet.'
                 )
 
         # func is bound to self by getattr in _get_importers()
@@ -295,7 +291,7 @@ class Data(Node):
         """
         if fileformat is None:
             fileformat = fname.split('.')[-1]
-        with open(fname, 'r', encoding='utf8') as fhandle:  # reads in cwd, if fname is not absolute
+        with open(fname, encoding='utf8') as fhandle:  # reads in cwd, if fname is not absolute
             self.importstring(fhandle.read(), fileformat)
 
     def _get_importers(self):
@@ -335,9 +331,8 @@ class Data(Node):
                 )
             else:
                 raise ValueError(
-                    'The format {} is not implemented for {}. No formats are implemented yet.'.format(
-                        object_format, self.__class__.__name__
-                    )
+                    f'The format {object_format} is not implemented for {self.__class__.__name__}. '
+                    'No formats are implemented yet.'
                 )
 
         return func(*args)

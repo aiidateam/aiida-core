@@ -60,7 +60,7 @@ class RabbitmqManagementClient:
         url_params: dict[str, str] | None = None,
         method: str = 'GET',
         params: dict[str, t.Any] | None = None,
-    ) -> 'requests.Response':
+    ) -> requests.Response:
         """Make a request.
 
         :param url: The resource path with placeholders, e.g., ``queues/{virtual_host}/{queue}``.

@@ -225,7 +225,7 @@ def _configure_profile_broker(
                 'The daemon is currently running. It will need to be restarted for changes to take effect.'
             )
             if not non_interactive:
-                click.confirm('Do you want to apply the configuration and restart the daemon?', abort=True)
+                click.confirm('Do you want to restart the daemon to load the new configuration?', abort=True)
                 echo.echo_report('Restarting the daemon...')
                 daemon_client.restart_daemon()
                 echo.echo_success('Daemon restarted successfully.')
@@ -247,7 +247,7 @@ def _configure_profile_broker(
                 'The daemon is currently running. It will need to be restarted for changes to take effect.'
             )
             if not non_interactive:
-                click.confirm('Do you want to apply the configuration and restart the daemon?', abort=True)
+                click.confirm('Do you want to restart the daemon to load the new configuration?', abort=True)
                 echo.echo_report('Restarting the daemon...')
                 daemon_client.restart_daemon()
                 echo.echo_success('Daemon restarted successfully.')
@@ -262,9 +262,9 @@ def _configure_profile_broker(
 
         daemon_client = get_daemon_client()
         if daemon_client and daemon_client.is_daemon_running:
-            echo.echo_warning('The daemon is currently running. It will need to be stopped for changes to take effect.')
-            if not force:
-                click.confirm('Do you want to apply the configuration and stop the daemon?', abort=True)
+            echo.echo_warning('The daemon is currently running. It is no longer needed and can be stopped.')
+            if not non_interactive:
+                click.confirm('Do you want to stop the daemon?', abort=True)
                 echo.echo_report('Stopping the daemon...')
                 daemon_client.stop_daemon(wait=True)
                 echo.echo_success('Daemon stopped successfully.')

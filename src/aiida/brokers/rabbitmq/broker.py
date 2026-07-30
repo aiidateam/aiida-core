@@ -87,26 +87,40 @@ class RabbitmqBroker(Broker):
         :param profile: The profile.
         """
         self._profile = profile
-        self._communicator: 'RmqThreadCommunicator' | None = None
+        self._communicator: RmqThreadCommunicator | None = None
         self._prefix = f'aiida-{self._profile.uuid}'
 
     def __str__(self) -> str:
-        url = self.get_url(safe=True)
+        url = self.get_url(redact_credentials=True)
 
         try:
             return f'RabbitMQ v{self.get_rabbitmq_version()} @ {url}'
         except ConnectionError:
             return f'RabbitMQ @ {url} <Connection failed>'
 
-    def get_service_status(self) -> BrokerServiceStatus | None:
+    def probe_service_status(self) -> BrokerServiceStatus:
         """Return status information reported by the RabbitMQ server."""
-        properties = self.get_communicator().server_properties
-        return {
-            key: t.cast(JsonValue, value.decode('utf-8') if isinstance(value, bytes) else value)
-            for key, value in properties.items()
-        }
+        had_communicator = self._communicator is not None
 
-    def is_service_reachable(self) -> bool:
+        try:
+            properties = self.get_communicator().server_properties
+            status: BrokerServiceStatus = {'connected': True}
+            status.update(
+                {
+                    key: t.cast(JsonValue, value.decode('utf-8') if isinstance(value, bytes) else value)
+                    for key, value in properties.items()
+                }
+            )
+            return status
+        except Exception as exception:
+            error = f'{type(exception).__name__}: {exception}'
+            LOGGER.error('Failed to probe broker status: %s', error)
+            return {'connected': False, 'error': error}
+        finally:
+            if not had_communicator:
+                self.close()
+
+    def check_service_reachable(self) -> bool:
         """Return whether the RabbitMQ service is reachable."""
         had_communicator = self._communicator is not None
 
@@ -134,10 +148,9 @@ class RabbitmqBroker(Broker):
 
     def iterate_tasks(self) -> Iterator[t.Any]:
         """Return an iterator over the tasks in the launch queue."""
-        for task in self.get_communicator().task_queue(get_launch_queue_name(self._prefix)):
-            yield task
+        yield from self.get_communicator().task_queue(get_launch_queue_name(self._prefix))
 
-    def get_communicator(self) -> 'RmqThreadCommunicator':
+    def get_communicator(self) -> RmqThreadCommunicator:
         if self._communicator is None:
             self._communicator = self._create_communicator()
             # Check whether a compatible version of RabbitMQ is being used.
@@ -145,7 +158,7 @@ class RabbitmqBroker(Broker):
 
         return self._communicator
 
-    def _create_communicator(self) -> 'RmqThreadCommunicator':
+    def _create_communicator(self) -> RmqThreadCommunicator:
         """Return an instance of :class:`kiwipy.Communicator`."""
         from kiwipy.rmq import RmqThreadCommunicator
 
@@ -180,10 +193,10 @@ class RabbitmqBroker(Broker):
 
         return version, True
 
-    def get_url(self, safe: bool = False) -> str:
+    def get_url(self, redact_credentials: bool = False) -> str:
         """Return the RMQ url for this profile.
 
-        :param safe: If ``True``, redact embedded credentials in the returned URL.
+        :param redact_credentials: If ``True``, redact embedded credentials in the returned URL.
         """
         from urllib.parse import urlsplit, urlunsplit
 
@@ -195,7 +208,7 @@ class RabbitmqBroker(Broker):
         additional_kwargs = kwargs.pop('parameters', {})
         url = get_rmq_url(**kwargs, **additional_kwargs)
 
-        if not safe:
+        if not redact_credentials:
             return url
 
         parsed = urlsplit(url)

@@ -20,7 +20,7 @@ Also, `varchar_pattern_ops` indexes are not possible in sqlite.
 
 import functools
 from datetime import datetime, timezone
-from typing import Any, Optional, Set, Tuple
+from typing import Any
 
 import sqlalchemy as sa
 from sqlalchemy import ColumnDefault
@@ -60,7 +60,7 @@ class TZDateTime(sa.TypeDecorator):
     impl = sa.DateTime
     cache_ok = True
 
-    def process_bind_param(self, value: Optional[datetime], dialect):
+    def process_bind_param(self, value: datetime | None, dialect):
         """Process before writing to database."""
         if value is None:
             return value
@@ -69,7 +69,7 @@ class TZDateTime(sa.TypeDecorator):
         value = value.astimezone(timezone.utc).replace(tzinfo=None)
         return value
 
-    def process_result_value(self, value: Optional[datetime], dialect):
+    def process_result_value(self, value: datetime | None, dialect):
         """Process when returning from database."""
         if value is None:
             return value
@@ -172,7 +172,7 @@ MAP_ENTITY_TYPE_TO_MODEL = {
 
 
 @functools.lru_cache(maxsize=10)
-def get_model_from_entity(entity_type: EntityTypes) -> Tuple[Any, Set[str]]:
+def get_model_from_entity(entity_type: EntityTypes) -> tuple[Any, set[str]]:
     """Return the Sqlalchemy model and column names corresponding to the given entity."""
     model = MAP_ENTITY_TYPE_TO_MODEL[entity_type]
     mapper = sa.inspect(model).mapper

@@ -309,7 +309,7 @@ class TestUpfParser:
         """Test UPF check Oxygen UPF1 pp conversion"""
         json_string, _ = self.pseudo_carbon._prepare_json()
         filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
-        with open(os.path.join(filepath_base, 'C.json'), 'r') as fhandle:
+        with open(os.path.join(filepath_base, 'C.json')) as fhandle:
             reference_dict = json.load(fhandle)
         pp_dict = json.loads(json_string.decode('utf-8'))
         # remove path information
@@ -321,7 +321,7 @@ class TestUpfParser:
         """Test UPF check Bariium UPF1 pp conversion"""
         json_string, _ = self.pseudo_barium._prepare_json()
         filepath_base = os.path.abspath(os.path.join(STATIC_DIR, 'pseudos'))
-        with open(os.path.join(filepath_base, 'Ba.json'), 'r') as fhandle:
+        with open(os.path.join(filepath_base, 'Ba.json')) as fhandle:
             reference_dict = json.load(fhandle)
         pp_dict = json.loads(json_string.decode('utf-8'))
         # remove path information

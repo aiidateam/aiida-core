@@ -16,7 +16,6 @@ import os
 import shutil
 import subprocess
 import sys
-from typing import Optional
 
 from aiida.common.warnings import warn_deprecation
 from aiida.transports import cli as transport_cli
@@ -739,7 +738,7 @@ class LocalTransport(BlockingTransport):
         return os.path.isfile(os.path.join(self.curdir, path))
 
     @contextlib.contextmanager
-    def _exec_command_internal(self, command, workdir: Optional[TransportPath] = None, **kwargs):
+    def _exec_command_internal(self, command, workdir: TransportPath | None = None, **kwargs):
         """Executes the specified command in bash login shell.
 
 
@@ -792,7 +791,7 @@ class LocalTransport(BlockingTransport):
         ) as process:
             yield process
 
-    def exec_command_wait_bytes(self, command, stdin=None, workdir: Optional[TransportPath] = None, **kwargs):
+    def exec_command_wait_bytes(self, command, stdin=None, workdir: TransportPath | None = None, **kwargs):
         """Executes the specified command and waits for it to finish.
 
         :param command: the command to execute
@@ -848,7 +847,7 @@ class LocalTransport(BlockingTransport):
 
         return retval, output_text, stderr_text
 
-    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
+    def gotocomputer_command(self, remotedir: TransportPath | None = None):
         """Return a string to be run using os.system in order to connect
         via the transport to the remote directory.
 

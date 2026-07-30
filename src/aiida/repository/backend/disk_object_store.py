@@ -46,7 +46,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         return 'DiskObjectStoreRepository: <uninitialised>'
 
     @property
-    def uuid(self) -> t.Optional[str]:
+    def uuid(self) -> str | None:
         """Return the unique identifier of the repository."""
         if not self.is_initialised:
             return None
@@ -54,7 +54,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             return container.container_id
 
     @property
-    def key_format(self) -> t.Optional[str]:
+    def key_format(self) -> str | None:
         with self._container as container:
             return container.hash_type
 
@@ -90,7 +90,7 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         with self._container as container:
             return container.add_streamed_object(handle)
 
-    def has_objects(self, keys: t.List[str]) -> t.List[bool]:
+    def has_objects(self, keys: list[str]) -> list[bool]:
         with self._container as container:
             return container.has_objects(keys)
 
@@ -113,13 +113,13 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
             with container.get_object_stream(key) as handle:
                 yield t.cast(t.BinaryIO, handle)
 
-    def iter_object_streams(self, keys: t.Iterable[str]) -> t.Iterator[t.Tuple[str, t.BinaryIO]]:
+    def iter_object_streams(self, keys: t.Iterable[str]) -> t.Iterator[tuple[str, t.BinaryIO]]:
         with self._container.get_objects_stream_and_meta(keys) as triplets:
             for key, stream, _ in triplets:
                 assert stream is not None
                 yield key, stream  # type: ignore[misc]
 
-    def delete_objects(self, keys: t.List[str]) -> None:
+    def delete_objects(self, keys: list[str]) -> None:
         super().delete_objects(keys)
         with self._container as container:
             container.delete_objects(keys)
@@ -150,10 +150,10 @@ class DiskObjectStoreRepositoryBackend(AbstractRepositoryBackend):
         self,
         dry_run: bool = False,
         live: bool = True,
-        pack_loose: t.Optional[bool] = None,
-        do_repack: t.Optional[bool] = None,
-        clean_storage: t.Optional[bool] = None,
-        do_vacuum: t.Optional[bool] = None,
+        pack_loose: bool | None = None,
+        do_repack: bool | None = None,
+        clean_storage: bool | None = None,
+        do_vacuum: bool | None = None,
         compress: bool = False,
         incremental_cleanup: bool = True,
     ) -> None:

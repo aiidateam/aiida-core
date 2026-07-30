@@ -20,13 +20,10 @@ from typing import (
     Any,
     ClassVar,
     Generic,
-    List,
     Literal,
     NoReturn,
-    Optional,
-    Type,
     TypeVar,
-    Union,
+    cast,
 )
 
 import pydantic as pdt
@@ -75,12 +72,12 @@ class Collection(abc.ABC, Generic[EntityType]):
 
     @staticmethod
     @abc.abstractmethod
-    def _entity_base_cls() -> Type[EntityType]:
+    def _entity_base_cls() -> type[EntityType]:
         """The allowed entity class or subclasses thereof."""
 
     @classmethod
     @lru_cache(maxsize=100)
-    def get_cached(cls, entity_class: Type[EntityType], backend: 'StorageBackend') -> Self:
+    def get_cached(cls, entity_class: type[EntityType], backend: StorageBackend) -> Self:
         """Get the cached collection instance for the given entity class and backend.
 
         :param backend: the backend instance to get the collection for
@@ -90,7 +87,7 @@ class Collection(abc.ABC, Generic[EntityType]):
         type_check(backend, StorageBackend)
         return cls(entity_class, backend=backend)
 
-    def __init__(self, entity_class: Type[EntityType], backend: Optional['StorageBackend'] = None) -> None:
+    def __init__(self, entity_class: type[EntityType], backend: StorageBackend | None = None) -> None:
         """Construct a new entity collection.
 
         :param entity_class: the entity type e.g. User, Computer, etc
@@ -110,24 +107,24 @@ class Collection(abc.ABC, Generic[EntityType]):
         return self.get_cached(self.entity_type, backend=backend)
 
     @property
-    def entity_type(self) -> Type[EntityType]:
+    def entity_type(self) -> type[EntityType]:
         """The entity type for this instance."""
         return self._entity_type
 
     @property
-    def backend(self) -> 'StorageBackend':
+    def backend(self) -> StorageBackend:
         """Return the backend."""
         return self._backend
 
     def query(
         self,
-        filters: Optional['FilterType'] = None,
-        order_by: Optional['OrderByType'] = None,
-        project: Optional[Union[list[str], str]] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        filters: FilterType | None = None,
+        order_by: OrderByType | None = None,
+        project: list[str] | str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
         subclassing: bool = True,
-    ) -> 'QueryBuilder':
+    ) -> QueryBuilder:
         """Get a query builder for the objects of this collection.
 
         :param filters: the keyword value pair filters to match
@@ -159,11 +156,11 @@ class Collection(abc.ABC, Generic[EntityType]):
 
     def find(
         self,
-        filters: Optional['FilterType'] = None,
-        order_by: Optional['OrderByType'] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-    ) -> List[EntityType]:
+        filters: FilterType | None = None,
+        order_by: OrderByType | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> list[EntityType]:
         """Find collection entries matching the filter criteria.
 
         :param filters: the keyword value pair filters to match
@@ -176,14 +173,14 @@ class Collection(abc.ABC, Generic[EntityType]):
         query = self.query(filters=filters, order_by=order_by, limit=limit, offset=offset)
         return query.all(flat=True)
 
-    def all(self) -> List[EntityType]:
+    def all(self) -> list[EntityType]:
         """Get all entities in this collection.
 
         :return: A list of all entities
         """
         return self.query().all(flat=True)
 
-    def count(self, filters: Optional['FilterType'] = None) -> int:
+    def count(self, filters: FilterType | None = None) -> int:
         """Count entities in this collection according to criteria.
 
         :param filters: the keyword value pair filters to match
@@ -196,7 +193,7 @@ class Collection(abc.ABC, Generic[EntityType]):
 class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
     """An AiiDA entity"""
 
-    _CLS_COLLECTION: Type[CollectionType] = Collection  # type: ignore[assignment]
+    _CLS_COLLECTION: type[CollectionType] = Collection  # type: ignore[assignment]
     _logger = log.AIIDA_LOGGER.getChild('orm.entities')
 
     identity_field = 'pk'
@@ -216,6 +213,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         """The write schema of this entity, derived from the absolute schema."""
 
     _MODEL_MAP: ClassVar[dict[str, type[OrmModel]]]
+    _COMPAT_MODEL: ClassVar[type[OrmModel] | None] = None
 
     def __init__(self, backend_entity: BackendEntityType) -> None:
         """:param backend_entity: the backend model supporting this entity"""
@@ -223,6 +221,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         call_with_super_check(self.initialize)
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
+        cls._COMPAT_MODEL = None
         cls._patch_write_model()
         cls._patch_qb_fields()
         super().__init_subclass__(**kwargs)
@@ -230,6 +229,43 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
             'read': cls.ReadModel,
             'write': cls.WriteModel,
         }
+
+    @classmethod
+    def model_to_orm_fields(cls) -> dict[str, pdt.fields.FieldInfo]:
+        """Return the fields that are accepted for ORM construction.
+
+        This compatibility helper mirrors the write schema that is accepted by
+        ``from_model``.
+        """
+        warn_deprecation(
+            '`Entity.model_to_orm_fields()` is deprecated, use `WriteModel.model_fields` instead.',
+            version=3,
+            stacklevel=2,
+        )
+        return dict(cls.WriteModel.model_fields)
+
+    @classmethod
+    def model_to_orm_field_values(cls, model: OrmModel) -> dict[str, Any]:
+        """Return ORM constructor values for a model instance."""
+        warn_deprecation(
+            '`Entity.model_to_orm_field_values()` is deprecated, use `from_model()` to construct an entity '
+            'or call `_to_orm_field_values()` on a specialized model directly if you explicitly need the '
+            'intermediate dictionary.',
+            version=3,
+            stacklevel=2,
+        )
+        compat_model = cls.__dict__.get('_COMPAT_MODEL')
+        if compat_model is not None and isinstance(model, compat_model):
+            from aiida.common.docs import URL_CHANGELOG_ORM_MODELS
+
+            class_name = cast(Any, cls).__name__
+            msg = (
+                f'`{class_name}.Model` is deprecated and only supported for validation/introspection. '
+                f'Use `{class_name}.WriteModel` with `from_model()` instead. '
+                f'See {URL_CHANGELOG_ORM_MODELS}.'
+            )
+            raise ValueError(msg)
+        return model._to_orm_field_values()
 
     def to_model(
         self,
@@ -264,7 +300,19 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         :param model: An instance of the entity's model class.
         :return: An instance of the entity class.
         """
-        fields = model._to_orm_field_values()
+        compat_model = cls.__dict__.get('_COMPAT_MODEL')
+        if compat_model is not None and isinstance(model, compat_model):
+            from aiida.common.docs import URL_CHANGELOG_ORM_MODELS
+
+            class_name = cast(Any, cls).__name__
+            msg = (
+                f'`{class_name}.Model` is deprecated and only supported for validation/introspection. '
+                f'Use `{class_name}.WriteModel` with `from_model()` instead. '
+                f'See {URL_CHANGELOG_ORM_MODELS}.'
+            )
+            raise ValueError(msg)
+
+        fields = cls.model_to_orm_field_values(model)
         return cls(**fields)
 
     def serialize(
@@ -303,6 +351,75 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         return cls.from_model(cls.WriteModel(**serialized))
 
     @classproperty
+    def Model(cls) -> type[OrmModel]:  # noqa: N802, N805
+        """Return the deprecated compatibility model class.
+
+        .. deprecated:: This will be removed in v3, use ``ReadModel``/``WriteModel`` instead.
+        """
+        class_name = cast(Any, cls).__name__
+        warn_deprecation(
+            f'`{class_name}.Model` is deprecated, use `{class_name}.ReadModel` and `{class_name}.WriteModel` instead.',
+            version=3,
+            stacklevel=3,
+        )
+        return cls._get_compat_model()
+
+    @classmethod
+    def _get_compat_model(cls) -> type[OrmModel]:
+        """Return the deprecated compatibility model class without emitting a warning."""
+        if cls._COMPAT_MODEL is None:
+            cls._patch_compat_model()
+
+        if cls._COMPAT_MODEL is None:
+            msg = f'failed to create compatibility model for `{cast(Any, cls).__name__}`'
+            raise RuntimeError(msg)
+
+        return cls._COMPAT_MODEL
+
+    @classmethod
+    def _patch_compat_model(cls) -> None:
+        """Patch the deprecated ``Model`` compatibility wrapper."""
+
+        def optionalize(annotation: Any) -> Any:
+            try:
+                return annotation | None
+            except TypeError:
+                return Any | None
+
+        model_fields: dict[str, Any] = {
+            key: (field.annotation, deepcopy(field)) for key, field in cls.WriteModel.model_fields.items()
+        }
+
+        for key, field in cls.ReadModel.model_fields.items():
+            if key in model_fields:
+                continue
+
+            model_fields[key] = (
+                optionalize(field.annotation),
+                OrmMetadataField(
+                    None,
+                    description=field.description,
+                    examples=getattr(field, 'examples', None),
+                    read_only=get_metadata(field, 'read_only', False),
+                ),
+            )
+
+        model = cast(
+            type[OrmModel],
+            pdt.create_model(
+                'Model',
+                __base__=OrmModel,
+                __module__=cls.ReadModel.__module__,
+                **model_fields,
+            ),
+        )
+        model.__qualname__ = f'{cast(Any, cls).__name__}.Model'
+        model.model_config = deepcopy(cls.ReadModel.model_config)
+        model.model_rebuild(force=True)
+
+        cls._COMPAT_MODEL = model
+
+    @classproperty
     def objects(cls) -> CollectionType:  # noqa: N805
         """Get a collection for objects of this type, with the default backend.
 
@@ -322,7 +439,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         return cls._CLS_COLLECTION.get_cached(cls, get_manager().get_profile_storage())
 
     @classmethod
-    def get_collection(cls, backend: 'StorageBackend') -> CollectionType:
+    def get_collection(cls, backend: StorageBackend) -> CollectionType:
         """Get a collection for objects of this type for a given backend.
 
         .. note:: Use the ``collection`` class property instead if the currently loaded backend or backend of the
@@ -409,7 +526,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         return self._backend_entity.is_stored
 
     @property
-    def backend(self) -> 'StorageBackend':
+    def backend(self) -> StorageBackend:
         """Get the backend for this entity"""
         return self._backend_entity.backend
 
@@ -471,11 +588,14 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
             }
 
             name = model_cls.__name__.replace(suffix, 'WriteModel')
-            WriteModel = pdt.create_model(  # noqa: N806
-                name,
-                __base__=tuple(bases),
-                __module__=model_cls.__module__,
-                **model_fields,
+            WriteModel = cast(  # noqa: N806
+                type[OrmModel],
+                pdt.create_model(
+                    name,
+                    __base__=tuple(bases),
+                    __module__=model_cls.__module__,
+                    **model_fields,
+                ),
             )
             WriteModel.__qualname__ = model_cls.__qualname__.replace(suffix, 'WriteModel')
             WriteModel.__pydantic_decorators__.field_serializers = serializers
@@ -598,7 +718,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         return get_model_field_values(schema or self.ReadModel)
 
 
-def from_backend_entity(cls: Type[EntityType], backend_entity: BackendEntity) -> EntityType:
+def from_backend_entity(cls: type[EntityType], backend_entity: BackendEntity) -> EntityType:
     """Construct an entity from a backend entity instance
 
     :param backend_entity: the backend entity

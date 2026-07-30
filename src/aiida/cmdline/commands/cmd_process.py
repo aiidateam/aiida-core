@@ -615,7 +615,7 @@ def process_repair(manager, broker, dry_run, force):
 
             from aiida.brokers.zeromq.queue import PersistentQueue
 
-            queue_path = broker.storage_path / 'tasks'
+            queue_path = broker._storage_path / 'tasks'
             queue = PersistentQueue(queue_path)
             for pid in zombies:
                 task_id = uuid.uuid4().hex

@@ -12,10 +12,11 @@ from __future__ import annotations
 
 import contextlib
 import os
+from collections.abc import Callable
 from enum import Enum, auto
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Callable, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING
 
 import yaml
 
@@ -25,7 +26,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.utils import LinkTriple
 from aiida.tools._dumping.config import DumpMode
 from aiida.tools._dumping.tracking import DumpRecord
-from aiida.tools._dumping.utils import ORM_TYPE_TO_REGISTRY, DumpPaths, RegistryNameType
+from aiida.tools._dumping.utils import DumpPaths, registry_name_for
 from aiida.tools.archive.exceptions import ExportValidationError
 
 if TYPE_CHECKING:
@@ -55,12 +56,12 @@ class ProcessDumpExecutor:
 
     def __init__(
         self,
-        config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig],
+        config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig,
         dump_paths: DumpPaths,
         dump_tracker: DumpTracker,
         dump_times: DumpTimes,
     ):
-        self.config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig] = config
+        self.config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig = config
         self.dump_paths: DumpPaths = dump_paths
         self.dump_tracker: DumpTracker = dump_tracker
         self.dump_times: DumpTimes = dump_times
@@ -166,7 +167,7 @@ class ProcessDumpExecutor:
         self,
         process_node: orm.ProcessNode,
         output_path: Path,
-    ) -> Tuple[NodeDumpAction, Optional[DumpRecord]]:
+    ) -> tuple[NodeDumpAction, DumpRecord | None]:
         """Checks the logger and node status to determine the appropriate dump action.
 
         :param node: The ``orm.ProcessNode`` to be evaluated
@@ -231,8 +232,8 @@ class ProcessDumpExecutor:
 
         # Create new log entry
         dump_record = DumpRecord(path=output_path.resolve())
-        registry_key = ORM_TYPE_TO_REGISTRY[type(process_node)]
-        self.dump_tracker.registries[cast(RegistryNameType, registry_key)].add_entry(process_node.uuid, dump_record)
+        registry_key = registry_name_for(process_node)
+        self.dump_tracker.registries[registry_key].add_entry(process_node.uuid, dump_record)
 
         # Dump content
         self._dump_node_content(process_node, output_path)
@@ -361,7 +362,7 @@ class ProcessDumpExecutor:
         DumpPaths._safe_delete_directory(path=output_path)
 
         if is_primary_dump:
-            registry_key = ORM_TYPE_TO_REGISTRY[type(process_node)]
+            registry_key = registry_name_for(process_node)
             node_registry = self.dump_tracker.registries[registry_key]
             node_registry.del_entry(process_node.uuid)
 
@@ -403,8 +404,8 @@ class ProcessDumpExecutor:
 class NodeMetadataWriter:
     """Handles writing the aiida_node_metadata.yaml file."""
 
-    def __init__(self, config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig]):
-        self.config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig] = config
+    def __init__(self, config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig):
+        self.config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig = config
 
     def _write(
         self,
@@ -475,8 +476,8 @@ class NodeMetadataWriter:
 class NodeRepoIoDumper:
     """Handles dumping repository contents and linked I/O Data nodes."""
 
-    def __init__(self, config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig]):
-        self.config: Union[ProcessDumpConfig, GroupDumpConfig, ProfileDumpConfig] = config
+    def __init__(self, config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig):
+        self.config: ProcessDumpConfig | GroupDumpConfig | ProfileDumpConfig = config
 
     def _dump_calculation_content(self, calculation_node: orm.CalculationNode, output_path: Path) -> None:
         """Dump repository and I/O file contents for a CalculationNode.

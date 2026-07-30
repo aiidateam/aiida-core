@@ -91,7 +91,7 @@ class SqliteTempBackend(StorageBackend):
         return get_schema_version_head()
 
     @classmethod
-    def initialise(cls, profile: 'Profile', reset: bool = False) -> bool:
+    def initialise(cls, profile: Profile, reset: bool = False) -> bool:
         return False
 
     @classmethod

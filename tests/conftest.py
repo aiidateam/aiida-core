@@ -19,24 +19,18 @@ import dataclasses
 import logging
 import os
 import pathlib
-import shutil
-import signal
 import subprocess
 import sys
-import time
 import types
 import typing as t
 import warnings
-from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import click
 import pytest
 
 from aiida import get_profile, orm
-from aiida.brokers import ZeromqBroker
 from aiida.common.folders import Folder
 from aiida.common.links import LinkType
 from aiida.manage import get_manager
@@ -69,78 +63,6 @@ class TestBrokerBackend(Enum):
     RMQ = 'rmq'
     ZEROMQ = 'zmq'
     NONE = 'none'
-
-
-@contextmanager
-def _patch_zmq_broker_service_filepaths(profile, service_dir: Path):
-    """Patch only the ZeroMQ broker-service filepaths for a test profile."""
-    config = get_config()
-    original_filepaths = config.filepaths
-
-    def filepaths(current_profile):
-        result = copy.deepcopy(original_filepaths(current_profile))
-
-        if current_profile is profile:
-            result['zmq_broker_service'] = {'dir': str(service_dir), 'log': str(service_dir / 'broker.log')}
-
-        return result
-
-    with patch.object(config, 'filepaths', side_effect=filepaths):
-        yield
-
-
-@pytest.fixture
-def zeromq_broker(tmp_path):
-    """Create a ZMQ broker instance rooted in ``tmp_path``."""
-    profile = MagicMock()
-    profile.process_control_config = {'supervised_by_daemon': True}
-    profile.name = 'test-profile'
-
-    with _patch_zmq_broker_service_filepaths(profile, tmp_path):
-        yield ZeromqBroker(profile)
-
-
-@contextmanager
-def _run_zeromq_broker_server(zeromq_broker: ZeromqBroker, timeout: float = 10.0):
-    """Run a ZeroMQ broker service subprocess for the duration of a context."""
-    if zeromq_broker.is_service_reachable():
-        raise ValueError('Broker server already running')
-
-    zeromq_broker.service_dir.mkdir(parents=True, exist_ok=True)
-
-    process = subprocess.Popen(
-        [sys.executable, '-m', 'aiida.brokers.zeromq.service', '--service-dir', str(zeromq_broker.service_dir)],
-        start_new_session=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        stdin=subprocess.DEVNULL,
-    )
-
-    try:
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            if process.poll() is not None:
-                msg = f'ZeroMQ broker exited before becoming ready with code {process.returncode}'
-                raise RuntimeError(msg)
-            if zeromq_broker.is_service_reachable():
-                break
-            time.sleep(0.1)
-        else:
-            msg = f'ZeroMQ broker did not become ready within {timeout}s'
-            raise TimeoutError(msg)
-
-        yield process
-    finally:
-        try:
-            if process.poll() is None:
-                process.send_signal(signal.SIGINT)
-                try:
-                    process.wait(timeout=timeout)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait()
-        finally:
-            shutil.rmtree(zeromq_broker.service_dir, ignore_errors=True)
 
 
 def pytest_collection_modifyitems(items, config):
@@ -335,13 +257,7 @@ def aiida_profile(pytestconfig, aiida_config, aiida_profile_factory, config_psql
     with aiida_profile_factory(
         aiida_config, storage_backend=storage, storage_config=config, broker_backend=broker
     ) as profile:
-        # Start ZeroMQ broker service if needed (tests don't use circus)
-        broker_instance = get_manager().get_broker()
-        if isinstance(broker_instance, ZeromqBroker):
-            with _run_zeromq_broker_server(broker_instance):
-                yield profile
-        else:
-            yield profile
+        yield profile
 
 
 @pytest.fixture()
@@ -807,7 +723,7 @@ class CliResult:
 
     stderr_bytes: bytes
     stdout_bytes: bytes
-    exc_info: tuple[t.Type[BaseException], BaseException, types.TracebackType] | tuple[None, None, None] = (
+    exc_info: tuple[type[BaseException], BaseException, types.TracebackType] | tuple[None, None, None] = (
         None,
         None,
         None,
@@ -926,7 +842,6 @@ def run_cli_command(reset_log_level, aiida_config, aiida_profile):
 def run_cli_command_subprocess(command, parameters, user_input, profile_name, suppress_warnings):
     """Run CLI command through ``subprocess``."""
     import subprocess
-    import sys
 
     env = os.environ.copy()
     command_path = cli_command_map()[command]
@@ -1149,8 +1064,8 @@ def construct_calculation_node_add(tmp_path_factory):
         output_content = f'{x + y}\n'.encode()
         retrieved_folder.put_object_from_bytes(output_content, 'aiida.out')
 
-        scheduler_stdout = '\n'.encode()
-        scheduler_stderr = '\n'.encode()
+        scheduler_stdout = b'\n'
+        scheduler_stderr = b'\n'
         retrieved_folder.base.repository.put_object_from_bytes(scheduler_stdout, '_scheduler-stdout.txt')
         retrieved_folder.base.repository.put_object_from_bytes(scheduler_stderr, '_scheduler-stderr.txt')
         retrieved_folder.store()
@@ -1206,7 +1121,7 @@ def create_file_hierarchy():
     :param target: the target where the hierarchy should be created.
     """
 
-    def _create_file_hierarchy(hierarchy: t.Dict, target: t.Union[pathlib.Path, Folder]) -> None:
+    def _create_file_hierarchy(hierarchy: dict, target: pathlib.Path | Folder) -> None:
         for filename, value in hierarchy.items():
             if isinstance(value, dict):
                 if isinstance(target, pathlib.Path):

@@ -11,6 +11,5 @@
 from __future__ import annotations
 
 import pathlib
-from typing import Union
 
-FilePath = Union[str, pathlib.PurePath]
+FilePath = str | pathlib.PurePath

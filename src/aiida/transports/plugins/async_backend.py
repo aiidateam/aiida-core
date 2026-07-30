@@ -21,7 +21,6 @@ import logging
 import posixpath
 import re
 import subprocess
-from typing import Optional
 
 import asyncssh
 from asyncssh import SFTPFileAlreadyExists
@@ -33,7 +32,7 @@ from aiida.transports.transport import (
 )
 
 
-def get_openssh_version() -> Optional[int]:
+def get_openssh_version() -> int | None:
     """Get the major version of the local OpenSSH client.
 
     Returns the major version number (e.g., 9 for OpenSSH_9.0), or None if detection fails.
@@ -56,9 +55,10 @@ class _AsynchronousSSHBackend(abc.ABC):
     Note: Subclasses should not be part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
+    def __init__(self, machine: str, data_machine: str, logger: logging.LoggerAdapter, bash_command: str):
         self.bash_command = bash_command + '-c '
         self.machine = machine
+        self.data_machine = data_machine
         self.logger = logger
 
     @abc.abstractmethod
@@ -96,7 +96,7 @@ class _AsynchronousSSHBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    async def run(self, command: str, stdin: Optional[str] = None, timeout: Optional[int] = None):
+    async def run(self, command: str, stdin: str | None = None, timeout: int | None = None):
         """Run a command on the remote machine.
         :param command: The command to run
         :param stdin: The input to send to the command
@@ -227,14 +227,29 @@ class _AsyncSSH(_AsynchronousSSHBackend):
     Note: This class is not part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
-        super().__init__(machine, logger, bash_command)
-
     async def open(self):
-        self._conn = await asyncssh.connect(self.machine)
-        self._sftp = await self._conn.start_sftp_client()
+        conn = await asyncssh.connect(self.machine)
+        data_conn = None
+        try:
+            data_conn = conn if self.data_machine == self.machine else await asyncssh.connect(self.data_machine)
+            sftp = await data_conn.start_sftp_client()
+        except BaseException:
+            # `BaseException` rather than `Exception`, to also release them when the open is cancelled.
+            if data_conn is not None and data_conn is not conn:
+                data_conn.close()
+                await data_conn.wait_closed()
+            conn.close()
+            await conn.wait_closed()
+            raise
+
+        self._conn = conn
+        self._data_conn = data_conn
+        self._sftp = sftp
 
     async def close(self):
+        if self._data_conn is not self._conn:
+            self._data_conn.close()
+            await self._data_conn.wait_closed()
         self._conn.close()
         await self._conn.wait_closed()
 
@@ -262,7 +277,7 @@ class _AsyncSSH(_AsynchronousSSHBackend):
         except asyncssh.Error as exc:
             raise OSError from exc
 
-    async def run(self, command: str, stdin: Optional[str] = None, timeout: Optional[int] = None):
+    async def run(self, command: str, stdin: str | None = None, timeout: int | None = None):
         result = await self._conn.run(
             self.bash_command + escape_for_bash(command),
             input=stdin,
@@ -412,17 +427,15 @@ class _AsyncSSH(_AsynchronousSSHBackend):
                         self.logger.warning(f'There was nonempty stderr in the cp command: {stderr}')
                 else:
                     self.logger.error(
-                        "Problem executing cp. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
-                            retval, stdout, stderr, command
-                        )
+                        f'Problem executing cp. Exit code: {retval}, '
+                        f"stdout: '{stdout}', stderr: '{stderr}', command: '{command}'"
                     )
                     if 'No such file or directory' in str(stderr):
                         raise FileNotFoundError(f'Error while executing cp: {stderr}')
 
                     raise OSError(
-                        "Error while executing cp. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
-                            retval, stdout, stderr, command
-                        )
+                        f'Error while executing cp. Exit code: {retval}, '
+                        f"stdout: '{stdout}', stderr: '{stderr}', command: '{command}'"
                     )
 
             cp_exe = 'cp'
@@ -458,22 +471,49 @@ class _OpenSSH(_AsynchronousSSHBackend):
     Note: This class is not part of the public API and should not be used directly.
     """
 
-    def __init__(self, machine: str, logger: logging.LoggerAdapter, bash_command: str):
-        super().__init__(machine, logger, bash_command)
+    def __init__(
+        self,
+        machine: str,
+        data_machine: str,
+        logger: logging.LoggerAdapter,
+        bash_command: str,
+        use_sftp: bool,
+    ):
+        super().__init__(machine, data_machine, logger, bash_command)
+        self.use_sftp = use_sftp
+        self.scp_options: list[str] = []
 
         # Check if the local OpenSSH client version is 9.0 or higher.
         # OpenSSH 9.0+ changed scp to use SFTP protocol by default instead of RCP.
         # This affects how paths are interpreted - SFTP treats paths as binary data,
         # so shell quoting is not needed and can cause issues.
         openssh_version = get_openssh_version()
-        if openssh_version is not None and openssh_version >= 9:
-            self.logger.debug(f'Detected OpenSSH version {openssh_version}, using SFTP mode for scp commands.')
-            self.is_openssh_9_or_higher = True
-        else:
-            self.logger.debug(f'Detected OpenSSH version {openssh_version}, using RCP mode for scp commands.')
-            self.is_openssh_9_or_higher = False
+        self.is_openssh_9_or_higher = openssh_version is not None and openssh_version >= 9
 
-    async def openssh_execute(self, commands, stdin: Optional[str] = None, timeout: Optional[float] = None):
+        if openssh_version is None:
+            self.logger.warning(
+                'Could not detect your OpenSSH version. '
+                'Not applied: `use_sftp=False`. In addition quoting paths might not function properly. '
+                'Report to maintainers.'
+            )
+            self.use_sftp = False
+        elif self.is_openssh_9_or_higher and self.use_sftp:
+            self.logger.debug(f'Detected OpenSSH version {openssh_version}, using SFTP mode for scp commands.')
+        elif self.is_openssh_9_or_higher and not self.use_sftp:
+            # `-O` forces the legacy protocol, for servers that do not implement SFTP.
+            self.scp_options = ['-O']
+            self.logger.debug(
+                f'Detected OpenSSH version {openssh_version}, using RCP mode for scp commands as configured.'
+            )
+        else:
+            self.logger.debug(
+                f'Detected OpenSSH version {openssh_version}, using RCP mode for scp commands. '
+                'Configuration overrides: `use_sftp=False`'
+            )
+            # Override the setting, as in legacy versions are not using sftp anuways
+            self.use_sftp = False
+
+    async def openssh_execute(self, commands, stdin: str | None = None, timeout: float | None = None):
         """
         Execute a command using the _OpenSSH command line client.
         :param commands: The list of commands to execute
@@ -523,7 +563,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         return ''.join(result)
 
     def _escape_for_scp(self, path: str) -> str:
-        """Prepare a path for use in scp commands.
+        """Prepare a remote path for use in scp commands.
 
         OpenSSH >= 9.0 uses SFTP mode: paths are sent as binary, no
         escaping needed. OpenSSH < 9.0 uses RCP mode: paths are interpreted
@@ -539,7 +579,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         else:
             return f'{self._escape_for_rcp(path)}'
 
-    def ssh_command_generator(self, command_template: str, paths: Optional[list[str]] = None):
+    def ssh_command_generator(self, command_template: str, paths: list[str] | None = None):
         """Generate an SSH command with properly quoted paths.
 
         :param command_template: The command template with {} placeholders for paths
@@ -632,9 +672,10 @@ class _OpenSSH(_AsynchronousSSHBackend):
         returncode, stdout, stderr = await self.openssh_execute(commands)
 
         if stderr:
-            # this should not happen, but just in case for debugging
-            self.logger.debug(f'Unexpected stderr: {stderr}')
-            raise OSError(stderr)
+            self.logger.debug(f'Stderr from `test -e {path}`: {stderr}')
+
+        if returncode not in (0, 1):
+            raise OSError(f'Failed to check whether path exists: {path} (exit code {returncode}): {stderr}')
         return returncode == 0
 
     async def rmtree(self, path: str):
@@ -696,13 +737,13 @@ class _OpenSSH(_AsynchronousSSHBackend):
         # order matters
         return Stat(*stdout.split())
 
-    async def run(self, command: str, stdin: Optional[str] = None, timeout: Optional[float] = None):
+    async def run(self, command: str, stdin: str | None = None, timeout: float | None = None):
         commands = self.ssh_command_generator(command)
         returncode, stdout, stderr = await self.openssh_execute(commands, stdin, timeout)
         return returncode, stdout, stderr
 
     async def get(self, remotepath: str, localpath: str, dereference: bool, preserve: bool, recursive: bool):
-        options = []
+        options = [*self.scp_options]
         if preserve:
             options.append('-p')
         if dereference:
@@ -713,13 +754,18 @@ class _OpenSSH(_AsynchronousSSHBackend):
             options.append('-r')
 
         returncode, stdout, stderr = await self.openssh_execute(
-            ['scp', *options, f'{self.machine}:{self._escape_for_scp(remotepath)}', self._escape_for_scp(localpath)]
+            [
+                'scp',
+                *options,
+                f'{self.data_machine}:{self._escape_for_scp(remotepath)}',
+                self._escape_for_scp(localpath),
+            ]
         )
         if returncode != 0:
             raise OSError({stderr})
 
     async def put(self, localpath: str, remotepath: str, dereference: bool, preserve: bool, recursive: bool):
-        options = []
+        options = [*self.scp_options]
         if preserve:
             options.append('-p')
         if dereference:
@@ -730,7 +776,12 @@ class _OpenSSH(_AsynchronousSSHBackend):
             options.append('-r')
 
         returncode, stdout, stderr = await self.openssh_execute(
-            ['scp', *options, self._escape_for_scp(localpath), f'{self.machine}:{self._escape_for_scp(remotepath)}']
+            [
+                'scp',
+                *options,
+                self._escape_for_scp(localpath),
+                f'{self.data_machine}:{self._escape_for_scp(remotepath)}',
+            ]
         )
         if returncode != 0:
             raise OSError({stderr})
@@ -749,7 +800,7 @@ class _OpenSSH(_AsynchronousSSHBackend):
         recursive: bool,
         preserve: bool,
     ):
-        options = []
+        options = [*self.scp_options]
         if preserve:
             options.append('-p')
         if dereference:
@@ -782,8 +833,8 @@ class _OpenSSH(_AsynchronousSSHBackend):
             [
                 'scp',
                 *options,
-                f'{self.machine}:{self._escape_for_scp(remotesource)}',
-                f'{self.machine}:{self._escape_for_scp(remotedestination)}',
+                f'{self.data_machine}:{self._escape_for_scp(remotesource)}',
+                f'{self.data_machine}:{self._escape_for_scp(remotedestination)}',
             ]
         )
         if returncode != 0:

@@ -1,2 +1,20 @@
+# Add copyright notice to all files (#452)
+fe780649baa88add631fc69813486918756d1781
+# Update yapf and apply the resulting reformatting (#3220)
+91b205bcdeebc3d6f9a019c77c38ffdf6fc95321
+# Add double-quote-string-fixer to pre-commit (#3221)
+cc94a1e0127cd9cab0a4049e69a9fa31cb82941c
+# Auto-generate the explicit __all__ imports (#5061)
+ead3f398ee48e6961603dab6b2622423319d4151
+# Add isort pre-commit hook (#5151)
+b7e37ce50ba1d6a5de62ad95357befdedda0de65
 # Introduction of ruff as new linter and formatter (#6233)
 64c5e6a82d8bb515d07fea84b611dc35cce1263b
+# Update ruff to v0.3.5 (#6339)
+acd54543dffca05df7189f36c71afd2bb0065f34
+# Update ruff to v0.7.3 (#6614)
+c915a97348ffb344ab48fe031711120238f6976a
+# Update ruff to v0.9.10 (#7440)
+21f50ac63c9b189315a586b6e248d6a2835588ac
+# Apply ruff UP (pyupgrade) modernization (#7254)
+12f88f49caa97f0fc68dd187b8df2325de27bdbb

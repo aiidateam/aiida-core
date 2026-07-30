@@ -20,7 +20,7 @@ from aiida.cmdline.utils.decorators import with_dbenv
 from aiida.plugins.entry_point import get_entry_point_from_string
 
 if t.TYPE_CHECKING:
-    from importlib.metadata import EntryPoint
+    from importlib_metadata import EntryPoint
 
     from aiida.orm.utils.loaders import OrmEntityLoader
 
@@ -114,15 +114,14 @@ class IdentifierParamType(click.ParamType, ABC):
 
             for entry_point in self._entry_points:
                 try:
-                    sub_class = entry_point.load()
+                    sub_class = entry_point.load()  # type: ignore[no-untyped-call]
                 except ImportError as exception:
                     raise RuntimeError(f'failed to load the entry point {entry_point}: {exception}')
 
                 if not issubclass(sub_class, loader.orm_base_class):
                     raise RuntimeError(
-                        'the class {} of entry point {} is not a sub class of {}'.format(
-                            sub_class, entry_point, loader.orm_base_class
-                        )
+                        f'the class {sub_class} of entry point {entry_point} '
+                        f'is not a sub class of {loader.orm_base_class}'
                     )
                 else:
                     sub_classes.append(sub_class)

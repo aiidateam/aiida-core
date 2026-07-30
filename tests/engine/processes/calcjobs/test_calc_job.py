@@ -751,7 +751,7 @@ class TestCalcJob:
         _, node = launch.run_get_node(ArithmeticAddCalculation, **inputs)
         job_tmpl_file = os.path.join(node.dry_run_info['folder'], '.aiida', 'job_tmpl.json')
 
-        with open(job_tmpl_file, mode='r', encoding='utf8') as in_f:
+        with open(job_tmpl_file, encoding='utf8') as in_f:
             job_tmpl = json.load(in_f)
 
         assert job_tmpl['rerunnable']

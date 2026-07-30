@@ -13,7 +13,8 @@ from __future__ import annotations
 import enum
 import functools
 import traceback
-from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Set, Tuple
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
 
 from aiida.common.exceptions import LoadingEntryPointError, MissingEntryPointError, MultipleEntryPointError
 from aiida.common.warnings import warn_deprecation
@@ -21,7 +22,7 @@ from aiida.common.warnings import warn_deprecation
 from . import factories
 
 if TYPE_CHECKING:
-    from importlib.metadata import EntryPoint, EntryPoints
+    from importlib_metadata import EntryPoint, EntryPoints
 
 __all__ = ('get_entry_points', 'load_entry_point', 'load_entry_point_from_string', 'parse_entry_point')
 
@@ -40,16 +41,9 @@ def eps() -> EntryPoints:
     which will always iterate over all entry points since it looks for
     possible duplicate entries.
     """
-    import sys
-    from importlib.metadata import EntryPoints, entry_points
+    from importlib_metadata import EntryPoints, entry_points
 
-    all_eps: list[EntryPoint] | EntryPoints
-    if sys.version_info >= (3, 12):
-        all_eps = entry_points()
-    else:
-        # Python <3.12: entry_points() returns SelectableGroups (dict subclass)
-        # that iterates group names, not EntryPoints. Flatten via .values().
-        all_eps = [ep for group_eps in entry_points().values() for ep in group_eps]
+    all_eps = entry_points()
     return EntryPoints(sorted(all_eps, key=lambda x: x.group))
 
 
@@ -159,7 +153,7 @@ ENTRY_POINT_GROUP_FACTORY_MAPPING = {
 
 def parse_entry_point(group: str, spec: str) -> EntryPoint:
     """Return an entry point, given its group and spec (as formatted in the setup)"""
-    from importlib.metadata import EntryPoint
+    from importlib_metadata import EntryPoint
 
     name, value = spec.split('=', maxsplit=1)
     return EntryPoint(group=group, name=name.strip(), value=value.strip())
@@ -201,7 +195,7 @@ def format_entry_point_string(group: str, name: str, fmt: EntryPointFormat = Ent
     raise ValueError('invalid EntryPointFormat')
 
 
-def parse_entry_point_string(entry_point_string: str) -> Tuple[str, str]:
+def parse_entry_point_string(entry_point_string: str) -> tuple[str, str]:
     """Validate the entry point string and attempt to parse the entry point group and name
 
     :param entry_point_string: the entry point string
@@ -289,7 +283,7 @@ def load_entry_point(group: str, name: str) -> Any:
     return loaded_entry_point
 
 
-def get_entry_point_groups() -> Set[str]:
+def get_entry_point_groups() -> set[str]:
     """Return a list of all the recognized entry point groups
 
     :return: a list of valid entry point groups
@@ -297,7 +291,7 @@ def get_entry_point_groups() -> Set[str]:
     return eps().groups
 
 
-def get_entry_point_names(group: str, sort: bool = True) -> List[str]:
+def get_entry_point_names(group: str, sort: bool = True) -> list[str]:
     """Return the entry points within a group."""
     group_names = list(get_entry_points(group).names)
     if sort:
@@ -360,7 +354,7 @@ def convert_potentially_deprecated_entry_point(group: str, name: str) -> str:
 
 
 @functools.lru_cache(maxsize=100)
-def get_entry_point_from_class(class_module: str, class_name: str) -> Tuple[Optional[str], Optional[EntryPoint]]:
+def get_entry_point_from_class(class_module: str, class_name: str) -> tuple[str | None, EntryPoint | None]:
     """Given the module and name of a class, attempt to obtain the corresponding entry point if it exists
 
     :param class_module: module of the class
@@ -373,7 +367,7 @@ def get_entry_point_from_class(class_module: str, class_name: str) -> Tuple[Opti
     return None, None
 
 
-def get_entry_point_string_from_class(class_module: str, class_name: str) -> Optional[str]:
+def get_entry_point_string_from_class(class_module: str, class_name: str) -> str | None:
     """Given the module and name of a class, attempt to obtain the corresponding entry point if it
     exists and return the entry point string which will be the entry point group and entry point
     name concatenated by the entry point string separator
@@ -415,7 +409,7 @@ def is_valid_entry_point_string(entry_point_string: str) -> bool:
 
 
 @functools.lru_cache(maxsize=100)
-def is_registered_entry_point(class_module: str, class_name: str, groups: Optional[Sequence[str]] = None) -> bool:
+def is_registered_entry_point(class_module: str, class_name: str, groups: Sequence[str] | None = None) -> bool:
     """Verify whether the class with the given module and class name is a registered entry point.
 
     .. note:: this function only checks whether the class has a registered entry point. It does explicitly not verify

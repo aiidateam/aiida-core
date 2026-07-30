@@ -160,7 +160,7 @@ def compare_config_in_memory_and_on_disk(config, filepath):
     in_memory = json.dumps(config.dictionary, indent=settings.DEFAULT_CONFIG_INDENT_SIZE)
 
     # Read the content stored on disk
-    with open(filepath, 'r', encoding='utf8') as handle:
+    with open(filepath, encoding='utf8') as handle:
         on_disk = handle.read()
 
     # Compare content of in memory config and the one on disk
@@ -239,10 +239,10 @@ def test_filepaths_include_daemon_and_zmq_broker_entries(config_with_profile):
     filepaths = config.filepaths(profile)
     assert 'daemon_env_info' in filepaths['daemon']
     assert filepaths['daemon']['daemon_env_info'].endswith('-env-info.json')
-    assert 'zmq_broker_service' in filepaths
+    assert 'broker_service' in filepaths
     expected_dir_suffix = f'{profile.uuid}-{profile.name}'
-    assert filepaths['zmq_broker_service']['dir'].endswith(expected_dir_suffix)
-    assert filepaths['zmq_broker_service']['log'].endswith(f'{expected_dir_suffix}/broker.log')
+    assert filepaths['broker_service']['dir'].endswith(expected_dir_suffix)
+    assert filepaths['broker_service']['log'].endswith(f'{expected_dir_suffix}/broker.log')
 
 
 def test_setting_versions(config_with_profile):
@@ -436,7 +436,7 @@ def test_store(config_with_profile):
     config = config_with_profile
     config.store()
 
-    with open(config.filepath, 'r', encoding='utf8') as handle:
+    with open(config.filepath, encoding='utf8') as handle:
         config_recreated = Config(config.filepath, json.load(handle))
 
         assert config.dictionary == config_recreated.dictionary

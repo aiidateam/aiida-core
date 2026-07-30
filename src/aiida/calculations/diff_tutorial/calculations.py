@@ -17,7 +17,7 @@ class DiffCalculation(CalcJob):
     @classmethod
     def define(cls, spec):
         """Define inputs and outputs of the calculation."""
-        super(DiffCalculation, cls).define(spec)
+        super().define(spec)
 
         # new ports
         spec.input('file1', valid_type=SinglefileData, help='First file to be compared.')

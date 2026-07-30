@@ -10,7 +10,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, cast
+from collections.abc import Callable, Iterable
+from typing import TYPE_CHECKING, Any, cast
 
 from typing_extensions import TypedDict
 
@@ -35,8 +36,8 @@ class TraverseGraphOutput(TypedDict, total=False, closed=True):
 def get_nodes_delete(
     starting_pks: Iterable[int],
     get_links: bool = False,
-    missing_callback: Optional[Callable[[Iterable[int]], None]] = None,
-    backend: Optional['StorageBackend'] = None,
+    missing_callback: Callable[[Iterable[int]], None] | None = None,
+    backend: StorageBackend | None = None,
     **traversal_rules: bool,
 ) -> TraverseGraphOutput:
     """This function will return the set of all nodes that can be connected
@@ -76,7 +77,7 @@ def get_nodes_delete(
 def get_nodes_export(
     starting_pks: Iterable[int],
     get_links: bool = False,
-    backend: Optional['StorageBackend'] = None,
+    backend: StorageBackend | None = None,
     **traversal_rules: bool,
 ) -> TraverseGraphOutput:
     """This function will return the set of all nodes that can be connected
@@ -138,9 +139,9 @@ def validate_traversal_rules(
             f'ruleset input must be of type aiida.common.links.GraphTraversalRules\ninstead, it is: {type(ruleset)}'
         )
 
-    rules_applied: Dict[str, bool] = {}
-    links_forward: List[LinkType] = []
-    links_backward: List[LinkType] = []
+    rules_applied: dict[str, bool] = {}
+    links_forward: list[LinkType] = []
+    links_backward: list[LinkType] = []
 
     for name, rule in ruleset.value.items():
         follow = rule.default
@@ -179,12 +180,12 @@ def validate_traversal_rules(
 
 def traverse_graph(
     starting_pks: Iterable[int],
-    max_iterations: Optional[int] = None,
+    max_iterations: int | None = None,
     get_links: bool = False,
     links_forward: Iterable[LinkType] = (),
     links_backward: Iterable[LinkType] = (),
-    missing_callback: Optional[Callable[[Iterable[int]], None]] = None,
-    backend: Optional['StorageBackend'] = None,
+    missing_callback: Callable[[Iterable[int]], None] | None = None,
+    backend: StorageBackend | None = None,
 ) -> TraverseGraphOutput:
     """This function will return the set of all nodes that can be connected
     to a list of initial nodes through any sequence of specified links.

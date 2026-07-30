@@ -20,7 +20,7 @@ __all__ = ('AbsolutePathParamType', 'FileOrUrl', 'PathOrUrl')
 
 URL_TIMEOUT_SECONDS = 10
 
-PathType = t.Union[str, bytes, os.PathLike[str]]
+PathType = str | bytes | os.PathLike[str]
 
 
 def check_timeout_seconds(timeout_seconds: float) -> int:
@@ -74,7 +74,6 @@ def convert_possible_url(value: str, timeout: int) -> t.Any:
     :param return_handle: Return the ``value`` as is. When set to ``True`` return an open file handle instead.
     :returns: The URL if ``value`` could be opened as a URL
     """
-    import socket
     import urllib.error
     import urllib.request
 
@@ -88,7 +87,7 @@ def convert_possible_url(value: str, timeout: int) -> t.Any:
         return urllib.request.urlopen(value, timeout=timeout)
     except urllib.error.URLError:
         raise click.BadParameter(f'The URL `{value}` could not be reached.')
-    except socket.timeout:
+    except TimeoutError:
         raise click.BadParameter(f'The URL `{value}` could not be reached within {timeout} seconds.')
     except ValueError as exception_url:
         raise click.BadParameter(

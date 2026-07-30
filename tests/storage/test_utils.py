@@ -9,6 +9,7 @@
 """Tests for :mod:`aiida.storage.utils`."""
 
 from collections.abc import Generator
+from datetime import datetime, timezone
 from typing import cast
 
 import pytest
@@ -62,6 +63,32 @@ def test_sqlite_batches_large_lists(sqlite_session: SqliteSessionFixture) -> Non
 
     assert sql.count('IN (SELECT') == 2
     assert ' OR ' in sql
+
+
+def test_sqlite_in_clause_datetime_values() -> None:
+    """SQLite: datetime values are serialized using the column bind processor."""
+    engine: sa.Engine = sa.create_engine(url='sqlite://')
+    metadata: sa.MetaData = sa.MetaData()
+    table: sa.Table = sa.Table(
+        'items',
+        metadata,
+        sa.Column(name='id', type_=sa.Integer, primary_key=True),
+        sa.Column(name='ctime', type_=sa.DateTime(timezone=True)),
+    )
+    metadata.create_all(bind=engine)
+
+    timestamp = datetime(2026, 7, 23, 12, 0, 0, 123456, tzinfo=timezone.utc)
+    with Session(bind=engine) as session:
+        session.execute(table.insert().values(id=1, ctime=timestamp))
+        session.execute(table.insert().values(id=2, ctime=datetime(2026, 7, 24, tzinfo=timezone.utc)))
+        session.commit()
+
+        in_clause: ColumnElement[bool] = _create_smarter_in_clause(
+            session=session, column=table.c.ctime, values=[timestamp]
+        )
+        result = session.execute(sa.select(table.c.id).where(in_clause)).scalars().all()
+
+    assert result == [1]
 
 
 @pytest.mark.requires_psql

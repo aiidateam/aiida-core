@@ -362,9 +362,8 @@ class SlurmScheduler(BashCliScheduler):
                     raise ValueError
             except ValueError:
                 raise ValueError(
-                    "max_wallclock_seconds must be a positive integer (in seconds)! It is instead '{}'".format(
-                        (job_tmpl.max_wallclock_seconds)
-                    )
+                    'max_wallclock_seconds must be a positive integer (in seconds)! '
+                    f"It is instead '{job_tmpl.max_wallclock_seconds}'"
                 )
             days = tot_secs // 86400
             tot_hours = tot_secs % 86400
@@ -624,8 +623,8 @@ stderr='{stderr.strip()}'"""
                 if len(this_job.allocated_machines) != this_job.num_machines:
                     self.logger.error(
                         'The length of the list of allocated '
-                        'nodes ({}) is different from the '
-                        'expected number of nodes ({})!'.format(len(this_job.allocated_machines), this_job.num_machines)
+                        f'nodes ({len(this_job.allocated_machines)}) is different from the '
+                        f'expected number of nodes ({this_job.num_machines})!'
                     )
 
             # I append to the list of jobs to return

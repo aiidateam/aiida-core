@@ -64,7 +64,7 @@ def code_create():
     """Create a new code."""
 
 
-def get_default(key: str, ctx: click.Context) -> 'Any | None':
+def get_default(key: str, ctx: click.Context) -> Any | None:
     """Get the default argument using a user instance property
 
     :param key: The name of the property to use

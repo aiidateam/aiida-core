@@ -15,7 +15,8 @@ import contextlib
 import contextvars
 import logging
 import time
-from typing import TYPE_CHECKING, Dict, Hashable, Iterator, Optional, cast
+from collections.abc import Hashable, Iterator
+from typing import TYPE_CHECKING, cast
 
 from aiida.common import lang
 from aiida.orm import AuthInfo
@@ -44,7 +45,7 @@ class JobsList:
     See the :py:class:`~aiida.engine.processes.calcjobs.manager.JobManager` for example usage.
     """
 
-    def __init__(self, authinfo: AuthInfo, transport_queue: 'TransportQueue', last_updated: Optional[float] = None):
+    def __init__(self, authinfo: AuthInfo, transport_queue: TransportQueue, last_updated: float | None = None):
         """Construct an instance for the given authinfo and transport queue.
 
         :param authinfo: The authinfo used to check the jobs list
@@ -59,10 +60,10 @@ class JobsList:
         self._loop = transport_queue.loop
         self._logger = logging.getLogger(__name__)
 
-        self._jobs_cache: Dict[str, 'JobInfo'] = {}
-        self._job_update_requests: Dict[str, asyncio.Future] = {}  # Mapping: {job_id: Future}
+        self._jobs_cache: dict[str, JobInfo] = {}
+        self._job_update_requests: dict[str, asyncio.Future] = {}  # Mapping: {job_id: Future}
         self._last_updated = last_updated
-        self._update_handle: Optional[asyncio.TimerHandle] = None
+        self._update_handle: asyncio.TimerHandle | None = None
         self._polling_jobs: frozenset[str] = frozenset()
 
     @property
@@ -82,7 +83,7 @@ class JobsList:
         return self._authinfo.computer.get_minimum_job_poll_interval()
 
     @property
-    def last_updated(self) -> Optional[float]:
+    def last_updated(self) -> float | None:
         """Get the timestamp of when the list was last updated as produced by `time.time()`
 
         :return: The last update point
@@ -90,7 +91,7 @@ class JobsList:
         """
         return self._last_updated
 
-    async def _get_jobs_from_scheduler(self) -> Dict[str, 'JobInfo']:
+    async def _get_jobs_from_scheduler(self) -> dict[str, JobInfo]:
         """Get the current jobs list from the scheduler.
 
         :return: a mapping of job ids to :py:class:`~aiida.schedulers.datastructures.JobInfo` instances
@@ -166,7 +167,7 @@ class JobsList:
                     future.set_result(self._jobs_cache.get(job_id, None))
 
     @contextlib.contextmanager
-    def request_job_info_update(self, authinfo: AuthInfo, job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:
+    def request_job_info_update(self, authinfo: AuthInfo, job_id: Hashable) -> Iterator[asyncio.Future[JobInfo]]:
         """Request job info about a job when the job next changes state.
 
         If the job is not found in the jobs list at the update, the future will resolve to `None`.
@@ -215,7 +216,7 @@ class JobsList:
             )
 
     @staticmethod
-    def _has_job_state_changed(old: Optional['JobInfo'], new: Optional['JobInfo']) -> bool:
+    def _has_job_state_changed(old: JobInfo | None, new: JobInfo | None) -> bool:
         """Return whether the states `old` and `new` are different."""
         if old is None and new is None:
             return False
@@ -266,7 +267,7 @@ class JobManager:
     only hold per runner.
     """
 
-    def __init__(self, transport_queue: 'TransportQueue') -> None:
+    def __init__(self, transport_queue: TransportQueue) -> None:
         self._transport_queue = transport_queue
         self._job_lists: dict[int, JobsList] = {}
 
@@ -288,7 +289,7 @@ class JobManager:
         return self._job_lists[pk]
 
     @contextlib.contextmanager
-    def request_job_info_update(self, authinfo: AuthInfo, job_id: Hashable) -> Iterator['asyncio.Future[JobInfo]']:
+    def request_job_info_update(self, authinfo: AuthInfo, job_id: Hashable) -> Iterator[asyncio.Future[JobInfo]]:
         """Get a future that will resolve to information about a given job.
 
         This is a context manager so that if the user leaves the context the request is automatically cancelled.

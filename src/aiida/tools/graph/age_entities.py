@@ -12,10 +12,10 @@ from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
-from typing import Any, Literal, overload
+from typing import Any, Literal, TypeAlias, overload
 
 # Import TypedDict from typing_extensions to get "closed" support (PEP728)
-from typing_extensions import Self, TypeAlias, TypedDict
+from typing_extensions import Self, TypedDict
 
 from aiida import orm
 from aiida.orm.utils.links import LinkQuadruple
@@ -209,9 +209,9 @@ class AiidaEntitySet(AbstractSetContainer):
             return input_for_set
 
         raise ValueError(
-            '{} is not a valid input\n'
+            f'{input_for_set} is not a valid input\n'
             'You can either pass an AiiDA instance or a key to an instance that'
-            'matches the identifier you defined ({})'.format(input_for_set, self._identifier_type)
+            f'matches the identifier you defined ({self._identifier_type})'
         )
 
     def get_template(self) -> AiidaEntitySet:
@@ -373,9 +373,9 @@ class Basket:
 
             else:
                 raise ValueError(
-                    'Input object is of type {}.\n'
+                    f'Input object is of type {input_object}.\n'
                     'Instead, it should be either None or one of:\n'
-                    ' - {}\n - {}\n - {}\n - {}\n'.format(input_object, AiidaEntitySet, list, tuple, set)
+                    f' - {AiidaEntitySet}\n - {list}\n - {tuple}\n - {set}\n'
                 )
 
         def get_check_set_directed_edge_set(
@@ -442,7 +442,7 @@ class Basket:
     def __setitem__(self, key: _BasketKeys, val: _BasketValues) -> None:
         self._dict[key] = val
 
-    def __add__(self, other: object) -> 'Basket':
+    def __add__(self, other: object) -> Basket:
         if not isinstance(other, Basket):
             return NotImplemented
         new_dict = {}
@@ -457,7 +457,7 @@ class Basket:
             self[key] += other[key]  # type: ignore[call-overload]
         return self
 
-    def __sub__(self, other: object) -> 'Basket':
+    def __sub__(self, other: object) -> Basket:
         if not isinstance(other, Basket):
             return NotImplemented
         new_dict = {}
@@ -495,14 +495,14 @@ class Basket:
         for set_ in self._dict.values():
             set_.empty()  # type: ignore[attr-defined]
 
-    def get_template(self) -> 'Basket':
+    def get_template(self) -> Basket:
         """Create new nasket with the same defining attributes for its internal containers."""
         new_dict = {}
         for key, val in self._dict.items():
             new_dict[key] = val.get_template()  # type: ignore[attr-defined]
         return Basket(**new_dict)
 
-    def copy(self) -> 'Basket':
+    def copy(self) -> Basket:
         """Create new instance with the same defining attributes and content."""
         new_dict = {}
         for key, val in self._dict.items():

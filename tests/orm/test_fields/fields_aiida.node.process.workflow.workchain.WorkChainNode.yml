@@ -1,30 +1,36 @@
-attributes:
-  QbDictField('attributes', dtype=typing.Optional[typing.Dict[str, typing.Any]],
-  is_attribute=False, is_subscriptable=True)
-computer: QbNumericField('computer', dtype=typing.Optional[str], is_attribute=False)
-ctime: QbNumericField('ctime', dtype=typing.Optional[datetime.datetime], is_attribute=False)
-description: QbStrField('description', dtype=typing.Optional[str], is_attribute=False)
-exception: QbStrField('exception', dtype=typing.Optional[str], is_attribute=True)
-exit_message: QbStrField('exit_message', dtype=typing.Optional[str], is_attribute=True)
-exit_status: QbNumericField('exit_status', dtype=typing.Optional[int], is_attribute=True)
-extras:
-  QbDictField('extras', dtype=typing.Optional[typing.Dict[str, typing.Any]],
-  is_attribute=False, is_subscriptable=True)
-label: QbStrField('label', dtype=typing.Optional[str], is_attribute=False)
-mtime: QbNumericField('mtime', dtype=typing.Optional[datetime.datetime], is_attribute=False)
-node_type: QbStrField('node_type', dtype=typing.Optional[str], is_attribute=False)
-paused: QbField('paused', dtype=<class 'bool'>, is_attribute=True)
-pk: QbNumericField('pk', dtype=typing.Optional[int], is_attribute=False)
-process_label: QbStrField('process_label', dtype=typing.Optional[str], is_attribute=True)
-process_state: QbStrField('process_state', dtype=typing.Optional[str], is_attribute=True)
-process_status: QbStrField('process_status', dtype=typing.Optional[str], is_attribute=True)
-process_type: QbStrField('process_type', dtype=typing.Optional[str], is_attribute=False)
-repository_content:
-  QbDictField('repository_content', dtype=typing.Optional[dict[str,
-  bytes]], is_attribute=False)
-repository_metadata:
-  QbDictField('repository_metadata', dtype=typing.Optional[typing.Dict[str,
-  typing.Any]], is_attribute=False)
-sealed: QbField('sealed', dtype=<class 'bool'>, is_attribute=True)
-user: QbNumericField('user', dtype=typing.Optional[int], is_attribute=False)
-uuid: QbStrField('uuid', dtype=typing.Optional[str], is_attribute=False)
+attributes: QbAttributesField('attributes', dtype=<class 'aiida.orm.nodes.process.workflow.workchain.WorkChainNode.AttributesModel'>,
+  doc='The node attributes')
+computer: QbNumericField('computer', dtype=int | None, doc='The PK of the computer')
+ctime: QbNumericField('ctime', dtype=<class 'datetime.datetime'>, doc='The creation
+  time of the node')
+description: QbStrField('description', dtype=<class 'str'>, doc='The node description')
+exception: QbStrField('attributes.exception', dtype=str | None, doc='The process exception
+  message')
+exit_message: QbStrField('attributes.exit_message', dtype=str | None, doc='The process
+  exit message')
+exit_status: QbNumericField('attributes.exit_status', dtype=int | None, doc='The process
+  exit status')
+extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The node extras')
+label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
+mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
+  time of the node')
+node_type: QbStrField('node_type', dtype=typing.Literal['process.workflow.workchain.WorkChainNode.'],
+  doc='The type of the node.')
+paused: QbAnyField('attributes.paused', dtype=bool | None, doc='Whether the process
+  is paused')
+pk: QbNumericField('pk', dtype=<class 'int'>, doc='The primary key of the entity')
+process_label: QbStrField('attributes.process_label', dtype=str | None, doc='The process
+  label')
+process_state: QbStrField('attributes.process_state', dtype=str | None, doc='The process
+  state enum')
+process_status: QbStrField('attributes.process_status', dtype=str | None, doc='The
+  process status is a generic status message')
+process_type: QbStrField('process_type', dtype=str | None, doc='The process type of
+  the node')
+repository_metadata: QbDictField('repository_metadata', dtype=dict[str, typing.Any],
+  doc='Virtual hierarchy of the file repository')
+sealed: QbAnyField('attributes.sealed', dtype=<class 'bool'>, doc='Whether the node
+  is sealed')
+user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
+  the node')
+uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')

@@ -11,13 +11,12 @@
 import urllib.parse
 import urllib.request
 from html.parser import HTMLParser
-from typing import Dict, Type
 
 from aiida.orm import AuthInfo, Comment, Computer, Entity, Group, Log, Node, User
 from aiida.orm.entities import EntityTypes
 
 # Mapping from entity names to AiiDA classes
-entity_type_to_orm: Dict[EntityTypes, Type[Entity]] = {
+entity_type_to_orm: dict[EntityTypes, type[Entity]] = {
     EntityTypes.AUTHINFO: AuthInfo,
     EntityTypes.GROUP: Group,
     EntityTypes.COMPUTER: Computer,

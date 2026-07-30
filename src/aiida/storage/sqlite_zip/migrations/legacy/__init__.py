@@ -12,7 +12,7 @@ using the old ``data.json`` format for storing the database.
 These migrations simply manipulate the metadata and data in-place.
 """
 
-from typing import Callable, Dict, Tuple
+from collections.abc import Callable
 
 from .v04_to_v05 import migrate_v4_to_v5
 from .v05_to_v06 import migrate_v5_to_v6
@@ -25,7 +25,7 @@ from .v11_to_v12 import migrate_v11_to_v12
 from .v12_to_v13 import migrate_v12_to_v13
 
 # version from -> version to, function which modifies metadata, data in-place
-LEGACY_MIGRATE_FUNCTIONS: Dict[str, Tuple[str, Callable[[dict, dict], None]]] = {
+LEGACY_MIGRATE_FUNCTIONS: dict[str, tuple[str, Callable[[dict, dict], None]]] = {
     '0.4': ('0.5', migrate_v4_to_v5),
     '0.5': ('0.6', migrate_v5_to_v6),
     '0.6': ('0.7', migrate_v6_to_v7),

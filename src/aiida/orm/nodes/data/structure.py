@@ -701,7 +701,7 @@ class StructureData(Data):
             False,
             description='Whether periodic in the c direction',
         )
-        cell: t.Optional[list[list[float]]] = OrmMetadataField(
+        cell: list[list[float]] | None = OrmMetadataField(
             None,
             description='The cell parameters',
         )
@@ -714,12 +714,12 @@ class StructureData(Data):
 
         @field_validator('kinds', mode='before')
         @classmethod
-        def _validate_kinds(cls, value: list[Kind | dict[str, t.Any]]) -> list[t.Dict]:
+        def _validate_kinds(cls, value: list[Kind | dict[str, t.Any]]) -> list[dict]:
             return [kind.get_raw() if isinstance(kind, Kind) else kind for kind in value]
 
         @field_validator('sites', mode='before')
         @classmethod
-        def _validate_sites(cls, value: list[Site | dict[str, t.Any]]) -> list[t.Dict]:
+        def _validate_sites(cls, value: list[Site | dict[str, t.Any]]) -> list[dict]:
             return [site.get_raw() if isinstance(site, Site) else site for site in value]
 
     def __init__(
@@ -992,7 +992,7 @@ class StructureData(Data):
             # I checked above that it is not an alloy, therefore I take the
             # first symbol
             return_string += f'{_atomic_numbers[self.get_kind(site.kind_name).symbols[0]]} '
-            return_string += '%18.10f %18.10f %18.10f\n' % tuple(site.position)
+            return_string += '{:18.10f} {:18.10f} {:18.10f}\n'.format(*tuple(site.position))
         return return_string.encode('utf-8'), {}
 
     def _prepare_cif(self, main_file_name=''):
@@ -1075,28 +1075,16 @@ class StructureData(Data):
 
         return_list = [f'{len(sites)}']
         return_list.append(
-            'Lattice="{} {} {} {} {} {} {} {} {}" pbc="{} {} {}"'.format(
-                cell[0][0],
-                cell[0][1],
-                cell[0][2],
-                cell[1][0],
-                cell[1][1],
-                cell[1][2],
-                cell[2][0],
-                cell[2][1],
-                cell[2][2],
-                self.pbc[0],
-                self.pbc[1],
-                self.pbc[2],
-            )
+            f'Lattice="{cell[0][0]} {cell[0][1]} {cell[0][2]} {cell[1][0]} {cell[1][1]} {cell[1][2]} '
+            f'{cell[2][0]} {cell[2][1]} {cell[2][2]}" '
+            f'pbc="{self.pbc[0]} {self.pbc[1]} {self.pbc[2]}"'
         )
         for site in sites:
             # I checked above that it is not an alloy, therefore I take the
             # first symbol
             return_list.append(
-                '{:6s} {:18.10f} {:18.10f} {:18.10f}'.format(
-                    self.get_kind(site.kind_name).symbols[0], site.position[0], site.position[1], site.position[2]
-                )
+                f'{self.get_kind(site.kind_name).symbols[0]:6s} '
+                f'{site.position[0]:18.10f} {site.position[1]:18.10f} {site.position[2]:18.10f}'
             )
 
         return_string = '\n'.join(return_list)
@@ -1471,9 +1459,9 @@ class StructureData(Data):
                 else:
                     raise ValueError(
                         'You are explicitly setting the name '
-                        "of the kind to '{}', that already "
+                        f"of the kind to '{kind.name}', that already "
                         'exists, but the two kinds are different!'
-                        ' (first difference: {})'.format(kind.name, firstdiff)
+                        f' (first difference: {firstdiff})'
                     )
 
         site = Site(kind_name=kind.name, position=position)
@@ -1558,7 +1546,7 @@ class StructureData(Data):
         return [k.name for k in self.kinds]
 
     @property
-    def cell(self) -> t.List[t.List[float]]:
+    def cell(self) -> list[list[float]]:
         """Returns the cell shape.
 
         :return: a 3x3 list of lists.
@@ -2011,7 +1999,7 @@ class Kind:
                 raise ValueError(
                     'Error using the Kind object. Are you sure '
                     'it is a Kind object? [Introspection says it is '
-                    '{}]'.format(str(type(oldkind)))
+                    f'{type(oldkind)!s}]'
                 )
 
         elif 'ase' in kwargs:
@@ -2032,7 +2020,7 @@ class Kind:
                 raise ValueError(
                     'Error using the aseatom object. Are you sure '
                     'it is a ase.atom.Atom object? [Introspection says it is '
-                    '{}]'.format(str(type(aseatom)))
+                    f'{type(aseatom)!s}]'
                 )
             if aseatom.tag != 0:
                 self.set_automatic_kind_name(tag=aseatom.tag)

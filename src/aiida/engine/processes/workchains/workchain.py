@@ -111,7 +111,7 @@ class WorkChain(Process, metaclass=Protect):
         self,
         inputs: dict | None = None,
         logger: logging.Logger | None = None,
-        runner: 'Runner' | None = None,
+        runner: Runner | None = None,
         enable_persistence: bool = True,
     ) -> None:
         """Construct a WorkChain instance.

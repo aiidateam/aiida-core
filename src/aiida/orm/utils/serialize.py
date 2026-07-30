@@ -19,7 +19,7 @@ import inspect
 from dataclasses import asdict, is_dataclass
 from enum import Enum
 from functools import partial
-from typing import Any, Protocol, Type, overload
+from typing import Any, Protocol, overload
 
 import yaml
 from plumpy import Bundle, get_object_loader
@@ -144,7 +144,7 @@ class _MappingType(Protocol):
 
 
 def mapping_constructor(
-    mapping_type: Type[_MappingType], loader: yaml.Loader, mapping: yaml.MappingNode
+    mapping_type: type[_MappingType], loader: yaml.Loader, mapping: yaml.MappingNode
 ) -> _MappingType:
     """Construct a mapping from the representation."""
     yaml_node = loader.construct_mapping(mapping, deep=True)

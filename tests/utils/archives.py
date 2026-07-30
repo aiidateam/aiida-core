@@ -12,7 +12,6 @@ import json
 import os
 import tarfile
 import zipfile
-from typing import List
 
 from archive_path import read_file_in_tar, read_file_in_zip
 
@@ -79,14 +78,14 @@ def import_test_archive(archive, filepath=None, external_module=None):
     import_archive(dirpath_archive)
 
 
-def read_json_files(path, *, names=('metadata.json', 'data.json')) -> List[dict]:
+def read_json_files(path, *, names=('metadata.json', 'data.json')) -> list[dict]:
     """Get metadata.json and data.json from an exported AiiDA archive
 
     :param path: the filepath of the archive
     :param names: the files to retrieve
 
     """
-    jsons: List[dict] = []
+    jsons: list[dict] = []
 
     if zipfile.is_zipfile(path):
         for name in names:

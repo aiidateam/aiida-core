@@ -43,8 +43,8 @@ class DummyBroker:
     def get_communicator(self):
         return object()
 
-    def get_service_status(self):
-        return {'product': 'RabbitMQ', 'version': '3.12.0'}
+    def probe_service_status(self):
+        return {'connected': True, 'product': 'RabbitMQ', 'version': '3.12.0'}
 
     def close(self):
         self.closed = True
@@ -69,15 +69,6 @@ class BrokenStorageCloseBackend(DummyStorageBackend):
 
     def close(self):
         raise RuntimeError('storage close unavailable')
-
-
-def _make_zeromq_broker(service_dir: pathlib.Path, is_running: bool, status: dict | None) -> ZeromqBroker:
-    """Create a ``ZeromqBroker`` instance without invoking its constructor."""
-    broker = ZeromqBroker.__new__(ZeromqBroker)
-    broker._service_dir = service_dir
-    broker.is_service_reachable = lambda: is_running
-    broker.get_service_status = lambda: status
-    return broker
 
 
 def _patch_manager(monkeypatch, profile, broker, get_daemon_client):
@@ -111,7 +102,7 @@ def _make_filepaths(dirpath: pathlib.Path) -> dict:
         'profile': {'log': str(dirpath / 'profile.log')},
         'daemon': {'log': str(dirpath / 'daemon.log')},
         'circus': {'log': str(dirpath / 'circus.log')},
-        'zmq_broker_service': {'dir': str(dirpath / 'broker'), 'log': str(dirpath / 'broker' / 'broker.log')},
+        'broker_service': {'dir': str(dirpath / 'broker'), 'log': str(dirpath / 'broker' / 'broker.log')},
     }
 
 
@@ -169,22 +160,28 @@ def test_collect_diagnostics(monkeypatch, tmp_path):
             DummyBroker,
             _get_daemon_client_ok,
             {
-                'storage': {'connected': True, 'status': 'DummyStorageBackend'},
-                'broker': {'connected': True, 'status': {'product': 'RabbitMQ', 'version': '3.12.0'}},
-                'daemon': {'connected': True, 'status': {'pid': 1234}},
+                'storage': {'retrieval_error': None, 'status': 'DummyStorageBackend'},
+                'broker': {
+                    'retrieval_error': None,
+                    'status': {'connected': True, 'product': 'RabbitMQ', 'version': '3.12.0'},
+                },
+                'daemon': {'retrieval_error': None, 'status': {'pid': 1234}},
             },
-            id='connected',
+            id='status-retrieved',
         ),
         pytest.param(
             BrokenStorageBackend,
             None,
             _get_daemon_client_error,
             {
-                'storage': {'connected': False, 'status': 'RuntimeError: storage unavailable'},
-                'broker': {'connected': False, 'status': 'No broker configured for this profile.'},
-                'daemon': {'connected': False, 'status': 'RuntimeError: daemon unavailable'},
+                'storage': {'retrieval_error': 'RuntimeError: storage unavailable', 'status': None},
+                'broker': {
+                    'retrieval_error': 'No broker configured for this profile.',
+                    'status': None,
+                },
+                'daemon': {'retrieval_error': 'RuntimeError: daemon unavailable', 'status': None},
             },
-            id='not-connected',
+            id='status-not-retrieved',
         ),
     ],
 )
@@ -204,22 +201,22 @@ def test_collect_diagnostics_services(
 
 
 @pytest.mark.parametrize(
-    ('is_running', 'status'),
+    'status',
     [
-        (True, {'pid': 4321, 'pending_tasks': 0}),
-        (False, None),
+        {'connected': True, 'pid': 4321, 'pending_tasks': 0},
+        {'connected': False, 'error': 'Broker is NOT running'},
     ],
 )
-def test_check_broker_zeromq_status(monkeypatch, tmp_path, is_running, status):
+def test_check_broker_zeromq_status(monkeypatch, status):
     """Test ``_check_broker`` reports the ZeroMQ broker service status payload."""
-    broker = _make_zeromq_broker(tmp_path, is_running=is_running, status=status)
+    broker = ZeromqBroker.__new__(ZeromqBroker)
+    broker.probe_service_status = lambda: status
     manager = SimpleNamespace(_broker=None, get_broker=lambda: broker, reset_broker=lambda: None)
     monkeypatch.setattr('aiida.manage.get_manager', lambda: manager)
 
     result = cmd_bug_report._check_broker()
 
-    assert result['connected'] is (status is not None)
-    assert result['status'] == status
+    assert result == {'retrieval_error': None, 'status': status}
 
 
 def test_get_config_data(monkeypatch, tmp_path):
@@ -320,7 +317,7 @@ def test_read_log_tail(tmp_path):
 def test_read_log_tail_handles_partial_utf8(tmp_path):
     """Test ``_read_log_tail`` drops incomplete UTF-8 bytes at the truncation boundary."""
     log_file = tmp_path / 'test.log'
-    log_file.write_bytes(b'a' * 30 + '🙂'.encode('utf-8') + b'b' * 2)
+    log_file.write_bytes(b'a' * 30 + '🙂'.encode() + b'b' * 2)
 
     truncated = cmd_bug_report._read_log_tail(log_file, max_bytes=34)
 
@@ -342,8 +339,8 @@ def test_check_storage_failure_after_instantiation(monkeypatch):
     monkeypatch.setattr('aiida.manage.get_manager', lambda: manager)
 
     assert cmd_bug_report._check_storage() == {
-        'connected': False,
-        'status': 'RuntimeError: storage string unavailable',
+        'retrieval_error': 'RuntimeError: storage string unavailable',
+        'status': None,
     }
 
 
@@ -359,7 +356,7 @@ def test_check_storage_close_failure_is_logged(monkeypatch, caplog):
 
     result = cmd_bug_report._check_storage()
 
-    assert result == {'connected': True, 'status': 'DummyStorageBackend'}
+    assert result == {'retrieval_error': None, 'status': 'DummyStorageBackend'}
     assert 'Failed to reset storage while collecting bug report diagnostics' in caplog.text
 
 
@@ -375,7 +372,10 @@ def test_check_broker_reset_failure_is_logged(monkeypatch, caplog):
 
     result = cmd_bug_report._check_broker()
 
-    assert result == {'connected': True, 'status': {'product': 'RabbitMQ', 'version': '3.12.0'}}
+    assert result == {
+        'retrieval_error': None,
+        'status': {'connected': True, 'product': 'RabbitMQ', 'version': '3.12.0'},
+    }
     assert 'Failed to reset broker while collecting bug report diagnostics' in caplog.text
 
 
@@ -393,7 +393,10 @@ def test_check_broker_does_not_reset_preloaded_broker(monkeypatch):
 
     result = cmd_bug_report._check_broker()
 
-    assert result == {'connected': True, 'status': {'product': 'RabbitMQ', 'version': '3.12.0'}}
+    assert result == {
+        'retrieval_error': None,
+        'status': {'connected': True, 'product': 'RabbitMQ', 'version': '3.12.0'},
+    }
     assert reset_called is False
     assert broker.closed is False
 
@@ -416,7 +419,7 @@ def test_check_storage_does_not_reset_preloaded_storage(monkeypatch):
 
     result = cmd_bug_report._check_storage()
 
-    assert result == {'connected': True, 'status': 'DummyStorageBackend'}
+    assert result == {'retrieval_error': None, 'status': 'DummyStorageBackend'}
     assert reset_called is False
     assert storage.closed is False
 
@@ -435,7 +438,7 @@ def test_bug_report_command(run_cli_command, tmp_path):
 
     assert diagnostics['aiida_version'] == aiida.__version__
     assert diagnostics['profile'] is not None
-    assert diagnostics['services']['storage']['connected'] is True
+    assert diagnostics['services']['storage']['retrieval_error'] is None
 
 
 def test_bug_report_command_default_output(run_cli_command, monkeypatch, tmp_path):

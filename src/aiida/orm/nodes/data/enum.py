@@ -105,7 +105,7 @@ class EnumData(Data):
         """Return the enum member wrapped by this node."""
         return self.get_member()
 
-    def get_enum(self) -> t.Type[EnumType]:
+    def get_enum(self) -> type[EnumType]:
         """Return the enum class reconstructed from the serialized identifier stored in the database.
 
         :raises `ImportError`: if the enum class represented by the stored identifier cannot be imported.
@@ -127,7 +127,7 @@ class EnumData(Data):
         :raises `ValueError`: if the stored enum member value is no longer valid for the imported enum class.
         """
         value = self.base.attributes.get(self.KEY_VALUE)
-        enum: t.Type[EnumType] = self.get_enum()
+        enum: type[EnumType] = self.get_enum()
 
         try:
             return enum(value)

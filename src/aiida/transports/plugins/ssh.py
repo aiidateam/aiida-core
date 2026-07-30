@@ -13,7 +13,6 @@ import io
 import os
 import re
 from stat import S_ISDIR, S_ISREG
-from typing import Optional
 
 import click
 
@@ -732,15 +731,15 @@ class SshTransport(BlockingTransport):
         except OSError as exc:
             if os.path.isabs(path):
                 raise OSError(
-                    "Error during mkdir of '{}', "
+                    f"Error during mkdir of '{path}', "
                     "maybe you don't have the permissions to do it, "
-                    'or the directory already exists? ({})'.format(path, exc)
+                    f'or the directory already exists? ({exc})'
                 )
             else:
                 raise OSError(
-                    "Error during mkdir of '{}' from folder '{}', "
+                    f"Error during mkdir of '{path}' from folder '{self.getcwd()}', "
                     "maybe you don't have the permissions to do it, "
-                    'or the directory already exists? ({})'.format(path, self.getcwd(), exc)
+                    f'or the directory already exists? ({exc})'
                 )
 
     def rmtree(self, path: TransportPath):
@@ -1288,17 +1287,15 @@ class SshTransport(BlockingTransport):
                 self.logger.warning(f'There was nonempty stderr in the cp command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing cp. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
-                    retval, stdout, stderr, command
-                )
+                f'Problem executing cp. Exit code: {retval}, '
+                f"stdout: '{stdout}', stderr: '{stderr}', command: '{command}'"
             )
             if 'No such file or directory' in str(stderr):
                 raise FileNotFoundError(f'Error while executing cp: {stderr}')
 
             raise OSError(
-                "Error while executing cp. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
-                    retval, stdout, stderr, command
-                )
+                f'Error while executing cp. Exit code: {retval}, '
+                f"stdout: '{stdout}', stderr: '{stderr}', command: '{command}'"
             )
 
     @staticmethod
@@ -1457,7 +1454,6 @@ class SshTransport(BlockingTransport):
         :return: a tuple with (return_value, stdout, stderr) where stdout and stderr
             are both bytes and the return_value is an int.
         """
-        import socket
         import time
 
         if workdir:
@@ -1516,7 +1512,7 @@ class SshTransport(BlockingTransport):
                 try:
                     piece = stdout.read(internal_bufsize)
                     stdout_bytes.append(piece)
-                except socket.timeout:
+                except TimeoutError:
                     # There was a timeout: I continue as there should still be data
                     pass
 
@@ -1525,7 +1521,7 @@ class SshTransport(BlockingTransport):
                 try:
                     piece = stderr.read(internal_bufsize)
                     stderr_bytes.append(piece)
-                except socket.timeout:
+                except TimeoutError:
                     # There was a timeout: I continue as there should still be data
                     pass
 
@@ -1556,7 +1552,7 @@ class SshTransport(BlockingTransport):
 
         return (retval, b''.join(stdout_bytes), b''.join(stderr_bytes))
 
-    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
+    def gotocomputer_command(self, remotedir: TransportPath | None = None):
         """Specific gotocomputer string to connect to a given remote computer via
         ssh and directly go to the calculation folder.
         """

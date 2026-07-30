@@ -11,6 +11,7 @@
 import numpy
 import pytest
 
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm import ArrayData, load_node
 
 
@@ -61,3 +62,22 @@ def test_get_array():
 
     node = ArrayData(numpy.array([1, 2]))
     assert (node.get_array() == numpy.array([1, 2])).all()
+
+
+def test_save_and_load_arrays():
+    """Test :meth:`aiida.orm.ArrayData.save_arrays` and ``load_arrays``."""
+    arrays = {
+        'a': numpy.array([1, 2, 3]),
+        'b': numpy.array([[1.0, 2.0], [3.0, 4.0]]),
+    }
+
+    with pytest.warns(AiidaDeprecationWarning, match='ArrayData.save_arrays'):
+        serialized = ArrayData.save_arrays(arrays)
+    assert set(serialized) == {'a', 'b'}
+    assert all(isinstance(value, bytes) for value in serialized.values())
+
+    with pytest.warns(AiidaDeprecationWarning, match='ArrayData.load_arrays'):
+        deserialized = ArrayData.load_arrays(serialized)
+    assert set(deserialized) == {'a', 'b'}
+    assert numpy.array_equal(deserialized['a'], arrays['a'])
+    assert numpy.array_equal(deserialized['b'], arrays['b'])

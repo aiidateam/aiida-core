@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING
 
 import click
 
@@ -35,13 +35,13 @@ logger = AIIDA_LOGGER.getChild('tools._dumping.executors.collection')
 class CollectionDumpExecutor:
     def __init__(
         self,
-        config: Union[GroupDumpConfig, ProfileDumpConfig],
+        config: GroupDumpConfig | ProfileDumpConfig,
         dump_paths: DumpPaths,
         dump_tracker: DumpTracker,
         process_dump_executor: ProcessDumpExecutor,
         current_mapping: GroupNodeMapping,
     ) -> None:
-        self.config: Union[GroupDumpConfig, ProfileDumpConfig] = config
+        self.config: GroupDumpConfig | ProfileDumpConfig = config
         self.dump_paths: DumpPaths = dump_paths
         self.process_dump_executor: ProcessDumpExecutor = process_dump_executor
         self.dump_tracker: DumpTracker = dump_tracker
@@ -122,8 +122,8 @@ class CollectionDumpExecutor:
     def _dump_nodes(
         self,
         processing_queue: ProcessingQueue,
-        group_context: Optional[orm.Group] = None,
-        current_dump_root_for_nodes: Optional[Path] = None,
+        group_context: orm.Group | None = None,
+        current_dump_root_for_nodes: Path | None = None,
     ):
         """Dumps a collection of nodes. Nodes are placed relative to 'current_dump_root_for_nodes'.
 

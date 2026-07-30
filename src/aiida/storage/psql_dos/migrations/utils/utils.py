@@ -16,7 +16,7 @@ import json
 import os
 import pathlib
 import re
-from typing import Dict, Iterable, Iterator, List, Optional, Union
+from collections.abc import Iterable, Iterator
 
 import numpy
 from disk_objectstore import Container
@@ -44,8 +44,8 @@ class LazyFile(File):
         self,
         name: str = '',
         file_type: FileType = FileType.DIRECTORY,
-        key: Union[str, None, LazyOpener] = None,
-        objects: Optional[Dict[str, 'File']] = None,
+        key: str | None | LazyOpener = None,
+        objects: dict[str, 'File'] | None = None,
     ):
         if not isinstance(name, str):
             raise TypeError('name should be a string.')
@@ -87,7 +87,7 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
     """
 
     @property
-    def uuid(self) -> Optional[str]:
+    def uuid(self) -> str | None:
         """Return the unique identifier of the repository.
 
         .. note:: A sandbox folder does not have the concept of a unique identifier and so always returns ``None``.
@@ -95,7 +95,7 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
         return None
 
     @property
-    def key_format(self) -> Optional[str]:
+    def key_format(self) -> str | None:
         return None
 
     def initialise(self, **kwargs) -> None:
@@ -111,16 +111,16 @@ class NoopRepositoryBackend(AbstractRepositoryBackend):
     def _put_object_from_filelike(self, handle: io.BufferedIOBase) -> str:
         return LazyOpener(handle.name)
 
-    def has_objects(self, keys: List[str]) -> List[bool]:
+    def has_objects(self, keys: list[str]) -> list[bool]:
         raise NotImplementedError()
 
-    def delete_objects(self, keys: List[str]) -> None:
+    def delete_objects(self, keys: list[str]) -> None:
         raise NotImplementedError()
 
     def list_objects(self) -> Iterable[str]:
         raise NotImplementedError()
 
-    def iter_object_streams(self, keys: List[str]):
+    def iter_object_streams(self, keys: list[str]):
         raise NotImplementedError()
 
     def maintain(self, dry_run: bool = False, live: bool = True, **kwargs) -> None:

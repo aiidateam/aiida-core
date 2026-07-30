@@ -36,7 +36,7 @@ def test_get_full_type_filters():
 
     # Like on both
     filters = get_full_type_filters(
-        'node_type{like}{concat}process_type{like}'.format(like=LIKE_OPERATOR_CHARACTER, concat=FULL_TYPE_CONCATENATOR)
+        f'node_type{LIKE_OPERATOR_CHARACTER}{FULL_TYPE_CONCATENATOR}process_type{LIKE_OPERATOR_CHARACTER}'
     )
     assert filters['node_type'] == {'like': 'node\\_type%'}
     assert filters['process_type'] == {'like': 'process\\_type%'}
@@ -61,14 +61,12 @@ def test_get_filters_errors():
 
     with pytest.raises(ValueError):
         get_full_type_filters(
-            'too_many_{like}{like}{concat}process_type'.format(
-                like=LIKE_OPERATOR_CHARACTER, concat=FULL_TYPE_CONCATENATOR
-            )
+            f'too_many_{LIKE_OPERATOR_CHARACTER}{LIKE_OPERATOR_CHARACTER}{FULL_TYPE_CONCATENATOR}process_type'
         )
 
     with pytest.raises(ValueError):
         get_full_type_filters(
-            'node_type{concat}too_many_{like}{like}'.format(like=LIKE_OPERATOR_CHARACTER, concat=FULL_TYPE_CONCATENATOR)
+            f'node_type{FULL_TYPE_CONCATENATOR}too_many_{LIKE_OPERATOR_CHARACTER}{LIKE_OPERATOR_CHARACTER}'
         )
 
     with pytest.raises(ValueError):

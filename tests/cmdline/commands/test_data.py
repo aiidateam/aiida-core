@@ -357,7 +357,7 @@ class TestVerdiDataBands(DummyVerdiDataListable):
         with CliRunner().isolated_filesystem():
             options = [str(bands.pk), '--format', 'gnuplot', '-o', 'bands.gnu']
             self.cli_runner(cmd_bands.bands_export, options)
-            with open('bands.gnu', 'r', encoding='utf8') as gnu_file:
+            with open('bands.gnu', encoding='utf8') as gnu_file:
                 res = gnu_file.read()
                 assert 'vectors nohead' in res, 'The string "vectors nohead" was not found in the gnuplot script'
 

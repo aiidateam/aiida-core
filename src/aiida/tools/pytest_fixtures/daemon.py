@@ -49,7 +49,7 @@ def daemon_client(aiida_profile):
 
 
 @pytest.fixture
-def started_daemon_client(daemon_client: 'DaemonClient'):
+def started_daemon_client(daemon_client: DaemonClient):
     """Ensure that the daemon is running for the test profile and return the associated client.
 
     Usage::
@@ -69,7 +69,7 @@ def started_daemon_client(daemon_client: 'DaemonClient'):
 
 
 @pytest.fixture
-def stopped_daemon_client(daemon_client: 'DaemonClient'):
+def stopped_daemon_client(daemon_client: DaemonClient):
     """Ensure that the daemon is not running for the test profile and return the associated client.
 
     Usage::

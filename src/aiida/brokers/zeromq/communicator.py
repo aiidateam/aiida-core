@@ -20,9 +20,10 @@ import asyncio
 import logging
 import threading
 import uuid
+from collections.abc import Callable
 from concurrent.futures import Future
 from types import TracebackType
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar
 
 import kiwipy
 import zmq
@@ -252,7 +253,7 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
                 future.cancel()
         self._pending_futures.clear()
 
-    def __enter__(self) -> 'ZeromqCommunicator':
+    def __enter__(self) -> ZeromqCommunicator:
         self.start()
         return self
 

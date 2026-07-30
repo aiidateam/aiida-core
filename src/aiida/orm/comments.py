@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, ClassVar, List, Optional, Type, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 from uuid import UUID
 
 from aiida.manage import get_manager
@@ -34,7 +34,7 @@ class CommentCollection(entities.Collection['Comment']):
     collection_type: ClassVar[str] = 'comments'
 
     @staticmethod
-    def _entity_base_cls() -> Type[Comment]:
+    def _entity_base_cls() -> type[Comment]:
         return Comment
 
     def delete(self, pk: int) -> None:
@@ -54,7 +54,7 @@ class CommentCollection(entities.Collection['Comment']):
         """
         self._backend.comments.delete_all()
 
-    def delete_many(self, filters: dict) -> List[int]:
+    def delete_many(self, filters: dict) -> list[int]:
         """Delete Comments from the Collection based on ``filters``
 
         :param filters: similar to QueryBuilder filter
@@ -107,9 +107,7 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
             examples=['This is a comment.'],
         )
 
-    def __init__(
-        self, node: 'Node', user: 'User', content: Optional[str] = None, backend: Optional['StorageBackend'] = None
-    ):
+    def __init__(self, node: Node, user: User, content: str | None = None, backend: StorageBackend | None = None):
         """Create a Comment for a given node and user
 
         :param node: a Node instance
@@ -155,16 +153,16 @@ class Comment(entities.Entity['BackendComment', CommentCollection]):
         return self._backend_entity.set_mtime(value)
 
     @property
-    def node(self) -> 'BackendNode':
+    def node(self) -> BackendNode:
         return self._backend_entity.node
 
     @property
-    def user(self) -> 'User':
+    def user(self) -> User:
         from aiida.orm.users import User
 
         return entities.from_backend_entity(User, self._backend_entity.user)
 
-    def set_user(self, value: 'User') -> None:
+    def set_user(self, value: User) -> None:
         # mypy error: Property "user" defined in "BackendComment" is read-only
         self._backend_entity.user = value.backend_entity  # type: ignore[misc]
 

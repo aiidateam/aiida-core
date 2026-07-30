@@ -13,7 +13,8 @@ from __future__ import annotations
 import abc
 import sys
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, ContextManager, List, Optional, TypeVar, Union
+from contextlib import AbstractContextManager
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from aiida.common.log import AIIDA_LOGGER
 
@@ -69,7 +70,7 @@ class StorageBackend(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def version_profile(cls, profile: 'Profile') -> Optional[str]:
+    def version_profile(cls, profile: Profile) -> str | None:
         """Return the schema version of the given profile's storage, or None for empty/uninitialised storage.
 
         :raises: `~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed
@@ -77,7 +78,7 @@ class StorageBackend(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def initialise(cls, profile: 'Profile', reset: bool = False) -> bool:
+    def initialise(cls, profile: Profile, reset: bool = False) -> bool:
         """Initialise the storage backend.
 
         This is typically used once when a new storage backed is created. If this method returns without exceptions the
@@ -91,7 +92,7 @@ class StorageBackend(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def migrate(cls, profile: 'Profile') -> None:
+    def migrate(cls, profile: Profile) -> None:
         """Migrate the storage of a profile to the latest schema version.
 
         If the schema version is already the latest version, this method does nothing. If the storage is uninitialised,
@@ -102,7 +103,7 @@ class StorageBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    def __init__(self, profile: 'Profile') -> None:
+    def __init__(self, profile: Profile) -> None:
         """Initialize the backend, for this profile.
 
         :raises: `~aiida.common.exceptions.UnreachableStorage` if the storage cannot be accessed
@@ -113,7 +114,7 @@ class StorageBackend(abc.ABC):
         from aiida.orm.autogroup import AutogroupManager
 
         self._profile = profile
-        self._default_user: Optional['User'] = None
+        self._default_user: User | None = None
         self._autogroup = AutogroupManager(self)
 
     @abc.abstractmethod
@@ -121,12 +122,12 @@ class StorageBackend(abc.ABC):
         """Return a string showing connection details for this instance."""
 
     @property
-    def profile(self) -> 'Profile':
+    def profile(self) -> Profile:
         """Return the profile for this backend."""
         return self._profile
 
     @property
-    def autogroup(self) -> 'AutogroupManager':
+    def autogroup(self) -> AutogroupManager:
         """Return the autogroup manager for this backend."""
         return self._autogroup
 
@@ -178,41 +179,41 @@ class StorageBackend(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def authinfos(self) -> 'BackendAuthInfoCollection':
+    def authinfos(self) -> BackendAuthInfoCollection:
         """Return the collection of authorisation information objects"""
 
     @property
     @abc.abstractmethod
-    def comments(self) -> 'BackendCommentCollection':
+    def comments(self) -> BackendCommentCollection:
         """Return the collection of comments"""
 
     @property
     @abc.abstractmethod
-    def computers(self) -> 'BackendComputerCollection':
+    def computers(self) -> BackendComputerCollection:
         """Return the collection of computers"""
 
     @property
     @abc.abstractmethod
-    def groups(self) -> 'BackendGroupCollection':
+    def groups(self) -> BackendGroupCollection:
         """Return the collection of groups"""
 
     @property
     @abc.abstractmethod
-    def logs(self) -> 'BackendLogCollection':
+    def logs(self) -> BackendLogCollection:
         """Return the collection of logs"""
 
     @property
     @abc.abstractmethod
-    def nodes(self) -> 'BackendNodeCollection':
+    def nodes(self) -> BackendNodeCollection:
         """Return the collection of nodes"""
 
     @property
     @abc.abstractmethod
-    def users(self) -> 'BackendUserCollection':
+    def users(self) -> BackendUserCollection:
         """Return the collection of users"""
 
     @property
-    def default_user(self) -> Optional['User']:
+    def default_user(self) -> User | None:
         """Return the default user for the profile, if it has been created.
 
         This is cached, since it is a frequently used operation, for creating other entities.
@@ -225,11 +226,11 @@ class StorageBackend(abc.ABC):
         return self._default_user
 
     @abc.abstractmethod
-    def query(self) -> 'BackendQueryBuilder':
+    def query(self) -> BackendQueryBuilder:
         """Return an instance of a query builder implementation for this backend"""
 
     @abc.abstractmethod
-    def transaction(self) -> ContextManager[Any]:
+    def transaction(self) -> AbstractContextManager[Any]:
         """Get a context manager that can be used as a transaction context for a series of backend operations.
         If there is an exception within the context then the changes will be rolled back and the state will
         be as before entering.  Transactions can be nested.
@@ -243,7 +244,7 @@ class StorageBackend(abc.ABC):
         """Return whether a transaction is currently active."""
 
     @abc.abstractmethod
-    def bulk_insert(self, entity_type: 'EntityTypes', rows: List[dict], allow_defaults: bool = False) -> List[int]:
+    def bulk_insert(self, entity_type: EntityTypes, rows: list[dict], allow_defaults: bool = False) -> list[int]:
         """Insert a list of entities into the database, directly into a backend transaction.
 
         :param entity_type: The type of the entity
@@ -258,7 +259,7 @@ class StorageBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    def bulk_update(self, entity_type: 'EntityTypes', rows: List[dict]) -> None:
+    def bulk_update(self, entity_type: EntityTypes, rows: list[dict]) -> None:
         """Update a list of entities in the database, directly with a backend transaction.
 
         :param entity_type: The type of the entity
@@ -284,12 +285,12 @@ class StorageBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_repository(self) -> 'AbstractRepositoryBackend':
+    def get_repository(self) -> AbstractRepositoryBackend:
         """Return the object repository configured for this backend."""
 
     @abc.abstractmethod
     def set_global_variable(
-        self, key: str, value: Union[None, str, int, float], description: Optional[str] = None, overwrite: bool = True
+        self, key: str, value: None | str | int | float, description: str | None = None, overwrite: bool = True
     ) -> None:
         """Set a global variable in the storage.
 
@@ -302,7 +303,7 @@ class StorageBackend(abc.ABC):
         """
 
     @abc.abstractmethod
-    def get_global_variable(self, key: str) -> Union[None, str, int, float]:
+    def get_global_variable(self, key: str) -> None | str | int | float:
         """Return a global variable from the storage.
 
         :param key: the key of the setting
@@ -328,7 +329,7 @@ class StorageBackend(abc.ABC):
     def _backup(
         self,
         dest: str,
-        keep: Optional[int] = None,
+        keep: int | None = None,
     ) -> None:
         raise NotImplementedError
 
@@ -415,7 +416,7 @@ class StorageBackend(abc.ABC):
     def backup(
         self,
         dest: str,
-        keep: Optional[int] = None,
+        keep: int | None = None,
     ) -> None:
         """Create a backup of the storage contents.
 

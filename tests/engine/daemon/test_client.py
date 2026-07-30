@@ -114,7 +114,7 @@ class TestDaemonEnvInfo:
     @staticmethod
     def test_get_package_version_snapshot():
         """Test that ``get_package_version_snapshot`` returns at least ``aiida-core``."""
-        from importlib.metadata import version as metadata_version
+        from importlib_metadata import version as metadata_version
 
         versions = DaemonClient.get_package_version_snapshot()
         assert 'aiida-core' in versions

@@ -85,7 +85,7 @@ AVAILABLE_PROJECTORS = (
 )
 
 
-def echo_response(response: 'requests.Response', exit_on_error: bool = True) -> None:
+def echo_response(response: requests.Response, exit_on_error: bool = True) -> None:
     """Echo the response of a request.
 
     :param response: The response to the request.

@@ -13,7 +13,8 @@ on them.
 
 from __future__ import annotations
 
-from typing import Any, Sequence, cast
+from collections.abc import Sequence
+from typing import Any, cast
 
 import numpy as np
 from pydantic import ConfigDict, field_validator

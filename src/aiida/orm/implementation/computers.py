@@ -10,7 +10,7 @@
 
 import abc
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from .entities import BackendCollection, BackendEntity
 
@@ -62,11 +62,11 @@ class BackendComputer(BackendEntity):
         """
 
     @abc.abstractmethod
-    def get_metadata(self) -> Dict[str, Any]:
+    def get_metadata(self) -> dict[str, Any]:
         """Return the metadata for the computer."""
 
     @abc.abstractmethod
-    def set_metadata(self, metadata: Dict[str, Any]) -> None:
+    def set_metadata(self, metadata: dict[str, Any]) -> None:
         """Set the metadata for the computer."""
 
     @abc.abstractmethod

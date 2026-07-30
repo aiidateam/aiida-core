@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import builtins
 import copy
 import typing as t
 
@@ -150,13 +151,11 @@ class Dict(Data):
 
         :return: iterator over the keys of the current dictionary
         """
-        for key in self.base.attributes.keys():
-            yield key
+        yield from self.base.attributes.keys()
 
     def items(self):
         """Iterator of all items stored in the Dict node."""
-        for key, value in self.base.attributes.items():
-            yield key, value
+        yield from self.base.attributes.items()
 
     @property
     def value(self) -> dict[str, t.Any]:
@@ -181,10 +180,10 @@ class Dict(Data):
     def to_model_field_values(
         self,
         *,
-        context: t.Dict[str, t.Any] | None = None,
+        context: builtins.dict[str, t.Any] | None = None,
         minimal: bool = False,
         schema: type[OrmModel] | None = None,
-    ) -> t.Dict[str, t.Any]:
+    ) -> builtins.dict[str, t.Any]:
         fields = super().to_model_field_values(context=context, minimal=minimal, schema=schema)
         if schema in (self.ReadModel, self.WriteModel):
             return fields | {'attributes': self.get_dict()}

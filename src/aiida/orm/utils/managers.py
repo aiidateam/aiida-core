@@ -124,8 +124,7 @@ class NodeLinksManager:
 
     def __iter__(self):
         node_attributes = self._get_keys()
-        for k in node_attributes:
-            yield k
+        yield from node_attributes
 
     def __getattr__(self, name):
         """:param name: name of the attribute to be asked to the parser results."""
@@ -208,8 +207,7 @@ class AttributeManager:
 
     def __iter__(self):
         """Return the keys as an iterator"""
-        for k in self._node.base.attributes.keys():
-            yield k
+        yield from self._node.base.attributes.keys()
 
     def _get_dict(self):
         """Return the internal dictionary"""

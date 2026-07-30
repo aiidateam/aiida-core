@@ -13,7 +13,8 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, Callable, Literal, Mapping, Protocol, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from graphviz import Digraph
 
@@ -278,9 +279,9 @@ def _get_node_label(node: orm.Node, id_type: IdentifierType | list[IdentifierTyp
     if isinstance(node, orm.Data):
         label = f'{node.__class__.__name__} ({get_node_id_label(node, id_type)})'
     elif isinstance(node, orm.ProcessNode):
-        label = '{} ({})'.format(
-            node.__class__.__name__ if node.process_label is None else node.process_label,
-            get_node_id_label(node, id_type),
+        label = (
+            f'{node.__class__.__name__ if node.process_label is None else node.process_label} '
+            f'({get_node_id_label(node, id_type)})'
         )
     else:
         raise TypeError(f'Unknown type: {type(node)}')

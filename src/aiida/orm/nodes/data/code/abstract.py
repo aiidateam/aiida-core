@@ -62,7 +62,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         )
 
     class CommonFields(OrmModel):
-        default_calc_job_plugin: t.Optional[str] = OrmMetadataField(
+        default_calc_job_plugin: str | None = OrmMetadataField(
             None,
             alias='input_plugin',
             title='Default `CalcJob` plugin',
@@ -75,7 +75,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             description='Whether the executable and arguments of the code in the submission script should be escaped '
             'with single or double quotes',
         )
-        with_mpi: t.Optional[bool] = OrmMetadataField(
+        with_mpi: bool | None = OrmMetadataField(
             None,
             title='Run with MPI',
             description='Whether the executable should be run as an MPI program. This option can be left unspecified '
@@ -436,7 +436,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         type_check(value, bool)
         self.base.extras.set(self._KEY_EXTRA_IS_HIDDEN, value)
 
-    def get_builder(self) -> 'ProcessBuilder':
+    def get_builder(self) -> ProcessBuilder:
         """Create and return a new ``ProcessBuilder`` for the ``CalcJob`` class of the plugin configured for this code.
 
         The configured calculation plugin class is defined by the ``default_calc_job_plugin`` property.

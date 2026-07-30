@@ -39,7 +39,7 @@ class Broker(abc.ABC):
 
     _config_fields: tuple[BrokerConfigField, ...] = ()
 
-    def __init__(self, profile: 'Profile') -> None:
+    def __init__(self, profile: Profile) -> None:
         """Construct a new instance.
 
         :param profile: The profile.
@@ -55,7 +55,7 @@ class Broker(abc.ABC):
         return {field.name: field.default for field in cls._config_fields}
 
     @classmethod
-    def get_detected_config(cls, get_value: 'Callable[[str], t.Any]') -> dict[str, t.Any]:
+    def get_detected_config(cls, get_value: Callable[[str], t.Any]) -> dict[str, t.Any]:
         """Return detected configuration values for CLI defaults.
 
         The callable should return the current value for a config field name.
@@ -66,20 +66,34 @@ class Broker(abc.ABC):
 
     @abc.abstractmethod
     def get_communicator(self) -> t.Any:
-        """Return an instance of :class:`kiwipy.Communicator`."""
+        """Return a communicator instance for the broker.
+
+        :return: An instance of :class:`kiwipy.Communicator`.
+        """
 
     @abc.abstractmethod
     def iterate_tasks(self) -> Iterator[t.Any]:
-        """Return an iterator over the tasks in the launch queue."""
+        """Return an iterator over the tasks in the launch queue.
+
+        :return: Iterator over broker-specific task objects.
+        """
 
     @abc.abstractmethod
-    def is_service_reachable(self) -> bool:
-        """Return whether the broker service is reachable from this client."""
+    def check_service_reachable(self) -> bool:
+        """Return whether the broker service is reachable from this client.
+
+        :return: ``True`` if the broker service can be reached, ``False`` otherwise.
+        """
 
     @abc.abstractmethod
-    def get_service_status(self) -> BrokerServiceStatus | None:
-        """Return service status information for the broker, if available."""
+    def probe_service_status(self) -> BrokerServiceStatus:
+        """Return service status information for the broker.
+
+        Retrieval failures should be captured in the returned status payload instead of raising.
+
+        :return: Structured service status information.
+        """
 
     @abc.abstractmethod
     def close(self) -> None:
-        """Close the broker."""
+        """Close broker resources held by this instance."""

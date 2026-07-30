@@ -15,7 +15,6 @@ import glob
 import os
 import subprocess
 from pathlib import Path, PurePath
-from typing import Optional, Union
 
 import click
 
@@ -63,12 +62,30 @@ class AsyncSshTransport(AsyncTransport):
             'host',
             {
                 'type': str,
-                'prompt': "Host as in 'ssh <HOST>' (needs to be a password-less setup in your ssh config)",
+                'prompt': "Login host as in 'ssh <HOST>'"
+                ' (needs a password-less setup, with the host key in known_hosts)',
                 'help': (
                     'Password-less host-setup to connect, as in command `ssh <HOST>`.'
                     ' You need to have a `Host <HOST>` entry defined in your `~/.ssh/config` file.'
+                    ' The remote host key must also already be present in your `~/.ssh/known_hosts` file;'
+                    ' connect once manually (e.g. run `ssh <HOST>`) to add it, otherwise the connection could fail.'
                     " Note, if not provided, we will use the 'hostname' that was set by you during setup."
                 ),
+                'non_interactive_default': True,
+            },
+        ),
+        (
+            'data_node_host',
+            {
+                'type': str,
+                'default': 'None',
+                'prompt': "Data transfer host as in 'ssh <HOST>', also requires a password-less SSH setup in your"
+                " SSH config ('None' to use the login host)",
+                'help': ' (optional) Some HPC centers provide a dedicated data transfer node in order to not'
+                ' overwhelm their login node. If set, all file operations (SFTP or scp) are performed on this'
+                ' host, while shell commands are still executed on the login host.'
+                ' As for `host`, this requires a password-less setup, with a `Host <HOST>` entry defined in your'
+                ' `~/.ssh/config` file.',
                 'non_interactive_default': True,
             },
         ),
@@ -103,10 +120,22 @@ class AsyncSshTransport(AsyncTransport):
                 'default': 'asyncssh',
                 'prompt': 'Type of async backend to use, `asyncssh` or `openssh`',
                 'help': '`openssh` uses the `ssh` command line tool to connect to the remote machine,'
-                'e.g. it is useful in case of multiplexing. '
+                'e.g. it is useful in case of multiplexing, or server not having SFTP implemented.'
                 'The `asyncssh` backend is the default and is recommended for most use cases.',
                 'non_interactive_default': True,
                 'callback': validate_backend,
+            },
+        ),
+        (
+            'use_sftp',
+            {
+                'default': True,
+                'switch': True,
+                'prompt': 'Server supports SFTP? (Only applies to `openssh` backend)',
+                'help': 'Some HPC centers do not allow SFTP protocol for file transfer.'
+                ' In this case, you should use `openssh` as connection backend, with having this setting as `False`.'
+                ' In that it applies `-O` to scp',
+                'non_interactive_default': True,
             },
         ),
     ]
@@ -134,6 +163,9 @@ class AsyncSshTransport(AsyncTransport):
         # NOTE: to guarantee a connection,
         # a computer with core.ssh_async transport plugin should be configured before any instantiation.
         self.machine = kwargs.pop('host', kwargs.pop('machine'))
+        data_node_host = kwargs.pop('data_node_host', 'None')
+        self.data_machine = self.machine if not data_node_host or data_node_host == 'None' else data_node_host
+
         self._max_io_allowed = kwargs.pop('max_io_allowed', self._DEFAULT_max_io_allowed)
         self._semaphore = asyncio.Semaphore(self._max_io_allowed)
         self.auth_script = kwargs.pop('authentication_script', 'None')
@@ -144,12 +176,20 @@ class AsyncSshTransport(AsyncTransport):
         if kwargs.get('backend') == 'openssh':
             from .async_backend import _OpenSSH
 
-            self.async_backend = _OpenSSH(self.machine, self.logger, self._bash_command_str)
+            self.async_backend = _OpenSSH(
+                self.machine,
+                self.data_machine,
+                self.logger,
+                self._bash_command_str,
+                use_sftp=kwargs.pop('use_sftp', True),
+            )
         else:
             # default backend is asyncssh
             from .async_backend import _AsyncSSH
 
-            self.async_backend = _AsyncSSH(self.machine, self.logger, self._bash_command_str)  # type: ignore[assignment]
+            self.async_backend = _AsyncSSH(  # type: ignore[assignment]
+                self.machine, self.data_machine, self.logger, self._bash_command_str
+            )
 
     @property
     def max_io_allowed(self):
@@ -722,7 +762,7 @@ class AsyncSshTransport(AsyncTransport):
     async def compress_async(
         self,
         format: str,
-        remotesources: Union[TransportPath, list[TransportPath]],
+        remotesources: TransportPath | list[TransportPath],
         remotedestination: TransportPath,
         root_dir: TransportPath,
         overwrite: bool = True,
@@ -795,9 +835,8 @@ class AsyncSshTransport(AsyncTransport):
                 self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing tar. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
-                    retval, stdout, stderr, tar_command
-                )
+                f'Problem executing tar. Exit code: {retval}, '
+                f"stdout: '{stdout}', stderr: '{stderr}', command: '{tar_command}'"
             )
             raise OSError(f'Error while creating the tar archive. Exit code: {retval}')
 
@@ -841,19 +880,18 @@ class AsyncSshTransport(AsyncTransport):
                 self.logger.warning(f'There was nonempty stderr in the tar command: {stderr}')
         else:
             self.logger.error(
-                "Problem executing tar. Exit code: {}, stdout: '{}', stderr: '{}', command: '{}'".format(
-                    retval, stdout, stderr, tar_command
-                )
+                f'Problem executing tar. Exit code: {retval}, '
+                f"stdout: '{stdout}', stderr: '{stderr}', command: '{tar_command}'"
             )
             raise OSError(f'Error while extracting the tar archive. Exit code: {retval}')
 
     async def exec_command_wait_async(
         self,
         command: str,
-        stdin: Optional[str] = None,
+        stdin: str | None = None,
         encoding: str = 'utf-8',
-        workdir: Optional[TransportPath] = None,
-        timeout: Optional[float] = None,
+        workdir: TransportPath | None = None,
+        timeout: float | None = None,
         **kwargs,
     ):
         """Execute a command on the remote machine and wait for it to finish.
@@ -1004,7 +1042,7 @@ class AsyncSshTransport(AsyncTransport):
 
         return list_
 
-    async def listdir_withattributes_async(self, path: TransportPath, pattern: Optional[str] = None):
+    async def listdir_withattributes_async(self, path: TransportPath, pattern: str | None = None):
         """Return a list of the names of the entries in the given path.
         The list is in arbitrary order. It does not include the special
         entries '.' and '..' even if they are present in the directory.
@@ -1294,7 +1332,7 @@ class AsyncSshTransport(AsyncTransport):
                     os.path.join(sandbox.abspath, filename), remotedestination, **kwargs_put
                 )
 
-    def gotocomputer_command(self, remotedir: Optional[TransportPath] = None):
+    def gotocomputer_command(self, remotedir: TransportPath | None = None):
         """Return a string to be used to connect to the remote computer.
 
         :param remotedir: the remote directory to connect to

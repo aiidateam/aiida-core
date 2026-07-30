@@ -217,11 +217,11 @@ class BandsData(KpointsData):
     """Class to handle bands data"""
 
     class AttributesModel(KpointsData.AttributesModel):
-        array_labels: t.Optional[t.List[str]] = OrmMetadataField(
+        array_labels: list[str] | None = OrmMetadataField(
             None,
             description='Labels associated with the band arrays',
         )
-        units: t.Optional[str] = OrmMetadataField(
+        units: str | None = OrmMetadataField(
             None,
             description='Units in which the data in bands were stored',
             orm_to_model=lambda node: t.cast(BandsData, node).base.attributes.get('units', None),
@@ -283,7 +283,7 @@ class BandsData(KpointsData):
             raise ValueError(
                 'Bands must be an array of dimension 2'
                 '([N_kpoints, N_bands]) or of dimension 3 '
-                ' ([N_arrays, N_kpoints, N_bands]), found instead {}'.format(len(the_bands.shape))
+                f' ([N_arrays, N_kpoints, N_bands]), found instead {len(the_bands.shape)}'
             )
 
         list_of_arrays_to_be_checked = []
@@ -324,9 +324,8 @@ class BandsData(KpointsData):
                 the_labels = [str(_) for _ in labels]
             else:
                 raise ValidationError(
-                    'Band labels have an unrecognized type ({})but should be a string or a list of strings'.format(
-                        labels.__class__
-                    )
+                    'Band labels have an unrecognized type '
+                    f'({labels.__class__})but should be a string or a list of strings'
                 )
 
             if len(the_bands.shape) == 2 and len(the_labels) != 1:
@@ -1130,7 +1129,7 @@ class BandsData(KpointsData):
             y_min_lim = the_bands.min()
         x_min_lim = min(x)  # this isn't a numpy array, but a list
         x_max_lim = max(x)
-        ytick_spacing = 10 ** int(math.log10((y_max_lim - y_min_lim)))
+        ytick_spacing = 10 ** int(math.log10(y_max_lim - y_min_lim))
 
         # prepare xticks labels
         sx1 = ''

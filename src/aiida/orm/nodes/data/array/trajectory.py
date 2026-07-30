@@ -34,7 +34,7 @@ class TrajectoryData(ArrayData):
         symbols: list[str] = OrmMetadataField(
             description='List of symbols',
         )
-        pbc: t.Optional[tuple[bool, bool, bool]] = OrmMetadataField(
+        pbc: tuple[bool, bool, bool] | None = OrmMetadataField(
             None,
             description='Periodic boundary conditions',
         )
@@ -453,7 +453,7 @@ class TrajectoryData(ArrayData):
                     'If you pass custom_kinds, you have to '
                     'pass one Kind object for each symbol '
                     'that is present in the trajectory. You '
-                    'passed {}, but the symbols are {}'.format(sorted(kind_names), sorted(symbols))
+                    f'passed {sorted(kind_names)}, but the symbols are {sorted(symbols)}'
                 )
 
         struc = StructureData(cell=cell, pbc=self.pbc)
@@ -601,8 +601,8 @@ class TrajectoryData(ArrayData):
         if positions.shape != (numsteps, numsites, 3):
             raise ValueError(
                 'TrajectoryData.positions must have shape (s,n,3), '
-                'with s=number of steps={} and '
-                'n=number of symbols={}'.format(numsteps, numsites)
+                f'with s=number of steps={numsteps} and '
+                f'n=number of symbols={numsites}'
             )
 
         self.set_array('positions', positions)
@@ -634,8 +634,8 @@ class TrajectoryData(ArrayData):
         if velocities.shape != (numsteps, numsites, 3):
             raise ValueError(
                 'TrajectoryData.positions must have shape (s,n,3), '
-                'with s=number of steps={} and '
-                'n=number of symbols={}'.format(numsteps, numsites)
+                f'with s=number of steps={numsteps} and '
+                f'n=number of symbols={numsites}'
             )
 
         self.set_array('velocities', velocities)
@@ -912,20 +912,20 @@ def plot_positions_XYZ(  # noqa: N802
     trajectories = zip(*positions.tolist())  # only used in enumerate() below
     fig = plt.figure(figsize=(12, 7))
 
-    plt.suptitle(r'Trajectory of {}'.format(label), fontsize=16)
+    plt.suptitle(rf'Trajectory of {label}', fontsize=16)
     nr_of_axes = 3
     gridspec = GridSpec(nr_of_axes, 1, hspace=0.0)
 
     ax1 = fig.add_subplot(gridspec[0])
-    plt.ylabel(r'X Position $\left[{}\right]$'.format(positions_unit))
+    plt.ylabel(rf'X Position $\left[{positions_unit}\right]$')
     plt.xticks([])
     plt.xlim(*tlim)
     ax2 = fig.add_subplot(gridspec[1])
-    plt.ylabel(r'Y Position $\left[{}\right]$'.format(positions_unit))
+    plt.ylabel(rf'Y Position $\left[{positions_unit}\right]$')
     plt.xticks([])
     plt.xlim(*tlim)
     ax3 = fig.add_subplot(gridspec[2])
-    plt.ylabel(r'Z Position $\left[{}\right]$'.format(positions_unit))
+    plt.ylabel(rf'Z Position $\left[{positions_unit}\right]$')
     plt.xlabel(f'Time [{times_unit}]')
     plt.xlim(*tlim)
     n_labels = np.minimum(n_labels, len(times))  # don't need more labels than times

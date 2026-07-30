@@ -26,6 +26,26 @@ env:
 
 jobs:
 
+  mypy:
+
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install aiida-core and pre-commit
+      uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: '3.11'
+        extras: pre-commit
+        # Full pre-commit runs in locked CI; run mypy additionally here
+        # with latest compatible dependencies for nightly validation.
+        from-lock: 'false'
+
+    - name: Run mypy
+      run: pre-commit run mypy --all-files
+
   nightly-tests:
 
     if: github.repository == 'aiidateam/aiida-core'  # Prevent running the builds on forks as well

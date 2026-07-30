@@ -52,10 +52,12 @@ jobs:
       with:
         python-version: '3.11'
         extras: pre-commit
+        # Full pre-commit runs in locked CI; run mypy additionally here
+        # with latest compatible dependencies for release validation.
         from-lock: 'false'
 
-    - name: Run pre-commit
-      run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
+    - name: Run mypy
+      run: pre-commit run mypy --all-files
 
   tests:
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'pull_request' && contains(fromJson(toJson(github.event.pull_request.labels)).*.name, 'test-release'))
@@ -68,6 +70,8 @@ jobs:
 
     - name: Install aiida-core
       uses: ./.github/actions/install-aiida-core
+      with:
+        python-version: '3.10'
 
     - name: Run sub-set of test suite
       run: pytest -s -m requires_broker --broker-backend zmq --db-backend=sqlite tests/

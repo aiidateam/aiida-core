@@ -277,7 +277,6 @@ class Manager:
         from aiida.manage.configuration.options import get_option, resolve_deprecated_option_name
 
         option_name = resolve_deprecated_option_name(option_name)
-        option = get_option(option_name)
 
         # try the profile
         if self._profile and option_name in self._profile.options:

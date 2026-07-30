@@ -517,6 +517,37 @@ print(dict(builder))
 - Remove `ci` section in `.pre-commit-config.yaml` (#6985) [[b8df58dd2]](https://github.com/aiidateam/aiida-core/commit/b8df58dd224648d4daf3eedcccb0a7396967092e)
 
 
+## v2.7.4 - 2026-07-25
+
+This patch fixes a SQLite QueryBuilder regression where plugin code using filters such as `{'ctime': {'in': [...]}}` or `{'ctime': {'!in': [...]}}` with Python `datetime` values could fail.
+Plugins that compare or exclude nodes by creation/modification time should now work again with SQLite profiles.
+It also adds a downgrade migration so that a v10 configuration schema — introduced in aiida-core v2.9 — can be brought back to the v9 schema used in aiida-core v2.7.
+
+### Full list of changes
+
+#### Features
+- Add a config v10 migration for deprecated logging and broker options ([#7417](https://github.com/aiidateam/aiida-core/pull/7417)) [[2eacaed4f]](https://github.com/aiidateam/aiida-core/commit/2eacaed4f63272753498ebfc84d75c7d44bc2a89)
+
+#### Fixes
+- Fix SQLite `IN` filters for non-JSON-serializable values ([#7486](https://github.com/aiidateam/aiida-core/pull/7486)) [[231dd8569]](https://github.com/aiidateam/aiida-core/commit/231dd8569407eb31dea559aba73a081a4311c757)
+
+#### Improvements
+- Add guidance on how to fix config version error ([#7421](https://github.com/aiidateam/aiida-core/pull/7421)) [[8283a1302]](https://github.com/aiidateam/aiida-core/commit/8283a13026830dd10b91464fbf552d40d1784b94)
+- Allow config downgrade for known migrations ([#7491](https://github.com/aiidateam/aiida-core/pull/7491)) [[d88af9743]](https://github.com/aiidateam/aiida-core/commit/d88af9743bb058c1d9b338cf7af10a81433aa6c5)
+- Run only mypy in the unlocked release checks to avoid formatter-version noise ([#7488](https://github.com/aiidateam/aiida-core/pull/7488)) [[2554d29cf]](https://github.com/aiidateam/aiida-core/commit/2554d29cfd5f8283cf0d952c2f5f069e1fb81ca1)
+
+#### Refactoring
+- Clarify config downgrade error message ([#7436](https://github.com/aiidateam/aiida-core/pull/7436)) [[4fd999e59]](https://github.com/aiidateam/aiida-core/commit/4fd999e595aec25d53583ef51da2c098f327159f)
+- Refactor Docker bake metadata extraction from shell to JavaScript ([#7161](https://github.com/aiidateam/aiida-core/pull/7161)) [[41e17df8b]](https://github.com/aiidateam/aiida-core/commit/41e17df8b9f3b75ad5f8c88f1f3b0d898fc50eee)
+
+#### Documentation
+- Fix the RTD build warning for the config migration downgrade helper docstring ([#7488](https://github.com/aiidateam/aiida-core/pull/7488)) [[c698be624]](https://github.com/aiidateam/aiida-core/commit/c698be624e37a2a90c482eebf08b20a1c0f51344)
+
+#### Tests & CI
+- Quote the Docker bake metadata heredoc ([#7449](https://github.com/aiidateam/aiida-core/pull/7449)) [[3cb8a7649]](https://github.com/aiidateam/aiida-core/commit/3cb8a7649c7b9478e23602d075a975aed3ee3507)
+- Pin `mamba=2.3` to fix ARM64 Docker builds ([#7168](https://github.com/aiidateam/aiida-core/pull/7168)) [[574ada81c]](https://github.com/aiidateam/aiida-core/commit/574ada81c81728e7cc26aa58e6f7e48d76841449)
+
+
 ## v2.7.3 - 2026-01-23
 
 ### Fixes

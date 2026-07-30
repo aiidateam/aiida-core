@@ -448,5 +448,5 @@ def test_change_workers_with_wait_timeout(stopped_daemon_client, method):
     ):
         get_client.return_value.__enter__.return_value.call.side_effect = CallError('Timed out.')
 
-        with pytest.raises(DaemonTimeoutException, match='Connection to the daemon timed out.'):
+        with pytest.raises(DaemonTimeoutException, match=r'Connection to the daemon timed out\.'):
             getattr(stopped_daemon_client, method)(1, timeout=1, wait=True)

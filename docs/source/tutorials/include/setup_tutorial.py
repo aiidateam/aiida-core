@@ -25,11 +25,13 @@ replace the ``%run -i`` cell with::
 """
 
 import hashlib
+import json
 import os
 import pathlib
 import shutil
 import sys
 import time
+import urllib.request
 from contextlib import suppress
 
 from aiida import load_profile
@@ -40,6 +42,29 @@ from aiida.engine.daemon.client import DaemonNotRunningException
 from aiida.manage import get_manager
 from aiida.manage.configuration import create_profile, get_config
 from aiida.orm import Computer, InstalledCode, load_code, load_computer
+
+
+def _ensure_tutorial_helpers() -> None:
+    """Fetch any missing tutorial helper files into ``include/``.
+
+    Lets a notebook running outside the tutorial repository (for example, cells
+    pasted into your own notebook) import the shared helpers. No-op when they
+    are already present, as in a repo clone or the docs build.
+    """
+    include_dir = pathlib.Path('include')
+    if all((include_dir / name).exists() for name in ('workflows.py', 'tasks.py', 'input.yaml')):
+        return
+    # TODO: switch to 'aiidateam/aiida-core' at the release tag once PR #7205 merges.
+    repo, ref = 'GeigerJ2/aiida-core', 'docs/integrate-tutorials'
+    api = f'https://api.github.com/repos/{repo}/contents/docs/source/tutorials/include?ref={ref}'
+    include_dir.mkdir(exist_ok=True)
+    for entry in json.loads(urllib.request.urlopen(api).read()):
+        if entry['type'] == 'file' and not (include_dir / entry['name']).exists():
+            urllib.request.urlretrieve(entry['download_url'], include_dir / entry['name'])
+
+
+_ensure_tutorial_helpers()
+
 
 # Derive a short suffix from the mtimes of all setup scripts: stable across
 # all modules in one build, but bumped whenever any setup logic changes,

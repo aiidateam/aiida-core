@@ -64,21 +64,31 @@ It sets up a lightweight local profile with sensible defaults for all three: SQL
 For more advanced high-throughput production setups, see the {ref}`installation guide <installation>`.
 
 This tutorial, though, runs in its own **isolated sandbox profile**, kept separate from any profile you already have, so the data you create here never mixes with your real work and every module reproduces exactly.
-Run the cell below to create it (later modules load the same one):
+
+The cell below creates that profile and loads AiiDA's `%verdi` Jupyter magic.
+If you are running outside the tutorial repository (for example, cells pasted into your own notebook), it first downloads `setup_tutorial.py`, which in turn fetches the other `include/` helpers it needs; inside the repo, as in these rendered docs, that step is skipped.
+Every module runs this same cell, so the data you create now is still available in later modules:
 
 ```{code-cell} ipython3
-# Create (or load) the tutorial's isolated sandbox profile. It stays separate
-# from any AiiDA profile you already have, so nothing here touches your real
-# work. Every module loads this same profile, so data you create now is still
-# there in later modules.
-# `%load_ext aiida` enables the `%verdi` magic used throughout the tutorial.
-#
-# Prefer to use your own existing profile? Replace the `%run` line with:
-#     from aiida import load_profile
-#     load_profile()
+# Set up the tutorial's isolated sandbox profile.
+from pathlib import Path
+
+if not Path('include/setup_tutorial.py').exists():
+    import urllib.request
+
+    Path('include').mkdir(exist_ok=True)
+    urllib.request.urlretrieve(
+        'https://raw.githubusercontent.com/GeigerJ2/aiida-core/docs/integrate-tutorials/docs/source/tutorials/include/setup_tutorial.py',
+        'include/setup_tutorial.py',
+    )
+
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```
+
+:::{tip}
+Prefer to use an AiiDA profile you already have? Replace the `%run` line with `from aiida import load_profile` followed by `load_profile()`.
+:::
 
 You can verify that the profile is set up correctly with `verdi status`:
 

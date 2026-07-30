@@ -85,6 +85,16 @@ seed: 42         # RNG seed for the initial perturbation
 ```{code-cell} ipython3
 # In a Jupyter notebook, a line starting with `!` runs a shell command.
 # Make a scratch directory to work in and copy the example input into it.
+# (Outside the tutorial repo, first fetch the example inputs into include/.)
+from pathlib import Path
+import urllib.request
+
+_base = 'https://raw.githubusercontent.com/GeigerJ2/aiida-core/docs/integrate-tutorials/docs/source/tutorials/include'
+Path('include').mkdir(exist_ok=True)
+for _name in ('input.yaml', 'input_bad.yaml'):
+    if not (Path('include') / _name).exists():
+        urllib.request.urlretrieve(f'{_base}/{_name}', Path('include') / _name)
+
 !mkdir -p /tmp/aiida-tutorial
 !cp include/input.yaml /tmp/aiida-tutorial/input.yaml
 ```

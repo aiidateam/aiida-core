@@ -48,6 +48,17 @@ Install `aiida-core`, not `aiida` (the latter is an old meta-package).
 
 ```{code-cell} ipython3
 # Set up the tutorial's isolated sandbox profile (see Module 1 for details).
+from pathlib import Path
+
+if not Path('include/setup_tutorial.py').exists():
+    import urllib.request
+
+    Path('include').mkdir(exist_ok=True)
+    urllib.request.urlretrieve(
+        'https://raw.githubusercontent.com/GeigerJ2/aiida-core/docs/integrate-tutorials/docs/source/tutorials/include/setup_tutorial.py',
+        'include/setup_tutorial.py',
+    )
+
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```

@@ -28,6 +28,7 @@ import hashlib
 import os
 import pathlib
 import shutil
+import sys
 import time
 from contextlib import suppress
 
@@ -121,8 +122,15 @@ except NotExistent:
 # simulator used throughout this tutorial; see https://github.com/aiidateam/gsrd.
 _gsrd_executable = shutil.which('gsrd')
 if _gsrd_executable is None:
+    # Some environments (e.g. the ReadTheDocs build) install the ``gsrd`` console
+    # script next to the interpreter without adding that directory to PATH, so
+    # ``shutil.which`` misses it; look there before giving up.
+    _candidate = pathlib.Path(sys.executable).parent / 'gsrd'
+    if _candidate.is_file():
+        _gsrd_executable = str(_candidate)
+if _gsrd_executable is None:
     msg = (
-        "Could not find the 'gsrd' executable in PATH. "
+        "Could not find the 'gsrd' executable. "
         'Install it with `pip install gsrd @ git+https://github.com/aiidateam/gsrd.git` '
         'before running the tutorial.'
     )

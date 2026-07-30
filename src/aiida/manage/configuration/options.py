@@ -8,6 +8,8 @@
 ###########################################################################
 """Definition of known configuration options and methods to parse and get option values."""
 
+import copy
+from functools import lru_cache
 from typing import Any
 
 from aiida.common.exceptions import ConfigurationError
@@ -36,7 +38,7 @@ class Option:
 
     @property
     def schema(self) -> dict[str, Any]:
-        return self._schema
+        return copy.deepcopy(self._schema)
 
     @property
     def default(self) -> Any:
@@ -111,6 +113,14 @@ def get_option_names() -> list[str]:
     return [key.replace('__', '.') for key in GlobalOptionsSchema.model_fields]
 
 
+@lru_cache(maxsize=1)
+def _get_options_schema_properties() -> dict[str, Any]:
+    """Return the JSON schema properties for the global options schema."""
+    from .config import GlobalOptionsSchema
+
+    return GlobalOptionsSchema.model_json_schema()['properties']
+
+
 def get_option(name: str) -> Option:
     """Return option."""
     from .config import GlobalOptionsSchema
@@ -119,7 +129,7 @@ def get_option(name: str) -> Option:
     option_name = name.replace('.', '__')
     if option_name not in options:
         raise ConfigurationError(f'the option {name} does not exist')
-    return Option(name, GlobalOptionsSchema.model_json_schema()['properties'][option_name], options[option_name])
+    return Option(name, _get_options_schema_properties()[option_name], options[option_name])
 
 
 def resolve_deprecated_option_name(option_name: str, stacklevel: int = 4) -> str:

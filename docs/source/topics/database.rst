@@ -137,9 +137,12 @@ This can be easily combined with the ``order_by`` method in order to get the las
 Reference tables
 ----------------
 
+The following tables are given as reference for usage in the ``QueryBuilder``.
+
 .. _topics:database:advancedquery:tables:operators:
 
 List of all operators:
+^^^^^^^^^^^^^^^^^^^^^^
 
 +--------------+-------------+-------------------------------------------------------+------------------------------------------------------------------------------+
 |**Operator**  |**Datatype** |  **Example**                                          | Explanation                                                                  |
@@ -201,45 +204,83 @@ As mentioned in the :ref:`section about operator negations<how-to:query:filters:
 .. _topics:database:advancedquery:tables:relationships:
 
 List of all relationships:
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-+------------------+---------------+--------------------+-------------------------------------------------+
-| **Entity from**  | **Entity to** | **Relationship**   | **Explanation**                                 |
-+==================+===============+====================+=================================================+
-| Node             | Node          | *with_outgoing*    | One node as input of another node               |
-+------------------+---------------+--------------------+-------------------------------------------------+
-| Node             | Node          | *with_incoming*    | One node as output of another node              |
-+------------------+---------------+--------------------+-------------------------------------------------+
-| Node             | Node          | *with_descendants* | One node as the ancestor of another node (Path) |
-+------------------+---------------+--------------------+-------------------------------------------------+
-| Node             | Node          | *with_ancestors*   | One node as descendant of another node (Path)   |
-+------------------+---------------+--------------------+-------------------------------------------------+
-| Node             | Group         | *with_node*        | The group of a node                             |
-+------------------+---------------+--------------------+-------------------------------------------------+
-| Group            | Node          | *with_group*       | The node is a member of a group                 |
-+------------------+---------------+--------------------+-------------------------------------------------+
-| Node             | Computer      | *with_node*        | The computer of a node                          |
-+------------------+---------------+--------------------+-------------------------------------------------+
-| Computer         | Node          | *with_computer*    | The node of a computer                          |
-+------------------+---------------+--------------------+-------------------------------------------------+
-| Node             | User          | *with_node*        | The creator of a node is a user                 |
-+------------------+---------------+--------------------+-------------------------------------------------+
-| User             | Node          | *with_user*        | The node was created by a user                  |
-+------------------+---------------+--------------------+-------------------------------------------------+
-| User             | Group         | *with_user*        | The node was created by a user                  |
-+------------------+---------------+--------------------+-------------------------------------------------+
-| Group            | User          | *with_group*       | The node was created by a user                  |
-+------------------+---------------+--------------------+-------------------------------------------------+
-| Node             | Log           | *with_node*        | The log of a node                               |
-+------------------+---------------+--------------------+-------------------------------------------------+
-| Log              | Node          | *with_log*         | The node has a log                              |
-| Node             | Comment       | *with_node*        | The comment of a node                           |
-+------------------+---------------+--------------------+-------------------------------------------------+
-| Comment          | Node          | *with_comment*     | The node has a comment                          |
-+------------------+---------------+--------------------+-------------------------------------------------+
-| User             | Comment       | *with_user*        | The comment was created by a user               |
-+------------------+---------------+--------------------+-------------------------------------------------+
-| Comment          | User          | *with_comment*     | The creator of a comment is a user              |
-+------------------+---------------+--------------------+-------------------------------------------------+
+The table below can be mapped to the following example:
+
+.. code-block:: python
+
+   from aiida import orm
+
+   orm.QueryBuilder().append(
+       orm.Group,
+       project='label',
+       tag='group',
+   ).append(
+       orm.Node,
+       with_group='group',
+       project='label',
+       tag='node',
+   ).append(
+       orm.Computer,
+       with_node='node',
+       project='label',
+       tag='computer',
+   ).first(flat=True)
+
+The above query for a ``Group`` containing a ``Node`` with an associated ``Computer`` would yield:
+
+.. code-block:: python
+
+   ['group_label', 'node_label', 'computer_label']
+
++--------------+--------------+----------------------+---------------------------------------------------------+
+| **Source**   | **Target**   | **Relationship**     | **Explanation**                                         |
++==============+==============+======================+=========================================================+
+| ``Node``     | ``Node``     | ``with_outgoing``    | Target ``Node`` is input of source ``Node``             |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``Node``     | ``Node``     | ``with_incoming``    | Target ``Node`` is output of source ``Node``            |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``Node``     | ``Node``     | ``with_descendants`` | Target ``Node`` is ancestor of source ``Node`` (Path)   |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``Node``     | ``Node``     | ``with_ancestors``   | Target ``Node`` is descendant of source ``Node`` (Path) |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``Node``     | ``Group``    | ``with_node``        | ``Group`` containing ``Node``                           |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``Group``    | ``Node``     | ``with_group``       | ``Node`` is member of ``Group``                         |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``Node``     | ``Computer`` | ``with_node``        | ``Computer`` associated with ``Node`` (e.g., codes)     |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``Computer`` | ``Node``     | ``with_computer``    | ``Node`` with associated ``Computer`` (e.g., codes)     |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``Node``     | ``User``     | ``with_node``        | ``User`` created ``Node``                               |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``User``     | ``Node``     | ``with_user``        | ``Node`` created by ``User``                            |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``Group``    | ``User``     | ``with_group``       | ``User`` created ``Group``                              |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``User``     | ``Group``    | ``with_user``        | ``Group`` created by ``User``                           |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``Node``     | ``Log``      | ``with_node``        | ``Log`` associated with ``Node``                        |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``Log``      | ``Node``     | ``with_log``         | ``Node`` with associated ``Log``                        |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``Node``     | ``Comment``  | ``with_node``        | ``Comment`` associated with ``Node``                    |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``Comment``  | ``Node``     | ``with_comment``     | ``Node`` with associated ``Comment``                    |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``User``     | ``Comment``  | ``with_user``        | ``Comment`` created by ``User``                         |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``Comment``  | ``User``     | ``with_comment``     | ``User`` created ``Comment``                            |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``User``     | ``AuthInfo`` | ``with_user``        | ``AuthInfo`` associated with ``User``                   |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``AuthInfo`` | ``User``     | ``with_authinfo``    | ``User`` with associated ``AuthInfo``                   |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``Computer`` | ``AuthInfo`` | ``with_computer``    | ``AuthInfo`` associated with ``Computer``               |
++--------------+--------------+----------------------+---------------------------------------------------------+
+| ``AuthInfo`` | ``Computer`` | ``with_authinfo``    | ``Computer`` with associated ``AuthInfo``               |
++--------------+--------------+----------------------+---------------------------------------------------------+
 
 .. _topics:database:advancedquery:queryhelp:
 .. _topics:database:advancedquery:querydict:

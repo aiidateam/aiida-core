@@ -529,7 +529,7 @@ def test_generated_orm_model_setup_defers_pydantic_rebuild(monkeypatch):
     with monkeypatch.context() as context:
         context.setattr(OrmModel, 'model_rebuild', classmethod(model_rebuild))
 
-        class LazyModelData(orm.Data):
+        class TestModelData(orm.Data):
             class AttributesModel(orm.Data.AttributesModel):
                 value: int
 
@@ -538,9 +538,9 @@ def test_generated_orm_model_setup_defers_pydantic_rebuild(monkeypatch):
 
         assert rebuilt == []
 
-    model = LazyModelData.WriteModel(node_type=LazyModelData.class_node_type, attributes={'value': '1'})
+    model = TestModelData.WriteModel(node_type=TestModelData.class_node_type, attributes={'value': '1'})
     assert model.attributes.value == 1
-    assert LazyModelData.ReadModel.model_json_schema()['title'] == 'LazyModelDataReadModel'
+    assert TestModelData.ReadModel.model_json_schema()['title'] == 'TestModelDataReadModel'
 
 
 @pytest.mark.parametrize(

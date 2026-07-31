@@ -415,7 +415,6 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
         )
         model.__qualname__ = f'{cast(Any, cls).__name__}.Model'
         model.model_config = deepcopy(cls.ReadModel.model_config)
-        model.model_rebuild(force=True)
 
         cls._COMPAT_MODEL = model
 
@@ -601,8 +600,6 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
             WriteModel.__pydantic_decorators__.field_serializers = serializers
             WriteModel.__pydantic_decorators__.field_validators = validators
             WriteModel.model_config = deepcopy(model_cls.model_config)
-
-            WriteModel.model_rebuild(force=True)
 
             return WriteModel
 

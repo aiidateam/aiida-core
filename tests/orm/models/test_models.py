@@ -529,7 +529,7 @@ def test_generated_orm_model_setup_defers_pydantic_rebuild(monkeypatch):
     with monkeypatch.context() as context:
         context.setattr(OrmModel, 'model_rebuild', classmethod(model_rebuild))
 
-        class TestModelData(orm.Data):
+        class TestData(orm.Data):
             class AttributesModel(orm.Data.AttributesModel):
                 value: int
 
@@ -538,9 +538,9 @@ def test_generated_orm_model_setup_defers_pydantic_rebuild(monkeypatch):
 
         assert rebuilt == []
 
-    model = TestModelData.WriteModel(node_type=TestModelData.class_node_type, attributes={'value': '1'})
+    model = TestData.WriteModel(node_type=TestData.class_node_type, attributes={'value': '1'})
     assert model.attributes.value == 1
-    assert TestModelData.ReadModel.model_json_schema()['title'] == 'TestModelDataReadModel'
+    assert TestData.ReadModel.model_json_schema()['title'] == 'TestDataReadModel'
 
 
 @pytest.mark.parametrize(

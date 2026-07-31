@@ -210,15 +210,29 @@ The table below can be mapped to the following example:
 
 .. code-block:: python
 
-   QueryBuilder().append(
-       # Source,
-       # tag='source',
-   ).append(
-       # Target,
-       # Relationship='source'
-   )
+   from aiida import orm
 
-where **Source**, **Target**, and **Relationship** correspond to the table columns.
+   orm.QueryBuilder().append(
+       orm.Group,
+       project='label',
+       tag='group',
+   ).append(
+       orm.Node,
+       with_group='group',
+       project='label',
+       tag='node',
+   ).append(
+       orm.Computer,
+       with_node='node',
+       project='label',
+       tag='computer',
+   ).first(flat=True)
+
+The above query for a ``Group`` containing a ``Node`` with an associated ``Computer`` would yield:
+
+.. code-block:: python
+
+   ['group_label', 'node_label', 'computer_label']
 
 +--------------+--------------+----------------------+---------------------------------------------------------+
 | **Source**   | **Target**   | **Relationship**     | **Explanation**                                         |

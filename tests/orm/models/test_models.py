@@ -13,6 +13,7 @@ from typing_extensions import NotRequired
 from aiida import orm
 from aiida.common.datastructures import StashMode
 from aiida.common.exceptions import UnsupportedSchemaError
+from aiida.orm.pydantic import OrmModel
 
 orm_to_test = (
     orm.AuthInfo,
@@ -517,6 +518,31 @@ def test_minimal_model_idempotency():
     assert RepeatedDynamicModel is DynamicModel
 
 
+def test_generated_orm_model_setup_defers_pydantic_rebuild(monkeypatch):
+    """Test generated ORM models are not rebuilt eagerly during class setup."""
+    rebuilt: list[type[OrmModel]] = []
+
+    def model_rebuild(cls, *args, **kwargs):
+        rebuilt.append(cls)
+        return True
+
+    with monkeypatch.context() as context:
+        context.setattr(OrmModel, 'model_rebuild', classmethod(model_rebuild))
+
+        class LazyModelData(orm.Data):
+            class AttributesModel(orm.Data.AttributesModel):
+                value: int
+
+            class ConstructorArgsModel(OrmModel):
+                value: int
+
+        assert rebuilt == []
+
+    model = LazyModelData.WriteModel(node_type=LazyModelData.class_node_type, attributes={'value': '1'})
+    assert model.attributes.value == 1
+    assert LazyModelData.ReadModel.model_json_schema()['title'] == 'LazyModelDataReadModel'
+
+
 @pytest.mark.parametrize(
     'required_arguments',
     orm_to_test,
@@ -527,10 +553,10 @@ def test_model_overrides(required_arguments: RequiredEntityArguments):
     name = cls.__name__
 
     assert cls.ReadModel.__qualname__ == f'{name}.ReadModel'
-    assert cls.ReadModel.model_config.get('title') == f'{name}ReadModel'
+    assert cls.ReadModel.model_json_schema()['title'] == f'{name}ReadModel'
 
     assert cls.WriteModel.__qualname__ == f'{name}.WriteModel'
-    assert cls.WriteModel.model_config.get('title') == f'{name}WriteModel'
+    assert cls.WriteModel.model_json_schema()['title'] == f'{name}WriteModel'
 
 
 def _clean_and_sort(dictionary: dict) -> dict:
@@ -616,11 +642,11 @@ def test_node_attributes_model_overrides(required_arguments: RequiredNodeArgumen
     AttributesModel = cls.ReadModel.model_fields['attributes'].annotation  # noqa: N806
     assert AttributesModel is cls.AttributesModel
     assert AttributesModel.__qualname__ == f'{name}.AttributesModel'
-    assert AttributesModel.model_config.get('title') == f'{name}AttributesModel'
+    assert AttributesModel.model_json_schema()['title'] == f'{name}AttributesModel'
 
     AttributesWriteModel = cls.WriteModel.model_fields['attributes'].annotation  # noqa: N806
     assert AttributesWriteModel.__qualname__ == f'{name}.AttributesWriteModel'
-    assert AttributesWriteModel.model_config.get('title') == f'{name}AttributesWriteModel'
+    assert AttributesWriteModel.model_json_schema()['title'] == f'{name}AttributesWriteModel'
 
 
 def _validate_value(value):

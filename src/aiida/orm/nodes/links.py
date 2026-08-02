@@ -54,6 +54,10 @@ class NodeLinks:
         :raise TypeError: if `source` is not a Node instance or `link_type` is not a `LinkType` enum
         :raise ValueError: if the proposed link is invalid
         """
+        if link_type is LinkType.NEXT_VERSION:
+            msg = 'NEXT_VERSION links are managed by `Node.base.revise()` and cannot be added manually'
+            raise exceptions.ModificationNotAllowed(msg)
+
         self.validate_incoming(source, link_type, link_label)
         source.base.links.validate_outgoing(self._node, link_type, link_label)
 
@@ -84,7 +88,7 @@ class NodeLinks:
         validate_link(source, self._node, link_type, link_label, backend=self._node.backend)
 
         # Check if the proposed link would introduce a cycle in the graph following ancestor/descendant rules
-        if link_type in [LinkType.CREATE, LinkType.INPUT_CALC, LinkType.INPUT_WORK]:
+        if link_type in [LinkType.CREATE, LinkType.INPUT_CALC, LinkType.INPUT_WORK, LinkType.NEXT_VERSION]:
             builder = (
                 QueryBuilder(backend=self._node.backend)
                 .append(Node, filters={'id': self._node.pk}, tag='parent')

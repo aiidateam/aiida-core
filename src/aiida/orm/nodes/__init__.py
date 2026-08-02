@@ -17,6 +17,7 @@ from .data import *
 from .node import *
 from .process import *
 from .repository import *
+from .versions import *
 
 __all__ = (
     'AbstractCode',
@@ -44,6 +45,7 @@ __all__ = (
     'Node',
     'NodeAttributes',
     'NodeRepository',
+    'NodeVersions',
     'NumericType',
     'OrbitalData',
     'PortableCode',

@@ -9,7 +9,11 @@ filename: QbStrField('attributes.filename', dtype=<class 'str'>, doc='The name o
   the stored file')
 formulae: QbArrayField('attributes.formulae', dtype=list[str] | None, doc='List of
   formulae contained in the CIF file')
+is_head: QbAnyField('is_head', dtype=<class 'bool'>, doc='Whether the node is the
+  latest version of its lineage')
 label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
+lineage_uuid: QbAnyField('lineage_uuid', dtype=uuid.UUID | None, doc='The UUID of
+  the node version lineage')
 md5: QbStrField('attributes.md5', dtype=str | None, doc='MD5 checksum of the file
   contents')
 mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
@@ -31,3 +35,5 @@ spacegroup_numbers: QbArrayField('attributes.spacegroup_numbers', dtype=list[str
 user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
   the node')
 uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+version: QbNumericField('version', dtype=<class 'int'>, doc='The node version number
+  within its lineage')

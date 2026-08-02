@@ -21,7 +21,7 @@ from aiida.common import exceptions
 if TYPE_CHECKING:
     from aiida.storage.psql_dos.backend import PsqlDosBackend
 
-IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid', 'node_type'}
+IMMUTABLE_MODEL_FIELDS = {'id', 'pk', 'uuid', 'node_type', 'lineage_uuid', 'version'}
 
 
 class ModelWrapper:

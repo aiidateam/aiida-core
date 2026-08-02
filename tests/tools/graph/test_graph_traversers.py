@@ -172,6 +172,24 @@ class TestTraverseGraph:
             links_backward=[LinkType.CALL_WORK],
         )
 
+    def test_traversal_next_version(self):
+        """Test traversing ``NEXT_VERSION`` links in both directions."""
+        from aiida import orm
+
+        first = orm.Data().store()
+        second = first.base.revise().store()
+
+        self._single_test(
+            starting_nodes=[first.pk],
+            expanded_nodes=[second.pk],
+            links_forward=[LinkType.NEXT_VERSION],
+        )
+        self._single_test(
+            starting_nodes=[second.pk],
+            expanded_nodes=[first.pk],
+            links_backward=[LinkType.NEXT_VERSION],
+        )
+
     def test_traversal_full_graph(self):
         """This will test that the traverser can get the full graph with the minimal traverse
         required keywords.
@@ -377,6 +395,7 @@ class TestTraverseGraph:
             LinkType.INPUT_WORK,
             LinkType.CALL_WORK,
             LinkType.RETURN,
+            LinkType.NEXT_VERSION,
         ]
 
         obtained_results = traverse_graph([], links_forward=all_links, links_backward=all_links)
@@ -386,6 +405,22 @@ class TestTraverseGraph:
         obtained_results = traverse_graph([], get_links=True, links_forward=all_links, links_backward=all_links)
         assert obtained_results['nodes'] == set()
         assert obtained_results['links'] == set()
+
+    def test_delete_next_version_chain(self):
+        """Test delete traversal keeps version chains contiguous."""
+        from aiida import orm
+
+        first = orm.Data().store()
+        second = first.base.revise().store()
+        third = second.base.revise().store()
+
+        obtained_nodes = get_nodes_delete([second.pk])['nodes']
+        assert obtained_nodes == {first.pk, second.pk, third.pk}
+
+        with pytest.raises(ValueError, match='next_version_forward'):
+            get_nodes_delete([second.pk], next_version_forward=False)
+        with pytest.raises(ValueError, match='next_version_backward'):
+            get_nodes_delete([second.pk], next_version_backward=False)
 
     def test_delete_aux(self):
         """Tests for the get_nodes_delete function"""

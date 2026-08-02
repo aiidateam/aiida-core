@@ -12,9 +12,13 @@ description: QbStrField('description', dtype=<class 'str'>, doc='The node descri
 extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The node extras')
 input_plugin: QbStrField('attributes.input_plugin', dtype=str | None, doc='The name
   of the input plugin to be used for this code')
+is_head: QbAnyField('is_head', dtype=<class 'bool'>, doc='Whether the node is the
+  latest version of its lineage')
 is_local: QbAnyField('attributes.is_local', dtype=bool | None, doc='Whether the code
   is local or remote')
 label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
+lineage_uuid: QbAnyField('lineage_uuid', dtype=uuid.UUID | None, doc='The UUID of
+  the node version lineage')
 local_executable: QbStrField('attributes.local_executable', dtype=str | None, doc='Path
   to a local executable')
 mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
@@ -37,6 +41,8 @@ use_double_quotes: QbAnyField('attributes.use_double_quotes', dtype=<class 'bool
 user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
   the node')
 uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+version: QbNumericField('version', dtype=<class 'int'>, doc='The node version number
+  within its lineage')
 with_mpi: QbAnyField('attributes.with_mpi', dtype=bool | None, doc='Whether the executable
   should be run as an MPI program. This option can be left unspecified in which case
   `None` will be set and it is left up to the calculation job plugin or inputs whether

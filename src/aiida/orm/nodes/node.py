@@ -61,10 +61,12 @@ if TYPE_CHECKING:
     from importlib_metadata import EntryPoint
 
     from aiida.common.log import AiidaLoggerType
+    from aiida.orm.utils.links import LinkTriple
 
     from ..implementation import StorageBackend
     from ..implementation.nodes import BackendNode
     from .repository import NodeRepository
+    from .versions import NodeVersions
 
 __all__ = ('Node',)
 
@@ -158,6 +160,39 @@ class NodeBase:
         """Return an interface to interact with the links of this node."""
         return self._node._CLS_NODE_LINKS(self._node)
 
+    @cached_property
+    def versions(self) -> NodeVersions:
+        """Return an interface to navigate the versions of this node."""
+        from .versions import NodeVersions
+
+        return NodeVersions(self._node)
+
+    def revise(self) -> Node:
+        """Return an unstored copy representing the next version of this node.
+
+        :raises aiida.common.exceptions.ModificationNotAllowed: if the node is unstored, not a data node, or not head
+        """
+        from aiida.orm import Data
+
+        if not isinstance(self._node, Data):
+            msg = 'only Data nodes can be revised'
+            raise exceptions.ModificationNotAllowed(msg)
+
+        if not self._node.is_stored:
+            msg = 'only stored nodes can be revised; modify the unstored node directly instead'
+            raise exceptions.ModificationNotAllowed(msg)
+
+        if not self._node.base.versions.is_head:
+            msg = 'only the head of a lineage can be revised'
+            raise exceptions.ModificationNotAllowed(msg)
+
+        clone = self._node.clone()
+        clone.base.extras.clear()
+        clone.backend_entity.lineage_uuid = self._node.base.versions.lineage_uuid
+        clone.backend_entity.version = self._node.base.versions.number + 1
+        clone._set_pending_revision_source(self._node)
+        return clone
+
 
 class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNodeMeta):
     """Base class for all nodes in AiiDA.
@@ -212,6 +247,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
     _storable = False
     _unstorable_message = 'only Data, WorkflowNode, CalculationNode or their subclasses can be stored'
 
+    _VERSION_LINK_LABEL = 'next_version'
+
     identity_field = 'uuid'
 
     class MutableNodeFields(OrmModel):
@@ -260,6 +297,24 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             description='The UUID of the node',
             read_only=True,
             examples=['123e4567-e89b-12d3-a456-426614174000'],
+        )
+        lineage_uuid: UUID | None = OrmMetadataField(
+            None,
+            description='The UUID of the node version lineage',
+            read_only=True,
+            examples=['123e4567-e89b-12d3-a456-426614174000'],
+        )
+        version: int = OrmMetadataField(
+            1,
+            description='The node version number within its lineage',
+            read_only=True,
+            examples=[1],
+        )
+        is_head: bool = OrmMetadataField(
+            description='Whether the node is the latest version of its lineage',
+            orm_to_model=lambda node: cast(Node, node).base.versions.is_head,
+            read_only=True,
+            examples=[True],
         )
         process_type: str | None = OrmMetadataField(
             None,
@@ -354,6 +409,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         extras: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
+        if {'lineage_uuid', 'version'} & set(kwargs):
+            msg = '`lineage_uuid` and `version` are managed by the versioning API and cannot be set manually'
+            raise TypeError(msg)
+
         backend_entity = create_backend_node(self.class_node_type, backend, user, computer, **kwargs)
         super().__init__(backend_entity)
         if extras:
@@ -366,6 +425,49 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         cls._patch_read_model()
         cls._patch_constructor_model()
         super().__init_subclass__(**kwargs)
+
+    def initialize(self) -> None:
+        """Initialize node instance attributes."""
+        super().initialize()
+        self._pending_revision_source: Node | None = None
+
+    def _set_pending_revision_source(self, source: Node) -> None:
+        """Set the source node from which this unstored node is being revised."""
+        self._pending_revision_source = source
+
+    def _get_pending_revision_source(self) -> Node | None:
+        """Return the source node from which this node is being revised, if any."""
+        return self._pending_revision_source
+
+    def _prepare_pending_revision(self, source: Node) -> LinkTriple:
+        """Prepare lineage metadata and link triple for storing a revised node.
+
+        :param source: the stored head node from which this node was revised
+        :return: the link triple connecting the source to this node
+        :raises aiida.common.exceptions.ModificationNotAllowed: if the source is no longer the lineage head
+        """
+        from aiida.orm import Data
+        from aiida.orm.utils.links import LinkTriple
+
+        if not isinstance(self, Data) or not isinstance(source, Data):
+            msg = 'only Data nodes can be revised'
+            raise exceptions.ModificationNotAllowed(msg)
+
+        if not source.is_stored:
+            msg = 'only stored nodes can be revised'
+            raise exceptions.ModificationNotAllowed(msg)
+
+        if source.backend is not self.backend:
+            msg = 'cannot store a revision in a different backend than its source node'
+            raise exceptions.ModificationNotAllowed(msg)
+
+        if not source.base.versions.is_head:
+            msg = 'only the head of a lineage can be revised'
+            raise exceptions.ModificationNotAllowed(msg)
+
+        self.backend_entity.lineage_uuid = source.base.versions.lineage_uuid
+        self.backend_entity.version = source.base.versions.number + 1
+        return LinkTriple(source, LinkType.NEXT_VERSION, self._VERSION_LINK_LABEL)
 
     @classmethod
     def _patch_compat_model(cls) -> None:
@@ -724,6 +826,21 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         return self.backend_entity.node_type
 
     @property
+    def lineage_uuid(self) -> str:
+        """Return the effective UUID of the node version lineage."""
+        return self.base.versions.lineage_uuid
+
+    @property
+    def version(self) -> int:
+        """Return the node version number within its lineage."""
+        return self.base.versions.number
+
+    @property
+    def is_head(self) -> bool:
+        """Return whether this node is the latest version of its lineage."""
+        return self.base.versions.is_head
+
+    @property
     def process_type(self) -> str | None:
         """Return the node process type.
 
@@ -864,8 +981,13 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             # us to set `clean=False` if we are storing normally, since the values will already have been cleaned
             self._backend_entity.clean_values()
 
-            # Retrieve the cached node if ``should_use_cache`` returns True
-            same_node = self.base.caching._get_same_node() if self.base.caching.should_use_cache() else None
+            # Retrieve the cached node if ``should_use_cache`` returns True. Revisions must always be stored as a new
+            # node, even if their attributes happen to match an existing node.
+            same_node = (
+                self.base.caching._get_same_node()
+                if self.base.caching.should_use_cache() and self._get_pending_revision_source() is None
+                else None
+            )
 
             if same_node is not None:
                 self._store_from_cache(same_node)
@@ -885,9 +1007,14 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
         self.base.repository._store()
 
-        links = self.base.links.incoming_cache
-        self._backend_entity.store(links, clean=clean)
+        links = list(self.base.links.incoming_cache)
 
+        with self.backend.transaction():
+            if source := self._get_pending_revision_source():
+                links.append(self._prepare_pending_revision(source))
+            self._backend_entity.store(links, clean=clean)
+
+        self._pending_revision_source = None
         self.base.links.incoming_cache = []
         self.base.caching.rehash()
 

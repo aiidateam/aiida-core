@@ -96,6 +96,8 @@ def get_nodes_export(
     :param input_work_forward: will traverse INPUT_WORK links in the forward direction.
     :param call_calc_backward: will traverse CALL_CALC links in the backward direction.
     :param call_work_backward: will traverse CALL_WORK links in the backward direction.
+    :param next_version_forward: will traverse NEXT_VERSION links in the forward direction.
+    :param next_version_backward: will traverse NEXT_VERSION links in the backward direction.
     """
     traverse_links = validate_traversal_rules(GraphTraversalRules.EXPORT, **traversal_rules)
 
@@ -133,6 +135,8 @@ def validate_traversal_rules(
     :param call_calc_backward: will traverse CALL_CALC links in the backward direction.
     :param call_work_forward: will traverse CALL_WORK links in the forward direction.
     :param call_work_backward: will traverse CALL_WORK links in the backward direction.
+    :param next_version_forward: will traverse NEXT_VERSION links in the forward direction.
+    :param next_version_backward: will traverse NEXT_VERSION links in the backward direction.
     """
     if not isinstance(ruleset, GraphTraversalRules):
         raise TypeError(

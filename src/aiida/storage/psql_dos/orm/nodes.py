@@ -43,6 +43,8 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         user,
         computer=None,
         process_type=None,
+        lineage_uuid=None,
+        version=1,
         label='',
         description='',
         ctime=None,
@@ -64,6 +66,8 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
         arguments = {
             'node_type': node_type,
             'process_type': process_type,
+            'lineage_uuid': lineage_uuid,
+            'version': version,
             'user': user.bare_model,
             'label': label,
             'description': description,
@@ -121,6 +125,23 @@ class SqlaNode(entities.SqlaModelEntity[models.DbNode], ExtrasMixin, BackendNode
     @property
     def node_type(self):
         return self.model.node_type
+
+    @property
+    def lineage_uuid(self):
+        lineage_uuid = self.model.lineage_uuid
+        return str(lineage_uuid) if lineage_uuid is not None else None
+
+    @lineage_uuid.setter
+    def lineage_uuid(self, value):
+        self.model.lineage_uuid = value
+
+    @property
+    def version(self):
+        return self.model.version or 1
+
+    @version.setter
+    def version(self, value):
+        self.model.version = value
 
     @property
     def process_type(self):

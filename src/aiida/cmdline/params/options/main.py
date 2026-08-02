@@ -148,6 +148,8 @@ TRAVERSAL_RULE_HELP_STRING = {
     'input_calc_forward': 'INPUT links to calculations forwards',
     'input_work_backward': 'INPUT links to workflows backwards',
     'input_work_forward': 'INPUT links to workflows forwards',
+    'next_version_backward': 'NEXT_VERSION links backwards',
+    'next_version_forward': 'NEXT_VERSION links forwards',
     'return_backward': 'RETURN links backwards',
     'return_forward': 'RETURN links forwards',
     'create_backward': 'CREATE links backwards',

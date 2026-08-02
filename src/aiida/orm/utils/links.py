@@ -171,6 +171,7 @@ def validate_link(
         LinkType.CREATE: (CalculationNode, Data, 'unique_pair', 'unique'),
         LinkType.INPUT_CALC: (Data, CalculationNode, 'unique_triple', 'unique_pair'),
         LinkType.INPUT_WORK: (Data, WorkflowNode, 'unique_triple', 'unique_pair'),
+        LinkType.NEXT_VERSION: (Data, Data, 'unique', 'unique'),
         LinkType.RETURN: (WorkflowNode, Data, 'unique_pair', 'unique_triple'),
     }
 

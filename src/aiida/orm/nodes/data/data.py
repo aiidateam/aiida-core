@@ -83,6 +83,10 @@ class Data(Node):
 
         return clone
 
+    def revise(self):
+        """Return an unstored copy representing the next version of this data node."""
+        return self.base.revise()
+
     @property
     def source(self) -> dict | None:
         """Gets the dictionary describing the source of Data object. Possible fields:

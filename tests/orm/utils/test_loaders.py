@@ -201,6 +201,11 @@ class TestOrmUtils:
         assert isinstance(loaded_node, Node)
         assert loaded_node.uuid == node.uuid
 
+        # Load with the legacy positional sub_classes argument
+        loaded_node = load_node(None, node.pk, None, None, (Data,))
+        assert isinstance(loaded_node, Data)
+        assert loaded_node.uuid == node.uuid
+
         # Load through partial uuid without a dash
         loaded_node = load_node(uuid=node.uuid[:8])
         assert isinstance(loaded_node, Node)

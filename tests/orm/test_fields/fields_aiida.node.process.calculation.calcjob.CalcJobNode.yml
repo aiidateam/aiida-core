@@ -15,10 +15,14 @@ exit_status: QbNumericField('attributes.exit_status', dtype=int | None, doc='The
 extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The node extras')
 imported: QbAnyField('attributes.imported', dtype=bool | None, doc='Whether the node
   has been migrated')
+is_head: QbAnyField('is_head', dtype=<class 'bool'>, doc='Whether the node is the
+  latest version of its lineage')
 job_id: QbStrField('attributes.job_id', dtype=str | None, doc='The scheduler job id')
 label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
 last_job_info: QbDictField('attributes.last_job_info', dtype=dict | None, doc='The
   last job info returned by the scheduler')
+lineage_uuid: QbAnyField('lineage_uuid', dtype=uuid.UUID | None, doc='The UUID of
+  the node version lineage')
 mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
   time of the node')
 node_type: QbStrField('node_type', dtype=typing.Literal['process.calculation.calcjob.CalcJobNode.'],
@@ -55,3 +59,5 @@ state: QbStrField('attributes.state', dtype=str | None, doc='The active state of
 user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
   the node')
 uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+version: QbNumericField('version', dtype=<class 'int'>, doc='The node version number
+  within its lineage')

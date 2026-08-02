@@ -11,7 +11,11 @@ exit_message: QbStrField('attributes.exit_message', dtype=str | None, doc='The p
 exit_status: QbNumericField('attributes.exit_status', dtype=int | None, doc='The process
   exit status')
 extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The node extras')
+is_head: QbAnyField('is_head', dtype=<class 'bool'>, doc='Whether the node is the
+  latest version of its lineage')
 label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
+lineage_uuid: QbAnyField('lineage_uuid', dtype=uuid.UUID | None, doc='The UUID of
+  the node version lineage')
 mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
   time of the node')
 node_type: QbStrField('node_type', dtype=typing.Literal['process.workflow.workfunction.WorkFunctionNode.'],
@@ -34,3 +38,5 @@ sealed: QbAnyField('attributes.sealed', dtype=<class 'bool'>, doc='Whether the n
 user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
   the node')
 uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+version: QbNumericField('version', dtype=<class 'int'>, doc='The node version number
+  within its lineage')

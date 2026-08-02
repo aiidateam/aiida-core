@@ -56,6 +56,38 @@ class BackendNode(BackendEntity, BackendEntityExtrasMixin, metaclass=abc.ABCMeta
 
     @property
     @abc.abstractmethod
+    def lineage_uuid(self) -> str | None:
+        """Return the node lineage UUID.
+
+        :return: the string representation of the lineage UUID or ``None``
+        """
+
+    @lineage_uuid.setter
+    @abc.abstractmethod
+    def lineage_uuid(self, value: str | None) -> None:
+        """Set the node lineage UUID before it is stored.
+
+        :param value: the lineage UUID to set
+        """
+
+    @property
+    @abc.abstractmethod
+    def version(self) -> int:
+        """Return the node version number.
+
+        :return: the version number
+        """
+
+    @version.setter
+    @abc.abstractmethod
+    def version(self, value: int) -> None:
+        """Set the node version number before it is stored.
+
+        :param value: the version number to set
+        """
+
+    @property
+    @abc.abstractmethod
     def process_type(self) -> str | None:
         """Return the node process type.
 

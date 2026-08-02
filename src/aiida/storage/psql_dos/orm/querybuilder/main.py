@@ -17,7 +17,7 @@ from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import and_, not_, or_
+from sqlalchemy import and_, exists, not_, or_
 from sqlalchemy import func as sa_func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Row
@@ -29,6 +29,7 @@ from sqlalchemy.sql.expression import case, text
 from sqlalchemy.types import Boolean, DateTime, Float, Integer, String
 
 from aiida.common.exceptions import NotExistent
+from aiida.common.links import LinkType
 from aiida.orm.entities import EntityTypes
 from aiida.orm.implementation.querybuilder import QUERYBUILD_LOGGER, BackendQueryBuilder, QueryDictType
 from aiida.storage.utils import _create_smarter_in_clause
@@ -385,13 +386,29 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         return entity
 
     @staticmethod
+    def _get_lineage_uuid_expression(alias: AliasedClass) -> ColumnElement:
+        """Return an expression for the effective lineage UUID of a node."""
+        return sa_func.coalesce(alias.lineage_uuid, alias.uuid)
+
+    def _get_is_head_expression(self, alias: AliasedClass) -> ColumnElement[bool]:
+        """Return an expression that is true when the node has no successor version."""
+        link = aliased(self.Link)
+        return ~exists().where(and_(link.input_id == alias.id, link.type == LinkType.NEXT_VERSION.value))
+
     def _get_projectable_entity(
+        self,
         alias: AliasedClass,
         column_name: str,
         attrpath: list[str],
         cast: str | None = None,
     ) -> ColumnElement | InstrumentedAttribute:
         """Return projectable entity for a given alias and column name."""
+        if column_name == 'lineage_uuid' and not attrpath:
+            return self._get_lineage_uuid_expression(alias)
+
+        if column_name == 'is_head' and not attrpath:
+            return self._get_is_head_expression(alias)
+
         if not (attrpath or column_name in ('attributes', 'extras')):
             return get_column(column_name, alias)
 
@@ -442,16 +459,26 @@ class SqlaQueryBuilder(BackendQueryBuilder):
             else:
                 column_name = path_spec.split('.')[0]
 
+                if column_name == 'is_head':
+                    if not isinstance(filter_operation_dict, dict):
+                        filter_operation_dict = {'==': filter_operation_dict}  # noqa: PLW2901
+                    for operator, value in filter_operation_dict.items():
+                        expressions.append(self._get_is_head_filter_expr(alias, operator, value))
+                    continue
+
                 attr_key = path_spec.split('.')[1:]
                 is_jsonb = bool(attr_key) or column_name in ('dict', 'attributes', 'extras')
-                column: InstrumentedAttribute | None
-                try:
-                    column = get_column(column_name, alias)
-                except (ValueError, TypeError):
-                    if is_jsonb:
-                        column = None
-                    else:
-                        raise
+                column: ColumnElement | InstrumentedAttribute | None
+                if column_name == 'lineage_uuid' and not attr_key:
+                    column = self._get_lineage_uuid_expression(alias)
+                else:
+                    try:
+                        column = get_column(column_name, alias)
+                    except (ValueError, TypeError):
+                        if is_jsonb:
+                            column = None
+                        else:
+                            raise
                 if not isinstance(filter_operation_dict, dict):
                     filter_operation_dict = {'==': filter_operation_dict}  # noqa: PLW2901
                 for operator, value in filter_operation_dict.items():
@@ -467,6 +494,26 @@ class SqlaQueryBuilder(BackendQueryBuilder):
                         )
                     )
         return and_(*expressions) if expressions else None
+
+    def _get_is_head_filter_expr(self, alias: AliasedClass, operator: str, value: Any) -> ColumnElement[bool]:
+        """Return a filter expression for the computed ``is_head`` field."""
+        if operator.startswith('~') or operator.startswith('!'):
+            negation = True
+            operator = operator[1:]
+        else:
+            negation = False
+
+        if operator != '==':
+            raise ValueError(f'Unknown operator {operator} for filters on is_head')
+        if not isinstance(value, bool):
+            raise TypeError(f'Value for is_head filter has to be a boolean (you gave {value})')
+
+        expr = self._get_is_head_expression(alias)
+        if not value:
+            expr = not_(expr)
+        if negation:
+            expr = not_(expr)
+        return expr
 
     def get_filter_expr(
         self,
@@ -750,7 +797,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
         # 'state' column by the hybrid_column construct
         if not isinstance(
             column,
-            (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause),
+            (Cast, ColumnElement, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause),
         ):
             raise TypeError(f'column ({type(column)}) {column} is not a valid column')
         database_entity = column

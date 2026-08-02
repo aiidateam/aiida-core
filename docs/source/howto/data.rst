@@ -78,6 +78,68 @@ Ways to find and retrieve data that have previously been imported are described 
 If none of the currently available data types, as listed by ``verdi plugin list``, seem to fit your needs, you can also create your own custom type.
 For details refer to the next section :ref:`"How to add support for custom data types"<topics:data_types:plugin>`.
 
+.. _how-to:data:revise:
+
+Revising stored data
+====================
+
+Stored nodes are immutable, so their attributes and repository content cannot be changed in place after calling :py:meth:`~aiida.orm.nodes.node.Node.store`.
+If a stored :py:class:`~aiida.orm.Data` node needs to be corrected or extended while preserving provenance, create a new version with :py:meth:`~aiida.orm.nodes.data.data.Data.revise`.
+The new version is a separate unstored node with its own UUID and PK once stored, while the original node remains unchanged and existing links keep pointing to it.
+
+.. code-block:: python
+
+    from aiida import orm
+
+    parameters = orm.Dict({'temperature': 300.0, 'obsolete': True}).store()
+
+    corrected = parameters.revise()
+    corrected.set_dict({'temperature': 320.0, 'pressure': 1.0})
+    corrected.store()
+
+    assert parameters.pk != corrected.pk
+    assert parameters.base.versions.number == 1
+    assert corrected.base.versions.number == 2
+    assert corrected.base.versions.previous.pk == parameters.pk
+
+Versions in the same lineage share a stable ``lineage_uuid`` and are connected by ``NEXT_VERSION`` links in the provenance graph.
+Use ``node.base.versions`` to navigate the lineage:
+
+.. code-block:: python
+
+    lineage_uuid = corrected.base.versions.lineage_uuid
+
+    first = corrected.base.versions.first
+    head = corrected.base.versions.head
+    history = corrected.base.versions.history()
+
+    assert first.pk == parameters.pk
+    assert head.pk == corrected.pk
+    assert [entry['version'] for entry in history] == [1, 2]
+
+A specific version, or the current head if ``version`` is omitted, can be loaded explicitly by lineage UUID:
+
+.. code-block:: python
+
+    original = orm.load_node_version(lineage_uuid, version=1)
+    latest = orm.load_node_version(lineage_uuid)
+
+    assert original.pk == parameters.pk
+    assert latest.pk == corrected.pk
+
+Loading by node UUID remains exact.
+For example, ``orm.load_node(uuid=parameters.uuid)`` still returns the original immutable node, not the head of the lineage.
+To query only current versions, filter on the computed ``is_head`` field:
+
+.. code-block:: python
+
+    heads = orm.QueryBuilder().append(orm.Data, filters={'is_head': True}, project='*').all(flat=True)
+
+Only :py:class:`~aiida.orm.Data` nodes can be revised.
+Process nodes record process executions and cannot be versioned.
+Extras are not versioned and are cleared on the revised unstored node, since extras are already mutable on each stored node.
+Repository content is preserved through the existing copy-on-write mechanism, so revising metadata does not duplicate file content.
+
 .. _how-to:data:dump:
 
 Dumping data to disk

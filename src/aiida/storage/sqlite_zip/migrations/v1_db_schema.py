@@ -6,8 +6,9 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""This is the sqlite DB schema, coresponding to the `main_0000` revision of the `sqlite_zip` backend,
-see: `versions/main_0000_initial.py`
+"""This is the sqlite DB schema, corresponding to the ``main_0000`` revision of the ``sqlite_zip`` backend.
+
+See: ``versions/main_0000_initial.py``.
 
 For normal operation of the archive,
 we auto-generate the schema from the models in ``aiida.storage.psql_dos.models``.

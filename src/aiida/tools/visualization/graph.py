@@ -71,6 +71,10 @@ def default_link_styles(link_pair: LinkPair, add_label: bool, add_type: bool) ->
             'style': 'dashed',
             'color': '#000000',  # black
         },
+        LinkType.NEXT_VERSION: {
+            'style': 'bold',
+            'color': '#666666',  # gray
+        },
     }[link_pair.link_type]
 
     if add_label and not add_type:
@@ -509,6 +513,7 @@ class Graph:
                 LinkType.INPUT_WORK,
                 LinkType.CALL_CALC,
                 LinkType.CALL_WORK,
+                LinkType.NEXT_VERSION,
             ]
         elif isinstance(link_types, (str, LinkType)):
             link_types_list = [link_types]  # type: ignore[assignment]

@@ -41,6 +41,7 @@ __all__ = (
     'load_group',
     'load_node',
     'load_node_class',
+    'load_node_version',
     'validate_link',
 )
 

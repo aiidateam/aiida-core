@@ -32,6 +32,7 @@ __all__ = (
     'load_entity',
     'load_group',
     'load_node',
+    'load_node_version',
 )
 
 
@@ -187,7 +188,16 @@ def load_group(identifier=None, pk=None, uuid=None, label=None, sub_classes=None
     )
 
 
-def load_node(identifier=None, pk=None, uuid=None, label=None, sub_classes=None, query_with_dashes=True) -> 'Node':
+def load_node(
+    identifier=None,
+    pk=None,
+    uuid=None,
+    label=None,
+    sub_classes=None,
+    query_with_dashes=True,
+    version=None,
+    lineage_uuid=None,
+) -> 'Node':
     """Load a node by one of its identifiers: pk or uuid. If the type of the identifier is unknown
     simply pass it without a keyword and the loader will attempt to infer the type
 
@@ -198,12 +208,29 @@ def load_node(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
     :param sub_classes: an optional tuple of orm classes to narrow the queryset. Each class should be a strict sub class
         of the ORM class of the given entity loader.
     :param bool query_with_dashes: allow to query for a uuid with dashes
+    :param version: optional version number, only valid together with ``uuid`` or ``lineage_uuid``
+    :param lineage_uuid: UUID of a node version lineage. If specified without ``version``, the head is returned.
     :returns: the node instance
     :raise ValueError: if none or more than one of the identifiers are supplied
     :raise TypeError: if the provided identifier has the wrong type
     :raise aiida.common.NotExistent: if no matching Node is found
     :raise aiida.common.MultipleObjectsError: if more than one Node was found
     """
+    if lineage_uuid is not None:
+        if not isinstance(lineage_uuid, str):
+            msg = 'lineage_uuid has to be a string type'
+            raise TypeError(msg)
+        if identifier is not None or pk is not None or uuid is not None or label is not None:
+            msg = 'lineage_uuid cannot be combined with identifier, pk, uuid or label'
+            raise ValueError(msg)
+        return load_node_version(lineage_uuid, version=version, sub_classes=sub_classes)
+
+    if version is not None:
+        if uuid is None or identifier is not None or pk is not None or label is not None:
+            msg = 'version can only be specified together with uuid or lineage_uuid'
+            raise ValueError(msg)
+        return load_node_version(uuid, version=version, sub_classes=sub_classes)
+
     return load_entity(
         NodeEntityLoader,
         identifier=identifier,
@@ -213,6 +240,57 @@ def load_node(identifier=None, pk=None, uuid=None, label=None, sub_classes=None,
         sub_classes=sub_classes,
         query_with_dashes=query_with_dashes,
     )
+
+
+def load_node_version(lineage_uuid: object, version: object | None = None, sub_classes=None) -> 'Node':
+    """Load a node by lineage UUID and optional version number.
+
+    If ``version`` is not specified, the latest version (the lineage head) is returned. Loading by node UUID through
+    :func:`load_node` remains exact and does not resolve to the lineage head unless ``version`` is explicitly passed.
+
+    :param lineage_uuid: UUID of the lineage to load
+    :param version: optional version number to load
+    :param sub_classes: optional tuple of ORM node classes to narrow the queryset
+    :return: the requested node version
+    :raises TypeError: if the inputs have invalid types
+    :raises ValueError: if the version is smaller than one
+    :raises aiida.common.NotExistent: if no matching node was found
+    :raises aiida.common.MultipleObjectsError: if more than one matching node was found
+    """
+    if not isinstance(lineage_uuid, str):
+        msg = 'lineage_uuid has to be a string type'
+        raise TypeError(msg)
+    if version is not None and not isinstance(version, int):
+        msg = 'version has to be an integer'
+        raise TypeError(msg)
+    if version is not None and version < 1:
+        msg = 'version should be larger than zero'
+        raise ValueError(msg)
+
+    classes = NodeEntityLoader.get_query_classes(sub_classes)
+    lineage_filter = {'or': [{'uuid': lineage_uuid}, {'lineage_uuid': lineage_uuid}]}
+    filters = lineage_filter if version is None else {'and': [lineage_filter, {'version': version}]}
+
+    builder = QueryBuilder().append(cls=classes, tag='node', filters=filters, project='*')
+
+    if version is None:
+        builder.order_by({'node': [{'version': 'desc'}]})
+        builder.limit(1)
+        node = builder.first(flat=True)
+        if node is None:
+            msg = f'no Node found with lineage UUID<{lineage_uuid}>'
+            raise NotExistent(msg)
+        return node
+
+    builder.limit(2)
+    try:
+        return builder.one()[0]
+    except MultipleObjectsError:
+        msg = f'multiple Nodes found with lineage UUID<{lineage_uuid}> version<{version}>'
+        raise MultipleObjectsError(msg)
+    except NotExistent as exception:
+        msg = f'no Node found with lineage UUID<{lineage_uuid}> version<{version}>: {exception}'
+        raise NotExistent(msg)
 
 
 def get_loader(orm_class):

@@ -7,7 +7,11 @@ description: QbStrField('description', dtype=<class 'str'>, doc='The node descri
 extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The node extras')
 identifier: QbStrField('attributes.identifier', dtype=<class 'str'>, doc='The member
   identifier')
+is_head: QbAnyField('is_head', dtype=<class 'bool'>, doc='Whether the node is the
+  latest version of its lineage')
 label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
+lineage_uuid: QbAnyField('lineage_uuid', dtype=uuid.UUID | None, doc='The UUID of
+  the node version lineage')
 mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
   time of the node')
 name: QbStrField('attributes.name', dtype=<class 'str'>, doc='The member name')
@@ -23,3 +27,5 @@ user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who ow
   the node')
 uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
 value: QbAnyField('attributes.value', dtype=typing.Any, doc='The member value')
+version: QbNumericField('version', dtype=<class 'int'>, doc='The node version number
+  within its lineage')

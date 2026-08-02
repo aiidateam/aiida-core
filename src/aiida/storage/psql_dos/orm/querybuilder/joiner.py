@@ -399,7 +399,9 @@ class SqlaJoiner:
         link2 = aliased(self._entities.Link)
         node1 = aliased(self._entities.Node)
 
-        link_filters = link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # follow input / create links
+        link_filters = link1.type.in_(
+            (LinkType.CREATE.value, LinkType.INPUT_CALC.value, LinkType.NEXT_VERSION.value)
+        )  # follow input / create / version links
         in_recursive_filters = self._entities.build_filters(node1, filter_dict)
         if in_recursive_filters is None:
             filters = link_filters
@@ -441,7 +443,7 @@ class SqlaJoiner:
                         link2.input_id == aliased_walk.c.descendant_id,
                     )
                 )
-                .where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
+                .where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value, LinkType.NEXT_VERSION.value)))
             )
         )  # .alias()
 
@@ -466,7 +468,9 @@ class SqlaJoiner:
         link2 = aliased(self._entities.Link)
         node1 = aliased(self._entities.Node)
 
-        link_filters = link1.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value))  # follow input / create links
+        link_filters = link1.type.in_(
+            (LinkType.CREATE.value, LinkType.INPUT_CALC.value, LinkType.NEXT_VERSION.value)
+        )  # follow input / create / version links
         in_recursive_filters = self._entities.build_filters(node1, filter_dict)
         if in_recursive_filters is None:
             filters = link_filters
@@ -508,7 +512,7 @@ class SqlaJoiner:
                         link2.output_id == aliased_walk.c.ancestor_id,
                     )
                 )
-                .where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value)))
+                .where(link2.type.in_((LinkType.CREATE.value, LinkType.INPUT_CALC.value, LinkType.NEXT_VERSION.value)))
                 # I can't follow RETURN or CALL links
             )
         )

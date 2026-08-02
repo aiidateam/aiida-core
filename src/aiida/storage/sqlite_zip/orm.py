@@ -179,13 +179,19 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
     def table_groups_nodes(self):
         return models.DbGroupNodes.__table__  # type: ignore[attr-defined]
 
-    @staticmethod
     def _get_projectable_entity(
+        self,
         alias: AliasedClass,
         column_name: str,
         attrpath: list[str],
         cast: str | None = None,
     ) -> ColumnElement | InstrumentedAttribute:
+        if column_name == 'lineage_uuid' and not attrpath:
+            return self._get_lineage_uuid_expression(alias)
+
+        if column_name == 'is_head' and not attrpath:
+            return self._get_is_head_expression(alias)
+
         if not (attrpath or column_name in ('attributes', 'extras')):
             return get_column(column_name, alias)
 
@@ -348,7 +354,9 @@ class SqliteQueryBuilder(SqlaQueryBuilder):
     def get_filter_expr_from_column(self, operator: str, value: Any, column) -> BinaryExpression:
         # Label is used because it is what is returned for the
         # 'state' column by the hybrid_column construct
-        if not isinstance(column, (Cast, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)):
+        if not isinstance(
+            column, (Cast, ColumnElement, InstrumentedAttribute, QueryableAttribute, Label, ColumnClause)
+        ):
             raise TypeError(f'column ({type(column)}) {column} is not a valid column')
         database_entity = column
         if operator == '==':

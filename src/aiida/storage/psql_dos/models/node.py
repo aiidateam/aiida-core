@@ -11,7 +11,7 @@
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.schema import Column
-from sqlalchemy.sql.schema import ForeignKey, Index
+from sqlalchemy.sql.schema import ForeignKey, Index, UniqueConstraint
 from sqlalchemy.types import DateTime, Integer, String, Text
 
 from aiida.common import timezone
@@ -39,6 +39,8 @@ class DbNode(Base):
 
     id = Column(Integer, primary_key=True)
     uuid = Column(UUID(as_uuid=True), default=get_new_uuid, nullable=False, unique=True)
+    lineage_uuid = Column(UUID(as_uuid=True), nullable=True, index=True)
+    version = Column(Integer, nullable=False, default=1, server_default='1')
     node_type = Column(String(255), default='', nullable=False, index=True)
     process_type = Column(String(255), index=True)
     label = Column(String(255), nullable=False, default='', index=True)
@@ -89,6 +91,7 @@ class DbNode(Base):
     )
 
     __table_args__ = (
+        UniqueConstraint('lineage_uuid', 'version', name='uq_dbnode_lineage_version'),
         Index(
             'ix_pat_db_dbnode_label', label, postgresql_using='btree', postgresql_ops={'label': 'varchar_pattern_ops'}
         ),

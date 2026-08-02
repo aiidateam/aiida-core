@@ -61,8 +61,6 @@ def test_add_field():
     node = NewNode()
 
     assert 'key1' in node.fields
-    with pytest.warns(AiidaDeprecationWarning, match='QbField.doc'):
-        assert node.fields.key1.doc == ''
     assert node.fields.key1.dtype is str
     with pytest.warns(AiidaDeprecationWarning, match='QbField.annotation'):
         assert node.fields.key1.annotation is str

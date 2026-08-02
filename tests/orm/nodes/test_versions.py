@@ -91,8 +91,9 @@ def test_revise_guards():
     with pytest.raises(exceptions.ModificationNotAllowed, match='only stored nodes can be revised'):
         orm.Data().base.revise()
 
-    with pytest.raises(exceptions.ModificationNotAllowed, match='only Data nodes can be revised'):
-        orm.ProcessNode().base.revise()
+    for process_node in (orm.ProcessNode(), orm.CalculationNode().store(), orm.WorkflowNode().store()):
+        with pytest.raises(exceptions.ModificationNotAllowed, match='only Data nodes can be revised'):
+            process_node.base.revise()
 
     node = orm.Data().store()
     revised = node.base.revise().store()

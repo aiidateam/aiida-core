@@ -144,7 +144,7 @@ class AsyncSshTransport(AsyncTransport):
     def _get_host_suggestion_string(cls, computer):
         """Return a suggestion for the parameter 'host'.
         Note: the name of this methood is not arbitrary! In order to be picked up during
-        `verdi computer configure` command, it has to be in the following format:
+        `verdi computer revise` command, it has to be in the following format:
         `_get_<PARAMETER_NAME>_suggestion_string`
         """
         # Originally set as 'Hostname' during `verdi computer setup`
@@ -158,7 +158,7 @@ class AsyncSshTransport(AsyncTransport):
         # the machine is passed as `machine=computer.hostname` in the codebase
         # 'machine' is immutable.
         # 'host' is mutable, so it can be changed via command:
-        # 'verdi computer configure core.ssh_async <LABEL>'.
+        # 'verdi computer revise core.ssh_async <LABEL>'.
         # by default, 'host' is set to 'machine' in the __init__ method, if not provided.
         # NOTE: to guarantee a connection,
         # a computer with core.ssh_async transport plugin should be configured before any instantiation.

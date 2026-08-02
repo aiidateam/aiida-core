@@ -580,7 +580,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
         except exceptions.NotExistent as exc:
             raise exceptions.NotExistent(
                 f'Computer `{self.label}` (ID={self.pk}) not configured for user `{user.get_short_name()}` '
-                f'(ID={user.pk}) - use `verdi computer configure` first'
+                f'(ID={user.pk}) - use `verdi computer revise` first'
             ) from exc
 
         return authinfo
@@ -635,7 +635,7 @@ class Computer(entities.Entity['BackendComputer', ComputerCollection]):
             Otherwise, pass a valid User.
 
         :return: a (closed) Transport, already configured with the connection
-            parameters to the supercomputer, as configured with ``verdi computer configure``
+            parameters to the supercomputer, as configured with ``verdi computer revise``
             for the user specified as a parameter ``user``.
         """
         from . import authinfos

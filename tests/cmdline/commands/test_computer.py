@@ -27,6 +27,7 @@ from aiida.cmdline.commands.cmd_computer import (
     computer_goto,
     computer_list,
     computer_relabel,
+    computer_revise,
     computer_setup,
     computer_show,
     computer_test,
@@ -146,7 +147,7 @@ def test_mixed(run_cli_command):
 
     options_dict['use-login-shell'] = 'y'
     # In any case, these would be managed by the visual editor
-    user_input = '\n'.join(generate_setup_options_interactive(options_dict))
+    user_input = '\n'.join(generate_setup_options_interactive(options_dict) + ['n', '0'])
     options = generate_setup_options(non_interactive_options_dict)
 
     result = run_cli_command(computer_setup, options, user_input=user_input)
@@ -194,6 +195,7 @@ def test_noninteractive(run_cli_command, aiida_localhost, non_interactive_editor
     assert new_computer.get_default_memory_per_machine() == int(options_dict['default-memory-per-machine'])
     assert new_computer.get_prepend_text() == options_dict['prepend-text']
     assert new_computer.get_append_text() == options_dict['append-text']
+    assert new_computer.is_configured
 
     # Test that I cannot generate twice a computer with the same label
     result = run_cli_command(computer_setup, options, raises=True)
@@ -341,6 +343,12 @@ class TestVerdiComputerConfigure:
         assert 'core.ssh' in result.output
         assert 'core.local' in result.output
 
+    def test_revise_top_help(self):
+        """Test help option of verdi computer revise."""
+        result = self.cli_runner(computer_revise, ['--help'])
+        assert 'core.ssh' in result.output
+        assert 'core.local' in result.output
+
     def test_reachable(self):
         """Test reachability of top level and sub commands."""
         import subprocess as sp
@@ -349,6 +357,21 @@ class TestVerdiComputerConfigure:
         sp.check_output(['verdi', 'computer', 'configure', 'core.local', '--help'])
         sp.check_output(['verdi', 'computer', 'configure', 'core.ssh', '--help'])
         sp.check_output(['verdi', 'computer', 'configure', 'show', '--help'])
+        sp.check_output(['verdi', 'computer', 'revise', '--help'])
+        sp.check_output(['verdi', 'computer', 'revise', 'core.local', '--help'])
+        sp.check_output(['verdi', 'computer', 'revise', 'show', '--help'])
+
+    def test_revise_local_ni_empty(self):
+        """Test revising the configuration for a local computer."""
+        self.comp_builder.label = 'test_revise_local_ni_empty'
+        self.comp_builder.transport = 'core.local'
+        comp = self.comp_builder.new()
+        comp.store()
+
+        options = ['core.local', comp.label, '--non-interactive', '--safe-interval', '0']
+        result = self.cli_runner(computer_revise, options)
+        assert comp.is_configured, result.output
+        assert comp.get_authinfo(self.user).get_auth_params()['safe_interval'] == 0.0
 
     def test_local_ni_empty(self):
         """Test verdi computer configure core.local <comp>
@@ -940,7 +963,7 @@ def test_direct_interactive(run_cli_command, non_interactive_editor):
     options_dict.pop('prepend-text')
     options_dict.pop('append-text')
     options_dict['use-login-shell'] = 'y'
-    user_input = '\n'.join(generate_setup_options_interactive(options_dict))
+    user_input = '\n'.join(generate_setup_options_interactive(options_dict) + ['n', '0'])
 
     result = run_cli_command(computer_setup, user_input=user_input)
     assert result.exception is None, f'There was an unexpected exception. Output: {result.output}'
@@ -959,6 +982,7 @@ def test_direct_interactive(run_cli_command, non_interactive_editor):
     # For now I'm not writing anything in them
     assert new_computer.get_prepend_text() == ''
     assert new_computer.get_append_text() == ''
+    assert new_computer.is_configured
 
 
 def test_computer_test_stderr(run_cli_command, aiida_localhost, monkeypatch):

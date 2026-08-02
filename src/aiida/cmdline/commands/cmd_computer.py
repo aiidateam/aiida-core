@@ -49,6 +49,32 @@ def prompt_for_computer_configuration(computer):
     pass
 
 
+def _configure_computer(ctx, computer, user, non_interactive):
+    """Configure a computer by invoking the command for its transport type.
+
+    :param ctx: the click context of the parent command
+    :param computer: the computer to configure
+    :param user: optional user to configure the computer for
+    :param non_interactive: whether to run the configuration non-interactively
+    """
+    from aiida.transports import cli as transport_cli
+
+    command = transport_cli.create_configure_cmd(computer.transport_type)
+    parameters = [computer.label]
+
+    if user is not None:
+        parameters.extend(['--user', user.email])
+    if non_interactive:
+        parameters.append('--non-interactive')
+
+    command.main(
+        args=parameters,
+        prog_name=f'{ctx.command_path} {computer.transport_type}',
+        obj=ctx.obj,
+        standalone_mode=False,
+    )
+
+
 def _computer_test_get_jobs(transport, scheduler, authinfo, computer):
     """Internal test to check if it is possible to check the queue state.
 
@@ -233,7 +259,7 @@ def _computer_use_login_shell_performance(transport, scheduler, authinfo, comput
             'The computer is configured to use a login shell, which is slower compared to a normal shell.\n'
             f'Command execution time of {timing_true:.3f} versus {timing_false:.3f} seconds, respectively).\n'
             'Unless this setting is really necessary, consider disabling it with:\n'
-            f'\n    verdi computer configure {computer.transport_type} {computer.label} -n --no-use-login-shell\n\n'
+            f'\n    verdi computer revise {computer.transport_type} {computer.label} -n --no-use-login-shell\n\n'
             'For details, please refer to the documentation: '
             'https://aiida.readthedocs.io/projects/aiida-core/en/latest/topics/transport.html#login-shells\n'
         )
@@ -286,12 +312,13 @@ def set_computer_builder(ctx, param, value):
 @options_computer.USE_DOUBLE_QUOTES()
 @options_computer.PREPEND_TEXT()
 @options_computer.APPEND_TEXT()
+@options.USER(required=False, help='Email address of the AiiDA user for whom to configure this computer.')
 @options.NON_INTERACTIVE()
 @options.CONFIG_FILE()
 @click.pass_context
 @with_dbenv()
-def computer_setup(ctx, non_interactive, **kwargs):
-    """Create a new computer."""
+def computer_setup(ctx, non_interactive, user, **kwargs):
+    """Create and configure a new computer."""
     from aiida.orm.utils.builders.computer import ComputerBuilder
 
     if kwargs['label'] in get_computer_names():
@@ -317,10 +344,12 @@ def computer_setup(ctx, non_interactive, **kwargs):
     else:
         echo.echo_success(f'Computer<{computer.pk}> {computer.label} created')
 
-    echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
-
-    profile = ctx.obj['profile']
-    echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
+    try:
+        _configure_computer(ctx, computer, user, non_interactive)
+    except (click.Abort, click.ClickException) as exception:
+        echo.echo_critical(f'Computer<{computer.pk}> {computer.label} created but configuration failed: {exception}')
+    else:
+        echo.echo_success(f'Computer<{computer.pk}> {computer.label} configured')
 
 
 @verdi_computer.command('duplicate')
@@ -375,7 +404,7 @@ def computer_duplicate(ctx, computer, non_interactive, **kwargs):
         echo.echo_report('Note: before the computer can be used, it has to be configured with the command:')
 
         profile = ctx.obj['profile']
-        echo.echo_report(f'  verdi -p {profile.name} computer configure {computer.transport_type} {computer.label}')
+        echo.echo_report(f'  verdi -p {profile.name} computer revise {computer.transport_type} {computer.label}')
 
 
 @verdi_computer.command('enable')
@@ -702,21 +731,17 @@ class LazyConfigureGroup(VerdiCommandGroup):
         return command
 
 
-@verdi_computer.group('configure', cls=LazyConfigureGroup)
+@verdi_computer.group('configure', cls=LazyConfigureGroup, hidden=True)
 def computer_configure():
     """Configure the transport for a computer and user."""
 
 
-@computer_configure.command('show')
-@click.option(
-    '--defaults', is_flag=True, default=False, help='Show the default configuration settings for this computer.'
-)
-@click.option('--as-option-string', is_flag=True)
-@options.USER(
-    help='Email address of the AiiDA user for whom to configure this computer (if different from default user).'
-)
-@arguments.COMPUTER()
-def computer_config_show(computer, user, defaults, as_option_string):
+@verdi_computer.group('revise', cls=LazyConfigureGroup)
+def computer_revise():
+    """Revise the transport configuration for a computer and user."""
+
+
+def _computer_config_show(computer, user, defaults, as_option_string):
     """Show the current configuration for a computer."""
     from aiida.common.escaping import escape_for_bash
     from aiida.transports import cli as transport_cli
@@ -761,6 +786,39 @@ def computer_config_show(computer, user, defaults, as_option_string):
             else:
                 table.append((f'* {name}', '-'))
         echo_tabulate(table, tablefmt='plain')
+
+
+_CONFIG_SHOW_OPTIONS = (
+    click.option(
+        '--defaults', is_flag=True, default=False, help='Show the default configuration settings for this computer.'
+    ),
+    click.option('--as-option-string', is_flag=True),
+    options.USER(
+        help='Email address of the AiiDA user for whom to configure this computer (if different from default user).'
+    ),
+    arguments.COMPUTER(),
+)
+
+
+def _apply_config_show_options(function):
+    """Apply common options for commands showing a computer configuration."""
+    for option in reversed(_CONFIG_SHOW_OPTIONS):
+        function = option(function)
+    return function
+
+
+@computer_configure.command('show')
+@_apply_config_show_options
+def computer_config_show(computer, user, defaults, as_option_string):
+    """Show the current configuration for a computer."""
+    _computer_config_show(computer, user, defaults, as_option_string)
+
+
+@computer_revise.command('show')
+@_apply_config_show_options
+def computer_revise_show(computer, user, defaults, as_option_string):
+    """Show the current configuration for a computer."""
+    _computer_config_show(computer, user, defaults, as_option_string)
 
 
 @verdi_computer.group('export')

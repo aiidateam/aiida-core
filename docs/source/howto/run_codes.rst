@@ -64,9 +64,9 @@ If you are configuring a remote computer, start by :ref:`configuring password-le
 Computer setup
 --------------
 
-The configuration of computers happens in two steps: setting up the public metadata associated with the |Computer| in AiiDA provenance graphs, and configuring private connection details.
+The setup of computers stores the public metadata associated with the |Computer| in AiiDA provenance graphs and configures the private connection details for the current user.
 
-Start by creating a new computer instance in the database:
+Start by creating and configuring a new computer instance in the database:
 
 .. code-block:: console
 
@@ -90,7 +90,8 @@ Use these additional lines to perform any further set up of the environment on t
     Don't specify settings here that are specific to a code or calculation: you can set further pre-execution commands at the ``Code`` and even ``CalcJob`` level.
 
 When you are done editing, save and quit.
-The computer has now been created in the database but you still need to *configure* access to it using your credentials.
+The computer has now been created and configured in the database.
+Use ``verdi computer revise`` to update the connection settings later.
 
 .. tip::
 
@@ -130,11 +131,11 @@ The computer has now been created in the database but you still need to *configu
 Computer connection configuration
 ---------------------------------
 
-The second step configures private connection details using:
+To revise private connection details for an existing computer, use:
 
 .. code-block:: console
 
-    $ verdi computer configure TRANSPORTTYPE COMPUTERLABEL
+    $ verdi computer revise TRANSPORTTYPE COMPUTERLABEL
 
 Replace ``COMPUTERLABEL`` with the computer label chosen during the setup and replace ``TRANSPORTTYPE`` with the name of chosen transport type, i.e., ``core.local`` for the localhost computer and ``core.ssh_async`` for any remote computer.
 
@@ -179,7 +180,7 @@ Some compute resources, particularly large supercomputing centers, may not toler
 
     .. code-block:: bash
 
-        verdi computer configure core.ssh_async --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
+        verdi computer revise core.ssh_async --non-interactive --safe-interval <SECONDS> <COMPUTER_NAME>
 
 .. important::
 

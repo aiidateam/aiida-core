@@ -251,7 +251,7 @@ With the recommended ``core.ssh_async`` transport, nothing else is needed: the p
 
 .. code-block:: console
 
-   $ verdi computer configure core.ssh_async SHORTNAME_TARGET
+   $ verdi computer revise core.ssh_async SHORTNAME_TARGET
 
 .. dropdown:: :fa:`plus-circle` With the deprecated ``core.ssh`` transport
 
@@ -266,7 +266,7 @@ With the recommended ``core.ssh_async`` transport, nothing else is needed: the p
 
    .. code-block:: console
 
-      $ verdi computer configure core.ssh SHORTNAME_TARGET
+      $ verdi computer revise core.ssh SHORTNAME_TARGET
       ...
       Allow ssh agent [True]:
       SSH proxy jump []: USER_PROXY@FULLHOSTNAME_PROXY
@@ -275,7 +275,7 @@ With the recommended ``core.ssh_async`` transport, nothing else is needed: the p
 
    .. important:: Specifying the ``proxy_command`` manually
 
-       When specifying or updating the ``proxy_command`` option via ``verdi computer configure core.ssh``, please **do not use placeholders** ``%h`` and ``%p`` but provide the *actual* hostname and port.
+       When specifying or updating the ``proxy_command`` option via ``verdi computer revise core.ssh``, please **do not use placeholders** ``%h`` and ``%p`` but provide the *actual* hostname and port.
        AiiDA replaces them only when parsing from the ``~/.ssh/config`` file.
 
 
@@ -478,7 +478,7 @@ When configuring your computer with the ``core.ssh_async`` transport, specify th
 
 .. code-block:: console
 
-   $ verdi computer configure core.ssh_async YOURCOMPUTER
+   $ verdi computer revise core.ssh_async YOURCOMPUTER
    ...
    Local script to run before opening connection (path) [None]: /home/YOURUSERNAME/bin/get_hpc_keys.sh
    ...
@@ -513,7 +513,7 @@ Once that works, pass it to the ``data_node_host`` option:
 
 .. code-block:: console
 
-   $ verdi computer configure core.ssh_async YOURCOMPUTER
+   $ verdi computer revise core.ssh_async YOURCOMPUTER
    ...
    Login host as in 'ssh <HOST>' (needs a password-less setup, with the host key in known_hosts) [<HPC>]: <HPC>
    Data transfer host as in 'ssh <HOST>', also requires a password-less SSH setup in your SSH config ('None' to use the login host) [None]: <HPC-DATA>
@@ -534,7 +534,7 @@ To do so, configure the computer with the ``openssh`` backend of the ``core.ssh_
 
 .. code-block:: console
 
-   $ verdi computer configure core.ssh_async <COMPUTER> --backend openssh --no-use-sftp
+   $ verdi computer revise core.ssh_async <COMPUTER> --backend openssh --no-use-sftp
 
 .. note::
 
@@ -555,7 +555,7 @@ If the remote machine requires authentication through a Kerberos token (that you
    * install ``libffi`` (``sudo apt-get install libffi-dev`` under Ubuntu)
    * install the ``ssh_kerberos`` extra during the installation of aiida-core (see :ref:`installation:guide-complete:python-package:optional-requirements`).
 
-   If you provide all necessary ``GSSAPI`` options in your ``~/.ssh/config`` file, ``verdi computer configure`` should already pick up the appropriate values for all the gss-related options.
+   If you provide all necessary ``GSSAPI`` options in your ``~/.ssh/config`` file, ``verdi computer revise`` should already pick up the appropriate values for all the gss-related options.
 
 For a real-world SSH troubleshooting walkthrough and a deep dive into secure SSH agent forwarding for cloud-based AiiDA deployments, see also these blog posts:
 

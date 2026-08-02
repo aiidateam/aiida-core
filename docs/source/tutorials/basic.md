@@ -279,7 +279,7 @@ Let's begin by setting up the computer using the ``verdi computer`` subcommand:
 
 ```console
 $ verdi computer setup -L tutor -H localhost -T core.local -S core.direct -w `echo $PWD/work` -n
-$ verdi computer configure core.local tutor --safe-interval 1 -n
+$ verdi computer revise core.local tutor --safe-interval 1 -n
 ```
 
 The first commands sets up the computer with the following options:
@@ -307,7 +307,7 @@ This command sets up a code with *label* `add` on the *computer* `tutor`, using 
 :tags: ["hide-cell"]
 
 %verdi computer setup -L tutor -H localhost -T core.local -S core.direct -w /tmp -n
-%verdi computer configure core.local tutor --safe-interval 0 -n
+%verdi computer revise core.local tutor --safe-interval 0 -n
 %verdi code create core.code.installed --label add --computer=tutor --default-calc-job-plugin core.arithmetic.add --filepath-executable=/bin/bash -n
 ```
 

@@ -121,7 +121,6 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      configure  Configure the transport for a computer and user.
       delete     Delete a computer.
       disable    Disable the computer for the given user.
       duplicate  Duplicate a computer allowing to change some parameters.
@@ -130,7 +129,8 @@ Below is a list with all available subcommands.
       goto       Open a shell connecting to the remote computer.
       list       List all available computers.
       relabel    Relabel a computer.
-      setup      Create a new computer.
+      revise     Revise the transport configuration for a computer and user.
+      setup      Create and configure a new computer.
       show       Show detailed information for a computer.
       test       Test the connection to a computer.
 

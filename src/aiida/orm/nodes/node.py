@@ -455,6 +455,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         )
         model.__qualname__ = f'{cast(Any, cls).__name__}.Model'
         model.model_config = deepcopy(cls.ReadModel.model_config)
+        model.model_rebuild(force=True)
 
         cls._COMPAT_MODEL = model
 
@@ -1176,6 +1177,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             )
             AttributesModel.__qualname__ = f'{cls.__name__}.AttributesModel'
             cls.AttributesModel = AttributesModel  # type: ignore[misc]
+        cls.AttributesModel.model_rebuild(force=True)
 
     @classmethod
     def _get_patched_node_type_field(cls):
@@ -1234,6 +1236,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             ),
         )
         ReadModel.__qualname__ = f'{cls.__name__}.ReadModel'
+        ReadModel.model_rebuild(force=True)
 
         cls.ReadModel = ReadModel  # type: ignore[misc]
 
@@ -1262,6 +1265,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             ),
         )
         ConstructorModel.__qualname__ = f'{cls.__name__}.ConstructorModel'
+        ConstructorModel.model_rebuild(force=True)
 
         cls._ConstructorModel = ConstructorModel
 

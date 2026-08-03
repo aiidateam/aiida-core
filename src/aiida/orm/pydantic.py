@@ -86,6 +86,8 @@ class OrmModel(AiiDABaseModel):
                     field.default_factory = None
             MinimalModel.model_fields[key] = field
 
+        MinimalModel.model_rebuild(force=True)
+
         # Make subsequent calls idempotent for this specific class and the derived model
         cls._AIIDA_MINIMAL_MODEL = MinimalModel  # type: ignore[attr-defined]
         MinimalModel._AIIDA_MINIMAL_MODEL = MinimalModel  # type: ignore[attr-defined]

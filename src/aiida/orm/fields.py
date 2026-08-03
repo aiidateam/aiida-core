@@ -96,6 +96,11 @@ class QbField:
     @property
     def doc(self) -> str:
         """Return the field documentation string."""
+        warn_deprecation(
+            '`QbField.doc` is deprecated. Inspect the corresponding ORM model field description instead.',
+            version=3,
+            stacklevel=2,
+        )
         return self._doc
 
     @property

@@ -159,7 +159,8 @@ if _gsrd_executable is None:
 if _gsrd_executable is None:
     msg = (
         "Could not find the 'gsrd' executable. "
-        'Install it with `pip install gsrd @ git+https://github.com/aiidateam/gsrd.git` '
+        'Install it with '
+        '`uv pip install "gsrd @ git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state"` '
         'before running the tutorial.'
     )
     raise RuntimeError(msg)

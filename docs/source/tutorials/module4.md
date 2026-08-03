@@ -47,7 +47,7 @@ After this module, you will be able to:
 This module uses AiiDA and `aiida-shell`, plus SSH access to a cluster:
 
 ```bash
-uv pip install aiida-core aiida-shell git+https://github.com/aiidateam/gsrd
+uv pip install aiida-core aiida-shell git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
 ```
 :::
 

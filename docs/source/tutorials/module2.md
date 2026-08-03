@@ -47,7 +47,7 @@ After this module, you will be able to:
 Same requirements as {ref}`Module 1 <tutorial:module1>`:
 
 ```bash
-uv pip install aiida-core aiida-shell matplotlib git+https://github.com/aiidateam/gsrd
+uv pip install aiida-core aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
 ```
 :::
 

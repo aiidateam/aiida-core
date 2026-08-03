@@ -44,7 +44,7 @@ After this module, you will be able to:
 This module only needs AiiDA:
 
 ```bash
-uv pip install aiida-core aiida-shell matplotlib git+https://github.com/aiidateam/gsrd
+uv pip install aiida-core aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
 ```
 
 It reuses the sweep data created in {ref}`Module 2 <tutorial:module2>`.

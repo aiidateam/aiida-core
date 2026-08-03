@@ -53,7 +53,7 @@ This first module uses only the `gsrd` simulator, no AiiDA yet.
 Install it with:
 
 ```bash
-uv pip install git+https://github.com/aiidateam/gsrd
+uv pip install git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
 ```
 :::
 
@@ -244,22 +244,22 @@ Those approaches are fragile, and the resulting data (and the workflow that prod
 
 ## How AiiDA solves these problems
 
-This is where AiiDA comes in.
-**Provenance** and **high-throughput** were two of its founding principles.
-At its core is the **provenance graph**: an automatic record of every calculation, its inputs, its outputs, and how they all connect, kept for every run, including the failed ones.
-While scaling up still needs real infrastructure, AiiDA can greatly help you with it.
-It gives you:
+Now, this is where AiiDA comes in, built to remove exactly this friction.
+Every calculation you run through AiiDA is recorded automatically in a **provenance graph**, including its inputs, outputs, relevant metadata, and the links between them.
+And the same machinery that runs one simulation can help you run thousands: AiiDA was created for high-throughput workloads from the start.
+In practice, that means:
 
-- **Provenance tracking**: nothing is lost. Every result can be traced back to the exact inputs, code, and machine that produced it. No overwriting, no orphaned files, no need to keep input YAMLs around by hand.
-- **Workflow orchestration**: multi-step pipelines run as managed workflows, handling execution, data passing, and error recovery. If some steps fail, AiiDA knows which ones, why, and can help you restart just those.
-- **Reliable failure detection**: parsers shipped with AiiDA plugins look for the markers that actually indicate success or failure (e.g., a `*** JOB DONE ***` line on stdout), so a run with a spurious zero exit code still gets flagged as failed and the downstream workflow does not blindly carry on.
+- **Provenance tracking**: every result can be traced back to the exact inputs, code, and machine that produced it. No overwriting, no orphaned files, no need to keep input files around by hand.
+- **Plugins and community knowledge**: AiiDA plugins for popular codes ship with workflows, parsers, and error handlers, encoding years of domain expertise. You benefit from best practices without having to painfully discover them yourself.
+- **Workflow orchestration**: multi-step pipelines run as managed workflows, handling execution, file transfer, data passing, and error recovery. If some steps fail, AiiDA knows which ones, why, and can help you restart just those. And because every run is recorded, identical calculations can be served from a cache instead of being recomputed.
+- **Reliable failure detection**: parsers shipped with AiiDA plugins look for the markers that actually indicate success or failure, so a run with a spurious zero exit code still gets flagged as failed and the downstream workflow does not blindly carry on.
+- **Structured output parsing**: AiiDA plugins provide parsers that extract structured results from a code's output channels, storing them as SQL database entries with a well-defined schema.
+- **Querying**: because every calculation and its results live in a database, you can search and filter across all of them without ever manually opening a single output file.
 - **Reproducibility and sharing**: the full provenance graph can be exported as a portable archive. A collaborator can easily reproduce, audit, or extend your work.
-- **Structured output parsing**: AiiDA plugins provide parsers that extract structured results from a code's output files *and* its stdout, store them as queryable database entries, and let you search and filter across all your calculations without ever manually opening a single file.
-- **Community knowledge**: AiiDA plugins for popular codes ship with workflows, parsers, and error handlers, encoding years of domain expertise. You benefit from best practices without having to painfully discover them yourself.
 
 :::{important}
 The promise is not just "more throughput".
-It is that the **scaffolding around your simulations** (bookkeeping, parsing, restart logic, retries) **stops being your problem**, so the time you'd otherwise spend fighting tooling goes back to doing science.
+It is that the **scaffolding around your simulations** (bookkeeping, parsing, data transfer, retries) **stops being your problem**, so the time you'd otherwise spend fighting tooling goes back to doing science.
 :::
 
 Buckle up: in {ref}`Module 1 <tutorial:module1>`, we'll run the same `gsrd` simulation through AiiDA and start seeing the benefits in action.

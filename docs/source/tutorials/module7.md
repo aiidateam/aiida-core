@@ -40,7 +40,7 @@ This module is a survey, not a deep dive: each section is a concrete demo or ske
 This module touches AiiDA, `aiida-shell`, and `aiida-workgraph`:
 
 ```bash
-uv pip install aiida-core aiida-shell aiida-workgraph
+uv pip install aiida-core aiida-shell aiida-workgraph git+https://github.com/aiidateam/gsrd
 ```
 
 Install `aiida-core`, not `aiida` (the latter is an old meta-package).

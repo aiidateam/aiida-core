@@ -38,10 +38,10 @@ After this module, you will be able to:
 This module needs AiiDA and `aiida-shell`:
 
 ```bash
-uv pip install aiida-core aiida-shell
+uv pip install aiida-core aiida-shell matplotlib git+https://github.com/aiidateam/gsrd
 ```
 
-It also uses the small `gsrd` simulator introduced in {ref}`Module 0 <tutorial:module0>`.
+It also uses the small `gsrd` simulator introduced in {ref}`Module 0 <tutorial:module0>`, and the Graphviz `dot` binary for the provenance-graph plots (`apt install graphviz`, `brew install graphviz`, or `conda install graphviz`).
 :::
 
 ## Setting up your AiiDA profile
@@ -322,8 +322,13 @@ AiiDA stores everything in its internal database and file repository (efficient 
 ```
 
 ```{code-cell} ipython3
-# Show the directory tree of the dumped calculation data.
-!tree /tmp/aiida-tutorial/dump
+# Show the directory tree of the dumped data (pure Python, no `tree` binary needed).
+from pathlib import Path
+
+dump_dir = Path('/tmp/aiida-tutorial/dump')
+for path in sorted(dump_dir.rglob('*')):
+    indent = '    ' * (len(path.relative_to(dump_dir).parts) - 1)
+    print(f'{indent}{path.name}{"/" if path.is_dir() else ""}')
 ```
 
 All the relevant entities of the calculation are there: the input file, the simulation script, the submission script, captured stdout and stderr, and AiiDA metadata.

@@ -35,7 +35,7 @@ After this module, you will be able to:
 This module uses AiiDA, `aiida-shell`, and `aiida-workgraph`:
 
 ```bash
-uv pip install aiida-core aiida-shell aiida-workgraph
+uv pip install aiida-core aiida-shell aiida-workgraph matplotlib git+https://github.com/aiidateam/gsrd
 ```
 :::
 
@@ -82,11 +82,9 @@ BASE_PARAMS = {
 F_VALUES = [0.038, 0.040, 0.042, 0.044, 0.046, 0.050, 0.055, 0.060]
 ```
 
-We also reuse `pipeline_with_optional_fft` from {ref}`Module 6a <tutorial:module6a>`, repeated here (folded) so this notebook runs standalone:
+We also reuse `pipeline_with_optional_fft` from {ref}`Module 6a <tutorial:module6a>`, repeated here so this notebook runs standalone:
 
 ```{code-cell} ipython3
-:tags: [hide-input]
-
 # The If-gated pipeline from Module 6a: run the pipeline, then run the FFT
 # only if the run's variance clears a threshold.
 @task.graph()

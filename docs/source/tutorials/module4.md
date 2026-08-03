@@ -49,7 +49,7 @@ After this module, you will be able to:
 This module uses AiiDA and `aiida-shell`, plus SSH access to a cluster:
 
 ```bash
-uv pip install aiida-core aiida-shell
+uv pip install aiida-core aiida-shell git+https://github.com/aiidateam/gsrd
 ```
 :::
 

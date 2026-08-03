@@ -51,7 +51,7 @@ Running that workflow over *many* inputs, replacing the Python `for`-loop, is th
 This module uses `aiida-core`, `aiida-shell`, and `aiida-workgraph`. Install them with:
 
 ```bash
-uv pip install aiida-core aiida-shell aiida-workgraph
+uv pip install aiida-core aiida-shell aiida-workgraph matplotlib git+https://github.com/aiidateam/gsrd
 ```
 
 `aiida-workgraph` is currently a separate package; it is planned to become part of `aiida-core` with the v3.0 release.

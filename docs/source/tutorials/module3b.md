@@ -41,7 +41,7 @@ After this module, you will be able to:
 This module uses AiiDA, `aiida-shell`, and `aiida-workgraph`:
 
 ```bash
-uv pip install aiida-core aiida-shell aiida-workgraph
+uv pip install aiida-core aiida-shell aiida-workgraph matplotlib git+https://github.com/aiidateam/gsrd
 ```
 :::
 

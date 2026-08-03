@@ -40,7 +40,7 @@ After this module, you will be able to:
 This module only needs AiiDA:
 
 ```bash
-uv pip install aiida-core
+uv pip install aiida-core aiida-shell matplotlib git+https://github.com/aiidateam/gsrd
 ```
 
 It reuses the sweep data created in {ref}`Module 2 <tutorial:module2>`.
@@ -350,6 +350,13 @@ qb = (
     )
 )
 rows = sorted(qb.all())
+if not rows:
+    msg = (
+        'No F-sweep data found in this profile. Module 5 queries the data that '
+        'Module 2 creates, run Module 2 first so this shared tutorial profile has '
+        'data to query.'
+    )
+    raise RuntimeError(msg)
 f_values, variances = zip(*rows)
 
 plot_transition_curve(list(f_values), list(variances))

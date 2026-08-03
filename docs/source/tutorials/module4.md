@@ -18,11 +18,9 @@ execution:
 
 {bdg-secondary}`⏱️ ~80 min read` {bdg-primary}`Intermediate`
 
-<!-- TODO: re-enable once the md->ipynb conversion script is verified
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module4.ipynb` {octicon}`download`
 :::
--->
 
 :::{note}
 This module reuses the tutorial profile created in {ref}`Module 1 <tutorial:module1>`.

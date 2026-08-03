@@ -18,11 +18,9 @@ execution:
 
 {bdg-secondary}`⏱️ ~75 min read` {bdg-success}`Beginner`
 
-<!-- TODO: re-enable once the md->ipynb conversion script is verified
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module2.ipynb` {octicon}`download`
 :::
--->
 
 :::{note}
 This module reuses the tutorial profile and the `gsrd_code` object created in {ref}`Module 1 <tutorial:module1>`.

@@ -16,6 +16,10 @@ kernelspec:
 
 {bdg-secondary}`⏱️ ~50 min read` {bdg-primary}`Intermediate`
 
+:::{tip}
+This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module5.ipynb` {octicon}`download`
+:::
+
 :::{note}
 This module reuses the tutorial profile created in {ref}`Module 1 <tutorial:module1>` and the F-sweep data created in {ref}`Module 2 <tutorial:module2>`.
 If you are following along locally, run those modules first.

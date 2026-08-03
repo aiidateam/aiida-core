@@ -19,11 +19,9 @@ execution:
 
 {bdg-secondary}`⏱️ ~45 min read` {bdg-success}`Beginner`
 
-<!-- TODO: re-enable once the md->ipynb conversion script is verified
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module0.ipynb` {octicon}`download`
 :::
--->
 
 In this module, we run a simulation the traditional way, without AiiDA, to experience the pain points it is built to solve.
 

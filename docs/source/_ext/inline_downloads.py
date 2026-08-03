@@ -1,12 +1,16 @@
-"""Sphinx extension: make downloaded notebooks self-contained and Jupyter-friendly.
+"""Sphinx extension: make downloaded notebooks Jupyter-friendly.
 
 After the build, post-process every ``.ipynb`` in ``_downloads/``:
 
-1. Replace ``%run -i <path>`` code cells with inlined file contents.
-2. Convert MyST admonitions to HTML ``<div class="alert ...">`` blocks.
-3. Convert MyST dropdowns to ``<details>`` elements (with literalinclude inlined).
-4. Strip MyST-only inline roles to plain text.
-5. Remove target labels and self-referential download links.
+1. Convert MyST admonitions to HTML ``<div class="alert ...">`` blocks.
+2. Convert MyST dropdowns to ``<details>`` elements (with literalinclude inlined).
+3. Strip MyST-only inline roles to plain text.
+4. Remove target labels and self-referential download links.
+
+The setup cell's ``%run -i setup_tutorial.py`` is left untouched: the bootstrap at
+the top of that cell fetches the helpers at runtime, so the notebook is
+self-contained without inlining (and inlining would break on the script's
+``__file__``).
 """
 
 from __future__ import annotations
@@ -24,8 +28,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Patterns
 # ---------------------------------------------------------------------------
-
-_RUN_PATTERN = re.compile(r'^%run\s+-i\s+(.+)$', re.MULTILINE)
 
 # Colon-fence opening: :::{directive} optional_arg
 _FENCE_OPEN = re.compile(r'^(:{3,})\{(\w+)\}\s*(.*)')
@@ -51,47 +53,6 @@ _ALERT_MAP: dict[str, tuple[str, str]] = {
     'warning': ('warning', 'Warning'),
     'danger': ('danger', 'Danger'),
 }
-
-
-# ---------------------------------------------------------------------------
-# Code cell: inline %run -i
-# ---------------------------------------------------------------------------
-
-
-def _inline_run_cells(cells: list[dict], source_dir: Path) -> bool:
-    """Replace ``%run -i <path>`` cells with inlined file contents."""
-    modified = False
-
-    for cell in cells:
-        if cell.get('cell_type') != 'code':
-            continue
-
-        source = ''.join(cell.get('source', []))
-        matches = list(_RUN_PATTERN.finditer(source))
-        if not matches:
-            continue
-
-        new_parts: list[str] = []
-        for match in matches:
-            rel_path = match.group(1).strip().strip('\'"')
-            include_file = source_dir / rel_path
-            if not include_file.is_file():
-                logger.warning('inline_downloads: file not found: %s', include_file)
-                new_parts.append(match.group(0))
-                continue
-            content = include_file.read_text(encoding='utf-8')
-            new_parts.append(f'# — inlined from {rel_path} —\n{content}')
-            modified = True
-
-        if modified:
-            remaining = _RUN_PATTERN.sub('', source).strip()
-            if remaining:
-                new_parts.append(remaining)
-            cell['source'] = ['\n\n'.join(new_parts)]
-            cell['outputs'] = []
-            cell['execution_count'] = None
-
-    return modified
 
 
 # ---------------------------------------------------------------------------
@@ -292,10 +253,9 @@ def on_build_finished(app: Sphinx, exception: Exception | None) -> None:
             nb = json.load(f)
 
         cells = nb.get('cells', [])
-        changed_code = _inline_run_cells(cells, source_dir)
         changed_md = _process_markdown_cells(cells, source_dir)
 
-        if changed_code or changed_md:
+        if changed_md:
             with open(notebook_path, 'w', encoding='utf-8') as f:
                 json.dump(nb, f, indent=1, ensure_ascii=False)
                 f.write('\n')

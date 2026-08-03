@@ -18,6 +18,10 @@ execution:
 
 {bdg-secondary}`⏱️ ~70 min read` {bdg-primary}`Intermediate`
 
+:::{tip}
+This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module7.ipynb` {octicon}`download`
+:::
+
 :::{note}
 This module reuses the tutorial profile and the `gsrd_code` object created in {ref}`Module 1 <tutorial:module1>`.
 If you are following along locally, run that first.

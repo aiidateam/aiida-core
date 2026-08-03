@@ -18,6 +18,10 @@ execution:
 
 {bdg-secondary}`⏱️ ~45 min read` {bdg-warning}`Advanced`
 
+:::{tip}
+This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module6b.ipynb` {octicon}`download`
+:::
+
 :::{note}
 This module continues {ref}`Module 6a <tutorial:module6a>` and reuses its `If`-gated pipeline.
 If you are following along locally, work through {ref}`Module 6a <tutorial:module6a>` first.

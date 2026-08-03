@@ -10,9 +10,10 @@ from __future__ import annotations
 
 from typing import TypedDict
 
-from aiida import orm
 from aiida_workgraph import shelljob, task
 from include.tasks import parse_output, prepare_input
+
+from aiida import orm
 
 # WorkGraph-wrapped variants of the Module 2 calcfunctions. Defined once
 # here so any workflow in this module can plug them into a graph without

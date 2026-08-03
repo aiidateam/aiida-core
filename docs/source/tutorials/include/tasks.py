@@ -13,8 +13,9 @@ import io
 from typing import TypedDict
 
 import yaml
-from aiida import engine, orm
 from include.constants import MEAN_RE, VARIANCE_RE
+
+from aiida import engine, orm
 
 
 class ParseOutputs(TypedDict):

@@ -9,8 +9,9 @@ refined parameter sweep) back the ``If``/``While``/``Map`` examples in modules
 from typing import Annotated
 
 import numpy as np
-from aiida import engine, orm
 from aiida_workgraph import dynamic, task
+
+from aiida import engine, orm
 
 
 @engine.calcfunction

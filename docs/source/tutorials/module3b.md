@@ -18,11 +18,9 @@ execution:
 
 {bdg-secondary}`⏱️ ~70 min read` {bdg-primary}`Intermediate`
 
-<!-- TODO: re-enable once the md->ipynb conversion script is verified
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module3b.ipynb` {octicon}`download`
 :::
--->
 
 :::{note}
 This module continues {ref}`Module 3a <tutorial:module3a>`, reusing the same tutorial profile and the `gray_scott_pipeline` workflow built there.

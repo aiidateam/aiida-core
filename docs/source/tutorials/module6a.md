@@ -19,6 +19,10 @@ execution:
 
 {bdg-secondary}`⏱️ ~75 min read` {bdg-warning}`Advanced`
 
+:::{tip}
+This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module6a.ipynb` {octicon}`download`
+:::
+
 :::{note}
 This module reuses the tutorial profile and the `gsrd_code` object created in {ref}`Module 1 <tutorial:module1>`, and assumes you have read {ref}`Module 3 <tutorial:module3>` (`@task.graph()`, `Map`, `shelljob`).
 If you are following along locally, run those first.

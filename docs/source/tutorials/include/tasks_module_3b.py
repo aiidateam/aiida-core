@@ -8,8 +8,9 @@ transition curve as a ``SinglefileData`` PNG.
 import io
 from typing import Annotated
 
-from aiida import orm
 from aiida_workgraph import dynamic, task
+
+from aiida import orm
 
 
 @task()

@@ -16,7 +16,7 @@ execution:
 (tutorial:module4)=
 # Module 4: Remote submission
 
-{bdg-secondary}`⏱️ ~80 min read` {bdg-primary}`Intermediate`
+{bdg-secondary}`⏱️ ~75 min read` {bdg-primary}`Intermediate`
 
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module4.ipynb` {octicon}`download`
@@ -47,7 +47,8 @@ After this module, you will be able to:
 This module uses AiiDA and `aiida-shell`, plus SSH access to a cluster:
 
 ```bash
-uv pip install aiida-core aiida-shell git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
+# aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
+uv pip install git+https://github.com/aiidateam/aiida-core aiida-shell git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
 ```
 :::
 

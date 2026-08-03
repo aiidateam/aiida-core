@@ -14,7 +14,7 @@ kernelspec:
 (tutorial:module5)=
 # Module 5: Querying and analysis
 
-{bdg-secondary}`⏱️ ~50 min read` {bdg-primary}`Intermediate`
+{bdg-secondary}`⏱️ ~45 min read` {bdg-primary}`Intermediate`
 
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module5.ipynb` {octicon}`download`
@@ -44,7 +44,8 @@ After this module, you will be able to:
 This module only needs AiiDA:
 
 ```bash
-uv pip install aiida-core aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
+# aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
+uv pip install git+https://github.com/aiidateam/aiida-core aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
 ```
 
 It reuses the sweep data created in {ref}`Module 2 <tutorial:module2>`.

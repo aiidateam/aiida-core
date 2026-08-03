@@ -39,7 +39,8 @@ After this module, you will be able to:
 This module uses AiiDA, `aiida-shell`, and `aiida-workgraph`:
 
 ```bash
-uv pip install aiida-core aiida-shell aiida-workgraph matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
+# aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
+uv pip install git+https://github.com/aiidateam/aiida-core aiida-shell aiida-workgraph matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
 ```
 :::
 

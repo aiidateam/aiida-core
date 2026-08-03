@@ -2,3 +2,6 @@
 # directory as scratch); kept out of the source tree.
 /results.npz
 /input.yaml
+
+# Isolated AiiDA config dir created by the tutorial setup cell.
+/.aiida-tutorial/

@@ -12,13 +12,20 @@ The broker and daemon configuration matches what ``verdi presto`` sets up
 on a fresh machine, so ``verdi status`` in the tutorial mirrors what users
 will see locally.
 
-Every tutorial module runs this in a visible setup cell, so that data created
-in earlier modules is available in later ones. The profile is an isolated
-sandbox: it never interferes with any AiiDA profile you already use, and stale
-tutorial profiles from previous builds are cleaned up automatically.
+Every tutorial module runs this in a visible setup cell, so that data created in
+earlier modules is available in later ones (when the modules run in the same
+working directory).
+
+The whole tutorial is confined to its own configuration directory,
+``.aiida-tutorial/`` in the current working directory, set via ``AIIDA_PATH``.
+It therefore never interferes with an AiiDA setup you may already have: nothing
+is written into your real ``~/.aiida``, your default profile is left alone, and
+your running daemons are untouched. This works the same whether the cell runs in
+the docs build (CI), in a downloaded notebook, or pasted into your own notebook.
+Delete ``.aiida-tutorial/`` to remove every trace of the tutorial.
 
 If you would rather use your own existing profile (e.g. from ``verdi presto``),
-replace the ``%run -i`` cell with::
+skip this setup cell entirely and load your profile instead::
 
     from aiida import load_profile
     load_profile()
@@ -38,9 +45,10 @@ from aiida import load_profile
 from aiida.brokers import ZeromqBroker
 from aiida.common.exceptions import NotExistent
 from aiida.engine import get_daemon_client
-from aiida.engine.daemon.client import DaemonNotRunningException
+from aiida.engine.daemon.client import DaemonException
 from aiida.manage import get_manager
-from aiida.manage.configuration import create_profile, get_config
+from aiida.manage.configuration import create_profile, get_config, reset_config
+from aiida.manage.configuration.settings import AiiDAConfigDir
 from aiida.orm import Computer, InstalledCode, load_code, load_computer
 
 
@@ -76,25 +84,39 @@ _include_dir = pathlib.Path('include')
 _mtimes = sorted(int(p.stat().st_mtime) for p in _include_dir.glob('setup_*.py'))
 _session_hash = hashlib.sha1(str(_mtimes).encode()).hexdigest()[:8]
 profile_name = f'tutorial-{_session_hash}'
-# ``create=True`` so a fresh machine (a new reader, or CI with no ~/.aiida yet)
-# gets a config file created instead of raising. Existing configs are loaded
-# untouched.
+
+# Isolate the whole tutorial in its own configuration directory (``.aiida-tutorial/``
+# in the current working directory), so it never touches an AiiDA setup you may
+# already have: no profiles written into your real ``~/.aiida``, no change to your
+# default profile, no interaction with your running daemons. ``AIIDA_PATH`` also
+# propagates to ``!verdi`` shell calls in the notebook, so they see this same
+# sandbox. Delete ``.aiida-tutorial/`` to remove every trace of the tutorial.
+os.environ['AIIDA_PATH'] = str(pathlib.Path('.aiida-tutorial').resolve())
+AiiDAConfigDir.set()  # re-read AIIDA_PATH (set above) and create the sandbox config dir
+reset_config()  # drop any config already loaded for a different directory
+
+# ``create=True`` so the sandbox config file is created on first run instead of
+# raising. On later runs the existing sandbox config is loaded untouched.
 config = get_config(create=True)
 
-# Remove stale tutorial profiles left over from previous builds: any
-# ``tutorial-*`` profile whose hash differs from the current one. Safe to run
-# from every module's setup cell, since it never touches the current profile
-# (so data created in earlier modules survives) nor any of your own,
-# non-tutorial profiles.
+# Remove stale tutorial profiles left over from previous runs in this sandbox: any
+# ``tutorial-*`` profile whose hash differs from the current one. Safe to run from
+# every module's setup cell, since it never touches the current profile (so data
+# created in earlier modules survives), and the sandbox never contains any of your
+# own profiles. Best-effort: a leftover we cannot fully remove must never block the
+# tutorial from starting.
 for _stale_name in [n for n in config.profile_names if n.startswith('tutorial-') and n != profile_name]:
-    _stale_client = get_daemon_client(_stale_name)
-    if _stale_client.is_daemon_running:
-        # ``is_daemon_running`` only checks the PID file; the underlying circus
-        # process may already be gone, in which case ``stop_daemon`` cleans the
-        # PID file and then raises. Tolerate that.
-        with suppress(DaemonNotRunningException):
-            _stale_client.stop_daemon(wait=True)
-    config.delete_profile(_stale_name, delete_storage=True)
+    try:
+        _stale_client = get_daemon_client(_stale_name)
+        if _stale_client.is_daemon_running:
+            # ``is_daemon_running`` only checks the PID file; the underlying circus
+            # process may already be gone (``stop_daemon`` then cleans the PID file
+            # and raises), or unreachable (a timeout). Tolerate either.
+            with suppress(DaemonException):
+                _stale_client.stop_daemon(wait=True)
+        config.delete_profile(_stale_name, delete_storage=True)
+    except Exception as _exc:  # best-effort cleanup, never fatal
+        print(f'Note: could not remove stale tutorial profile {_stale_name!r}: {_exc}')
 
 if profile_name not in config.profile_names:
     create_profile(

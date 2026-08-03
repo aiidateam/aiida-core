@@ -16,7 +16,7 @@ execution:
 (tutorial:module3b)=
 # Module 3b: `for`-loops as workflows
 
-{bdg-secondary}`⏱️ ~70 min read` {bdg-primary}`Intermediate`
+{bdg-secondary}`⏱️ ~75 min read` {bdg-primary}`Intermediate`
 
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module3b.ipynb` {octicon}`download`
@@ -39,7 +39,8 @@ After this module, you will be able to:
 This module uses AiiDA, `aiida-shell`, and `aiida-workgraph`:
 
 ```bash
-uv pip install aiida-core aiida-shell aiida-workgraph matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
+# aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
+uv pip install git+https://github.com/aiidateam/aiida-core aiida-shell aiida-workgraph matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
 ```
 :::
 

@@ -108,7 +108,8 @@ def _convert_myst_block(lines: list[str], source_dir: Path) -> list[str]:
         m = _FENCE_OPEN.match(line)
         if m is None:
             bm = _BACKTICK_DIRECTIVE.match(line)
-            if bm is not None and bm.group(1) in ('image', 'figure'):
+            if bm is not None and bm.group(1) in ('image', 'figure', 'literalinclude'):
+                directive = bm.group(1)
                 rel_path = bm.group(2).strip()
                 i += 1
                 options = {}
@@ -121,7 +122,16 @@ def _convert_myst_block(lines: list[str], source_dir: Path) -> list[str]:
                     i += 1
                 if i < len(lines):
                     i += 1  # consume the closing fence
-                output.append(_render_image(rel_path, options, source_dir))
+
+                if directive == 'literalinclude':
+                    content = _read_include(rel_path, source_dir)
+                    lang = options.get('language', 'python')
+                    if content is not None:
+                        output.extend([f'```{lang}', content.rstrip(), '```'])
+                    else:
+                        output.append(f'*File not found: {rel_path}*')
+                else:
+                    output.append(_render_image(rel_path, options, source_dir))
                 continue
             output.append(line)
             i += 1

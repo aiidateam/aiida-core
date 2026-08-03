@@ -16,7 +16,7 @@ execution:
 (tutorial:module1)=
 # Module 1: Calculations with AiiDA
 
-{bdg-secondary}`⏱️ ~55 min read` {bdg-success}`Beginner`
+{bdg-secondary}`⏱️ ~60 min read` {bdg-success}`Beginner`
 
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module1.ipynb` {octicon}`download`
@@ -36,7 +36,8 @@ After this module, you will be able to:
 This module needs AiiDA and `aiida-shell`:
 
 ```bash
-uv pip install aiida-core aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
+# aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
+uv pip install git+https://github.com/aiidateam/aiida-core aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
 ```
 
 It also uses the small `gsrd` simulator introduced in {ref}`Module 0 <tutorial:module0>`.

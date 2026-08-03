@@ -4,8 +4,9 @@ After the build, post-process every ``.ipynb`` in ``_downloads/``:
 
 1. Convert MyST admonitions to HTML ``<div class="alert ...">`` blocks.
 2. Convert MyST dropdowns to ``<details>`` elements (with literalinclude inlined).
-3. Strip MyST-only inline roles to plain text.
-4. Remove target labels and self-referential download links.
+3. Inline ``{image}``/``{figure}`` directives as self-contained base64 ``<img>`` tags.
+4. Strip MyST-only inline roles to plain text.
+5. Remove target labels and self-referential download links.
 
 The setup cell's ``%run -i setup_tutorial.py`` is left untouched: the bootstrap at
 the top of that cell fetches the helpers at runtime, so the notebook is
@@ -15,7 +16,9 @@ self-contained without inlining (and inlining would break on the script's
 
 from __future__ import annotations
 
+import base64
 import json
+import mimetypes
 import re
 from pathlib import Path
 from typing import Any
@@ -68,6 +71,33 @@ def _read_include(rel_path: str, source_dir: Path) -> str | None:
     return None
 
 
+def _render_image(rel_path: str, options: dict[str, str], source_dir: Path) -> str:
+    """Render an ``{image}``/``{figure}`` target as a self-contained ``<img>`` tag.
+
+    The image bytes are embedded as a base64 data URI so the downloaded notebook
+    displays them without depending on the working directory or the runtime fetch
+    of ``include/``. Falls back to the relative path if the file is missing.
+    """
+    path = source_dir / rel_path
+    attrs = ''
+    if (width := options.get('width')) is not None:
+        attrs += f' width="{width}"'
+    if (alt := options.get('alt')) is not None:
+        attrs += f' alt="{alt}"'
+
+    if path.is_file():
+        mime = mimetypes.guess_type(path.name)[0] or 'application/octet-stream'
+        data = base64.b64encode(path.read_bytes()).decode('ascii')
+        src = f'data:{mime};base64,{data}'
+    else:
+        src = rel_path
+
+    img = f'<img src="{src}"{attrs}>'
+    if options.get('align') in ('center', 'left', 'right'):
+        return f'<div align="{options["align"]}">\n{img}\n</div>'
+    return img
+
+
 def _convert_myst_block(lines: list[str], source_dir: Path) -> list[str]:
     """Process a markdown cell's lines, converting MyST block directives."""
     output: list[str] = []
@@ -77,6 +107,22 @@ def _convert_myst_block(lines: list[str], source_dir: Path) -> list[str]:
         line = lines[i]
         m = _FENCE_OPEN.match(line)
         if m is None:
+            bm = _BACKTICK_DIRECTIVE.match(line)
+            if bm is not None and bm.group(1) in ('image', 'figure'):
+                rel_path = bm.group(2).strip()
+                i += 1
+                options = {}
+                while i < len(lines) and (om := _DIRECTIVE_OPT.match(lines[i])) is not None:
+                    options[om.group(1)] = om.group(2)
+                    i += 1
+                # Drop any remaining content (e.g. a figure caption) up to the
+                # closing backtick fence.
+                while i < len(lines) and not lines[i].strip().startswith('```'):
+                    i += 1
+                if i < len(lines):
+                    i += 1  # consume the closing fence
+                output.append(_render_image(rel_path, options, source_dir))
+                continue
             output.append(line)
             i += 1
             continue

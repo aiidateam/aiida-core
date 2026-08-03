@@ -69,7 +69,10 @@ _ensure_tutorial_helpers()
 # Derive a short suffix from the mtimes of all setup scripts: stable across
 # all modules in one build, but bumped whenever any setup logic changes,
 # so stale profiles from older builds don't get reused.
-_include_dir = pathlib.Path(__file__).parent
+# ``include/`` relative to the working directory (not ``__file__``), so this still
+# works when the cell is inlined into a downloaded notebook, where ``__file__`` is
+# undefined. Matches the path used by ``_ensure_tutorial_helpers`` above.
+_include_dir = pathlib.Path('include')
 _mtimes = sorted(int(p.stat().st_mtime) for p in _include_dir.glob('setup_*.py'))
 _session_hash = hashlib.sha1(str(_mtimes).encode()).hexdigest()[:8]
 profile_name = f'tutorial-{_session_hash}'

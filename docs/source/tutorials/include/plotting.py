@@ -1,5 +1,3 @@
-# pyright: reportUnknownMemberType=false
-# ^^^ matplotlib stubs are incomplete; this suppresses upstream typing noise
 """Plotting helpers used across the tutorial notebooks.
 
 Independent helpers, grouped here so the notebooks can ``import``

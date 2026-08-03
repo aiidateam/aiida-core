@@ -39,7 +39,11 @@ This module needs AiiDA and `aiida-shell`:
 uv pip install aiida-core aiida-shell matplotlib git+https://github.com/aiidateam/gsrd
 ```
 
-It also uses the small `gsrd` simulator introduced in {ref}`Module 0 <tutorial:module0>`, and the Graphviz `dot` binary for the provenance-graph plots (`apt install graphviz`, `brew install graphviz`, or `conda install graphviz`).
+It also uses the small `gsrd` simulator introduced in {ref}`Module 0 <tutorial:module0>`.
+:::
+
+:::{dropdown} System dependency: Graphviz
+The provenance-graph plots need the Graphviz `dot` binary, a system package (not a Python one). Install it through your operating system's package manager if the graph cells report it as missing.
 :::
 
 ## Setting up your AiiDA profile

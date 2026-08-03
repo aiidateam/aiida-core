@@ -37,7 +37,7 @@ A typical pattern formed can look like this:
 &nbsp;
 
 The concrete code we will be wrapping is [`gsrd`](https://github.com/aiidateam/gsrd), a small command-line simulator deliberately written to *mirror the conventions and quirks of real-world scientific codes*: a single positional argument, no `--help` to guide you, hardcoded output filenames, scalar results scattered across stdout, citation banners, and unreliable exit codes.
-None of this is essential to a Gray-Scott solver, but all of it is common in scientific software that has grown over the years around the science rather than the interface, which is exactly the situation a scientific workflow manager needs to handle gracefully.
+None of this is essential to a Gray-Scott solver, but all of it can show up in scientific software that has grown over the years around the science rather than the interface, which is exactly the situation a scientific workflow manager needs to handle gracefully.
 
 :::{dropdown} More about the model
 
@@ -80,79 +80,64 @@ seed: 42         # RNG seed for the initial perturbation
 ```
 :::
 
+How you get these input files depends on how you are working through the tutorial:
+
+- **In your own local Jupyter notebook** (copy-pasting cells from this page): expand and run the cell below to fetch them.
+- **From the downloaded notebook** (the link at the top of the page): the fetch is already included, nothing to do.
+- **Just reading in the browser**: this cell does not apply to you.
+
 ```{code-cell} ipython3
-# In a Jupyter notebook, a line starting with `!` runs a shell command.
-# Make a scratch directory to work in and copy the example input into it.
-# (Outside the tutorial repo, first fetch the example inputs into include/.)
+:tags: [hide-cell]
+:mystnb:
+:    code_prompt_show: 'Show the fetch cell (local-notebook users)'
+:    code_prompt_hide: 'Hide the fetch cell'
+
+# Fetch the tutorial's include/ helpers if they are not already present.
 from pathlib import Path
-import urllib.request
 
-_base = 'https://raw.githubusercontent.com/GeigerJ2/aiida-core/docs/integrate-tutorials/docs/source/tutorials/include'
-Path('include').mkdir(exist_ok=True)
-for _name in ('input.yaml', 'input_bad.yaml'):
-    if not (Path('include') / _name).exists():
-        urllib.request.urlretrieve(f'{_base}/{_name}', Path('include') / _name)
+if not (Path('include') / 'input.yaml').exists():
+    import json
+    import urllib.request
 
-!mkdir -p /tmp/aiida-tutorial
-!cp include/input.yaml /tmp/aiida-tutorial/input.yaml
+    api = 'https://api.github.com/repos/GeigerJ2/aiida-core/contents/docs/source/tutorials/include?ref=docs/integrate-tutorials'
+    Path('include').mkdir(exist_ok=True)
+    for entry in json.load(urllib.request.urlopen(api)):
+        if entry['type'] == 'file':
+            urllib.request.urlretrieve(entry['download_url'], Path('include') / entry['name'])
 ```
 
-Now run `gsrd` on that input:
+Now run `gsrd` with the input file (as we run in a Jupyter notebook here, we prepend the shell command with `!` to execute it from within the notebook):
 
 ```{code-cell} ipython3
 :tags: ["hide-output"]
 
-# gsrd reads input.yaml and writes its results into the directory it runs
-# in. Expand the output to see what it prints.
-!cd /tmp/aiida-tutorial && gsrd input.yaml
+# gsrd reads the input file and writes its results into the current directory.
+# Expand the output to see what it prints.
+!gsrd include/input.yaml
 ```
 
-Expand the output above to see what `gsrd` prints during a run: a banner, a citation block, per-iteration progress, and a diagnostics box at the end, all on stdout.
+Expand the output above. The run's two key results, **variance(V)** (how sharply contrasted the final pattern is across the grid) and **mean(V)** (the average V concentration), are printed in a diagnostics box at the very end. That box is surrounded by much more, though: a banner, a citation block, and per-iteration progress, all on stdout.
 
-Let's see what `gsrd` actually wrote to disk:
-
-```{code-cell} ipython3
-# List the files gsrd created.
-!ls /tmp/aiida-tutorial
-```
-
-The simulation produced `results.npz`.
-But look more carefully: the two summary diagnostics of the final V field only appear in the *Diagnostics* block on stdout.
-These are **variance(V)**, which measures how sharply contrasted the pattern is across the grid, and **mean(V)**, the average V concentration.
-They are *not* in `results.npz`:
+Now, let's see what `gsrd` wrote to disk. Besides everything on stdout, it also produced `results.npz` in the current directory, a binary NumPy archive. Let's load it and list what it holds:
 
 ```{code-cell} ipython3
-# results.npz is a binary NumPy archive. Load it and list what it holds.
 import numpy as np
 
-data = np.load('/tmp/aiida-tutorial/results.npz')
-for name in data.files:
-    print(name, data[name].shape)
+data = np.load('results.npz')
+print('U_final:', data['U_final'].shape)
+print('V_final:', data['V_final'].shape)
+print('params: ', repr(data['params'].item()))
 ```
 
-So the two summary numbers of the run are only in the log.
-If you forgot to redirect stdout to a file, you have to re-run the simulation to recover them.
-And `results.npz` is a fixed filename in the current directory: run `gsrd` again in the same directory and it silently overwrites the previous results.
+The run was successful, but a closer look reveals three problems:
+
+**Key numbers live only in the log.** The two summary diagnostics, `variance(V)` and `mean(V)`, are nowhere in `results.npz`; they appear only in the stdout block you expanded above. If you forgot to redirect stdout to a file, you have to re-run the simulation just to recover them.
+
+**The saved inputs are an opaque blob.** The `params` entry *does* record the inputs, but as a single JSON string with no schema, not a structured record you can query.
+Pulling anything out of it means parsing the JSON back into a dict yourself, and there is no guarantee that the next code you wrap will follow the same convention (or any convention at all).
+
+**The output filename is fixed.** `results.npz` is written to a fixed name in the current directory: run `gsrd` again there and it silently overwrites the previous results.
 Some codes go further and implicitly *read* leftover files from the working directory to "restart", so the very same command can produce different results depending on what happens to be lying around.
-
-There is also a `params` entry, however, it's not a structured record, but a single 104-character string blob.
-Let's print it:
-
-```{code-cell} ipython3
-# The `params` entry stores the inputs, but as one opaque string.
-print(repr(data['params'].item()))
-```
-
-So the inputs *are* in the output file, but as an opaque JSON-serialised string with no schema.
-You can't query it without first parsing the JSON back into a dict yourself, and there is no guarantee that the next code you wrap will follow the same convention (or any convention at all).
-
-:::{admonition} Results scattered across stdout and the output file
-:class: warning
-
-- The arrays go to a binary file (`results.npz`), but the summary diagnostics (`variance(V)`, `mean(V)`) only appear on stdout
-- The output filename is hardcoded, so two runs in the same directory overwrite each other
-- The input parameters are buried inside the output file as an opaque JSON blob with no schema; querying or filtering across many runs requires writing a custom parser
-:::
 
 ## Running again
 
@@ -160,31 +145,20 @@ You can't query it without first parsing the JSON back into a dict yourself, and
      The user edits the input file, runs again, and now the original
      input is gone. The output file doesn't help either. -->
 
-What if we want to try a different feed rate?
-The natural thing to do is to open `input.yaml` in a text editor and change `F` from `0.04` to `0.055`.
-Editing inputs by hand like this is convenient, but it has its own hazard: many scientific codes (`gsrd` included) silently ignore keys they don't recognize, so a mistyped parameter name runs cleanly using the default value instead of raising an error.
-
+All of this compounds further the moment you run more simulations. So let's do exactly that and try a different set of input parameters.
+The natural thing to do is to make a copy of the input, open it in a text editor, and change `F` from `0.04` to `0.055`.
 ```{code-cell} ipython3
-# Change the feed rate F from 0.04 to 0.055.
-# In practice you would edit input.yaml in a text editor; here we do it in
-# code so the notebook runs top to bottom on its own.
-import yaml
-
-with open('/tmp/aiida-tutorial/input.yaml') as f:
-    params = yaml.safe_load(f)
-
-params['F'] = 0.055
-
-with open('/tmp/aiida-tutorial/input.yaml', 'w') as f:
-    yaml.dump(params, f)
+# Change the feed rate F from 0.04 to 0.055, saved as our own editable input
+# (in practice you might open input.yaml in a text editor).
+!sed 's/F: 0.04/F: 0.055/' include/input.yaml > input.yaml
 ```
 
-Then run the same command again:
+Then run the simulation with the modified input file:
 
 ```{code-cell} ipython3
 :tags: ["hide-output"]
 
-!cd /tmp/aiida-tutorial && gsrd input.yaml
+!gsrd input.yaml
 ```
 
 With `F=0.055`, the pattern looks completely different:
@@ -196,19 +170,13 @@ With `F=0.055`, the pattern looks completely different:
 
 &nbsp;
 
-However, note that we just overwrote our input file, *and* the `results.npz` of the first run, in one go.
-The original parameters are gone, and so is the previous output.
-Nothing on disk now records that the first run ever happened.
+Tweaking a parameter and re-running like this is how the exploratory phase of a project often looks, and done casually it quietly costs you:
 
-Quickly tweaking parameters and re-running like this is exactly how the exploratory phase of a scientific project tends to look like in practice, which is precisely why the pain points below are so common.
+**The previous output is gone.** The re-run reused the fixed `results.npz` filename, silently overwriting the first run's results.
 
-:::{admonition} No systematic record of your work
-:class: warning
+**Editing in place erases the original input.** We changed `F` in `input.yaml` and overwrote it, so the first run's parameters are gone, with nothing on disk recording that it happened.
 
-- Editing the input file in place loses the original parameters
-- The fixed output filename means the second run overwrites the first
-- Without a systematic way to organize runs, results become untraceable and data may be lost
-:::
+**Typos fail silently.** Editing inputs by hand is convenient, but many scientific codes (`gsrd` included) ignore keys they don't recognize, so a mistyped parameter name runs cleanly using the default value instead of raising an error.
 
 ## Running into errors
 
@@ -216,20 +184,17 @@ Quickly tweaking parameters and re-running like this is exactly how the explorat
      and leave no useful trace. The user has no idea what went wrong, and
      no record that the run even happened. -->
 
-What happens when things go wrong?
-The explicit time-integration scheme `gsrd` uses is only stable up to a certain timestep size; push it past that, and the field values blow up.
-Let's trigger that by running with an oversized timestep (`dt=100`), using a prepared `input_bad.yaml`:
+Now, let's see what happens when things actually go wrong with our simulation.
+We run it with an oversized timestep (`dt=100`), from a prepared `input_bad.yaml`:
 
 ```{code-cell} ipython3
-# Copy in an input with an oversized timestep (dt=100). The integration
-# blows up; watch how gsrd reports the failure.
-!cp include/input_bad.yaml /tmp/aiida-tutorial/input_bad.yaml
-
+# Run an input with an oversized timestep (dt=100), which makes the
+# integration blow up. We use subprocess (rather than the shell `!`) so we
+# can capture the exit code, which is the telling part below.
 import subprocess
 
 result = subprocess.run(
-    ['gsrd', 'input_bad.yaml'],
-    cwd='/tmp/aiida-tutorial',
+    ['gsrd', 'include/input_bad.yaml'],
     capture_output=True,
     text=True,
 )
@@ -239,50 +204,50 @@ print(result.stderr)
 
 Three things are simultaneously wrong with that failure mode:
 
-- The exit code is `0`. As far as your shell or any orchestration script is concerned, the run succeeded.
-- The only signal that something failed is a terse `ERR:` line on stderr (here preceded by a numpy `RuntimeWarning` about the overflow that caused it), plus the *absence* of `*** JOB DONE ***` on stdout.
-- `results.npz` was not written. Combined with the zero exit code, an automation script downstream will happily try to open a non-existent file, or worse, pick up a stale `results.npz` from a previous run.
+**The exit code lies.** It is `0`, so as far as your shell or any orchestration script is concerned, the run succeeded.
 
-In practice this is often harder to spot, with the relevant line buried among pages of other output.
-But even the minimal version here doesn't tell you what to fix or how to recover.
+**The only failure signal is buried in the log.** A terse `ERR:` line on stderr (here preceded by a numpy `RuntimeWarning` about the overflow that caused it) and the *absence* of `*** JOB DONE ***` on stdout, easy to miss in a longer output log.
 
-:::{admonition} Failures are hard to diagnose and easy to lose
+**No output file was written.** Combined with the zero exit code, a downstream script will happily try to open a non-existent `results.npz`, or worse, pick up a stale one from a previous run.
+
+And, lastly, from the error, you are not being told what to fix or how to recover.
+
+:::{admonition} The friction, all in one place
 :class: warning
 
-- Exit codes are not reliable: many scientific codes always return 0 and signal failure through log markers instead
-- Failed runs may produce no output file at all, or, worse, a partial file that looks plausible
-- Even when error messages exist, connecting them back to the right inputs and parameters is up to you
+Pulled together, the raw command-line workflow leaves you fighting:
+
+- **No single source of truth for a run**: results are split across different channels (stdout, output files, log files, etc.).
+- **Silently overwritten results**: a fixed output filename means each run clobbers the last, with nothing recording which inputs produced which output.
+- **Inputs you can't query or trust**: parameters are saved as an unstructured blob with no schema, and editing in place loses the original values.
+- **Failures that pass silently**: a failed run can still exit `0`, so downstream automation carries on as if nothing went wrong.
 :::
+
+We deliberately baked these shortcomings into `gsrd`, but if you've spent any time in the field, chances are you've hit one or more of them in your actual work.
 
 ## How this becomes even worse at real-world scale
 
-<!-- MOTIVATION: The punchline of Module 0. We already surfaced the concrete
-     pain points inline as they appeared; here we project them to real-world
-     scale to make the case for AiiDA compelling. -->
+Now, while these issues are mildly annoying at a few runs, they turn into real problems once you scale up.
 
-We ran just two simulations and already had to track inputs by hand, hunt for scalars in stdout, watch a re-run silently overwrite the previous one, and nearly miss a failure that still reported a successful exit code of `0`.
-None of these are bugs in `gsrd`; they are the everyday texture of scientific software.
-Mildly annoying at two runs, they turn into real problems once you scale up.
+Also, at larger scale, more complications can start appearing:
 
-:::{note}
-Now imagine doing this not for 2 runs, but for **100 different parameter combinations**.
-You'd need a naming convention, a spreadsheet, and custom scripts to execute and keep track of your simulations.
-Those approaches are fragile, and the resulting data (and the workflow that produced it) is hard to pass on to a colleague.
-:::
-
-At that scale, more things start to go wrong:
-
-- **Scattered data**: input and output files can end up on scratch filesystems across different clusters, your local machine, and shared drives. Months later, just tracking down which directory holds the converged results becomes a chore in itself.
-- **Multi-step workflows**: one code prepares the geometry, another runs the simulation, a third post-processes the results. If step 2 fails for 15 out of 100 runs, how do you figure out which ones failed, why, and how to re-run just those? You'd have to manually identify the failures, fix or adjust the inputs, and re-run each.
+- **Even more scattered data**: input and output files might end up on scratch filesystems across different clusters, your local machine, and shared drives. Months later, just tracking down which directory holds the converged results becomes a chore in itself.
+- **Failures in multi-step workflows**: one step prepares the inputs, another runs the simulation, a third post-processes the results. If step 2 fails for 15 out of 100 runs, how do you figure out which ones failed, why, and how to re-run just those? You'd have to manually identify the failures, fix or adjust the inputs, and re-run each.
 - **Heterogeneous output formats**: each code has its own conventions. Some write structured output (e.g., XML or HDF5) that is easy to parse, others (`gsrd` included) scatter key numbers across plain-text logs with no defined schema. Extracting results programmatically across many such codes often means writing and maintaining fragile custom parsers that break with new code versions.
 - **Code versions and environments**: was this result produced with v2.1 or v2.3? Compiled with which flags? On which cluster? You'd easily lose track unless you logged it yourself.
 - **Post-processing at scale**: aggregating a single number from each of hundreds of output files requires custom scripts that might break when the output format changes.
 - **Collaboration and handover**: a colleague takes over your project. They inherit a directory tree of thousands of files with no documentation of what produced what. You could write a README, but keeping it up to date is yet another manual task that rarely happens in practice.
 
+Unlike the pitfalls from the single runs above, these are not really shortcomings of any individual code but are instead inherent to any large computational project.
+To handle such a workload, you'd need a naming convention, a spreadsheet, and custom scripts to execute and keep track of your simulations.
+Those approaches are fragile, and the resulting data (and the workflow that produced it) is hard to pass on to a colleague.
+
 ## How AiiDA solves these problems
 
-AiiDA is a workflow manager designed for exactly these problems.
-At its core is the **provenance graph**: an automatic record of every calculation, its inputs, its outputs, and how they all connect, for every run, including failed ones.
+This is where AiiDA comes in.
+**Provenance** and **high-throughput** were two of its founding principles.
+At its core is the **provenance graph**: an automatic record of every calculation, its inputs, its outputs, and how they all connect, kept for every run, including the failed ones.
+While scaling up still needs real infrastructure, AiiDA can greatly help you with it.
 It gives you:
 
 - **Provenance tracking**: nothing is lost. Every result can be traced back to the exact inputs, code, and machine that produced it. No overwriting, no orphaned files, no need to keep input YAMLs around by hand.

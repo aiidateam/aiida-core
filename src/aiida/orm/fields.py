@@ -16,6 +16,7 @@ from abc import ABCMeta
 from copy import deepcopy
 from functools import singledispatchmethod
 from pprint import pformat
+from types import UnionType
 
 from pydantic import BaseModel
 
@@ -37,7 +38,12 @@ def extract_root_type(dtype: t.Any) -> t.Any:
     """
     origin = t.get_origin(dtype)
     if origin:
-        if origin is t.Union:
+        # `t.Union` is the origin of `Optional[X]`/`Union[X, Y]`; `UnionType` that of the PEP 604
+        # `X | Y` spelling, which pydantic preserves on the annotations feeding this function.
+        # Both checks are required below Python 3.14: only there do the two unify
+        # (`t.Union is UnionType`), so dropping either silently degrades every `X | None`
+        # annotation to `QbAnyField` on 3.10-3.13.
+        if origin is t.Union or origin is UnionType:
             return extract_root_type(t.get_args(dtype)[0])
         else:
             return origin

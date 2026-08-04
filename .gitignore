@@ -61,6 +61,3 @@ docker-bake.override.json
 
 # benchmark
 .benchmarks/
-
-# dev files
-.dev

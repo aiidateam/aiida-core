@@ -10,8 +10,6 @@
 in a Brillouin zone, and how to operate on them.
 """
 
-from __future__ import annotations
-
 import itertools
 import json
 import typing as t
@@ -20,8 +18,8 @@ from string import Template
 import numpy
 
 from aiida.common.exceptions import ValidationError
+from aiida.common.pydantic import MetadataField
 from aiida.common.utils import join_labels, prettify_labels
-from aiida.orm.pydantic import OrmMetadataField
 
 from .kpoints import KpointsData
 
@@ -133,7 +131,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                     ]
                 )
             ]
-            number_electrons = round(sum(sum(i) for i in occupations) / num_kpoints)
+            number_electrons = int(round(sum(sum(i) for i in occupations) / num_kpoints))
 
             homo_indexes = [numpy.where(numpy.array([nint(_) for _ in x]) > 0)[0][-1] for x in occupations]
             if len(set(homo_indexes)) > 1:  # there must be intersections of valence and conduction bands
@@ -144,7 +142,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                 lumo = [_[0][_[1] + 1] for _ in zip(bands, homo_indexes)]
             except IndexError:
                 raise ValueError(
-                    'To understand if it is a metal or insulator, need more bands than n_band=number_electrons'
+                    'To understand if it is a metal or insulator, ' 'need more bands than n_band=number_electrons'
                 )
 
         else:
@@ -161,7 +159,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                 lumo = [i[number_electrons // number_electrons_per_band] for i in bands]  # take the n+1th level
             except IndexError:
                 raise ValueError(
-                    'To understand if it is a metal or insulator, need more bands than n_band=number_electrons'
+                    'To understand if it is a metal or insulator, ' 'need more bands than n_band=number_electrons'
                 )
 
         if number_electrons % 2 == 1 and len(stored_bands.shape) == 2:
@@ -195,7 +193,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
             raise ValueError("The Fermi energy is below all band energies, don't know what to do.")
 
         # one band is crossed by the fermi energy
-        if any(i[1] < fermi_energy < i[0] for i in max_mins):
+        if any(i[1] < fermi_energy and fermi_energy < i[0] for i in max_mins):
             return False, None
 
         # case of semimetals, fermi energy at the crossing of two bands
@@ -216,26 +214,9 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
 class BandsData(KpointsData):
     """Class to handle bands data"""
 
-    class AttributesModel(KpointsData.AttributesModel):
-        array_labels: list[str] | None = OrmMetadataField(
-            None,
-            description='Labels associated with the band arrays',
-        )
-        units: str | None = OrmMetadataField(
-            None,
-            description='Units in which the data in bands were stored',
-            orm_to_model=lambda node: t.cast(BandsData, node).base.attributes.get('units', None),
-        )
-
-    def __init__(
-        self,
-        *,
-        array_labels: list[str] | None = None,
-        units: str | None = None,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self.units = units
+    class Model(KpointsData.Model):
+        array_labels: t.Optional[t.List[str]] = MetadataField(description='Labels associated with the band arrays')
+        units: str = MetadataField(description='Units in which the data in bands were stored')
 
     def set_kpointsdata(self, kpointsdata):
         """Load the kpoints from a kpoint object.
@@ -283,7 +264,7 @@ class BandsData(KpointsData):
             raise ValueError(
                 'Bands must be an array of dimension 2'
                 '([N_kpoints, N_bands]) or of dimension 3 '
-                f' ([N_arrays, N_kpoints, N_bands]), found instead {len(the_bands.shape)}'
+                ' ([N_arrays, N_kpoints, N_bands]), found instead {}'.format(len(the_bands.shape))
             )
 
         list_of_arrays_to_be_checked = []
@@ -324,8 +305,9 @@ class BandsData(KpointsData):
                 the_labels = [str(_) for _ in labels]
             else:
                 raise ValidationError(
-                    'Band labels have an unrecognized type '
-                    f'({labels.__class__})but should be a string or a list of strings'
+                    'Band labels have an unrecognized type ({})' 'but should be a string or a list of strings'.format(
+                        labels.__class__
+                    )
                 )
 
             if len(the_bands.shape) == 2 and len(the_labels) != 1:
@@ -1129,7 +1111,7 @@ class BandsData(KpointsData):
             y_min_lim = the_bands.min()
         x_min_lim = min(x)  # this isn't a numpy array, but a list
         x_max_lim = max(x)
-        ytick_spacing = 10 ** int(math.log10(y_max_lim - y_min_lim))
+        ytick_spacing = 10 ** int(math.log10((y_max_lim - y_min_lim)))
 
         # prepare xticks labels
         sx1 = ''

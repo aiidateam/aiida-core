@@ -10,14 +10,11 @@
 
 from __future__ import annotations
 
-import builtins
 import copy
 import typing as t
 
-import pydantic as pdt
-
 from aiida.common import exceptions
-from aiida.orm.pydantic import OrmFieldsAsModelDump, OrmMetadataField, OrmModel
+from aiida.common.pydantic import MetadataField
 
 from .base import to_aiida_type
 from .data import Data
@@ -53,16 +50,11 @@ class Dict(Data):
     Finally, all dictionary mutations will be forbidden once the node is stored.
     """
 
-    class AttributesModel(OrmFieldsAsModelDump, Data.AttributesModel):
-        model_config = pdt.ConfigDict(
-            arbitrary_types_allowed=True,
-            extra='allow',
-        )
-
-    class ConstructorArgsModel(OrmModel):
-        value: dict[str, t.Any] = OrmMetadataField(
-            description='The dictionary content',
-            write_only=True,
+    class Model(Data.Model):
+        value: t.Dict[str, t.Any] = MetadataField(
+            description='Dictionary content.',
+            is_attribute=False,
+            is_subscriptable=True,
         )
 
     def __init__(self, value=None, **kwargs):
@@ -76,9 +68,7 @@ class Dict(Data):
         :param value: dictionary to initialise the ``Dict`` node from
         """
         dictionary = value or kwargs.pop('dict', None)
-
         super().__init__(**kwargs)
-
         if dictionary:
             self.set_dict(dictionary)
 
@@ -151,11 +141,13 @@ class Dict(Data):
 
         :return: iterator over the keys of the current dictionary
         """
-        yield from self.base.attributes.keys()
+        for key in self.base.attributes.keys():
+            yield key
 
     def items(self):
         """Iterator of all items stored in the Dict node."""
-        yield from self.base.attributes.items()
+        for key, value in self.base.attributes.items():
+            yield key, value
 
     @property
     def value(self) -> dict[str, t.Any]:
@@ -176,18 +168,6 @@ class Dict(Data):
         from aiida.orm.utils.managers import AttributeManager
 
         return AttributeManager(self)
-
-    def to_model_field_values(
-        self,
-        *,
-        context: builtins.dict[str, t.Any] | None = None,
-        minimal: bool = False,
-        schema: type[OrmModel] | None = None,
-    ) -> builtins.dict[str, t.Any]:
-        fields = super().to_model_field_values(context=context, minimal=minimal, schema=schema)
-        if schema in (self.ReadModel, self.WriteModel):
-            return fields | {'attributes': self.get_dict()}
-        return fields
 
 
 @to_aiida_type.register(dict)

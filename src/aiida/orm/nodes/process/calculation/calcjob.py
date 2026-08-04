@@ -8,18 +8,13 @@
 ###########################################################################
 """Module with `Node` sub class for calculation job processes."""
 
-from __future__ import annotations
-
 import datetime
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, AnyStr, cast
-
-from pydantic import field_validator
+from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Sequence, Tuple, Type, Union
 
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState
 from aiida.common.lang import classproperty
-from aiida.orm.pydantic import OrmMetadataField
+from aiida.common.pydantic import MetadataField
 
 from ..process import ProcessNodeCaching
 from .calculation import CalculationNode
@@ -39,7 +34,7 @@ __all__ = ('CalcJobNode',)
 class CalcJobNodeCaching(ProcessNodeCaching):
     """Interface to control caching of a node instance."""
 
-    def get_objects_to_hash(self) -> list[Any]:
+    def get_objects_to_hash(self) -> List[Any]:
         """Return a list of objects which should be included in the hash.
 
         This method is purposefully overridden from the base `Node` class, because we do not want to include the
@@ -69,68 +64,49 @@ class CalcJobNode(CalculationNode):
     SCHEDULER_LAST_JOB_INFO_KEY = 'last_job_info'
     SCHEDULER_DETAILED_JOB_INFO_KEY = 'detailed_job_info'
 
-    class AttributesModel(CalculationNode.AttributesModel):
-        scheduler_state: str | None = OrmMetadataField(
-            None,
-            description='The state of the scheduler',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_scheduler_state(),
+    class Model(CalculationNode.Model):
+        scheduler_state: Optional[str] = MetadataField(
+            description='The state of the scheduler', orm_to_model=lambda node, _: node.get_scheduler_state()
         )
-        state: str | None = OrmMetadataField(
-            None,
-            description='The active state of the calculation job',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_state(),
+        state: Optional[str] = MetadataField(
+            description='The active state of the calculation job', orm_to_model=lambda node, _: node.get_state()
         )
-        remote_workdir: str | None = OrmMetadataField(
-            None,
+        remote_workdir: Optional[str] = MetadataField(
             description='The path to the remote (on cluster) scratch folder',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_remote_workdir(),
+            orm_to_model=lambda node, _: node.get_remote_workdir(),
         )
-        job_id: str | None = OrmMetadataField(
-            None,
-            description='The scheduler job id',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_job_id(),
+        job_id: Optional[str] = MetadataField(
+            description='The scheduler job id', orm_to_model=lambda node, _: node.get_job_id()
         )
-        scheduler_lastchecktime: datetime.datetime | None = OrmMetadataField(
-            None,
+        scheduler_lastchecktime: Optional[datetime.datetime] = MetadataField(
             description='The last time the scheduler was checked, in isoformat',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_scheduler_lastchecktime(),
+            orm_to_model=lambda node, _: node.get_scheduler_lastchecktime(),
         )
-        last_job_info: dict | None = OrmMetadataField(
-            None,
+        last_job_info: Optional[dict] = MetadataField(
             description='The last job info returned by the scheduler',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_last_job_info(),
+            orm_to_model=lambda node, _: dict(node.get_last_job_info() or {}),
         )
-        detailed_job_info: dict | None = OrmMetadataField(
-            None,
+        detailed_job_info: Optional[dict] = MetadataField(
             description='The detailed job info returned by the scheduler',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_detailed_job_info(),
+            orm_to_model=lambda node, _: node.get_detailed_job_info(),
         )
-        retrieve_list: Sequence[str | tuple[str, str, int]] | None = OrmMetadataField(
-            None,
+        retrieve_list: Optional[List[str]] = MetadataField(
             description='The list of files to retrieve from the remote cluster',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_retrieve_list(),
+            orm_to_model=lambda node, _: node.get_retrieve_list(),
         )
-        retrieve_temporary_list: Sequence[str | tuple[str, str, int]] | None = OrmMetadataField(
-            None,
+        retrieve_temporary_list: Optional[List[str]] = MetadataField(
             description='The list of temporary files to retrieve from the remote cluster',
-            orm_to_model=lambda node: cast(CalcJobNode, node).get_retrieve_temporary_list(),
+            orm_to_model=lambda node, _: node.get_retrieve_temporary_list(),
         )
-        imported: bool | None = OrmMetadataField(
-            None,
-            description='Whether the node has been migrated',
+        imported: Optional[bool] = MetadataField(
+            description='Whether the node has been migrated', orm_to_model=lambda node, _: node.is_imported
         )
-
-        @field_validator('last_job_info', mode='before')
-        @classmethod
-        def validate_last_job_info(cls, value: dict | JobInfo | None) -> dict | None:
-            """Validate the last job info field."""
-            return dict(value) if value is not None else None
 
     # An optional entry point for a CalculationTools instance
     _tools = None
 
     @property
-    def tools(self) -> CalculationTools:
+    def tools(self) -> 'CalculationTools':
         """Return the calculation tools for the process type associated with this calculation.
 
         If the entry point name stored in the `process_type` of the `CalcJobNode` has an accompanying entry point in
@@ -162,7 +138,7 @@ class CalcJobNode(CalculationNode):
         return self._tools
 
     @classproperty
-    def _updatable_attributes(cls) -> tuple[str, ...]:  # noqa: N805
+    def _updatable_attributes(cls) -> Tuple[str, ...]:  # noqa: N805
         return super()._updatable_attributes + (
             cls.CALC_JOB_STATE_KEY,
             cls.IMMIGRATED_KEY,
@@ -177,7 +153,7 @@ class CalcJobNode(CalculationNode):
         )
 
     @classproperty
-    def _hash_ignored_attributes(cls) -> tuple[str, ...]:  # noqa: N805
+    def _hash_ignored_attributes(cls) -> Tuple[str, ...]:  # noqa: N805
         return super()._hash_ignored_attributes + (
             'queue_name',
             'account',
@@ -189,16 +165,11 @@ class CalcJobNode(CalculationNode):
         )
 
     @property
-    def imported(self) -> bool | None:
-        """Return whether the calculation job was imported instead of being an actual run."""
-        return self.base.attributes.get(self.IMMIGRATED_KEY, None)
-
-    @property
     def is_imported(self) -> bool:
         """Return whether the calculation job was imported instead of being an actual run."""
         return self.base.attributes.get(self.IMMIGRATED_KEY, None) is True
 
-    def get_option(self, name: str) -> Any | None:
+    def get_option(self, name: str) -> Optional[Any]:
         """Return the value of an option that was set for this CalcJobNode.
 
         :param name: the option name
@@ -217,7 +188,7 @@ class CalcJobNode(CalculationNode):
         """
         self.base.attributes.set(name, value)
 
-    def get_options(self) -> dict[str, Any]:
+    def get_options(self) -> Dict[str, Any]:
         """Return the dictionary of options set for this CalcJobNode
 
         :return: dictionary of the options and their values
@@ -230,7 +201,7 @@ class CalcJobNode(CalculationNode):
 
         return options
 
-    def set_options(self, options: dict[str, Any]) -> None:
+    def set_options(self, options: Dict[str, Any]) -> None:
         """Set the options for this CalcJobNode
 
         :param options: dictionary of option and their values to set
@@ -238,7 +209,7 @@ class CalcJobNode(CalculationNode):
         for name, value in options.items():
             self.set_option(name, value)
 
-    def get_state(self) -> CalcJobState | None:
+    def get_state(self) -> Optional[CalcJobState]:
         """Return the calculation job active sub state.
 
         The calculation job state serves to give more granular state information to `CalcJobs`, in addition to the
@@ -281,7 +252,7 @@ class CalcJobNode(CalculationNode):
         """
         self.base.attributes.set(self.REMOTE_WORKDIR_KEY, remote_workdir)
 
-    def get_remote_workdir(self) -> str | None:
+    def get_remote_workdir(self) -> Optional[str]:
         """Return the path to the remote (on cluster) scratch folder of the calculation.
 
         :return: a string with the remote path
@@ -289,7 +260,7 @@ class CalcJobNode(CalculationNode):
         return self.base.attributes.get(self.REMOTE_WORKDIR_KEY, None)
 
     @staticmethod
-    def _validate_retrieval_directive(directives: Sequence[str | tuple[str, str, int]]) -> None:
+    def _validate_retrieval_directive(directives: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
         """Validate a list or tuple of file retrieval directives.
 
         :param directives: a list or tuple of file retrieval directives
@@ -316,7 +287,7 @@ class CalcJobNode(CalculationNode):
             if not isinstance(directive[2], (int, type(None))):
                 raise ValueError('invalid directive, third element has to be an integer representing the depth')
 
-    def set_retrieve_list(self, retrieve_list: Sequence[str | tuple[str, str, int]]) -> None:
+    def set_retrieve_list(self, retrieve_list: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
         """Set the retrieve list.
 
         This list of directives will instruct the daemon what files to retrieve after the calculation has completed.
@@ -327,14 +298,14 @@ class CalcJobNode(CalculationNode):
         self._validate_retrieval_directive(retrieve_list)
         self.base.attributes.set(self.RETRIEVE_LIST_KEY, retrieve_list)
 
-    def get_retrieve_list(self) -> Sequence[str | tuple[str, str, int]] | None:
+    def get_retrieve_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, str]]]]:
         """Return the list of files/directories to be retrieved on the cluster after the calculation has completed.
 
         :return: a list of file directives
         """
         return self.base.attributes.get(self.RETRIEVE_LIST_KEY, None)
 
-    def set_retrieve_temporary_list(self, retrieve_temporary_list: Sequence[str | tuple[str, str, int]]) -> None:
+    def set_retrieve_temporary_list(self, retrieve_temporary_list: Sequence[Union[str, Tuple[str, str, str]]]) -> None:
         """Set the retrieve temporary list.
 
         The retrieve temporary list stores files that are retrieved after completion and made available during parsing
@@ -345,14 +316,14 @@ class CalcJobNode(CalculationNode):
         self._validate_retrieval_directive(retrieve_temporary_list)
         self.base.attributes.set(self.RETRIEVE_TEMPORARY_LIST_KEY, retrieve_temporary_list)
 
-    def get_retrieve_temporary_list(self) -> Sequence[str | tuple[str, str, int]] | None:
+    def get_retrieve_temporary_list(self) -> Optional[Sequence[Union[str, Tuple[str, str, str]]]]:
         """Return list of files to be retrieved from the cluster which will be available during parsing.
 
         :return: a list of file directives
         """
         return self.base.attributes.get(self.RETRIEVE_TEMPORARY_LIST_KEY, None)
 
-    def set_job_id(self, job_id: int | str) -> None:
+    def set_job_id(self, job_id: Union[int, str]) -> None:
         """Set the job id that was assigned to the calculation by the scheduler.
 
         .. note:: the id will always be stored as a string
@@ -361,14 +332,14 @@ class CalcJobNode(CalculationNode):
         """
         return self.base.attributes.set(self.SCHEDULER_JOB_ID_KEY, str(job_id))
 
-    def get_job_id(self) -> str | None:
+    def get_job_id(self) -> Optional[str]:
         """Return job id that was assigned to the calculation by the scheduler.
 
         :return: the string representation of the scheduler job id
         """
         return self.base.attributes.get(self.SCHEDULER_JOB_ID_KEY, None)
 
-    def set_scheduler_state(self, state: JobState) -> None:
+    def set_scheduler_state(self, state: 'JobState') -> None:
         """Set the scheduler state.
 
         :param state: an instance of `JobState`
@@ -382,7 +353,7 @@ class CalcJobNode(CalculationNode):
         self.base.attributes.set(self.SCHEDULER_STATE_KEY, state.value)
         self.base.attributes.set(self.SCHEDULER_LAST_CHECK_TIME_KEY, timezone.now().isoformat())
 
-    def get_scheduler_state(self) -> JobState | None:
+    def get_scheduler_state(self) -> Optional['JobState']:
         """Return the status of the calculation according to the cluster scheduler.
 
         :return: a JobState enum instance, or None if no state has been set.
@@ -399,7 +370,7 @@ class CalcJobNode(CalculationNode):
 
         return JobState(state)
 
-    def get_scheduler_lastchecktime(self) -> datetime.datetime | None:
+    def get_scheduler_lastchecktime(self) -> Optional[datetime.datetime]:
         """Return the time of the last update of the scheduler state by the daemon or None if it was never set.
 
         :return: a datetime object or None
@@ -411,14 +382,14 @@ class CalcJobNode(CalculationNode):
 
         return value
 
-    def set_detailed_job_info(self, detailed_job_info: dict | None) -> None:
+    def set_detailed_job_info(self, detailed_job_info: Optional[dict]) -> None:
         """Set the detailed job info dictionary.
 
         :param detailed_job_info: a dictionary with metadata with the accounting of a completed job
         """
         self.base.attributes.set(self.SCHEDULER_DETAILED_JOB_INFO_KEY, detailed_job_info)
 
-    def get_detailed_job_info(self) -> dict | None:
+    def get_detailed_job_info(self) -> Optional[dict]:
         """Return the detailed job info dictionary.
 
         The scheduler is polled for the detailed job info after the job is completed and ready to be retrieved.
@@ -427,14 +398,14 @@ class CalcJobNode(CalculationNode):
         """
         return self.base.attributes.get(self.SCHEDULER_DETAILED_JOB_INFO_KEY, None)
 
-    def set_last_job_info(self, last_job_info: JobInfo) -> None:
+    def set_last_job_info(self, last_job_info: 'JobInfo') -> None:
         """Set the last job info.
 
         :param last_job_info: a `JobInfo` object
         """
         self.base.attributes.set(self.SCHEDULER_LAST_JOB_INFO_KEY, last_job_info.get_dict())
 
-    def get_last_job_info(self) -> JobInfo | None:
+    def get_last_job_info(self) -> Optional['JobInfo']:
         """Return the last information asked to the scheduler about the status of the job.
 
         The last job info is updated on every poll of the scheduler, except for the final poll when the job drops from
@@ -456,7 +427,7 @@ class CalcJobNode(CalculationNode):
 
         return job_info
 
-    def get_authinfo(self) -> AuthInfo:
+    def get_authinfo(self) -> 'AuthInfo':
         """Return the `AuthInfo` that is configured for the `Computer` set for this node.
 
         :return: `AuthInfo`
@@ -468,7 +439,7 @@ class CalcJobNode(CalculationNode):
 
         return computer.get_authinfo(self.user)
 
-    def get_transport(self) -> Transport:
+    def get_transport(self) -> 'Transport':
         """Return the transport for this calculation.
 
         :return: Transport configured
@@ -476,7 +447,7 @@ class CalcJobNode(CalculationNode):
         """
         return self.get_authinfo().get_transport()
 
-    def get_parser_class(self) -> type[Parser] | None:
+    def get_parser_class(self) -> Optional[Type['Parser']]:
         """Return the output parser object for this calculation or None if no parser is set.
 
         :return: a `Parser` class.
@@ -496,7 +467,7 @@ class CalcJobNode(CalculationNode):
         """Return the link label used for the retrieved FolderData node."""
         return 'retrieved'
 
-    def get_retrieved_node(self) -> FolderData | None:
+    def get_retrieved_node(self) -> Optional['FolderData']:
         """Return the retrieved data folder.
 
         :return: the retrieved FolderData node or None if not found
@@ -513,7 +484,7 @@ class CalcJobNode(CalculationNode):
             return None
 
     @property
-    def res(self) -> CalcJobResultManager:
+    def res(self) -> 'CalcJobResultManager':
         """To be used to get direct access to the parsed parameters.
 
         :return: an instance of the CalcJobResultManager.
@@ -526,7 +497,7 @@ class CalcJobNode(CalculationNode):
 
         return CalcJobResultManager(self)
 
-    def get_scheduler_stdout(self) -> AnyStr | None:
+    def get_scheduler_stdout(self) -> Optional[AnyStr]:
         """Return the scheduler stderr output if the calculation has finished and been retrieved, None otherwise.
 
         :return: scheduler stderr output or None
@@ -544,7 +515,7 @@ class CalcJobNode(CalculationNode):
 
         return stdout
 
-    def get_scheduler_stderr(self) -> AnyStr | None:
+    def get_scheduler_stderr(self) -> Optional[AnyStr]:
         """Return the scheduler stdout output if the calculation has finished and been retrieved, None otherwise.
 
         :return: scheduler stdout output or None

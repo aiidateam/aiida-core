@@ -25,9 +25,9 @@ def test_construct():
     assert not node.is_stored
 
 
-@pytest.mark.parametrize('value', (42, 'string'))
+@pytest.mark.parametrize('value', (None, 'string'))
 def test_construct_invalid_type(value):
-    """Test the ``EnumData`` constructor raises if member is not an enum."""
+    """Test the ``EnumData`` constructor raises if object is ``None``."""
     with pytest.raises(TypeError, match=r'Got object of type .*, expecting .*.'):
         EnumData(value)
 

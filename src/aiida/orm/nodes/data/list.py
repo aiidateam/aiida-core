@@ -12,9 +12,7 @@ import typing as t
 from collections.abc import MutableSequence
 from typing import Any
 
-import pydantic as pdt
-
-from aiida.orm.pydantic import OrmMetadataField
+from aiida.common.pydantic import MetadataField
 
 from .base import to_aiida_type
 from .data import Data
@@ -27,11 +25,9 @@ class List(Data, MutableSequence):
 
     _LIST_KEY = 'list'
 
-    class AttributesModel(Data.AttributesModel):
-        value: list[t.Any] = OrmMetadataField(
-            alias='list',
+    class Model(Data.Model):
+        value: t.List[t.Any] = MetadataField(
             description='Content of the data',
-            validation_alias=pdt.AliasChoices('list', 'value'),
         )
 
     def __init__(self, value=None, **kwargs):

@@ -21,7 +21,6 @@ from .fields import *
 from .groups import *
 from .logs import *
 from .nodes import *
-from .pydantic import *
 from .querybuilder import *
 from .users import *
 from .utils import *
@@ -81,7 +80,6 @@ __all__ = (
     'OrbitalData',
     'OrderSpecifier',
     'OrmEntityLoader',
-    'OrmModel',
     'PortableCode',
     'ProcessNode',
     'ProjectionData',

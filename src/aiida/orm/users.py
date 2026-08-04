@@ -8,15 +8,13 @@
 ###########################################################################
 """Module for the ORM user class."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Optional, Tuple, Type
 
 from aiida.common import exceptions
+from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
 
 from . import entities
-from .pydantic import OrmMetadataField
 
 if TYPE_CHECKING:
     from aiida.orm.implementation import StorageBackend
@@ -28,13 +26,11 @@ __all__ = ('User',)
 class UserCollection(entities.Collection['User']):
     """The collection of users stored in a backend."""
 
-    collection_type: ClassVar[str] = 'users'
-
     @staticmethod
-    def _entity_base_cls() -> type[User]:
+    def _entity_base_cls() -> Type['User']:
         return User
 
-    def get_or_create(self, email: str, **kwargs) -> tuple[bool, User]:
+    def get_or_create(self, email: str, **kwargs) -> Tuple[bool, 'User']:
         """Get the existing user with a given email address or create an unstored one
 
         :param kwargs: The properties of the user to get or create
@@ -47,7 +43,7 @@ class UserCollection(entities.Collection['User']):
         except exceptions.NotExistent:
             return True, User(backend=self.backend, email=email, **kwargs)
 
-    def get_default(self) -> User | None:
+    def get_default(self) -> Optional['User']:
         """Get the current default user"""
         return self.backend.default_user
 
@@ -57,26 +53,11 @@ class User(entities.Entity['BackendUser', UserCollection]):
 
     _CLS_COLLECTION = UserCollection
 
-    class ReadModel(entities.Entity.ReadModel):
-        email: str = OrmMetadataField(
-            description='The user email',
-            examples=['verdi@opera.net'],
-        )
-        first_name: str = OrmMetadataField(
-            '',
-            description='The user first name',
-            examples=['Giuseppe'],
-        )
-        last_name: str = OrmMetadataField(
-            '',
-            description='The user last name',
-            examples=['Verdi'],
-        )
-        institution: str = OrmMetadataField(
-            '',
-            description='The user institution',
-            examples=['Opera National de Paris'],
-        )
+    class Model(entities.Entity.Model):
+        email: str = MetadataField(description='The user email', is_attribute=False)
+        first_name: str = MetadataField(description='The user first name', is_attribute=False)
+        last_name: str = MetadataField(description='The user last name', is_attribute=False)
+        institution: str = MetadataField(description='The user institution', is_attribute=False)
 
     def __init__(
         self,
@@ -84,7 +65,7 @@ class User(entities.Entity['BackendUser', UserCollection]):
         first_name: str = '',
         last_name: str = '',
         institution: str = '',
-        backend: StorageBackend | None = None,
+        backend: Optional['StorageBackend'] = None,
     ):
         """Create a new `User`."""
         backend = backend or get_manager().get_profile_storage()

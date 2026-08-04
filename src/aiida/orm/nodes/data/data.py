@@ -8,13 +8,13 @@
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
 
-from __future__ import annotations
+from typing import Dict, Optional
 
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
+from aiida.common.pydantic import MetadataField
 from aiida.orm.entities import from_backend_entity
-from aiida.orm.pydantic import OrmMetadataField
 
 from ..node import Node
 
@@ -40,16 +40,15 @@ class Data(Node):
     # By default, if not found here,
     # The fileformat string is assumed to match the extension.
     # Example: {'dat': 'dat_multicolumn'}
-    _export_format_replacements: dict[str, str] = {}
+    _export_format_replacements: Dict[str, str] = {}
 
     # Data nodes are storable
     _storable = True
     _unstorable_message = 'storing for this node has been disabled'
 
-    class AttributesModel(Node.AttributesModel):
-        source: dict | None = OrmMetadataField(
-            None,
-            description='Source of the data',
+    class Model(Node.Model):
+        source: Optional[dict] = MetadataField(
+            None, description='Source of the data.', is_subscriptable=True, exclude_from_cli=True
         )
 
     def __init__(self, *args, source=None, **kwargs):
@@ -84,7 +83,7 @@ class Data(Node):
         return clone
 
     @property
-    def source(self) -> dict | None:
+    def source(self) -> Optional[dict]:
         """Gets the dictionary describing the source of Data object. Possible fields:
 
         * **db_name**: name of the source database.
@@ -114,7 +113,7 @@ class Data(Node):
             raise ValueError('Source must be supplied as a dictionary')
         unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
         if unknown_attrs:
-            raise KeyError(f'Unknown source parameters: {", ".join(unknown_attrs)}')
+            raise KeyError(f"Unknown source parameters: {', '.join(unknown_attrs)}")
 
         self.base.attributes.set('source', source)
 
@@ -162,14 +161,15 @@ class Data(Node):
         except KeyError:
             if exporters.keys():
                 raise ValueError(
-                    'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
+                    'The format {} is not implemented for {}. ' 'Currently implemented are: {}.'.format(
                         fileformat, self.__class__.__name__, ','.join(exporters.keys())
                     )
                 )
             else:
                 raise ValueError(
-                    f'The format {fileformat} is not implemented for {self.__class__.__name__}. '
-                    'No formats are implemented yet.'
+                    'The format {} is not implemented for {}. ' 'No formats are implemented yet.'.format(
+                        fileformat, self.__class__.__name__
+                    )
                 )
 
         string, dictionary = func(main_file_name=main_file_name, **kwargs)
@@ -269,14 +269,15 @@ class Data(Node):
         except KeyError:
             if importers.keys():
                 raise ValueError(
-                    'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
+                    'The format {} is not implemented for {}. ' 'Currently implemented are: {}.'.format(
                         fileformat, self.__class__.__name__, ','.join(importers.keys())
                     )
                 )
             else:
                 raise ValueError(
-                    f'The format {fileformat} is not implemented for {self.__class__.__name__}. '
-                    'No formats are implemented yet.'
+                    'The format {} is not implemented for {}. ' 'No formats are implemented yet.'.format(
+                        fileformat, self.__class__.__name__
+                    )
                 )
 
         # func is bound to self by getattr in _get_importers()
@@ -291,7 +292,7 @@ class Data(Node):
         """
         if fileformat is None:
             fileformat = fname.split('.')[-1]
-        with open(fname, encoding='utf8') as fhandle:  # reads in cwd, if fname is not absolute
+        with open(fname, 'r', encoding='utf8') as fhandle:  # reads in cwd, if fname is not absolute
             self.importstring(fhandle.read(), fileformat)
 
     def _get_importers(self):
@@ -325,14 +326,15 @@ class Data(Node):
         except KeyError:
             if converters.keys():
                 raise ValueError(
-                    'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
+                    'The format {} is not implemented for {}. ' 'Currently implemented are: {}.'.format(
                         object_format, self.__class__.__name__, ','.join(converters.keys())
                     )
                 )
             else:
                 raise ValueError(
-                    f'The format {object_format} is not implemented for {self.__class__.__name__}. '
-                    'No formats are implemented yet.'
+                    'The format {} is not implemented for {}. ' 'No formats are implemented yet.'.format(
+                        object_format, self.__class__.__name__
+                    )
                 )
 
         return func(*args)

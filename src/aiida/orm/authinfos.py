@@ -10,15 +10,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from aiida.common import exceptions
+from aiida.common.pydantic import MetadataField
 from aiida.manage import get_manager
 from aiida.plugins import TransportFactory
 
 from . import entities, users
 from .computers import Computer
-from .pydantic import OrmMetadataField
 from .users import User
 
 if TYPE_CHECKING:
@@ -32,10 +32,8 @@ __all__ = ('AuthInfo',)
 class AuthInfoCollection(entities.Collection['AuthInfo']):
     """The collection of `AuthInfo` entries."""
 
-    collection_type: ClassVar[str] = 'authinfos'
-
     @staticmethod
-    def _entity_base_cls() -> type[AuthInfo]:
+    def _entity_base_cls() -> Type['AuthInfo']:
         return AuthInfo
 
     def delete(self, pk: int) -> None:
@@ -52,38 +50,43 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
     _CLS_COLLECTION = AuthInfoCollection
     PROPERTY_WORKDIR = 'workdir'
 
-    class ReadModel(entities.Entity.ReadModel):
-        computer: int = OrmMetadataField(
+    class Model(entities.Entity.Model):
+        computer: int = MetadataField(
             description='The PK of the computer',
+            is_attribute=False,
             orm_class=Computer,
-            orm_to_model=lambda auth_info: cast(AuthInfo, auth_info).computer.pk,
+            orm_to_model=lambda auth_info, _: auth_info.computer.pk,  # type: ignore[attr-defined]
         )
-        user: int = OrmMetadataField(
+        user: int = MetadataField(
             description='The PK of the user',
+            is_attribute=False,
             orm_class=User,
-            orm_to_model=lambda auth_info: cast(AuthInfo, auth_info).user.pk,
+            orm_to_model=lambda auth_info, _: auth_info.user.pk,  # type: ignore[attr-defined]
         )
-        enabled: bool = OrmMetadataField(
+        enabled: bool = MetadataField(
             True,
             description='Whether the instance is enabled',
+            is_attribute=False,
         )
-        auth_params: dict[str, Any] = OrmMetadataField(
+        auth_params: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='Dictionary of authentication parameters',
+            is_attribute=False,
         )
-        metadata: dict[str, Any] = OrmMetadataField(
+        metadata: Dict[str, Any] = MetadataField(
             default_factory=dict,
             description='Dictionary of metadata',
+            is_attribute=False,
         )
 
     def __init__(
         self,
-        computer: Computer,
-        user: User,
+        computer: 'Computer',
+        user: 'User',
         enabled: bool = True,
-        auth_params: dict[str, Any] | None = None,
-        metadata: dict[str, Any] | None = None,
-        backend: StorageBackend | None = None,
+        auth_params: Dict[str, Any] | None = None,
+        metadata: Dict[str, Any] | None = None,
+        backend: Optional['StorageBackend'] = None,
     ) -> None:
         """Create an `AuthInfo` instance for the given computer and user.
 
@@ -136,47 +139,47 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         self._backend_entity.enabled = enabled
 
     @property
-    def computer(self) -> Computer:
+    def computer(self) -> 'Computer':
         """Return the computer associated with this instance."""
         from . import computers
 
         return entities.from_backend_entity(computers.Computer, self._backend_entity.computer)
 
     @property
-    def user(self) -> User:
+    def user(self) -> 'User':
         """Return the user associated with this instance."""
         return entities.from_backend_entity(users.User, self._backend_entity.user)
 
     @property
-    def auth_params(self) -> dict[str, Any]:
+    def auth_params(self) -> Dict[str, Any]:
         return self._backend_entity.get_auth_params()
 
     @property
-    def metadata(self) -> dict[str, Any]:
+    def metadata(self) -> Dict[str, Any]:
         return self._backend_entity.get_metadata()
 
-    def get_auth_params(self) -> dict[str, Any]:
+    def get_auth_params(self) -> Dict[str, Any]:
         """Return the dictionary of authentication parameters
 
         :return: a dictionary with authentication parameters
         """
         return self._backend_entity.get_auth_params()
 
-    def set_auth_params(self, auth_params: dict[str, Any]) -> None:
+    def set_auth_params(self, auth_params: Dict[str, Any]) -> None:
         """Set the dictionary of authentication parameters
 
         :param auth_params: a dictionary with authentication parameters
         """
         self._backend_entity.set_auth_params(auth_params)
 
-    def get_metadata(self) -> dict[str, Any]:
+    def get_metadata(self) -> Dict[str, Any]:
         """Return the dictionary of metadata
 
         :return: a dictionary with metadata
         """
         return self._backend_entity.get_metadata()
 
-    def set_metadata(self, metadata: dict[str, Any]) -> None:
+    def set_metadata(self, metadata: Dict[str, Any]) -> None:
         """Set the dictionary of metadata
 
         :param metadata: a dictionary with metadata
@@ -195,7 +198,7 @@ class AuthInfo(entities.Entity['BackendAuthInfo', AuthInfoCollection]):
         except KeyError:
             return self.computer.get_workdir()
 
-    def get_transport(self) -> Transport:
+    def get_transport(self) -> 'Transport':
         """Return a fully configured transport that can be used to connect to the computer set for this instance."""
         computer = self.computer
         transport_type = computer.transport_type

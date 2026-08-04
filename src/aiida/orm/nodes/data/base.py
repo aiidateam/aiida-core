@@ -8,6 +8,8 @@
 ###########################################################################
 """`Data` sub class to be used as a base for data containers that represent base python data types."""
 
+from __future__ import annotations
+
 import typing as t
 from functools import singledispatch
 

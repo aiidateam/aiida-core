@@ -8,6 +8,8 @@
 ###########################################################################
 """Tools for handling Crystallographic Information Files (CIF)"""
 
+from __future__ import annotations
+
 import re
 import typing as t
 

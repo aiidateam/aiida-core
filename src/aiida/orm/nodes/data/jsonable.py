@@ -1,5 +1,7 @@
 """Data plugin that allows to easily wrap objects that are JSON-able."""
 
+from __future__ import annotations
+
 import importlib
 import json
 import typing

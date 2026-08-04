@@ -8,6 +8,8 @@
 ###########################################################################
 """Module with `Node` sub class `Data` to be used as a base class for data structures."""
 
+from __future__ import annotations
+
 from typing import Dict, Optional
 
 from aiida.common import exceptions

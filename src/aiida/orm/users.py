@@ -8,6 +8,8 @@
 ###########################################################################
 """Module for the ORM user class."""
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Optional, Tuple, Type
 
 from aiida.common import exceptions

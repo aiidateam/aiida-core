@@ -10,6 +10,8 @@
 functions to operate on them.
 """
 
+from __future__ import annotations
+
 import copy
 import functools
 import itertools

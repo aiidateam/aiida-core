@@ -8,6 +8,8 @@
 ###########################################################################
 """Module with `Node` sub class for calculation job processes."""
 
+from __future__ import annotations
+
 import datetime
 from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Sequence, Tuple, Type, Union
 

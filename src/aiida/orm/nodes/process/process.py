@@ -8,6 +8,8 @@
 ###########################################################################
 """Module with `Node` sub class for processes."""
 
+from __future__ import annotations
+
 import enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union

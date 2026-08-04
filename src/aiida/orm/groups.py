@@ -8,6 +8,8 @@
 ###########################################################################
 """AiiDA Group entites"""
 
+from __future__ import annotations
+
 import datetime
 import warnings
 from functools import cached_property

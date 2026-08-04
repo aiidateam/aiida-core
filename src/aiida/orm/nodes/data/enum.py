@@ -15,6 +15,8 @@ members (or enum members) and are functionally constants. The enum members have 
 ``Color.RED`` is ``RED`` and the value of ``Color.RED`` is ``1``.
 """
 
+from __future__ import annotations
+
 import typing as t
 from enum import Enum
 

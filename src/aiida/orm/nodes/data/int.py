@@ -8,6 +8,8 @@
 ###########################################################################
 """`Data` sub class to represent an integer value."""
 
+from __future__ import annotations
+
 import numbers
 
 from .base import to_aiida_type

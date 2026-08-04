@@ -8,6 +8,8 @@
 ###########################################################################
 """Module which provides decorators for AiiDA ORM entity -> DB field mappings."""
 
+from __future__ import annotations
+
 import datetime
 import typing as t
 from abc import ABCMeta

@@ -205,8 +205,11 @@ class QbBoolField(QbField):
         return self.as_filter() | other
 
     def __invert__(self) -> QbFieldFilters:
-        """Return a filter for only values that are False."""
-        return QbFieldFilters(((self, '==', False),))
+        """Return a filter for only values that are not `True`.
+
+        Some booleans are optional, so not `False`, but rather `None` (absent).
+        """
+        return QbFieldFilters(((self, '!==', True),))
 
 
 class QbArrayField(QbField):

@@ -448,13 +448,13 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             type[OrmModel],
             pdt.create_model(
                 'Model',
+                __config__=deepcopy(cls.ReadModel.model_config),
                 __base__=OrmModel,
                 __module__=cls.ReadModel.__module__,
+                __qualname__=f'{cast(Any, cls).__name__}.Model',
                 **cast(dict[str, Any], model_fields),
             ),
         )
-        model.__qualname__ = f'{cast(Any, cls).__name__}.Model'
-        model.model_config = deepcopy(cls.ReadModel.model_config)
 
         cls._COMPAT_MODEL = model
 
@@ -1172,9 +1172,9 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                     'AttributesModel',
                     __base__=cls.AttributesModel,
                     __module__=cls.__module__,
+                    __qualname__=f'{cls.__name__}.AttributesModel',
                 ),
             )
-            AttributesModel.__qualname__ = f'{cls.__name__}.AttributesModel'
             cls.AttributesModel = AttributesModel  # type: ignore[misc]
 
     @classmethod
@@ -1230,10 +1230,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 'ReadModel',
                 __base__=BaseReadModel,
                 __module__=cls.__module__,
+                __qualname__=f'{cls.__name__}.ReadModel',
                 **model_fields,
             ),
         )
-        ReadModel.__qualname__ = f'{cls.__name__}.ReadModel'
 
         cls.ReadModel = ReadModel  # type: ignore[misc]
 
@@ -1258,10 +1258,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 'ConstructorModel',
                 __base__=cls.BaseNodeModel,
                 __module__=cls.__module__,
+                __qualname__=f'{cls.__name__}.ConstructorModel',
                 **model_fields,
             ),
         )
-        ConstructorModel.__qualname__ = f'{cls.__name__}.ConstructorModel'
 
         cls._ConstructorModel = ConstructorModel
 

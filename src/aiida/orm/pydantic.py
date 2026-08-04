@@ -72,14 +72,15 @@ class OrmModel(AiiDABaseModel):
         model_fields: dict[str, tuple[t.Any, pdt.fields.FieldInfo]] = {}
         for key, field in cls.model_fields.items():
             annotation = field.annotation
+            field_copy = deepcopy(field)
             if get_metadata(field, 'may_be_large'):
                 continue
             if isinstance(annotation, type) and issubclass(annotation, OrmModel):
                 sub_minimal_model = annotation._as_minimal_model()
-                field.annotation = sub_minimal_model
+                field_copy.annotation = sub_minimal_model
                 if any(f.is_required() for f in sub_minimal_model.model_fields.values()):
-                    field.default_factory = None
-            model_fields[key] = (field.annotation, deepcopy(field))
+                    field_copy.default_factory = None
+            model_fields[key] = (field_copy.annotation, field_copy)
 
         MinimalModel = create_model(  # noqa: N806
             f'Minimal{model_name}',

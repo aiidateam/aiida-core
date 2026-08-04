@@ -12,7 +12,7 @@ extras: QbDictField('extras', dtype=typing.Optional[typing.Dict[str, typing.Any]
 imported: QbField('imported', dtype=typing.Optional[bool], is_attribute=True)
 job_id: QbStrField('job_id', dtype=typing.Optional[str], is_attribute=True)
 label: QbStrField('label', dtype=typing.Optional[str], is_attribute=False)
-last_job_info: QbStrField('last_job_info', dtype=typing.Optional[str], is_attribute=True)
+last_job_info: QbDictField('last_job_info', dtype=typing.Optional[dict], is_attribute=True)
 mtime: QbNumericField('mtime', dtype=typing.Optional[datetime.datetime], is_attribute=False)
 node_type: QbStrField('node_type', dtype=typing.Optional[str], is_attribute=False)
 paused: QbField('paused', dtype=<class 'bool'>, is_attribute=True)
@@ -30,7 +30,7 @@ retrieve_list: QbArrayField('retrieve_list', dtype=typing.Optional[typing.List[s
   is_attribute=True)
 retrieve_temporary_list: QbArrayField('retrieve_temporary_list', dtype=typing.Optional[typing.List[str]],
   is_attribute=True)
-scheduler_lastchecktime: QbStrField('scheduler_lastchecktime', dtype=typing.Optional[str],
+scheduler_lastchecktime: QbNumericField('scheduler_lastchecktime', dtype=typing.Optional[datetime.datetime],
   is_attribute=True)
 scheduler_state: QbStrField('scheduler_state', dtype=typing.Optional[str], is_attribute=True)
 sealed: QbField('sealed', dtype=<class 'bool'>, is_attribute=True)

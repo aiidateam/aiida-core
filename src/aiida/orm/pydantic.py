@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from copy import deepcopy
 import datetime
 import typing as t
+from copy import deepcopy
 
 import pydantic as pdt
 from pydantic import create_model
@@ -82,18 +82,21 @@ class OrmModel(AiiDABaseModel):
                     field_copy.default_factory = None
             model_fields[key] = (field_copy.annotation, field_copy)
 
-        MinimalModel = create_model(  # noqa: N806
-            f'Minimal{model_name}',
-            __config__=deepcopy(cls.model_config) | {'extra': 'ignore'},
-            __base__=OrmModel,
-            __module__=cls.__module__,
-            __qualname__=f'{orm_class_name}.Minimal{model_name}',
-            **model_fields,
+        MinimalModel = t.cast(  # noqa: N806
+            type[OrmModel],
+            create_model(
+                f'Minimal{model_name}',
+                __config__=deepcopy(cls.model_config) | {'extra': 'ignore'},
+                __base__=OrmModel,
+                __module__=cls.__module__,
+                __qualname__=f'{orm_class_name}.Minimal{model_name}',
+                **model_fields,
+            ),
         )
 
         # Make subsequent calls idempotent for this specific class and the derived model
-        cls._AIIDA_MINIMAL_MODEL = MinimalModel  # type: ignore[attr-defined]
-        MinimalModel._AIIDA_MINIMAL_MODEL = MinimalModel  # type: ignore[attr-defined]
+        cls._AIIDA_MINIMAL_MODEL = MinimalModel
+        MinimalModel._AIIDA_MINIMAL_MODEL = MinimalModel
 
         return MinimalModel
 

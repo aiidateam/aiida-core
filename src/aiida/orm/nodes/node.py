@@ -1217,7 +1217,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             # For exceptions that override `ReadModel`, we need to copy the overridden fields.
             # We don't know a priori which fields are overridden, so we copy all.
             BaseReadModel = cls.ReadModel.__bases__[0]  # noqa: N806
-            model_fields: dict[str, tuple[Any, pdt.fields.FieldInfo]] = {
+            model_fields = {
                 key: (field.annotation, deepcopy(field)) for key, field in cls.ReadModel.model_fields.items()
             }
 

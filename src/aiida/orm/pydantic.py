@@ -20,6 +20,8 @@ __all__ = ('OrmModel',)
 class OrmModel(AiiDABaseModel):
     """Base class for Read/Write/Attributes models."""
 
+    _AIIDA_MINIMAL_MODEL: type[OrmModel] | None = None
+
     model_config = pdt.ConfigDict(
         extra='forbid',
         json_encoders={
@@ -61,9 +63,13 @@ class OrmModel(AiiDABaseModel):
     @classmethod
     def _as_minimal_model(cls: type[OrmModel]) -> type[OrmModel]:
         """Return a derived model class excluding fields marked as "may_be_large"."""
-        cached = cls.__dict__.get('_AIIDA_MINIMAL_MODEL')
+        if cls.__name__.startswith('Minimal'):
+            return cls
+
+        cached = cls._AIIDA_MINIMAL_MODEL
         if isinstance(cached, type) and issubclass(cached, OrmModel):
             return cached
+
         try:
             orm_class_name, model_name = cls.__qualname__.split('.')
         except ValueError as exception:
@@ -94,9 +100,7 @@ class OrmModel(AiiDABaseModel):
             ),
         )
 
-        # Make subsequent calls idempotent for this specific class and the derived model
-        cls._AIIDA_MINIMAL_MODEL = MinimalModel
-        MinimalModel._AIIDA_MINIMAL_MODEL = MinimalModel
+        cls._AIIDA_MINIMAL_MODEL = MinimalModel  # cache the derived model on the original class
 
         return MinimalModel
 

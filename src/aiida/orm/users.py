@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Tuple, Type
+from typing import TYPE_CHECKING
 
 from aiida.common import exceptions
 from aiida.common.pydantic import MetadataField

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any
 
 from plumpy.process_states import ProcessState
 

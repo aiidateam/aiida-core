@@ -283,5 +283,5 @@ class ProjectionData(OrbitalData, ArrayData):
         If used will raise a NotImplementedError
         """
         raise NotImplementedError(
-            'You cannot set orbitals using this class!' ' This class is for setting orbitals and ' ' projections only!'
+            'You cannot set orbitals using this class! This class is for setting orbitals and  projections only!'
         )

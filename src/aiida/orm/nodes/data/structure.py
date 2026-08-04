@@ -16,7 +16,6 @@ import copy
 import functools
 import itertools
 import json
-import typing as t
 
 from aiida.common.constants import elements
 from aiida.common.exceptions import UnsupportedSpeciesError
@@ -505,7 +504,7 @@ def get_symbols_string(symbols, weights):
         pieces.append(f'{symbol}{weight:4.2f}')
     if has_vacancies(weights):
         pieces.append(f'X{1.0 - sum(weights):4.2f}')
-    return f"{{{''.join(sorted(pieces))}}}"
+    return f'{{{"".join(sorted(pieces))}}}'
 
 
 def has_vacancies(weights):
@@ -690,9 +689,9 @@ class StructureData(Data):
         pbc1: bool = MetadataField(description='Whether periodic in the a direction')
         pbc2: bool = MetadataField(description='Whether periodic in the b direction')
         pbc3: bool = MetadataField(description='Whether periodic in the c direction')
-        cell: t.List[t.List[float]] = MetadataField(description='The cell parameters')
-        kinds: t.Optional[t.List[dict]] = MetadataField(description='The kinds of atoms')
-        sites: t.Optional[t.List[dict]] = MetadataField(description='The atomic sites')
+        cell: list[list[float]] = MetadataField(description='The cell parameters')
+        kinds: list[dict] | None = MetadataField(description='The kinds of atoms')
+        sites: list[dict] | None = MetadataField(description='The atomic sites')
 
     def __init__(
         self,
@@ -947,7 +946,7 @@ class StructureData(Data):
             return_string += ' '.join([f'{i:18.10f}' for i in cell_vector])
             return_string += '\n'
         return_string += 'PRIMCOORD 1\n'
-        return_string += f'{int(len(sites))} 1\n'
+        return_string += f'{len(sites)} 1\n'
         for site in sites:
             # I checked above that it is not an alloy, therefore I take the
             # first symbol
@@ -1035,28 +1034,13 @@ class StructureData(Data):
 
         return_list = [f'{len(sites)}']
         return_list.append(
-            'Lattice="{} {} {} {} {} {} {} {} {}" pbc="{} {} {}"'.format(
-                cell[0][0],
-                cell[0][1],
-                cell[0][2],
-                cell[1][0],
-                cell[1][1],
-                cell[1][2],
-                cell[2][0],
-                cell[2][1],
-                cell[2][2],
-                self.pbc[0],
-                self.pbc[1],
-                self.pbc[2],
-            )
+            f'Lattice="{cell[0][0]} {cell[0][1]} {cell[0][2]} {cell[1][0]} {cell[1][1]} {cell[1][2]} {cell[2][0]} {cell[2][1]} {cell[2][2]}" pbc="{self.pbc[0]} {self.pbc[1]} {self.pbc[2]}"'
         )
         for site in sites:
             # I checked above that it is not an alloy, therefore I take the
             # first symbol
             return_list.append(
-                '{:6s} {:18.10f} {:18.10f} {:18.10f}'.format(
-                    self.get_kind(site.kind_name).symbols[0], site.position[0], site.position[1], site.position[2]
-                )
+                f'{self.get_kind(site.kind_name).symbols[0]:6s} {site.position[0]:18.10f} {site.position[1]:18.10f} {site.position[2]:18.10f}'
             )
 
         return_string = '\n'.join(return_list)
@@ -1373,7 +1357,7 @@ class StructureData(Data):
         if aseatom is not None:
             if kwargs:
                 raise ValueError(
-                    "If you pass 'ase' as a parameter to " 'append_atom, you cannot pass any further' 'parameter'
+                    "If you pass 'ase' as a parameter to append_atom, you cannot pass any furtherparameter"
                 )
             position = aseatom.position
             kind = Kind(ase=aseatom)
@@ -1431,9 +1415,9 @@ class StructureData(Data):
                 else:
                     raise ValueError(
                         'You are explicitly setting the name '
-                        "of the kind to '{}', that already "
+                        f"of the kind to '{kind.name}', that already "
                         'exists, but the two kinds are different!'
-                        ' (first difference: {})'.format(kind.name, firstdiff)
+                        f' (first difference: {firstdiff})'
                     )
 
         site = Site(kind_name=kind.name, position=position)
@@ -1518,7 +1502,7 @@ class StructureData(Data):
         return [k.name for k in self.kinds]
 
     @property
-    def cell(self) -> t.List[t.List[float]]:
+    def cell(self) -> list[list[float]]:
         """Returns the cell shape.
 
         :return: a 3x3 list of lists.
@@ -1971,7 +1955,7 @@ class Kind:
                 raise ValueError(
                     'Error using the Kind object. Are you sure '
                     'it is a Kind object? [Introspection says it is '
-                    '{}]'.format(str(type(oldkind)))
+                    f'{type(oldkind)!s}]'
                 )
 
         elif 'ase' in kwargs:
@@ -1992,7 +1976,7 @@ class Kind:
                 raise ValueError(
                     'Error using the aseatom object. Are you sure '
                     'it is a ase.atom.Atom object? [Introspection says it is '
-                    '{}]'.format(str(type(aseatom)))
+                    f'{type(aseatom)!s}]'
                 )
             if aseatom.tag != 0:
                 self.set_automatic_kind_name(tag=aseatom.tag)
@@ -2155,9 +2139,7 @@ class Kind:
         weights_tuple = _create_weights_tuple(value)
 
         if len(weights_tuple) != len(self._symbols):
-            raise ValueError(
-                'Cannot change the number of weights. Use the ' 'set_symbols_and_weights function instead.'
-            )
+            raise ValueError('Cannot change the number of weights. Use the set_symbols_and_weights function instead.')
         validate_weights_tuple(weights_tuple, _SUM_THRESHOLD)
 
         self._weights = weights_tuple
@@ -2210,9 +2192,7 @@ class Kind:
         symbols_tuple = _create_symbols_tuple(value)
 
         if len(symbols_tuple) != len(self._weights):
-            raise ValueError(
-                'Cannot change the number of symbols. Use the ' 'set_symbols_and_weights function instead.'
-            )
+            raise ValueError('Cannot change the number of symbols. Use the set_symbols_and_weights function instead.')
         validate_symbols_tuple(symbols_tuple)
 
         self._symbols = symbols_tuple

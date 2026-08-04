@@ -10,8 +10,6 @@
 
 from __future__ import annotations
 
-from typing import Dict, Optional
-
 from aiida.common import exceptions
 from aiida.common.lang import override
 from aiida.common.links import LinkType
@@ -115,7 +113,7 @@ class Data(Node):
             raise ValueError('Source must be supplied as a dictionary')
         unknown_attrs = tuple(set(source.keys()) - set(self._source_attributes))
         if unknown_attrs:
-            raise KeyError(f"Unknown source parameters: {', '.join(unknown_attrs)}")
+            raise KeyError(f'Unknown source parameters: {", ".join(unknown_attrs)}')
 
         self.base.attributes.set('source', source)
 
@@ -163,15 +161,13 @@ class Data(Node):
         except KeyError:
             if exporters.keys():
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'Currently implemented are: {}.'.format(
+                    'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
                         fileformat, self.__class__.__name__, ','.join(exporters.keys())
                     )
                 )
             else:
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'No formats are implemented yet.'.format(
-                        fileformat, self.__class__.__name__
-                    )
+                    f'The format {fileformat} is not implemented for {self.__class__.__name__}. No formats are implemented yet.'
                 )
 
         string, dictionary = func(main_file_name=main_file_name, **kwargs)
@@ -271,15 +267,13 @@ class Data(Node):
         except KeyError:
             if importers.keys():
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'Currently implemented are: {}.'.format(
+                    'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
                         fileformat, self.__class__.__name__, ','.join(importers.keys())
                     )
                 )
             else:
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'No formats are implemented yet.'.format(
-                        fileformat, self.__class__.__name__
-                    )
+                    f'The format {fileformat} is not implemented for {self.__class__.__name__}. No formats are implemented yet.'
                 )
 
         # func is bound to self by getattr in _get_importers()
@@ -328,15 +322,13 @@ class Data(Node):
         except KeyError:
             if converters.keys():
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'Currently implemented are: {}.'.format(
+                    'The format {} is not implemented for {}. Currently implemented are: {}.'.format(
                         object_format, self.__class__.__name__, ','.join(converters.keys())
                     )
                 )
             else:
                 raise ValueError(
-                    'The format {} is not implemented for {}. ' 'No formats are implemented yet.'.format(
-                        object_format, self.__class__.__name__
-                    )
+                    f'The format {object_format} is not implemented for {self.__class__.__name__}. No formats are implemented yet.'
                 )
 
         return func(*args)

@@ -26,7 +26,7 @@ class List(Data, MutableSequence):
     _LIST_KEY = 'list'
 
     class Model(Data.Model):
-        value: t.List[t.Any] = MetadataField(
+        value: list[t.Any] = MetadataField(
             description='Content of the data',
         )
 

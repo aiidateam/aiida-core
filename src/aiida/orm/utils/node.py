@@ -153,5 +153,5 @@ class AbstractNodeMeta(EntityFieldMeta):
 
     def __new__(mcs, name, bases, namespace, **kwargs):
         newcls = super().__new__(mcs, name, bases, namespace, **kwargs)
-        newcls._logger = logging.getLogger(f"{namespace['__module__']}.{name}")
+        newcls._logger = logging.getLogger(f'{namespace["__module__"]}.{name}')
         return newcls

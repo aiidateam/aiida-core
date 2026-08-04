@@ -60,9 +60,9 @@ class QbField:
     def __init__(
         self,
         key: str,
-        alias: t.Optional[str] = None,
+        alias: str | None = None,
         *,
-        dtype: t.Optional[t.Any] = None,
+        dtype: t.Any | None = None,
         doc: str = '',
         is_attribute: bool = True,
         is_subscriptable: bool = False,
@@ -98,12 +98,12 @@ class QbField:
         return self._doc
 
     @property
-    def dtype(self) -> t.Optional[t.Any]:
+    def dtype(self) -> t.Any | None:
         """Return the primitive root type."""
         return extract_root_type(self._dtype)
 
     @property
-    def annotation(self) -> t.Optional[t.Any]:
+    def annotation(self) -> t.Any | None:
         """Return the full type annotation."""
         return self._dtype
 
@@ -251,12 +251,12 @@ class QbFieldFilters:
 
     def __init__(
         self,
-        filters: t.Union[t.Sequence[t.Tuple[QbField, str, t.Any]], dict],
+        filters: t.Sequence[tuple[QbField, str, t.Any]] | dict,
     ):
-        self.filters: t.Dict[str, t.Any] = {}
+        self.filters: dict[str, t.Any] = {}
         self.add_filters(filters)
 
-    def as_dict(self) -> t.Dict[str, t.Any]:
+    def as_dict(self) -> dict[str, t.Any]:
         """Return the filters dictionary."""
         return self.filters
 
@@ -323,7 +323,7 @@ class QbFieldFilters:
             filters[key] = {operator: value}
         return QbFieldFilters(filters)
 
-    def _resolve_redundancy(self, other: QbFieldFilters, logical: str) -> t.Optional[QbFieldFilters]:
+    def _resolve_redundancy(self, other: QbFieldFilters, logical: str) -> QbFieldFilters | None:
         """Resolve redundant filters and nested logical operators."""
 
         if not isinstance(other, QbFieldFilters):
@@ -353,7 +353,7 @@ class QbFields:
 
     __isabstractmethod__ = False
 
-    def __init__(self, fields: t.Optional[t.Dict[str, QbField]] = None):
+    def __init__(self, fields: dict[str, QbField] | None = None):
         self._fields = fields or {}
 
     def __repr__(self) -> str:
@@ -478,8 +478,8 @@ class EntityFieldMeta(ABCMeta):
 
 class QbFieldArguments(t.TypedDict):
     key: str
-    alias: t.Optional[str]
-    dtype: t.Optional[t.Any]
+    alias: str | None
+    dtype: t.Any | None
     doc: str
     is_attribute: bool
     is_subscriptable: bool
@@ -487,9 +487,9 @@ class QbFieldArguments(t.TypedDict):
 
 def add_field(
     key: str,
-    alias: t.Optional[str] = None,
+    alias: str | None = None,
     *,
-    dtype: t.Optional[t.Any] = None,
+    dtype: t.Any | None = None,
     doc: str = '',
     is_attribute: bool = True,
     is_subscriptable: bool = False,

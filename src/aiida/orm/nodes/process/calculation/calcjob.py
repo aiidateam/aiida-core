@@ -11,8 +11,8 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Any, AnyStr, Dict, List, Optional, Tuple, Type, Union
 from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, AnyStr
 
 from aiida.common import exceptions
 from aiida.common.datastructures import CalcJobState

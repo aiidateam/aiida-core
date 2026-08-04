@@ -12,9 +12,9 @@ from __future__ import annotations
 
 import base64
 import datetime
-from functools import cached_property
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Generic, List, NoReturn, Optional, Tuple, Type, TypeVar
 from collections.abc import Iterator
+from functools import cached_property
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, NoReturn, TypeVar
 from uuid import UUID
 
 from typing_extensions import Self
@@ -232,9 +232,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             exclude_to_orm=True,
             exclude_from_cli=True,
         )
-        label: str | None = MetadataField(
-            None, description='The node label', is_attribute=False, exclude_from_cli=True
-        )
+        label: str | None = MetadataField(None, description='The node label', is_attribute=False, exclude_from_cli=True)
         description: str | None = MetadataField(
             None, description='The node description', is_attribute=False, exclude_from_cli=True
         )

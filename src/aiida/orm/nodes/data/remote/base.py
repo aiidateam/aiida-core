@@ -13,7 +13,6 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Union
 
 from aiida.common.pydantic import MetadataField
 from aiida.orm import AuthInfo
@@ -87,9 +86,7 @@ class RemoteData(Data):
             except OSError as exception:
                 if exception.errno == 2:  # file does not exist
                     raise OSError(
-                        'The required remote file {} on {} does not exist or has been deleted.'.format(
-                            full_path, self.computer.label
-                        )
+                        f'The required remote file {full_path} on {self.computer.label} does not exist or has been deleted.'
                     ) from exception
                 raise
 

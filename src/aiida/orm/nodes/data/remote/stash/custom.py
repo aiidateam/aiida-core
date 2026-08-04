@@ -10,8 +10,6 @@
 
 from __future__ import annotations
 
-from typing import List, Tuple, Union
-
 from aiida.common.datastructures import StashMode
 from aiida.common.lang import type_check
 from aiida.common.pydantic import MetadataField

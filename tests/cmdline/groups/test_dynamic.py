@@ -14,8 +14,8 @@ class CustomClass:
     class Model(BaseModel):
         """Model configuration."""
 
-        optional_type: t.Union[int, float] = Field(title='Optional type')
-        union_type: t.Union[int, float] = Field(title='Union type')
+        optional_type: int | float = Field(title='Optional type')
+        union_type: int | float = Field(title='Union type')
         without_default: str = Field(title='Without default')
         with_default: str = Field(title='With default', default='default')
         with_default_factory: str = Field(title='With default factory', default_factory=lambda: True)  # type: ignore[assignment]

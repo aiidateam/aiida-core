@@ -14,7 +14,7 @@ import abc
 import pathlib
 from enum import Enum
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Generic, List, NoReturn, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Generic, NoReturn, TypeVar
 
 from plumpy.base.utils import call_with_super_check, super_check
 from pydantic import BaseModel

@@ -12,10 +12,10 @@ from __future__ import annotations
 
 import datetime
 import warnings
+from collections.abc import Sequence
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, Tuple, Type, Union, cast
-from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from typing_extensions import Self
 
@@ -122,9 +122,7 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
             orm_class='core.user',
             orm_to_model=lambda group, _: group.user.pk,  # type: ignore[attr-defined]
         )
-        time: datetime.datetime | None = MetadataField(
-            description='The creation time of the node', is_attribute=False
-        )
+        time: datetime.datetime | None = MetadataField(description='The creation time of the node', is_attribute=False)
         label: str = MetadataField(description='The group label', is_attribute=False)
         description: str | None = MetadataField(description='The group description', is_attribute=False)
         extras: dict[str, Any] | None = MetadataField(

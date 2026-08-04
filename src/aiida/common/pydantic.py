@@ -36,7 +36,7 @@ def MetadataField(  # noqa: N802
     option_cls: t.Any | None = None,
     orm_class: type[Entity[t.Any, t.Any]] | str | None = None,
     orm_to_model: t.Callable[[Entity[t.Any, t.Any], Path], t.Any] | None = None,
-    model_to_orm: t.Callable[['BaseModel'], t.Any] | None = None,
+    model_to_orm: t.Callable[[BaseModel], t.Any] | None = None,
     exclude_to_orm: bool = False,
     exclude_from_cli: bool = False,
     is_attribute: bool = True,

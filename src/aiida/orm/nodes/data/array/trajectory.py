@@ -908,20 +908,20 @@ def plot_positions_XYZ(  # noqa: N802
     trajectories = zip(*positions.tolist())  # only used in enumerate() below
     fig = plt.figure(figsize=(12, 7))
 
-    plt.suptitle(r'Trajectory of {}'.format(label), fontsize=16)
+    plt.suptitle(fr'Trajectory of {label}', fontsize=16)
     nr_of_axes = 3
     gridspec = GridSpec(nr_of_axes, 1, hspace=0.0)
 
     ax1 = fig.add_subplot(gridspec[0])
-    plt.ylabel(r'X Position $\left[{}\right]$'.format(positions_unit))
+    plt.ylabel(fr'X Position $\left[{positions_unit}\right]$')
     plt.xticks([])
     plt.xlim(*tlim)
     ax2 = fig.add_subplot(gridspec[1])
-    plt.ylabel(r'Y Position $\left[{}\right]$'.format(positions_unit))
+    plt.ylabel(fr'Y Position $\left[{positions_unit}\right]$')
     plt.xticks([])
     plt.xlim(*tlim)
     ax3 = fig.add_subplot(gridspec[2])
-    plt.ylabel(r'Z Position $\left[{}\right]$'.format(positions_unit))
+    plt.ylabel(fr'Z Position $\left[{positions_unit}\right]$')
     plt.xlabel(f'Time [{times_unit}]')
     plt.xlim(*tlim)
     n_labels = np.minimum(n_labels, len(times))  # don't need more labels than times

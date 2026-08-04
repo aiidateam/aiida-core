@@ -121,7 +121,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
 
             # sort the bands by energy, and reorder the occupations accordingly
             # since after joining the two spins, I might have unsorted stuff
-            bands, occupations = [
+            bands, occupations = (
                 numpy.array(y)
                 for y in zip(
                     *[
@@ -132,7 +132,7 @@ def find_bandgap(bandsdata, number_electrons=None, fermi_energy=None):
                         ]
                     ]
                 )
-            ]
+            )
             number_electrons = int(round(sum(sum(i) for i in occupations) / num_kpoints))
 
             homo_indexes = [numpy.where(numpy.array([nint(_) for _ in x]) > 0)[0][-1] for x in occupations]
@@ -1113,7 +1113,7 @@ class BandsData(KpointsData):
             y_min_lim = the_bands.min()
         x_min_lim = min(x)  # this isn't a numpy array, but a list
         x_max_lim = max(x)
-        ytick_spacing = 10 ** int(math.log10((y_max_lim - y_min_lim)))
+        ytick_spacing = 10 ** int(math.log10(y_max_lim - y_min_lim))
 
         # prepare xticks labels
         sx1 = ''

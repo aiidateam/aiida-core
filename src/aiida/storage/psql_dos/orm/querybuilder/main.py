@@ -559,7 +559,7 @@ class SqlaQueryBuilder(BackendQueryBuilder):
 
         elif operator == 'in':
             try:
-                value_type_set = set(type(i) for i in value)
+                value_type_set = {type(i) for i in value}
             except TypeError:
                 raise TypeError('Value for operator `in` could not be iterated')
             if not value_type_set:

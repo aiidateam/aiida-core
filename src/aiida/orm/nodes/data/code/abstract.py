@@ -339,7 +339,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
         type_check(value, bool)
         self.base.extras.set(self._KEY_EXTRA_IS_HIDDEN, value)
 
-    def get_builder(self) -> 'ProcessBuilder':
+    def get_builder(self) -> ProcessBuilder:
         """Create and return a new ``ProcessBuilder`` for the ``CalcJob`` class of the plugin configured for this code.
 
         The configured calculation plugin class is defined by the ``default_calc_job_plugin`` property.

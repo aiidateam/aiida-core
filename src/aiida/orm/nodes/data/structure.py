@@ -533,8 +533,8 @@ def symop_ortho_from_fract(cell):
     import numpy
 
     a, b, c, alpha, beta, gamma = cell
-    alpha, beta, gamma = [math.pi * x / 180 for x in [alpha, beta, gamma]]
-    ca, cb, cg = [math.cos(x) for x in [alpha, beta, gamma]]
+    alpha, beta, gamma = (math.pi * x / 180 for x in [alpha, beta, gamma])
+    ca, cb, cg = (math.cos(x) for x in [alpha, beta, gamma])
     sg = math.sin(gamma)
 
     return numpy.array(
@@ -561,8 +561,8 @@ def symop_fract_from_ortho(cell):
     import numpy
 
     a, b, c, alpha, beta, gamma = cell
-    alpha, beta, gamma = [math.pi * x / 180 for x in [alpha, beta, gamma]]
-    ca, cb, cg = [math.cos(x) for x in [alpha, beta, gamma]]
+    alpha, beta, gamma = (math.pi * x / 180 for x in [alpha, beta, gamma])
+    ca, cb, cg = (math.cos(x) for x in [alpha, beta, gamma])
     sg = math.sin(gamma)
     ctg = cg / sg
     D = math.sqrt(sg * sg - cb * cb - ca * ca + 2 * ca * cb * cg)  # noqa: N806
@@ -929,7 +929,7 @@ class StructureData(Data):
             if site.kind_name not in [k.name for k in kinds]:
                 raise ValidationError(f'A site has kind {site.kind_name}, but no specie with that name exists')
 
-        kinds_without_sites = set(k.name for k in kinds) - set(s.kind_name for s in sites)
+        kinds_without_sites = {k.name for k in kinds} - {s.kind_name for s in sites}
         if kinds_without_sites:
             raise ValidationError(
                 f'The following kinds are defined, but there are no sites with that kind: {list(kinds_without_sites)}'

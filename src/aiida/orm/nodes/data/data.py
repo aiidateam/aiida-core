@@ -42,14 +42,14 @@ class Data(Node):
     # By default, if not found here,
     # The fileformat string is assumed to match the extension.
     # Example: {'dat': 'dat_multicolumn'}
-    _export_format_replacements: Dict[str, str] = {}
+    _export_format_replacements: dict[str, str] = {}
 
     # Data nodes are storable
     _storable = True
     _unstorable_message = 'storing for this node has been disabled'
 
     class Model(Node.Model):
-        source: Optional[dict] = MetadataField(
+        source: dict | None = MetadataField(
             None, description='Source of the data.', is_subscriptable=True, exclude_from_cli=True
         )
 
@@ -85,7 +85,7 @@ class Data(Node):
         return clone
 
     @property
-    def source(self) -> Optional[dict]:
+    def source(self) -> dict | None:
         """Gets the dictionary describing the source of Data object. Possible fields:
 
         * **db_name**: name of the source database.
@@ -294,7 +294,7 @@ class Data(Node):
         """
         if fileformat is None:
             fileformat = fname.split('.')[-1]
-        with open(fname, 'r', encoding='utf8') as fhandle:  # reads in cwd, if fname is not absolute
+        with open(fname, encoding='utf8') as fhandle:  # reads in cwd, if fname is not absolute
             self.importstring(fhandle.read(), fileformat)
 
     def _get_importers(self):

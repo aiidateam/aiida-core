@@ -149,7 +149,7 @@ class QbField:
 
     if t.TYPE_CHECKING:
 
-        def __getitem__(self, key: str) -> 'QbField': ...
+        def __getitem__(self, key: str) -> QbField: ...
 
 
 class QbNumericField(QbField):
@@ -225,7 +225,7 @@ class QbDictField(QbField):
         """Return a filter for only values with these keys"""
         return QbFieldFilters(((self, 'has_key', value),))
 
-    def __getitem__(self, key: str) -> 'QbAttrField':
+    def __getitem__(self, key: str) -> QbAttrField:
         """Return a new `QbField` with a nested key."""
         if not self.is_subscriptable:
             raise IndexError('This field is not subscriptable')
@@ -297,15 +297,15 @@ class QbFieldFilters:
             raise TypeError(f'Cannot compare QbFieldFilters to {type(other)}')
         return self.filters == other.filters
 
-    def __and__(self, other: 'QbFieldFilters') -> 'QbFieldFilters':
+    def __and__(self, other: QbFieldFilters) -> QbFieldFilters:
         """``a & b`` -> {'and': [`a.filters`, `b.filters`]}."""
         return self._resolve_redundancy(other, 'and') or QbFieldFilters({'and': [self.filters, other.filters]})
 
-    def __or__(self, other: 'QbFieldFilters') -> 'QbFieldFilters':
+    def __or__(self, other: QbFieldFilters) -> QbFieldFilters:
         """``a | b`` -> {'or': [`a.filters`, `b.filters`]}."""
         return self._resolve_redundancy(other, 'or') or QbFieldFilters({'or': [self.filters, other.filters]})
 
-    def __invert__(self) -> 'QbFieldFilters':
+    def __invert__(self) -> QbFieldFilters:
         """~(a > b) -> a !> b; ~(a !> b) -> a > b"""
         filters = deepcopy(self.filters)
         if 'and' in filters:
@@ -323,7 +323,7 @@ class QbFieldFilters:
             filters[key] = {operator: value}
         return QbFieldFilters(filters)
 
-    def _resolve_redundancy(self, other: 'QbFieldFilters', logical: str) -> t.Optional['QbFieldFilters']:
+    def _resolve_redundancy(self, other: QbFieldFilters, logical: str) -> t.Optional[QbFieldFilters]:
         """Resolve redundant filters and nested logical operators."""
 
         if not isinstance(other, QbFieldFilters):

@@ -1034,13 +1034,16 @@ class StructureData(Data):
 
         return_list = [f'{len(sites)}']
         return_list.append(
-            f'Lattice="{cell[0][0]} {cell[0][1]} {cell[0][2]} {cell[1][0]} {cell[1][1]} {cell[1][2]} {cell[2][0]} {cell[2][1]} {cell[2][2]}" pbc="{self.pbc[0]} {self.pbc[1]} {self.pbc[2]}"'
+            f'Lattice="{cell[0][0]} {cell[0][1]} {cell[0][2]} {cell[1][0]} {cell[1][1]} {cell[1][2]} '
+            f'{cell[2][0]} {cell[2][1]} {cell[2][2]}" '
+            f'pbc="{self.pbc[0]} {self.pbc[1]} {self.pbc[2]}"'
         )
         for site in sites:
             # I checked above that it is not an alloy, therefore I take the
             # first symbol
             return_list.append(
-                f'{self.get_kind(site.kind_name).symbols[0]:6s} {site.position[0]:18.10f} {site.position[1]:18.10f} {site.position[2]:18.10f}'
+                f'{self.get_kind(site.kind_name).symbols[0]:6s} '
+                f'{site.position[0]:18.10f} {site.position[1]:18.10f} {site.position[2]:18.10f}'
             )
 
         return_string = '\n'.join(return_list)

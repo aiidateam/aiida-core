@@ -86,7 +86,8 @@ class RemoteData(Data):
             except OSError as exception:
                 if exception.errno == 2:  # file does not exist
                     raise OSError(
-                        f'The required remote file {full_path} on {self.computer.label} does not exist or has been deleted.'
+                        f'The required remote file {full_path} on {self.computer.label} '
+                        'does not exist or has been deleted.'
                     ) from exception
                 raise
 

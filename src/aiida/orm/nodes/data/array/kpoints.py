@@ -55,7 +55,10 @@ class KpointsData(ArrayData):
         """
         try:
             mesh = self.get_kpoints_mesh()
-            return f'Kpoints mesh: {mesh[0][0]}x{mesh[0][1]}x{mesh[0][2]} (+{mesh[1][0]:.1f},{mesh[1][1]:.1f},{mesh[1][2]:.1f})'
+            return (
+                f'Kpoints mesh: {mesh[0][0]}x{mesh[0][1]}x{mesh[0][2]} '
+                f'(+{mesh[1][0]:.1f},{mesh[1][1]:.1f},{mesh[1][2]:.1f})'
+            )
         except AttributeError:
             try:
                 return f'(Path of {len(self.get_kpoints())} kpts)'
@@ -192,7 +195,8 @@ class KpointsData(ArrayData):
 
         if not isinstance(structuredata, StructureData):
             raise ValueError(
-                f'An instance of StructureData should be passed to the KpointsData, found instead {structuredata.__class__}'
+                'An instance of StructureData should be passed to the KpointsData, '
+                f'found instead {structuredata.__class__}'
             )
         cell = structuredata.cell
         self.set_cell(cell, structuredata.pbc)
@@ -351,7 +355,8 @@ class KpointsData(ArrayData):
                 kpoints = numpy.array([[0.0, 0.0, 0.0]])
             else:
                 raise ValueError(
-                    f'empty kpoints list is valid only in zero dimension; instead here with have {self._dimension} dimensions'
+                    'empty kpoints list is valid only in zero dimension; '
+                    f'instead here with have {self._dimension} dimensions'
                 )
 
         if len(kpoints.shape) <= 1:
@@ -367,7 +372,8 @@ class KpointsData(ArrayData):
 
         if kpoints.shape[1] < self._dimension:
             raise ValueError(
-                f'In a system which has {self._dimension} dimensions, kpoint needmore than {self._dimension} coordinates (found instead {kpoints.shape[1]})'
+                f'In a system which has {self._dimension} dimensions, '
+                f'kpoint needmore than {self._dimension} coordinates (found instead {kpoints.shape[1]})'
             )
 
         if weights is not None:

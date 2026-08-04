@@ -167,7 +167,8 @@ class Data(Node):
                 )
             else:
                 raise ValueError(
-                    f'The format {fileformat} is not implemented for {self.__class__.__name__}. No formats are implemented yet.'
+                    f'The format {fileformat} is not implemented for {self.__class__.__name__}. '
+                    'No formats are implemented yet.'
                 )
 
         string, dictionary = func(main_file_name=main_file_name, **kwargs)
@@ -273,7 +274,8 @@ class Data(Node):
                 )
             else:
                 raise ValueError(
-                    f'The format {fileformat} is not implemented for {self.__class__.__name__}. No formats are implemented yet.'
+                    f'The format {fileformat} is not implemented for {self.__class__.__name__}. '
+                    'No formats are implemented yet.'
                 )
 
         # func is bound to self by getattr in _get_importers()
@@ -328,7 +330,8 @@ class Data(Node):
                 )
             else:
                 raise ValueError(
-                    f'The format {object_format} is not implemented for {self.__class__.__name__}. No formats are implemented yet.'
+                    f'The format {object_format} is not implemented for {self.__class__.__name__}. '
+                    'No formats are implemented yet.'
                 )
 
         return func(*args)

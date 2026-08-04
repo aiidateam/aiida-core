@@ -307,7 +307,8 @@ class BandsData(KpointsData):
                 the_labels = [str(_) for _ in labels]
             else:
                 raise ValidationError(
-                    f'Band labels have an unrecognized type ({labels.__class__})but should be a string or a list of strings'
+                    'Band labels have an unrecognized type '
+                    f'({labels.__class__})but should be a string or a list of strings'
                 )
 
             if len(the_bands.shape) == 2 and len(the_labels) != 1:

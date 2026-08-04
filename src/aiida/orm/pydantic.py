@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import datetime
 import typing as t
 
@@ -67,14 +68,8 @@ class OrmModel(AiiDABaseModel):
             orm_class_name, model_name = cls.__qualname__.split('.')
         except ValueError as exception:
             raise ValueError(f"expected 'OrmClass.ModelName' format, got '{cls.__qualname__}'") from exception
-        MinimalModel = create_model(  # noqa: N806
-            f'Minimal{model_name}',
-            __base__=OrmModel,
-            __module__=cls.__module__,
-        )
-        MinimalModel.__qualname__ = f'{orm_class_name}.Minimal{model_name}'
-        MinimalModel.model_config['extra'] = 'ignore'
 
+        model_fields: dict[str, tuple[t.Any, pdt.fields.FieldInfo]] = {}
         for key, field in cls.model_fields.items():
             annotation = field.annotation
             if get_metadata(field, 'may_be_large'):
@@ -84,7 +79,16 @@ class OrmModel(AiiDABaseModel):
                 field.annotation = sub_minimal_model
                 if any(f.is_required() for f in sub_minimal_model.model_fields.values()):
                     field.default_factory = None
-            MinimalModel.model_fields[key] = field
+            model_fields[key] = (field.annotation, deepcopy(field))
+
+        MinimalModel = create_model(  # noqa: N806
+            f'Minimal{model_name}',
+            __config__=deepcopy(cls.model_config) | {'extra': 'ignore'},
+            __base__=OrmModel,
+            __module__=cls.__module__,
+            __qualname__=f'{orm_class_name}.Minimal{model_name}',
+            **model_fields,
+        )
 
         # Make subsequent calls idempotent for this specific class and the derived model
         cls._AIIDA_MINIMAL_MODEL = MinimalModel  # type: ignore[attr-defined]

@@ -5,7 +5,6 @@ import typing as t
 from copy import deepcopy
 
 import pydantic as pdt
-from pydantic import create_model
 from pydantic_core import PydanticUndefined
 
 from aiida.common.exceptions import EntryPointError, NotExistent
@@ -90,7 +89,7 @@ class OrmModel(AiiDABaseModel):
 
         MinimalModel = t.cast(  # noqa: N806
             type[OrmModel],
-            create_model(
+            pdt.create_model(
                 f'Minimal{model_name}',
                 __config__=deepcopy(cls.model_config) | {'extra': 'ignore'},
                 __base__=OrmModel,

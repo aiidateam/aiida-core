@@ -75,7 +75,7 @@ class OrmModel(AiiDABaseModel):
         except ValueError as exception:
             raise ValueError(f"expected 'OrmClass.ModelName' format, got '{cls.__qualname__}'") from exception
 
-        model_fields: dict[str, tuple[t.Any, pdt.fields.FieldInfo]] = {}
+        model_fields: dict[str, t.Any] = {}
         for key, field in cls.model_fields.items():
             annotation = field.annotation
             field_copy = deepcopy(field)

@@ -395,7 +395,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
             return annotation, merged_field
 
-        model_fields: dict[str, tuple[Any, pdt.fields.FieldInfo]] = {}
+        model_fields: dict[str, Any] = {}
 
         for key, field in cls.WriteModel.model_fields.items():
             if key in {'attributes', 'node_type'}:
@@ -452,7 +452,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 __base__=OrmModel,
                 __module__=cls.ReadModel.__module__,
                 __qualname__=f'{cast(Any, cls).__name__}.Model',
-                **cast(dict[str, Any], model_fields),
+                **model_fields,
             ),
         )
 
@@ -1198,7 +1198,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
         BaseReadModel: type[Node.ReadModel] = cls.ReadModel  # noqa: N806
 
-        model_fields: dict[str, tuple[Any, pdt.fields.FieldInfo]] = {}
+        model_fields: dict[str, Any] = {}
 
         if 'ReadModel' in cls.__dict__:
             # TODO ideally we should do this check with issubclass, but we can't import
@@ -1248,7 +1248,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             description='The constructor arguments.',
             write_only=True,
         )
-        model_fields: dict[str, tuple[Any, pdt.fields.FieldInfo]] = {
+        model_fields: dict[str, Any] = {
             'args': (cls.ConstructorArgsModel, args_field),
             'node_type': cls._get_patched_node_type_field(),
         }

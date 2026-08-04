@@ -40,9 +40,10 @@ _DIRECTIVE_OPT = re.compile(r'^:(\w[\w-]*):\s*(.*)')
 _BACKTICK_DIRECTIVE = re.compile(r'^```\{(\w+)\}\s*(.*)')
 
 # Inline MyST roles
-_ROLE_WITH_ANGLE = re.compile(r'\{[a-z:]+\}`([^<`]*?)\s*<[^>]+>`')  # {ref}`text <target>`
-_ROLE_TILDE = re.compile(r'\{[a-z:]+\}`~([^`]+)`')  # {py:class}`~full.path.Name` → Name
-_ROLE_PLAIN = re.compile(r'\{[a-z:]+\}`([^`]+)`')  # {role}`text`
+# Role names may contain ``:`` (``py:class``) and ``-`` (``bdg-secondary``, ``nb-download``).
+_ROLE_WITH_ANGLE = re.compile(r'\{[a-z:-]+\}`([^<`]*?)\s*<[^>]+>`')  # {ref}`text <target>`
+_ROLE_TILDE = re.compile(r'\{[a-z:-]+\}`~([^`]+)`')  # {py:class}`~full.path.Name` → Name
+_ROLE_PLAIN = re.compile(r'\{[a-z:-]+\}`([^`]+)`')  # {role}`text`
 _TARGET_LABEL = re.compile(r'^\([a-z][a-z0-9:_-]*\)=\s*$', re.MULTILINE)
 _NB_DOWNLOAD_LINE = re.compile(r'^.*\{nb-download\}.*$', re.MULTILINE)
 _EMPTY_ALERT = re.compile(r'<div class="alert alert-\w+">\s*<strong>\w+:</strong>\s*</div>', re.DOTALL)

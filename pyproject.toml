@@ -568,6 +568,8 @@ setenv =
 commands =
     sphinx-autobuild \
         --re-ignore build/.* \
+        --re-ignore .*/.aiida-tutorial/.* \
+        --re-ignore .*/tutorials/(results.npz|input.yaml)$ \
         --port 0 --open-browser \
         -n -b {posargs:html} docs/source/ docs/build/{posargs:html}
 

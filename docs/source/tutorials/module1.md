@@ -37,7 +37,7 @@ This module needs AiiDA and `aiida-shell`:
 
 ```bash
 # aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
-uv pip install git+https://github.com/aiidateam/aiida-core aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
+uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.com/aiidateam/aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
 ```
 
 It also uses the small `gsrd` simulator introduced in {ref}`Module 0 <tutorial:module0>`.
@@ -91,6 +91,11 @@ if not Path('include/setup_tutorial.py').exists():
 
 :::{tip}
 Prefer to use an AiiDA profile you already have? Replace the `%run` line with `from aiida import load_profile` followed by `load_profile()`.
+:::
+
+:::{note}
+To keep the sandbox self-contained, the setup cell points `AIIDA_PATH` at a local `.aiida-tutorial/` directory in your working directory, so this profile, its database, and its daemon live there instead of in your usual `~/.aiida`.
+Nothing here touches any AiiDA profile you already have, and deleting `.aiida-tutorial/` removes every trace of the tutorial.
 :::
 
 You can verify that the profile is set up correctly with `verdi status`:

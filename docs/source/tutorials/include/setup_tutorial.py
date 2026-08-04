@@ -138,6 +138,12 @@ os.environ['AIIDA_PROFILE'] = profile_name
 
 # Start the daemon (idempotent) so verdi status mirrors `verdi presto`'s.
 _daemon_client = get_daemon_client(profile_name)
+# ``is_daemon_running`` only checks that the PID file exists. That file can be left
+# behind stale when the daemon is killed without cleanup (a kernel restart between
+# runs, a reboot), which then makes ``verdi status`` report the daemon unreachable.
+# Remove a stale PID file first (a healthy daemon's file is left untouched) so the
+# check below reflects reality, then (re)start when needed.
+_daemon_client._clean_potentially_stale_pid_file()
 if not _daemon_client.is_daemon_running:
     _daemon_client.start_daemon()
 

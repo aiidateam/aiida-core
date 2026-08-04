@@ -951,7 +951,7 @@ class StructureData(Data):
             # I checked above that it is not an alloy, therefore I take the
             # first symbol
             return_string += f'{_atomic_numbers[self.get_kind(site.kind_name).symbols[0]]} '
-            return_string += '%18.10f %18.10f %18.10f\n' % tuple(site.position)
+            return_string += '{:18.10f} {:18.10f} {:18.10f}\n'.format(*tuple(site.position))
         return return_string.encode('utf-8'), {}
 
     def _prepare_cif(self, main_file_name=''):

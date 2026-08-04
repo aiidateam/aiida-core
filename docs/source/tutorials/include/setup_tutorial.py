@@ -39,6 +39,7 @@ import shutil
 import sys
 import time
 import urllib.request
+import warnings
 from contextlib import suppress
 
 from aiida import load_profile
@@ -92,12 +93,17 @@ profile_name = f'tutorial-{_session_hash}'
 # propagates to ``!verdi`` shell calls in the notebook, so they see this same
 # sandbox. Delete ``.aiida-tutorial/`` to remove every trace of the tutorial.
 os.environ['AIIDA_PATH'] = str(pathlib.Path('.aiida-tutorial').resolve())
-AiiDAConfigDir.set()  # re-read AIIDA_PATH (set above) and create the sandbox config dir
-reset_config()  # drop any config already loaded for a different directory
 
-# ``create=True`` so the sandbox config file is created on first run instead of
-# raising. On later runs the existing sandbox config is loaded untouched.
-config = get_config(create=True)
+# Creating this fresh config directory is the whole point of the sandbox, so silence
+# the "Creating AiiDA configuration folder" UserWarning AiiDA emits for it: that warning
+# exists to alert users who did not expect a new config dir, which is exactly what we do
+# want here. ``create=True`` likewise creates the sandbox config file on first run instead
+# of raising; on later runs the existing sandbox config is loaded untouched.
+with warnings.catch_warnings():
+    warnings.filterwarnings('ignore', message='Creating AiiDA configuration folder')
+    AiiDAConfigDir.set()  # re-read AIIDA_PATH (set above) and create the sandbox config dir
+    reset_config()  # drop any config already loaded for a different directory
+    config = get_config(create=True)
 
 # Remove stale tutorial profiles left over from previous runs in this sandbox: any
 # ``tutorial-*`` profile whose hash differs from the current one. Safe to run from

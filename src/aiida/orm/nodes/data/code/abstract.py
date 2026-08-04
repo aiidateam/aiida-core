@@ -202,7 +202,7 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
     @classmethod
     def _patch_cli_model(cls):
         """Patch `CliModel` by synthesizing it from the base and constructor models."""
-        model_fields: dict[str, t.Any] = {
+        model_fields: dict[str, tuple[t.Any, pdt.fields.FieldInfo]] = {
             'label': (
                 cls.BaseNodeModel.model_fields['label'].annotation,
                 deepcopy(cls.BaseNodeModel.model_fields['label']),

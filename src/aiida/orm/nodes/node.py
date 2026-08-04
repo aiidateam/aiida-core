@@ -1197,7 +1197,8 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
 
         BaseReadModel: type[Node.ReadModel] = cls.ReadModel  # noqa: N806
-        model_fields: dict[str, Any] = {}
+
+        model_fields: dict[str, tuple[Any, pdt.fields.FieldInfo]] = {}
 
         if 'ReadModel' in cls.__dict__:
             # TODO ideally we should do this check with issubclass, but we can't import
@@ -1216,7 +1217,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             # For exceptions that override `ReadModel`, we need to copy the overridden fields.
             # We don't know a priori which fields are overridden, so we copy all.
             BaseReadModel = cls.ReadModel.__bases__[0]  # noqa: N806
-            model_fields = {
+            model_fields: dict[str, tuple[Any, pdt.fields.FieldInfo]] = {
                 key: (field.annotation, deepcopy(field)) for key, field in cls.ReadModel.model_fields.items()
             }
 
@@ -1247,7 +1248,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
             description='The constructor arguments.',
             write_only=True,
         )
-        model_fields: dict[str, Any] = {
+        model_fields: dict[str, tuple[Any, pdt.fields.FieldInfo]] = {
             'args': (cls.ConstructorArgsModel, args_field),
             'node_type': cls._get_patched_node_type_field(),
         }

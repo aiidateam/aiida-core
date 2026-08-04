@@ -386,7 +386,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
             except TypeError:
                 return Any | None
 
-        model_fields: dict[str, Any] = {
+        model_fields: dict[str, tuple[Any, pdt.fields.FieldInfo]] = {
             key: (field.annotation, deepcopy(field)) for key, field in cls.WriteModel.model_fields.items()
         }
 
@@ -586,7 +586,7 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
                 bases.append(OrmFieldsAsModelDump)  # write models should inherit the override
             bases.append(base_cls)
 
-            model_fields: dict[str, Any] = {
+            model_fields: dict[str, tuple[Any, pdt.fields.FieldInfo]] = {
                 key: copy_model_field(field)
                 for key, field in model_cls.model_fields.items()
                 if not get_metadata(field, 'read_only', False)

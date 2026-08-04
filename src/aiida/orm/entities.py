@@ -556,6 +556,24 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
             :return: The derived creation model class.
             """
 
+            from pydantic._internal._decorators import PydanticDescriptorProxy
+
+            def copy_decorator(model_cls: type[OrmModel], name: str, decorator: Any) -> PydanticDescriptorProxy:
+                """Reconstruct a Pydantic decorator for installation on a new model."""
+
+                for parent in model_cls.__mro__:
+                    if name in parent.__dict__:
+                        wrapped = parent.__dict__[name]
+                        break
+                else:
+                    raise RuntimeError(f'Could not locate decorated attribute {name!r} on {model_cls.__qualname__}')
+
+                return PydanticDescriptorProxy(
+                    wrapped=wrapped,
+                    decorator_info=deepcopy(decorator.info),
+                    shim=decorator.shim,
+                )
+
             def copy_model_field(field: pdt.fields.FieldInfo) -> tuple[Any, pdt.fields.FieldInfo]:
                 """Copy a model field, replacing any nested read models with their write model equivalent."""
                 annotation = field.annotation
@@ -574,32 +592,30 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
                 if not get_metadata(field, 'read_only', False)
             }
 
-            serializers = {
-                key: deepcopy(serializer)
-                for key, serializer in model_cls.__pydantic_decorators__.field_serializers.items()
-                if all(serializer_key in model_fields for serializer_key in serializer.info.fields)
-            }
+            decorators: dict[str, Any] = {}
 
-            validators = {
-                key: deepcopy(validator)
-                for key, validator in model_cls.__pydantic_decorators__.field_validators.items()
-                if all(validator_key in model_fields for validator_key in validator.info.fields)
-            }
+            for registry in (
+                model_cls.__pydantic_decorators__.field_validators,
+                model_cls.__pydantic_decorators__.field_serializers,
+            ):
+                for name, decorator in registry.items():
+                    # Only retain decorators for the remaining non-read-only fields
+                    if all(field in model_fields for field in decorator.info.fields):
+                        decorators[name] = copy_decorator(model_cls, name, decorator)
 
             name = model_cls.__name__.replace(suffix, 'WriteModel')
             WriteModel = cast(  # noqa: N806
                 type[OrmModel],
                 pdt.create_model(
                     name,
+                    __config__=deepcopy(model_cls.model_config),
                     __base__=tuple(bases),
                     __module__=model_cls.__module__,
+                    __qualname__=model_cls.__qualname__.replace(suffix, 'WriteModel'),
+                    __validators__=decorators,
                     **model_fields,
                 ),
             )
-            WriteModel.__qualname__ = model_cls.__qualname__.replace(suffix, 'WriteModel')
-            WriteModel.__pydantic_decorators__.field_serializers = serializers
-            WriteModel.__pydantic_decorators__.field_validators = validators
-            WriteModel.model_config = deepcopy(model_cls.model_config)
 
             return WriteModel
 

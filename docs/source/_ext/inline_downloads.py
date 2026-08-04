@@ -252,9 +252,8 @@ def _clean_markdown(text: str) -> str:
     """Remove MyST-only constructs that have no Jupyter equivalent."""
     # Remove target labels like (tutorial:module1)=
     text = _TARGET_LABEL.sub('', text)
-    # Remove {nb-download} lines (self-referential in downloaded notebook)
-    text = _NB_DOWNLOAD_LINE.sub('', text)
-    # Remove empty alert divs (e.g. tip that only contained a {nb-download} link)
+    # Remove empty alert divs (e.g. the tip that only contained a {nb-download} link,
+    # whose line is stripped earlier in _process_markdown_cells).
     text = _EMPTY_ALERT.sub('', text)
     # Clean up multiple blank lines
     text = re.sub(r'\n{3,}', '\n\n', text)
@@ -278,6 +277,11 @@ def _process_markdown_cells(cells: list[dict], source_dir: Path) -> bool:
         lines = original.split('\n')
         converted = _convert_myst_block(lines, source_dir)
         text = '\n'.join(converted)
+        # Drop the self-referential ``{nb-download}`` line before roles are stripped
+        # to plain text: role conversion erases the ``{nb-download}`` marker this match
+        # relies on, which would otherwise leave the "download as a notebook" tip (and
+        # its no-longer-empty alert div) stranded inside the downloaded notebook.
+        text = _NB_DOWNLOAD_LINE.sub('', text)
         text = _convert_inline_roles(text)
         text = _clean_markdown(text)
 

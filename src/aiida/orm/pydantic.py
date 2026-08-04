@@ -71,8 +71,8 @@ class OrmModel(AiiDABaseModel):
             f'Minimal{model_name}',
             __base__=OrmModel,
             __module__=cls.__module__,
+            __qualname__=f'{orm_class_name}.Minimal{model_name}',
         )
-        MinimalModel.__qualname__ = f'{orm_class_name}.Minimal{model_name}'
         MinimalModel.model_config['extra'] = 'ignore'
 
         for key, field in cls.model_fields.items():

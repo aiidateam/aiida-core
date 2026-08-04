@@ -270,3 +270,22 @@ def test_boolean_query():
     result = query(filters=~orm.Bool.fields.value & (orm.Bool.fields.label == 'false'))
     assert len(result) == 1
     assert result == [False]
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_boolean_null_attribute_query():
+    """Test querying for null (absent) boolean attribute."""
+
+    node = orm.KpointsData().store()
+
+    result = (
+        orm.QueryBuilder()
+        .append(
+            orm.KpointsData,
+            filters=~orm.KpointsData.fields.attributes.pbc1,
+            project=orm.KpointsData.fields.pk,
+        )
+        .all(flat=True)
+    )
+
+    assert result == [node.pk]

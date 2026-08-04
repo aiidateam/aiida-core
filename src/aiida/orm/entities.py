@@ -408,7 +408,6 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
             type[OrmModel],
             pdt.create_model(
                 'Model',
-                __config__=deepcopy(cls.ReadModel.model_config),
                 __base__=OrmModel,
                 __module__=cls.ReadModel.__module__,
                 __qualname__=f'{cast(Any, cls).__name__}.Model',

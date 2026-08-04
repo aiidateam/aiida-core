@@ -220,7 +220,6 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
             type[OrmModel],
             pdt.create_model(
                 'CliModel',
-                __config__=deepcopy(cls.ConstructorArgsModel.model_config),
                 __base__=OrmModel,
                 __module__=cls.__module__,
                 __qualname__=f'{cls.__name__}.CliModel',

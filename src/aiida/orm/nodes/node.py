@@ -395,7 +395,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
             return annotation, merged_field
 
-        model_fields: dict[str, tuple[Any, pdt.fields.FieldInfo]] = {}
+        model_fields: dict[str, Any] = {}
 
         for key, field in cls.WriteModel.model_fields.items():
             if key in {'attributes', 'node_type'}:
@@ -450,11 +450,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 'Model',
                 __base__=OrmModel,
                 __module__=cls.ReadModel.__module__,
-                **cast(dict[str, Any], model_fields),
+                __qualname__=f'{cast(Any, cls).__name__}.Model',
+                **model_fields,
             ),
         )
-        model.__qualname__ = f'{cast(Any, cls).__name__}.Model'
-        model.model_config = deepcopy(cls.ReadModel.model_config)
 
         cls._COMPAT_MODEL = model
 
@@ -1172,9 +1171,9 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                     'AttributesModel',
                     __base__=cls.AttributesModel,
                     __module__=cls.__module__,
+                    __qualname__=f'{cls.__name__}.AttributesModel',
                 ),
             )
-            AttributesModel.__qualname__ = f'{cls.__name__}.AttributesModel'
             cls.AttributesModel = AttributesModel  # type: ignore[misc]
 
     @classmethod
@@ -1197,6 +1196,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
 
         BaseReadModel: type[Node.ReadModel] = cls.ReadModel  # noqa: N806
+
         model_fields: dict[str, Any] = {}
 
         if 'ReadModel' in cls.__dict__:
@@ -1230,10 +1230,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 'ReadModel',
                 __base__=BaseReadModel,
                 __module__=cls.__module__,
+                __qualname__=f'{cls.__name__}.ReadModel',
                 **model_fields,
             ),
         )
-        ReadModel.__qualname__ = f'{cls.__name__}.ReadModel'
 
         cls.ReadModel = ReadModel  # type: ignore[misc]
 
@@ -1258,10 +1258,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 'ConstructorModel',
                 __base__=cls.BaseNodeModel,
                 __module__=cls.__module__,
+                __qualname__=f'{cls.__name__}.ConstructorModel',
                 **model_fields,
             ),
         )
-        ConstructorModel.__qualname__ = f'{cls.__name__}.ConstructorModel'
 
         cls._ConstructorModel = ConstructorModel
 

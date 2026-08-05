@@ -410,11 +410,10 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
                 'Model',
                 __base__=OrmModel,
                 __module__=cls.ReadModel.__module__,
+                __qualname__=f'{cast(Any, cls).__name__}.Model',
                 **model_fields,
             ),
         )
-        model.__qualname__ = f'{cast(Any, cls).__name__}.Model'
-        model.model_config = deepcopy(cls.ReadModel.model_config)
 
         cls._COMPAT_MODEL = model
 
@@ -591,15 +590,15 @@ class Entity(abc.ABC, Generic[BackendEntityType, CollectionType]):
                 type[OrmModel],
                 pdt.create_model(
                     name,
+                    __config__=deepcopy(model_cls.model_config),
                     __base__=tuple(bases),
                     __module__=model_cls.__module__,
+                    __qualname__=model_cls.__qualname__.replace(suffix, 'WriteModel'),
                     **model_fields,
                 ),
             )
-            WriteModel.__qualname__ = model_cls.__qualname__.replace(suffix, 'WriteModel')
             WriteModel.__pydantic_decorators__.field_serializers = serializers
             WriteModel.__pydantic_decorators__.field_validators = validators
-            WriteModel.model_config = deepcopy(model_cls.model_config)
 
             return WriteModel
 

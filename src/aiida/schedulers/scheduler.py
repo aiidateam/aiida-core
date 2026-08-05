@@ -354,7 +354,7 @@ class Scheduler(metaclass=abc.ABCMeta):
 
     def can_get_detailed_job_info(self) -> bool:
         try:
-            self._get_detailed_job_info_command('')
+            self._get_detailed_job_info_command('1')
         except exceptions.FeatureNotAvailable:
             return False
         return True

@@ -185,7 +185,7 @@ def test_status_surfaces_zeromq_probe_error(run_cli_command, monkeypatch, tmp_pa
     broker.check_service_reachable = lambda: True
     monkeypatch.setattr(get_manager(), 'get_broker', lambda: broker)
     monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
-    monkeypatch.setattr(DaemonClient, 'get_daemon_env_info', lambda self: None)
+    monkeypatch.setattr(DaemonClient, '_get_daemon_env_info', lambda self: None)
 
     result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
 
@@ -202,7 +202,7 @@ def test_version_mismatch_warning(run_cli_command, monkeypatch, tmp_path):
     monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
     monkeypatch.setattr(
         DaemonClient,
-        'get_daemon_env_info',
+        '_get_daemon_env_info',
         lambda self: {
             'packages': {'aiida-core': {'version': '2.8.0.post0', 'editable_path': str(daemon_path)}},
             'python_binary': sys.executable,
@@ -210,7 +210,7 @@ def test_version_mismatch_warning(run_cli_command, monkeypatch, tmp_path):
     )
     monkeypatch.setattr(
         DaemonClient,
-        'get_package_version_snapshot',
+        '_get_package_version_snapshot',
         staticmethod(lambda: {'aiida-core': {'version': '2.8.0.post0', 'editable_path': str(current_path)}}),
     )
 
@@ -248,10 +248,10 @@ def test_version_mismatch_warning_for_added_or_removed_plugin(
     monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
     monkeypatch.setattr(
         DaemonClient,
-        'get_daemon_env_info',
+        '_get_daemon_env_info',
         lambda self: {'packages': daemon_packages, 'python_binary': sys.executable},
     )
-    monkeypatch.setattr(DaemonClient, 'get_package_version_snapshot', staticmethod(lambda: current_packages))
+    monkeypatch.setattr(DaemonClient, '_get_package_version_snapshot', staticmethod(lambda: current_packages))
 
     result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
     assert 'different package versions' in result.output
@@ -274,10 +274,10 @@ def test_no_warning_when_versions_match(run_cli_command, monkeypatch, tmp_path, 
     monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
     monkeypatch.setattr(
         DaemonClient,
-        'get_daemon_env_info',
+        '_get_daemon_env_info',
         lambda self: {'packages': {'aiida-core': pkg_info}, 'python_binary': sys.executable},
     )
-    monkeypatch.setattr(DaemonClient, 'get_package_version_snapshot', staticmethod(lambda: {'aiida-core': pkg_info}))
+    monkeypatch.setattr(DaemonClient, '_get_package_version_snapshot', staticmethod(lambda: {'aiida-core': pkg_info}))
 
     result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
     assert 'different package versions' not in result.output
@@ -303,11 +303,11 @@ def test_warning_when_editable_install_state_changes(
     monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
     monkeypatch.setattr(
         DaemonClient,
-        'get_daemon_env_info',
+        '_get_daemon_env_info',
         lambda self: {'packages': {'aiida-core': daemon_info}, 'python_binary': sys.executable},
     )
     monkeypatch.setattr(
-        DaemonClient, 'get_package_version_snapshot', staticmethod(lambda: {'aiida-core': current_info})
+        DaemonClient, '_get_package_version_snapshot', staticmethod(lambda: {'aiida-core': current_info})
     )
 
     result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
@@ -319,7 +319,7 @@ def test_warning_when_editable_install_state_changes(
 def test_no_warning_when_version_file_missing(run_cli_command, monkeypatch):
     """Test that ``verdi status`` shows no warning when version file is missing."""
     monkeypatch.setattr(DaemonClient, 'get_status', lambda self, timeout=None: {'pid': 12345})
-    monkeypatch.setattr(DaemonClient, 'get_daemon_env_info', lambda self: None)
+    monkeypatch.setattr(DaemonClient, '_get_daemon_env_info', lambda self: None)
 
     result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
     assert 'different package versions' not in result.output

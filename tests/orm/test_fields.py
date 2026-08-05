@@ -273,19 +273,31 @@ def test_boolean_query():
 
 
 @pytest.mark.usefixtures('aiida_profile_clean')
-def test_boolean_null_attribute_query():
-    """Test querying for null (absent) boolean attribute."""
+def test_boolean_query_absent_attribute():
+    """Negating a boolean field must match rows where the attribute is absent.
 
-    node = orm.KpointsData().store()
+    Flag-style attributes like ``paused`` are stored as ``True`` or not at all: ``unpause()``
+    deletes the key rather than storing ``False``. So ``~field`` has to match every row where
+    the attribute is not ``True``, absent rows included.
+    """
+    # One node stays paused: the `paused` attribute is stored as `True`.
+    paused_node = orm.CalculationNode().store()
+    paused_node.pause()
 
-    result = (
-        orm.QueryBuilder()
-        .append(
-            orm.KpointsData,
-            filters=~orm.KpointsData.fields.attributes.pbc1,
-            project=orm.KpointsData.fields.pk,
-        )
-        .all(flat=True)
-    )
+    # One node is paused and then unpaused: the `paused` attribute is deleted, not set to `False`.
+    unpaused_node = orm.CalculationNode().store()
+    unpaused_node.pause()
+    unpaused_node.unpause()
 
-    assert result == [node.pk]
+    # The stored state the query relies on: `True` on one node, absent on the other, even though
+    # the `.paused` property reads back `False` for the absent case (via `attributes.get(key, False)`).
+    assert paused_node.base.attributes.all == {'paused': True}
+    assert unpaused_node.base.attributes.all == {}
+    assert unpaused_node.paused is False
+
+    def count(filters):
+        return orm.QueryBuilder().append(orm.CalculationNode, filters=filters).count()
+
+    assert count(orm.CalculationNode.fields.paused) == 1  # only the paused node
+    assert count(~orm.CalculationNode.fields.paused) == 1  # only the unpaused node
+    assert count(orm.CalculationNode.fields.paused | ~orm.CalculationNode.fields.paused) == 2  # both

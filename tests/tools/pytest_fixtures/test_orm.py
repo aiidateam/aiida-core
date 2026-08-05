@@ -18,6 +18,9 @@ pytest_plugins = ['aiida.tools.pytest_fixtures']
 def test_aiida_localhost(aiida_localhost):
     """Test the ``aiida_localhost`` fixture."""
     assert aiida_localhost.label == 'localhost'
+    assert aiida_localhost.hostname == 'localhost'
+    assert aiida_localhost.transport_type == 'core.local'
+    assert aiida_localhost.scheduler_type == 'core.direct'
 
 
 @pytest.mark.parametrize(

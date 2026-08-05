@@ -205,7 +205,7 @@ class TestVisGraph:
 
         expected = {
             'State: running" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]',
-            '@localhost" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]',
+            f'@{self.computer.label}" color=lightgray fillcolor=white penwidth=2 shape=ellipse style=filled]',
             'Exit Code: 200" color=lightgray fillcolor=white penwidth=2 shape=rectangle style=filled]',
             f'N{nodes.fd1.pk} [label="FolderData ({nodes.fd1.pk})" color=lightgray fillcolor=white penwidth=2 '
             'shape=ellipse style=filled]',
@@ -262,7 +262,7 @@ class TestVisGraph:
                     State: running" fillcolor="#e38851ff" penwidth=0 shape=rectangle style=filled]
                 N{pd0} -> N{wc1} [color="#000000" style=dashed]
                 N{rd1} [label="RemoteData ({rd1})
-                    @localhost" fillcolor="#8cd499ff" penwidth=0 shape=ellipse style=filled]
+                    @{computer_label}" fillcolor="#8cd499ff" penwidth=0 shape=ellipse style=filled]
                 N{calc1} -> N{rd1} [color="#000000" style=solid]
                 N{fd1} [label="FolderData ({fd1})" fillcolor="#8cd499ff" penwidth=0 shape=ellipse style=filled]
                 N{wc1} -> N{fd1} [color="#000000" style=dashed]
@@ -276,7 +276,7 @@ class TestVisGraph:
                 N{rd1} -> N{calcf1} [color="#000000" style=solid]
                 N{calcf1} -> N{fd1} [color="#000000" style=solid]
                 N{calcf1} -> N{pd3} [color="#000000" style=solid]
-        }}""".format(**{k: v.pk for k, v in nodes.items()})
+        }}""".format(computer_label=self.computer.label, **{k: v.pk for k, v in nodes.items()})
 
         # dedent before comparison
         assert sorted([line.strip() for line in graph.graphviz.source.splitlines()]) == sorted(
@@ -301,7 +301,7 @@ class TestVisGraph:
                     State: running" fillcolor="#e38851ff" penwidth=0 shape=polygon sides=6 style=filled]
                 N{pd0} -> N{wc1} [color="#000000" style=dashed]
                 N{rd1} [label="RemoteData ({rd1})
-                    @localhost" pencolor=black shape=rectangle]
+                    @{computer_label}" pencolor=black shape=rectangle]
                 N{calc1} -> N{rd1} [color="#000000" style=solid]
                 N{fd1} [label="FolderData ({fd1})" pencolor=black shape=rectangle]
                 N{wc1} -> N{fd1} [color="#000000" style=dashed]
@@ -315,7 +315,7 @@ class TestVisGraph:
                 N{rd1} -> N{calcf1} [color="#000000" style=solid]
                 N{calcf1} -> N{fd1} [color="#000000" style=solid]
                 N{calcf1} -> N{pd3} [color="#000000" style=solid]
-        }}""".format(**{k: v.pk for k, v in nodes.items()})
+        }}""".format(computer_label=self.computer.label, **{k: v.pk for k, v in nodes.items()})
 
         # dedent before comparison
         assert sorted([line.strip() for line in graph.graphviz.source.splitlines()]) == sorted(

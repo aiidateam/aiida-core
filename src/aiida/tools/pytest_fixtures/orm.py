@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import pathlib
 import typing as t
 
@@ -291,12 +290,6 @@ def aiida_computer_ssh_async(aiida_computer) -> t.Callable[[], Computer]:
 def aiida_localhost(aiida_computer_local) -> Computer:
     """Return a :class:`aiida.orm.computers.Computer` instance representing localhost with ``core.local`` transport.
 
-    The computer's label is suffixed with the pytest-xdist worker id (e.g. ``localhost-gw0``,
-    or just ``localhost-master`` when not running under xdist). This keeps the fixture's row
-    distinct from any literal-``'localhost'`` Computer that ``verdi presto`` or other code
-    paths may create in the same profile, avoiding UNIQUE-constraint collisions on
-    ``Computer.label``.
-
     Usage::
 
         def test(aiida_localhost):
@@ -304,8 +297,7 @@ def aiida_localhost(aiida_computer_local) -> Computer:
 
     :return: The computer.
     """
-    worker_id = os.environ.get('PYTEST_XDIST_WORKER', 'master')
-    return aiida_computer_local(label=f'localhost-{worker_id}')
+    return aiida_computer_local(label='localhost')
 
 
 @pytest.fixture

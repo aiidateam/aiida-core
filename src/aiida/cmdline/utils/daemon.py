@@ -96,7 +96,7 @@ def validate_package_versions(env_info: DaemonEnvInfo) -> str | None:
     """Return an error message if daemon and current package versions differ, or None if they match."""
     from aiida.engine.daemon.client import DaemonClient
 
-    current_packages = DaemonClient.get_package_version_snapshot()
+    current_packages = DaemonClient._get_package_version_snapshot()
     validated = DaemonClient._validate_package_version_snapshot(current_packages)
     if validated is None:
         return None
@@ -114,7 +114,7 @@ def validate_package_versions(env_info: DaemonEnvInfo) -> str | None:
 
 def validate_daemon_env(client: DaemonClient) -> str | None:
     """Return an error message if the daemon environment differs from the current one, or None if they match."""
-    env_info = client.get_daemon_env_info()
+    env_info = client._get_daemon_env_info()
     if env_info is None:
         return None
 

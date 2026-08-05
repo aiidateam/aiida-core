@@ -299,12 +299,12 @@ def test_daemon_status_worker_timeout(run_cli_command):
 @patch.object(DaemonClient, 'get_worker_info', get_worker_info)
 @patch.object(
     DaemonClient,
-    'get_daemon_env_info',
+    '_get_daemon_env_info',
     lambda self: {'packages': {'aiida-core': {'version': '2.8.0.post0'}}, 'python_binary': sys.executable},
 )
 @patch.object(
     DaemonClient,
-    'get_package_version_snapshot',
+    '_get_package_version_snapshot',
     lambda: {'aiida-core': {'version': '2.8.0.post0'}, 'aiida-plugin': {'version': '1.2.3'}},
 )
 @patch('aiida.cmdline.utils.common.format_local_time', format_local_time)

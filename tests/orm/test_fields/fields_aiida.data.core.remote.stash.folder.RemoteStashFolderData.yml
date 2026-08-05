@@ -5,7 +5,7 @@ ctime: QbNumericField('ctime', dtype=<class 'datetime.datetime'>, doc='The creat
   time of the node')
 description: QbStrField('description', dtype=<class 'str'>, doc='The node description')
 extras: QbDictField('extras', dtype=dict[str, typing.Any], doc='The node extras')
-fail_on_missing: QbAnyField('attributes.fail_on_missing', dtype=<class 'bool'>, doc='Whether
+fail_on_missing: QbBoolField('attributes.fail_on_missing', dtype=<class 'bool'>, doc='Whether
   stashing should fail if any files are missing')
 label: QbStrField('label', dtype=<class 'str'>, doc='The node label')
 mtime: QbNumericField('mtime', dtype=<class 'datetime.datetime'>, doc='The modification
@@ -26,4 +26,4 @@ target_basepath: QbStrField('attributes.target_basepath', dtype=<class 'str'>, d
   the target basepath')
 user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the user who owns
   the node')
-uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')
+uuid: QbStrField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the node')

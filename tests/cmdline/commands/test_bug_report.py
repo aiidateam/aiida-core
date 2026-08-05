@@ -71,15 +71,6 @@ class BrokenStorageCloseBackend(DummyStorageBackend):
         raise RuntimeError('storage close unavailable')
 
 
-def _make_zeromq_broker(service_dir: pathlib.Path, is_running: bool, status: dict) -> ZeromqBroker:
-    """Create a ``ZeromqBroker`` instance without invoking its constructor."""
-    broker = ZeromqBroker.__new__(ZeromqBroker)
-    broker._service_dir = service_dir
-    broker.is_service_reachable = lambda: is_running
-    broker.probe_service_status = lambda: status
-    return broker
-
-
 def _patch_manager(monkeypatch, profile, broker, get_daemon_client):
     """Patch the global manager used by ``cmd_bug_report``."""
     manager = SimpleNamespace(
@@ -210,15 +201,16 @@ def test_collect_diagnostics_services(
 
 
 @pytest.mark.parametrize(
-    ('is_running', 'status'),
+    'status',
     [
-        (True, {'connected': True, 'pid': 4321, 'pending_tasks': 0}),
-        (False, {'connected': False, 'error': 'Broker is NOT running'}),
+        {'connected': True, 'pid': 4321, 'pending_tasks': 0},
+        {'connected': False, 'error': 'Broker is NOT running'},
     ],
 )
-def test_check_broker_zeromq_status(monkeypatch, tmp_path, is_running, status):
+def test_check_broker_zeromq_status(monkeypatch, status):
     """Test ``_check_broker`` reports the ZeroMQ broker service status payload."""
-    broker = _make_zeromq_broker(tmp_path, is_running=is_running, status=status)
+    broker = ZeromqBroker.__new__(ZeromqBroker)
+    broker.probe_service_status = lambda: status
     manager = SimpleNamespace(_broker=None, get_broker=lambda: broker, reset_broker=lambda: None)
     monkeypatch.setattr('aiida.manage.get_manager', lambda: manager)
 

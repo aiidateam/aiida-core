@@ -93,7 +93,7 @@ def test_check_service_reachable(monkeypatch, manager):
     close.assert_called_once_with()
 
 
-def test_is_service_reachable_false(monkeypatch, manager):
+def test_check_service_reachable_false(monkeypatch, manager):
     """Test RabbitMQ service reachability returns false on connection errors."""
     broker = manager.get_broker()
     close = MagicMock()
@@ -205,8 +205,8 @@ def test_get_rmq_url_quotes_credentials():
     assert url.startswith('amqp://user%2Fname:pass%3Fword%23fragment@127.0.0.1:5672?')
 
 
-def test_get_url_safe_quotes_then_redacts_credentials():
-    """Test safe broker URLs redact credentials after quoting reserved characters."""
+def test_get_url_redact_credentials_quotes_then_redacts_credentials():
+    """Test redacted broker URLs hide credentials after quoting reserved characters."""
     profile = SimpleNamespace(
         uuid='uuid',
         is_test_profile=False,
@@ -217,7 +217,7 @@ def test_get_url_safe_quotes_then_redacts_credentials():
     )
     broker = RabbitmqBroker(profile)
 
-    assert broker.get_url(safe=True).startswith('amqp://user%2Fname:***@127.0.0.1:5672?')
+    assert broker.get_url(redact_credentials=True).startswith('amqp://user%2Fname:***@127.0.0.1:5672?')
 
 
 @pytest.mark.parametrize('url', ('amqp://guest:guest@127.0.0.1:5672',))

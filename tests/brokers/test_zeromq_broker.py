@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 from unittest.mock import MagicMock, PropertyMock, patch
 
@@ -18,20 +19,44 @@ import pytest
 
 from aiida.brokers.zeromq.broker import ZeromqBroker, ZeromqIncomingTask
 from aiida.brokers.zeromq.queue import PersistentQueue
-from tests.conftest import _patch_zmq_broker_service_filepaths, _run_zeromq_broker_server
+from aiida.common.exceptions import ConfigurationError
+from aiida.manage.configuration import get_config
 
 
 @pytest.fixture(scope='module')
-def zeromq_broker_with_server(tmp_path_factory):
-    """Create a ZMQ broker instance with a ZMQ server running in the background."""
-    service_dir = tmp_path_factory.mktemp('zeromq-broker')
+def aiida_broker():
+    """Returns the broker for the aiida_profile session fixture with a running service."""
+    from aiida.manage import get_manager
+
+    broker = get_manager().get_broker()
+
+    if not isinstance(broker, ZeromqBroker):
+        pytest.skip('Requires a profile with a ZeroMQ broker.')
+
+    yield broker
+    broker.close()
+
+
+@pytest.fixture
+def zeromq_broker(tmp_path):
+    """Create a ZMQ broker instance rooted in ``tmp_path``."""
     profile = MagicMock()
-    profile.process_control_config = {'supervised_by_daemon': True}
     profile.name = 'test-profile'
-    with _patch_zmq_broker_service_filepaths(profile, service_dir):
-        broker = ZeromqBroker(profile)
-        with _run_zeromq_broker_server(broker):
-            yield broker
+    profile.process_control_backend = 'core.zeromq'
+
+    config = get_config()
+    original_filepaths = config.filepaths
+
+    def filepaths(current_profile):
+        result = copy.deepcopy(original_filepaths(current_profile))
+
+        if current_profile is profile:
+            result['broker_service'] = {'dir': str(tmp_path), 'log': str(tmp_path / 'broker.log')}
+
+        return result
+
+    with patch.object(config, 'filepaths', side_effect=filepaths):
+        yield ZeromqBroker(profile)
 
 
 def test_get_default_config():
@@ -39,14 +64,12 @@ def test_get_default_config():
     assert ZeromqBroker.get_default_config() == {'supervised_by_daemon': True}
 
 
-def test_not_supervised_by_daemon_raises():
-    """Test that broker construction fails when the service is not managed by the daemon."""
-    from aiida.common.exceptions import ConfigurationError
-
+def test_init_invalid_backend():
+    """Test the broker rejects profiles configured for a different backend."""
     profile = MagicMock()
-    profile.process_control_config = {'supervised_by_daemon': False}
+    profile.process_control_backend = 'core.rabbitmq'
 
-    with pytest.raises(ConfigurationError, match='not managed by the daemon'):
+    with pytest.raises(ConfigurationError, match=r'should be `core\.zeromq`'):
         ZeromqBroker(profile)
 
 
@@ -61,12 +84,12 @@ class TestZeromqBrokerStatusQueries:
         """Test probe_service_status captures a missing status file in the payload."""
         assert zeromq_broker.probe_service_status() == {
             'connected': False,
-            'error': f'Status file `{zeromq_broker.service_dir / "broker.status"}` does not exist.',
+            'error': f'Status file `{zeromq_broker._service_dir / "broker.status"}` does not exist.',
         }
 
-    def test_str_running(self, zeromq_broker_with_server):
+    def test_str_running(self, aiida_broker):
         """Test __str__ when running."""
-        s = str(zeromq_broker_with_server)
+        s = str(aiida_broker)
         assert 'ZeroMQ Broker' in s
         assert 'PID' in s
 
@@ -75,17 +98,17 @@ class TestZeromqBrokerStatusQueries:
         s = str(zeromq_broker)
         assert 'not running' in s
 
-    def test_storage_path(self, zeromq_broker, tmp_path):
-        """Test storage_path property."""
-        assert zeromq_broker.storage_path == tmp_path / 'storage'
+    def test__storage_path(self, zeromq_broker, tmp_path):
+        """Test internal storage path."""
+        assert zeromq_broker._storage_path == tmp_path / 'storage'
 
-    def test_service_dir(self, zeromq_broker, tmp_path):
-        """Test service_dir property."""
-        assert zeromq_broker.service_dir == tmp_path
+    def test__service_dir(self, zeromq_broker, tmp_path):
+        """Test internal service directory."""
+        assert zeromq_broker._service_dir == tmp_path
 
     def test_is_running_stale_pid(self, zeromq_broker):
         """Test is_running with stale PID."""
-        pid_file = zeromq_broker.service_dir / 'broker.pid'
+        pid_file = zeromq_broker._service_dir / 'broker.pid'
         pid_file.write_text('aiida-zeromq-broker 12345')
 
         with patch('aiida.brokers.zeromq.broker.psutil.Process', side_effect=psutil.NoSuchProcess(pid=12345)):
@@ -93,7 +116,7 @@ class TestZeromqBrokerStatusQueries:
 
     def test_probe_service_status_valid(self, zeromq_broker):
         """Test probe_service_status with valid JSON."""
-        status_file = zeromq_broker.service_dir / 'broker.status'
+        status_file = zeromq_broker._service_dir / 'broker.status'
         status_file.write_text(json.dumps({'pid': 123, 'running': True}))
         status = zeromq_broker.probe_service_status()
         assert status['connected'] is False
@@ -101,7 +124,7 @@ class TestZeromqBrokerStatusQueries:
 
     def test_probe_service_status_invalid_json(self, zeromq_broker):
         """Test probe_service_status captures invalid JSON in the payload."""
-        status_file = zeromq_broker.service_dir / 'broker.status'
+        status_file = zeromq_broker._service_dir / 'broker.status'
         status_file.write_text('{INVALID JSON')
         status = zeromq_broker.probe_service_status()
         assert status['connected'] is False
@@ -109,7 +132,7 @@ class TestZeromqBrokerStatusQueries:
 
     def test_probe_service_status_invalid_payload_type(self, zeromq_broker, caplog):
         """Test probe_service_status captures valid JSON with an invalid top-level type."""
-        status_file = zeromq_broker.service_dir / 'broker.status'
+        status_file = zeromq_broker._service_dir / 'broker.status'
         status_file.write_text(json.dumps(['invalid']))
 
         status = zeromq_broker.probe_service_status()
@@ -154,7 +177,7 @@ class TestZeromqBrokerCommunicator:
             patch.object(ZeromqBroker, '_router_endpoint', new_callable=PropertyMock) as router_endpoint,
             patch('aiida.brokers.zeromq.broker.time.monotonic', side_effect=[100.0, 100.1, 105.1, 105.2]),
             patch('aiida.brokers.zeromq.broker.time.sleep') as sleep,
-            patch('aiida.brokers.zeromq.broker.AIIDA_LOGGER.warning') as warning,
+            patch('aiida.brokers.zeromq.broker.LOGGER.warning') as warning,
             patch('aiida.manage.configuration.get_config_option', return_value=None),
             patch('aiida.brokers.zeromq.broker.ZeromqCommunicator') as communicator_cls,
         ):
@@ -169,20 +192,16 @@ class TestZeromqBrokerCommunicator:
             communicator_cls.assert_called_once_with(router_endpoint=endpoint, task_timeout=None)
             communicator.start.assert_called_once()
 
-    def test_get_communicator_and_close(self, zeromq_broker_with_server, monkeypatch):
-        """Test get_communicator and close."""
-        try:
-            with patch('aiida.manage.configuration.get_config_option', return_value=None):
-                monkeypatch.setattr('aiida.brokers.zeromq.broker.BROKER_READY_TIMEOUT', 0.5)
-                comm = zeromq_broker_with_server.get_communicator()
-                assert comm is not None
-                assert not comm.is_closed()
+    def test_get_communicator(self, aiida_broker, monkeypatch):
+        """Test get_communicator."""
+        monkeypatch.setattr('aiida.brokers.zeromq.broker.BROKER_READY_TIMEOUT', 0.5)
+        comm = aiida_broker.get_communicator()
+        assert comm is not None
+        assert not comm.is_closed()
 
-                # Second call returns cached instance
-                comm2 = zeromq_broker_with_server.get_communicator()
-                assert comm2 is comm
-        finally:
-            zeromq_broker_with_server.close()
+        # Second call returns cached instance
+        comm2 = aiida_broker.get_communicator()
+        assert comm2 is comm
 
     def test_get_communicator_timeout(self, zeromq_broker, monkeypatch):
         """Test get_communicator raises on timeout when zeromq_broker not running."""
@@ -206,7 +225,7 @@ class TestZeromqBrokerTasks:
 
     def test_iterate_tasks_with_data(self, zeromq_broker):
         """Test iterate_tasks with pending tasks."""
-        queue_path = zeromq_broker.storage_path / 'tasks'
+        queue_path = zeromq_broker._storage_path / 'tasks'
         queue = PersistentQueue(queue_path)
         queue.push('task-1', {'body': 'hello'})
         queue.push('task-2', {'body': 'world'})
@@ -237,10 +256,10 @@ class TestZeromqIncomingTask:
 class TestZeromqBrokerIntegration:
     """Integration tests for the ZeroMQ broker with AiiDA."""
 
-    def test_broker_lifecycle(self, zeromq_broker_with_server):
+    def test_broker_lifecycle(self, aiida_broker):
         """Test the zeromq_broker lifecycle."""
-        assert zeromq_broker_with_server.check_service_reachable()
+        assert aiida_broker.check_service_reachable()
 
-        status = zeromq_broker_with_server.probe_service_status()
+        status = aiida_broker.probe_service_status()
         assert status['connected'] is True
         assert 'pid' in status

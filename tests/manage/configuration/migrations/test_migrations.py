@@ -18,9 +18,10 @@ import pytest
 from aiida.common.exceptions import ConfigurationError, ConfigurationVersionError
 from aiida.manage.configuration.migrations import check_and_migrate_config
 from aiida.manage.configuration.migrations.migrations import (
-    CURRENT_CONFIG_VERSION,
+    MAXIMUM_DOWNGRADE_CONFIG_VERSION,
     MIGRATIONS,
     Initial,
+    config_can_be_downgraded,
     downgrade_config,
     upgrade_config,
 )
@@ -70,14 +71,41 @@ def test_downgrade_path_fail(load_config_sample):
         downgrade_config(config_initial, 4, migrations=[CircularMigration])
 
 
-def test_config_needs_migrating_incompatible_version():
+def test_config_needs_migrating_incompatible_version(monkeypatch):
     """An incompatible configuration version should raise with downgrade guidance."""
+    from aiida.manage.configuration.migrations import migrations
+
+    # Lower the loadable version below the downgrade cap so a config at the cap is unloadable but downgradeable,
+    # exercising the can_downgrade guidance path (config_needs_migrating downgrades to CURRENT_CONFIG_VERSION).
+    monkeypatch.setattr(migrations, 'CURRENT_CONFIG_VERSION', MAXIMUM_DOWNGRADE_CONFIG_VERSION - 1)
     config = {
-        'CONFIG_VERSION': {'CURRENT': CURRENT_CONFIG_VERSION + 1, 'OLDEST_COMPATIBLE': CURRENT_CONFIG_VERSION + 1}
+        'CONFIG_VERSION': {
+            'CURRENT': MAXIMUM_DOWNGRADE_CONFIG_VERSION,
+            'OLDEST_COMPATIBLE': MAXIMUM_DOWNGRADE_CONFIG_VERSION,
+        }
     }
 
-    with pytest.raises(ConfigurationVersionError, match=r'verdi config downgrade'):
+    with pytest.raises(ConfigurationVersionError, match=r'verdi config downgrade') as exception:
         check_and_migrate_config(config, filepath='/tmp/config.json')
+
+    assert exception.value._can_downgrade
+
+
+def test_config_can_be_downgraded():
+    """Test detecting whether a configuration can be downgraded by this AiiDA version.
+
+    The migrations are passed as one-shot generators over a multi-step chain to ensure the iterable is materialized
+    before being searched repeatedly (a consumed iterator would make the second lookup wrongly fail).
+    """
+    assert config_can_be_downgraded(
+        {'CONFIG_VERSION': {'CURRENT': MAXIMUM_DOWNGRADE_CONFIG_VERSION, 'OLDEST_COMPATIBLE': 0}},
+        target=MAXIMUM_DOWNGRADE_CONFIG_VERSION - 2,
+        migrations=(m for m in MIGRATIONS),
+    )
+    assert not config_can_be_downgraded(
+        {'CONFIG_VERSION': {'CURRENT': MAXIMUM_DOWNGRADE_CONFIG_VERSION + 1, 'OLDEST_COMPATIBLE': 0}},
+        migrations=(m for m in MIGRATIONS),
+    )
 
 
 def test_migrate_full(load_config_sample, monkeypatch):
@@ -91,6 +119,24 @@ def test_migrate_full(load_config_sample, monkeypatch):
 
     config_migrated = check_and_migrate_config(config_initial)
     assert config_migrated == config_target
+
+
+def test_migrate_full_downgrade(load_config_sample, monkeypatch):
+    """Test the full config downgrade, as a counterpart to :func:`test_migrate_full`.
+
+    The oldest sample is upgraded to the latest version and then downgraded all the way back, exercising the full
+    migration chain in both directions. Downgrades are lossy by design (e.g. a profile UUID added on upgrade is
+    intentionally kept), so this asserts the versions reached rather than round-trip equality. The migrations are
+    passed as one-shot generators, which additionally guards that the iterable is materialized before the repeated
+    per-step lookups (a consumed iterator would stop finding migrations after the first step).
+    """
+    monkeypatch.setattr(uuid, 'uuid4', lambda: uuid.UUID(hex='0' * 32))
+
+    upgraded = upgrade_config(load_config_sample('input/0.json'), 10, migrations=(m for m in MIGRATIONS))
+    assert upgraded['CONFIG_VERSION']['CURRENT'] == 10
+
+    downgraded = downgrade_config(upgraded, 0, migrations=(m for m in MIGRATIONS))
+    assert downgraded['CONFIG_VERSION']['CURRENT'] == 0
 
 
 @pytest.mark.parametrize('initial, target', ((m.down_revision, m.up_revision) for m in MIGRATIONS))

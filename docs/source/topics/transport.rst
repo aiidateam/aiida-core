@@ -7,9 +7,15 @@ Transport plugins
 The term `transport` in AiiDA refers to a class that the engine uses to perform operations on local or remote machines where its :py:class:`~aiida.engine.processes.calcjobs.calcjob.CalcJob` are submitted.
 The base class :py:class:`~aiida.transports.transport.Transport` defines an interface for these operations, such as copying files and executing commands.
 A `transport plugin` is a class that implements this base class for a specific connection method.
-The ``aiida-core`` package ships with two transport plugins: the :py:class:`~aiida.transports.plugins.local.LocalTransport` and :py:class:`~aiida.transports.plugins.ssh.SshTransport` classes.
-The ``local`` transport can be used to connect with the `localhost` and makes use only of some standard python modules like ``os`` and ``shutil``.
-The ``ssh`` transport, which can be used for machines that can be connected to over ssh, is simply a wrapper around the library `paramiko <https://www.paramiko.org/>`_ that is installed as a required dependency of ``aiida-core``.
+The ``aiida-core`` package ships with three transport plugins: the :py:class:`~aiida.transports.plugins.local.LocalTransport`, :py:class:`~aiida.transports.plugins.ssh_async.AsyncSshTransport` and :py:class:`~aiida.transports.plugins.ssh.SshTransport` classes.
+The ``core.local`` transport can be used to connect with the `localhost` and makes use only of some standard python modules like ``os`` and ``shutil``.
+The ``core.ssh_async`` transport is the recommended plugin for machines that can be connected to over ssh: its operations are asynchronous and the connection is configured through your ``~/.ssh/config`` file.
+The ``core.ssh`` transport is simply a wrapper around the library `paramiko <https://www.paramiko.org/>`_ that is installed as a required dependency of ``aiida-core``.
+
+.. deprecated:: 2.8
+
+    The ``core.ssh`` transport plugin is deprecated and will be removed in v3.0.
+    Use ``core.ssh_async`` instead, which is significantly faster and provides an easier configuration interface.
 
 .. _topics:transport:develop_plugin:
 

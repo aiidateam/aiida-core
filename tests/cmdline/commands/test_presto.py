@@ -16,6 +16,8 @@ def mock_daemon_client(monkeypatch):
     """Mock the daemon client so the daemon is not actually started during tests."""
     from aiida.engine.daemon import client as daemon_client_mod
 
+    monkeypatch.delenv('AIIDA_PRESTO_DAEMON_AUTOSTART', raising=False)
+
     mock_client = MagicMock()
     monkeypatch.setattr(daemon_client_mod, 'get_daemon_client', lambda *args, **kwargs: mock_client)
     return mock_client
@@ -109,36 +111,31 @@ def test_presto_overdose(run_cli_command, config_with_profile_factory):
 
 
 @pytest.mark.usefixtures('empty_config')
-def test_presto_starts_daemon(run_cli_command, mock_daemon_client):
-    """Test that ``verdi presto`` auto-starts the daemon."""
-    result = run_cli_command(verdi_presto, ['--non-interactive'])
-    assert 'Starting the daemon' in result.output
-    mock_daemon_client.start_daemon.assert_called_once_with()
-
-
-@pytest.mark.usefixtures('empty_config')
-def test_presto_no_daemon_autostart_env(run_cli_command, mock_daemon_client, monkeypatch):
-    """Test that ``AIIDA_NO_DAEMON_AUTOSTART=1`` skips the daemon auto-start."""
-    monkeypatch.setenv('AIIDA_NO_DAEMON_AUTOSTART', '1')
+def test_presto_skips_daemon_by_default(run_cli_command, mock_daemon_client):
+    """Test that ``verdi presto`` does not auto-start the daemon by default."""
     result = run_cli_command(verdi_presto, ['--non-interactive'])
     assert 'Created new profile' in result.output
     assert 'Starting the daemon' not in result.output
     mock_daemon_client.start_daemon.assert_not_called()
 
 
-@pytest.mark.parametrize('value', ('0', 'true', 'false', '', 'banana'))
 @pytest.mark.usefixtures('empty_config')
-def test_presto_daemon_autostart_env_non_one(run_cli_command, mock_daemon_client, monkeypatch, value):
-    """Test that anything other than the literal string ``1`` does not skip the daemon.
-
-    Only ``AIIDA_NO_DAEMON_AUTOSTART=1`` is recognized; any other value (including ``0``, ``true``,
-    typos, or empty string) falls through to "start the daemon" so a misspelled or unrecognized
-    value doesn't silently disable the daemon.
-    """
-    monkeypatch.setenv('AIIDA_NO_DAEMON_AUTOSTART', value)
+def test_presto_daemon_autostart_env_non_empty(run_cli_command, mock_daemon_client, monkeypatch):
+    """Test that any non-empty ``AIIDA_PRESTO_DAEMON_AUTOSTART`` value starts the daemon."""
+    monkeypatch.setenv('AIIDA_PRESTO_DAEMON_AUTOSTART', 'SET')
     result = run_cli_command(verdi_presto, ['--non-interactive'])
     assert 'Starting the daemon' in result.output
     mock_daemon_client.start_daemon.assert_called_once_with()
+
+
+@pytest.mark.usefixtures('empty_config')
+def test_presto_daemon_autostart_env_empty(run_cli_command, mock_daemon_client, monkeypatch):
+    """Test that an empty ``AIIDA_PRESTO_DAEMON_AUTOSTART`` value does not start the daemon."""
+    monkeypatch.setenv('AIIDA_PRESTO_DAEMON_AUTOSTART', '')
+    result = run_cli_command(verdi_presto, ['--non-interactive'])
+    assert 'Created new profile' in result.output
+    assert 'Starting the daemon' not in result.output
+    mock_daemon_client.start_daemon.assert_not_called()
 
 
 @pytest.mark.usefixtures('empty_config')
@@ -151,10 +148,11 @@ def test_presto_no_broker_skips_daemon(run_cli_command, mock_daemon_client):
 
 
 @pytest.mark.usefixtures('empty_config')
-def test_presto_daemon_start_failure(run_cli_command, mock_daemon_client):
+def test_presto_daemon_start_failure(run_cli_command, mock_daemon_client, monkeypatch):
     """Test that ``verdi presto`` handles daemon start failure gracefully."""
     from aiida.engine.daemon.client import DaemonException
 
+    monkeypatch.setenv('AIIDA_PRESTO_DAEMON_AUTOSTART', 'True')
     mock_daemon_client.start_daemon.side_effect = DaemonException('Could not start daemon')
 
     result = run_cli_command(verdi_presto, ['--non-interactive'])

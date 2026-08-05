@@ -114,6 +114,8 @@ This will cause all calculations submitted on that computer to pause.
 To restart them, one needs to generate a new SSH key pair and play the paused processes using ``verdi process play --all``.
 Typically, this is all one needs to do - AiiDA will re-establish the connection to the computer and will continue following the calculations.
 
+This manual step can be avoided altogether with the ``core.ssh_async`` transport and a configured ``authentication_script``, which renews the credentials before each connection; see :ref:`how-to:ssh:2fa`.
+
 How to back up AiiDA data?
 =============================================================================
 

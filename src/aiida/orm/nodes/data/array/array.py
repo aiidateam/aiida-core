@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+import base64
+import io
 from collections.abc import Iterable, Iterator, Sequence
 from typing import Any, BinaryIO
 
@@ -115,6 +117,55 @@ class ArrayData(Data):
 
         for key, value in arrays.items():
             self.set_array(key, np.asarray(value))
+
+    @staticmethod
+    def save_arrays(arrays: dict[str, np.ndarray]) -> dict[str, bytes]:
+        """Serialize arrays to base64-encoded ``.npy`` payloads.
+
+        :param arrays: Mapping of array names to numpy arrays.
+        :return: Mapping of array names to base64-encoded bytes.
+        """
+        from aiida.common.warnings import warn_deprecation
+
+        warn_deprecation(
+            '`ArrayData.save_arrays` is deprecated. Use `numpy.save` with `io.BytesIO` directly instead.',
+            version=3,
+            stacklevel=2,
+        )
+
+        results = {}
+
+        for key, array in arrays.items():
+            stream = io.BytesIO()
+            np.save(stream, array, allow_pickle=False)
+            stream.seek(0)
+            results[key] = base64.encodebytes(stream.read())
+
+        return results
+
+    @staticmethod
+    def load_arrays(arrays: dict[str, bytes]) -> dict[str, np.ndarray]:
+        """Deserialize arrays from base64-encoded ``.npy`` payloads.
+
+        :param arrays: Mapping of array names to base64-encoded bytes.
+        :return: Mapping of array names to numpy arrays.
+        """
+        from aiida.common.warnings import warn_deprecation
+
+        warn_deprecation(
+            '`ArrayData.load_arrays` is deprecated. Use `numpy.load` with `io.BytesIO` directly instead.',
+            version=3,
+            stacklevel=2,
+        )
+
+        results = {}
+
+        for key, encoded in arrays.items():
+            stream = io.BytesIO(base64.decodebytes(encoded))
+            stream.seek(0)
+            results[key] = np.load(stream, allow_pickle=False)
+
+        return results
 
     @property
     def arrays(self) -> dict[str, np.ndarray]:

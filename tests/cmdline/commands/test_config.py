@@ -8,6 +8,9 @@
 ###########################################################################
 """Tests for ``verdi config``."""
 
+import json
+import pathlib
+
 import pytest
 
 from aiida import get_profile
@@ -274,15 +277,28 @@ def test_config_downgrade(run_cli_command, config_with_profile_factory):
     assert 'Success: Downgraded' in result.output.strip()
 
 
-@pytest.mark.presto
-def test_config_list_advanced_flag(run_cli_command, config_with_profile_factory):
-    """Test that ``verdi config list --advanced`` flag is accepted and footer hint is shown."""
-    config_with_profile_factory()
+def test_config_downgrade_incompatible_but_downgradeable(run_cli_command, config_with_profile_factory, monkeypatch):
+    """Test `verdi config downgrade` can run even if the config cannot be loaded normally."""
+    from aiida.manage import configuration
+    from aiida.manage.configuration.migrations import migrations
 
-    result_default = run_cli_command(cmd_verdi.verdi, ['config', 'list'], use_subprocess=False)
-    assert '--advanced' in result_default.output
-    assert 'logging.sqlalchemy_loglevel' not in result_default.output
+    config = config_with_profile_factory()
+    filepath = pathlib.Path(config.filepath)
+    dictionary = config.dictionary
+    dictionary['CONFIG_VERSION'] = {'CURRENT': 10, 'OLDEST_COMPATIBLE': 10}
+    dictionary.setdefault('options', {})['broker.task_timeout'] = 12
+    filepath.write_text(json.dumps(dictionary), encoding='utf8')
 
-    result_advanced = run_cli_command(cmd_verdi.verdi, ['config', 'list', '--advanced'], use_subprocess=False)
-    assert 'Use `verdi config list --advanced`' not in result_advanced.output
-    assert 'logging.db_loglevel' not in result_advanced.output
+    configuration.CONFIG = None
+    monkeypatch.setattr(migrations, 'CURRENT_CONFIG_VERSION', 9)
+    monkeypatch.setattr(migrations, 'MAXIMUM_DOWNGRADE_CONFIG_VERSION', 10)
+
+    result = run_cli_command(
+        cmd_verdi.verdi, ['config', 'downgrade', '9'], initialize_ctx_obj=False, use_subprocess=False
+    )
+
+    assert 'Success: Downgraded' in result.output.strip()
+    dictionary = json.loads(filepath.read_text(encoding='utf8'))
+    assert dictionary['CONFIG_VERSION'] == {'CURRENT': 9, 'OLDEST_COMPATIBLE': 9}
+    assert dictionary['options']['rmq.task_timeout'] == 12
+    assert 'broker.task_timeout' not in dictionary['options']

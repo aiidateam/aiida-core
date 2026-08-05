@@ -853,7 +853,12 @@ class CalcJob(Process):
         detailed_job_info = self.node.get_detailed_job_info()
 
         if detailed_job_info is None:
-            self.logger.warning('could not parse scheduler output: the `detailed_job_info` attribute is missing')
+            if scheduler.can_get_detailed_job_info():
+                self.logger.warning('could not parse scheduler output: raised exception during parsing')
+            else:
+                self.logger.info(
+                    f'could not parse scheduler output: scheduler `{scheduler}` does not parse detailed job info'
+                )
         elif detailed_job_info.get('retval', 0) != 0:
             self.logger.warning('could not parse scheduler output: return value of `detailed_job_info` is non-zero')
             detailed_job_info = None

@@ -8,6 +8,8 @@
 ###########################################################################
 """Test for entity fields"""
 
+import typing as t
+
 import pytest
 from importlib_metadata import entry_points
 
@@ -274,7 +276,7 @@ def test_boolean_query():
 
 @pytest.mark.usefixtures('aiida_profile_clean')
 def test_boolean_query_absent_attribute():
-    """Negating a boolean field must match rows where the attribute is absent.
+    """Test sparse boolean field negation.
 
     Flag-style attributes like ``paused`` are stored as ``True`` or not at all: ``unpause()``
     deletes the key rather than storing ``False``. So ``~field`` has to match every row where
@@ -301,3 +303,20 @@ def test_boolean_query_absent_attribute():
     assert count(orm.CalculationNode.fields.paused) == 1  # only the paused node
     assert count(~orm.CalculationNode.fields.paused) == 1  # only the unpaused node
     assert count(orm.CalculationNode.fields.paused | ~orm.CalculationNode.fields.paused) == 2  # both
+
+
+def test_attribute_field_access():
+    """Test both modes of attribute field access."""
+    node = orm.Int(42)
+    value_attr_field = node.fields.value
+    assert node.fields.attributes.value is value_attr_field
+    assert node.fields.attributes['value'] is value_attr_field
+
+
+def test_unknown_attribute_field_access():
+    """Test unknown attribute access returns a generic `QbAnyField`."""
+    node = orm.Data()
+    unknown_attr = node.fields.attributes['unknown']
+    assert isinstance(unknown_attr, orm.fields.QbAnyField)
+    assert unknown_attr.key == 'attributes.unknown'
+    assert unknown_attr.dtype is t.Any

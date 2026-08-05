@@ -269,7 +269,7 @@ class QbDictField(QbField):
         """Return a filter for only values with these keys"""
         return QbFieldFilters(((self, 'has_key', value),))
 
-    def __getitem__(self, key: str) -> QbAnyField:
+    def __getitem__(self, key: str) -> QbField:
         """Return a new `QbField` with a nested key."""
         return QbAnyField(
             key=f'{self.key}.{key}',
@@ -307,6 +307,13 @@ class QbAttributesField(QbDictField):
             return children[key]
 
         raise AttributeError(key)
+
+    def __getitem__(self, key: str) -> QbField:
+        """Return a typed child field if known; otherwise return a generic QbAnyField."""
+        children = getattr(self, '_typed_children', None) or {}
+        if key in children:
+            return children[key]
+        return super().__getitem__(key)
 
     def __dir__(self) -> list[str]:
         """Expose typed children for autocompletion."""

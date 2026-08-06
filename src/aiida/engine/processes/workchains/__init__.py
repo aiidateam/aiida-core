@@ -17,6 +17,7 @@ from .context import *
 from .restart import *
 from .utils import *
 from .workchain import *
+from .workflow_process import *
 
 __all__ = (
     'Awaitable',
@@ -26,6 +27,7 @@ __all__ = (
     'ProcessHandlerReport',
     'ToContext',
     'WorkChain',
+    'WorkflowProcess',
     'append_',
     'assign_',
     'construct_awaitable',

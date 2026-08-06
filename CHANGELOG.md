@@ -111,7 +111,6 @@ See the updated [logging documentation](https://aiida-core.readthedocs.io/en/v2.
 
 Related interface extensions:
 
-- `aiida.common.UnsupportedSchemaError` ([#7417](https://github.com/aiidateam/aiida-core/pull/7417))
 - `aiida.manage.AiiDAConfigPathResolver.profile_log_dir` ([#7322](https://github.com/aiidateam/aiida-core/pull/7322))
 - `aiida.manage.Option.advanced` ([#7322](https://github.com/aiidateam/aiida-core/pull/7322))
 - `aiida.manage.Option.deprecated_by` ([#7322](https://github.com/aiidateam/aiida-core/pull/7322))
@@ -132,6 +131,7 @@ See the [Behavior changes](#behavior-changes) section for migration guidance.
 
 Related interface extensions:
 
+- `aiida.common.UnsupportedSchemaError` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 - `aiida.orm.AbstractCode.serialize` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 - `aiida.orm.AbstractCode.to_model` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 - `aiida.orm.AbstractCode.attach_file` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
@@ -168,7 +168,6 @@ Related interface extensions:
 - `aiida.orm.Node.to_model_field_values` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 - `aiida.orm.QbFields.keys` ([#7463](https://github.com/aiidateam/aiida-core/pull/7463))
 - `aiida.orm.SinglefileData.attach_file` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
-- `aiida.orm.WorkChainNode.tools` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 - `aiida.orm.XyData.x_name` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 - `aiida.orm.XyData.x_units` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 - `aiida.orm.XyData.y_names` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
@@ -207,7 +206,8 @@ This tool exposes methods to introspect and manipulate workflow state, helping d
 
 Related interface extensions:
 
-- `aiida.tools.WorkflowTools` ([#7329](https://github.com/aiidateam/aiida-core/pull/7329))
+- `aiida.tools.WorkflowTools` ([#6884](https://github.com/aiidateam/aiida-core/pull/6884))
+- `aiida.orm.WorkChainNode.tools` ([#6884](https://github.com/aiidateam/aiida-core/pull/6884))
 
 #### Daemon client: worker scaling with wait parameter
 

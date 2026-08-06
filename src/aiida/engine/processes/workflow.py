@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""The :class:`WorkflowProcess`, the shared base for stepper-driven workflow processes."""
+"""The :class:`Workflow`, the shared base for stepper-driven workflow processes."""
 
 from __future__ import annotations
 
@@ -27,14 +27,14 @@ from aiida.common.lang import override
 from aiida.orm import Node, ProcessNode
 from aiida.orm.utils import load_node
 
-from ..exit_code import ExitCode
-from ..process import Process, ProcessState
-from .awaitable import Awaitable, AwaitableAction, AwaitableTarget, construct_awaitable
+from .exit_code import ExitCode
+from .process import Process, ProcessState
+from .workchains.awaitable import Awaitable, AwaitableAction, AwaitableTarget, construct_awaitable
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner
 
-__all__ = ('WorkflowProcess',)
+__all__ = ('Workflow',)
 
 
 MethodType = t.TypeVar('MethodType')
@@ -61,7 +61,7 @@ class Protect(ProcessStateMachineMeta):
 
         The whole ancestry of each base is scanned (``base.__mro__``), not just the direct bases, so a ``final``
         method stays protected even when it is inherited through an intermediate class rather than defined on the
-        immediate parent (for example a ``final`` method on ``WorkflowProcess`` reached via ``WorkChain``).
+        immediate parent (for example a ``final`` method on ``Workflow`` reached via ``WorkChain``).
 
         :raises RuntimeError: If the new class defines (i.e. overrides) a method that was decorated with ``final``.
         """
@@ -101,7 +101,7 @@ class Protect(ProcessStateMachineMeta):
 
 
 @auto_persist('_awaitables')
-class WorkflowProcess(Process, metaclass=Protect):
+class Workflow(Process, metaclass=Protect):
     """A :class:`~aiida.engine.processes.process.Process` whose execution is delegated to a pluggable stepper.
 
     This is the shared base for AiiDA's stepper-driven workflow processes: the :class:`~aiida.engine.WorkChain`
@@ -132,8 +132,8 @@ class WorkflowProcess(Process, metaclass=Protect):
         :param runner: process runner
         :param enable_persistence: whether to persist this process
         """
-        if self.__class__ == WorkflowProcess:
-            raise exceptions.InvalidOperation('cannot construct or launch a base `WorkflowProcess` class.')
+        if self.__class__ == Workflow:
+            raise exceptions.InvalidOperation('cannot construct or launch a base `Workflow` class.')
 
         super().__init__(inputs, logger, runner, enable_persistence=enable_persistence)
 
@@ -351,7 +351,7 @@ class WorkflowProcess(Process, metaclass=Protect):
         will enter in the Wait state, otherwise it will go to Continue. When the stepper returns that it is done, the
         stepper result will be converted to None and returned, unless it is an integer or instance of ExitCode.
         """
-        from .context import ToContext
+        from .workchains.context import ToContext
 
         # Under the barrier model the awaitables belong to a single step and are cleared before the next one, which
         # is what forces every step to wait for all the children it launched. A streaming stepper keeps them, so

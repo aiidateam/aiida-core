@@ -12,7 +12,7 @@ from plumpy.workchains import Stepper
 from aiida.common.lang import override
 from aiida.engine.processes.process_spec import ProcessSpec
 from aiida.engine.processes.workchains.awaitable import Awaitable
-from aiida.engine.processes.workchains.workflow_process import WorkflowProcess
+from aiida.engine.processes.workflow import Workflow
 from aiida.orm import WorkGraphNode
 from aiida.workgraph.engine.error_handler_manager import ErrorHandlerManager
 from aiida.workgraph.engine.stepper import DagStepper
@@ -30,7 +30,7 @@ class WorkGraphSpec(ProcessSpec):
     WORKGRAPH_DATA_KEY = 'workgraph_data'
 
 
-class WorkGraphProcess(WorkflowProcess):
+class WorkGraphProcess(Workflow):
     """Execute a work graph, scheduling its tasks by their data dependencies.
 
     A work chain declares its execution order up front as an outline; a work graph derives it from the links
@@ -145,7 +145,7 @@ class WorkGraphProcess(WorkflowProcess):
     def load_instance_state(self, saved_state: t.MutableMapping[str, t.Any], load_context: t.Any) -> None:
         from aiida.orm.utils.log import create_logger_adapter
 
-        # `WorkflowProcess.load_instance_state` re-registers the awaitable callbacks before returning, so the runtime
+        # `Workflow.load_instance_state` re-registers the awaitable callbacks before returning, so the runtime
         # state it consults has to be in place first.
         self._init_runtime_state()
 
@@ -161,9 +161,9 @@ class WorkGraphProcess(WorkflowProcess):
         self._init_managers()
 
     def _action_awaitables(self) -> None:
-        """Register the awaitable callbacks (via `WorkflowProcess`), then surface the waiting status in the report log.
+        """Register the awaitable callbacks (via `Workflow`), then surface the waiting status in the report log.
 
-        `WorkflowProcess` records "Waiting for child processes: ..." only as the process status; echoing it to the
+        `Workflow` records "Waiting for child processes: ..." only as the process status; echoing it to the
         report makes it visible in `verdi process report` when a graph pauses for its children.
         """
         super()._action_awaitables()
@@ -174,7 +174,7 @@ class WorkGraphProcess(WorkflowProcess):
         """Record a finished child's outcome on its task before the process decides whether to resume.
 
         This is the only work-graph-specific step in the awaitable lifecycle. The rest, including resuming as soon
-        as any child finishes rather than only once all do, comes from `WorkflowProcess`, because :class:`DagStepper`
+        as any child finishes rather than only once all do, comes from `Workflow`, because :class:`DagStepper`
         declares ``awaitable_barrier = False``.
 
         :param awaitable: the awaitable whose target process has terminated

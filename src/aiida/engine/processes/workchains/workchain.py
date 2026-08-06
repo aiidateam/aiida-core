@@ -20,7 +20,7 @@ from aiida.common import exceptions
 from aiida.orm import WorkChainNode
 
 from ..process_spec import ProcessSpec
-from .workflow_process import WorkflowProcess
+from ..workflow import Workflow
 
 if t.TYPE_CHECKING:
     from aiida.engine.runners import Runner
@@ -32,10 +32,10 @@ class WorkChainSpec(ProcessSpec, PlumpyWorkChainSpec):
     pass
 
 
-class WorkChain(WorkflowProcess):
+class WorkChain(Workflow):
     """The `WorkChain` class is the principle component to implement workflows in AiiDA.
 
-    It is a :class:`~aiida.engine.processes.workchains.workflow_process.WorkflowProcess` whose stepper walks the
+    It is a :class:`~aiida.engine.processes.workflow.Workflow` whose stepper walks the
     static outline declared on its spec. The shared workflow machinery (awaitables, context, the step lifecycle
     and its checkpointing) lives on the base class; only the outline stepping is defined here.
     """

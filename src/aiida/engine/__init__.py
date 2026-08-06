@@ -55,7 +55,7 @@ __all__ = (
     'WithNonDb',
     'WithSerialize',
     'WorkChain',
-    'WorkflowProcess',
+    'Workflow',
     'append_',
     'assign_',
     'await_processes',

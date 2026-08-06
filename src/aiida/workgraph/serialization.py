@@ -17,16 +17,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from node_graph.serializer import SerializationAdapter
 from node_graph.socket_meta import SocketMeta
 from node_graph.socket_spec import SocketSpec
+from node_graph.utils import resolve_tagged_values
 from node_graph.utils.struct_utils import is_structured_instance, structured_to_dict
 
 from aiida.orm import general_serializer
+from aiida.orm.nodes.data.serializer import get_serializers
 
 if TYPE_CHECKING:
     from aiida.orm import User
 
-__all__ = ('serialize_ports',)
+__all__ = ('AiidaSerializationAdapter', 'serialize_ports')
 
 
 def _ensure_spec(schema: SocketSpec | dict[str, Any]) -> SocketSpec:
@@ -101,3 +104,27 @@ def serialize_ports(
             raise ValueError(msg)
 
     return out
+
+
+class AiidaSerializationAdapter(SerializationAdapter):
+    """node-graph serialization adapter that serializes socket values into AiiDA data nodes."""
+
+    id: str = 'aiida'
+    name: str = 'AiiDA'
+
+    def __init__(self, serializers: dict[str, str] | None = None, user: Any = None) -> None:
+        self.serializers = serializers or get_serializers()
+        self.user = user
+
+    def serialize(self, value: Any, socket: Any, *, store: bool) -> Any:
+        if socket is None:
+            return value
+        spec = socket._to_spec()
+        resolve_tagged_values(value)
+        return serialize_ports(python_data=value, port_schema=spec, serializers=self.serializers, user=self.user)
+
+    def serialize_ports(self, python_data: Any, port_schema: Any, *, store: bool) -> Any:
+        resolve_tagged_values(python_data)
+        return serialize_ports(
+            python_data=python_data, port_schema=port_schema, serializers=self.serializers, user=self.user
+        )

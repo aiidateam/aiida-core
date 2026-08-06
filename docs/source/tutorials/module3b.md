@@ -96,7 +96,7 @@ The pipeline is unchanged from Module 3a; expand it if you need a refresher:
 
 ## Integrating the for-loop into the workflow
 
-In Module 2, the parameter sweep was a Python `for` loop calling the pipeline for each `F` value.
+In Module 2, you ran the pipeline for several `F` values with a plain Python `for` loop.
 But a `for` loop is not an AiiDA process: it doesn't show up in the provenance, can't be inspected with `verdi`, and can't recover from failures.
 
 WorkGraph's {class}`~aiida_workgraph.Map` lets you run the same sub-workflow over multiple input values, like a parallel `for` loop, but as a single AiiDA workflow with full provenance.
@@ -287,6 +287,28 @@ with sweep_node.outputs.transition_plot.open(mode='rb') as fh:
 
 Image(img_bytes)
 ```
+
+The curve's two regimes look strikingly different in real space: below the transition a rich pattern forms; above it the pattern dissolves.
+
+::::{grid} 2
+:gutter: 2
+
+:::{grid-item}
+```{image} include/reaction-diffusion-fields.png
+:width: 100%
+:align: center
+```
+*Below the transition (`F=0.040`): rich spatial pattern.*
+:::
+
+:::{grid-item}
+```{image} include/reaction-diffusion-fields-2.png
+:width: 100%
+:align: center
+```
+*Above the transition (`F=0.055`): pattern dissolved.*
+:::
+::::
 
 ## A 2D scan: feed rate &times; kill rate
 

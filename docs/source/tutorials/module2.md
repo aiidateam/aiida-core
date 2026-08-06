@@ -16,7 +16,7 @@ execution:
 (tutorial:module2)=
 # Module 2: Structured data and calcfunctions
 
-{bdg-secondary}`⏱️ ~75 min read` {bdg-success}`Beginner`
+{bdg-secondary}`⏱️ ~45 min read` {bdg-success}`Beginner`
 
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module2.ipynb` {octicon}`download`
@@ -38,10 +38,10 @@ load_profile()
 
 After this module, you will be able to:
 
-- Launch many tracked calculations programmatically
-- Use AiiDA's structured data types to obtain queryable results
-- Add input preparation and output parsing as tracked Python steps to the simulation's provenance
-- Organize results with extras and groups for quick retrieval
+- Recognize why file-based outputs are hard to query, and what structured data buys you
+- Use AiiDA's structured data types (`Dict`, `Float`, ...) to store queryable results
+- Add input preparation and output parsing as tracked `@calcfunction` steps in the provenance
+- Organize and search results with extras, groups, and QueryBuilder
 
 :::{dropdown} Installation requirements (same as&nbsp;{ref}`Module 1 <tutorial:module1>`)
 If you have not already installed these in an earlier module, run:
@@ -55,8 +55,8 @@ uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.co
 ```{code-cell} ipython3
 :tags: [hide-input]
 :mystnb:
-:    code_prompt_show: 'Show the setup code'
-:    code_prompt_hide: 'Hide the setup code'
+:    code_prompt_show: 'Show the setup code (same as Module 1)'
+:    code_prompt_hide: 'Hide the setup code (same as Module 1)'
 
 # Set up the tutorial's isolated sandbox profile (see Module 1 for details).
 from pathlib import Path
@@ -74,16 +74,21 @@ if not Path('include/setup_tutorial.py').exists():
 %run -i include/setup_tutorial.py
 ```
 
-## Running many `aiida-shell` calculations
+## Why structured data?
 
 In {ref}`Module 1 <tutorial:module1>`, you ran a single `gsrd` simulation through `aiida-shell` and got back `SinglefileData` nodes: the input YAML, the captured stdout, and the `results.npz` file, all tracked with provenance.
 
-Now, let's start varying our simulation parameters: scan the feed rate `F` and see how the pattern strength (`variance_V`) changes across a range of values.
-
-We hold every other Gray-Scott parameter fixed and vary only `F`, sampling more densely around the transition near `F ~ 0.043`:
+Let's run one again here to work with, holding the Gray-Scott parameters fixed:
 
 ```{code-cell} ipython3
-# Fixed Gray-Scott parameters; we vary only the feed rate F below.
+# Run a single tracked gsrd calculation (as in Module 1).
+from pathlib import Path
+
+import yaml
+
+from aiida_shell import launch_shell_job
+
+# The Gray-Scott parameters for this run.
 BASE_PARAMS = {
     'grid_size': 64,
     'du': 0.16,
@@ -94,116 +99,25 @@ BASE_PARAMS = {
     'n_steps': 3000,
     'seed': 42,
 }
-# Feed-rate values to scan, denser around the F ~ 0.043 transition.
-F_VALUES = [0.038, 0.040, 0.042, 0.044, 0.046, 0.050, 0.055, 0.060]
-```
-
-For each feed rate, we write an input file and launch a tracked `gsrd` calculation, keeping the resulting nodes so we can read their outputs afterwards:
-
-```{code-cell} ipython3
-# Launch one tracked gsrd calculation per F value.
-from pathlib import Path
-
-import yaml
-
-from aiida_shell import launch_shell_job
 
 input_dir = Path('/tmp/aiida-tutorial')
 input_dir.mkdir(parents=True, exist_ok=True)
+input_path = input_dir / 'input.yaml'
+input_path.write_text(yaml.dump(BASE_PARAMS))
 
-calc_nodes = []
-
-for f_val in F_VALUES:
-    # Write one input file per F value into the input directory.
-    label = f'F{f_val:.3f}'.replace('.', '_')  # e.g. F0_038
-    input_path = input_dir / f'input_{label}.yaml'
-    params = BASE_PARAMS | {'F': f_val}
-    input_path.write_text(yaml.dump(params))
-
-    results, calc_node = launch_shell_job(
-        gsrd_code,
-        arguments='{input}',
-        nodes={'input': str(input_path)},
-        outputs=['results.npz'],
-    )
-    calc_nodes.append((f_val, calc_node))
-```
-
-We saw in {ref}`Module 1 <tutorial:module1>` that `gsrd` only prints its scalar diagnostics (`variance(V)`, `mean(V)`) to stdout.
-So to get the numbers for plotting, we read each run's stdout, same regex as before, just inside a `for` loop now:
-
-```{code-cell} ipython3
-# Extract and print the variance from each run's stdout.
-import re
-
-VARIANCE_RE = re.compile(r'Variance of V field\s*:\s*([\d.eE+-]+)')
-
-sweep_results = []
-
-for f_val, calc_node in calc_nodes:
-    text = calc_node.outputs.stdout.get_content()
-    variance_v = float(VARIANCE_RE.search(text).group(1))
-    sweep_results.append({'F': f_val, 'variance_V': variance_v})
-
-for r in sweep_results:
-    print(f"F={r['F']:.3f}  variance(V)={r['variance_V']:.4e}")
-```
-
-Plotting `variance_V` against `F` shows what we are after: a sharp drop somewhere along the swept range, marking the boundary between the "pattern forms" and "pattern dies out" regimes:
-
-```{code-cell} ipython3
-# Plot variance_V vs F to show the phase transition.
-from include.plotting import plot_transition_curve
-
-plot_transition_curve(
-    [r['F'] for r in sweep_results],
-    [r['variance_V'] for r in sweep_results],
+results, calc_node = launch_shell_job(
+    gsrd_code,
+    arguments='{input}',
+    nodes={'input': str(input_path)},
+    outputs=['results.npz'],
 )
 ```
 
-The sharp drop in `variance_V` marks a **phase transition**: below it, the system forms rich spatial patterns; above it, the patterns dissolve.
+To get the `variance_V` value out, you'd reach for the same hand-written regex as in {ref}`Module 1 <tutorial:module1>`, run over the run's `stdout` node.
+The provenance records **file in → ShellJob → stdout/file out**, so AiiDA knows *that* a stdout log and a `results.npz` were produced, but not *what's inside* them.
+A query like "all runs where `variance_V > 0.001`" would therefore mean opening every stdout node and re-running that regex ourselves.
 
-:::{dropdown} About the&nbsp;`plot_transition_curve`&nbsp;helper
-`plot_transition_curve` is one of the tutorial's `plot_*` helpers, shipped in {download}`include/plotting.py`. Plotting is not the focus here, so we keep that boilerplate out of the way; open the file if you are curious.
-:::
-
-::::{grid} 2
-:gutter: 2
-
-:::{grid-item}
-```{image} include/reaction-diffusion-fields.png
-:width: 100%
-:align: center
-```
-*Below the transition (`F=0.040`): rich spatial pattern.*
-:::
-
-:::{grid-item}
-```{image} include/reaction-diffusion-fields-2.png
-:width: 100%
-:align: center
-```
-*Above the transition (`F=0.055`): pattern dissolved.*
-:::
-::::
-
-Every simulation is tracked by AiiDA, so we can inspect any of them:
-
-```{code-cell} ipython3
-:tags: ["hide-output"]
-
-# List all processes run so far in this profile.
-%verdi process list -a
-```
-
-:::{important}
-Notice what we had to do to get the `variance_V` values: regex each `stdout` node individually, the same hand-written line as in {ref}`Module 1 <tutorial:module1>`, just inside a `for` loop.
-
-The provenance looks like this for each run: **file in → ShellJob → stdout/file out**.
-AiiDA knows *that* a stdout log and a `results.npz` were produced, but it doesn't know *what's inside* them, so a query like "all runs where `variance_V > 0.001`" would mean opening every stdout node and re-running that same regex ourselves.
-:::
-
-Looking at the provenance graph of one of the runs (essentially the same shape as the one we already saw in {ref}`Module 1 <tutorial:module1>`) makes this visible:
+Looking at the provenance graph of the run (essentially the same shape as the one we saw in {ref}`Module 1 <tutorial:module1>`) makes this visible:
 
 ```{code-cell} ipython3
 ---
@@ -211,10 +125,10 @@ mystnb:
     image:
         width: 100%
 ---
-# Provenance graph of a single sweep run: opaque files in, opaque files out.
+# Provenance graph of the run: opaque files in, opaque files out.
 from include.plotting import plot_provenance
 
-plot_provenance(calc_nodes[0][1])
+plot_provenance(calc_node)
 ```
 
 Every input and every output is a `SinglefileData` blob: the YAML on the left, `results.npz` and `stdout` on the right.
@@ -370,19 +284,19 @@ from include.plotting import plot_provenance
 plot_provenance(node)
 ```
 
-Compare this to the first sweep: the provenance now shows **Dict** going in and **Float** values coming out, not just opaque files.
+Compare this to the opaque run at the start of the module: the provenance now shows **Dict** going in and **Float** values coming out, not just opaque files.
 These values can now be searched directly in AiiDA's database.
 
-Scaling that up to the full sweep, with the same structured data at every step:
+To have several results to organize and search in a moment, run the enriched pipeline for a few more `F` values:
 
 ```{code-cell} ipython3
-# Re-run the full sweep with the enriched pipeline (structured data at every step).
+# Run the enriched pipeline for a few more F values, so we have several results.
 enriched_results = []
 
-for f_val in F_VALUES:
+for f_val in [0.038, 0.042, 0.046, 0.050]:
     input_file = prepare_input(BASE_PARAMS | {'F': f_val})
 
-    results, calc_node = launch_shell_job(
+    results, node = launch_shell_job(
         gsrd_code,
         arguments='{input}',
         nodes={'input': input_file},
@@ -401,13 +315,15 @@ for r in enriched_results:
     print(f"F={r['F']:.3f}  variance(V)={r['parsed']['variance_V'].value:.4e}")
 ```
 
-The transition curve looks identical to the first sweep (same simulation, same parameters); what changed is *how* we got the numbers.
-The `Dict` inputs and `Float` outputs now live in the database with full provenance, ready to be queried.
+What changed from the opaque run at the start is not the simulation but *how* we get the numbers back: the `Dict` inputs and `Float` outputs now live in the database with full provenance, ready to be queried.
 
 ## Organizing your results
 
-Once you have run more than a handful of calculations, three needs show up: (a) tagging nodes by ad-hoc properties you only realized you cared about later, (b) bundling related runs as a single named unit you can retrieve or share, and (c) actually searching across the database to answer questions like "which runs are above the threshold?".
-AiiDA gives you three tools, one for each: **extras**, **groups**, and **QueryBuilder**.
+Once you have run more than a handful of calculations, three needs show up, and AiiDA gives you one tool for each:
+
+- **Tag** nodes with ad-hoc properties you only realized you cared about later: **extras**.
+- **Bundle** related runs as a single named unit you can retrieve or share: **groups**.
+- **Search** across the database to answer questions like *"which runs are above the threshold?"*: **QueryBuilder**.
 
 ### Extras
 
@@ -416,15 +332,15 @@ The **extras** dictionary on every AiiDA node is AiiDA's mechanism for exactly t
 Unlike node attributes (which are immutable once stored), extras can be updated freely, even long after the node was created, without touching the provenance graph:
 
 ```{code-cell} ipython3
-# Tag each enriched-sweep CalcJob with its F value and a sweep label.
+# Tag each run's parse_output node with its F value and a sweep label.
 from pprint import pprint
 
 for r in enriched_results:
-    calc_node = r['parsed']['variance_V'].creator  # the parse_output CalcFunctionNode
-    calc_node.base.extras.set_many({'F': r['F'], 'sweep': 'F_scan'})
+    parse_node = r['parsed']['variance_V'].creator  # the parse_output CalcFunctionNode
+    parse_node.base.extras.set_many({'F': r['F'], 'sweep': 'F_scan'})
 
-first_calc_node = enriched_results[0]['parsed']['variance_V'].creator
-user_extras = {k: v for k, v in first_calc_node.base.extras.all.items() if not k.startswith('_')}
+first_parse_node = enriched_results[0]['parsed']['variance_V'].creator
+user_extras = {k: v for k, v in first_parse_node.base.extras.all.items() if not k.startswith('_')}
 print('Extras on first node:')
 pprint(user_extras)
 ```
@@ -435,7 +351,7 @@ Extras are great for filters and tags, but sometimes you want to bundle "the run
 A {py:class}`~aiida.orm.Group` is AiiDA's named collection for that:
 
 ```{code-cell} ipython3
-# Collect all enriched-sweep CalcJobs into a Group.
+# Collect all the parse_output nodes into a Group.
 # `get_or_create` returns a (Group, bool) tuple: the group itself and a flag
 # indicating whether it was just created (True) or already existed (False).
 sweep_group: orm.Group
@@ -444,8 +360,8 @@ sweep_group, created = orm.Group.collection.get_or_create('tutorial/F-sweep')
 
 if created:
     for r in enriched_results:
-        calc_node = r['parsed']['variance_V'].creator
-        sweep_group.add_nodes(calc_node)
+        parse_node = r['parsed']['variance_V'].creator
+        sweep_group.add_nodes(parse_node)
 
 print(f"Group '{sweep_group.label}' contains {sweep_group.count()} nodes")
 ```
@@ -465,7 +381,7 @@ Extras and groups are how you *organize* nodes; {class}`~aiida.orm.QueryBuilder`
 It is AiiDA's structured-search API over the provenance graph: filter by node type, by attribute value, by extras, by which group they belong to, by their relationships to other nodes, etc.
 A few examples on the `Float` nodes we just stored:
 
-All three patterns below operate on the F-sweep we just ran. Start by counting how many `parse_output` calcfunction nodes there are:
+All three patterns below operate on the runs we just tagged. Start by counting how many `parse_output` calcfunction nodes there are:
 
 ```{code-cell} ipython3
 # 1. Filter by node type and process label.
@@ -514,10 +430,12 @@ To list every process we have run so far across all modules:
 
 ## Next steps
 
-We now have a tracked pipeline with structured data, however, it's still a Python `for` loop that runs each step in a blocking manner.
-If one step fails, the loop stops.
-There's no single "sweep" object to query, and no way to run steps in parallel.
-In {ref}`Module 3 <tutorial:module3>`, you'll wrap the pipeline into a **WorkGraph workflow** and turn the loop itself into a mapped workflow too.
+We now have a tracked pipeline with structured data, but two things are still plain Python.
+The pipeline, `prepare_input → ShellJob → parse_output`, is a bare sequence of calls: there's no single object that *is* the workflow, so if one step fails you handle it yourself, and there's nothing to hand around or query as one unit.
+The sweep is a `for` loop that runs each parameter set one after another, with no way to run independent runs in parallel.
+
+In {ref}`Module 3a <tutorial:module3a>`, you'll wrap that pipeline into a single **WorkGraph workflow**.
+Then in {ref}`Module 3b <tutorial:module3b>`, you'll turn the `for` loop itself into a mapped, parallel workflow with WorkGraph's `Map`.
 
 ## Further reading
 

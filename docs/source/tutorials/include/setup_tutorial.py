@@ -92,7 +92,14 @@ profile_name = f'tutorial-{_session_hash}'
 # default profile, no interaction with your running daemons. ``AIIDA_PATH`` also
 # propagates to ``!verdi`` shell calls in the notebook, so they see this same
 # sandbox. Delete ``.aiida-tutorial/`` to remove every trace of the tutorial.
-os.environ['AIIDA_PATH'] = str(pathlib.Path('.aiida-tutorial').resolve())
+#
+# ``AIIDA_TUTORIAL_SANDBOX`` lets the docs build relocate this directory out of the
+# watched source tree (see ``docs/source/conf.py``); it has no effect on downloaded or
+# pasted notebooks, which always use ``.aiida-tutorial/`` in the working directory. We
+# still always overwrite ``AIIDA_PATH`` (never honour a user's own exported value), so
+# the sandbox stays fully isolated from any real profile either way.
+_sandbox_dir = os.environ.get('AIIDA_TUTORIAL_SANDBOX', '.aiida-tutorial')
+os.environ['AIIDA_PATH'] = str(pathlib.Path(_sandbox_dir).resolve())
 
 # Creating this fresh config directory is the whole point of the sandbox, so silence
 # the "Creating AiiDA configuration folder" UserWarning AiiDA emits for it: that warning

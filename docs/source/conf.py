@@ -116,6 +116,15 @@ nb_execution_excludepatterns = []
 if 'READTHEDOCS' in os.environ:
     nb_execution_excludepatterns.append('tutorials/module4.md')
 
+# The tutorial setup cell (``tutorials/include/setup_tutorial.py``) creates an isolated
+# ``.aiida-tutorial/`` sandbox profile in the notebook's working directory, which during
+# the build is ``docs/source/tutorials/``. That sandbox runs a live daemon whose broker
+# heartbeat file is rewritten roughly every second; left under the watched source tree it
+# makes ``sphinx-autobuild`` rebuild in an endless loop. Relocate it out of ``docs/source``
+# (into the git-ignored ``docs/build/``) via the dedicated override the setup cell honours;
+# downloaded notebooks do not set this and keep their sandbox in their own working directory.
+os.environ['AIIDA_TUTORIAL_SANDBOX'] = str(Path(__file__).resolve().parent.parent / 'build' / '.aiida-tutorial')
+
 # --- Optional: bake module4 outputs into RTD via a pre-executed .ipynb ----
 # Future work, currently disabled. The intent is:
 #   - CI's docs-build job (which already runs module4 live against the

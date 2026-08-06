@@ -41,6 +41,7 @@ class ZeromqBrokerServer:
     - A persistent task queue for reliable task delivery
     - RPC subscriber registry for routing RPC calls
     - Task subscriber registry for distributing tasks
+    - Per-worker prefetch limits and in flight task counts, which throttle dispatch
 
     Socket architecture:
         ROUTER - Receives all client messages, routes replies and broadcasts
@@ -92,6 +93,11 @@ class ZeromqBrokerServer:
         # Task-worker assignments: task_id -> worker_identity
         # Used to requeue tasks when a worker dies
         self._task_worker_assignments: dict[str, bytes] = {}
+
+        # Prefetch limit declared by each worker on SUBSCRIBE_TASK (None = unlimited)
+        self._worker_prefetch: dict[bytes, int | None] = {}
+        # Number of dispatched but not yet acknowledged tasks per worker identity
+        self._worker_load: dict[bytes, int] = {}
 
         # Server state
         self._running = False
@@ -343,10 +349,10 @@ class ZeromqBrokerServer:
                 )
                 return
             self._task_queue.ack(task_id)
-            self._task_worker_assignments.pop(task_id, None)
+            self._release_task(task_id)
             _LOGGER.debug('Task acknowledged: %s', task_id)
 
-        # Worker is available for more tasks
+        # Worker has freed a slot and is available for more tasks
         self._mark_worker_available(identity)
 
     def _handle_task_nack(self, identity: bytes, msg: dict[str, Any]) -> None:
@@ -363,9 +369,10 @@ class ZeromqBrokerServer:
                 )
                 return
             self._task_queue.nack(task_id, requeue=True)
+            self._release_task(task_id)
             _LOGGER.debug('Task nacked and requeued: %s', task_id)
 
-        # Worker is available for more tasks
+        # Worker has freed a slot and is available for more tasks
         self._mark_worker_available(identity)
 
     def _handle_rpc(self, identity: bytes, msg: dict[str, Any]) -> None:
@@ -448,8 +455,12 @@ class ZeromqBrokerServer:
             return
 
         self._task_subscribers[identifier] = identity
+        # The prefetch limit applies to the connection, like AMQP's channel-level
+        # ``basic.qos``, so the most recent declaration for this identity wins.
+        prefetch = msg.get('prefetch_count')
+        self._worker_prefetch[identity] = prefetch if prefetch and prefetch > 0 else None
         self._mark_worker_available(identity)
-        _LOGGER.info('Task subscriber registered: %s', identifier)
+        _LOGGER.info('Task subscriber registered: %s (prefetch: %s)', identifier, self._worker_prefetch[identity])
 
         # Try to dispatch any pending tasks
         self._dispatch_pending_tasks()
@@ -468,7 +479,10 @@ class ZeromqBrokerServer:
         """Handle task subscriber removal."""
         identifier = msg.get('identifier') or msg.get('sender')
         if identifier and identifier in self._task_subscribers:
-            del self._task_subscribers[identifier]
+            worker_identity = self._task_subscribers.pop(identifier)
+            # Forget the prefetch limit once the connection has no task subscriptions left
+            if worker_identity not in self._task_subscribers.values():
+                self._worker_prefetch.pop(worker_identity, None)
             _LOGGER.info('Task subscriber removed: %s', identifier)
 
     def _handle_unsubscribe_rpc(self, identity: bytes, msg: dict[str, Any]) -> None:
@@ -479,12 +493,16 @@ class ZeromqBrokerServer:
             _LOGGER.info('RPC subscriber removed: %s', identifier)
 
     def _dispatch_pending_tasks(self) -> None:
-        """Dispatch pending tasks to available workers."""
+        """Dispatch pending tasks to workers that have a free slot."""
         while self._available_workers and not self._task_queue.is_empty():
             worker_identity = self._available_workers.popleft()
 
             # Verify worker is still subscribed
             if worker_identity not in self._task_subscribers.values():
+                continue
+
+            # Guard against stale entries for a worker that has since filled up
+            if not self._has_capacity(worker_identity):
                 continue
 
             # Get next task
@@ -511,10 +529,10 @@ class ZeromqBrokerServer:
                 self._task_queue.nack(task_id, requeue=True)
                 self._remove_dead_worker(worker_identity)
                 continue
-            self._task_worker_assignments[task_id] = worker_identity
-            # Re-add worker so it can receive more tasks concurrently
-            # (matching RMQ's multi-prefetch behaviour).  The ACK only
-            # affects the PersistentQueue, not worker availability.
+            self._assign_task(task_id, worker_identity)
+            # Re-add the worker so it can receive more tasks concurrently, but
+            # only while it stays below its declared prefetch limit (matching
+            # RMQ's multi-prefetch behaviour).  The ACK frees the slot again.
             self._mark_worker_available(worker_identity)
             _LOGGER.debug('Dispatched task %s to worker', task_id)
 
@@ -523,9 +541,12 @@ class ZeromqBrokerServer:
         # Requeue all tasks assigned to this worker
         dead_tasks = [tid for tid, wid in self._task_worker_assignments.items() if wid == identity]
         for task_id in dead_tasks:
-            self._task_worker_assignments.pop(task_id, None)
+            self._release_task(task_id)
             self._task_queue.nack(task_id, requeue=True)
             _LOGGER.warning('Requeued task %s from dead worker %s', task_id, identity.hex()[:8])
+
+        self._worker_prefetch.pop(identity, None)
+        self._worker_load.pop(identity, None)
 
         # Remove from task subscribers
         dead_keys = [k for k, v in self._task_subscribers.items() if v == identity]
@@ -586,8 +607,44 @@ class ZeromqBrokerServer:
                 _LOGGER.warning('Worker %s is dead, removing', identity.hex()[:8])
                 self._remove_dead_worker(identity)
 
+    def _assign_task(self, task_id: str, identity: bytes) -> None:
+        """Record a task as in flight on a worker, occupying one of its slots."""
+        if task_id in self._task_worker_assignments:
+            _LOGGER.warning('Task %s already assigned to worker, skipping', task_id)
+            return
+        self._task_worker_assignments[task_id] = identity
+        self._worker_load[identity] = self._worker_load.get(identity, 0) + 1
+
+    def _release_task(self, task_id: str) -> None:
+        """Drop a task's worker assignment, freeing the slot it occupied."""
+        identity = self._task_worker_assignments.pop(task_id, None)
+        if identity is None:
+            _LOGGER.debug('Tried to release task %s but it was not assigned', task_id)
+            return
+
+        remaining = self._worker_load.get(identity, 0) - 1
+        if remaining > 0:
+            self._worker_load[identity] = remaining
+        else:
+            self._worker_load.pop(identity, None)
+
+    def _has_capacity(self, identity: bytes) -> bool:
+        """Return whether a worker has a free slot for another task.
+
+        This is the equivalent of AMQP's ``basic.qos``: a worker declares a
+        prefetch count when it subscribes and is only handed further tasks while
+        its dispatched-but-unacknowledged count stays below it. A
+        worker that declared no limit is always considered to have capacity.
+        """
+        prefetch = self._worker_prefetch.get(identity)
+        if prefetch is None:
+            return True
+        return self._worker_load.get(identity, 0) < prefetch
+
     def _mark_worker_available(self, identity: bytes) -> None:
-        """Mark a worker as available for tasks."""
+        """Mark a worker as available for tasks, unless it is at its prefetch limit."""
+        if not self._has_capacity(identity):
+            return
         if identity not in self._available_workers:
             self._available_workers.append(identity)
 
@@ -622,6 +679,7 @@ class ZeromqBrokerServer:
             'task_subscribers': len(self._task_subscribers),
             'rpc_subscribers': len(self._rpc_subscribers),
             'available_workers': len(self._available_workers),
+            'in_flight_tasks': len(self._task_worker_assignments),
             'pending_rpc_responses': len(self._pending_rpc_responses),
         }
 

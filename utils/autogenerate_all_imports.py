@@ -119,6 +119,11 @@ def write_inits(folder_path: Path, all_dict: dict, skip_children: dict[str, list
 
         rel_path = path.parent.relative_to(folder_path).as_posix()
 
+        if rel_path == 'workgraph' or rel_path.startswith('workgraph/'):
+            # The workgraph subsystem's ``__init__`` files are hand-maintained: a curated public API,
+            # lazy plugin imports, and the node-graph optional-extra boundary. Skip autogeneration.
+            continue
+
         # get sub_dict for this folder
         path_all_dict = all_dict
         mod_path = path.parent.relative_to(folder_path).parts

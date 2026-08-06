@@ -520,6 +520,13 @@ select = [
   'NPY201'  # numpy compatibility
 ]
 
+[tool.ruff.lint.per-file-ignores]
+# The relocated WorkGraph subsystem uses CamelCase for its public control-flow / task-type API
+# (``If`` / ``While`` / ``Map`` / ``Zone``, ``TaskPool``, the ``*_TaskSpec`` factory functions),
+# which pep8-naming (N802/N803/N806) would otherwise flag. PLW2901/PLR1704 are pre-existing
+# WorkGraph loop/argument patterns to clean up in a follow-up.
+'src/aiida/workgraph/**' = ['N802', 'N803', 'N806', 'PLW2901', 'PLR1704']
+
 # Mark some classes as generic, per https://docs.astral.sh/ruff/settings/#lint_pyflakes_extend-generics
 # Needed due to https://github.com/astral-sh/ruff/issues/9298
 [tool.ruff.lint.pyflakes]

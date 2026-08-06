@@ -40,6 +40,7 @@ AMQP concepts mapped to message types:
     ``basic.ack``             ``TASK_ACK``
     ``basic.nack``            ``TASK_NACK``
     consumer with prefetch    ``TASK`` dispatch to workers
+    ``basic.qos``             ``prefetch_count`` in ``SUBSCRIBE_TASK``
     fanout exchange           ``BROADCAST`` via ROUTER fan-out
     direct exchange           ``RPC`` to specific recipient
     durable queue             ``PersistentQueue`` (file-based)
@@ -192,11 +193,27 @@ def make_broadcast_message(
     }
 
 
-def make_subscribe_message(msg_type: MessageType, sender: str, identifier: str | None = None) -> dict[str, Any]:
-    """Create a subscription message dictionary."""
+def make_subscribe_message(
+    msg_type: MessageType,
+    sender: str,
+    identifier: str | None = None,
+    prefetch_count: int | None = None,
+) -> dict[str, Any]:
+    """Create a subscription message dictionary.
+
+    :param msg_type: Type of subscription message (e.g., ``SUBSCRIBE_TASK``, ``SUBSCRIBE_RPC``).
+    :param sender: Identifier of the client sending the subscription.
+    :param identifier: Unique identifier for this subscription. If not provided, a UUID is generated
+        in the message itself.
+    :param prefetch_count: Maximum number of tasks the subscriber accepts in flight at once.
+        ``None`` or a non-positive value means unlimited. Only meaningful for ``SUBSCRIBE_TASK``;
+        ignored for other message types.
+    :return: Dictionary containing the subscription message.
+    """
     return {
         'type': msg_type.value,
         'id': uuid.uuid4().hex,
         'sender': sender,
         'identifier': identifier,
+        'prefetch_count': prefetch_count,
     }

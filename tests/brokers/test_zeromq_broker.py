@@ -164,7 +164,9 @@ class TestZeromqBrokerCommunicator:
 
             assert result is communicator
             sleep.assert_called_once_with(0.2)
-            communicator_cls.assert_called_once_with(router_endpoint=endpoint, task_timeout=None)
+            communicator_cls.assert_called_once_with(
+                router_endpoint=endpoint, task_timeout=None, task_prefetch_count=None
+            )
             communicator.start.assert_called_once()
 
     def test_get_communicator_warns_while_waiting_for_endpoint(self, zeromq_broker, monkeypatch):
@@ -189,7 +191,9 @@ class TestZeromqBrokerCommunicator:
             assert result is communicator
             assert sleep.call_count == 2
             warning.assert_called_once_with('Still waiting for broker to become ready...')
-            communicator_cls.assert_called_once_with(router_endpoint=endpoint, task_timeout=None)
+            communicator_cls.assert_called_once_with(
+                router_endpoint=endpoint, task_timeout=None, task_prefetch_count=None
+            )
             communicator.start.assert_called_once()
 
     def test_get_communicator(self, aiida_broker, monkeypatch):

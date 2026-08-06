@@ -69,10 +69,14 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         router_endpoint: str,
         client_id: str | None = None,
         task_timeout: float | None = None,
+        task_prefetch_count: int | None = None,
     ):
         self._router_endpoint = router_endpoint
         self._client_id = client_id or f'client-{uuid.uuid4().hex[:8]}'
         self._task_timeout = task_timeout
+        # Maximum number of tasks the broker may keep in flight on this client
+        # (``None`` = unlimited). Declared to the broker on every SUBSCRIBE_TASK.
+        self._task_prefetch_count = task_prefetch_count
 
         # ZeroMQ sockets (created on the event loop thread)
         self._context: zmq.asyncio.Context | None = None
@@ -343,7 +347,12 @@ class ZeromqCommunicator(kiwipy.Communicator):  # type: ignore[misc]
         def _do() -> str:
             ident = identifier or f'task-{uuid.uuid4().hex[:8]}'
             self._task_subscribers[ident] = subscriber
-            msg = make_subscribe_message(MessageType.SUBSCRIBE_TASK, self._client_id, ident)
+            msg = make_subscribe_message(
+                MessageType.SUBSCRIBE_TASK,
+                self._client_id,
+                ident,
+                prefetch_count=self._task_prefetch_count,
+            )
             self._send(msg)
             _LOGGER.info('Added task subscriber: %s', ident)
             return ident

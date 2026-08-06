@@ -19,6 +19,7 @@ import pytest
 
 from aiida.brokers.zeromq.broker import ZeromqBroker
 from aiida.brokers.zeromq.communicator import ZeromqCommunicator
+from aiida.brokers.zeromq.protocol import MessageType
 
 
 @pytest.fixture(scope='module')
@@ -76,6 +77,42 @@ class TestZeromqCommunicatorLifecycle:
         comm = ZeromqCommunicator(router_endpoint='ipc:///tmp/fake')
         with pytest.raises(RuntimeError, match='closed'):
             comm.task_send({'x': 1})
+
+
+class TestZeromqCommunicatorPrefetch:
+    """Tests that the communicator declares its prefetch count when subscribing."""
+
+    @staticmethod
+    def make_offline_communicator(**kwargs) -> ZeromqCommunicator:
+        """Return a communicator whose sends are captured instead of hitting a socket.
+
+        Pretending the current thread is the loop thread makes ``_run_on_loop``
+        execute inline, so no event loop or broker is needed.
+        """
+        import threading
+        from unittest.mock import MagicMock
+
+        comm = ZeromqCommunicator(router_endpoint='ipc://test', **kwargs)
+        comm._loop_thread = threading.current_thread()
+        comm._send = MagicMock()
+        comm._closed = False
+        return comm
+
+    def test_subscribe_declares_prefetch_count(self):
+        """Test the configured prefetch count is sent on SUBSCRIBE_TASK."""
+        comm = self.make_offline_communicator(task_prefetch_count=15)
+        comm.add_task_subscriber(lambda c, t: None, identifier='worker')
+
+        msg = comm._send.call_args[0][0]
+        assert msg['type'] == MessageType.SUBSCRIBE_TASK.value
+        assert msg['prefetch_count'] == 15
+
+    def test_subscribe_without_prefetch_count(self):
+        """Test no prefetch count is declared when none is configured."""
+        comm = self.make_offline_communicator()
+        comm.add_task_subscriber(lambda c, t: None, identifier='worker')
+
+        assert comm._send.call_args[0][0]['prefetch_count'] is None
 
 
 class TestZeromqCommunicatorMessaging:

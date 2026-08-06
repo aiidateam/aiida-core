@@ -87,6 +87,9 @@ requires-python = '>=3.10'
 [project.entry-points.'aiida.calculations.monitors']
 'core.always_kill' = 'aiida.calculations.monitors.base:always_kill'
 
+[project.entry-points."aiida.cmdline"]
+"workgraph" = "aiida.workgraph.cli.cmd_workgraph:workgraph"
+
 [project.entry-points.'aiida.cmdline.computer.configure']
 'core.local' = 'aiida.transports.plugins.local:CONFIGURE_LOCAL_CMD'
 'core.ssh' = 'aiida.transports.plugins.ssh:CONFIGURE_SSH_CMD'
@@ -216,6 +219,67 @@ requires-python = '>=3.10'
 [project.entry-points.'aiida.workflows']
 'core.arithmetic.add_multiply' = 'aiida.workflows.arithmetic.add_multiply:add_multiply'
 'core.arithmetic.multiply_add' = 'aiida.workflows.arithmetic.multiply_add:MultiplyAddWorkChain'
+"workgraph.process" = "aiida.workgraph.engine.process:WorkGraphProcess"
+
+[project.entry-points."aiida_workgraph.property"]
+"workgraph.aiida_float_vector" = "aiida.workgraph.properties.builtins:PropertyAiiDAFloatVector"
+"workgraph.aiida_int_vector" = "aiida.workgraph.properties.builtins:PropertyAiiDAIntVector"
+"workgraph.aiida_structuredata" = "aiida.workgraph.properties.builtins:PropertyStructureData"
+"workgraph.any" = "aiida.workgraph.properties.builtins:PropertyAny"
+"workgraph.bool" = "aiida.workgraph.properties.builtins:PropertyBool"
+"workgraph.dict" = "aiida.workgraph.properties.builtins:PropertyDict"
+"workgraph.float" = "aiida.workgraph.properties.builtins:PropertyFloat"
+"workgraph.int" = "aiida.workgraph.properties.builtins:PropertyInt"
+"workgraph.list" = "aiida.workgraph.properties.builtins:PropertyList"
+"workgraph.string" = "aiida.workgraph.properties.builtins:PropertyString"
+
+[project.entry-points."aiida_workgraph.socket"]
+"workgraph.aiida_float_vector" = "aiida.workgraph.sockets.builtins:SocketAiiDAFloatVector"
+"workgraph.aiida_int_vector" = "aiida.workgraph.sockets.builtins:SocketAiiDAIntVector"
+"workgraph.aiida_structuredata" = "aiida.workgraph.sockets.builtins:SocketStructureData"
+"workgraph.annotated" = "aiida.workgraph.sockets.builtins:SocketAnnotated"
+"workgraph.any" = "aiida.workgraph.sockets.builtins:SocketAny"
+"workgraph.bool" = "aiida.workgraph.sockets.builtins:SocketBool"
+"workgraph.dict" = "aiida.workgraph.sockets.builtins:SocketDict"
+"workgraph.float" = "aiida.workgraph.sockets.builtins:SocketFloat"
+"workgraph.int" = "aiida.workgraph.sockets.builtins:SocketInt"
+"workgraph.list" = "aiida.workgraph.sockets.builtins:SocketList"
+"workgraph.namespace" = "aiida.workgraph.socket:TaskSocketNamespace"
+"workgraph.string" = "aiida.workgraph.sockets.builtins:SocketString"
+
+[project.entry-points."aiida_workgraph.task"]
+"workgraph.aiida_dict" = "aiida.workgraph.tasks.builtins:aiida_dict"
+"workgraph.aiida_float" = "aiida.workgraph.tasks.builtins:aiida_float"
+"workgraph.aiida_int" = "aiida.workgraph.tasks.builtins:aiida_int"
+"workgraph.aiida_list" = "aiida.workgraph.tasks.builtins:aiida_list"
+"workgraph.aiida_process" = "aiida.workgraph.tasks.aiida:AiiDAProcessTask"
+"workgraph.aiida_string" = "aiida.workgraph.tasks.builtins:aiida_string"
+"workgraph.any" = "aiida.workgraph.task:Task"
+"workgraph.gather_item" = "aiida.workgraph.tasks.builtins:GatherItem"
+"workgraph.get_context" = "aiida.workgraph.tasks.builtins:GetContext"
+"workgraph.graph_level" = "aiida.workgraph.tasks.builtins:GraphLevelTask"
+"workgraph.if_zone" = "aiida.workgraph.tasks.builtins:If"
+"workgraph.load_code" = "aiida.workgraph.tasks.builtins:AiiDACode"
+"workgraph.load_node" = "aiida.workgraph.tasks.builtins:AiiDANode"
+"workgraph.map_item" = "aiida.workgraph.tasks.builtins:MapItem"
+"workgraph.map_zone" = "aiida.workgraph.tasks.builtins:Map"
+"workgraph.monitor_file" = "aiida.workgraph.tasks.monitors:monitor_file"
+"workgraph.monitor_task" = "aiida.workgraph.tasks.monitors:monitor_task"
+"workgraph.monitor_time" = "aiida.workgraph.tasks.monitors:monitor_time"
+"workgraph.select" = "aiida.workgraph.tasks.builtins:Select"
+"workgraph.set_context" = "aiida.workgraph.tasks.builtins:SetContext"
+"workgraph.subgraph_task" = "aiida.workgraph.tasks.subgraph_task:SubGraphTask"
+"workgraph.test_add" = "aiida.workgraph.executors.test:add"
+"workgraph.test_arithmetic_multiply_add" = "aiida.workgraph.tasks.test:TestArithmeticMultiplyAdd"
+"workgraph.test_sum_diff" = "aiida.workgraph.executors.test:sum_diff"
+"workgraph.while_zone" = "aiida.workgraph.tasks.builtins:While"
+"workgraph.zone" = "aiida.workgraph.tasks.builtins:Zone"
+
+[project.entry-points."aiida_workgraph.type_mapping"]
+"workgraph.builtins_mapping" = "aiida.workgraph.orm.mapping:builtins_type_mapping"
+
+[project.entry-points."aiida_workgraph.type_promotion"]
+"workgraph.builtins_mapping" = "aiida.workgraph.orm.mapping:TYPE_PROMOTIONS"
 
 [project.optional-dependencies]
 atomic_tools = [

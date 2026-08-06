@@ -135,8 +135,8 @@ class QbField:
     def is_subscriptable(self) -> bool:
         """Return whether nested lookup through ``field['key']`` is supported."""
         warn_deprecation(
-            'Deprecated compatibility argument. Subscriptability is determined by the field type;'
-            '``QbDictField`` and its subclasses support nested lookup.',
+            '`QbField.is_subscriptable` is deprecated. Subscriptability is determined by the field type;'
+            '`QbDictField` and its subclasses support nested lookup.',
             version=3,
             stacklevel=2,
         )

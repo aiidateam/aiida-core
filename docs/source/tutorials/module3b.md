@@ -22,20 +22,7 @@ execution:
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module3b.ipynb` {octicon}`download`
 :::
 
-:::{note}
-This module continues {ref}`Module 3a <tutorial:module3a>`, reusing the same tutorial profile and the `gray_scott_pipeline` workflow built there.
-If you are following along locally, work through {ref}`Module 3a <tutorial:module3a>` first: this module builds directly on it.
-:::
-
-## What you will learn
-
-After this module, you will be able to:
-
-- Run a workflow over many input sets at once with WorkGraph's `Map`, turning a plain Python `for`-loop into a single tracked, parallel workflow
-- Gather per-iteration outputs back into a single result
-- Reuse the same workflow for a 2D scan by changing only its input
-
-:::{note}
+:::{dropdown} Installation requirements
 This module uses AiiDA, `aiida-shell`, and `aiida-workgraph`:
 
 ```bash
@@ -44,7 +31,17 @@ uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.co
 ```
 :::
 
+:::{note}
+This module continues {ref}`Module 3a <tutorial:module3a>`, reusing the same tutorial profile and the `gray_scott_pipeline` workflow built there.
+If you are following along locally, work through {ref}`Module 3a <tutorial:module3a>` first: this module builds directly on it.
+:::
+
 ```{code-cell} ipython3
+:tags: [hide-input]
+:mystnb:
+:    code_prompt_show: 'Show the setup code (same as Module 1)'
+:    code_prompt_hide: 'Hide the setup code (same as Module 1)'
+
 # Set up the tutorial's isolated sandbox profile (see Module 1 for details).
 from pathlib import Path
 
@@ -60,6 +57,14 @@ if not Path('include/setup_tutorial.py').exists():
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```
+
+## What you will learn
+
+After this module, you will be able to:
+
+- Run a workflow over many input sets at once with WorkGraph's `Map`, turning a plain Python `for`-loop into a single tracked, parallel workflow
+- Gather per-iteration outputs back into a single result
+- Reuse the same workflow for a 2D scan by changing only its input
 
 We build on the `gray_scott_pipeline` workflow from {ref}`Module 3a <tutorial:module3a>`.
 Because each notebook runs in its own kernel, we import it from the shared `include/workflows.py` rather than redefining it:

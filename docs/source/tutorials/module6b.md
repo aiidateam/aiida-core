@@ -22,20 +22,7 @@ execution:
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module6b.ipynb` {octicon}`download`
 :::
 
-:::{note}
-This module continues {ref}`Module 6a <tutorial:module6a>` and reuses its `If`-gated pipeline.
-If you are following along locally, work through {ref}`Module 6a <tutorial:module6a>` first.
-:::
-
-## What you will learn
-
-After this module, you will be able to:
-
-- Give each iteration of a `Map` its own shape, by putting an `If`-gated pipeline inside the `Map`.
-- Build part of a workflow's graph from **data that wasn't known when you wrote it**, using a calcfunction to turn one stage's outputs into the next stage's parameter set.
-- Combine both into a single adaptive sweep whose refined parameters are computed midway through the run.
-
-:::{note}
+:::{dropdown} Installation requirements
 This module uses AiiDA, `aiida-shell`, and `aiida-workgraph`:
 
 ```bash
@@ -44,7 +31,17 @@ uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.co
 ```
 :::
 
+:::{note}
+This module continues {ref}`Module 6a <tutorial:module6a>` and reuses its `If`-gated pipeline.
+If you are following along locally, work through {ref}`Module 6a <tutorial:module6a>` first.
+:::
+
 ```{code-cell} ipython3
+:tags: [hide-input]
+:mystnb:
+:    code_prompt_show: 'Show the setup code (same as Module 1)'
+:    code_prompt_hide: 'Hide the setup code (same as Module 1)'
+
 # Set up the tutorial's isolated sandbox profile (see Module 1 for details).
 from pathlib import Path
 
@@ -60,6 +57,14 @@ if not Path('include/setup_tutorial.py').exists():
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```
+
+## What you will learn
+
+After this module, you will be able to:
+
+- Give each iteration of a `Map` its own shape, by putting an `If`-gated pipeline inside the `Map`.
+- Build part of a workflow's graph from **data that wasn't known when you wrote it**, using a calcfunction to turn one stage's outputs into the next stage's parameter set.
+- Combine both into a single adaptive sweep whose refined parameters are computed midway through the run.
 
 We build on {ref}`Module 6a <tutorial:module6a>`, so we pull in the same helpers.
 Because each notebook runs in its own kernel, the shared pieces come from `include/`:

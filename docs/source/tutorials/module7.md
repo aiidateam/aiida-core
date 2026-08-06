@@ -22,25 +22,7 @@ execution:
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module7.ipynb` {octicon}`download`
 :::
 
-:::{note}
-This module reuses the tutorial profile and the `gsrd_code` object created in {ref}`Module 1 <tutorial:module1>`.
-If you are following along locally, run that first.
-:::
-
-## What you will learn
-
-By the end of this module, you will have a map of the wider AiiDA world and concrete pointers for taking the next step.
-Specifically:
-
-- How to make a workflow **recover** from a failed calculation using a WorkGraph error handler, instead of giving up.
-- Why **CalcJob plugins** exist, what they look like, and when to write one instead of staying with `aiida-shell`.
-- How **WorkChains** relate to WorkGraph, and when you'll meet them in the wild.
-- How **caching** lets you re-run the same workflow at near-zero cost, and how to inspect cache hits.
-- An overview of the **plugin ecosystem**, with one card per plugin and a link.
-
-This module is a survey, not a deep dive: each section is a concrete demo or sketch plus a pointer to the canonical reference.
-
-:::{note}
+:::{dropdown} Installation requirements
 This module touches AiiDA, `aiida-shell`, and `aiida-workgraph`:
 
 ```bash
@@ -51,7 +33,17 @@ uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.co
 Install `aiida-core`, not `aiida` (the latter is an old meta-package).
 :::
 
+:::{note}
+This module reuses the tutorial profile and the `gsrd_code` object created in {ref}`Module 1 <tutorial:module1>`.
+If you are following along locally, run that first.
+:::
+
 ```{code-cell} ipython3
+:tags: [hide-input]
+:mystnb:
+:    code_prompt_show: 'Show the setup code (same as Module 1)'
+:    code_prompt_hide: 'Hide the setup code (same as Module 1)'
+
 # Set up the tutorial's isolated sandbox profile (see Module 1 for details).
 from pathlib import Path
 
@@ -67,6 +59,19 @@ if not Path('include/setup_tutorial.py').exists():
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```
+
+## What you will learn
+
+By the end of this module, you will have a map of the wider AiiDA world and concrete pointers for taking the next step.
+Specifically:
+
+- How to make a workflow **recover** from a failed calculation using a WorkGraph error handler, instead of giving up.
+- Why **CalcJob plugins** exist, what they look like, and when to write one instead of staying with `aiida-shell`.
+- How **WorkChains** relate to WorkGraph, and when you'll meet them in the wild.
+- How **caching** lets you re-run the same workflow at near-zero cost, and how to inspect cache hits.
+- An overview of the **plugin ecosystem**, with one card per plugin and a link.
+
+This module is a survey, not a deep dive: each section is a concrete demo or sketch plus a pointer to the canonical reference.
 
 ## Error handling: recovering from a failed calculation
 

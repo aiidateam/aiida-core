@@ -23,6 +23,17 @@ execution:
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module3a.ipynb` {octicon}`download`
 :::
 
+:::{dropdown} Installation requirements
+This module uses `aiida-core`, `aiida-shell`, and `aiida-workgraph`. Install them with:
+
+```bash
+# aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
+uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.com/aiidateam/aiida-shell git+https://github.com/GeigerJ2/aiida-workgraph.git@fix/map-zone-output-retrieval matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
+```
+
+`aiida-workgraph` is currently a separate package; it is planned to become part of `aiida-core` with the v3.0 release.
+:::
+
 :::{note}
 This module reuses the tutorial profile and the `gsrd_code` object created in {ref}`Module 1 <tutorial:module1>`.
 If you are following along locally, run that module first.
@@ -35,28 +46,12 @@ load_profile()
 ```
 :::
 
-## What you will learn
-
-After this module, you will be able to:
-
-- Build a reusable workflow from existing calcfunctions and CalcJobs
-- Connect tasks by passing one task's output as another task's input, so the whole pipeline is tracked as a single named process you can query and restart
-- Inspect the workflow as a single process node and explore its individual child steps
-
-Running that workflow over *many* inputs, replacing the Python `for`-loop, is the subject of {ref}`Module 3b <tutorial:module3b>`.
-
-:::{note}
-This module uses `aiida-core`, `aiida-shell`, and `aiida-workgraph`. Install them with:
-
-```bash
-# aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
-uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.com/aiidateam/aiida-shell git+https://github.com/GeigerJ2/aiida-workgraph.git@fix/map-zone-output-retrieval matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
-```
-
-`aiida-workgraph` is currently a separate package; it is planned to become part of `aiida-core` with the v3.0 release.
-:::
-
 ```{code-cell} ipython3
+:tags: [hide-input]
+:mystnb:
+:    code_prompt_show: 'Show the setup code (same as Module 1)'
+:    code_prompt_hide: 'Hide the setup code (same as Module 1)'
+
 # Set up the tutorial's isolated sandbox profile (see Module 1 for details).
 from pathlib import Path
 
@@ -72,6 +67,16 @@ if not Path('include/setup_tutorial.py').exists():
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```
+
+## What you will learn
+
+After this module, you will be able to:
+
+- Build a reusable workflow from existing calcfunctions and CalcJobs
+- Connect tasks by passing one task's output as another task's input, so the whole pipeline is tracked as a single named process you can query and restart
+- Inspect the workflow as a single process node and explore its individual child steps
+
+Running that workflow over *many* inputs, replacing the Python `for`-loop, is the subject of {ref}`Module 3b <tutorial:module3b>`.
 
 ## Why workflows?
 

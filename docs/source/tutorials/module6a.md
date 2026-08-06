@@ -23,21 +23,7 @@ execution:
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module6a.ipynb` {octicon}`download`
 :::
 
-:::{note}
-This module reuses the tutorial profile and the `gsrd_code` object created in {ref}`Module 1 <tutorial:module1>`, and assumes you have read {ref}`Module 3 <tutorial:module3>` (`@task.graph()`, `Map`, `shelljob`).
-If you are following along locally, run those first.
-:::
-
-## What you will learn
-
-After this module, you will be able to:
-
-- Run a task only when it is worth it, with an `If` control-flow region gated on an earlier task's output.
-- Iterate a simulation until a quantity converges, with a `While` region and the graph's shared `ctx` store.
-
-Composing these into a workflow whose shape **emerges at runtime** (an `If` inside a `Map`, and an adaptive sweep) is the subject of {ref}`Module 6b <tutorial:module6b>`.
-
-:::{note}
+:::{dropdown} Installation requirements
 This module uses AiiDA, `aiida-shell`, and `aiida-workgraph`:
 
 ```bash
@@ -46,7 +32,17 @@ uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.co
 ```
 :::
 
+:::{note}
+This module reuses the tutorial profile and the `gsrd_code` object created in {ref}`Module 1 <tutorial:module1>`, and assumes you have read {ref}`Module 3 <tutorial:module3>` (`@task.graph()`, `Map`, `shelljob`).
+If you are following along locally, run those first.
+:::
+
 ```{code-cell} ipython3
+:tags: [hide-input]
+:mystnb:
+:    code_prompt_show: 'Show the setup code (same as Module 1)'
+:    code_prompt_hide: 'Hide the setup code (same as Module 1)'
+
 # Set up the tutorial's isolated sandbox profile (see Module 1 for details).
 from pathlib import Path
 
@@ -62,6 +58,15 @@ if not Path('include/setup_tutorial.py').exists():
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```
+
+## What you will learn
+
+After this module, you will be able to:
+
+- Run a task only when it is worth it, with an `If` control-flow region gated on an earlier task's output.
+- Iterate a simulation until a quantity converges, with a `While` region and the graph's shared `ctx` store.
+
+Composing these into a workflow whose shape **emerges at runtime** (an `If` inside a `Map`, and an adaptive sweep) is the subject of {ref}`Module 6b <tutorial:module6b>`.
 
 ## When fixed-shape workflows aren't enough
 

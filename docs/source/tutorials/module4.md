@@ -22,6 +22,15 @@ execution:
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module4.ipynb` {octicon}`download`
 :::
 
+:::{dropdown} Installation requirements
+This module uses AiiDA and `aiida-shell`, plus SSH access to a cluster:
+
+```bash
+# aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
+uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.com/aiidateam/aiida-shell git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
+```
+:::
+
 :::{note}
 This module reuses the tutorial profile created in {ref}`Module 1 <tutorial:module1>`.
 If you are following along locally, run that module first.
@@ -34,25 +43,12 @@ load_profile()
 ```
 :::
 
-## What you will learn
-
-After this module, you will be able to:
-
-- Register a remote HPC cluster (setup → configure → test) and a code that lives on it
-- Submit a calculation to that cluster and inspect the result with the same commands as for a local run
-- Set per-job scheduler options (resources, queue, account, wall-time) via `metadata.options`
-- Switch a workflow between local and remote execution without changing the workflow itself
-
-:::{note}
-This module uses AiiDA and `aiida-shell`, plus SSH access to a cluster:
-
-```bash
-# aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
-uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.com/aiidateam/aiida-shell git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
-```
-:::
-
 ```{code-cell} ipython3
+:tags: [hide-input]
+:mystnb:
+:    code_prompt_show: 'Show the setup code (same as Module 1)'
+:    code_prompt_hide: 'Hide the setup code (same as Module 1)'
+
 # Set up the tutorial's isolated sandbox profile (see Module 1 for details).
 from pathlib import Path
 
@@ -68,6 +64,15 @@ if not Path('include/setup_tutorial.py').exists():
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```
+
+## What you will learn
+
+After this module, you will be able to:
+
+- Register a remote HPC cluster (setup → configure → test) and a code that lives on it
+- Submit a calculation to that cluster and inspect the result with the same commands as for a local run
+- Set per-job scheduler options (resources, queue, account, wall-time) via `metadata.options`
+- Switch a workflow between local and remote execution without changing the workflow itself
 
 ```{code-cell} ipython3
 :tags: ["hide-input"]

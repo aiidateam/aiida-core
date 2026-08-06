@@ -20,6 +20,17 @@ kernelspec:
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module5.ipynb` {octicon}`download`
 :::
 
+:::{dropdown} Installation requirements
+This module only needs AiiDA:
+
+```bash
+# aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
+uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.com/aiidateam/aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
+```
+
+It reuses the sweep data created in {ref}`Module 2 <tutorial:module2>`.
+:::
+
 :::{note}
 This module reuses the tutorial profile created in {ref}`Module 1 <tutorial:module1>` and the F-sweep data created in {ref}`Module 2 <tutorial:module2>`.
 If you are following along locally, run those modules first.
@@ -32,26 +43,12 @@ load_profile()
 ```
 :::
 
-## What you will learn
-
-After this module, you will be able to:
-
-- Build queries that filter, project, and aggregate over thousands of nodes without loading them into Python
-- Walk the provenance graph from any node to its inputs, outputs, ancestors, or descendants
-- Reconstruct an analysis directly from the database, without keeping Python references to the original results
-
-:::{note}
-This module only needs AiiDA:
-
-```bash
-# aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
-uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.com/aiidateam/aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
-```
-
-It reuses the sweep data created in {ref}`Module 2 <tutorial:module2>`.
-:::
-
 ```{code-cell} ipython3
+:tags: [hide-input]
+:mystnb:
+:    code_prompt_show: 'Show the setup code (same as Module 1)'
+:    code_prompt_hide: 'Hide the setup code (same as Module 1)'
+
 # Set up the tutorial's isolated sandbox profile (see Module 1 for details).
 from pathlib import Path
 
@@ -67,6 +64,14 @@ if not Path('include/setup_tutorial.py').exists():
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```
+
+## What you will learn
+
+After this module, you will be able to:
+
+- Build queries that filter, project, and aggregate over thousands of nodes without loading them into Python
+- Walk the provenance graph from any node to its inputs, outputs, ancestors, or descendants
+- Reconstruct an analysis directly from the database, without keeping Python references to the original results
 
 ## Why query the database?
 

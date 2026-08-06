@@ -22,6 +22,15 @@ execution:
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module2.ipynb` {octicon}`download`
 :::
 
+:::{dropdown} Installation requirements (same as&nbsp;{ref}`Module 1 <tutorial:module1>`)
+If you have not already installed these in an earlier module, run:
+
+```bash
+# aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
+uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.com/aiidateam/aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
+```
+:::
+
 :::{note}
 This module reuses the tutorial profile and the `gsrd_code` object created in {ref}`Module 1 <tutorial:module1>`.
 If you are following along locally, run that module first.
@@ -31,24 +40,6 @@ To use your own profile instead, replace the setup cell at the top of the downlo
 from aiida import load_profile
 
 load_profile()
-```
-:::
-
-## What you will learn
-
-After this module, you will be able to:
-
-- Recognize why file-based outputs are hard to query, and what structured data buys you
-- Use AiiDA's structured data types (`Dict`, `Float`, ...) to store queryable results
-- Add input preparation and output parsing as tracked `@calcfunction` steps in the provenance
-- Organize and search results with extras, groups, and QueryBuilder
-
-:::{dropdown} Installation requirements (same as&nbsp;{ref}`Module 1 <tutorial:module1>`)
-If you have not already installed these in an earlier module, run:
-
-```bash
-# aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
-uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.com/aiidateam/aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
 ```
 :::
 
@@ -73,6 +64,15 @@ if not Path('include/setup_tutorial.py').exists():
 %load_ext aiida
 %run -i include/setup_tutorial.py
 ```
+
+## What you will learn
+
+After this module, you will be able to:
+
+- Recognize why file-based outputs are hard to query, and what structured data buys you
+- Use AiiDA's structured data types (`Dict`, `Float`, ...) to store queryable results
+- Add input preparation and output parsing as tracked `@calcfunction` steps in the provenance
+- Organize and search results with extras, groups, and QueryBuilder
 
 ## Why structured data?
 

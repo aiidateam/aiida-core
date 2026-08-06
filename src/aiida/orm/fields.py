@@ -59,6 +59,7 @@ class QbField:
         '_doc',
         '_dtype',
         '_is_attribute',
+        '_is_subscriptable',
         '_key',
     )
 
@@ -70,6 +71,7 @@ class QbField:
         dtype: t.Any | None = None,
         doc: str = '',
         is_attribute: bool = True,
+        is_subscriptable: bool = False,
     ) -> None:
         """Initialise a ORM entity field, accessible via the ``QueryBuilder``
 
@@ -78,12 +80,16 @@ class QbField:
         :param dtype: The data type of the field. If None, the field is of variable type.
         :param doc: A docstring for the field
         :param is_attribute: If True, the ``backend_key`` property will prepend "attributes." to field name
+        :param is_subscriptable: If True, a new field can be created by ``field["subkey"]``.
+            Deprecated: automatically set to `True` for `QbDictField` and its subclasses.
+
         """
         self._key = key
         self._backend_key = alias if alias is not None else key
         self._doc = doc
         self._dtype = dtype
         self._is_attribute = is_attribute
+        self._is_subscriptable = is_subscriptable
 
     @property
     def key(self) -> str:
@@ -129,7 +135,7 @@ class QbField:
     def is_subscriptable(self) -> bool:
         """Return whether nested lookup through ``field['key']`` is supported."""
         warn_deprecation(
-            '`QbField.is_subscriptable` is deprecated. Inspect the corresponding ORM model field metadata instead.',
+            '`QbField.is_subscriptable` is deprecated. It is `True` only for `QbDictField` and its subclasses.',
             version=3,
             stacklevel=2,
         )
@@ -494,6 +500,7 @@ class QbFieldArguments(t.TypedDict):
     dtype: t.Any | None
     doc: str
     is_attribute: bool
+    is_subscriptable: bool
 
 
 def add_field(
@@ -503,6 +510,7 @@ def add_field(
     dtype: t.Any | None = None,
     doc: str = '',
     is_attribute: bool = False,
+    is_subscriptable: bool = False,
 ) -> QbField:
     """Add a `dtype`-dependent `QbField` representation of a field.
 
@@ -511,6 +519,8 @@ def add_field(
     :param dtype: The data type of the field. If None, the field is of variable type.
     :param doc: A docstring for the field
     :param is_attribute: If True, the ``backend_key`` property will prepend "attributes." to field name
+    :param is_subscriptable: If True, a new field can be created by ``field["subkey"]``.
+        Deprecated: automatically set to `True` for `QbDictField` and its subclasses.
     """
     kwargs: QbFieldArguments = {
         'key': key,
@@ -518,6 +528,7 @@ def add_field(
         'dtype': dtype,
         'doc': doc,
         'is_attribute': is_attribute,
+        'is_subscriptable': is_subscriptable,
     }
     if not isidentifier(key):
         raise ValueError(f'{key} is not a valid python identifier')

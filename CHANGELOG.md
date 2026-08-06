@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### New features
+
+### Behavior changes
+
+### Fixes
+
+### Deprecations
+
+
 ## v2.9.0 - 2026-08-06
 
 The big feature of this release is the new built-in **ZeroMQ broker**, which allows submitting calculations and workflows to the daemon workers without installing and running an external message broker service such as RabbitMQ.

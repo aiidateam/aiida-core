@@ -333,6 +333,15 @@ class ZeromqBrokerServer:
         """Handle task acknowledgment from worker."""
         task_id = msg.get('task_id')
         if task_id:
+            # Verify this worker owns the task
+            owner = self._task_worker_assignments.get(task_id)
+            if owner != identity:
+                _LOGGER.warning(
+                    'Worker %s tried to ack task %s owned by another worker',
+                    identity.hex()[:8],
+                    task_id,
+                )
+                return
             self._task_queue.ack(task_id)
             self._task_worker_assignments.pop(task_id, None)
             _LOGGER.debug('Task acknowledged: %s', task_id)
@@ -344,6 +353,15 @@ class ZeromqBrokerServer:
         """Handle task negative acknowledgment from worker."""
         task_id = msg.get('task_id')
         if task_id:
+            # Verify this worker owns the task
+            owner = self._task_worker_assignments.get(task_id)
+            if owner != identity:
+                _LOGGER.warning(
+                    'Worker %s tried to nack task %s owned by another worker',
+                    identity.hex()[:8],
+                    task_id,
+                )
+                return
             self._task_queue.nack(task_id, requeue=True)
             _LOGGER.debug('Task nacked and requeued: %s', task_id)
 

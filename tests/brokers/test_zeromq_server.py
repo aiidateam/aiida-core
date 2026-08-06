@@ -160,6 +160,8 @@ class TestZeromqBrokerServerMessageHandling:
         """Test _handle_task_nack requeues task and marks worker available."""
         server._task_queue.push('task-300', {'body': 'x'})
         server._task_queue.pop()
+        # Assign task to worker so NACK can find the owner
+        server._task_worker_assignments['task-300'] = b'worker-1'
 
         msg = {'type': MessageType.TASK_NACK.value, 'task_id': 'task-300'}
         server._handle_task_nack(b'worker-1', msg)
@@ -374,6 +376,37 @@ class TestZeromqBrokerServerMessageHandling:
         status = server.get_status()
         assert status['running'] is False
         assert status['pending_tasks'] == 0
+
+    def test_mismatched_ack_is_rejected(self, server):
+        """Test that a worker cannot ACK a task owned by another worker."""
+        # Set up: task assigned to worker-1
+        server._task_queue.push('task-1', {'body': 'data'})
+        server._task_queue.pop()
+        server._task_worker_assignments['task-1'] = b'worker-1'
+
+        # Worker-2 tries to ACK worker-1's task (should be rejected)
+        server._handle_task_ack(b'worker-2', {'type': MessageType.TASK_ACK.value, 'task_id': 'task-1'})
+
+        # Verify rejection: task still assigned and still processing
+        assert 'task-1' in server._task_worker_assignments
+        assert server._task_worker_assignments['task-1'] == b'worker-1'
+        assert server._task_queue.processing_count() == 1  # task not removed from processing
+
+    def test_mismatched_nack_is_rejected(self, server):
+        """Test that a worker cannot NACK a task owned by another worker."""
+        # Set up: task assigned to worker-1
+        server._task_queue.push('task-1', {'body': 'data'})
+        server._task_queue.pop()
+        server._task_worker_assignments['task-1'] = b'worker-1'
+
+        # Worker-2 tries to NACK worker-1's task (should be rejected)
+        server._handle_task_nack(b'worker-2', {'type': MessageType.TASK_NACK.value, 'task_id': 'task-1'})
+
+        # Verify rejection: task still assigned and not requeued
+        assert 'task-1' in server._task_worker_assignments
+        assert server._task_worker_assignments['task-1'] == b'worker-1'
+        assert server._task_queue.processing_count() == 1  # task not removed from processing
+        assert server._task_queue.size() == 0  # task was not requeued to pending
 
 
 class TestZeromqBrokerServerWithSockets:

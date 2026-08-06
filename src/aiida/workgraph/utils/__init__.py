@@ -93,23 +93,11 @@ def _validate_task_name(name: str, *, source: TaskNameSource) -> None:
 def inspect_aiida_component_type(executor: Callable) -> str:
     task_type = None
     if isinstance(executor, type):
-        # Lazy plugin imports so that ``import aiida.workgraph`` never pulls a downstream plugin.
-        # TODO: invert onto a ``_workgraph_task_type`` marker declared by each plugin process.
-        try:
-            from aiida_pythonjob import PythonJob
-            from aiida_pythonjob.calculations.pyfunction import PyFunction
-        except ImportError:
-            PythonJob = PyFunction = None
-        try:
-            from aiida_shell.calculations.shell import ShellJob
-        except ImportError:
-            ShellJob = None
-        if PythonJob is not None and executor == PythonJob:
-            task_type = 'PYTHONJOB'
-        elif PyFunction is not None and executor == PyFunction:
-            task_type = 'PYFUNCTION'
-        elif ShellJob is not None and executor == ShellJob:
-            task_type = 'SHELLJOB'
+        # A plugin process declares its WorkGraph task type via the ``_workgraph_task_type`` marker, so the
+        # host recognises it without importing the plugin class (GRASP: the process is the information expert).
+        declared = getattr(executor, '_workgraph_task_type', None)
+        if declared is not None:
+            task_type = declared
         elif issubclass(executor, CalcJob):
             task_type = task_types[CalcJob]
         elif issubclass(executor, WorkChain):

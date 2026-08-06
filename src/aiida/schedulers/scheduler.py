@@ -352,6 +352,13 @@ class Scheduler(metaclass=abc.ABCMeta):
         """
         raise exceptions.FeatureNotAvailable('Cannot get detailed job info')
 
+    def can_get_detailed_job_info(self) -> bool:
+        try:
+            self._get_detailed_job_info_command('1')
+        except exceptions.FeatureNotAvailable:
+            return False
+        return True
+
     def get_detailed_job_info(self, job_id: str) -> dict[str, str | int]:
         """Return the detailed job info.
 

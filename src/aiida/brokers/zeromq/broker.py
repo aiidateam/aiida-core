@@ -184,6 +184,7 @@ class ZeromqBroker(Broker):
             self._communicator = ZeromqCommunicator(
                 router_endpoint=router_endpoint,
                 task_timeout=get_config_option('broker.task_timeout'),
+                task_prefetch_count=get_config_option('daemon.worker_process_slots'),
             )
             self._communicator.start()
 

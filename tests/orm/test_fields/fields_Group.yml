@@ -6,4 +6,4 @@ time: QbNumericField('time', dtype=<class 'datetime.datetime'>, doc='The creatio
   time of the node, defaults to now (timezone-aware)')
 type_string: QbStrField('type_string', dtype=<class 'str'>, doc='The type of the group')
 user: QbNumericField('user', dtype=<class 'int'>, doc='The PK of the group owner')
-uuid: QbAnyField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the group')
+uuid: QbStrField('uuid', dtype=<class 'uuid.UUID'>, doc='The UUID of the group')

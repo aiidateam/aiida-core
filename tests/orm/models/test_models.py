@@ -540,7 +540,7 @@ def test_generated_orm_model_setup_defers_pydantic_rebuild(monkeypatch):
 
     model = TestData.WriteModel(node_type=TestData.class_node_type, attributes={'value': '1'})
     assert model.attributes.value == 1
-    assert TestData.ReadModel.model_json_schema()['title'] == 'TestDataReadModel'
+    assert TestData.ReadModel.model_config.get('title') == 'TestDataReadModel'
 
 
 @pytest.mark.parametrize(
@@ -553,10 +553,10 @@ def test_model_overrides(required_arguments: RequiredEntityArguments):
     name = cls.__name__
 
     assert cls.ReadModel.__qualname__ == f'{name}.ReadModel'
-    assert cls.ReadModel.model_json_schema()['title'] == f'{name}ReadModel'
+    assert cls.ReadModel.model_config.get('title') == f'{name}ReadModel'
 
     assert cls.WriteModel.__qualname__ == f'{name}.WriteModel'
-    assert cls.WriteModel.model_json_schema()['title'] == f'{name}WriteModel'
+    assert cls.WriteModel.model_config.get('title') == f'{name}WriteModel'
 
 
 def _clean_and_sort(dictionary: dict) -> dict:
@@ -642,11 +642,11 @@ def test_node_attributes_model_overrides(required_arguments: RequiredNodeArgumen
     AttributesModel = cls.ReadModel.model_fields['attributes'].annotation  # noqa: N806
     assert AttributesModel is cls.AttributesModel
     assert AttributesModel.__qualname__ == f'{name}.AttributesModel'
-    assert AttributesModel.model_json_schema()['title'] == f'{name}AttributesModel'
+    assert AttributesModel.model_config.get('title') == f'{name}AttributesModel'
 
     AttributesWriteModel = cls.WriteModel.model_fields['attributes'].annotation  # noqa: N806
     assert AttributesWriteModel.__qualname__ == f'{name}.AttributesWriteModel'
-    assert AttributesWriteModel.model_json_schema()['title'] == f'{name}AttributesWriteModel'
+    assert AttributesWriteModel.model_config.get('title') == f'{name}AttributesWriteModel'
 
 
 def _validate_value(value):

@@ -43,8 +43,8 @@ After this module, you will be able to:
 - Add input preparation and output parsing as tracked Python steps to the simulation's provenance
 - Organize results with extras and groups for quick retrieval
 
-:::{note}
-Same requirements as {ref}`Module 1 <tutorial:module1>`:
+:::{dropdown} Installation requirements (same as&nbsp;{ref}`Module 1 <tutorial:module1>`)
+If you have not already installed these in an earlier module, run:
 
 ```bash
 # aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
@@ -53,6 +53,11 @@ uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.co
 :::
 
 ```{code-cell} ipython3
+:tags: [hide-input]
+:mystnb:
+:    code_prompt_show: 'Show the setup code'
+:    code_prompt_hide: 'Hide the setup code'
+
 # Set up the tutorial's isolated sandbox profile (see Module 1 for details).
 from pathlib import Path
 
@@ -69,18 +74,15 @@ if not Path('include/setup_tutorial.py').exists():
 %run -i include/setup_tutorial.py
 ```
 
-## Running many calculations with `aiida-shell`
+## Running many `aiida-shell` calculations
 
 In {ref}`Module 1 <tutorial:module1>`, you ran a single `gsrd` simulation through `aiida-shell` and got back `SinglefileData` nodes: the input YAML, the captured stdout, and the `results.npz` file, all tracked with provenance.
 
-Let's start varying our simulation parameters: scan the feed rate `F` and see how the pattern strength (`variance_V`) changes across a range of values.
+Now, let's start varying our simulation parameters: scan the feed rate `F` and see how the pattern strength (`variance_V`) changes across a range of values.
+
+We hold every other Gray-Scott parameter fixed and vary only `F`, sampling more densely around the transition near `F ~ 0.043`:
 
 ```{code-cell} ipython3
-# Sweep the feed rate F using aiida-shell.
-import yaml
-
-from aiida_shell import launch_shell_job
-
 # Fixed Gray-Scott parameters; we vary only the feed rate F below.
 BASE_PARAMS = {
     'grid_size': 64,
@@ -94,22 +96,34 @@ BASE_PARAMS = {
 }
 # Feed-rate values to scan, denser around the F ~ 0.043 transition.
 F_VALUES = [0.038, 0.040, 0.042, 0.044, 0.046, 0.050, 0.055, 0.060]
+```
 
-!mkdir -p /tmp/aiida-tutorial
+For each feed rate, we write an input file and launch a tracked `gsrd` calculation, keeping the resulting nodes so we can read their outputs afterwards:
+
+```{code-cell} ipython3
+# Launch one tracked gsrd calculation per F value.
+from pathlib import Path
+
+import yaml
+
+from aiida_shell import launch_shell_job
+
+input_dir = Path('/tmp/aiida-tutorial')
+input_dir.mkdir(parents=True, exist_ok=True)
+
 calc_nodes = []
 
 for f_val in F_VALUES:
-    # Write one input file per F value into the /tmp/aiida-tutorial/ folder.
+    # Write one input file per F value into the input directory.
     label = f'F{f_val:.3f}'.replace('.', '_')  # e.g. F0_038
-    input_path = f'/tmp/aiida-tutorial/input_{label}.yaml'
+    input_path = input_dir / f'input_{label}.yaml'
     params = BASE_PARAMS | {'F': f_val}
-    with open(input_path, 'w') as fh:
-        yaml.dump(params, fh)
+    input_path.write_text(yaml.dump(params))
 
     results, calc_node = launch_shell_job(
         gsrd_code,
         arguments='{input}',
-        nodes={'input': input_path},
+        nodes={'input': str(input_path)},
         outputs=['results.npz'],
     )
     calc_nodes.append((f_val, calc_node))
@@ -148,6 +162,10 @@ plot_transition_curve(
 ```
 
 The sharp drop in `variance_V` marks a **phase transition**: below it, the system forms rich spatial patterns; above it, the patterns dissolve.
+
+:::{dropdown} About the&nbsp;`plot_transition_curve`&nbsp;helper
+`plot_transition_curve` is one of the tutorial's `plot_*` helpers, shipped in {download}`include/plotting.py`. Plotting is not the focus here, so we keep that boilerplate out of the way; open the file if you are curious.
+:::
 
 ::::{grid} 2
 :gutter: 2

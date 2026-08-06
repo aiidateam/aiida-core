@@ -25,7 +25,7 @@ If existing plugin code still references `Class.Model`, keep it only as a tempor
 
 **`QbField` `str` and `repr` output**
 
-`QbField.is_subscriptable` is deprecated and has been removed from `str` and `repr` output. It is automatically set to `True` for `QbDictField` and its subclasses (`False` for all other `QbField` types).
+`QbField.is_subscriptable` is deprecated and has been removed from `str` and `repr` output. The runtime value is `True` only for `QbDictField` and its subclasses, which support nested lookup.
 
 ## v2.8.0 - 2026-03-16
 

@@ -80,8 +80,8 @@ class QbField:
         :param dtype: The data type of the field. If None, the field is of variable type.
         :param doc: A docstring for the field
         :param is_attribute: If True, the ``backend_key`` property will prepend "attributes." to field name
-        :param is_subscriptable: If True, a new field can be created by ``field["subkey"]``.
-            Deprecated: automatically set to `True` for `QbDictField` and its subclasses.
+        :param is_subscriptable: Deprecated compatibility argument. Subscriptability is determined by the field type;
+            ``QbDictField`` and its subclasses support nested lookup.
 
         """
         self._key = key
@@ -135,7 +135,8 @@ class QbField:
     def is_subscriptable(self) -> bool:
         """Return whether nested lookup through ``field['key']`` is supported."""
         warn_deprecation(
-            '`QbField.is_subscriptable` is deprecated. It is `True` only for `QbDictField` and its subclasses.',
+            'Deprecated compatibility argument. Subscriptability is determined by the field type;'
+            '``QbDictField`` and its subclasses support nested lookup.',
             version=3,
             stacklevel=2,
         )
@@ -519,8 +520,8 @@ def add_field(
     :param dtype: The data type of the field. If None, the field is of variable type.
     :param doc: A docstring for the field
     :param is_attribute: If True, the ``backend_key`` property will prepend "attributes." to field name
-    :param is_subscriptable: If True, a new field can be created by ``field["subkey"]``.
-        Deprecated: automatically set to `True` for `QbDictField` and its subclasses.
+    :param is_subscriptable: Deprecated compatibility argument. Subscriptability is determined by the field type;
+        ``QbDictField`` and its subclasses support nested lookup.
     """
     kwargs: QbFieldArguments = {
         'key': key,

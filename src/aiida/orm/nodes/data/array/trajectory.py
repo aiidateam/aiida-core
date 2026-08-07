@@ -222,7 +222,7 @@ class TrajectoryData(ArrayData):
         """Create trajectory from the list of
         :py:class:`aiida.orm.nodes.data.structure.StructureData` instances.
 
-        :param structurelist: a list of
+        :param structurelist: a sequence of
             :py:class:`aiida.orm.nodes.data.structure.StructureData` instances.
 
         :raises ValueError: if symbol lists of supplied structures are

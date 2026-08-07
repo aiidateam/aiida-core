@@ -96,7 +96,7 @@ def test_import_staged_pauses_workers_on_sqlite(make_profile, record_calls, tmp_
     report = endpoint.import_staged(tmp_path / 'staged', 'http://pusher:9137', timezone.now())
 
     assert calls == [circus_command('stop', profile), 'import', circus_command('start', profile)]
-    assert report == {'uuids': [], 'skipped': [], 'size': 0}
+    assert report == {'uuids': [], 'skipped': [], 'size': 0, 'refreshed': []}
 
 
 def test_import_staged_restarts_workers_on_failure(make_profile, record_calls, tmp_path):
@@ -232,6 +232,19 @@ def test_negotiate_delta_per_requester(make_profile, temp_backend):
     assert endpoint.resolve_delta(offer_all.delta).exists()
     assert endpoint.resolve_delta(offer_none.delta).exists()
     assert endpoint.resolve_delta('0' * 64) is None
+
+
+def test_negotiate_delta_refresh_only_under_sync(make_profile, empty_config, temp_backend):
+    """Test that the manifest offers the mtimes of edited extras only when the collab syncs extras."""
+    profile = make_profile()
+    cursor = timezone.now()
+    seal_calculation(temp_backend)
+
+    assert CollabEndpoint(profile, temp_backend).negotiate_delta(cursor, frozenset()).refresh == {}
+
+    empty_config.set_option('collab.policy', {'extras_mode': 'sync', 'groups_mode': 'local'}, scope=profile.name)
+
+    assert CollabEndpoint(profile, temp_backend).negotiate_delta(cursor, frozenset()).refresh
 
 
 def test_join_records_the_newcomer_and_answers_with_the_membership(make_profile, empty_config):

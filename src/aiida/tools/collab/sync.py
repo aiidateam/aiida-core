@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -20,14 +20,26 @@ from aiida import orm
 from aiida.common import timezone
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
+from aiida.orm.nodes.caching import NodeCaching
 from aiida.orm.utils.mixins import Sealable
 from aiida.tools.archive import create_archive, import_archive
 from aiida.tools.archive.abstract import get_format
+from aiida.tools.archive.imports import MergeExtrasType
+from aiida.tools.collab.protocol import ExtrasSnapshot
 from aiida.tools.collab.state import CollabEvent, CollabState
 from aiida.tools.graph.graph_traversers import get_nodes_export, traverse_graph, validate_traversal_rules
 
 if TYPE_CHECKING:
+    from aiida.manage.configuration.config import CollabExtrasMode
     from aiida.orm.implementation import StorageBackend
+
+MERGE_EXTRAS: dict[str, MergeExtrasType] = {'local': ('k', 'n', 'l'), 'sync': ('k', 'c', 'u')}
+
+CACHING_EXTRAS = (NodeCaching._HASH_EXTRA_KEY, NodeCaching.CACHED_FROM_KEY)
+
+# Extras whose key starts with this are private to the profile they live in: they never travel in a refresh and an
+# incoming snapshot never overwrites them. The caching extras are the ones AiiDA itself keeps there.
+PRIVATE_EXTRA_PREFIX = '_'
 
 # Callers are left out: a process that is still running has sealed children but is not sealed itself, and the export
 # refuses to write an unsealed process. Their CALL links travel once the caller seals.
@@ -94,6 +106,8 @@ class DeltaReport:
     uuids: list[str]
     skipped: list[str]
     size: int
+    refreshed: list[str] = field(default_factory=list)
+    """The nodes whose extras were replaced by the snapshot that travelled with the delta."""
 
 
 def compute_delta(
@@ -296,6 +310,104 @@ def missing_uuids(backend: StorageBackend, uuids: list[str]) -> list[str]:
     return sorted(set(uuids) - set(query.all(flat=True)))
 
 
+def refresh_offer(*, state: CollabState, backend: StorageBackend, cursor: datetime | None) -> dict[str, datetime]:
+    """Return the mtime of every node whose extras this profile may hold a newer version of than a peer at ``cursor``.
+
+    Under the ``sync`` policy this is what the manifest is for nodes, but for the extras of *shared* ones: the nodes
+    edited here since the cursor, united with those refreshed into this profile since then. That union is the same
+    one that makes relayed provenance travel, here so that an extras edit relayed A→B→C travels with pairwise pulls
+    alone. Only mtimes are offered: the receiver holds the authoritative comparison, its own mtimes, and asks for
+    the snapshots it turns out to need.
+
+    A peer without a cursor holds nothing of this profile yet, so everything travels in the delta with its extras
+    and there is nothing to refresh.
+    """
+    if cursor is None:
+        return {}
+
+    relayed = sorted(state.refreshed_uuids_since(cursor))
+    filters: dict[str, Any] = {'mtime': {'>=': cursor}}
+
+    if relayed:
+        filters = {'or': [filters, {'uuid': {'in': relayed}}]}
+
+    query = orm.QueryBuilder(backend=backend).append(orm.Node, filters=filters, project=['uuid', 'mtime'])
+
+    return dict(query.iterall())
+
+
+def refresh_wanted(backend: StorageBackend, offer: dict[str, datetime], tombstones: set[str]) -> list[str]:
+    """Return which of the offered nodes this profile holds an older version of the extras of.
+
+    A node this profile does not hold has no extras to replace — it either travels in the delta with them or is
+    not shared at all — and a tombstoned one was deliberately deleted, so both are dropped.
+    """
+    candidates = {uuid: mtime for uuid, mtime in offer.items() if uuid not in tombstones}
+
+    if not candidates:
+        return []
+
+    query = orm.QueryBuilder(backend=backend).append(
+        orm.Node, filters={'uuid': {'in': sorted(candidates)}}, project=['uuid', 'mtime']
+    )
+
+    return sorted(uuid for uuid, mtime in query.iterall() if candidates[uuid] > mtime)
+
+
+def refresh_snapshots(backend: StorageBackend, uuids: list[str]) -> list[ExtrasSnapshot]:
+    """Return the extras of the requested nodes, as the snapshot a peer replaces its own with."""
+    if not uuids:
+        return []
+
+    query = orm.QueryBuilder(backend=backend).append(
+        orm.Node, filters={'uuid': {'in': uuids}}, project=['uuid', 'mtime', 'extras']
+    )
+
+    return [
+        ExtrasSnapshot(uuid=uuid, mtime=mtime, extras=_public_extras(extras)) for uuid, mtime, extras in query.iterall()
+    ]
+
+
+def _public_extras(extras: dict[str, Any]) -> dict[str, Any]:
+    """Return the extras that are shared with the collab: everything outside the private ``_`` namespace."""
+    return {key: value for key, value in extras.items() if not key.startswith(PRIVATE_EXTRA_PREFIX)}
+
+
+def _apply_refresh(backend: StorageBackend, refresh: list[ExtrasSnapshot], tombstones: set[str]) -> list[str]:
+    """Replace the extras of the nodes whose snapshot is the newer one, and return which were written.
+
+    The whole dict is replaced rather than merged, which is what propagates a deletion as absence, except that the
+    private ``_`` namespace of this profile — the caching extras among it — is kept and never taken from the peer.
+    The snapshot's mtime is written as the node's own, so that this profile does not become the newest side and
+    echo the same extras back on the next exchange.
+    """
+    from aiida.orm.entities import EntityTypes
+
+    wanted = set(refresh_wanted(backend, {snapshot.uuid: snapshot.mtime for snapshot in refresh}, tombstones))
+
+    if not wanted:
+        return []
+
+    query = orm.QueryBuilder(backend=backend).append(
+        orm.Node, filters={'uuid': {'in': sorted(wanted)}}, project=['uuid', 'id', 'extras']
+    )
+    local = {uuid: (pk, extras) for uuid, pk, extras in query.iterall()}
+
+    rows = []
+
+    for snapshot in refresh:
+        if snapshot.uuid not in wanted:
+            continue
+
+        pk, extras = local[snapshot.uuid]
+        private = {key: value for key, value in extras.items() if key.startswith(PRIVATE_EXTRA_PREFIX)}
+        rows.append({'id': pk, 'extras': {**private, **_public_extras(snapshot.extras)}, 'mtime': snapshot.mtime})
+
+    backend.bulk_update(EntityTypes.NODE, rows)
+
+    return sorted(wanted)
+
+
 def _imported_nodes(state: CollabState, cursor: datetime | None, backend: StorageBackend) -> list[orm.Node]:
     """Return the nodes this profile imported since ``cursor`` that still exist locally."""
     uuids = state.imported_uuids_since(cursor)
@@ -311,17 +423,28 @@ def import_delta(
     *,
     state: CollabState,
     backend: StorageBackend,
+    extras_mode: CollabExtrasMode,
     peer: str,
     instant: datetime,
     include_deleted: bool = False,
+    refresh: list[ExtrasSnapshot] | None = None,
 ) -> DeltaReport:
     """Import a delta received from a peer, advance the cursor for that peer and record the event in the collab log.
 
     Nodes that were deleted locally are not imported again, unless provenance in the delta depends on them.
 
+    The policy passed here is this profile's own, never the sender's: what enters a profile is decided by the
+    profile it enters, so a peer that declares one policy and serves another — which only a hand-edited
+    configuration produces — changes nothing here.
+
     :param filepath: the path of the archive to import.
     :param state: the state of the collab, whose tombstones are honoured and whose log is appended to.
     :param backend: the storage to import into.
+    :param extras_mode: how to merge the extras of nodes that already exist locally, and whether an offered
+        refresh is applied at all.
+    :param refresh: extras snapshots of shared nodes the peer edited more recently, negotiated under the ``sync``
+        policy. Applied after the archive, so that the extras of a node that arrives in this very delta are the
+        ones the archive carries rather than a snapshot cut before it.
     :param peer: the identity the delta was received under, which keys the cursor: the profile UUID of the peer.
     :param instant: the export instant carried with the delta, which the cursor for ``peer`` advances to.
     :param include_deleted: import nodes that were deleted locally after all, and drop their tombstones.
@@ -339,6 +462,10 @@ def import_delta(
         uuids = _archive_uuids(filepath)
         boundary = _boundary_links(filepath)
         tombstoned = [] if include_deleted else sorted(state.tombstones.intersection(uuids))
+
+        # The caching extras of the peer describe their profile, not this one, so the merge must not be able to
+        # carry them over. New nodes are stripped of them by the import itself, existing ones are restored below.
+        caching_extras = _get_caching_extras(backend, uuids) if extras_mode == 'sync' else {}
 
         if tombstoned:
             filepath = _without_nodes(filepath, Path(dirpath) / 'delta.aiida', tombstoned)
@@ -361,9 +488,13 @@ def import_delta(
         import_archive(
             filepath,
             backend=backend,
-            merge_extras=('k', 'n', 'l'),
+            merge_extras=MERGE_EXTRAS[extras_mode],
             create_group=False,
         )
+
+    _set_caching_extras(backend, caching_extras)
+
+    refreshed = _apply_refresh(backend, refresh or [], state.tombstones) if extras_mode == 'sync' else []
 
     event = CollabEvent(time=timezone.now(), direction='pull', peer=peer, uuids=uuids, size=size)
 
@@ -383,7 +514,14 @@ def import_delta(
 
         fresh.events.append(event)
 
-    return DeltaReport(uuids=uuids, skipped=sorted(set(tombstoned) - set(uuids)), size=size)
+        # Recorded apart from the import: these nodes were already held, so they are no claim of new provenance,
+        # but a peer pulling from here later has to learn that their extras moved on.
+        if refreshed:
+            fresh.events.append(
+                CollabEvent(time=timezone.now(), direction='refresh', peer=peer, uuids=refreshed, size=0)
+            )
+
+    return DeltaReport(uuids=uuids, skipped=sorted(set(tombstoned) - set(uuids)), size=size, refreshed=refreshed)
 
 
 def _boundary_links(filepath: Path) -> list[list[str]]:
@@ -593,6 +731,36 @@ def _unsealed_pks(backend: StorageBackend, pks: set[int]) -> set[int]:
 
     # Queried as the complement of the sealed processes, because an unsealed one has no ``sealed`` attribute at all.
     return query() - query(**{f'attributes.{Sealable.SEALED_KEY}': True})
+
+
+def _get_caching_extras(backend: StorageBackend, uuids: list[str]) -> dict[str, dict[str, Any]]:
+    """Return the caching extras of the nodes of a delta that already exist in ``backend``, keyed by UUID."""
+    if not uuids:
+        return {}
+
+    query = orm.QueryBuilder(backend=backend).append(
+        orm.Node, filters={'uuid': {'in': uuids}}, project=['uuid', 'extras']
+    )
+
+    return {uuid: {key: extras[key] for key in CACHING_EXTRAS if key in extras} for uuid, extras in query.iterall()}
+
+
+def _set_caching_extras(backend: StorageBackend, caching_extras: dict[str, dict[str, Any]]) -> None:
+    """Restore the caching extras of nodes, dropping the ones they did not have before.
+
+    In one transaction, so that an interruption cannot leave the extras of the peer on some of the nodes and the local
+    ones on the rest.
+    """
+    if not caching_extras:
+        return
+
+    query = orm.QueryBuilder(backend=backend).append(orm.Node, filters={'uuid': {'in': list(caching_extras)}})
+
+    with backend.transaction():
+        for (node,) in query.iterall():
+            extras = {key: value for key, value in node.base.extras.all.items() if key not in CACHING_EXTRAS}
+            extras.update(caching_extras[node.uuid])
+            node.base.extras.reset(extras)
 
 
 def _at_head_version(filepath: Path, filepath_migrated: Path) -> Path:

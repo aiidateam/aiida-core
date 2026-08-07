@@ -768,7 +768,7 @@ def collab_peer_set(ctx, peer, url, nickname):
 @requires_loaded_profile()
 @click.pass_context
 def collab_log(ctx):
-    """Show the history of the pulls and pushes of the collab."""
+    """Show the history of the pulls, pushes and extras refreshes of the collab."""
     from aiida.tools.collab.config import OPTION_PEERS
     from aiida.tools.collab.state import CollabState
 
@@ -827,11 +827,11 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
     from aiida.engine.daemon.client import get_daemon_client
     from aiida.manage import get_manager
     from aiida.tools.collab.client import CollabClient
-    from aiida.tools.collab.config import OPTION_PEERS, OPTION_TOKEN, OPTION_UUID
+    from aiida.tools.collab.config import OPTION_PEERS, OPTION_POLICY, OPTION_TOKEN, OPTION_UUID
     from aiida.tools.collab.endpoint import local_info, workers_stopped
     from aiida.tools.collab.protocol import CollabRequestError, VersionSkew
     from aiida.tools.collab.state import CollabState, import_lock
-    from aiida.tools.collab.sync import import_delta, missing_uuids
+    from aiida.tools.collab.sync import import_delta, missing_uuids, refresh_wanted
 
     profile = ctx.obj.profile
     require_collab(profile)
@@ -849,6 +849,8 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
     selected = select_peers(ctx.obj.config.get_option(OPTION_PEERS, scope=profile.name), peers)
     token = ctx.obj.config.get_option(OPTION_TOKEN, scope=profile.name)
     collab = ctx.obj.config.get_option(OPTION_UUID, scope=profile.name)
+    # This profile's own policy decides what a delta may bring into it, whatever a peer declares or serves.
+    policy = ctx.obj.config.get_option(OPTION_POLICY, scope=profile.name)
     backend = get_manager().get_profile_storage()
     local = local_info(profile, backend)
     workdir = CollabState.get_workdir(profile)
@@ -892,16 +894,33 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
                 manifest = client.negotiate_delta(cursor, claim, gossip(ctx.obj.config, profile, bump=not dry_run))
                 want = set(missing_uuids(backend, manifest.manifest))
 
+                # Extras of shared nodes the peer edited more recently; empty unless this profile syncs extras.
+                # Asked for under the local policy, not the peer's offer, so that what is prompted for is what
+                # the import will write: the import gates on the same value and would drop the rest anyway.
+                refresh_want = (
+                    refresh_wanted(backend, manifest.refresh, state.tombstones)
+                    if policy['extras_mode'] == 'sync'
+                    else []
+                )
+
                 if dry_run:
-                    echo.echo_report(f'{nickname}: {len(want)} node(s) to pull')
+                    summary = f'{nickname}: {len(want)} node(s) to pull'
+
+                    if refresh_want:
+                        summary += f', extras of {len(refresh_want)} node(s) to be replaced by theirs'
+
+                    echo.echo_report(summary)
                     continue
 
-                offer = client.request_delta(cursor, claim, want)
+                offer = client.request_delta(cursor, claim, want, refresh_want)
 
-                if want and not force:
-                    prompt = f'pull {len(want)} node(s) ({offer.size} bytes) from {nickname}?'
+                if (want or refresh_want) and not force:
+                    prompt = f'pull {len(want)} node(s) ({offer.size} bytes) from {nickname}'
 
-                    if not click.confirm(prompt, default=False):
+                    if refresh_want:
+                        prompt += f', letting their extras replace yours on {len(refresh_want)} node(s)'
+
+                    if not click.confirm(f'{prompt}?', default=False):
                         echo.echo_report(f'skipped {nickname}.')
                         continue
 
@@ -919,12 +938,14 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
                         filepath,
                         state=state,
                         backend=backend,
+                        extras_mode=policy['extras_mode'],
                         peer=peer_uuid,
                         # The peer may have recomputed its delta between the negotiation and the request; the
                         # cursor must not advance past either the manifest the want was diffed against or the
                         # computation the bytes were cut from, or in-window nodes would never be delivered.
                         instant=min(manifest.instant, offer.instant),
                         include_deleted=include_deleted,
+                        refresh=offer.refresh,
                     )
         except IntegrityError as exception:
             # The delta linked to a node this profile holds nowhere; nothing landed, the next sync delivers it.
@@ -937,6 +958,9 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
         pulled += len(report.uuids)
 
         message = f'pulled {len(report.uuids)} node(s) ({report.size} bytes) from {nickname}'
+
+        if report.refreshed:
+            message += f', refreshed the extras of {len(report.refreshed)} node(s)'
 
         if report.skipped:
             message += f', skipped {len(report.skipped)} deleted node(s)'
@@ -979,11 +1003,11 @@ def collab_push(ctx, peers, force, dry_run):
     from aiida.common import timezone
     from aiida.manage import get_manager
     from aiida.tools.collab.client import CollabClient
-    from aiida.tools.collab.config import OPTION_PEERS, OPTION_TOKEN, OPTION_UUID
+    from aiida.tools.collab.config import OPTION_PEERS, OPTION_POLICY, OPTION_TOKEN, OPTION_UUID
     from aiida.tools.collab.endpoint import local_identity, local_info
     from aiida.tools.collab.protocol import CollabRequestError, VersionSkew
     from aiida.tools.collab.state import CollabEvent, CollabState
-    from aiida.tools.collab.sync import compute_delta, export_delta
+    from aiida.tools.collab.sync import compute_delta, export_delta, refresh_offer, refresh_snapshots
 
     profile = ctx.obj.profile
     require_collab(profile)
@@ -991,6 +1015,7 @@ def collab_push(ctx, peers, force, dry_run):
     selected = select_peers(ctx.obj.config.get_option(OPTION_PEERS, scope=profile.name), peers)
     token = ctx.obj.config.get_option(OPTION_TOKEN, scope=profile.name)
     collab = ctx.obj.config.get_option(OPTION_UUID, scope=profile.name)
+    policy = ctx.obj.config.get_option(OPTION_POLICY, scope=profile.name)
     backend = get_manager().get_profile_storage()
     identity = local_identity(profile)
     local = local_info(profile, backend)
@@ -1034,11 +1059,13 @@ def collab_push(ctx, peers, force, dry_run):
                 meta = json.loads(filepath_meta.read_text(encoding='utf-8')) if filepath_meta.exists() else None
 
                 state = CollabState.load(profile)
+                refresh = []
 
                 if filepath.exists() and meta is not None and meta['peer'] == peer_uuid:
                     # A previous push to this peer failed after the transfer. Retrying with the very same bytes
                     # is what lets the upload negotiate that everything is already staged and re-attempt only
                     # the import; the original instant travels with them, since it is what describes those bytes.
+                    # The retry carries no extras refresh: negotiating one is what the next push does anyway.
                     uuids, instant = meta['uuids'], datetime.fromisoformat(meta['instant'])
 
                     if dry_run:
@@ -1047,28 +1074,40 @@ def collab_push(ctx, peers, force, dry_run):
 
                     echo.echo_report(f'retrying the delta of the previous failed push to {nickname}')
                 else:
-                    # The delta is offered to the peer as a manifest first; only the nodes it is missing are
-                    # exported, so nothing the peer already holds is uploaded.
+                    # The delta is offered to the peer as a manifest first — with the mtimes of the extras this
+                    # profile edited, when the collab syncs them — so that only what the peer lacks travels.
                     delta = compute_delta(
                         state=state,
                         backend=backend,
                         cursor=handshake.cursor,
                         claim=frozenset(handshake.claim),
                     )
-                    want = set(client.diff_manifest(delta.uuids).missing)
+                    offer = (
+                        refresh_offer(state=state, backend=backend, cursor=handshake.cursor)
+                        if policy['extras_mode'] == 'sync'
+                        else {}
+                    )
+                    diff = client.diff_manifest(delta.uuids, offer)
+                    want = set(diff.missing)
 
                     if dry_run:
-                        echo.echo_report(f'{nickname}: {len(want)} node(s) to push')
+                        summary = f'{nickname}: {len(want)} node(s) to push'
+
+                        if diff.refresh:
+                            summary += f', extras of {len(diff.refresh)} node(s) to be replaced by yours'
+
+                        echo.echo_report(summary)
                         continue
 
                     export = export_delta(filepath, delta=delta, backend=backend, want=want)
+                    refresh = refresh_snapshots(backend, diff.refresh)
                     uuids, instant = export.uuids, export.instant
                     filepath_meta.write_text(
                         json.dumps({'peer': peer_uuid, 'instant': instant.isoformat(), 'uuids': uuids}, indent=4),
                         encoding='utf-8',
                     )
 
-                if not uuids:
+                if not uuids and not refresh:
                     filepath.unlink()
                     filepath_meta.unlink()
 
@@ -1092,9 +1131,12 @@ def collab_push(ctx, peers, force, dry_run):
                     continue
 
                 if not force:
-                    prompt = f'push {len(uuids)} node(s) ({filepath.stat().st_size} bytes) to {nickname}?'
+                    prompt = f'push {len(uuids)} node(s) ({filepath.stat().st_size} bytes) to {nickname}'
 
-                    if not click.confirm(prompt, default=False):
+                    if refresh:
+                        prompt += f', replacing their extras with yours on {len(refresh)} node(s)'
+
+                    if not click.confirm(f'{prompt}?', default=False):
                         # The cut is dropped rather than stashed: a stash is re-sent without renegotiation, which
                         # is right after a failed import but wrong after a decline, when the peer moves on.
                         filepath.unlink()
@@ -1109,7 +1151,7 @@ def collab_push(ctx, peers, force, dry_run):
                 continue
 
             try:
-                client.trigger_import(upload.sha256, peer=identity, instant=instant)
+                client.trigger_import(upload.sha256, peer=identity, instant=instant, refresh=refresh)
             except CollabRequestError as exception:
                 if exception.status == HTTPStatus.UNPROCESSABLE_ENTITY:
                     # The delta can never land — it links to a node the peer no longer holds — so retrying the
@@ -1138,4 +1180,9 @@ def collab_push(ctx, peers, force, dry_run):
         filepath.unlink()
         filepath_meta.unlink()
 
-        echo.echo_success(f'pushed {len(uuids)} node(s) ({size} bytes) to {nickname}')
+        message = f'pushed {len(uuids)} node(s) ({size} bytes) to {nickname}'
+
+        if refresh:
+            message += f', refreshed the extras of {len(refresh)} node(s)'
+
+        echo.echo_success(message)

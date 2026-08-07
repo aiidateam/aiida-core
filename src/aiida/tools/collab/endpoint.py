@@ -45,7 +45,17 @@ from aiida.tools.collab.protocol import (
     delta_id,
 )
 from aiida.tools.collab.state import CollabState, import_lock, import_lock_held
-from aiida.tools.collab.sync import Delta, compute_delta, count_seeds, export_delta, import_delta, missing_uuids
+from aiida.tools.collab.sync import (
+    Delta,
+    compute_delta,
+    count_seeds,
+    export_delta,
+    import_delta,
+    missing_uuids,
+    refresh_offer,
+    refresh_snapshots,
+    refresh_wanted,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -54,6 +64,7 @@ if TYPE_CHECKING:
 
     from aiida.manage.configuration import Profile
     from aiida.orm.implementation import StorageBackend
+    from aiida.tools.collab.protocol import ExtrasSnapshot
     from aiida.tools.collab.sync import DeltaExport
 
 LOGGER = AIIDA_LOGGER.getChild('collab')
@@ -127,8 +138,17 @@ class CollabEndpoint:
     """The callables behind the routes of the ``CollabServer`` of a profile."""
 
     def __init__(self, profile: Profile, backend: StorageBackend):
+        from aiida.manage.configuration import get_config
+
+        config = get_config()
+
+        policy = config.get_option(OPTION_POLICY, scope=profile.name)
+
         self._profile = profile
         self._backend = backend
+        # The policy of a collab is fixed when it is created, so caching it for the life of the endpoint cannot go
+        # stale — which is what retired the whole class of "declares one policy, serves another" defects.
+        self._extras_mode = policy['extras_mode']
         self._dirpath = CollabState.get_workdir(profile)
         self._state_filepath = CollabState.get_filepath(profile)
         self._computed: dict[str, Delta] = {}
@@ -248,16 +268,29 @@ class CollabEndpoint:
         """Serve the manifest of the delta for a presented cursor and claim: which nodes it holds.
 
         No archive is built for this — the requester first diffs the manifest against its own nodes and then
-        requests only the subset it lacks.
+        requests only the subset it lacks. Under the ``sync`` extras policy the manifest also offers the mtimes of
+        the shared nodes whose extras moved on here, computed fresh rather than cached with the delta: an extras
+        edit changes no node membership, so it must not wait for the delta to be recomputed.
         """
         entries = self._entries(self._merge_roster(roster or []))
 
         with self._delta_lock:
             delta = self._delta(cursor, claim)
 
-            return DeltaManifest(manifest=delta.uuids, instant=delta.instant, roster=entries)
+            return DeltaManifest(
+                manifest=delta.uuids,
+                instant=delta.instant,
+                refresh=self._refresh_offer(cursor),
+                roster=entries,
+            )
 
-    def request_delta(self, cursor: datetime | None, claim: frozenset[str], want: frozenset[str]) -> DeltaOffer:
+    def request_delta(
+        self,
+        cursor: datetime | None,
+        claim: frozenset[str],
+        want: frozenset[str],
+        refresh_want: frozenset[str] = frozenset(),
+    ) -> DeltaOffer:
         """Export the requested subset of a delta, reusing the cached archive while nothing changed.
 
         The transport requires an identifier to keep resolving to the same bytes while a transfer is in progress,
@@ -292,11 +325,32 @@ class CollabEndpoint:
                 stale = next(iter(self._deltas))
                 self._deltas.pop(stale).filepath.unlink(missing_ok=True)
 
-            return DeltaOffer(delta=key, instant=cached.instant, size=cached.filepath.stat().st_size)
+            return DeltaOffer(
+                delta=key,
+                instant=cached.instant,
+                size=cached.filepath.stat().st_size,
+                refresh=refresh_snapshots(self._backend, sorted(refresh_want)),
+            )
 
-    def diff_manifest(self, uuids: list[str]) -> ManifestDiff:
-        """Return what this profile lacks of the nodes a pushing peer offers."""
-        return ManifestDiff(missing=missing_uuids(self._backend, uuids))
+    def diff_manifest(self, uuids: list[str], refresh: dict[str, datetime] | None = None) -> ManifestDiff:
+        """Return what this profile lacks of what a pushing peer offers: nodes and newer extras."""
+        state = CollabState.read(self._state_filepath)
+
+        return ManifestDiff(
+            missing=missing_uuids(self._backend, uuids),
+            refresh=(
+                refresh_wanted(self._backend, refresh or {}, state.tombstones) if self._extras_mode == 'sync' else []
+            ),
+        )
+
+    def _refresh_offer(self, cursor: datetime | None) -> dict[str, datetime]:
+        """Return the extras refresh offer for a requester at ``cursor``, empty unless the collab syncs extras."""
+        if self._extras_mode != 'sync':
+            return {}
+
+        state = CollabState.read(self._state_filepath)
+
+        return refresh_offer(state=state, backend=self._backend, cursor=cursor)
 
     def resolve_delta(self, delta_id: str) -> Path | None:
         """Return the path of a negotiated delta, or ``None`` when nothing is on offer under that identifier."""
@@ -328,7 +382,13 @@ class CollabEndpoint:
 
         return any(event.direction == 'pull' and event.time >= instant for event in state.events)
 
-    def import_staged(self, filepath: Path, peer: str, instant: datetime) -> dict[str, Any]:
+    def import_staged(
+        self,
+        filepath: Path,
+        peer: str,
+        instant: datetime,
+        refresh: list[ExtrasSnapshot] | None = None,
+    ) -> dict[str, Any]:
         """Import a delta a peer pushed, pausing the daemon workers when the storage cannot take two writers."""
         from aiida.manage.configuration import get_config
 
@@ -348,8 +408,10 @@ class CollabEndpoint:
                     filepath,
                     state=state,
                     backend=self._backend,
+                    extras_mode=self._extras_mode,
                     peer=peer,
                     instant=instant,
+                    refresh=refresh,
                 )
 
         return dataclasses.asdict(report)

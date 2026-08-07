@@ -17,7 +17,15 @@ from aiida.common import timezone
 from aiida.common.links import LinkType
 from aiida.storage.sqlite_temp import SqliteTempBackend
 from aiida.tools.collab.state import CollabEvent, CollabState
-from aiida.tools.collab.sync import compute_delta, export_delta, import_delta, missing_uuids
+from aiida.tools.collab.sync import (
+    compute_delta,
+    export_delta,
+    import_delta,
+    missing_uuids,
+    refresh_offer,
+    refresh_snapshots,
+    refresh_wanted,
+)
 
 PEER = 'http://100.64.0.2:9137'
 
@@ -157,6 +165,28 @@ def test_export_ignores_push_history(tmp_path, peers):
     assert set(again.uuids) == set(export.uuids)
 
 
+@pytest.mark.parametrize('extras_mode, expected', (('local', 'mine'), ('sync', 'theirs')))
+def test_import_extras_mode(tmp_path, peers, extras_mode, expected):
+    """Test that the extras mode decides whether an incoming extra overwrites the local one."""
+    backend_one, state_one = peers('one')
+    backend_two, state_two = peers('two')
+    calculation = seal_calculation(backend_one, 'sealed')
+
+    filepath = tmp_path / 'delta.aiida'
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+    import_delta(filepath, state=state_two, backend=backend_two, extras_mode='local', peer=PEER, instant=export.instant)
+
+    calculation.base.extras.set('note', 'theirs')
+    load_node(backend_two, calculation.uuid).base.extras.set('note', 'mine')
+
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+    import_delta(
+        filepath, state=state_two, backend=backend_two, extras_mode=extras_mode, peer=PEER, instant=export.instant
+    )
+
+    assert load_node(backend_two, calculation.uuid).base.extras.get('note') == expected
+
+
 def test_import_strips_private_extras(tmp_path, peers):
     """Test that the caching extras of a peer, which are local to their profile, do not travel."""
     backend_one, state_one = peers('one')
@@ -167,9 +197,35 @@ def test_import_strips_private_extras(tmp_path, peers):
 
     filepath = tmp_path / 'delta.aiida'
     export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
-    import_delta(filepath, state=state_two, backend=backend_two, peer=PEER, instant=export.instant)
+    import_delta(filepath, state=state_two, backend=backend_two, extras_mode='local', peer=PEER, instant=export.instant)
 
     assert load_node(backend_two, calculation.uuid).base.extras.all == {}
+
+
+@pytest.mark.parametrize('extras_mode', ('local', 'sync'))
+def test_import_keeps_local_caching_extras(tmp_path, peers, extras_mode):
+    """Test that the caching extras of a peer cannot overwrite the local ones of a node that already exists."""
+    backend_one, state_one = peers('one')
+    backend_two, state_two = peers('two')
+    calculation = seal_calculation(backend_one, 'sealed')
+
+    filepath = tmp_path / 'delta.aiida'
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+    import_delta(filepath, state=state_two, backend=backend_two, extras_mode='local', peer=PEER, instant=export.instant)
+
+    calculation.base.extras.set('_aiida_hash', 'a-hash-of-the-peer')
+    calculation.base.extras.set('_aiida_cached_from', 'a-uuid-of-the-peer')
+    load_node(backend_two, calculation.uuid).base.extras.set('_aiida_hash', 'my-own-hash')
+
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+    import_delta(
+        filepath, state=state_two, backend=backend_two, extras_mode=extras_mode, peer=PEER, instant=export.instant
+    )
+
+    extras = load_node(backend_two, calculation.uuid).base.extras.all
+
+    assert extras['_aiida_hash'] == 'my-own-hash'
+    assert '_aiida_cached_from' not in extras
 
 
 def test_import_empty_delta(tmp_path, peers):
@@ -179,7 +235,9 @@ def test_import_empty_delta(tmp_path, peers):
 
     filepath = tmp_path / 'delta.aiida'
     export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
-    report = import_delta(filepath, state=state_two, backend=backend_two, peer=PEER, instant=export.instant)
+    report = import_delta(
+        filepath, state=state_two, backend=backend_two, extras_mode='sync', peer=PEER, instant=export.instant
+    )
 
     assert report.uuids == []
     assert node_count(backend_two) == 0
@@ -197,7 +255,9 @@ def test_import_skips_tombstoned(tmp_path, peers):
     deleted_uuids = linked_uuids(deleted)
     state_two.tombstones.update(deleted_uuids)
 
-    report = import_delta(filepath, state=state_two, backend=backend_two, peer=PEER, instant=export.instant)
+    report = import_delta(
+        filepath, state=state_two, backend=backend_two, extras_mode='local', peer=PEER, instant=export.instant
+    )
 
     assert set(report.skipped) == deleted_uuids
     assert set(report.uuids) == set(export.uuids) - deleted_uuids
@@ -220,7 +280,9 @@ def test_import_skips_tombstoned_caller(tmp_path, peers):
     export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
     state_two.tombstones.add(caller.uuid)
 
-    report = import_delta(filepath, state=state_two, backend=backend_two, peer=PEER, instant=export.instant)
+    report = import_delta(
+        filepath, state=state_two, backend=backend_two, extras_mode='local', peer=PEER, instant=export.instant
+    )
 
     assert report.skipped == [caller.uuid]
     assert caller.uuid not in report.uuids
@@ -236,7 +298,9 @@ def test_import_skips_tombstoned_creator(tmp_path, peers):
     export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
     state_two.tombstones.add(calculation.uuid)
 
-    report = import_delta(filepath, state=state_two, backend=backend_two, peer=PEER, instant=export.instant)
+    report = import_delta(
+        filepath, state=state_two, backend=backend_two, extras_mode='local', peer=PEER, instant=export.instant
+    )
 
     assert report.skipped == [calculation.uuid]
     assert calculation.uuid not in report.uuids
@@ -253,7 +317,9 @@ def test_import_tombstone_loses_to_provenance(tmp_path, peers):
     export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
     state_two.tombstones.add(inputs.uuid)
 
-    report = import_delta(filepath, state=state_two, backend=backend_two, peer=PEER, instant=export.instant)
+    report = import_delta(
+        filepath, state=state_two, backend=backend_two, extras_mode='local', peer=PEER, instant=export.instant
+    )
 
     assert report.skipped == []
     assert inputs.uuid in report.uuids
@@ -267,10 +333,10 @@ def test_import_twice(tmp_path, peers):
 
     filepath = tmp_path / 'delta.aiida'
     export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
-    import_delta(filepath, state=state_two, backend=backend_two, peer=PEER, instant=export.instant)
+    import_delta(filepath, state=state_two, backend=backend_two, extras_mode='local', peer=PEER, instant=export.instant)
     count = node_count(backend_two)
 
-    import_delta(filepath, state=state_two, backend=backend_two, peer=PEER, instant=export.instant)
+    import_delta(filepath, state=state_two, backend=backend_two, extras_mode='local', peer=PEER, instant=export.instant)
 
     assert node_count(backend_two) == count
     # Read back from disk, since the log is what `verdi collab log` loads, not the dataclass in memory.
@@ -289,7 +355,7 @@ def test_import_advances_cursor_per_peer(tmp_path, peers):
 
     filepath = tmp_path / 'delta.aiida'
     export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
-    import_delta(filepath, state=state_two, backend=backend_two, peer=PEER, instant=export.instant)
+    import_delta(filepath, state=state_two, backend=backend_two, extras_mode='local', peer=PEER, instant=export.instant)
 
     cursors = CollabState.read(state_two.filepath).cursors
 
@@ -309,7 +375,7 @@ def test_import_cursor_never_moves_back(tmp_path, peers):
     state_two.cursors[PEER] = newer
     state_two.save()
 
-    import_delta(filepath, state=state_two, backend=backend_two, peer=PEER, instant=export.instant)
+    import_delta(filepath, state=state_two, backend=backend_two, extras_mode='local', peer=PEER, instant=export.instant)
 
     assert CollabState.read(state_two.filepath).cursors[PEER] == newer
 
@@ -329,6 +395,7 @@ def test_import_include_deleted(tmp_path, peers):
         filepath,
         state=state_two,
         backend=backend_two,
+        extras_mode='local',
         peer=PEER,
         instant=export.instant,
         include_deleted=True,
@@ -357,6 +424,7 @@ def test_chain_convergence(tmp_path, peers):
         tmp_path / 'b-empty.aiida',
         state=state_a,
         backend=backend_a,
+        extras_mode='local',
         peer='b',
         instant=empty.instant,
     )
@@ -367,6 +435,7 @@ def test_chain_convergence(tmp_path, peers):
         tmp_path / 'c.aiida',
         state=state_b,
         backend=backend_b,
+        extras_mode='local',
         peer='c',
         instant=from_c.instant,
     )
@@ -380,6 +449,7 @@ def test_chain_convergence(tmp_path, peers):
         tmp_path / 'b.aiida',
         state=state_a,
         backend=backend_a,
+        extras_mode='local',
         peer='b',
         instant=export.instant,
     )
@@ -401,6 +471,7 @@ def test_export_subtracts_claim(tmp_path, peers):
         tmp_path / 'a.aiida',
         state=state_b,
         backend=backend_b,
+        extras_mode='local',
         peer='a',
         instant=export.instant,
     )
@@ -410,6 +481,7 @@ def test_export_subtracts_claim(tmp_path, peers):
         tmp_path / 'a.aiida',
         state=state_c,
         backend=backend_c,
+        extras_mode='local',
         peer='a',
         instant=export.instant,
     )
@@ -438,6 +510,7 @@ def test_export_claimed_ancestor_still_rides(tmp_path, peers):
         tmp_path / 'a.aiida',
         state=state_b,
         backend=backend_b,
+        extras_mode='local',
         peer='a',
         instant=export.instant,
     )
@@ -458,6 +531,7 @@ def test_export_claimed_ancestor_still_rides(tmp_path, peers):
         tmp_path / 'a-second.aiida',
         state=state_b,
         backend=backend_b,
+        extras_mode='local',
         peer='a',
         instant=delta.instant,
     )
@@ -536,6 +610,7 @@ def test_thin_export_ships_only_missing(tmp_path, peers):
         tmp_path / 'first.aiida',
         state=state_two,
         backend=backend_two,
+        extras_mode='local',
         peer=PEER,
         instant=export.instant,
     )
@@ -558,6 +633,7 @@ def test_thin_export_ships_only_missing(tmp_path, peers):
         tmp_path / 'second.aiida',
         state=state_two,
         backend=backend_two,
+        extras_mode='local',
         peer=PEER,
         instant=export.instant,
     )
@@ -584,6 +660,7 @@ def test_thin_import_graph_equality(tmp_path, peers):
         tmp_path / 'one.aiida',
         state=state_thin,
         backend=backend_thin,
+        extras_mode='local',
         peer=PEER,
         instant=export.instant,
     )
@@ -596,6 +673,7 @@ def test_thin_import_graph_equality(tmp_path, peers):
         tmp_path / 'two.aiida',
         state=state_thin,
         backend=backend_thin,
+        extras_mode='local',
         peer=PEER,
         instant=export.instant,
     )
@@ -606,6 +684,7 @@ def test_thin_import_graph_equality(tmp_path, peers):
         tmp_path / 'full.aiida',
         state=state_full,
         backend=backend_full,
+        extras_mode='local',
         peer=PEER,
         instant=export.instant,
     )
@@ -636,6 +715,7 @@ def test_thin_import_missing_endpoint_aborts_and_recovers(tmp_path, peers):
             tmp_path / 'hole.aiida',
             state=state_two,
             backend=backend_two,
+            extras_mode='local',
             peer=PEER,
             instant=export.instant,
         )
@@ -650,6 +730,7 @@ def test_thin_import_missing_endpoint_aborts_and_recovers(tmp_path, peers):
         tmp_path / 'heal.aiida',
         state=state_two,
         backend=backend_two,
+        extras_mode='local',
         peer=PEER,
         instant=export.instant,
     )
@@ -675,6 +756,7 @@ def test_boundary_link_to_reimported_tombstoned_node(tmp_path, peers):
         tmp_path / 'first.aiida',
         state=state_two,
         backend=backend_two,
+        extras_mode='local',
         peer=PEER,
         instant=export.instant,
     )
@@ -710,6 +792,7 @@ def test_boundary_link_to_reimported_tombstoned_node(tmp_path, peers):
         tmp_path / 'second.aiida',
         state=state_two,
         backend=backend_two,
+        extras_mode='local',
         peer=PEER,
         instant=export.instant,
     )
@@ -732,6 +815,7 @@ def test_pending_boundary_links_heal_on_next_import(tmp_path, peers, monkeypatch
         tmp_path / 'one.aiida',
         state=state_two,
         backend=backend_two,
+        extras_mode='local',
         peer=PEER,
         instant=export.instant,
     )
@@ -747,6 +831,7 @@ def test_pending_boundary_links_heal_on_next_import(tmp_path, peers, monkeypatch
         tmp_path / 'two.aiida',
         state=state_two,
         backend=backend_two,
+        extras_mode='local',
         peer=PEER,
         instant=export.instant,
     )
@@ -763,6 +848,7 @@ def test_pending_boundary_links_heal_on_next_import(tmp_path, peers, monkeypatch
         tmp_path / 'empty.aiida',
         state=CollabState.read(state_two.filepath),
         backend=backend_two,
+        extras_mode='local',
         peer=PEER,
         instant=export.instant,
     )
@@ -805,6 +891,7 @@ def test_thin_import_sibling_boundary_links_abort(tmp_path, peers):
             tmp_path / 'siblings.aiida',
             state=state_two,
             backend=backend_two,
+            extras_mode='local',
             peer=PEER,
             instant=timezone.now(),
         )
@@ -831,6 +918,7 @@ def test_thin_import_same_source_relabeled_link_aborts(tmp_path, peers):
         tmp_path / 'first.aiida',
         state=state_two,
         backend=backend_two,
+        extras_mode='local',
         peer=PEER,
         instant=export.instant,
     )
@@ -852,6 +940,7 @@ def test_thin_import_same_source_relabeled_link_aborts(tmp_path, peers):
             tmp_path / 'relabel.aiida',
             state=CollabState.read(state_two.filepath),
             backend=backend_two,
+            extras_mode='local',
             peer=PEER,
             instant=timezone.now(),
         )
@@ -884,6 +973,7 @@ def test_thin_import_self_link_aborts(tmp_path, peers):
             tmp_path / 'loop.aiida',
             state=state_two,
             backend=backend_two,
+            extras_mode='local',
             peer=PEER,
             instant=timezone.now(),
         )
@@ -911,6 +1001,7 @@ def test_thin_import_boundary_invariant_aborts(tmp_path, peers):
         tmp_path / 'first.aiida',
         state=state_two,
         backend=backend_two,
+        extras_mode='local',
         peer=PEER,
         instant=export.instant,
     )
@@ -933,12 +1024,214 @@ def test_thin_import_boundary_invariant_aborts(tmp_path, peers):
             tmp_path / 'diverged.aiida',
             state=CollabState.read(state_two.filepath),
             backend=backend_two,
+            extras_mode='local',
             peer=PEER,
             instant=timezone.now(),
         )
 
     assert node_count(backend_two) == count, 'nothing should have been imported'
     assert CollabState.read(state_two.filepath).pending_links == [], 'nothing should have been journalled'
+
+
+def sync_pull(sender, receiver, filepath, peer, receiver_extras_mode='sync'):
+    """Pull from one profile into another as ``verdi collab pull`` does under the ``sync`` extras policy.
+
+    Both sides talk through the same functions the endpoint and the client wire together: the sender offers the
+    mtimes of the shared nodes it may have edited, the receiver keeps the extras it holds an older version of, and
+    only those travel.
+
+    :param receiver_extras_mode: the receiver's own policy, when the point of the test is that it differs. The
+        sender always offers, so that what is tested is the receiver's gate and not the offer.
+    """
+    backend_sender, state_sender = sender
+    backend_receiver, state_receiver = receiver
+
+    # Re-read, because every import writes the state file behind the object the fixture handed out.
+    state_sender = CollabState.read(state_sender.filepath)
+    state_receiver = CollabState.read(state_receiver.filepath)
+
+    cursor = state_receiver.cursors.get(peer)
+    claim = state_receiver.imported_uuids_since(cursor) | state_receiver.tombstones
+    delta = compute_delta(state=state_sender, backend=backend_sender, cursor=cursor, claim=claim)
+    offer = refresh_offer(state=state_sender, backend=backend_sender, cursor=cursor)
+    wanted = refresh_wanted(backend_receiver, offer, state_receiver.tombstones)
+    export = export_delta(
+        filepath, delta=delta, backend=backend_sender, want=set(missing_uuids(backend_receiver, delta.uuids))
+    )
+
+    return import_delta(
+        export.filepath,
+        state=state_receiver,
+        backend=backend_receiver,
+        extras_mode=receiver_extras_mode,
+        peer=peer,
+        instant=export.instant,
+        refresh=refresh_snapshots(backend_sender, wanted),
+    )
+
+
+def extras_of(backend, uuid):
+    """Return the shared extras of a node: the ``_`` namespace is private to each profile and never compared."""
+    return {key: value for key, value in load_node(backend, uuid).base.extras.all.items() if not key.startswith('_')}
+
+
+def test_refresh_travels_and_the_newest_edit_wins(tmp_path, peers):
+    """Test that an extra edited on one peer reaches the other, and that a later edit there wins it back."""
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+
+    # The first exchange in each direction carries the nodes and establishes the cursors the refresh is bounded by.
+    sync_pull(one, two, tmp_path / 'one-to-two.aiida', peer='one')
+    sync_pull(two, one, tmp_path / 'two-to-one.aiida', peer='two')
+
+    calculation.base.extras.set('note', 'from one')
+    report = sync_pull(one, two, tmp_path / 'edit.aiida', peer='one')
+
+    assert report.uuids == [], 'the extras edit must not make any node travel'
+    assert report.refreshed == [calculation.uuid]
+    assert extras_of(two[0], calculation.uuid) == {'note': 'from one'}
+
+    load_node(two[0], calculation.uuid).base.extras.set('note', 'from two')
+    sync_pull(two, one, tmp_path / 'back.aiida', peer='two')
+
+    assert extras_of(one[0], calculation.uuid) == {'note': 'from two'}
+
+
+def test_refresh_offered_to_a_local_profile_is_not_applied(tmp_path, peers):
+    """Test that a profile that keeps its extras local ignores a refresh, however insistently it is offered.
+
+    What enters a profile is decided by the profile it enters, so a sender that declares ``local`` and serves
+    snapshots anyway — a hand-edited configuration — cannot overwrite extras here.
+    """
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+
+    sync_pull(one, two, tmp_path / 'one-to-two.aiida', peer='one')
+    load_node(two[0], calculation.uuid).base.extras.set('note', 'mine')
+
+    calculation.base.extras.set('note', 'from one')
+    report = sync_pull(one, two, tmp_path / 'edit.aiida', peer='one', receiver_extras_mode='local')
+
+    assert report.refreshed == []
+    assert extras_of(two[0], calculation.uuid) == {'note': 'mine'}
+
+
+def test_refresh_is_not_echoed_back(tmp_path, peers):
+    """Test that the side that received a refresh does not offer it back: the sender's mtime travelled with it."""
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+
+    sync_pull(one, two, tmp_path / 'one-to-two.aiida', peer='one')
+    sync_pull(two, one, tmp_path / 'two-to-one.aiida', peer='two')
+
+    calculation.base.extras.set('note', 'from one')
+    sync_pull(one, two, tmp_path / 'edit.aiida', peer='one')
+
+    report = sync_pull(two, one, tmp_path / 'echo.aiida', peer='two')
+
+    assert report.refreshed == []
+    assert load_node(two[0], calculation.uuid).mtime == load_node(one[0], calculation.uuid).mtime
+
+
+def test_refresh_deletion_propagates(tmp_path, peers):
+    """Test that a key deleted on the newer side disappears on the other and does not come back."""
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+    calculation.base.extras.set('note', 'from one')
+
+    sync_pull(one, two, tmp_path / 'one-to-two.aiida', peer='one')
+    sync_pull(two, one, tmp_path / 'two-to-one.aiida', peer='two')
+
+    assert extras_of(two[0], calculation.uuid) == {'note': 'from one'}
+
+    calculation.base.extras.delete('note')
+    sync_pull(one, two, tmp_path / 'delete.aiida', peer='one')
+
+    assert extras_of(two[0], calculation.uuid) == {}
+
+    sync_pull(two, one, tmp_path / 'resurrect.aiida', peer='two')
+
+    assert extras_of(one[0], calculation.uuid) == {}, 'the deleted key must not be restored by the other side'
+
+
+def test_refresh_relays_through_a_chain(tmp_path, peers):
+    """Test that an extras edit made on A reaches C through pairwise pulls alone, relayed by B.
+
+    B's copy keeps A's mtime, which is older than C's cursor for B, so only the refresh event B recorded can put
+    the node back into what B offers C.
+    """
+    one, two, three = peers('one'), peers('two'), peers('three')
+    calculation = seal_calculation(one[0], 'sealed')
+
+    sync_pull(one, two, tmp_path / 'one-to-two.aiida', peer='one')
+    sync_pull(two, three, tmp_path / 'two-to-three.aiida', peer='two')
+
+    calculation.base.extras.set('note', 'from one')
+
+    # C syncs from B in between, so that its cursor for B is younger than the edit: the mtime B ends up holding
+    # cannot put the node back into what B offers C, and only the refresh event B records can.
+    sync_pull(two, three, tmp_path / 'in-between.aiida', peer='two')
+
+    sync_pull(one, two, tmp_path / 'edit.aiida', peer='one')
+    report = sync_pull(two, three, tmp_path / 'relay.aiida', peer='two')
+
+    assert report.refreshed == [calculation.uuid]
+    assert extras_of(three[0], calculation.uuid) == {'note': 'from one'}
+
+
+def test_refresh_keeps_the_private_namespace(tmp_path, peers):
+    """Test that ``_``-prefixed extras neither travel nor are overwritten by an incoming snapshot."""
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+
+    sync_pull(one, two, tmp_path / 'one-to-two.aiida', peer='one')
+    sync_pull(two, one, tmp_path / 'two-to-one.aiida', peer='two')
+
+    load_node(two[0], calculation.uuid).base.extras.set('_mine', 'kept')
+    calculation.base.extras.set('note', 'from one')
+    calculation.base.extras.set('_aiida_hash', 'a-hash-of-the-peer')
+
+    snapshots = refresh_snapshots(one[0], [calculation.uuid])
+    sync_pull(one, two, tmp_path / 'edit.aiida', peer='one')
+
+    assert [snapshot.extras for snapshot in snapshots] == [{'note': 'from one'}], 'the private keys must not be sent'
+    assert load_node(two[0], calculation.uuid).base.extras.all == {'note': 'from one', '_mine': 'kept'}
+
+
+def test_refresh_survives_compaction(tmp_path, peers, monkeypatch):
+    """Test that a relayed extras edit still travels once the event that recorded it was folded by compaction."""
+    from aiida.tools.collab import state as state_module
+
+    one, two, three = peers('one'), peers('two'), peers('three')
+    calculation = seal_calculation(one[0], 'sealed')
+
+    sync_pull(one, two, tmp_path / 'one-to-two.aiida', peer='one')
+    sync_pull(two, three, tmp_path / 'two-to-three.aiida', peer='two')
+
+    calculation.base.extras.set('note', 'from one')
+
+    # As in the relay test: C's cursor for B lands after the edit, so the event B folds is the only thing that can
+    # still deliver it.
+    sync_pull(two, three, tmp_path / 'in-between.aiida', peer='two')
+
+    sync_pull(one, two, tmp_path / 'edit.aiida', peer='one')
+
+    monkeypatch.setattr(state_module, 'COMPACT_THRESHOLD', 2)
+    state_two = CollabState.read(two[1].filepath)
+    state_two.events.append(
+        CollabEvent(time=timezone.now(), direction='pull', peer='one', uuids=['uuid-padding'], size=1)
+    )
+    state_two.save()
+
+    folded = CollabState.read(two[1].filepath).events
+    assert [event.peer for event in folded if event.direction == 'refresh'] == [state_module.COMPACTED_PEER], (
+        'the event recording the refresh should have been folded into the synthetic one'
+    )
+
+    report = sync_pull(two, three, tmp_path / 'relay.aiida', peer='two')
+
+    assert report.refreshed == [calculation.uuid]
+    assert extras_of(three[0], calculation.uuid) == {'note': 'from one'}
 
 
 def test_import_migrates_an_older_archive(tmp_path, peers):
@@ -954,7 +1247,9 @@ def test_import_migrates_an_older_archive(tmp_path, peers):
     backend, state = peers('one')
     filepath = Path(get_archive_file('export_main_0000_simple.aiida', 'export/migrate'))
 
-    report = import_delta(filepath, state=state, backend=backend, peer=PEER, instant=timezone.now())
+    report = import_delta(
+        filepath, state=state, backend=backend, extras_mode='local', peer=PEER, instant=timezone.now()
+    )
 
     assert report.uuids
     assert node_count(backend) == len(report.uuids)

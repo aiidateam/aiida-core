@@ -33,6 +33,7 @@ from aiida.tools.collab.protocol import (
     CollabRequestError,
     DeltaManifest,
     DeltaOffer,
+    ExtrasSnapshot,
     JoinResponse,
     ManifestDiff,
     PeerInfo,
@@ -97,18 +98,23 @@ class StubSyncCore:
         self.negotiated.append((cursor, claim))
         return DeltaManifest(manifest=self.manifest, instant=self.instant, roster=self.roster)
 
-    def request_delta(self, cursor: datetime | None, claim: frozenset, want: frozenset) -> DeltaOffer:
+    def request_delta(
+        self, cursor: datetime | None, claim: frozenset, want: frozenset, refresh_want: frozenset
+    ) -> DeltaOffer:
         self.requested.append((cursor, claim, want))
         return DeltaOffer(
-            delta=delta_id(cursor, claim, want), instant=self.instant, size=self.delta_path.stat().st_size
+            delta=delta_id(cursor, claim, want),
+            instant=self.instant,
+            size=self.delta_path.stat().st_size,
+            refresh=[ExtrasSnapshot(uuid=uuid, mtime=self.instant, extras={'k': 1}) for uuid in sorted(refresh_want)],
         )
 
     def resolve_delta(self, requested_id: str) -> Path | None:
         return self.delta_path if self.delta_path.exists() else None
 
-    def diff_manifest(self, uuids: list) -> ManifestDiff:
+    def diff_manifest(self, uuids: list, refresh: dict) -> ManifestDiff:
         self.diffed.append(uuids)
-        return ManifestDiff(missing=self.missing)
+        return ManifestDiff(missing=self.missing, refresh=sorted(refresh))
 
     def handshake(self, requester: str, roster: list | None = None) -> PushHandshake:
         self.handshakes.append(requester)
@@ -121,7 +127,7 @@ class StubSyncCore:
     def retired(self, peer: str) -> None:
         self.retirements.append(peer)
 
-    def import_staged(self, filepath: Path, peer: str, instant: datetime) -> dict:
+    def import_staged(self, filepath: Path, peer: str, instant: datetime, refresh: list) -> dict:
         if self.import_exception is not None:
             raise self.import_exception
 
@@ -446,19 +452,25 @@ def test_request_delta(transport):
     claim = frozenset({'uuid-held'})
     want = frozenset({'uuid-wanted'})
 
-    offer = transport.client.request_delta(cursor, claim, want)
+    offer = transport.client.request_delta(cursor, claim, want, frozenset({'uuid-stale'}))
 
     assert transport.stub.requested == [(cursor, claim, want)]
     assert offer.delta == delta_id(cursor, claim, want)
     assert offer.instant == transport.stub.instant
     assert offer.size == len(DELTA)
+    assert [(snapshot.uuid, snapshot.mtime, snapshot.extras) for snapshot in offer.refresh] == [
+        ('uuid-stale', transport.stub.instant, {'k': 1})
+    ], 'the extras snapshots of the requested refreshes travel with the offer'
 
 
 def test_diff_manifest(transport):
-    """The manifest offered before a push reaches the sync core."""
-    diff = transport.client.diff_manifest(['uuid-one', 'uuid-two'])
+    """The manifest and the edited extras offered before a push reach the sync core."""
+    mtime = timezone.now()
+
+    diff = transport.client.diff_manifest(['uuid-one', 'uuid-two'], {'uuid-edited': mtime})
 
     assert diff.missing == ['uuid-missing']
+    assert diff.refresh == ['uuid-edited']
     assert transport.stub.diffed == [['uuid-one', 'uuid-two']]
 
 

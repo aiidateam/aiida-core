@@ -35,6 +35,7 @@ from aiida.tools.collab.protocol import (
     PushHandshake,
     VersionSkew,
     file_sha256,
+    refresh_as_dict,
     route_delta,
     route_import,
     route_upload,
@@ -44,6 +45,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from datetime import datetime
     from pathlib import Path
+
+    from aiida.tools.collab.protocol import ExtrasSnapshot
 
 TIMEOUT = 60.0
 
@@ -167,28 +170,35 @@ class CollabClient:
         cursor: datetime | None,
         claim: frozenset[str] | set[str],
         want: frozenset[str] | set[str],
+        refresh_want: frozenset[str] | set[str] | list[str] = frozenset(),
     ) -> DeltaOffer:
         """Ask the peer to export the subset of the negotiated delta this profile lacks, and receive its offer.
 
         :param cursor: the cursor the manifest was negotiated with.
         :param claim: the claim the manifest was negotiated with.
         :param want: the UUIDs of the manifest this profile is missing.
+        :param refresh_want: the nodes of the manifest's refresh offer whose extras this profile holds an older
+            version of; their snapshots come with the offer.
         """
         body = {
             'cursor': cursor.isoformat() if cursor is not None else None,
             'claim': sorted(claim),
             'want': sorted(want),
+            'refresh_want': sorted(refresh_want),
             'collab': self._collab,
         }
 
         return self._answer(DeltaOffer.from_dict, 'POST', ROUTE_DELTA, json=body)
 
-    def diff_manifest(self, uuids: list[str]) -> ManifestDiff:
-        """Offer the peer a manifest of nodes and receive what it lacks.
+    def diff_manifest(self, uuids: list[str], refresh: dict[str, datetime] | None = None) -> ManifestDiff:
+        """Offer the peer a manifest of nodes and of edited extras, and receive what it lacks.
 
         :param uuids: the manifest of the delta this profile would push.
+        :param refresh: the mtimes this profile holds for the shared nodes whose extras it may have edited.
         """
-        return self._answer(ManifestDiff.from_dict, 'POST', ROUTE_MISSING, json={'uuids': uuids})
+        body = {'uuids': uuids, 'refresh': refresh_as_dict(refresh or {})}
+
+        return self._answer(ManifestDiff.from_dict, 'POST', ROUTE_MISSING, json=body)
 
     def push_handshake(self, requester: str, roster: list[dict[str, Any]] | None = None) -> PushHandshake:
         """Ask the peer what it already holds of this profile, in preparation of a push.
@@ -285,7 +295,14 @@ class CollabClient:
 
         return UploadReport(sha256=sha256, sent=size - staged, staged=total)
 
-    def trigger_import(self, sha256: str, *, peer: str, instant: datetime) -> dict[str, Any]:
+    def trigger_import(
+        self,
+        sha256: str,
+        *,
+        peer: str,
+        instant: datetime,
+        refresh: list[ExtrasSnapshot] | None = None,
+    ) -> dict[str, Any]:
         """Ask the peer to import the staged upload with the given checksum.
 
         The peer imports synchronously, so the response may take as long as the import; only the connection
@@ -294,13 +311,18 @@ class CollabClient:
         :param sha256: the checksum under which the upload was staged.
         :param peer: the identity under which the receiver tracks this profile.
         :param instant: the export instant of the staged delta, which the receiver's cursor advances to.
+        :param refresh: the extras snapshots the receiver asked for when it diffed the manifest.
         :return: the import report of the peer.
         :raises CollabRequestError: when the import fails, with the reason of the peer. The peer keeps the staged
             upload in that case, so a retry only repeats the import, not the transfer — unless the upload failed
             its checksum verification (409) or can never land because it links to a node the peer no longer holds
             (422), in which cases the peer discards it and the push has to be negotiated afresh.
         """
-        body = {'peer': peer, 'instant': instant.isoformat()}
+        body = {
+            'peer': peer,
+            'instant': instant.isoformat(),
+            'refresh': [snapshot.as_dict() for snapshot in refresh or []],
+        }
 
         return self._answer(dict, 'POST', route_import(sha256), json=body, timeout=(self._timeout, None))
 

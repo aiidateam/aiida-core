@@ -218,6 +218,36 @@ class PeerInfo:
 
 
 @dataclass
+class ExtrasSnapshot:
+    """The extras of one shared node as its sender holds them, with the mtime that decides whose version wins.
+
+    The mtime travels with the snapshot and is written as the receiver's own: a refresh must never make the
+    receiver the newer side, or the two would echo the same extras back and forth forever.
+    """
+
+    uuid: str
+    mtime: datetime
+    extras: dict[str, Any]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {'uuid': self.uuid, 'mtime': self.mtime.isoformat(), 'extras': self.extras}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ExtrasSnapshot:
+        return cls(uuid=data['uuid'], mtime=datetime.fromisoformat(data['mtime']), extras=data['extras'])
+
+
+def refresh_as_dict(refresh: dict[str, datetime]) -> dict[str, str]:
+    """Serialize an offer of extras refreshes: the mtime this profile holds for each shared node it may have edited."""
+    return {uuid: mtime.isoformat() for uuid, mtime in refresh.items()}
+
+
+def refresh_from_dict(data: dict[str, str]) -> dict[str, datetime]:
+    """Parse an offer of extras refreshes."""
+    return {uuid: datetime.fromisoformat(mtime) for uuid, mtime in data.items()}
+
+
+@dataclass
 class DeltaManifest:
     """The first answer to a delta negotiation: which nodes the delta for the presented cursor and claim holds.
 
@@ -227,6 +257,11 @@ class DeltaManifest:
 
     manifest: list[str]
     instant: datetime
+    refresh: dict[str, datetime] = dataclasses.field(default_factory=dict)
+    """Under the ``sync`` extras policy, the mtime the sender holds for each shared node whose extras it may have
+    edited since the presented cursor. The requester keeps the ones it holds an older version of and asks for their
+    extras with the export request; under ``local`` the offer is empty."""
+
     roster: list[dict[str, Any]] = dataclasses.field(default_factory=list)
     """The sender's own roster entry and every peer it knows, so that membership spreads with every sync."""
 
@@ -234,6 +269,7 @@ class DeltaManifest:
         return {
             'manifest': self.manifest,
             'instant': self.instant.isoformat(),
+            'refresh': refresh_as_dict(self.refresh),
             'roster': self.roster,
         }
 
@@ -242,6 +278,7 @@ class DeltaManifest:
         return cls(
             manifest=data['manifest'],
             instant=datetime.fromisoformat(data['instant']),
+            refresh=refresh_from_dict(data['refresh']),
             roster=data.get('roster', []),
         )
 
@@ -253,12 +290,15 @@ class ManifestDiff:
     missing: list[str]
     """The UUIDs of the offered nodes the receiver holds nowhere; only those are exported and uploaded."""
 
+    refresh: list[str]
+    """The nodes whose extras the receiver holds an older version of, and whose snapshot it wants with the push."""
+
     def as_dict(self) -> dict[str, Any]:
-        return {'missing': self.missing}
+        return {'missing': self.missing, 'refresh': self.refresh}
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ManifestDiff:
-        return cls(missing=data['missing'])
+        return cls(missing=data['missing'], refresh=data['refresh'])
 
 
 @dataclass
@@ -274,12 +314,25 @@ class DeltaOffer:
     size: int
     """The size of the delta archive in bytes."""
 
+    refresh: list[ExtrasSnapshot] = dataclasses.field(default_factory=list)
+    """The extras snapshots the requester asked for after diffing the manifest's refresh offer."""
+
     def as_dict(self) -> dict[str, Any]:
-        return {'delta': self.delta, 'instant': self.instant.isoformat(), 'size': self.size}
+        return {
+            'delta': self.delta,
+            'instant': self.instant.isoformat(),
+            'size': self.size,
+            'refresh': [snapshot.as_dict() for snapshot in self.refresh],
+        }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> DeltaOffer:
-        return cls(delta=data['delta'], instant=datetime.fromisoformat(data['instant']), size=data['size'])
+        return cls(
+            delta=data['delta'],
+            instant=datetime.fromisoformat(data['instant']),
+            size=data['size'],
+            refresh=[ExtrasSnapshot.from_dict(snapshot) for snapshot in data['refresh']],
+        )
 
 
 @dataclass

@@ -122,7 +122,7 @@ Below is a list with all available subcommands.
 
     Commands:
       init    Set up a profile as part of a collab.
-      log     Show the history of the pulls and pushes of the collab.
+      log     Show the history of the pulls, pushes and extras refreshes of the collab.
       peer    Correct the entries of the peers of the collab.
       pull    Fetch the new sealed provenance of peers and import it.
       push    Send the new sealed provenance of this profile to peers.

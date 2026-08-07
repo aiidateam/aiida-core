@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
     from aiida.manage.configuration import Profile
 
-Direction = Literal['pull', 'push']
+Direction = Literal['pull', 'push', 'refresh']
 
 # Above this many events the log is folded on save. The trigger is a count, not an age, because what the log
 # costs is the linear scan on every negotiation and the size of the state file — both functions of the count.
@@ -60,7 +60,7 @@ def _exclusive_lock(filepath: Path) -> Iterator[None]:
 
 @dataclass
 class CollabEvent:
-    """A single completed pull or push."""
+    """A single completed pull, push or extras refresh."""
 
     time: datetime
     direction: Direction
@@ -152,8 +152,9 @@ class CollabState:
 
         The synthetic events sit at the horizon — the time of the newest folded event — so any query bounded by an
         instant after the horizon correctly excludes them, and one bounded inside the folded range still sees the
-        whole union. The latter over-states what was imported since that instant, which only re-offers UUIDs the
-        manifest diff then drops; it can never under-state, which would lose relayed provenance.
+        whole union. The latter over-states what was imported or refreshed since that instant, which only re-offers
+        UUIDs the manifest diff and the mtime comparison then drop; it can never under-state, which would lose
+        relayed provenance or a relayed extras edit.
         """
         if len(self.events) <= COMPACT_THRESHOLD:
             return
@@ -220,10 +221,21 @@ class CollabState:
         Received pushes are recorded with direction ``pull`` too — the direction describes the flow relative to this
         profile — so this is the complete set of nodes that entered the profile through the collab.
         """
+        return self._uuids_since('pull', instant)
+
+    def refreshed_uuids_since(self, instant: datetime | None) -> set[str]:
+        """Return the UUIDs of every node whose extras a peer refreshed here since ``instant``, or ever when ``None``.
+
+        These are shared nodes, not new provenance, so they are kept apart from the imported ones: what they feed is
+        the refresh offer, which is how an extras edit relayed through this profile reaches the next peer.
+        """
+        return self._uuids_since('refresh', instant)
+
+    def _uuids_since(self, direction: Direction, instant: datetime | None) -> set[str]:
         return {
             uuid
             for event in self.events
-            if event.direction == 'pull' and (instant is None or event.time >= instant)
+            if event.direction == direction and (instant is None or event.time >= instant)
             for uuid in event.uuids
         }
 

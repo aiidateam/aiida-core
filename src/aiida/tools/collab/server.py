@@ -40,7 +40,9 @@ from aiida.tools.collab.protocol import (
     ROUTE_MISSING,
     ROUTE_RETIRED,
     UNAUTHORIZED_DETAIL,
+    ExtrasSnapshot,
     file_sha256,
+    refresh_from_dict,
 )
 
 if TYPE_CHECKING:
@@ -82,18 +84,19 @@ class CollabServer(ThreadingHTTPServer):
     :param negotiate_delta: serves the manifest of the delta for the cursor and claim posted to
         ``POST /collab/v1/delta``, and merges the roster gossiped with it.
     :param request_delta: exports (or reuses) the subset of that delta named by the ``want`` of a
-        ``POST /collab/v1/delta`` and returns its offer.
+        ``POST /collab/v1/delta`` and returns its offer, with the extras snapshots of its ``refresh_want``.
     :param resolve_delta: returns the path of the negotiated delta served at ``GET /collab/v1/delta/<id>``, or
         ``None`` when no delta with that identifier is on offer. Each identifier must keep resolving to the same
         bytes while a transfer is in progress; when the delta is re-exported, a client that resumes an interrupted
         download is served the new file from the start instead.
     :param diff_manifest: answers ``POST /collab/v1/missing`` for a peer that wants to push: which of the offered
-        nodes this profile is missing.
+        nodes this profile is missing and which of the offered extras it holds an older version of.
     :param handshake: answers ``POST /collab/v1/handshake`` for a peer that wants to push: busy while an import is
         running, otherwise what the profile already holds of that peer. Merges the roster gossiped with it.
     :param import_staged: imports a fully staged upload at ``POST /collab/v1/import/<sha256>`` and returns a
         JSON-serializable report, which is relayed to the client. Receives the path of the staged file, the
-        identity the pushing peer declared and the export instant carried with the delta. Raising
+        identity the pushing peer declared, the export instant carried with the delta, and the extras snapshots
+        the pusher was asked for. Raising
         ``IntegrityError`` means the staged delta can never land; it is discarded and answered 422, telling the
         pusher to negotiate afresh instead of retrying the same bytes.
     """
@@ -109,11 +112,11 @@ class CollabServer(ThreadingHTTPServer):
         staging_dir: Path,
         info: Callable[[datetime | None], PeerInfo],
         negotiate_delta: Callable[[datetime | None, frozenset[str], list[dict[str, Any]]], DeltaManifest],
-        request_delta: Callable[[datetime | None, frozenset[str], frozenset[str]], DeltaOffer],
+        request_delta: Callable[[datetime | None, frozenset[str], frozenset[str], frozenset[str]], DeltaOffer],
         resolve_delta: Callable[[str], Path | None],
-        diff_manifest: Callable[[list[str]], ManifestDiff],
+        diff_manifest: Callable[[list[str], dict[str, datetime]], ManifestDiff],
         handshake: Callable[[str, list[dict[str, Any]]], PushHandshake],
-        import_staged: Callable[[Path, str, datetime], dict[str, Any]],
+        import_staged: Callable[[Path, str, datetime, list[ExtrasSnapshot]], dict[str, Any]],
         join: Callable[[dict[str, Any]], JoinResponse],
         retired: Callable[[str], None],
         collab: str = '',
@@ -290,7 +293,9 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
         answer: DeltaManifest | DeltaOffer
 
         if 'want' in data:
-            answer = self.server.request_delta(cursor, claim, frozenset(data['want']))
+            answer = self.server.request_delta(
+                cursor, claim, frozenset(data['want']), frozenset(data.get('refresh_want', []))
+            )
         else:
             answer = self.server.negotiate_delta(cursor, claim, data.get('roster', []))
 
@@ -313,7 +318,7 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
 
     def _post_missing(self) -> None:
         data = self._read_json()
-        diff = self.server.diff_manifest(data.get('uuids', []))
+        diff = self.server.diff_manifest(data.get('uuids', []), refresh_from_dict(data.get('refresh', {})))
 
         self._send_json(HTTPStatus.OK, diff.as_dict())
 
@@ -435,7 +440,12 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
         try:
             # A failing import deliberately leaves the staged file (the exception propagates to `_dispatch`), so
             # the next attempt negotiates that the bytes are already present and retries only the import.
-            report = self.server.import_staged(filepath, data['peer'], datetime.fromisoformat(data['instant']))
+            report = self.server.import_staged(
+                filepath,
+                data['peer'],
+                datetime.fromisoformat(data['instant']),
+                [ExtrasSnapshot.from_dict(snapshot) for snapshot in data.get('refresh', [])],
+            )
         except IntegrityError as exception:
             # These bytes can never land: the delta references a node this profile no longer holds. Retrying the
             # import is pointless, so the staged file is discarded and the pusher has to negotiate afresh.

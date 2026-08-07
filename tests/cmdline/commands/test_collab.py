@@ -907,7 +907,7 @@ def stub_transfer(monkeypatch):
     def missing_uuids(backend, uuids):
         return [uuid for uuid in uuids if uuid != 'uuid-held']
 
-    def request_delta(self, cursor, claim, want):
+    def request_delta(self, cursor, claim, want, refresh_want=frozenset()):
         calls.append(('request', set(want)))
         # A later instant than the negotiated one, as served by a peer that recomputed its delta in between:
         # the import must advance the cursor to the negotiated instant, not this one, or in-window nodes are
@@ -1149,6 +1149,28 @@ def test_pull_records_the_contact_without_pinning_a_policy(
     assert peers == {PEER_UUID: peer_entry(seen=True)}, 'the contact proves the address and pins no policy'
 
 
+def test_pull_reports_the_refresh_count(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch
+):
+    """Test that the pull prompt and its dry run name how many nodes' extras an incoming refresh replaces."""
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+
+    init_collab(config_with_profile, **{OPTION_POLICY: {'extras_mode': 'sync', 'groups_mode': 'local'}})
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(extras_mode='sync')
+    )
+    monkeypatch.setattr(sync, 'refresh_wanted', lambda backend, offer, tombstones: ['uuid-stale'])
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--dry-run', '--force'], use_subprocess=False)
+
+    assert f'{PEER}: 1 node(s) to pull, extras of 1 node(s) to be replaced by theirs' in result.output
+
+    result = run_cli_command(cmd_collab.collab_pull, use_subprocess=False, user_input='n\n')
+
+    assert 'letting their extras replace yours on 1 node(s)' in result.output
+
+
 def test_pull_keys_the_cursor_by_profile_uuid(
     run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch
 ):
@@ -1356,7 +1378,7 @@ def test_push_failed_import_then_retry(run_cli_command, config_with_profile, stu
         exports.append(set(want))
         return DeltaExport(filepath=filepath, uuids=sorted(want), instant=delta.instant)
 
-    def trigger_import_failing(self, sha256, *, peer, instant):
+    def trigger_import_failing(self, sha256, *, peer, instant, refresh=None):
         raise CollabRequestError('the peer failed to import')
 
     monkeypatch.setattr(sync, 'compute_delta', compute_delta)
@@ -1366,7 +1388,7 @@ def test_push_failed_import_then_retry(run_cli_command, config_with_profile, stu
     monkeypatch.setattr(
         CollabClient,
         'diff_manifest',
-        lambda self, uuids: ManifestDiff(missing=['uuid-one']),
+        lambda self, uuids, refresh=None: ManifestDiff(missing=['uuid-one'], refresh=[]),
     )
     monkeypatch.setattr(
         CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=5, staged=5)
@@ -1386,7 +1408,7 @@ def test_push_failed_import_then_retry(run_cli_command, config_with_profile, stu
 
     # The retry has to reuse the exported delta: the same bytes are what the peer already staged, and the
     # original instant is what describes them.
-    def trigger_import(self, sha256, *, peer, instant):
+    def trigger_import(self, sha256, *, peer, instant, refresh=None):
         imports.append((peer, instant))
         return {'uuids': ['uuid-one']}
 
@@ -1444,7 +1466,7 @@ def test_push_prompts_and_decline_drops_cut(run_cli_command, config_with_profile
     monkeypatch.setattr(
         CollabClient,
         'diff_manifest',
-        lambda self, uuids: ManifestDiff(missing=uuids),
+        lambda self, uuids, refresh=None: ManifestDiff(missing=uuids, refresh=[]),
     )
     monkeypatch.setattr(CollabClient, 'upload_delta', untouched)
 
@@ -1484,13 +1506,91 @@ def test_push_dry_run(run_cli_command, config_with_profile, stub_environment, mo
     monkeypatch.setattr(
         CollabClient,
         'diff_manifest',
-        lambda self, uuids: ManifestDiff(missing=uuids),
+        lambda self, uuids, refresh=None: ManifestDiff(missing=uuids, refresh=[]),
     )
     monkeypatch.setattr(CollabClient, 'upload_delta', untouched)
 
     result = run_cli_command(cmd_collab.collab_push, ['--dry-run'], use_subprocess=False)
 
     assert f'{PEER}: 1 node(s) to push' in result.output
+
+
+def test_push_reports_the_refresh_count(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that the push prompt and its dry run name how many nodes' extras the receiver asked for."""
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import ExtrasSnapshot, ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile, **{OPTION_POLICY: {'extras_mode': 'sync', 'groups_mode': 'local'}})
+
+    def export_delta(filepath, *, delta, backend, want=None):
+        filepath.write_bytes(b'delta')
+        return DeltaExport(filepath=filepath, uuids=['uuid-one'], instant=timezone.now())
+
+    monkeypatch.setattr(
+        sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now())
+    )
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(sync, 'refresh_offer', lambda **kwargs: {'uuid-stale': timezone.now()})
+    monkeypatch.setattr(
+        sync,
+        'refresh_snapshots',
+        lambda backend, uuids: [ExtrasSnapshot(uuid=uuid, mtime=timezone.now(), extras={}) for uuid in uuids],
+    )
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(extras_mode='sync')
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'push_handshake',
+        lambda self, requester, roster=None: PushHandshake(busy=False, cursor=None, claim=[]),
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'diff_manifest',
+        lambda self, uuids, refresh=None: ManifestDiff(missing=uuids, refresh=['uuid-stale']),
+    )
+
+    result = run_cli_command(cmd_collab.collab_push, ['--dry-run', '--force'], use_subprocess=False)
+
+    assert f'{PEER}: 1 node(s) to push, extras of 1 node(s) to be replaced by yours' in result.output
+
+    result = run_cli_command(cmd_collab.collab_push, use_subprocess=False, user_input='n\n')
+
+    assert 'replacing their extras with yours on 1 node(s)' in result.output
+
+
+def test_push_offers_no_refresh_under_local(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a collab that keeps extras local exchanges no refresh metadata, in the push direction either."""
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta
+
+    init_collab(config_with_profile)
+
+    offered = []
+
+    def diff_manifest(self, uuids, refresh=None):
+        offered.append(refresh)
+        return ManifestDiff(missing=[], refresh=[])
+
+    monkeypatch.setattr(
+        sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now())
+    )
+    monkeypatch.setattr(sync, 'refresh_offer', lambda **kwargs: {'uuid-edited': timezone.now()})
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
+    monkeypatch.setattr(
+        CollabClient,
+        'push_handshake',
+        lambda self, requester, roster=None: PushHandshake(busy=False, cursor=timezone.now(), claim=[]),
+    )
+    monkeypatch.setattr(CollabClient, 'diff_manifest', diff_manifest)
+
+    run_cli_command(cmd_collab.collab_push, ['--dry-run'], use_subprocess=False)
+
+    assert offered == [{}], 'nothing about extras may be offered to a peer of a collab that keeps them local'
 
 
 def test_push_refused_delta_drops_stash(run_cli_command, config_with_profile, stub_environment, monkeypatch):
@@ -1514,7 +1614,7 @@ def test_push_refused_delta_drops_stash(run_cli_command, config_with_profile, st
         filepath.write_bytes(b'delta')
         return DeltaExport(filepath=filepath, uuids=['uuid-one'], instant=instant)
 
-    def trigger_import_refused(self, sha256, *, peer, instant):
+    def trigger_import_refused(self, sha256, *, peer, instant, refresh=None):
         raise CollabRequestError('it links to node gone-uuid', status=HTTPStatus.UNPROCESSABLE_ENTITY)
 
     monkeypatch.setattr(
@@ -1530,7 +1630,7 @@ def test_push_refused_delta_drops_stash(run_cli_command, config_with_profile, st
     monkeypatch.setattr(
         CollabClient,
         'diff_manifest',
-        lambda self, uuids: ManifestDiff(missing=uuids),
+        lambda self, uuids, refresh=None: ManifestDiff(missing=uuids, refresh=[]),
     )
     monkeypatch.setattr(
         CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=5, staged=5)
@@ -1654,7 +1754,18 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
         delta_id,
     )
     from aiida.tools.collab.server import CollabServer
-    from aiida.tools.collab.sync import compute_delta, export_delta, import_delta, missing_uuids
+    from aiida.tools.collab.sync import (
+        compute_delta,
+        export_delta,
+        import_delta,
+        missing_uuids,
+        refresh_offer,
+        refresh_snapshots,
+        refresh_wanted,
+    )
+
+    # The whole loopback collab syncs extras, so that the wire carries the refresh negotiation as well.
+    extras_mode = 'sync'
 
     def seal_calculation(backend, inputs=None, heavy=False):
         import hashlib
@@ -1724,13 +1835,22 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
             state = CollabState.read(state_path)
             delta = compute_delta(state=state, backend=backend, cursor=cursor, claim=claim)
             computed[delta_id(cursor, claim)] = delta
-            return DeltaManifest(manifest=delta.uuids, instant=delta.instant)
+            return DeltaManifest(
+                manifest=delta.uuids,
+                instant=delta.instant,
+                refresh=refresh_offer(state=state, backend=backend, cursor=cursor),
+            )
 
-        def request_delta(cursor, claim, want):
+        def request_delta(cursor, claim, want, refresh_want):
             delta = computed[delta_id(cursor, claim)]
             key = delta_id(cursor, claim, want)
             deltas[key] = export_delta(workdir / f'{key}.aiida', delta=delta, backend=backend, want=want)
-            return DeltaOffer(delta=key, instant=deltas[key].instant, size=deltas[key].filepath.stat().st_size)
+            return DeltaOffer(
+                delta=key,
+                instant=deltas[key].instant,
+                size=deltas[key].filepath.stat().st_size,
+                refresh=refresh_snapshots(backend, sorted(refresh_want)),
+            )
 
         def handshake(requester, roster=None):
             state = CollabState.read(state_path)
@@ -1738,16 +1858,22 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
             claim = sorted(state.imported_uuids_since(cursor) | state.tombstones)
             return PushHandshake(busy=False, cursor=cursor, claim=claim)
 
-        def diff_manifest(uuids):
-            return ManifestDiff(missing=missing_uuids(backend, uuids))
+        def diff_manifest(uuids, refresh):
+            state = CollabState.read(state_path)
+            return ManifestDiff(
+                missing=missing_uuids(backend, uuids),
+                refresh=refresh_wanted(backend, refresh, state.tombstones),
+            )
 
-        def import_staged(filepath, peer, instant):
+        def import_staged(filepath, peer, instant, refresh):
             report = import_delta(
                 filepath,
                 state=CollabState.read(state_path),
                 backend=backend,
+                extras_mode=extras_mode,
                 peer=peer,
                 instant=instant,
+                refresh=refresh,
             )
             return dataclasses.asdict(report)
 
@@ -1757,7 +1883,9 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
             token=lambda: token,
             collab=COLLAB_UUID,
             staging_dir=tmp_path / f'{name}-staging',
-            info=lambda cursor: dataclasses.replace(local, uuid=peer_uuid, collab=COLLAB_UUID, accept_push=True),
+            info=lambda cursor: dataclasses.replace(
+                local, uuid=peer_uuid, collab=COLLAB_UUID, extras_mode=extras_mode, accept_push=True
+            ),
             join=lambda entry: JoinResponse(collab=COLLAB_UUID, roster=[entry]),
             retired=lambda peer: None,
             negotiate_delta=negotiate_delta,
@@ -1791,7 +1919,7 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
         'collab.uuid': COLLAB_UUID,
         'collab.bind': '127.0.0.1',
         'collab.announced': 'http://127.0.0.1:9137',
-        'collab.policy': {'extras_mode': 'local', 'groups_mode': 'local'},
+        'collab.policy': {'extras_mode': extras_mode, 'groups_mode': 'local'},
     }
 
     for option, value in options.items():
@@ -1820,6 +1948,7 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
             filepath,
             state=CollabState.read(state_path_b),
             backend=backend_b,
+            extras_mode=extras_mode,
             peer=uuid_c,
             instant=offer.instant,
         )
@@ -1858,6 +1987,27 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
 
         pushes = [event.size for event in CollabState.read(tmp_path / 'state.json').events if event.direction == 'push']
         assert pushes[1] < pushes[0], 'the second sync of the restart chain must transfer fewer bytes'
+
+        # B edits an extra of a node both hold: under the `sync` policy the next pull carries it over, without any
+        # node travelling with it.
+        shared = orm.QueryBuilder(backend=backend_b).append(orm.Node, filters={'uuid': output_a.uuid}).one()[0]
+        shared.base.extras.set('reviewed', 'by b')
+
+        result = run_cli_command(cmd_collab.collab_pull, ['peer-b', '--force'], use_subprocess=False)
+
+        assert 'pulled 0 node(s)' in result.output
+        assert 'refreshed the extras of 1 node(s)' in result.output
+        assert orm.load_node(output_a.uuid).base.extras.get('reviewed') == 'by b'
+
+        # And back the other way: an edit here reaches B by a push that carries no node at all, replacing B's whole
+        # extras dict — which is why the key B set survives only because this side holds it too.
+        orm.load_node(output_a.uuid).base.extras.set('checked', 'by a')
+
+        result = run_cli_command(cmd_collab.collab_push, ['peer-b', '--force'], use_subprocess=False)
+
+        assert 'pushed 0 node(s)' in result.output
+        assert 'refreshed the extras of 1 node(s)' in result.output
+        assert shared.base.extras.all == {'reviewed': 'by b', 'checked': 'by a'}
     finally:
         for option in options:
             config.unset_option(option, scope=profile.name)
@@ -1901,7 +2051,7 @@ def test_push_nothing_is_still_logged(run_cli_command, config_with_profile, stub
     monkeypatch.setattr(
         CollabClient,
         'diff_manifest',
-        lambda self, uuids: ManifestDiff(missing=[]),
+        lambda self, uuids, refresh=None: ManifestDiff(missing=[], refresh=[]),
     )
 
     result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)
@@ -1963,7 +2113,7 @@ def test_push_version_skew(run_cli_command, config_with_profile, stub_environmen
 
     monkeypatch.setattr(CollabClient, 'check_version_skew', check_version_skew)
     monkeypatch.setattr(CollabClient, 'push_handshake', push_handshake)
-    monkeypatch.setattr(CollabClient, 'diff_manifest', lambda self, uuids: ManifestDiff([]))
+    monkeypatch.setattr(CollabClient, 'diff_manifest', lambda self, uuids, refresh=None: ManifestDiff([], []))
     monkeypatch.setattr(sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={}, links=[], instant=timezone.now()))
 
     result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)

@@ -480,7 +480,11 @@ def rehash(nodes, entry_point, force):
 
     The set of nodes that will be rehashed can be filtered by their identifier and/or based on their class.
     """
+    from aiida.common.utils import DEFAULT_BATCH_SIZE
+    from aiida.manage import get_manager
     from aiida.orm import Data, ProcessNode, QueryBuilder
+    from aiida.orm.entities import EntityTypes
+    from aiida.orm.nodes.caching import NodeCaching
 
     # If no explicit entry point is defined, rehash all nodes, which are either Data nodes or ProcessNodes
     if entry_point is None:
@@ -515,9 +519,26 @@ def rehash(nodes, entry_point, force):
     if not num_nodes:
         echo.echo_critical('no matching nodes found')
 
+    backend = get_manager().get_profile_storage()
+    rows: list[dict] = []
+
     with click.progressbar(to_hash, label='Rehashing Nodes:') as iter_hash:
         for (node,) in iter_hash:
-            node.base.caching.rehash()
+            # Written through a bulk update with the mtime passed explicitly, rather than through
+            # `node.base.caching.rehash()`: a hash describes a node, so recomputing it modifies nothing, but a
+            # regular extras write fires the `mtime` `onupdate` and makes every node in the profile look modified
+            # today — to `verdi process list --past-days`, to an incremental `verdi profile dump`, and to the extras
+            # replication of a collab, where the most recently modified side overwrites what the others hold.
+            extras = dict(node.base.extras.all)
+            extras[NodeCaching._HASH_EXTRA_KEY] = node.base.caching.compute_hash()
+            rows.append({'id': node.pk, 'extras': extras, 'mtime': node.mtime})
+
+            if len(rows) >= DEFAULT_BATCH_SIZE:
+                backend.bulk_update(EntityTypes.NODE, rows)
+                rows = []
+
+    if rows:
+        backend.bulk_update(EntityTypes.NODE, rows)
 
     echo.echo_success(f'{num_nodes} nodes re-hashed.')
 

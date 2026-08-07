@@ -29,21 +29,24 @@ def test_load_without_file():
     assert state.filepath == AiiDAConfigPathResolver().collab_dir / f'{profile.uuid}.json'
     assert not state.filepath.exists()
     assert state.cursors == {}
+    assert state.tombstones == set()
     assert state.events == []
 
 
 @pytest.mark.usefixtures('config_with_profile')
 def test_save_load():
-    """Test that the cursors and the events survive a save and load cycle."""
+    """Test that the cursors, the tombstones and the events survive a save and load cycle."""
     profile = get_profile()
     state = CollabState.load(profile)
     state.cursors[PEER] = timezone.now()
+    state.tombstones.update(['uuid-one', 'uuid-two'])
     state.events.append(CollabEvent(time=timezone.now(), direction='pull', peer=PEER, uuids=['uuid-three'], size=128))
     state.save()
 
     loaded = CollabState.load(profile)
 
     assert loaded.cursors == state.cursors
+    assert loaded.tombstones == state.tombstones
     assert loaded.events == state.events
 
 

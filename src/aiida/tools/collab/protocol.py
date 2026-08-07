@@ -296,7 +296,7 @@ class PushHandshake:
     """The export instant of the last delta the receiver imported from the pusher, or ``None`` for none."""
 
     claim: list[str]
-    """UUIDs the receiver already holds, which the sender subtracts from what it would send."""
+    """UUIDs the receiver already holds, including its tombstones, which keeps deletions out of re-delivery."""
 
     roster: list[dict[str, Any]] = dataclasses.field(default_factory=list)
     """The receiver's own roster entry and every peer it knows, so that membership spreads with every sync."""

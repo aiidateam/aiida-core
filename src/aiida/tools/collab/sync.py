@@ -21,7 +21,7 @@ from aiida.common import timezone
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.utils.mixins import Sealable
-from aiida.tools.archive import import_archive
+from aiida.tools.archive import create_archive, import_archive
 from aiida.tools.archive.abstract import get_format
 from aiida.tools.collab.state import CollabEvent, CollabState
 from aiida.tools.graph.graph_traversers import get_nodes_export, traverse_graph, validate_traversal_rules
@@ -92,6 +92,7 @@ class DeltaReport:
     """The outcome of importing a delta."""
 
     uuids: list[str]
+    skipped: list[str]
     size: int
 
 
@@ -312,14 +313,18 @@ def import_delta(
     backend: StorageBackend,
     peer: str,
     instant: datetime,
+    include_deleted: bool = False,
 ) -> DeltaReport:
     """Import a delta received from a peer, advance the cursor for that peer and record the event in the collab log.
 
+    Nodes that were deleted locally are not imported again, unless provenance in the delta depends on them.
+
     :param filepath: the path of the archive to import.
-    :param state: the state of the collab, whose log is appended to.
+    :param state: the state of the collab, whose tombstones are honoured and whose log is appended to.
     :param backend: the storage to import into.
     :param peer: the identity the delta was received under, which keys the cursor: the profile UUID of the peer.
     :param instant: the export instant carried with the delta, which the cursor for ``peer`` advances to.
+    :param include_deleted: import nodes that were deleted locally after all, and drop their tombstones.
     :raises ~aiida.common.exceptions.IntegrityError: when the delta links to a node that exists neither in the
         archive nor locally, or a boundary link would violate a link invariant of the local graph; nothing is
         imported in either case.
@@ -333,6 +338,13 @@ def import_delta(
 
         uuids = _archive_uuids(filepath)
         boundary = _boundary_links(filepath)
+        tombstoned = [] if include_deleted else sorted(state.tombstones.intersection(uuids))
+
+        if tombstoned:
+            filepath = _without_nodes(filepath, Path(dirpath) / 'delta.aiida', tombstoned)
+            uuids = _archive_uuids(filepath)
+            # A boundary link whose archive endpoint was dropped with its tombstone must not be re-attached.
+            boundary = [link for link in boundary if link[0] in uuids or link[1] in uuids]
 
         # Checked before anything lands: a boundary endpoint that exists neither in the archive nor locally would
         # leave the imported nodes permanently disconnected from provenance the sender counted on, and a boundary
@@ -356,10 +368,13 @@ def import_delta(
     event = CollabEvent(time=timezone.now(), direction='pull', peer=peer, uuids=uuids, size=size)
 
     # Appended to a freshly read state under the lock instead of saving ``state``: that was read before an import
-    # that can take minutes, and writing it back wholesale would erase everything recorded in the meantime.
+    # that can take minutes, and writing it back wholesale would erase every tombstone recorded in the meantime.
     with CollabState.mutate(state.filepath) as fresh:
-        written = _write_boundary_links(backend, fresh.pending_links)
+        written = _write_boundary_links(backend, fresh.pending_links, fresh.tombstones)
         fresh.pending_links = [link for link in fresh.pending_links if link not in written]
+
+        if include_deleted:
+            fresh.tombstones.difference_update(uuids)
 
         # A retried push carries the instant of its original export, which can predate a pull that advanced the
         # cursor in the meantime; the cursor means "I hold everything the peer had at T", so it never moves back.
@@ -368,13 +383,13 @@ def import_delta(
 
         fresh.events.append(event)
 
-    return DeltaReport(uuids=uuids, size=size)
+    return DeltaReport(uuids=uuids, skipped=sorted(set(tombstoned) - set(uuids)), size=size)
 
 
 def _boundary_links(filepath: Path) -> list[list[str]]:
     """Return the boundary links of a thin archive, as ``[input_uuid, output_uuid, type, label]``.
 
-    An archive that was not written by ``export_delta`` has none.
+    An archive that was not written by ``export_delta``, such as the tombstone re-filter's output, has none.
     """
     with get_format().open(filepath, mode='r') as reader:
         return reader.get_metadata().get('collab_boundary_links', [])
@@ -463,10 +478,11 @@ def _check_boundary_invariants(backend: StorageBackend, boundary: list[list[str]
         existing.setdefault(output_uuid, []).append((input_uuid, link_type, label))
 
 
-def _write_boundary_links(backend: StorageBackend, pending: list[list[str]]) -> list[list[str]]:
-    """Write the pending boundary links whose endpoints both exist, and return the ones written.
+def _write_boundary_links(backend: StorageBackend, pending: list[list[str]], tombstones: set[str]) -> list[list[str]]:
+    """Write the pending boundary links whose endpoints both exist, and return the ones written or obsolete.
 
-    A link whose endpoint has not arrived yet stays pending until a later sync delivers the node.
+    A link is obsolete when an endpoint was tombstoned: the node was deliberately deleted, so the link died with
+    it. A link whose endpoint simply has not arrived yet stays pending until a later sync delivers the node.
     """
     from aiida.orm.entities import EntityTypes
 
@@ -486,9 +502,13 @@ def _write_boundary_links(backend: StorageBackend, pending: list[list[str]]) -> 
         # A journalled self-link predates the pre-check that now refuses them; dropped, never written.
         if input_uuid == output_uuid:
             resolved.append(link)
+        # Existence wins over the tombstone: a tombstoned endpoint that provenance closure re-imported in this
+        # very delta is held again, and its link must be restored — only a tombstoned *absent* node is obsolete.
         elif input_uuid in pk_by_uuid and output_uuid in pk_by_uuid:
             resolved.append(link)
             writable.append(link)
+        elif input_uuid in tombstones or output_uuid in tombstones:
+            resolved.append(link)
 
     if not writable:
         return resolved
@@ -596,3 +616,22 @@ def _archive_uuids(filepath: Path) -> list[str]:
     """Return the UUIDs of the nodes in an archive."""
     with get_format().open(filepath, mode='r') as reader:
         return orm.QueryBuilder(backend=reader.get_backend()).append(orm.Node, project='uuid').all(flat=True)
+
+
+def _without_nodes(filepath: Path, filepath_filtered: Path, uuids: list[str]) -> Path:
+    """Write a copy of an archive from which the given nodes are left out.
+
+    Provenance is kept closed, so a node is still included if one that is kept requires it as an input or an output.
+    """
+    with get_format().open(filepath, mode='r') as reader:
+        archive_backend = reader.get_backend()
+        nodes = (
+            orm.QueryBuilder(backend=archive_backend).append(orm.Node, filters={'uuid': {'!in': uuids}}).all(flat=True)
+        )
+        # Every kept node is already a starting entity here, so walking CREATE backwards can only add back a node that
+        # was left out on purpose. The export needs that rule to close over ancestry; this re-filter does not.
+        create_archive(
+            nodes, filename=filepath_filtered, backend=archive_backend, create_backward=False, **TRAVERSAL_RULES
+        )
+
+    return filepath_filtered

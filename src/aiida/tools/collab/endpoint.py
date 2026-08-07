@@ -207,7 +207,7 @@ class CollabEndpoint:
         return PushHandshake(
             busy=False,
             cursor=cursor,
-            claim=sorted(state.imported_uuids_since(cursor)),
+            claim=sorted(state.imported_uuids_since(cursor) | state.tombstones),
             roster=entries,
         )
 

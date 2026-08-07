@@ -919,8 +919,8 @@ def stub_transfer(monkeypatch):
         return len(b'delta')
 
     def import_delta(filepath, **kwargs):
-        calls.append(('import', kwargs['instant']))
-        return DeltaReport(uuids=['uuid-offered'], size=5)
+        calls.append(('import', kwargs['include_deleted'], kwargs['instant']))
+        return DeltaReport(uuids=['uuid-offered'], skipped=[], size=5)
 
     monkeypatch.setattr(DaemonClient, 'call_client', lambda self, command: calls.append(command) or {})
     monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
@@ -949,19 +949,20 @@ def test_pull_pause_my_daemon(
         ('negotiate', None, set()),
         ('request', {'uuid-offered'}),
         {'command': 'stop', 'properties': {'name': name, 'waiting': True}},
-        ('import', OFFER_INSTANT),
+        ('import', False, OFFER_INSTANT),
         {'command': 'start', 'properties': {'name': name, 'waiting': True}},
     ]
     assert 'pulled 1 node(s)' in result.output
 
 
 def test_pull_presents_cursor_and_claim(run_cli_command, config_with_profile, stub_environment, stub_transfer):
-    """Test that a pull presents the cursor of the peer and claims the nodes it has imported."""
+    """Test that a pull presents the cursor of the peer and claims imported nodes and tombstones."""
     init_collab(config_with_profile)
 
     cursor = timezone.now()
     state = CollabState.load(get_profile())
     state.cursors[PEER_UUID] = cursor
+    state.tombstones.add('uuid-dead')
     state.events.append(
         CollabEvent(time=timezone.now(), direction='pull', peer='http://other:9137', uuids=['uuid-held'], size=1)
     )
@@ -970,9 +971,30 @@ def test_pull_presents_cursor_and_claim(run_cli_command, config_with_profile, st
     run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
 
     assert stub_transfer == [
-        ('negotiate', cursor, {'uuid-held'}),
+        ('negotiate', cursor, {'uuid-held', 'uuid-dead'}),
         ('request', {'uuid-offered'}),
-        ('import', OFFER_INSTANT),
+        ('import', False, OFFER_INSTANT),
+    ]
+
+
+def test_pull_include_deleted(run_cli_command, config_with_profile, stub_environment, stub_transfer):
+    """Test that ``--include-deleted`` rewinds the cursor, drops tombstones from the claim and reaches the import."""
+    init_collab(config_with_profile)
+
+    state = CollabState.load(get_profile())
+    state.cursors[PEER_UUID] = timezone.now()
+    state.tombstones.add('uuid-dead')
+    state.events.append(
+        CollabEvent(time=timezone.now(), direction='pull', peer=PEER_UUID, uuids=['uuid-held', 'uuid-dead'], size=1)
+    )
+    state.save()
+
+    run_cli_command(cmd_collab.collab_pull, ['--include-deleted', '--force'], use_subprocess=False)
+
+    assert stub_transfer == [
+        ('negotiate', None, {'uuid-held'}),
+        ('request', {'uuid-offered'}),
+        ('import', True, OFFER_INSTANT),
     ]
 
 
@@ -1139,7 +1161,7 @@ def test_pull_keys_the_cursor_by_profile_uuid(
 
     def import_delta(filepath, **kwargs):
         imports.append(kwargs['peer'])
-        return sync.DeltaReport(uuids=['uuid-offered'], size=5)
+        return sync.DeltaReport(uuids=['uuid-offered'], skipped=[], size=5)
 
     monkeypatch.setattr(sync, 'import_delta', import_delta)
 
@@ -1713,7 +1735,7 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
         def handshake(requester, roster=None):
             state = CollabState.read(state_path)
             cursor = state.cursors.get(requester)
-            claim = sorted(state.imported_uuids_since(cursor))
+            claim = sorted(state.imported_uuids_since(cursor) | state.tombstones)
             return PushHandshake(busy=False, cursor=cursor, claim=claim)
 
         def diff_manifest(uuids):

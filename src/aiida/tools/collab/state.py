@@ -6,7 +6,7 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""Local state of a collab: the per-peer sync cursors and the log of pull and push events.
+"""Local state of a collab: the per-peer sync cursors, the tombstones and the log of pull and push events.
 
 This state is deliberately kept local to the profile and is never shared with peers. It lives next to the configuration
 instead of inside it, because the event log grows with every sync whereas the configuration is read on every ``verdi``
@@ -100,6 +100,7 @@ class CollabState:
 
     filepath: Path
     cursors: dict[str, datetime] = field(default_factory=dict)
+    tombstones: set[str] = field(default_factory=set)
     events: list[CollabEvent] = field(default_factory=list)
     pending_links: list[list[str]] = field(default_factory=list)
     """Boundary links of a thin delta, as ``[input_uuid, output_uuid, type, label]``, journalled before the import
@@ -111,7 +112,8 @@ class CollabState:
         """Return the path of the file in which the state of the collab of ``profile`` is stored.
 
         Keyed by the UUID of the profile rather than its name, so that a profile recreated under the name of a
-        deleted one does not inherit its cursors — which would make a pull skip nodes for no visible reason.
+        deleted one does not inherit its cursors and tombstones — which would make a pull skip nodes for no
+        visible reason.
         """
         from aiida.manage.configuration.settings import AiiDAConfigPathResolver
 
@@ -140,6 +142,7 @@ class CollabState:
         return cls(
             filepath=filepath,
             cursors={peer: datetime.fromisoformat(value) for peer, value in data.get('cursors', {}).items()},
+            tombstones=set(data['tombstones']),
             events=[CollabEvent.from_dict(event) for event in data['events']],
             pending_links=data.get('pending_links', []),
         )
@@ -189,6 +192,7 @@ class CollabState:
 
         data = {
             'cursors': {peer: cursor.isoformat() for peer, cursor in self.cursors.items()},
+            'tombstones': sorted(self.tombstones),
             'events': [event.as_dict() for event in self.events],
             'pending_links': self.pending_links,
         }
@@ -229,7 +233,8 @@ class CollabState:
         """Read the state stored at ``filepath`` under an exclusive lock and save it on exit.
 
         Every writer has to mutate through this: the CLI and the collab endpoint of the daemon share the state
-        file, and an unguarded read-modify-write cycle loses whichever of two concurrent writes finishes first.
+        file, and an unguarded read-modify-write cycle loses whichever of two concurrent writes finishes first —
+        a lost tombstone being exactly what lets a deleted node come back on the next pull.
         """
         with _exclusive_lock(filepath):
             state = cls.read(filepath)
@@ -294,3 +299,13 @@ def delete_state(profile: Profile) -> None:
         filepath.with_name(f'{filepath.name}{suffix}').unlink(missing_ok=True)
 
     shutil.rmtree(CollabState.get_workdir(profile), ignore_errors=True)
+
+
+def record_tombstones(uuids: list[str], profile: Profile) -> None:
+    """Record nodes as deleted, such that they are not pulled from a peer again.
+
+    :param uuids: the UUIDs of the deleted nodes.
+    :param profile: the profile from which the nodes were deleted.
+    """
+    with CollabState.mutate(CollabState.get_filepath(profile)) as state:
+        state.tombstones.update(uuids)

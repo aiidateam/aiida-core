@@ -804,13 +804,18 @@ def collab_log(ctx):
 @options.FORCE(help='Do not prompt for confirmation before transferring.')
 @options.DRY_RUN(help='Report what a pull would transfer from every peer, without transferring anything.')
 @click.option(
+    '--include-deleted',
+    is_flag=True,
+    help='Import nodes that were deleted from this profile before, and drop their tombstones.',
+)
+@click.option(
     '--pause-my-daemon',
     is_flag=True,
     help='Stop the daemon workers while the delta is imported. Required on SQLite storage while workers run.',
 )
 @requires_loaded_profile()
 @click.pass_context
-def collab_pull(ctx, peers, force, dry_run, pause_my_daemon):
+def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
     """Fetch the new sealed provenance of peers and import it.
 
     PEER is the nickname of a peer of the collab; without any, every peer is pulled from. Each transfer is
@@ -872,8 +877,13 @@ def collab_pull(ctx, peers, force, dry_run, pause_my_daemon):
             if not peer_agrees(ctx.obj.config, profile, peer_uuid, entry, info):
                 continue
 
-            cursor = state.cursors.get(peer_uuid)
+            # `--include-deleted` rewinds the cursor for this pull: a tombstoned node older than the cursor would
+            # otherwise never re-enter the delta. The claim keeps the transfer bounded, and drops the tombstones
+            # so they are delivered again.
+            cursor = None if include_deleted else state.cursors.get(peer_uuid)
+
             claim = state.imported_uuids_since(cursor)
+            claim = claim - state.tombstones if include_deleted else claim | state.tombstones
 
             try:
                 # The manifest names what the delta holds; only the nodes this profile lacks are then requested,
@@ -914,6 +924,7 @@ def collab_pull(ctx, peers, force, dry_run, pause_my_daemon):
                         # cursor must not advance past either the manifest the want was diffed against or the
                         # computation the bytes were cut from, or in-window nodes would never be delivered.
                         instant=min(manifest.instant, offer.instant),
+                        include_deleted=include_deleted,
                     )
         except IntegrityError as exception:
             # The delta linked to a node this profile holds nowhere; nothing landed, the next sync delivers it.
@@ -925,7 +936,12 @@ def collab_pull(ctx, peers, force, dry_run, pause_my_daemon):
         filepath.with_name(f'{filepath.name}.etag').unlink(missing_ok=True)
         pulled += len(report.uuids)
 
-        echo.echo_success(f'pulled {len(report.uuids)} node(s) ({report.size} bytes) from {nickname}')
+        message = f'pulled {len(report.uuids)} node(s) ({report.size} bytes) from {nickname}'
+
+        if report.skipped:
+            message += f', skipped {len(report.skipped)} deleted node(s)'
+
+        echo.echo_success(message)
 
     if pulled:
         _dump_hint(profile)

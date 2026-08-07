@@ -185,6 +185,80 @@ def test_import_empty_delta(tmp_path, peers):
     assert node_count(backend_two) == 0
 
 
+def test_import_skips_tombstoned(tmp_path, peers):
+    """Test that provenance that was deleted locally is not imported again."""
+    backend_one, state_one = peers('one')
+    backend_two, state_two = peers('two')
+    kept = seal_calculation(backend_one, 'kept')
+    deleted = seal_calculation(backend_one, 'deleted')
+
+    filepath = tmp_path / 'delta.aiida'
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+    deleted_uuids = linked_uuids(deleted)
+    state_two.tombstones.update(deleted_uuids)
+
+    report = import_delta(filepath, state=state_two, backend=backend_two, peer=PEER, instant=export.instant)
+
+    assert set(report.skipped) == deleted_uuids
+    assert set(report.uuids) == set(export.uuids) - deleted_uuids
+    assert node_count(backend_two) == len(export.uuids) - len(deleted_uuids)
+    assert orm.QueryBuilder(backend=backend_two).append(orm.Node, filters={'uuid': kept.uuid}).count() == 1
+
+
+def test_import_skips_tombstoned_caller(tmp_path, peers):
+    """Test that a tombstoned caller is not pulled back in by the process it called."""
+    backend_one, state_one = peers('one')
+    backend_two, state_two = peers('two')
+    caller = orm.WorkChainNode(backend=backend_one, label='caller').store()
+    called = orm.CalcJobNode(backend=backend_one, label='called')
+    called.base.links.add_incoming(caller, link_type=LinkType.CALL_CALC, link_label='child')
+    called.store()
+    called.seal()
+    caller.seal()
+
+    filepath = tmp_path / 'delta.aiida'
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+    state_two.tombstones.add(caller.uuid)
+
+    report = import_delta(filepath, state=state_two, backend=backend_two, peer=PEER, instant=export.instant)
+
+    assert report.skipped == [caller.uuid]
+    assert caller.uuid not in report.uuids
+
+
+def test_import_skips_tombstoned_creator(tmp_path, peers):
+    """Test that a tombstoned calculation is not pulled back in by the output it created."""
+    backend_one, state_one = peers('one')
+    backend_two, state_two = peers('two')
+    calculation = seal_calculation(backend_one, 'sealed')
+
+    filepath = tmp_path / 'delta.aiida'
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+    state_two.tombstones.add(calculation.uuid)
+
+    report = import_delta(filepath, state=state_two, backend=backend_two, peer=PEER, instant=export.instant)
+
+    assert report.skipped == [calculation.uuid]
+    assert calculation.uuid not in report.uuids
+
+
+def test_import_tombstone_loses_to_provenance(tmp_path, peers):
+    """Test that a tombstoned node the remaining provenance depends on is imported, and not reported as skipped."""
+    backend_one, state_one = peers('one')
+    backend_two, state_two = peers('two')
+    calculation = seal_calculation(backend_one, 'sealed')
+    inputs = calculation.base.links.get_incoming().one().node
+
+    filepath = tmp_path / 'delta.aiida'
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+    state_two.tombstones.add(inputs.uuid)
+
+    report = import_delta(filepath, state=state_two, backend=backend_two, peer=PEER, instant=export.instant)
+
+    assert report.skipped == []
+    assert inputs.uuid in report.uuids
+
+
 def test_import_twice(tmp_path, peers):
     """Test that importing the same delta again adds nothing but is recorded as its own event."""
     backend_one, state_one = peers('one')
@@ -238,6 +312,32 @@ def test_import_cursor_never_moves_back(tmp_path, peers):
     import_delta(filepath, state=state_two, backend=backend_two, peer=PEER, instant=export.instant)
 
     assert CollabState.read(state_two.filepath).cursors[PEER] == newer
+
+
+def test_import_include_deleted(tmp_path, peers):
+    """Test that ``include_deleted`` imports a tombstoned node again and drops its tombstone."""
+    backend_one, state_one = peers('one')
+    backend_two, state_two = peers('two')
+    calculation = seal_calculation(backend_one, 'sealed')
+
+    filepath = tmp_path / 'delta.aiida'
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+    state_two.tombstones.add(calculation.uuid)
+    state_two.save()
+
+    report = import_delta(
+        filepath,
+        state=state_two,
+        backend=backend_two,
+        peer=PEER,
+        instant=export.instant,
+        include_deleted=True,
+    )
+
+    assert calculation.uuid in report.uuids
+    assert report.skipped == []
+    assert orm.QueryBuilder(backend=backend_two).append(orm.Node, filters={'uuid': calculation.uuid}).count() == 1
+    assert CollabState.read(state_two.filepath).tombstones == set()
 
 
 def test_chain_convergence(tmp_path, peers):
@@ -314,7 +414,7 @@ def test_export_subtracts_claim(tmp_path, peers):
         instant=export.instant,
     )
     state_c = CollabState.read(state_c.filepath)
-    claim = state_c.imported_uuids_since(None)
+    claim = state_c.imported_uuids_since(None) | state_c.tombstones
 
     second = export_full(
         tmp_path / 'b.aiida', state=CollabState.read(state_b.filepath), backend=backend_b, cursor=None, claim=claim
@@ -558,6 +658,67 @@ def test_thin_import_missing_endpoint_aborts_and_recovers(tmp_path, peers):
     assert graph_links(backend_two) == graph_links(backend_one)
 
 
+def test_boundary_link_to_reimported_tombstoned_node(tmp_path, peers):
+    """Test that a boundary link is written when its tombstoned endpoint is re-imported by the same delta.
+
+    The receiver deleted the output X of a kept calculation P; the sender then built new work on X, so provenance
+    closure re-delivers it (tombstone loses to provenance). The CREATE link P -> X crosses the thin boundary and
+    must be restored — a tombstoned endpoint is obsolete only while it is absent.
+    """
+    backend_one, state_one = peers('one')
+    backend_two, state_two = peers('two')
+    creator = seal_calculation(backend_one, 'creator')
+    deleted = creator.base.links.get_outgoing().one().node
+
+    export = export_full(tmp_path / 'first.aiida', state=state_one, backend=backend_one, cursor=None)
+    import_delta(
+        tmp_path / 'first.aiida',
+        state=state_two,
+        backend=backend_two,
+        peer=PEER,
+        instant=export.instant,
+    )
+
+    # The receiver deletes X and records its tombstone; the creator stays. Deleted through raw rows, because
+    # ``SqliteTempBackend`` does not implement ``delete_nodes_and_connections``.
+    from aiida.storage.sqlite_zip.models import DbLink, DbNode
+
+    pk = orm.QueryBuilder(backend=backend_two).append(orm.Node, filters={'uuid': deleted.uuid}, project='id').one()[0]
+
+    with backend_two.transaction() as session:
+        session.query(DbLink).filter((DbLink.input_id == pk) | (DbLink.output_id == pk)).delete(
+            synchronize_session=False
+        )
+        session.query(DbNode).filter(DbNode.id == pk).delete(synchronize_session=False)
+
+    state_two = CollabState.read(state_two.filepath)
+    state_two.tombstones.add(deleted.uuid)
+    state_two.save()
+
+    # The sender builds new work on X, then the receiver syncs, claiming its tombstone as usual.
+    consumer = seal_calculation_with(backend_one, 'consumer', inputs=[deleted])
+
+    cursor = state_two.cursors[PEER]
+    claim = state_two.imported_uuids_since(cursor) | state_two.tombstones
+    delta = compute_delta(state=state_one, backend=backend_one, cursor=cursor, claim=claim)
+    want = set(missing_uuids(backend_two, delta.uuids))
+
+    assert deleted.uuid in want, 'closure requires X, and the receiver does not hold it'
+
+    export = export_delta(tmp_path / 'second.aiida', delta=delta, backend=backend_one, want=want)
+    import_delta(
+        tmp_path / 'second.aiida',
+        state=state_two,
+        backend=backend_two,
+        peer=PEER,
+        instant=export.instant,
+    )
+
+    assert (creator.uuid, deleted.uuid, 'create', 'result') in graph_links(backend_two)
+    assert orm.QueryBuilder(backend=backend_two).append(orm.Node, filters={'uuid': consumer.uuid}).count() == 1
+    assert CollabState.read(state_two.filepath).pending_links == []
+
+
 def test_pending_boundary_links_heal_on_next_import(tmp_path, peers, monkeypatch):
     """Test that boundary links journalled before a crashed import are written by the next one."""
     from aiida.tools.collab import sync
@@ -576,7 +737,7 @@ def test_pending_boundary_links_heal_on_next_import(tmp_path, peers, monkeypatch
     )
 
     # The crash window: the import of the thin delta lands its nodes, but dies before the boundary links.
-    monkeypatch.setattr(sync, '_write_boundary_links', lambda backend, pending: [])
+    monkeypatch.setattr(sync, '_write_boundary_links', lambda backend, pending, tombstones: [])
 
     restart(backend_one, heavy, output)
     delta = compute_delta(state=state_one, backend=backend_one, cursor=None)

@@ -73,7 +73,7 @@ def record_calls(monkeypatch):
             if import_error is not None:
                 raise RuntimeError(import_error)
 
-            return DeltaReport(uuids=[], size=0)
+            return DeltaReport(uuids=[], skipped=[], size=0)
 
         monkeypatch.setattr(DaemonClient, 'call_client', lambda self, command: calls.append(command) or {})
         monkeypatch.setattr(endpoint_module, 'import_delta', import_delta)
@@ -96,7 +96,7 @@ def test_import_staged_pauses_workers_on_sqlite(make_profile, record_calls, tmp_
     report = endpoint.import_staged(tmp_path / 'staged', 'http://pusher:9137', timezone.now())
 
     assert calls == [circus_command('stop', profile), 'import', circus_command('start', profile)]
-    assert report == {'uuids': [], 'size': 0}
+    assert report == {'uuids': [], 'skipped': [], 'size': 0}
 
 
 def test_import_staged_restarts_workers_on_failure(make_profile, record_calls, tmp_path):
@@ -542,13 +542,14 @@ def test_serve_carries_the_collab_and_its_roster(empty_config, tmp_path, monkeyp
 
 
 def test_handshake(make_profile):
-    """Test that the handshake serves the cursor of the requester and claims the nodes it holds."""
+    """Test that the handshake serves the cursor of the requester and claims held nodes and tombstones."""
     profile = make_profile()
     endpoint = CollabEndpoint(profile, backend=MagicMock())
 
     cursor = timezone.now()
     state = CollabState(filepath=CollabState.get_filepath(profile))
     state.cursors['http://pusher:9137'] = cursor
+    state.tombstones.add('uuid-deleted')
     state.events.append(
         CollabEvent(time=timezone.now(), direction='pull', peer='http://other:9137', uuids=['uuid-held'], size=1)
     )
@@ -558,7 +559,7 @@ def test_handshake(make_profile):
 
     assert handshake.busy is False
     assert handshake.cursor == cursor
-    assert handshake.claim == ['uuid-held']
+    assert handshake.claim == ['uuid-deleted', 'uuid-held']
 
     assert endpoint.handshake('http://unknown:9137').cursor is None
 
@@ -596,7 +597,7 @@ def test_concurrent_imports_serialize(make_profile, monkeypatch, tmp_path):
         start = time.monotonic()
         time.sleep(0.2)
         intervals.append((start, time.monotonic()))
-        return DeltaReport(uuids=[], size=0)
+        return DeltaReport(uuids=[], skipped=[], size=0)
 
     monkeypatch.setattr(endpoint_module, 'import_delta', slow_import)
     endpoint = CollabEndpoint(profile, backend=MagicMock())

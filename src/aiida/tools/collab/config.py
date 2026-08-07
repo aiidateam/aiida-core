@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from aiida.manage.configuration import Profile
     from aiida.manage.configuration.config import Config
+    from aiida.orm.implementation import StorageBackend
 
 OPTION_ENABLED = 'collab.enabled'
 OPTION_UUID = 'collab.uuid'
@@ -39,6 +40,21 @@ def is_enabled() -> bool:
     from aiida.manage.configuration import get_config_option, get_profile
 
     return get_profile() is not None and get_config_option(OPTION_ENABLED)
+
+
+def get_collab_profile(backend: StorageBackend) -> Profile | None:
+    """Return the loaded profile if it takes part in a collab and ``backend`` is its storage, or ``None``.
+
+    Operations on any other backend, such as that of an archive, must not affect the collab state of the profile.
+    """
+    from aiida.manage import get_manager
+
+    if not is_enabled():
+        return None
+
+    manager = get_manager()
+
+    return manager.get_profile() if backend is manager.get_profile_storage() else None
 
 
 def stored_config(config: Config) -> Config:

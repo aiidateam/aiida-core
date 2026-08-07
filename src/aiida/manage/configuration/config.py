@@ -308,7 +308,8 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         {},
         description='The collab peers of this profile, keyed by the UUID of their profile. Each entry holds the '
         '`url` of the peer (e.g. `http://100.64.0.2:9137`), the local `nickname` under which it is shown and '
-        'addressed, the `name` its owner announces, and whether it has ever answered (`seen`).',
+        'addressed, the `name` its owner announces, the owner `stamp` that versions its address, and whether it '
+        'has ever answered (`seen`).',
     )
     collab__bind: str = Field(
         '',
@@ -320,6 +321,17 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         9137,
         description='Port on which the collab endpoint of this profile listens.',
         json_schema_extra={'requires_daemon_restart': True},
+    )
+    collab__stamp: int = Field(
+        0,
+        description='Version of the address this profile announces to its peers. Raised by the first sync after '
+        '`collab.bind` or `collab.port` changed, so that the correction supersedes the old address wherever it '
+        'spread.',
+    )
+    collab__announced: str = Field(
+        '',
+        description='The endpoint URL this profile last announced to its peers, against which a change of '
+        '`collab.bind` or `collab.port` is detected.',
     )
     collab__accept_push: bool = Field(
         False,

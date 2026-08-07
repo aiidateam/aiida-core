@@ -157,14 +157,16 @@ class CollabEndpoint:
             collab=get_config().get_option(OPTION_UUID, scope=self._profile.name), roster=self._entries(peers)
         )
 
-    def handshake(self, requester: str) -> PushHandshake:
+    def handshake(self, requester: str, roster: list[dict[str, Any]] | None = None) -> PushHandshake:
         """Answer a peer that wants to push: busy while an import is running, else what this profile holds of it.
 
         Answering busy before anything is exported or uploaded is what serializes concurrent fan-in: the retrying
         pusher negotiates against the post-import cursor and claim, so no redundant bytes travel.
         """
+        entries = self._entries(self._merge_roster(roster or []))
+
         if import_lock_held(self._state_filepath):
-            return PushHandshake(busy=True, cursor=None, claim=[])
+            return PushHandshake(busy=True, cursor=None, claim=[], roster=entries)
 
         state = CollabState.read(self._state_filepath)
         cursor = state.cursors.get(requester)
@@ -173,10 +175,11 @@ class CollabEndpoint:
             busy=False,
             cursor=cursor,
             claim=sorted(state.imported_uuids_since(cursor)),
+            roster=entries,
         )
 
     def _merge_roster(self, entries: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-        """Merge the entries a newcomer presents into the configuration and return the resulting roster."""
+        """Merge gossiped roster entries into the configuration and return the resulting roster."""
         from aiida.manage.configuration import get_config
 
         if not entries:
@@ -206,16 +209,20 @@ class CollabEndpoint:
 
         return roster_entries(peers, self_entry(get_config(), self._profile))
 
-    def negotiate_delta(self, cursor: datetime | None, claim: frozenset[str]) -> DeltaManifest:
+    def negotiate_delta(
+        self, cursor: datetime | None, claim: frozenset[str], roster: list[dict[str, Any]] | None = None
+    ) -> DeltaManifest:
         """Serve the manifest of the delta for a presented cursor and claim: which nodes it holds.
 
         No archive is built for this — the requester first diffs the manifest against its own nodes and then
         requests only the subset it lacks.
         """
+        entries = self._entries(self._merge_roster(roster or []))
+
         with self._delta_lock:
             delta = self._delta(cursor, claim)
 
-            return DeltaManifest(manifest=delta.uuids, instant=delta.instant)
+            return DeltaManifest(manifest=delta.uuids, instant=delta.instant, roster=entries)
 
     def request_delta(self, cursor: datetime | None, claim: frozenset[str], want: frozenset[str]) -> DeltaOffer:
         """Export the requested subset of a delta, reusing the cached archive while nothing changed.

@@ -10,12 +10,15 @@
 
 from aiida import get_profile
 from aiida.cmdline.commands import cmd_collab
+from aiida.manage.configuration.config import Config
 from aiida.tools.collab.config import (
+    OPTION_ANNOUNCED,
     OPTION_BIND,
     OPTION_ENABLED,
     OPTION_PEERS,
     OPTION_POLICY,
     OPTION_PORT,
+    OPTION_STAMP,
     OPTION_TOKEN,
     OPTION_UUID,
 )
@@ -34,6 +37,7 @@ def peer_entry(url=PEER_URL, nickname=PEER, **overrides):
         'url': url,
         'nickname': nickname,
         'name': nickname,
+        'stamp': 1,
         'seen': True,
         **overrides,
     }
@@ -48,6 +52,8 @@ def init_collab(config, peers=None, **options):
         OPTION_TOKEN: TOKEN,
         OPTION_BIND: '127.0.0.1',
         OPTION_PORT: 9137,
+        OPTION_STAMP: 1,
+        OPTION_ANNOUNCED: 'http://127.0.0.1:9137',
         OPTION_PEERS: {PEER_UUID: peer_entry()} if peers is None else peers,
         OPTION_POLICY: POLICY,
         **options,
@@ -79,6 +85,7 @@ def test_init(run_cli_command, config_with_profile, monkeypatch):
     assert get(OPTION_PEERS, scope=scope) == {}
     assert get(OPTION_BIND, scope=scope) == '127.0.0.1'
     assert get(OPTION_PORT, scope=scope) == 9200
+    assert get(OPTION_ANNOUNCED, scope=scope) == 'http://127.0.0.1:9200'
     assert get(OPTION_UUID, scope=scope)
     assert get(OPTION_TOKEN, scope=scope)
     assert 'http://127.0.0.1:9200' in result.output
@@ -126,8 +133,8 @@ def test_init_join(run_cli_command, config_with_profile, monkeypatch):
         return JoinResponse(
             collab=COLLAB_UUID,
             roster=[
-                {'uuid': PEER_UUID, 'url': PEER_URL, 'name': PEER},
-                {'uuid': 'uuid-of-bob', 'url': 'http://100.64.0.3:9137', 'name': 'bob'},
+                {'uuid': PEER_UUID, 'url': PEER_URL, 'name': PEER, 'stamp': 1},
+                {'uuid': 'uuid-of-bob', 'url': 'http://100.64.0.3:9137', 'name': 'bob', 'stamp': 4},
             ],
         )
 
@@ -146,11 +153,11 @@ def test_init_join(run_cli_command, config_with_profile, monkeypatch):
     assert get(OPTION_PEERS, scope=profile.name) == {
         # The issuer just answered, so its address is proven; the members it told us about are not.
         PEER_UUID: peer_entry(),
-        'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob', seen=False),
+        'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob', stamp=4, seen=False),
     }
-    assert announced == [(PEER_URL, {'uuid': profile.uuid, 'url': 'http://127.0.0.1:9200', 'name': profile.name})], (
-        'the joiner announces itself to the issuer of the code'
-    )
+    assert announced == [
+        (PEER_URL, {'uuid': profile.uuid, 'url': 'http://127.0.0.1:9200', 'name': profile.name, 'stamp': 1})
+    ], 'the joiner announces itself to the issuer of the code'
     assert f'learned about peer `{PEER}`' in result.output
 
 
@@ -278,3 +285,78 @@ def test_init_already_initialized(run_cli_command, config_with_profile):
 
     assert 'already part of a collab' in result.output
     assert config_with_profile.get_option(OPTION_TOKEN, scope=scope) == TOKEN
+
+
+def test_peer_set_url(run_cli_command, config_with_profile):
+    """Test that a corrected address is stored as the provisional guess it is.
+
+    Only the owner of an entry stamps it, so the stamp is left where it is and the owner's next announcement
+    supersedes the correction; and the peer is unproven at the new address until it answers there.
+    """
+    init_collab(config_with_profile)
+
+    result = run_cli_command(
+        cmd_collab.collab_peer_set, [PEER, '--url', 'http://100.64.0.9:9137'], use_subprocess=False
+    )
+
+    entry = config_with_profile.get_option(OPTION_PEERS, scope=get_profile().name)[PEER_UUID]
+
+    assert entry == peer_entry(url='http://100.64.0.9:9137', seen=False)
+    assert 'http://100.64.0.9:9137' in result.output
+
+
+def test_peer_set_keeps_what_the_daemon_merged(run_cli_command, config_with_profile):
+    """Test that a command does not revert what the endpoint wrote to the configuration while it ran.
+
+    ``Config.store`` writes the whole dictionary its holder loaded, and since this phase the daemon's endpoint is
+    a second writer of that file: a command that stored its start-time copy would drop every entry gossiped in
+    between — including a corrected address, which is the one write nothing ever re-applies.
+    """
+    init_collab(config_with_profile)
+
+    profile = get_profile()
+    bob = peer_entry(url='http://100.64.0.3:9137', nickname='bob', seen=False)
+
+    # The endpoint merges a newly gossiped peer into the file, as it does while a command is running.
+    daemon = Config.from_file(config_with_profile.filepath)
+    merged = {**daemon.get_option(OPTION_PEERS, scope=profile.name), 'uuid-of-bob': bob}
+    daemon.set_option(OPTION_PEERS, merged, scope=profile.name)
+    daemon.store()
+
+    run_cli_command(cmd_collab.collab_peer_set, [PEER, '--nickname', 'ali'], use_subprocess=False)
+
+    stored = Config.from_file(config_with_profile.filepath).get_option(OPTION_PEERS, scope=profile.name)
+
+    assert stored['uuid-of-bob'] == bob, 'the entry the endpoint merged must survive the command'
+    assert stored[PEER_UUID]['nickname'] == 'ali'
+
+
+def test_peer_set_refuses_a_used_nickname(run_cli_command, config_with_profile):
+    """Test that two peers may not share a nickname: it is how a peer is named on the command line."""
+    init_collab(
+        config_with_profile,
+        peers={PEER_UUID: peer_entry(), 'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob')},
+    )
+
+    result = run_cli_command(cmd_collab.collab_peer_set, ['bob', '--nickname', PEER], use_subprocess=False, raises=True)
+
+    assert 'already in use' in result.output
+    assert config_with_profile.get_option(OPTION_PEERS, scope=get_profile().name)['uuid-of-bob']['nickname'] == 'bob'
+
+
+def test_complete_peer(run_cli_command, config_with_profile):
+    """Test that the PEER argument completes to the nicknames of the collab, from the configuration alone."""
+    import click
+
+    init_collab(
+        config_with_profile,
+        peers={
+            PEER_UUID: peer_entry(),
+            'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob'),
+        },
+    )
+
+    ctx = click.Context(cmd_collab.collab_peer_set)
+    completions = [item.value for item in cmd_collab.complete_peer(ctx, None, 'a')]
+
+    assert completions == ['alice']

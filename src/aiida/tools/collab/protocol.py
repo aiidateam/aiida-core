@@ -215,11 +215,14 @@ class DeltaManifest:
 
     manifest: list[str]
     instant: datetime
+    roster: list[dict[str, Any]] = dataclasses.field(default_factory=list)
+    """The sender's own roster entry and every peer it knows, so that membership spreads with every sync."""
 
     def as_dict(self) -> dict[str, Any]:
         return {
             'manifest': self.manifest,
             'instant': self.instant.isoformat(),
+            'roster': self.roster,
         }
 
     @classmethod
@@ -227,6 +230,7 @@ class DeltaManifest:
         return cls(
             manifest=data['manifest'],
             instant=datetime.fromisoformat(data['instant']),
+            roster=data.get('roster', []),
         )
 
 
@@ -282,11 +286,15 @@ class PushHandshake:
     claim: list[str]
     """UUIDs the receiver already holds, which the sender subtracts from what it would send."""
 
+    roster: list[dict[str, Any]] = dataclasses.field(default_factory=list)
+    """The receiver's own roster entry and every peer it knows, so that membership spreads with every sync."""
+
     def as_dict(self) -> dict[str, Any]:
         return {
             'busy': self.busy,
             'cursor': self.cursor.isoformat() if self.cursor is not None else None,
             'claim': self.claim,
+            'roster': self.roster,
         }
 
     @classmethod
@@ -295,6 +303,7 @@ class PushHandshake:
             busy=data['busy'],
             cursor=datetime.fromisoformat(data['cursor']) if data['cursor'] is not None else None,
             claim=data['claim'],
+            roster=data.get('roster', []),
         )
 
 

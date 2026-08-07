@@ -28,6 +28,8 @@ OPTION_TOKEN = 'collab.token'
 OPTION_PEERS = 'collab.peers'
 OPTION_BIND = 'collab.bind'
 OPTION_PORT = 'collab.port'
+OPTION_STAMP = 'collab.stamp'
+OPTION_ANNOUNCED = 'collab.announced'
 OPTION_ACCEPT_PUSH = 'collab.accept_push'
 OPTION_POLICY = 'collab.policy'
 
@@ -93,24 +95,39 @@ def join_code(config: Config, profile: Profile) -> str:
     ).encode()
 
 
-def self_entry(config: Config, profile: Profile) -> dict[str, Any]:
-    """Return the roster entry with which this profile announces itself to the collab."""
+def self_entry(config: Config, profile: Profile, *, bump: bool = False) -> dict[str, Any]:
+    """Return the roster entry with which this profile announces itself to its peers.
+
+    :param bump: raise the version stamp when the endpoint URL changed since the last announcement, and record the
+        new one. Only the owner of an entry ever stamps it, which is what makes "whose information is newer" a
+        local fact: a stale URL cannot gossip its way back over a fresher one.
+    """
     url = endpoint_url(
         config.get_option(OPTION_BIND, scope=profile.name), config.get_option(OPTION_PORT, scope=profile.name)
     )
+    stamp = config.get_option(OPTION_STAMP, scope=profile.name)
 
-    return {'uuid': profile.uuid, 'url': url, 'name': profile.name}
+    if bump and config.get_option(OPTION_ANNOUNCED, scope=profile.name) != url:
+        stamp += 1
+        config.set_option(OPTION_STAMP, stamp, scope=profile.name)
+        config.set_option(OPTION_ANNOUNCED, url, scope=profile.name)
+        config.store()
+
+    return {'uuid': profile.uuid, 'url': url, 'name': profile.name, 'stamp': stamp}
 
 
 def roster_entries(peers: dict[str, dict[str, Any]], mine: dict[str, Any]) -> list[dict[str, Any]]:
-    """Return the membership of the collab: this profile's own entry first, then every peer it holds.
+    """Return what this profile gossips: its own entry first, then every peer it holds.
+
+    The order is part of the protocol, not presentation: the receiving ``merge_roster`` reads the first entry as
+    the self-announcement of whoever is making contact, which is the one entry that contact is evidence about.
 
     Only the owner's self-announced name travels; the local nickname is a display alias of this machine alone.
     """
     return [
         mine,
         *(
-            {'uuid': uuid, 'url': entry['url'], 'name': entry.get('name') or entry['nickname']}
+            {'uuid': uuid, 'url': entry['url'], 'name': entry.get('name') or entry['nickname'], 'stamp': entry['stamp']}
             for uuid, entry in peers.items()
         ),
     ]
@@ -137,24 +154,26 @@ def merge_roster(
     """Merge gossiped roster entries into the peers of this profile.
 
     Entries are auto-trusted — only a token holder can hand one out — but never silent: the second return value
-    reports every peer that was added, for the command output.
+    reports every peer that was added or moved, for the command output.
 
     :param peers: the roster of this profile, keyed by profile UUID.
-    :param entries: the membership a peer handed over: its own entry first, as ``roster_entries`` builds it, and
-        the ones it knows after it.
-    :param own_uuid: the profile UUID of this profile, whose entry the peers hand back.
-    :return: the merged roster and one report line per added peer.
+    :param entries: what a peer gossiped: its own entry **first**, as ``roster_entries`` builds it, and the ones
+        it knows after it. That first entry is the only one this contact is direct evidence about; the rest are
+        hearsay, which is enough to vouch for a member but not to speak for one.
+    :param own_uuid: the profile UUID of this profile, whose entry the peers gossip back and which only this
+        profile itself may stamp.
+    :return: the merged roster and one report line per added or moved peer.
     """
     merged = {uuid: dict(entry) for uuid, entry in peers.items()}
     reports = []
 
     for gossiped in entries:
-        uuid, url, name = gossiped.get('uuid'), gossiped.get('url'), gossiped.get('name')
+        uuid, url, stamp, name = gossiped.get('uuid'), gossiped.get('url'), gossiped.get('stamp'), gossiped.get('name')
 
         # Typed as strictly as the entry is used, since a peer running anything is what hands these over: an
         # entry that is not what it claims is skipped like an incomplete one, rather than raising in the merge or
         # at the schema on its way into the configuration — where it would abort a pull that already imported.
-        if not isinstance(uuid, str) or not isinstance(url, str):
+        if not isinstance(uuid, str) or not isinstance(url, str) or not isinstance(stamp, int):
             continue
 
         if not uuid or not url or uuid == own_uuid:
@@ -169,8 +188,32 @@ def merge_roster(
                 'url': url,
                 'nickname': nickname,
                 'name': name,
+                'stamp': stamp,
                 'seen': False,
             }
             reports.append(f'learned about peer `{nickname}` at {url}')
+            continue
+
+        entry = dict(known)
+
+        if stamp > known['stamp']:
+            # Only the owner raises its own stamp, so a higher one is the owner's own correction and supersedes
+            # whatever is held here — a manual `peer set --url` included.
+            entry.update(url=url, name=name, stamp=stamp)
+
+            if known['url'] != url:
+                # The flag is about the address that is announced now, so a move puts the peer back to unproven.
+                entry['seen'] = False
+                reports.append(f'peer `{known["nickname"]}` moved to {url}')
+
+        merged[uuid] = entry
 
     return merged, reports
+
+
+def find_peer(peers: dict[str, dict[str, Any]], selector: str) -> str | None:
+    """Return the profile UUID of the peer a nickname or UUID selects, or ``None`` when it selects none."""
+    if selector in peers:
+        return selector
+
+    return next((uuid for uuid, entry in peers.items() if entry['nickname'] == selector), None)

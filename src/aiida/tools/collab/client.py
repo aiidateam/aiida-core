@@ -90,22 +90,27 @@ class CollabClient:
     def join(self, entry: dict[str, Any]) -> JoinResponse:
         """Present the join code to the member that issued it, announce this profile and receive the roster.
 
-        :param entry: the roster entry of this profile: its UUID, endpoint URL and announced name.
+        :param entry: the roster entry of this profile: its UUID, endpoint URL, announced name and version stamp.
         """
         body = {'collab': self._collab, 'entry': entry}
 
         return self._answer(JoinResponse.from_dict, 'POST', ROUTE_JOIN, json=body)
 
-    def negotiate_delta(self, cursor: datetime | None, claim: frozenset[str] | set[str]) -> DeltaManifest:
+    def negotiate_delta(
+        self, cursor: datetime | None, claim: frozenset[str] | set[str], roster: list[dict[str, Any]] | None = None
+    ) -> DeltaManifest:
         """Present a cursor and a claim to the peer and receive the manifest of the delta they negotiate.
 
         :param cursor: the export instant of the last delta imported from this peer, or ``None`` for everything.
         :param claim: UUIDs this profile already holds and does not want re-delivered.
+        :param roster: this profile's own entry and the peers it knows, gossiped with the negotiation; the answer
+            carries the peer's own in return.
         """
         body = {
             'cursor': cursor.isoformat() if cursor is not None else None,
             'claim': sorted(claim),
             'collab': self._collab,
+            'roster': roster or [],
         }
 
         return self._answer(DeltaManifest.from_dict, 'POST', ROUTE_DELTA, json=body)
@@ -138,12 +143,14 @@ class CollabClient:
         """
         return self._answer(ManifestDiff.from_dict, 'POST', ROUTE_MISSING, json={'uuids': uuids})
 
-    def push_handshake(self, requester: str) -> PushHandshake:
+    def push_handshake(self, requester: str, roster: list[dict[str, Any]] | None = None) -> PushHandshake:
         """Ask the peer what it already holds of this profile, in preparation of a push.
 
         :param requester: the identity under which the peer tracks this profile: its profile UUID.
+        :param roster: this profile's own entry and the peers it knows, gossiped with the handshake; the answer
+            carries the peer's own in return.
         """
-        body = {'requester': requester, 'collab': self._collab}
+        body = {'requester': requester, 'collab': self._collab, 'roster': roster or []}
 
         return self._answer(PushHandshake.from_dict, 'POST', ROUTE_HANDSHAKE, json=body)
 

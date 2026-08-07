@@ -79,7 +79,7 @@ class StubSyncCore:
         self.handshakes: list[str] = []
         self.joined: list[dict] = []
         self.token = TOKEN
-        self.roster: list[dict] = [{'uuid': 'uuid-of-the-peer', 'url': 'http://peer:9137', 'name': 'peer'}]
+        self.roster: list[dict] = [{'uuid': 'uuid-of-the-peer', 'url': 'http://peer:9137', 'name': 'peer', 'stamp': 1}]
         self.info_cursors: list[datetime | None] = []
         self.imported: list[tuple[str, datetime, bytes]] = []
 
@@ -87,9 +87,9 @@ class StubSyncCore:
         self.info_cursors.append(cursor)
         return self.peer_info
 
-    def negotiate_delta(self, cursor: datetime | None, claim: frozenset) -> DeltaManifest:
+    def negotiate_delta(self, cursor: datetime | None, claim: frozenset, roster: list | None = None) -> DeltaManifest:
         self.negotiated.append((cursor, claim))
-        return DeltaManifest(manifest=self.manifest, instant=self.instant)
+        return DeltaManifest(manifest=self.manifest, instant=self.instant, roster=self.roster)
 
     def request_delta(self, cursor: datetime | None, claim: frozenset, want: frozenset) -> DeltaOffer:
         self.requested.append((cursor, claim, want))
@@ -104,7 +104,7 @@ class StubSyncCore:
         self.diffed.append(uuids)
         return ManifestDiff(missing=self.missing)
 
-    def handshake(self, requester: str) -> PushHandshake:
+    def handshake(self, requester: str, roster: list | None = None) -> PushHandshake:
         self.handshakes.append(requester)
         return self.push_handshake
 

@@ -122,6 +122,7 @@ Below is a list with all available subcommands.
 
     Commands:
       init  Set up a profile as part of a collab.
+      peer  Correct the entries of the peers of the collab.
 
 
 .. _reference:command-line:verdi-computer:

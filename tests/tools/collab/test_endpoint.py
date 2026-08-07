@@ -248,6 +248,7 @@ def test_join_records_the_newcomer_and_answers_with_the_membership(make_profile,
         'url': 'http://100.64.0.2:9137',
         'nickname': 'alice',
         'name': 'alice',
+        'stamp': 1,
         'seen': True,
     }
 
@@ -271,9 +272,46 @@ def test_join_records_the_newcomer_and_answers_with_the_membership(make_profile,
         'url': 'http://100.64.0.3:9137',
         'nickname': 'carol',
         'name': 'carol',
+        'stamp': 1,
         'seen': False,
     }
     assert stored['uuid-of-alice'] == alice
+
+
+def test_handshake_merges_the_gossiped_roster(make_profile, empty_config):
+    """Test that a peer's own announcement corrects the address held for it, on the served side too.
+
+    The endpoint is how a moved member reaches a peer whose daemon is the only thing running there, so the merge
+    has to happen here as much as in the ``verdi`` commands.
+    """
+    from aiida.manage.configuration.config import Config
+
+    profile = make_profile()
+    empty_config.set_option(
+        'collab.peers',
+        {
+            'uuid-of-alice': {
+                'url': 'http://old:9137',
+                'nickname': 'alice',
+                'name': 'alice',
+                'stamp': 1,
+                'seen': True,
+            }
+        },
+        scope=profile.name,
+    )
+    empty_config.store()
+
+    endpoint = CollabEndpoint(profile, backend=MagicMock())
+    moved = {'uuid': 'uuid-of-alice', 'url': 'http://100.64.0.9:9137', 'name': 'alice', 'stamp': 2}
+
+    handshake = endpoint.handshake('uuid-of-alice', [moved])
+
+    stored = Config.from_file(empty_config.filepath).get_option('collab.peers', scope=profile.name)
+
+    assert stored['uuid-of-alice']['url'] == 'http://100.64.0.9:9137'
+    assert stored['uuid-of-alice']['seen'] is False, 'the new address is unproven until the peer answers at it'
+    assert {entry['uuid'] for entry in handshake.roster} == {profile.uuid, 'uuid-of-alice'}
 
 
 def test_serve_carries_the_collab_and_its_roster(empty_config, tmp_path, monkeypatch):
@@ -328,6 +366,7 @@ def test_serve_carries_the_collab_and_its_roster(empty_config, tmp_path, monkeyp
                 'url': 'http://old:9137',
                 'nickname': 'alice',
                 'name': 'alice',
+                'stamp': 1,
                 'seen': True,
             }
         },
@@ -360,7 +399,7 @@ def test_serve_carries_the_collab_and_its_roster(empty_config, tmp_path, monkeyp
         with CollabClient(f'http://127.0.0.1:{port}', token, collab=collab, timeout=30) as client:
             assert client.info().collab == collab, 'a peer that does not name its collab is refused by every peer'
 
-            newcomer = {'uuid': 'uuid-of-carol', 'url': 'http://100.64.0.3:9137', 'name': 'carol'}
+            newcomer = {'uuid': 'uuid-of-carol', 'url': 'http://100.64.0.3:9137', 'name': 'carol', 'stamp': 1}
             response = client.join(newcomer)
 
             assert response.collab == collab
@@ -372,7 +411,20 @@ def test_serve_carries_the_collab_and_its_roster(empty_config, tmp_path, monkeyp
                 'uuid': profile.uuid,
                 'url': f'http://127.0.0.1:{port}',
                 'name': profile.name,
+                'stamp': 0,
             }, 'the address a newcomer adopts for this profile is the one its endpoint is serving on'
+
+            # Alice announces that she moved; the raised stamp is what makes it supersede the address held here.
+            moved = [{'uuid': 'uuid-of-alice', 'url': 'http://100.64.0.9:9137', 'name': 'alice', 'stamp': 2}]
+            handshake = client.push_handshake('uuid-of-carol', moved)
+
+            assert {entry['uuid'] for entry in handshake.roster} == {profile.uuid, 'uuid-of-alice', 'uuid-of-carol'}
+
+            manifest = client.negotiate_delta(
+                None, frozenset(), [dict(newcomer, url='http://100.64.0.4:9137', stamp=2)]
+            )
+
+            assert {entry['uuid'] for entry in manifest.roster} == {profile.uuid, 'uuid-of-alice', 'uuid-of-carol'}
     finally:
         servers[0].shutdown()
         servers[0].server_close()
@@ -381,8 +433,8 @@ def test_serve_carries_the_collab_and_its_roster(empty_config, tmp_path, monkeyp
 
     peers = Config.from_file(empty_config.filepath).get_option('collab.peers', scope=profile.name)
 
-    assert peers['uuid-of-carol']['url'] == 'http://100.64.0.3:9137'
-    assert peers['uuid-of-alice']['url'] == 'http://old:9137'
+    assert peers['uuid-of-carol']['url'] == 'http://100.64.0.4:9137', 'the last announcement of the newcomer wins'
+    assert peers['uuid-of-alice']['url'] == 'http://100.64.0.9:9137'
 
 
 def test_handshake(make_profile):

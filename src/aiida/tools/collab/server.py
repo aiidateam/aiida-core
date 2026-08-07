@@ -75,7 +75,7 @@ class CollabServer(ThreadingHTTPServer):
     :param join: admits a newcomer presenting a join code at ``POST /collab/v1/join``: receives its roster entry,
         adds it and answers with the full roster.
     :param negotiate_delta: serves the manifest of the delta for the cursor and claim posted to
-        ``POST /collab/v1/delta``.
+        ``POST /collab/v1/delta``, and merges the roster gossiped with it.
     :param request_delta: exports (or reuses) the subset of that delta named by the ``want`` of a
         ``POST /collab/v1/delta`` and returns its offer.
     :param resolve_delta: returns the path of the negotiated delta served at ``GET /collab/v1/delta/<id>``, or
@@ -85,7 +85,7 @@ class CollabServer(ThreadingHTTPServer):
     :param diff_manifest: answers ``POST /collab/v1/missing`` for a peer that wants to push: which of the offered
         nodes this profile is missing.
     :param handshake: answers ``POST /collab/v1/handshake`` for a peer that wants to push: busy while an import is
-        running, otherwise what the profile already holds of that peer.
+        running, otherwise what the profile already holds of that peer. Merges the roster gossiped with it.
     :param import_staged: imports a fully staged upload at ``POST /collab/v1/import/<sha256>`` and returns a
         JSON-serializable report, which is relayed to the client. Receives the path of the staged file, the
         identity the pushing peer declared and the export instant carried with the delta. Raising
@@ -103,11 +103,11 @@ class CollabServer(ThreadingHTTPServer):
         token: str,
         staging_dir: Path,
         info: Callable[[datetime | None], PeerInfo],
-        negotiate_delta: Callable[[datetime | None, frozenset[str]], DeltaManifest],
+        negotiate_delta: Callable[[datetime | None, frozenset[str], list[dict[str, Any]]], DeltaManifest],
         request_delta: Callable[[datetime | None, frozenset[str], frozenset[str]], DeltaOffer],
         resolve_delta: Callable[[str], Path | None],
         diff_manifest: Callable[[list[str]], ManifestDiff],
-        handshake: Callable[[str], PushHandshake],
+        handshake: Callable[[str, list[dict[str, Any]]], PushHandshake],
         import_staged: Callable[[Path, str, datetime], dict[str, Any]],
         join: Callable[[dict[str, Any]], JoinResponse],
         collab: str = '',
@@ -241,7 +241,7 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
         if self._foreign(data.get('collab', '')):
             return
 
-        self._send_json(HTTPStatus.OK, self.server.handshake(requester).as_dict())
+        self._send_json(HTTPStatus.OK, self.server.handshake(requester, data.get('roster', [])).as_dict())
 
     def _post_join(self) -> None:
         data = self._read_json()
@@ -269,7 +269,7 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
         if 'want' in data:
             answer = self.server.request_delta(cursor, claim, frozenset(data['want']))
         else:
-            answer = self.server.negotiate_delta(cursor, claim)
+            answer = self.server.negotiate_delta(cursor, claim, data.get('roster', []))
 
         self._send_json(HTTPStatus.OK, answer.as_dict())
 

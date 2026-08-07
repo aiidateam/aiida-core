@@ -13,6 +13,7 @@ import click
 from aiida.cmdline.commands.cmd_verdi import verdi
 from aiida.cmdline.params import options
 from aiida.cmdline.utils import echo
+from aiida.cmdline.utils.decorators import requires_loaded_profile
 
 
 @verdi.group('collab')
@@ -26,6 +27,29 @@ def require_collab(profile):
 
     if not is_enabled():
         echo.echo_critical(f'profile `{profile.name}` is not part of a collab: run `verdi collab init` first.')
+
+
+def complete_peer(ctx, param, incomplete):
+    """Complete a PEER argument with the nicknames of the peers that can be synced with.
+
+    Only the configuration file is read — no storage, daemon or network — so completion stays instant.
+    """
+    from click.shell_completion import CompletionItem
+
+    try:
+        from aiida.manage.configuration import get_config
+        from aiida.tools.collab.config import OPTION_PEERS
+
+        config = get_config()
+        profile = ctx.find_root().params.get('profile')
+        name = getattr(profile, 'name', None) or profile or config.default_profile_name
+        peers = config.get_option(OPTION_PEERS, scope=name)
+    except Exception:
+        return []
+
+    nicknames = sorted(entry['nickname'] for entry in peers.values())
+
+    return [CompletionItem(nickname) for nickname in nicknames if nickname.startswith(incomplete)]
 
 
 def candidate_addresses():
@@ -313,6 +337,8 @@ def collab_init(ctx, code, profile_name, bind, port, extras_mode, groups_mode, n
         collab_config.OPTION_PEERS: {},
         collab_config.OPTION_BIND: bind,
         collab_config.OPTION_PORT: port,
+        collab_config.OPTION_STAMP: 1,
+        collab_config.OPTION_ANNOUNCED: url,
         collab_config.OPTION_POLICY: policy,
     }
 
@@ -350,7 +376,7 @@ def announce(config, profile, code):
     with CollabClient(code.url, code.token, collab=code.collab) as client:
         # Stamped like any outbound contact: a member that moved announces the address it is at now, and only a
         # raised stamp makes the issuer take it over the one it has held all along.
-        response = client.join(self_entry(config, profile))
+        response = client.join(self_entry(config, profile, bump=True))
 
     stored = stored_config(config)
     merged, reports = merge_roster(stored.get_option(OPTION_PEERS, scope=profile.name), response.roster, profile.uuid)
@@ -381,3 +407,62 @@ def join_collab(config, profile, code):
             f'up; delete it with `verdi profile delete {profile.name}`, then run `verdi collab init --join` '
             'again with a code from a member that is online.'
         )
+
+
+@verdi_collab.group('peer')
+def verdi_collab_peer():
+    """Correct the entries of the peers of the collab."""
+
+
+@verdi_collab_peer.command('set')
+@click.argument('peer', metavar='PEER', shell_complete=complete_peer)
+@click.option('--url', help='Correct the address at which the peer is reached.')
+@click.option('--nickname', help='Rename the peer on this machine. The new name never travels to other machines.')
+@requires_loaded_profile()
+@click.pass_context
+def collab_peer_set(ctx, peer, url, nickname):
+    """Correct the entry of a peer of the collab.
+
+    PEER is the nickname or the profile UUID of the peer. A corrected address is provisional: only the owner of an
+    entry stamps it, so the first contact that carries the owner's own announcement reconciles it.
+    """
+    from aiida.tools.collab.config import OPTION_PEERS, find_peer, stored_config
+
+    profile = ctx.obj.profile
+    require_collab(profile)
+
+    if url is None and nickname is None:
+        echo.echo_critical('nothing to set: pass `--url`, `--nickname` or both.')
+
+    # A manual correction is the one write nothing ever re-applies, since it deliberately never travels: it has to
+    # be merged into the roster as the daemon's endpoint left it, not into the copy this command started with.
+    stored = stored_config(ctx.obj.config)
+    peers = dict(stored.get_option(OPTION_PEERS, scope=profile.name))
+    uuid = find_peer(peers, peer)
+
+    if uuid is None:
+        known = ', '.join(sorted(entry['nickname'] for entry in peers.values()))
+        echo.echo_critical(f'unknown peer {peer}: the peers of this collab are {known}.')
+
+    if nickname is not None and any(other != uuid and entry['nickname'] == nickname for other, entry in peers.items()):
+        echo.echo_critical(f'nickname `{nickname}` is already in use: nicknames address peers on this machine.')
+
+    entry = dict(peers[uuid])
+
+    if url is not None:
+        # A manual correction is a local guess about someone else's address, so it does not raise their stamp and
+        # is superseded by their own announcement — and it is unproven until they answer at it.
+        entry.update(url=url, seen=False)
+
+    if nickname is not None:
+        entry['nickname'] = nickname
+
+    peers[uuid] = entry
+
+    for target in (stored, ctx.obj.config):
+        target.set_option(OPTION_PEERS, peers, scope=profile.name)
+
+    stored.store()
+
+    changed = [text for text in (url and f'is at {url}', nickname and f'is now called `{nickname}`') if text]
+    echo.echo_success(f'peer `{peer}` {" and ".join(changed)}.')

@@ -46,6 +46,10 @@ class CollabRequestError(AiidaException):
         self.status = status
 
 
+class VersionSkew(AiidaException):
+    """A delta cannot travel between two peers, because one of them cannot read the archives the other writes."""
+
+
 @dataclass
 class JoinCode:
     """The single code a newcomer needs to join a collab: which collab, whom to ask, the key, and the terms.

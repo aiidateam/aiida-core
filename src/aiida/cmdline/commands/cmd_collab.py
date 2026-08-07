@@ -609,8 +609,8 @@ def collab_pull(ctx, peers, force, dry_run, pause_my_daemon):
     from aiida.manage import get_manager
     from aiida.tools.collab.client import CollabClient
     from aiida.tools.collab.config import OPTION_PEERS, OPTION_TOKEN, OPTION_UUID
-    from aiida.tools.collab.endpoint import workers_stopped
-    from aiida.tools.collab.protocol import CollabRequestError
+    from aiida.tools.collab.endpoint import local_info, workers_stopped
+    from aiida.tools.collab.protocol import CollabRequestError, VersionSkew
     from aiida.tools.collab.state import CollabState, import_lock
     from aiida.tools.collab.sync import import_delta, missing_uuids
 
@@ -631,6 +631,7 @@ def collab_pull(ctx, peers, force, dry_run, pause_my_daemon):
     token = ctx.obj.config.get_option(OPTION_TOKEN, scope=profile.name)
     collab = ctx.obj.config.get_option(OPTION_UUID, scope=profile.name)
     backend = get_manager().get_profile_storage()
+    local = local_info(profile, backend)
     workdir = CollabState.get_workdir(profile)
     pulled = 0
 
@@ -644,9 +645,14 @@ def collab_pull(ctx, peers, force, dry_run, pause_my_daemon):
 
         with CollabClient(url, token, collab=collab) as client:
             try:
-                info = client.info()
+                info = client.check_version_skew(local, direction='pull')
             except CollabRequestError as exception:
                 echo.echo_warning(f'skipping {skipped_peer(entry)}: {exception}')
+                continue
+            except VersionSkew as exception:
+                # Skipped like an offline or a refusing peer: one collaborator on an aiida-core this one cannot
+                # read must not stop the sync with everybody else.
+                echo.echo_warning(f'skipping peer {nickname}: {exception}')
                 continue
 
             if not peer_agrees(ctx.obj.config, profile, peer_uuid, entry, info):
@@ -743,8 +749,8 @@ def collab_push(ctx, peers, force, dry_run):
     from aiida.manage import get_manager
     from aiida.tools.collab.client import CollabClient
     from aiida.tools.collab.config import OPTION_PEERS, OPTION_TOKEN, OPTION_UUID
-    from aiida.tools.collab.endpoint import local_identity
-    from aiida.tools.collab.protocol import CollabRequestError
+    from aiida.tools.collab.endpoint import local_identity, local_info
+    from aiida.tools.collab.protocol import CollabRequestError, VersionSkew
     from aiida.tools.collab.state import CollabState
     from aiida.tools.collab.sync import compute_delta, export_delta
 
@@ -756,6 +762,7 @@ def collab_push(ctx, peers, force, dry_run):
     collab = ctx.obj.config.get_option(OPTION_UUID, scope=profile.name)
     backend = get_manager().get_profile_storage()
     identity = local_identity(profile)
+    local = local_info(profile, backend)
     workdir = CollabState.get_workdir(profile)
 
     workdir.mkdir(parents=True, exist_ok=True)
@@ -767,9 +774,14 @@ def collab_push(ctx, peers, force, dry_run):
 
         with CollabClient(url, token, collab=collab) as client:
             try:
-                info = client.info()
+                info = client.check_version_skew(local, direction='push')
             except CollabRequestError as exception:
                 echo.echo_warning(f'skipping {skipped_peer(entry)}: {exception}')
+                continue
+            except VersionSkew as exception:
+                # Skipped like an offline or a refusing peer: one collaborator that cannot read what this profile
+                # writes must not stop the sync with everybody else.
+                echo.echo_warning(f'skipping peer {nickname}: {exception}')
                 continue
 
             if not info.accept_push:

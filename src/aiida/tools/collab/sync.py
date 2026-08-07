@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -324,27 +325,33 @@ def import_delta(
         imported in either case.
     """
     size = filepath.stat().st_size
-    uuids = _archive_uuids(filepath)
-    boundary = _boundary_links(filepath)
 
-    # Checked before anything lands: a boundary endpoint that exists neither in the archive nor locally would
-    # leave the imported nodes permanently disconnected from provenance the sender counted on, and a boundary
-    # link that violates a local link invariant must not be plantable by a diverged or hostile sender.
-    _check_boundary_resolvable(backend, uuids, boundary)
-    _check_boundary_invariants(backend, boundary)
+    with tempfile.TemporaryDirectory() as dirpath:
+        # A peer on an older aiida-core writes an older archive format, which the importer refuses rather than
+        # migrating, so the delta is brought to the head version first — as `verdi archive import` does.
+        filepath = _at_head_version(filepath, Path(dirpath) / 'migrated.aiida')
 
-    # The boundary links are journalled before the import, which commits its own transaction: a crash between
-    # the two leaves them pending, and the next import retries them instead of losing them.
-    if boundary:
-        with CollabState.mutate(state.filepath) as fresh:
-            fresh.pending_links.extend(link for link in boundary if link not in fresh.pending_links)
+        uuids = _archive_uuids(filepath)
+        boundary = _boundary_links(filepath)
 
-    import_archive(
-        filepath,
-        backend=backend,
-        merge_extras=('k', 'n', 'l'),
-        create_group=False,
-    )
+        # Checked before anything lands: a boundary endpoint that exists neither in the archive nor locally would
+        # leave the imported nodes permanently disconnected from provenance the sender counted on, and a boundary
+        # link that violates a local link invariant must not be plantable by a diverged or hostile sender.
+        _check_boundary_resolvable(backend, uuids, boundary)
+        _check_boundary_invariants(backend, boundary)
+
+        # The boundary links are journalled before the import, which commits its own transaction: a crash between
+        # the two leaves them pending, and the next import retries them instead of losing them.
+        if boundary:
+            with CollabState.mutate(state.filepath) as fresh:
+                fresh.pending_links.extend(link for link in boundary if link not in fresh.pending_links)
+
+        import_archive(
+            filepath,
+            backend=backend,
+            merge_extras=('k', 'n', 'l'),
+            create_group=False,
+        )
 
     event = CollabEvent(time=timezone.now(), direction='pull', peer=peer, uuids=uuids, size=size)
 
@@ -566,6 +573,23 @@ def _unsealed_pks(backend: StorageBackend, pks: set[int]) -> set[int]:
 
     # Queried as the complement of the sealed processes, because an unsealed one has no ``sealed`` attribute at all.
     return query() - query(**{f'attributes.{Sealable.SEALED_KEY}': True})
+
+
+def _at_head_version(filepath: Path, filepath_migrated: Path) -> Path:
+    """Return the archive at the head format version, migrating a copy of it when a peer wrote an older one.
+
+    Peers whose archive format is *newer* are refused at the handshake, before anything is exported or transferred;
+    an older one is no obstacle, and this is what makes that true — the importer refuses an archive that is not at
+    head rather than migrating it itself.
+    """
+    archive_format = get_format()
+
+    if archive_format.read_version(filepath) == archive_format.latest_version:
+        return filepath
+
+    archive_format.migrate(filepath, filepath_migrated, archive_format.latest_version, compression=0)
+
+    return filepath_migrated
 
 
 def _archive_uuids(filepath: Path) -> list[str]:

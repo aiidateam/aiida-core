@@ -470,7 +470,7 @@ def stub_transfer(monkeypatch):
         return DeltaReport(uuids=['uuid-offered'], size=5)
 
     monkeypatch.setattr(DaemonClient, 'call_client', lambda self, command: calls.append(command) or {})
-    monkeypatch.setattr(CollabClient, 'info', lambda self, **kwargs: make_peer_info())
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
     monkeypatch.setattr(CollabClient, 'negotiate_delta', negotiate_delta)
     monkeypatch.setattr(CollabClient, 'request_delta', request_delta)
     monkeypatch.setattr(CollabClient, 'download_delta', download_delta)
@@ -572,7 +572,9 @@ def test_pull_verifies_identity(run_cli_command, config_with_profile, stub_envir
     from aiida.tools.collab.client import CollabClient
 
     init_collab(config_with_profile)
-    monkeypatch.setattr(CollabClient, 'info', lambda self, **kwargs: make_peer_info(uuid='uuid-of-somebody-else'))
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(uuid='uuid-of-somebody-else')
+    )
 
     result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
 
@@ -587,7 +589,9 @@ def test_pull_refuses_a_foreign_collab(
     from aiida.tools.collab.client import CollabClient
 
     init_collab(config_with_profile)
-    monkeypatch.setattr(CollabClient, 'info', lambda self, **kwargs: make_peer_info(collab='another-collab'))
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(collab='another-collab')
+    )
 
     result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
 
@@ -615,8 +619,8 @@ def test_pull_refuses_a_peer_declaring_another_policy(
     config_with_profile.set_option(OPTION_POLICY, {'extras_mode': 'sync', 'groups_mode': 'local'}, scope=scope)
     monkeypatch.setattr(
         CollabClient,
-        'info',
-        lambda self, **kwargs: make_peer_info(uuid=PEER_UUID if PEER_URL in self._base_url else 'uuid-of-bob'),
+        'check_version_skew',
+        lambda self, local, **kwargs: make_peer_info(uuid=PEER_UUID if PEER_URL in self._base_url else 'uuid-of-bob'),
     )
 
     result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
@@ -639,13 +643,13 @@ def test_pull_refuses_a_changed_policy_and_continues(
         peers={PEER_UUID: peer_entry(), 'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob')},
     )
 
-    def info(self, **kwargs):
+    def check_version_skew(self, local, **kwargs):
         if PEER_URL in self._base_url:
             return make_peer_info(extras_mode='sync')
 
         return make_peer_info(uuid='uuid-of-bob')
 
-    monkeypatch.setattr(CollabClient, 'info', info)
+    monkeypatch.setattr(CollabClient, 'check_version_skew', check_version_skew)
 
     result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
 
@@ -737,8 +741,8 @@ def test_pull_gossips_a_move(run_cli_command, config_with_profile, stub_environm
 
     monkeypatch.setattr(
         CollabClient,
-        'info',
-        lambda self, **kwargs: make_peer_info(uuid=PEER_UUID if PEER_URL in self._base_url else 'uuid-of-carol'),
+        'check_version_skew',
+        lambda self, local, **kwargs: make_peer_info(uuid=PEER_UUID if PEER_URL in self._base_url else 'uuid-of-carol'),
     )
     monkeypatch.setattr(CollabClient, 'negotiate_delta', negotiate_delta)
 
@@ -772,14 +776,52 @@ def test_pull_flags_a_peer_that_never_answered(run_cli_command, config_with_prof
 
     init_collab(config_with_profile, peers={PEER_UUID: peer_entry(seen=False)})
 
-    def offline(self, **kwargs):
+    def offline(self, local, **kwargs):
         raise CollabRequestError('connection refused')
 
-    monkeypatch.setattr(CollabClient, 'info', offline)
+    monkeypatch.setattr(CollabClient, 'check_version_skew', offline)
 
     result = run_cli_command(cmd_collab.collab_pull, use_subprocess=False)
 
     assert f'skipping never-answering peer {PEER}' in result.output
+
+
+def test_pull_version_skew(run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch):
+    """Test that a peer whose archives this profile cannot read is warned about and skipped, not fatal.
+
+    The middle peer of the three is skewed: an aiida-core that is too new on one machine must not stop the sync
+    with everybody else, exactly as an offline or push-refusing peer does not.
+    """
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import VersionSkew
+
+    init_collab(
+        config_with_profile,
+        peers={
+            PEER_UUID: peer_entry(),
+            'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob'),
+            'uuid-of-carol': peer_entry(url='http://100.64.0.4:9137', nickname='carol'),
+        },
+    )
+
+    directions = []
+
+    def check_version_skew(self, local, *, direction):
+        directions.append(direction)
+
+        if 'http://100.64.0.3:9137' in self._base_url:
+            raise VersionSkew('the peer runs a newer version')
+
+        return make_peer_info(uuid=PEER_UUID if PEER_URL in self._base_url else 'uuid-of-carol')
+
+    monkeypatch.setattr(CollabClient, 'check_version_skew', check_version_skew)
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert result.output.count('the peer runs a newer version') == 1, 'the skewed peer is warned about once'
+    assert 'skipping peer bob' in result.output
+    assert result.output.count('pulled 1 node(s)') == 2, 'the other two peers sync all the same'
+    assert directions == ['pull'] * 3, 'the pull must be checked in the direction the delta would travel'
 
 
 def test_push_failed_import_then_retry(run_cli_command, config_with_profile, stub_environment, monkeypatch):
@@ -817,7 +859,7 @@ def test_push_failed_import_then_retry(run_cli_command, config_with_profile, stu
 
     monkeypatch.setattr(sync, 'compute_delta', compute_delta)
     monkeypatch.setattr(sync, 'export_delta', export_delta)
-    monkeypatch.setattr(CollabClient, 'info', lambda self, **kwargs: make_peer_info())
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
     monkeypatch.setattr(CollabClient, 'push_handshake', push_handshake)
     monkeypatch.setattr(
         CollabClient,
@@ -888,7 +930,7 @@ def test_push_prompts_and_decline_drops_cut(run_cli_command, config_with_profile
         sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now())
     )
     monkeypatch.setattr(sync, 'export_delta', export_delta)
-    monkeypatch.setattr(CollabClient, 'info', lambda self, **kwargs: make_peer_info())
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
     monkeypatch.setattr(
         CollabClient,
         'push_handshake',
@@ -928,7 +970,7 @@ def test_push_dry_run(run_cli_command, config_with_profile, stub_environment, mo
         sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now())
     )
     monkeypatch.setattr(sync, 'export_delta', untouched)
-    monkeypatch.setattr(CollabClient, 'info', lambda self, **kwargs: make_peer_info())
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
     monkeypatch.setattr(
         CollabClient,
         'push_handshake',
@@ -974,7 +1016,7 @@ def test_push_refused_delta_drops_stash(run_cli_command, config_with_profile, st
         sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=instant)
     )
     monkeypatch.setattr(sync, 'export_delta', export_delta)
-    monkeypatch.setattr(CollabClient, 'info', lambda self, **kwargs: make_peer_info())
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
     monkeypatch.setattr(
         CollabClient,
         'push_handshake',
@@ -1009,7 +1051,7 @@ def test_push_busy_peer(run_cli_command, config_with_profile, stub_environment, 
     def untouched(*args, **kwargs):
         raise AssertionError('a busy handshake must stop the push before any export or upload')
 
-    monkeypatch.setattr(CollabClient, 'info', lambda self, **kwargs: make_peer_info())
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
     monkeypatch.setattr(
         CollabClient,
         'push_handshake',
@@ -1031,10 +1073,10 @@ def test_push_offline_peer_warns_and_continues(run_cli_command, config_with_prof
 
     init_collab(config_with_profile)
 
-    def offline(self, **kwargs):
+    def offline(self, local, **kwargs):
         raise CollabRequestError('connection refused')
 
-    monkeypatch.setattr(CollabClient, 'info', offline)
+    monkeypatch.setattr(CollabClient, 'check_version_skew', offline)
 
     result = run_cli_command(cmd_collab.collab_push, use_subprocess=False)
 
@@ -1051,7 +1093,7 @@ def test_push_dying_peer_warns_and_continues(run_cli_command, config_with_profil
     def dying(self, requester, roster=None):
         raise CollabRequestError('connection reset by peer')
 
-    monkeypatch.setattr(CollabClient, 'info', lambda self, **kwargs: make_peer_info())
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
     monkeypatch.setattr(CollabClient, 'push_handshake', dying)
 
     result = run_cli_command(cmd_collab.collab_push, use_subprocess=False)
@@ -1069,7 +1111,9 @@ def test_push_refusing_peer_warns_and_continues(run_cli_command, config_with_pro
     def untouched(*args, **kwargs):
         raise AssertionError('a refusing peer must stop the push before any handshake or export')
 
-    monkeypatch.setattr(CollabClient, 'info', lambda self, **kwargs: make_peer_info(accept_push=False))
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(accept_push=False)
+    )
     monkeypatch.setattr(CollabClient, 'push_handshake', untouched)
     monkeypatch.setattr(sync, 'compute_delta', untouched)
 
@@ -1318,3 +1362,52 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
             thread.join()
         for backend in backends:
             backend.close()
+
+
+def test_push_version_skew(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a peer that cannot read this profile's archives is warned about, skipped, and the loop goes on.
+
+    Nothing is uploaded to the skewed peer — the check precedes the handshake — and the peer after it in the list
+    is pushed to as if the skewed one were merely offline.
+    """
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import ManifestDiff, PushHandshake, VersionSkew
+    from aiida.tools.collab.sync import Delta
+
+    init_collab(
+        config_with_profile,
+        peers={
+            PEER_UUID: peer_entry(),
+            'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob'),
+            'uuid-of-carol': peer_entry(url='http://100.64.0.4:9137', nickname='carol'),
+        },
+    )
+
+    directions = []
+    handshakes = []
+
+    def check_version_skew(self, local, *, direction):
+        directions.append(direction)
+
+        if 'http://100.64.0.3:9137' in self._base_url:
+            raise VersionSkew('the peer reads an older archive format')
+
+        return make_peer_info(uuid=PEER_UUID if PEER_URL in self._base_url else 'uuid-of-carol')
+
+    def push_handshake(self, requester, roster=None):
+        handshakes.append(self._base_url)
+        return PushHandshake(busy=False, cursor=None, claim=[])
+
+    monkeypatch.setattr(CollabClient, 'check_version_skew', check_version_skew)
+    monkeypatch.setattr(CollabClient, 'push_handshake', push_handshake)
+    monkeypatch.setattr(CollabClient, 'diff_manifest', lambda self, uuids: ManifestDiff([]))
+    monkeypatch.setattr(sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={}, links=[], instant=timezone.now()))
+
+    result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)
+
+    assert result.output.count('skipping peer bob: the peer reads an older archive format') == 1
+    assert f'{PEER} is up to date' in result.output, 'the peer before the skewed one is pushed to'
+    assert 'carol is up to date' in result.output, 'and so is the peer after it'
+    assert handshakes == [PEER_URL, 'http://100.64.0.4:9137'], 'nothing may be negotiated with the skewed peer'
+    assert directions == ['push'] * 3, 'the push must be checked in the direction the delta would travel'

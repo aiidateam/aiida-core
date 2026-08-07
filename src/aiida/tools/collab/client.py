@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import requests
 
@@ -32,6 +32,7 @@ from aiida.tools.collab.protocol import (
     ManifestDiff,
     PeerInfo,
     PushHandshake,
+    VersionSkew,
     file_sha256,
     route_delta,
     route_import,
@@ -95,6 +96,40 @@ class CollabClient:
         body = {'collab': self._collab, 'entry': entry}
 
         return self._answer(JoinResponse.from_dict, 'POST', ROUTE_JOIN, json=body)
+
+    def check_version_skew(self, local: PeerInfo, *, direction: Literal['pull', 'push']) -> PeerInfo:
+        """Fetch the handshake of the peer and refuse the transfer when it could not read what the sender writes.
+
+        The delta travels as an archive, so the archive format is the interchange contract of a collab; the storage
+        schema of either side is its own concern, which is what makes a collab of mixed PostgreSQL and SQLite
+        profiles first-class. Since a profile reads its own archive format and every older one, only the sending
+        side can be too new, so exactly one direction is refused and the message names whoever has to act on it.
+
+        :param local: the handshake of this side, to compare against.
+        :param direction: which way the delta would travel, since that decides who has to upgrade.
+        :return: the handshake of the peer, so that callers can display both sides.
+        :raises VersionSkew: when the receiving side of the transfer cannot read the sender's archive format.
+        """
+        peer = self.info()
+
+        # Archive format versions are zero-padded (`main_0002`), so string comparison orders them.
+        if direction == 'pull' and peer.archive_schema > local.archive_schema:
+            msg = (
+                f'cannot pull from the peer at {self._base_url}: it writes archive format '
+                f'`{peer.archive_schema}`, this profile reads up to `{local.archive_schema}`. Its deltas are not '
+                f'compatible with your aiida-core; please upgrade it to the latest stable release (your '
+                f'collaborator runs {peer.version}).'
+            )
+        elif direction == 'push' and local.archive_schema > peer.archive_schema:
+            msg = (
+                f'cannot push to the peer at {self._base_url}: this profile writes archive format '
+                f'`{local.archive_schema}`, the peer reads up to `{peer.archive_schema}`. Please ask your '
+                f'collaborator to upgrade their aiida-core to the latest stable release (they run {peer.version}).'
+            )
+        else:
+            return peer
+
+        raise VersionSkew(msg)
 
     def negotiate_delta(
         self, cursor: datetime | None, claim: frozenset[str] | set[str], roster: list[dict[str, Any]] | None = None

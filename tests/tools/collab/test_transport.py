@@ -10,7 +10,7 @@
 
 import socket
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from http import HTTPStatus
 from pathlib import Path
@@ -35,6 +35,7 @@ from aiida.tools.collab.protocol import (
     ManifestDiff,
     PeerInfo,
     PushHandshake,
+    VersionSkew,
     delta_id,
     file_sha256,
     route_delta,
@@ -60,6 +61,8 @@ PEER_INFO = PeerInfo(
     groups_mode='local',
     collab=COLLAB,
 )
+
+LOCAL_INFO = replace(PEER_INFO, backend='core.psql_dos', pending_count=0)
 
 
 class StubSyncCore:
@@ -579,3 +582,46 @@ def test_import_checksum_mismatch(transport):
 
     assert not (transport.staging_dir / sha256).exists()
     assert transport.stub.imported == []
+
+
+def test_version_skew_ignores_storage(transport):
+    """A newer storage schema on another backend is no obstacle: only the archive format has to be readable.
+
+    ``LOCAL_INFO`` and ``PEER_INFO`` already run different storage backends, so this covers both halves of the
+    "storage is a local concern" decision.
+    """
+    transport.stub.peer_info = replace(PEER_INFO, storage_schema='main_0099')
+
+    assert transport.client.check_version_skew(LOCAL_INFO, direction='pull') == transport.stub.peer_info
+    assert transport.client.check_version_skew(LOCAL_INFO, direction='push') == transport.stub.peer_info
+
+
+def test_version_skew_pull_from_newer_peer(transport):
+    """A pull from a peer writing an archive format this profile cannot read is refused, telling it to upgrade."""
+    transport.stub.peer_info = replace(PEER_INFO, version='3.1.0', archive_schema='main_0099')
+
+    with pytest.raises(VersionSkew) as excinfo:
+        transport.client.check_version_skew(LOCAL_INFO, direction='pull')
+
+    message = str(excinfo.value)
+    assert '3.1.0' in message
+    assert 'main_0099' in message
+    assert 'please upgrade it' in message
+
+    # The other direction is unaffected: the peer reads everything this profile writes.
+    assert transport.client.check_version_skew(LOCAL_INFO, direction='push') == transport.stub.peer_info
+
+
+def test_version_skew_push_to_older_peer(transport):
+    """A push the peer could not read is refused, with the message aimed at the collaborator who has to upgrade."""
+    transport.stub.peer_info = replace(PEER_INFO, version='2.5.0', archive_schema='main_0000')
+
+    with pytest.raises(VersionSkew) as excinfo:
+        transport.client.check_version_skew(LOCAL_INFO, direction='push')
+
+    message = str(excinfo.value)
+    assert 'main_0000' in message
+    assert 'ask your collaborator' in message
+
+    # Pulling from it stays allowed: its older archives are migrated forward on import.
+    assert transport.client.check_version_skew(LOCAL_INFO, direction='pull') == transport.stub.peer_info

@@ -778,3 +778,22 @@ def test_thin_import_boundary_invariant_aborts(tmp_path, peers):
 
     assert node_count(backend_two) == count, 'nothing should have been imported'
     assert CollabState.read(state_two.filepath).pending_links == [], 'nothing should have been journalled'
+
+
+def test_import_migrates_an_older_archive(tmp_path, peers):
+    """Test that a delta written by a peer on an older aiida-core is migrated forward instead of refused.
+
+    This is what makes the version gate's "an older peer is no obstacle" true: ``import_archive`` refuses an
+    archive that is not at the head format version rather than migrating it itself.
+    """
+    from pathlib import Path
+
+    from tests.utils.archives import get_archive_file
+
+    backend, state = peers('one')
+    filepath = Path(get_archive_file('export_main_0000_simple.aiida', 'export/migrate'))
+
+    report = import_delta(filepath, state=state, backend=backend, peer=PEER, instant=timezone.now())
+
+    assert report.uuids
+    assert node_count(backend) == len(report.uuids)

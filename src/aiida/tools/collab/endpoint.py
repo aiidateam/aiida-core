@@ -25,13 +25,19 @@ from aiida.tools.archive.abstract import get_format
 from aiida.tools.collab.config import (
     OPTION_ACCEPT_PUSH,
     OPTION_BIND,
+    OPTION_PEERS,
     OPTION_PORT,
     OPTION_TOKEN,
+    OPTION_UUID,
+    merge_roster,
+    roster_entries,
+    self_entry,
     stored_config,
 )
 from aiida.tools.collab.protocol import (
     DeltaManifest,
     DeltaOffer,
+    JoinResponse,
     ManifestDiff,
     PeerInfo,
     PushHandshake,
@@ -77,6 +83,8 @@ def local_info(profile: Profile, backend: StorageBackend, cursor: datetime | Non
         archive_schema=get_format().latest_version,
         pending_count=count_seeds(cursor, backend) + len(state.imported_uuids_since(cursor)),
         accept_push=accept_push,
+        uuid=profile.uuid,
+        collab=config.get_option(OPTION_UUID, scope=profile.name),
     )
 
 
@@ -114,6 +122,7 @@ class CollabEndpoint:
         self._deltas: dict[str, DeltaExport] = {}
         self._delta_lock = threading.Lock()
         self._counter = 0
+        self._roster_lock = threading.Lock()
 
         self._dirpath.mkdir(parents=True, exist_ok=True)
 
@@ -129,6 +138,20 @@ class CollabEndpoint:
     def info(self, cursor: datetime | None = None) -> PeerInfo:
         """Serve the handshake of this profile."""
         return local_info(self._profile, self._backend, cursor)
+
+    def join(self, entry: dict[str, Any]) -> JoinResponse:
+        """Admit a newcomer presenting the join code: record it and hand it the membership of the collab.
+
+        Only a token holder reaches this, and the newcomer's profile UUID is pinned by the very entry it is added
+        under, so the admission needs no further ceremony.
+        """
+        from aiida.manage.configuration import get_config
+
+        peers = self._merge_roster([entry])
+
+        return JoinResponse(
+            collab=get_config().get_option(OPTION_UUID, scope=self._profile.name), roster=self._entries(peers)
+        )
 
     def handshake(self, requester: str) -> PushHandshake:
         """Answer a peer that wants to push: busy while an import is running, else what this profile holds of it.
@@ -147,6 +170,37 @@ class CollabEndpoint:
             cursor=cursor,
             claim=sorted(state.imported_uuids_since(cursor)),
         )
+
+    def _merge_roster(self, entries: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        """Merge the entries a newcomer presents into the configuration and return the resulting roster."""
+        from aiida.manage.configuration import get_config
+
+        if not entries:
+            return get_config().get_option(OPTION_PEERS, scope=self._profile.name)
+
+        with self._roster_lock:
+            config = stored_config(get_config())
+            peers = config.get_option(OPTION_PEERS, scope=self._profile.name)
+            merged, reports = merge_roster(peers, entries, self._profile.uuid)
+
+            if merged != peers:
+                config.set_option(OPTION_PEERS, merged, scope=self._profile.name)
+                config.store()
+
+                for report in reports:
+                    LOGGER.report(report)
+
+            return merged
+
+    def _entries(self, peers: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+        """Return what this profile gossips back: its own entry and every peer it knows.
+
+        The endpoint never raises its own stamp: only an outbound sync does, which is what the member whose
+        address changed runs to spread the correction.
+        """
+        from aiida.manage.configuration import get_config
+
+        return roster_entries(peers, self_entry(get_config(), self._profile))
 
     def negotiate_delta(self, cursor: datetime | None, claim: frozenset[str]) -> DeltaManifest:
         """Serve the manifest of the delta for a presented cursor and claim: which nodes it holds.
@@ -269,8 +323,10 @@ def serve(profile: Profile, backend: StorageBackend) -> None:
         config.get_option(OPTION_BIND, scope=profile.name),
         config.get_option(OPTION_PORT, scope=profile.name),
         token=config.get_option(OPTION_TOKEN, scope=profile.name),
+        collab=config.get_option(OPTION_UUID, scope=profile.name),
         staging_dir=endpoint.staging_dir,
         info=endpoint.info,
+        join=endpoint.join,
         negotiate_delta=endpoint.negotiate_delta,
         request_delta=endpoint.request_delta,
         resolve_delta=endpoint.resolve_delta,

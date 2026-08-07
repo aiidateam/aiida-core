@@ -280,10 +280,22 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         description='Whether this profile takes part in a collab, sharing provenance with peer profiles.',
         json_schema_extra={'requires_daemon_restart': True},
     )
+    collab__uuid: str = Field(
+        '',
+        description='The permanent identity of the collab this profile takes part in. Minted when the collab is '
+        'created, carried by every join code and handshake, and never changed.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
     collab__token: str = Field(
         '',
         description='Shared secret with which peers of the collab authenticate against this profile. Read by the '
         'endpoint per request, so a rotation retires the old one for serving at once, without a daemon restart.',
+    )
+    collab__peers: dict[str, dict[str, str | int | bool | None]] = Field(
+        {},
+        description='The collab peers of this profile, keyed by the UUID of their profile. Each entry holds the '
+        '`url` of the peer (e.g. `http://100.64.0.2:9137`), the local `nickname` under which it is shown and '
+        'addressed, the `name` its owner announces, and whether it has ever answered (`seen`).',
     )
     collab__bind: str = Field(
         '',

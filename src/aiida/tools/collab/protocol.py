@@ -25,6 +25,7 @@ ROUTE_INFO = f'{API_PREFIX}/info'
 ROUTE_DELTA = f'{API_PREFIX}/delta'
 ROUTE_HANDSHAKE = f'{API_PREFIX}/handshake'
 ROUTE_MISSING = f'{API_PREFIX}/missing'
+ROUTE_JOIN = f'{API_PREFIX}/join'
 
 HEADER_STAGED = 'X-Collab-Staged-Bytes'
 
@@ -40,6 +41,52 @@ class CollabRequestError(AiidaException):
     def __init__(self, message: str, status: int | None = None):
         super().__init__(message)
         self.status = status
+
+
+@dataclass
+class JoinCode:
+    """The single code a newcomer needs to join a collab: which collab, whom to ask, the key, and the terms.
+
+    Any member can mint one — after creation the creator is nobody special — so a newcomer joins through whichever
+    member happens to be online.
+    """
+
+    collab: str
+    """The UUID of the collab, which the joiner pins and every later handshake is held against."""
+
+    url: str
+    """The endpoint URL of the member that issued the code."""
+
+    token: str
+    """The shared secret of the collab."""
+
+    def encode(self) -> str:
+        """Return the code as one opaque string, to be shared out of band."""
+        import base64
+
+        payload = json.dumps({'collab': self.collab, 'url': self.url, 'token': self.token}).encode('utf-8')
+
+        return base64.urlsafe_b64encode(payload).decode('ascii').rstrip('=')
+
+    @classmethod
+    def decode(cls, code: str) -> JoinCode:
+        """Parse a join code.
+
+        :raises ValueError: when the code is not one, which is the only thing a user can mistype here.
+        """
+        import base64
+        import binascii
+
+        stripped = code.strip()
+
+        try:
+            payload = base64.urlsafe_b64decode(stripped + '=' * (-len(stripped) % 4))
+            data = json.loads(payload)
+
+            return cls(collab=data['collab'], url=data['url'], token=data['token'])
+        except (binascii.Error, KeyError, TypeError, UnicodeDecodeError, ValueError) as exception:
+            msg = f'`{code}` is not a valid join code: {exception}'
+            raise ValueError(msg) from exception
 
 
 def route_delta(delta_id: str) -> str:
@@ -109,6 +156,14 @@ class PeerInfo:
 
     accept_push: bool
     """Whether the peer accepts pushes."""
+
+    uuid: str | None = None
+    """The UUID of the profile behind the endpoint: its stable identity across the collab, under which cursors are
+    kept regardless of how its URL is spelled or changes."""
+
+    collab: str = ''
+    """The UUID of the collab the peer takes part in. A contact presenting another one is refused: the token alone
+    must not be able to splice two collabs into one."""
 
     def as_dict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)
@@ -213,3 +268,21 @@ class PushHandshake:
             cursor=datetime.fromisoformat(data['cursor']) if data['cursor'] is not None else None,
             claim=data['claim'],
         )
+
+
+@dataclass
+class JoinResponse:
+    """The answer of the member that issued a join code to the newcomer presenting it."""
+
+    collab: str
+    """The UUID of the collab, which the joiner holds against the one its code carried."""
+
+    roster: list[dict[str, Any]]
+    """Every peer the issuer knows, its own entry included: the newcomer starts with the full membership."""
+
+    def as_dict(self) -> dict[str, Any]:
+        return {'collab': self.collab, 'roster': self.roster}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> JoinResponse:
+        return cls(collab=data['collab'], roster=data['roster'])

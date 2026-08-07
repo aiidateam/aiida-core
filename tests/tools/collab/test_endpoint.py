@@ -234,6 +234,157 @@ def test_negotiate_delta_per_requester(make_profile, temp_backend):
     assert endpoint.resolve_delta('0' * 64) is None
 
 
+def test_join_records_the_newcomer_and_answers_with_the_membership(make_profile, empty_config):
+    """Test that admitting a newcomer stores it and hands it everyone this profile knows, itself included.
+
+    The roster is written to the configuration file rather than to the daemon's own copy of it: that copy is a
+    snapshot from the moment the daemon started, and storing it wholesale would undo everything ``verdi`` wrote
+    since.
+    """
+    from aiida.manage.configuration.config import Config
+
+    profile = make_profile()
+    alice = {
+        'url': 'http://100.64.0.2:9137',
+        'nickname': 'alice',
+        'name': 'alice',
+        'seen': True,
+    }
+
+    empty_config.set_option('collab.uuid', 'uuid-of-the-collab', scope=profile.name)
+    empty_config.set_option('collab.bind', '127.0.0.1', scope=profile.name)
+    empty_config.set_option('collab.port', 9137, scope=profile.name)
+    empty_config.set_option('collab.peers', {'uuid-of-alice': alice}, scope=profile.name)
+    empty_config.store()
+
+    endpoint = CollabEndpoint(profile, backend=MagicMock())
+    newcomer = {'uuid': 'uuid-of-carol', 'url': 'http://100.64.0.3:9137', 'name': 'carol', 'stamp': 1}
+
+    response = endpoint.join(newcomer)
+
+    assert response.collab == 'uuid-of-the-collab'
+    assert {entry['uuid'] for entry in response.roster} == {profile.uuid, 'uuid-of-alice', 'uuid-of-carol'}
+
+    stored = Config.from_file(empty_config.filepath).get_option('collab.peers', scope=profile.name)
+
+    assert stored['uuid-of-carol'] == {
+        'url': 'http://100.64.0.3:9137',
+        'nickname': 'carol',
+        'name': 'carol',
+        'seen': False,
+    }
+    assert stored['uuid-of-alice'] == alice
+
+
+def test_serve_carries_the_collab_and_its_roster(empty_config, tmp_path, monkeypatch):
+    """Test the seam between client, server and endpoint, through the wiring the daemon itself starts.
+
+    Every layer is tested apart from the others: the merge as a unit, the endpoint called directly, the commands
+    with the client stubbed, the server with a stubbed core. This is the test that fails if the roster stops
+    crossing the wire, if the endpoint stops admitting newcomers, or if the handshake stops naming the collab —
+    none of which any of those can see.
+    """
+    import socket
+    import threading
+
+    from aiida.manage.configuration.config import Config
+    from aiida.manage.configuration.profile import Profile
+    from aiida.storage.sqlite_dos.backend import SqliteDosStorage
+    from aiida.tools.collab import server as server_module
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.endpoint import serve
+
+    collab, token = 'uuid-of-the-collab', 'the-token'
+
+    # A file-backed storage, since the handshake is answered from the server's own handler thread and an
+    # in-memory SQLite is not the same database there.
+    profile = Profile(
+        'collab-profile',
+        {
+            'default_user_email': 'dummy@localhost',
+            'storage': {'backend': 'core.sqlite_dos', 'config': {'filepath': str(tmp_path / 'served-storage')}},
+            'process_control': {'backend': None, 'config': {}},
+            'test_profile': True,
+        },
+    )
+    empty_config.add_profile(profile)
+    SqliteDosStorage.initialise(profile)
+    backend = SqliteDosStorage(profile)
+
+    # `serve` takes the port from the configuration, so one is reserved here to know where to knock.
+    with socket.socket() as probe:
+        probe.bind(('127.0.0.1', 0))
+        port = probe.getsockname()[1]
+
+    options = {
+        'collab.enabled': True,
+        'collab.accept_push': True,
+        'collab.uuid': collab,
+        'collab.token': token,
+        'collab.bind': '127.0.0.1',
+        'collab.port': port,
+        'collab.peers': {
+            'uuid-of-alice': {
+                'url': 'http://old:9137',
+                'nickname': 'alice',
+                'name': 'alice',
+                'seen': True,
+            }
+        },
+    }
+
+    for option, value in options.items():
+        empty_config.set_option(option, value, scope=profile.name)
+
+    empty_config.store()
+
+    started = threading.Event()
+    servers = []
+    build = server_module.CollabServer
+
+    def capture(*args, **kwargs):
+        """Keep the server `serve` builds, which is the only handle on it, without touching how it is built."""
+        servers.append(build(*args, **kwargs))
+        started.set()
+
+        return servers[-1]
+
+    monkeypatch.setattr(server_module, 'CollabServer', capture)
+
+    thread = threading.Thread(target=serve, args=(profile, backend), daemon=True)
+    thread.start()
+
+    assert started.wait(timeout=30), 'the endpoint never started'
+
+    try:
+        with CollabClient(f'http://127.0.0.1:{port}', token, collab=collab, timeout=30) as client:
+            assert client.info().collab == collab, 'a peer that does not name its collab is refused by every peer'
+
+            newcomer = {'uuid': 'uuid-of-carol', 'url': 'http://100.64.0.3:9137', 'name': 'carol'}
+            response = client.join(newcomer)
+
+            assert response.collab == collab
+            assert {entry['uuid'] for entry in response.roster} == {profile.uuid, 'uuid-of-alice', 'uuid-of-carol'}
+
+            mine = next(entry for entry in response.roster if entry['uuid'] == profile.uuid)
+
+            assert mine == {
+                'uuid': profile.uuid,
+                'url': f'http://127.0.0.1:{port}',
+                'name': profile.name,
+            }, 'the address a newcomer adopts for this profile is the one its endpoint is serving on'
+    finally:
+        servers[0].shutdown()
+        servers[0].server_close()
+        thread.join()
+        backend.close()
+
+    peers = Config.from_file(empty_config.filepath).get_option('collab.peers', scope=profile.name)
+
+    assert peers['uuid-of-carol']['url'] == 'http://100.64.0.3:9137'
+    assert peers['uuid-of-alice']['url'] == 'http://old:9137'
+
+
 def test_handshake(make_profile):
     """Test that the handshake serves the cursor of the requester and claims the nodes it holds."""
     profile = make_profile()

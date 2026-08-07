@@ -26,10 +26,12 @@ from aiida.tools.collab.protocol import (
     ROUTE_DELTA,
     ROUTE_HANDSHAKE,
     ROUTE_INFO,
+    ROUTE_JOIN,
     ROUTE_MISSING,
     CollabRequestError,
     DeltaManifest,
     DeltaOffer,
+    JoinResponse,
     ManifestDiff,
     PeerInfo,
     PushHandshake,
@@ -42,6 +44,7 @@ from aiida.tools.collab.protocol import (
 from aiida.tools.collab.server import CollabServer
 
 TOKEN = 'the-collab-token'
+COLLAB = 'uuid-of-the-collab'
 
 DELTA = bytes(range(256)) * 1024
 UPLOAD = bytes(reversed(range(256))) * 512
@@ -53,6 +56,7 @@ PEER_INFO = PeerInfo(
     archive_schema='main_0001',
     pending_count=3,
     accept_push=True,
+    collab=COLLAB,
 )
 
 
@@ -71,7 +75,9 @@ class StubSyncCore:
         self.requested: list[tuple[datetime | None, frozenset, frozenset]] = []
         self.diffed: list[list[str]] = []
         self.handshakes: list[str] = []
+        self.joined: list[dict] = []
         self.token = TOKEN
+        self.roster: list[dict] = [{'uuid': 'uuid-of-the-peer', 'url': 'http://peer:9137', 'name': 'peer'}]
         self.info_cursors: list[datetime | None] = []
         self.imported: list[tuple[str, datetime, bytes]] = []
 
@@ -100,6 +106,10 @@ class StubSyncCore:
         self.handshakes.append(requester)
         return self.push_handshake
 
+    def join(self, entry: dict) -> JoinResponse:
+        self.joined.append(entry)
+        return JoinResponse(collab=COLLAB, roster=self.roster)
+
     def import_staged(self, filepath: Path, peer: str, instant: datetime) -> dict:
         if self.import_exception is not None:
             raise self.import_exception
@@ -124,8 +134,10 @@ def build_server(host: str, port: int, stub: StubSyncCore, staging_dir: Path) ->
         host,
         port,
         token=stub.token,
+        collab=COLLAB,
         staging_dir=staging_dir,
         info=stub.info,
+        join=stub.join,
         negotiate_delta=stub.negotiate_delta,
         request_delta=stub.request_delta,
         resolve_delta=stub.resolve_delta,
@@ -150,7 +162,7 @@ def transport(tmp_path):
 
     url = f'http://127.0.0.1:{server.server_address[1]}'
 
-    with CollabClient(url, TOKEN, timeout=10) as client:
+    with CollabClient(url, TOKEN, collab=COLLAB, timeout=10) as client:
         yield Transport(client=client, stub=stub, staging_dir=staging_dir, url=url)
 
     server.shutdown()
@@ -204,12 +216,35 @@ def test_serves_on_ipv6(tmp_path):
     thread.start()
 
     try:
-        with CollabClient(endpoint_url('::1', server.server_address[1]), TOKEN, timeout=10) as client:
+        with CollabClient(endpoint_url('::1', server.server_address[1]), TOKEN, collab=COLLAB, timeout=10) as client:
             assert client.info() == PEER_INFO
     finally:
         server.shutdown()
         server.server_close()
         thread.join()
+
+
+def test_join(transport):
+    """A newcomer presenting the join code is recorded by the issuer and answered with the full membership."""
+    entry = {'uuid': 'uuid-of-the-newcomer', 'url': 'http://newcomer:9137', 'name': 'newcomer', 'stamp': 1}
+
+    response = transport.client.join(entry)
+
+    assert transport.stub.joined == [entry]
+    assert response == JoinResponse(collab=COLLAB, roster=transport.stub.roster)
+
+
+def test_join_refuses_a_foreign_collab(transport):
+    """Joining a collab other than the one the endpoint serves is refused, whatever token was presented.
+
+    A token shared too widely would otherwise splice two collabs into one, which no later handshake could undo.
+    """
+    with CollabClient(transport.url, TOKEN, collab='uuid-of-another-collab', timeout=10) as client:
+        with pytest.raises(CollabRequestError) as excinfo:
+            client.join({'uuid': 'uuid-of-the-newcomer', 'url': 'http://newcomer:9137', 'name': 'x', 'stamp': 1})
+
+    assert excinfo.value.status == HTTPStatus.CONFLICT
+    assert transport.stub.joined == []
 
 
 def test_client_foreign_service(tmp_path):
@@ -263,6 +298,7 @@ def test_auth_rejected(transport):
     routes = [
         ('GET', ROUTE_INFO),
         ('POST', ROUTE_HANDSHAKE),
+        ('POST', ROUTE_JOIN),
         ('GET', route_delta('0' * 64)),
         ('POST', ROUTE_DELTA),
         ('POST', ROUTE_MISSING),
@@ -281,6 +317,7 @@ def test_auth_rejected(transport):
     assert transport.stub.requested == []
     assert transport.stub.diffed == []
     assert transport.stub.handshakes == []
+    assert transport.stub.joined == []
     assert transport.stub.imported == []
 
 
@@ -405,7 +442,7 @@ def test_push_handshake_requires_requester(transport):
     response = requests.post(
         f'{transport.url}{ROUTE_HANDSHAKE}',
         headers={'Authorization': f'Bearer {TOKEN}'},
-        json={},
+        json={'collab': COLLAB},
         timeout=10,
     )
 

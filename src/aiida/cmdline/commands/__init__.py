@@ -17,6 +17,7 @@ from aiida.cmdline.commands import (
     cmd_bug_report,
     cmd_calcjob,
     cmd_code,
+    cmd_collab,
     cmd_computer,
     cmd_config,
     cmd_daemon,

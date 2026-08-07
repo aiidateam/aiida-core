@@ -36,6 +36,7 @@ from aiida.tools.collab.protocol import (
     ROUTE_DELTA,
     ROUTE_HANDSHAKE,
     ROUTE_INFO,
+    ROUTE_JOIN,
     ROUTE_MISSING,
     UNAUTHORIZED_DETAIL,
     file_sha256,
@@ -45,6 +46,7 @@ if TYPE_CHECKING:
     from aiida.tools.collab.protocol import (
         DeltaManifest,
         DeltaOffer,
+        JoinResponse,
         ManifestDiff,
         PeerInfo,
         PushHandshake,
@@ -65,9 +67,13 @@ class CollabServer(ThreadingHTTPServer):
         socket, since the overlays this is deployed on commonly hand out IPv6 addresses.
     :param port: the port to bind. Pass ``0`` to let the operating system pick a free one.
     :param token: the shared secret of the collab, required of every request as a bearer token.
+    :param collab: the UUID of the collab. Every request that carries one is held against it, so that the token
+        alone cannot splice two collabs into one.
     :param staging_dir: the directory in which uploads are staged, one file per checksum.
     :param info: produces the handshake served at ``GET /collab/v1/info``. Receives the cursor presented with the
         request, or ``None``, against which the pending count is computed.
+    :param join: admits a newcomer presenting a join code at ``POST /collab/v1/join``: receives its roster entry,
+        adds it and answers with the full roster.
     :param negotiate_delta: serves the manifest of the delta for the cursor and claim posted to
         ``POST /collab/v1/delta``.
     :param request_delta: exports (or reuses) the subset of that delta named by the ``want`` of a
@@ -103,13 +109,17 @@ class CollabServer(ThreadingHTTPServer):
         diff_manifest: Callable[[list[str]], ManifestDiff],
         handshake: Callable[[str], PushHandshake],
         import_staged: Callable[[Path, str, datetime], dict[str, Any]],
+        join: Callable[[dict[str, Any]], JoinResponse],
+        collab: str = '',
     ):
         import ipaddress
         import socket
 
         self.token = token
+        self.collab = collab
         self.staging_dir = staging_dir
         self.info = info
+        self.join = join
         self.negotiate_delta = negotiate_delta
         self.request_delta = request_delta
         self.resolve_delta = resolve_delta
@@ -175,6 +185,7 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
                 ROUTE_DELTA: self._post_delta,
                 ROUTE_MISSING: self._post_missing,
                 ROUTE_HANDSHAKE: self._post_handshake,
+                ROUTE_JOIN: self._post_join,
                 _IMPORT_PATTERN: self._post_import,
             }
         )
@@ -227,12 +238,30 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
             self._send_json(HTTPStatus.BAD_REQUEST, {'detail': 'the handshake requires a `requester`'})
             return
 
+        if self._foreign(data.get('collab', '')):
+            return
+
         self._send_json(HTTPStatus.OK, self.server.handshake(requester).as_dict())
+
+    def _post_join(self) -> None:
+        data = self._read_json()
+
+        if self._foreign(data.get('collab', '')):
+            return
+
+        if not isinstance(data.get('entry'), dict):
+            self._send_json(HTTPStatus.BAD_REQUEST, {'detail': 'joining requires the `entry` of the newcomer'})
+            return
+
+        self._send_json(HTTPStatus.OK, self.server.join(data['entry']).as_dict())
 
     def _post_delta(self) -> None:
         data = self._read_json()
         cursor = datetime.fromisoformat(data['cursor']) if data.get('cursor') else None
         claim = frozenset(data.get('claim', []))
+
+        if self._foreign(data.get('collab', '')):
+            return
 
         # Without a `want` the request negotiates the manifest; with one it asks for that subset to be exported.
         answer: DeltaManifest | DeltaOffer
@@ -243,6 +272,21 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
             answer = self.server.negotiate_delta(cursor, claim)
 
         self._send_json(HTTPStatus.OK, answer.as_dict())
+
+    def _foreign(self, presented: str) -> bool:
+        """Refuse a request presenting the identity of another collab, and report whether it was refused.
+
+        The token authorizes; the collab UUID is what keeps two different collabs from being spliced into one by a
+        token that was shared too widely.
+        """
+        if presented == self.server.collab:
+            return False
+
+        self._send_json(
+            HTTPStatus.CONFLICT,
+            {'detail': f'this endpoint serves collab `{self.server.collab}`, not `{presented}`'},
+        )
+        return True
 
     def _post_missing(self) -> None:
         data = self._read_json()

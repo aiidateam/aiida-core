@@ -106,6 +106,24 @@ Below is a list with all available subcommands.
       test       Run tests for the given code to check whether it is usable.
 
 
+.. _reference:command-line:verdi-collab:
+
+``verdi collab``
+----------------
+
+.. code:: console
+
+    Usage:  [OPTIONS] COMMAND [ARGS]...
+
+      Share provenance with the peers of a collab.
+
+    Options:
+      --help  Show this message and exit.
+
+    Commands:
+      init  Set up a profile as part of a collab.
+
+
 .. _reference:command-line:verdi-computer:
 
 ``verdi computer``

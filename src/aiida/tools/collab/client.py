@@ -23,10 +23,12 @@ from aiida.tools.collab.protocol import (
     ROUTE_DELTA,
     ROUTE_HANDSHAKE,
     ROUTE_INFO,
+    ROUTE_JOIN,
     ROUTE_MISSING,
     CollabRequestError,
     DeltaManifest,
     DeltaOffer,
+    JoinResponse,
     ManifestDiff,
     PeerInfo,
     PushHandshake,
@@ -60,8 +62,9 @@ class CollabClient:
     guarded by the served ``ETag``, uploads by first asking the peer how much of the file it already staged.
     """
 
-    def __init__(self, base_url: str, token: str, *, timeout: float = TIMEOUT):
+    def __init__(self, base_url: str, token: str, *, collab: str = '', timeout: float = TIMEOUT):
         self._base_url = base_url.rstrip('/')
+        self._collab = collab
         self._timeout = timeout
         self._session = requests.Session()
         self._session.headers['Authorization'] = f'Bearer {token}'
@@ -84,6 +87,15 @@ class CollabClient:
 
         return self._answer(PeerInfo.from_dict, 'GET', ROUTE_INFO, params=params)
 
+    def join(self, entry: dict[str, Any]) -> JoinResponse:
+        """Present the join code to the member that issued it, announce this profile and receive the roster.
+
+        :param entry: the roster entry of this profile: its UUID, endpoint URL and announced name.
+        """
+        body = {'collab': self._collab, 'entry': entry}
+
+        return self._answer(JoinResponse.from_dict, 'POST', ROUTE_JOIN, json=body)
+
     def negotiate_delta(self, cursor: datetime | None, claim: frozenset[str] | set[str]) -> DeltaManifest:
         """Present a cursor and a claim to the peer and receive the manifest of the delta they negotiate.
 
@@ -93,6 +105,7 @@ class CollabClient:
         body = {
             'cursor': cursor.isoformat() if cursor is not None else None,
             'claim': sorted(claim),
+            'collab': self._collab,
         }
 
         return self._answer(DeltaManifest.from_dict, 'POST', ROUTE_DELTA, json=body)
@@ -113,6 +126,7 @@ class CollabClient:
             'cursor': cursor.isoformat() if cursor is not None else None,
             'claim': sorted(claim),
             'want': sorted(want),
+            'collab': self._collab,
         }
 
         return self._answer(DeltaOffer.from_dict, 'POST', ROUTE_DELTA, json=body)
@@ -129,7 +143,7 @@ class CollabClient:
 
         :param requester: the identity under which the peer tracks this profile: its profile UUID.
         """
-        body = {'requester': requester}
+        body = {'requester': requester, 'collab': self._collab}
 
         return self._answer(PushHandshake.from_dict, 'POST', ROUTE_HANDSHAKE, json=body)
 

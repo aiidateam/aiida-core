@@ -107,6 +107,9 @@ class PeerInfo:
     """An estimate of what a sync would deliver: the sealed processes and imported nodes the peer gained since the
     cursor presented with the request, or everything when none was."""
 
+    accept_push: bool
+    """Whether the peer accepts pushes."""
+
     def as_dict(self) -> dict[str, Any]:
         return dataclasses.asdict(self)
 

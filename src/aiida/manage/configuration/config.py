@@ -289,6 +289,11 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         description='Port on which the collab endpoint of this profile listens.',
         json_schema_extra={'requires_daemon_restart': True},
     )
+    collab__accept_push: bool = Field(
+        False,
+        description='Whether peers of the collab are allowed to push provenance into this profile. Read by the '
+        'endpoint per request, so revoking it takes effect at once, without a daemon restart.',
+    )
 
     @field_validator('caching__enabled_for', 'caching__disabled_for')
     @classmethod

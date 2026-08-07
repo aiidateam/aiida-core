@@ -10,10 +10,29 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from aiida.manage.configuration.config import Config
+
 OPTION_ENABLED = 'collab.enabled'
 OPTION_TOKEN = 'collab.token'
 OPTION_BIND = 'collab.bind'
 OPTION_PORT = 'collab.port'
+OPTION_ACCEPT_PUSH = 'collab.accept_push'
+
+
+def stored_config(config: Config) -> Config:
+    """Return the configuration as it is on disk right now.
+
+    The daemon's collab endpoint writes the configuration file too — it merges gossiped roster entries into it —
+    and ``Config.store`` writes the whole dictionary its holder loaded. Whoever writes without re-reading first
+    therefore silently reverts whatever the other one wrote while it was working, so every collab write goes
+    through the file as it is now and mirrors the result into the configuration its own process holds.
+    """
+    from aiida.manage.configuration.config import Config
+
+    return Config.from_file(config.filepath)
 
 
 def is_ipv6(host: str) -> bool:

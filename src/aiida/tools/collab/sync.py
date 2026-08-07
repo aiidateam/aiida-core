@@ -53,6 +53,11 @@ def seed_filters(cursor: datetime | None) -> dict[str, Any]:
     return filters
 
 
+def count_seeds(cursor: datetime | None, backend: StorageBackend) -> int:
+    """Return the number of seeds a delta bounded by ``cursor`` would start from."""
+    return orm.QueryBuilder(backend=backend).append(orm.ProcessNode, filters=seed_filters(cursor)).count()
+
+
 @dataclass
 class Delta:
     """The provenance-closed delta computed for a presented cursor and claim, before any archive is built.

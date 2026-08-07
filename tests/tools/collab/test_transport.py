@@ -52,6 +52,7 @@ PEER_INFO = PeerInfo(
     storage_schema='main_0002',
     archive_schema='main_0001',
     pending_count=3,
+    accept_push=True,
 )
 
 

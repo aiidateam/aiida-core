@@ -42,6 +42,7 @@ def test_join_code_round_trip():
         collab='uuid-of-the-collab',
         url='http://[fd7a::2]:9137',
         token='the-token',
+        policy={'extras_mode': 'sync', 'groups_mode': 'grow'},
     )
 
     assert JoinCode.decode(code.encode()) == code
@@ -51,6 +52,25 @@ def test_join_code_rejects_nonsense():
     """Test that a mistyped code fails as a value error, which the CLI turns into an error message."""
     with pytest.raises(ValueError, match='not a valid join code'):
         JoinCode.decode('this is not a code')
+
+
+@pytest.mark.parametrize('policy', [None, {'groups_mode': 'grow'}, {'extras_mode': 'evil', 'groups_mode': 'grow'}])
+def test_join_code_rejects_a_policy_it_cannot_honour(policy):
+    """Test that a code is refused unless it names a policy this version has, and refused at the boundary.
+
+    A newcomer must not join on terms it was not shown, and a mode nobody offers has to fail here rather than
+    where the policy is written — which is after the profile exists, and would leave a half-made one behind.
+    """
+    import base64
+    import json
+
+    payload = {'collab': 'uuid-of-the-collab', 'url': 'http://peer:9137', 'token': 'the-token'}
+    code = base64.urlsafe_b64encode(
+        json.dumps(payload if policy is None else {**payload, 'policy': policy}).encode('utf-8')
+    ).decode('ascii')
+
+    with pytest.raises(ValueError, match='not a valid join code'):
+        JoinCode.decode(code.rstrip('='))
 
 
 def test_merge_adds_an_unknown_peer():

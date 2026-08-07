@@ -118,6 +118,64 @@ def reserve_port(bind, port, default):
             return port
 
 
+EXTRAS_SYNC_TERMS = (
+    "On nodes you share, the extras of whoever edited them last replace everyone else's: your values are "
+    'overwritten, your deletions propagate, and "last" is decided by the clocks of the machines. Extras whose key '
+    'starts with `_` stay private and never travel.'
+)
+
+
+def choose_policy(extras_mode, groups_mode, non_interactive):
+    """Return the policy the creator of a collab fixes for it, asking for what was not passed.
+
+    The choice is permanent for everyone who will ever join, so it is explained — and said to be permanent —
+    before it is asked for, rather than in the help of an option nobody reads twice.
+    """
+    if (extras_mode and groups_mode) or non_interactive:
+        policy = {'extras_mode': extras_mode or 'local', 'groups_mode': groups_mode or 'local'}
+        # Reported even when it was chosen by the options, since this is the moment it becomes permanent and
+        # `--non-interactive` with neither option would otherwise fix the terms of the collab in silence.
+        echo.echo_report(f'this collab shares extras `{policy["extras_mode"]}` and groups `{policy["groups_mode"]}`.')
+
+        return policy
+
+    echo.echo_report(
+        'A collab agrees on what it shares beyond provenance nodes. The choice is made once, now, and holds for '
+        'every member that ever joins: it travels in the join code, and there is no way to change it afterwards. '
+        'Changing your mind later means founding a new collab and joining it.'
+    )
+
+    if not extras_mode:
+        echo.echo('  extras `local`: extras stop travelling once the node has, and stay yours to edit')
+        echo.echo(f'  extras `sync`:  {EXTRAS_SYNC_TERMS}')
+        extras_mode = click.prompt('extras mode', type=click.Choice(['local', 'sync']), default='local')
+
+    if not groups_mode:
+        echo.echo('  groups `local`: your groups stay yours, and no sync creates one')
+        echo.echo('  groups `grow`:  a node curated into a group joins it on every peer, additions only')
+        groups_mode = click.prompt('groups mode', type=click.Choice(['local', 'grow']), default='local')
+
+    return {'extras_mode': extras_mode, 'groups_mode': groups_mode}
+
+
+def accept_policy(policy, non_interactive):
+    """Return the policy carried by a join code once its consequences have been consented to.
+
+    A joiner chooses nothing: the policy is the collab's, fixed at its creation. What it does decide is whether to
+    join at all, which is why the one policy that lets other people's edits overwrite this profile's data is shown
+    and confirmed here — before a profile exists to be governed by it.
+    """
+    echo.echo_report(f'this collab shares extras `{policy["extras_mode"]}` and groups `{policy["groups_mode"]}`.')
+
+    if policy['extras_mode'] == 'sync' and not non_interactive:
+        echo.echo_warning(f'This collab syncs extras. {EXTRAS_SYNC_TERMS}')
+
+        if not click.confirm('join this collab?', default=False):
+            echo.echo_critical('the join was declined: no profile was created and nothing was written.')
+
+    return policy
+
+
 def create_profile(ctx, profile_name, non_interactive):
     """Create the profile that joins the collab, quickly or with the full set of questions.
 
@@ -177,9 +235,21 @@ def create_profile(ctx, profile_name, non_interactive):
     type=int,
     help='Port on which the endpoint of this profile listens. A free one is picked when not given.',
 )
+@click.option(
+    '--extras-mode',
+    type=click.Choice(['local', 'sync']),
+    help='Whether the extras of shared nodes keep being replicated (`sync`) or stop travelling once the node has '
+    '(`local`, the default). Chosen once when the collab is created and permanent; prompted for when not given.',
+)
+@click.option(
+    '--groups-mode',
+    type=click.Choice(['local', 'grow']),
+    help='Whether curated group membership travels (`grow`) or groups stay home (`local`, the default). Chosen '
+    'once when the collab is created and permanent; prompted for when not given.',
+)
 @options.NON_INTERACTIVE()
 @click.pass_context
-def collab_init(ctx, code, profile_name, bind, port, non_interactive):
+def collab_init(ctx, code, profile_name, bind, port, extras_mode, groups_mode, non_interactive):
     """Set up a profile as part of a collab.
 
     Peers of a collab share one logical provenance graph: each of them can pull the sealed provenance of the others and
@@ -200,6 +270,12 @@ def collab_init(ctx, code, profile_name, bind, port, non_interactive):
         except ValueError as exception:
             echo.echo_critical(str(exception))
 
+        if extras_mode or groups_mode:
+            echo.echo_critical(
+                'a collab is joined on its own terms: its policy is fixed when it is created and travels in the '
+                'join code, so `--extras-mode` and `--groups-mode` are for creating one.'
+            )
+
         if profile_name in config.profile_names:
             echo.echo_critical(f'profile `{profile_name}` already exists: joining a collab creates a new profile.')
     else:
@@ -215,7 +291,13 @@ def collab_init(ctx, code, profile_name, bind, port, non_interactive):
 
     # Everything that can still be refused happens before the profile exists: an address that is not this
     # machine's, or a mistyped one, would otherwise abort with a fresh profile left behind and the retry
-    # refusing to reuse its name.
+    # refusing to reuse its name. The policy belongs to that list — the joiner's consent to it, and the
+    # creator's choice of it, both precede the profile they would govern.
+    policy = (
+        accept_policy(joining.policy, non_interactive)
+        if joining
+        else choose_policy(extras_mode, groups_mode, non_interactive)
+    )
     scope = None if joining else profile.name
     bind = resolve_bind(bind, non_interactive)
     port = reserve_port(bind, port, config.get_option(collab_config.OPTION_PORT, scope=scope))
@@ -231,6 +313,7 @@ def collab_init(ctx, code, profile_name, bind, port, non_interactive):
         collab_config.OPTION_PEERS: {},
         collab_config.OPTION_BIND: bind,
         collab_config.OPTION_PORT: port,
+        collab_config.OPTION_POLICY: policy,
     }
 
     # The configuration file is shared by every profile, so any collab endpoint running on this machine is a

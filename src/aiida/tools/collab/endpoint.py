@@ -26,6 +26,7 @@ from aiida.tools.collab.config import (
     OPTION_ACCEPT_PUSH,
     OPTION_BIND,
     OPTION_PEERS,
+    OPTION_POLICY,
     OPTION_PORT,
     OPTION_TOKEN,
     OPTION_UUID,
@@ -75,6 +76,7 @@ def local_info(profile: Profile, backend: StorageBackend, cursor: datetime | Non
     # Read from the file rather than from what this process loaded: a daemon serving the endpoint loaded its
     # configuration at startup, and withdrawing consent to be pushed to has to hold from the next request on.
     accept_push = stored_config(config).get_option(OPTION_ACCEPT_PUSH, scope=profile.name)
+    policy = config.get_option(OPTION_POLICY, scope=profile.name)
 
     return PeerInfo(
         version=__version__,
@@ -83,6 +85,8 @@ def local_info(profile: Profile, backend: StorageBackend, cursor: datetime | Non
         archive_schema=get_format().latest_version,
         pending_count=count_seeds(cursor, backend) + len(state.imported_uuids_since(cursor)),
         accept_push=accept_push,
+        extras_mode=policy['extras_mode'],
+        groups_mode=policy['groups_mode'],
         uuid=profile.uuid,
         collab=config.get_option(OPTION_UUID, scope=profile.name),
     )

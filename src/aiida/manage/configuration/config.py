@@ -42,6 +42,19 @@ LOGGER = AIIDA_LOGGER.getChild('manage.configuration.config')
 
 
 CircusEndpointName: TypeAlias = Literal['controller', 'pubsub', 'stats']
+CollabExtrasMode: TypeAlias = Literal['local', 'sync']
+CollabGroupsMode: TypeAlias = Literal['local', 'grow']
+
+
+class CollabPolicy(TypedDict):
+    """What a collab shares beyond provenance nodes, fixed when the collab is created.
+
+    The two modes live in one option because they are one decision, taken once: `verdi config set` cannot write a
+    dictionary, so storing them this way is also what keeps the policy out of reach of the command line.
+    """
+
+    extras_mode: CollabExtrasMode
+    groups_mode: CollabGroupsMode
 
 
 class CircusEndpointFilepaths(TypedDict):
@@ -312,6 +325,15 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         False,
         description='Whether peers of the collab are allowed to push provenance into this profile. Read by the '
         'endpoint per request, so revoking it takes effect at once, without a daemon restart.',
+    )
+    collab__policy: CollabPolicy = Field(
+        {'extras_mode': 'local', 'groups_mode': 'local'},
+        description='What the collab shares beyond provenance nodes, chosen once by whoever created it and never '
+        'changed: `extras_mode` is `local` (extras stop travelling once the node has) or `sync` (the whole extras '
+        'dict of the most recently edited side replaces the others, so deletions propagate, with keys starting with '
+        '`_` exempt in both directions), and `groups_mode` is `local` (groups stay home) or `grow` (curated group '
+        'membership travels, additions only). It is carried by the join code and adopted by whoever joins; changing '
+        'it means re-founding the collab.',
     )
 
     @field_validator('caching__enabled_for', 'caching__disabled_for')

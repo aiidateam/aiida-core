@@ -29,6 +29,7 @@ OPTION_PEERS = 'collab.peers'
 OPTION_BIND = 'collab.bind'
 OPTION_PORT = 'collab.port'
 OPTION_ACCEPT_PUSH = 'collab.accept_push'
+OPTION_POLICY = 'collab.policy'
 
 
 def is_enabled() -> bool:
@@ -74,6 +75,10 @@ def join_code(config: Config, profile: Profile) -> str:
 
     Built from where the endpoint listens now rather than from what was last announced: a moved address only
     catches up with its announcement at the next outbound sync, and a code handed out meanwhile has to work.
+
+    The policy travels in the code because that is the one moment at which a newcomer can still decline it: the
+    consent has to precede the profile it would govern. Any member mints a code from its own stored policy — the
+    policy is fixed at the collab's creation, so every member's copy is equally authoritative.
     """
     from aiida.tools.collab.protocol import JoinCode
 
@@ -84,6 +89,7 @@ def join_code(config: Config, profile: Profile) -> str:
         collab=config.get_option(OPTION_UUID, scope=scope),
         url=url,
         token=config.get_option(OPTION_TOKEN, scope=scope),
+        policy=config.get_option(OPTION_POLICY, scope=scope),
     ).encode()
 
 

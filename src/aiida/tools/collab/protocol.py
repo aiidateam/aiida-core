@@ -16,9 +16,12 @@ import json
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from aiida.common.exceptions import AiidaException
+
+if TYPE_CHECKING:
+    from aiida.manage.configuration.config import CollabExtrasMode, CollabGroupsMode, CollabPolicy
 
 API_PREFIX = '/collab/v1'
 ROUTE_INFO = f'{API_PREFIX}/info'
@@ -60,11 +63,17 @@ class JoinCode:
     token: str
     """The shared secret of the collab."""
 
+    policy: CollabPolicy
+    """What the collab shares beyond provenance nodes, fixed at its creation. It travels here because joining is
+    the one moment at which it can still be declined: the consent has to precede the profile it governs."""
+
     def encode(self) -> str:
         """Return the code as one opaque string, to be shared out of band."""
         import base64
 
-        payload = json.dumps({'collab': self.collab, 'url': self.url, 'token': self.token}).encode('utf-8')
+        payload = json.dumps(
+            {'collab': self.collab, 'url': self.url, 'token': self.token, 'policy': self.policy}
+        ).encode('utf-8')
 
         return base64.urlsafe_b64encode(payload).decode('ascii').rstrip('=')
 
@@ -76,14 +85,27 @@ class JoinCode:
         """
         import base64
         import binascii
+        from typing import get_args
+
+        from aiida.manage.configuration.config import CollabExtrasMode, CollabGroupsMode
 
         stripped = code.strip()
 
         try:
             payload = base64.urlsafe_b64decode(stripped + '=' * (-len(stripped) % 4))
             data = json.loads(payload)
+            policy = data['policy']
 
-            return cls(collab=data['collab'], url=data['url'], token=data['token'])
+            # The values are checked here, not where the policy is written: writing it is the step *after* the
+            # profile is created, so a code naming a mode nobody offers would abort the join with a half-made
+            # profile left behind and the retry refusing to reuse its name.
+            modes = {'extras_mode': get_args(CollabExtrasMode), 'groups_mode': get_args(CollabGroupsMode)}
+
+            if set(policy) != set(modes) or any(policy[key] not in values for key, values in modes.items()):
+                msg = f'it declares a policy this version does not understand: {policy}'
+                raise ValueError(msg)
+
+            return cls(collab=data['collab'], url=data['url'], token=data['token'], policy=policy)
         except (binascii.Error, KeyError, TypeError, UnicodeDecodeError, ValueError) as exception:
             msg = f'`{code}` is not a valid join code: {exception}'
             raise ValueError(msg) from exception
@@ -156,6 +178,12 @@ class PeerInfo:
 
     accept_push: bool
     """Whether the peer accepts pushes."""
+
+    extras_mode: CollabExtrasMode
+    """How the collab treats extras: ``local`` keeps them private to each profile, ``sync`` replicates them."""
+
+    groups_mode: CollabGroupsMode
+    """How the collab treats groups."""
 
     uuid: str | None = None
     """The UUID of the profile behind the endpoint: its stable identity across the collab, under which cursors are

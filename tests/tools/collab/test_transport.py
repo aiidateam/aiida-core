@@ -56,6 +56,8 @@ PEER_INFO = PeerInfo(
     archive_schema='main_0001',
     pending_count=3,
     accept_push=True,
+    extras_mode='local',
+    groups_mode='local',
     collab=COLLAB,
 )
 

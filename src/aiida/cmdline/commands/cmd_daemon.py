@@ -360,3 +360,22 @@ def broker(service_dir, log_file_path):
         raise TypeError(msg)
 
     run_broker_service(service_dir=service_dir, log_file_path=log_file_path)
+
+
+@verdi_daemon.command('collab-endpoint', hidden=True)
+@decorators.with_dbenv()
+def collab_endpoint():
+    """Serve the collab endpoint of the profile in the current process.
+
+    .. note:: this should not be called directly from the commandline!
+    """
+    from aiida.manage.manager import get_manager
+    from aiida.tools.collab.endpoint import serve
+
+    manager = get_manager()
+    profile = manager.get_profile()
+
+    if profile is None:
+        echo.echo_critical('No profile loaded.')
+
+    serve(profile, manager.get_profile_storage())

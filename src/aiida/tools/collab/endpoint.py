@@ -6,7 +6,11 @@
 # For further information on the license, see the LICENSE.txt file        #
 # For further information please visit http://www.aiida.net               #
 ###########################################################################
-"""The collab endpoint of a profile: the transport server wired to the sync core."""
+"""The collab endpoint of a profile: the transport server wired to the sync core.
+
+The daemon supervises this as a circus watcher of its own (see ``DaemonClient._create_watchers``), started through
+the hidden ``verdi daemon collab-endpoint`` command when ``collab.enabled`` is set on the profile.
+"""
 
 from __future__ import annotations
 

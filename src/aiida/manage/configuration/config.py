@@ -88,6 +88,12 @@ class ZeromqBrokerServiceFilepaths(TypedDict):
     log: str
 
 
+class CollabFilepaths(TypedDict):
+    """Typed dictionary for collab endpoint file paths."""
+
+    log: str
+
+
 class ConfigFilepaths(TypedDict):
     """Typed dictionary for profile-related file paths."""
 
@@ -95,6 +101,7 @@ class ConfigFilepaths(TypedDict):
     circus: CircusFilepaths
     daemon: DaemonFilepaths
     broker_service: ZeromqBrokerServiceFilepaths
+    collab: CollabFilepaths
 
 
 class ConfigVersionSchema(BaseModel, defer_build=True):
@@ -1068,5 +1075,8 @@ class Config:
             'broker_service': {
                 'dir': str(zmq_broker_service_base_dir / f'{profile.uuid}-{profile.name}'),
                 'log': str(zmq_broker_service_base_dir / f'{profile.uuid}-{profile.name}' / 'broker.log'),
+            },
+            'collab': {
+                'log': str(daemon_log_dir / f'collab-{profile.name}.log'),
             },
         }

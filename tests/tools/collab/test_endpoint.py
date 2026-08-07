@@ -40,6 +40,27 @@ def make_profile(empty_config, profile_factory):
     return factory
 
 
+def test_create_watchers_with_collab(make_profile, empty_config):
+    """Test that the daemon watcher list contains the collab endpoint when ``collab.enabled`` is set."""
+    profile = make_profile()
+    empty_config.set_option('collab.enabled', True, scope=profile.name)
+    client = DaemonClient(profile)
+
+    names = [watcher['name'] for watcher in client._create_watchers(1)]
+
+    assert names.count(f'{client.daemon_name}-collab-endpoint') == 1
+
+
+def test_create_watchers_without_collab(make_profile):
+    """Test that the daemon watcher list has no collab endpoint when the profile is not part of a collab."""
+    profile = make_profile()
+    client = DaemonClient(profile)
+
+    names = [watcher['name'] for watcher in client._create_watchers(1)]
+
+    assert f'{client.daemon_name}-collab-endpoint' not in names
+
+
 @pytest.fixture
 def record_calls(monkeypatch):
     """Record circus commands and the import in order, the import succeeding unless given an error."""

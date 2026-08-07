@@ -305,6 +305,16 @@ class DaemonClient:
         ]
 
     @property
+    def _collab_log_file(self) -> str:
+        """Return the log file of the collab endpoint, derived from the settings."""
+        return self._config.filepaths(self.profile)['collab']['log']
+
+    @property
+    def _cmd_start_collab_endpoint(self) -> list[str]:
+        """Return the command to start the collab endpoint process."""
+        return [self._verdi_bin, '-p', self.profile.name, 'daemon', 'collab-endpoint']
+
+    @property
     def loglevel(self) -> str:
         return get_config_option('logging.circus_loglevel')
 
@@ -949,32 +959,12 @@ class DaemonClient:
             if time.time() - start_time > timeout:
                 raise exception
 
-    def _start_daemon(self, number_workers: int = 1, foreground: bool = False) -> None:
-        """Start the daemon.
-
-        .. warning:: This will daemonize the current process and put it in the background. It is most likely not what
-            you want to call if you want to start the daemon from the Python API. Instead you probably will want to use
-            the :meth:`aiida.engine.daemon.client.DaemonClient.start_daemon` function instead.
+    def _create_watchers(self, number_workers: int) -> list[dict[str, t.Any]]:
+        """Build the list of circus watchers with which the daemon of this profile is started.
 
         :param number_workers: Number of daemon workers to start.
-        :param foreground: Whether to launch the subprocess in the background or not.
         """
-        from circus import get_arbiter
-        from circus import logger as circus_logger
-        from circus.circusd import daemonize
-        from circus.pidfile import Pidfile
-        from circus.util import check_future_exception_and_log, configure_logger
-
-        if foreground and number_workers > 1:
-            raise ValueError('can only run a single worker when running in the foreground')
-
-        loglevel = self.loglevel
-        logoutput = '-'
-
-        if not foreground:
-            logoutput = self.circus_log_file
-
-        watchers = []
+        watchers: list[dict[str, t.Any]] = []
 
         # Start ZeroMQ broker before workers so its sockets are ready when workers connect.
         # Skip if a broker is already running (e.g. started by the test fixture).
@@ -1033,6 +1023,59 @@ class DaemonClient:
                 'env': self.get_env(),
             }
         )
+
+        from aiida.tools.collab.config import OPTION_ENABLED
+
+        if self._config.get_option(OPTION_ENABLED, scope=self.profile.name):
+            watchers.append(
+                {
+                    'cmd': ' '.join(self._cmd_start_collab_endpoint),
+                    'name': f'{self.daemon_name}-collab-endpoint',
+                    'numprocesses': 1,
+                    'virtualenv': self.virtualenv,
+                    'copy_env': True,
+                    'stdout_stream': {
+                        'class': 'FileStream',
+                        'filename': self._collab_log_file,
+                        'time_format': '%Y-%m-%d %H:%M:%S',
+                    },
+                    'stderr_stream': {
+                        'class': 'FileStream',
+                        'filename': self._collab_log_file,
+                        'time_format': '%Y-%m-%d %H:%M:%S',
+                    },
+                    'env': self.get_env(),
+                }
+            )
+
+        return watchers
+
+    def _start_daemon(self, number_workers: int = 1, foreground: bool = False) -> None:
+        """Start the daemon.
+
+        .. warning:: This will daemonize the current process and put it in the background. It is most likely not what
+            you want to call if you want to start the daemon from the Python API. Instead you probably will want to use
+            the :meth:`aiida.engine.daemon.client.DaemonClient.start_daemon` function instead.
+
+        :param number_workers: Number of daemon workers to start.
+        :param foreground: Whether to launch the subprocess in the background or not.
+        """
+        from circus import get_arbiter
+        from circus import logger as circus_logger
+        from circus.circusd import daemonize
+        from circus.pidfile import Pidfile
+        from circus.util import check_future_exception_and_log, configure_logger
+
+        if foreground and number_workers > 1:
+            raise ValueError('can only run a single worker when running in the foreground')
+
+        loglevel = self.loglevel
+        logoutput = '-'
+
+        if not foreground:
+            logoutput = self.circus_log_file
+
+        watchers = self._create_watchers(number_workers)
 
         arbiter_config = {
             'controller': self.get_controller_endpoint(),

@@ -237,6 +237,42 @@ class ExtrasSnapshot:
         return cls(uuid=data['uuid'], mtime=datetime.fromisoformat(data['mtime']), extras=data['extras'])
 
 
+@dataclass
+class GroupMembers:
+    """Nodes that joined one group, offered to a peer under the ``grow`` groups policy.
+
+    The group travels with its label and type string rather than by UUID alone, so that a receiver which does not
+    hold it can create it — which is what lets a group made over already-shared nodes reach anybody at all.
+    """
+
+    uuid: str
+    label: str
+    type_string: str
+    nodes: list[str]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {'uuid': self.uuid, 'label': self.label, 'type_string': self.type_string, 'nodes': self.nodes}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> GroupMembers:
+        return cls(uuid=data['uuid'], label=data['label'], type_string=data['type_string'], nodes=list(data['nodes']))
+
+
+def members_as_dict(members: list[GroupMembers]) -> list[dict[str, Any]]:
+    """Serialize an offer of group memberships."""
+    return [group.as_dict() for group in members]
+
+
+def members_from_dict(data: list[dict[str, Any]]) -> list[GroupMembers]:
+    """Parse an offer of group memberships."""
+    return [GroupMembers.from_dict(group) for group in data]
+
+
+def member_pairs(members: list[GroupMembers]) -> list[tuple[str, str]]:
+    """Return the offered memberships as ``(group uuid, node uuid)`` pairs, which is what is counted and applied."""
+    return [(group.uuid, node) for group in members for node in group.nodes]
+
+
 def refresh_as_dict(refresh: dict[str, datetime]) -> dict[str, str]:
     """Serialize an offer of extras refreshes: the mtime this profile holds for each shared node it may have edited."""
     return {uuid: mtime.isoformat() for uuid, mtime in refresh.items()}
@@ -265,12 +301,18 @@ class DeltaManifest:
     roster: list[dict[str, Any]] = dataclasses.field(default_factory=list)
     """The sender's own roster entry and every peer it knows, so that membership spreads with every sync."""
 
+    members: list[GroupMembers] = dataclasses.field(default_factory=list)
+    """Under the ``grow`` groups policy, the memberships the sender gained since the presented cursor, whether
+    curated there or applied from a peer. Unlike the extras offer these are the payload itself: there is nothing
+    to compare, since membership only ever grows. Empty under ``local``."""
+
     def as_dict(self) -> dict[str, Any]:
         return {
             'manifest': self.manifest,
             'instant': self.instant.isoformat(),
             'refresh': refresh_as_dict(self.refresh),
             'roster': self.roster,
+            'members': members_as_dict(self.members),
         }
 
     @classmethod
@@ -280,6 +322,7 @@ class DeltaManifest:
             instant=datetime.fromisoformat(data['instant']),
             refresh=refresh_from_dict(data['refresh']),
             roster=data.get('roster', []),
+            members=members_from_dict(data.get('members', [])),
         )
 
 
@@ -293,12 +336,20 @@ class ManifestDiff:
     refresh: list[str]
     """The nodes whose extras the receiver holds an older version of, and whose snapshot it wants with the push."""
 
+    members: list[GroupMembers] = dataclasses.field(default_factory=list)
+    """The offered memberships the receiver can and does not yet hold; they ride the import request. Empty unless
+    the receiver's own policy is ``grow``."""
+
     def as_dict(self) -> dict[str, Any]:
-        return {'missing': self.missing, 'refresh': self.refresh}
+        return {'missing': self.missing, 'refresh': self.refresh, 'members': members_as_dict(self.members)}
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ManifestDiff:
-        return cls(missing=data['missing'], refresh=data['refresh'])
+        return cls(
+            missing=data['missing'],
+            refresh=data['refresh'],
+            members=members_from_dict(data.get('members', [])),
+        )
 
 
 @dataclass

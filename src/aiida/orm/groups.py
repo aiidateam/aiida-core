@@ -361,6 +361,16 @@ class Group(entities.Entity['BackendGroup', GroupCollection]):
 
         self._backend_entity.add_nodes([node.backend_entity for node in nodes])
 
+        from aiida.tools.collab.config import shares_group_membership
+        from aiida.tools.collab.state import record_memberships
+
+        # Curating is the one thing a collab has to replicate that leaves no timestamp of its own, so a collab that
+        # grows groups journals it as it happens. Recorded after the write, like the tombstones of a deletion.
+        collab_profile = shares_group_membership(self.backend, self.type_string)
+
+        if collab_profile is not None:
+            record_memberships([(self.uuid, node.uuid) for node in nodes], collab_profile)
+
     def remove_nodes(self, nodes: Node | Sequence[Node]) -> None:
         """Remove a node or a set of nodes to the group.
 

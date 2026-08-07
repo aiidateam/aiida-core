@@ -34,6 +34,10 @@ OPTION_ANNOUNCED = 'collab.announced'
 OPTION_ACCEPT_PUSH = 'collab.accept_push'
 OPTION_POLICY = 'collab.policy'
 
+# Groups AiiDA generates to record how provenance arrived in a profile rather than what a person curated. They
+# describe the history of the profile that made them and would mean nothing in another one, so they stay home.
+GENERATED_GROUP_TYPES = ('core.import', 'core.auto')
+
 
 def is_enabled() -> bool:
     """Return whether the loaded profile takes part in a collab."""
@@ -55,6 +59,22 @@ def get_collab_profile(backend: StorageBackend) -> Profile | None:
     manager = get_manager()
 
     return manager.get_profile() if backend is manager.get_profile_storage() else None
+
+
+def shares_group_membership(backend: StorageBackend, type_string: str) -> Profile | None:
+    """Return the profile whose collab replicates the membership of a group of this type, or ``None``.
+
+    A ``GROUP_NODE`` row carries no timestamp, so a collab that grows groups has no way to answer "which
+    memberships were made since T" other than to journal each addition as it happens — which is what this gates.
+    """
+    from aiida.manage.configuration import get_config_option
+
+    profile = get_collab_profile(backend)
+
+    if profile is None or type_string in GENERATED_GROUP_TYPES:
+        return None
+
+    return profile if get_config_option(OPTION_POLICY)['groups_mode'] == 'grow' else None
 
 
 def stored_config(config: Config) -> Config:

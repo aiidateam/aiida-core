@@ -829,9 +829,9 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
     from aiida.tools.collab.client import CollabClient
     from aiida.tools.collab.config import OPTION_PEERS, OPTION_POLICY, OPTION_TOKEN, OPTION_UUID
     from aiida.tools.collab.endpoint import local_info, workers_stopped
-    from aiida.tools.collab.protocol import CollabRequestError, VersionSkew
+    from aiida.tools.collab.protocol import CollabRequestError, VersionSkew, member_pairs
     from aiida.tools.collab.state import CollabState, import_lock
-    from aiida.tools.collab.sync import import_delta, missing_uuids, refresh_wanted
+    from aiida.tools.collab.sync import import_delta, members_wanted, missing_uuids, refresh_wanted
 
     profile = ctx.obj.profile
     require_collab(profile)
@@ -903,22 +903,37 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
                     else []
                 )
 
+                # Memberships of nodes this profile already holds; empty unless the collab grows groups. Filtered
+                # here rather than at the import, so that what is prompted for is what will be written.
+                members = (
+                    members_wanted(backend, manifest.members, state.tombstones)
+                    if policy['groups_mode'] == 'grow'
+                    else []
+                )
+                curated = len(member_pairs(members))
+
                 if dry_run:
                     summary = f'{nickname}: {len(want)} node(s) to pull'
 
                     if refresh_want:
                         summary += f', extras of {len(refresh_want)} node(s) to be replaced by theirs'
 
+                    if curated:
+                        summary += f', {curated} group membership(s) to add'
+
                     echo.echo_report(summary)
                     continue
 
                 offer = client.request_delta(cursor, claim, want, refresh_want)
 
-                if (want or refresh_want) and not force:
+                if (want or refresh_want or curated) and not force:
                     prompt = f'pull {len(want)} node(s) ({offer.size} bytes) from {nickname}'
 
                     if refresh_want:
                         prompt += f', letting their extras replace yours on {len(refresh_want)} node(s)'
+
+                    if curated:
+                        prompt += f', adding {curated} group membership(s)'
 
                     if not click.confirm(f'{prompt}?', default=False):
                         echo.echo_report(f'skipped {nickname}.')
@@ -946,6 +961,8 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
                         instant=min(manifest.instant, offer.instant),
                         include_deleted=include_deleted,
                         refresh=offer.refresh,
+                        groups_mode=policy['groups_mode'],
+                        members=members,
                     )
         except IntegrityError as exception:
             # The delta linked to a node this profile holds nowhere; nothing landed, the next sync delivers it.
@@ -961,6 +978,9 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
 
         if report.refreshed:
             message += f', refreshed the extras of {len(report.refreshed)} node(s)'
+
+        if report.members:
+            message += f', added {len(report.members)} group membership(s)'
 
         if report.skipped:
             message += f', skipped {len(report.skipped)} deleted node(s)'
@@ -1005,9 +1025,15 @@ def collab_push(ctx, peers, force, dry_run):
     from aiida.tools.collab.client import CollabClient
     from aiida.tools.collab.config import OPTION_PEERS, OPTION_POLICY, OPTION_TOKEN, OPTION_UUID
     from aiida.tools.collab.endpoint import local_identity, local_info
-    from aiida.tools.collab.protocol import CollabRequestError, VersionSkew
+    from aiida.tools.collab.protocol import CollabRequestError, VersionSkew, member_pairs
     from aiida.tools.collab.state import CollabEvent, CollabState
-    from aiida.tools.collab.sync import compute_delta, export_delta, refresh_offer, refresh_snapshots
+    from aiida.tools.collab.sync import (
+        compute_delta,
+        export_delta,
+        membership_offer,
+        refresh_offer,
+        refresh_snapshots,
+    )
 
     profile = ctx.obj.profile
     require_collab(profile)
@@ -1060,16 +1086,33 @@ def collab_push(ctx, peers, force, dry_run):
 
                 state = CollabState.load(profile)
                 refresh = []
+                members = []
+                curated = 0
 
                 if filepath.exists() and meta is not None and meta['peer'] == peer_uuid:
                     # A previous push to this peer failed after the transfer. Retrying with the very same bytes
                     # is what lets the upload negotiate that everything is already staged and re-attempt only
                     # the import; the original instant travels with them, since it is what describes those bytes.
-                    # The retry carries no extras refresh: negotiating one is what the next push does anyway.
                     uuids, instant = meta['uuids'], datetime.fromisoformat(meta['instant'])
 
+                    # The memberships are negotiated again, though the bytes are not: the import advances the
+                    # peer's cursor to the stashed instant, past every journal entry older than it, so a retry
+                    # that carried none would lose the curation the failed push had negotiated for good.
+                    curations = (
+                        membership_offer(state=state, backend=backend, cursor=handshake.cursor)
+                        if policy['groups_mode'] == 'grow'
+                        else []
+                    )
+                    members = client.diff_manifest([], {}, curations).members if curations else []
+                    curated = len(member_pairs(members))
+
                     if dry_run:
-                        echo.echo_report(f'{nickname}: {len(uuids)} node(s) to push (stashed retry)')
+                        summary = f'{nickname}: {len(uuids)} node(s) to push (stashed retry)'
+
+                        if curated:
+                            summary += f', {curated} group membership(s) to add there'
+
+                        echo.echo_report(summary)
                         continue
 
                     echo.echo_report(f'retrying the delta of the previous failed push to {nickname}')
@@ -1087,8 +1130,14 @@ def collab_push(ctx, peers, force, dry_run):
                         if policy['extras_mode'] == 'sync'
                         else {}
                     )
-                    diff = client.diff_manifest(delta.uuids, offer)
+                    curations = (
+                        membership_offer(state=state, backend=backend, cursor=handshake.cursor)
+                        if policy['groups_mode'] == 'grow'
+                        else []
+                    )
+                    diff = client.diff_manifest(delta.uuids, offer, curations)
                     want = set(diff.missing)
+                    curated = len(member_pairs(diff.members))
 
                     if dry_run:
                         summary = f'{nickname}: {len(want)} node(s) to push'
@@ -1096,18 +1145,24 @@ def collab_push(ctx, peers, force, dry_run):
                         if diff.refresh:
                             summary += f', extras of {len(diff.refresh)} node(s) to be replaced by yours'
 
+                        if curated:
+                            summary += f', {curated} group membership(s) to add there'
+
                         echo.echo_report(summary)
                         continue
 
-                    export = export_delta(filepath, delta=delta, backend=backend, want=want)
+                    export = export_delta(
+                        filepath, delta=delta, backend=backend, want=want, groups_mode=policy['groups_mode']
+                    )
                     refresh = refresh_snapshots(backend, diff.refresh)
+                    members = diff.members
                     uuids, instant = export.uuids, export.instant
                     filepath_meta.write_text(
                         json.dumps({'peer': peer_uuid, 'instant': instant.isoformat(), 'uuids': uuids}, indent=4),
                         encoding='utf-8',
                     )
 
-                if not uuids and not refresh:
+                if not uuids and not refresh and not members:
                     filepath.unlink()
                     filepath_meta.unlink()
 
@@ -1136,6 +1191,9 @@ def collab_push(ctx, peers, force, dry_run):
                     if refresh:
                         prompt += f', replacing their extras with yours on {len(refresh)} node(s)'
 
+                    if curated:
+                        prompt += f', adding {curated} group membership(s) there'
+
                     if not click.confirm(f'{prompt}?', default=False):
                         # The cut is dropped rather than stashed: a stash is re-sent without renegotiation, which
                         # is right after a failed import but wrong after a decline, when the peer moves on.
@@ -1151,7 +1209,7 @@ def collab_push(ctx, peers, force, dry_run):
                 continue
 
             try:
-                client.trigger_import(upload.sha256, peer=identity, instant=instant, refresh=refresh)
+                client.trigger_import(upload.sha256, peer=identity, instant=instant, refresh=refresh, members=members)
             except CollabRequestError as exception:
                 if exception.status == HTTPStatus.UNPROCESSABLE_ENTITY:
                     # The delta can never land — it links to a node the peer no longer holds — so retrying the
@@ -1184,5 +1242,8 @@ def collab_push(ctx, peers, force, dry_run):
 
         if refresh:
             message += f', refreshed the extras of {len(refresh)} node(s)'
+
+        if members:
+            message += f', added {len(member_pairs(members))} group membership(s)'
 
         echo.echo_success(message)

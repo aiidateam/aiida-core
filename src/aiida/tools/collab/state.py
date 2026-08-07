@@ -89,6 +89,27 @@ class CollabEvent:
 
 
 @dataclass
+class Membership:
+    """A node joining a group in this profile, and when it happened.
+
+    ``GROUP_NODE`` rows carry no timestamp, so this journal is the only clock a collab has for membership: it is
+    what answers "which memberships were made here since T" when a peer presents its cursor. Both a person
+    curating and a peer's addition being applied are recorded, which is what makes membership relay A→B→C.
+    """
+
+    time: datetime
+    group: str
+    node: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return {'time': self.time.isoformat(), 'group': self.group, 'node': self.node}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Membership:
+        return cls(time=datetime.fromisoformat(data['time']), group=data['group'], node=data['node'])
+
+
+@dataclass
 class CollabState:
     """The local state of the collab of a single profile.
 
@@ -106,6 +127,10 @@ class CollabState:
     """Boundary links of a thin delta, as ``[input_uuid, output_uuid, type, label]``, journalled before the import
     and cleared once they are written: the import commits its own transaction, so a crash between the two would
     otherwise lose the links between imported nodes and the ones already held."""
+
+    memberships: list[Membership] = field(default_factory=list)
+    """The membership journal: which node joined which group here, and when. Written only under the ``grow``
+    groups policy, since it exists for nothing else."""
 
     @staticmethod
     def get_filepath(profile: Profile) -> Path:
@@ -145,6 +170,7 @@ class CollabState:
             tombstones=set(data['tombstones']),
             events=[CollabEvent.from_dict(event) for event in data['events']],
             pending_links=data.get('pending_links', []),
+            memberships=[Membership.from_dict(entry) for entry in data.get('memberships', [])],
         )
 
     def _compact(self) -> None:
@@ -183,6 +209,26 @@ class CollabState:
 
         self.events = [*synthetic, *self.events[len(folded) :]]
 
+    def _compact_memberships(self) -> None:
+        """Fold all but the newest half of the membership journal onto one instant, losing no pair.
+
+        The same trade as the event log: the folded entries move up to the horizon, so a cursor after it correctly
+        excludes them and one inside the folded range still sees every pair. That over-states what was curated
+        since such a cursor, which only re-offers memberships the receiver already holds and drops on apply; it can
+        never under-state, which would lose a curation forever.
+        """
+        if len(self.memberships) <= COMPACT_THRESHOLD:
+            return
+
+        folded = self.memberships[: -COMPACT_THRESHOLD // 2]
+        horizon = max(entry.time for entry in folded)
+        pairs = sorted({(entry.group, entry.node) for entry in folded})
+
+        self.memberships = [
+            *(Membership(time=horizon, group=group, node=node) for group, node in pairs),
+            *self.memberships[len(folded) :],
+        ]
+
     def save(self) -> None:
         """Write the state to disk, replacing the existing file atomically."""
         import tempfile
@@ -190,12 +236,14 @@ class CollabState:
         from aiida.manage.configuration.settings import DEFAULT_UMASK
 
         self._compact()
+        self._compact_memberships()
 
         data = {
             'cursors': {peer: cursor.isoformat() for peer, cursor in self.cursors.items()},
             'tombstones': sorted(self.tombstones),
             'events': [event.as_dict() for event in self.events],
             'pending_links': self.pending_links,
+            'memberships': [entry.as_dict() for entry in self.memberships],
         }
 
         umask = os.umask(DEFAULT_UMASK)
@@ -230,6 +278,15 @@ class CollabState:
         the refresh offer, which is how an extras edit relayed through this profile reaches the next peer.
         """
         return self._uuids_since('refresh', instant)
+
+    def memberships_since(self, instant: datetime | None) -> set[tuple[str, str]]:
+        """Return every ``(group, node)`` pair that became a membership here since ``instant``, or ever when ``None``.
+
+        A peer that presents no cursor holds nothing this profile sent it, but may well hold its nodes through a
+        third party — and those are exactly the memberships no delta of ours can carry — so it is offered the
+        whole journal rather than nothing.
+        """
+        return {(entry.group, entry.node) for entry in self.memberships if instant is None or entry.time >= instant}
 
     def _uuids_since(self, direction: Direction, instant: datetime | None) -> set[str]:
         return {
@@ -321,3 +378,21 @@ def record_tombstones(uuids: list[str], profile: Profile) -> None:
     """
     with CollabState.mutate(CollabState.get_filepath(profile)) as state:
         state.tombstones.update(uuids)
+
+
+def record_memberships(pairs: list[tuple[str, str]], profile: Profile) -> None:
+    """Journal nodes joining groups, so that a peer presenting a cursor can be told what it missed.
+
+    :param pairs: the ``(group uuid, node uuid)`` memberships that were made.
+    :param profile: the profile they were made in.
+    """
+    from aiida.common import timezone
+
+    if not pairs:
+        return
+
+    with CollabState.mutate(CollabState.get_filepath(profile)) as state:
+        # Stamped under the lock, not before waiting for it: a peer whose cursor lands between the two would
+        # never be offered the pair, and the offer is allowed to over-state but never to omit.
+        instant = timezone.now()
+        state.memberships.extend(Membership(time=instant, group=group, node=node) for group, node in pairs)

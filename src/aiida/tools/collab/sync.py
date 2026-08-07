@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -25,12 +26,13 @@ from aiida.orm.utils.mixins import Sealable
 from aiida.tools.archive import create_archive, import_archive
 from aiida.tools.archive.abstract import get_format
 from aiida.tools.archive.imports import MergeExtrasType
-from aiida.tools.collab.protocol import ExtrasSnapshot
-from aiida.tools.collab.state import CollabEvent, CollabState
+from aiida.tools.collab.config import GENERATED_GROUP_TYPES
+from aiida.tools.collab.protocol import ExtrasSnapshot, GroupMembers
+from aiida.tools.collab.state import CollabEvent, CollabState, Membership
 from aiida.tools.graph.graph_traversers import get_nodes_export, traverse_graph, validate_traversal_rules
 
 if TYPE_CHECKING:
-    from aiida.manage.configuration.config import CollabExtrasMode
+    from aiida.manage.configuration.config import CollabExtrasMode, CollabGroupsMode
     from aiida.orm.implementation import StorageBackend
 
 MERGE_EXTRAS: dict[str, MergeExtrasType] = {'local': ('k', 'n', 'l'), 'sync': ('k', 'c', 'u')}
@@ -109,6 +111,9 @@ class DeltaReport:
     refreshed: list[str] = field(default_factory=list)
     """The nodes whose extras were replaced by the snapshot that travelled with the delta."""
 
+    members: list[tuple[str, str]] = field(default_factory=list)
+    """The ``(group, node)`` memberships written, whether they rode the delta or the membership offer beside it."""
+
 
 def compute_delta(
     *,
@@ -171,6 +176,7 @@ def export_delta(
     delta: Delta,
     backend: StorageBackend,
     want: frozenset[str] | set[str] | None = None,
+    groups_mode: CollabGroupsMode = 'local',
 ) -> DeltaExport:
     """Write the requested subset of a delta to an archive.
 
@@ -183,6 +189,7 @@ def export_delta(
     :param delta: the computed delta the subset is taken from.
     :param backend: the storage to export from.
     :param want: the UUIDs the requester asked for, or ``None`` for the whole delta.
+    :param groups_mode: under ``grow``, the curated groups of the exported nodes travel with their memberships.
     """
     want_uuids = set(delta.uuid_by_pk.values()) if want is None else set(want) & set(delta.uuid_by_pk.values())
     want_pks = {pk for pk, uuid in delta.uuid_by_pk.items() if uuid in want_uuids}
@@ -200,7 +207,14 @@ def export_delta(
                 [delta.uuid_by_pk[link.source_id], delta.uuid_by_pk[link.target_id], link.link_type, link.link_label]
             )
 
-    _write_thin_archive(filepath, backend=backend, node_pks=want_pks, links=internal, boundary=boundary)
+    _write_thin_archive(
+        filepath,
+        backend=backend,
+        node_pks=want_pks,
+        links=internal,
+        boundary=boundary,
+        groups_mode=groups_mode,
+    )
 
     return DeltaExport(filepath=filepath, uuids=sorted(want_uuids), instant=delta.instant)
 
@@ -212,6 +226,7 @@ def _write_thin_archive(
     node_pks: set[int],
     links: list[Any],
     boundary: list[list[str]],
+    groups_mode: CollabGroupsMode,
 ) -> None:
     """Write an archive of exactly the given nodes, with the links that leave the set in the metadata.
 
@@ -226,7 +241,7 @@ def _write_thin_archive(
     from aiida.tools.archive.create import _stream_repo_files
     from aiida.tools.archive.implementations.sqlite_zip.main import ArchiveFormatSqlZip
 
-    def related_pks(entity: Any, relationship: str) -> set[int]:
+    def related_pks(entity: Any, relationship: str, filters: dict[str, Any] | None = None) -> set[int]:
         if not node_pks:
             return set()
 
@@ -234,14 +249,21 @@ def _write_thin_archive(
         query = (
             orm.QueryBuilder(backend=backend)
             .append(orm.Node, filters={'id': {'in': node_pks}}, tag='node')
-            .append(entity, project='id', **kwargs)
+            .append(entity, project='id', filters=filters, **kwargs)
             .distinct()
         )
         return set(query.all(flat=True))
 
+    group_pks = (
+        related_pks(orm.Group, 'with_node', {'type_string': {'!in': list(GENERATED_GROUP_TYPES)}})
+        if groups_mode == 'grow'
+        else set()
+    )
+
     entity_pks: dict[EntityTypes, set[int]] = {
         EntityTypes.USER: related_pks(orm.User, 'with_node'),
         EntityTypes.COMPUTER: related_pks(orm.Computer, 'with_node'),
+        EntityTypes.GROUP: group_pks,
         EntityTypes.NODE: node_pks,
         EntityTypes.COMMENT: related_pks(orm.Comment, 'with_node'),
         EntityTypes.LOG: related_pks(orm.Log, 'with_node'),
@@ -252,6 +274,15 @@ def _write_thin_archive(
             orm.QueryBuilder(backend=backend)
             .append(orm.Comment, filters={'id': {'in': comment_pks}}, tag='comment')
             .append(orm.User, with_comment='comment', project='id')
+            .distinct()
+        )
+        entity_pks[EntityTypes.USER].update(query.all(flat=True))
+
+    if group_pks:
+        query = (
+            orm.QueryBuilder(backend=backend)
+            .append(orm.Group, filters={'id': {'in': group_pks}}, tag='group')
+            .append(orm.User, with_group='group', project='id')
             .distinct()
         )
         entity_pks[EntityTypes.USER].update(query.all(flat=True))
@@ -293,6 +324,19 @@ def _write_thin_archive(
 
         for _, rows in batch_iter(link_rows, DEFAULT_BATCH_SIZE, lambda row: row):
             writer.bulk_insert(EntityTypes.LINK, rows, allow_defaults=True)
+
+        if group_pks:
+            # Restricted to the exported nodes: a group holds members the requester is not entitled to in this
+            # delta, and a membership row naming an absent node would be an unresolvable reference.
+            membership = (
+                orm.QueryBuilder(backend=backend)
+                .append(orm.Group, filters={'id': {'in': group_pks}}, tag='group', project='id')
+                .append(orm.Node, with_group='group', filters={'id': {'in': node_pks}}, project='id')
+            )
+            member_rows = [{'dbgroup_id': group_pk, 'dbnode_id': node_pk} for group_pk, node_pk in membership.all()]
+
+            for _, rows in batch_iter(member_rows, DEFAULT_BATCH_SIZE, lambda row: row):
+                writer.bulk_insert(EntityTypes.GROUP_NODE, rows, allow_defaults=True)
 
         if node_pks:
             _stream_repo_files(
@@ -368,6 +412,167 @@ def refresh_snapshots(backend: StorageBackend, uuids: list[str]) -> list[ExtrasS
     ]
 
 
+def membership_offer(*, state: CollabState, backend: StorageBackend, cursor: datetime | None) -> list[GroupMembers]:
+    """Return the group memberships this profile gained since ``cursor``, with the identity of their groups.
+
+    Under the ``grow`` policy this is to curation what the delta is to provenance: a ``GROUP_NODE`` row has no
+    timestamp of its own, so the journal — which records a person curating here and a peer's addition applied here
+    alike — is the only answer to "what changed since T". That union is what makes a curation made on A reach C
+    through B by pairwise syncs, exactly as the event union does for relayed provenance and extras.
+
+    Only memberships are offered, never removals: under ``grow`` the set of members grows and nothing else. A group
+    that no longer exists here is dropped, since there is no label left to create it under on the other side.
+    """
+    pairs = state.memberships_since(cursor)
+
+    if not pairs:
+        return []
+
+    query = orm.QueryBuilder(backend=backend).append(
+        orm.Group,
+        filters={'uuid': {'in': sorted({group for group, _ in pairs})}},
+        project=['uuid', 'label', 'type_string'],
+    )
+    groups = {uuid: (label, type_string) for uuid, label, type_string in query.iterall()}
+    nodes: dict[str, list[str]] = {}
+
+    for group, node in sorted(pairs):
+        if group in groups:
+            nodes.setdefault(group, []).append(node)
+
+    return [
+        GroupMembers(uuid=group, label=groups[group][0], type_string=groups[group][1], nodes=members)
+        for group, members in nodes.items()
+    ]
+
+
+def members_wanted(backend: StorageBackend, offer: list[GroupMembers], tombstones: set[str]) -> list[GroupMembers]:
+    """Return the offered memberships this profile can apply and does not hold yet.
+
+    A pair whose node is not here — never shared, or deleted — is dropped rather than kept pending: the
+    memberships of a node travel with the node, so whichever later sync delivers it delivers them too. The groups
+    AiiDA generates for itself are refused whatever a peer offers: they describe the history of the profile that
+    made them, and this profile decides what enters it.
+
+    The offer is wire data, so it is folded first: a group row and a membership row are both unique, and a peer
+    naming a group twice or a node twice within one entry would otherwise raise out of the storage layer, past
+    every handler the sync has and with the archive already committed.
+    """
+    folded: dict[str, GroupMembers] = {}
+
+    for group in offer:
+        if group.type_string not in GENERATED_GROUP_TYPES:
+            folded.setdefault(group.uuid, dataclasses.replace(group, nodes=[])).nodes.extend(group.nodes)
+
+    candidates = [dataclasses.replace(group, nodes=list(dict.fromkeys(group.nodes))) for group in folded.values()]
+    wanted_nodes = {node for group in candidates for node in group.nodes} - tombstones
+
+    if not wanted_nodes:
+        return []
+
+    query = orm.QueryBuilder(backend=backend).append(
+        orm.Node, filters={'uuid': {'in': sorted(wanted_nodes)}}, project='uuid'
+    )
+    held_nodes = set(query.all(flat=True))
+
+    if not held_nodes:
+        return []
+
+    membership = (
+        orm.QueryBuilder(backend=backend)
+        .append(
+            orm.Group,
+            filters={'uuid': {'in': sorted({group.uuid for group in candidates})}},
+            tag='group',
+            project='uuid',
+        )
+        .append(orm.Node, with_group='group', filters={'uuid': {'in': sorted(held_nodes)}}, project='uuid')
+    )
+    held = {(group, node) for group, node in membership.all()}
+
+    wanted = [
+        dataclasses.replace(
+            group, nodes=[node for node in group.nodes if node in held_nodes and (group.uuid, node) not in held]
+        )
+        for group in candidates
+    ]
+
+    return [group for group in wanted if group.nodes]
+
+
+def apply_members(backend: StorageBackend, offer: list[GroupMembers], tombstones: set[str]) -> list[tuple[str, str]]:
+    """Insert the offered memberships this profile lacks, creating the groups it does not hold, and return them.
+
+    A group is created under the offered UUID, so that every member of the collab holds one group where one group
+    was curated, however many hops the offer took to arrive. Its label is deduplicated against the labels in use
+    here, as the archive import does, because a label collides where a UUID cannot.
+    """
+    from aiida.orm.entities import EntityTypes
+
+    wanted = members_wanted(backend, offer, tombstones)
+
+    if not wanted:
+        return []
+
+    query = orm.QueryBuilder(backend=backend).append(
+        orm.Group, filters={'uuid': {'in': sorted({group.uuid for group in wanted})}}, project=['uuid', 'id']
+    )
+    group_pks = dict(query.iterall())
+    missing = [group for group in wanted if group.uuid not in group_pks]
+
+    if missing:
+        taken = {
+            (label, type_string)
+            for label, type_string in orm.QueryBuilder(backend=backend)
+            .append(orm.Group, project=['label', 'type_string'])
+            .all()
+        }
+        rows = []
+
+        for group in missing:
+            label = _unique_label(group.label, group.type_string, taken)
+            taken.add((label, group.type_string))
+            rows.append(
+                {
+                    'uuid': group.uuid,
+                    'label': label,
+                    'type_string': group.type_string,
+                    'user_id': cast(orm.User, backend.default_user).pk,
+                }
+            )
+
+        pks = backend.bulk_insert(EntityTypes.GROUP, rows, allow_defaults=True)
+        group_pks.update(zip([group.uuid for group in missing], pks))
+
+    query = orm.QueryBuilder(backend=backend).append(
+        orm.Node,
+        filters={'uuid': {'in': sorted({node for group in wanted for node in group.nodes})}},
+        project=['uuid', 'id'],
+    )
+    node_pks = dict(query.iterall())
+    applied = [(group.uuid, node) for group in wanted for node in group.nodes]
+
+    backend.bulk_insert(
+        EntityTypes.GROUP_NODE,
+        [{'dbgroup_id': group_pks[group], 'dbnode_id': node_pks[node]} for group, node in applied],
+    )
+
+    return applied
+
+
+def _unique_label(label: str, type_string: str, taken: set[tuple[str, str]]) -> str:
+    """Return ``label`` deduplicated against the labels already in use for its type, which are unique per type."""
+    if (label, type_string) not in taken:
+        return label
+
+    index = 2
+
+    while (f'{label}-{index}', type_string) in taken:
+        index += 1
+
+    return f'{label}-{index}'
+
+
 def _public_extras(extras: dict[str, Any]) -> dict[str, Any]:
     """Return the extras that are shared with the collab: everything outside the private ``_`` namespace."""
     return {key: value for key, value in extras.items() if not key.startswith(PRIVATE_EXTRA_PREFIX)}
@@ -428,6 +633,8 @@ def import_delta(
     instant: datetime,
     include_deleted: bool = False,
     refresh: list[ExtrasSnapshot] | None = None,
+    groups_mode: CollabGroupsMode = 'local',
+    members: list[GroupMembers] | None = None,
 ) -> DeltaReport:
     """Import a delta received from a peer, advance the cursor for that peer and record the event in the collab log.
 
@@ -445,6 +652,11 @@ def import_delta(
     :param refresh: extras snapshots of shared nodes the peer edited more recently, negotiated under the ``sync``
         policy. Applied after the archive, so that the extras of a node that arrives in this very delta are the
         ones the archive carries rather than a snapshot cut before it.
+    :param groups_mode: under ``grow``, the groups of the delta and the offered memberships are applied and every
+        membership written here is journalled, so that it travels on to the peers of this profile.
+    :param members: memberships of nodes this profile already holds, offered beside the delta. They are what makes
+        a node curated after it was shared reach anybody: no delta can carry it, since the node itself never
+        travels again.
     :param peer: the identity the delta was received under, which keys the cursor: the profile UUID of the peer.
     :param instant: the export instant carried with the delta, which the cursor for ``peer`` advances to.
     :param include_deleted: import nodes that were deleted locally after all, and drop their tombstones.
@@ -459,9 +671,20 @@ def import_delta(
         # migrating, so the delta is brought to the head version first — as `verdi archive import` does.
         filepath = _at_head_version(filepath, Path(dirpath) / 'migrated.aiida')
 
-        uuids = _archive_uuids(filepath)
+        uuids, delivered = _archive_contents(filepath)
         boundary = _boundary_links(filepath)
         tombstoned = [] if include_deleted else sorted(state.tombstones.intersection(uuids))
+
+        if delivered and groups_mode != 'grow':
+            # This profile keeps its groups to itself, so the delta's have to go before it lands — a sender that
+            # declares `local` and serves group rows anyway is the whole reason the gate sits on this side.
+            filepath = _without_groups(filepath, Path(dirpath) / 'ungrouped.aiida')
+            delivered = []
+
+        # Which groups were held before is what tells apart the memberships the import writes by itself — it
+        # creates the rows of a group it creates — from the ones that were already here.
+        held_groups = _held_group_uuids(backend, delivered)
+        imported_groups = delivered
 
         # The caching extras of the peer describe their profile, not this one, so the merge must not be able to
         # carry them over. New nodes are stripped of them by the import itself, existing ones are restored below.
@@ -470,8 +693,17 @@ def import_delta(
         if tombstoned:
             filepath = _without_nodes(filepath, Path(dirpath) / 'delta.aiida', tombstoned)
             uuids = _archive_uuids(filepath)
+            # Re-exporting the surviving nodes alone is exactly how the groups are dropped for a `local` profile,
+            # so the archive that lands now carries none: the import writes no membership of its own, and every
+            # pair that still applies has to be written after it.
+            imported_groups = []
             # A boundary link whose archive endpoint was dropped with its tombstone must not be re-attached.
             boundary = [link for link in boundary if link[0] in uuids or link[1] in uuids]
+
+        # A tombstone speaks for what this import leaves deleted. A node the delta brings back anyway — because
+        # provenance of the delta depends on it, or because `--include-deleted` asked for it — is here afterwards,
+        # and its memberships are as real as it is.
+        honoured = state.tombstones - set(uuids)
 
         # Checked before anything lands: a boundary endpoint that exists neither in the archive nor locally would
         # leave the imported nodes permanently disconnected from provenance the sender counted on, and a boundary
@@ -496,6 +728,26 @@ def import_delta(
 
     refreshed = _apply_refresh(backend, refresh or [], state.tombstones) if extras_mode == 'sync' else []
 
+    # Both ways a membership arrives go through the same apply, which is what lets a pair whose group the archive
+    # lost still create it here. Only what was written is journalled — a pair sent back to the peer that already
+    # has it would otherwise bounce between the two forever, and a pair claimed but not written would be relayed
+    # to a third peer this profile cannot back up.
+    archived = set(uuids)
+    applied = sorted(
+        {
+            *apply_members(backend, delivered, honoured),
+            # What the import wrote by itself, which is the memberships of a group that was not here before it
+            # ran — and nothing at all once the re-filter has taken that group out of the archive.
+            *(
+                (group.uuid, node)
+                for group in imported_groups
+                if group.uuid not in held_groups
+                for node in group.nodes
+                if node in archived
+            ),
+            *(apply_members(backend, members or [], honoured) if groups_mode == 'grow' else []),
+        }
+    )
     event = CollabEvent(time=timezone.now(), direction='pull', peer=peer, uuids=uuids, size=size)
 
     # Appended to a freshly read state under the lock instead of saving ``state``: that was read before an import
@@ -521,7 +773,14 @@ def import_delta(
                 CollabEvent(time=timezone.now(), direction='refresh', peer=peer, uuids=refreshed, size=0)
             )
 
-    return DeltaReport(uuids=uuids, skipped=sorted(set(tombstoned) - set(uuids)), size=size, refreshed=refreshed)
+        # Journalled as if curated here, which for the peers of this profile is exactly what it is: they hold no
+        # cursor of the peer this delta came from, and only the journal makes a membership relay A→B→C.
+        stamped = timezone.now()
+        fresh.memberships.extend(Membership(time=stamped, group=group, node=node) for group, node in applied)
+
+    return DeltaReport(
+        uuids=uuids, skipped=sorted(set(tombstoned) - set(uuids)), size=size, refreshed=refreshed, members=applied
+    )
 
 
 def _boundary_links(filepath: Path) -> list[list[str]]:
@@ -693,6 +952,18 @@ def _write_boundary_links(backend: StorageBackend, pending: list[list[str]], tom
     return resolved
 
 
+def _held_group_uuids(backend: StorageBackend, groups: list[GroupMembers]) -> set[str]:
+    """Return which of the given groups this profile already holds."""
+    if not groups:
+        return set()
+
+    query = orm.QueryBuilder(backend=backend).append(
+        orm.Group, filters={'uuid': {'in': sorted(group.uuid for group in groups)}}, project='uuid'
+    )
+
+    return set(query.all(flat=True))
+
+
 def _without_unsealed_provenance(nodes: list[orm.Node], *, backend: StorageBackend) -> list[orm.Node]:
     """Return the start nodes whose provenance does not reach a process that is still running.
 
@@ -780,10 +1051,49 @@ def _at_head_version(filepath: Path, filepath_migrated: Path) -> Path:
     return filepath_migrated
 
 
+def _archive_contents(filepath: Path) -> tuple[list[str], list[GroupMembers]]:
+    """Return the UUIDs of the nodes in an archive and the groups it carries, with their members.
+
+    Both in one read: opening an archive extracts its database to a temporary file, so the import path asks for
+    everything it needs from a single open. The groups are empty unless the sender exported under ``grow``, and
+    are described exactly as an offer describes them, so that both ways a membership can arrive are applied by
+    the same function. A group with no members is reported too, since it is still a group row to gate on.
+    """
+    with get_format().open(filepath, mode='r') as reader:
+        backend = reader.get_backend()
+        uuids = orm.QueryBuilder(backend=backend).append(orm.Node, project='uuid').all(flat=True)
+        rows = (
+            orm.QueryBuilder(backend=backend)
+            .append(orm.Group, tag='group', project=['uuid', 'label', 'type_string'])
+            .append(orm.Node, with_group='group', project='uuid', outerjoin=True)
+            .all()
+        )
+
+    groups: dict[str, GroupMembers] = {}
+
+    for group_uuid, label, type_string, node_uuid in rows:
+        group = groups.setdefault(
+            group_uuid, GroupMembers(uuid=group_uuid, label=label, type_string=type_string, nodes=[])
+        )
+
+        if node_uuid is not None:
+            group.nodes.append(node_uuid)
+
+    return uuids, [groups[uuid] for uuid in sorted(groups)]
+
+
 def _archive_uuids(filepath: Path) -> list[str]:
     """Return the UUIDs of the nodes in an archive."""
-    with get_format().open(filepath, mode='r') as reader:
-        return orm.QueryBuilder(backend=reader.get_backend()).append(orm.Node, project='uuid').all(flat=True)
+    return _archive_contents(filepath)[0]
+
+
+def _without_groups(filepath: Path, filepath_filtered: Path) -> Path:
+    """Write a copy of an archive from which the groups and their memberships are left out.
+
+    ``create_archive`` carries only the groups it is handed as entities, so re-exporting the nodes alone is all it
+    takes to drop them.
+    """
+    return _without_nodes(filepath, filepath_filtered, [])
 
 
 def _without_nodes(filepath: Path, filepath_filtered: Path, uuids: list[str]) -> Path:
@@ -793,9 +1103,10 @@ def _without_nodes(filepath: Path, filepath_filtered: Path, uuids: list[str]) ->
     """
     with get_format().open(filepath, mode='r') as reader:
         archive_backend = reader.get_backend()
-        nodes = (
-            orm.QueryBuilder(backend=archive_backend).append(orm.Node, filters={'uuid': {'!in': uuids}}).all(flat=True)
-        )
+        # An empty exclusion keeps every node — which is how the groups are dropped and nothing else with them —
+        # and has to be spelled as no filter at all, since an empty `!in` is not a query.
+        filters = {'uuid': {'!in': uuids}} if uuids else {}
+        nodes = orm.QueryBuilder(backend=archive_backend).append(orm.Node, filters=filters).all(flat=True)
         # Every kept node is already a starting entity here, so walking CREATE backwards can only add back a node that
         # was left out on purpose. The export needs that rule to close over ancestry; this re-filter does not.
         create_archive(

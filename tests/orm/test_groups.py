@@ -823,3 +823,84 @@ class TestGroupExtras:
         extras = {'extra_one': 'value', 'extra_two': 'value'}
         self.group.base.extras.set_many(extras)
         assert set(self.group.base.extras.keys()) == set(extras)
+
+
+@pytest.fixture
+def collab_filepath(monkeypatch, tmp_path):
+    """Redirect the state of the collab to a temporary file and return its path."""
+    from aiida.tools.collab.state import CollabState
+
+    filepath = tmp_path / 'collab.json'
+    monkeypatch.setattr(CollabState, 'get_filepath', staticmethod(lambda profile: filepath))
+    return filepath
+
+
+@pytest.fixture
+def growing_collab(monkeypatch, collab_filepath):
+    """Put the loaded profile in a collab that replicates group membership, and return its state file."""
+    from aiida import get_profile
+    from aiida.tools.collab.config import OPTION_ENABLED, OPTION_POLICY
+
+    monkeypatch.setitem(get_profile().options, OPTION_ENABLED, True)
+    monkeypatch.setitem(get_profile().options, OPTION_POLICY, {'extras_mode': 'local', 'groups_mode': 'grow'})
+
+    return collab_filepath
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_add_nodes_journals_the_curation(growing_collab):
+    """Test that curating a node into a group is journalled, since a membership row carries no timestamp of its own."""
+    from aiida import get_profile
+    from aiida.tools.collab.state import CollabState
+
+    node = orm.Data().store()
+    group = orm.Group(label=uuid.uuid4().hex).store()
+
+    group.add_nodes([node])
+
+    journalled = CollabState.load(get_profile()).memberships
+
+    assert [(entry.group, entry.node) for entry in journalled] == [(group.uuid, node.uuid)]
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_add_nodes_journals_nothing_without_grow(collab_filepath, monkeypatch):
+    """Test that a collab that keeps groups local journals nothing: the journal exists for `grow` and nothing else."""
+    from aiida import get_profile
+    from aiida.tools.collab.config import OPTION_ENABLED
+
+    monkeypatch.setitem(get_profile().options, OPTION_ENABLED, True)
+
+    orm.Group(label=uuid.uuid4().hex).store().add_nodes([orm.Data().store()])
+
+    assert not collab_filepath.exists()
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_add_nodes_journals_a_membership_that_is_already_there(growing_collab):
+    """Test that re-adding a node already in the group is journalled again, which is what makes it a repair.
+
+    A membership written straight to the database — ``verdi archive import --group`` does that — is invisible to
+    the journal, and re-adding the node is the documented way to make it travel after all.
+    """
+    from aiida import get_profile
+    from aiida.tools.collab.state import CollabState
+
+    node = orm.Data().store()
+    group = orm.Group(label=uuid.uuid4().hex).store()
+
+    group.add_nodes([node])
+    group.add_nodes([node])
+
+    journalled = CollabState.load(get_profile()).memberships
+
+    assert [(entry.group, entry.node) for entry in journalled] == [(group.uuid, node.uuid)] * 2
+    assert set(group.nodes) == {node}
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_add_nodes_journals_no_generated_group(growing_collab):
+    """Test that the groups AiiDA generates for itself are not journalled: they never travel, so nothing tracks them."""
+    orm.ImportGroup(label=uuid.uuid4().hex).store().add_nodes([orm.Data().store()])
+
+    assert not growing_collab.exists()

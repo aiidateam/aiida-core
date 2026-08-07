@@ -51,6 +51,8 @@ from aiida.tools.collab.sync import (
     count_seeds,
     export_delta,
     import_delta,
+    members_wanted,
+    membership_offer,
     missing_uuids,
     refresh_offer,
     refresh_snapshots,
@@ -64,7 +66,7 @@ if TYPE_CHECKING:
 
     from aiida.manage.configuration import Profile
     from aiida.orm.implementation import StorageBackend
-    from aiida.tools.collab.protocol import ExtrasSnapshot
+    from aiida.tools.collab.protocol import ExtrasSnapshot, GroupMembers
     from aiida.tools.collab.sync import DeltaExport
 
 LOGGER = AIIDA_LOGGER.getChild('collab')
@@ -149,6 +151,7 @@ class CollabEndpoint:
         # The policy of a collab is fixed when it is created, so caching it for the life of the endpoint cannot go
         # stale — which is what retired the whole class of "declares one policy, serves another" defects.
         self._extras_mode = policy['extras_mode']
+        self._groups_mode = policy['groups_mode']
         self._dirpath = CollabState.get_workdir(profile)
         self._state_filepath = CollabState.get_filepath(profile)
         self._computed: dict[str, Delta] = {}
@@ -282,6 +285,7 @@ class CollabEndpoint:
                 instant=delta.instant,
                 refresh=self._refresh_offer(cursor),
                 roster=entries,
+                members=self._membership_offer(cursor),
             )
 
     def request_delta(
@@ -316,6 +320,7 @@ class CollabEndpoint:
                     delta=delta,
                     backend=self._backend,
                     want=want,
+                    groups_mode=self._groups_mode,
                 )
 
             # Re-inserted last, so the cache evicts in order of least recent use.
@@ -332,14 +337,22 @@ class CollabEndpoint:
                 refresh=refresh_snapshots(self._backend, sorted(refresh_want)),
             )
 
-    def diff_manifest(self, uuids: list[str], refresh: dict[str, datetime] | None = None) -> ManifestDiff:
-        """Return what this profile lacks of what a pushing peer offers: nodes and newer extras."""
+    def diff_manifest(
+        self,
+        uuids: list[str],
+        refresh: dict[str, datetime] | None = None,
+        members: list[GroupMembers] | None = None,
+    ) -> ManifestDiff:
+        """Return what this profile lacks of what a pushing peer offers: nodes, newer extras and memberships."""
         state = CollabState.read(self._state_filepath)
 
         return ManifestDiff(
             missing=missing_uuids(self._backend, uuids),
             refresh=(
                 refresh_wanted(self._backend, refresh or {}, state.tombstones) if self._extras_mode == 'sync' else []
+            ),
+            members=(
+                members_wanted(self._backend, members or [], state.tombstones) if self._groups_mode == 'grow' else []
             ),
         )
 
@@ -351,6 +364,15 @@ class CollabEndpoint:
         state = CollabState.read(self._state_filepath)
 
         return refresh_offer(state=state, backend=self._backend, cursor=cursor)
+
+    def _membership_offer(self, cursor: datetime | None) -> list[GroupMembers]:
+        """Return the membership offer for a requester at ``cursor``, empty unless the collab grows groups."""
+        if self._groups_mode != 'grow':
+            return []
+
+        state = CollabState.read(self._state_filepath)
+
+        return membership_offer(state=state, backend=self._backend, cursor=cursor)
 
     def resolve_delta(self, delta_id: str) -> Path | None:
         """Return the path of a negotiated delta, or ``None`` when nothing is on offer under that identifier."""
@@ -388,6 +410,7 @@ class CollabEndpoint:
         peer: str,
         instant: datetime,
         refresh: list[ExtrasSnapshot] | None = None,
+        members: list[GroupMembers] | None = None,
     ) -> dict[str, Any]:
         """Import a delta a peer pushed, pausing the daemon workers when the storage cannot take two writers."""
         from aiida.manage.configuration import get_config
@@ -412,6 +435,8 @@ class CollabEndpoint:
                     peer=peer,
                     instant=instant,
                     refresh=refresh,
+                    groups_mode=self._groups_mode,
+                    members=members,
                 )
 
         return dataclasses.asdict(report)

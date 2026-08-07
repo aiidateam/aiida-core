@@ -96,7 +96,7 @@ def test_import_staged_pauses_workers_on_sqlite(make_profile, record_calls, tmp_
     report = endpoint.import_staged(tmp_path / 'staged', 'http://pusher:9137', timezone.now())
 
     assert calls == [circus_command('stop', profile), 'import', circus_command('start', profile)]
-    assert report == {'uuids': [], 'skipped': [], 'size': 0, 'refreshed': []}
+    assert report == {'uuids': [], 'skipped': [], 'size': 0, 'refreshed': [], 'members': []}
 
 
 def test_import_staged_restarts_workers_on_failure(make_profile, record_calls, tmp_path):
@@ -245,6 +245,35 @@ def test_negotiate_delta_refresh_only_under_sync(make_profile, empty_config, tem
     empty_config.set_option('collab.policy', {'extras_mode': 'sync', 'groups_mode': 'local'}, scope=profile.name)
 
     assert CollabEndpoint(profile, temp_backend).negotiate_delta(cursor, frozenset()).refresh
+
+
+def test_request_delta_groups_only_under_grow(make_profile, empty_config, temp_backend):
+    """Test that the delta the daemon serves carries groups only when the collab grows them.
+
+    The endpoint is the only path that delivers a pull, so it is the only place where the groups policy of a
+    served delta can be observed.
+    """
+    from aiida.tools.collab.protocol import member_pairs
+    from aiida.tools.collab.sync import _archive_contents
+
+    profile = make_profile()
+    seal_calculation(temp_backend)
+    orm.Group(label='curated', backend=temp_backend).store().add_nodes(
+        orm.QueryBuilder(backend=temp_backend).append(orm.CalcJobNode).all(flat=True)
+    )
+
+    def served() -> list:
+        endpoint = CollabEndpoint(profile, temp_backend)
+        manifest = endpoint.negotiate_delta(None, frozenset())
+        offer = endpoint.request_delta(None, frozenset(), frozenset(manifest.manifest))
+
+        return member_pairs(_archive_contents(endpoint.resolve_delta(offer.delta))[1])
+
+    assert served() == []
+
+    empty_config.set_option('collab.policy', {'extras_mode': 'local', 'groups_mode': 'grow'}, scope=profile.name)
+
+    assert served(), 'the endpoint must serve group memberships once the collab grows groups'
 
 
 def test_join_records_the_newcomer_and_answers_with_the_membership(make_profile, empty_config):

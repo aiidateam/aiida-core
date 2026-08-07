@@ -9,6 +9,7 @@
 """Tests for the export and import of the delta of a collab."""
 
 import json
+from uuid import uuid4
 
 import pytest
 
@@ -16,11 +17,15 @@ from aiida import orm
 from aiida.common import timezone
 from aiida.common.links import LinkType
 from aiida.storage.sqlite_temp import SqliteTempBackend
-from aiida.tools.collab.state import CollabEvent, CollabState
+from aiida.tools.collab.protocol import GroupMembers, member_pairs
+from aiida.tools.collab.state import CollabEvent, CollabState, Membership
 from aiida.tools.collab.sync import (
+    apply_members,
     compute_delta,
     export_delta,
     import_delta,
+    members_wanted,
+    membership_offer,
     missing_uuids,
     refresh_offer,
     refresh_snapshots,
@@ -884,6 +889,7 @@ def test_thin_import_sibling_boundary_links_abort(tmp_path, peers):
         node_pks={impostor.pk for impostor in impostors},
         links=[],
         boundary=[[impostor.uuid, orphan.uuid, 'create', 'result'] for impostor in impostors],
+        groups_mode='local',
     )
 
     with pytest.raises(IntegrityError, match='second incoming link'):
@@ -931,6 +937,7 @@ def test_thin_import_same_source_relabeled_link_aborts(tmp_path, peers):
         node_pks={filler.pk},
         links=[],
         boundary=[[creator.uuid, created.uuid, 'create', 'result2']],
+        groups_mode='local',
     )
 
     count = node_count(backend_two)
@@ -966,6 +973,7 @@ def test_thin_import_self_link_aborts(tmp_path, peers):
         node_pks={filler.pk},
         links=[],
         boundary=[[held.uuid, held.uuid, 'create', 'loop']],
+        groups_mode='local',
     )
 
     with pytest.raises(IntegrityError, match='to itself'):
@@ -1015,6 +1023,7 @@ def test_thin_import_boundary_invariant_aborts(tmp_path, peers):
         node_pks={impostor.pk},
         links=[],
         boundary=[[impostor.uuid, created.uuid, 'create', 'result']],
+        groups_mode='local',
     )
 
     count = node_count(backend_two)
@@ -1033,15 +1042,20 @@ def test_thin_import_boundary_invariant_aborts(tmp_path, peers):
     assert CollabState.read(state_two.filepath).pending_links == [], 'nothing should have been journalled'
 
 
-def sync_pull(sender, receiver, filepath, peer, receiver_extras_mode='sync'):
+def sync_pull(
+    sender, receiver, filepath, peer, groups_mode='local', receiver_groups_mode=None, receiver_extras_mode='sync'
+):
     """Pull from one profile into another as ``verdi collab pull`` does under the ``sync`` extras policy.
 
     Both sides talk through the same functions the endpoint and the client wire together: the sender offers the
-    mtimes of the shared nodes it may have edited, the receiver keeps the extras it holds an older version of, and
-    only those travel.
+    mtimes of the shared nodes it may have edited and the memberships it gained, the receiver keeps the extras it
+    holds an older version of and the memberships it can apply, and only those travel.
 
-    :param receiver_extras_mode: the receiver's own policy, when the point of the test is that it differs. The
-        sender always offers, so that what is tested is the receiver's gate and not the offer.
+    :param groups_mode: the policy of the collab, which both sides run under.
+    :param receiver_groups_mode: the receiver's own policy, when the point of the test is that it differs — which
+        outside a hand-edited configuration it cannot.
+    :param receiver_extras_mode: the same, for extras. The sender always offers, so that what is tested is the
+        receiver's gate and not the offer.
     """
     backend_sender, state_sender = sender
     backend_receiver, state_receiver = receiver
@@ -1049,14 +1063,22 @@ def sync_pull(sender, receiver, filepath, peer, receiver_extras_mode='sync'):
     # Re-read, because every import writes the state file behind the object the fixture handed out.
     state_sender = CollabState.read(state_sender.filepath)
     state_receiver = CollabState.read(state_receiver.filepath)
+    receiver_groups_mode = receiver_groups_mode or groups_mode
 
     cursor = state_receiver.cursors.get(peer)
     claim = state_receiver.imported_uuids_since(cursor) | state_receiver.tombstones
     delta = compute_delta(state=state_sender, backend=backend_sender, cursor=cursor, claim=claim)
     offer = refresh_offer(state=state_sender, backend=backend_sender, cursor=cursor)
     wanted = refresh_wanted(backend_receiver, offer, state_receiver.tombstones)
+    members = (
+        membership_offer(state=state_sender, backend=backend_sender, cursor=cursor) if groups_mode == 'grow' else []
+    )
     export = export_delta(
-        filepath, delta=delta, backend=backend_sender, want=set(missing_uuids(backend_receiver, delta.uuids))
+        filepath,
+        delta=delta,
+        backend=backend_sender,
+        want=set(missing_uuids(backend_receiver, delta.uuids)),
+        groups_mode=groups_mode,
     )
 
     return import_delta(
@@ -1067,6 +1089,8 @@ def sync_pull(sender, receiver, filepath, peer, receiver_extras_mode='sync'):
         peer=peer,
         instant=export.instant,
         refresh=refresh_snapshots(backend_sender, wanted),
+        groups_mode=receiver_groups_mode,
+        members=members_wanted(backend_receiver, members, state_receiver.tombstones),
     )
 
 
@@ -1100,8 +1124,8 @@ def test_refresh_travels_and_the_newest_edit_wins(tmp_path, peers):
 def test_refresh_offered_to_a_local_profile_is_not_applied(tmp_path, peers):
     """Test that a profile that keeps its extras local ignores a refresh, however insistently it is offered.
 
-    What enters a profile is decided by the profile it enters, so a sender that declares ``local`` and serves
-    snapshots anyway — a hand-edited configuration — cannot overwrite extras here.
+    The mirror of the groups gate: what enters a profile is decided by the profile it enters, so a sender that
+    declares ``local`` and serves snapshots anyway — a hand-edited configuration — cannot overwrite extras here.
     """
     one, two = peers('one'), peers('two')
     calculation = seal_calculation(one[0], 'sealed')
@@ -1234,6 +1258,73 @@ def test_refresh_survives_compaction(tmp_path, peers, monkeypatch):
     assert extras_of(three[0], calculation.uuid) == {'note': 'from one'}
 
 
+def group_uuid(backend, label):
+    """Return the UUID of the group with the given label."""
+    return (
+        orm.QueryBuilder(backend=backend).append(orm.Group, filters={'label': label}, project='uuid').all(flat=True)[0]
+    )
+
+
+def group_members(backend, label):
+    """Return the UUIDs of the nodes in the group with the given label, or ``None`` when there is no such group."""
+    query = (
+        orm.QueryBuilder(backend=backend)
+        .append(orm.Group, filters={'label': label}, tag='group')
+        .append(orm.Node, with_group='group', project='uuid')
+    )
+
+    if not orm.QueryBuilder(backend=backend).append(orm.Group, filters={'label': label}).count():
+        return None
+
+    return set(query.all(flat=True))
+
+
+def test_groups_grow_carries_curated_groups(tmp_path, peers):
+    """Test that ``grow`` delivers the groups a person curated, and never the ones AiiDA generated."""
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+    orm.Group(label='curated', backend=one[0]).store().add_nodes([calculation])
+    orm.ImportGroup(label='generated', backend=one[0]).store().add_nodes([calculation])
+
+    sync_pull(one, two, tmp_path / 'delta.aiida', peer='one', groups_mode='grow')
+
+    assert group_members(two[0], 'curated') == {calculation.uuid}
+    assert group_members(two[0], 'generated') is None
+
+
+def test_groups_local_carries_none(tmp_path, peers):
+    """Test that the default policy leaves groups alone: none travels, and the receiver keeps its own."""
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+    orm.Group(label='curated', backend=one[0]).store().add_nodes([calculation])
+
+    sync_pull(one, two, tmp_path / 'delta.aiida', peer='one')
+
+    assert orm.QueryBuilder(backend=two[0]).append(orm.Group).count() == 0
+
+
+def test_groups_grow_only_adds_members(tmp_path, peers):
+    """Test that a node added to a group the receiver already holds joins it, and that a removal does not travel.
+
+    The import writes membership rows only for the groups it creates, so the second sync — whose group already
+    exists at the receiver — is the one that would silently drop the new member.
+    """
+    one, two = peers('one'), peers('two')
+    first = seal_calculation(one[0], 'first')
+    group = orm.Group(label='curated', backend=one[0]).store()
+    group.add_nodes([first])
+
+    sync_pull(one, two, tmp_path / 'first.aiida', peer='one', groups_mode='grow')
+
+    second = seal_calculation(one[0], 'second')
+    group.add_nodes([second])
+    group.remove_nodes([first])
+
+    sync_pull(one, two, tmp_path / 'second.aiida', peer='one', groups_mode='grow')
+
+    assert group_members(two[0], 'curated') == {first.uuid, second.uuid}
+
+
 def test_import_migrates_an_older_archive(tmp_path, peers):
     """Test that a delta written by a peer on an older aiida-core is migrated forward instead of refused.
 
@@ -1253,3 +1344,315 @@ def test_import_migrates_an_older_archive(tmp_path, peers):
 
     assert report.uuids
     assert node_count(backend) == len(report.uuids)
+
+
+def curate(profile, group, nodes):
+    """Add nodes to a group and journal it, as the ``Group.add_nodes`` hook does under the ``grow`` policy.
+
+    The hook itself is tested where it lives; here the journal is what the exchange is driven by.
+    """
+    group.add_nodes(nodes)
+
+    state = CollabState.read(profile[1].filepath)
+    state.memberships.extend(Membership(time=timezone.now(), group=group.uuid, node=node.uuid) for node in nodes)
+    state.save()
+
+
+def test_groups_curation_of_a_shared_node_travels(tmp_path, peers):
+    """Test the headline case: a node the peer already holds is curated, and the membership reaches it anyway.
+
+    Nothing about the node changes, so no delta can carry it — the group and the membership travel beside it or
+    not at all.
+    """
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+
+    sync_pull(one, two, tmp_path / 'nodes.aiida', peer='one', groups_mode='grow')
+
+    curate(one, orm.Group(label='curated', backend=one[0]).store(), [calculation])
+    report = sync_pull(one, two, tmp_path / 'curation.aiida', peer='one', groups_mode='grow')
+
+    assert report.uuids == [], 'the curation must not make any node travel'
+    assert report.members == [(group_uuid(one[0], 'curated'), calculation.uuid)]
+    assert group_members(two[0], 'curated') == {calculation.uuid}
+    assert group_uuid(two[0], 'curated') == group_uuid(one[0], 'curated'), 'one curated group, one UUID everywhere'
+    assert CollabState.read(two[1].filepath).cursors['one'], 'a sync that carries only memberships still advances'
+
+
+def test_groups_curation_relays_through_a_chain(tmp_path, peers):
+    """Test that a curation made on A reaches C through pairwise syncs alone, relayed by B.
+
+    C never contacts A, and the node is held by all three, so only what B journalled when it applied A's offer can
+    put the membership into what B offers C.
+    """
+    one, two, three = peers('one'), peers('two'), peers('three')
+    calculation = seal_calculation(one[0], 'sealed')
+
+    sync_pull(one, two, tmp_path / 'one-to-two.aiida', peer='one', groups_mode='grow')
+    sync_pull(two, three, tmp_path / 'two-to-three.aiida', peer='two', groups_mode='grow')
+
+    curate(one, orm.Group(label='curated', backend=one[0]).store(), [calculation])
+
+    sync_pull(one, two, tmp_path / 'relay-in.aiida', peer='one', groups_mode='grow')
+    report = sync_pull(two, three, tmp_path / 'relay-out.aiida', peer='two', groups_mode='grow')
+
+    assert report.uuids == []
+    assert group_members(two[0], 'curated') == {calculation.uuid}
+    assert group_members(three[0], 'curated') == {calculation.uuid}
+
+
+def test_groups_membership_of_a_held_group_relays_through_a_chain(tmp_path, peers):
+    """Test the same relay for a node added to a group all three already hold."""
+    one, two, three = peers('one'), peers('two'), peers('three')
+    first = seal_calculation(one[0], 'first')
+    group = orm.Group(label='curated', backend=one[0]).store()
+    curate(one, group, [first])
+
+    second = seal_calculation(one[0], 'second')
+
+    sync_pull(one, two, tmp_path / 'one-to-two.aiida', peer='one', groups_mode='grow')
+    sync_pull(two, three, tmp_path / 'two-to-three.aiida', peer='two', groups_mode='grow')
+
+    assert group_members(three[0], 'curated') == {first.uuid}
+
+    curate(one, group, [second])
+
+    sync_pull(one, two, tmp_path / 'relay-in.aiida', peer='one', groups_mode='grow')
+    report = sync_pull(two, three, tmp_path / 'relay-out.aiida', peer='two', groups_mode='grow')
+
+    assert report.uuids == []
+    assert group_members(three[0], 'curated') == {first.uuid, second.uuid}
+
+
+def test_groups_curation_is_not_offered_back(tmp_path, peers):
+    """Test that the side that applied a membership does not offer it back to the peer that sent it.
+
+    Only memberships that were new to a profile are journalled, so a pair a peer already holds cannot bounce
+    between the two of them forever.
+    """
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+
+    sync_pull(one, two, tmp_path / 'nodes.aiida', peer='one', groups_mode='grow')
+    sync_pull(two, one, tmp_path / 'back.aiida', peer='two', groups_mode='grow')
+
+    curate(one, orm.Group(label='curated', backend=one[0]).store(), [calculation])
+    sync_pull(one, two, tmp_path / 'curation.aiida', peer='one', groups_mode='grow')
+
+    report = sync_pull(two, one, tmp_path / 'echo.aiida', peer='two', groups_mode='grow')
+
+    assert report.members == []
+
+
+def test_groups_local_exchanges_nothing(tmp_path, peers):
+    """Test that a collab that keeps groups local neither offers nor applies membership."""
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+
+    sync_pull(one, two, tmp_path / 'nodes.aiida', peer='one')
+
+    curate(one, orm.Group(label='curated', backend=one[0]).store(), [calculation])
+    report = sync_pull(one, two, tmp_path / 'curation.aiida', peer='one')
+
+    assert report.members == []
+    assert group_members(two[0], 'curated') is None
+
+
+def test_groups_offer_to_a_local_profile_imports_nothing(tmp_path, peers):
+    """Test that what enters a profile is decided by its own policy, not by what a peer declares or serves.
+
+    A sender that grows groups while the receiver keeps them local can only be a hand-edited configuration, and it
+    must not be able to create a group or a membership here — neither with the delta nor beside it.
+    """
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+    curate(one, orm.Group(label='curated', backend=one[0]).store(), [calculation])
+
+    report = sync_pull(one, two, tmp_path / 'delta.aiida', peer='one', groups_mode='grow', receiver_groups_mode='local')
+
+    assert report.uuids, 'the nodes of the delta still land'
+    assert report.members == []
+    assert orm.QueryBuilder(backend=two[0]).append(orm.Group).count() == 0
+
+
+def test_groups_curation_offered_to_a_local_profile_imports_nothing(tmp_path, peers):
+    """Test that the same gate holds for a curation offered beside the delta, not only for one riding it.
+
+    This is the half that carries the weight: a pusher can skip ``POST /missing`` entirely, so the import is the
+    only place where the receiver's own policy is consulted about an offer.
+    """
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+
+    # Shared first, so that the curation has no delta left to ride and can only arrive as an offer.
+    sync_pull(one, two, tmp_path / 'nodes.aiida', peer='one', groups_mode='grow')
+
+    curate(one, orm.Group(label='curated', backend=one[0]).store(), [calculation])
+    report = sync_pull(
+        one, two, tmp_path / 'curation.aiida', peer='one', groups_mode='grow', receiver_groups_mode='local'
+    )
+
+    assert report.members == []
+    assert group_members(two[0], 'curated') is None
+    assert calculation.uuid in {node.uuid for node in orm.QueryBuilder(backend=two[0]).append(orm.Node).all(flat=True)}
+
+
+def test_groups_survive_the_tombstone_refilter(tmp_path, peers):
+    """Test that a curation still lands when a tombstone forces the delta to be re-exported without its groups.
+
+    The re-filter hands ``create_archive`` the nodes alone, which is exactly how the groups are dropped for a
+    ``local`` profile — so the memberships that rode the delta have to be able to create their group here after
+    the import, or they are lost with no way back: the cursor moves past them and the node never travels again.
+    """
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+    an_input = calculation.base.links.get_incoming().all()[0].node
+    curate(one, orm.Group(label='curated', backend=one[0]).store(), [calculation, an_input])
+
+    # A node of the delta's provenance that this profile deleted: it comes back because the calculation requires
+    # it, and the re-filter that drops it from the archive is what strips the group along the way.
+    state_two = CollabState.read(two[1].filepath)
+    state_two.tombstones.add(an_input.uuid)
+    state_two.save()
+
+    report = sync_pull(one, two, tmp_path / 'delta.aiida', peer='one', groups_mode='grow')
+
+    # The tombstoned node is back — provenance of the delta needs it — so it is here to be curated like any other,
+    # and what is reported is what was written: a pair claimed but not written would be relayed on to a third peer.
+    assert group_members(two[0], 'curated') == {calculation.uuid, an_input.uuid}
+    assert report.members == sorted((group_uuid(one[0], 'curated'), uuid) for uuid in (calculation.uuid, an_input.uuid))
+
+
+def test_groups_generated_by_aiida_are_refused_from_an_offer(tmp_path, peers):
+    """Test that a group AiiDA generates for itself is refused however a peer offers it.
+
+    The sender leaves them out, so an offer naming one is a diverged peer — and these groups describe the
+    history of the profile that made them, which is nobody else's.
+    """
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+
+    sync_pull(one, two, tmp_path / 'nodes.aiida', peer='one', groups_mode='grow')
+
+    offer = [GroupMembers(uuid=str(uuid4()), label='an import', type_string='core.import', nodes=[calculation.uuid])]
+
+    assert apply_members(two[0], offer, set()) == []
+    assert orm.QueryBuilder(backend=two[0]).append(orm.Group).count() == 0
+
+
+def test_groups_offer_naming_a_pair_twice_applies_it_once(tmp_path, peers):
+    """Test that an offer repeating a pair is applied once, not attempted twice.
+
+    A membership row is unique, and the offer is wire data: a peer naming a pair twice would otherwise raise out
+    of the storage layer, past every handler the sync has, with the archive already committed.
+    """
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+
+    sync_pull(one, two, tmp_path / 'nodes.aiida', peer='one', groups_mode='grow')
+
+    uuid = str(uuid4())
+    twice = GroupMembers(uuid=uuid, label='curated', type_string='', nodes=[calculation.uuid, calculation.uuid])
+
+    assert apply_members(two[0], [twice, twice], set()) == [(uuid, calculation.uuid)]
+    assert group_members(two[0], 'curated') == {calculation.uuid}
+
+
+def test_groups_membership_of_an_absent_node_is_dropped(peers):
+    """Test that a pair naming a node this profile does not hold is dropped rather than attempted.
+
+    A push asks for what it wants before the delta is uploaded, so the nodes of that very delta are absent when
+    the offer is filtered; they come back with it, carrying their memberships as every delta does.
+    """
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+    curate(one, orm.Group(label='curated', backend=one[0]).store(), [calculation])
+
+    offer = membership_offer(state=CollabState.read(one[1].filepath), backend=one[0], cursor=None)
+
+    assert member_pairs(offer) == [(group_uuid(one[0], 'curated'), calculation.uuid)]
+    assert members_wanted(two[0], offer, set()) == []
+
+
+def test_groups_membership_of_a_tombstoned_node_is_dropped_and_recovered(tmp_path, peers):
+    """Test that a pair whose node this profile deleted is dropped, and comes back with the node if it does.
+
+    Dropping is safe precisely because the memberships of a node ride the node: whichever later sync delivers it
+    delivers them too.
+    """
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+
+    sync_pull(one, two, tmp_path / 'nodes.aiida', peer='one', groups_mode='grow')
+
+    state_two = CollabState.read(two[1].filepath)
+    state_two.tombstones.add(calculation.uuid)
+    state_two.save()
+
+    curate(one, orm.Group(label='curated', backend=one[0]).store(), [calculation])
+    report = sync_pull(one, two, tmp_path / 'curation.aiida', peer='one', groups_mode='grow')
+
+    assert report.members == []
+    assert group_members(two[0], 'curated') is None, 'a group whose only member is tombstoned is not created either'
+
+    # The node is taken back, which is what carries its memberships along: they ride the delta, not the offer.
+    delta = compute_delta(state=CollabState.read(one[1].filepath), backend=one[0], cursor=None)
+    export = export_delta(tmp_path / 'again.aiida', delta=delta, backend=one[0], groups_mode='grow')
+    recovered = import_delta(
+        export.filepath,
+        state=CollabState.read(two[1].filepath),
+        backend=two[0],
+        extras_mode='sync',
+        peer='one',
+        instant=export.instant,
+        include_deleted=True,
+        groups_mode='grow',
+    )
+
+    assert (group_uuid(one[0], 'curated'), calculation.uuid) in recovered.members
+    assert group_members(two[0], 'curated') == {calculation.uuid}
+
+
+def test_groups_membership_survives_compaction(tmp_path, peers, monkeypatch):
+    """Test that a curation still travels once the journal entry that recorded it was folded by compaction."""
+    from aiida.tools.collab import state as state_module
+
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+
+    sync_pull(one, two, tmp_path / 'nodes.aiida', peer='one', groups_mode='grow')
+
+    curate(one, orm.Group(label='curated', backend=one[0]).store(), [calculation])
+
+    monkeypatch.setattr(state_module, 'COMPACT_THRESHOLD', 2)
+    state_one = CollabState.read(one[1].filepath)
+    state_one.memberships.extend(
+        Membership(time=timezone.now(), group='uuid-of-padding', node=f'uuid-padding-{index}') for index in range(2)
+    )
+    state_one.save()
+
+    folded = CollabState.read(one[1].filepath).memberships
+    assert len({entry.time for entry in folded}) < 3, 'the older entries should have been folded onto one instant'
+
+    report = sync_pull(one, two, tmp_path / 'curation.aiida', peer='one', groups_mode='grow')
+
+    assert group_members(two[0], 'curated') == {calculation.uuid}
+    assert report.members, 'the folded curation must still be offered'
+
+
+def test_groups_relabels_a_clashing_group(tmp_path, peers):
+    """Test that an offered group whose label is taken here is created under a free one, as the import does.
+
+    A UUID cannot collide, a label can: the two profiles curated groups of the same name independently.
+    """
+    one, two = peers('one'), peers('two')
+    calculation = seal_calculation(one[0], 'sealed')
+    orm.Group(label='curated', backend=two[0]).store()
+
+    sync_pull(one, two, tmp_path / 'nodes.aiida', peer='one', groups_mode='grow')
+
+    curate(one, orm.Group(label='curated', backend=one[0]).store(), [calculation])
+    sync_pull(one, two, tmp_path / 'curation.aiida', peer='one', groups_mode='grow')
+
+    assert group_members(two[0], 'curated') == set(), 'the group that was here keeps its label and its members'
+    assert group_members(two[0], 'curated-2') == {calculation.uuid}

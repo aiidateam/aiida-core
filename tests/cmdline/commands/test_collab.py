@@ -1149,6 +1149,42 @@ def test_pull_records_the_contact_without_pinning_a_policy(
     assert peers == {PEER_UUID: peer_entry(seen=True)}, 'the contact proves the address and pins no policy'
 
 
+def test_pull_reports_the_membership_count(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch
+):
+    """Test that a sync carrying no nodes at all still prompts, naming how many memberships it would add.
+
+    The headline case of the curation exchange: everything the peer has already travelled, so the only thing
+    left to move is the membership — which makes it a real sync, not a bookkeeping one that passes unasked.
+    """
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import GroupMembers
+
+    init_collab(config_with_profile, **{OPTION_POLICY: {'extras_mode': 'local', 'groups_mode': 'grow'}})
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(groups_mode='grow')
+    )
+    monkeypatch.setattr(sync, 'missing_uuids', lambda backend, uuids: [])
+    monkeypatch.setattr(
+        sync,
+        'members_wanted',
+        lambda backend, offer, tombstones: [
+            GroupMembers(uuid='uuid-of-group', label='curated', type_string='', nodes=['uuid-held'])
+        ],
+    )
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--dry-run', '--force'], use_subprocess=False)
+
+    assert f'{PEER}: 0 node(s) to pull, 1 group membership(s) to add' in result.output
+
+    result = run_cli_command(cmd_collab.collab_pull, use_subprocess=False, user_input='\n')
+
+    assert 'pull 0 node(s)' in result.output
+    assert 'adding 1 group membership(s)' in result.output
+    assert f'skipped {PEER}.' in result.output, 'a bare Enter declines a sync that is only memberships too'
+
+
 def test_pull_reports_the_refresh_count(
     run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch
 ):
@@ -1373,12 +1409,12 @@ def test_push_failed_import_then_retry(run_cli_command, config_with_profile, stu
         computes.append((cursor, set(claim)))
         return delta
 
-    def export_delta(filepath, *, delta, backend, want=None):
+    def export_delta(filepath, *, delta, backend, want=None, groups_mode=None):
         filepath.write_bytes(b'delta')
         exports.append(set(want))
         return DeltaExport(filepath=filepath, uuids=sorted(want), instant=delta.instant)
 
-    def trigger_import_failing(self, sha256, *, peer, instant, refresh=None):
+    def trigger_import_failing(self, sha256, *, peer, instant, refresh=None, members=None):
         raise CollabRequestError('the peer failed to import')
 
     monkeypatch.setattr(sync, 'compute_delta', compute_delta)
@@ -1388,7 +1424,7 @@ def test_push_failed_import_then_retry(run_cli_command, config_with_profile, stu
     monkeypatch.setattr(
         CollabClient,
         'diff_manifest',
-        lambda self, uuids, refresh=None: ManifestDiff(missing=['uuid-one'], refresh=[]),
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=['uuid-one'], refresh=[]),
     )
     monkeypatch.setattr(
         CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=5, staged=5)
@@ -1408,7 +1444,7 @@ def test_push_failed_import_then_retry(run_cli_command, config_with_profile, stu
 
     # The retry has to reuse the exported delta: the same bytes are what the peer already staged, and the
     # original instant is what describes them.
-    def trigger_import(self, sha256, *, peer, instant, refresh=None):
+    def trigger_import(self, sha256, *, peer, instant, refresh=None, members=None):
         imports.append((peer, instant))
         return {'uuids': ['uuid-one']}
 
@@ -1437,6 +1473,65 @@ def test_push_failed_import_then_retry(run_cli_command, config_with_profile, stu
     ], 'the event keys the peer by its profile UUID'
 
 
+def test_push_retry_renegotiates_the_memberships(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a retried push carries the memberships again, though it reuses the bytes of the failed one.
+
+    The import advances the peer's cursor to the stashed instant, past every journal entry older than it, so a
+    curation the failed push had negotiated would never be offered again — and the node it names is shared
+    already, so no later delta could carry it either.
+    """
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient, UploadReport
+    from aiida.tools.collab.protocol import CollabRequestError, GroupMembers, ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile, **{OPTION_POLICY: {'extras_mode': 'local', 'groups_mode': 'grow'}})
+
+    curation = [GroupMembers(uuid='uuid-of-group', label='curated', type_string='', nodes=['uuid-held'])]
+    imports = []
+
+    def export_delta(filepath, *, delta, backend, want=None, groups_mode=None):
+        filepath.write_bytes(b'delta')
+        return DeltaExport(filepath=filepath, uuids=sorted(want), instant=delta.instant)
+
+    def trigger_import_failing(self, sha256, *, peer, instant, refresh=None, members=None):
+        raise CollabRequestError('the peer failed to import')
+
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(groups_mode='grow')
+    )
+    monkeypatch.setattr(
+        CollabClient, 'push_handshake', lambda self, requester, roster=None: PushHandshake(False, None, [])
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'diff_manifest',
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=list(uuids), refresh=[], members=members),
+    )
+    monkeypatch.setattr(
+        CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=5, staged=5)
+    )
+    monkeypatch.setattr(
+        sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now())
+    )
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(sync, 'membership_offer', lambda **kwargs: curation)
+    monkeypatch.setattr(CollabClient, 'trigger_import', trigger_import_failing)
+
+    run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False, raises=True)
+
+    def trigger_import(self, sha256, *, peer, instant, refresh=None, members=None):
+        imports.append(members)
+        return {'uuids': ['uuid-one']}
+
+    monkeypatch.setattr(CollabClient, 'trigger_import', trigger_import)
+
+    result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)
+
+    assert 'retrying the delta of the previous failed push' in result.output
+    assert imports == [curation], 'the retry must offer the curation again, not drop it with the renegotiation'
+
+
 def test_push_prompts_and_decline_drops_cut(run_cli_command, config_with_profile, stub_environment, monkeypatch):
     """Test that a push prompts with the exact count and size, and that declining drops the cut archive."""
     from aiida.tools.collab import sync
@@ -1446,7 +1541,7 @@ def test_push_prompts_and_decline_drops_cut(run_cli_command, config_with_profile
 
     init_collab(config_with_profile)
 
-    def export_delta(filepath, *, delta, backend, want=None):
+    def export_delta(filepath, *, delta, backend, want=None, groups_mode=None):
         filepath.write_bytes(b'delta')
         return DeltaExport(filepath=filepath, uuids=['uuid-one'], instant=timezone.now())
 
@@ -1466,7 +1561,7 @@ def test_push_prompts_and_decline_drops_cut(run_cli_command, config_with_profile
     monkeypatch.setattr(
         CollabClient,
         'diff_manifest',
-        lambda self, uuids, refresh=None: ManifestDiff(missing=uuids, refresh=[]),
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=uuids, refresh=[]),
     )
     monkeypatch.setattr(CollabClient, 'upload_delta', untouched)
 
@@ -1506,7 +1601,7 @@ def test_push_dry_run(run_cli_command, config_with_profile, stub_environment, mo
     monkeypatch.setattr(
         CollabClient,
         'diff_manifest',
-        lambda self, uuids, refresh=None: ManifestDiff(missing=uuids, refresh=[]),
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=uuids, refresh=[]),
     )
     monkeypatch.setattr(CollabClient, 'upload_delta', untouched)
 
@@ -1524,7 +1619,7 @@ def test_push_reports_the_refresh_count(run_cli_command, config_with_profile, st
 
     init_collab(config_with_profile, **{OPTION_POLICY: {'extras_mode': 'sync', 'groups_mode': 'local'}})
 
-    def export_delta(filepath, *, delta, backend, want=None):
+    def export_delta(filepath, *, delta, backend, want=None, groups_mode=None):
         filepath.write_bytes(b'delta')
         return DeltaExport(filepath=filepath, uuids=['uuid-one'], instant=timezone.now())
 
@@ -1549,7 +1644,7 @@ def test_push_reports_the_refresh_count(run_cli_command, config_with_profile, st
     monkeypatch.setattr(
         CollabClient,
         'diff_manifest',
-        lambda self, uuids, refresh=None: ManifestDiff(missing=uuids, refresh=['uuid-stale']),
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=uuids, refresh=['uuid-stale']),
     )
 
     result = run_cli_command(cmd_collab.collab_push, ['--dry-run', '--force'], use_subprocess=False)
@@ -1572,7 +1667,7 @@ def test_push_offers_no_refresh_under_local(run_cli_command, config_with_profile
 
     offered = []
 
-    def diff_manifest(self, uuids, refresh=None):
+    def diff_manifest(self, uuids, refresh=None, members=None):
         offered.append(refresh)
         return ManifestDiff(missing=[], refresh=[])
 
@@ -1610,11 +1705,11 @@ def test_push_refused_delta_drops_stash(run_cli_command, config_with_profile, st
 
     instant = timezone.now()
 
-    def export_delta(filepath, *, delta, backend, want=None):
+    def export_delta(filepath, *, delta, backend, want=None, groups_mode=None):
         filepath.write_bytes(b'delta')
         return DeltaExport(filepath=filepath, uuids=['uuid-one'], instant=instant)
 
-    def trigger_import_refused(self, sha256, *, peer, instant, refresh=None):
+    def trigger_import_refused(self, sha256, *, peer, instant, refresh=None, members=None):
         raise CollabRequestError('it links to node gone-uuid', status=HTTPStatus.UNPROCESSABLE_ENTITY)
 
     monkeypatch.setattr(
@@ -1630,7 +1725,7 @@ def test_push_refused_delta_drops_stash(run_cli_command, config_with_profile, st
     monkeypatch.setattr(
         CollabClient,
         'diff_manifest',
-        lambda self, uuids, refresh=None: ManifestDiff(missing=uuids, refresh=[]),
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=uuids, refresh=[]),
     )
     monkeypatch.setattr(
         CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=5, staged=5)
@@ -1758,14 +1853,18 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
         compute_delta,
         export_delta,
         import_delta,
+        members_wanted,
+        membership_offer,
         missing_uuids,
         refresh_offer,
         refresh_snapshots,
         refresh_wanted,
     )
 
-    # The whole loopback collab syncs extras, so that the wire carries the refresh negotiation as well.
+    # The whole loopback collab syncs extras and grows groups, so that the wire carries the refresh and the
+    # membership negotiations as well.
     extras_mode = 'sync'
+    groups_mode = 'grow'
 
     def seal_calculation(backend, inputs=None, heavy=False):
         import hashlib
@@ -1839,12 +1938,15 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
                 manifest=delta.uuids,
                 instant=delta.instant,
                 refresh=refresh_offer(state=state, backend=backend, cursor=cursor),
+                members=membership_offer(state=state, backend=backend, cursor=cursor),
             )
 
         def request_delta(cursor, claim, want, refresh_want):
             delta = computed[delta_id(cursor, claim)]
             key = delta_id(cursor, claim, want)
-            deltas[key] = export_delta(workdir / f'{key}.aiida', delta=delta, backend=backend, want=want)
+            deltas[key] = export_delta(
+                workdir / f'{key}.aiida', delta=delta, backend=backend, want=want, groups_mode=groups_mode
+            )
             return DeltaOffer(
                 delta=key,
                 instant=deltas[key].instant,
@@ -1858,14 +1960,15 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
             claim = sorted(state.imported_uuids_since(cursor) | state.tombstones)
             return PushHandshake(busy=False, cursor=cursor, claim=claim)
 
-        def diff_manifest(uuids, refresh):
+        def diff_manifest(uuids, refresh, members):
             state = CollabState.read(state_path)
             return ManifestDiff(
                 missing=missing_uuids(backend, uuids),
                 refresh=refresh_wanted(backend, refresh, state.tombstones),
+                members=members_wanted(backend, members, state.tombstones),
             )
 
-        def import_staged(filepath, peer, instant, refresh):
+        def import_staged(filepath, peer, instant, refresh, members):
             report = import_delta(
                 filepath,
                 state=CollabState.read(state_path),
@@ -1874,6 +1977,8 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
                 peer=peer,
                 instant=instant,
                 refresh=refresh,
+                groups_mode=groups_mode,
+                members=members,
             )
             return dataclasses.asdict(report)
 
@@ -1884,7 +1989,12 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
             collab=COLLAB_UUID,
             staging_dir=tmp_path / f'{name}-staging',
             info=lambda cursor: dataclasses.replace(
-                local, uuid=peer_uuid, collab=COLLAB_UUID, extras_mode=extras_mode, accept_push=True
+                local,
+                uuid=peer_uuid,
+                collab=COLLAB_UUID,
+                extras_mode=extras_mode,
+                groups_mode=groups_mode,
+                accept_push=True,
             ),
             join=lambda entry: JoinResponse(collab=COLLAB_UUID, roster=[entry]),
             retired=lambda peer: None,
@@ -1919,7 +2029,7 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
         'collab.uuid': COLLAB_UUID,
         'collab.bind': '127.0.0.1',
         'collab.announced': 'http://127.0.0.1:9137',
-        'collab.policy': {'extras_mode': extras_mode, 'groups_mode': 'local'},
+        'collab.policy': {'extras_mode': extras_mode, 'groups_mode': groups_mode},
     }
 
     for option, value in options.items():
@@ -2008,6 +2118,24 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
         assert 'pushed 0 node(s)' in result.output
         assert 'refreshed the extras of 1 node(s)' in result.output
         assert shared.base.extras.all == {'reviewed': 'by b', 'checked': 'by a'}
+
+        # The headline groups case over the wire, in the push direction: a node B has held all along is curated
+        # here into a brand-new group. No node can travel — B holds them all — yet the group and the membership do.
+        group = orm.Group(label='screened').store()
+        group.add_nodes([orm.load_node(output_a.uuid)])
+
+        result = run_cli_command(cmd_collab.collab_push, ['peer-b', '--force'], use_subprocess=False)
+
+        curated = (
+            orm.QueryBuilder(backend=backend_b)
+            .append(orm.Group, filters={'uuid': group.uuid}, tag='group', project='label')
+            .append(orm.Node, with_group='group', project='uuid')
+            .all()
+        )
+
+        assert 'pushed 0 node(s)' in result.output
+        assert 'added 1 group membership(s)' in result.output
+        assert curated == [['screened', output_a.uuid]], 'the group is created there under the very same UUID'
     finally:
         for option in options:
             config.unset_option(option, scope=profile.name)
@@ -2032,7 +2160,7 @@ def test_push_nothing_is_still_logged(run_cli_command, config_with_profile, stub
 
     init_collab(config_with_profile)
 
-    def export_delta(filepath, *, delta, backend, want=None):
+    def export_delta(filepath, *, delta, backend, want=None, groups_mode=None):
         filepath.write_bytes(b'')
         return DeltaExport(filepath=filepath, uuids=[], instant=timezone.now())
 
@@ -2051,7 +2179,7 @@ def test_push_nothing_is_still_logged(run_cli_command, config_with_profile, stub
     monkeypatch.setattr(
         CollabClient,
         'diff_manifest',
-        lambda self, uuids, refresh=None: ManifestDiff(missing=[], refresh=[]),
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=[], refresh=[]),
     )
 
     result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)
@@ -2113,7 +2241,9 @@ def test_push_version_skew(run_cli_command, config_with_profile, stub_environmen
 
     monkeypatch.setattr(CollabClient, 'check_version_skew', check_version_skew)
     monkeypatch.setattr(CollabClient, 'push_handshake', push_handshake)
-    monkeypatch.setattr(CollabClient, 'diff_manifest', lambda self, uuids, refresh=None: ManifestDiff([], []))
+    monkeypatch.setattr(
+        CollabClient, 'diff_manifest', lambda self, uuids, refresh=None, members=None: ManifestDiff([], [])
+    )
     monkeypatch.setattr(sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={}, links=[], instant=timezone.now()))
 
     result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)

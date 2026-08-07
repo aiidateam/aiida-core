@@ -34,6 +34,7 @@ from aiida.tools.collab.protocol import (
     DeltaManifest,
     DeltaOffer,
     ExtrasSnapshot,
+    GroupMembers,
     JoinResponse,
     ManifestDiff,
     PeerInfo,
@@ -89,6 +90,7 @@ class StubSyncCore:
         self.roster: list[dict] = [{'uuid': 'uuid-of-the-peer', 'url': 'http://peer:9137', 'name': 'peer', 'stamp': 1}]
         self.info_cursors: list[datetime | None] = []
         self.imported: list[tuple[str, datetime, bytes]] = []
+        self.applied: list = []
 
     def info(self, cursor: datetime | None) -> PeerInfo:
         self.info_cursors.append(cursor)
@@ -112,9 +114,9 @@ class StubSyncCore:
     def resolve_delta(self, requested_id: str) -> Path | None:
         return self.delta_path if self.delta_path.exists() else None
 
-    def diff_manifest(self, uuids: list, refresh: dict) -> ManifestDiff:
+    def diff_manifest(self, uuids: list, refresh: dict, members: list) -> ManifestDiff:
         self.diffed.append(uuids)
-        return ManifestDiff(missing=self.missing, refresh=sorted(refresh))
+        return ManifestDiff(missing=self.missing, refresh=sorted(refresh), members=members)
 
     def handshake(self, requester: str, roster: list | None = None) -> PushHandshake:
         self.handshakes.append(requester)
@@ -127,11 +129,12 @@ class StubSyncCore:
     def retired(self, peer: str) -> None:
         self.retirements.append(peer)
 
-    def import_staged(self, filepath: Path, peer: str, instant: datetime, refresh: list) -> dict:
+    def import_staged(self, filepath: Path, peer: str, instant: datetime, refresh: list, members: list) -> dict:
         if self.import_exception is not None:
             raise self.import_exception
 
         self.imported.append((peer, instant, filepath.read_bytes()))
+        self.applied = members
         return {'imported': 7}
 
 
@@ -464,13 +467,15 @@ def test_request_delta(transport):
 
 
 def test_diff_manifest(transport):
-    """The manifest and the edited extras offered before a push reach the sync core."""
+    """The manifest, the edited extras and the memberships offered before a push reach the sync core."""
     mtime = timezone.now()
+    members = [GroupMembers(uuid='uuid-of-group', label='curated', type_string='', nodes=['uuid-held'])]
 
-    diff = transport.client.diff_manifest(['uuid-one', 'uuid-two'], {'uuid-edited': mtime})
+    diff = transport.client.diff_manifest(['uuid-one', 'uuid-two'], {'uuid-edited': mtime}, members)
 
     assert diff.missing == ['uuid-missing']
     assert diff.refresh == ['uuid-edited']
+    assert diff.members == members, 'the membership offer has to survive the round trip over the wire'
     assert transport.stub.diffed == [['uuid-one', 'uuid-two']]
 
 
@@ -587,9 +592,13 @@ def test_import_staged(transport, tmp_path):
     report = transport.client.upload_delta(filepath)
 
     instant = timezone.now()
+    members = [GroupMembers(uuid='uuid-of-group', label='curated', type_string='', nodes=['uuid-held'])]
 
-    assert transport.client.trigger_import(report.sha256, peer='http://pusher:9137', instant=instant) == {'imported': 7}
+    assert transport.client.trigger_import(
+        report.sha256, peer='http://pusher:9137', instant=instant, members=members
+    ) == {'imported': 7}
     assert transport.stub.imported == [('http://pusher:9137', instant, UPLOAD)]
+    assert transport.stub.applied == members, 'the memberships the receiver asked for ride the import request'
     assert not (transport.staging_dir / report.sha256).exists()
 
 

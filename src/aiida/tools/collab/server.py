@@ -41,7 +41,9 @@ from aiida.tools.collab.protocol import (
     ROUTE_RETIRED,
     UNAUTHORIZED_DETAIL,
     ExtrasSnapshot,
+    GroupMembers,
     file_sha256,
+    members_from_dict,
     refresh_from_dict,
 )
 
@@ -90,13 +92,14 @@ class CollabServer(ThreadingHTTPServer):
         bytes while a transfer is in progress; when the delta is re-exported, a client that resumes an interrupted
         download is served the new file from the start instead.
     :param diff_manifest: answers ``POST /collab/v1/missing`` for a peer that wants to push: which of the offered
-        nodes this profile is missing and which of the offered extras it holds an older version of.
+        nodes this profile is missing, which of the offered extras it holds an older version of, and which of the
+        offered group memberships it can apply.
     :param handshake: answers ``POST /collab/v1/handshake`` for a peer that wants to push: busy while an import is
         running, otherwise what the profile already holds of that peer. Merges the roster gossiped with it.
     :param import_staged: imports a fully staged upload at ``POST /collab/v1/import/<sha256>`` and returns a
         JSON-serializable report, which is relayed to the client. Receives the path of the staged file, the
         identity the pushing peer declared, the export instant carried with the delta, and the extras snapshots
-        the pusher was asked for. Raising
+        and group memberships the pusher was asked for. Raising
         ``IntegrityError`` means the staged delta can never land; it is discarded and answered 422, telling the
         pusher to negotiate afresh instead of retrying the same bytes.
     """
@@ -114,9 +117,9 @@ class CollabServer(ThreadingHTTPServer):
         negotiate_delta: Callable[[datetime | None, frozenset[str], list[dict[str, Any]]], DeltaManifest],
         request_delta: Callable[[datetime | None, frozenset[str], frozenset[str], frozenset[str]], DeltaOffer],
         resolve_delta: Callable[[str], Path | None],
-        diff_manifest: Callable[[list[str], dict[str, datetime]], ManifestDiff],
+        diff_manifest: Callable[[list[str], dict[str, datetime], list[GroupMembers]], ManifestDiff],
         handshake: Callable[[str, list[dict[str, Any]]], PushHandshake],
-        import_staged: Callable[[Path, str, datetime, list[ExtrasSnapshot]], dict[str, Any]],
+        import_staged: Callable[[Path, str, datetime, list[ExtrasSnapshot], list[GroupMembers]], dict[str, Any]],
         join: Callable[[dict[str, Any]], JoinResponse],
         retired: Callable[[str], None],
         collab: str = '',
@@ -318,7 +321,11 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
 
     def _post_missing(self) -> None:
         data = self._read_json()
-        diff = self.server.diff_manifest(data.get('uuids', []), refresh_from_dict(data.get('refresh', {})))
+        diff = self.server.diff_manifest(
+            data.get('uuids', []),
+            refresh_from_dict(data.get('refresh', {})),
+            members_from_dict(data.get('members', [])),
+        )
 
         self._send_json(HTTPStatus.OK, diff.as_dict())
 
@@ -445,6 +452,7 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
                 data['peer'],
                 datetime.fromisoformat(data['instant']),
                 [ExtrasSnapshot.from_dict(snapshot) for snapshot in data.get('refresh', [])],
+                members_from_dict(data.get('members', [])),
             )
         except IntegrityError as exception:
             # These bytes can never land: the delta references a node this profile no longer holds. Retrying the

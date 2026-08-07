@@ -35,6 +35,7 @@ from aiida.tools.collab.protocol import (
     PushHandshake,
     VersionSkew,
     file_sha256,
+    members_as_dict,
     refresh_as_dict,
     route_delta,
     route_import,
@@ -46,7 +47,7 @@ if TYPE_CHECKING:
     from datetime import datetime
     from pathlib import Path
 
-    from aiida.tools.collab.protocol import ExtrasSnapshot
+    from aiida.tools.collab.protocol import ExtrasSnapshot, GroupMembers
 
 TIMEOUT = 60.0
 
@@ -190,13 +191,19 @@ class CollabClient:
 
         return self._answer(DeltaOffer.from_dict, 'POST', ROUTE_DELTA, json=body)
 
-    def diff_manifest(self, uuids: list[str], refresh: dict[str, datetime] | None = None) -> ManifestDiff:
-        """Offer the peer a manifest of nodes and of edited extras, and receive what it lacks.
+    def diff_manifest(
+        self,
+        uuids: list[str],
+        refresh: dict[str, datetime] | None = None,
+        members: list[GroupMembers] | None = None,
+    ) -> ManifestDiff:
+        """Offer the peer a manifest of nodes, of edited extras and of memberships, and receive what it lacks.
 
         :param uuids: the manifest of the delta this profile would push.
         :param refresh: the mtimes this profile holds for the shared nodes whose extras it may have edited.
+        :param members: the group memberships this profile gained since the peer's cursor, offered under ``grow``.
         """
-        body = {'uuids': uuids, 'refresh': refresh_as_dict(refresh or {})}
+        body = {'uuids': uuids, 'refresh': refresh_as_dict(refresh or {}), 'members': members_as_dict(members or [])}
 
         return self._answer(ManifestDiff.from_dict, 'POST', ROUTE_MISSING, json=body)
 
@@ -302,6 +309,7 @@ class CollabClient:
         peer: str,
         instant: datetime,
         refresh: list[ExtrasSnapshot] | None = None,
+        members: list[GroupMembers] | None = None,
     ) -> dict[str, Any]:
         """Ask the peer to import the staged upload with the given checksum.
 
@@ -312,6 +320,7 @@ class CollabClient:
         :param peer: the identity under which the receiver tracks this profile.
         :param instant: the export instant of the staged delta, which the receiver's cursor advances to.
         :param refresh: the extras snapshots the receiver asked for when it diffed the manifest.
+        :param members: the group memberships the receiver asked for when it diffed the manifest.
         :return: the import report of the peer.
         :raises CollabRequestError: when the import fails, with the reason of the peer. The peer keeps the staged
             upload in that case, so a retry only repeats the import, not the transfer — unless the upload failed
@@ -322,6 +331,7 @@ class CollabClient:
             'peer': peer,
             'instant': instant.isoformat(),
             'refresh': [snapshot.as_dict() for snapshot in refresh or []],
+            'members': members_as_dict(members or []),
         }
 
         return self._answer(dict, 'POST', route_import(sha256), json=body, timeout=(self._timeout, None))

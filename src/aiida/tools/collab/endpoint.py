@@ -25,6 +25,7 @@ from aiida.tools.archive.abstract import get_format
 from aiida.tools.collab.config import (
     OPTION_ACCEPT_PUSH,
     OPTION_BIND,
+    OPTION_COMPUTER_MAP,
     OPTION_PEERS,
     OPTION_POLICY,
     OPTION_PORT,
@@ -152,6 +153,7 @@ class CollabEndpoint:
         # stale — which is what retired the whole class of "declares one policy, serves another" defects.
         self._extras_mode = policy['extras_mode']
         self._groups_mode = policy['groups_mode']
+        self._computer_map: dict[str, str] = config.get_option(OPTION_COMPUTER_MAP, scope=profile.name)
         self._dirpath = CollabState.get_workdir(profile)
         self._state_filepath = CollabState.get_filepath(profile)
         self._computed: dict[str, Delta] = {}
@@ -434,6 +436,7 @@ class CollabEndpoint:
                     extras_mode=self._extras_mode,
                     peer=peer,
                     instant=instant,
+                    computer_map=self._computer_map,
                     refresh=refresh,
                     groups_mode=self._groups_mode,
                     members=members,

@@ -33,6 +33,7 @@ OPTION_STAMP = 'collab.stamp'
 OPTION_ANNOUNCED = 'collab.announced'
 OPTION_ACCEPT_PUSH = 'collab.accept_push'
 OPTION_POLICY = 'collab.policy'
+OPTION_COMPUTER_MAP = 'collab.computer_map'
 
 # Groups AiiDA generates to record how provenance arrived in a profile rather than what a person curated. They
 # describe the history of the profile that made them and would mean nothing in another one, so they stay home.

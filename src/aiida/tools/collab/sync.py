@@ -632,6 +632,7 @@ def import_delta(
     peer: str,
     instant: datetime,
     include_deleted: bool = False,
+    computer_map: dict[str, str] | None = None,
     refresh: list[ExtrasSnapshot] | None = None,
     groups_mode: CollabGroupsMode = 'local',
     members: list[GroupMembers] | None = None,
@@ -660,6 +661,8 @@ def import_delta(
     :param peer: the identity the delta was received under, which keys the cursor: the profile UUID of the peer.
     :param instant: the export instant carried with the delta, which the cursor for ``peer`` advances to.
     :param include_deleted: import nodes that were deleted locally after all, and drop their tombstones.
+    :param computer_map: peer computer label to local computer label; imported calculations that ran on a mapped
+        computer get the hash they would have on the local one, so they can be cache hits (see ``_remap_hashes``).
     :raises ~aiida.common.exceptions.IntegrityError: when the delta links to a node that exists neither in the
         archive nor locally, or a boundary link would violate a link invariant of the local graph; nothing is
         imported in either case.
@@ -685,6 +688,10 @@ def import_delta(
         # creates the rows of a group it creates — from the ones that were already here.
         held_groups = _held_group_uuids(backend, delivered)
         imported_groups = delivered
+
+        # Resolved before anything lands, so that a stale mapping aborts the import instead of crashing after it,
+        # half-done and unlogged.
+        computer_uuids = _resolve_computer_map(backend, computer_map) if computer_map else {}
 
         # The caching extras of the peer describe their profile, not this one, so the merge must not be able to
         # carry them over. New nodes are stripped of them by the import itself, existing ones are restored below.
@@ -725,6 +732,9 @@ def import_delta(
         )
 
     _set_caching_extras(backend, caching_extras)
+
+    if computer_uuids:
+        _remap_hashes(backend, uuids, computer_uuids)
 
     refreshed = _apply_refresh(backend, refresh or [], state.tombstones) if extras_mode == 'sync' else []
 
@@ -1002,6 +1012,85 @@ def _unsealed_pks(backend: StorageBackend, pks: set[int]) -> set[int]:
 
     # Queried as the complement of the sealed processes, because an unsealed one has no ``sealed`` attribute at all.
     return query() - query(**{f'attributes.{Sealable.SEALED_KEY}': True})
+
+
+def apply_computer_map(backend: StorageBackend, computer_map: dict[str, str]) -> int:
+    """Write remapped hashes onto every calculation that ran on a mapped computer.
+
+    Run when the mapping changes, so that calculations imported before it was declared become cache sources
+    too; every import applies the same remap to its own delta.
+
+    :returns: the number of calculations whose hash was written.
+    """
+    return _remap_hashes(backend, None, _resolve_computer_map(backend, computer_map))
+
+
+def _resolve_computer_map(backend: StorageBackend, computer_map: dict[str, str]) -> dict[str, str]:
+    """Return peer computer label to local computer UUID, refusing when a mapped local computer does not exist."""
+    from aiida.common.exceptions import ConfigurationError, NotExistent
+
+    resolved = {}
+
+    for peer_label, local_label in computer_map.items():
+        try:
+            resolved[peer_label] = orm.Computer.get_collection(backend).get(label=local_label).uuid
+        except NotExistent:
+            msg = (
+                f'the `collab.computer_map` option maps peer computer `{peer_label}` to `{local_label}`, but no '
+                f'computer with label `{local_label}` exists in this profile.'
+            )
+            raise ConfigurationError(msg) from None
+
+    return resolved
+
+
+def _remap_hashes(backend: StorageBackend, uuids: list[str] | None, computer_uuids: dict[str, str]) -> int:
+    """Write onto each mapped calculation the hash it would have on the local computer.
+
+    The hash of a calculation includes the UUID of its computer, which differs between the profiles of a collab,
+    so an imported calculation can never be a cache hit for a local submission on its own. Where the user declared
+    a peer computer equivalent to a local one, the hash is recomputed with the local computer's UUID substituted;
+    everything else about the node, including which computer it actually ran on, stays untouched.
+
+    :param uuids: the nodes of the delta being imported, or ``None`` for every mapped calculation.
+    :param computer_uuids: peer computer label to local computer UUID, from ``_resolve_computer_map``.
+    :returns: the number of calculations whose hash was written.
+    """
+    from aiida.common.exceptions import HashingError
+    from aiida.common.hashing import make_hash
+    from aiida.orm.entities import EntityTypes
+
+    filters: dict[str, Any] = {'uuid': {'in': uuids}} if uuids is not None else {}
+
+    query = (
+        orm.QueryBuilder(backend=backend)
+        .append(orm.Computer, filters={'label': {'in': list(computer_uuids)}}, project='label', tag='computer')
+        .append(orm.CalcJobNode, with_computer='computer', filters=filters, project='*')
+    )
+
+    rows = []
+
+    for label, node in query.iterall():
+        objects = node.base.caching.get_objects_to_hash()
+        objects['computer_uuid'] = computer_uuids[label]
+
+        try:
+            remapped = make_hash(objects)
+        except HashingError:
+            node.logger.exception('remapping the hash failed, the node stays a cache miss')
+            continue
+
+        # Written through a bulk update with the mtime passed explicitly, because a regular extras write fires
+        # the ``mtime`` ``onupdate``, and a freshly stamped node re-enters the delta of the next export — the
+        # peer would be echoed the whole subgraph it just sent, on every sync, forever.
+        extras = dict(node.base.extras.all)
+        extras[NodeCaching._HASH_EXTRA_KEY] = remapped
+        rows.append({'id': node.pk, 'extras': extras, 'mtime': node.mtime})
+
+    if rows:
+        backend.bulk_update(EntityTypes.NODE, rows)
+
+    return len(rows)
 
 
 def _get_caching_extras(backend: StorageBackend, uuids: list[str]) -> dict[str, dict[str, Any]]:

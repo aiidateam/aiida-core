@@ -20,6 +20,7 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
 from aiida.tools.collab.protocol import GroupMembers, member_pairs
 from aiida.tools.collab.state import CollabEvent, CollabState, Membership
 from aiida.tools.collab.sync import (
+    apply_computer_map,
     apply_members,
     compute_delta,
     export_delta,
@@ -1040,6 +1041,155 @@ def test_thin_import_boundary_invariant_aborts(tmp_path, peers):
 
     assert node_count(backend_two) == count, 'nothing should have been imported'
     assert CollabState.read(state_two.filepath).pending_links == [], 'nothing should have been journalled'
+
+
+def make_computer(backend, label):
+    return orm.Computer(
+        label=label, hostname='localhost', transport_type='core.local', scheduler_type='core.direct', backend=backend
+    ).store()
+
+
+def seal_cached_calculation(backend, computer):
+    """Return a sealed, finished calculation that is a valid cache source, identical on every call."""
+    from aiida.engine import ProcessState
+
+    inputs = orm.Int(1, backend=backend).store()
+    calculation = orm.CalcJobNode(
+        backend=backend, computer=computer, process_type='aiida.calculations:core.arithmetic.add'
+    )
+    calculation.base.links.add_incoming(inputs, link_type=LinkType.INPUT_CALC, link_label='term')
+    calculation.base.repository.put_object_from_bytes(b'1 + 1', 'aiida.in')
+    calculation.set_process_state(ProcessState.FINISHED)
+    calculation.set_exit_status(0)
+    calculation.store()
+    calculation.seal()
+
+    return calculation
+
+
+def test_remap_cache_hit(tmp_path, peers):
+    """Test that a mapped calculation carries the hash of its local twin and is found by the caching engine."""
+    backend_one, state_one = peers('one')
+    backend_two, state_two = peers('two')
+    calculation = seal_cached_calculation(backend_one, make_computer(backend_one, 'lumi'))
+
+    filepath = tmp_path / 'delta.aiida'
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+
+    leonardo = make_computer(backend_two, 'leonardo')
+    import_delta(
+        filepath,
+        state=state_two,
+        backend=backend_two,
+        extras_mode='local',
+        peer=PEER,
+        instant=export.instant,
+        computer_map={'lumi': 'leonardo'},
+    )
+
+    twin = seal_cached_calculation(backend_two, leonardo)
+    imported = load_node(backend_two, calculation.uuid)
+
+    assert imported.base.caching.get_hash() == twin.base.caching.compute_hash()
+    assert calculation.uuid in {node.uuid for node in twin.base.caching.get_all_same_nodes()}
+
+
+def test_remap_cache_miss_without_mapping(tmp_path, peers):
+    """Test that without a mapping an imported calculation carries no hash and is not a cache hit."""
+    backend_one, state_one = peers('one')
+    backend_two, state_two = peers('two')
+    calculation = seal_cached_calculation(backend_one, make_computer(backend_one, 'lumi'))
+
+    filepath = tmp_path / 'delta.aiida'
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+
+    leonardo = make_computer(backend_two, 'leonardo')
+    import_delta(filepath, state=state_two, backend=backend_two, extras_mode='local', peer=PEER, instant=export.instant)
+
+    twin = seal_cached_calculation(backend_two, leonardo)
+    imported = load_node(backend_two, calculation.uuid)
+
+    assert imported.base.caching.get_hash() is None
+    assert calculation.uuid not in {node.uuid for node in twin.base.caching.get_all_same_nodes()}
+
+
+def test_remap_leaves_node_unchanged(tmp_path, peers):
+    """Test that remapping writes only the hash extra: UUID, attributes and repository content are as exported."""
+    from aiida.orm.nodes.caching import NodeCaching
+
+    backend_one, state_one = peers('one')
+    backend_two, state_two = peers('two')
+    calculation = seal_cached_calculation(backend_one, make_computer(backend_one, 'lumi'))
+
+    filepath = tmp_path / 'delta.aiida'
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+
+    make_computer(backend_two, 'leonardo')
+    import_delta(
+        filepath,
+        state=state_two,
+        backend=backend_two,
+        extras_mode='local',
+        peer=PEER,
+        instant=export.instant,
+        computer_map={'lumi': 'leonardo'},
+    )
+
+    imported = load_node(backend_two, calculation.uuid)
+
+    assert imported.uuid == calculation.uuid
+    assert imported.base.attributes.all == calculation.base.attributes.all
+    assert imported.base.repository.hash() == calculation.base.repository.hash()
+    assert set(imported.base.extras.keys()) == {NodeCaching._HASH_EXTRA_KEY}
+    # A bumped mtime would re-enter the node into the delta of the next export, echoing it back to the peer.
+    assert imported.mtime == calculation.mtime
+
+
+def test_remap_unknown_local_computer(tmp_path, peers):
+    """Test that a mapping to a computer this profile does not have aborts before anything is imported."""
+    from aiida.common.exceptions import ConfigurationError
+
+    backend_one, state_one = peers('one')
+    backend_two, state_two = peers('two')
+    seal_cached_calculation(backend_one, make_computer(backend_one, 'lumi'))
+
+    filepath = tmp_path / 'delta.aiida'
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+
+    with pytest.raises(ConfigurationError, match='collab.computer_map'):
+        import_delta(
+            filepath,
+            state=state_two,
+            backend=backend_two,
+            extras_mode='local',
+            peer=PEER,
+            instant=export.instant,
+            computer_map={'lumi': 'missing'},
+        )
+
+    assert node_count(backend_two) == 0, 'the import should have been refused before anything landed'
+    assert not state_two.filepath.exists(), 'no event should have been recorded'
+
+
+def test_apply_computer_map_retroactively(tmp_path, peers):
+    """Test that applying a mapping after the import writes the twin hash onto already-imported calculations."""
+    backend_one, state_one = peers('one')
+    backend_two, state_two = peers('two')
+    calculation = seal_cached_calculation(backend_one, make_computer(backend_one, 'lumi'))
+
+    filepath = tmp_path / 'delta.aiida'
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+
+    leonardo = make_computer(backend_two, 'leonardo')
+    import_delta(filepath, state=state_two, backend=backend_two, extras_mode='local', peer=PEER, instant=export.instant)
+
+    assert load_node(backend_two, calculation.uuid).base.caching.get_hash() is None
+
+    count = apply_computer_map(backend_two, {'lumi': 'leonardo'})
+    twin = seal_cached_calculation(backend_two, leonardo)
+
+    assert count == 1
+    assert load_node(backend_two, calculation.uuid).base.caching.get_hash() == twin.base.caching.compute_hash()
 
 
 def sync_pull(

@@ -348,6 +348,12 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         'membership travels, additions only). It is carried by the join code and adopted by whoever joins; changing '
         'it means re-founding the collab.',
     )
+    collab__computer_map: dict[str, str] = Field(
+        {},
+        description='Map of peer computer label to local computer label, used to remap hashes of pulled calculations '
+        'so they can be reused by the caching mechanism.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
 
     @field_validator('caching__enabled_for', 'caching__disabled_for')
     @classmethod

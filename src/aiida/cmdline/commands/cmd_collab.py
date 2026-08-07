@@ -34,6 +34,21 @@ def require_collab(profile):
         echo.echo_critical(f'profile `{profile.name}` is not part of a collab: run `verdi collab init` first.')
 
 
+def parse_computer_map(entries):
+    """Parse ``PEER=LOCAL`` computer mapping entries, aborting on a malformed one."""
+    mapping = {}
+
+    for entry in entries:
+        peer_label, separator, local_label = entry.partition('=')
+
+        if not separator or not peer_label or not local_label:
+            echo.echo_critical(f'`{entry}` is not a valid computer mapping: pass it as PEER=LOCAL.')
+
+        mapping[peer_label] = local_label
+
+    return mapping
+
+
 def complete_peer(ctx, param, incomplete):
     """Complete a PEER argument with the nicknames of the peers that can be synced with.
 
@@ -417,6 +432,14 @@ def create_profile(ctx, profile_name, non_interactive):
     help='Port on which the endpoint of this profile listens. A free one is picked when not given.',
 )
 @click.option(
+    '--map-computer',
+    'computer_map',
+    metavar='PEER=LOCAL',
+    multiple=True,
+    help='Treat calculations that ran on peer computer PEER as if they ran on local computer LOCAL, so pulled '
+    'calculations can be cache hits. Pass multiple times for multiple computers.',
+)
+@click.option(
     '--extras-mode',
     type=click.Choice(['local', 'sync']),
     help='Whether the extras of shared nodes keep being replicated (`sync`) or stop travelling once the node has '
@@ -430,7 +453,7 @@ def create_profile(ctx, profile_name, non_interactive):
 )
 @options.NON_INTERACTIVE()
 @click.pass_context
-def collab_init(ctx, code, profile_name, bind, port, extras_mode, groups_mode, non_interactive):
+def collab_init(ctx, code, profile_name, bind, port, computer_map, extras_mode, groups_mode, non_interactive):
     """Set up a profile as part of a collab.
 
     Peers of a collab share one logical provenance graph: each of them can pull the sealed provenance of the others and
@@ -443,6 +466,7 @@ def collab_init(ctx, code, profile_name, bind, port, extras_mode, groups_mode, n
     from aiida.tools.collab.protocol import JoinCode
 
     config = ctx.obj.config
+    mapping = parse_computer_map(computer_map)
     joining = None
 
     if code:
@@ -496,6 +520,7 @@ def collab_init(ctx, code, profile_name, bind, port, extras_mode, groups_mode, n
         collab_config.OPTION_PORT: port,
         collab_config.OPTION_STAMP: 1,
         collab_config.OPTION_ANNOUNCED: url,
+        collab_config.OPTION_COMPUTER_MAP: mapping,
         collab_config.OPTION_POLICY: policy,
     }
 
@@ -705,6 +730,46 @@ def collab_rekey(ctx, code):
         )
 
 
+@verdi_collab.command('map-computer')
+@click.argument('mappings', metavar='PEER=LOCAL...', nargs=-1, required=True)
+@requires_loaded_profile()
+@click.pass_context
+def collab_map_computer(ctx, mappings):
+    """Declare peer computers equivalent to local ones, so pulled calculations can be cache hits.
+
+    Each mapping maps the label of a peer computer to the label of a local one, as PEER=LOCAL. New mappings are
+    merged into the existing ones and applied to already-pulled calculations, so declaring a mapping after the
+    first pull loses nothing. To remove mappings, run `verdi config unset collab.computer_map` and declare the
+    remaining ones again. Restart the daemon for pushes received by the endpoint to pick up the change.
+    """
+    from aiida.common.exceptions import ConfigurationError
+    from aiida.manage import get_manager
+    from aiida.tools.collab.config import OPTION_COMPUTER_MAP, stored_config
+    from aiida.tools.collab.sync import apply_computer_map
+
+    profile = ctx.obj.profile
+    require_collab(profile)
+
+    mapping = dict(ctx.obj.config.get_option(OPTION_COMPUTER_MAP, scope=profile.name))
+    mapping.update(parse_computer_map(mappings))
+
+    try:
+        count = apply_computer_map(get_manager().get_profile_storage(), mapping)
+    except ConfigurationError as exception:
+        echo.echo_critical(str(exception))
+
+    stored = stored_config(ctx.obj.config)
+
+    for target in (stored, ctx.obj.config):
+        target.set_option(OPTION_COMPUTER_MAP, mapping, scope=profile.name)
+
+    stored.store()
+
+    echo.echo_success(
+        f'{len(mapping)} computer mapping(s) configured, the mapped hash was written onto {count} calculation(s).'
+    )
+
+
 @verdi_collab.group('peer')
 def verdi_collab_peer():
     """Correct the entries of the peers of the collab."""
@@ -823,11 +888,11 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
     """
     from contextlib import nullcontext
 
-    from aiida.common.exceptions import IntegrityError
+    from aiida.common.exceptions import ConfigurationError, IntegrityError
     from aiida.engine.daemon.client import get_daemon_client
     from aiida.manage import get_manager
     from aiida.tools.collab.client import CollabClient
-    from aiida.tools.collab.config import OPTION_PEERS, OPTION_POLICY, OPTION_TOKEN, OPTION_UUID
+    from aiida.tools.collab.config import OPTION_COMPUTER_MAP, OPTION_PEERS, OPTION_POLICY, OPTION_TOKEN, OPTION_UUID
     from aiida.tools.collab.endpoint import local_info, workers_stopped
     from aiida.tools.collab.protocol import CollabRequestError, VersionSkew, member_pairs
     from aiida.tools.collab.state import CollabState, import_lock
@@ -849,6 +914,7 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
     selected = select_peers(ctx.obj.config.get_option(OPTION_PEERS, scope=profile.name), peers)
     token = ctx.obj.config.get_option(OPTION_TOKEN, scope=profile.name)
     collab = ctx.obj.config.get_option(OPTION_UUID, scope=profile.name)
+    computer_map = ctx.obj.config.get_option(OPTION_COMPUTER_MAP, scope=profile.name)
     # This profile's own policy decides what a delta may bring into it, whatever a peer declares or serves.
     policy = ctx.obj.config.get_option(OPTION_POLICY, scope=profile.name)
     backend = get_manager().get_profile_storage()
@@ -960,10 +1026,14 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
                         # computation the bytes were cut from, or in-window nodes would never be delivered.
                         instant=min(manifest.instant, offer.instant),
                         include_deleted=include_deleted,
+                        computer_map=computer_map,
                         refresh=offer.refresh,
                         groups_mode=policy['groups_mode'],
                         members=members,
                     )
+        except ConfigurationError as exception:
+            # The downloaded delta is left in place: the next pull, with the configuration fixed, reuses it.
+            echo.echo_critical(str(exception))
         except IntegrityError as exception:
             # The delta linked to a node this profile holds nowhere; nothing landed, the next sync delivers it.
             echo.echo_critical(str(exception))

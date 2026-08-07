@@ -2151,6 +2151,32 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
             backend.close()
 
 
+def test_map_computer(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that ``verdi collab map-computer`` merges new mappings and applies them to existing calculations."""
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.config import OPTION_COMPUTER_MAP
+
+    applied = []
+
+    def apply_computer_map(backend, computer_map):
+        applied.append(computer_map)
+        return 2
+
+    monkeypatch.setattr(sync, 'apply_computer_map', apply_computer_map)
+
+    init_collab(config_with_profile, **{OPTION_COMPUTER_MAP: {'lumi': 'leonardo'}})
+
+    result = run_cli_command(cmd_collab.collab_map_computer, ['daint=leonardo'], use_subprocess=False)
+
+    scope = get_profile().name
+    assert config_with_profile.get_option(OPTION_COMPUTER_MAP, scope=scope) == {
+        'lumi': 'leonardo',
+        'daint': 'leonardo',
+    }
+    assert applied == [{'lumi': 'leonardo', 'daint': 'leonardo'}]
+    assert 'onto 2 calculation(s)' in result.output
+
+
 def test_push_nothing_is_still_logged(run_cli_command, config_with_profile, stub_environment, monkeypatch):
     """Test that a push finding the peer up to date records an event, so the log says when it last ran."""
     from aiida.tools.collab import sync

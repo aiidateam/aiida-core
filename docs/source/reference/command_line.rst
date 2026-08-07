@@ -121,13 +121,14 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
-      init    Set up a profile as part of a collab.
-      log     Show the history of the pulls, pushes and extras refreshes of the collab.
-      peer    Correct the entries of the peers of the collab.
-      pull    Fetch the new sealed provenance of peers and import it.
-      push    Send the new sealed provenance of this profile to peers.
-      rekey   Adopt the new token of a collab whose token was rotated.
-      rotate  Retire the token of the collab and mint a new one.
+      init          Set up a profile as part of a collab.
+      log           Show the history of the pulls, pushes and extras refreshes of the...
+      map-computer  Declare peer computers equivalent to local ones, so pulled...
+      peer          Correct the entries of the peers of the collab.
+      pull          Fetch the new sealed provenance of peers and import it.
+      push          Send the new sealed provenance of this profile to peers.
+      rekey         Adopt the new token of a collab whose token was rotated.
+      rotate        Retire the token of the collab and mint a new one.
 
 
 .. _reference:command-line:verdi-computer:

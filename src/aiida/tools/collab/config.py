@@ -34,6 +34,7 @@ OPTION_ANNOUNCED = 'collab.announced'
 OPTION_ACCEPT_PUSH = 'collab.accept_push'
 OPTION_POLICY = 'collab.policy'
 OPTION_COMPUTER_MAP = 'collab.computer_map'
+OPTION_MAX_CONCURRENCY = 'collab.max_concurrency'
 
 # Groups AiiDA generates to record how provenance arrived in a profile rather than what a person curated. They
 # describe the history of the profile that made them and would mean nothing in another one, so they stay home.

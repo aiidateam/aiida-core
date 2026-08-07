@@ -40,6 +40,7 @@ from aiida.tools.collab.protocol import (
     ROUTE_MISSING,
     ROUTE_RETIRED,
     UNAUTHORIZED_DETAIL,
+    EndpointBusy,
     ExtrasSnapshot,
     GroupMembers,
     file_sha256,
@@ -91,6 +92,8 @@ class CollabServer(ThreadingHTTPServer):
         ``None`` when no delta with that identifier is on offer. Each identifier must keep resolving to the same
         bytes while a transfer is in progress; when the delta is re-exported, a client that resumes an interrupted
         download is served the new file from the start instead.
+    :param release_delta: notified with the identifier of a delta whose download was served to the end of the
+        file, so the endpoint can free the serving slot behind it.
     :param diff_manifest: answers ``POST /collab/v1/missing`` for a peer that wants to push: which of the offered
         nodes this profile is missing, which of the offered extras it holds an older version of, and which of the
         offered group memberships it can apply.
@@ -123,6 +126,7 @@ class CollabServer(ThreadingHTTPServer):
         join: Callable[[dict[str, Any]], JoinResponse],
         retired: Callable[[str], None],
         collab: str = '',
+        release_delta: Callable[[str], None] | None = None,
     ):
         import ipaddress
         import socket
@@ -136,6 +140,7 @@ class CollabServer(ThreadingHTTPServer):
         self.negotiate_delta = negotiate_delta
         self.request_delta = request_delta
         self.resolve_delta = resolve_delta
+        self.release_delta = release_delta
         self.diff_manifest = diff_manifest
         self.handshake = handshake
         self.import_staged = import_staged
@@ -232,6 +237,8 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
             self._send_json(HTTPStatus.NOT_FOUND, {'detail': f'unknown route `{path}`'})
         except (BrokenPipeError, ConnectionResetError, TimeoutError):
             self.close_connection = True
+        except EndpointBusy as exception:
+            self._send_json(HTTPStatus.SERVICE_UNAVAILABLE, {'detail': str(exception)})
         except Exception as exception:
             LOGGER.exception('collab endpoint request failed')
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {'detail': str(exception)})
@@ -359,6 +366,10 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
             self.send_header('Content-Length', '0')
             self.end_headers()
 
+            # This is how a client whose file is already complete learns so: its download is done too.
+            if self.server.release_delta is not None:
+                self.server.release_delta(delta_id)
+
             return
 
         self.send_response(HTTPStatus.OK if offset is None else HTTPStatus.PARTIAL_CONTENT)
@@ -375,6 +386,11 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
         with filepath.open('rb') as handle:
             handle.seek(offset or 0)
             shutil.copyfileobj(handle, self.wfile, CHUNK_SIZE)
+
+        # Reaching here means the response was written to the end of the file, whatever offset it started from:
+        # the client holds the complete delta and the serving slot behind it can be freed.
+        if self.server.release_delta is not None:
+            self.server.release_delta(delta_id)
 
     def _head_upload(self, sha256: str) -> None:
         self.send_response(HTTPStatus.OK)

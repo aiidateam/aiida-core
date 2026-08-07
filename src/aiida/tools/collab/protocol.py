@@ -54,6 +54,10 @@ class CollabRequestError(AiidaException):
         self.status = status
 
 
+class EndpointBusy(AiidaException):
+    """The endpoint is serving as many peers as ``collab.max_concurrency`` allows; the requester retries later."""
+
+
 class VersionSkew(AiidaException):
     """A delta cannot travel between two peers, because one of them cannot read the archives the other writes."""
 

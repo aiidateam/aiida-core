@@ -354,6 +354,12 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         'so they can be reused by the caching mechanism.',
         json_schema_extra={'requires_daemon_restart': True},
     )
+    collab__max_concurrency: int = Field(
+        2,
+        description='How many peers the collab endpoint serves at once — pull negotiations and push sessions '
+        'combined. Peers beyond it are answered busy and retry later.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
 
     @field_validator('caching__enabled_for', 'caching__disabled_for')
     @classmethod

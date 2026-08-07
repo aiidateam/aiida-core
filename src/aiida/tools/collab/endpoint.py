@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 import threading
+import time
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
@@ -26,6 +27,7 @@ from aiida.tools.collab.config import (
     OPTION_ACCEPT_PUSH,
     OPTION_BIND,
     OPTION_COMPUTER_MAP,
+    OPTION_MAX_CONCURRENCY,
     OPTION_PEERS,
     OPTION_POLICY,
     OPTION_PORT,
@@ -39,6 +41,7 @@ from aiida.tools.collab.config import (
 from aiida.tools.collab.protocol import (
     DeltaManifest,
     DeltaOffer,
+    EndpointBusy,
     JoinResponse,
     ManifestDiff,
     PeerInfo,
@@ -75,6 +78,43 @@ LOGGER = AIIDA_LOGGER.getChild('collab')
 # Deltas stay cached while their requester retries an interrupted download; anything beyond a few concurrent
 # requesters is stale cursors accumulating, not live transfers.
 MAX_CACHED_DELTAS = 8
+
+# How long a serving slot survives without any request from its holder. Slots are normally released when the
+# import commits or the download completes; the expiry reclaims one whose holder sent nothing for this long —
+# usually a crash, but also a live transfer whose single request outlasts it, so the cap is approximate under
+# very long transfers rather than a hard guarantee.
+SLOT_IDLE_SECONDS = 600
+
+
+class _Slots:
+    """The peers the endpoint is serving right now, bounded by ``collab.max_concurrency``.
+
+    A slot is keyed by the session it serves (a pushing peer, or a pull negotiation) and carries the time of the
+    holder's last request, so the slot of a holder that went silent expires instead of wedging the endpoint.
+    """
+
+    def __init__(self, limit: int):
+        self._limit = limit
+        self._lock = threading.Lock()
+        self._active: dict[str, float] = {}
+
+    def acquire(self, key: str) -> bool:
+        """Grant or refresh the slot of ``key``; ``False`` when every slot is held by someone else."""
+        with self._lock:
+            now = time.monotonic()
+
+            for stale in [held for held, last in self._active.items() if now - last > SLOT_IDLE_SECONDS]:
+                del self._active[stale]
+
+            if key in self._active or len(self._active) < self._limit:
+                self._active[key] = now
+                return True
+
+            return False
+
+    def release(self, key: str) -> None:
+        with self._lock:
+            self._active.pop(key, None)
 
 
 def local_info(profile: Profile, backend: StorageBackend, cursor: datetime | None = None) -> PeerInfo:
@@ -160,6 +200,8 @@ class CollabEndpoint:
         self._deltas: dict[str, DeltaExport] = {}
         self._delta_lock = threading.Lock()
         self._counter = 0
+        self._slots = _Slots(config.get_option(OPTION_MAX_CONCURRENCY, scope=profile.name))
+        self._slot_by_offer: dict[str, str] = {}
         self._roster_lock = threading.Lock()
 
         self._dirpath.mkdir(parents=True, exist_ok=True)
@@ -216,14 +258,19 @@ class CollabEndpoint:
             LOGGER.report('peer `%s` signalled that it rotated the token of the collab', peers[peer]['nickname'])
 
     def handshake(self, requester: str, roster: list[dict[str, Any]] | None = None) -> PushHandshake:
-        """Answer a peer that wants to push: busy while an import is running, else what this profile holds of it.
+        """Answer a peer that wants to push: busy while an import is running or every serving slot is taken,
+        else what this profile holds of it.
 
         Answering busy before anything is exported or uploaded is what serializes concurrent fan-in: the retrying
-        pusher negotiates against the post-import cursor and claim, so no redundant bytes travel.
+        pusher negotiates against the post-import cursor and claim, so no redundant bytes travel. The slot granted
+        here is released when the pushed delta is imported, or expires if the pusher goes silent.
         """
         entries = self._entries(self._merge_roster(roster or []))
 
         if import_lock_held(self._state_filepath):
+            return PushHandshake(busy=True, cursor=None, claim=[], roster=entries)
+
+        if not self._slots.acquire(f'push:{requester}'):
             return PushHandshake(busy=True, cursor=None, claim=[], roster=entries)
 
         state = CollabState.read(self._state_filepath)
@@ -276,8 +323,12 @@ class CollabEndpoint:
         requests only the subset it lacks. Under the ``sync`` extras policy the manifest also offers the mtimes of
         the shared nodes whose extras moved on here, computed fresh rather than cached with the delta: an extras
         edit changes no node membership, so it must not wait for the delta to be recomputed.
+
+        :raises EndpointBusy: when every serving slot is taken by another peer.
         """
         entries = self._entries(self._merge_roster(roster or []))
+
+        self._acquire_pull_slot(cursor, claim)
 
         with self._delta_lock:
             delta = self._delta(cursor, claim)
@@ -303,10 +354,15 @@ class CollabEndpoint:
         so a re-export goes to a fresh path: a client still streaming the previous file keeps its open handle on
         the unlinked inode, and one that resumes later is served the new file from the start by the ``ETag``
         validator.
+
+        :raises EndpointBusy: when every serving slot is taken by another peer.
         """
+        slot = self._acquire_pull_slot(cursor, claim)
+
         with self._delta_lock:
             delta = self._delta(cursor, claim)
             key = delta_id(cursor, claim, want)
+            self._slot_by_offer[key] = slot
             cached = self._deltas.pop(key, None)
 
             # An archive built from a superseded computation of the delta serves stale bytes: the instant ties
@@ -331,6 +387,7 @@ class CollabEndpoint:
             while len(self._deltas) > MAX_CACHED_DELTAS:
                 stale = next(iter(self._deltas))
                 self._deltas.pop(stale).filepath.unlink(missing_ok=True)
+                self._slot_by_offer.pop(stale, None)
 
             return DeltaOffer(
                 delta=key,
@@ -381,7 +438,37 @@ class CollabEndpoint:
         with self._delta_lock:
             cached = self._deltas.get(delta_id)
 
+            # A download request is activity of the negotiation's slot holder; refreshing keeps the slot from
+            # expiring under a long transfer. It re-acquires after an expiry, which cannot be refused meaningfully
+            # mid-download, so the result is ignored.
+            if (slot := self._slot_by_offer.get(delta_id)) is not None:
+                self._slots.acquire(slot)
+
             return cached.filepath if cached is not None else None
+
+    def release_delta(self, delta_id: str) -> None:
+        """Release the serving slot behind a negotiated delta, called when its download completed in full."""
+        with self._delta_lock:
+            slot = self._slot_by_offer.pop(delta_id, None)
+
+        if slot is not None:
+            self._slots.release(slot)
+
+    def _acquire_pull_slot(self, cursor: datetime | None, claim: frozenset[str]) -> str:
+        """Grant or refresh the serving slot of the pull negotiation for a cursor and claim.
+
+        The slot is keyed by the negotiation, so the manifest request, the export request and the download of one
+        requester all count as the same session.
+
+        :raises EndpointBusy: when every slot is taken by another peer.
+        """
+        slot = f'pull:{delta_id(cursor, claim)}'
+
+        if not self._slots.acquire(slot):
+            msg = 'the endpoint is serving its maximum number of peers: try again shortly'
+            raise EndpointBusy(msg)
+
+        return slot
 
     def _delta(self, cursor: datetime | None, claim: frozenset[str]) -> Delta:
         """Return the computed delta for a cursor and claim, recomputing it once the profile gained content."""
@@ -423,24 +510,28 @@ class CollabEndpoint:
             msg = f'this profile does not accept pushes: its `{OPTION_ACCEPT_PUSH}` option is off'
             raise PermissionError(msg)
 
-        # The import lock wraps the worker stop as well: were it taken inside, a second push could restart the
-        # workers while the first is still importing, which is the very starvation the stop exists to prevent.
-        with import_lock(self._state_filepath):
-            state = CollabState.read(self._state_filepath)
+        try:
+            # The import lock wraps the worker stop as well: were it taken inside, a second push could restart the
+            # workers while the first is still importing, which is the very starvation the stop exists to prevent.
+            with import_lock(self._state_filepath):
+                state = CollabState.read(self._state_filepath)
 
-            with workers_stopped(self._profile):
-                report = import_delta(
-                    filepath,
-                    state=state,
-                    backend=self._backend,
-                    extras_mode=self._extras_mode,
-                    peer=peer,
-                    instant=instant,
-                    computer_map=self._computer_map,
-                    refresh=refresh,
-                    groups_mode=self._groups_mode,
-                    members=members,
-                )
+                with workers_stopped(self._profile):
+                    report = import_delta(
+                        filepath,
+                        state=state,
+                        backend=self._backend,
+                        extras_mode=self._extras_mode,
+                        peer=peer,
+                        instant=instant,
+                        computer_map=self._computer_map,
+                        refresh=refresh,
+                        groups_mode=self._groups_mode,
+                        members=members,
+                    )
+        finally:
+            # Released on failure too: the pusher's retry starts with a fresh handshake, which re-acquires.
+            self._slots.release(f'push:{peer}')
 
         return dataclasses.asdict(report)
 
@@ -469,6 +560,7 @@ def serve(profile: Profile, backend: StorageBackend) -> None:
         negotiate_delta=endpoint.negotiate_delta,
         request_delta=endpoint.request_delta,
         resolve_delta=endpoint.resolve_delta,
+        release_delta=endpoint.release_delta,
         diff_manifest=endpoint.diff_manifest,
         handshake=endpoint.handshake,
         import_staged=endpoint.import_staged,

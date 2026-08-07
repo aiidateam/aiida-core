@@ -276,6 +276,63 @@ def test_request_delta_groups_only_under_grow(make_profile, empty_config, temp_b
     assert served(), 'the endpoint must serve group memberships once the collab grows groups'
 
 
+def test_slots_cap_and_expiry(make_profile, monkeypatch):
+    """Test that sessions beyond ``collab.max_concurrency`` answer busy, until a stale slot expires."""
+    from types import SimpleNamespace
+
+    from aiida.tools.collab.protocol import EndpointBusy
+
+    profile = make_profile()
+    endpoint = CollabEndpoint(profile, backend=MagicMock())
+
+    assert endpoint.handshake('pusher-one').busy is False
+    assert endpoint.handshake('pusher-one').busy is False, 'refreshing an own slot is never refused'
+    assert endpoint.handshake('pusher-two').busy is False
+    assert endpoint.handshake('pusher-three').busy is True
+
+    with pytest.raises(EndpointBusy):
+        endpoint.negotiate_delta(None, frozenset())
+
+    now = time.monotonic()
+    monkeypatch.setattr(
+        endpoint_module, 'time', SimpleNamespace(monotonic=lambda: now + endpoint_module.SLOT_IDLE_SECONDS + 1)
+    )
+
+    assert endpoint.handshake('pusher-three').busy is False, 'the slots of the silent holders should have expired'
+
+
+def test_slot_released_after_import(make_profile, record_calls, tmp_path):
+    """Test that a pusher's slot is freed when its import commits, admitting the next pusher."""
+    profile = make_profile(storage_backend='core.psql_dos')
+    record_calls()
+    endpoint = CollabEndpoint(profile, backend=MagicMock())
+
+    assert endpoint.handshake('pusher-one').busy is False
+    assert endpoint.handshake('pusher-two').busy is False
+    assert endpoint.handshake('pusher-three').busy is True
+
+    endpoint.import_staged(tmp_path / 'staged', 'pusher-one', timezone.now())
+
+    assert endpoint.handshake('pusher-three').busy is False
+
+
+def test_slot_released_after_download(make_profile, temp_backend):
+    """Test that completing a download frees the negotiation's slot for the next peer."""
+    profile = make_profile()
+    seal_calculation(temp_backend)
+    endpoint = CollabEndpoint(profile, temp_backend)
+
+    manifest = endpoint.negotiate_delta(None, frozenset())
+    offer = endpoint.request_delta(None, frozenset(), frozenset(manifest.manifest))
+
+    assert endpoint.handshake('pusher-one').busy is False
+    assert endpoint.handshake('pusher-two').busy is True
+
+    endpoint.release_delta(offer.delta)
+
+    assert endpoint.handshake('pusher-two').busy is False
+
+
 def test_join_records_the_newcomer_and_answers_with_the_membership(make_profile, empty_config):
     """Test that admitting a newcomer stores it and hands it everyone this profile knows, itself included.
 

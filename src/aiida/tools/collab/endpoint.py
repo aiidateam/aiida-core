@@ -92,6 +92,15 @@ def local_info(profile: Profile, backend: StorageBackend, cursor: datetime | Non
     )
 
 
+def local_identity(profile: Profile) -> str:
+    """Return the identity under which this profile introduces itself when pushing: the UUID of the profile.
+
+    Peers key what they hold of this profile by it, so it has to be stable across pushes and independent of how
+    the network happens to spell this machine's address.
+    """
+    return profile.uuid
+
+
 @contextmanager
 def workers_stopped(profile: Profile) -> Iterator[None]:
     """Stop the daemon workers of the profile for the duration, on storage that cannot take a second writer.

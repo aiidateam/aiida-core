@@ -123,6 +123,8 @@ Below is a list with all available subcommands.
     Commands:
       init  Set up a profile as part of a collab.
       peer  Correct the entries of the peers of the collab.
+      pull  Fetch the new sealed provenance of peers and import it.
+      push  Send the new sealed provenance of this profile to peers.
 
 
 .. _reference:command-line:verdi-computer:

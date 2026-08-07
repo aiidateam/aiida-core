@@ -52,6 +52,123 @@ def complete_peer(ctx, param, incomplete):
     return [CompletionItem(nickname) for nickname in nicknames if nickname.startswith(incomplete)]
 
 
+def select_peers(configured, names):
+    """Return the peers to sync with, keyed by profile UUID: the named ones, or every one when none was named.
+
+    A name is a local nickname or, for a peer whose nickname one does not remember, its profile UUID.
+    """
+    from aiida.tools.collab.config import find_peer
+
+    if not configured:
+        echo.echo_critical('this collab has no peers yet: hand out a join code, or join with `verdi collab init`.')
+
+    if not names:
+        return configured
+
+    selected = {name: find_peer(configured, name) for name in names}
+    unknown = [name for name, uuid in selected.items() if uuid is None]
+
+    if unknown:
+        known = ', '.join(sorted(entry['nickname'] for entry in configured.values()))
+        echo.echo_critical(f'unknown peer(s) {", ".join(unknown)}: the peers of this collab are {known}.')
+
+    return {uuid: configured[uuid] for uuid in selected.values()}
+
+
+def gossip(config, profile, bump=True):
+    """Return what this profile announces to a peer it contacts: its own entry and everyone it knows.
+
+    Read from the file for every peer, so that what one peer just taught this profile reaches the next one in the
+    same run, and so that the daemon's own merges are not written back over.
+
+    :param bump: raise the version stamp when this machine's address changed, which is what spreads the
+        correction. A dry run announces without stamping: it is to leave nothing behind.
+    """
+    from aiida.tools.collab.config import OPTION_PEERS, roster_entries, self_entry, stored_config
+
+    stored = stored_config(config)
+
+    return roster_entries(stored.get_option(OPTION_PEERS, scope=profile.name), self_entry(stored, profile, bump=bump))
+
+
+def skipped_peer(entry):
+    """Return how to name a peer being skipped, calling out an address nothing has ever answered at.
+
+    An address announced at join is only ever proven by a contact, since a peer's endpoint starts with its daemon,
+    long after the join finished — so a wrong one shows up here and nowhere else.
+    """
+    return f'{"never-answering" if not entry.get("seen") else "offline"} peer {entry["nickname"]}'
+
+
+def pin_peer(config, profile, *, peer_uuid, url, roster):
+    """Record a completed contact: mark the peer answered and merge what it gossiped.
+
+    :param url: the address the peer was reached at, which is what the contact proves. Its own announcement may
+        have moved it in the very roster being merged here, and that address nothing has answered at yet.
+    """
+    from aiida.tools.collab.config import OPTION_PEERS, merge_roster, stored_config
+
+    stored = stored_config(config)
+
+    peers, reports = merge_roster(stored.get_option(OPTION_PEERS, scope=profile.name), roster, profile.uuid)
+    peers[peer_uuid] = {**peers[peer_uuid], 'seen': peers[peer_uuid]['url'] == url}
+
+    # Written to the file as it is now and mirrored into the configuration this command holds, which the peers
+    # after this one in the same run read from.
+    for target in (stored, config):
+        target.set_option(OPTION_PEERS, peers, scope=profile.name)
+
+    stored.store()
+
+    # Membership is auto-trusted — only a token holder hands an entry out — but never silent.
+    for report in reports:
+        echo.echo_report(report)
+
+
+def peer_agrees(config, profile, peer_uuid, entry, info):
+    """Check the identity, the collab and the policy a peer presents, and report whether it may be synced with.
+
+    Nothing is written here, so a refusal leaves both the configuration and the state file untouched.
+    """
+    from aiida.tools.collab.config import OPTION_POLICY, OPTION_UUID
+
+    nickname = entry['nickname']
+
+    # A URL answering with another profile UUID is a different profile — a reprovisioned machine, or a stranger —
+    # and must not inherit the sync history of its predecessor.
+    if info.uuid is not None and info.uuid != peer_uuid:
+        echo.echo_warning(
+            f'refusing to sync with {nickname}: the profile at {entry["url"]} is not the one this collab knows '
+            f'(expected {peer_uuid}, found {info.uuid}). Correct the address with `verdi collab peer set`.'
+        )
+        return False
+
+    # The collab UUID is what keeps a token that was shared too widely from splicing two collabs into one.
+    collab = config.get_option(OPTION_UUID, scope=profile.name)
+
+    if info.collab != collab:
+        echo.echo_warning(
+            f'refusing to sync with {nickname}: it takes part in collab `{info.collab}`, this profile in `{collab}`.'
+        )
+        return False
+
+    # The policy is fixed when a collab is created and travels in the join code, so there is no legitimate way for
+    # two members to declare different ones: a mismatch means a configuration file was edited by hand.
+    policy = config.get_option(OPTION_POLICY, scope=profile.name)
+
+    if (info.extras_mode, info.groups_mode) != (policy['extras_mode'], policy['groups_mode']):
+        echo.echo_warning(
+            f'refusing to sync with {nickname}: it declares extras `{info.extras_mode}` and groups '
+            f'`{info.groups_mode}`, this profile extras `{policy["extras_mode"]}` and groups '
+            f'`{policy["groups_mode"]}`. The policy of a collab is fixed when it is created and cannot be '
+            f'changed, so one of the two `{OPTION_POLICY}` options was edited by hand; restore it to the policy '
+            'the collab was founded with.'
+        )
+        return False
+
+    return True
+
+
 def candidate_addresses():
     """Return the addresses of this machine a collab endpoint could sensibly bind, as ``(interface, address)``.
 
@@ -466,3 +583,302 @@ def collab_peer_set(ctx, peer, url, nickname):
 
     changed = [text for text in (url and f'is at {url}', nickname and f'is now called `{nickname}`') if text]
     echo.echo_success(f'peer `{peer}` {" and ".join(changed)}.')
+
+
+@verdi_collab.command('pull')
+@click.argument('peers', metavar='[PEER]...', nargs=-1, shell_complete=complete_peer)
+@options.FORCE(help='Do not prompt for confirmation before transferring.')
+@options.DRY_RUN(help='Report what a pull would transfer from every peer, without transferring anything.')
+@click.option(
+    '--pause-my-daemon',
+    is_flag=True,
+    help='Stop the daemon workers while the delta is imported. Required on SQLite storage while workers run.',
+)
+@requires_loaded_profile()
+@click.pass_context
+def collab_pull(ctx, peers, force, dry_run, pause_my_daemon):
+    """Fetch the new sealed provenance of peers and import it.
+
+    PEER is the nickname of a peer of the collab; without any, every peer is pulled from. Each transfer is
+    confirmed with its exact node count and size before any payload travels.
+    """
+    from contextlib import nullcontext
+
+    from aiida.common.exceptions import IntegrityError
+    from aiida.engine.daemon.client import get_daemon_client
+    from aiida.manage import get_manager
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.config import OPTION_PEERS, OPTION_TOKEN, OPTION_UUID
+    from aiida.tools.collab.endpoint import workers_stopped
+    from aiida.tools.collab.protocol import CollabRequestError
+    from aiida.tools.collab.state import CollabState, import_lock
+    from aiida.tools.collab.sync import import_delta, missing_uuids
+
+    profile = ctx.obj.profile
+    require_collab(profile)
+
+    # Checked before anything is transferred: SQLite is single-writer, so the import and running workers would
+    # starve each other over the database lock.
+    pause = False
+
+    if not dry_run and 'sqlite' in profile.storage_backend and get_daemon_client().is_daemon_running:
+        if not pause_my_daemon:
+            echo.echo_critical('cannot proceed: please pause your daemon, or pass `--pause-my-daemon`.')
+
+        pause = True
+
+    selected = select_peers(ctx.obj.config.get_option(OPTION_PEERS, scope=profile.name), peers)
+    token = ctx.obj.config.get_option(OPTION_TOKEN, scope=profile.name)
+    collab = ctx.obj.config.get_option(OPTION_UUID, scope=profile.name)
+    backend = get_manager().get_profile_storage()
+    workdir = CollabState.get_workdir(profile)
+    pulled = 0
+
+    workdir.mkdir(parents=True, exist_ok=True)
+
+    for peer_uuid, entry in selected.items():
+        url, nickname = entry['url'], entry['nickname']
+
+        # Reloaded per peer, so the claim presented to the second peer names what the first one just delivered.
+        state = CollabState.load(profile)
+
+        with CollabClient(url, token, collab=collab) as client:
+            try:
+                info = client.info()
+            except CollabRequestError as exception:
+                echo.echo_warning(f'skipping {skipped_peer(entry)}: {exception}')
+                continue
+
+            if not peer_agrees(ctx.obj.config, profile, peer_uuid, entry, info):
+                continue
+
+            cursor = state.cursors.get(peer_uuid)
+            claim = state.imported_uuids_since(cursor)
+
+            try:
+                # The manifest names what the delta holds; only the nodes this profile lacks are then requested,
+                # so already-held ancestors never travel. The roster travels with it, which is how membership
+                # spreads and a corrected address heals.
+                manifest = client.negotiate_delta(cursor, claim, gossip(ctx.obj.config, profile, bump=not dry_run))
+                want = set(missing_uuids(backend, manifest.manifest))
+
+                if dry_run:
+                    echo.echo_report(f'{nickname}: {len(want)} node(s) to pull')
+                    continue
+
+                offer = client.request_delta(cursor, claim, want)
+
+                if want and not force:
+                    prompt = f'pull {len(want)} node(s) ({offer.size} bytes) from {nickname}?'
+
+                    if not click.confirm(prompt, default=False):
+                        echo.echo_report(f'skipped {nickname}.')
+                        continue
+
+                # A stable per-peer path, so an interrupted download resumes on the next pull.
+                filepath = workdir / f'pull-{peer_uuid}.aiida'
+                client.download_delta(filepath, offer.delta)
+            except CollabRequestError as exception:
+                echo.echo_warning(f'skipping peer {nickname}: {exception}')
+                continue
+
+        try:
+            with import_lock(state.filepath):
+                with workers_stopped(profile) if pause else nullcontext():
+                    report = import_delta(
+                        filepath,
+                        state=state,
+                        backend=backend,
+                        peer=peer_uuid,
+                        # The peer may have recomputed its delta between the negotiation and the request; the
+                        # cursor must not advance past either the manifest the want was diffed against or the
+                        # computation the bytes were cut from, or in-window nodes would never be delivered.
+                        instant=min(manifest.instant, offer.instant),
+                    )
+        except IntegrityError as exception:
+            # The delta linked to a node this profile holds nowhere; nothing landed, the next sync delivers it.
+            echo.echo_critical(str(exception))
+
+        pin_peer(ctx.obj.config, profile, peer_uuid=peer_uuid, url=url, roster=manifest.roster)
+
+        filepath.unlink()
+        filepath.with_name(f'{filepath.name}.etag').unlink(missing_ok=True)
+        pulled += len(report.uuids)
+
+        echo.echo_success(f'pulled {len(report.uuids)} node(s) ({report.size} bytes) from {nickname}')
+
+    if pulled:
+        _dump_hint(profile)
+
+
+def _dump_hint(profile):
+    """Point at the full dump, since an incremental one selects by mtime and pulled nodes keep old timestamps."""
+    from aiida.tools._dumping.utils import DumpPaths
+
+    filepath = DumpPaths.get_default_dump_path(entity=profile) / DumpPaths.TRACKING_LOG_FILE_NAME
+
+    if filepath.exists():
+        echo.echo_report(
+            'this profile has an incremental dump: pulled nodes keep their original timestamps, so run '
+            '`verdi profile dump --no-filter-by-last-dump-time` once to include them.'
+        )
+
+
+@verdi_collab.command('push')
+@click.argument('peers', metavar='[PEER]...', nargs=-1, shell_complete=complete_peer)
+@options.FORCE(help='Do not prompt for confirmation before transferring.')
+@options.DRY_RUN(help='Report what a push would transfer to every peer, without transferring anything.')
+@requires_loaded_profile()
+@click.pass_context
+def collab_push(ctx, peers, force, dry_run):
+    """Send the new sealed provenance of this profile to peers.
+
+    PEER is the nickname of a peer of the collab; without any, every peer that accepts pushes is pushed to. Each
+    transfer is confirmed with its exact node count and size before any payload travels.
+    """
+    import json
+    from datetime import datetime
+    from http import HTTPStatus
+
+    from aiida.manage import get_manager
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.config import OPTION_PEERS, OPTION_TOKEN, OPTION_UUID
+    from aiida.tools.collab.endpoint import local_identity
+    from aiida.tools.collab.protocol import CollabRequestError
+    from aiida.tools.collab.state import CollabState
+    from aiida.tools.collab.sync import compute_delta, export_delta
+
+    profile = ctx.obj.profile
+    require_collab(profile)
+
+    selected = select_peers(ctx.obj.config.get_option(OPTION_PEERS, scope=profile.name), peers)
+    token = ctx.obj.config.get_option(OPTION_TOKEN, scope=profile.name)
+    collab = ctx.obj.config.get_option(OPTION_UUID, scope=profile.name)
+    backend = get_manager().get_profile_storage()
+    identity = local_identity(profile)
+    workdir = CollabState.get_workdir(profile)
+
+    workdir.mkdir(parents=True, exist_ok=True)
+
+    for peer_uuid, entry in selected.items():
+        url, nickname = entry['url'], entry['nickname']
+        filepath = workdir / f'push-{peer_uuid}.aiida'
+        filepath_meta = workdir / f'push-{peer_uuid}.json'
+
+        with CollabClient(url, token, collab=collab) as client:
+            try:
+                info = client.info()
+            except CollabRequestError as exception:
+                echo.echo_warning(f'skipping {skipped_peer(entry)}: {exception}')
+                continue
+
+            if not info.accept_push:
+                echo.echo_warning(f'skipping peer {nickname}: it does not accept pushes.')
+                continue
+
+            if not peer_agrees(ctx.obj.config, profile, peer_uuid, entry, info):
+                continue
+
+            # A peer that dies anywhere between the handshake and the upload is skipped like an offline one:
+            # nothing durable was written, the stash (if any) is preserved, and the remaining peers still sync.
+            try:
+                handshake = client.push_handshake(identity, gossip(ctx.obj.config, profile, bump=not dry_run))
+
+                if handshake.busy:
+                    echo.echo_warning(f'skipping peer {nickname}: it is busy right now, try again shortly.')
+                    continue
+
+                meta = json.loads(filepath_meta.read_text(encoding='utf-8')) if filepath_meta.exists() else None
+
+                state = CollabState.load(profile)
+
+                if filepath.exists() and meta is not None and meta['peer'] == peer_uuid:
+                    # A previous push to this peer failed after the transfer. Retrying with the very same bytes
+                    # is what lets the upload negotiate that everything is already staged and re-attempt only
+                    # the import; the original instant travels with them, since it is what describes those bytes.
+                    uuids, instant = meta['uuids'], datetime.fromisoformat(meta['instant'])
+
+                    if dry_run:
+                        echo.echo_report(f'{nickname}: {len(uuids)} node(s) to push (stashed retry)')
+                        continue
+
+                    echo.echo_report(f'retrying the delta of the previous failed push to {nickname}')
+                else:
+                    # The delta is offered to the peer as a manifest first; only the nodes it is missing are
+                    # exported, so nothing the peer already holds is uploaded.
+                    delta = compute_delta(
+                        state=state,
+                        backend=backend,
+                        cursor=handshake.cursor,
+                        claim=frozenset(handshake.claim),
+                    )
+                    want = set(client.diff_manifest(delta.uuids).missing)
+
+                    if dry_run:
+                        echo.echo_report(f'{nickname}: {len(want)} node(s) to push')
+                        continue
+
+                    export = export_delta(filepath, delta=delta, backend=backend, want=want)
+                    uuids, instant = export.uuids, export.instant
+                    filepath_meta.write_text(
+                        json.dumps({'peer': peer_uuid, 'instant': instant.isoformat(), 'uuids': uuids}, indent=4),
+                        encoding='utf-8',
+                    )
+
+                if not uuids:
+                    filepath.unlink()
+                    filepath_meta.unlink()
+
+                    # A sync that had nothing to carry is still a completed contact, so the identity and the
+                    # policy it revealed are pinned as after any other.
+                    pin_peer(
+                        ctx.obj.config,
+                        profile,
+                        peer_uuid=peer_uuid,
+                        url=url,
+                        roster=handshake.roster,
+                    )
+                    echo.echo_report(f'nothing to push: {nickname} is up to date.')
+                    continue
+
+                if not force:
+                    prompt = f'push {len(uuids)} node(s) ({filepath.stat().st_size} bytes) to {nickname}?'
+
+                    if not click.confirm(prompt, default=False):
+                        # The cut is dropped rather than stashed: a stash is re-sent without renegotiation, which
+                        # is right after a failed import but wrong after a decline, when the peer moves on.
+                        filepath.unlink()
+                        filepath_meta.unlink()
+                        echo.echo_report(f'skipped {nickname}.')
+                        continue
+
+                upload = client.upload_delta(filepath)
+                echo.echo_report(f'transferred {upload.sent} bytes, {upload.staged} staged on the peer')
+            except CollabRequestError as exception:
+                echo.echo_warning(f'skipping peer {nickname}: {exception}')
+                continue
+
+            try:
+                client.trigger_import(upload.sha256, peer=identity, instant=instant)
+            except CollabRequestError as exception:
+                if exception.status == HTTPStatus.UNPROCESSABLE_ENTITY:
+                    # The delta can never land — it links to a node the peer no longer holds — so retrying the
+                    # same bytes would abort forever. The next push negotiates afresh, its diff includes the hole.
+                    filepath.unlink()
+                    filepath_meta.unlink()
+                    echo.echo_critical(f'the peer refused the delta: {exception}\nThe next push negotiates afresh.')
+
+                echo.echo_critical(
+                    f'files transferred, provenance not landed: {exception}\n'
+                    'The next push resumes from whatever the peer still has staged.'
+                )
+
+        size = filepath.stat().st_size
+
+        # Nothing is recorded locally: what the peer now holds is its cursor for this profile, kept on its side.
+        pin_peer(ctx.obj.config, profile, peer_uuid=peer_uuid, url=url, roster=handshake.roster)
+
+        filepath.unlink()
+        filepath_meta.unlink()
+
+        echo.echo_success(f'pushed {len(uuids)} node(s) ({size} bytes) to {nickname}')

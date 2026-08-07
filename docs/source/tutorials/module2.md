@@ -81,6 +81,11 @@ In {ref}`Module 1 <tutorial:module1>`, you ran a single `gsrd` simulation throug
 Let's run one again here to work with, holding the Gray-Scott parameters fixed:
 
 ```{code-cell} ipython3
+:tags: [hide-input]
+:mystnb:
+:    code_prompt_show: 'Show the run code (same as Module 1)'
+:    code_prompt_hide: 'Hide the run code (same as Module 1)'
+
 # Run a single tracked gsrd calculation (as in Module 1).
 from pathlib import Path
 
@@ -113,7 +118,7 @@ results, calc_node = launch_shell_job(
 )
 ```
 
-To get the `variance_V` value out, you'd reach for the same hand-written regex as in {ref}`Module 1 <tutorial:module1>`, run over the run's `stdout` node.
+As in {ref}`Module 1 <tutorial:module1>`, getting the `variance_V` value back out means a hand-written regex over the run's `stdout` node.
 The provenance records **file in → ShellJob → stdout/file out**, so AiiDA knows *that* a stdout log and a `results.npz` were produced, but not *what's inside* them.
 A query like "all runs where `variance_V > 0.001`" would therefore mean opening every stdout node and re-running that regex ourselves.
 
@@ -134,31 +139,15 @@ plot_provenance(calc_node)
 Every input and every output is a `SinglefileData` blob: the YAML on the left, `results.npz` and `stdout` on the right.
 The simulation ran with full provenance, but as far as the database is concerned, the values that we actually care about are buried inside opaque files.
 
-## Structured data nodes
-
-What if we could register the simulation's inputs and outputs as **structured AiiDA data nodes** instead?
+Instead, we can register the simulation's inputs and outputs as **structured AiiDA data nodes**:
 
 - The input parameters as a {py:class}`~aiida.orm.Dict` (queryable key-value pairs in the database)
 - The output scalars as {py:class}`~aiida.orm.Float` nodes (directly searchable)
 
 :::{note}
-`orm` stands for **Object-Relational Mapping**: it lets you work with database-stored objects as regular Python classes.
-AiiDA's {mod}`~aiida.orm` module provides data types like `Dict`, `Float`, `Int`, `Str`, `List`, `SinglefileData` (and more) that are automatically persisted in the database and linked in the provenance graph.
+`Dict` and `Float` both come from AiiDA's {mod}`~aiida.orm` module (short for **Object-Relational Mapping**), which lets you work with database-stored objects as regular Python classes.
+It also provides `Int`, `Str`, `List` (Python primitive equivalents), `SinglefileData`, and more, each automatically persisted in the database and linked in the provenance graph.
 :::
-
-### Built-in data types at a glance
-
-AiiDA ships a range of data types for different use cases.
-The ones you will see most often:
-
-| Category | Type | When to use |
-|---|---|---|
-| Scalars | {py:class}`~aiida.orm.Int`, {py:class}`~aiida.orm.Float`, {py:class}`~aiida.orm.Str`, {py:class}`~aiida.orm.Bool` | Single values you want queryable in the database |
-| Collections | {py:class}`~aiida.orm.Dict`, {py:class}`~aiida.orm.List` | Key-value maps or ordered sequences of simple Python types |
-| Arrays | {py:class}`~aiida.orm.ArrayData`, {py:class}`~aiida.orm.XyData` | NumPy arrays (grids, spectra, x-y curves) |
-| Files | {py:class}`~aiida.orm.SinglefileData`, {py:class}`~aiida.orm.FolderData`, {py:class}`~aiida.orm.RemoteData` | Opaque binary or text files, directory trees, pointers to files on a remote machine |
-
-The full catalogue is in {ref}`topics:data_types:core`.
 
 ## Tracking Python steps with `@calcfunction`
 
@@ -170,37 +159,38 @@ It's a regular Python function with a decorator that makes AiiDA automatically:
 3. Store all output nodes
 4. Link everything in the provenance graph
 
+Because a `calcfunction` records its inputs and outputs as AiiDA nodes, inside the body you work with AiiDA data objects rather than plain Python: `parameters` arrives as an `orm.Dict` node (not a plain `dict`), whose contents you read with `.value`, the same `.value` every data node exposes, including the `orm.Float` outputs later.
+At the *call* site you can still pass a plain `dict`; AiiDA auto-wraps it into that `orm.Dict` node for you.
+
 Let's write two: one for input preparation, and one for output parsing.
 
-The first, `prepare_input`, bridges the two natural representations of a simulation's parameters: the dictionary of typed values we want to *think* in (floats, ints, strings) and the YAML input file the binary actually *reads*.
+### Preparing the input
+
+`prepare_input` bridges the two natural representations of a simulation's parameters: the dictionary of typed values we want to *think* in (floats, ints, strings) and the YAML input file the binary actually *reads*.
 Most scientific codes take an input file on disk, but the values that drive them are often set programmatically (e.g., from Python), as typed variables.
 Doing the conversion inside a `calcfunction` keeps both representations in the provenance graph: the `Dict` is queryable, the rendered file is what `gsrd` consumes:
 
 ```{code-cell} ipython3
 # Define prepare_input: a calcfunction that converts a Dict to a YAML file.
-import io
-
 from aiida import engine, orm
 
 
 @engine.calcfunction
 def prepare_input(parameters: orm.Dict) -> orm.SinglefileData:
     """Convert a Dict of parameters into a SinglefileData YAML file."""
-    content = yaml.dump(parameters.get_dict())
-    return orm.SinglefileData(io.BytesIO(content.encode()), filename='input.yaml')
+    content = yaml.dump(parameters.value)
+    return orm.SinglefileData.from_string(content, filename='input.yaml')
 ```
 
-:::{note}
-Inside a `calcfunction`, all parameters are AiiDA data nodes, not plain Python types.
-That is why the function calls `parameters.get_dict()` to extract the dictionary.
+This also starts to address one of {ref}`Module 0 <tutorial:module0>`'s pain points: the parameters now live in a single `Dict` node, stored with full provenance and reviewable in one place, rather than a hand-edited YAML file whose mistyped keys vanish silently.
 
-When *calling* the function, AiiDA auto-serializes plain Python types (`int`, `float`, `str`, `bool`, `dict`, `list`) to the corresponding `orm` nodes, so `prepare_input(orm.Dict(params))` and `prepare_input(params)` both work.
+:::{tip}
+A `Dict` on its own still doesn't *validate* the keys, but real {ref}`CalcJob <topics:calculations:concepts:calcjobs>` plugins do: they check the inputs for you and reject unknown or malformed parameters before the calculation ever runs.
 :::
 
-This also starts to address one of {ref}`Module 0 <tutorial:module0>`'s pain points: the parameters now live in a single `Dict` node, stored with full provenance and reviewable in one place, rather than a hand-edited YAML file whose mistyped keys vanish silently.
-The `Dict` alone still doesn't validate the keys, but real {ref}`CalcJob <topics:calculations:concepts:calcjobs>` plugins do: they check the inputs for you and reject unknown or malformed parameters before the calculation ever runs.
+### Parsing the output
 
-The second, `parse_output`, takes the captured stdout of a `gsrd` run and extracts the two scalar diagnostics as `Float` nodes.
+`parse_output` takes the captured stdout of a `gsrd` run and extracts the two scalar diagnostics as `Float` nodes.
 We declare the two return keys as a {class}`~typing.TypedDict` so the function's return type is self-documenting (and so that {ref}`Module 3 <tutorial:module3>` can reuse the same annotation):
 
 ```{code-cell} ipython3
@@ -220,8 +210,7 @@ class ParseOutputs(TypedDict):
 @engine.calcfunction
 def parse_output(stdout: orm.SinglefileData) -> ParseOutputs:
     """Extract variance_V and mean_V from the captured ``gsrd`` stdout log."""
-    with stdout.open(mode='r') as f:
-        text = f.read()
+    text = stdout.get_content(mode='r')
 
     variance_v = float(VARIANCE_RE.search(text).group(1))
     mean_v = float(MEAN_RE.search(text).group(1))
@@ -233,8 +222,8 @@ def parse_output(stdout: orm.SinglefileData) -> ParseOutputs:
 ```
 
 :::{note}
-Writing a small parser is a common cost when wrapping codes that emit their results in unstructured text (the alternative being a schema-defined output format like XML or HDF5, which not every code provides).
-What is new here is that the parser itself becomes a tracked AiiDA process: its inputs (the stdout node) and its outputs (the `Float`s) get linked into the provenance graph, so the regex result lives at the same level as the simulation's other data.
+Writing a small parsing step is a common cost when wrapping codes that emit their results in unstructured text (the alternative being a schema-defined output format like XML or HDF5, which not every code provides).
+What is new here is that the parsing step itself becomes a tracked AiiDA process: its inputs (the stdout node) and its outputs (the `Float` nodes) get linked into the provenance graph, so the regex result lives at the same level as the simulation's other data.
 :::
 
 :::{note}
@@ -243,12 +232,14 @@ When returning a single node, AiiDA registers it under the default link label `r
 When returning a dict, each value is registered as a named output instead, accessible via `node.outputs.<label>`.
 :::
 
+### Chaining the steps into a pipeline
+
 Now, we can chain them: `prepare_input` → `launch_shell_job` → `parse_output`.
 Each step is tracked, and the inputs and outputs are stored as structured, queryable nodes:
 
 ```{code-cell} ipython3
 # Run the enriched pipeline: prepare_input → ShellJob → parse_output.
-input_file = prepare_input(orm.Dict(BASE_PARAMS))
+input_file = prepare_input(BASE_PARAMS)
 
 results, node = launch_shell_job(
     gsrd_code,
@@ -257,7 +248,8 @@ results, node = launch_shell_job(
     outputs=['results.npz'],
 )
 
-parsed = parse_output(results['stdout'])
+# engine.run_get_node returns the outputs and the process node, like launch_shell_job above.
+parsed, parse_node = engine.run_get_node(parse_output, stdout=results['stdout'])
 print(f"variance(V) = {parsed['variance_V'].value:.4e}")
 print(f"mean(V)     = {parsed['mean_V'].value:.4e}")
 ```
@@ -266,7 +258,7 @@ print(f"mean(V)     = {parsed['mean_V'].value:.4e}")
 
 ```{code-cell} ipython3
 # parse_output is a tracked process: SinglefileData (stdout) in, Float nodes out.
-parse_node = parsed['variance_V'].creator
+# parse_node came from engine.run_get_node above.
 %verdi process show {parse_node.pk}
 ```
 
@@ -440,7 +432,7 @@ Then in {ref}`Module 3b <tutorial:module3b>`, you'll turn the `for` loop itself 
 ## Further reading
 
 - AiiDA's data model: {ref}`topics:data_types`
-- Base data types (`Dict`, `Float`, `Int`, `Str`, `List`): {ref}`topics:data_types:core:base`
+- Built-in data types (scalars, collections, arrays, files): {ref}`topics:data_types:core`
 - In-depth guide to calcfunctions: {ref}`topics:processes:functions`
 - CalcJob reference: {ref}`topics:calculations:concepts:calcjobs`
 - {ref}`Auto-serialization of plain Python types in calcfunctions <topics:calculations:concepts:calcfunctions:automatic-serialization>` (introduced in v2.1)

@@ -289,7 +289,7 @@ with If(parsed.variance_V > variance_threshold):
         command=command,
         arguments=['{input}'],
         nodes={'input': prepare_input_task(
-            parameters={**parameters.get_dict(), 'grid_size': 128}
+            parameters={**parameters.value, 'grid_size': 128}
         ).result},
         outputs=['results.npz'],
     )
@@ -446,7 +446,7 @@ for parse_node in wg_loop.process.called_descendants:
         continue
     sim_stdout = parse_node.inputs.stdout
     sim_node = sim_stdout.creator
-    n_steps = sim_node.inputs.nodes.input.creator.inputs.parameters.get_dict()['n_steps']
+    n_steps = sim_node.inputs.nodes.input.creator.inputs.parameters['n_steps']
     variance = float(parse_node.outputs.variance_V.value)
     iterations.append((sim_node.ctime, n_steps, variance))
 

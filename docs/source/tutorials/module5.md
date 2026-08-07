@@ -275,10 +275,9 @@ stdout_qb = orm.QueryBuilder().append(
 )
 file_values = []
 for (sfd,) in stdout_qb.iterall():
-    with sfd.open(mode='r') as fh:
-        match = VARIANCE_RE.search(fh.read())
-        if match:
-            file_values.append(float(match.group(1)))
+    match = VARIANCE_RE.search(sfd.get_content(mode='r'))
+    if match:
+        file_values.append(float(match.group(1)))
 t_files = time.perf_counter() - t0
 ```
 

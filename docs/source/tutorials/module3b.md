@@ -287,8 +287,7 @@ from IPython.display import Image
 
 # Load the transition plot from the stored process node, not the live Python object.
 sweep_node = orm.load_node(wg_sweep.process.pk)
-with sweep_node.outputs.transition_plot.open(mode='rb') as fh:
-    img_bytes = fh.read()
+img_bytes = sweep_node.outputs.transition_plot.get_content(mode='rb')
 
 Image(img_bytes)
 ```

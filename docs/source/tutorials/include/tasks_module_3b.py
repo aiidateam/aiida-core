@@ -54,6 +54,5 @@ def make_transition_plot(variances: Annotated[dict, dynamic(float)]) -> orm.Sing
     buf = io.BytesIO()
     fig.savefig(buf, format='png', dpi=100)
     plt.close(fig)
-    buf.seek(0)
 
-    return orm.SinglefileData(io.BytesIO(buf.getvalue()), filename='transition_curve.png')
+    return orm.SinglefileData.from_bytes(buf.getvalue(), filename='transition_curve.png')

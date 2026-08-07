@@ -100,7 +100,9 @@ load_profile()
 :::
 
 :::{note}
-To keep the sandbox self-contained, the setup cell points `AIIDA_PATH` at a local `.aiida-tutorial/` directory in your working directory, so this profile, its database, and its daemon live there instead of in your usual `~/.aiida` default configuration folder.
+AiiDA keeps all of its configuration, your profiles, their databases, and the daemon's state, in a single **configuration directory**, which defaults to `~/.aiida`.
+Where AiiDA looks for (and creates) that directory is controlled by the `AIIDA_PATH` environment variable.
+To keep the tutorial self-contained, the setup cell points `AIIDA_PATH` at a local `.aiida-tutorial/` directory in your working directory, so this profile, its database, and its daemon live there instead of in your usual `~/.aiida`.
 Nothing here touches any AiiDA profile you already have, and deleting `.aiida-tutorial/` removes every trace of the tutorial.
 :::
 

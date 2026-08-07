@@ -9,7 +9,6 @@ Module-specific tasks live alongside this file: ``tasks_module_3b.py`` (the
 sweep reduction plot) and ``tasks_module_6.py`` (the adaptive-workflow tasks).
 """
 
-import io
 from typing import TypedDict
 
 import yaml
@@ -28,8 +27,8 @@ class ParseOutputs(TypedDict):
 @engine.calcfunction
 def prepare_input(parameters: orm.Dict) -> orm.SinglefileData:
     """Convert a Dict of parameters into a SinglefileData YAML file."""
-    content = yaml.dump(parameters.get_dict())
-    return orm.SinglefileData(io.BytesIO(content.encode()), filename='input.yaml')
+    content = yaml.dump(parameters.value)
+    return orm.SinglefileData.from_string(content, filename='input.yaml')
 
 
 @engine.calcfunction
@@ -40,8 +39,7 @@ def parse_output(stdout: orm.SinglefileData) -> ParseOutputs:
         ``aiida-shell``). ``gsrd`` prints the headline diagnostics only to
         stdout, so we recover them with a simple regex.
     """
-    with stdout.open(mode='r') as f:
-        text = f.read()
+    text = stdout.get_content(mode='r')
     variance_match = VARIANCE_RE.search(text)
     mean_match = MEAN_RE.search(text)
     if variance_match is None or mean_match is None:

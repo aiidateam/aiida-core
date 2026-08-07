@@ -99,7 +99,6 @@ Let's confirm the failure mode end-to-end before wiring anything fancy:
 :    code_prompt_show: 'Show first run (unstable `dt`, will fail)'
 :    code_prompt_hide: 'Hide first run'
 
-import io
 import yaml
 
 from aiida import orm
@@ -118,10 +117,7 @@ BASE_PARAMS = {
 }
 
 unstable_params = {**BASE_PARAMS, 'dt': 10.0, 'n_steps': 500}
-input_file = orm.SinglefileData(
-    io.BytesIO(yaml.dump(unstable_params).encode()),
-    filename='input.yaml',
-)
+input_file = orm.SinglefileData.from_string(yaml.dump(unstable_params), filename='input.yaml')
 
 _, node_fail = launch_shell_job(
     gsrd_code,
@@ -148,13 +144,9 @@ Here, the recovery is to halve `dt` (so the integrator becomes stable again) and
 def halve_dt(task):
     """Recover from `gsrd`'s numerical-instability failure by halving `dt`."""
     current_input = task.inputs.nodes.input.value
-    with current_input.open(mode='r') as fh:
-        params = yaml.safe_load(fh.read())
+    params = yaml.safe_load(current_input.get_content(mode='r'))
     params['dt'] = params['dt'] / 2.0
-    new_input = orm.SinglefileData(
-        io.BytesIO(yaml.dump(params).encode()),
-        filename='input.yaml',
-    )
+    new_input = orm.SinglefileData.from_string(yaml.dump(params), filename='input.yaml')
     task.set_inputs({'nodes': {'input': new_input}})
     return f"reduced dt to {params['dt']} and retrying"
 ```
@@ -279,7 +271,7 @@ class GsrdCalculation(CalcJob):
     def prepare_for_submission(self, folder):
         import yaml
         with folder.open('input.yaml', 'w') as fh:
-            yaml.safe_dump(self.inputs.parameters.get_dict(), fh)
+            yaml.safe_dump(self.inputs.parameters.value, fh)
         codeinfo = datastructures.CodeInfo()
         codeinfo.code_uuid = self.inputs.code.uuid
         codeinfo.cmdline_params = ['input.yaml']
@@ -355,10 +347,7 @@ import time
 from aiida.manage.caching import enable_caching
 
 valid_params = {**BASE_PARAMS}
-valid_input = orm.SinglefileData(
-    io.BytesIO(yaml.dump(valid_params).encode()),
-    filename='input.yaml',
-)
+valid_input = orm.SinglefileData.from_string(yaml.dump(valid_params), filename='input.yaml')
 
 # First run: actually executes gsrd.
 t0 = time.perf_counter()

@@ -43,7 +43,7 @@ def fft_peak_wavelength(results_npz: orm.SinglefileData) -> orm.Float:
 @engine.calcfunction
 def bump_n_steps(parameters: orm.Dict, increment: orm.Int) -> orm.Dict:
     """Return a copy of *parameters* with ``n_steps`` increased by ``increment``."""
-    new_params = parameters.get_dict()
+    new_params = dict(parameters.value)
     new_params['n_steps'] = int(new_params['n_steps']) + int(increment.value)
     return orm.Dict(new_params)
 

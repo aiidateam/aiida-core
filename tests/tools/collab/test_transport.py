@@ -23,11 +23,13 @@ from aiida.common.exceptions import ConfigurationError
 from aiida.tools.collab.client import CollabClient
 from aiida.tools.collab.config import endpoint_url
 from aiida.tools.collab.protocol import (
+    REKEY_HINT,
     ROUTE_DELTA,
     ROUTE_HANDSHAKE,
     ROUTE_INFO,
     ROUTE_JOIN,
     ROUTE_MISSING,
+    ROUTE_RETIRED,
     CollabRequestError,
     DeltaManifest,
     DeltaOffer,
@@ -82,6 +84,7 @@ class StubSyncCore:
         self.handshakes: list[str] = []
         self.joined: list[dict] = []
         self.token = TOKEN
+        self.retirements: list[str] = []
         self.roster: list[dict] = [{'uuid': 'uuid-of-the-peer', 'url': 'http://peer:9137', 'name': 'peer', 'stamp': 1}]
         self.info_cursors: list[datetime | None] = []
         self.imported: list[tuple[str, datetime, bytes]] = []
@@ -115,6 +118,9 @@ class StubSyncCore:
         self.joined.append(entry)
         return JoinResponse(collab=COLLAB, roster=self.roster)
 
+    def retired(self, peer: str) -> None:
+        self.retirements.append(peer)
+
     def import_staged(self, filepath: Path, peer: str, instant: datetime) -> dict:
         if self.import_exception is not None:
             raise self.import_exception
@@ -138,11 +144,13 @@ def build_server(host: str, port: int, stub: StubSyncCore, staging_dir: Path) ->
     return CollabServer(
         host,
         port,
-        token=stub.token,
+        # Read per request, so a rotation retires the old token for serving without a restart.
+        token=lambda: stub.token,
         collab=COLLAB,
         staging_dir=staging_dir,
         info=stub.info,
         join=stub.join,
+        retired=stub.retired,
         negotiate_delta=stub.negotiate_delta,
         request_delta=stub.request_delta,
         resolve_delta=stub.resolve_delta,
@@ -304,6 +312,7 @@ def test_auth_rejected(transport):
         ('GET', ROUTE_INFO),
         ('POST', ROUTE_HANDSHAKE),
         ('POST', ROUTE_JOIN),
+        ('POST', ROUTE_RETIRED),
         ('GET', route_delta('0' * 64)),
         ('POST', ROUTE_DELTA),
         ('POST', ROUTE_MISSING),
@@ -317,13 +326,52 @@ def test_auth_rejected(transport):
             response = requests.request(method, f'{transport.url}{route}', headers=headers, timeout=10)
             assert response.status_code == HTTPStatus.UNAUTHORIZED, (method, route)
 
+    refused = requests.get(f'{transport.url}{ROUTE_INFO}', headers={'Authorization': 'Bearer wrong'}, timeout=10)
+
     assert transport.stub.info_cursors == []
     assert transport.stub.negotiated == []
     assert transport.stub.requested == []
     assert transport.stub.diffed == []
     assert transport.stub.handshakes == []
     assert transport.stub.joined == []
+    assert transport.stub.retirements == []
     assert transport.stub.imported == []
+    assert REKEY_HINT in refused.json()['detail'], 'the 401 is where a rotation is enforced, and it has to say so'
+
+
+def test_rotated_token_is_refused_at_once(transport):
+    """A token the endpoint no longer holds is refused from the next request on, without a restart.
+
+    This is the whole enforcement of a rotation: the excluded member keeps its copy of the retired token, so
+    everything depends on the endpoints that rotated stopping to honour it — and a restart nobody is told to run
+    would leave that member reading in the meantime.
+    """
+    assert transport.client.info() == PEER_INFO
+
+    transport.stub.token = 'the-rotated-token'
+
+    with pytest.raises(CollabRequestError) as excinfo:
+        transport.client.info()
+
+    assert excinfo.value.status == HTTPStatus.UNAUTHORIZED
+    assert 'verdi collab rekey' in str(excinfo.value)
+
+
+def test_signal_retired(transport):
+    """The rotation signal reaches the peer and hands it the identity of whoever rotated, and nothing more."""
+    transport.client.signal_retired('uuid-of-the-rotator')
+
+    assert transport.stub.retirements == ['uuid-of-the-rotator']
+
+
+def test_signal_retired_refuses_a_foreign_collab(transport):
+    """A signal presenting another collab is refused like every other request that does."""
+    with CollabClient(transport.url, TOKEN, collab='uuid-of-another-collab', timeout=10) as client:
+        with pytest.raises(CollabRequestError) as excinfo:
+            client.signal_retired('uuid-of-the-rotator')
+
+    assert excinfo.value.status == HTTPStatus.CONFLICT
+    assert transport.stub.retirements == []
 
 
 def test_download(transport, tmp_path):

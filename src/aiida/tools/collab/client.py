@@ -25,6 +25,7 @@ from aiida.tools.collab.protocol import (
     ROUTE_INFO,
     ROUTE_JOIN,
     ROUTE_MISSING,
+    ROUTE_RETIRED,
     CollabRequestError,
     DeltaManifest,
     DeltaOffer,
@@ -96,6 +97,17 @@ class CollabClient:
         body = {'collab': self._collab, 'entry': entry}
 
         return self._answer(JoinResponse.from_dict, 'POST', ROUTE_JOIN, json=body)
+
+    def signal_retired(self, peer: str) -> None:
+        """Tell the peer that this profile retired the token both were using, so it can ask its user to rekey.
+
+        Sent with the token being retired, which is the only one the peer still knows. It is advisory and nothing
+        more: an excluded member holds that same token, so any automatic reaction to this would hand it the power
+        to freeze the collab.
+
+        :param peer: the profile UUID of this profile, under which the receiver knows it.
+        """
+        self._request('POST', ROUTE_RETIRED, json={'collab': self._collab, 'peer': peer})
 
     def check_version_skew(self, local: PeerInfo, *, direction: Literal['pull', 'push']) -> PeerInfo:
         """Fetch the handshake of the peer and refuse the transfer when it could not read what the sender writes.

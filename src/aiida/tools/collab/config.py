@@ -117,20 +117,34 @@ def self_entry(config: Config, profile: Profile, *, bump: bool = False) -> dict[
 
 
 def roster_entries(peers: dict[str, dict[str, Any]], mine: dict[str, Any]) -> list[dict[str, Any]]:
-    """Return what this profile gossips: its own entry first, then every peer it holds.
+    """Return what this profile gossips: its own entry first, then every peer it holds as active.
 
     The order is part of the protocol, not presentation: the receiving ``merge_roster`` reads the first entry as
     the self-announcement of whoever is making contact, which is the one entry that contact is evidence about.
 
     Only the owner's self-announced name travels; the local nickname is a display alias of this machine alone.
+
+    Dormant peers stay home. A gossiped entry is a vouching — the receiver takes it as confirmed under the current
+    token — so vouching for a member one has not seen under that token would undo every rotation: the branch that
+    rotated away, or the member that was excluded, would be handed back to everyone at the next sync.
     """
     return [
         mine,
         *(
             {'uuid': uuid, 'url': entry['url'], 'name': entry.get('name') or entry['nickname'], 'stamp': entry['stamp']}
             for uuid, entry in peers.items()
+            if entry['active']
         ),
     ]
+
+
+def dormant_roster(peers: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Return the roster with every entry set dormant, as ``rotate`` and ``rekey`` leave it.
+
+    Dormancy deletes nothing: URL, nickname and stamp are kept as the history that lets a member returning under
+    the new token be recognized rather than re-added, and resume at its existing cursor.
+    """
+    return {uuid: {**entry, 'active': False, 'signalled': False} for uuid, entry in peers.items()}
 
 
 def unique_nickname(peers: dict[str, dict[str, Any]], name: str) -> str:
@@ -154,7 +168,11 @@ def merge_roster(
     """Merge gossiped roster entries into the peers of this profile.
 
     Entries are auto-trusted — only a token holder can hand one out — but never silent: the second return value
-    reports every peer that was added or moved, for the command output.
+    reports every peer that was added, moved or reactivated, for the command output.
+
+    Everything merged here is marked active: a merge only ever follows a contact authenticated by the current
+    token, and a peer gossips its active entries alone. That is the whole of recognition — a member returning
+    after a rotation is found by its profile UUID and resumes at the cursor its dormant entry kept.
 
     :param peers: the roster of this profile, keyed by profile UUID.
     :param entries: what a peer gossiped: its own entry **first**, as ``roster_entries`` builds it, and the ones
@@ -162,10 +180,11 @@ def merge_roster(
         hearsay, which is enough to vouch for a member but not to speak for one.
     :param own_uuid: the profile UUID of this profile, whose entry the peers gossip back and which only this
         profile itself may stamp.
-    :return: the merged roster and one report line per added or moved peer.
+    :return: the merged roster and one report line per added, moved or reactivated peer.
     """
     merged = {uuid: dict(entry) for uuid, entry in peers.items()}
     reports = []
+    contact = entries[0].get('uuid') if entries else None
 
     for gossiped in entries:
         uuid, url, stamp, name = gossiped.get('uuid'), gossiped.get('url'), gossiped.get('stamp'), gossiped.get('name')
@@ -190,6 +209,8 @@ def merge_roster(
                 'name': name,
                 'stamp': stamp,
                 'seen': False,
+                'active': True,
+                'signalled': False,
             }
             reports.append(f'learned about peer `{nickname}` at {url}')
             continue
@@ -205,6 +226,20 @@ def merge_roster(
                 # The flag is about the address that is announced now, so a move puts the peer back to unproven.
                 entry['seen'] = False
                 reports.append(f'peer `{known["nickname"]}` moved to {url}')
+
+        if not known['active']:
+            # Recognition: the member is met again under the current token, so it takes up its entry — and with
+            # it the cursor kept under its UUID — where the rotation left it.
+            entry['active'] = True
+            reports.append(f'peer `{known["nickname"]}` is back under the current token')
+
+        if uuid == contact:
+            # The signal says "the key we share is retired", and this profile hearing from its sender under the
+            # current key is what falsifies it — a rotator that rekeyed onto somebody else's code instead would
+            # otherwise leave its peers told forever to rekey onto a code that no longer exists. Only the sender
+            # can retract it: were a relayed entry to clear the flag, any third party's gossip would erase a
+            # warning it knows nothing about, and nothing would ever restore it.
+            entry['signalled'] = False
 
         merged[uuid] = entry
 

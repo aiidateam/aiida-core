@@ -166,6 +166,30 @@ class CollabEndpoint:
             collab=get_config().get_option(OPTION_UUID, scope=self._profile.name), roster=self._entries(peers)
         )
 
+    def retired(self, peer: str) -> None:
+        """Record that a peer signalled it rotated the token, so that ``verdi status`` asks its user to rekey.
+
+        Nothing else follows from it, by design: the signal is authenticated by the very token being retired, so
+        acting on it would let an excluded member freeze the collab by sending it. A signal from a profile UUID
+        this roster does not know, or from one it holds dormant, has nowhere to be shown — ``verdi status`` is
+        the active list and nothing else — and is dropped; the 401s of the signaller teach the same lesson.
+        """
+        from aiida.manage.configuration import get_config
+
+        with self._roster_lock:
+            config = stored_config(get_config())
+            peers = config.get_option(OPTION_PEERS, scope=self._profile.name)
+
+            if peer not in peers or not peers[peer]['active'] or peers[peer]['signalled']:
+                return
+
+            config.set_option(
+                OPTION_PEERS, {**peers, peer: {**peers[peer], 'signalled': True}}, scope=self._profile.name
+            )
+            config.store()
+
+            LOGGER.report('peer `%s` signalled that it rotated the token of the collab', peers[peer]['nickname'])
+
     def handshake(self, requester: str, roster: list[dict[str, Any]] | None = None) -> PushHandshake:
         """Answer a peer that wants to push: busy while an import is running, else what this profile holds of it.
 
@@ -342,11 +366,16 @@ def serve(profile: Profile, backend: StorageBackend) -> None:
     server = CollabServer(
         config.get_option(OPTION_BIND, scope=profile.name),
         config.get_option(OPTION_PORT, scope=profile.name),
-        token=config.get_option(OPTION_TOKEN, scope=profile.name),
+        # Read from the file per request: a rotation on this machine has to retire the old token for serving at
+        # once, not at the next daemon restart, or an excluded member keeps reading until someone remembers to
+        # restart. The bind address and the collab UUID cannot change under a running endpoint, so they are read
+        # once here.
+        token=lambda: stored_config(config).get_option(OPTION_TOKEN, scope=profile.name),
         collab=config.get_option(OPTION_UUID, scope=profile.name),
         staging_dir=endpoint.staging_dir,
         info=endpoint.info,
         join=endpoint.join,
+        retired=endpoint.retired,
         negotiate_delta=endpoint.negotiate_delta,
         request_delta=endpoint.request_delta,
         resolve_delta=endpoint.resolve_delta,

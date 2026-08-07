@@ -29,11 +29,19 @@ ROUTE_DELTA = f'{API_PREFIX}/delta'
 ROUTE_HANDSHAKE = f'{API_PREFIX}/handshake'
 ROUTE_MISSING = f'{API_PREFIX}/missing'
 ROUTE_JOIN = f'{API_PREFIX}/join'
+ROUTE_RETIRED = f'{API_PREFIX}/retired'
 
 HEADER_STAGED = 'X-Collab-Staged-Bytes'
 
-UNAUTHORIZED_DETAIL = 'the token presented is not the one this collab uses'
-"""Answered to every request that fails to authenticate."""
+REKEY_HINT = 'obtain the current join code from a member and run `verdi collab rekey <code>`'
+"""What a member whose token was retired has to do, said by the advisory signal a rotation sends and offered by
+the 401 of every endpoint that rotated. That 401 is what enforces a rotation, and the only thing that does — the
+signal is authenticated by the very token being retired, which an excluded member also still holds, so it must
+never trigger an action of its own."""
+
+UNAUTHORIZED_DETAIL = f'the token presented is not the one this collab uses. If its key was rotated, {REKEY_HINT}'
+"""Answered to every request that fails to authenticate. It cannot claim a rotation: the same 401 answers a
+mistyped join code, and the endpoint has no way to tell the two apart."""
 
 CHUNK_SIZE = 1024 * 1024
 

@@ -21,6 +21,11 @@ def verdi_collab():
     """Share provenance with the peers of a collab."""
 
 
+# How long the advisory signal of a rotation waits for one peer. Short, like the `verdi status` probe: nothing
+# depends on it arriving, and what the user is waiting for is the new join code printed after it.
+SIGNAL_TIMEOUT = 2.0
+
+
 def require_collab(profile):
     """Abort unless the loaded profile takes part in a collab."""
     from aiida.tools.collab.config import is_enabled
@@ -32,7 +37,10 @@ def require_collab(profile):
 def complete_peer(ctx, param, incomplete):
     """Complete a PEER argument with the nicknames of the peers that can be synced with.
 
-    Only the configuration file is read — no storage, daemon or network — so completion stays instant.
+    Dormant peers are left out, as they are from `verdi status` and from every sync: a member that has not been
+    seen under the current token is not somebody one can act on from here, and its address is corrected by its
+    own announcement when it returns. Only the configuration file is read — no storage, daemon or network — so
+    completion stays instant.
     """
     from click.shell_completion import CompletionItem
 
@@ -47,30 +55,49 @@ def complete_peer(ctx, param, incomplete):
     except Exception:
         return []
 
-    nicknames = sorted(entry['nickname'] for entry in peers.values())
+    nicknames = sorted(entry['nickname'] for entry in peers.values() if entry['active'])
 
     return [CompletionItem(nickname) for nickname in nicknames if nickname.startswith(incomplete)]
 
 
 def select_peers(configured, names):
-    """Return the peers to sync with, keyed by profile UUID: the named ones, or every one when none was named.
+    """Return the peers to sync with, keyed by profile UUID: the named ones, or every active one when none was named.
 
     A name is a local nickname or, for a peer whose nickname one does not remember, its profile UUID.
+
+    Dormant peers are never contacted, named or not: they have not been seen under the current token, so the
+    collab either rotated away from them or they have not rekeyed yet. They come back on their own — by their
+    next contact here, or vouched by a peer that has seen them.
     """
     from aiida.tools.collab.config import find_peer
 
     if not configured:
         echo.echo_critical('this collab has no peers yet: hand out a join code, or join with `verdi collab init`.')
 
+    active = {uuid: entry for uuid, entry in configured.items() if entry['active']}
+
+    if not active:
+        echo.echo_critical(
+            'every peer of this collab is dormant: none has been seen under the current token. They reactivate '
+            'when they contact this profile after rekeying, or when a peer that has seen them gossips them here.'
+        )
+
     if not names:
-        return configured
+        return active
 
     selected = {name: find_peer(configured, name) for name in names}
     unknown = [name for name, uuid in selected.items() if uuid is None]
+    dormant = [name for name, uuid in selected.items() if uuid is not None and uuid not in active]
 
     if unknown:
-        known = ', '.join(sorted(entry['nickname'] for entry in configured.values()))
+        known = ', '.join(sorted(entry['nickname'] for entry in active.values()))
         echo.echo_critical(f'unknown peer(s) {", ".join(unknown)}: the peers of this collab are {known}.')
+
+    if dormant:
+        echo.echo_critical(
+            f'dormant peer(s) {", ".join(dormant)}: they have not been seen under the current token, and are '
+            'contacted again once they rekey and make contact.'
+        )
 
     return {uuid: configured[uuid] for uuid in selected.values()}
 
@@ -91,24 +118,37 @@ def gossip(config, profile, bump=True):
     return roster_entries(stored.get_option(OPTION_PEERS, scope=profile.name), self_entry(stored, profile, bump=bump))
 
 
-def skipped_peer(entry):
+def skipped_peer(entry, exception):
     """Return how to name a peer being skipped, calling out an address nothing has ever answered at.
 
     An address announced at join is only ever proven by a contact, since a peer's endpoint starts with its daemon,
-    long after the join finished — so a wrong one shows up here and nowhere else.
+    long after the join finished — so a wrong one shows up here and nowhere else. A peer that answered at all —
+    with a 401 while it has not rekeyed, say, which is the routine outcome after a rotation — says why itself and
+    is not called offline on top of it.
     """
+    if exception.status is not None:
+        return f'peer {entry["nickname"]}'
+
     return f'{"never-answering" if not entry.get("seen") else "offline"} peer {entry["nickname"]}'
 
 
-def pin_peer(config, profile, *, peer_uuid, url, roster):
+def pin_peer(config, profile, *, peer_uuid, url, roster, token):
     """Record a completed contact: mark the peer answered and merge what it gossiped.
 
     :param url: the address the peer was reached at, which is what the contact proves. Its own announcement may
         have moved it in the very roster being merged here, and that address nothing has answered at yet.
+    :param token: the key this contact was made under. A pin belongs to it: a `verdi collab rotate` run in
+        another terminal while a long transfer was in flight has already set the roster dormant, and merging
+        this contact into it would mark the peer — and everyone it vouched for, the excluded member included —
+        active again under a key none of them holds.
     """
-    from aiida.tools.collab.config import OPTION_PEERS, merge_roster, stored_config
+    from aiida.tools.collab.config import OPTION_PEERS, OPTION_TOKEN, merge_roster, stored_config
 
     stored = stored_config(config)
+
+    if stored.get_option(OPTION_TOKEN, scope=profile.name) != token:
+        echo.echo_warning(f'the collab was rekeyed while syncing with {url}: its standing is left to the rekey.')
+        return
 
     peers, reports = merge_roster(stored.get_option(OPTION_PEERS, scope=profile.name), roster, profile.uuid)
     peers[peer_uuid] = {**peers[peer_uuid], 'seen': peers[peer_uuid]['url'] == url}
@@ -491,8 +531,8 @@ def announce(config, profile, code):
     from aiida.tools.collab.config import OPTION_PEERS, merge_roster, self_entry, stored_config
 
     with CollabClient(code.url, code.token, collab=code.collab) as client:
-        # Stamped like any outbound contact: a member that moved announces the address it is at now, and only a
-        # raised stamp makes the issuer take it over the one it has held all along.
+        # Stamped like any outbound contact: a member that moved while it was dormant announces the address it
+        # is at now, and only a raised stamp makes the issuer take it over the one it has held all along.
         response = client.join(self_entry(config, profile, bump=True))
 
     stored = stored_config(config)
@@ -523,6 +563,145 @@ def join_collab(config, profile, code):
             f'could not join through {code.url}: {exception}\nProfile `{profile.name}` was created and is set '
             f'up; delete it with `verdi profile delete {profile.name}`, then run `verdi collab init --join` '
             'again with a code from a member that is online.'
+        )
+
+
+def set_key(config, profile, token):
+    """Write a new token and set the whole roster dormant, on the file as it is now and in this process.
+
+    Both are one act: a token nobody has presented yet is a roster nobody has been confirmed under. The roster
+    is read from the very snapshot it is written back into, so that an entry the daemon's endpoint merged
+    meanwhile goes dormant with the rest instead of being dropped — dormancy deletes nothing.
+    """
+    from aiida.tools.collab.config import OPTION_PEERS, OPTION_TOKEN, dormant_roster, stored_config
+
+    stored = stored_config(config)
+    values = {OPTION_TOKEN: token, OPTION_PEERS: dormant_roster(stored.get_option(OPTION_PEERS, scope=profile.name))}
+
+    for target in (stored, config):
+        for option, value in values.items():
+            target.set_option(option, value, scope=profile.name)
+
+    stored.store()
+
+    return stored
+
+
+@verdi_collab.command('rotate')
+@requires_loaded_profile()
+@click.pass_context
+def collab_rotate(ctx):
+    """Retire the token of the collab and mint a new one.
+
+    Every member has to rekey with the code this prints, handed to them out of band. Whoever is not given it stays
+    out: rotating is how a collab excludes a member, and how it splits into two groups going separate ways. The
+    exclusion completes when the last member has rekeyed — until then the old token still opens the laggards.
+    """
+    import secrets
+
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.config import OPTION_PEERS, OPTION_TOKEN, OPTION_UUID, join_code, stored_config
+    from aiida.tools.collab.protocol import CollabRequestError
+
+    profile = ctx.obj.profile
+    require_collab(profile)
+
+    stored = stored_config(ctx.obj.config)
+    scope = profile.name
+    retired = stored.get_option(OPTION_TOKEN, scope=scope)
+    collab = stored.get_option(OPTION_UUID, scope=scope)
+    active = [entry for entry in stored.get_option(OPTION_PEERS, scope=scope).values() if entry['active']]
+
+    stored = set_key(ctx.obj.config, profile, secrets.token_urlsafe(32))
+
+    # Sent with the token that was just retired, the only one the peers still know, and purely advisory: it makes
+    # their `verdi status` ask for a rekey and nothing else. Acting on it would hand an excluded member — who
+    # holds that same token — the power to make the whole collab demand a rekey it cannot serve. A courtesy to
+    # whoever answers quickly, so an unreachable peer costs the probe timeout and not the transfer one: the code
+    # below is what the user is waiting for.
+    for entry in active:
+        with CollabClient(entry['url'], retired, collab=collab, timeout=SIGNAL_TIMEOUT) as client:
+            try:
+                client.signal_retired(profile.uuid)
+            except CollabRequestError as exception:
+                echo.echo_warning(f'could not tell {entry["nickname"]} about the rotation: {exception}')
+
+    echo.echo_success('the collab is keyed by a new token; peers rest dormant until they rekey and make contact.')
+    echo.echo_report(
+        'Hand the code below to the members that stay, out of band — person to person. Sending it through the '
+        'collab itself would hand it to whoever was just excluded, since that channel is keyed by the old token.'
+    )
+    echo.echo(join_code(stored, profile))
+
+
+@verdi_collab.command('rekey')
+@click.argument('code', metavar='CODE')
+@requires_loaded_profile()
+@click.pass_context
+def collab_rekey(ctx, code):
+    """Adopt the new token of a collab whose token was rotated.
+
+    CODE is a fresh join code of the same collab, as `verdi status` shows it on a member that already holds the new
+    token. Peers, cursors and history are kept: this profile announces itself to the member whose code it is, and
+    syncing resumes where it left off.
+    """
+    from http import HTTPStatus
+
+    from aiida.tools.collab.config import OPTION_BIND, OPTION_PORT, OPTION_UUID, endpoint_url, stored_config
+    from aiida.tools.collab.protocol import CollabRequestError, JoinCode
+
+    profile = ctx.obj.profile
+    require_collab(profile)
+
+    try:
+        rekeyed = JoinCode.decode(code)
+    except ValueError as exception:
+        echo.echo_critical(str(exception))
+
+    stored = stored_config(ctx.obj.config)
+    scope = profile.name
+    collab = stored.get_option(OPTION_UUID, scope=scope)
+
+    # A rotation replaces the key of a collab, never its identity, so a code naming another collab is somebody
+    # else's — and adopting its token would leave this profile unable to talk to either.
+    if rekeyed.collab != collab:
+        echo.echo_critical(
+            f'this code belongs to collab `{rekeyed.collab}`, this profile takes part in `{collab}`. Rotation '
+            'keeps the identity of a collab, so a code of another one is never the one to rekey with.'
+        )
+
+    # Every member's `verdi status` prints a code, this profile's own included, and rekeying with that one is the
+    # one case that cannot work: this profile is the only member its own endpoint can teach nothing, so it would
+    # rest its whole roster dormant and reactivate none of it.
+    if rekeyed.url == endpoint_url(
+        stored.get_option(OPTION_BIND, scope=scope), stored.get_option(OPTION_PORT, scope=scope)
+    ):
+        echo.echo_critical(
+            'this is the join code of this very profile: rekeying needs the code of another member, who already '
+            'holds the new key.'
+        )
+
+    set_key(ctx.obj.config, profile, rekeyed.token)
+
+    echo.echo_success('the new token is in place; cursors and history are untouched.')
+
+    # The contact the code buys: the issuer learns this profile is back under the current token — nothing else
+    # would tell it, since nobody polls a dormant peer — and vouches for the members it has seen in return.
+    try:
+        announce(ctx.obj.config, profile, rekeyed)
+    except CollabRequestError as exception:
+        if exception.status == HTTPStatus.UNAUTHORIZED:
+            # The code was minted before its issuer rotated again, so this profile now holds a key nobody has:
+            # no peer can reach it and it can reach none, which no amount of waiting repairs.
+            echo.echo_critical(
+                f'{rekeyed.url} refused this code: {exception}\nIt was superseded by a later rotation, and this '
+                'profile now holds a key no member accepts. Obtain the current code and run this again.'
+            )
+
+        echo.echo_warning(
+            f'could not reach {rekeyed.url} to announce the rekey: {exception}\nThe key is in place, but the peers '
+            'stay dormant until one of them contacts this profile; run this again with the code of a member that '
+            'is online to announce yourself now.'
         )
 
 
@@ -682,7 +861,7 @@ def collab_pull(ctx, peers, force, dry_run, pause_my_daemon):
             try:
                 info = client.check_version_skew(local, direction='pull')
             except CollabRequestError as exception:
-                echo.echo_warning(f'skipping {skipped_peer(entry)}: {exception}')
+                echo.echo_warning(f'skipping {skipped_peer(entry, exception)}: {exception}')
                 continue
             except VersionSkew as exception:
                 # Skipped like an offline or a refusing peer: one collaborator on an aiida-core this one cannot
@@ -740,7 +919,7 @@ def collab_pull(ctx, peers, force, dry_run, pause_my_daemon):
             # The delta linked to a node this profile holds nowhere; nothing landed, the next sync delivers it.
             echo.echo_critical(str(exception))
 
-        pin_peer(ctx.obj.config, profile, peer_uuid=peer_uuid, url=url, roster=manifest.roster)
+        pin_peer(ctx.obj.config, profile, peer_uuid=peer_uuid, url=url, roster=manifest.roster, token=token)
 
         filepath.unlink()
         filepath.with_name(f'{filepath.name}.etag').unlink(missing_ok=True)
@@ -812,7 +991,7 @@ def collab_push(ctx, peers, force, dry_run):
             try:
                 info = client.check_version_skew(local, direction='push')
             except CollabRequestError as exception:
-                echo.echo_warning(f'skipping {skipped_peer(entry)}: {exception}')
+                echo.echo_warning(f'skipping {skipped_peer(entry, exception)}: {exception}')
                 continue
             except VersionSkew as exception:
                 # Skipped like an offline or a refusing peer: one collaborator that cannot read what this profile
@@ -891,6 +1070,7 @@ def collab_push(ctx, peers, force, dry_run):
                         peer_uuid=peer_uuid,
                         url=url,
                         roster=handshake.roster,
+                        token=token,
                     )
                     echo.echo_report(f'nothing to push: {nickname} is up to date.')
                     continue
@@ -937,7 +1117,7 @@ def collab_push(ctx, peers, force, dry_run):
                 CollabEvent(time=timezone.now(), direction='push', peer=peer_uuid, uuids=uuids, size=size)
             )
 
-        pin_peer(ctx.obj.config, profile, peer_uuid=peer_uuid, url=url, roster=handshake.roster)
+        pin_peer(ctx.obj.config, profile, peer_uuid=peer_uuid, url=url, roster=handshake.roster, token=token)
 
         filepath.unlink()
         filepath_meta.unlink()

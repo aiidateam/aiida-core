@@ -39,6 +39,8 @@ def held(url='http://100.64.0.2:9137', nickname='alice', **overrides):
         'name': nickname,
         'stamp': 1,
         'seen': True,
+        'active': True,
+        'signalled': False,
         **overrides,
     }
 
@@ -153,6 +155,56 @@ def test_merge_skips_a_malformed_entry():
     assert list(merged) == ['ok']
     assert merged['ok']['nickname'] == 'ok', 'a nameless entry falls back to its UUID'
     assert len(reports) == 1
+
+
+def test_merge_reactivates_a_dormant_peer_keeping_its_history():
+    """Test that a member met again under the current token is recognized rather than re-added.
+
+    Recognition is by profile UUID, so the entry — and with it the nickname and the cursor kept under that UUID —
+    is the one the member had before the rotation: syncing resumes where it stopped.
+    """
+    dormant = held(nickname='ali', active=False)
+
+    merged, reports = merge_roster({'uuid-of-alice': dormant}, [entry()], OWN)
+
+    assert merged['uuid-of-alice'] == {**dormant, 'active': True}
+    assert 'back' in reports[0]
+
+
+def test_merge_clears_a_rotation_signal_only_for_its_sender():
+    """Test that only the peer that signalled a rotation can retract it, by making contact itself.
+
+    Hearing from the sender under the current token is proof that the key it called retired is not — it may have
+    rekeyed onto somebody else's code instead. Hearing *about* it from a third party proves nothing: a laggard
+    that has not noticed the rotation relays it on every sync, and letting that erase the warning would drop the
+    one notification the user gets, with nothing to restore it.
+    """
+    signalled = {'uuid-of-carol': held(nickname='carol', signalled=True)}
+    relayed = [entry(uuid='uuid-of-alice'), entry(uuid='uuid-of-carol', name='carol')]
+
+    kept, _ = merge_roster(signalled, relayed, OWN)
+
+    assert kept['uuid-of-carol']['signalled'] is True, 'alice relayed carol; that is hearsay about carol'
+
+    retracted, _ = merge_roster(signalled, [entry(uuid='uuid-of-carol', name='carol')], OWN)
+
+    assert retracted['uuid-of-carol']['signalled'] is False, 'carol itself made contact under the current token'
+
+
+def test_gossip_carries_active_peers_only():
+    """Test that a dormant peer is not vouched for, which is what makes a rotation stick.
+
+    A gossiped entry is taken by its receiver as confirmed under the current token. Vouching for a member one
+    has not seen under it would hand the excluded — or the other branch of a split — straight back to everyone.
+    """
+    peers = {
+        'uuid-of-alice': held(url='http://one:9137'),
+        'uuid-of-bob': held(url='http://two:9137', nickname='bob', active=False),
+    }
+
+    gossip = roster_entries(peers, entry(uuid=OWN, name='me'))
+
+    assert [item['uuid'] for item in gossip] == [OWN, 'uuid-of-alice']
 
 
 def test_merge_ignores_the_entry_of_this_profile():

@@ -308,8 +308,9 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         {},
         description='The collab peers of this profile, keyed by the UUID of their profile. Each entry holds the '
         '`url` of the peer (e.g. `http://100.64.0.2:9137`), the local `nickname` under which it is shown and '
-        'addressed, the `name` its owner announces, the owner `stamp` that versions its address, and whether it '
-        'has ever answered (`seen`).',
+        'addressed, the `name` its owner announces, the owner `stamp` that versions its address, whether it has '
+        'ever answered (`seen`), whether it has been seen under the current token (`active`, false for a member '
+        'that has not rekeyed since the last rotation) and whether it signalled a rotation (`signalled`).',
     )
     collab__bind: str = Field(
         '',

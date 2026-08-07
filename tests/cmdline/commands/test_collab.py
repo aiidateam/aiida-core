@@ -45,6 +45,8 @@ def peer_entry(url=PEER_URL, nickname=PEER, **overrides):
         'name': nickname,
         'stamp': 1,
         'seen': True,
+        'active': True,
+        'signalled': False,
         **overrides,
     }
 
@@ -350,6 +352,423 @@ def test_peer_set_refuses_a_used_nickname(run_cli_command, config_with_profile):
     assert config_with_profile.get_option(OPTION_PEERS, scope=get_profile().name)['uuid-of-bob']['nickname'] == 'bob'
 
 
+def printed_code(result):
+    """Return the join code a command printed: the last thing it writes, so it can be copied off the screen."""
+    from aiida.tools.collab.protocol import JoinCode
+
+    return JoinCode.decode(result.output_lines[-1])
+
+
+@pytest.fixture
+def stub_signal(monkeypatch):
+    """Record the rotation signals a command sends, with the key they go out under, sending nothing anywhere."""
+    from aiida.tools.collab.client import CollabClient
+
+    signals = []
+
+    def signal_retired(self, peer):
+        signals.append((self._base_url, peer, self._session.headers['Authorization']))
+
+    monkeypatch.setattr(CollabClient, 'signal_retired', signal_retired)
+
+    return signals
+
+
+def test_rotate(run_cli_command, config_with_profile, stub_signal):
+    """Test that rotating mints a new key, prints it as a code and tells the peers it holds — and no more.
+
+    The collab UUID is untouched: a rotation replaces the key of a collab, never its identity, so the code still
+    names the same collab and every cross-check against it keeps working.
+    """
+    init_collab(config_with_profile)
+
+    profile = get_profile()
+    result = run_cli_command(cmd_collab.collab_rotate, use_subprocess=False)
+
+    get = config_with_profile.get_option
+    token = get(OPTION_TOKEN, scope=profile.name)
+    code = printed_code(result)
+
+    assert token != TOKEN
+    assert (code.collab, code.token, code.url) == (COLLAB_UUID, token, 'http://127.0.0.1:9137')
+    assert stub_signal == [(PEER_URL, profile.uuid, f'Bearer {TOKEN}')], (
+        'the signal goes out under the token it retires: the peers know no other one yet'
+    )
+    assert get(OPTION_PEERS, scope=profile.name) == {PEER_UUID: peer_entry(active=False)}, (
+        'dormancy is not deletion: the whole record is kept as the history a returning member is recognized by'
+    )
+
+
+def test_rotate_leaves_dormant_peers_alone(run_cli_command, config_with_profile, stub_signal):
+    """Test that a rotation signals the members it holds and not the ones it already rotated away from.
+
+    Signalling the other branch of a split, or the member that was just excluded, would tell them to come and
+    ask for a code they are not meant to get.
+    """
+    init_collab(
+        config_with_profile,
+        peers={PEER_UUID: peer_entry(), 'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', active=False)},
+    )
+
+    run_cli_command(cmd_collab.collab_rotate, use_subprocess=False)
+
+    assert [url for url, _, _ in stub_signal] == [PEER_URL]
+
+
+def test_rotate_survives_an_unreachable_peer(run_cli_command, config_with_profile, monkeypatch):
+    """Test that a peer that cannot be told about the rotation is a warning, not a half-done rotation.
+
+    The signal is a courtesy; the rotation is the point. Aborting on it would leave the token swapped on some
+    machines and not others depending on who happened to be up.
+    """
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import CollabRequestError
+
+    init_collab(config_with_profile)
+    monkeypatch.setattr(
+        CollabClient, 'signal_retired', lambda self, peer: (_ for _ in ()).throw(CollabRequestError('offline'))
+    )
+
+    result = run_cli_command(cmd_collab.collab_rotate, use_subprocess=False)
+
+    assert 'could not tell alice' in result.output
+    assert printed_code(result).token == config_with_profile.get_option(OPTION_TOKEN, scope=get_profile().name)
+
+
+def test_rotate_does_not_stop_a_peer_that_has_not_rotated(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer
+):
+    """Test that the signal is advisory: a member that received one still syncs with the collab as before.
+
+    Enforcement is the 401 of the endpoints that rotated, and only that. If the signal itself stopped anything,
+    an excluded member — who still holds the retired token — could freeze the collab by sending it around.
+    """
+    init_collab(config_with_profile, peers={PEER_UUID: peer_entry(signalled=True)})
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert 'pulled 1 node(s)' in result.output
+    assert config_with_profile.get_option(OPTION_TOKEN, scope=get_profile().name) == TOKEN
+
+
+def rekey_code(token='the-new-token', collab=COLLAB_UUID, url=PEER_URL):
+    from aiida.tools.collab.protocol import JoinCode
+
+    return JoinCode(collab=collab, url=url, token=token, policy=POLICY).encode()
+
+
+@pytest.fixture
+def stub_join(monkeypatch):
+    """Answer the announcement a rekey makes with the issuer's roster, recording what was announced."""
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import JoinResponse
+
+    announced = []
+
+    def join(self, entry):
+        announced.append((self._base_url, entry))
+        return JoinResponse(collab=COLLAB_UUID, roster=[{'uuid': PEER_UUID, 'url': PEER_URL, 'name': PEER, 'stamp': 1}])
+
+    monkeypatch.setattr(CollabClient, 'join', join)
+
+    return announced
+
+
+def test_rekey_swaps_the_token_and_recognizes_the_issuer(run_cli_command, config_with_profile, stub_join):
+    """Test that rekeying changes the key and nothing else, and that the member whose code it was comes back.
+
+    Recognition is by profile UUID, so the entry is the one that was there before: the nickname stays, and the
+    cursor kept under that UUID means the next sync resumes instead of re-transferring the whole history.
+    """
+    init_collab(config_with_profile, peers={PEER_UUID: peer_entry(nickname='ali')})
+
+    profile = get_profile()
+    before = Config.from_file(config_with_profile.filepath).dictionary
+
+    run_cli_command(cmd_collab.collab_rekey, [rekey_code()], use_subprocess=False)
+
+    get = config_with_profile.get_option
+    after = Config.from_file(config_with_profile.filepath).dictionary
+    changed = {
+        option
+        for option in {*before['profiles'][profile.name]['options'], *after['profiles'][profile.name]['options']}
+        if before['profiles'][profile.name]['options'].get(option)
+        != after['profiles'][profile.name]['options'].get(option)
+    }
+
+    assert changed == {OPTION_TOKEN}, 'a rekey swaps the key and leaves everything else where it was'
+    assert get(OPTION_TOKEN, scope=profile.name) == 'the-new-token'
+    assert get(OPTION_PEERS, scope=profile.name) == {PEER_UUID: peer_entry(nickname='ali')}, (
+        'the roster went dormant and the issuer came straight back out of it: same entry, same nickname'
+    )
+    assert stub_join == [
+        (PEER_URL, {'uuid': profile.uuid, 'url': 'http://127.0.0.1:9137', 'name': profile.name, 'stamp': 1})
+    ], 'the returning member announces itself: nothing else would tell the issuer it is back'
+
+
+def test_rekey_without_a_reachable_issuer_leaves_everyone_dormant(
+    run_cli_command, config_with_profile, monkeypatch, stub_environment
+):
+    """Test that a rekey nobody answered swaps the key anyway and leaves no peer to contact.
+
+    Until some peer is seen under the new token there is nobody to sync with, and a pull must say so rather than
+    knock on addresses whose owners are still on the old key.
+    """
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import CollabRequestError
+
+    init_collab(config_with_profile)
+
+    contacted = []
+
+    monkeypatch.setattr(CollabClient, 'join', lambda self, entry: (_ for _ in ()).throw(CollabRequestError('offline')))
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: contacted.append(self._base_url)
+    )
+
+    result = run_cli_command(cmd_collab.collab_rekey, [rekey_code()], use_subprocess=False)
+
+    assert 'could not reach' in result.output
+    assert config_with_profile.get_option(OPTION_TOKEN, scope=get_profile().name) == 'the-new-token'
+
+    for command in (cmd_collab.collab_pull, cmd_collab.collab_push):
+        result = run_cli_command(command, ['--force'], use_subprocess=False, raises=True)
+
+        assert 'dormant' in result.output
+
+    assert contacted == [], 'a dormant peer is not polled, so nothing goes out at all'
+
+
+def test_rotate_then_rekey_onto_another_code(run_cli_command, config_with_profile, stub_signal, stub_join):
+    """Test that a member that has just rotated can adopt somebody else's fresh code all the same.
+
+    Two members rotating at once need no arbitration: a rotator is nobody special, so the way out of the mutual
+    401s is that one of them simply rekeys onto the other's code and the collab converges socially.
+    """
+    init_collab(config_with_profile)
+
+    profile = get_profile()
+    mine = printed_code(run_cli_command(cmd_collab.collab_rotate, use_subprocess=False)).token
+
+    run_cli_command(cmd_collab.collab_rekey, [rekey_code(token='the-other-rotation')], use_subprocess=False)
+
+    get = config_with_profile.get_option
+
+    assert mine != TOKEN
+    assert get(OPTION_TOKEN, scope=profile.name) == 'the-other-rotation', 'the code wins over the self-minted key'
+    assert get(OPTION_PEERS, scope=profile.name) == {PEER_UUID: peer_entry()}, (
+        'the issuer comes back out of the roster the rotation had just set dormant'
+    )
+
+
+def test_a_rotation_during_a_sync_is_not_undone_by_it(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch
+):
+    """Test that a pull finishing after a rotation does not put the peers it talked to back on their feet.
+
+    A pin belongs to the key its sync was negotiated under. Merging this one into the roster the rotation had
+    just set dormant would mark the peer active again — and with it everyone that peer vouched for, the member
+    that was just excluded included — under a key none of them holds.
+    """
+    from aiida.tools.collab.client import CollabClient
+
+    init_collab(config_with_profile)
+
+    profile = get_profile()
+
+    def download_delta(self, filepath, delta_id):
+        # `verdi collab rotate` in another terminal, landing while the delta is being transferred here.
+        cmd_collab.set_key(Config.from_file(config_with_profile.filepath), profile, 'the-rotated-token')
+        filepath.write_bytes(b'delta')
+        return len(b'delta')
+
+    monkeypatch.setattr(CollabClient, 'download_delta', download_delta)
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    peers = Config.from_file(config_with_profile.filepath).get_option(OPTION_PEERS, scope=profile.name)
+
+    assert 'rekeyed while syncing' in result.output
+    assert peers == {PEER_UUID: peer_entry(active=False)}, 'the rotation stands; the peer waits for its rekey'
+
+
+def test_rekey_refuses_this_profiles_own_code(run_cli_command, config_with_profile):
+    """Test that the one code that cannot help is refused before it dormants the roster.
+
+    Every member's `verdi status` prints a code, this profile's own included, and `rekey` sends the user there
+    for one — but one's own endpoint is the only member that can teach one nothing.
+    """
+    init_collab(config_with_profile)
+
+    own = rekey_code(url='http://127.0.0.1:9137')
+    result = run_cli_command(cmd_collab.collab_rekey, [own], use_subprocess=False, raises=True)
+
+    assert 'this very profile' in result.output
+    assert config_with_profile.get_option(OPTION_PEERS, scope=get_profile().name) == {PEER_UUID: peer_entry()}
+
+
+def test_rekey_with_a_superseded_code_says_so(run_cli_command, config_with_profile, monkeypatch):
+    """Test that a code the issuer itself refuses is reported as superseded, not as waiting for contact.
+
+    A code minted before its issuer rotated again leaves this profile holding a key no member accepts: nobody
+    can reach it and it can reach nobody, so telling the user to wait for a contact would be a false promise.
+    """
+    from http import HTTPStatus
+
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import CollabRequestError
+
+    init_collab(config_with_profile)
+
+    def refused(self, entry):
+        raise CollabRequestError('responded 401', status=HTTPStatus.UNAUTHORIZED)
+
+    monkeypatch.setattr(CollabClient, 'join', refused)
+
+    result = run_cli_command(cmd_collab.collab_rekey, [rekey_code()], use_subprocess=False, raises=True)
+
+    assert 'superseded by a later rotation' in result.output
+
+
+def test_rekey_refuses_a_code_of_another_collab(run_cli_command, config_with_profile):
+    """Test that a code of a different collab is refused naming both, and changes nothing.
+
+    Rotation keeps the identity of a collab, so a code naming another one can only be somebody else's — and
+    adopting its token would leave this profile unable to talk to either side.
+    """
+    init_collab(config_with_profile)
+
+    result = run_cli_command(
+        cmd_collab.collab_rekey, [rekey_code(collab='uuid-of-another-collab')], use_subprocess=False, raises=True
+    )
+
+    assert 'uuid-of-another-collab' in result.output
+    assert COLLAB_UUID in result.output
+    assert config_with_profile.get_option(OPTION_TOKEN, scope=get_profile().name) == TOKEN
+
+
+def test_rekey_resumes_at_the_cursor_it_had(
+    run_cli_command, config_with_profile, stub_join, stub_environment, stub_transfer
+):
+    """Test that a member that rekeys picks up where it stopped: same cursor, nothing re-transferred.
+
+    Cursors key on the profile UUID and dormancy keeps the entry, so a rotation costs a member nothing beyond
+    the code it has to be handed.
+    """
+    init_collab(config_with_profile)
+
+    cursor = timezone.now()
+    state = CollabState.load(get_profile())
+    state.cursors[PEER_UUID] = cursor
+    state.save()
+
+    run_cli_command(cmd_collab.collab_rekey, [rekey_code()], use_subprocess=False)
+    run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert stub_transfer[0] == ('negotiate', cursor, set()), 'nothing already held is asked for again'
+
+
+def reload_peers(config, profile):
+    """Adopt the roster as the endpoint left it on the file, as the next `verdi` process reads it."""
+    stored = Config.from_file(config.filepath).get_option(OPTION_PEERS, scope=profile.name)
+    config.set_option(OPTION_PEERS, stored, scope=profile.name)
+
+
+def test_branching_and_reunion(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, stub_signal, monkeypatch
+):
+    """Test the whole lifecycle from the side of the member that rotates: split, sync within, reunion.
+
+    Two members rekey and one does not. The one that does not is neither contacted nor visible, and syncing
+    goes on within the branch. When it rekeys later it is recognized by its UUID — same entry, same cursor —
+    and the branches are one collab again, which is what keeping the collab UUID across a rotation buys.
+    """
+    from unittest.mock import MagicMock
+
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.endpoint import CollabEndpoint
+
+    init_collab(
+        config_with_profile,
+        peers={
+            PEER_UUID: peer_entry(),
+            'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob'),
+        },
+    )
+
+    profile = get_profile()
+    state = CollabState.load(profile)
+    state.cursors['uuid-of-bob'] = timezone.now()
+    state.save()
+
+    # Rotating puts both peers out of reach until they come back under the new token.
+    run_cli_command(cmd_collab.collab_rotate, use_subprocess=False)
+    run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False, raises=True)
+
+    assert stub_transfer == [], 'a rotation stops every peer from being contacted until one of them rekeys'
+
+    # Alice rekeys and announces herself to this profile: that inbound contact is what brings her back.
+    endpoint = CollabEndpoint(profile, backend=MagicMock())
+    endpoint.handshake(PEER_UUID, [{'uuid': PEER_UUID, 'url': PEER_URL, 'name': PEER, 'stamp': 1}])
+    reload_peers(config_with_profile, profile)
+
+    run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert [call for call in stub_transfer if call[0] == 'negotiate'] == [('negotiate', None, set())], (
+        'the branch syncs within itself and never reaches across to the members that stayed behind'
+    )
+
+    # Bob rekeys much later, is recognized by his UUID and resumes at the cursor his dormant entry kept.
+    stub_transfer.clear()
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kw: make_peer_info(uuid='uuid-of-bob')
+    )
+    bob = {'uuid': 'uuid-of-bob', 'url': 'http://100.64.0.3:9137', 'name': 'bob', 'stamp': 1}
+    endpoint.handshake('uuid-of-bob', [bob])
+    reload_peers(config_with_profile, profile)
+
+    run_cli_command(cmd_collab.collab_pull, ['bob', '--force'], use_subprocess=False)
+
+    assert stub_transfer[0] == ('negotiate', state.cursors['uuid-of-bob'], set())
+
+
+def test_gossip_reactivates_a_third_member(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch
+):
+    """Test the relay: C rekeys through B, and A learns that C is back from B's gossip alone.
+
+    A never contacts C — nobody polls a dormant peer — so without this path a member that rekeyed through
+    somebody else would stay invisible to everyone it did not personally call.
+    """
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import DeltaManifest
+
+    carol_url = 'http://100.64.0.4:9137'
+
+    init_collab(
+        config_with_profile,
+        peers={PEER_UUID: peer_entry(), 'uuid-of-carol': peer_entry(url=carol_url, nickname='carol', active=False)},
+    )
+
+    def negotiate_delta(self, cursor, claim, roster=None):
+        # B vouches for C, having just seen it under the current token; it says nothing about anyone else.
+        return DeltaManifest(
+            manifest=[],
+            instant=OFFER_INSTANT,
+            roster=[{'uuid': 'uuid-of-carol', 'url': carol_url, 'name': 'carol', 'stamp': 1}],
+        )
+
+    monkeypatch.setattr(CollabClient, 'negotiate_delta', negotiate_delta)
+
+    result = run_cli_command(cmd_collab.collab_pull, ['alice', '--force'], use_subprocess=False)
+
+    peers = config_with_profile.get_option(OPTION_PEERS, scope=get_profile().name)
+
+    assert peers['uuid-of-carol']['active'] is True
+    assert peers['uuid-of-carol']['nickname'] == 'carol', 'a vouched member is the one that was there, not a new one'
+    assert 'carol` is back' in result.output, 'membership is auto-trusted, but never silent'
+
+
 def test_pull_without_collab(run_cli_command, config_with_profile):
     """Test that a profile which is not part of a collab refuses to pull, as it refuses every other collab command.
 
@@ -403,13 +822,14 @@ def test_complete_peer(run_cli_command, config_with_profile):
         peers={
             PEER_UUID: peer_entry(),
             'uuid-of-bob': peer_entry(url='http://100.64.0.3:9137', nickname='bob'),
+            'uuid-of-amir': peer_entry(url='http://100.64.0.4:9137', nickname='amir', active=False),
         },
     )
 
     ctx = click.Context(cmd_collab.collab_pull)
     completions = [item.value for item in cmd_collab.complete_peer(ctx, None, 'a')]
 
-    assert completions == ['alice']
+    assert completions == ['alice'], 'a dormant peer is not offered: the command would only refuse it'
 
 
 def make_peer_info(**overrides):
@@ -817,6 +1237,33 @@ def test_pull_flags_a_peer_that_never_answered(run_cli_command, config_with_prof
     result = run_cli_command(cmd_collab.collab_pull, use_subprocess=False)
 
     assert f'skipping never-answering peer {PEER}' in result.output
+
+
+def test_pull_does_not_call_a_peer_that_answered_offline(
+    run_cli_command, config_with_profile, stub_environment, monkeypatch
+):
+    """Test that a peer refusing the key is skipped as itself, not reported as unreachable.
+
+    After a rotation this is the routine outcome for every member that has not rekeyed yet: the peer is up and
+    answers, and what it answers — with the rekey hint in it — is the whole message.
+    """
+    from http import HTTPStatus
+
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import REKEY_HINT, CollabRequestError
+
+    init_collab(config_with_profile)
+
+    def refused(self, local, **kwargs):
+        raise CollabRequestError(f'responded 401: {REKEY_HINT}', status=HTTPStatus.UNAUTHORIZED)
+
+    monkeypatch.setattr(CollabClient, 'check_version_skew', refused)
+
+    result = run_cli_command(cmd_collab.collab_pull, use_subprocess=False)
+
+    assert f'skipping peer {PEER}' in result.output
+    assert 'offline' not in result.output
+    assert 'verdi collab rekey' in result.output
 
 
 def test_pull_version_skew(run_cli_command, config_with_profile, stub_environment, stub_transfer, monkeypatch):
@@ -1285,11 +1732,12 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
         server = CollabServer(
             '127.0.0.1',
             0,
-            token=token,
+            token=lambda: token,
             collab=COLLAB_UUID,
             staging_dir=tmp_path / f'{name}-staging',
             info=lambda cursor: dataclasses.replace(local, uuid=peer_uuid, collab=COLLAB_UUID, accept_push=True),
             join=lambda entry: JoinResponse(collab=COLLAB_UUID, roster=[entry]),
+            retired=lambda peer: None,
             negotiate_delta=negotiate_delta,
             request_delta=request_delta,
             resolve_delta=lambda key: deltas[key].filepath if key in deltas else None,

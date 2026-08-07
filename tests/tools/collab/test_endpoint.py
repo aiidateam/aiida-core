@@ -250,6 +250,8 @@ def test_join_records_the_newcomer_and_answers_with_the_membership(make_profile,
         'name': 'alice',
         'stamp': 1,
         'seen': True,
+        'active': True,
+        'signalled': False,
     }
 
     empty_config.set_option('collab.uuid', 'uuid-of-the-collab', scope=profile.name)
@@ -274,6 +276,8 @@ def test_join_records_the_newcomer_and_answers_with_the_membership(make_profile,
         'name': 'carol',
         'stamp': 1,
         'seen': False,
+        'active': True,
+        'signalled': False,
     }
     assert stored['uuid-of-alice'] == alice
 
@@ -296,6 +300,8 @@ def test_handshake_merges_the_gossiped_roster(make_profile, empty_config):
                 'name': 'alice',
                 'stamp': 1,
                 'seen': True,
+                'active': True,
+                'signalled': False,
             }
         },
         scope=profile.name,
@@ -314,6 +320,86 @@ def test_handshake_merges_the_gossiped_roster(make_profile, empty_config):
     assert {entry['uuid'] for entry in handshake.roster} == {profile.uuid, 'uuid-of-alice'}
 
 
+def dormant(nickname, url):
+    """Return a roster entry of a member that has not been seen under the current token."""
+    return {
+        'url': url,
+        'nickname': nickname,
+        'name': nickname,
+        'stamp': 1,
+        'seen': True,
+        'active': False,
+        'signalled': False,
+    }
+
+
+def test_handshake_reactivates_the_returning_peer_and_leaves_the_others_dormant(make_profile, empty_config):
+    """Test the inbound half of recognition: whoever contacts under the current token is active again.
+
+    This is the only way a rekeyed member comes back — nobody polls a dormant peer — and it must reach exactly
+    that member: the peers it gossips along are vouched for, the ones it says nothing about stay dormant.
+    """
+    from aiida.manage.configuration.config import Config
+
+    profile = make_profile()
+    empty_config.set_option(
+        'collab.peers',
+        {
+            'uuid-of-alice': dormant('alice', 'http://100.64.0.2:9137'),
+            'uuid-of-bob': dormant('bob', 'http://100.64.0.3:9137'),
+        },
+        scope=profile.name,
+    )
+    empty_config.store()
+
+    endpoint = CollabEndpoint(profile, backend=MagicMock())
+    returning = {'uuid': 'uuid-of-alice', 'url': 'http://100.64.0.2:9137', 'name': 'alice', 'stamp': 1}
+
+    handshake = endpoint.handshake('uuid-of-alice', [returning])
+
+    peers = Config.from_file(empty_config.filepath).get_option('collab.peers', scope=profile.name)
+
+    assert peers['uuid-of-alice']['active'] is True
+    assert peers['uuid-of-bob']['active'] is False
+    assert {entry['uuid'] for entry in handshake.roster} == {profile.uuid, 'uuid-of-alice'}, (
+        'a dormant peer is never gossiped: vouching for it would undo the rotation everywhere'
+    )
+
+
+def test_retired_records_the_signal_and_nothing_else(make_profile, empty_config):
+    """Test that the rotation signal is recorded against its sender and changes nothing else.
+
+    Acting on it is what must not happen: it is authenticated by the token being retired, which an excluded
+    member holds too, so anything automatic would let that member paralyse the collab by sending it.
+    """
+    from aiida.manage.configuration.config import Config
+
+    profile = make_profile()
+    alice = {'url': 'http://100.64.0.2:9137', 'nickname': 'alice', 'name': 'alice', 'stamp': 1, 'seen': True}
+    bob = dormant('bob', 'http://100.64.0.3:9137')
+    empty_config.set_option(
+        'collab.peers',
+        {'uuid-of-alice': {**alice, 'active': True, 'signalled': False}, 'uuid-of-bob': bob},
+        scope=profile.name,
+    )
+    empty_config.set_option('collab.token', 'the-token', scope=profile.name)
+    empty_config.store()
+
+    endpoint = CollabEndpoint(profile, backend=MagicMock())
+
+    endpoint.retired('uuid-of-alice')
+    # Neither a member this roster does not know nor one it holds dormant has anywhere to be shown, since
+    # `verdi status` is the active list and nothing else.
+    endpoint.retired('uuid-of-a-stranger')
+    endpoint.retired('uuid-of-bob')
+
+    stored = Config.from_file(empty_config.filepath)
+    peers = stored.get_option('collab.peers', scope=profile.name)
+
+    assert peers == {'uuid-of-alice': {**alice, 'active': True, 'signalled': True}, 'uuid-of-bob': bob}
+    assert stored.get_option('collab.token', scope=profile.name) == 'the-token', 'the signal is advisory only'
+
+
 def test_serve_carries_the_collab_and_its_roster(empty_config, tmp_path, monkeypatch):
     """Test the seam between client, server and endpoint, through the wiring the daemon itself starts.
 
@@ -324,6 +410,7 @@ def test_serve_carries_the_collab_and_its_roster(empty_config, tmp_path, monkeyp
     """
     import socket
     import threading
+    from http import HTTPStatus
 
     from aiida.manage.configuration.config import Config
     from aiida.manage.configuration.profile import Profile
@@ -331,6 +418,7 @@ def test_serve_carries_the_collab_and_its_roster(empty_config, tmp_path, monkeyp
     from aiida.tools.collab import server as server_module
     from aiida.tools.collab.client import CollabClient
     from aiida.tools.collab.endpoint import serve
+    from aiida.tools.collab.protocol import CollabRequestError
 
     collab, token = 'uuid-of-the-collab', 'the-token'
 
@@ -368,6 +456,8 @@ def test_serve_carries_the_collab_and_its_roster(empty_config, tmp_path, monkeyp
                 'name': 'alice',
                 'stamp': 1,
                 'seen': True,
+                'active': True,
+                'signalled': False,
             }
         },
     }
@@ -425,6 +515,20 @@ def test_serve_carries_the_collab_and_its_roster(empty_config, tmp_path, monkeyp
             )
 
             assert {entry['uuid'] for entry in manifest.roster} == {profile.uuid, 'uuid-of-alice', 'uuid-of-carol'}
+
+            # A rotation runs in another process — `verdi collab rotate` — and reaches the endpoint through the
+            # configuration file alone. The old token has to stop working from the next request on: this is the
+            # whole enforcement of a rotation, and a restart nobody is told to run would leave the member that
+            # was excluded reading in the meantime.
+            rotating = Config.from_file(empty_config.filepath)
+            rotating.set_option('collab.token', 'the-rotated-token', scope=profile.name)
+            rotating.store()
+
+            with pytest.raises(CollabRequestError) as excinfo:
+                client.info()
+
+            assert excinfo.value.status == HTTPStatus.UNAUTHORIZED
+            assert 'verdi collab rekey' in str(excinfo.value)
     finally:
         servers[0].shutdown()
         servers[0].server_close()

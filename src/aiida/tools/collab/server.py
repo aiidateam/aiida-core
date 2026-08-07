@@ -38,6 +38,7 @@ from aiida.tools.collab.protocol import (
     ROUTE_INFO,
     ROUTE_JOIN,
     ROUTE_MISSING,
+    ROUTE_RETIRED,
     UNAUTHORIZED_DETAIL,
     file_sha256,
 )
@@ -66,7 +67,9 @@ class CollabServer(ThreadingHTTPServer):
         the endpoint speaks plain HTTP and refuses to listen on all interfaces. An IPv6 literal binds an IPv6
         socket, since the overlays this is deployed on commonly hand out IPv6 addresses.
     :param port: the port to bind. Pass ``0`` to let the operating system pick a free one.
-    :param token: the shared secret of the collab, required of every request as a bearer token.
+    :param token: produces the shared secret of the collab, required of every request as a bearer token. Called
+        per request rather than read once, so that a rotation on this machine retires the old token for serving
+        the moment it is written — a token pinned at daemon start would keep letting an excluded member read.
     :param collab: the UUID of the collab. Every request that carries one is held against it, so that the token
         alone cannot splice two collabs into one.
     :param staging_dir: the directory in which uploads are staged, one file per checksum.
@@ -74,6 +77,8 @@ class CollabServer(ThreadingHTTPServer):
         request, or ``None``, against which the pending count is computed.
     :param join: admits a newcomer presenting a join code at ``POST /collab/v1/join``: receives its roster entry,
         adds it and answers with the full roster.
+    :param retired: notified at ``POST /collab/v1/retired`` that the peer identified by the given profile UUID
+        rotated the token of the collab. Advisory only: it makes ``verdi status`` tell the user to rekey.
     :param negotiate_delta: serves the manifest of the delta for the cursor and claim posted to
         ``POST /collab/v1/delta``, and merges the roster gossiped with it.
     :param request_delta: exports (or reuses) the subset of that delta named by the ``want`` of a
@@ -100,7 +105,7 @@ class CollabServer(ThreadingHTTPServer):
         host: str,
         port: int,
         *,
-        token: str,
+        token: Callable[[], str],
         staging_dir: Path,
         info: Callable[[datetime | None], PeerInfo],
         negotiate_delta: Callable[[datetime | None, frozenset[str], list[dict[str, Any]]], DeltaManifest],
@@ -110,6 +115,7 @@ class CollabServer(ThreadingHTTPServer):
         handshake: Callable[[str, list[dict[str, Any]]], PushHandshake],
         import_staged: Callable[[Path, str, datetime], dict[str, Any]],
         join: Callable[[dict[str, Any]], JoinResponse],
+        retired: Callable[[str], None],
         collab: str = '',
     ):
         import ipaddress
@@ -120,6 +126,7 @@ class CollabServer(ThreadingHTTPServer):
         self.staging_dir = staging_dir
         self.info = info
         self.join = join
+        self.retired = retired
         self.negotiate_delta = negotiate_delta
         self.request_delta = request_delta
         self.resolve_delta = resolve_delta
@@ -186,6 +193,7 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
                 ROUTE_MISSING: self._post_missing,
                 ROUTE_HANDSHAKE: self._post_handshake,
                 ROUTE_JOIN: self._post_join,
+                ROUTE_RETIRED: self._post_retired,
                 _IMPORT_PATTERN: self._post_import,
             }
         )
@@ -196,6 +204,8 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
         if not self._authenticated():
             # The body of an unauthenticated upload is never read, so the connection cannot be reused.
             self.close_connection = True
+            # A member whose token this endpoint retired reaches exactly this answer, which is where a rotation
+            # is enforced and the only place it is: the detail is what points that member at the rekey.
             self._send_json(
                 HTTPStatus.UNAUTHORIZED, {'detail': UNAUTHORIZED_DETAIL}, headers={'WWW-Authenticate': 'Bearer'}
             )
@@ -223,7 +233,7 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
     def _authenticated(self) -> bool:
         scheme, _, token = self.headers.get('Authorization', '').partition(' ')
 
-        return scheme == 'Bearer' and compare_digest(token.encode(), self.server.token.encode())
+        return scheme == 'Bearer' and compare_digest(token.encode(), self.server.token().encode())
 
     def _get_info(self) -> None:
         cursor = self._query('cursor')
@@ -254,6 +264,19 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
             return
 
         self._send_json(HTTPStatus.OK, self.server.join(data['entry']).as_dict())
+
+    def _post_retired(self) -> None:
+        data = self._read_json()
+
+        if self._foreign(data.get('collab', '')):
+            return
+
+        if not isinstance(data.get('peer'), str) or not data['peer']:
+            self._send_json(HTTPStatus.BAD_REQUEST, {'detail': 'the signal requires the `peer` that rotated'})
+            return
+
+        self.server.retired(data['peer'])
+        self._send_json(HTTPStatus.OK, {})
 
     def _post_delta(self) -> None:
         data = self._read_json()

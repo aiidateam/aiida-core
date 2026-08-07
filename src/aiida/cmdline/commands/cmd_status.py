@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import enum
 import sys
+from typing import TYPE_CHECKING, Any
 
 import click
 
@@ -23,6 +24,9 @@ from aiida.common.log import override_log_level
 from aiida.common.warnings import warn_deprecation
 
 from ..utils.echo import ExitCode
+
+if TYPE_CHECKING:
+    from aiida.manage.configuration import Profile
 
 
 class ServiceStatus(enum.IntEnum):
@@ -209,9 +213,112 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
 
             print_status(daemon_status, 'daemon', '\n'.join(daemon_lines))
 
+    # Getting the collab status
+    from aiida.tools.collab.config import is_enabled
+
+    if is_enabled():
+        print_collab_status(profile)
+
     # Note: click does not forward return values to the exit code, see https://github.com/pallets/click/issues/747
     if exit_code != ExitCode.SUCCESS:
         sys.exit(exit_code)
+
+
+# One probe may take this long before its peer counts as offline; the probes run concurrently, so this is also
+# roughly the total time the collab section adds to `verdi status`, however many peers there are.
+COLLAB_PROBE_TIMEOUT = 2.0
+
+
+def print_collab_status(profile: Profile) -> None:
+    """Print the code that lets others join, one line per active peer — reachable or not — and the last sync.
+
+    Dormant peers are left out entirely: they have not been seen under the current token, and a collab that
+    rotated away from a member, or split in two, should carry no trace of the branch it left behind.
+
+    The probes run concurrently and write nothing anywhere.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    from http import HTTPStatus
+
+    from aiida.manage.configuration import get_config, get_config_option
+    from aiida.tools.archive.abstract import get_format
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.config import OPTION_PEERS, OPTION_POLICY, OPTION_TOKEN, join_code
+    from aiida.tools.collab.protocol import REKEY_HINT, CollabRequestError, PeerInfo
+    from aiida.tools.collab.state import CollabState
+
+    peers = {uuid: entry for uuid, entry in get_config_option(OPTION_PEERS).items() if entry['active']}
+    token = get_config_option(OPTION_TOKEN)
+    policy = get_config_option(OPTION_POLICY)
+
+    def probe(entry: dict[str, Any]) -> PeerInfo | CollabRequestError:
+        with CollabClient(entry['url'], token, timeout=COLLAB_PROBE_TIMEOUT) as client:
+            try:
+                return client.info()
+            except CollabRequestError as exception:
+                # Kept rather than folded into "offline": a peer that answered said why, and after a rotation
+                # what it says — 401, rekey — is the whole point of looking here.
+                return exception
+
+    infos: list[PeerInfo | CollabRequestError] = []
+
+    if peers:
+        with ThreadPoolExecutor(max_workers=len(peers)) as pool:
+            infos = list(pool.map(probe, peers.values()))
+
+    archive_schema = get_format().latest_version
+
+    for entry, info in zip(peers.values(), infos):
+        nickname = entry['nickname']
+
+        if isinstance(info, CollabRequestError) and info.status == HTTPStatus.UNAUTHORIZED:
+            # The steady state for a member that has not rekeyed since the collab rotated. It is up, it answered,
+            # and this is the only place that says so before the user tries to sync.
+            print_status(
+                ServiceStatus.DOWN, f'peer {nickname}', f'{entry["url"]} refuses the current key — {REKEY_HINT}'
+            )
+        elif isinstance(info, CollabRequestError):
+            # A peer that has never answered is called out apart from one that is merely down: it is the only
+            # way a wrong address announced at join can surface, since nothing can probe back at join time.
+            reachability = 'has never answered' if not entry.get('seen') else 'offline'
+            print_status(ServiceStatus.DOWN, f'peer {nickname}', f'{entry["url"]} {reachability}')
+        # The archive format is what a delta travels as, so it alone decides compatibility; the storage schema of
+        # either side is its own concern. Zero-padded versions (`main_0002`), so string comparison orders them.
+        elif info.archive_schema > archive_schema:
+            print_status(
+                ServiceStatus.WARNING,
+                f'peer {nickname}',
+                f'{entry["url"]} online, writes a newer archive format than this profile can read '
+                f'(aiida-core {info.version})',
+            )
+        else:
+            print_status(ServiceStatus.UP, f'peer {nickname}', f'{entry["url"]} online (aiida-core {info.version})')
+
+    state = CollabState.load(profile)
+    last_sync = f'last sync {state.events[-1].time.isoformat(timespec="seconds")}' if state.events else 'no syncs yet'
+    online = sum(1 for info in infos if isinstance(info, PeerInfo))
+    status = ServiceStatus.UP if online == len(peers) else ServiceStatus.WARNING
+
+    print_status(status, 'collab', f'{online}/{len(peers)} peer(s) reachable, {last_sync}')
+
+    # Shown here because it is shown nowhere else: the policy is fixed when the collab is created, so it is stored
+    # as one dictionary, and `verdi config set` cannot write dict options.
+    print_status(
+        ServiceStatus.UP,
+        'collab policy',
+        f'extras `{policy["extras_mode"]}`, groups `{policy["groups_mode"]}` (fixed at creation)',
+    )
+
+    # Advisory and nothing else: whoever signalled it holds the token being retired, and so does anyone that was
+    # just excluded, so the only thing it may do is tell the user where to look.
+    signalled = [entry['nickname'] for entry in peers.values() if entry['signalled']]
+
+    if signalled:
+        print_status(ServiceStatus.WARNING, 'collab rotation', f'signalled by {", ".join(signalled)} — {REKEY_HINT}')
+
+    # Any member can admit a newcomer, so every member shows the code: one joins through whoever is online, and a
+    # member that has to rekey after a rotation obtains it the same way.
+    print_status(ServiceStatus.UP, 'collab join code', join_code(get_config(), profile))
 
 
 def print_status(

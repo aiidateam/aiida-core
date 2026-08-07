@@ -95,6 +95,10 @@ class CollabState:
     filepath: Path
     cursors: dict[str, datetime] = field(default_factory=dict)
     events: list[CollabEvent] = field(default_factory=list)
+    pending_links: list[list[str]] = field(default_factory=list)
+    """Boundary links of a thin delta, as ``[input_uuid, output_uuid, type, label]``, journalled before the import
+    and cleared once they are written: the import commits its own transaction, so a crash between the two would
+    otherwise lose the links between imported nodes and the ones already held."""
 
     @staticmethod
     def get_filepath(profile: Profile) -> Path:
@@ -131,6 +135,7 @@ class CollabState:
             filepath=filepath,
             cursors={peer: datetime.fromisoformat(value) for peer, value in data.get('cursors', {}).items()},
             events=[CollabEvent.from_dict(event) for event in data['events']],
+            pending_links=data.get('pending_links', []),
         )
 
     def save(self) -> None:
@@ -142,6 +147,7 @@ class CollabState:
         data = {
             'cursors': {peer: cursor.isoformat() for peer, cursor in self.cursors.items()},
             'events': [event.as_dict() for event in self.events],
+            'pending_links': self.pending_links,
         }
 
         umask = os.umask(DEFAULT_UMASK)

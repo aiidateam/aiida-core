@@ -20,7 +20,9 @@ from aiida.common import timezone
 from aiida.common.links import GraphTraversalRules
 from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.utils.mixins import Sealable
-from aiida.tools.collab.state import CollabState
+from aiida.tools.archive import import_archive
+from aiida.tools.archive.abstract import get_format
+from aiida.tools.collab.state import CollabEvent, CollabState
 from aiida.tools.graph.graph_traversers import get_nodes_export, traverse_graph, validate_traversal_rules
 
 if TYPE_CHECKING:
@@ -32,9 +34,15 @@ TRAVERSAL_RULES: dict[str, Any] = {'call_calc_backward': False, 'call_work_backw
 
 LOGGER = AIIDA_LOGGER.getChild('collab')
 
-
 # Link types of which a node can have at most one incoming, mapped to the class they are exclusive against:
 # a data node has exactly one creator, a process exactly one caller of either call flavour.
+EXCLUSIVE_LINKS = {
+    'create': ('create',),
+    'call_calc': ('call_calc', 'call_work'),
+    'call_work': ('call_calc', 'call_work'),
+}
+
+
 def seed_filters(cursor: datetime | None) -> dict[str, Any]:
     """Return the query filters selecting the seeds of a delta: the sealed processes produced since ``cursor``."""
     filters: dict[str, Any] = {f'attributes.{Sealable.SEALED_KEY}': True}
@@ -71,6 +79,14 @@ class DeltaExport:
     filepath: Path
     uuids: list[str]
     instant: datetime
+
+
+@dataclass
+class DeltaReport:
+    """The outcome of importing a delta."""
+
+    uuids: list[str]
+    size: int
 
 
 def compute_delta(
@@ -263,6 +279,16 @@ def _write_thin_archive(
             )
 
 
+def missing_uuids(backend: StorageBackend, uuids: list[str]) -> list[str]:
+    """Return the subset of ``uuids`` that ``backend`` does not hold: the diff of a manifest against a profile."""
+    if not uuids:
+        return []
+
+    query = orm.QueryBuilder(backend=backend).append(orm.Node, filters={'uuid': {'in': uuids}}, project='uuid')
+
+    return sorted(set(uuids) - set(query.all(flat=True)))
+
+
 def _imported_nodes(state: CollabState, cursor: datetime | None, backend: StorageBackend) -> list[orm.Node]:
     """Return the nodes this profile imported since ``cursor`` that still exist locally."""
     uuids = state.imported_uuids_since(cursor)
@@ -271,6 +297,230 @@ def _imported_nodes(state: CollabState, cursor: datetime | None, backend: Storag
         return []
 
     return orm.QueryBuilder(backend=backend).append(orm.Node, filters={'uuid': {'in': sorted(uuids)}}).all(flat=True)
+
+
+def import_delta(
+    filepath: Path,
+    *,
+    state: CollabState,
+    backend: StorageBackend,
+    peer: str,
+    instant: datetime,
+) -> DeltaReport:
+    """Import a delta received from a peer, advance the cursor for that peer and record the event in the collab log.
+
+    :param filepath: the path of the archive to import.
+    :param state: the state of the collab, whose log is appended to.
+    :param backend: the storage to import into.
+    :param peer: the identity the delta was received under, which keys the cursor: the profile UUID of the peer.
+    :param instant: the export instant carried with the delta, which the cursor for ``peer`` advances to.
+    :raises ~aiida.common.exceptions.IntegrityError: when the delta links to a node that exists neither in the
+        archive nor locally, or a boundary link would violate a link invariant of the local graph; nothing is
+        imported in either case.
+    """
+    size = filepath.stat().st_size
+    uuids = _archive_uuids(filepath)
+    boundary = _boundary_links(filepath)
+
+    # Checked before anything lands: a boundary endpoint that exists neither in the archive nor locally would
+    # leave the imported nodes permanently disconnected from provenance the sender counted on, and a boundary
+    # link that violates a local link invariant must not be plantable by a diverged or hostile sender.
+    _check_boundary_resolvable(backend, uuids, boundary)
+    _check_boundary_invariants(backend, boundary)
+
+    # The boundary links are journalled before the import, which commits its own transaction: a crash between
+    # the two leaves them pending, and the next import retries them instead of losing them.
+    if boundary:
+        with CollabState.mutate(state.filepath) as fresh:
+            fresh.pending_links.extend(link for link in boundary if link not in fresh.pending_links)
+
+    import_archive(
+        filepath,
+        backend=backend,
+        merge_extras=('k', 'n', 'l'),
+        create_group=False,
+    )
+
+    event = CollabEvent(time=timezone.now(), direction='pull', peer=peer, uuids=uuids, size=size)
+
+    # Appended to a freshly read state under the lock instead of saving ``state``: that was read before an import
+    # that can take minutes, and writing it back wholesale would erase everything recorded in the meantime.
+    with CollabState.mutate(state.filepath) as fresh:
+        written = _write_boundary_links(backend, fresh.pending_links)
+        fresh.pending_links = [link for link in fresh.pending_links if link not in written]
+
+        # A retried push carries the instant of its original export, which can predate a pull that advanced the
+        # cursor in the meantime; the cursor means "I hold everything the peer had at T", so it never moves back.
+        held = fresh.cursors.get(peer)
+        fresh.cursors[peer] = max(held, instant) if held is not None else instant
+
+        fresh.events.append(event)
+
+    return DeltaReport(uuids=uuids, size=size)
+
+
+def _boundary_links(filepath: Path) -> list[list[str]]:
+    """Return the boundary links of a thin archive, as ``[input_uuid, output_uuid, type, label]``.
+
+    An archive that was not written by ``export_delta`` has none.
+    """
+    with get_format().open(filepath, mode='r') as reader:
+        return reader.get_metadata().get('collab_boundary_links', [])
+
+
+def _check_boundary_resolvable(backend: StorageBackend, uuids: list[str], boundary: list[list[str]]) -> None:
+    """Refuse the import when a boundary link endpoint exists neither in the archive nor in this profile."""
+    from aiida.common.exceptions import IntegrityError
+
+    archived = set(uuids)
+    held = {uuid for link in boundary for uuid in link[:2] if uuid not in archived}
+
+    if not held:
+        return
+
+    query = orm.QueryBuilder(backend=backend).append(orm.Node, filters={'uuid': {'in': sorted(held)}}, project='uuid')
+    missing = held - set(query.all(flat=True))
+
+    if missing:
+        msg = (
+            f'refusing to import the delta: it links to node {sorted(missing)[0]}, which is neither in the '
+            'archive nor in this profile. Nothing was imported; the next sync will deliver the missing node.'
+        )
+        raise IntegrityError(msg)
+
+
+def _check_boundary_invariants(backend: StorageBackend, boundary: list[list[str]]) -> None:
+    """Refuse the import when a boundary link would violate a link-uniqueness invariant of the local graph.
+
+    The boundary insertion path bypasses the validation of the archive importer, and from one coherent source
+    profile a violation cannot arise — so one arriving means the sender's graph diverged from this profile's,
+    and it must not be able to plant a second creator on a data node or a second caller on a process.
+    """
+    from aiida.common.exceptions import IntegrityError
+
+    # No real graph link connects a node to itself; a self-link in the metadata can only be planted.
+    for link in boundary:
+        if link[0] == link[1]:
+            msg = (
+                f'refusing to import the delta: it declares a `{link[2]}` link from node {link[0]} to itself, '
+                'which cannot exist in a provenance graph. Nothing was imported.'
+            )
+            raise IntegrityError(msg)
+
+    checks = [link for link in boundary if link[2] in EXCLUSIVE_LINKS]
+
+    if not checks:
+        return
+
+    query = (
+        orm.QueryBuilder(backend=backend)
+        .append(orm.Node, filters={'uuid': {'in': sorted({link[1] for link in checks})}}, tag='target', project='uuid')
+        .append(
+            orm.Node,
+            with_outgoing='target',
+            project='uuid',
+            edge_filters={'type': {'in': sorted(EXCLUSIVE_LINKS)}},
+            edge_project=['type', 'label'],
+        )
+    )
+
+    existing: dict[str, list[tuple[str, str, str]]] = {}
+
+    for target_uuid, input_uuid, link_type, label in query.all():
+        existing.setdefault(target_uuid, []).append((input_uuid, link_type, label))
+
+    for input_uuid, output_uuid, link_type, label in checks:
+        # The indegree of the exclusive classes is one full stop — source and label do not matter — so anything
+        # short of the identical quadruple (an idempotent re-delivery) is a second link and refused.
+        conflicts = [
+            other
+            for other in existing.get(output_uuid, [])
+            if other[1] in EXCLUSIVE_LINKS[link_type] and other != (input_uuid, link_type, label)
+        ]
+
+        if conflicts:
+            msg = (
+                f'refusing to import the delta: its `{link_type}` link from {input_uuid} to {output_uuid} would '
+                f'give the target a second incoming link of that kind (it has one from {conflicts[0][0]}). The '
+                'graph of the sender has diverged from this profile; nothing was imported.'
+            )
+            raise IntegrityError(msg)
+
+        # A sibling link later in this same delta must be held against this one, exactly as it would be against
+        # the local graph had the two arrived in separate deltas.
+        existing.setdefault(output_uuid, []).append((input_uuid, link_type, label))
+
+
+def _write_boundary_links(backend: StorageBackend, pending: list[list[str]]) -> list[list[str]]:
+    """Write the pending boundary links whose endpoints both exist, and return the ones written.
+
+    A link whose endpoint has not arrived yet stays pending until a later sync delivers the node.
+    """
+    from aiida.orm.entities import EntityTypes
+
+    if not pending:
+        return []
+
+    uuids = sorted({uuid for link in pending for uuid in link[:2]})
+    query = orm.QueryBuilder(backend=backend).append(orm.Node, filters={'uuid': {'in': uuids}}, project=['uuid', 'id'])
+    pk_by_uuid = dict(query.iterall())
+
+    resolved = []
+    writable = []
+
+    for link in pending:
+        input_uuid, output_uuid, link_type, label = link
+
+        # A journalled self-link predates the pre-check that now refuses them; dropped, never written.
+        if input_uuid == output_uuid:
+            resolved.append(link)
+        elif input_uuid in pk_by_uuid and output_uuid in pk_by_uuid:
+            resolved.append(link)
+            writable.append(link)
+
+    if not writable:
+        return resolved
+
+    outputs = sorted({pk_by_uuid[link[1]] for link in writable})
+    existing = {
+        tuple(row)
+        for row in orm.QueryBuilder(backend=backend)
+        .append(
+            entity_type='link',
+            filters={'output_id': {'in': outputs}},
+            project=['input_id', 'output_id', 'type', 'label'],
+        )
+        .all()
+    }
+
+    rows = []
+
+    for link in writable:
+        row = (pk_by_uuid[link[0]], pk_by_uuid[link[1]], link[2], link[3])
+
+        if row in existing:
+            continue
+
+        # The invariants were checked when the link was journalled, but the graph can have changed since a
+        # crash-recovered entry was written; a link that would violate them now is dropped, not retried forever.
+        # The exclusive indegree is one regardless of source and label, so any non-identical link conflicts.
+        if link[2] in EXCLUSIVE_LINKS and any(
+            output_id == row[1]
+            and link_type in EXCLUSIVE_LINKS[link[2]]
+            and (input_id, link_type, label) != (row[0], row[2], row[3])
+            for input_id, output_id, link_type, label in existing
+        ):
+            LOGGER.warning('dropping journalled link %s: it now violates a link invariant of this profile', link)
+            continue
+
+        rows.append({'input_id': row[0], 'output_id': row[1], 'type': row[2], 'label': row[3]})
+        # Later pending links are held against this one too, not only against what the query returned.
+        existing.add(row)
+
+    if rows:
+        backend.bulk_insert(EntityTypes.LINK, rows)
+
+    return resolved
 
 
 def _without_unsealed_provenance(nodes: list[orm.Node], *, backend: StorageBackend) -> list[orm.Node]:
@@ -311,3 +561,9 @@ def _unsealed_pks(backend: StorageBackend, pks: set[int]) -> set[int]:
 
     # Queried as the complement of the sealed processes, because an unsealed one has no ``sealed`` attribute at all.
     return query() - query(**{f'attributes.{Sealable.SEALED_KEY}': True})
+
+
+def _archive_uuids(filepath: Path) -> list[str]:
+    """Return the UUIDs of the nodes in an archive."""
+    with get_format().open(filepath, mode='r') as reader:
+        return orm.QueryBuilder(backend=reader.get_backend()).append(orm.Node, project='uuid').all(flat=True)

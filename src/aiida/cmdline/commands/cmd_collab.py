@@ -585,6 +585,41 @@ def collab_peer_set(ctx, peer, url, nickname):
     echo.echo_success(f'peer `{peer}` {" and ".join(changed)}.')
 
 
+@verdi_collab.command('log')
+@requires_loaded_profile()
+@click.pass_context
+def collab_log(ctx):
+    """Show the history of the pulls and pushes of the collab."""
+    from aiida.tools.collab.config import OPTION_PEERS
+    from aiida.tools.collab.state import CollabState
+
+    profile = ctx.obj.profile
+    require_collab(profile)
+
+    state = CollabState.load(profile)
+
+    if not state.events:
+        echo.echo_report('no sync events recorded yet.')
+        return
+
+    # Events key peers by profile UUID; shown under the nickname of this machine where one matches.
+    alias = {
+        uuid: entry['nickname'] for uuid, entry in ctx.obj.config.get_option(OPTION_PEERS, scope=profile.name).items()
+    }
+
+    rows = [
+        [
+            event.time.isoformat(timespec='seconds'),
+            event.direction,
+            alias.get(event.peer, event.peer),
+            len(event.uuids),
+            event.size,
+        ]
+        for event in state.events
+    ]
+    echo.echo_tabulate(rows, headers=['Time', 'Direction', 'Peer', 'Nodes', 'Bytes'])
+
+
 @verdi_collab.command('pull')
 @click.argument('peers', metavar='[PEER]...', nargs=-1, shell_complete=complete_peer)
 @options.FORCE(help='Do not prompt for confirmation before transferring.')
@@ -746,12 +781,13 @@ def collab_push(ctx, peers, force, dry_run):
     from datetime import datetime
     from http import HTTPStatus
 
+    from aiida.common import timezone
     from aiida.manage import get_manager
     from aiida.tools.collab.client import CollabClient
     from aiida.tools.collab.config import OPTION_PEERS, OPTION_TOKEN, OPTION_UUID
     from aiida.tools.collab.endpoint import local_identity, local_info
     from aiida.tools.collab.protocol import CollabRequestError, VersionSkew
-    from aiida.tools.collab.state import CollabState
+    from aiida.tools.collab.state import CollabEvent, CollabState
     from aiida.tools.collab.sync import compute_delta, export_delta
 
     profile = ctx.obj.profile
@@ -841,8 +877,14 @@ def collab_push(ctx, peers, force, dry_run):
                     filepath.unlink()
                     filepath_meta.unlink()
 
-                    # A sync that had nothing to carry is still a completed contact, so the identity and the
-                    # policy it revealed are pinned as after any other.
+                    # Logged even though nothing travelled, so that the log answers "when did this last run"
+                    # and not only "when did this last transfer". A sync that had nothing to carry is still a
+                    # completed contact, so the identity and policy it revealed are pinned as after any other.
+                    with CollabState.mutate(CollabState.get_filepath(profile)) as fresh:
+                        fresh.events.append(
+                            CollabEvent(time=timezone.now(), direction='push', peer=peer_uuid, uuids=[], size=0)
+                        )
+
                     pin_peer(
                         ctx.obj.config,
                         profile,
@@ -887,7 +929,14 @@ def collab_push(ctx, peers, force, dry_run):
 
         size = filepath.stat().st_size
 
-        # Nothing is recorded locally: what the peer now holds is its cursor for this profile, kept on its side.
+        # Only the event is recorded: what the peer now holds is its cursor for this profile, kept on its side.
+        # The peer is keyed as pull events key it — by its profile UUID — so `collab log` maps it through the
+        # alias and a renamed nickname does not orphan old rows.
+        with CollabState.mutate(CollabState.get_filepath(profile)) as fresh:
+            fresh.events.append(
+                CollabEvent(time=timezone.now(), direction='push', peer=peer_uuid, uuids=uuids, size=size)
+            )
+
         pin_peer(ctx.obj.config, profile, peer_uuid=peer_uuid, url=url, roster=handshake.roster)
 
         filepath.unlink()

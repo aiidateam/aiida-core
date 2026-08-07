@@ -31,6 +31,12 @@ if TYPE_CHECKING:
 
 Direction = Literal['pull', 'push']
 
+# Above this many events the log is folded on save. The trigger is a count, not an age, because what the log
+# costs is the linear scan on every negotiation and the size of the state file — both functions of the count.
+COMPACT_THRESHOLD = 1000
+
+COMPACTED_PEER = '(compacted)'
+
 
 @contextmanager
 def _exclusive_lock(filepath: Path) -> Iterator[None]:
@@ -138,11 +144,48 @@ class CollabState:
             pending_links=data.get('pending_links', []),
         )
 
+    def _compact(self) -> None:
+        """Fold all but the newest half of the events into one synthetic event per direction, losing no UUID.
+
+        The synthetic events sit at the horizon — the time of the newest folded event — so any query bounded by an
+        instant after the horizon correctly excludes them, and one bounded inside the folded range still sees the
+        whole union. The latter over-states what was imported since that instant, which only re-offers UUIDs the
+        manifest diff then drops; it can never under-state, which would lose relayed provenance.
+        """
+        if len(self.events) <= COMPACT_THRESHOLD:
+            return
+
+        folded = self.events[: -COMPACT_THRESHOLD // 2]
+        # The maximum rather than the last: a backwards wall-clock step between appends must not leave a folded
+        # event beyond the horizon, which would under-state the union for cursors in between.
+        horizon = max(event.time for event in folded)
+        by_direction: dict[Direction, list[CollabEvent]] = {}
+
+        for event in folded:
+            by_direction.setdefault(event.direction, []).append(event)
+
+        synthetic = [
+            CollabEvent(
+                time=horizon,
+                direction=direction,
+                peer=COMPACTED_PEER,
+                # A folded push keeps its row and its byte total for the log but drops its UUIDs: nothing ever
+                # queries them, and keeping them would grow without bound the very file compaction exists to hold.
+                uuids=sorted({uuid for event in events for uuid in event.uuids}) if direction != 'push' else [],
+                size=sum(event.size for event in events),
+            )
+            for direction, events in sorted(by_direction.items())
+        ]
+
+        self.events = [*synthetic, *self.events[len(folded) :]]
+
     def save(self) -> None:
         """Write the state to disk, replacing the existing file atomically."""
         import tempfile
 
         from aiida.manage.configuration.settings import DEFAULT_UMASK
+
+        self._compact()
 
         data = {
             'cursors': {peer: cursor.isoformat() for peer, cursor in self.cursors.items()},

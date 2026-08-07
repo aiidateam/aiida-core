@@ -361,6 +361,39 @@ def test_pull_without_collab(run_cli_command, config_with_profile):
     assert 'not part of a collab' in result.output
 
 
+def test_log_without_events(run_cli_command, config_with_profile):
+    """Test that ``verdi collab log`` reports that nothing was synced yet instead of failing."""
+    init_collab(config_with_profile)
+
+    result = run_cli_command(cmd_collab.collab_log, use_subprocess=False)
+
+    assert 'no sync events recorded yet' in result.output
+
+
+def test_log(run_cli_command, config_with_profile):
+    """Test that ``verdi collab log`` shows one row per event, with the peer shown under its nickname."""
+    init_collab(config_with_profile)
+
+    profile = get_profile()
+    state = CollabState.load(profile)
+    state.events.append(
+        CollabEvent(time=timezone.now(), direction='push', peer=PEER_UUID, uuids=['uuid-one', 'uuid-two'], size=1024)
+    )
+    state.save()
+
+    result = run_cli_command(cmd_collab.collab_log, use_subprocess=False)
+    row = next(line for line in result.output_lines if 'push' in line)
+
+    assert row.split() == [state.events[0].time.isoformat(timespec='seconds'), 'push', PEER, '2', '1024']
+
+
+def test_log_without_collab(run_cli_command, config_with_profile):
+    """Test that ``verdi collab log`` aborts on a profile that is not part of a collab."""
+    result = run_cli_command(cmd_collab.collab_log, use_subprocess=False, raises=True)
+
+    assert 'not part of a collab' in result.output
+
+
 def test_complete_peer(run_cli_command, config_with_profile):
     """Test that the PEER argument completes to the nicknames of the collab, from the configuration alone."""
     import click
@@ -908,6 +941,9 @@ def test_push_failed_import_then_retry(run_cli_command, config_with_profile, stu
 
     state = CollabState.load(profile)
     assert state.cursors == {}, 'the sender keeps no send-state; what the peer holds is tracked on its side'
+    assert [(event.direction, event.peer, event.uuids) for event in state.events] == [
+        ('push', PEER_UUID, ['uuid-one'])
+    ], 'the event keys the peer by its profile UUID'
 
 
 def test_push_prompts_and_decline_drops_cut(run_cli_command, config_with_profile, stub_environment, monkeypatch):
@@ -1333,7 +1369,7 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
 
         state_a = CollabState.read(tmp_path / 'state.json')
         assert set(state_a.cursors) == {uuid_b, uuid_c}, 'cursors key by the profile UUID the peers revealed'
-        assert [event.direction for event in state_a.events] == ['pull', 'pull']
+        assert [event.direction for event in state_a.events] == ['push', 'pull', 'pull']
 
         # The pulls proved both addresses, which is the only thing that ever clears the never-answered flag.
         assert all(entry['seen'] for entry in config.get_option('collab.peers', scope=profile.name).values())
@@ -1342,13 +1378,16 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
         state_b = CollabState.read(state_path_b)
         assert profile.uuid in state_b.cursors
 
-        # A restarts its calculation, reusing the heavy one's output: the second push carries only the new nodes,
-        # although the closure still covers the heavy ancestor.
+        # A restarts its calculation, reusing the heavy one's output: the second push transfers only the new
+        # nodes, so its bytes shrink although the closure still covers the heavy ancestor.
         seal_calculation(backend_a, inputs=output_a)
         result = run_cli_command(cmd_collab.collab_push, ['peer-b', '--force'], use_subprocess=False)
 
         assert 'pushed 2 node(s)' in result.output
         assert node_count(backend_b) == 8
+
+        pushes = [event.size for event in CollabState.read(tmp_path / 'state.json').events if event.direction == 'push']
+        assert pushes[1] < pushes[0], 'the second sync of the restart chain must transfer fewer bytes'
     finally:
         for option in options:
             config.unset_option(option, scope=profile.name)
@@ -1362,6 +1401,59 @@ def test_pull_push_end_to_end(run_cli_command, aiida_profile_clean, monkeypatch,
             thread.join()
         for backend in backends:
             backend.close()
+
+
+def test_push_nothing_is_still_logged(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a push finding the peer up to date records an event, so the log says when it last ran."""
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile)
+
+    def export_delta(filepath, *, delta, backend, want=None):
+        filepath.write_bytes(b'')
+        return DeltaExport(filepath=filepath, uuids=[], instant=timezone.now())
+
+    monkeypatch.setattr(sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={}, links=[], instant=timezone.now()))
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(uuid='uuid-of-alice')
+    )
+    gossiped = []
+
+    def push_handshake(self, requester, roster=None):
+        gossiped.append(roster)
+        return PushHandshake(busy=False, cursor=None, claim=[])
+
+    monkeypatch.setattr(CollabClient, 'push_handshake', push_handshake)
+    monkeypatch.setattr(
+        CollabClient,
+        'diff_manifest',
+        lambda self, uuids: ManifestDiff(missing=[]),
+    )
+
+    result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)
+
+    assert f'{PEER} is up to date' in result.output
+    assert gossiped[0][0] == {
+        'uuid': get_profile().uuid,
+        'url': 'http://127.0.0.1:9137',
+        'name': get_profile().name,
+        'stamp': 1,
+    }, 'a push announces this profile as a pull does, so a move heals whichever way the sync goes'
+
+    events = CollabState.load(get_profile()).events
+
+    assert [(event.direction, event.peer, event.uuids, event.size) for event in events] == [
+        ('push', 'uuid-of-alice', [], 0)
+    ]
+
+    result = run_cli_command(cmd_collab.collab_log, use_subprocess=False)
+    row = next(line for line in result.output_lines if 'push' in line)
+
+    assert row.split()[1:] == ['push', PEER, '0', '0'], 'the empty push should show under the nickname'
 
 
 def test_push_version_skew(run_cli_command, config_with_profile, stub_environment, monkeypatch):

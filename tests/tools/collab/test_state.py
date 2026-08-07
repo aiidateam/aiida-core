@@ -63,6 +63,45 @@ def test_imported_uuids_since(tmp_path):
     assert state.imported_uuids_since(late) == {'uuid-late'}
 
 
+def test_compaction(tmp_path, monkeypatch):
+    """Test that saving past the threshold folds the oldest events into one synthetic event per direction.
+
+    No UUID is lost. Any query bounded after the horizon is unchanged; one bounded inside the folded range may see
+    more than it strictly should (over-delivery, dropped by the manifest diff), but never less.
+    """
+    from datetime import timedelta
+
+    from aiida.tools.collab import state as state_module
+
+    monkeypatch.setattr(state_module, 'COMPACT_THRESHOLD', 4)
+
+    base = timezone.now()
+    times = [base + timedelta(seconds=index) for index in range(6)]
+    directions = ['pull', 'push', 'pull', 'pull', 'pull', 'pull']
+    state = CollabState(filepath=tmp_path / 'state.json')
+
+    for index, (instant, direction) in enumerate(zip(times, directions)):
+        state.events.append(CollabEvent(time=instant, direction=direction, peer=PEER, uuids=[f'uuid-{index}'], size=1))
+
+    ever = state.imported_uuids_since(None)
+    since_inside = state.imported_uuids_since(times[3])
+    since_after = state.imported_uuids_since(times[5])
+
+    state.save()
+    loaded = CollabState.read(tmp_path / 'state.json')
+
+    assert len(loaded.events) == 4, 'four folded into one synthetic event per direction, the newest two kept'
+    assert {event.peer for event in loaded.events[:2]} == {state_module.COMPACTED_PEER}
+    assert {event.time for event in loaded.events[:2]} == {times[3]}, 'the synthetic events sit at the horizon'
+    assert loaded.imported_uuids_since(None) == ever
+    assert loaded.imported_uuids_since(times[5]) == since_after
+    assert loaded.imported_uuids_since(times[3]) >= since_inside
+
+    # Saving again does not fold further: the log is already at the target size.
+    loaded.save()
+    assert len(CollabState.read(tmp_path / 'state.json').events) == 4
+
+
 def test_import_lock(tmp_path):
     """Test that the import lock reports held exactly while another thread holds it."""
     filepath = tmp_path / 'state.json'

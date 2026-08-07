@@ -465,6 +465,18 @@ def _gather_imports(archives: list[str], webpages: list[str] | None) -> list[tup
     return final_archives
 
 
+def _is_collab_thin_delta(archive_path: str) -> bool:
+    """Return whether the archive is a thin collab delta, which only ``verdi collab pull`` imports completely."""
+    from aiida.tools.archive.abstract import get_format
+
+    try:
+        with get_format().open(archive_path, mode='r') as reader:
+            return bool(reader.get_metadata().get('creation_parameters', {}).get('collab_thin_delta'))
+    except Exception:
+        # An archive this version cannot read yet is handled (or refused) by the import machinery itself.
+        return False
+
+
 def _import_archive_and_migrate(
     ctx: click.Context, archive: str, web_based: bool, import_kwargs: dict, try_migration: bool
 ) -> None:
@@ -502,6 +514,14 @@ def _import_archive_and_migrate(
             echo.echo_success('archive downloaded, proceeding with import')
 
         archive_path = str(archive_path)
+
+        if _is_collab_thin_delta(archive_path):
+            echo.echo_critical(
+                f'{archive} is a collab transfer delta, not a general-purpose archive: importing it here would '
+                'silently lose the links it carries to nodes outside of it. It is imported by `verdi collab pull` '
+                'on the destination profile.'
+            )
+
         echo.echo_report(f'starting import: {archive}')
         try:
             _import_archive(archive_path, archive_format=archive_format, **import_kwargs)

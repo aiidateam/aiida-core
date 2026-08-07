@@ -17,6 +17,7 @@ How-To Guides
    data
    query
    share_data
+   collaborate
    archive_profile
    visualising_graphs
    installation

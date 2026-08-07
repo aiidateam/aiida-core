@@ -9,6 +9,7 @@ Internal architecture
     engine
     broker
     rest_api
+    aep/index
 
 .. todo::
 

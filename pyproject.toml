@@ -295,6 +295,7 @@ bpython = [
   'bpython~=0.20'
 ]
 docs = [
+  'sphinxcontrib-mermaid~=1.0',
   'pydata-sphinx-theme~=0.15.1',
   'sphinx~=7.2.0',
   'sphinx-copybutton~=0.5.0',

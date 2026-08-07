@@ -16,7 +16,7 @@ execution:
 (tutorial:module2)=
 # Module 2: Structured data and calcfunctions
 
-{bdg-secondary}`⏱️ ~45 min read` {bdg-success}`Beginner`
+{bdg-secondary}`⏱️ ~90 min read` {bdg-success}`Beginner`
 
 :::{tip}
 This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`module2.ipynb` {octicon}`download`
@@ -238,8 +238,9 @@ Now, we can chain them: `prepare_input` → `launch_shell_job` → `parse_output
 Each step is tracked, and the inputs and outputs are stored as structured, queryable nodes:
 
 ```{code-cell} ipython3
-# Run the enriched pipeline: prepare_input → ShellJob → parse_output.
-input_file = prepare_input(BASE_PARAMS)
+# Run the pipeline. engine.run_get_node runs a process and returns (outputs, process node),
+# the same shape launch_shell_job returns just below; we keep the nodes we inspect later.
+input_file, _ = engine.run_get_node(prepare_input, parameters=BASE_PARAMS)
 
 results, node = launch_shell_job(
     gsrd_code,
@@ -248,11 +249,12 @@ results, node = launch_shell_job(
     outputs=['results.npz'],
 )
 
-# engine.run_get_node returns the outputs and the process node, like launch_shell_job above.
 parsed, parse_node = engine.run_get_node(parse_output, stdout=results['stdout'])
 print(f"variance(V) = {parsed['variance_V'].value:.4e}")
 print(f"mean(V)     = {parsed['mean_V'].value:.4e}")
 ```
+
+That is already the payoff: instead of opening the output files, `variance(V)` and `mean(V)` come straight off the run's `Float` output nodes via `.value`.
 
 `parse_output` is now itself a first-class process node: the calcjob's `stdout` node is its input, and the `Float` nodes are its outputs:
 
@@ -276,65 +278,85 @@ from include.plotting import plot_provenance
 plot_provenance(node)
 ```
 
-Compare this to the opaque run at the start of the module: the provenance now shows **Dict** going in and **Float** values coming out, not just opaque files.
-These values can now be searched directly in AiiDA's database.
+Compare this to the opaque run at the start of the module: the provenance now shows `Dict` going in and `Float` values coming out, not just opaque files.
+What changed is not the simulation but *how* we get the numbers back: the `Dict` inputs and `Float` outputs now live in the database with full provenance, ready to be queried.
 
-To have several results to organize and search in a moment, run the enriched pipeline for a few more `F` values:
+We've now chained these three steps by hand.
+Packaging them as a function makes the pipeline repeatable, and it returns a small `GsrdRun` record so each run's nodes are reachable by name:
 
 ```{code-cell} ipython3
-# Run the enriched pipeline for a few more F values, so we have several results.
-enriched_results = []
+:tags: [hide-input]
+:mystnb:
+:    code_prompt_show: 'Show the GsrdRun dataclass'
+:    code_prompt_hide: 'Hide the GsrdRun dataclass'
 
-for f_val in [0.038, 0.042, 0.046, 0.050]:
-    input_file = prepare_input(BASE_PARAMS | {'F': f_val})
+from dataclasses import dataclass
 
-    results, node = launch_shell_job(
+
+@dataclass
+class GsrdRun:
+    """One Gray-Scott run: its feed rate and the three process nodes that produced it."""
+
+    F: float
+    prepare: orm.ProcessNode
+    shelljob: orm.ProcessNode
+    parse: orm.ProcessNode
+```
+
+```{code-cell} ipython3
+def run_pipeline(f_val: float) -> GsrdRun:
+    """Run prepare_input → ShellJob → parse_output for one feed rate, returning a GsrdRun."""
+    params = BASE_PARAMS | {'F': f_val}
+    input_file, prepare_node = engine.run_get_node(prepare_input, parameters=params)
+
+    results, shelljob_node = launch_shell_job(
         gsrd_code,
         arguments='{input}',
         nodes={'input': input_file},
         outputs=['results.npz'],
     )
 
-    parsed = parse_output(results['stdout'])
-    enriched_results.append({'F': f_val, 'parsed': parsed})
+    parsed, parse_node = engine.run_get_node(parse_output, stdout=results['stdout'])
+
+    return GsrdRun(
+        F=f_val,
+        prepare=prepare_node,
+        shelljob=shelljob_node,
+        parse=parse_node,
+    )
 ```
 
-Now the payoff: instead of manually opening YAML files, the results are stored as `Float` nodes that we can access directly through the provenance graph:
+:::{note}
+`run_pipeline` runs immediately: each `engine.run_get_node` and `launch_shell_job` call blocks until its process finishes, so the nodes exist as soon as the function returns.
+{ref}`Module 3 <tutorial:module3>` takes this same function and turns it into a tracked **WorkGraph** workflow, where you instead *build* the graph first and run it as a single separate step.
+:::
+
+## Organizing and querying your results
+
+The tools below only earn their keep once you have more than one run, so let's call `run_pipeline` over a few feed rates:
 
 ```{code-cell} ipython3
-# Access the structured results directly (no file handling needed).
-for r in enriched_results:
-    print(f"F={r['F']:.3f}  variance(V)={r['parsed']['variance_V'].value:.4e}")
+runs = [run_pipeline(f_val) for f_val in [0.038, 0.042, 0.046, 0.050]]
 ```
 
-What changed from the opaque run at the start is not the simulation but *how* we get the numbers back: the `Dict` inputs and `Float` outputs now live in the database with full provenance, ready to be queried.
-
-## Organizing your results
-
-Once you have run more than a handful of calculations, three needs show up, and AiiDA gives you one tool for each:
+With a handful of tracked runs in the database, the payoff we are building toward is **searching** them, which is what the `QueryBuilder` does.
+Queries get far more useful once each run carries metadata to filter on, so we take it in three steps:
 
 - **Tag** nodes with ad-hoc properties you only realized you cared about later: **extras**.
 - **Bundle** related runs as a single named unit you can retrieve or share: **groups**.
-- **Search** across the database to answer questions like *"which runs are above the threshold?"*: **QueryBuilder**.
+- **Search** across the database, including by extras and group membership: **QueryBuilder**.
 
 ### Extras
 
-There are often properties you want to attach to a node *after* it was created: a quality flag, a review status, an experiment label, "this is the run I used in the paper".
-The **extras** dictionary on every AiiDA node is AiiDA's mechanism for exactly that.
-Unlike node attributes (which are immutable once stored), extras can be updated freely, even long after the node was created, without touching the provenance graph:
+There are often properties you want to attach to a node *after* it was created: a quality flag, a review status, "this is the run I used in the paper".
+The **extras** dictionary on every AiiDA node is AiiDA's mechanism for exactly that: unlike node attributes (immutable once stored), extras can be set and changed freely, long after the node was created, without touching the provenance graph.
+
+Having run the sweep, say you want to mark the run at the **pattern transition**, a judgement about the results that the provenance itself does not record.
+From the transition curve in {ref}`Module 3b <tutorial:module3b>`, the pattern dissolves around `F=0.046`; select that run and flag its `parse_output` node:
 
 ```{code-cell} ipython3
-# Tag each run's parse_output node with its F value and a sweep label.
-from pprint import pprint
-
-for r in enriched_results:
-    parse_node = r['parsed']['variance_V'].creator  # the parse_output CalcFunctionNode
-    parse_node.base.extras.set_many({'F': r['F'], 'sweep': 'F_scan'})
-
-first_parse_node = enriched_results[0]['parsed']['variance_V'].creator
-user_extras = {k: v for k, v in first_parse_node.base.extras.all.items() if not k.startswith('_')}
-print('Extras on first node:')
-pprint(user_extras)
+transition_run = next(run for run in runs if run.F == 0.046)
+transition_run.parse.base.extras.set('note', 'pattern transition')
 ```
 
 ### Groups
@@ -351,9 +373,8 @@ created: bool
 sweep_group, created = orm.Group.collection.get_or_create('tutorial/F-sweep')
 
 if created:
-    for r in enriched_results:
-        parse_node = r['parsed']['variance_V'].creator
-        sweep_group.add_nodes(parse_node)
+    for run in runs:
+        sweep_group.add_nodes(run.parse)
 
 print(f"Group '{sweep_group.label}' contains {sweep_group.count()} nodes")
 ```
@@ -361,22 +382,21 @@ print(f"Group '{sweep_group.label}' contains {sweep_group.count()} nodes")
 ```{code-cell} ipython3
 :tags: ["hide-output"]
 
-%verdi group list
+%verdi group list -C
 ```
 
 Groups are purely organizational and do not affect provenance.
 You can add or remove nodes at any time, and a node can belong to multiple groups.
 
-### Searching with QueryBuilder
+### QueryBuilder
 
 Extras and groups are how you *organize* nodes; {class}`~aiida.orm.QueryBuilder` is how you *find* them.
 It is AiiDA's structured-search API over the provenance graph: filter by node type, by attribute value, by extras, by which group they belong to, by their relationships to other nodes, etc.
-A few examples on the `Float` nodes we just stored:
 
-All three patterns below operate on the runs we just tagged. Start by counting how many `parse_output` calcfunction nodes there are:
+Start by counting every `parse_output` run in the database:
 
 ```{code-cell} ipython3
-# 1. Filter by node type and process label.
+# Filter by node type and process label.
 qb = orm.QueryBuilder().append(
     orm.CalcFunctionNode,
     filters={'attributes.process_label': 'parse_output'},
@@ -384,31 +404,19 @@ qb = orm.QueryBuilder().append(
 print(f'parse_output calcfunctions in this profile: {qb.count()}')
 ```
 
-Narrow that down to the ones we tagged with `sweep=F_scan` (using the extras we attached earlier):
+Then use the extra we just set to pull the transition run straight back out, however many runs sit in between:
 
 ```{code-cell} ipython3
-# 2. Filter the same node type by an extras key.
+# Filter the same node type by an extras key.
 qb = orm.QueryBuilder().append(
     orm.CalcFunctionNode,
-    filters={'extras.sweep': 'F_scan'},
+    filters={'extras.note': 'pattern transition'},
 )
-print(f'of which tagged sweep=F_scan: {qb.count()}')
+flagged = qb.all(flat=True)
+print(f'{len(flagged)} run flagged as the transition: {flagged[0]}')
 ```
 
-Instead of returning whole nodes, *project* a single attribute. Here, recover the `F` values directly from the sweep tags:
-
-```{code-cell} ipython3
-# 3. Project a single field, so the database doesn't load full nodes.
-qb = orm.QueryBuilder().append(
-    orm.CalcFunctionNode,
-    filters={'extras.sweep': 'F_scan'},
-    project='extras.F',
-)
-F_values = sorted(row[0] for row in qb.all())
-print(f'F values recovered from the sweep tags: {F_values}')
-```
-
-QueryBuilder can also join across the provenance graph: filter `Float` nodes by the calcfunction that created them, by output label, by the workflow they belong to, etc. We'll cover those patterns properly in {ref}`Module 5 <tutorial:module5>`.
+QueryBuilder can do much more: *project* single fields instead of loading whole nodes, and *join* across the provenance graph, filter a `Float` by the calcfunction that created it, recover a run's inputs, restrict to a group's members, and so on. We'll cover those patterns properly in {ref}`Module 5 <tutorial:module5>`.
 
 After all this activity, our profile is filling up.
 To list every process we have run so far across all modules:

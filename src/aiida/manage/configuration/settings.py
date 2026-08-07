@@ -28,6 +28,7 @@ DEFAULT_DAEMON_DIR_NAME = 'daemon'
 DEFAULT_DAEMON_LOG_DIR_NAME = 'log'
 DEFAULT_PROFILE_LOG_DIR_NAME = 'log'
 DEFAULT_ACCESS_CONTROL_DIR_NAME = 'access'
+DEFAULT_COLLAB_DIR_NAME = 'collab'
 
 __all__ = ('AiiDAConfigDir', 'AiiDAConfigPathResolver')
 
@@ -92,6 +93,10 @@ class AiiDAConfigPathResolver:
     @property
     def access_control_dir(self) -> pathlib.Path:
         return self._aiida_path / DEFAULT_ACCESS_CONTROL_DIR_NAME
+
+    @property
+    def collab_dir(self) -> pathlib.Path:
+        return self._aiida_path / DEFAULT_COLLAB_DIR_NAME
 
 
 def _create_instance_directories(aiida_config_folder: pathlib.Path | None) -> None:

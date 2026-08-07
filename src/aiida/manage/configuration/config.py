@@ -268,6 +268,27 @@ class ProfileOptionsSchema(BaseModel, defer_build=True):
         description='Calculation entry points to disable caching on.',
         json_schema_extra={'requires_daemon_restart': True},
     )
+    collab__enabled: bool = Field(
+        False,
+        description='Whether this profile takes part in a collab, sharing provenance with peer profiles.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
+    collab__token: str = Field(
+        '',
+        description='Shared secret with which peers of the collab authenticate against this profile. Read by the '
+        'endpoint per request, so a rotation retires the old one for serving at once, without a daemon restart.',
+    )
+    collab__bind: str = Field(
+        '',
+        description='Address of this machine on the private network of the collab, on which the collab endpoint '
+        'listens. The endpoint speaks plain HTTP and refuses to listen on all interfaces (`0.0.0.0` or `::`).',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
+    collab__port: int = Field(
+        9137,
+        description='Port on which the collab endpoint of this profile listens.',
+        json_schema_extra={'requires_daemon_restart': True},
+    )
 
     @field_validator('caching__enabled_for', 'caching__disabled_for')
     @classmethod
@@ -728,6 +749,7 @@ class Config:
             get_daemon_client,
         )
         from aiida.plugins import StorageFactory
+        from aiida.tools.collab.state import delete_state
 
         profile = self.get_profile(name)
         is_default_profile: bool = profile.name == self.default_profile_name
@@ -805,6 +827,7 @@ class Config:
         else:
             LOGGER.report(f'Data storage not deleted, configuration is: {profile.storage_config}')
 
+        delete_state(profile)
         self.remove_profile(name)
 
         if is_default_profile and not self.profile_names:

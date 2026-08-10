@@ -755,6 +755,31 @@ class _Faults:
 
         return state
 
+    def delete_during_negotiation(self, member: Member, uuid: str) -> dict:
+        """Delete a node of a member's own profile from inside that member's in-flight pull.
+
+        A ``verdi node delete`` run in another terminal while a transfer is under way, driven from inside the
+        transfer for the reason ``rotate_during_import`` is: two ``verdi`` runs cannot genuinely overlap in one
+        interpreter. Hooked on the negotiation rather than on the download, which is where a pull spends its
+        time, because a node the receiver still held when the manifest was diffed is never cut into the delta at
+        all -- so a deletion later than that has nothing to be undone by.
+        """
+        from aiida.tools.collab.client import CollabClient
+
+        state = {'deleted': False}
+        original = CollabClient.negotiate_delta
+
+        def negotiating(self, *args, **kwargs):
+            if not state['deleted']:
+                state['deleted'] = True
+                member.delete(uuid)
+
+            return original(self, *args, **kwargs)
+
+        self._monkeypatch.setattr(CollabClient, 'negotiate_delta', negotiating)
+
+        return state
+
     def claims(self, member: Member, **fields) -> None:
         """Make one member's handshake declare something other than the truth about itself.
 

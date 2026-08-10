@@ -1884,6 +1884,62 @@ def test_push_retry_offers_no_refresh_under_local(run_cli_command, config_with_p
     assert offered == [{}, {}], 'a retry of a collab that keeps extras local may offer nothing about them either'
 
 
+def test_push_offers_a_membership_journalled_while_the_delta_was_cut(
+    run_cli_command, config_with_profile, stub_environment, monkeypatch
+):
+    """Test that the push computes its offers from a state read after the instant it exports at.
+
+    The receiver's cursor advances to that instant, so a curation another ``verdi`` run journals while the delta
+    is being cut is behind that cursor the moment the import lands: an offer computed from a state read before
+    the instant would drop it for good. Over-stating is the safe side of the trade — a membership the receiver
+    already holds is dropped by its own diff.
+    """
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.protocol import GroupMembers, ManifestDiff, PushHandshake
+    from aiida.tools.collab.state import Membership
+    from aiida.tools.collab.sync import Delta
+
+    init_collab(config_with_profile, **{OPTION_POLICY: {'extras_mode': 'local', 'groups_mode': 'grow'}})
+
+    offered = []
+
+    def compute_delta(*, state, backend, cursor, claim=frozenset()):
+        instant = timezone.now()
+
+        # The other terminal, curating a node while this push cuts its delta: journalled after the instant this
+        # export carries, which is what puts it in the window the state read has to be on the far side of.
+        with CollabState.mutate(CollabState.get_filepath(get_profile())) as fresh:
+            fresh.memberships.append(Membership(time=timezone.now(), group='uuid-of-group', node='uuid-late'))
+
+        return Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=instant)
+
+    def membership_offer(*, state, backend, cursor):
+        nodes = [entry.node for entry in state.memberships]
+
+        return [GroupMembers(uuid='uuid-of-group', label='band', type_string='', nodes=nodes)]
+
+    def diff_manifest(self, uuids, refresh=None, members=None):
+        offered.append(members)
+        return ManifestDiff(missing=[], refresh=[], members=[])
+
+    monkeypatch.setattr(
+        CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(groups_mode='grow')
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'push_handshake',
+        lambda self, requester, roster=None: PushHandshake(busy=False, cursor=None, claim=[]),
+    )
+    monkeypatch.setattr(CollabClient, 'diff_manifest', diff_manifest)
+    monkeypatch.setattr(sync, 'compute_delta', compute_delta)
+    monkeypatch.setattr(sync, 'membership_offer', membership_offer)
+
+    run_cli_command(cmd_collab.collab_push, ['--dry-run'], use_subprocess=False)
+
+    assert offered == [[GroupMembers(uuid='uuid-of-group', label='band', type_string='', nodes=['uuid-late'])]]
+
+
 def test_push_refused_delta_drops_stash(run_cli_command, config_with_profile, stub_environment, monkeypatch):
     """Test that a 422-refused push drops its retry stash, so the next push negotiates afresh.
 

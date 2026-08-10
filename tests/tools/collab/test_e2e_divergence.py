@@ -115,6 +115,31 @@ def test_what_a_deleted_node_takes_with_it(collab, direction):
     assert len(a.uuids()) == 3
 
 
+def test_a_deletion_during_a_pull_is_not_undone(collab, faults):
+    """Test that a tombstone recorded while a delta is in flight is honoured by the import that lands it.
+
+    The pull holds a state object across a handshake, a negotiation and a download — minutes of wall clock — and
+    the import is what has to see the tombstones as they are when it runs, not as they were before any of it.
+    Both defences fall to the same staleness: the claim was computed before the deletion, so the node is cut into
+    the delta, and the import's tombstone filter would read the same stale set. Pull-only: only the pull carries
+    a state object across a network round trip; the endpoint already re-reads its own inside the import lock.
+    """
+    a, b, c = collab(3)
+    created = b.seal_calculation()
+
+    # Carol's copy comes through Alice, so Carol's first contact with Bob is unbounded and offers everything she
+    # holds — which is the only way work Bob produced himself can be handed back to him at all.
+    b.run('push', ['alice', '--force'])
+    a.run('push', ['carol', '--force'])
+
+    faults.delete_during_negotiation(b, created)
+
+    b.run('pull', ['carol', '--force'])
+
+    assert created in b.state().tombstones
+    assert created not in b.uuids(), 'the deletion was undone by the import it raced'
+
+
 # -- extras -----------------------------------------------------------------------------------------------------
 
 

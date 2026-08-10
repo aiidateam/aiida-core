@@ -1037,10 +1037,16 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
 
         try:
             with import_lock(state.filepath):
+                # Re-read under the lock, as the endpoint does. The copy above describes the moment the cursor and
+                # the claim were computed at and has to; but a handshake, a negotiation and a download have run
+                # since, and a `verdi node delete` in that window would be undone by an import honouring the
+                # tombstones of before it.
+                fresh = CollabState.read(state.filepath)
+
                 with workers_stopped(profile) if pause else nullcontext():
                     report = import_delta(
                         filepath,
-                        state=state,
+                        state=fresh,
                         backend=backend,
                         extras_mode=policy['extras_mode'],
                         peer=peer_uuid,
@@ -1184,13 +1190,12 @@ def collab_push(ctx, peers, force, dry_run):
 
                 meta = json.loads(filepath_meta.read_text(encoding='utf-8')) if filepath_meta.exists() else None
 
-                state = CollabState.load(profile)
-
                 if filepath.exists() and meta is not None and meta['peer'] == peer_uuid:
                     # A previous push to this peer failed after the transfer. Retrying with the very same bytes
                     # is what lets the upload negotiate that everything is already staged and re-attempt only
                     # the import; the original instant travels with them, since it is what describes those bytes.
                     uuids, instant = meta['uuids'], datetime.fromisoformat(meta['instant'])
+                    state = CollabState.load(profile)
 
                     # The extras and the memberships are negotiated again, though the bytes are not: the import
                     # advances the peer's cursor to the stashed instant — past every journal entry older than it,
@@ -1232,11 +1237,17 @@ def collab_push(ctx, peers, force, dry_run):
                     # The delta is offered to the peer as a manifest first — with the mtimes of the extras this
                     # profile edited, when the collab syncs them — so that only what the peer lacks travels.
                     delta = compute_delta(
-                        state=state,
+                        state=CollabState.load(profile),
                         backend=backend,
                         cursor=handshake.cursor,
                         claim=frozenset(handshake.claim),
                     )
+
+                    # Re-read now that the export instant the receiver's cursor will advance to has been taken:
+                    # an offer computed from an older state omits whatever another process journalled in between,
+                    # and what is omitted ends up behind that cursor for good. Over-stating is safe — the manifest
+                    # diff and the mtime comparison drop what the receiver already holds.
+                    state = CollabState.load(profile)
                     offer = (
                         refresh_offer(state=state, backend=backend, cursor=handshake.cursor)
                         if policy['extras_mode'] == 'sync'

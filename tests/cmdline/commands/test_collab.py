@@ -1553,7 +1553,7 @@ def test_push_failed_import_then_retry(run_cli_command, config_with_profile, stu
     imports = []
     instant = timezone.now()
     receiver_cursor = timezone.now()
-    delta = Delta(uuid_by_pk={1: 'uuid-one', 2: 'uuid-held'}, links=[], instant=instant)
+    delta = Delta(uuid_by_pk={1: 'uuid-one', 2: 'uuid-held'}, links=[], instant=instant, computed=instant)
 
     def push_handshake(self, requester, roster=None):
         handshakes.append(requester)
@@ -1666,7 +1666,9 @@ def test_push_retry_renegotiates_the_memberships(run_cli_command, config_with_pr
         CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=5, staged=5)
     )
     monkeypatch.setattr(
-        sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now())
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now(), computed=timezone.now()),
     )
     monkeypatch.setattr(sync, 'export_delta', export_delta)
     monkeypatch.setattr(sync, 'membership_offer', lambda **kwargs: curation)
@@ -1703,7 +1705,9 @@ def test_push_prompts_and_decline_drops_cut(run_cli_command, config_with_profile
         raise AssertionError('a declined prompt must stop the push before any upload')
 
     monkeypatch.setattr(
-        sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now())
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now(), computed=timezone.now()),
     )
     monkeypatch.setattr(sync, 'export_delta', export_delta)
     monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
@@ -1743,7 +1747,9 @@ def test_push_dry_run(run_cli_command, config_with_profile, stub_environment, mo
         raise AssertionError('a dry run must not export or upload anything')
 
     monkeypatch.setattr(
-        sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now())
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now(), computed=timezone.now()),
     )
     monkeypatch.setattr(sync, 'export_delta', untouched)
     monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
@@ -1778,7 +1784,9 @@ def test_push_reports_the_refresh_count(run_cli_command, config_with_profile, st
         return DeltaExport(filepath=filepath, uuids=['uuid-one'], instant=timezone.now())
 
     monkeypatch.setattr(
-        sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now())
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now(), computed=timezone.now()),
     )
     monkeypatch.setattr(sync, 'export_delta', export_delta)
     monkeypatch.setattr(sync, 'refresh_offer', lambda **kwargs: {'uuid-stale': timezone.now()})
@@ -1826,7 +1834,9 @@ def test_push_offers_no_refresh_under_local(run_cli_command, config_with_profile
         return ManifestDiff(missing=[], refresh=[])
 
     monkeypatch.setattr(
-        sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now())
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now(), computed=timezone.now()),
     )
     monkeypatch.setattr(sync, 'refresh_offer', lambda **kwargs: {'uuid-edited': timezone.now()})
     monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
@@ -1980,7 +1990,9 @@ def test_push_refused_delta_drops_stash(run_cli_command, config_with_profile, st
         raise CollabRequestError('it links to node gone-uuid', status=HTTPStatus.UNPROCESSABLE_ENTITY)
 
     monkeypatch.setattr(
-        sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=instant)
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=instant, computed=instant),
     )
     monkeypatch.setattr(sync, 'export_delta', export_delta)
     monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
@@ -2128,7 +2140,11 @@ def test_push_nothing_is_still_logged(run_cli_command, config_with_profile, stub
         filepath.write_bytes(b'')
         return DeltaExport(filepath=filepath, uuids=[], instant=timezone.now())
 
-    monkeypatch.setattr(sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={}, links=[], instant=timezone.now()))
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={}, links=[], instant=timezone.now(), computed=timezone.now()),
+    )
     monkeypatch.setattr(sync, 'export_delta', export_delta)
     monkeypatch.setattr(
         CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(uuid='uuid-of-alice')
@@ -2208,7 +2224,11 @@ def test_push_version_skew(run_cli_command, config_with_profile, stub_environmen
     monkeypatch.setattr(
         CollabClient, 'diff_manifest', lambda self, uuids, refresh=None, members=None: ManifestDiff([], [])
     )
-    monkeypatch.setattr(sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={}, links=[], instant=timezone.now()))
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={}, links=[], instant=timezone.now(), computed=timezone.now()),
+    )
 
     result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)
 

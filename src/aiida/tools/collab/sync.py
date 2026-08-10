@@ -86,6 +86,13 @@ class Delta:
     instant: datetime
     """The export instant the importer stores as its cursor for this profile once the import succeeds."""
 
+    computed: datetime
+    """When the computation started, which is what a cache of it has to be measured against.
+
+    Distinct from the export instant because a withheld seed pulls that one back to its own mtime, which the seed
+    then satisfies for as long as it is withheld: staleness measured against it would be permanent.
+    """
+
     @property
     def uuids(self) -> list[str]:
         """The manifest: the UUIDs of every node of the closed delta."""
@@ -140,7 +147,7 @@ def compute_delta(
     :param claim: UUIDs the requester already holds and does not want re-delivered.
     """
     # Taken before querying, so a process that seals during the computation is picked up by the next one.
-    instant = timezone.now()
+    computed = timezone.now()
 
     seeds = orm.QueryBuilder(backend=backend).append(orm.ProcessNode, filters=seed_filters(cursor)).all(flat=True)
     seed_pks = {node.pk for node in seeds}
@@ -149,13 +156,13 @@ def compute_delta(
     nodes = _without_unsealed_provenance(kept, backend=backend)
 
     # A withheld seed has to stay within reach of the next computation, and nothing will touch its mtime when its
-    # child seals, so the instant cannot move past it. The seed filter is inclusive for that reason. Imported nodes
-    # cannot be withheld: every export rule that could reach a local unsealed process from them is off by default.
+    # child seals, so the export instant cannot move past it. The seed filter is inclusive for that reason. Imported
+    # nodes cannot be withheld: every export rule that could reach a local unsealed process from them is off by
+    # default. The instant the computation was taken at is kept beside it, because that pull-back is what a peer is
+    # owed and not a statement about when this delta was computed.
     kept_pks = {cast(int, node.pk) for node in nodes}
     withheld = [node for node in kept if node.pk not in kept_pks and node.pk in seed_pks]
-
-    if withheld:
-        instant = min(node.mtime for node in withheld)
+    instant = min(node.mtime for node in withheld) if withheld else computed
 
     traversed = get_nodes_export(starting_pks=kept_pks, get_links=True, backend=backend, **TRAVERSAL_RULES)
     pks = traversed['nodes']
@@ -167,7 +174,7 @@ def compute_delta(
         query = orm.QueryBuilder(backend=backend).append(orm.Node, filters={'id': {'in': pks}}, project=['id', 'uuid'])
         uuid_by_pk = dict(query.iterall())
 
-    return Delta(uuid_by_pk=uuid_by_pk, links=links, instant=instant)
+    return Delta(uuid_by_pk=uuid_by_pk, links=links, instant=instant, computed=computed)
 
 
 def export_delta(

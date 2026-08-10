@@ -176,11 +176,96 @@ def seal_calculation(backend):
     calculation.seal()
 
 
+def withheld_seed(backend):
+    """Store a sealed workchain that called a calculation which is still running, and return its mtime.
+
+    The export refuses to write an unsealed process, so the workchain is left out of every delta until its child
+    seals — which, when the daemon that ran it was killed, is never.
+    """
+    from aiida.common.links import LinkType
+
+    excepted = orm.WorkChainNode(backend=backend).store()
+    running = orm.CalcJobNode(backend=backend)
+    running.base.links.add_incoming(excepted, link_type=LinkType.CALL_CALC, link_label='child')
+    running.store()
+    excepted.seal()
+
+    return orm.QueryBuilder(backend=backend).append(orm.WorkChainNode, project='mtime').one()[0]
+
+
 @pytest.fixture
 def temp_backend(tmp_path):
     backend = SqliteTempBackend(SqliteTempBackend.create_profile(filepath=str(tmp_path / 'storage')))
     yield backend
     backend.close()
+
+
+@pytest.fixture
+def computations(monkeypatch):
+    """Return the list the endpoint's delta computations are recorded in, each still doing its genuine work."""
+    genuine = endpoint_module.compute_delta
+    calls = []
+
+    def counted(**kwargs):
+        calls.append(kwargs)
+
+        return genuine(**kwargs)
+
+    monkeypatch.setattr(endpoint_module, 'compute_delta', counted)
+
+    return calls
+
+
+def test_delta_cached_under_a_withheld_seed(make_profile, temp_backend, computations):
+    """Test that a seed no delta can carry does not make every negotiation recompute the delta.
+
+    The export instant is pulled back to that seed's mtime, which the seed's own filter satisfies from then on,
+    so a computation measured against it would count as stale the moment it was taken.
+    """
+    profile = make_profile()
+    seal_calculation(temp_backend)
+    withheld_seed(temp_backend)
+    endpoint = CollabEndpoint(profile, temp_backend)
+
+    manifest = endpoint.negotiate_delta(None, frozenset())
+
+    assert endpoint.negotiate_delta(None, frozenset()) == manifest
+    assert len(computations) == 1
+
+
+def test_delta_recomputed_after_a_new_seal(make_profile, temp_backend, computations):
+    """Test that a process sealed since the computation still invalidates it, withheld seed or not.
+
+    The other half of the cache fix: without it, the delta would simply never be recomputed again.
+    """
+    profile = make_profile()
+    withheld_seed(temp_backend)
+    endpoint = CollabEndpoint(profile, temp_backend)
+
+    assert endpoint.negotiate_delta(None, frozenset()).manifest == []
+
+    seal_calculation(temp_backend)
+
+    assert endpoint.negotiate_delta(None, frozenset()).manifest != []
+    assert len(computations) == 2
+
+
+def test_delta_offered_at_the_withheld_instant(make_profile, temp_backend):
+    """Test that what a requester is offered still carries the export instant, not the computation instant.
+
+    The requester stores it as its cursor, so it has to stay at the withheld seed's mtime: past it, the seed
+    never re-enters a delta and its subgraph never reaches that peer at all.
+    """
+    profile = make_profile()
+    mtime = withheld_seed(temp_backend)
+    seal_calculation(temp_backend)
+    endpoint = CollabEndpoint(profile, temp_backend)
+
+    manifest = endpoint.negotiate_delta(None, frozenset())
+    offer = endpoint.request_delta(None, frozenset(), frozenset(manifest.manifest))
+
+    assert manifest.instant == mtime
+    assert offer.instant == mtime
 
 
 def test_negotiate_delta_cached(make_profile, temp_backend):

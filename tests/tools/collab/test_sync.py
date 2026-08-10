@@ -144,6 +144,23 @@ def test_export_withheld_seed_travels_later(tmp_path, peers):
     assert linked_uuids(excepted) | {running.uuid} <= set(export.uuids)
 
 
+def test_compute_delta_instants_under_a_withheld_seed(peers):
+    """Test that a withheld seed pulls back the export instant alone, leaving the computation instant where it is.
+
+    Both values are the design. The export instant is what a requester stores as its cursor, so it may not pass
+    the seed; the computation instant is what a cache of the computation is measured against, and pulling that
+    one back too would report the profile as having gained content for as long as the seed is withheld.
+    """
+    backend, state = peers('one')
+    excepted, _ = excepted_over_running(backend)
+
+    delta = compute_delta(state=state, backend=backend, cursor=None)
+
+    assert delta.uuid_by_pk == {}, 'the seed is withheld, so the delta is empty'
+    assert delta.instant == excepted.mtime
+    assert delta.computed > excepted.mtime
+
+
 def test_export_bounded_by_cursor(tmp_path, peers):
     """Test that a requester presenting the instant of the previous export is served nothing it already has."""
     backend, state = peers('one')

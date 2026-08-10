@@ -512,7 +512,7 @@ class CollabEndpoint:
         state = CollabState.read(self._state_filepath)
         cached = self._computed.get(key)
 
-        if cached is None or self._stale(cached.instant, state):
+        if cached is None or self._stale(cached.computed, state):
             cached = compute_delta(state=state, backend=self._backend, cursor=cursor, claim=claim)
             self._computed.pop(key, None)
             self._computed[key] = cached
@@ -522,12 +522,17 @@ class CollabEndpoint:
 
         return cached
 
-    def _stale(self, instant: datetime, state: CollabState) -> bool:
-        """Return whether the profile gained content since a delta was computed at ``instant``."""
-        if count_seeds(instant, self._backend) > 0:
+    def _stale(self, computed: datetime, state: CollabState) -> bool:
+        """Return whether the profile gained content since a delta computation started at ``computed``.
+
+        Measured against the instant the computation was taken at rather than against the delta's export instant: a
+        withheld seed pulls that one back to its own mtime, which it then satisfies for as long as it is withheld,
+        and every negotiation would recompute two full graph traversals for a profile that gained nothing.
+        """
+        if count_seeds(computed, self._backend) > 0:
             return True
 
-        return any(event.direction == 'pull' and event.time >= instant for event in state.events)
+        return any(event.direction == 'pull' and event.time >= computed for event in state.events)
 
     def import_staged(
         self,

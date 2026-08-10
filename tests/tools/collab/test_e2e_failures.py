@@ -404,6 +404,75 @@ def test_a_full_endpoint_answers_busy_until_a_slot_expires(collab, monkeypatch):
     assert created in b.uuids()
 
 
+def test_a_declined_pull_frees_the_slot_it_took(collab):
+    """Test that declining the confirmation of a pull ends the negotiation, instead of holding a slot for nothing.
+
+    The negotiation takes a serving slot before the user is asked anything. A decline that kept it would make
+    saying "no" to one member the same as taking the endpoint away from another for ten minutes.
+    """
+    from aiida.tools.collab import endpoint as collab_endpoint
+
+    a, b, c = collab(3)
+    created = a.seal_calculation()
+
+    a.endpoint._slots = collab_endpoint._Slots(1)
+
+    result = b.run('pull', ['alice'], user_input='n\n')
+
+    assert 'skipped alice' in result.output
+    assert created not in b.uuids()
+
+    c.run('pull', ['alice', '--force'])
+
+    assert created in c.uuids(), 'the declined negotiation of bob was still counted against the cap'
+
+
+def test_dry_runs_free_the_slots_they_took(collab):
+    """Test that a dry run of a pull and of a push both end their session, in either direction.
+
+    A dry run is the abandonment that happens most: it reports and stops, transferring nothing. Its slot is taken
+    by the negotiation on the pull side and by the handshake on the push side, and both have to be given back.
+    """
+    from aiida.tools.collab import endpoint as collab_endpoint
+
+    a, b, c = collab(3)
+    created = a.seal_calculation()
+
+    # One slot, so that a leak of either of the two is what the third member runs into: each dry run releases
+    # before the next asks, and with two slots a leak of one of them would still leave one free.
+    a.endpoint._slots = collab_endpoint._Slots(1)
+
+    b.run('pull', ['alice', '--dry-run'])
+    b.run('push', ['alice', '--dry-run'])
+
+    c.run('pull', ['alice', '--force'])
+
+    assert created in c.uuids(), 'the dry runs of bob were still counted against the cap'
+
+
+def test_a_refused_import_frees_the_slot_of_the_pusher(collab, faults):
+    """Test that a push whose import the receiver refuses ends its session, rather than holding a slot to expiry.
+
+    The slot of a push is normally given back by the import; a refusal answered before the import runs — corrupt
+    bytes here, a rotated token or a vanished staging file elsewhere — has nothing to give it back.
+    """
+    from aiida.tools.collab import endpoint as collab_endpoint
+
+    a, b, c = collab(3)
+    created = a.seal_calculation()
+
+    b.endpoint._slots = collab_endpoint._Slots(1)
+    faults.corrupt_staged(b)
+
+    a.run('push', ['bob', '--force'], raises=True)
+
+    result = c.run('pull', ['bob', '--force'])
+
+    assert created not in c.uuids(), 'the refused push must not have landed on bob'
+    # A pull that was served records a cursor even when the delta was empty; a refused one never imports at all.
+    assert b.uuid in c.state().cursors, f'the failed push of alice was still counted against the cap: {result.output}'
+
+
 def test_concurrent_pushes_into_one_profile_serialize(collab, tmp_path):
     """Test that two peers importing into the same profile at once produce one correct graph, not a race.
 

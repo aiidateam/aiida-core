@@ -988,6 +988,9 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
                         summary += f', {curated} group membership(s) to add'
 
                     echo.echo_report(summary)
+                    # The negotiation took a serving slot of the peer and is over: without this the peer would
+                    # answer everybody else busy until the slot expired, for a command that transferred nothing.
+                    client.release()
                     continue
 
                 offer = client.request_delta(cursor, claim, want, refresh_want)
@@ -1003,6 +1006,7 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
 
                     if not click.confirm(f'{prompt}?', default=False):
                         echo.echo_report(f'skipped {nickname}.')
+                        client.release()
                         continue
 
                 # A stable per-peer path, so an interrupted download resumes on the next pull.
@@ -1010,6 +1014,9 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
                 client.download_delta(filepath, offer.delta)
             except CollabRequestError as exception:
                 echo.echo_warning(f'skipping peer {nickname}: {exception}')
+                # A transfer that failed abandons its slot as surely as one that was declined: the peer answered
+                # a moment ago, so it is there to be told, and it is the other members that pay if it is not.
+                client.release()
                 continue
 
         try:
@@ -1183,6 +1190,9 @@ def collab_push(ctx, peers, force, dry_run):
                             summary += f', {curated} group membership(s) to add there'
 
                         echo.echo_report(summary)
+                        # The handshake took a serving slot of the peer and is over: without this the peer would
+                        # answer everybody else busy until the slot expired, for a command that sent nothing.
+                        client.release()
                         continue
 
                     echo.echo_report(f'retrying the delta of the previous failed push to {nickname}')
@@ -1219,6 +1229,7 @@ def collab_push(ctx, peers, force, dry_run):
                             summary += f', {curated} group membership(s) to add there'
 
                         echo.echo_report(summary)
+                        client.release()
                         continue
 
                     export = export_delta(
@@ -1253,6 +1264,7 @@ def collab_push(ctx, peers, force, dry_run):
                         token=token,
                     )
                     echo.echo_report(f'nothing to push: {nickname} is up to date.')
+                    client.release()
                     continue
 
                 if not force:
@@ -1270,17 +1282,24 @@ def collab_push(ctx, peers, force, dry_run):
                         filepath.unlink()
                         filepath_meta.unlink()
                         echo.echo_report(f'skipped {nickname}.')
+                        client.release()
                         continue
 
                 upload = client.upload_delta(filepath)
                 echo.echo_report(f'transferred {upload.sent} bytes, {upload.staged} staged on the peer')
             except CollabRequestError as exception:
                 echo.echo_warning(f'skipping peer {nickname}: {exception}')
+                client.release()
                 continue
 
             try:
                 client.trigger_import(upload.sha256, peer=identity, instant=instant, refresh=refresh, members=members)
             except CollabRequestError as exception:
+                # A refusal that never reached the import — corrupt bytes, a staging file that is gone, a token
+                # rotated in between — leaves the slot the handshake took with nothing to release it: the import
+                # whose `finally` would have is the one that did not run.
+                client.release()
+
                 if exception.status == HTTPStatus.UNPROCESSABLE_ENTITY:
                     # The delta can never land — it links to a node the peer no longer holds — so retrying the
                     # same bytes would abort forever. The next push negotiates afresh, its diff includes the hole.

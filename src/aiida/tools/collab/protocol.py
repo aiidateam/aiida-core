@@ -30,6 +30,7 @@ ROUTE_HANDSHAKE = f'{API_PREFIX}/handshake'
 ROUTE_MISSING = f'{API_PREFIX}/missing'
 ROUTE_JOIN = f'{API_PREFIX}/join'
 ROUTE_RETIRED = f'{API_PREFIX}/retired'
+ROUTE_SESSION = f'{API_PREFIX}/session'
 
 HEADER_STAGED = 'X-Collab-Staged-Bytes'
 

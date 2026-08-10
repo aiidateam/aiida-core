@@ -41,6 +41,7 @@ from aiida.tools.collab.protocol import (
     ROUTE_JOIN,
     ROUTE_MISSING,
     ROUTE_RETIRED,
+    ROUTE_SESSION,
     UNAUTHORIZED_DETAIL,
     EndpointBusy,
     ExtrasSnapshot,
@@ -98,7 +99,9 @@ class CollabServer(ThreadingHTTPServer):
         bytes while a transfer is in progress; when the delta is re-exported, a client that resumes an interrupted
         download is served the new file from the start instead. Receives the requester too, since a download is
         activity of its session and keeps its slot from expiring under a long transfer.
-    :param release: frees the serving slots of the requester, when a download was served to the end of the file.
+    :param release: frees the serving slots of the requester, at ``DELETE /collab/v1/session`` and when a download
+        was served to the end of the file. A peer that abandons a negotiation — a dry run, a declined prompt —
+        ends its session that way instead of leaving the endpoint refusing others until the slot expires.
     :param diff_manifest: answers ``POST /collab/v1/missing`` for a peer that wants to push: which of the offered
         nodes this profile is missing, which of the offered extras it holds an older version of, and which of the
         offered group memberships it can apply.
@@ -206,6 +209,9 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
 
     def do_PUT(self) -> None:
         self._dispatch({_UPLOAD_PATTERN: self._put_upload})
+
+    def do_DELETE(self) -> None:
+        self._dispatch({ROUTE_SESSION: self._delete_session})
 
     def do_POST(self) -> None:
         self._dispatch(
@@ -334,6 +340,10 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
             answer = self.server.negotiate_delta(cursor, claim, data.get('roster', []), self.peer)
 
         self._send_json(HTTPStatus.OK, answer.as_dict())
+
+    def _delete_session(self) -> None:
+        self.server.release(self.peer)
+        self._send_json(HTTPStatus.OK, {})
 
     def _post_missing(self) -> None:
         data = self._read_json()

@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import requests
 
+from aiida.common.log import AIIDA_LOGGER
 from aiida.tools.collab.protocol import (
     CHUNK_SIZE,
     HEADER_COLLAB,
@@ -28,6 +29,7 @@ from aiida.tools.collab.protocol import (
     ROUTE_JOIN,
     ROUTE_MISSING,
     ROUTE_RETIRED,
+    ROUTE_SESSION,
     CollabRequestError,
     DeltaManifest,
     DeltaOffer,
@@ -51,7 +53,14 @@ if TYPE_CHECKING:
 
     from aiida.tools.collab.protocol import ExtrasSnapshot, GroupMembers
 
+LOGGER = AIIDA_LOGGER.getChild('collab')
+
 TIMEOUT = 60.0
+
+# Ending a session is one round trip to a peer that just answered one, and is only ever a courtesy: a peer that
+# does not answer it at once is one whose slot the expiry has to reclaim anyway, and waiting out the full timeout
+# for it would add a second stall to a command that is already reporting a failure.
+RELEASE_TIMEOUT = 5.0
 
 
 @dataclass
@@ -190,6 +199,20 @@ class CollabClient:
         }
 
         return self._answer(DeltaOffer.from_dict, 'POST', ROUTE_DELTA, json=body)
+
+    def release(self) -> None:
+        """Tell the peer that this profile is done with it, so the serving slot it granted is freed at once.
+
+        Owed by every path that leaves a peer having asked it for something — a dry run, a declined confirmation,
+        a transfer that failed, an import it refused — and by no path that completed, since a finished download or
+        import is already the end of a session and needs no announcement. Best effort and briefly so: the peer
+        expires the slot of a holder that went silent anyway, so being unable to say this costs the collab a delay
+        and must never cost the user their command, nor a second stall waiting to say it.
+        """
+        try:
+            self._request('DELETE', ROUTE_SESSION, timeout=RELEASE_TIMEOUT)
+        except CollabRequestError as exception:
+            LOGGER.debug('could not tell the peer at %s that the session ended: %s', self._base_url, exception)
 
     def diff_manifest(
         self,

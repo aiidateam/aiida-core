@@ -32,6 +32,7 @@ from aiida.tools.collab.protocol import (
     ROUTE_JOIN,
     ROUTE_MISSING,
     ROUTE_RETIRED,
+    ROUTE_SESSION,
     CollabRequestError,
     DeltaManifest,
     DeltaOffer,
@@ -340,6 +341,7 @@ def test_auth_rejected(transport):
         ('HEAD', route_upload('0' * 64)),
         ('PUT', route_upload('0' * 64)),
         ('POST', route_import('0' * 64)),
+        ('DELETE', ROUTE_SESSION),
     ]
 
     for headers in ({}, {'Authorization': 'Bearer not-the-collab-token'}):
@@ -357,6 +359,7 @@ def test_auth_rejected(transport):
     assert transport.stub.joined == []
     assert transport.stub.retirements == []
     assert transport.stub.imported == []
+    assert transport.stub.released == []
     assert REKEY_HINT in refused.json()['detail'], 'the 401 is where a rotation is enforced, and it has to say so'
 
 
@@ -561,6 +564,15 @@ def test_request_delta(transport):
     assert [(snapshot.uuid, snapshot.mtime, snapshot.extras) for snapshot in offer.refresh] == [
         ('uuid-stale', transport.stub.instant, {'k': 1})
     ], 'the extras snapshots of the requested refreshes travel with the offer'
+
+
+def test_release_ends_the_session_of_the_requester(transport):
+    """The requester of a negotiation is named by its header, and is who the release frees the slots of."""
+    transport.client.negotiate_delta(None, frozenset())
+    transport.client.release()
+
+    assert transport.stub.requesters == [PEER]
+    assert transport.stub.released == [PEER]
 
 
 def test_a_request_without_the_peer_header_is_served(transport):

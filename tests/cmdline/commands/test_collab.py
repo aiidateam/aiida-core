@@ -956,14 +956,18 @@ def make_peer_info(**overrides):
 
 @pytest.fixture
 def stub_environment(monkeypatch):
-    """Stub the storage backend and the local handshake, neither of which CLI tests should touch for real."""
+    """Stub the storage backend, the local handshake and the session release, none of which CLI tests touch for real."""
     from unittest.mock import MagicMock
 
     from aiida.manage import get_manager
     from aiida.tools.collab import endpoint
+    from aiida.tools.collab.client import CollabClient
 
     monkeypatch.setattr(get_manager(), 'get_profile_storage', MagicMock())
     monkeypatch.setattr(endpoint, 'local_info', lambda profile, backend: make_peer_info(pending_count=3))
+    # An abandoned transfer tells the peer so; here that is the one call left talking to an address nobody
+    # answers at. That it happens at all is covered over the wire, in `tests/tools/collab/test_e2e_failures.py`.
+    monkeypatch.setattr(CollabClient, 'release', lambda self: None)
 
 
 def test_pull_sqlite_running_workers_aborts(run_cli_command, config_with_profile_factory, monkeypatch):

@@ -320,6 +320,24 @@ def test_slot_released_after_import(make_profile, record_calls, tmp_path):
     assert endpoint.handshake('pusher-three').busy is False
 
 
+def test_slot_released_when_a_negotiation_ends(make_profile, temp_backend):
+    """Test that ending a negotiation frees its slot, whether or not anything was ever exported.
+
+    A dry run negotiates and stops there. Until the end could be signalled, only an export registered a slot that
+    could be given back, so two dry runs left the endpoint answering everybody else busy until they expired.
+    """
+    profile = make_profile()
+    endpoint = CollabEndpoint(profile, temp_backend)
+
+    endpoint.negotiate_delta(None, frozenset(), requester='puller-one')
+    endpoint.release('puller-one')
+    endpoint.negotiate_delta(None, frozenset(), requester='puller-two')
+    endpoint.release('puller-two')
+
+    # `collab.max_concurrency` is 2, so this is refused unless both ended negotiations gave their slot back.
+    endpoint.negotiate_delta(None, frozenset(), requester='puller-three')
+
+
 def test_slots_are_held_per_peer_not_per_request(make_profile, temp_backend):
     """Test that two peers presenting the same cursor and claim hold a slot each, and neither frees the other's.
 

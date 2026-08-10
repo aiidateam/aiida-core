@@ -80,10 +80,10 @@ LOGGER = AIIDA_LOGGER.getChild('collab')
 # requesters is stale cursors accumulating, not live transfers.
 MAX_CACHED_DELTAS = 8
 
-# How long a serving slot survives without any request from its holder. A slot is normally ended by its holder,
-# by the import it commits or the download it completes; the expiry reclaims one whose holder sent nothing for
-# this long — usually a crash, but also a live transfer whose single request outlasts it, so the cap is
-# approximate under very long transfers rather than a hard guarantee.
+# How long a serving slot survives without any request from its holder. A slot is normally ended by its holder —
+# explicitly, or by the import it commits or the download it completes; the expiry reclaims one whose holder sent
+# nothing for this long — usually a crash, but also a live transfer whose single request outlasts it, so the cap
+# is approximate under very long transfers rather than a hard guarantee.
 SLOT_IDLE_SECONDS = 600
 
 # How long an upload nobody imported is kept staged. A stash exists so that a pusher retrying after a failed
@@ -277,6 +277,9 @@ class CollabEndpoint:
         pusher negotiates against the post-import cursor and claim, so no redundant bytes travel. The slot granted
         here is released when the pushed delta is imported or when the pusher ends its session — a dry run has
         nothing to import — and expires if the pusher goes silent instead.
+
+        The slot is keyed by the ``requester`` of this body while the release that frees it is keyed by the
+        ``X-Collab-Peer`` header, so the two have to name the same thing: both are the pusher's profile UUID.
 
         :raises PushRefused: when this profile does not accept pushes. Refused here, at the first request of a
             push, so that a peer whose consent was withdrawn is turned away before it computes a delta, exports it
@@ -481,10 +484,12 @@ class CollabEndpoint:
         return cached.filepath
 
     def release(self, requester: str) -> None:
-        """Free the serving slots of a peer whose session ended: its download completed, or its import committed.
+        """Free the serving slots of a peer whose session ended, whether it transferred anything or not.
 
-        Both directions are freed by the one call: a member drives one command at a time against a peer, so what
-        ends is its session here, not one half of the endpoint.
+        A negotiation that is abandoned — a dry run, a declined confirmation — has to end as explicitly as one
+        that completed, or the cap counts a peer that left until ``SLOT_IDLE_SECONDS`` reclaims it. Both
+        directions are freed by the one call: a member drives one command at a time against a peer, and what it
+        signals here is that it is done, not which half of the endpoint it was using.
         """
         for direction in ('pull', 'push'):
             self._slots.release(f'{direction}:{requester}')

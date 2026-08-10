@@ -230,7 +230,7 @@ COLLAB_PROBE_TIMEOUT = 2.0
 
 
 def print_collab_status(profile: Profile) -> None:
-    """Print the code that lets others join, one line per active peer — reachable or not — and the last sync.
+    """Print one line per active peer — reachable or not — the last sync, and where the join code is obtained.
 
     Dormant peers are left out entirely: they have not been seen under the current token, and a collab that
     rotated away from a member, or split in two, should carry no trace of the branch it left behind.
@@ -240,10 +240,10 @@ def print_collab_status(profile: Profile) -> None:
     from concurrent.futures import ThreadPoolExecutor
     from http import HTTPStatus
 
-    from aiida.manage.configuration import get_config, get_config_option
+    from aiida.manage.configuration import get_config_option
     from aiida.tools.archive.abstract import get_format
     from aiida.tools.collab.client import CollabClient
-    from aiida.tools.collab.config import OPTION_PEERS, OPTION_POLICY, OPTION_TOKEN, join_code
+    from aiida.tools.collab.config import OPTION_PEERS, OPTION_POLICY, OPTION_TOKEN
     from aiida.tools.collab.protocol import REKEY_HINT, CollabRequestError, PeerInfo
     from aiida.tools.collab.state import CollabState
 
@@ -316,9 +316,10 @@ def print_collab_status(profile: Profile) -> None:
     if signalled:
         print_status(ServiceStatus.WARNING, 'collab rotation', f'signalled by {", ".join(signalled)} — {REKEY_HINT}')
 
-    # Any member can admit a newcomer, so every member shows the code: one joins through whoever is online, and a
-    # member that has to rekey after a rotation obtains it the same way.
-    print_status(ServiceStatus.UP, 'collab join code', join_code(get_config(), profile))
+    # The code embeds the token every request of the collab is authenticated with, and this is the command users
+    # are routinely asked to paste into bug reports and chat threads. The line stays, so that a member can see a
+    # code exists and where to get it; obtaining it is an act of its own.
+    print_status(ServiceStatus.UP, 'collab join code', 'withheld — `verdi collab link` prints it')
 
 
 def print_status(

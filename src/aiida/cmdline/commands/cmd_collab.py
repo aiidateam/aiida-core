@@ -408,8 +408,8 @@ def create_profile(ctx, profile_name, non_interactive):
     '--join',
     'code',
     metavar='CODE',
-    help='The code of a collab to join, as shown by `verdi status` on any of its members. A new profile is created '
-    'for the collab. Without it, a new collab is set up on the current profile.',
+    help='The code of a collab to join, as `verdi collab link` prints it on any of its members. A new profile is '
+    'created for the collab. Without it, a new collab is set up on the current profile.',
 )
 @click.option(
     '-p',
@@ -534,7 +534,9 @@ def collab_init(ctx, code, profile_name, bind, port, computer_map, extras_mode, 
         join_collab(config, profile, joining)
 
     echo.echo_success(f'profile `{profile.name}` serves the collab at {url}.')
-    echo.echo_report('Run `verdi daemon start` to serve it, and `verdi status` for the code that lets others join.')
+    echo.echo_report(
+        'Run `verdi daemon start` to serve it, and `verdi collab link` for the code that lets others join.'
+    )
 
 
 def announce(config, profile, code):
@@ -610,6 +612,26 @@ def set_key(stored, config, profile, token):
             target.set_option(option, value, scope=profile.name)
 
 
+@verdi_collab.command('link')
+@requires_loaded_profile()
+@click.pass_context
+def collab_link(ctx):
+    """Print the code that admits a newcomer to this collab.
+
+    Any member can hand one out: once the collab exists its creator is nobody special, so a newcomer joins through
+    whoever happens to be online, and a member that has to rekey after a rotation obtains a fresh code the same way.
+
+    The code carries the token every request of the collab is authenticated with, which is why asking for it is a
+    command of its own rather than a line of `verdi status`. Hand it over out of band, person to person.
+    """
+    from aiida.tools.collab.config import join_code
+
+    profile = ctx.obj.profile
+    require_collab(profile)
+
+    echo.echo(join_code(ctx.obj.config, profile))
+
+
 @verdi_collab.command('rotate')
 @requires_loaded_profile()
 @click.pass_context
@@ -667,8 +689,8 @@ def collab_rotate(ctx):
 def collab_rekey(ctx, code):
     """Adopt the new token of a collab whose token was rotated.
 
-    CODE is a fresh join code of the same collab, as `verdi status` shows it on a member that already holds the new
-    token. Peers, cursors and history are kept: this profile announces itself to the member whose code it is, and
+    CODE is a fresh join code of the same collab, as `verdi collab link` prints it on a member that already holds the
+    new token. Peers, cursors and history are kept: this profile announces itself to the member whose code it is, and
     syncing resumes where it left off.
     """
     from http import HTTPStatus
@@ -698,9 +720,9 @@ def collab_rekey(ctx, code):
                 'keeps the identity of a collab, so a code of another one is never the one to rekey with.'
             )
 
-        # Every member's `verdi status` prints a code, this profile's own included, and rekeying with that one is
-        # the one case that cannot work: this profile is the only member its own endpoint can teach nothing, so it
-        # would rest its whole roster dormant and reactivate none of it.
+        # Every member prints a code of its own, this profile included, and rekeying with that one is the one case
+        # that cannot work: this profile is the only member its own endpoint can teach nothing, so it would rest
+        # its whole roster dormant and reactivate none of it.
         if rekeyed.url == endpoint_url(
             stored.get_option(OPTION_BIND, scope=scope), stored.get_option(OPTION_PORT, scope=scope)
         ):

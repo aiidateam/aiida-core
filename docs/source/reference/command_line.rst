@@ -122,6 +122,7 @@ Below is a list with all available subcommands.
 
     Commands:
       init          Set up a profile as part of a collab.
+      link          Print the code that admits a newcomer to this collab.
       log           Show the history of the pulls, pushes and extras refreshes of the...
       map-computer  Declare peer computers equivalent to local ones, so pulled...
       peer          Correct the entries of the peers of the collab.

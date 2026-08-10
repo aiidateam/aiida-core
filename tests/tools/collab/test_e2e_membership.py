@@ -45,11 +45,33 @@ def joining(monkeypatch):
 
 
 def code_of(member):
-    """Return the join code a member's ``verdi status`` prints."""
+    """Return the join code a member hands out, as ``verdi collab link`` mints it."""
     from aiida.manage.configuration.config import Config
     from aiida.tools.collab.config import join_code
 
     return join_code(Config.from_file(member.config.filepath), member.profile)
+
+
+def test_the_printed_link_is_what_a_newcomer_joins_with(collab, joining):
+    """Test that a second profile joins on exactly what ``verdi collab link`` wrote to the screen.
+
+    The command exists because the code carries the token and ``verdi status`` may therefore not print it. It is
+    worth having only if what it prints is the whole of what a newcomer needs, so that claim is made end to end
+    rather than against the code the same function would have minted.
+    """
+    a, b = collab(2, bare=True)
+
+    a.run('init', ['--bind', '127.0.0.1', '--port', '0', '--non-interactive'])
+    a.serve()
+
+    printed = a.run('link').output.strip()
+
+    joining.append(b)
+    b.run('init', ['--join', printed, '--bind', '127.0.0.1', '--port', '0', '--non-interactive'])
+
+    assert set(b.peers()) == {a.uuid}
+    assert set(a.peers()) == {b.uuid}, 'the join announced the newcomer to the member whose code it used'
+    assert b.option('collab.token') == a.option('collab.token')
 
 
 def test_joining_a_collab_three_members_deep(collab, joining):

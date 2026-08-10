@@ -49,7 +49,7 @@ The first peer creates the collab on the profile they already work in:
       192.168.1.24 (wlan0)
     This machine's address on the private network of the collab: 100.64.0.1
     Success: profile `main` serves the collab at http://100.64.0.1:9137.
-    Report: Run `verdi daemon start` to serve it, and `verdi status` for the code that lets others join.
+    Report: Run `verdi daemon start` to serve it, and `verdi collab link` for the code that lets others join.
 
 What the collab shares beyond provenance nodes is settled here and never again — see :ref:`choosing the policy <how-to:collaborate:policy>`; ``--extras-mode`` and ``--groups-mode`` script both answers.
 The address is the other thing you have to supply (``--bind`` scripts it).
@@ -57,16 +57,16 @@ It cannot be guessed: a machine has several addresses, and which network the col
 It is validated by binding it, so an address that is not this machine's fails right there instead of at the next daemon start, and an IPv6 address is served and announced as ``http://[fd7a::2]:9137``.
 A free port is picked and persisted (``--port`` chooses one), so the URL your peers were given keeps working across restarts.
 
-The endpoint that serves your provenance is supervised by the daemon; after ``verdi daemon start``, ``verdi status`` shows the code that lets others join:
+The endpoint that serves your provenance is supervised by the daemon; after ``verdi daemon start``, ask for the code that lets others join:
 
 .. code-block:: console
 
-    $ verdi status
-    ...
-     ✔ collab join code: eyJjb2xsYWIiOiAiNGRhO...
+    $ verdi collab link
+    eyJjb2xsYWIiOiAiNGRhO...
 
 That one code carries everything a newcomer needs: which collab, whom to ask, the key to ask with, and the terms it runs on.
 Any member can hand one out — once the collab exists, its creator is nobody special — so a newcomer joins through whoever happens to be online.
+It is a command of its own, and not a line of ``verdi status``, because it carries the token: ``verdi status`` is what you paste into a bug report, and anyone reading one would be holding the key to your collab.
 
 Joining creates a new profile:
 
@@ -166,6 +166,7 @@ Day-to-day use
     $ verdi collab push         # send my new sealed provenance to every peer that accepts pushes
     $ verdi collab push alice   # ... or to the named peers only
     $ verdi collab log          # the history of every pull, push and extras refresh
+    $ verdi collab link         # the code that admits a newcomer — it carries the key, so hand it over out of band
     $ verdi collab rotate       # replace the key of the collab (see above)
     $ verdi collab rekey <code> # adopt a replaced key
 

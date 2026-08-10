@@ -356,8 +356,27 @@ def peer_entry(url, nickname, **overrides):
     }
 
 
+def decodable_codes(output):
+    """Return every whitespace-separated word of ``output`` that parses as a join code.
+
+    Asserted on rather than on the redaction text: what matters is that no rendering of the code reaches the
+    output, and matching a string would keep passing if a later change printed it in another shape.
+    """
+    from aiida.tools.collab.protocol import JoinCode
+
+    found = []
+
+    for word in output.split():
+        try:
+            found.append(JoinCode.decode(word))
+        except ValueError:
+            continue
+
+    return found
+
+
 def test_status_collab(run_cli_command, brokerless_profile, monkeypatch):
-    """Test that the collab section lists each peer, reports the last sync and shows the code that lets others join.
+    """Test that the collab section lists each peer, reports the last sync and withholds the join code.
 
     A peer that never answered is called apart from one that is merely down: a wrong address announced at join
     cannot be detected any other way, since a joiner's endpoint only starts with its daemon.
@@ -368,7 +387,7 @@ def test_status_collab(run_cli_command, brokerless_profile, monkeypatch):
     from aiida import __version__
     from aiida.tools.archive.abstract import get_format
     from aiida.tools.collab.client import CollabClient
-    from aiida.tools.collab.protocol import CollabRequestError, JoinCode, PeerInfo
+    from aiida.tools.collab.protocol import CollabRequestError, PeerInfo
     from aiida.tools.collab.state import CollabEvent, CollabState
 
     monkeypatch.setitem(brokerless_profile.options, 'collab.enabled', True)
@@ -424,14 +443,12 @@ def test_status_collab(run_cli_command, brokerless_profile, monkeypatch):
     assert 'dave' not in result.output, 'a dormant member leaves no trace: neither a line nor a count'
     assert 'last sync 2026-08-01T12:00:00' in result.output
 
-    code = next(line for line in result.output_lines if 'join code' in line).split()[-1]
+    join = next(line for line in result.output_lines if 'join code' in line)
 
-    assert JoinCode.decode(code) == JoinCode(
-        collab='uuid-of-the-collab',
-        url='http://100.64.0.1:9137',
-        token='the-token',
-        policy={'extras_mode': 'sync', 'groups_mode': 'grow'},
-    ), 'the code carries the terms of the collab, so a newcomer sees them before anything is created'
+    assert 'verdi collab link' in join, 'the line stays: a code exists, and this is where a member obtains it'
+    assert not decodable_codes(result.output), (
+        'the code embeds the token of the collab, and this output is what users paste into bug reports'
+    )
 
     policy = next(line for line in result.output_lines if 'collab policy' in line)
 

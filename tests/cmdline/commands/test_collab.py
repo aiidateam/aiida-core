@@ -360,6 +360,21 @@ def printed_code(result):
     return JoinCode.decode(result.output_lines[-1])
 
 
+def test_link(run_cli_command, config_with_profile):
+    """Test that the code printed on request carries this collab, this endpoint, the current key and the terms.
+
+    Asking for it is what obtains a code: `verdi status` withholds it, being the command whose output users are
+    asked to paste into bug reports.
+    """
+    from aiida.tools.collab.protocol import JoinCode
+
+    init_collab(config_with_profile)
+
+    result = run_cli_command(cmd_collab.collab_link, use_subprocess=False)
+
+    assert printed_code(result) == JoinCode(collab=COLLAB_UUID, url='http://127.0.0.1:9137', token=TOKEN, policy=POLICY)
+
+
 @pytest.fixture
 def stub_signal(monkeypatch):
     """Record the rotation signals a command sends, with the key they go out under, sending nothing anywhere."""

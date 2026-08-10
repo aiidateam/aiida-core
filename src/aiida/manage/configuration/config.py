@@ -1015,7 +1015,7 @@ class Config:
         daemon_dir = _config_path_resolver.daemon_dir
         daemon_log_dir = _config_path_resolver.daemon_log_dir
         profile_log_dir = _config_path_resolver.profile_log_dir
-        zmq_broker_service_base_dir = _config_path_resolver.zmq_broker_service_base_dir
+        zmq_broker_service_base_dir = _config_path_resolver._zmq_broker_service_base_dir
 
         return {
             'profile': {

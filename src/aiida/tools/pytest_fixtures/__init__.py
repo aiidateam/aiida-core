@@ -3,6 +3,7 @@
 
 # fmt: off
 
+from .broker import run_aiida_broker_service, run_aiida_broker_service_for_profile
 from .configuration import (
     aiida_config,
     aiida_config_factory,
@@ -50,6 +51,8 @@ __all__ = (
     'daemon_client',
     'entry_points',
     'postgres_cluster',
+    'run_aiida_broker_service',
+    'run_aiida_broker_service_for_profile',
     'ssh_key',
     'started_daemon_client',
     'stopped_daemon_client',

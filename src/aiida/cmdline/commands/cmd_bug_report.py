@@ -205,30 +205,33 @@ def _collect_diagnostics() -> dict[str, Any]:
     return diagnostics
 
 
-def _get_log_files() -> list[pathlib.Path]:
-    """Return the log files to include."""
+def _get_log_files() -> dict[str, pathlib.Path]:
+    """Return the log files to include, keyed by log type.
+
+    The log type is used as the name in the archive since the log files of a profile can share the same basename.
+    """
     from aiida.manage import get_manager
     from aiida.manage.configuration import get_config
 
     profile = get_manager().get_profile()
 
     if profile is None:
-        return []
+        return {}
 
     filepaths = get_config().filepaths(profile)
-    files = []
+    files = {}
 
-    log_filepaths = [
-        filepaths['profile']['log'],
-        filepaths['circus']['log'],
-        filepaths['daemon']['log'],
-        filepaths['broker_service']['log'],
-    ]
+    log_filepaths = {
+        'profile': filepaths['profile']['log'],
+        'circus': filepaths['circus']['log'],
+        'daemon': filepaths['daemon']['log'],
+        'broker_service': filepaths['broker_service']['log'],
+    }
 
-    for log_filepath in log_filepaths:
+    for log_type, log_filepath in log_filepaths.items():
         path = pathlib.Path(log_filepath)
         if path.exists():
-            files.append(path)
+            files[log_type] = path
 
     return files
 
@@ -292,10 +295,11 @@ def verdi_bug_report(output: str | None) -> None:
     try:
         with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zf:
             zf.writestr('diagnostics.json', json.dumps(diagnostics, indent=2, sort_keys=True, default=str))
-            for filepath in log_files:
+            for log_type, filepath in log_files.items():
                 data = _read_log_tail(filepath)
-                zf.writestr(filepath.name, data)
-                contents.append((filepath.name, len(data)))
+                archive_name = f'{log_type}.log'
+                zf.writestr(archive_name, data)
+                contents.append((archive_name, len(data)))
     except OSError as exception:
         if output_path.exists():
             try:

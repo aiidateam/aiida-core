@@ -16,7 +16,7 @@ from collections.abc import Callable
 from enum import Enum, auto
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import yaml
 
@@ -26,7 +26,7 @@ from aiida.common.log import AIIDA_LOGGER
 from aiida.orm.utils import LinkTriple
 from aiida.tools._dumping.config import DumpMode
 from aiida.tools._dumping.tracking import DumpRecord
-from aiida.tools._dumping.utils import ORM_TYPE_TO_REGISTRY, DumpPaths, RegistryNameType
+from aiida.tools._dumping.utils import DumpPaths, registry_name_for
 from aiida.tools.archive.exceptions import ExportValidationError
 
 if TYPE_CHECKING:
@@ -232,8 +232,8 @@ class ProcessDumpExecutor:
 
         # Create new log entry
         dump_record = DumpRecord(path=output_path.resolve())
-        registry_key = ORM_TYPE_TO_REGISTRY[type(process_node)]
-        self.dump_tracker.registries[cast(RegistryNameType, registry_key)].add_entry(process_node.uuid, dump_record)
+        registry_key = registry_name_for(process_node)
+        self.dump_tracker.registries[registry_key].add_entry(process_node.uuid, dump_record)
 
         # Dump content
         self._dump_node_content(process_node, output_path)
@@ -362,7 +362,7 @@ class ProcessDumpExecutor:
         DumpPaths._safe_delete_directory(path=output_path)
 
         if is_primary_dump:
-            registry_key = ORM_TYPE_TO_REGISTRY[type(process_node)]
+            registry_key = registry_name_for(process_node)
             node_registry = self.dump_tracker.registries[registry_key]
             node_registry.del_entry(process_node.uuid)
 

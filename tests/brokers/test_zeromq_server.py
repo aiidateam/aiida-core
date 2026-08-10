@@ -30,7 +30,7 @@ class TestZeromqBrokerServerInit:
         sockets_path = tmp_path / 'sockets'
 
         server = ZeromqBrokerServer(storage_path=storage_path, sockets_path=sockets_path)
-        assert server.storage_path == storage_path
+        assert server._storage_path == storage_path
         assert server.sockets_path == sockets_path
 
     def test_start_stop(self):
@@ -160,6 +160,8 @@ class TestZeromqBrokerServerMessageHandling:
         """Test _handle_task_nack requeues task and marks worker available."""
         server._task_queue.push('task-300', {'body': 'x'})
         server._task_queue.pop()
+        # Assign task to worker so NACK can find the owner
+        server._task_worker_assignments['task-300'] = b'worker-1'
 
         msg = {'type': MessageType.TASK_NACK.value, 'task_id': 'task-300'}
         server._handle_task_nack(b'worker-1', msg)
@@ -375,6 +377,199 @@ class TestZeromqBrokerServerMessageHandling:
         assert status['running'] is False
         assert status['pending_tasks'] == 0
 
+    def test_mismatched_ack_is_rejected(self, server):
+        """Test that a worker cannot ACK a task owned by another worker."""
+        # Set up: task assigned to worker-1
+        server._task_queue.push('task-1', {'body': 'data'})
+        server._task_queue.pop()
+        server._task_worker_assignments['task-1'] = b'worker-1'
+
+        # Worker-2 tries to ACK worker-1's task (should be rejected)
+        server._handle_task_ack(b'worker-2', {'type': MessageType.TASK_ACK.value, 'task_id': 'task-1'})
+
+        # Verify rejection: task still assigned and still processing
+        assert 'task-1' in server._task_worker_assignments
+        assert server._task_worker_assignments['task-1'] == b'worker-1'
+        assert server._task_queue.processing_count() == 1  # task not removed from processing
+
+    def test_mismatched_nack_is_rejected(self, server):
+        """Test that a worker cannot NACK a task owned by another worker."""
+        # Set up: task assigned to worker-1
+        server._task_queue.push('task-1', {'body': 'data'})
+        server._task_queue.pop()
+        server._task_worker_assignments['task-1'] = b'worker-1'
+
+        # Worker-2 tries to NACK worker-1's task (should be rejected)
+        server._handle_task_nack(b'worker-2', {'type': MessageType.TASK_NACK.value, 'task_id': 'task-1'})
+
+        # Verify rejection: task still assigned and not requeued
+        assert 'task-1' in server._task_worker_assignments
+        assert server._task_worker_assignments['task-1'] == b'worker-1'
+        assert server._task_queue.processing_count() == 1  # task not removed from processing
+        assert server._task_queue.size() == 0  # task was not requeued to pending
+
+
+class TestZeromqBrokerServerPrefetch:
+    """Tests for the per-worker prefetch limit (``daemon.worker_process_slots``).
+
+    Workers declare the limit on ``SUBSCRIBE_TASK``; the broker must not keep more
+    than that many tasks in flight on a worker until they are acknowledged.
+    """
+
+    @pytest.fixture
+    def server(self, tmp_path):
+        server = ZeromqBrokerServer(storage_path=tmp_path / 'storage', sockets_path=tmp_path / 'sockets')
+        server._send_to_client = MagicMock()
+        return server
+
+    @staticmethod
+    def subscribe(server, identity: bytes, identifier: str, prefetch_count: int | None = None) -> None:
+        """Register ``identity`` as a task subscriber with the given prefetch limit."""
+        server._handle_subscribe_task(
+            identity,
+            {
+                'type': MessageType.SUBSCRIBE_TASK.value,
+                'identifier': identifier,
+                'prefetch_count': prefetch_count,
+            },
+        )
+
+    @staticmethod
+    def push_tasks(server, count: int, prefix: str = 'task') -> None:
+        """Queue ``count`` tasks without dispatching them."""
+        for index in range(count):
+            server._task_queue.push(f'{prefix}-{index}', {'body': index, 'no_reply': True})
+
+    def test_subscribe_records_prefetch(self, server):
+        """Test the prefetch count declared on subscription is stored per identity."""
+        self.subscribe(server, b'worker-1', 'w1', prefetch_count=3)
+        assert server._worker_prefetch[b'worker-1'] == 3
+
+    def test_subscribe_without_prefetch_is_unlimited(self, server):
+        """Test a subscription that declares no prefetch count is unlimited."""
+        self.subscribe(server, b'worker-1', 'w1')
+        assert server._worker_prefetch[b'worker-1'] is None
+
+    def test_subscribe_with_nonpositive_prefetch_is_unlimited(self, server):
+        """Test a prefetch count of zero means unlimited, as it does in AMQP."""
+        self.subscribe(server, b'worker-1', 'w1', prefetch_count=0)
+        assert server._worker_prefetch[b'worker-1'] is None
+
+    def test_dispatch_stops_at_prefetch_limit(self, server):
+        """Test dispatch hands out at most ``prefetch_count`` tasks before an ACK."""
+        self.subscribe(server, b'worker-1', 'w1', prefetch_count=2)
+        self.push_tasks(server, 5)
+
+        server._dispatch_pending_tasks()
+
+        assert server._send_to_client.call_count == 2
+        assert len(server._task_worker_assignments) == 2
+        assert server._task_queue.size() == 3
+        assert b'worker-1' not in server._available_workers
+
+    def test_dispatch_unlimited_without_prefetch(self, server):
+        """Test a worker that declared no limit still receives every pending task."""
+        self.subscribe(server, b'worker-1', 'w1')
+        self.push_tasks(server, 5)
+
+        server._dispatch_pending_tasks()
+
+        assert server._send_to_client.call_count == 5
+        assert server._task_queue.size() == 0
+
+    def test_ack_frees_a_slot(self, server):
+        """Test acknowledging a task lets the next pending task through."""
+        self.subscribe(server, b'worker-1', 'w1', prefetch_count=2)
+        self.push_tasks(server, 5)
+        server._dispatch_pending_tasks()
+
+        acked = next(iter(server._task_worker_assignments))
+        server._handle_task_ack(b'worker-1', {'type': MessageType.TASK_ACK.value, 'task_id': acked})
+        server._dispatch_pending_tasks()
+
+        assert server._send_to_client.call_count == 3
+        assert len(server._task_worker_assignments) == 2
+        assert server._task_queue.size() == 2
+
+    def test_nack_frees_a_slot(self, server):
+        """Test a negative acknowledgment also releases the slot it occupied."""
+        self.subscribe(server, b'worker-1', 'w1', prefetch_count=1)
+        self.push_tasks(server, 2)
+        server._dispatch_pending_tasks()
+
+        nacked = next(iter(server._task_worker_assignments))
+        server._handle_task_nack(b'worker-1', {'type': MessageType.TASK_NACK.value, 'task_id': nacked})
+
+        assert server._worker_load.get(b'worker-1', 0) == 0
+        assert nacked not in server._task_worker_assignments
+        assert b'worker-1' in server._available_workers
+
+    def test_limit_is_per_worker(self, server):
+        """Test each worker gets its own allowance rather than a global one."""
+        self.subscribe(server, b'worker-1', 'w1', prefetch_count=1)
+        self.subscribe(server, b'worker-2', 'w2', prefetch_count=1)
+        self.push_tasks(server, 5)
+
+        server._dispatch_pending_tasks()
+
+        assert server._send_to_client.call_count == 2
+        assert sorted(server._worker_load) == [b'worker-1', b'worker-2']
+        assert all(load == 1 for load in server._worker_load.values())
+        assert server._task_queue.size() == 3
+
+    def test_capped_and_uncapped_workers_coexist(self, server):
+        """Test a capped worker stops while an unlimited one drains the queue."""
+        self.subscribe(server, b'capped', 'w1', prefetch_count=1)
+        self.subscribe(server, b'uncapped', 'w2')
+        self.push_tasks(server, 6)
+
+        server._dispatch_pending_tasks()
+
+        assert server._task_queue.size() == 0
+        assert server._worker_load[b'capped'] == 1
+        assert server._worker_load[b'uncapped'] == 5
+
+    def test_dead_worker_releases_its_slots(self, server):
+        """Test removing a dead worker clears its load so requeued tasks can move on."""
+        self.subscribe(server, b'worker-1', 'w1', prefetch_count=2)
+        self.push_tasks(server, 3)
+        server._dispatch_pending_tasks()
+
+        server._remove_dead_worker(b'worker-1')
+
+        assert b'worker-1' not in server._worker_load
+        assert b'worker-1' not in server._worker_prefetch
+        assert server._task_queue.size() == 3  # both in-flight tasks requeued
+
+    def test_unsubscribe_forgets_prefetch(self, server):
+        """Test the prefetch limit is dropped once the connection has no task subscription."""
+        self.subscribe(server, b'worker-1', 'w1', prefetch_count=2)
+        server._handle_unsubscribe_task(b'worker-1', {'type': MessageType.UNSUBSCRIBE_TASK.value, 'identifier': 'w1'})
+
+        assert b'worker-1' not in server._worker_prefetch
+
+    def test_unsubscribe_keeps_prefetch_while_other_subscriptions_remain(self, server):
+        """Test the limit survives while the same connection still has a task subscription."""
+        self.subscribe(server, b'worker-1', 'w1', prefetch_count=2)
+        self.subscribe(server, b'worker-1', 'w2', prefetch_count=2)
+        server._handle_unsubscribe_task(b'worker-1', {'type': MessageType.UNSUBSCRIBE_TASK.value, 'identifier': 'w1'})
+
+        assert server._worker_prefetch[b'worker-1'] == 2
+
+    def test_load_does_not_leak_on_repeated_ack(self, server):
+        """Test acknowledging an unknown task does not free a slot that was never taken."""
+        self.subscribe(server, b'worker-1', 'w1', prefetch_count=1)
+        self.push_tasks(server, 2)
+        server._dispatch_pending_tasks()
+
+        acked = next(iter(server._task_worker_assignments))
+        ack_msg = {'type': MessageType.TASK_ACK.value, 'task_id': acked}
+        server._handle_task_ack(b'worker-1', ack_msg)
+        server._handle_task_ack(b'worker-1', ack_msg)  # duplicate
+
+        server._dispatch_pending_tasks()
+        assert server._worker_load[b'worker-1'] == 1
+
 
 class TestZeromqBrokerServerWithSockets:
     """Tests using a real running server with ZeroMQ sockets."""
@@ -442,6 +637,71 @@ class TestZeromqBrokerServerWithSockets:
             received = decode_message(frames[1] if frames[0] == b'' else frames[0])
             assert received['type'] == MessageType.TASK.value
             assert received['id'] == 'live-task-1'
+
+        finally:
+            dealer.close()
+            ctx.term()
+
+    def test_prefetch_limit_over_the_wire(self, running_server):
+        """Test a worker declaring ``prefetch_count=1`` receives one task at a time."""
+        import zmq
+
+        ctx = zmq.Context()
+        dealer = ctx.socket(zmq.DEALER)
+        try:
+            dealer.setsockopt_string(zmq.IDENTITY, 'capped-client')
+            dealer.connect(running_server.router_endpoint)
+            time.sleep(0.1)
+
+            subscribe = {
+                'type': MessageType.SUBSCRIBE_TASK.value,
+                'identifier': 'capped-subscriber',
+                'sender': 'capped-client',
+                'prefetch_count': 1,
+            }
+            dealer.send_multipart([b'', encode_message(subscribe)])
+            running_server.run_once(timeout=1.0)
+
+            for index in range(3):
+                task = {
+                    'type': MessageType.TASK.value,
+                    'id': f'capped-task-{index}',
+                    'sender': 'capped-client',
+                    'body': {'index': index},
+                    'no_reply': True,
+                }
+                dealer.send_multipart([b'', encode_message(task)])
+                running_server.run_once(timeout=1.0)
+
+            def receive_task(timeout: int) -> dict | None:
+                """Return the next task delivered to the worker, or None if none arrives."""
+                poller = zmq.Poller()
+                poller.register(dealer, zmq.POLLIN)
+                if dealer not in dict(poller.poll(timeout=timeout)):
+                    return None
+                frames = dealer.recv_multipart()
+                return decode_message(frames[1] if frames[0] == b'' else frames[0])
+
+            first = receive_task(2000)
+            assert first is not None, 'Worker did not receive the first task'
+            assert first['id'] == 'capped-task-0'
+
+            # The remaining two must be withheld until the first one is acknowledged
+            running_server.run_once(timeout=0.5)
+            assert receive_task(500) is None, 'Broker exceeded the declared prefetch limit'
+            assert running_server._task_queue.size() == 2
+
+            ack = {
+                'type': MessageType.TASK_ACK.value,
+                'task_id': 'capped-task-0',
+                'sender': 'capped-client',
+            }
+            dealer.send_multipart([b'', encode_message(ack)])
+            running_server.run_once(timeout=1.0)
+
+            second = receive_task(2000)
+            assert second is not None, 'Worker did not receive the next task after the ACK'
+            assert second['id'] == 'capped-task-1'
 
         finally:
             dealer.close()

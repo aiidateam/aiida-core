@@ -12,12 +12,15 @@ from __future__ import annotations
 
 import datetime
 import typing as t
+from collections.abc import Sequence
 from copy import deepcopy
 from functools import singledispatchmethod
 from pprint import pformat
 from types import UnionType
+from uuid import UUID
 
 from aiida.common.lang import isidentifier
+from aiida.common.warnings import warn_deprecation
 
 __all__ = (
     'QbField',
@@ -56,6 +59,7 @@ class QbField:
         '_doc',
         '_dtype',
         '_is_attribute',
+        '_is_subscriptable',
         '_key',
     )
 
@@ -67,6 +71,7 @@ class QbField:
         dtype: t.Any | None = None,
         doc: str = '',
         is_attribute: bool = True,
+        is_subscriptable: bool = False,
     ) -> None:
         """Initialise a ORM entity field, accessible via the ``QueryBuilder``
 
@@ -75,12 +80,16 @@ class QbField:
         :param dtype: The data type of the field. If None, the field is of variable type.
         :param doc: A docstring for the field
         :param is_attribute: If True, the ``backend_key`` property will prepend "attributes." to field name
+        :param is_subscriptable: Deprecated compatibility argument. Subscriptability is determined by the field type;
+            ``QbDictField`` and its subclasses support nested lookup.
+
         """
         self._key = key
         self._backend_key = alias if alias is not None else key
         self._doc = doc
         self._dtype = dtype
         self._is_attribute = is_attribute
+        self._is_subscriptable = is_subscriptable
 
     @property
     def key(self) -> str:
@@ -93,9 +102,45 @@ class QbField:
         return self._backend_key
 
     @property
+    def doc(self) -> str:
+        """Return the field documentation string."""
+        return self._doc
+
+    @property
     def dtype(self) -> t.Any | None:
         """Return the primitive root type."""
         return extract_root_type(self._dtype)
+
+    @property
+    def annotation(self) -> t.Any | None:
+        """Return the full type annotation."""
+        warn_deprecation(
+            '`QbField.annotation` is deprecated. Inspect the corresponding ORM model field annotation instead.',
+            version=3,
+            stacklevel=2,
+        )
+        return self._dtype
+
+    @property
+    def is_attribute(self) -> bool:
+        """Return whether the field is stored in the attributes namespace."""
+        warn_deprecation(
+            '`QbField.is_attribute` is deprecated. Inspect the corresponding ORM model field metadata instead.',
+            version=3,
+            stacklevel=2,
+        )
+        return self._is_attribute
+
+    @property
+    def is_subscriptable(self) -> bool:
+        """Return whether nested lookup through ``field['key']`` is supported."""
+        warn_deprecation(
+            '`QbField.is_subscriptable` is deprecated. Subscriptability is determined by the field type;'
+            '`QbDictField` and its subclasses support nested lookup.',
+            version=3,
+            stacklevel=2,
+        )
+        return isinstance(self, QbDictField)
 
     def in_(self, value: t.Iterable[t.Any]):
         """Return a filter for only values in the list"""
@@ -149,6 +194,29 @@ class QbNumericField(QbField):
 
     def __ge__(self, value):
         return QbFieldFilters(((self, '>=', value),))
+
+
+class QbBoolField(QbField):
+    """A boolean (`bool`) flavor of `QbField`."""
+
+    def as_filter(self) -> QbFieldFilters:
+        """Return a filter for only values that are True."""
+        return QbFieldFilters(((self, '==', True),))
+
+    def __and__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
+        """Return a filter for only values that are True and satisfy the other filter."""
+        return self.as_filter() & other
+
+    def __or__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
+        """Return a filter for only values that are True or satisfy the other filter."""
+        return self.as_filter() | other
+
+    def __invert__(self) -> QbFieldFilters:
+        """Return a filter for only values that are not `True`.
+
+        Some booleans are optional, so not `False`, but rather `None` (absent).
+        """
+        return QbFieldFilters(((self, '!==', True),))
 
 
 class QbArrayField(QbField):
@@ -208,7 +276,7 @@ class QbDictField(QbField):
         """Return a filter for only values with these keys"""
         return QbFieldFilters(((self, 'has_key', value),))
 
-    def __getitem__(self, key: str) -> QbAnyField:
+    def __getitem__(self, key: str) -> QbField:
         """Return a new `QbField` with a nested key."""
         return QbAnyField(
             key=f'{self.key}.{key}',
@@ -246,6 +314,13 @@ class QbAttributesField(QbDictField):
             return children[key]
 
         raise AttributeError(key)
+
+    def __getitem__(self, key: str) -> QbField:
+        """Return a typed child field if known; otherwise return a generic QbAnyField."""
+        children = getattr(self, '_typed_children', None) or {}
+        if key in children:
+            return children[key]
+        return super().__getitem__(key)
 
     def __dir__(self) -> list[str]:
         """Expose typed children for autocompletion."""
@@ -314,13 +389,17 @@ class QbFieldFilters:
             raise TypeError(f'cannot compare QbFieldFilters to {type(other)}')
         return self.filters == other.filters
 
-    def __and__(self, other: QbFieldFilters) -> QbFieldFilters:
+    def __and__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
         """``a & b`` -> {'and': [`a.filters`, `b.filters`]}."""
-        return self._resolve_redundancy(other, 'and') or QbFieldFilters({'and': [self.filters, other.filters]})
+        qb_filters = other.as_filter() if isinstance(other, QbBoolField) else other
+        resolved = self._resolve_redundancy(qb_filters, 'and')
+        return resolved or QbFieldFilters({'and': [self.filters, qb_filters.filters]})
 
-    def __or__(self, other: QbFieldFilters) -> QbFieldFilters:
+    def __or__(self, other: QbFieldFilters | QbBoolField) -> QbFieldFilters:
         """``a | b`` -> {'or': [`a.filters`, `b.filters`]}."""
-        return self._resolve_redundancy(other, 'or') or QbFieldFilters({'or': [self.filters, other.filters]})
+        qb_filters = other.as_filter() if isinstance(other, QbBoolField) else other
+        resolved = self._resolve_redundancy(qb_filters, 'or')
+        return resolved or QbFieldFilters({'or': [self.filters, qb_filters.filters]})
 
     def __invert__(self) -> QbFieldFilters:
         """~(a > b) -> a !> b; ~(a !> b) -> a > b"""
@@ -422,6 +501,7 @@ class QbFieldArguments(t.TypedDict):
     dtype: t.Any | None
     doc: str
     is_attribute: bool
+    is_subscriptable: bool
 
 
 def add_field(
@@ -431,6 +511,7 @@ def add_field(
     dtype: t.Any | None = None,
     doc: str = '',
     is_attribute: bool = False,
+    is_subscriptable: bool = False,
 ) -> QbField:
     """Add a `dtype`-dependent `QbField` representation of a field.
 
@@ -439,6 +520,8 @@ def add_field(
     :param dtype: The data type of the field. If None, the field is of variable type.
     :param doc: A docstring for the field
     :param is_attribute: If True, the ``backend_key`` property will prepend "attributes." to field name
+    :param is_subscriptable: Deprecated compatibility argument. Subscriptability is determined by the field type;
+        ``QbDictField`` and its subclasses support nested lookup.
     """
     kwargs: QbFieldArguments = {
         'key': key,
@@ -446,6 +529,7 @@ def add_field(
         'dtype': dtype,
         'doc': doc,
         'is_attribute': is_attribute,
+        'is_subscriptable': is_subscriptable,
     }
     if not isidentifier(key):
         raise ValueError(f'{key} is not a valid python identifier')
@@ -456,9 +540,11 @@ def add_field(
     root_type = extract_root_type(dtype) if dtype else None
     if root_type in (int, float, datetime.datetime):
         return QbNumericField(**kwargs)
-    elif root_type in (list, tuple):
+    elif root_type is bool:
+        return QbBoolField(**kwargs)
+    elif root_type in (list, tuple, Sequence):
         return QbArrayField(**kwargs)
-    elif root_type in (str, t.Literal):
+    elif root_type in (str, t.Literal, UUID):
         return QbStrField(**kwargs)
     elif root_type is dict:
         return QbDictField(**kwargs)

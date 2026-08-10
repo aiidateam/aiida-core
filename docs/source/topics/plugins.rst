@@ -351,7 +351,8 @@ Usage: The scheduler is used in the familiar way by entering 'myscheduler' as th
 ``aiida.transports``
 --------------------
 
-``aiida-core`` ships with two modes of transporting files and folders to remote computers: ``core.ssh`` and ``core.local`` (stub for when the remote computer is actually the same).
+``aiida-core`` ships with two modes of transporting files and folders to remote computers: ``core.ssh_async`` and ``core.local`` (stub for when the remote computer is actually the same).
+(A third one, ``core.ssh``, is deprecated since v2.8 and will be removed in v3.0; use ``core.ssh_async`` instead.)
 We recommend naming the plugin package after the mode of transport (e.g. ``aiida-mytransport``), so that the entry point name can simply equal the name of the transport:
 
 Spec::
@@ -402,7 +403,7 @@ The module provides the following fixtures:
 * :ref:`postgres_cluster <topics:plugins:testfixtures:postgres-cluster>`: Create a temporary and isolated PostgreSQL cluster using ``pgtest`` and cleanup after the yielder
 * :ref:`aiida_computer <topics:plugins:testfixtures:aiida-computer>`: Setup a :class:`~aiida.orm.computers.Computer` instance
 * :ref:`aiida_computer_local <topics:plugins:testfixtures:aiida-computer-local>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using local transport
-* :ref:`aiida_computer_ssh <topics:plugins:testfixtures:aiida-computer-ssh>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using SSH transport
+* :ref:`aiida_computer_ssh <topics:plugins:testfixtures:aiida-computer-ssh>`: Setup the localhost as a :class:`~aiida.orm.computers.Computer` using SSH transport (``core.ssh`` is deprecated, prefer ``aiida_computer_ssh_async``)
 * :ref:`aiida_localhost <topics:plugins:testfixtures:aiida-localhost>`: Shortcut for <topics:plugins:testfixtures:aiida-computer-local> that immediately returns a :class:`~aiida.orm.computers.Computer` instance for the ``localhost`` computer instead of a factory
 * :ref:`aiida_code <topics:plugins:testfixtures:aiida-code>`: Setup a :class:`~aiida.orm.nodes.data.code.abstract.AbstractCode` instance
 * :ref:`aiida_code_installed <topics:plugins:testfixtures:aiida-code-installed>`: Setup a :class:`~aiida.orm.nodes.data.code.installed.InstalledCode` instance on a given computer
@@ -686,7 +687,16 @@ If you need a guarantee that the computer is not configured, make sure to clean 
 ``aiida_computer_ssh``
 ----------------------
 
-This fixture is a shortcut for ``aiida_computer`` to setup the localhost with SSH transport:
+This fixture is a shortcut for ``aiida_computer`` to setup the localhost with the (deprecated) ``core.ssh`` transport.
+For new tests use the ``aiida_computer_ssh_async`` fixture instead, which uses ``core.ssh_async``.
+
+.. code-block:: python
+
+    def test(aiida_computer_ssh_async):
+        localhost = aiida_computer_ssh_async(backend='asyncssh')
+        assert localhost.transport_type == 'core.ssh_async'
+
+The ``aiida_computer_ssh`` fixture itself is used as follows:
 
 .. code-block:: python
 

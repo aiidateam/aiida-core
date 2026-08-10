@@ -27,6 +27,7 @@ from ..utils.echo import ExitCode
 
 if TYPE_CHECKING:
     from aiida.manage.configuration import Profile
+    from aiida.orm.implementation import StorageBackend
 
 
 class ServiceStatus(enum.IntEnum):
@@ -98,6 +99,7 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
 
     # Check the backend storage
     storage_head_version = None
+    storage_backend = None
     try:
         with override_log_level():  # temporarily suppress noisy logging
             storage_cls = profile.storage_cls
@@ -125,7 +127,6 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     else:
         message = str(storage_backend)
         print_status(ServiceStatus.UP, 'storage', message)
-        storage_backend.close()
 
     if no_rmq:
         warn_deprecation(
@@ -217,7 +218,10 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
     from aiida.tools.collab.config import is_enabled
 
     if is_enabled():
-        print_collab_status(profile)
+        print_collab_status(profile, storage_backend)
+
+    if storage_backend is not None:
+        storage_backend.close()
 
     # Note: click does not forward return values to the exit code, see https://github.com/pallets/click/issues/747
     if exit_code != ExitCode.SUCCESS:
@@ -229,23 +233,29 @@ def verdi_status(print_traceback: bool, no_rmq: bool) -> None:
 COLLAB_PROBE_TIMEOUT = 2.0
 
 
-def print_collab_status(profile: Profile) -> None:
+def print_collab_status(profile: Profile, backend: StorageBackend | None) -> None:
     """Print one line per active peer — reachable or not — the last sync, and where the join code is obtained.
 
     Dormant peers are left out entirely: they have not been seen under the current token, and a collab that
     rotated away from a member, or split in two, should carry no trace of the branch it left behind.
 
     The probes run concurrently and write nothing anywhere.
+
+    :param backend: the storage opened for the storage row, or ``None`` when it could not be opened, in which case
+        the section reports on the collab alone.
     """
     from concurrent.futures import ThreadPoolExecutor
     from http import HTTPStatus
 
+    from aiida.common import timezone
+    from aiida.common.utils import str_timedelta
     from aiida.manage.configuration import get_config_option
     from aiida.tools.archive.abstract import get_format
     from aiida.tools.collab.client import CollabClient
     from aiida.tools.collab.config import OPTION_PEERS, OPTION_POLICY, OPTION_TOKEN
     from aiida.tools.collab.protocol import REKEY_HINT, CollabRequestError, PeerInfo
     from aiida.tools.collab.state import CollabState
+    from aiida.tools.collab.sync import withheld_seeds
 
     peers = {uuid: entry for uuid, entry in get_config_option(OPTION_PEERS).items() if entry['active']}
     token = get_config_option(OPTION_TOKEN)
@@ -300,6 +310,20 @@ def print_collab_status(profile: Profile) -> None:
     status = ServiceStatus.UP if online == len(peers) else ServiceStatus.WARNING
 
     print_status(status, 'collab', f'{online}/{len(peers)} peer(s) reachable, {last_sync}')
+
+    # A sealed process whose provenance reaches one that is still running is held out of every delta until that
+    # child seals, and nothing else says so. When the child never seals — a killed daemon, a stuck process — its
+    # whole subgraph stops travelling for good, and the only other symptom is a peer that never receives it.
+    held = withheld_seeds(backend) if backend is not None else []
+
+    if held:
+        age = str_timedelta(timezone.delta(min(held)), short=True, negative_to_zero=True)
+        print_status(
+            ServiceStatus.WARNING,
+            'collab held',
+            f'{len(held)} sealed process(es) no delta can carry, each waiting on a process that has not sealed '
+            f'(oldest {age})',
+        )
 
     # Shown here because it is shown nowhere else: the policy is fixed when the collab is created, so it is stored
     # as one dictionary, and `verdi config set` cannot write dict options.

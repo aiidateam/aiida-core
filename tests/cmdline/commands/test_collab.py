@@ -1889,7 +1889,9 @@ def test_push_retry_offers_no_refresh_under_local(run_cli_command, config_with_p
         CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=5, staged=5)
     )
     monkeypatch.setattr(
-        sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now())
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now(), computed=timezone.now()),
     )
     monkeypatch.setattr(sync, 'export_delta', export_delta)
     monkeypatch.setattr(sync, 'refresh_offer', lambda **kwargs: {'uuid-edited': timezone.now()})
@@ -1937,7 +1939,7 @@ def test_push_offers_a_membership_journalled_while_the_delta_was_cut(
         with CollabState.mutate(CollabState.get_filepath(get_profile())) as fresh:
             fresh.memberships.append(Membership(time=timezone.now(), group='uuid-of-group', node='uuid-late'))
 
-        return Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=instant)
+        return Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=instant, computed=instant)
 
     def membership_offer(*, state, backend, cursor):
         nodes = [entry.node for entry in state.memberships]

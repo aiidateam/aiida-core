@@ -602,6 +602,43 @@ def test_status_collab_skew_is_archive_only(run_cli_command, brokerless_profile,
     assert 'newer archive format' in next(line for line in result.output_lines if 'peer archive' in line)
 
 
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_status_collab_reports_withheld_seeds(run_cli_command, brokerless_profile, monkeypatch):
+    """Test that sealed processes no delta can carry are reported, and that nothing is said when there are none.
+
+    A workchain that excepted over a child the daemon never finished stops travelling for good, and this is the
+    only place that says so: to its peers it looks like provenance that was simply never produced.
+    """
+    from pathlib import Path
+
+    from aiida import orm
+    from aiida.common.links import LinkType
+    from aiida.tools.collab.state import CollabState
+
+    monkeypatch.setitem(brokerless_profile.options, 'collab.enabled', True)
+    monkeypatch.setattr(CollabState, 'load', classmethod(lambda cls, profile: cls(filepath=Path('unused'))))
+
+    # A profile whose sealed processes all travel, so that the silent half cannot be passed by a report that
+    # simply counts sealed processes.
+    orm.CalcJobNode().store().seal()
+    quiet = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
+
+    assert 'collab held' not in quiet.output
+
+    excepted = orm.WorkChainNode().store()
+    running = orm.CalcJobNode()
+    running.base.links.add_incoming(excepted, link_type=LinkType.CALL_CALC, link_label='child')
+    running.store()
+    excepted.seal()
+
+    result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)
+    held = next(line for line in result.output_lines if 'collab held' in line)
+
+    assert '1 sealed process(es)' in held
+    assert 'has not sealed' in held
+    assert 'oldest' in held
+
+
 def test_status_no_collab(run_cli_command, brokerless_profile):
     """Test that no collab row is printed when the profile is not part of a collab."""
     result = run_cli_command(cmd_status.verdi_status, use_subprocess=False)

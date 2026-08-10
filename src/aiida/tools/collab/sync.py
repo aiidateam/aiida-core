@@ -73,6 +73,28 @@ def count_seeds(cursor: datetime | None, backend: StorageBackend) -> int:
     return orm.QueryBuilder(backend=backend).append(orm.ProcessNode, filters=seed_filters(cursor)).count()
 
 
+def withheld_seeds(backend: StorageBackend) -> list[datetime]:
+    """Return the mtimes of the sealed processes that no delta of this profile can carry.
+
+    A seed whose provenance reaches a process that is still running is left out of every delta until that child
+    seals, and nothing brings it back when the child never does — a workchain that excepted over a calculation the
+    daemon never finished holds its subgraph back for good. The only symptom is a peer that never receives it,
+    which is why ``verdi status`` reports the count.
+    """
+    unsealed = _unsealed_pks(backend)
+
+    if not unsealed:
+        return []
+
+    query = orm.QueryBuilder(backend=backend).append(
+        orm.ProcessNode,
+        filters={'id': {'in': list(_reaching_unsealed(backend, unsealed))}, **seed_filters(None)},
+        project='mtime',
+    )
+
+    return query.all(flat=True)
+
+
 @dataclass
 class Delta:
     """The provenance-closed delta computed for a presented cursor and claim, before any archive is built.
@@ -997,28 +1019,37 @@ def _without_unsealed_provenance(nodes: list[orm.Node], *, backend: StorageBacke
     if not unsealed:
         return nodes
 
-    # Which seeds reach an unsealed process is answered by walking the export in reverse from the unsealed ones, so
-    # that it costs one traversal rather than one per seed.
-    rules = validate_traversal_rules(GraphTraversalRules.EXPORT, **TRAVERSAL_RULES)
-    reaching = traverse_graph(
-        unsealed, backend=backend, links_forward=rules['backward'], links_backward=rules['forward']
-    )['nodes']
+    reaching = _reaching_unsealed(backend, unsealed)
 
     return [node for pk, node in nodes_by_pk.items() if pk not in reaching]
 
 
-def _unsealed_pks(backend: StorageBackend, pks: set[int]) -> set[int]:
-    """Return the primary keys of the processes among ``pks`` that are not sealed."""
+def _reaching_unsealed(backend: StorageBackend, unsealed: set[int]) -> set[int]:
+    """Return the primary keys of the nodes whose export closure holds one of the given unsealed processes.
 
-    def query(**filters: Any) -> set[int]:
-        return set(
-            orm.QueryBuilder(backend=backend)
-            .append(orm.ProcessNode, filters={'id': {'in': list(pks)}, **filters}, project='id')
-            .all(flat=True)
-        )
+    Answered by walking the export in reverse from the unsealed ones, so that it costs one traversal rather than
+    one per node.
+    """
+    rules = validate_traversal_rules(GraphTraversalRules.EXPORT, **TRAVERSAL_RULES)
 
-    # Queried as the complement of the sealed processes, because an unsealed one has no ``sealed`` attribute at all.
-    return query() - query(**{f'attributes.{Sealable.SEALED_KEY}': True})
+    return traverse_graph(unsealed, backend=backend, links_forward=rules['backward'], links_backward=rules['forward'])[
+        'nodes'
+    ]
+
+
+def _unsealed_pks(backend: StorageBackend, pks: set[int] | None = None) -> set[int]:
+    """Return the primary keys of the processes that are not sealed, among ``pks`` when one is given.
+
+    Asked as the absence of the attribute, because ``seal()`` is its only writer and only ever writes ``True``: a
+    process without the key is exactly an unsealed one. The complement of the sealed processes answers the same,
+    but only after materialising every process in the profile, which the unbounded caller cannot afford.
+    """
+    filters: dict[str, Any] = {'attributes': {'!has_key': Sealable.SEALED_KEY}}
+
+    if pks is not None:
+        filters['id'] = {'in': list(pks)}
+
+    return set(orm.QueryBuilder(backend=backend).append(orm.ProcessNode, filters=filters, project='id').all(flat=True))
 
 
 def apply_computer_map(backend: StorageBackend, computer_map: dict[str, str]) -> int:

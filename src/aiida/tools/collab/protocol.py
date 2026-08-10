@@ -38,6 +38,12 @@ HEADER_COLLAB = 'X-Collab-UUID'
 rather than a body field because ``PUT /collab/v1/upload/<sha256>`` — the one route that writes to disk — streams
 raw bytes and has no body to put it in."""
 
+HEADER_PEER = 'X-Collab-Peer'
+"""The profile UUID of the requester, naming the session its requests belong to so that a serving slot is held by a
+peer instead of by the shape of a request. Not a credential and never treated as one: the token authorizes and the
+collab UUID confines, both before it is read. A request without it is served, sharing one anonymous session with
+every other such request — turning a client that omits it into a lockout would be the worse failure."""
+
 REKEY_HINT = 'obtain the current join code from a member and run `verdi collab rekey <code>`'
 """What a member whose token was retired has to do, said by the advisory signal a rotation sends and offered by
 the 401 of every endpoint that rotated. That 401 is what enforces a rotation, and the only thing that does — the

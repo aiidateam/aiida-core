@@ -893,7 +893,7 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
     from aiida.manage import get_manager
     from aiida.tools.collab.client import CollabClient
     from aiida.tools.collab.config import OPTION_COMPUTER_MAP, OPTION_PEERS, OPTION_POLICY, OPTION_TOKEN, OPTION_UUID
-    from aiida.tools.collab.endpoint import local_info, workers_stopped
+    from aiida.tools.collab.endpoint import local_identity, local_info, workers_stopped
     from aiida.tools.collab.protocol import CollabRequestError, VersionSkew, member_pairs
     from aiida.tools.collab.state import CollabState, import_lock
     from aiida.tools.collab.sync import import_delta, members_wanted, missing_uuids, refresh_wanted
@@ -930,7 +930,7 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
         # Reloaded per peer, so the claim presented to the second peer names what the first one just delivered.
         state = CollabState.load(profile)
 
-        with CollabClient(url, token, collab=collab) as client:
+        with CollabClient(url, token, collab=collab, peer=local_identity(profile)) as client:
             try:
                 info = client.check_version_skew(local, direction='pull')
             except CollabRequestError as exception:
@@ -1124,7 +1124,7 @@ def collab_push(ctx, peers, force, dry_run):
         filepath = workdir / f'push-{peer_uuid}.aiida'
         filepath_meta = workdir / f'push-{peer_uuid}.json'
 
-        with CollabClient(url, token, collab=collab) as client:
+        with CollabClient(url, token, collab=collab, peer=identity) as client:
             try:
                 info = client.check_version_skew(local, direction='push')
             except CollabRequestError as exception:

@@ -81,7 +81,7 @@ class Member:
             negotiate_delta=self.endpoint.negotiate_delta,
             request_delta=self.endpoint.request_delta,
             resolve_delta=self.endpoint.resolve_delta,
-            release_delta=self.endpoint.release_delta,
+            release=self.endpoint.release,
             diff_manifest=self.endpoint.diff_manifest,
             handshake=self.endpoint.handshake,
             import_staged=self.endpoint.import_staged,

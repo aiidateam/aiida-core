@@ -52,6 +52,7 @@ from aiida.tools.collab.server import CollabServer
 
 TOKEN = 'the-collab-token'
 COLLAB = 'uuid-of-the-collab'
+PEER = 'uuid-of-the-requester'
 
 DELTA = bytes(range(256)) * 1024
 UPLOAD = bytes(reversed(range(256))) * 512
@@ -84,6 +85,8 @@ class StubSyncCore:
         self.import_exception: Exception | None = None
         self.negotiated: list[tuple[datetime | None, frozenset]] = []
         self.requested: list[tuple[datetime | None, frozenset, frozenset]] = []
+        self.requesters: list[str] = []
+        self.released: list[str] = []
         self.diffed: list[list[str]] = []
         self.handshakes: list[str] = []
         self.joined: list[dict] = []
@@ -98,12 +101,15 @@ class StubSyncCore:
         self.info_cursors.append(cursor)
         return self.peer_info
 
-    def negotiate_delta(self, cursor: datetime | None, claim: frozenset, roster: list | None = None) -> DeltaManifest:
+    def negotiate_delta(
+        self, cursor: datetime | None, claim: frozenset, roster: list | None = None, requester: str = ''
+    ) -> DeltaManifest:
         self.negotiated.append((cursor, claim))
+        self.requesters.append(requester)
         return DeltaManifest(manifest=self.manifest, instant=self.instant, roster=self.roster)
 
     def request_delta(
-        self, cursor: datetime | None, claim: frozenset, want: frozenset, refresh_want: frozenset
+        self, cursor: datetime | None, claim: frozenset, want: frozenset, refresh_want: frozenset, requester: str = ''
     ) -> DeltaOffer:
         self.requested.append((cursor, claim, want))
         return DeltaOffer(
@@ -113,8 +119,11 @@ class StubSyncCore:
             refresh=[ExtrasSnapshot(uuid=uuid, mtime=self.instant, extras={'k': 1}) for uuid in sorted(refresh_want)],
         )
 
-    def resolve_delta(self, requested_id: str) -> Path | None:
+    def resolve_delta(self, requested_id: str, requester: str = '') -> Path | None:
         return self.delta_path if self.delta_path.exists() else None
+
+    def release(self, requester: str) -> None:
+        self.released.append(requester)
 
     def diff_manifest(self, uuids: list, refresh: dict, members: list) -> ManifestDiff:
         self.diffed.append(uuids)
@@ -165,6 +174,7 @@ def build_server(host: str, port: int, stub: StubSyncCore, staging_dir: Path) ->
         negotiate_delta=stub.negotiate_delta,
         request_delta=stub.request_delta,
         resolve_delta=stub.resolve_delta,
+        release=stub.release,
         diff_manifest=stub.diff_manifest,
         handshake=stub.handshake,
         import_staged=stub.import_staged,
@@ -186,7 +196,7 @@ def transport(tmp_path):
 
     url = f'http://127.0.0.1:{server.server_address[1]}'
 
-    with CollabClient(url, TOKEN, collab=COLLAB, timeout=10) as client:
+    with CollabClient(url, TOKEN, collab=COLLAB, peer=PEER, timeout=10) as client:
         yield Transport(client=client, stub=stub, staging_dir=staging_dir, url=url)
 
     server.shutdown()
@@ -516,6 +526,14 @@ def test_download_already_complete(transport, tmp_path):
     assert filepath.read_bytes() == DELTA
 
 
+def test_a_completed_download_ends_the_session(transport, tmp_path):
+    """A download served to the end of the file frees the slot behind it without waiting to be told."""
+    offer = transport.client.request_delta(None, frozenset(), frozenset())
+    transport.client.download_delta(tmp_path / 'download.aiida', offer.delta)
+
+    assert transport.stub.released == [PEER]
+
+
 def test_negotiate_delta(transport):
     """The negotiation relays the cursor and claim to the sync core and returns its manifest."""
     cursor = timezone.now()
@@ -543,6 +561,23 @@ def test_request_delta(transport):
     assert [(snapshot.uuid, snapshot.mtime, snapshot.extras) for snapshot in offer.refresh] == [
         ('uuid-stale', transport.stub.instant, {'k': 1})
     ], 'the extras snapshots of the requested refreshes travel with the offer'
+
+
+def test_a_request_without_the_peer_header_is_served(transport):
+    """A client that names no session is served under the anonymous one rather than refused.
+
+    The header names a session and authorizes nothing — the token and the collab UUID do that — so treating it
+    as required would turn a client that omits it into a lockout.
+    """
+    response = requests.post(
+        f'{transport.url}{ROUTE_DELTA}',
+        headers={'Authorization': f'Bearer {TOKEN}', HEADER_COLLAB: COLLAB},
+        json={'cursor': None, 'claim': []},
+        timeout=10,
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert transport.stub.requesters == ['']
 
 
 def test_diff_manifest(transport):

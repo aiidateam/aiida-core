@@ -33,6 +33,7 @@ from aiida.tools.collab.protocol import (
     API_PREFIX,
     CHUNK_SIZE,
     HEADER_COLLAB,
+    HEADER_PEER,
     HEADER_STAGED,
     ROUTE_DELTA,
     ROUTE_HANDSHAKE,
@@ -87,15 +88,17 @@ class CollabServer(ThreadingHTTPServer):
     :param retired: notified at ``POST /collab/v1/retired`` that the peer identified by the given profile UUID
         rotated the token of the collab. Advisory only: it makes ``verdi status`` tell the user to rekey.
     :param negotiate_delta: serves the manifest of the delta for the cursor and claim posted to
-        ``POST /collab/v1/delta``, and merges the roster gossiped with it.
+        ``POST /collab/v1/delta``, and merges the roster gossiped with it. Receives the requester of the
+        ``X-Collab-Peer`` header, whose session the serving slot it takes belongs to.
     :param request_delta: exports (or reuses) the subset of that delta named by the ``want`` of a
-        ``POST /collab/v1/delta`` and returns its offer, with the extras snapshots of its ``refresh_want``.
+        ``POST /collab/v1/delta`` and returns its offer, with the extras snapshots of its ``refresh_want``. Also
+        receives the requester, as ``negotiate_delta`` does.
     :param resolve_delta: returns the path of the negotiated delta served at ``GET /collab/v1/delta/<id>``, or
         ``None`` when no delta with that identifier is on offer. Each identifier must keep resolving to the same
         bytes while a transfer is in progress; when the delta is re-exported, a client that resumes an interrupted
-        download is served the new file from the start instead.
-    :param release_delta: notified with the identifier of a delta whose download was served to the end of the
-        file, so the endpoint can free the serving slot behind it.
+        download is served the new file from the start instead. Receives the requester too, since a download is
+        activity of its session and keeps its slot from expiring under a long transfer.
+    :param release: frees the serving slots of the requester, when a download was served to the end of the file.
     :param diff_manifest: answers ``POST /collab/v1/missing`` for a peer that wants to push: which of the offered
         nodes this profile is missing, which of the offered extras it holds an older version of, and which of the
         offered group memberships it can apply.
@@ -121,16 +124,16 @@ class CollabServer(ThreadingHTTPServer):
         token: Callable[[], str],
         staging_dir: Path,
         info: Callable[[datetime | None], PeerInfo],
-        negotiate_delta: Callable[[datetime | None, frozenset[str], list[dict[str, Any]]], DeltaManifest],
-        request_delta: Callable[[datetime | None, frozenset[str], frozenset[str], frozenset[str]], DeltaOffer],
-        resolve_delta: Callable[[str], Path | None],
+        negotiate_delta: Callable[[datetime | None, frozenset[str], list[dict[str, Any]], str], DeltaManifest],
+        request_delta: Callable[[datetime | None, frozenset[str], frozenset[str], frozenset[str], str], DeltaOffer],
+        resolve_delta: Callable[[str, str], Path | None],
+        release: Callable[[str], None],
         diff_manifest: Callable[[list[str], dict[str, datetime], list[GroupMembers]], ManifestDiff],
         handshake: Callable[[str, list[dict[str, Any]]], PushHandshake],
         import_staged: Callable[[Path, str, datetime, list[ExtrasSnapshot], list[GroupMembers]], dict[str, Any]],
         join: Callable[[dict[str, Any]], JoinResponse],
         retired: Callable[[str], None],
         collab: str = '',
-        release_delta: Callable[[str], None] | None = None,
     ):
         import ipaddress
         import socket
@@ -144,7 +147,7 @@ class CollabServer(ThreadingHTTPServer):
         self.negotiate_delta = negotiate_delta
         self.request_delta = request_delta
         self.resolve_delta = resolve_delta
-        self.release_delta = release_delta
+        self.release = release
         self.diff_manifest = diff_manifest
         self.handshake = handshake
         self.import_staged = import_staged
@@ -187,6 +190,9 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
     server: CollabServer
 
     protocol_version = 'HTTP/1.1'
+
+    peer = ''
+    """The requester of the request being dispatched, from its ``X-Collab-Peer`` header."""
 
     # A client that dies mid-request must not pin its handler thread forever; whatever it managed to stage
     # before the timeout remains resumable.
@@ -244,6 +250,11 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
                 headers={'Connection': 'close'},
             )
             return
+
+        # Read here rather than per route, as the collab UUID above is, and for the same reason: the routes that
+        # need it include the ones that carry no body. It names a session and authorizes nothing, so a request
+        # without it is served rather than refused; such requests share the one anonymous session.
+        self.peer = self.headers.get(HEADER_PEER, '')
 
         try:
             for route, handler in routes.items():
@@ -317,10 +328,10 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
 
         if 'want' in data:
             answer = self.server.request_delta(
-                cursor, claim, frozenset(data['want']), frozenset(data.get('refresh_want', []))
+                cursor, claim, frozenset(data['want']), frozenset(data.get('refresh_want', [])), self.peer
             )
         else:
-            answer = self.server.negotiate_delta(cursor, claim, data.get('roster', []))
+            answer = self.server.negotiate_delta(cursor, claim, data.get('roster', []), self.peer)
 
         self._send_json(HTTPStatus.OK, answer.as_dict())
 
@@ -335,7 +346,7 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
         self._send_json(HTTPStatus.OK, diff.as_dict())
 
     def _get_delta(self, delta_id: str) -> None:
-        filepath = self.server.resolve_delta(delta_id)
+        filepath = self.server.resolve_delta(delta_id, self.peer)
 
         try:
             # The eviction of a delta can unlink the file after it was resolved; that is the same answer as an
@@ -365,8 +376,7 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
             # This is how a client whose file is already complete learns so: its download is done too.
-            if self.server.release_delta is not None:
-                self.server.release_delta(delta_id)
+            self.server.release(self.peer)
 
             return
 
@@ -387,8 +397,7 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
 
         # Reaching here means the response was written to the end of the file, whatever offset it started from:
         # the client holds the complete delta and the serving slot behind it can be freed.
-        if self.server.release_delta is not None:
-            self.server.release_delta(delta_id)
+        self.server.release(self.peer)
 
     def _head_upload(self, sha256: str) -> None:
         self.send_response(HTTPStatus.OK)

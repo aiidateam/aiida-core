@@ -388,7 +388,8 @@ def test_a_full_endpoint_answers_busy_until_a_slot_expires(collab, monkeypatch):
     # are replaced directly rather than pretending the option is re-read.
     a.endpoint._slots = collab_endpoint._Slots(1)
 
-    # One negotiation of a different session takes the only slot and never downloads, so nothing releases it.
+    # One negotiation takes the only slot and never downloads, so nothing releases it. Called directly, it names
+    # no requester and is therefore a session of its own: the CLI below arrives under its profile UUID instead.
     a.endpoint.negotiate_delta(None, frozenset({'a-uuid-nobody-holds'}))
 
     result = b.run('pull', ['alice', '--force'])

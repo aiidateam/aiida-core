@@ -320,21 +320,29 @@ def test_slot_released_after_import(make_profile, record_calls, tmp_path):
     assert endpoint.handshake('pusher-three').busy is False
 
 
-def test_slot_released_after_download(make_profile, temp_backend):
-    """Test that completing a download frees the negotiation's slot for the next peer."""
+def test_slots_are_held_per_peer_not_per_request(make_profile, temp_backend):
+    """Test that two peers presenting the same cursor and claim hold a slot each, and neither frees the other's.
+
+    Every newcomer of a collab presents the same empty cursor and claim: keyed by the request, two of them
+    counted as one session against the cap, and whichever ended first freed the slot the other was served under.
+    """
+    from aiida.tools.collab.protocol import EndpointBusy
+
     profile = make_profile()
-    seal_calculation(temp_backend)
     endpoint = CollabEndpoint(profile, temp_backend)
 
-    manifest = endpoint.negotiate_delta(None, frozenset())
-    offer = endpoint.request_delta(None, frozenset(), frozenset(manifest.manifest))
+    endpoint.negotiate_delta(None, frozenset(), requester='puller-one')
+    endpoint.negotiate_delta(None, frozenset(), requester='puller-two')
 
-    assert endpoint.handshake('pusher-one').busy is False
-    assert endpoint.handshake('pusher-two').busy is True
+    with pytest.raises(EndpointBusy):
+        endpoint.negotiate_delta(None, frozenset(), requester='puller-three')
 
-    endpoint.release_delta(offer.delta)
+    endpoint.release('puller-one')
+    endpoint.negotiate_delta(None, frozenset(), requester='puller-three')
 
-    assert endpoint.handshake('pusher-two').busy is False
+    with pytest.raises(EndpointBusy):
+        # Only the peer that ended gave a slot back; the one still being served kept its own.
+        endpoint.negotiate_delta(None, frozenset(), requester='puller-four')
 
 
 def test_join_records_the_newcomer_and_answers_with_the_membership(make_profile, empty_config):

@@ -20,6 +20,7 @@ import requests
 from aiida.tools.collab.protocol import (
     CHUNK_SIZE,
     HEADER_COLLAB,
+    HEADER_PEER,
     HEADER_STAGED,
     ROUTE_DELTA,
     ROUTE_HANDSHAKE,
@@ -69,12 +70,14 @@ class CollabClient:
     guarded by the served ``ETag``, uploads by first asking the peer how much of the file it already staged.
     """
 
-    def __init__(self, base_url: str, token: str, *, collab: str = '', timeout: float = TIMEOUT):
+    def __init__(self, base_url: str, token: str, *, collab: str = '', peer: str = '', timeout: float = TIMEOUT):
+        """:param peer: the profile UUID of this profile, naming the session its requests to this peer belong to."""
         self._base_url = base_url.rstrip('/')
         self._timeout = timeout
         self._session = requests.Session()
         self._session.headers['Authorization'] = f'Bearer {token}'
         self._session.headers[HEADER_COLLAB] = collab
+        self._session.headers[HEADER_PEER] = peer
 
     def close(self) -> None:
         self._session.close()

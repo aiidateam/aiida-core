@@ -26,8 +26,7 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 This module uses AiiDA and `aiida-shell`, plus SSH access to a cluster:
 
 ```bash
-# aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
-uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.com/aiidateam/aiida-shell git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
+uv pip install "aiida-core>=2.9" git+https://github.com/aiidateam/aiida-shell git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
 ```
 :::
 

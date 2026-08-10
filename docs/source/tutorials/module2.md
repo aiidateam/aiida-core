@@ -26,8 +26,7 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 If you have not already installed these in an earlier module, run:
 
 ```bash
-# aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
-uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.com/aiidateam/aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
+uv pip install "aiida-core>=2.9" git+https://github.com/aiidateam/aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
 ```
 :::
 
@@ -256,6 +255,11 @@ print(f"mean(V)     = {parsed['mean_V'].value:.4e}")
 
 That is already the payoff: instead of opening the output files, `variance(V)` and `mean(V)` come straight off the run's `Float` output nodes via `.value`.
 
+:::{note}
+`launch_shell_job` is `aiida-shell`'s convenience wrapper: it builds a **ShellJob** (a `CalcJob`) from your command and inputs, runs it, and returns `(outputs, node)`.
+So the `gsrd` step is an AiiDA process just like the two calcfunctions around it..
+:::
+
 `parse_output` is now itself a first-class process node: the calcjob's `stdout` node is its input, and the `Float` nodes are its outputs:
 
 ```{code-cell} ipython3
@@ -340,9 +344,9 @@ runs = [run_pipeline(f_val) for f_val in [0.038, 0.042, 0.046, 0.050]]
 ```
 
 With a handful of tracked runs in the database, the payoff we are building toward is **searching** them, which is what the `QueryBuilder` does.
-Queries get far more useful once each run carries metadata to filter on, so we take it in three steps:
+Queries get far more useful once each run carries additional metadata to filter on, so we take it in three steps:
 
-- **Tag** nodes with ad-hoc properties you only realized you cared about later: **extras**.
+- **Tag** nodes with ad-hoc metadata: **extras**.
 - **Bundle** related runs as a single named unit you can retrieve or share: **groups**.
 - **Search** across the database, including by extras and group membership: **QueryBuilder**.
 
@@ -352,7 +356,7 @@ There are often properties you want to attach to a node *after* it was created: 
 The **extras** dictionary on every AiiDA node is AiiDA's mechanism for exactly that: unlike node attributes (immutable once stored), extras can be set and changed freely, long after the node was created, without touching the provenance graph.
 
 Having run the sweep, say you want to mark the run at the **pattern transition**, a judgement about the results that the provenance itself does not record.
-From the transition curve in {ref}`Module 3b <tutorial:module3b>`, the pattern dissolves around `F=0.046`; select that run and flag its `parse_output` node:
+From the transition curve in {ref}`Module 3b <tutorial:module3b>`, the pattern dissolves around `F=0.046`, so we select that run and flag its `parse_output` node:
 
 ```{code-cell} ipython3
 transition_run = next(run for run in runs if run.F == 0.046)
@@ -365,16 +369,9 @@ Extras are great for filters and tags, but sometimes you want to bundle "the run
 A {py:class}`~aiida.orm.Group` is AiiDA's named collection for that:
 
 ```{code-cell} ipython3
-# Collect all the parse_output nodes into a Group.
-# `get_or_create` returns a (Group, bool) tuple: the group itself and a flag
-# indicating whether it was just created (True) or already existed (False).
-sweep_group: orm.Group
-created: bool
-sweep_group, created = orm.Group.collection.get_or_create('tutorial/F-sweep')
-
-if created:
-    for run in runs:
-        sweep_group.add_nodes(run.parse)
+sweep_group, _ = orm.Group.collection.get_or_create('tutorial/F-sweep')
+sweep_group.clear()  # start empty so re-running this cell doesn't accumulate nodes
+sweep_group.add_nodes([run.parse for run in runs])
 
 print(f"Group '{sweep_group.label}' contains {sweep_group.count()} nodes")
 ```
@@ -388,10 +385,17 @@ print(f"Group '{sweep_group.label}' contains {sweep_group.count()} nodes")
 Groups are purely organizational and do not affect provenance.
 You can add or remove nodes at any time, and a node can belong to multiple groups.
 
+:::{tip}
+Group labels are hierarchical: the `/` works like a directory separator, so `tutorial/F-sweep` nests `F-sweep` under a `tutorial/` namespace, and AiiDA can navigate that hierarchy.
+:::
+
 ### QueryBuilder
 
 Extras and groups are how you *organize* nodes; {class}`~aiida.orm.QueryBuilder` is how you *find* them.
 It is AiiDA's structured-search API over the provenance graph: filter by node type, by attribute value, by extras, by which group they belong to, by their relationships to other nodes, etc.
+
+You build a query by **appending** the entity type you're after, optionally with `filters` (which nodes to keep) and a `project` (which fields to return), then run it with `.count()`, `.all()`, or `.first()`.
+Filters are written against the entity's typed `fields`, which gives tab-completion and type checking instead of hand-typed string keys, as the examples below show.
 
 Start by counting every `parse_output` run in the database:
 
@@ -399,7 +403,7 @@ Start by counting every `parse_output` run in the database:
 # Filter by node type and process label.
 qb = orm.QueryBuilder().append(
     orm.CalcFunctionNode,
-    filters={'attributes.process_label': 'parse_output'},
+    filters=orm.CalcFunctionNode.fields.process_label == 'parse_output',
 )
 print(f'parse_output calcfunctions in this profile: {qb.count()}')
 ```
@@ -410,15 +414,15 @@ Then use the extra we just set to pull the transition run straight back out, how
 # Filter the same node type by an extras key.
 qb = orm.QueryBuilder().append(
     orm.CalcFunctionNode,
-    filters={'extras.note': 'pattern transition'},
+    filters=orm.CalcFunctionNode.fields.extras['note'] == 'pattern transition',
 )
 flagged = qb.all(flat=True)
 print(f'{len(flagged)} run flagged as the transition: {flagged[0]}')
 ```
 
-QueryBuilder can do much more: *project* single fields instead of loading whole nodes, and *join* across the provenance graph, filter a `Float` by the calcfunction that created it, recover a run's inputs, restrict to a group's members, and so on. We'll cover those patterns properly in {ref}`Module 5 <tutorial:module5>`.
+The QueryBuilder can do much more: *project* single fields instead of loading whole nodes, and *join* across the provenance graph, filter a `Float` by the calcfunction that created it, recover a run's inputs, restrict to a group's members, and so on. We'll cover those patterns properly in {ref}`Module 5 <tutorial:module5>`.
 
-After all this activity, our profile is filling up.
+With all this activity, our profile is filling up.
 To list every process we have run so far across all modules:
 
 ```{code-cell} ipython3
@@ -432,10 +436,10 @@ To list every process we have run so far across all modules:
 
 We now have a tracked pipeline with structured data, but two things are still plain Python.
 The pipeline, `prepare_input → ShellJob → parse_output`, is a bare sequence of calls: there's no single object that *is* the workflow, so if one step fails you handle it yourself, and there's nothing to hand around or query as one unit.
-The sweep is a `for` loop that runs each parameter set one after another, with no way to run independent runs in parallel.
+And, the sweep is a `for` loop that runs each parameter set one after another, with no way to run independent runs in parallel.
 
 In {ref}`Module 3a <tutorial:module3a>`, you'll wrap that pipeline into a single **WorkGraph workflow**.
-Then in {ref}`Module 3b <tutorial:module3b>`, you'll turn the `for` loop itself into a mapped, parallel workflow with WorkGraph's `Map`.
+Then in {ref}`Module 3b <tutorial:module3b>`, you'll map it over the whole sweep in parallel with WorkGraph's `Map`, replacing that `for` loop.
 
 ## Further reading
 

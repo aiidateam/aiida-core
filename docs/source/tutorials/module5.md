@@ -24,8 +24,7 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 This module only needs AiiDA:
 
 ```bash
-# aiida-core from `main` until v2.9 ships the ZeroMQ broker used here
-uv pip install git+https://github.com/aiidateam/aiida-core git+https://github.com/aiidateam/aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
+uv pip install "aiida-core>=2.9" git+https://github.com/aiidateam/aiida-shell matplotlib git+https://github.com/GeigerJ2/gsrd.git@fix/dont-raise-on-trivial-state
 ```
 
 It reuses the sweep data created in {ref}`Module 2 <tutorial:module2>`.
@@ -75,7 +74,7 @@ After this module, you will be able to:
 
 ## Why query the database?
 
-In {ref}`Module 2 <tutorial:module2>` the sweep ended with a Python list called `enriched_results`: the F values and `Float` outputs of each `parse_output` calcfunction, conveniently in memory.
+In {ref}`Module 2 <tutorial:module2>` the sweep left you a Python list, `runs`, holding each run's `F` and the process nodes it produced, conveniently in memory.
 However, that list only exists because the sweep just ran in the same notebook.
 
 In real work, the data you want to analyse is rarely the data you just produced.
@@ -130,22 +129,18 @@ A few things to notice:
 - `.count()` skips materialisation entirely; the database returns just an integer.
 
 The same `fields` syntax reaches **extras**, the mutable per-node metadata you can attach at any time, via `orm.<NodeType>.fields.extras['<key>']`.
-Module 2 tagged each `parse_output` calcfunction with `F` (the feed rate) and `sweep='F_scan'`; we can pick out exactly those nodes now:
+Module 2 flagged the transition run with `note='pattern transition'`; that extra pulls exactly that node back out:
 
 ```{code-cell} ipython3
-qb = (
-    orm.QueryBuilder()
-    .append(
-        orm.CalcFunctionNode,
-        filters=orm.CalcFunctionNode.fields.extras['sweep'] == 'F_scan',
-        project=['extras.F', 'pk'],
-    )
+qb = orm.QueryBuilder().append(
+    orm.CalcFunctionNode,
+    filters=orm.CalcFunctionNode.fields.extras['note'] == 'pattern transition',
+    project='pk',
 )
-for f_val, pk in sorted(qb.all()):
-    print(f'F={f_val:.3f}  (parse_output PK={pk})')
+print(f'parse_output node flagged as the transition: PK {qb.all(flat=True)}')
 ```
 
-This returns only the Module 2 sweep, even though Module 3's WorkGraph ran the same sweep again: the WorkGraph's calcfunctions were never tagged with the `sweep` extra, so they are silently excluded.
+That `note` lives on exactly one node, so the query returns it alone, out of every `parse_output` in the profile (including Module 3's WorkGraph sweep), without your having kept a Python reference to it.
 
 :::{tip}
 Reach for `project=` and `.count()` whenever you can.
@@ -170,17 +165,53 @@ The interesting questions involve several nodes at once: which `Float` came from
 You express those by chaining `.append(...)` calls and **declaring the relationship** between each appended node and an earlier one with `with_incoming=`, `with_outgoing=`, `with_ancestors=`, `with_descendants=`, or `with_group=`.
 Each appended node gets an optional `tag=` so later appends can refer back to it.
 
-The previous query returned the `parse_output` calcfunction nodes themselves. Extend it by one hop to also reach the `variance_V` `Float` output:
+Enter through the `tutorial/F-sweep` Group from Module 2, and follow each member to its `variance_V` `Float` output:
 
 ```{code-cell} ipython3
 qb = (
     orm.QueryBuilder()
     .append(
-        orm.CalcFunctionNode,
-        tag='parse',
-        filters=orm.CalcFunctionNode.fields.extras['sweep'] == 'F_scan',
-        project='extras.F',
+        orm.Group,
+        filters=orm.Group.fields.label == 'tutorial/F-sweep',
+        tag='grp',
     )
+    .append(orm.CalcFunctionNode, with_group='grp', tag='parse')
+    .append(
+        orm.Float,
+        with_incoming='parse',
+        edge_filters={'label': 'variance_V'},
+        project='attributes.value',
+    )
+)
+variances = sorted(qb.all(flat=True))
+print(f'{len(variances)} variance(V) values from the F-sweep: {[round(v, 4) for v in variances]}')
+```
+
+What each `.append` contributes:
+
+- `with_group='grp'` keeps only the `parse_output` nodes that belong to the tagged Group, exactly the Module 2 sweep, excluding Module 3's WorkGraph runs, which are not members.
+- `with_incoming='parse'` says "the `Float` I want has an *incoming* link from the node tagged `parse`"; from the `Float`'s point of view, `parse` is its creator.
+- `edge_filters={'label': 'variance_V'}` filters on the *link* between the two nodes, picking the output named `variance_V` and excluding `mean_V`.
+
+:::{tip}
+Read multi-append queries **top to bottom, as a path through the graph**: the first `.append()` (the one without a `with_*=` keyword) picks the starting nodes, each later one follows a relationship to the next stop on the tour.
+The order of projected columns in the result rows follows the append order.
+(The database itself doesn't execute the joins in this order; it picks whatever join plan it thinks is most selective. The top-to-bottom reading is just a mental model for you, not a description of the SQL.)
+:::
+
+Those variances are unlabelled, though, because `F` was never stored on the `parse_output` node.
+It lives on the input `Dict`, several hops upstream (`Dict → prepare_input → file → ShellJob → stdout → parse_output`), so we recover it with one more `.append`, this time reaching *backwards* with `with_descendants=` (the `Dict` whose descendants include our `parse` node):
+
+```{code-cell} ipython3
+qb = (
+    orm.QueryBuilder()
+    .append(
+        orm.Group,
+        filters=orm.Group.fields.label == 'tutorial/F-sweep',
+        tag='grp',
+    )
+    .append(orm.CalcFunctionNode, with_group='grp', tag='parse')
+    .append(orm.Dict, with_descendants='parse', project='attributes.F')
     .append(
         orm.Float,
         with_incoming='parse',
@@ -192,45 +223,7 @@ for f_val, variance in sorted(qb.all()):
     print(f'F={f_val:.3f}  variance(V)={variance:.4e}')
 ```
 
-What changed in the query:
-
-- The second `.append` declares `with_incoming='parse'`: "the `Float` I want has an *incoming* link from the node tagged `parse`". From the `Float`'s point of view, `parse` is its creator.
-- `edge_filters={'label': 'variance_V'}` filters on the *link* between the two nodes, picking just the output named `variance_V` and excluding `mean_V`.
-- Both nodes contribute a projected column, so each result row is `[F, variance]`.
-
-:::{tip}
-Read multi-append queries **top to bottom, as a path through the graph**: the first `.append()` (the one without a `with_*=` keyword) picks the starting nodes, each later one follows a relationship to the next stop on the tour.
-The order of projected columns in the result rows also follows the append order.
-(The database itself doesn't execute the joins in this order; it picks whatever join plan it thinks is most selective. The top-to-bottom reading is just a mental model for you, not a description of the SQL.)
-:::
-
-The same `tutorial/F-sweep` Group from Module 2 can be the entry point of a join with `with_group=`: fetch every member of the Group and follow their links forward.
-
-```{code-cell} ipython3
-qb = (
-    orm.QueryBuilder()
-    .append(
-        orm.Group,
-        filters=orm.Group.fields.label == 'tutorial/F-sweep',
-        tag='grp',
-    )
-    .append(
-        orm.CalcFunctionNode,
-        with_group='grp',
-        tag='parse',
-        project='extras.F',
-    )
-    .append(
-        orm.Float,
-        with_incoming='parse',
-        edge_filters={'label': 'mean_V'},
-        project='attributes.value',
-    )
-)
-for f_val, mean_v in sorted(qb.all()):
-    print(f'F={f_val:.3f}  mean(V)={mean_v:.4e}')
-```
-
+This is the honest version of a convenience `F` extra: rather than duplicating `F` onto the node, we walk the provenance back to the input it actually came from.
 Groups, extras, and graph traversal all compose: you can filter a query by any combination of them in a single call.
 
 :::{dropdown} The full set of relationship keywords
@@ -337,8 +330,7 @@ Our example here is not one of those: both paths walk every row, just via very d
 
 ## Rebuilding the transition curve from the database
 
-Module 2 built its transition curve from `enriched_results`, a Python list it had just produced.
-We can rebuild the same plot using only QueryBuilder, starting from nothing but the database.
+The transition curve, `variance(V)` against `F`, that {ref}`Module 3b <tutorial:module3b>` renders inside a workflow can be rebuilt from the database alone, starting from nothing but the `tutorial/F-sweep` Group and no Python references to the original nodes:
 
 ```{code-cell} ipython3
 from include.plotting import plot_transition_curve
@@ -346,11 +338,12 @@ from include.plotting import plot_transition_curve
 qb = (
     orm.QueryBuilder()
     .append(
-        orm.CalcFunctionNode,
-        tag='parse',
-        filters=orm.CalcFunctionNode.fields.extras['sweep'] == 'F_scan',
-        project='extras.F',
+        orm.Group,
+        filters=orm.Group.fields.label == 'tutorial/F-sweep',
+        tag='grp',
     )
+    .append(orm.CalcFunctionNode, with_group='grp', tag='parse')
+    .append(orm.Dict, with_descendants='parse', project='attributes.F')
     .append(
         orm.Float,
         with_incoming='parse',

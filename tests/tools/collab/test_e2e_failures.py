@@ -1,0 +1,361 @@
+###########################################################################
+# Copyright (c), The AiiDA team. All rights reserved.                     #
+# This file is part of the AiiDA code.                                    #
+#                                                                         #
+# The code is hosted on GitHub at https://github.com/aiidateam/aiida-core #
+# For further information on the license, see the LICENSE.txt file        #
+# For further information please visit http://www.aiida.net               #
+###########################################################################
+"""The transfer breaks: what survives, what is retried, and what must never be half-landed.
+
+Every failure here is injected into the real code path — a short body against a promised ``Content-Length``, a
+half-staged upload, an import that raised — so the recovery under test is the one a collaborator would get.
+"""
+
+import threading
+
+import pytest
+
+from tests.tools.collab.conftest import move
+
+DIRECTIONS = ('pull', 'push')
+
+
+def test_a_dropped_download_resumes_on_the_next_pull(collab, faults):
+    """Test that a connection cut mid-download is resumed, not restarted, and imported exactly once.
+
+    Pull-only: the download is the receiver's, and only it has a partial file to resume from. The delta carries a
+    payload larger than one transfer chunk, because a client buffers a chunk before it writes any of it: below
+    that size an interrupted download has nothing to resume from and legitimately starts over.
+    """
+    a, b, _ = collab(3)
+    chunk = 1024 * 1024
+    created = a.seal_calculation(ballast=chunk + chunk // 2)
+
+    dropped = faults.drop_next_download(after=chunk + 200)
+
+    b.run('pull', ['alice', '--force'])
+
+    partial = b.workdir / f'pull-{a.uuid}.aiida'
+
+    assert partial.stat().st_size == chunk
+    assert created not in b.uuids()
+
+    b.run('pull', ['alice', '--force'])
+
+    assert created in b.uuids()
+    assert b.graph() == a.graph()
+    assert not partial.exists()
+    assert len([event for event in b.state().events if event.uuids]) == 1
+    # The resumption served only the tail, so the two transfers add up to the delta rather than to twice it.
+    assert dropped['served'][1] < chunk
+
+
+def test_a_dropped_upload_resumes_from_what_was_staged(collab, faults):
+    """Test that a connection cut mid-upload re-sends only the missing tail on the next push.
+
+    Push-only: the upload is the sender's, and the peer's staging directory is what holds the resumption point.
+    """
+    a, b, _ = collab(3)
+    created = a.seal_calculation()
+
+    dropped = faults.drop_upload(b, after=200)
+
+    a.run('push', ['bob', '--force'])
+
+    stash = a.workdir / f'push-{b.uuid}.aiida'
+
+    assert dropped['staged'] == 200
+    assert created not in b.uuids()
+    assert stash.exists(), 'the cut delta was not stashed for the retry'
+
+    size = stash.stat().st_size
+    result = a.run('push', ['bob', '--force'])
+
+    assert created in b.uuids()
+    assert b.graph() == a.graph()
+    # The staged prefix is not re-sent: the retry probes what the peer holds and continues from there.
+    assert f'transferred {size - 200} bytes' in result.output
+
+
+def test_a_peer_dying_before_the_import_keeps_the_upload_staged(collab, faults):
+    """Test that a push whose import never answered retries the import alone, uploading nothing again."""
+    a, b, _ = collab(3)
+    created = a.seal_calculation()
+
+    faults.drop_import(b)
+
+    a.run('push', ['bob', '--force'], raises=True)
+
+    assert created not in b.uuids()
+    assert list(b.endpoint.staging_dir.iterdir()), 'the staged upload was discarded'
+
+    result = a.run('push', ['bob', '--force'])
+
+    assert created in b.uuids()
+    assert 'transferred 0 bytes' in result.output
+    assert not list(b.endpoint.staging_dir.iterdir())
+
+
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_an_import_that_never_ran_lands_nothing_and_is_retried_whole(collab, faults, direction):
+    """Test that an import that raised before it started leaves no node, no event and no cursor, and retries."""
+    a, b, _ = collab(3)
+    created = a.seal_calculation()
+
+    faults.failing_import()
+
+    move(a, b, direction, raises=True)
+
+    assert created not in b.uuids()
+    assert b.state().events == []
+    assert b.state().cursors == {}
+
+    move(a, b, direction)
+
+    assert b.graph() == a.graph()
+    assert b.count() == 3
+    assert len(b.state().events) == 1
+
+
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_an_import_that_died_after_its_archive_committed_claims_nothing(collab, faults, direction):
+    """Test the window the ordering of the import exists for: nodes here, and no claim on any of them.
+
+    The archive commits in its own transaction; the cursor, the event and the journalled boundary links are
+    written after it. A crash in between therefore leaves the receiver holding provenance it does not yet claim —
+    which is the safe direction, because the next sync re-offers what it has not claimed and the import dedupes.
+    Claiming first and importing second is the arrangement that would lose nodes silently.
+    """
+    a, b, _ = collab(3)
+    created = a.seal_calculation()
+
+    faults.die_after_the_archive_commits()
+
+    move(a, b, direction, raises=True)
+
+    assert created in b.uuids(), 'the archive did not commit, so this is not the window under test'
+    assert b.state().events == []
+    assert b.state().cursors == {}
+
+    move(a, b, direction)
+
+    assert b.graph() == a.graph()
+    assert b.count() == 3, 'the retry imported the delta a second time'
+    assert b.state().cursors != {}
+
+
+def test_corrupt_staged_bytes_are_discarded_and_uploaded_again(collab, faults):
+    """Test that an upload that does not match its checksum is refused, dropped, and re-sent by the next push."""
+    a, b, _ = collab(3)
+    created = a.seal_calculation()
+
+    faults.corrupt_staged(b)
+
+    result = a.run('push', ['bob', '--force'], raises=True)
+
+    assert 'does not match its checksum' in result.output
+    assert created not in b.uuids()
+    assert not list(b.endpoint.staging_dir.iterdir()), 'corrupt bytes were left to rot in the staging directory'
+
+    a.run('push', ['bob', '--force'])
+
+    assert b.graph() == a.graph()
+
+
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_a_corrupt_delta_lands_nothing(collab, faults, direction):
+    """KNOWN GAP: bytes that are not an archive abort the sync, and on a pull say only what the reader saw.
+
+    Nothing lands and no cursor moves, which is what matters. What the user is told is not: a pull aborts with
+    the bare message of the archive reader, naming neither the peer nor what to do about it, and the peers after
+    it in the loop are left unsynced. See ``phase-15/deferred.md``.
+    """
+    a, b, _ = collab(3)
+    a.seal_calculation()
+
+    faults.corrupt_export()
+
+    result = move(a, b, direction, raises=True)
+
+    assert b.count() == 0
+    assert b.state().cursors == {}
+    assert ('not a folder, zip or tar file' if direction == 'pull' else 'provenance not landed') in result.output
+
+
+@pytest.mark.parametrize('status', (200, 500))
+def test_a_peer_that_is_not_a_collab_endpoint_is_skipped(collab, stranger, status):
+    """Test that a URL answering with anything but a collab endpoint is skipped, the other peers still syncing.
+
+    The two statuses fail in different places — a 200 whose body is not the expected answer fails when the client
+    parses it, a 500 when it checks the status — and both have to read as one unusable peer. Not parametrised
+    over direction: both routes open with the same ``GET /info`` and handle its failure identically, so the
+    second half of that matrix would assert nothing the first does not.
+    """
+    a, b, c = collab(3)
+    created = c.seal_calculation()
+
+    # The failure has to be one the loop gets *past*, not one it reaches after everything else succeeded.
+    assert list(a.peers()) == [b.uuid, c.uuid]
+    _repoint(a, b, stranger(status=status))
+
+    result = a.run('pull', ['--force'])
+
+    assert f'peer {b.nickname}' in result.output
+    # One event, for Carol, who comes after Bob: the loop carried on past the stranger and finished the round.
+    assert [event.peer for event in a.state().events] == [c.uuid]
+    assert created in a.uuids()
+
+
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_an_unreachable_peer_does_not_stop_the_loop(collab, direction):
+    """Test that a peer whose endpoint is closed is warned about and the remaining peers are still synced."""
+    a, b, c = collab(3)
+    created = a.seal_calculation()
+    theirs = c.seal_calculation()
+
+    # The failure has to be one the loop gets past, not one it ends on.
+    assert list(a.peers()) == [b.uuid, c.uuid]
+    b.stop()
+
+    result = a.run(direction, ['--force'])
+
+    assert f'peer {b.nickname}' in result.output
+    # One event, for Carol, who comes after Bob: the loop finished the round despite the peer that is gone.
+    assert [event.peer for event in a.state().events] == [c.uuid]
+    assert (theirs in a.uuids()) if direction == 'pull' else (created in c.uuids())
+    assert created not in b.uuids()
+
+
+def test_a_peer_that_does_not_accept_pushes_is_skipped(collab):
+    """EXPECTED (phase 3): a profile that has not opted in to being written to is skipped, and still serves pulls.
+
+    Push-only, and asymmetric on purpose: ``collab.accept_push`` governs what may be written into a profile, not
+    what it hands out, so the same peer that refuses the push delivers the identical provenance on a pull.
+    """
+    from aiida.tools.collab.config import OPTION_ACCEPT_PUSH
+
+    a, b, c = collab(3)
+    created = a.seal_calculation()
+
+    # The refusal has to be one the loop gets past, not one it ends on.
+    assert list(a.peers()) == [b.uuid, c.uuid]
+    b.set_option(OPTION_ACCEPT_PUSH, False)
+
+    result = a.run('push', ['--force'])
+
+    assert 'does not accept pushes' in result.output
+    assert created not in b.uuids()
+    assert created in c.uuids(), 'one peer refusing pushes stopped the sync with the others'
+
+    b.run('pull', ['alice', '--force'])
+
+    assert b.graph() == a.graph()
+
+
+def test_a_push_against_a_running_import_is_answered_busy(collab):
+    """Test that a peer whose import lock is held answers the handshake busy, before anything is exported.
+
+    Push-only: the handshake is what a pusher asks for, and answering busy there is what serializes fan-in
+    without any redundant bytes travelling.
+    """
+    from aiida.tools.collab.state import import_lock
+
+    a, b, _ = collab(3)
+    created = a.seal_calculation()
+
+    with import_lock(b.state_filepath):
+        result = a.run('push', ['bob', '--force'])
+
+        assert 'busy right now' in result.output
+        assert not list(b.endpoint.staging_dir.iterdir())
+
+    a.run('push', ['bob', '--force'])
+
+    assert created in b.uuids()
+
+
+def test_a_full_endpoint_answers_busy_until_a_slot_expires(collab, monkeypatch):
+    """EXPECTED (phase 9): a full endpoint refuses the next requester, and serves it once a slot ages out.
+
+    What is pinned is the expiry, not the cap: a slot is refreshed per request, so a single transfer longer than
+    ``SLOT_IDLE_SECONDS`` can still have its slot reclaimed under it. See ``phase-15/deferred.md``.
+
+    Pull-only: the serving slots bound negotiations, which is what a pull opens; a pusher is bounded by the
+    handshake instead.
+    """
+    from aiida.tools.collab import endpoint as collab_endpoint
+
+    a, b, _ = collab(3)
+    created = a.seal_calculation()
+
+    # The cap is read once when the endpoint is built, so lowering it is a restart in production; here the slots
+    # are replaced directly rather than pretending the option is re-read.
+    a.endpoint._slots = collab_endpoint._Slots(1)
+
+    # One negotiation of a different session takes the only slot and never downloads, so nothing releases it.
+    a.endpoint.negotiate_delta(None, frozenset({'a-uuid-nobody-holds'}))
+
+    result = b.run('pull', ['alice', '--force'])
+
+    assert 'maximum number of peers' in result.output
+    assert created not in b.uuids()
+
+    monkeypatch.setattr(collab_endpoint, 'SLOT_IDLE_SECONDS', 0)
+
+    b.run('pull', ['alice', '--force'])
+
+    assert created in b.uuids()
+
+
+def test_concurrent_pushes_into_one_profile_serialize(collab, tmp_path):
+    """Test that two peers importing into the same profile at once produce one correct graph, not a race.
+
+    Driven against the endpoint directly rather than through two CLIs, because loading a profile is process-wide
+    state: what is under test is the import lock, and this is the only way two imports genuinely overlap.
+    """
+    from aiida.tools.collab.state import CollabState
+    from aiida.tools.collab.sync import compute_delta, export_delta
+
+    a, b, c = collab(3)
+    created = {member.nickname: member.seal_calculation() for member in (a, b)}
+
+    def staged(member):
+        state = CollabState.read(member.state_filepath)
+        delta = compute_delta(state=state, backend=member.backend, cursor=None, claim=frozenset())
+
+        return export_delta(tmp_path / f'{member.nickname}-delta.aiida', delta=delta, backend=member.backend)
+
+    exports = {member.nickname: staged(member) for member in (a, b)}
+    errors = []
+
+    def push(member):
+        export = exports[member.nickname]
+
+        try:
+            c.endpoint.import_staged(export.filepath, peer=member.uuid, instant=export.instant)
+        except Exception as exception:
+            errors.append(exception)
+
+    threads = [threading.Thread(target=push, args=(member,)) for member in (a, b)]
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join(timeout=60)
+
+    assert not any(thread.is_alive() for thread in threads), 'an import never returned'
+    assert errors == []
+    assert set(created.values()) <= c.uuids()
+    assert c.count() == 6
+    assert set(c.state().cursors) == {a.uuid, b.uuid}
+
+
+def _repoint(member, peer, url):
+    """Point one of a member's roster entries at another address, as a moved peer would be corrected to."""
+    from aiida.tools.collab.config import OPTION_PEERS
+
+    peers = dict(member.peers())
+    peers[peer.uuid] = {**peers[peer.uuid], 'url': url}
+    member.set_option(OPTION_PEERS, peers)

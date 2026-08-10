@@ -166,11 +166,11 @@ class CollabState:
 
         return cls(
             filepath=filepath,
-            cursors={peer: datetime.fromisoformat(value) for peer, value in data.get('cursors', {}).items()},
+            cursors={peer: datetime.fromisoformat(value) for peer, value in data['cursors'].items()},
             tombstones=set(data['tombstones']),
             events=[CollabEvent.from_dict(event) for event in data['events']],
-            pending_links=data.get('pending_links', []),
-            memberships=[Membership.from_dict(entry) for entry in data.get('memberships', [])],
+            pending_links=data['pending_links'],
+            memberships=[Membership.from_dict(entry) for entry in data['memberships']],
         )
 
     def _compact(self) -> None:

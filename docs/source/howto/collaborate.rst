@@ -203,6 +203,13 @@ To change your mind, run ``verdi collab pull --include-deleted``: the tombstoned
 The tombstones, the sync cursors and the log belong to your profile and are deleted with it, so a profile you later create under the same name starts afresh instead of inheriting what a dead one held.
 If provenance in a delta depends on a node you deleted (for example, a peer ran a new calculation on data you removed), that node is imported again regardless, because provenance is never imported with holes in it.
 
+.. note::
+
+    Tombstones are kept for good and never pruned or aged out, because a deletion is never undone: a peer that was offline for a year must still not hand the node back.
+    They also go on the wire at every contact — in your request when you pull, and in the answer your endpoint serves when a peer pushes to you — which is what keeps that peer from cutting them into a delta in the first place.
+    A profile that deleted a very large campaign therefore keeps a correspondingly large collab state file and puts a correspondingly large set on the wire on every sync, and neither comes back down.
+    Short of ``--include-deleted``, which drops the tombstones of the nodes it brings back, only deleting the profile clears them.
+
 .. _how-to:collaborate:extras:
 
 Extras: the one thing that can change after it travelled

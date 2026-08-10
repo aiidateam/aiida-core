@@ -501,6 +501,45 @@ def test_export_subtracts_claim(tmp_path, peers):
     assert second.uuids == []
 
 
+@pytest.mark.parametrize('reentry', ('relayed', 'touched'))
+def test_export_claim_must_carry_every_tombstone(peers, reentry):
+    """EXPECTED (phase 25): the claim has to name every tombstone, however old — bounding it by the cursor costs bytes.
+
+    Sending only the tombstones recorded at or after the presented cursor was proposed on the reasoning that the
+    sender's seed filter is bounded by that same cursor, so a node behind it is not a seed of anything the sender
+    will offer. The start set of a delta is not the seeds alone, and this pins the two ways a long-deleted node
+    re-enters it: the sender *imported* it from a third peer since the cursor, which no mtime bounds, or something
+    touched it there and moved its mtime past the cursor. The seed filter is mtime and nothing else, so any write
+    on the sender does the second — setting an extra of its own is enough, under either extras policy.
+
+    Either way a tombstone the claim stops naming puts its node back in the delta, where the requester, which
+    deleted it and so does not hold it, asks for it and the import then refuses it. See ``phase-25/report.md``: the
+    day the start set is bounded on both counts, this test fails and the bound becomes worth revisiting.
+    """
+    backend, state = peers('sender')
+    calculation = seal_calculation(backend, 'shared')
+    output = calculation.base.links.get_outgoing().one().node
+    # The requester deleted the calculation, which took its output with it, and kept the input it was run on.
+    tombstones = {calculation.uuid, output.uuid}
+
+    cursor = timezone.now()
+
+    if reentry == 'relayed':
+        state.events.append(
+            CollabEvent(
+                time=timezone.now(), direction='pull', peer=PEER, uuids=sorted(linked_uuids(calculation)), size=1
+            )
+        )
+    else:
+        calculation.base.extras.set('note', 'edited after the cursor')
+
+    full = compute_delta(state=state, backend=backend, cursor=cursor, claim=frozenset(tombstones))
+    bounded = compute_delta(state=state, backend=backend, cursor=cursor, claim=frozenset())
+
+    assert not tombstones & set(full.uuids), 'the claim as it is sent today keeps the deleted nodes out of the delta'
+    assert tombstones <= set(bounded.uuids), 'dropping the old tombstones put them back'
+
+
 def test_export_claimed_ancestor_still_rides(tmp_path, peers):
     """Test that the claim cannot break provenance closure: a claimed ancestor a new node needs is exported anyway.
 

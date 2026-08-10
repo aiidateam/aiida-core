@@ -44,25 +44,24 @@ class ZeromqBroker(Broker):
             help='Whether the lifecycle of the broker service is managed by the daemon.',
             default=True,
             param_type='bool',
-            # Running the broker service outside of the daemon is not yet supported, so the setting is not
-            # configurable and always stored with its default.
+            # Regular profiles always let the daemon supervise the service, so the setting is not exposed on the CLI and
+            # is stored with its default. Running the service outside of the daemon is used by the pytest fixtures,
+            # which set this to ``False`` and manage the service lifecycle themselves.
             expose_cli=False,
         ),
     )
 
     def __init__(self, profile: Profile) -> None:
         super().__init__(profile)
-        self._communicator: ZeromqCommunicator | None = None
 
-        # The broker service determines this location, not this client. Currently the service is always managed by
-        # the daemon, so the daemon client is the authority for the directory.
-        if not profile.process_control_config.get('supervised_by_daemon', True):
+        if profile.process_control_backend != 'core.zeromq':
             msg = (
-                'The ZeroMQ broker service is not managed by the daemon (`supervised_by_daemon` is false in the broker '
-                'settings), so the location of its state files is unknown. Running the broker service outside of the '
-                'daemon is not yet supported.'
+                'the profile process control backend should be `core.zeromq` for the `ZeromqBroker`, '
+                f'got: {profile.process_control_backend}'
             )
             raise ConfigurationError(msg)
+
+        self._communicator: ZeromqCommunicator | None = None
 
         from aiida.manage.configuration import get_config
 
@@ -81,14 +80,6 @@ class ZeromqBroker(Broker):
             pid = status.get('pid', '?') if status else '?'
             return f'ZeroMQ Broker (PID {pid}) @ {self._service_dir}'
         return f'ZeroMQ Broker @ {self._service_dir} <not running>'
-
-    @property
-    def storage_path(self) -> Path:
-        return self._storage_path
-
-    @property
-    def service_dir(self) -> Path:
-        return self._service_dir
 
     # --- Status queries (read PID/status/socket files) ---
 
@@ -182,7 +173,7 @@ class ZeromqBroker(Broker):
                     if router_endpoint is not None:
                         break
                     if not warning_issued and time.monotonic() > warning_deadline:
-                        AIIDA_LOGGER.warning('Still waiting for broker to become ready...')
+                        LOGGER.warning('Still waiting for broker to become ready...')
                         warning_issued = True
                 else:
                     msg = f'Broker did not become ready within {BROKER_READY_TIMEOUT}s: {self}'
@@ -193,12 +184,13 @@ class ZeromqBroker(Broker):
             self._communicator = ZeromqCommunicator(
                 router_endpoint=router_endpoint,
                 task_timeout=get_config_option('broker.task_timeout'),
+                task_prefetch_count=get_config_option('daemon.worker_process_slots'),
             )
             self._communicator.start()
 
         return self._communicator
 
-    def iterate_tasks(self) -> t.Iterator[ZeromqIncomingTask]:
+    def iterate_tasks(self) -> t.Iterator[t.Any]:
         queue_path = self._storage_path / 'tasks'
         if not queue_path.exists():
             return

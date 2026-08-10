@@ -13,6 +13,7 @@ from typing_extensions import NotRequired
 from aiida import orm
 from aiida.common.datastructures import StashMode
 from aiida.common.exceptions import UnsupportedSchemaError
+from aiida.orm.pydantic import OrmModel
 
 orm_to_test = (
     orm.AuthInfo,
@@ -515,6 +516,31 @@ def test_minimal_model_idempotency():
     DynamicModel = orm.Int.ReadModel._as_minimal_model()  # noqa: N806
     RepeatedDynamicModel = DynamicModel._as_minimal_model()  # noqa: N806
     assert RepeatedDynamicModel is DynamicModel
+
+
+def test_generated_orm_model_setup_defers_pydantic_rebuild(monkeypatch):
+    """Test generated ORM models are not rebuilt eagerly during class setup."""
+    rebuilt: list[type[OrmModel]] = []
+
+    def model_rebuild(cls, *args, **kwargs):
+        rebuilt.append(cls)
+        return True
+
+    with monkeypatch.context() as context:
+        context.setattr(OrmModel, 'model_rebuild', classmethod(model_rebuild))
+
+        class TestData(orm.Data):
+            class AttributesModel(orm.Data.AttributesModel):
+                value: int
+
+            class ConstructorArgsModel(OrmModel):
+                value: int
+
+        assert rebuilt == []
+
+    model = TestData.WriteModel(node_type=TestData.class_node_type, attributes={'value': '1'})
+    assert model.attributes.value == 1
+    assert TestData.ReadModel.model_config.get('title') == 'TestDataReadModel'
 
 
 @pytest.mark.parametrize(

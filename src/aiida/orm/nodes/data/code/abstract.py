@@ -222,12 +222,10 @@ class AbstractCode(Data, metaclass=abc.ABCMeta):
                 'CliModel',
                 __base__=OrmModel,
                 __module__=cls.__module__,
+                __qualname__=f'{cls.__name__}.CliModel',
                 **model_fields,
             ),
         )
-        CliModel.__qualname__ = f'{cls.__name__}.CliModel'
-        CliModel.model_config['arbitrary_types_allowed'] = True
-        CliModel.model_rebuild(force=True)
         cls._CliModel = CliModel
 
     @abc.abstractmethod

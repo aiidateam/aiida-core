@@ -26,7 +26,7 @@ env:
 
 jobs:
 
-  pre-commit:
+  mypy:
 
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -39,10 +39,12 @@ jobs:
       with:
         python-version: '3.11'
         extras: pre-commit
+        # Full pre-commit runs in locked CI; run mypy additionally here
+        # with latest compatible dependencies for nightly validation.
         from-lock: 'false'
 
-    - name: Run pre-commit
-      run: pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
+    - name: Run mypy
+      run: pre-commit run mypy --all-files
 
   nightly-tests:
 

@@ -8,11 +8,13 @@
 ###########################################################################
 """Test for entity fields"""
 
-from importlib.metadata import entry_points
+import typing as t
 
 import pytest
+from importlib_metadata import entry_points
 
 from aiida import orm
+from aiida.common.warnings import AiidaDeprecationWarning
 from aiida.orm.fields import add_field
 from aiida.orm.pydantic import OrmMetadataField
 from aiida.plugins import load_entry_point
@@ -62,9 +64,17 @@ def test_add_field():
 
     assert 'key1' in node.fields
     assert node.fields.key1.dtype is str
+    with pytest.warns(AiidaDeprecationWarning, match='QbField.annotation'):
+        assert node.fields.key1.annotation is str
+    with pytest.warns(AiidaDeprecationWarning, match='QbField.is_attribute'):
+        assert node.fields.key1.is_attribute is True
+    with pytest.warns(AiidaDeprecationWarning, match='QbField.is_subscriptable'):
+        assert node.fields.key1.is_subscriptable is False
     assert isinstance(node.fields.key1, orm.fields.QbStrField)
     assert node.fields.key1.backend_key == 'attributes.key1'
     assert node.fields.key1 == node.fields.attributes.key1
+    with pytest.warns(AiidaDeprecationWarning, match='QbField.is_subscriptable'):
+        assert node.fields.attributes.is_subscriptable is True
 
 
 @pytest.mark.parametrize('key', ('|', 'some.field', '1key'))
@@ -220,3 +230,93 @@ def test_query_subscriptable():
         .all()
     )
     assert result == [[1, 2]]
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_boolean_query():
+    """Test using boolean fields in a query."""
+    orm.Bool(True, label='true').store()
+    orm.Bool(False, label='false').store()
+
+    def query(filters):
+        return (
+            orm.QueryBuilder()
+            .append(
+                orm.Bool,
+                filters=filters,
+                project=orm.Bool.fields.value,
+            )
+            .all(flat=True)
+        )
+
+    result = query(filters=orm.Bool.fields.value)
+    assert len(result) == 1
+    assert result == [True]
+
+    result = query(filters=~orm.Bool.fields.value)
+    assert len(result) == 1
+    assert result == [False]
+
+    result = query(filters=orm.Bool.fields.value | ~orm.Bool.fields.value)
+    assert len(result) == 2
+    assert set(result) == {True, False}
+
+    result = query(filters=~orm.Bool.fields.value & orm.Bool.fields.value)
+    assert len(result) == 0
+    assert result == []
+
+    result = query(filters=(orm.Bool.fields.label == 'true') & orm.Bool.fields.value)
+    assert len(result) == 1
+    assert result == [True]
+
+    result = query(filters=~orm.Bool.fields.value & (orm.Bool.fields.label == 'false'))
+    assert len(result) == 1
+    assert result == [False]
+
+
+@pytest.mark.usefixtures('aiida_profile_clean')
+def test_boolean_query_absent_attribute():
+    """Test sparse boolean field negation.
+
+    Flag-style attributes like ``paused`` are stored as ``True`` or not at all: ``unpause()``
+    deletes the key rather than storing ``False``. So ``~field`` has to match every row where
+    the attribute is not ``True``, absent rows included.
+    """
+    # One node stays paused: the `paused` attribute is stored as `True`.
+    paused_node = orm.CalculationNode().store()
+    paused_node.pause()
+
+    # One node is paused and then unpaused: the `paused` attribute is deleted, not set to `False`.
+    unpaused_node = orm.CalculationNode().store()
+    unpaused_node.pause()
+    unpaused_node.unpause()
+
+    # The stored state the query relies on: `True` on one node, absent on the other, even though
+    # the `.paused` property reads back `False` for the absent case (via `attributes.get(key, False)`).
+    assert paused_node.base.attributes.all == {'paused': True}
+    assert unpaused_node.base.attributes.all == {}
+    assert unpaused_node.paused is False
+
+    def count(filters):
+        return orm.QueryBuilder().append(orm.CalculationNode, filters=filters).count()
+
+    assert count(orm.CalculationNode.fields.paused) == 1  # only the paused node
+    assert count(~orm.CalculationNode.fields.paused) == 1  # only the unpaused node
+    assert count(orm.CalculationNode.fields.paused | ~orm.CalculationNode.fields.paused) == 2  # both
+
+
+def test_attribute_field_access():
+    """Test both modes of attribute field access."""
+    node = orm.Int(42)
+    value_attr_field = node.fields.value
+    assert node.fields.attributes.value is value_attr_field
+    assert node.fields.attributes['value'] is value_attr_field
+
+
+def test_unknown_attribute_field_access():
+    """Test unknown attribute access returns a generic `QbAnyField`."""
+    node = orm.Data()
+    unknown_attr = node.fields.attributes['unknown']
+    assert isinstance(unknown_attr, orm.fields.QbAnyField)
+    assert unknown_attr.key == 'attributes.unknown'
+    assert unknown_attr.dtype is t.Any

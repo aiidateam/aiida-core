@@ -35,6 +35,7 @@ from aiida.common import exceptions
 from aiida.common.lang import classproperty, type_check
 from aiida.common.links import LinkType
 from aiida.common.log import AIIDA_LOGGER
+from aiida.common.pydantic import get_metadata
 from aiida.common.warnings import warn_deprecation
 from aiida.manage import get_manager
 from aiida.orm.fields import QbAttributesField, QbFields, add_field
@@ -57,7 +58,7 @@ from .comments import NodeComments
 from .links import NodeLinks
 
 if TYPE_CHECKING:
-    from importlib.metadata import EntryPoint
+    from importlib_metadata import EntryPoint
 
     from aiida.common.log import AiidaLoggerType
 
@@ -360,10 +361,101 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
 
     def __init_subclass__(cls, **kwargs) -> None:
         """Patch subclass models."""
+        cls._COMPAT_MODEL = None
         cls._patch_attributes_model()
         cls._patch_read_model()
         cls._patch_constructor_model()
         super().__init_subclass__(**kwargs)
+
+    @classmethod
+    def _patch_compat_model(cls) -> None:
+        """Patch the deprecated ``Model`` compatibility wrapper."""
+
+        def optionalize(annotation: Any) -> Any:
+            try:
+                return annotation | None
+            except TypeError:
+                return Any | None
+
+        def merge_field(
+            current: tuple[Any, pdt.fields.FieldInfo],
+            field: pdt.fields.FieldInfo,
+        ) -> tuple[Any, pdt.fields.FieldInfo]:
+            """Merge a compatibility field with a duplicate field from another schema."""
+            annotation, current_field = current
+            merged_field = deepcopy(field)
+
+            for metadata_key in ('orm_to_model', 'model_to_orm', 'orm_class'):
+                metadata_value = get_metadata(current_field, metadata_key)
+                if metadata_value is not None and get_metadata(merged_field, metadata_key) is None:
+                    merged_field.metadata.append({metadata_key: metadata_value})
+
+            if merged_field.description is None:
+                merged_field.description = current_field.description
+
+            return annotation, merged_field
+
+        model_fields: dict[str, Any] = {}
+
+        for key, field in cls.WriteModel.model_fields.items():
+            if key in {'attributes', 'node_type'}:
+                continue
+            model_fields[key] = (field.annotation, deepcopy(field))
+
+        for key, field in cls.ReadModel.model_fields.items():
+            if key == 'attributes' or key in model_fields:
+                continue
+
+            model_fields[key] = (
+                optionalize(field.annotation),
+                OrmMetadataField(
+                    None,
+                    description=field.description,
+                    examples=getattr(field, 'examples', None),
+                    read_only=get_metadata(field, 'read_only', False),
+                ),
+            )
+
+        model_fields['attributes'] = (
+            dict[str, Any] | None,
+            OrmMetadataField(
+                None,
+                description='The node attributes',
+                may_be_large=True,
+            ),
+        )
+        model_fields['repository_content'] = (
+            dict[str, bytes] | None,
+            OrmMetadataField(
+                None,
+                description='Dictionary of repository file contents',
+                write_only=True,
+            ),
+        )
+
+        for key, field in cls.AttributesModel.model_fields.items():
+            current = model_fields.get(key)
+            model_fields[key] = (field.annotation, deepcopy(field)) if current is None else merge_field(current, field)
+
+        if cls.supports_constructor_model:
+            for key, field in cls.ConstructorArgsModel.model_fields.items():
+                current = model_fields.get(key)
+                model_fields[key] = (
+                    (field.annotation, deepcopy(field)) if current is None else merge_field(current, field)
+                )
+
+        model = cast(
+            type[OrmModel],
+            pdt.create_model(
+                'Model',
+                __base__=OrmModel,
+                __module__=cls.ReadModel.__module__,
+                __qualname__=f'{cast(Any, cls).__name__}.Model',
+                **model_fields,
+            ),
+        )
+
+        cls._COMPAT_MODEL = model
 
     @cached_property
     def base(self) -> NodeBase:
@@ -412,6 +504,17 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         :param files: A mapping of target repository paths to file-like object callables (for efficient streaming).
         :return: The created node instance.
         """
+        compat_model = cls.__dict__.get('_COMPAT_MODEL')
+        if compat_model is not None and isinstance(model, compat_model):
+            from aiida.common.docs import URL_CHANGELOG_ORM_MODELS
+
+            class_name = cast(Any, cls).__name__
+            msg = (
+                f'`{class_name}.Model` is deprecated and only supported for validation/introspection. '
+                f'Use `{class_name}.WriteModel`, `{class_name}.ConstructorModel`, or `{class_name}.CliModel` '
+                f'with `from_model()` instead. See {URL_CHANGELOG_ORM_MODELS}.'
+            )
+            raise ValueError(msg)
         if isinstance(model, cls.WriteModel):
             return cls._from_write_model(model, files=files)
         if cls._ConstructorModel is not None and isinstance(model, cls.ConstructorModel):
@@ -1068,11 +1171,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                     'AttributesModel',
                     __base__=cls.AttributesModel,
                     __module__=cls.__module__,
+                    __qualname__=f'{cls.__name__}.AttributesModel',
                 ),
             )
-            AttributesModel.__qualname__ = f'{cls.__name__}.AttributesModel'
             cls.AttributesModel = AttributesModel  # type: ignore[misc]
-        cls.AttributesModel.model_rebuild(force=True)
 
     @classmethod
     def _get_patched_node_type_field(cls):
@@ -1094,6 +1196,7 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
         """
 
         BaseReadModel: type[Node.ReadModel] = cls.ReadModel  # noqa: N806
+
         model_fields: dict[str, Any] = {}
 
         if 'ReadModel' in cls.__dict__:
@@ -1127,11 +1230,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 'ReadModel',
                 __base__=BaseReadModel,
                 __module__=cls.__module__,
+                __qualname__=f'{cls.__name__}.ReadModel',
                 **model_fields,
             ),
         )
-        ReadModel.__qualname__ = f'{cls.__name__}.ReadModel'
-        ReadModel.model_rebuild(force=True)
 
         cls.ReadModel = ReadModel  # type: ignore[misc]
 
@@ -1156,11 +1258,10 @@ class Node(Entity['BackendNode', NodeCollection['Node']], metaclass=AbstractNode
                 'ConstructorModel',
                 __base__=cls.BaseNodeModel,
                 __module__=cls.__module__,
+                __qualname__=f'{cls.__name__}.ConstructorModel',
                 **model_fields,
             ),
         )
-        ConstructorModel.__qualname__ = f'{cls.__name__}.ConstructorModel'
-        ConstructorModel.model_rebuild(force=True)
 
         cls._ConstructorModel = ConstructorModel
 

@@ -172,6 +172,7 @@ Message types
    * - ``SUBSCRIBE_TASK``
      - worker → broker
      - Register as a task consumer. Broker adds worker to dispatch pool.
+       Carries the worker's ``prefetch_count`` (see :ref:`task dispatch <internal_architecture:broker:dispatch>`).
    * - ``UNSUBSCRIBE_TASK``
      - worker → broker
      - Deregister as a task consumer.
@@ -198,6 +199,7 @@ The protocol maps AMQP concepts to ZeroMQ message types:
     basic.ack                 TASK_ACK
     basic.nack                TASK_NACK
     consumer with prefetch    TASK dispatch to available workers
+    basic.qos                 prefetch_count in SUBSCRIBE_TASK
     fanout exchange           BROADCAST via ROUTER fan-out
     direct exchange           RPC routed to named recipient
     durable queue             PersistentQueue (file-based)
@@ -254,16 +256,25 @@ With ``no_reply=True`` the task stays fully fire-and-forget: the broker sends no
 ``submit()`` always uses this mode while RPC messages do send a completion response.
 
 
+.. _internal_architecture:broker:dispatch:
+
 Task dispatch strategy
 ======================
 
-The broker keeps a deque of available workers, ``_available_workers``.
+The broker keeps a deque (double-ended queue) of available workers, ``available_workers``.
 A worker joins the pool when it sends ``SUBSCRIBE_TASK``.
 Since the ROUTER socket routes by identity, dispatching a task is just picking the next worker from the deque and sending to its identity.
 
-After dispatching, the worker goes straight back into the pool; the broker does not wait for the ACK.
-A single worker can therefore have several tasks in flight at once, which matches RabbitMQ's multi-prefetch behavior.
-The ACK only affects the ``PersistentQueue`` (removing the task from disk), never worker availability.
+After dispatching, the broker puts the worker back into the deque without waiting for an ACK if the limit of unacknowledged messages has not been reached.
+A single worker can therefore have several tasks in flight (dispatched but unacknowledged) at once, which is equivalent to AMQP's ``basic.qos`` mechanism.
+How many in flight tasks can be send to a worker is governed by the worker's prefetch limit, the equivalent of AMQP's ``basic.qos``.
+A worker declares it in ``SUBSCRIBE_TASK`` as ``prefetch_count``; the communicator takes the value from ``daemon.worker_process_slots``, the same option the RabbitMQ broker passes to kiwipy as ``task_prefetch_count``.
+The broker counts in flight tasks per worker in ``worker_load`` and only returns a worker to the pool while that count is below its limit.
+A worker that declares no limit (``prefetch_count`` of ``None`` or ``0``) is never held back.
+The worker acknowledges tasks once the corresponding AiiDA process has terminated.
+
+The ACK therefore does two things: it removes the task from the ``PersistentQueue`` on disk, and it frees the slot the task occupied so the worker can be handed another one.
+A ``NACK``, and the requeueing of tasks belonging to a worker that died, free the slot in the same way.
 
 .. code-block:: text
 
@@ -273,9 +284,13 @@ The ACK only affects the ``PersistentQueue`` (removing the task from disk), neve
         worker = available_workers.popleft()
         if worker no longer subscribed:      # stale entry
             continue
+        if worker is at its prefetch limit:  # stale entry
+            continue
         task   = task_queue.pop()           # pending → processing
         send task to worker                  # on failure: requeue + remove dead worker
-        available_workers.append(worker)     # immediately re-available
+        worker_load[worker] += 1
+        if worker_load[worker] < prefetch:   # else it waits for an ACK
+            available_workers.append(worker)
 
 
 .. _internal_architecture:broker:deferred_ack:

@@ -140,7 +140,7 @@ class Manager:
         # Reconfigure the logging to make sure that profile specific logging config options are taken into account.
         # Note that we do not configure with `with_orm=True` because that will force the backend to be loaded.
         # This should instead be done lazily in `Manager.get_profile_storage`.
-        configure_logging(daemon_log_file=self.get_config().filepaths(self._profile)['profile']['log'])
+        configure_logging(daemon_log_file=self.get_config(create=True).filepaths(self._profile)['profile']['log'])
 
         # Check whether a development version is being run. Note that needs to be called after ``configure_logging``
         # because this function relies on the logging being properly configured for the warning to show.
@@ -277,7 +277,6 @@ class Manager:
         from aiida.manage.configuration.options import get_option, resolve_deprecated_option_name
 
         option_name = resolve_deprecated_option_name(option_name)
-        option = get_option(option_name)
 
         # try the profile
         if self._profile and option_name in self._profile.options:
@@ -359,8 +358,6 @@ class Manager:
             # Backwards compatibility. Before adding broker entry points, profiles used to define ``rabbitmq``.
             if entry_point == 'rabbitmq':
                 entry_point = 'core.rabbitmq'
-            elif entry_point == 'zeromq':
-                entry_point = 'core.zeromq'
 
             broker_cls = BrokerFactory(entry_point)
             self._broker = broker_cls(self._profile)

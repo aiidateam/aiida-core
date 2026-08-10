@@ -71,15 +71,6 @@ class BrokenStorageCloseBackend(DummyStorageBackend):
         raise RuntimeError('storage close unavailable')
 
 
-def _make_zeromq_broker(service_dir: pathlib.Path, is_running: bool, status: dict) -> ZeromqBroker:
-    """Create a ``ZeromqBroker`` instance without invoking its constructor."""
-    broker = ZeromqBroker.__new__(ZeromqBroker)
-    broker._service_dir = service_dir
-    broker.is_service_reachable = lambda: is_running
-    broker.probe_service_status = lambda: status
-    return broker
-
-
 def _patch_manager(monkeypatch, profile, broker, get_daemon_client):
     """Patch the global manager used by ``cmd_bug_report``."""
     manager = SimpleNamespace(
@@ -210,15 +201,16 @@ def test_collect_diagnostics_services(
 
 
 @pytest.mark.parametrize(
-    ('is_running', 'status'),
+    'status',
     [
-        (True, {'connected': True, 'pid': 4321, 'pending_tasks': 0}),
-        (False, {'connected': False, 'error': 'Broker is NOT running'}),
+        {'connected': True, 'pid': 4321, 'pending_tasks': 0},
+        {'connected': False, 'error': 'Broker is NOT running'},
     ],
 )
-def test_check_broker_zeromq_status(monkeypatch, tmp_path, is_running, status):
+def test_check_broker_zeromq_status(monkeypatch, status):
     """Test ``_check_broker`` reports the ZeroMQ broker service status payload."""
-    broker = _make_zeromq_broker(tmp_path, is_running=is_running, status=status)
+    broker = ZeromqBroker.__new__(ZeromqBroker)
+    broker.probe_service_status = lambda: status
     manager = SimpleNamespace(_broker=None, get_broker=lambda: broker, reset_broker=lambda: None)
     monkeypatch.setattr('aiida.manage.get_manager', lambda: manager)
 
@@ -273,7 +265,7 @@ def test_collect_diagnostics_invalid_config(monkeypatch, tmp_path):
 
 
 def test_get_log_files(monkeypatch, tmp_path):
-    """Test ``_get_log_files`` returns the existing log files from the profile filepaths."""
+    """Test ``_get_log_files`` returns the existing log files from the profile filepaths, keyed by log type."""
     profile_log = tmp_path / 'profile.log'
     profile_log.write_text('profile', encoding='utf-8')
 
@@ -293,7 +285,12 @@ def test_get_log_files(monkeypatch, tmp_path):
     _patch_config(monkeypatch, tmp_path)
     monkeypatch.setattr('aiida.manage.get_manager', lambda: manager)
 
-    assert cmd_bug_report._get_log_files() == [profile_log, circus_log, daemon_log, broker_log]
+    assert cmd_bug_report._get_log_files() == {
+        'profile': profile_log,
+        'circus': circus_log,
+        'daemon': daemon_log,
+        'broker_service': broker_log,
+    }
 
 
 def test_get_log_files_skips_missing(monkeypatch, tmp_path):
@@ -307,7 +304,7 @@ def test_get_log_files_skips_missing(monkeypatch, tmp_path):
     _patch_config(monkeypatch, tmp_path)
     monkeypatch.setattr('aiida.manage.get_manager', lambda: manager)
 
-    assert cmd_bug_report._get_log_files() == [daemon_log]
+    assert cmd_bug_report._get_log_files() == {'daemon': daemon_log}
 
 
 def test_read_log_tail(tmp_path):
@@ -433,7 +430,23 @@ def test_check_storage_does_not_reset_preloaded_storage(monkeypatch):
 
 
 def test_bug_report_command(run_cli_command, tmp_path):
-    """Test the ``verdi bug-report`` command creates a zip file with diagnostics."""
+    """Test the ``verdi bug-report`` command creates a zip file with diagnostics and all log files.
+
+    The client log and the daemon log of a profile are both named ``aiida-<profile_name>.log``, so they have to be
+    stored under their log type in the archive to keep them from shadowing each other.
+    """
+    from aiida.manage import get_manager
+    from aiida.manage.configuration import get_config
+
+    logs = {
+        log_type: pathlib.Path(paths['log'])
+        for log_type, paths in get_config().filepaths(get_manager().get_profile()).items()
+    }
+
+    for log_type, log in logs.items():
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text(f'contents of the {log_type} log', encoding='utf-8')
+
     output = tmp_path / 'report.zip'
     result = run_cli_command(cmd_bug_report.verdi_bug_report, ['-o', str(output)], use_subprocess=False)
 
@@ -441,8 +454,16 @@ def test_bug_report_command(run_cli_command, tmp_path):
     assert 'Bug report written to' in result.output
 
     with zipfile.ZipFile(output) as zf:
-        assert 'diagnostics.json' in zf.namelist()
+        namelist = zf.namelist()
         diagnostics = json.loads(zf.read('diagnostics.json'))
+        contents = {name: zf.read(name).decode('utf-8') for name in namelist if name.endswith('.log')}
+
+    assert set(namelist) == {'broker_service.log', 'circus.log', 'daemon.log', 'diagnostics.json', 'profile.log'}
+    assert len(namelist) == len(set(namelist))
+
+    # The command may log to the profile log while it runs, so only assert that each entry holds its own log
+    for log_type in logs:
+        assert f'contents of the {log_type} log' in contents[f'{log_type}.log']
 
     assert diagnostics['aiida_version'] == aiida.__version__
     assert diagnostics['profile'] is not None

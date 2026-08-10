@@ -408,6 +408,18 @@ qb = orm.QueryBuilder().append(
 print(f'parse_output calcfunctions in this profile: {qb.count()}')
 ```
 
+The `tutorial/F-sweep` Group we built earlier scopes a query to just its members, by chaining a second `.append` with `with_group`:
+
+```{code-cell} ipython3
+# Restrict to the parse_output nodes that belong to our Group.
+qb = (
+    orm.QueryBuilder()
+    .append(orm.Group, filters=orm.Group.fields.label == 'tutorial/F-sweep', tag='grp')
+    .append(orm.CalcFunctionNode, with_group='grp')
+)
+print(f'parse_output runs in the tutorial/F-sweep group: {qb.count()}')
+```
+
 Then use the extra we just set to pull the transition run straight back out, however many runs sit in between:
 
 ```{code-cell} ipython3
@@ -415,12 +427,12 @@ Then use the extra we just set to pull the transition run straight back out, how
 qb = orm.QueryBuilder().append(
     orm.CalcFunctionNode,
     filters=orm.CalcFunctionNode.fields.extras['note'] == 'pattern transition',
+    project='pk',
 )
-flagged = qb.all(flat=True)
-print(f'{len(flagged)} run flagged as the transition: {flagged[0]}')
+print(f'Transition run: parse_output PK {qb.first(flat=True)}')
 ```
 
-The QueryBuilder can do much more: *project* single fields instead of loading whole nodes, and *join* across the provenance graph, filter a `Float` by the calcfunction that created it, recover a run's inputs, restrict to a group's members, and so on. We'll cover those patterns properly in {ref}`Module 5 <tutorial:module5>`.
+That last query already chains two appends (Group → its members). QueryBuilder can go much further: *projecting* single fields instead of loading whole nodes, and following the links between nodes, a run to its `Float` outputs, back to its inputs, across entire workflows. We'll cover those patterns properly in {ref}`Module 5 <tutorial:module5>`.
 
 With all this activity, our profile is filling up.
 To list every process we have run so far across all modules:

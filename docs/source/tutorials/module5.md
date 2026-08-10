@@ -137,7 +137,7 @@ qb = orm.QueryBuilder().append(
     filters=orm.CalcFunctionNode.fields.extras['note'] == 'pattern transition',
     project='pk',
 )
-print(f'parse_output node flagged as the transition: PK {qb.all(flat=True)}')
+print(f'parse_output node flagged as the transition: PK {qb.first(flat=True)}')
 ```
 
 That `note` lives on exactly one node, so the query returns it alone, out of every `parse_output` in the profile (including Module 3's WorkGraph sweep), without your having kept a Python reference to it.

@@ -185,7 +185,7 @@ The endpoint serves at most ``collab.max_concurrency`` peers at once (default 2,
 
 .. note::
 
-    Collabs are not supported on Windows: the locks that guard the collab state file and serialize imports are ``fcntl``-based, so on Windows concurrent syncs and daemon-received pushes run unguarded.
+    Collabs are not supported on Windows: the locks that guard the collab state file and the configuration file, and the one that serializes imports, are all ``fcntl``-based, so on Windows concurrent syncs and daemon-received pushes run unguarded — a ``verdi collab rotate`` racing a sync the daemon is serving can be reverted by it.
 
 .. _how-to:collaborate:deletion:
 

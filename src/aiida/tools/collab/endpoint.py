@@ -34,9 +34,9 @@ from aiida.tools.collab.config import (
     OPTION_TOKEN,
     OPTION_UUID,
     merge_roster,
+    mutate_config,
     roster_entries,
     self_entry,
-    stored_config,
 )
 from aiida.tools.collab.protocol import (
     DeltaManifest,
@@ -124,12 +124,14 @@ def local_info(profile: Profile, backend: StorageBackend, cursor: datetime | Non
         bounded by it would deliver.
     """
     from aiida.manage.configuration import get_config
+    from aiida.manage.configuration.config import Config
 
     config = get_config()
     state = CollabState.load(profile)
     # Read from the file rather than from what this process loaded: a daemon serving the endpoint loaded its
     # configuration at startup, and withdrawing consent to be pushed to has to hold from the next request on.
-    accept_push = stored_config(config).get_option(OPTION_ACCEPT_PUSH, scope=profile.name)
+    # Unlocked, because a read needs no lock: the configuration is replaced atomically, never written in place.
+    accept_push = Config.from_file(config.filepath).get_option(OPTION_ACCEPT_PUSH, scope=profile.name)
     policy = config.get_option(OPTION_POLICY, scope=profile.name)
 
     return PeerInfo(
@@ -202,7 +204,6 @@ class CollabEndpoint:
         self._counter = 0
         self._slots = _Slots(config.get_option(OPTION_MAX_CONCURRENCY, scope=profile.name))
         self._slot_by_offer: dict[str, str] = {}
-        self._roster_lock = threading.Lock()
 
         self._dirpath.mkdir(parents=True, exist_ok=True)
 
@@ -243,8 +244,7 @@ class CollabEndpoint:
         """
         from aiida.manage.configuration import get_config
 
-        with self._roster_lock:
-            config = stored_config(get_config())
+        with mutate_config(get_config()) as config:
             peers = config.get_option(OPTION_PEERS, scope=self._profile.name)
 
             if peer not in peers or not peers[peer]['active'] or peers[peer]['signalled']:
@@ -253,7 +253,6 @@ class CollabEndpoint:
             config.set_option(
                 OPTION_PEERS, {**peers, peer: {**peers[peer], 'signalled': True}}, scope=self._profile.name
             )
-            config.store()
 
             LOGGER.report('peer `%s` signalled that it rotated the token of the collab', peers[peer]['nickname'])
 
@@ -284,20 +283,19 @@ class CollabEndpoint:
         )
 
     def _merge_roster(self, entries: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-        """Merge gossiped roster entries into the configuration and return the resulting roster."""
+        """Merge gossiped roster entries into the configuration file and return the resulting roster.
+
+        Also how the endpoint reads the roster at all: what a request gossips is merged into the file as it is
+        now, and the daemon's own copy of the configuration is a snapshot of its startup that nothing updates.
+        """
         from aiida.manage.configuration import get_config
 
-        if not entries:
-            return get_config().get_option(OPTION_PEERS, scope=self._profile.name)
-
-        with self._roster_lock:
-            config = stored_config(get_config())
+        with mutate_config(get_config()) as config:
             peers = config.get_option(OPTION_PEERS, scope=self._profile.name)
             merged, reports = merge_roster(peers, entries, self._profile.uuid)
 
             if merged != peers:
                 config.set_option(OPTION_PEERS, merged, scope=self._profile.name)
-                config.store()
 
                 for report in reports:
                     LOGGER.report(report)
@@ -503,10 +501,11 @@ class CollabEndpoint:
     ) -> dict[str, Any]:
         """Import a delta a peer pushed, pausing the daemon workers when the storage cannot take two writers."""
         from aiida.manage.configuration import get_config
+        from aiida.manage.configuration.config import Config
 
         # Read from the file per import, like the handshake that preceded it: withdrawing consent must take effect
         # at once, and a pusher that negotiated before it was withdrawn must not be let through afterwards.
-        if not stored_config(get_config()).get_option(OPTION_ACCEPT_PUSH, scope=self._profile.name):
+        if not Config.from_file(get_config().filepath).get_option(OPTION_ACCEPT_PUSH, scope=self._profile.name):
             msg = f'this profile does not accept pushes: its `{OPTION_ACCEPT_PUSH}` option is off'
             raise PermissionError(msg)
 
@@ -539,6 +538,7 @@ class CollabEndpoint:
 def serve(profile: Profile, backend: StorageBackend) -> None:
     """Run the collab endpoint of the profile until the process is terminated."""
     from aiida.manage.configuration import get_config
+    from aiida.manage.configuration.config import Config
     from aiida.tools.collab.server import CollabServer
 
     config = get_config()
@@ -551,7 +551,7 @@ def serve(profile: Profile, backend: StorageBackend) -> None:
         # once, not at the next daemon restart, or an excluded member keeps reading until someone remembers to
         # restart. The bind address and the collab UUID cannot change under a running endpoint, so they are read
         # once here.
-        token=lambda: stored_config(config).get_option(OPTION_TOKEN, scope=profile.name),
+        token=lambda: Config.from_file(config.filepath).get_option(OPTION_TOKEN, scope=profile.name),
         collab=config.get_option(OPTION_UUID, scope=profile.name),
         staging_dir=endpoint.staging_dir,
         info=endpoint.info,

@@ -16,9 +16,12 @@ itself; it travels in every join code and handshake, so two different collabs ca
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from aiida.manage.configuration import Profile
     from aiida.manage.configuration.config import Config
     from aiida.orm.implementation import StorageBackend
@@ -79,17 +82,35 @@ def shares_group_membership(backend: StorageBackend, type_string: str) -> Profil
     return profile if get_config_option(OPTION_POLICY)['groups_mode'] == 'grow' else None
 
 
-def stored_config(config: Config) -> Config:
-    """Return the configuration as it is on disk right now.
+@contextmanager
+def mutate_config(config: Config) -> Iterator[Config]:
+    """Hold the collab lock on the configuration file, yield it as it is on disk, and store it on exit.
 
-    The daemon's collab endpoint writes the configuration file too — it merges gossiped roster entries into it —
-    and ``Config.store`` writes the whole dictionary its holder loaded. Whoever writes without re-reading first
-    therefore silently reverts whatever the other one wrote while it was working, so every collab write goes
-    through the file as it is now and mirrors the result into the configuration its own process holds.
+    Every collab write goes through this. The daemon's collab endpoint writes the configuration file too — it
+    merges gossiped roster entries into it — and ``Config.store`` writes the whole dictionary its holder loaded,
+    so a writer that merely re-read the file before storing still reverts whatever the other one wrote in
+    between. Read, modify and write happen inside one held lock instead, and two collab writers serialize.
+
+    Nothing is written back when the document was left as it was found, so a caller that reads the file and
+    decides against writing — a dry run announcing itself without raising its stamp — leaves it untouched.
+
+    Never nest: the lock is taken on a new file handle every time, which ``flock`` does not grant twice to one
+    process. A site that writes from inside another one's transaction takes the yielded configuration instead.
     """
-    from aiida.manage.configuration.config import Config
+    import copy
+    from pathlib import Path
 
-    return Config.from_file(config.filepath)
+    from aiida.manage.configuration.config import Config
+    from aiida.tools.collab.state import exclusive_lock
+
+    with exclusive_lock(Path(f'{config.filepath}.collab.lock')):
+        stored = Config.from_file(config.filepath)
+        before = copy.deepcopy(stored.dictionary)
+
+        yield stored
+
+        if stored.dictionary != before:
+            stored.store()
 
 
 def is_ipv6(host: str) -> bool:
@@ -136,6 +157,8 @@ def join_code(config: Config, profile: Profile) -> str:
 def self_entry(config: Config, profile: Profile, *, bump: bool = False) -> dict[str, Any]:
     """Return the roster entry with which this profile announces itself to its peers.
 
+    :param config: the configuration to stamp, which a bump requires to be one ``mutate_config`` yielded: this is
+        the one write site that happens inside another one's transaction, and it is that transaction which stores.
     :param bump: raise the version stamp when the endpoint URL changed since the last announcement, and record the
         new one. Only the owner of an entry ever stamps it, which is what makes "whose information is newer" a
         local fact: a stale URL cannot gossip its way back over a fresher one.
@@ -149,7 +172,6 @@ def self_entry(config: Config, profile: Profile, *, bump: bool = False) -> dict[
         stamp += 1
         config.set_option(OPTION_STAMP, stamp, scope=profile.name)
         config.set_option(OPTION_ANNOUNCED, url, scope=profile.name)
-        config.store()
 
     return {'uuid': profile.uuid, 'url': url, 'name': profile.name, 'stamp': stamp}
 

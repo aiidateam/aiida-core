@@ -26,6 +26,7 @@ from aiida.tools.collab.config import (
     OPTION_STAMP,
     OPTION_TOKEN,
     OPTION_UUID,
+    mutate_config,
 )
 from aiida.tools.collab.state import CollabEvent, CollabState
 
@@ -578,7 +579,11 @@ def test_a_rotation_during_a_sync_is_not_undone_by_it(
 
     def download_delta(self, filepath, delta_id):
         # `verdi collab rotate` in another terminal, landing while the delta is being transferred here.
-        cmd_collab.set_key(Config.from_file(config_with_profile.filepath), profile, 'the-rotated-token')
+        terminal = Config.from_file(config_with_profile.filepath)
+
+        with mutate_config(terminal) as stored:
+            cmd_collab.set_key(stored, terminal, profile, 'the-rotated-token')
+
         filepath.write_bytes(b'delta')
         return len(b'delta')
 
@@ -590,6 +595,103 @@ def test_a_rotation_during_a_sync_is_not_undone_by_it(
 
     assert 'rekeyed while syncing' in result.output
     assert peers == {PEER_UUID: peer_entry(active=False)}, 'the rotation stands; the peer waits for its rekey'
+
+
+def test_a_rotation_racing_a_roster_merge_keeps_both(run_cli_command, config_with_profile, stub_signal, monkeypatch):
+    """Test that a rotation and a gossip merge landing together lose neither the new key nor the merged entry.
+
+    The two writers of ``config.json`` hold one lock across their read and their write, so they serialize.
+    Re-reading before writing is not enough on its own: a merge that reads before the rotation stores and
+    stores after it writes the retired token back, while `rotate` has already printed success and handed out
+    a code nobody holds.
+    """
+    import threading
+
+    init_collab(config_with_profile)
+
+    profile = get_profile()
+    scope = profile.name
+    bob = peer_entry(url='http://100.64.0.3:9137', nickname='bob', seen=False)
+    holding, rotated, raced = threading.Event(), threading.Event(), []
+
+    written = cmd_collab.set_key
+
+    def rotating(*args):
+        written(*args)
+        rotated.set()
+
+    monkeypatch.setattr(cmd_collab, 'set_key', rotating)
+
+    def endpoint_merge():
+        """Merge a newly gossiped peer, as the daemon's endpoint does whenever a peer makes contact."""
+        with mutate_config(config_with_profile) as stored:
+            peers = stored.get_option(OPTION_PEERS, scope=scope)
+            holding.set()
+            # Held open for longer than a rotation takes: what the rotation must not do is write in here, and
+            # the wait ends early exactly when it did.
+            raced.append(rotated.wait(timeout=1.0))
+            stored.set_option(OPTION_PEERS, {**peers, 'uuid-of-bob': bob}, scope=scope)
+
+    thread = threading.Thread(target=endpoint_merge)
+    thread.start()
+
+    assert holding.wait(timeout=30), 'the merge never got as far as reading the roster'
+
+    result = run_cli_command(cmd_collab.collab_rotate, use_subprocess=False)
+
+    thread.join(timeout=30)
+
+    stored = Config.from_file(config_with_profile.filepath)
+
+    assert stored.get_option(OPTION_TOKEN, scope=scope) == printed_code(result).token != TOKEN, (
+        'the rotation stands: the key on the file is the one the printed code hands out'
+    )
+    assert stored.get_option(OPTION_PEERS, scope=scope) == {
+        PEER_UUID: peer_entry(active=False),
+        'uuid-of-bob': {**bob, 'active': False},
+    }, 'the merged entry stands too: the rotation read it and rested it with the rest of the roster'
+    assert raced == [False], 'the rotation waited for the merge rather than writing inside its window'
+
+
+def test_rekey_announces_without_reverting_what_the_daemon_merged(
+    run_cli_command, config_with_profile, stub_join, monkeypatch
+):
+    """Test that announcing a rekey keeps a roster entry the endpoint merged while the command was running.
+
+    The stamp a member raises when it moved while it was dormant is written onto the file as it is now. It
+    used to be stored from the configuration the command had loaded at startup, which reverted every entry
+    gossiped in between — and, a store writing the whole document, other profiles' options with it.
+    """
+    # Moved while dormant: the endpoint listens on 9137, but 9000 is the address the peers were last told.
+    init_collab(config_with_profile, **{OPTION_ANNOUNCED: 'http://127.0.0.1:9000'})
+
+    profile = get_profile()
+    scope = profile.name
+    bob = peer_entry(url='http://100.64.0.3:9137', nickname='bob', seen=False)
+    announcing = cmd_collab.announce
+
+    def announce(config, profile, code):
+        # The endpoint merges a peer somebody gossiped to it, in the window between the new key being written
+        # and this profile announcing itself under it.
+        daemon = Config.from_file(config_with_profile.filepath)
+        peers = {**daemon.get_option(OPTION_PEERS, scope=scope), 'uuid-of-bob': bob}
+        daemon.set_option(OPTION_PEERS, peers, scope=scope)
+        daemon.store()
+
+        return announcing(config, profile, code)
+
+    monkeypatch.setattr(cmd_collab, 'announce', announce)
+
+    run_cli_command(cmd_collab.collab_rekey, [rekey_code()], use_subprocess=False)
+
+    stored = Config.from_file(config_with_profile.filepath)
+
+    assert stored.get_option(OPTION_PEERS, scope=scope) == {PEER_UUID: peer_entry(), 'uuid-of-bob': bob}, (
+        'the entry the endpoint merged survives the announcement, and the issuer is back out of dormancy'
+    )
+    assert stored.get_option(OPTION_STAMP, scope=scope) == 2
+    assert stored.get_option(OPTION_ANNOUNCED, scope=scope) == 'http://127.0.0.1:9137'
+    assert stub_join[0][1]['stamp'] == 2, 'the raised stamp is what makes the issuer take the new address over'
 
 
 def test_rekey_refuses_this_profiles_own_code(run_cli_command, config_with_profile):

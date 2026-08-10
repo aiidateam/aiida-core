@@ -64,7 +64,7 @@ class Member:
             daemon started after ``verdi collab init`` would do.
         :return: the port that was bound, which is what the peers are told.
         """
-        from aiida.tools.collab.config import OPTION_BIND, OPTION_PORT, OPTION_TOKEN, OPTION_UUID, stored_config
+        from aiida.tools.collab.config import OPTION_BIND, OPTION_PORT, OPTION_TOKEN, OPTION_UUID
         from aiida.tools.collab.endpoint import CollabEndpoint
         from aiida.tools.collab.server import CollabServer
 
@@ -72,7 +72,7 @@ class Member:
         self.server = CollabServer(
             self.option(OPTION_BIND),
             self.option(OPTION_PORT) if port is None else port,
-            token=lambda: stored_config(self.config).get_option(OPTION_TOKEN, scope=self.profile.name),
+            token=lambda: self.option(OPTION_TOKEN),
             collab=self.option(OPTION_UUID),
             staging_dir=self.endpoint.staging_dir,
             info=self.endpoint.info,
@@ -299,20 +299,17 @@ class Member:
 
     def option(self, name: str) -> t.Any:
         """Return a configuration option of this member, read from the file every member shares."""
-        from aiida.tools.collab.config import stored_config
+        from aiida.manage.configuration.config import Config
 
-        return stored_config(self.config).get_option(name, scope=self.profile.name)
+        return Config.from_file(self.config.filepath).get_option(name, scope=self.profile.name)
 
     def set_option(self, name: str, value: t.Any) -> None:
         """Write a configuration option of this member, into the file and into the loaded configuration."""
-        from aiida.tools.collab.config import stored_config
+        from aiida.tools.collab.config import mutate_config
 
-        stored = stored_config(self.config)
-
-        for target in (stored, self.config):
-            target.set_option(name, value, scope=self.profile.name)
-
-        stored.store()
+        with mutate_config(self.config) as stored:
+            for target in (stored, self.config):
+                target.set_option(name, value, scope=self.profile.name)
 
     def peers(self) -> dict[str, dict[str, t.Any]]:
         """Return the roster of this member, keyed by profile UUID."""
@@ -717,6 +714,7 @@ class _Faults:
         from aiida.cmdline.commands.cmd_collab import set_key
         from aiida.tools.collab import endpoint as collab_endpoint
         from aiida.tools.collab import sync as collab_sync
+        from aiida.tools.collab.config import mutate_config
 
         state = {'rotated': False}
         original = collab_sync.import_delta
@@ -724,7 +722,9 @@ class _Faults:
         def rotating(*args, **kwargs):
             if not state['rotated']:
                 state['rotated'] = True
-                set_key(member.config, member.profile, secrets.token_urlsafe(32))
+
+                with mutate_config(member.config) as stored:
+                    set_key(stored, member.config, member.profile, secrets.token_urlsafe(32))
 
             return original(*args, **kwargs)
 

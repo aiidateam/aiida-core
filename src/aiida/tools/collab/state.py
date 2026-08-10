@@ -39,12 +39,13 @@ COMPACTED_PEER = '(compacted)'
 
 
 @contextmanager
-def _exclusive_lock(filepath: Path) -> Iterator[None]:
-    """Hold an exclusive advisory lock on the state stored at ``filepath``.
+def exclusive_lock(lockpath: Path) -> Iterator[None]:
+    """Hold the exclusive advisory lock kept at ``lockpath``, waiting for it if another holder has it.
 
-    The lock lives on a sidecar file, because ``save`` replaces the state file itself.
+    The one lock of the collab, taken by everything that has a second writer: the state file, the configuration
+    file and the imports. It always lives on a sidecar rather than on what it guards — the state and the
+    configuration are replaced rather than written in place, and an import guards no single file at all.
     """
-    lockpath = filepath.with_name(f'{filepath.name}.lock')
     lockpath.parent.mkdir(parents=True, exist_ok=True)
 
     with lockpath.open('w') as handle:
@@ -305,7 +306,7 @@ class CollabState:
         file, and an unguarded read-modify-write cycle loses whichever of two concurrent writes finishes first —
         a lost tombstone being exactly what lets a deleted node come back on the next pull.
         """
-        with _exclusive_lock(filepath):
+        with exclusive_lock(filepath.with_name(f'{filepath.name}.lock')):
             state = cls.read(filepath)
             yield state
             state.save()
@@ -319,16 +320,7 @@ def import_lock(filepath: Path) -> Iterator[None]:
     lock, so two of them can never interleave. The endpoint's push handshake answers busy while it is held, which is
     what serializes concurrent fan-in before any bytes travel.
     """
-    lockpath = filepath.with_name(f'{filepath.name}.import.lock')
-    lockpath.parent.mkdir(parents=True, exist_ok=True)
-
-    with lockpath.open('w') as handle:
-        # Same Windows caveat as ``_exclusive_lock``: without ``fcntl`` imports stay unguarded there.
-        if sys.platform != 'win32':
-            import fcntl
-
-            fcntl.flock(handle, fcntl.LOCK_EX)
-
+    with exclusive_lock(filepath.with_name(f'{filepath.name}.import.lock')):
         yield
 
 

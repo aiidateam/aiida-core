@@ -46,9 +46,10 @@ def joining(monkeypatch):
 
 def code_of(member):
     """Return the join code a member's ``verdi status`` prints."""
-    from aiida.tools.collab.config import join_code, stored_config
+    from aiida.manage.configuration.config import Config
+    from aiida.tools.collab.config import join_code
 
-    return join_code(stored_config(member.config), member.profile)
+    return join_code(Config.from_file(member.config.filepath), member.profile)
 
 
 def test_joining_a_collab_three_members_deep(collab, joining):

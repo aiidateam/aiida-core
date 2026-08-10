@@ -126,11 +126,12 @@ def gossip(config, profile, bump=True):
     :param bump: raise the version stamp when this machine's address changed, which is what spreads the
         correction. A dry run announces without stamping: it is to leave nothing behind.
     """
-    from aiida.tools.collab.config import OPTION_PEERS, roster_entries, self_entry, stored_config
+    from aiida.tools.collab.config import OPTION_PEERS, mutate_config, roster_entries, self_entry
 
-    stored = stored_config(config)
-
-    return roster_entries(stored.get_option(OPTION_PEERS, scope=profile.name), self_entry(stored, profile, bump=bump))
+    with mutate_config(config) as stored:
+        return roster_entries(
+            stored.get_option(OPTION_PEERS, scope=profile.name), self_entry(stored, profile, bump=bump)
+        )
 
 
 def skipped_peer(entry, exception):
@@ -157,23 +158,20 @@ def pin_peer(config, profile, *, peer_uuid, url, roster, token):
         this contact into it would mark the peer — and everyone it vouched for, the excluded member included —
         active again under a key none of them holds.
     """
-    from aiida.tools.collab.config import OPTION_PEERS, OPTION_TOKEN, merge_roster, stored_config
+    from aiida.tools.collab.config import OPTION_PEERS, OPTION_TOKEN, merge_roster, mutate_config
 
-    stored = stored_config(config)
+    with mutate_config(config) as stored:
+        if stored.get_option(OPTION_TOKEN, scope=profile.name) != token:
+            echo.echo_warning(f'the collab was rekeyed while syncing with {url}: its standing is left to the rekey.')
+            return
 
-    if stored.get_option(OPTION_TOKEN, scope=profile.name) != token:
-        echo.echo_warning(f'the collab was rekeyed while syncing with {url}: its standing is left to the rekey.')
-        return
+        peers, reports = merge_roster(stored.get_option(OPTION_PEERS, scope=profile.name), roster, profile.uuid)
+        peers[peer_uuid] = {**peers[peer_uuid], 'seen': peers[peer_uuid]['url'] == url}
 
-    peers, reports = merge_roster(stored.get_option(OPTION_PEERS, scope=profile.name), roster, profile.uuid)
-    peers[peer_uuid] = {**peers[peer_uuid], 'seen': peers[peer_uuid]['url'] == url}
-
-    # Written to the file as it is now and mirrored into the configuration this command holds, which the peers
-    # after this one in the same run read from.
-    for target in (stored, config):
-        target.set_option(OPTION_PEERS, peers, scope=profile.name)
-
-    stored.store()
+        # Written to the file as it is now and mirrored into the configuration this command holds, so that the
+        # rest of the process reads what was written and not what it loaded at startup.
+        for target in (stored, config):
+            target.set_option(OPTION_PEERS, peers, scope=profile.name)
 
     # Membership is auto-trusted — only a token holder hands an entry out — but never silent.
     for report in reports:
@@ -527,13 +525,10 @@ def collab_init(ctx, code, profile_name, bind, port, computer_map, extras_mode, 
     # The configuration file is shared by every profile, so any collab endpoint running on this machine is a
     # second writer of it: what is written here goes onto the file as it is now, and into the copy this process
     # holds so that the rest of the command reads what it just wrote.
-    stored = collab_config.stored_config(config)
-
-    for option_name, value in values.items():
-        for target in (stored, config):
-            target.set_option(option_name, value, scope=profile.name)
-
-    stored.store()
+    with collab_config.mutate_config(config) as stored:
+        for option_name, value in values.items():
+            for target in (stored, config):
+                target.set_option(option_name, value, scope=profile.name)
 
     if joining:
         join_collab(config, profile, joining)
@@ -553,25 +548,30 @@ def announce(config, profile, code):
     :raises CollabRequestError: when the issuer cannot be reached or refuses the token.
     """
     from aiida.tools.collab.client import CollabClient
-    from aiida.tools.collab.config import OPTION_PEERS, merge_roster, self_entry, stored_config
+    from aiida.tools.collab.config import OPTION_PEERS, merge_roster, mutate_config, self_entry
+
+    # Stamped like any outbound contact: a member that moved while it was dormant announces the address it is at
+    # now, and only a raised stamp makes the issuer take it over the one it has held all along. In a transaction
+    # of its own, since what follows it is a network round trip: no lock on the configuration file is worth
+    # holding for the time a peer takes to answer.
+    with mutate_config(config) as stored:
+        announcement = self_entry(stored, profile, bump=True)
 
     with CollabClient(code.url, code.token, collab=code.collab) as client:
-        # Stamped like any outbound contact: a member that moved while it was dormant announces the address it
-        # is at now, and only a raised stamp makes the issuer take it over the one it has held all along.
-        response = client.join(self_entry(config, profile, bump=True))
+        response = client.join(announcement)
 
-    stored = stored_config(config)
-    merged, reports = merge_roster(stored.get_option(OPTION_PEERS, scope=profile.name), response.roster, profile.uuid)
+    with mutate_config(config) as stored:
+        merged, reports = merge_roster(
+            stored.get_option(OPTION_PEERS, scope=profile.name), response.roster, profile.uuid
+        )
 
-    # The issuer just answered at that URL, so it is the one entry of the roster this profile has proof of.
-    for entry in merged.values():
-        if entry['url'] == code.url:
-            entry['seen'] = True
+        # The issuer just answered at that URL, so it is the one entry of the roster this profile has proof of.
+        for entry in merged.values():
+            if entry['url'] == code.url:
+                entry['seen'] = True
 
-    for target in (stored, config):
-        target.set_option(OPTION_PEERS, merged, scope=profile.name)
-
-    stored.store()
+        for target in (stored, config):
+            target.set_option(OPTION_PEERS, merged, scope=profile.name)
 
     for report in reports:
         echo.echo_report(report)
@@ -591,25 +591,23 @@ def join_collab(config, profile, code):
         )
 
 
-def set_key(config, profile, token):
-    """Write a new token and set the whole roster dormant, on the file as it is now and in this process.
+def set_key(stored, config, profile, token):
+    """Write a new token and set the whole roster dormant, on the locked file and in this process.
 
     Both are one act: a token nobody has presented yet is a roster nobody has been confirmed under. The roster
     is read from the very snapshot it is written back into, so that an entry the daemon's endpoint merged
     meanwhile goes dormant with the rest instead of being dropped — dormancy deletes nothing.
-    """
-    from aiida.tools.collab.config import OPTION_PEERS, OPTION_TOKEN, dormant_roster, stored_config
 
-    stored = stored_config(config)
+    :param stored: the configuration file as ``mutate_config`` yielded it, which stores it when its caller is done.
+    :param config: the configuration this process holds, mirrored into so the rest of the command sees the key.
+    """
+    from aiida.tools.collab.config import OPTION_PEERS, OPTION_TOKEN, dormant_roster
+
     values = {OPTION_TOKEN: token, OPTION_PEERS: dormant_roster(stored.get_option(OPTION_PEERS, scope=profile.name))}
 
     for target in (stored, config):
         for option, value in values.items():
             target.set_option(option, value, scope=profile.name)
-
-    stored.store()
-
-    return stored
 
 
 @verdi_collab.command('rotate')
@@ -625,19 +623,22 @@ def collab_rotate(ctx):
     import secrets
 
     from aiida.tools.collab.client import CollabClient
-    from aiida.tools.collab.config import OPTION_PEERS, OPTION_TOKEN, OPTION_UUID, join_code, stored_config
+    from aiida.tools.collab.config import OPTION_PEERS, OPTION_TOKEN, OPTION_UUID, join_code, mutate_config
     from aiida.tools.collab.protocol import CollabRequestError
 
     profile = ctx.obj.profile
     require_collab(profile)
 
-    stored = stored_config(ctx.obj.config)
     scope = profile.name
-    retired = stored.get_option(OPTION_TOKEN, scope=scope)
-    collab = stored.get_option(OPTION_UUID, scope=scope)
-    active = [entry for entry in stored.get_option(OPTION_PEERS, scope=scope).values() if entry['active']]
 
-    stored = set_key(ctx.obj.config, profile, secrets.token_urlsafe(32))
+    # The key that is retired and the key that replaces it are read and written under one lock: a second rotation
+    # that read the same file first would otherwise mint its key over this one and hand out a code nobody holds.
+    with mutate_config(ctx.obj.config) as stored:
+        retired = stored.get_option(OPTION_TOKEN, scope=scope)
+        collab = stored.get_option(OPTION_UUID, scope=scope)
+        active = [entry for entry in stored.get_option(OPTION_PEERS, scope=scope).values() if entry['active']]
+
+        set_key(stored, ctx.obj.config, profile, secrets.token_urlsafe(32))
 
     # Sent with the token that was just retired, the only one the peers still know, and purely advisory: it makes
     # their `verdi status` ask for a rekey and nothing else. Acting on it would hand an excluded member — who
@@ -656,7 +657,7 @@ def collab_rotate(ctx):
         'Hand the code below to the members that stay, out of band — person to person. Sending it through the '
         'collab itself would hand it to whoever was just excluded, since that channel is keyed by the old token.'
     )
-    echo.echo(join_code(stored, profile))
+    echo.echo(join_code(ctx.obj.config, profile))
 
 
 @verdi_collab.command('rekey')
@@ -672,7 +673,7 @@ def collab_rekey(ctx, code):
     """
     from http import HTTPStatus
 
-    from aiida.tools.collab.config import OPTION_BIND, OPTION_PORT, OPTION_UUID, endpoint_url, stored_config
+    from aiida.tools.collab.config import OPTION_BIND, OPTION_PORT, OPTION_UUID, endpoint_url, mutate_config
     from aiida.tools.collab.protocol import CollabRequestError, JoinCode
 
     profile = ctx.obj.profile
@@ -683,30 +684,32 @@ def collab_rekey(ctx, code):
     except ValueError as exception:
         echo.echo_critical(str(exception))
 
-    stored = stored_config(ctx.obj.config)
     scope = profile.name
-    collab = stored.get_option(OPTION_UUID, scope=scope)
 
-    # A rotation replaces the key of a collab, never its identity, so a code naming another collab is somebody
-    # else's — and adopting its token would leave this profile unable to talk to either.
-    if rekeyed.collab != collab:
-        echo.echo_critical(
-            f'this code belongs to collab `{rekeyed.collab}`, this profile takes part in `{collab}`. Rotation '
-            'keeps the identity of a collab, so a code of another one is never the one to rekey with.'
-        )
+    # Both refusals are inside the transaction, so a refused code leaves the file exactly as it found it.
+    with mutate_config(ctx.obj.config) as stored:
+        collab = stored.get_option(OPTION_UUID, scope=scope)
 
-    # Every member's `verdi status` prints a code, this profile's own included, and rekeying with that one is the
-    # one case that cannot work: this profile is the only member its own endpoint can teach nothing, so it would
-    # rest its whole roster dormant and reactivate none of it.
-    if rekeyed.url == endpoint_url(
-        stored.get_option(OPTION_BIND, scope=scope), stored.get_option(OPTION_PORT, scope=scope)
-    ):
-        echo.echo_critical(
-            'this is the join code of this very profile: rekeying needs the code of another member, who already '
-            'holds the new key.'
-        )
+        # A rotation replaces the key of a collab, never its identity, so a code naming another collab is somebody
+        # else's — and adopting its token would leave this profile unable to talk to either.
+        if rekeyed.collab != collab:
+            echo.echo_critical(
+                f'this code belongs to collab `{rekeyed.collab}`, this profile takes part in `{collab}`. Rotation '
+                'keeps the identity of a collab, so a code of another one is never the one to rekey with.'
+            )
 
-    set_key(ctx.obj.config, profile, rekeyed.token)
+        # Every member's `verdi status` prints a code, this profile's own included, and rekeying with that one is
+        # the one case that cannot work: this profile is the only member its own endpoint can teach nothing, so it
+        # would rest its whole roster dormant and reactivate none of it.
+        if rekeyed.url == endpoint_url(
+            stored.get_option(OPTION_BIND, scope=scope), stored.get_option(OPTION_PORT, scope=scope)
+        ):
+            echo.echo_critical(
+                'this is the join code of this very profile: rekeying needs the code of another member, who already '
+                'holds the new key.'
+            )
+
+        set_key(stored, ctx.obj.config, profile, rekeyed.token)
 
     echo.echo_success('the new token is in place; cursors and history are untouched.')
 
@@ -744,7 +747,7 @@ def collab_map_computer(ctx, mappings):
     """
     from aiida.common.exceptions import ConfigurationError
     from aiida.manage import get_manager
-    from aiida.tools.collab.config import OPTION_COMPUTER_MAP, stored_config
+    from aiida.tools.collab.config import OPTION_COMPUTER_MAP, mutate_config
     from aiida.tools.collab.sync import apply_computer_map
 
     profile = ctx.obj.profile
@@ -758,12 +761,9 @@ def collab_map_computer(ctx, mappings):
     except ConfigurationError as exception:
         echo.echo_critical(str(exception))
 
-    stored = stored_config(ctx.obj.config)
-
-    for target in (stored, ctx.obj.config):
-        target.set_option(OPTION_COMPUTER_MAP, mapping, scope=profile.name)
-
-    stored.store()
+    with mutate_config(ctx.obj.config) as stored:
+        for target in (stored, ctx.obj.config):
+            target.set_option(OPTION_COMPUTER_MAP, mapping, scope=profile.name)
 
     echo.echo_success(
         f'{len(mapping)} computer mapping(s) configured, the mapped hash was written onto {count} calculation(s).'
@@ -787,7 +787,7 @@ def collab_peer_set(ctx, peer, url, nickname):
     PEER is the nickname or the profile UUID of the peer. A corrected address is provisional: only the owner of an
     entry stamps it, so the first contact that carries the owner's own announcement reconciles it.
     """
-    from aiida.tools.collab.config import OPTION_PEERS, find_peer, stored_config
+    from aiida.tools.collab.config import OPTION_PEERS, find_peer, mutate_config
 
     profile = ctx.obj.profile
     require_collab(profile)
@@ -797,33 +797,33 @@ def collab_peer_set(ctx, peer, url, nickname):
 
     # A manual correction is the one write nothing ever re-applies, since it deliberately never travels: it has to
     # be merged into the roster as the daemon's endpoint left it, not into the copy this command started with.
-    stored = stored_config(ctx.obj.config)
-    peers = dict(stored.get_option(OPTION_PEERS, scope=profile.name))
-    uuid = find_peer(peers, peer)
+    with mutate_config(ctx.obj.config) as stored:
+        peers = dict(stored.get_option(OPTION_PEERS, scope=profile.name))
+        uuid = find_peer(peers, peer)
 
-    if uuid is None:
-        known = ', '.join(sorted(entry['nickname'] for entry in peers.values()))
-        echo.echo_critical(f'unknown peer {peer}: the peers of this collab are {known}.')
+        if uuid is None:
+            known = ', '.join(sorted(entry['nickname'] for entry in peers.values()))
+            echo.echo_critical(f'unknown peer {peer}: the peers of this collab are {known}.')
 
-    if nickname is not None and any(other != uuid and entry['nickname'] == nickname for other, entry in peers.items()):
-        echo.echo_critical(f'nickname `{nickname}` is already in use: nicknames address peers on this machine.')
+        if nickname is not None and any(
+            other != uuid and entry['nickname'] == nickname for other, entry in peers.items()
+        ):
+            echo.echo_critical(f'nickname `{nickname}` is already in use: nicknames address peers on this machine.')
 
-    entry = dict(peers[uuid])
+        entry = dict(peers[uuid])
 
-    if url is not None:
-        # A manual correction is a local guess about someone else's address, so it does not raise their stamp and
-        # is superseded by their own announcement — and it is unproven until they answer at it.
-        entry.update(url=url, seen=False)
+        if url is not None:
+            # A manual correction is a local guess about someone else's address, so it does not raise their stamp
+            # and is superseded by their own announcement — and it is unproven until they answer at it.
+            entry.update(url=url, seen=False)
 
-    if nickname is not None:
-        entry['nickname'] = nickname
+        if nickname is not None:
+            entry['nickname'] = nickname
 
-    peers[uuid] = entry
+        peers[uuid] = entry
 
-    for target in (stored, ctx.obj.config):
-        target.set_option(OPTION_PEERS, peers, scope=profile.name)
-
-    stored.store()
+        for target in (stored, ctx.obj.config):
+            target.set_option(OPTION_PEERS, peers, scope=profile.name)
 
     changed = [text for text in (url and f'is at {url}', nickname and f'is now called `{nickname}`') if text]
     echo.echo_success(f'peer `{peer}` {" and ".join(changed)}.')

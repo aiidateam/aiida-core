@@ -33,6 +33,11 @@ ROUTE_RETIRED = f'{API_PREFIX}/retired'
 
 HEADER_STAGED = 'X-Collab-Staged-Bytes'
 
+HEADER_COLLAB = 'X-Collab-UUID'
+"""Carried on every request but ``GET /collab/v1/info`` and held against the collab the endpoint serves. A header
+rather than a body field because ``PUT /collab/v1/upload/<sha256>`` — the one route that writes to disk — streams
+raw bytes and has no body to put it in."""
+
 REKEY_HINT = 'obtain the current join code from a member and run `verdi collab rekey <code>`'
 """What a member whose token was retired has to do, said by the advisory signal a rotation sends and offered by
 the 401 of every endpoint that rotated. That 401 is what enforces a rotation, and the only thing that does — the

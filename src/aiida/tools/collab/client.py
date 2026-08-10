@@ -19,6 +19,7 @@ import requests
 
 from aiida.tools.collab.protocol import (
     CHUNK_SIZE,
+    HEADER_COLLAB,
     HEADER_STAGED,
     ROUTE_DELTA,
     ROUTE_HANDSHAKE,
@@ -70,10 +71,10 @@ class CollabClient:
 
     def __init__(self, base_url: str, token: str, *, collab: str = '', timeout: float = TIMEOUT):
         self._base_url = base_url.rstrip('/')
-        self._collab = collab
         self._timeout = timeout
         self._session = requests.Session()
         self._session.headers['Authorization'] = f'Bearer {token}'
+        self._session.headers[HEADER_COLLAB] = collab
 
     def close(self) -> None:
         self._session.close()
@@ -98,9 +99,7 @@ class CollabClient:
 
         :param entry: the roster entry of this profile: its UUID, endpoint URL, announced name and version stamp.
         """
-        body = {'collab': self._collab, 'entry': entry}
-
-        return self._answer(JoinResponse.from_dict, 'POST', ROUTE_JOIN, json=body)
+        return self._answer(JoinResponse.from_dict, 'POST', ROUTE_JOIN, json={'entry': entry})
 
     def signal_retired(self, peer: str) -> None:
         """Tell the peer that this profile retired the token both were using, so it can ask its user to rekey.
@@ -111,7 +110,7 @@ class CollabClient:
 
         :param peer: the profile UUID of this profile, under which the receiver knows it.
         """
-        self._request('POST', ROUTE_RETIRED, json={'collab': self._collab, 'peer': peer})
+        self._request('POST', ROUTE_RETIRED, json={'peer': peer})
 
     def check_version_skew(self, local: PeerInfo, *, direction: Literal['pull', 'push']) -> PeerInfo:
         """Fetch the handshake of the peer and refuse the transfer when it could not read what the sender writes.
@@ -160,7 +159,6 @@ class CollabClient:
         body = {
             'cursor': cursor.isoformat() if cursor is not None else None,
             'claim': sorted(claim),
-            'collab': self._collab,
             'roster': roster or [],
         }
 
@@ -186,7 +184,6 @@ class CollabClient:
             'claim': sorted(claim),
             'want': sorted(want),
             'refresh_want': sorted(refresh_want),
-            'collab': self._collab,
         }
 
         return self._answer(DeltaOffer.from_dict, 'POST', ROUTE_DELTA, json=body)
@@ -214,7 +211,7 @@ class CollabClient:
         :param roster: this profile's own entry and the peers it knows, gossiped with the handshake; the answer
             carries the peer's own in return.
         """
-        body = {'requester': requester, 'collab': self._collab, 'roster': roster or []}
+        body = {'requester': requester, 'roster': roster or []}
 
         return self._answer(PushHandshake.from_dict, 'POST', ROUTE_HANDSHAKE, json=body)
 

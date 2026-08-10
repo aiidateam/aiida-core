@@ -256,19 +256,95 @@ def test_a_rekey_with_the_code_of_another_collab_is_refused(collab):
     assert 'belongs to collab' in result.output
 
 
-def test_a_peer_of_another_collab_is_refused(collab):
-    """Test that a token shared too widely cannot splice two collabs: the collab UUID is held against every peer."""
+@pytest.mark.parametrize('direction', ['pull', 'push'])
+def test_a_peer_of_another_collab_is_refused(collab, direction):
+    """Test that a token shared too widely cannot splice two collabs: the collab UUID is held against every peer.
+
+    Both directions, since one check guards the routes of both; the rest of the collab keeps syncing, because it
+    is the member that drifted that is refused and not the collab that is stopped.
+    """
     a, b, c = collab(3)
     created = a.seal_calculation()
 
     b.set_option('collab.uuid', 'some-other-collab')
 
-    result = a.run('pull', ['--force'])
+    result = move(a, b, direction)
 
     assert 'takes part in collab' in result.output
-    move(a, c, 'pull')
+    assert created not in b.uuids()
+
+    move(a, c, direction)
 
     assert created in c.uuids()
+
+
+def test_a_client_that_skips_the_handshake_is_still_refused(collab, tmp_path):
+    """Test that the routes a push carries its payload over refuse a foreign collab with no handshake in front.
+
+    The handshake is the client's to send, so a guard standing only there guards nothing: a holder of a token
+    shared too widely reaches the manifest diff, the upload and the import directly, and those are what land
+    foreign provenance in this profile.
+    """
+    from http import HTTPStatus
+
+    from aiida.common import timezone
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.config import OPTION_TOKEN
+    from aiida.tools.collab.protocol import CollabRequestError
+
+    a, b, _ = collab(3)
+    a.seal_calculation()
+    before = b.graph()
+
+    filepath = tmp_path / 'push.aiida'
+    filepath.write_bytes(b'a delta that never gets to be one')
+
+    with CollabClient(b.url, b.option(OPTION_TOKEN), collab='some-other-collab') as client:
+        for attempt in (
+            lambda: client.diff_manifest(['uuid-of-a-node']),
+            lambda: client.upload_delta(filepath),
+            lambda: client.trigger_import('d' * 64, peer=a.uuid, instant=timezone.now()),
+        ):
+            with pytest.raises(CollabRequestError) as excinfo:
+                attempt()
+
+            assert excinfo.value.status == HTTPStatus.CONFLICT
+
+    assert list(b.endpoint.staging_dir.iterdir()) == []
+    assert b.graph() == before
+
+
+def test_the_discovery_route_answers_a_caller_of_another_collab(collab, capsys):
+    """EXPECTED (phase 18): ``/info`` answers a caller of another collab, which is what the refusal is built on.
+
+    It is the one route whose purpose is to say which collab this is, so it cannot demand that the caller
+    already know. What the exemption buys is asserted rather than described: the answer it serves is what
+    ``peer_agrees`` turns into a refusal naming both collabs, where the guard would give a bare 409.
+    """
+    from aiida.cmdline.commands.cmd_collab import peer_agrees
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.config import OPTION_TOKEN, OPTION_UUID
+
+    a, b, _ = collab(3)
+    theirs = b.option(OPTION_UUID)
+
+    a.set_option(OPTION_UUID, 'some-other-collab')
+
+    with CollabClient(b.url, b.option(OPTION_TOKEN), collab='some-other-collab') as client:
+        info = client.info()
+
+    assert info.collab == theirs
+
+    a.load()
+    entry = a.peers()[b.uuid]
+    capsys.readouterr()
+
+    agrees = peer_agrees(a.config, a.profile, b.uuid, entry, info)
+    warning = capsys.readouterr().out
+
+    assert agrees is False
+    assert theirs in warning
+    assert 'some-other-collab' in warning
 
 
 def test_another_profile_at_a_known_address_is_refused(collab):

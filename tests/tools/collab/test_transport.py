@@ -23,6 +23,8 @@ from aiida.common.exceptions import ConfigurationError
 from aiida.tools.collab.client import CollabClient
 from aiida.tools.collab.config import endpoint_url
 from aiida.tools.collab.protocol import (
+    API_PREFIX,
+    HEADER_COLLAB,
     REKEY_HINT,
     ROUTE_DELTA,
     ROUTE_HANDSHAKE,
@@ -383,6 +385,83 @@ def test_signal_retired_refuses_a_foreign_collab(transport):
     assert transport.stub.retirements == []
 
 
+@pytest.mark.parametrize(
+    'method, route',
+    [
+        ('POST', ROUTE_MISSING),
+        ('HEAD', route_upload('b' * 64)),
+        ('PUT', route_upload('b' * 64)),
+        ('POST', route_import('b' * 64)),
+    ],
+)
+def test_the_push_data_path_refuses_a_foreign_collab(transport, method, route):
+    """Every route a push carries its payload over is refused, not only the handshake a client is free to skip.
+
+    Parametrised because the claim is that ``_dispatch`` covers these routes uniformly rather than that four
+    handlers each remembered to check: two of them carry no ``collab`` field and ``PUT`` carries no body at all.
+    """
+    response = requests.request(
+        method,
+        f'{transport.url}{route}',
+        headers={'Authorization': f'Bearer {TOKEN}', HEADER_COLLAB: 'uuid-of-another-collab'},
+        data=UPLOAD[:64] if method == 'PUT' else None,
+        timeout=10,
+    )
+
+    assert response.status_code == HTTPStatus.CONFLICT
+    assert transport.stub.diffed == []
+    assert transport.stub.imported == []
+    assert list(transport.staging_dir.iterdir()) == []
+
+
+def test_a_refused_upload_closes_the_connection(transport):
+    """A refused ``PUT /upload`` announces and performs a close, because the body it promised was never read.
+
+    The refusal comes before the handler, so the bytes the client is still sending are never consumed: a 409 that
+    left the connection open would leave that client parsing its own unread payload as the next response. Both
+    halves are asserted, because a socket that closes without saying so is one a pooling client still reuses.
+    """
+    sha256 = 'c' * 64
+    host, port = transport.url.removeprefix('http://').split(':')
+    request = (
+        f'PUT {route_upload(sha256)} HTTP/1.1\r\n'
+        f'Host: {host}:{port}\r\n'
+        f'Authorization: Bearer {TOKEN}\r\n'
+        f'{HEADER_COLLAB}: uuid-of-another-collab\r\n'
+        'Content-Range: bytes 0-63/64\r\n'
+        'Content-Length: 64\r\n'
+        '\r\n'
+    ).encode()
+    answer = b''
+
+    with socket.create_connection((host, int(port)), timeout=10) as connection:
+        connection.sendall(request)
+
+        # Reads to end of stream: the endpoint answering a body it never asked for is only half of the property,
+        # and this loop would hang until the timeout if the socket were left open for another request.
+        while chunk := connection.recv(4096):
+            answer += chunk
+
+    assert answer.startswith(b'HTTP/1.1 409')
+    assert b'Connection: close' in answer
+    assert not (transport.staging_dir / sha256).exists()
+
+
+def test_an_unknown_route_refuses_a_foreign_collab(transport):
+    """A route this endpoint does not serve is refused 409 rather than 404 when the collab is foreign.
+
+    The check runs before routing, which is what makes "every route added after it is covered" true rather than
+    a promise the next route has to remember to keep.
+    """
+    response = requests.get(
+        f'{transport.url}{API_PREFIX}/added-by-a-later-phase',
+        headers={'Authorization': f'Bearer {TOKEN}', HEADER_COLLAB: 'uuid-of-another-collab'},
+        timeout=10,
+    )
+
+    assert response.status_code == HTTPStatus.CONFLICT
+
+
 def test_download(transport, tmp_path):
     """The negotiated delta downloads in full and byte-identical."""
     offer = transport.client.request_delta(None, frozenset(), frozenset())
@@ -511,8 +590,8 @@ def test_push_handshake_requires_requester(transport):
     """A handshake without a requester is rejected: the receiver could not know whose cursor to serve."""
     response = requests.post(
         f'{transport.url}{ROUTE_HANDSHAKE}',
-        headers={'Authorization': f'Bearer {TOKEN}'},
-        json={'collab': COLLAB},
+        headers={'Authorization': f'Bearer {TOKEN}', HEADER_COLLAB: COLLAB},
+        json={},
         timeout=10,
     )
 
@@ -537,7 +616,7 @@ def test_import_requires_peer_and_instant(transport, tmp_path):
 
     response = requests.post(
         f'{transport.url}{route_import(report.sha256)}',
-        headers={'Authorization': f'Bearer {TOKEN}'},
+        headers={'Authorization': f'Bearer {TOKEN}', HEADER_COLLAB: COLLAB},
         timeout=10,
     )
 

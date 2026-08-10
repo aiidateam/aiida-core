@@ -32,6 +32,7 @@ from aiida.tools.collab.config import OPTION_BIND, OPTION_PORT, is_ipv6
 from aiida.tools.collab.protocol import (
     API_PREFIX,
     CHUNK_SIZE,
+    HEADER_COLLAB,
     HEADER_STAGED,
     ROUTE_DELTA,
     ROUTE_HANDSHAKE,
@@ -75,8 +76,8 @@ class CollabServer(ThreadingHTTPServer):
     :param token: produces the shared secret of the collab, required of every request as a bearer token. Called
         per request rather than read once, so that a rotation on this machine retires the old token for serving
         the moment it is written — a token pinned at daemon start would keep letting an excluded member read.
-    :param collab: the UUID of the collab. Every request that carries one is held against it, so that the token
-        alone cannot splice two collabs into one.
+    :param collab: the UUID of the collab. Every request but ``GET /collab/v1/info`` has to present it as the
+        ``X-Collab-UUID`` header, so that the token alone cannot splice two collabs into one.
     :param staging_dir: the directory in which uploads are staged, one file per checksum.
     :param info: produces the handshake served at ``GET /collab/v1/info``. Receives the cursor presented with the
         request, or ``None``, against which the pending count is computed.
@@ -210,7 +211,7 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
         )
 
     def _dispatch(self, routes: dict[str | re.Pattern[str], Callable[..., None]]) -> None:
-        """Authenticate the request and hand it to the handler of its route."""
+        """Authenticate the request, hold it against the collab this endpoint serves, and hand it to its route."""
         # Authentication comes first: an unauthenticated request must not reach any route handler.
         if not self._authenticated():
             # The body of an unauthenticated upload is never read, so the connection cannot be reused.
@@ -223,6 +224,23 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
             return
 
         path = urlparse(self.path).path
+        presented = self.headers.get(HEADER_COLLAB, '')
+
+        # The token authorizes and every member holds the same one, so the collab UUID is the second factor and the
+        # only defence against a token that was shared too widely. Checked before routing rather than per handler,
+        # which is what covers the upload routes — they stream raw bytes and have no body to carry it — and every
+        # route added after this one. `/info` is exempt by design: it is the route whose purpose is to tell a caller
+        # which collab this is, so it cannot demand that the caller already know.
+        if path != ROUTE_INFO and presented != self.server.collab:
+            # The body of a refused upload is never read, so the connection cannot carry another response: it is
+            # closed, and said so, since a client that reused it would parse its own unread payload as the answer.
+            self.close_connection = True
+            self._send_json(
+                HTTPStatus.CONFLICT,
+                {'detail': f'this endpoint serves collab `{self.server.collab}`, not `{presented}`'},
+                headers={'Connection': 'close'},
+            )
+            return
 
         try:
             for route, handler in routes.items():
@@ -261,16 +279,10 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
             self._send_json(HTTPStatus.BAD_REQUEST, {'detail': 'the handshake requires a `requester`'})
             return
 
-        if self._foreign(data.get('collab', '')):
-            return
-
         self._send_json(HTTPStatus.OK, self.server.handshake(requester, data.get('roster', [])).as_dict())
 
     def _post_join(self) -> None:
         data = self._read_json()
-
-        if self._foreign(data.get('collab', '')):
-            return
 
         if not isinstance(data.get('entry'), dict):
             self._send_json(HTTPStatus.BAD_REQUEST, {'detail': 'joining requires the `entry` of the newcomer'})
@@ -280,9 +292,6 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
 
     def _post_retired(self) -> None:
         data = self._read_json()
-
-        if self._foreign(data.get('collab', '')):
-            return
 
         if not isinstance(data.get('peer'), str) or not data['peer']:
             self._send_json(HTTPStatus.BAD_REQUEST, {'detail': 'the signal requires the `peer` that rotated'})
@@ -296,9 +305,6 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
         cursor = datetime.fromisoformat(data['cursor']) if data.get('cursor') else None
         claim = frozenset(data.get('claim', []))
 
-        if self._foreign(data.get('collab', '')):
-            return
-
         # Without a `want` the request negotiates the manifest; with one it asks for that subset to be exported.
         answer: DeltaManifest | DeltaOffer
 
@@ -310,21 +316,6 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
             answer = self.server.negotiate_delta(cursor, claim, data.get('roster', []))
 
         self._send_json(HTTPStatus.OK, answer.as_dict())
-
-    def _foreign(self, presented: str) -> bool:
-        """Refuse a request presenting the identity of another collab, and report whether it was refused.
-
-        The token authorizes; the collab UUID is what keeps two different collabs from being spliced into one by a
-        token that was shared too widely.
-        """
-        if presented == self.server.collab:
-            return False
-
-        self._send_json(
-            HTTPStatus.CONFLICT,
-            {'detail': f'this endpoint serves collab `{self.server.collab}`, not `{presented}`'},
-        )
-        return True
 
     def _post_missing(self) -> None:
         data = self._read_json()

@@ -809,9 +809,10 @@ def test_branching_and_reunion(
 
     assert stub_transfer == [], 'a rotation stops every peer from being contacted until one of them rekeys'
 
-    # Alice rekeys and announces herself to this profile: that inbound contact is what brings her back.
+    # Alice rekeys and announces herself to this profile: that inbound contact is what brings her back. It arrives
+    # at `join`, which is the one route `announce` calls and the one a rekey is admitted through.
     endpoint = CollabEndpoint(profile, backend=MagicMock())
-    endpoint.handshake(PEER_UUID, [{'uuid': PEER_UUID, 'url': PEER_URL, 'name': PEER, 'stamp': 1}])
+    endpoint.join({'uuid': PEER_UUID, 'url': PEER_URL, 'name': PEER, 'stamp': 1})
     reload_peers(config_with_profile, profile)
 
     run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
@@ -826,7 +827,7 @@ def test_branching_and_reunion(
         CollabClient, 'check_version_skew', lambda self, local, **kw: make_peer_info(uuid='uuid-of-bob')
     )
     bob = {'uuid': 'uuid-of-bob', 'url': 'http://100.64.0.3:9137', 'name': 'bob', 'stamp': 1}
-    endpoint.handshake('uuid-of-bob', [bob])
+    endpoint.join(bob)
     reload_peers(config_with_profile, profile)
 
     run_cli_command(cmd_collab.collab_pull, ['bob', '--force'], use_subprocess=False)

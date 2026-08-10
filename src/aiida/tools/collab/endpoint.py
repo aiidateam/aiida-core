@@ -46,6 +46,7 @@ from aiida.tools.collab.protocol import (
     ManifestDiff,
     PeerInfo,
     PushHandshake,
+    PushRefused,
     delta_id,
 )
 from aiida.tools.collab.state import CollabState, import_lock, import_lock_held
@@ -84,6 +85,11 @@ MAX_CACHED_DELTAS = 8
 # usually a crash, but also a live transfer whose single request outlasts it, so the cap is approximate under
 # very long transfers rather than a hard guarantee.
 SLOT_IDLE_SECONDS = 600
+
+# How long an upload nobody imported is kept staged. A stash exists so that a pusher retrying after a failed
+# import transfers zero bytes, and one that has not retried in a week is not coming back with those bytes;
+# sweeping one that would have been retried costs a re-upload, never correctness.
+STAGING_MAX_AGE = 7 * 24 * 60 * 60
 
 
 class _Slots:
@@ -211,6 +217,14 @@ class CollabEndpoint:
         for stale in self._dirpath.glob('delta-*.aiida'):
             stale.unlink()
 
+        # Uploads whose import never landed are kept for the pusher's retry, and are removed by nothing else:
+        # the ones nobody came back for are what would otherwise grow without bound.
+        cutoff = time.time() - STAGING_MAX_AGE
+
+        for abandoned in self.staging_dir.glob('*'):
+            if abandoned.stat().st_mtime < cutoff:
+                abandoned.unlink()
+
     @property
     def staging_dir(self) -> Path:
         """The directory in which the server stages the uploads of pushing peers."""
@@ -263,7 +277,20 @@ class CollabEndpoint:
         Answering busy before anything is exported or uploaded is what serializes concurrent fan-in: the retrying
         pusher negotiates against the post-import cursor and claim, so no redundant bytes travel. The slot granted
         here is released when the pushed delta is imported, or expires if the pusher goes silent.
+
+        :raises PushRefused: when this profile does not accept pushes. Refused here, at the first request of a
+            push, so that a peer whose consent was withdrawn is turned away before it computes a delta, exports it
+            or uploads a byte; the import refuses again, for a pusher that skips this.
         """
+        from aiida.manage.configuration import get_config
+        from aiida.manage.configuration.config import Config
+
+        # Read from the file per request, as the handshake this profile serves and its import both do: withdrawing
+        # consent has to hold from the next request on, without a daemon restart.
+        if not Config.from_file(get_config().filepath).get_option(OPTION_ACCEPT_PUSH, scope=self._profile.name):
+            msg = f'this profile does not accept pushes: its `{OPTION_ACCEPT_PUSH}` option is off'
+            raise PushRefused(msg)
+
         entries = self._entries(self._merge_roster(roster or []))
 
         if import_lock_held(self._state_filepath):
@@ -507,7 +534,7 @@ class CollabEndpoint:
         # at once, and a pusher that negotiated before it was withdrawn must not be let through afterwards.
         if not Config.from_file(get_config().filepath).get_option(OPTION_ACCEPT_PUSH, scope=self._profile.name):
             msg = f'this profile does not accept pushes: its `{OPTION_ACCEPT_PUSH}` option is off'
-            raise PermissionError(msg)
+            raise PushRefused(msg)
 
         try:
             # The import lock wraps the worker stop as well: were it taken inside, a second push could restart the

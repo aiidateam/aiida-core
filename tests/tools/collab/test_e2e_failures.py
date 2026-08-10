@@ -253,6 +253,101 @@ def test_a_peer_that_does_not_accept_pushes_is_skipped(collab):
     assert b.graph() == a.graph()
 
 
+def test_a_withdrawn_consent_refuses_the_handshake(collab, faults):
+    """Test that consent withdrawn under a running endpoint refuses the next push before any delta is cut.
+
+    A cooperating pusher reads ``accept_push`` from the peer's handshake and skips, so the only way it reaches the
+    refusal is consent withdrawn between that read and the push itself. The peer here declares that it accepts
+    pushes and refuses when asked, which is what the race looks like from the pusher's side — and neither side is
+    restarted, since the option is read from the file per request.
+    """
+    from aiida.tools.collab.config import OPTION_ACCEPT_PUSH
+
+    a, b, _ = collab(3)
+    created = a.seal_calculation()
+
+    b.set_option(OPTION_ACCEPT_PUSH, False)
+    faults.claims(b, accept_push=True)
+
+    result = a.run('push', ['bob', '--force'])
+
+    assert '403' in result.output
+    assert 'does not accept pushes' in result.output
+    assert created not in b.uuids()
+    assert not list(a.workdir.glob('push-*.aiida')), 'a delta was cut for a peer that had already refused it'
+
+
+def test_a_push_that_skips_the_handshake_is_refused_at_the_import(collab, caplog, tmp_path):
+    """Test that the import refuses a pusher that never asked, and that the refusal is not reported as a fault.
+
+    The handshake is what a cooperating peer meets and nothing obliges a peer to ask it, so the import is what
+    makes the option mean anything at all. Its refusal is the endpoint working as designed: the answer says
+    refused rather than broken, and no traceback lands in the log of whoever hosts it.
+    """
+    from http import HTTPStatus
+
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.config import OPTION_ACCEPT_PUSH, OPTION_TOKEN, OPTION_UUID
+    from aiida.tools.collab.protocol import CollabRequestError
+    from aiida.tools.collab.sync import compute_delta, export_delta
+
+    a, b, _ = collab(3)
+    created = a.seal_calculation()
+
+    b.set_option(OPTION_ACCEPT_PUSH, False)
+
+    delta = compute_delta(state=a.state(), backend=a.backend, cursor=None, claim=frozenset())
+    export = export_delta(tmp_path / 'delta.aiida', delta=delta, backend=a.backend)
+
+    with CollabClient(b.url, a.option(OPTION_TOKEN), collab=a.option(OPTION_UUID)) as client:
+        upload = client.upload_delta(export.filepath)
+
+        with pytest.raises(CollabRequestError) as raised:
+            client.trigger_import(upload.sha256, peer=a.uuid, instant=export.instant)
+
+    assert raised.value.status == HTTPStatus.FORBIDDEN
+    assert created not in b.uuids()
+    assert 'Traceback' not in caplog.text, 'the refusal was logged as a malfunction of the endpoint'
+    # The refused bytes stay staged, which is the residual the sweep of the staging directory bounds.
+    assert list(b.endpoint.staging_dir.iterdir())
+
+
+def test_a_stale_staged_upload_is_swept_and_a_fresh_one_is_not(collab, faults):
+    """Test that a restart sweeps the uploads nobody came back for, and keeps the one a retry still needs.
+
+    A staged upload is removed when its import succeeds, when it fails its checksum and when it is refused for
+    good; every other outcome leaves it. Without the sweep a collab accumulates one abandoned upload per failed
+    push forever, and with a sweep that took the fresh one the stash would stop being worth keeping at all.
+    """
+    import os
+    import time
+
+    from aiida.tools.collab.endpoint import STAGING_MAX_AGE
+
+    a, b, _ = collab(3)
+    created = a.seal_calculation()
+
+    # A push whose import never answered: a retry is exactly what those bytes stay staged for.
+    faults.drop_import(b)
+    a.run('push', ['bob', '--force'], raises=True)
+
+    (fresh,) = list(b.endpoint.staging_dir.iterdir())
+    abandoned = b.endpoint.staging_dir / ('0' * 64)
+    abandoned.write_bytes(b'an upload whose pusher never came back')
+    os.utime(abandoned, (time.time() - STAGING_MAX_AGE - 1,) * 2)
+
+    b.stop()
+    b.serve()
+
+    assert not abandoned.exists()
+    assert fresh.exists(), 'the sweep took the upload the pusher is about to retry'
+
+    result = a.run('push', ['bob', '--force'])
+
+    assert 'transferred 0 bytes' in result.output
+    assert created in b.uuids()
+
+
 def test_a_push_against_a_running_import_is_answered_busy(collab):
     """Test that a peer whose import lock is held answers the handshake busy, before anything is exported.
 

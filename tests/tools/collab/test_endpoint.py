@@ -20,6 +20,7 @@ from aiida.engine.daemon.client import DaemonClient
 from aiida.storage.sqlite_temp import SqliteTempBackend
 from aiida.tools.collab import endpoint as endpoint_module
 from aiida.tools.collab.endpoint import CollabEndpoint
+from aiida.tools.collab.protocol import PushRefused
 from aiida.tools.collab.state import CollabEvent, CollabState, import_lock
 from aiida.tools.collab.sync import DeltaReport
 
@@ -133,7 +134,7 @@ def test_import_staged_refused_unless_accepted(make_profile, empty_config, recor
 
     endpoint = CollabEndpoint(profile, backend=MagicMock())
 
-    with pytest.raises(PermissionError, match='collab.accept_push'):
+    with pytest.raises(PushRefused, match='collab.accept_push'):
         endpoint.import_staged(tmp_path / 'staged', 'http://pusher:9137', timezone.now())
 
     assert calls == []
@@ -142,8 +143,8 @@ def test_import_staged_refused_unless_accepted(make_profile, empty_config, recor
 def test_accept_push_is_read_per_request(make_profile, empty_config, record_calls, tmp_path):
     """Test that withdrawing consent to be pushed to holds from the next request, without a daemon restart.
 
-    The endpoint of a running daemon holds the configuration it loaded at startup, so both the handshake it
-    serves and the import it would run have to go back to the file.
+    The endpoint of a running daemon holds the configuration it loaded at startup, so the handshake it serves, the
+    push it would admit and the import it would run all have to go back to the file.
     """
     from aiida.manage.configuration.config import Config
     from aiida.tools.collab.endpoint import local_info
@@ -163,7 +164,10 @@ def test_accept_push_is_read_per_request(make_profile, empty_config, record_call
     assert empty_config.get_option('collab.accept_push', scope=profile.name) is True, 'the staging is stale'
     assert local_info(profile, MagicMock()).accept_push is False, 'the handshake must stop inviting pushes'
 
-    with pytest.raises(PermissionError, match='collab.accept_push'):
+    with pytest.raises(PushRefused, match='collab.accept_push'):
+        endpoint.handshake('http://pusher:9137')
+
+    with pytest.raises(PushRefused, match='collab.accept_push'):
         endpoint.import_staged(tmp_path / 'staged', 'http://pusher:9137', timezone.now())
 
 

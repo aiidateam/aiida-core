@@ -44,6 +44,7 @@ from aiida.tools.collab.protocol import (
     EndpointBusy,
     ExtrasSnapshot,
     GroupMembers,
+    PushRefused,
     file_sha256,
     members_from_dict,
     refresh_from_dict,
@@ -99,7 +100,9 @@ class CollabServer(ThreadingHTTPServer):
         nodes this profile is missing, which of the offered extras it holds an older version of, and which of the
         offered group memberships it can apply.
     :param handshake: answers ``POST /collab/v1/handshake`` for a peer that wants to push: busy while an import is
-        running, otherwise what the profile already holds of that peer. Merges the roster gossiped with it.
+        running, otherwise what the profile already holds of that peer. Merges the roster gossiped with it. Raising
+        ``PushRefused`` means the profile does not accept pushes and is answered 403, here and at the import that
+        refuses again for a pusher that skipped the handshake.
     :param import_staged: imports a fully staged upload at ``POST /collab/v1/import/<sha256>`` and returns a
         JSON-serializable report, which is relayed to the client. Receives the path of the staged file, the
         identity the pushing peer declared, the export instant carried with the delta, and the extras snapshots
@@ -257,6 +260,10 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
             self.close_connection = True
         except EndpointBusy as exception:
             self._send_json(HTTPStatus.SERVICE_UNAVAILABLE, {'detail': str(exception)})
+        except PushRefused as exception:
+            # A profile that has not opted in to being written to is refusing, not malfunctioning: answering it as
+            # the refusal it is keeps a traceback out of the daemon log and tells the pusher what to ask for.
+            self._send_json(HTTPStatus.FORBIDDEN, {'detail': str(exception)})
         except Exception as exception:
             LOGGER.exception('collab endpoint request failed')
             self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {'detail': str(exception)})

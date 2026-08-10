@@ -63,6 +63,15 @@ class EndpointBusy(AiidaException):
     """The endpoint is serving as many peers as ``collab.max_concurrency`` allows; the requester retries later."""
 
 
+class PushRefused(AiidaException):
+    """The profile has not opted in to being written to; a push against it is refused rather than attempted.
+
+    A class of its own rather than the ``PermissionError`` it reads as, because the endpoint has to answer a
+    refusal and a malfunction differently: an ``EACCES`` on a file the daemon owns is the second of those, and
+    must not be reported to a peer as a policy decision and logged nowhere.
+    """
+
+
 class VersionSkew(AiidaException):
     """A delta cannot travel between two peers, because one of them cannot read the archives the other writes."""
 

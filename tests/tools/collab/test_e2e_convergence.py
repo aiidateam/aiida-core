@@ -73,6 +73,37 @@ def test_extras_relay_through_the_chain(collab, direction):
     assert c.graph() == a.graph()
 
 
+def test_a_refreshed_extra_survives_a_failed_push_and_relays_through_the_chain(collab, faults):
+    """Test that an extras edit whose push failed at the import still reaches C through B, once the retry lands it.
+
+    What the retry's renegotiation is worth: an edit the retry dropped is not merely missing from the pair that
+    had the failure — the node is shared, so no delta ever carries it again and it leaves the collab entirely.
+    Push-only: the stash is the sender's.
+    """
+    a, b, c = collab(3, extras_mode='sync')
+    created = a.seal_calculation()
+
+    a.run('push', ['bob', '--force'])
+    b.run('push', ['carol', '--force'])
+
+    a.set_extra(created, 'note', 'from-alice')
+    # Sealed so that the failed push has real bytes to stash: an extras-only push does travel once the receiver
+    # holds a cursor, but the archive it stashes holds no node and the retry would have nothing to reuse.
+    a.seal_calculation()
+
+    faults.failing_import()
+    a.run('push', ['bob', '--force'], raises=True)
+    a.run('push', ['bob', '--force'])
+
+    assert b.extras(created) == {'note': 'from-alice'}
+
+    b.run('push', ['carol', '--force'])
+
+    assert c.extras(created) == {'note': 'from-alice'}
+    assert c.graph() == a.graph()
+    assert c.state().cursors.get(a.uuid) is None, 'Carol took the edit from Alice rather than through Bob'
+
+
 @pytest.mark.parametrize('direction', DIRECTIONS)
 def test_membership_relays_through_the_chain(collab, direction):
     """Test that a node curated into a group on A joins that group on C too, under the `grow` policy."""

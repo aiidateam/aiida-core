@@ -1827,6 +1827,63 @@ def test_push_offers_no_refresh_under_local(run_cli_command, config_with_profile
     assert offered == [{}], 'nothing about extras may be offered to a peer of a collab that keeps them local'
 
 
+def test_push_retry_offers_no_refresh_under_local(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a collab that keeps extras local negotiates none on the retry of a stashed push either.
+
+    Asserted on what the sender offers rather than on what the receiver keeps: a receiver under ``local`` answers
+    every refresh offer with nothing, so its extras staying its own would hold with this gate removed too.
+    """
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient, UploadReport
+    from aiida.tools.collab.protocol import CollabRequestError, ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile)
+
+    offered = []
+
+    def export_delta(filepath, *, delta, backend, want=None, groups_mode=None):
+        filepath.write_bytes(b'delta')
+        return DeltaExport(filepath=filepath, uuids=sorted(want), instant=delta.instant)
+
+    def diff_manifest(self, uuids, refresh=None, members=None):
+        offered.append(refresh)
+        return ManifestDiff(missing=list(uuids), refresh=[])
+
+    def trigger_import_failing(self, sha256, *, peer, instant, refresh=None, members=None):
+        raise CollabRequestError('the peer failed to import')
+
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
+    monkeypatch.setattr(
+        CollabClient,
+        'push_handshake',
+        lambda self, requester, roster=None: PushHandshake(busy=False, cursor=timezone.now(), claim=[]),
+    )
+    monkeypatch.setattr(CollabClient, 'diff_manifest', diff_manifest)
+    monkeypatch.setattr(
+        CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=5, staged=5)
+    )
+    monkeypatch.setattr(
+        sync, 'compute_delta', lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=timezone.now())
+    )
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(sync, 'refresh_offer', lambda **kwargs: {'uuid-edited': timezone.now()})
+    monkeypatch.setattr(CollabClient, 'trigger_import', trigger_import_failing)
+
+    run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False, raises=True)
+
+    monkeypatch.setattr(
+        CollabClient,
+        'trigger_import',
+        lambda self, sha256, *, peer, instant, refresh=None, members=None: {'uuids': ['uuid-one']},
+    )
+
+    result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)
+
+    assert 'retrying the delta of the previous failed push' in result.output
+    assert offered == [{}, {}], 'a retry of a collab that keeps extras local may offer nothing about them either'
+
+
 def test_push_refused_delta_drops_stash(run_cli_command, config_with_profile, stub_environment, monkeypatch):
     """Test that a 422-refused push drops its retry stash, so the next push negotiates afresh.
 

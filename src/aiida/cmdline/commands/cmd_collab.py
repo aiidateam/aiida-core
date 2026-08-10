@@ -1185,9 +1185,6 @@ def collab_push(ctx, peers, force, dry_run):
                 meta = json.loads(filepath_meta.read_text(encoding='utf-8')) if filepath_meta.exists() else None
 
                 state = CollabState.load(profile)
-                refresh = []
-                members = []
-                curated = 0
 
                 if filepath.exists() and meta is not None and meta['peer'] == peer_uuid:
                     # A previous push to this peer failed after the transfer. Retrying with the very same bytes
@@ -1195,19 +1192,28 @@ def collab_push(ctx, peers, force, dry_run):
                     # the import; the original instant travels with them, since it is what describes those bytes.
                     uuids, instant = meta['uuids'], datetime.fromisoformat(meta['instant'])
 
-                    # The memberships are negotiated again, though the bytes are not: the import advances the
-                    # peer's cursor to the stashed instant, past every journal entry older than it, so a retry
-                    # that carried none would lose the curation the failed push had negotiated for good.
+                    # The extras and the memberships are negotiated again, though the bytes are not: the import
+                    # advances the peer's cursor to the stashed instant — past every journal entry older than it,
+                    # and past the mtime of every extras edit the failed push had already offered — so a retry
+                    # that carried neither would lose what it had negotiated for good.
+                    offer = (
+                        refresh_offer(state=state, backend=backend, cursor=handshake.cursor)
+                        if policy['extras_mode'] == 'sync'
+                        else {}
+                    )
                     curations = (
                         membership_offer(state=state, backend=backend, cursor=handshake.cursor)
                         if policy['groups_mode'] == 'grow'
                         else []
                     )
-                    members = client.diff_manifest([], {}, curations).members if curations else []
-                    curated = len(member_pairs(members))
+                    diff = client.diff_manifest([], offer, curations)
+                    curated = len(member_pairs(diff.members))
 
                     if dry_run:
                         summary = f'{nickname}: {len(uuids)} node(s) to push (stashed retry)'
+
+                        if diff.refresh:
+                            summary += f', extras of {len(diff.refresh)} node(s) to be replaced by yours'
 
                         if curated:
                             summary += f', {curated} group membership(s) to add there'
@@ -1217,6 +1223,9 @@ def collab_push(ctx, peers, force, dry_run):
                         # answer everybody else busy until the slot expired, for a command that sent nothing.
                         client.release()
                         continue
+
+                    refresh = refresh_snapshots(backend, diff.refresh)
+                    members = diff.members
 
                     echo.echo_report(f'retrying the delta of the previous failed push to {nickname}')
                 else:

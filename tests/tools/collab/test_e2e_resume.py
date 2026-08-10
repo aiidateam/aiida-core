@@ -71,12 +71,13 @@ def test_a_stashed_push_is_retried_verbatim_with_its_memberships_renegotiated(co
     assert (group, first) in b.graph()['members']
 
 
-def test_a_stashed_push_drops_its_extras_refresh(collab, faults):
-    """KNOWN GAP (phase 14): a retried push loses the extras refresh the failed one had negotiated, for good.
+def test_a_stashed_push_renegotiates_its_extras_refresh(collab, faults):
+    """Test that a retried push negotiates the extras of the failed one afresh, as it does its memberships.
 
-    The retry re-sends the stashed bytes and renegotiates the memberships, but not the refresh: the extras are
-    left empty. The import then advances the receiver's cursor to the stashed instant, which is after the edit,
-    so no later offer includes it either. See ``phase-15/deferred.md``.
+    The import advances the receiver's cursor to the stashed instant, which is later than the mtime of the edit
+    the failed push had already offered, so a retry that dropped it would leave it behind that cursor and no
+    offer would name it again — and the node is shared already, so no later delta could carry it either.
+    Push-only: the stash is the sender's.
     """
     a, b, _ = collab(3, extras_mode='sync')
     first = a.seal_calculation()
@@ -93,12 +94,41 @@ def test_a_stashed_push_drops_its_extras_refresh(collab, faults):
 
     a.run('push', ['bob', '--force'])
 
-    assert b.extras(first) == {}
+    assert b.extras(first) == {'note': 'alice'}
+
+    mark = len(b.state().events)
 
     for _ in range(3):
         a.run('push', ['bob', '--force'])
 
-    assert b.extras(first) == {}, 'the lost refresh recovered on its own after all'
+    assert b.extras(first) == {'note': 'alice'}, 'a later push moved the value the retry had landed'
+    assert all(not event.uuids for event in b.state().events[mark:]), 'the landed refresh is re-delivered forever'
+
+
+def test_a_retried_push_still_transfers_no_bytes(collab, faults):
+    """Test that renegotiating the extras of a retry does not recompute the delta the stash exists to reuse.
+
+    The guard on the fix above: the bytes are what the peer already staged, and re-cutting them would defeat the
+    resumption the stash is for. Only the metadata beside them is negotiated again. Push-only: as its subject.
+    """
+    a, b, _ = collab(3, extras_mode='sync')
+    first = a.seal_calculation()
+
+    a.run('push', ['bob', '--force'])
+    b.seal_calculation()
+    b.run('push', ['alice', '--force'])
+
+    a.set_extra(first, 'note', 'alice')
+    second = a.seal_calculation()
+
+    faults.failing_import()
+    a.run('push', ['bob', '--force'], raises=True)
+
+    result = a.run('push', ['bob', '--force'])
+
+    assert 'transferred 0 bytes' in result.output
+    assert second in b.uuids()
+    assert b.extras(first) == {'note': 'alice'}
 
 
 def test_a_cursor_never_moves_backwards(collab, faults):

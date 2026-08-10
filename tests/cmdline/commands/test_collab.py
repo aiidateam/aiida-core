@@ -993,6 +993,38 @@ def test_pull_unknown_peer(run_cli_command, config_with_profile, stub_environmen
     assert PEER in result.output
 
 
+def test_pull_refuses_a_stale_computer_map(
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, tmp_path, monkeypatch
+):
+    """Test that a mapping naming a computer this profile does not have aborts before any peer is contacted.
+
+    Unlike a delta that cannot land, it is not one peer's answer: it would refuse every peer's delta identically,
+    so it is refused up front rather than after each download.
+    """
+    from aiida.manage import get_manager
+    from aiida.storage.sqlite_temp import SqliteTempBackend
+    from aiida.tools.collab.client import CollabClient
+    from aiida.tools.collab.config import OPTION_COMPUTER_MAP
+
+    init_collab(config_with_profile, **{OPTION_COMPUTER_MAP: {'lumi': 'missing'}})
+
+    # A real storage: what is under test is the lookup that fails against it, and `stub_environment` mocks the
+    # storage away for the pull tests that make no query at all.
+    backend = SqliteTempBackend(SqliteTempBackend.create_profile(filepath=str(tmp_path / 'storage')))
+    monkeypatch.setattr(get_manager(), 'get_profile_storage', lambda: backend)
+    # Recorded too, so that "nobody was contacted" covers the handshake the loop opens with and not only the
+    # negotiation after it.
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: stub_transfer.append('info'))
+
+    result = run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False, raises=True)
+
+    assert 'collab.computer_map' in result.output
+    assert 'missing' in result.output
+    assert stub_transfer == [], 'a peer was contacted before the mapping was resolved'
+
+    backend.close()
+
+
 OFFER_INSTANT = timezone.now()
 
 

@@ -500,11 +500,12 @@ def faults(monkeypatch):
 class _Faults:
     """Injects one fault at a time, each wrapping the genuine handler rather than replacing it.
 
-    The transfer failures fire once and let the retry through, which is what the recovery under test needs. The
-    ones that stand in for a diverged sender or an older peer -- a planted boundary link, a generated group, an
-    older archive format, a handshake that misstates itself, an unreadable export -- hold for every call, since
-    what they model is a peer being that way rather than a moment going wrong. ``rotate_during_import`` is
-    neither: it fires once, and what it models is a second terminal, not a fault at all.
+    The transfer failures fire once and let the retry through, which is what the recovery under test needs. So do
+    the two that stand in for one peer of a round being diverged -- a planted boundary link and an unreadable
+    export -- since a loop over several peers is only isolated by the others being served correctly. The ones
+    that model a peer simply being that way -- a generated group, an older archive format, a handshake that
+    misstates itself -- hold for every call. ``rotate_during_import`` is neither: it fires once, and what it
+    models is a second terminal, not a fault at all.
     """
 
     def __init__(self, monkeypatch):
@@ -615,8 +616,20 @@ class _Faults:
 
         return state
 
-    def failing_import(self, message: str = 'the import failed', times: int = 1) -> dict:
-        """Make the next ``times`` imports raise, wherever they run: in the endpoint or in the pulling CLI."""
+    def failing_import(
+        self,
+        message: str = 'the import failed',
+        times: int = 1,
+        after: int = 0,
+        error: type[Exception] = RuntimeError,
+    ) -> dict:
+        """Make imports raise, wherever they run: in the endpoint or in the pulling CLI.
+
+        :param after: imports to let through first, which is how the failure is placed in the middle of a loop
+            over several peers rather than at its head.
+        :param error: what the import raises. A pull only treats the delta of one peer as unusable for the errors
+            that describe the delta, so a scenario about the loop carrying on has to raise one of those.
+        """
         from aiida.tools.collab import endpoint as collab_endpoint
         from aiida.tools.collab import sync as collab_sync
 
@@ -626,8 +639,8 @@ class _Faults:
         def failing(*args, **kwargs):
             state['calls'] += 1
 
-            if state['calls'] <= times:
-                raise RuntimeError(message)
+            if after < state['calls'] <= after + times:
+                raise error(message)
 
             return original(*args, **kwargs)
 
@@ -639,17 +652,26 @@ class _Faults:
         return state
 
     def plant_boundary_link(self, link: list[str]) -> None:
-        """Add one link quadruple to the metadata of every delta exported from here on.
+        """Add one link quadruple to the metadata of the next delta exported from anywhere.
 
         A diverged or hostile sender is the only thing that produces one, so this is how the receiver's refusal
         can be exercised at all: the boundary is what the import re-attaches without the archive importer's
         validation, and it must not be able to plant a second creator or a link from a node to itself.
+
+        The next delta and no other, so that in a round over several peers exactly one of them is the diverged
+        one -- the pulls and the cuts of a loop are sequential, and the first belongs to the first peer.
         """
         from aiida.tools.collab import sync as collab_sync
 
+        state = {'planted': False}
         original = collab_sync._write_thin_archive
 
         def planting(filepath, *, boundary, **kwargs):
+            if state['planted']:
+                return original(filepath, boundary=boundary, **kwargs)
+
+            state['planted'] = True
+
             return original(filepath, boundary=[*boundary, link], **kwargs)
 
         self._monkeypatch.setattr(collab_sync, '_write_thin_archive', planting)
@@ -780,15 +802,25 @@ class _Faults:
         return state
 
     def corrupt_export(self) -> None:
-        """Make every delta export from here on write bytes that are not an archive at all."""
+        """Make the next delta exported from anywhere write bytes that are not an archive at all.
+
+        The next and no other, for the reason ``plant_boundary_link`` fires once: one unusable peer in a round is
+        what tells apart a peer being skipped from a run being over.
+        """
         from aiida.tools.collab import endpoint as collab_endpoint
         from aiida.tools.collab import sync as collab_sync
         from aiida.tools.collab.sync import DeltaExport
 
+        state = {'corrupted': False}
         original = collab_sync.export_delta
 
         def corrupting(filepath, **kwargs):
             export = original(filepath, **kwargs)
+
+            if state['corrupted']:
+                return export
+
+            state['corrupted'] = True
             filepath.write_bytes(b'not an archive' * 64)
 
             return DeltaExport(filepath=filepath, uuids=export.uuids, instant=export.instant)

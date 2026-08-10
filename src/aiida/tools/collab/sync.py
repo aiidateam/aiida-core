@@ -691,7 +691,7 @@ def import_delta(
 
         # Resolved before anything lands, so that a stale mapping aborts the import instead of crashing after it,
         # half-done and unlogged.
-        computer_uuids = _resolve_computer_map(backend, computer_map) if computer_map else {}
+        computer_uuids = resolve_computer_map(backend, computer_map) if computer_map else {}
 
         # The caching extras of the peer describe their profile, not this one, so the merge must not be able to
         # carry them over. New nodes are stripped of them by the import itself, existing ones are restored below.
@@ -1022,10 +1022,10 @@ def apply_computer_map(backend: StorageBackend, computer_map: dict[str, str]) ->
 
     :returns: the number of calculations whose hash was written.
     """
-    return _remap_hashes(backend, None, _resolve_computer_map(backend, computer_map))
+    return _remap_hashes(backend, None, resolve_computer_map(backend, computer_map))
 
 
-def _resolve_computer_map(backend: StorageBackend, computer_map: dict[str, str]) -> dict[str, str]:
+def resolve_computer_map(backend: StorageBackend, computer_map: dict[str, str]) -> dict[str, str]:
     """Return peer computer label to local computer UUID, refusing when a mapped local computer does not exist."""
     from aiida.common.exceptions import ConfigurationError, NotExistent
 
@@ -1053,7 +1053,7 @@ def _remap_hashes(backend: StorageBackend, uuids: list[str] | None, computer_uui
     everything else about the node, including which computer it actually ran on, stays untouched.
 
     :param uuids: the nodes of the delta being imported, or ``None`` for every mapped calculation.
-    :param computer_uuids: peer computer label to local computer UUID, from ``_resolve_computer_map``.
+    :param computer_uuids: peer computer label to local computer UUID, from ``resolve_computer_map``.
     :returns: the number of calculations whose hash was written.
     """
     from aiida.common.exceptions import HashingError

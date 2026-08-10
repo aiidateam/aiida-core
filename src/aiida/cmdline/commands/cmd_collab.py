@@ -896,7 +896,13 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
     from aiida.tools.collab.endpoint import local_identity, local_info, workers_stopped
     from aiida.tools.collab.protocol import CollabRequestError, VersionSkew, member_pairs
     from aiida.tools.collab.state import CollabState, import_lock
-    from aiida.tools.collab.sync import import_delta, members_wanted, missing_uuids, refresh_wanted
+    from aiida.tools.collab.sync import (
+        import_delta,
+        members_wanted,
+        missing_uuids,
+        refresh_wanted,
+        resolve_computer_map,
+    )
 
     profile = ctx.obj.profile
     require_collab(profile)
@@ -921,6 +927,16 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
     local = local_info(profile, backend)
     workdir = CollabState.get_workdir(profile)
     pulled = 0
+    failed = []
+
+    # A mapping naming a computer this profile does not have is about this profile, not about any peer: it would
+    # refuse every delta identically. Resolved here so that it aborts with nobody contacted and nothing
+    # transferred, rather than once per peer after each download.
+    if computer_map:
+        try:
+            resolve_computer_map(backend, computer_map)
+        except ConfigurationError as exception:
+            echo.echo_critical(str(exception))
 
     workdir.mkdir(parents=True, exist_ok=True)
 
@@ -1038,12 +1054,15 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
                         groups_mode=policy['groups_mode'],
                         members=members,
                     )
-        except ConfigurationError as exception:
-            # The downloaded delta is left in place: the next pull, with the configuration fixed, reuses it.
-            echo.echo_critical(str(exception))
-        except IntegrityError as exception:
-            # The delta linked to a node this profile holds nowhere; nothing landed, the next sync delivers it.
-            echo.echo_critical(str(exception))
+        # What one peer served: a link this profile cannot resolve, or bytes the archive reader cannot read
+        # (``CorruptStorage`` and its siblings are ``ConfigurationError``s, and the mapping that is genuinely this
+        # profile's own was refused before the loop). Nothing landed, and the next peer's delta is unaffected, so
+        # it is skipped like an offline one — but named, and with the exit code of a transfer that failed. The
+        # downloaded delta is left in place for the next pull to reuse.
+        except (ConfigurationError, IntegrityError) as exception:
+            echo.echo_warning(f'skipping peer {nickname}: {exception}')
+            failed.append(nickname)
+            continue
 
         pin_peer(ctx.obj.config, profile, peer_uuid=peer_uuid, url=url, roster=manifest.roster, token=token)
 
@@ -1066,6 +1085,9 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
 
     if pulled:
         _dump_hint(profile)
+
+    if failed:
+        echo.echo_critical(f'the delta of {", ".join(failed)} did not land: see the warnings above.')
 
 
 def _dump_hint(profile):
@@ -1123,6 +1145,7 @@ def collab_push(ctx, peers, force, dry_run):
     identity = local_identity(profile)
     local = local_info(profile, backend)
     workdir = CollabState.get_workdir(profile)
+    failed = []
 
     workdir.mkdir(parents=True, exist_ok=True)
 
@@ -1292,6 +1315,8 @@ def collab_push(ctx, peers, force, dry_run):
                 client.release()
                 continue
 
+            # An import that did not land says nothing about the next peer's, so it is skipped like an offline one
+            # — but named, and with the exit code of a transfer that failed.
             try:
                 client.trigger_import(upload.sha256, peer=identity, instant=instant, refresh=refresh, members=members)
             except CollabRequestError as exception:
@@ -1299,18 +1324,23 @@ def collab_push(ctx, peers, force, dry_run):
                 # rotated in between — leaves the slot the handshake took with nothing to release it: the import
                 # whose `finally` would have is the one that did not run.
                 client.release()
+                failed.append(nickname)
 
                 if exception.status == HTTPStatus.UNPROCESSABLE_ENTITY:
                     # The delta can never land — it links to a node the peer no longer holds — so retrying the
                     # same bytes would abort forever. The next push negotiates afresh, its diff includes the hole.
                     filepath.unlink()
                     filepath_meta.unlink()
-                    echo.echo_critical(f'the peer refused the delta: {exception}\nThe next push negotiates afresh.')
+                    echo.echo_warning(
+                        f'skipping peer {nickname}: it refused the delta: {exception}\nThe next push negotiates afresh.'
+                    )
+                    continue
 
-                echo.echo_critical(
-                    f'files transferred, provenance not landed: {exception}\n'
+                echo.echo_warning(
+                    f'skipping peer {nickname}: files transferred, provenance not landed: {exception}\n'
                     'The next push resumes from whatever the peer still has staged.'
                 )
+                continue
 
         size = filepath.stat().st_size
 
@@ -1336,3 +1366,6 @@ def collab_push(ctx, peers, force, dry_run):
             message += f', added {len(member_pairs(members))} group membership(s)'
 
         echo.echo_success(message)
+
+    if failed:
+        echo.echo_critical(f'the delta sent to {", ".join(failed)} did not land: see the warnings above.')

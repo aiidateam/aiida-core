@@ -419,13 +419,14 @@ def test_a_self_link_is_refused(collab, faults, direction):
 
 
 @pytest.mark.parametrize('direction', DIRECTIONS)
-def test_a_refused_delta_stops_the_whole_sync(collab, faults, direction):
-    """KNOWN GAP: a delta a peer refuses aborts the run, so the peers after it in the loop are not synced.
+def test_a_refused_delta_skips_only_its_peer(collab, faults, direction):
+    """EXPECTED (phase 21): a delta that cannot land is one peer's answer, so it is skipped like any other.
 
     Every other unusable answer from a peer — offline, 401, busy, a version this profile cannot read, a policy
-    that does not match — is warned about and skipped, and the loop moves on. A delta that cannot land is the one
-    that is not: it aborts, and whoever came after that peer in the roster waits for the next run.
-    See ``phase-15/deferred.md``.
+    that does not match — is warned about and skipped, and the loop moves on. A refusal reads the same, and names
+    the peer it came from, because with several peers the message is the only thing that says which one diverged.
+    What it does not do is exit 0: a transfer that started and did not land is a failure, unlike a peer that never
+    started one.
     """
     a, b, c = collab(3)
     first = a.seal_calculation()
@@ -434,14 +435,20 @@ def test_a_refused_delta_stops_the_whole_sync(collab, faults, direction):
     move(a, c, direction)
 
     second = a.seal_calculation()
+    # Only the first delta of the round carries it, so the round has exactly one diverged peer in it.
     faults.plant_boundary_link([a.creator(second), first, 'create', 'result'])
 
     result = a.run(direction, ['--force'], raises=True)
 
-    # Both peers would refuse this delta, so one refusal in the output is the loop having stopped at the first.
     assert result.output.count('second incoming link') == 1
-    assert second not in b.uuids()
-    assert second not in c.uuids()
+    assert f'peer {b.nickname}' in result.output, 'the refusal does not say which peer it came from'
+
+    # Nothing landed from the refusal, and the peer after it is contacted and synced all the same.
+    if direction == 'pull':
+        assert set(a.state().cursors) == {c.uuid}
+    else:
+        assert second not in b.uuids()
+        assert second in c.uuids()
 
 
 @pytest.mark.parametrize('direction', DIRECTIONS)

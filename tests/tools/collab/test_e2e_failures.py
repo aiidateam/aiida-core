@@ -165,22 +165,62 @@ def test_corrupt_staged_bytes_are_discarded_and_uploaded_again(collab, faults):
 
 @pytest.mark.parametrize('direction', DIRECTIONS)
 def test_a_corrupt_delta_lands_nothing(collab, faults, direction):
-    """KNOWN GAP: bytes that are not an archive abort the sync, and on a pull say only what the reader saw.
+    """Test that bytes that are not an archive land nothing, skip that peer by name, and leave the round running.
 
-    Nothing lands and no cursor moves, which is what matters. What the user is told is not: a pull aborts with
-    the bare message of the archive reader, naming neither the peer nor what to do about it, and the peers after
-    it in the loop are left unsynced. See ``phase-15/deferred.md``.
+    An unreadable delta reaches a different guard from a refused one — the archive reader rather than the
+    boundary check — and has to read the same way: nothing lands, the peers after it are still synced, and the
+    run exits non-zero because a transfer that started did not land.
     """
-    a, b, _ = collab(3)
-    a.seal_calculation()
+    a, b, c = collab(3)
+    mine = a.seal_calculation()
+    theirs = b.seal_calculation()
+    c.seal_calculation()
 
+    # The corruption has to be one the loop gets past, not one it ends on.
+    assert list(a.peers()) == [b.uuid, c.uuid]
     faults.corrupt_export()
 
-    result = move(a, b, direction, raises=True)
+    result = a.run(direction, ['--force'], raises=True)
 
-    assert b.count() == 0
-    assert b.state().cursors == {}
+    assert f'peer {b.nickname}' in result.output, 'the unreadable delta does not say which peer served it'
     assert ('not a folder, zip or tar file' if direction == 'pull' else 'provenance not landed') in result.output
+
+    if direction == 'pull':
+        assert theirs not in a.uuids()
+        assert set(a.state().cursors) == {c.uuid}, 'a cursor moved on the corrupt delta, or the loop stopped'
+    else:
+        assert mine not in b.uuids()
+        assert mine in c.uuids(), 'one corrupt cut stopped the sync with the peers after it'
+
+
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_an_import_failure_in_the_middle_of_a_round_syncs_the_rest(collab, faults, direction):
+    """Test the general claim: one peer's import failing costs that peer alone, wherever it sits in the round.
+
+    The refusal and the corrupt delta above are both the *first* peer of their round. What this adds is a failure
+    with peers on either side of it, which is the only shape that shows the loop resuming rather than merely
+    surviving its first step.
+    """
+    from aiida.common.exceptions import IntegrityError
+
+    a, b, c, d = collab(4)
+    mine = a.seal_calculation()
+    theirs = {peer.nickname: peer.seal_calculation() for peer in (b, c, d)}
+
+    assert list(a.peers()) == [b.uuid, c.uuid, d.uuid]
+    faults.failing_import(after=1, error=IntegrityError)
+
+    result = a.run(direction, ['--force'], raises=True)
+
+    assert result.output.count('skipping peer') == 1
+    assert f'peer {c.nickname}' in result.output
+
+    if direction == 'pull':
+        assert theirs['carol'] not in a.uuids()
+        assert set(a.state().cursors) == {b.uuid, d.uuid}
+    else:
+        assert mine not in c.uuids()
+        assert mine in b.uuids() and mine in d.uuids()
 
 
 @pytest.mark.parametrize('status', (200, 500))

@@ -21,6 +21,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
 
   validate-dependency-specification:
@@ -32,6 +35,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
 
     - name: Set up Python 3.11
       uses: actions/setup-python@v6
@@ -39,7 +44,7 @@ jobs:
         python-version: '3.11'
 
     - name: Set up uv
-      uses: astral-sh/setup-uv@v7.3.1
+      uses: astral-sh/setup-uv@5a095e7a2014a4212f075830d4f7277575a9d098   # v7.3.1
       with:
         version: latest
 
@@ -59,9 +64,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
 
     - name: Setup Conda
-      uses: conda-incubator/setup-miniconda@v3
+      uses: conda-incubator/setup-miniconda@fc2d68f6413eb2d87b895e92f8584b5b94a10167   # v3.3.0
       with:
         channels: conda-forge
 
@@ -84,6 +91,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
 
     - name: Set up Python 3.10
       uses: actions/setup-python@v6
@@ -126,9 +135,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
 
     - name: Setup Conda
-      uses: conda-incubator/setup-miniconda@v3
+      uses: conda-incubator/setup-miniconda@fc2d68f6413eb2d87b895e92f8584b5b94a10167   # v3.3.0
       with:
         channels: conda-forge
 
@@ -194,6 +205,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
 
     - name: Install system dependencies
       run: sudo apt update && sudo apt install postgresql graphviz

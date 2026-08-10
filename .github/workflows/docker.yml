@@ -22,6 +22,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  # The reusable workflows called below push images to ghcr.io
+  packages: write
+
 env:
   FORCE_COLOR: 1
 

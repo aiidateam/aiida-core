@@ -14,7 +14,7 @@ runs:
   steps:
 
   - name: Slack notification
-    uses: rtCamp/action-slack-notify@v2
+    uses: rtCamp/action-slack-notify@33ca3be66c6f378fe1610fd1d5258632dbed5e58   # v2.4.0
     env:
       SLACK_ICON: https://www.materialscloud.org/discover/images/0ba0a17d.aiida-logo-128.png
       SLACK_CHANNEL: dev-aiida-core

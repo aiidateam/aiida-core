@@ -64,6 +64,7 @@ numfig = True
 extensions = [
     'myst_nb',
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosectionlabel',
     'sphinx.ext.intersphinx',
     'sphinx.ext.doctest',
     'sphinx.ext.viewcode',
@@ -97,6 +98,23 @@ ipython_mplbackend = ''
 
 myst_enable_extensions = ['colon_fence', 'deflist']
 myst_heading_anchors = 4
+
+# Warn when two sections in the same document generate the same anchor, which silently makes
+# in-page links resolve to the first of them. Labels are prefixed by document, so identical
+# section titles across different pages are not reported.
+autosectionlabel_prefix_document = True
+
+# The changelog repeats the same section titles for every release by design, so it cannot be
+# checked here; `markdownlint` guards it instead, see `.markdownlint.json`. The remaining
+# documents each have a handful of duplicated section titles and are silenced as a baseline
+# until those are renamed.
+#suppress_warnings = [
+#    'autosectionlabel.reference/_changelog',
+#    'autosectionlabel.howto/plugins_develop',
+#    'autosectionlabel.howto/ssh',
+#    'autosectionlabel.topics/data_types',
+#    'autosectionlabel.topics/workflows/usage',
+#]
 nb_execution_show_tb = 'READTHEDOCS' in os.environ
 nb_merge_streams = True
 nb_mime_priority_overrides = [

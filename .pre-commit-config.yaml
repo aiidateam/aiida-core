@@ -59,6 +59,13 @@ repos:
   - id: nbstripout
     files: \.ipynb$
 
+- repo: https://github.com/DavidAnson/markdownlint-cli2
+  rev: v0.23.2
+  hooks:
+    # Guard the changelog against headings that shadow the anchors of the newest release section
+  - id: markdownlint-cli2
+    files: ^CHANGELOG\.md$
+
 - repo: local
 
   hooks:

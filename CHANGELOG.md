@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+<!-- Group new entries under bold labels, e.g. `**Fixes**`, and keep the headings below commented out. -->
+<!-- A heading here shadows the identically named anchor of the newest release section and breaks its -->
+<!-- table of contents. The release notes turn these into real headings. Enforced by markdownlint MD024. -->
+
+### New features
+
+<!-- ### Behavior changes -->
+
+<!-- ### Fixes -->
+
+<!-- ### Deprecations -->
+
+
 ## v2.9.0 - 2026-08-06
 
 The big feature of this release is the new built-in **ZeroMQ broker**, which allows submitting calculations and workflows to the daemon workers without installing and running an external message broker service such as RabbitMQ.
@@ -111,7 +126,6 @@ See the updated [logging documentation](https://aiida-core.readthedocs.io/en/v2.
 
 Related interface extensions:
 
-- `aiida.common.UnsupportedSchemaError` ([#7417](https://github.com/aiidateam/aiida-core/pull/7417))
 - `aiida.manage.AiiDAConfigPathResolver.profile_log_dir` ([#7322](https://github.com/aiidateam/aiida-core/pull/7322))
 - `aiida.manage.Option.advanced` ([#7322](https://github.com/aiidateam/aiida-core/pull/7322))
 - `aiida.manage.Option.deprecated_by` ([#7322](https://github.com/aiidateam/aiida-core/pull/7322))
@@ -132,6 +146,7 @@ See the [Behavior changes](#behavior-changes) section for migration guidance.
 
 Related interface extensions:
 
+- `aiida.common.UnsupportedSchemaError` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 - `aiida.orm.AbstractCode.serialize` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 - `aiida.orm.AbstractCode.to_model` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 - `aiida.orm.AbstractCode.attach_file` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
@@ -168,7 +183,6 @@ Related interface extensions:
 - `aiida.orm.Node.to_model_field_values` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 - `aiida.orm.QbFields.keys` ([#7463](https://github.com/aiidateam/aiida-core/pull/7463))
 - `aiida.orm.SinglefileData.attach_file` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
-- `aiida.orm.WorkChainNode.tools` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 - `aiida.orm.XyData.x_name` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 - `aiida.orm.XyData.x_units` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 - `aiida.orm.XyData.y_names` ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
@@ -208,6 +222,7 @@ This tool exposes methods to introspect and manipulate workflow state, helping d
 Related interface extensions:
 
 - `aiida.tools.WorkflowTools` ([#7329](https://github.com/aiidateam/aiida-core/pull/7329))
+- `aiida.orm.WorkChainNode.tools` ([#7329](https://github.com/aiidateam/aiida-core/pull/7329))
 
 #### Daemon client: worker scaling with wait parameter
 
@@ -315,6 +330,7 @@ We added to aiida-core v2.7.4 and v2.8.1 migrations to downgrade the configurati
 - `QbField.is_attribute` and `QbField.is_subscriptable` are deprecated, inspect the corresponding ORM model field metadata instead ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 - `ArrayData.save_arrays()` and `ArrayData.load_arrays()` are deprecated, use `numpy.save`/`numpy.load` with `io.BytesIO` directly instead ([#7480](https://github.com/aiidateam/aiida-core/pull/7480))
 
+<!-- markdownlint-disable-next-line MD024 -- intentional duplicate, the TOC links it as `#command-line-1` -->
 #### Command line
 
 - `verdi profile setup --use-rabbitmq/--no-use-rabbitmq` is deprecated, use `--broker` instead. `--no-use-rabbitmq` is equivalent to `--broker none` ([#7284](https://github.com/aiidateam/aiida-core/pull/7284))
@@ -327,6 +343,9 @@ We added to aiida-core v2.7.4 and v2.8.1 migrations to downgrade the configurati
 
 Both configuration options are renamed automatically by the migration to config schema version 10, see [Configuration file: schema bumped to version 10](#configuration-file-schema-bumped-to-version-10).
 
+<!-- Only the newest release section can own the shared anchors (`#fixes`, ...), so duplicate headings -->
+<!-- are checked above this marker only. Move it below the new section when writing release notes. -->
+<!-- markdownlint-disable MD024 -->
 
 ## v2.8.1 - 2026-07-25
 

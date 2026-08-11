@@ -80,7 +80,7 @@ Running that workflow over *many* inputs, replacing the Python `for`-loop, is th
 ## Why workflows?
 
 In {ref}`Module 2 <tutorial:module2>`, you built a three-step pipeline (`prepare_input` &rarr; `ShellJob` &rarr; `parse_output`) and ran it in a Python `for` loop.
-That works for a single run, but leaves several gaps:
+That gets the job done, but leaves several gaps:
 
 - **No single pipeline object**: the steps are linked in the provenance graph, but nothing ties them together into one entity you can restart, execute with different parameters, or query.
 - **Sequential only**: the Python loop waits for each iteration to finish; a workflow can run independent iterations in parallel.

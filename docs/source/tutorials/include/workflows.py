@@ -18,8 +18,8 @@ from aiida import orm
 # WorkGraph-wrapped variants of the Module 2 calcfunctions. Defined once
 # here so any workflow in this module can plug them into a graph without
 # re-wrapping at every call site.
-prepare_input_task = task(prepare_input)
-parse_output_task = task(parse_output)
+prepare_input_task = task()(prepare_input)
+parse_output_task = task()(parse_output)
 
 
 class GrayScottOutputs(TypedDict):

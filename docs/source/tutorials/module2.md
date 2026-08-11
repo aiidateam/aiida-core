@@ -408,6 +408,19 @@ qb = orm.QueryBuilder().append(
 print(f'parse_output calcfunctions in this profile: {qb.count()}')
 ```
 
+That counts by node *type*. You can just as well filter by a stored **attribute**, for example the feed rate `F` that each run recorded on its input `Dict`:
+
+```{code-cell} ipython3
+# Filter input Dict nodes by a stored parameter value.
+qb = orm.QueryBuilder().append(
+    orm.Dict,
+    filters=orm.Dict.fields.attributes['F'] == 0.046,
+    project=['pk', 'attributes.F'],
+)
+pk, f_value = qb.first()
+print(f'An input Dict with F = {f_value} sits at PK {pk}')
+```
+
 The `tutorial/F-sweep` Group we built earlier scopes a query to just its members, by chaining a second `.append` with `with_group`:
 
 ```{code-cell} ipython3
@@ -434,8 +447,7 @@ print(f'Transition run: parse_output PK {qb.first(flat=True)}')
 
 That last query already chains two appends (Group → its members). QueryBuilder can go much further: *projecting* single fields instead of loading whole nodes, and following the links between nodes, a run to its `Float` outputs, back to its inputs, across entire workflows. We'll cover those patterns properly in {ref}`Module 5 <tutorial:module5>`.
 
-With all this activity, our profile is filling up.
-To list every process we have run so far across all modules:
+With all this activity, our profile is filling up, so let's list every process we have run so far across all modules:
 
 ```{code-cell} ipython3
 :tags: ["hide-output"]

@@ -229,12 +229,16 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
         """Authenticate the request, hold it against the collab this endpoint serves, and hand it to its route."""
         # Authentication comes first: an unauthenticated request must not reach any route handler.
         if not self._authenticated():
-            # The body of an unauthenticated upload is never read, so the connection cannot be reused.
+            # The body of an unauthenticated upload is never read, so the connection cannot be reused: it is
+            # closed, and said so, or a pooling client races the close and sees a dropped connection instead of
+            # the answer below.
             self.close_connection = True
             # A member whose token this endpoint retired reaches exactly this answer, which is where a rotation
             # is enforced and the only place it is: the detail is what points that member at the rekey.
             self._send_json(
-                HTTPStatus.UNAUTHORIZED, {'detail': UNAUTHORIZED_DETAIL}, headers={'WWW-Authenticate': 'Bearer'}
+                HTTPStatus.UNAUTHORIZED,
+                {'detail': UNAUTHORIZED_DETAIL},
+                headers={'WWW-Authenticate': 'Bearer', 'Connection': 'close'},
             )
             return
 

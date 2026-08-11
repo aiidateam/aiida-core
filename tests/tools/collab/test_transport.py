@@ -348,6 +348,9 @@ def test_auth_rejected(transport):
         for method, route in routes:
             response = requests.request(method, f'{transport.url}{route}', headers=headers, timeout=10)
             assert response.status_code == HTTPStatus.UNAUTHORIZED, (method, route)
+            # The request body is never read, so the socket is closed; a pooling client that is not told races
+            # the close and sees a dropped connection instead of the answer that tells it to rekey.
+            assert response.headers.get('Connection') == 'close', (method, route)
 
     refused = requests.get(f'{transport.url}{ROUTE_INFO}', headers={'Authorization': 'Bearer wrong'}, timeout=10)
 

@@ -6,7 +6,7 @@
 <!-- A heading here shadows the identically named anchor of the newest release section and breaks its -->
 <!-- table of contents. The release notes turn these into real headings. Enforced by markdownlint MD024. -->
 
-<!-- ### New features -->
+### New features
 
 <!-- ### Behavior changes -->
 

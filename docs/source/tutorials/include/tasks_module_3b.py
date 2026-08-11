@@ -15,7 +15,7 @@ from aiida import orm
 
 @task()
 def make_transition_plot(variances: Annotated[dict, dynamic(float)]) -> orm.SinglefileData:
-    """Plot variance(V) vs feed rate F from gathered sweep results.
+    """Plot variance(V) vs feed rate F from the gathered sweep results.
 
     :param variances: dynamic-namespace input mapping sweep keys (e.g.
         ``F_0_038``) to per-iteration variance values.
@@ -23,33 +23,23 @@ def make_transition_plot(variances: Annotated[dict, dynamic(float)]) -> orm.Sing
     """
     import matplotlib.pyplot as plt
 
-    def _key_to_f(key: str) -> float | None:
-        """Reverse the `F_0_038` → 0.038 encoding used by `param_sweep`.
-
-        Returns ``None`` for keys that don't follow the 1D `F_<int>_<frac>`
-        shape (e.g. multi-parameter sweep keys), so callers can skip them
-        instead of crashing.
-        """
+    # Sweep keys encode the feed rate as `F_0_038` (= 0.038). Keys from a
+    # multi-parameter sweep (e.g. `F_0_040_k_0_060`) don't fit that 1D shape,
+    # so we skip them and plot only the points that sit on a single F axis.
+    points = {}
+    for key, value in variances.items():
         parts = key.split('_')
-        if len(parts) != 3 or parts[0] != 'F':
-            return None
-        try:
-            return float(f'{parts[1]}.{parts[2]}')
-        except ValueError:
-            return None
+        if len(parts) == 3 and parts[0] == 'F':
+            points[float(f'{parts[1]}.{parts[2]}')] = float(value)
 
-    items = sorted((f, float(v)) for k, v in variances.items() if (f := _key_to_f(k)) is not None)
-    f_values = [f for f, _ in items]
-    var_values = [v for _, v in items]
+    f_values = sorted(points)
 
     fig, ax = plt.subplots(figsize=(6, 4))
-    ax.plot(f_values, var_values, 'o-', color='tab:blue', linewidth=2, markersize=6)
+    ax.plot(f_values, [points[f] for f in f_values], 'o-')
     ax.set_xlabel('Feed rate F')
     ax.set_ylabel('variance(V)')
     ax.set_yscale('log')
     ax.set_title('Pattern transition curve')
-    ax.grid(True, alpha=0.3)
-    fig.tight_layout()
 
     buf = io.BytesIO()
     fig.savefig(buf, format='png', dpi=100)

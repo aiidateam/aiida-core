@@ -125,7 +125,7 @@ def conditional_sweep(
     """A coarse F-sweep where each iteration decides for itself whether to run the FFT."""
     with Map(param_sweep) as m:
         pipeline_with_optional_fft(
-            parameters=m.item.value,
+            parameters=m.value,
             command=command,
             variance_threshold=variance_threshold,
         )
@@ -203,7 +203,7 @@ def adaptive_sweep(
     """Coarse F-sweep -> locate transition -> refined sweep with FFT on each point."""
     # 1. Coarse sweep: only the variance is needed to locate the transition.
     with Map(coarse_sweep) as coarse:
-        run = gray_scott_pipeline(parameters=coarse.item.value, command=command)
+        run = gray_scott_pipeline(parameters=coarse.value, command=command)
         coarse.gather({'variance_V': run.variance_V})
 
     # 2. Identify: build the refined sweep dict from the coarse variances.
@@ -215,7 +215,7 @@ def adaptive_sweep(
 
     # 3. Refined sweep: the Map source is the *socket* refined.result, not a static dict.
     with Map(refined.result) as fine:
-        fine_run = gray_scott_pipeline(parameters=fine.item.value, command=command)
+        fine_run = gray_scott_pipeline(parameters=fine.value, command=command)
         wavelength = fft_peak_wavelength_task(results_npz=fine_run.results_npz)
         fine.gather({
             'variance_V': fine_run.variance_V,

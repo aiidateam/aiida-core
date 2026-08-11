@@ -109,7 +109,7 @@ In WorkGraph terminology, a `Map` is a **zone**: a region of the graph that cont
 
 A `Map` zone works in three parts.
 It takes a source mapping of the form `{key: value}` and runs the tasks inside it once per entry.
-Inside the zone, `map_zone.item.key` and `map_zone.item.value` expose the current entry as sockets you wire into tasks like any other output.
+Inside the zone, `map_zone.key` and `map_zone.value` expose the current entry as sockets you wire into tasks like any other output.
 At the end, `map_zone.gather({...})` picks which per-iteration outputs to collect; afterwards they are available as `map_zone.outputs.<name>`, a namespace keyed by the original source keys.
 
 `Map` is imported alongside the rest of the WorkGraph helpers; its signature and docstring are visible via `help(Map)`:
@@ -133,7 +133,7 @@ The workflow's primary output is then that single artifact: `Map` produces one v
 ```
 :::
 
-Now the graph itself, `gray_scott_sweep`:
+Now the sweep workflow itself. Like `gray_scott_pipeline` in {ref}`Module 3a <tutorial:module3a>`, `gray_scott_sweep` is a `@task.graph()`-decorated function whose body assembles the graph; the new piece is the `Map` zone wrapping the pipeline call.
 
 ```{code-cell} ipython3
 from typing import Annotated
@@ -153,7 +153,7 @@ def gray_scott_sweep(
     """Sweep gray_scott_pipeline over param_sweep and reduce to a transition plot."""
     with Map(param_sweep) as map_zone:
         result = gray_scott_pipeline(
-            parameters=map_zone.item.value,
+            parameters=map_zone.value,
             command=command,
         )
         map_zone.gather({
@@ -179,7 +179,7 @@ Its signature uses two annotations you have not seen yet:
 Two things to watch with `Map`:
 
 - The keys of your source dict become labels in the provenance graph and the names of the gathered outputs, so use meaningful, identifier-safe keys (`F_0_040`, not an integer index). **Avoid dots**: WorkGraph treats them as namespace separators and will silently collapse entries.
-- `map_zone.item.key` and `map_zone.item.value` are sockets, not Python values. You can pass them to tasks, but you cannot branch on them or build strings from them inside the graph function.
+- `map_zone.key` and `map_zone.value` are sockets, not Python values. You can pass them to tasks, but you cannot branch on them or build strings from them inside the graph function.
 :::
 
 That's the blueprint; no execution yet.

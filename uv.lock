@@ -338,7 +338,7 @@ dependencies = [
 [[package]]
 name = "aiida-workgraph"
 version = "0.8.1"
-source = { git = "https://github.com/GeigerJ2/aiida-workgraph.git?rev=fix%2Fmap-zone-output-retrieval#fa5f8615aaae173633fe1133d0e672ba2910b47f" }
+source = { git = "https://github.com/GeigerJ2/aiida-workgraph.git?rev=fix%2Fmap-zone-output-retrieval#4013df1eb81fe4470f8324a2cb0289938188e66b" }
 dependencies = [
     { name = "aiida-core" },
     { name = "aiida-pythonjob" },
@@ -5605,10 +5605,12 @@ name = "sphinx-autobuild"
 version = "2025.8.25"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform == 'win32'",
+    "python_full_version >= '3.15' and sys_platform == 'win32'",
+    "python_full_version == '3.14.*' and sys_platform == 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform == 'win32'",
     "python_full_version == '3.11.*' and sys_platform == 'win32'",
-    "python_full_version >= '3.14' and sys_platform != 'win32'",
+    "python_full_version >= '3.15' and sys_platform != 'win32'",
+    "python_full_version == '3.14.*' and sys_platform != 'win32'",
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'win32'",
     "python_full_version == '3.11.*' and sys_platform != 'win32'",
 ]

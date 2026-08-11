@@ -185,6 +185,10 @@ With the tasks wrapped, we can write the workflow itself: a Python function deco
 Its body reads like ordinary Python, but as already noted above, the calls inside register tasks and links rather than executing right away.
 The function's parameters become the graph's inputs and the return statement its outputs.
 
+:::{important}
+The `@task.graph()` decorator is what assembles these calls into a workflow. Calling the wrapped tasks on their own, outside such a function, runs nothing and produces no usable graph: each call only hands back output sockets. The steps become a single, named workflow you can `.build()`, run, or submit only once you connect them inside a `@task.graph()` body.
+:::
+
 The canonical definition lives in `include/workflows.py` so later modules (and other notebooks) can import the same pipeline rather than redefining it.
 It is inlined verbatim in the snippet below:
 
@@ -242,22 +246,9 @@ wg = gray_scott_pipeline.build(
 )
 ```
 
-Building assembles the graph without running anything, so we can convince ourselves the workflow really is just a *specification* by inspecting its inputs, outputs, and tasks first:
+Task inputs accept both **concrete data and sockets**: when we called `.build()`, `command` (an `InstalledCode` node) and `parameters` (a plain dict AiiDA stores as a `Dict`) went in as concrete values, while inside the workflow body `prepared.result` was a socket. A concrete input is stored directly on the task; a socket instead adds a link from the producing task, resolved to its value only at execution time.
 
-```{code-cell} ipython3
-print('Graph inputs: ', [name for name in wg.get_input_names() if name != 'metadata'])
-print('Graph outputs:', wg.get_output_names())
-print('Tasks:        ', [t.name for t in wg.tasks])
-```
-
-(The `!= 'metadata'` filter drops `metadata`, the standard `label`/`description`/caching input namespace AiiDA adds to every process, leaving just the two inputs we declared.)
-
-Two things to notice:
-
-- Task inputs accept both **concrete data and sockets**. Above, `command` (an `InstalledCode` node) and `parameters` (a plain dict AiiDA stores as a `Dict`) are concrete inputs, while `prepared.result` is a socket. Concrete inputs are stored directly as the task's input; a socket instead adds a link from the producing task, resolved to its value only at execution time.
-- The list also shows a few **built-ins** WorkGraph adds to every graph. `graph_inputs` and `graph_outputs` stand in for the graph's own inputs and outputs, so connections into and out of the graph look like ordinary links between tasks. `graph_ctx` is a shared key-value store tasks can read and write (via `wg.ctx`), covered in {ref}`Module 6 <tutorial:module6>`.
-
-WorkGraph also exposes the same structure as an **interactive graph viewer**. Click around the nodes to see the sockets and links; the flow is `graph_inputs` &rarr; `prepare_input` &rarr; `ShellJob` &rarr; `parse_output` &rarr; `graph_outputs`.
+WorkGraph also renders the assembled graph in an **interactive viewer**. Click around the nodes to see the sockets and links; the flow is `graph_inputs` &rarr; `prepare_input` &rarr; `ShellJob` &rarr; `parse_output` &rarr; `graph_outputs`.
 
 ```{code-cell} ipython3
 :tags: [hide-output]
@@ -268,7 +259,9 @@ WorkGraph also exposes the same structure as an **interactive graph viewer**. Cl
 wg
 ```
 
-Everything so far has only *built* the graph. To execute it, we call `run()` (in-process); `submit()` would instead hand it to the AiiDA daemon. You can also reuse `gray_scott_pipeline` as one step inside a bigger graph, which is exactly what {ref}`Module 3b <tutorial:module3b>` does.
+The `graph_inputs` and `graph_outputs` nodes are built-ins that stand in for the graph's own inputs and outputs, so connections into and out of the graph look like ordinary links between tasks; a third built-in, `graph_ctx`, is a shared key-value store tasks can read and write (via `wg.ctx`), covered in {ref}`Module 6 <tutorial:module6>`.
+
+Everything so far has only *built* the graph. To execute it, we call `run()` (in-process), or `submit()` that would instead hand it to the AiiDA daemon. You can also reuse `gray_scott_pipeline` as one step inside a bigger graph, which is exactly what {ref}`Module 3b <tutorial:module3b>` does.
 
 ```{code-cell} ipython3
 :tags: [hide-output]
@@ -276,10 +269,15 @@ Everything so far has only *built* the graph. To execute it, we call `run()` (in
 :    code_prompt_show: 'Show workflow execution log'
 :    code_prompt_hide: 'Hide workflow execution log'
 
-wg.run()
+results = wg.run()
 ```
 
-Expanding the cell above shows the workflow's progress log and, at the very end, a dict of the resolved output values: `variance_V`, `mean_V`, and `results_npz` as concrete `Float` / `SinglefileData` nodes, the return value of `wg.run()`.
+`run()` executes the graph (expand the cell above for the progress log) and returns its resolved outputs, which we capture in `results`: a dict mapping each declared output to a concrete node, `variance_V` and `mean_V` as `Float`s and `results_npz` as a `SinglefileData`.
+
+```{code-cell} ipython3
+for label, node in results.items():
+    print(f'{label:<12} {type(node).__name__:<15} {node}')
+```
 
 `wg` itself stays a Python-side container around the graph definition. The actual AiiDA process node that records the execution lives on `wg.process` and is a `WorkGraphNode` (a subclass of `aiida-core`'s `WorkChainNode`):
 
@@ -313,7 +311,7 @@ For example, the inner `ShellJob`:
 
 ```{code-cell} ipython3
 # Pick the ShellJob child of the workflow.
-shelljob_node = [child for child in wg.process.called if isinstance(child, orm.CalcJobNode)][0]
+shelljob_node = next(child for child in wg.process.called if isinstance(child, orm.CalcJobNode))
 
 print(f'ShellJob PK:    {shelljob_node.pk}')
 print(f'process_label:  {shelljob_node.process_label}')
@@ -345,8 +343,8 @@ The orchestrator is linked to each child step it called and back to the outputs 
 
 ## Next steps
 
-You've turned the Module 2 pipeline into a single, reusable workflow.
-In {ref}`Module 3b <tutorial:module3b>`, you'll apply the same idea to the outer loop: running that workflow over many inputs at once with WorkGraph's `Map` turns the Python `for`-loop from Module 2 into one tracked, parallel workflow too.
+You've turned the pipeline of Module 2 into a single, reusable workflow.
+In {ref}`Module 3b <tutorial:module3b>`, WorkGraph's `Map` runs that same workflow over the whole `F`-sweep at once, as a single tracked, parallel workflow.
 
 ## Further reading
 

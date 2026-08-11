@@ -412,7 +412,7 @@ F_VALUES = [0.038, 0.040, 0.042, 0.044, 0.046, 0.050, 0.055, 0.060]
 @task.graph()
 def gray_scott_sweep(param_sweep: Annotated[dict, dynamic(dict)], command):
     with Map(param_sweep) as m:
-        run = gray_scott_pipeline(parameters=m.item.value, command=command)
+        run = gray_scott_pipeline(parameters=m.value, command=command)
         m.gather({'variance_V': run.variance_V})
 
 

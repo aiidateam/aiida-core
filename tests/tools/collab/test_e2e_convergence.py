@@ -73,6 +73,29 @@ def test_extras_relay_through_the_chain(collab, direction):
     assert c.graph() == a.graph()
 
 
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_an_extras_edit_relays_before_its_author_was_ever_synced_from(collab, direction):
+    """Test that an annotation Bob made on what he pulled reaches Carol through Alice, who never synced from Bob.
+
+    The two halves of the null cursor composing: Alice holds no cursor for Bob, so only the unbounded offer of a
+    first contact carries the edit to her at all, and her own refresh journal is what offers it on to Carol —
+    whose cursor for Alice is already past the node's mtime. Carol never contacts Bob.
+    """
+    a, b, c = collab(3, extras_mode='sync')
+    created = a.seal_calculation()
+
+    move(a, b, direction)
+    move(a, c, direction)
+
+    b.set_extra(created, 'note', 'from-bob')
+
+    move(b, a, direction)
+    move(a, c, direction)
+
+    assert c.extras(created) == {'note': 'from-bob'}
+    assert c.state().cursors.get(b.uuid) is None, 'Carol took the edit from Alice rather than from Bob'
+
+
 def test_a_refreshed_extra_survives_a_failed_push_and_relays_through_the_chain(collab, faults):
     """Test that an extras edit whose push failed at the import still reaches C through B, once the retry lands it.
 

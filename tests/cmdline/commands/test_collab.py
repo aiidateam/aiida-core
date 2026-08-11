@@ -2252,7 +2252,11 @@ def test_init_no_longer_maps_computers(run_cli_command, config_with_profile):
 
 
 def test_push_nothing_is_still_logged(run_cli_command, config_with_profile, stub_environment, monkeypatch):
-    """Test that a push finding the peer up to date records an event, so the log says when it last ran."""
+    """Test that a push finding the peer up to date records an event, so the log says when it last ran.
+
+    The peer holds a cursor for this profile, which is what the short-circuit needs: without one the empty delta
+    is uploaded and imported instead, to write that very cursor (see the test below).
+    """
     from aiida.tools.collab import sync
     from aiida.tools.collab.client import CollabClient
     from aiida.tools.collab.protocol import ManifestDiff, PushHandshake
@@ -2277,7 +2281,7 @@ def test_push_nothing_is_still_logged(run_cli_command, config_with_profile, stub
 
     def push_handshake(self, requester, roster=None):
         gossiped.append(roster)
-        return PushHandshake(busy=False, cursor=None, claim=[])
+        return PushHandshake(busy=False, cursor=timezone.now(), claim=[])
 
     monkeypatch.setattr(CollabClient, 'push_handshake', push_handshake)
     monkeypatch.setattr(
@@ -2306,6 +2310,62 @@ def test_push_nothing_is_still_logged(run_cli_command, config_with_profile, stub
     row = next(line for line in result.output_lines if 'push' in line)
 
     assert row.split()[1:] == ['push', PEER, '0', '0'], 'the empty push should show under the nickname'
+
+
+def test_push_to_a_peer_without_a_cursor_imports_the_empty_delta(
+    run_cli_command, config_with_profile, stub_environment, monkeypatch
+):
+    """Test that an empty push to a peer holding no cursor rides through the import, and prompts about nothing.
+
+    Only an import writes the receiver's cursor, so short-circuiting here would leave the pusher presenting a null
+    cursor forever — and an extras-only change with no route at all. Nothing travels, so nothing is asked: the
+    command runs unforced with no answer available to it.
+    """
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient, UploadReport
+    from aiida.tools.collab.protocol import ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile)
+
+    imports = []
+    instant = timezone.now()
+
+    def export_delta(filepath, *, delta, backend, want=None, groups_mode=None):
+        filepath.write_bytes(b'')
+        return DeltaExport(filepath=filepath, uuids=[], instant=instant)
+
+    def trigger_import(self, sha256, *, peer, instant, refresh=None, members=None):
+        imports.append((peer, instant))
+        return {'uuids': []}
+
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={}, links=[], instant=instant, computed=instant),
+    )
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
+    monkeypatch.setattr(
+        CollabClient,
+        'push_handshake',
+        lambda self, requester, roster=None: PushHandshake(busy=False, cursor=None, claim=[]),
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'diff_manifest',
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=[], refresh=[]),
+    )
+    monkeypatch.setattr(
+        CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=0, staged=0)
+    )
+    monkeypatch.setattr(CollabClient, 'trigger_import', trigger_import)
+
+    result = run_cli_command(cmd_collab.collab_push, use_subprocess=False)
+
+    assert 'is up to date' not in result.output
+    assert 'pushed 0 node(s)' in result.output
+    assert imports == [(get_profile().uuid, instant)], 'the empty delta has to reach the import that sets the cursor'
 
 
 def test_push_version_skew(run_cli_command, config_with_profile, stub_environment, monkeypatch):
@@ -2341,7 +2401,9 @@ def test_push_version_skew(run_cli_command, config_with_profile, stub_environmen
 
     def push_handshake(self, requester, roster=None):
         handshakes.append(self._base_url)
-        return PushHandshake(busy=False, cursor=None, claim=[])
+        # A cursor, so the empty deltas short-circuit and the subject stays the skew: without one they would be
+        # uploaded and imported, which is what the peer without a cursor is pushed for.
+        return PushHandshake(busy=False, cursor=timezone.now(), claim=[])
 
     monkeypatch.setattr(CollabClient, 'check_version_skew', check_version_skew)
     monkeypatch.setattr(CollabClient, 'push_handshake', push_handshake)

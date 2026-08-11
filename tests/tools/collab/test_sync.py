@@ -1439,6 +1439,21 @@ def test_refresh_travels_and_the_newest_edit_wins(tmp_path, peers):
     assert extras_of(one[0], calculation.uuid) == {'note': 'from two'}
 
 
+def test_refresh_offered_to_a_peer_without_a_cursor_names_every_node(peers):
+    """Test that a null cursor is answered with every node's mtime, not with nothing.
+
+    The unit pin of the offer a first contact gets: a peer without a cursor is not a peer holding nothing of this
+    profile, so bounding the offer by "nothing" loses the extras of everything it gave this profile.
+    """
+    backend, state = peers('one')
+    calculation = seal_calculation(backend, 'sealed')
+
+    offer = refresh_offer(state=state, backend=backend, cursor=None)
+
+    assert set(offer) == linked_uuids(calculation)
+    assert offer[calculation.uuid] == calculation.mtime
+
+
 def test_refresh_offered_to_a_local_profile_is_not_applied(tmp_path, peers):
     """Test that a profile that keeps its extras local ignores a refresh, however insistently it is offered.
 

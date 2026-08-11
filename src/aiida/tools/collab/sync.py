@@ -397,17 +397,19 @@ def refresh_offer(*, state: CollabState, backend: StorageBackend, cursor: dateti
     alone. Only mtimes are offered: the receiver holds the authoritative comparison, its own mtimes, and asks for
     the snapshots it turns out to need.
 
-    A peer without a cursor holds nothing of this profile yet, so everything travels in the delta with its extras
-    and there is nothing to refresh.
+    A peer without a cursor is offered every node, because it is not true that such a peer holds nothing of this
+    profile: it holds whatever it gave this profile in the first place, and those extras are in no delta. The offer
+    is only mtimes, and a null-cursor negotiation already ships a manifest of the whole shareable graph, so the
+    unbounded offer costs a payload of the order of one already being sent.
     """
-    if cursor is None:
-        return {}
+    filters: dict[str, Any] = {}
 
-    relayed = sorted(state.refreshed_uuids_since(cursor))
-    filters: dict[str, Any] = {'mtime': {'>=': cursor}}
+    if cursor is not None:
+        relayed = sorted(state.refreshed_uuids_since(cursor))
+        filters = {'mtime': {'>=': cursor}}
 
-    if relayed:
-        filters = {'or': [filters, {'uuid': {'in': relayed}}]}
+        if relayed:
+            filters = {'or': [filters, {'uuid': {'in': relayed}}]}
 
     query = orm.QueryBuilder(backend=backend).append(orm.Node, filters=filters, project=['uuid', 'mtime'])
 

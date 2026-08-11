@@ -189,16 +189,15 @@ def test_the_most_recent_extras_replace_the_others(collab, direction):
 
 
 @pytest.mark.parametrize('direction', DIRECTIONS)
-def test_an_extras_edit_made_before_the_cursor_exists_is_lost(collab, direction):
-    """KNOWN GAP: an extra edited before the other side holds a cursor for this one never reaches it, ever.
+def test_an_extras_edit_made_before_the_cursor_exists_travels(collab, direction):
+    """Test that an extra edited before the other side holds a cursor for this one still reaches it (phase 27).
 
-    ``refresh_offer`` answers a peer without a cursor with nothing, on the reasoning that such a peer holds
-    nothing of this profile and everything travels in the delta with its extras. That is false for a node this
-    profile received *from* that peer: it holds it already. So the first exchange carries no refresh and still
-    advances the cursor past the edit, and every later offer — bounded by that cursor — excludes it too. An edit
-    made afterwards travels normally, which is what makes the loss silent.
+    A peer that presents no cursor is not a peer holding nothing of this profile: it holds whatever it gave this
+    profile in the first place, and those extras are in no delta. So ``refresh_offer`` answers a null cursor with
+    every node's mtime, and the receiver's own comparison — which was always the authoritative one — asks for the
+    single snapshot it turns out to need.
 
-    See ``phase-15/deferred.md``.
+    See ``phase-15/deferred.md`` entry 13.
     """
     a, b, _ = collab(3, extras_mode='sync')
     created = a.seal_calculation()
@@ -207,10 +206,9 @@ def test_an_extras_edit_made_before_the_cursor_exists_is_lost(collab, direction)
 
     b.set_extra(created, 'note', 'before-the-cursor')
 
-    for _ in range(3):
-        move(b, a, direction)
+    move(b, a, direction)
 
-    assert a.extras(created) == {}
+    assert a.extras(created) == {'note': 'before-the-cursor'}
 
 
 def test_an_extras_edit_travels_once_a_cursor_exists(collab):
@@ -231,15 +229,14 @@ def test_an_extras_edit_travels_once_a_cursor_exists(collab):
     assert a.extras(created) == {'note': 'after-the-cursor'}
 
 
-def test_an_extras_only_change_can_never_be_pushed_first(collab):
-    """KNOWN GAP: a push cannot start an extras exchange, because nothing ever sets the cursor it needs.
+def test_an_extras_only_change_can_be_pushed_first(collab):
+    """Test that a push can start an extras exchange, with no node ever having travelled that way (phase 27).
 
-    Push-only, and worse than the pull side of the same gap: a push whose delta is empty is short-circuited
-    before any import, so the receiver's cursor is not advanced by it. The pusher therefore keeps presenting a
-    null cursor, keeps offering no refresh, and the edit never travels — until some node happens to travel that
-    way and sets the cursor as a side effect.
+    Push-only, because this is the half of the gap the null-cursor offer alone does not close: the receiver's
+    cursor is written by an import and by nothing else, so the delta — empty of nodes, carrying the snapshot —
+    has to ride through the upload and the import for the pusher to stop presenting a null cursor.
 
-    See ``phase-15/deferred.md``.
+    See ``phase-15/deferred.md`` entry 13.
     """
     a, b, _ = collab(3, extras_mode='sync')
     created = a.seal_calculation()
@@ -248,19 +245,10 @@ def test_an_extras_only_change_can_never_be_pushed_first(collab):
 
     b.set_extra(created, 'note', 'bob')
 
-    for _ in range(3):
-        move(b, a, 'push')
-
-    assert a.extras(created) == {}
-    assert a.state().cursors == {}
-
-    # A node travelling the other way sets the cursor, and only then does an edit have a route.
-    b.seal_calculation()
-    move(b, a, 'push')
-    b.set_extra(created, 'note', 'bob-again')
     move(b, a, 'push')
 
-    assert a.extras(created) == {'note': 'bob-again'}
+    assert a.extras(created) == {'note': 'bob'}
+    assert b.uuid in a.state().cursors, 'the import that carried the snapshot is what writes the cursor'
 
 
 @pytest.mark.parametrize('direction', DIRECTIONS)

@@ -1310,7 +1310,10 @@ def collab_push(ctx, peers, force, dry_run):
                         encoding='utf-8',
                     )
 
-                if not uuids and not refresh and not members:
+                # Only an import writes the receiver's cursor — that is what the cursor means — so a peer that
+                # holds none is pushed the empty delta anyway, once: without it the pusher presents a null cursor
+                # forever and an extras-only change has no route to it at all.
+                if handshake.cursor is not None and not uuids and not refresh and not members:
                     filepath.unlink()
                     filepath_meta.unlink()
 
@@ -1334,7 +1337,9 @@ def collab_push(ctx, peers, force, dry_run):
                     client.release()
                     continue
 
-                if not force:
+                # Nothing to ask about when nothing travels: the empty delta that sets a first cursor writes no
+                # provenance, no extras and no membership. Mirrors the pull's own guard.
+                if (uuids or refresh or members) and not force:
                     prompt = f'push {len(uuids)} node(s) ({filepath.stat().st_size} bytes) to {nickname}'
 
                     if refresh:

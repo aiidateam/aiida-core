@@ -295,22 +295,17 @@ A computer that arrives through the collab is labelled ``<label>@collab``, so ``
 Every member that imports the computer writes the same marker, and writing it onto a label that already carries it changes nothing, so a machine your collaborator calls ``lumi`` is ``lumi@collab`` on every member of the collab except the one that runs it.
 Labels still have to be unique within your profile, so where two collaborators each run a ``lumi`` the second one to reach you is ``lumi-2@collab``: the marker stays at the end, and the number, once drawn, travels on with the machine unless it too is taken where the machine next lands.
 
-If you decide that a peer's machine is equivalent to one of yours — "same inputs on their cluster give the result mine would" is a scientific judgement, which is why it is opt-in — declare it at init time:
+If you decide that such a machine is equivalent to one of yours — "same inputs on their cluster give the result mine would" is a scientific judgement, which is why it is opt-in — declare it:
 
 .. code-block:: console
 
-    $ verdi collab init --join <code> --map-computer lumi=leonardo
+    $ verdi collab map-computer lumi@collab=leonardo
 
-or at any later point — for example once the first pull has shown you the labels of the peer's computers:
+Both halves have to be computers you hold, so the mapping is declared after the machine has reached you — through a pull from whoever runs it, or from any peer that already holds it — and never at ``verdi collab init``: until it arrives there is nothing here to name, and a mapping naming a computer you do not hold is refused, listing the peer computers that have arrived.
+Waiting costs nothing — the command applies the mapping to the calculations you already pulled as well.
 
-.. code-block:: console
-
-    $ verdi collab map-computer lumi=leonardo
-
-The command applies the mapping to the calculations you already pulled as well, so declaring it after the first pull loses nothing.
-
-Calculations that ran on the peer computer ``lumi`` then arrive carrying the hash they would have on your computer ``leonardo``, and an identical local submission is a cache hit on them.
-Everything else about the node is untouched: it keeps its UUID, its attributes and its repository content, and it still records that it actually ran on ``lumi``.
+Calculations that ran on the peer computer ``lumi@collab`` then carry the hash they would have on your computer ``leonardo``, and an identical local submission is a cache hit on them.
+Everything else about the node is untouched: it keeps its UUID, its attributes and its repository content, and it still records that it actually ran on the peer's machine.
 One limitation: a calculation whose *inputs* carry a computer of their own — a ``RemoteData`` input of a restarted calculation, for example — still hashes differently from a local submission, because the hashes of inputs are not remapped, so such calculations silently stay cache misses.
 
 .. warning::

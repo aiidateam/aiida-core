@@ -499,7 +499,6 @@ def _wire(member: Member, collab_uuid: str, policy: dict) -> None:
         collab_config.OPTION_PORT: 0,
         collab_config.OPTION_STAMP: 1,
         collab_config.OPTION_POLICY: policy,
-        collab_config.OPTION_COMPUTER_MAP: {},
         # Off by default in the schema, so that a profile has to opt in to being written to. Every member of this
         # harness has, since half of these scenarios are pushes; the one that tests the refusal turns it back off.
         collab_config.OPTION_ACCEPT_PUSH: True,

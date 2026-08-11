@@ -430,14 +430,6 @@ def create_profile(ctx, profile_name, non_interactive):
     help='Port on which the endpoint of this profile listens. A free one is picked when not given.',
 )
 @click.option(
-    '--map-computer',
-    'computer_map',
-    metavar='PEER=LOCAL',
-    multiple=True,
-    help='Treat calculations that ran on peer computer PEER as if they ran on local computer LOCAL, so pulled '
-    'calculations can be cache hits. Pass multiple times for multiple computers.',
-)
-@click.option(
     '--extras-mode',
     type=click.Choice(['local', 'sync']),
     help='Whether the extras of shared nodes keep being replicated (`sync`) or stop travelling once the node has '
@@ -451,7 +443,7 @@ def create_profile(ctx, profile_name, non_interactive):
 )
 @options.NON_INTERACTIVE()
 @click.pass_context
-def collab_init(ctx, code, profile_name, bind, port, computer_map, extras_mode, groups_mode, non_interactive):
+def collab_init(ctx, code, profile_name, bind, port, extras_mode, groups_mode, non_interactive):
     """Set up a profile as part of a collab.
 
     Peers of a collab share one logical provenance graph: each of them can pull the sealed provenance of the others and
@@ -464,7 +456,6 @@ def collab_init(ctx, code, profile_name, bind, port, computer_map, extras_mode, 
     from aiida.tools.collab.protocol import JoinCode
 
     config = ctx.obj.config
-    mapping = parse_computer_map(computer_map)
     joining = None
 
     if code:
@@ -518,7 +509,6 @@ def collab_init(ctx, code, profile_name, bind, port, computer_map, extras_mode, 
         collab_config.OPTION_PORT: port,
         collab_config.OPTION_STAMP: 1,
         collab_config.OPTION_ANNOUNCED: url,
-        collab_config.OPTION_COMPUTER_MAP: mapping,
         collab_config.OPTION_POLICY: policy,
     }
 
@@ -760,12 +750,17 @@ def collab_rekey(ctx, code):
 @requires_loaded_profile()
 @click.pass_context
 def collab_map_computer(ctx, mappings):
-    """Declare peer computers equivalent to local ones, so pulled calculations can be cache hits.
+    """Treat calculations that ran on a peer computer as if they ran on a local one, so they can be cache hits.
 
-    Each mapping maps the label of a peer computer to the label of a local one, as PEER=LOCAL. New mappings are
-    merged into the existing ones and applied to already-pulled calculations, so declaring a mapping after the
-    first pull loses nothing. To remove mappings, run `verdi config unset collab.computer_map` and declare the
-    remaining ones again. Restart the daemon for pushes received by the endpoint to pick up the change.
+    Each mapping maps the label of a peer computer to the label of a local one, as PEER=LOCAL; pass several to map
+    several computers. A computer that arrived through the collab is labelled `<label>@collab`, which is the name
+    to map from, and `verdi computer list` shows them. Both halves have to be computers this profile holds, so a
+    mapping is declared after the machine has arrived here, never before: the mapping is applied to the
+    calculations already pulled as well, so waiting loses nothing.
+
+    New mappings are merged into the existing ones. To remove mappings, run `verdi config unset
+    collab.computer_map` and declare the remaining ones again. Restart the daemon for pushes received by the
+    endpoint to pick up the change.
     """
     from aiida.common.exceptions import ConfigurationError
     from aiida.manage import get_manager
@@ -775,8 +770,9 @@ def collab_map_computer(ctx, mappings):
     profile = ctx.obj.profile
     require_collab(profile)
 
+    declared = parse_computer_map(mappings)
     mapping = dict(ctx.obj.config.get_option(OPTION_COMPUTER_MAP, scope=profile.name))
-    mapping.update(parse_computer_map(mappings))
+    mapping.update(declared)
 
     try:
         count = apply_computer_map(get_manager().get_profile_storage(), mapping)
@@ -787,9 +783,15 @@ def collab_map_computer(ctx, mappings):
         for target in (stored, ctx.obj.config):
             target.set_option(OPTION_COMPUTER_MAP, mapping, scope=profile.name)
 
-    echo.echo_success(
-        f'{len(mapping)} computer mapping(s) configured, the mapped hash was written onto {count} calculation(s).'
-    )
+    mapped = ', '.join(f'`{peer_label}` → `{local_label}`' for peer_label, local_label in sorted(declared.items()))
+
+    if count:
+        echo.echo_success(f'mapped {mapped}; {count} calculation(s) now carry the hash of their local twin.')
+    else:
+        echo.echo_success(
+            f'mapped {mapped}; no calculation here ran on those computers, so nothing was rewritten — the mapping '
+            'applies to whatever arrives from now on.'
+        )
 
 
 @verdi_collab.group('peer')

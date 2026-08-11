@@ -1120,22 +1120,54 @@ def apply_computer_map(backend: StorageBackend, computer_map: dict[str, str]) ->
 
 
 def resolve_computer_map(backend: StorageBackend, computer_map: dict[str, str]) -> dict[str, str]:
-    """Return peer computer label to local computer UUID, refusing when a mapped local computer does not exist."""
-    from aiida.common.exceptions import ConfigurationError, NotExistent
+    """Return peer computer label to local computer UUID, refusing the whole mapping when a pair cannot be honoured.
 
-    resolved = {}
+    Both halves must name a computer this profile holds. The local one is what the remapped hash is computed for;
+    the peer one is the condition ``_remap_hashes`` silently imposes anyway, since it finds the calculations to
+    remap by querying *this* profile for that label — so a mapping naming a computer that has never arrived here
+    used to remap nothing and say nothing. A pair whose halves resolve to the same computer is refused too: it can
+    only be a mistake, and it would write remapped hashes onto this profile's own calculations.
 
-    for peer_label, local_label in computer_map.items():
-        try:
-            resolved[peer_label] = orm.Computer.get_collection(backend).get(label=local_label).uuid
-        except NotExistent:
-            msg = (
-                f'the `collab.computer_map` option maps peer computer `{peer_label}` to `{local_label}`, but no '
-                f'computer with label `{local_label}` exists in this profile.'
-            )
-            raise ConfigurationError(msg) from None
+    Every unusable pair of the call is named at once, since the mapping is a single option and applying the good
+    half of it leaves a set of equivalences that is harder to reason about than none.
 
-    return resolved
+    :raises ~aiida.common.exceptions.ConfigurationError: when any pair names a computer this profile does not hold,
+        or maps one onto itself.
+    """
+    from aiida.common.exceptions import ConfigurationError
+
+    uuids = dict(orm.QueryBuilder(backend=backend).append(orm.Computer, project=['label', 'uuid']).all())
+    unknown_peer = sorted(label for label in computer_map if label not in uuids)
+    unknown_local = sorted({label for label in computer_map.values() if label not in uuids})
+    reflexive = sorted(
+        f'`{peer}`=`{local}`'
+        for peer, local in computer_map.items()
+        if peer in uuids and local in uuids and uuids[peer] == uuids[local]
+    )
+    problems = []
+
+    if unknown_peer:
+        listed = ', '.join(f'`{label}`' for label in unknown_peer)
+        known = ', '.join(sorted(label for label in uuids if label.endswith(COMPUTER_MARKER)))
+        problems.append(
+            f'{listed} is not a computer known to this profile — pull from a peer that holds it first.'
+            if len(unknown_peer) == 1
+            else f'{listed} are not computers known to this profile — pull from a peer that holds them first.'
+        )
+        problems.append(f'Known peer computers: {known}' if known else 'No peer computer has arrived here yet.')
+
+    if unknown_local:
+        listed = ', '.join(f'`{label}`' for label in unknown_local)
+        problems.append(f'no local computer of this profile is labelled {listed}.')
+
+    if reflexive:
+        problems.append(f'{", ".join(reflexive)}: the two halves are one and the same computer.')
+
+    if problems:
+        msg = '\n'.join(['the `collab.computer_map` option cannot be applied to this profile:', *problems])
+        raise ConfigurationError(msg)
+
+    return {peer_label: uuids[local_label] for peer_label, local_label in computer_map.items()}
 
 
 def _remap_hashes(backend: StorageBackend, uuids: list[str] | None, computer_uuids: dict[str, str]) -> int:

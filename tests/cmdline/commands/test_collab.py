@@ -12,7 +12,7 @@ from datetime import timedelta
 
 import pytest
 
-from aiida import get_profile
+from aiida import get_profile, orm
 from aiida.cmdline.commands import cmd_collab
 from aiida.common import timezone
 from aiida.manage.configuration.config import Config
@@ -1008,25 +1008,37 @@ def test_pull_unknown_peer(run_cli_command, config_with_profile, stub_environmen
     assert PEER in result.output
 
 
+@pytest.fixture
+def storage(tmp_path, monkeypatch):
+    """Return a real storage for the loaded profile, which is what a computer mapping is resolved against.
+
+    `stub_environment` mocks the storage away, which is right for the commands that make no query at all; the
+    ones whose subject *is* a lookup — every refusal of a mapping — need one that answers.
+    """
+    from aiida.manage import get_manager
+    from aiida.storage.sqlite_temp import SqliteTempBackend
+
+    backend = SqliteTempBackend(SqliteTempBackend.create_profile(filepath=str(tmp_path / 'storage')))
+    monkeypatch.setattr(get_manager(), 'get_profile_storage', lambda: backend)
+
+    yield backend
+
+    backend.close()
+
+
 def test_pull_refuses_a_stale_computer_map(
-    run_cli_command, config_with_profile, stub_environment, stub_transfer, tmp_path, monkeypatch
+    run_cli_command, config_with_profile, stub_environment, stub_transfer, storage, monkeypatch
 ):
     """Test that a mapping naming a computer this profile does not have aborts before any peer is contacted.
 
     Unlike a delta that cannot land, it is not one peer's answer: it would refuse every peer's delta identically,
     so it is refused up front rather than after each download.
     """
-    from aiida.manage import get_manager
-    from aiida.storage.sqlite_temp import SqliteTempBackend
     from aiida.tools.collab.client import CollabClient
     from aiida.tools.collab.config import OPTION_COMPUTER_MAP
 
     init_collab(config_with_profile, **{OPTION_COMPUTER_MAP: {'lumi': 'missing'}})
 
-    # A real storage: what is under test is the lookup that fails against it, and `stub_environment` mocks the
-    # storage away for the pull tests that make no query at all.
-    backend = SqliteTempBackend(SqliteTempBackend.create_profile(filepath=str(tmp_path / 'storage')))
-    monkeypatch.setattr(get_manager(), 'get_profile_storage', lambda: backend)
     # Recorded too, so that "nobody was contacted" covers the handshake the loop opens with and not only the
     # negotiation after it.
     monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: stub_transfer.append('info'))
@@ -1036,8 +1048,6 @@ def test_pull_refuses_a_stale_computer_map(
     assert 'collab.computer_map' in result.output
     assert 'missing' in result.output
     assert stub_transfer == [], 'a peer was contacted before the mapping was resolved'
-
-    backend.close()
 
 
 OFFER_INSTANT = timezone.now()
@@ -2116,17 +2126,129 @@ def test_map_computer(run_cli_command, config_with_profile, stub_environment, mo
 
     monkeypatch.setattr(sync, 'apply_computer_map', apply_computer_map)
 
-    init_collab(config_with_profile, **{OPTION_COMPUTER_MAP: {'lumi': 'leonardo'}})
+    # A mapping declared by an earlier call, so it names a peer computer as one that got here would be labelled.
+    init_collab(config_with_profile, **{OPTION_COMPUTER_MAP: {'lumi@collab': 'leonardo'}})
 
-    result = run_cli_command(cmd_collab.collab_map_computer, ['daint=leonardo'], use_subprocess=False)
+    result = run_cli_command(cmd_collab.collab_map_computer, ['daint@collab=leonardo'], use_subprocess=False)
 
     scope = get_profile().name
     assert config_with_profile.get_option(OPTION_COMPUTER_MAP, scope=scope) == {
-        'lumi': 'leonardo',
-        'daint': 'leonardo',
+        'lumi@collab': 'leonardo',
+        'daint@collab': 'leonardo',
     }
-    assert applied == [{'lumi': 'leonardo', 'daint': 'leonardo'}]
-    assert 'onto 2 calculation(s)' in result.output
+    assert applied == [{'lumi@collab': 'leonardo', 'daint@collab': 'leonardo'}]
+    assert '2 calculation(s) now carry the hash of their local twin' in result.output
+    # The whole mapping is applied, so the count covers it, but only this call's pair was declared by this call.
+    assert 'mapped `daint@collab` → `leonardo`;' in result.output
+    assert 'lumi' not in result.output
+
+
+def computer_on(backend, label):
+    """Store a computer of this label and return it."""
+    return orm.Computer(
+        label=label, hostname='localhost', transport_type='core.local', scheduler_type='core.direct', backend=backend
+    ).store()
+
+
+def calculation_on(backend, label):
+    """Store a sealed calculation that ran on a computer of this label, creating the computer, and return it."""
+    from aiida.common.links import LinkType
+
+    calculation = orm.CalcJobNode(backend=backend, computer=computer_on(backend, label))
+    calculation.base.links.add_incoming(
+        orm.Int(1, backend=backend).store(), link_type=LinkType.INPUT_CALC, link_label='term'
+    )
+    calculation.store()
+    calculation.seal()
+
+    return calculation
+
+
+def test_map_computer_refuses_unknown_peer_computers(run_cli_command, config_with_profile, storage):
+    """Test that a mapping naming a peer computer this profile does not hold is refused whole, listing them all.
+
+    All or nothing: every accepted pair also rewrites hashes onto existing nodes, and half a set of declared
+    equivalences is harder to reason about than none. So the good pair of this call must not have been applied.
+    """
+    from aiida.tools.collab.config import OPTION_COMPUTER_MAP
+
+    init_collab(config_with_profile)
+    calculation = calculation_on(storage, 'lumi@collab')
+    computer_on(storage, 'leonardo')
+    before = calculation.base.caching.get_hash()
+
+    result = run_cli_command(
+        cmd_collab.collab_map_computer,
+        ['lumi@collab=leonardo', 'daint=leonardo', 'perlmutter=leonardo'],
+        use_subprocess=False,
+        raises=True,
+    )
+
+    assert '`daint`' in result.output
+    assert '`perlmutter`' in result.output, 'only the first unknown label was named'
+    assert 'lumi@collab' in result.output, 'the labels that could be mapped are what makes the refusal actionable'
+    assert config_with_profile.get_option(OPTION_COMPUTER_MAP, scope=get_profile().name) == {}
+    assert calculation.base.caching.get_hash() == before, 'the pair that resolved was applied anyway'
+
+
+def test_map_computer_refuses_a_computer_mapped_onto_itself(run_cli_command, config_with_profile, storage):
+    """Test that a pair whose halves are one and the same computer is refused rather than remapping onto itself."""
+    from aiida.tools.collab.config import OPTION_COMPUTER_MAP
+
+    init_collab(config_with_profile)
+    calculation_on(storage, 'lumi@collab')
+
+    result = run_cli_command(
+        cmd_collab.collab_map_computer, ['lumi@collab=lumi@collab'], use_subprocess=False, raises=True
+    )
+
+    assert 'one and the same computer' in result.output
+    assert config_with_profile.get_option(OPTION_COMPUTER_MAP, scope=get_profile().name) == {}
+
+
+def test_map_computer_writes_the_mapped_hash(run_cli_command, config_with_profile, storage):
+    """Test that a mapping of two computers this profile holds is applied and the report names what it did."""
+    init_collab(config_with_profile)
+    calculation = calculation_on(storage, 'lumi@collab')
+    twin = calculation_on(storage, 'leonardo')
+
+    result = run_cli_command(cmd_collab.collab_map_computer, ['lumi@collab=leonardo'], use_subprocess=False)
+
+    assert calculation.base.caching.get_hash() == twin.base.caching.compute_hash()
+    assert '1 calculation(s) now carry the hash of their local twin' in result.output
+
+
+def test_map_computer_says_when_it_rewrote_nothing(run_cli_command, config_with_profile, storage):
+    """Test that a mapping with no calculation to rewrite says so, rather than reporting a bare zero.
+
+    Reachable where the peer's computer arrived on something other than a calculation — a ``RemoteData`` input —
+    or where the calculations it came with have since been deleted. The mapping is still worth declaring, and
+    the report has to say that it applies to what arrives later rather than that it did nothing.
+    """
+    init_collab(config_with_profile)
+    computer_on(storage, 'lumi@collab')
+    computer_on(storage, 'leonardo')
+
+    result = run_cli_command(cmd_collab.collab_map_computer, ['lumi@collab=leonardo'], use_subprocess=False)
+
+    assert 'no calculation here ran on those computers' in result.output
+    assert 'applies to whatever arrives from now on' in result.output
+
+
+def test_init_no_longer_maps_computers(run_cli_command, config_with_profile):
+    """Test that ``verdi collab init`` refuses ``--map-computer``: nothing has been pulled when it runs.
+
+    Joining creates a fresh profile and founding starts a fresh collab, so in neither path can a peer computer
+    exist yet — the option could only ever write a mapping that the first pull would then refuse.
+    """
+    result = run_cli_command(
+        cmd_collab.collab_init,
+        ['--map-computer', 'lumi=leonardo', '--bind', '127.0.0.1', '-n'],
+        use_subprocess=False,
+        raises=True,
+    )
+
+    assert 'no such option' in result.output.lower()
 
 
 def test_push_nothing_is_still_logged(run_cli_command, config_with_profile, stub_environment, monkeypatch):

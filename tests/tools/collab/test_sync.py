@@ -1123,6 +1123,22 @@ def seal_cached_calculation(backend, computer):
     return calculation
 
 
+def deliver_computer(filepath, *, sender, sender_state, receiver, receiver_state):
+    """Import a first, unmapped delta, which is how the computer of the sender arrives in the receiver and is marked.
+
+    Every scenario about a mapped import starts one delta earlier than the mapping does: a mapping may only name a
+    computer the receiving profile holds, and an import is the only thing that puts a peer's computer there.
+
+    :returns: the UUIDs the receiver holds afterwards, which is what the next delta is claimed against.
+    """
+    export = export_full(filepath, state=sender_state, backend=sender, cursor=None)
+    import_delta(
+        filepath, state=receiver_state, backend=receiver, extras_mode='local', peer=PEER, instant=export.instant
+    )
+
+    return set(export.uuids)
+
+
 def test_a_computer_the_tombstone_refilter_kept_out_is_not_marked(tmp_path, peers):
     """Test that a computer the import never created, because its calculation was tombstoned, is left alone.
 
@@ -1173,10 +1189,20 @@ def test_remap_cache_hit(tmp_path, peers):
     """Test that a mapped calculation carries the hash of its local twin and is found by the caching engine."""
     backend_one, state_one = peers('one')
     backend_two, state_two = peers('two')
-    calculation = seal_cached_calculation(backend_one, make_computer(backend_one, 'lumi'))
+    lumi = make_computer(backend_one, 'lumi')
+    seal_cached_calculation(backend_one, lumi)
+
+    held = deliver_computer(
+        tmp_path / 'first.aiida',
+        sender=backend_one,
+        sender_state=state_one,
+        receiver=backend_two,
+        receiver_state=state_two,
+    )
+    calculation = seal_cached_calculation(backend_one, lumi)
 
     filepath = tmp_path / 'delta.aiida'
-    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None, claim=held)
 
     leonardo = make_computer(backend_two, 'leonardo')
     import_delta(
@@ -1186,7 +1212,7 @@ def test_remap_cache_hit(tmp_path, peers):
         extras_mode='local',
         peer=PEER,
         instant=export.instant,
-        computer_map={'lumi': 'leonardo'},
+        computer_map={'lumi@collab': 'leonardo'},
     )
 
     twin = seal_cached_calculation(backend_two, leonardo)
@@ -1237,10 +1263,20 @@ def test_remap_leaves_node_unchanged(tmp_path, peers):
 
     backend_one, state_one = peers('one')
     backend_two, state_two = peers('two')
-    calculation = seal_cached_calculation(backend_one, make_computer(backend_one, 'lumi'))
+    lumi = make_computer(backend_one, 'lumi')
+    seal_cached_calculation(backend_one, lumi)
+
+    held = deliver_computer(
+        tmp_path / 'first.aiida',
+        sender=backend_one,
+        sender_state=state_one,
+        receiver=backend_two,
+        receiver_state=state_two,
+    )
+    calculation = seal_cached_calculation(backend_one, lumi)
 
     filepath = tmp_path / 'delta.aiida'
-    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None, claim=held)
 
     make_computer(backend_two, 'leonardo')
     import_delta(
@@ -1250,7 +1286,7 @@ def test_remap_leaves_node_unchanged(tmp_path, peers):
         extras_mode='local',
         peer=PEER,
         instant=export.instant,
-        computer_map={'lumi': 'leonardo'},
+        computer_map={'lumi@collab': 'leonardo'},
     )
 
     imported = load_node(backend_two, calculation.uuid)
@@ -1264,15 +1300,29 @@ def test_remap_leaves_node_unchanged(tmp_path, peers):
 
 
 def test_remap_unknown_local_computer(tmp_path, peers):
-    """Test that a mapping to a computer this profile does not have aborts before anything is imported."""
+    """Test that a mapping to a local computer this profile does not have aborts before anything is imported.
+
+    The peer half of the mapping is deliberately satisfiable — the computer was delivered by the first delta — so
+    that what fails is the local half and nothing else.
+    """
     from aiida.common.exceptions import ConfigurationError
 
     backend_one, state_one = peers('one')
     backend_two, state_two = peers('two')
-    seal_cached_calculation(backend_one, make_computer(backend_one, 'lumi'))
+    lumi = make_computer(backend_one, 'lumi')
+    seal_cached_calculation(backend_one, lumi)
+
+    held = deliver_computer(
+        tmp_path / 'first.aiida',
+        sender=backend_one,
+        sender_state=state_one,
+        receiver=backend_two,
+        receiver_state=state_two,
+    )
+    seal_cached_calculation(backend_one, lumi)
 
     filepath = tmp_path / 'delta.aiida'
-    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None, claim=held)
 
     with pytest.raises(ConfigurationError, match='collab.computer_map'):
         import_delta(
@@ -1282,11 +1332,11 @@ def test_remap_unknown_local_computer(tmp_path, peers):
             extras_mode='local',
             peer=PEER,
             instant=export.instant,
-            computer_map={'lumi': 'missing'},
+            computer_map={'lumi@collab': 'missing'},
         )
 
-    assert node_count(backend_two) == 0, 'the import should have been refused before anything landed'
-    assert not state_two.filepath.exists(), 'no event should have been recorded'
+    assert node_count(backend_two) == len(held), 'the import should have been refused before anything landed'
+    assert len(CollabState.read(state_two.filepath).events) == 1, 'the refused import recorded an event'
 
 
 def test_apply_computer_map_retroactively(tmp_path, peers):

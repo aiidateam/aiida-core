@@ -321,6 +321,10 @@ Unreachable data and timestamp surprises
 Stashed and remote data live on the filesystem of whoever ran the calculation.
 Unless you have access to that filesystem (for example a shared cluster), a pulled ``RemoteData`` or stashed folder is unreachable from your side — the provenance is complete, the files on the peer's cluster are simply not yours to read.
 
+A node's primary key is assigned by the database of the profile it lands in, so the same node has a different PK on every member of the collab.
+When you talk to a collaborator about a specific node, use its UUID — or a unique prefix of it, which ``verdi node show 3f4a1b2c`` resolves like the full one.
+Preserving PKs across profiles is not on the table: it would mean partitioning a 4-byte id space between the members, which survives neither their number nor SQLite's ``max(rowid) + 1`` allocator.
+
 Import preserves timestamps, so ``ctime`` and ``mtime`` mean "when it happened on the peer's side", never "when it arrived here".
 Two consequences:
 

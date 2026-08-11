@@ -908,7 +908,7 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
     """Fetch the new sealed provenance of peers and import it.
 
     PEER is the nickname of a peer of the collab; without any, every peer is pulled from. Each transfer is
-    confirmed with its exact node count and size before any payload travels.
+    confirmed with the node count it asked for and its size before any payload travels.
     """
     from contextlib import nullcontext
 
@@ -986,19 +986,28 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
                 continue
 
             # `--include-deleted` rewinds the cursor for this pull: a tombstoned node older than the cursor would
-            # otherwise never re-enter the delta. The claim keeps the transfer bounded, and drops the tombstones
-            # so they are delivered again.
+            # otherwise never re-enter the delta. It then also has to drop the tombstoned nodes from the claim —
+            # they sit in the import events, and a claimed node is never offered.
             cursor = None if include_deleted else state.cursors.get(peer_uuid)
 
             claim = state.imported_uuids_since(cursor)
-            claim = claim - state.tombstones if include_deleted else claim | state.tombstones
+
+            if include_deleted:
+                claim = claim - state.tombstones
 
             try:
                 # The manifest names what the delta holds; only the nodes this profile lacks are then requested,
                 # so already-held ancestors never travel. The roster travels with it, which is how membership
                 # spreads and a corrected address heals.
                 manifest = client.negotiate_delta(cursor, claim, gossip(ctx.obj.config, profile, bump=not dry_run))
-                want = set(missing_uuids(backend, manifest.manifest))
+                missing = set(missing_uuids(backend, manifest.manifest))
+
+                # A node this profile deleted is missing too, and is refused rather than asked for: that is where
+                # a deletion is defended, bounded by the delta instead of by every deletion ever made. Only what
+                # is missing may be refused — a node held *and* tombstoned, which a restoration leaves behind, is
+                # one the sender must keep linking to. `--include-deleted` refuses nothing; that is what it means.
+                refuse = set() if include_deleted else missing & state.tombstones
+                want = missing - refuse
 
                 # Extras of shared nodes the peer edited more recently; empty unless this profile syncs extras.
                 # Asked for under the local policy, not the peer's offer, so that what is prompted for is what
@@ -1033,7 +1042,7 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
                     client.release()
                     continue
 
-                offer = client.request_delta(cursor, claim, want, refresh_want)
+                offer = client.request_delta(cursor, claim, want, refresh_want, refuse)
 
                 if (want or refresh_want or curated) and not force:
                     prompt = f'pull {len(want)} node(s) ({offer.size} bytes) from {nickname}'
@@ -1142,8 +1151,8 @@ def _dump_hint(profile):
 def collab_push(ctx, peers, force, dry_run):
     """Send the new sealed provenance of this profile to peers.
 
-    PEER is the nickname of a peer of the collab; without any, every peer that accepts pushes is pushed to. Each
-    transfer is confirmed with its exact node count and size before any payload travels.
+    PEER is the nickname of a peer of the collab; without any, every peer that accepts pushes is pushed to. A
+    transfer that carries anything is confirmed with its exact node count and size before any payload travels.
     """
     import json
     from datetime import datetime
@@ -1162,6 +1171,7 @@ def collab_push(ctx, peers, force, dry_run):
         membership_offer,
         refresh_offer,
         refresh_snapshots,
+        required_refused,
     )
 
     profile = ctx.obj.profile
@@ -1283,7 +1293,14 @@ def collab_push(ctx, peers, force, dry_run):
                         else []
                     )
                     diff = client.diff_manifest(delta.uuids, offer, curations)
+                    refuse = set(diff.refuse)
+
+                    # A refused node the wanted provenance requires travels anyway: the receiver's own import
+                    # closes over it regardless, so leaving it out would only make the archive link to a node
+                    # that exists nowhere. One that is *not* required is cut out with its links instead, or the
+                    # receiver would refuse the whole delta over a boundary endpoint it cannot resolve.
                     want = set(diff.missing)
+                    want |= required_refused(delta=delta, backend=backend, want=want, refuse=refuse)
                     curated = len(member_pairs(diff.members))
 
                     if dry_run:
@@ -1300,7 +1317,12 @@ def collab_push(ctx, peers, force, dry_run):
                         continue
 
                     export = export_delta(
-                        filepath, delta=delta, backend=backend, want=want, groups_mode=policy['groups_mode']
+                        filepath,
+                        delta=delta,
+                        backend=backend,
+                        want=want,
+                        refuse=refuse,
+                        groups_mode=policy['groups_mode'],
                     )
                     refresh = refresh_snapshots(backend, diff.refresh)
                     members = diff.members

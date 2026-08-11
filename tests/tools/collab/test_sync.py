@@ -20,6 +20,7 @@ from aiida.storage.sqlite_temp import SqliteTempBackend
 from aiida.tools.collab.protocol import GroupMembers, member_pairs
 from aiida.tools.collab.state import CollabEvent, CollabState, Membership
 from aiida.tools.collab.sync import (
+    _boundary_links,
     apply_computer_map,
     apply_members,
     compute_delta,
@@ -31,6 +32,7 @@ from aiida.tools.collab.sync import (
     refresh_offer,
     refresh_snapshots,
     refresh_wanted,
+    required_refused,
 )
 
 PEER = 'http://100.64.0.2:9137'
@@ -72,6 +74,23 @@ def node_count(backend):
 
 def load_node(backend, uuid):
     return orm.QueryBuilder(backend=backend).append(orm.Node, filters={'uuid': uuid}).one()[0]
+
+
+def delete_nodes(backend, uuids):
+    """Delete nodes and their links from a profile, as ``verdi node delete`` would.
+
+    Through raw rows, because ``SqliteTempBackend`` does not implement ``delete_nodes_and_connections``.
+    """
+    from aiida.storage.sqlite_zip.models import DbLink, DbNode
+
+    query = orm.QueryBuilder(backend=backend).append(orm.Node, filters={'uuid': {'in': list(uuids)}}, project='id')
+    pks = query.all(flat=True)
+
+    with backend.transaction() as session:
+        session.query(DbLink).filter(DbLink.input_id.in_(pks) | DbLink.output_id.in_(pks)).delete(
+            synchronize_session=False
+        )
+        session.query(DbNode).filter(DbNode.id.in_(pks)).delete(synchronize_session=False)
 
 
 def linked_uuids(calculation):
@@ -509,7 +528,7 @@ def test_export_subtracts_claim(tmp_path, peers):
         instant=export.instant,
     )
     state_c = CollabState.read(state_c.filepath)
-    claim = state_c.imported_uuids_since(None) | state_c.tombstones
+    claim = state_c.imported_uuids_since(None)
 
     second = export_full(
         tmp_path / 'b.aiida', state=CollabState.read(state_b.filepath), backend=backend_b, cursor=None, claim=claim
@@ -519,25 +538,34 @@ def test_export_subtracts_claim(tmp_path, peers):
 
 
 @pytest.mark.parametrize('reentry', ('relayed', 'touched'))
-def test_export_claim_must_carry_every_tombstone(peers, reentry):
-    """EXPECTED (phase 25): the claim has to name every tombstone, however old — bounding it by the cursor costs bytes.
+def test_a_tombstoned_node_that_re_enters_the_delta_is_refused_at_the_diff(tmp_path, peers, reentry):
+    """Test that a deleted node the sender's delta reaches again is refused at the diff and cut, with its links.
 
-    Sending only the tombstones recorded at or after the presented cursor was proposed on the reasoning that the
-    sender's seed filter is bounded by that same cursor, so a node behind it is not a seed of anything the sender
-    will offer. The start set of a delta is not the seeds alone, and this pins the two ways a long-deleted node
-    re-enters it: the sender *imported* it from a third peer since the cursor, which no mtime bounds, or something
-    touched it there and moved its mtime past the cursor. The seed filter is mtime and nothing else, so any write
-    on the sender does the second — setting an extra of its own is enough, under either extras policy.
-
-    Either way a tombstone the claim stops naming puts its node back in the delta, where the requester, which
-    deleted it and so does not hold it, asks for it and the import then refuses it. See ``phase-25/report.md``: the
-    day the start set is bounded on both counts, this test fails and the bound becomes worth revisiting.
+    The two ways a long-deleted node re-enters a delta whatever the cursor: the sender *imported* it from a third
+    peer since the cursor, which no mtime bounds, or something touched it there and moved its mtime past the
+    cursor — setting an extra of its own is enough. The claim used to carry every tombstone to keep them out of
+    the start set; the receiver refusing them at the manifest diff is bounded by the delta instead of by the whole
+    history, and on this graph nothing travels to be thrown away at the import.
     """
     backend, state = peers('sender')
+    backend_receiver, state_receiver = peers('receiver')
     calculation = seal_calculation(backend, 'shared')
     output = calculation.base.links.get_outgoing().one().node
-    # The requester deleted the calculation, which took its output with it, and kept the input it was run on.
-    tombstones = {calculation.uuid, output.uuid}
+
+    # The receiver holds the input it was run on, and deleted the calculation, which took its output with it.
+    export = export_full(tmp_path / 'first.aiida', state=state, backend=backend, cursor=None)
+    import_delta(
+        tmp_path / 'first.aiida',
+        state=state_receiver,
+        backend=backend_receiver,
+        extras_mode='local',
+        peer=PEER,
+        instant=export.instant,
+    )
+    delete_nodes(backend_receiver, [calculation.uuid, output.uuid])
+    state_receiver = CollabState.read(state_receiver.filepath)
+    state_receiver.tombstones.update({calculation.uuid, output.uuid})
+    state_receiver.save()
 
     cursor = timezone.now()
 
@@ -550,11 +578,48 @@ def test_export_claim_must_carry_every_tombstone(peers, reentry):
     else:
         calculation.base.extras.set('note', 'edited after the cursor')
 
-    full = compute_delta(state=state, backend=backend, cursor=cursor, claim=frozenset(tombstones))
-    bounded = compute_delta(state=state, backend=backend, cursor=cursor, claim=frozenset())
+    delta = compute_delta(
+        state=state, backend=backend, cursor=cursor, claim=state_receiver.imported_uuids_since(cursor)
+    )
+    missing = set(missing_uuids(backend_receiver, delta.uuids))
+    refuse = missing & state_receiver.tombstones
+    want = missing - refuse
 
-    assert not tombstones & set(full.uuids), 'the claim as it is sent today keeps the deleted nodes out of the delta'
-    assert tombstones <= set(bounded.uuids), 'dropping the old tombstones put them back'
+    assert {calculation.uuid, output.uuid} <= set(delta.uuids), 'the delta reaches the deleted nodes again'
+    assert refuse == {calculation.uuid, output.uuid}
+    assert want == set()
+
+    export = export_delta(tmp_path / 'second.aiida', delta=delta, backend=backend, want=want, refuse=refuse)
+
+    assert export.uuids == []
+
+
+def test_a_refused_node_the_wanted_provenance_requires_rides_anyway(tmp_path, peers):
+    """Test that the cut closes over a refused node a wanted one needs, and drops the links to the rest.
+
+    Both traps of subtracting a refusal naively, on one graph. The refused *input* of a wanted calculation cannot
+    simply go: the receiver's own import re-filter closes over it under the same rules and would import it back,
+    so leaving it out would only make the archive link to a node that exists nowhere. The refused *creator* of a
+    wanted output genuinely does not travel — and its CREATE link must go with it, or the receiver would refuse
+    the whole delta over a boundary endpoint it cannot resolve.
+    """
+    backend, state = peers('sender')
+    producer = seal_calculation(backend, 'producer')
+    shared = producer.base.links.get_outgoing().one().node
+    consumer = seal_calculation_with(backend, 'consumer', inputs=[shared])
+    result = consumer.base.links.get_outgoing().one().node
+
+    delta = compute_delta(state=state, backend=backend, cursor=None)
+    refuse = {shared.uuid, producer.uuid}
+    want = {consumer.uuid, result.uuid}
+    required = required_refused(delta=delta, backend=backend, want=want, refuse=refuse)
+
+    assert required == {shared.uuid}, 'the input of a wanted calculation is required; the creator of an output is not'
+
+    export = export_delta(tmp_path / 'delta.aiida', delta=delta, backend=backend, want=want | required, refuse=refuse)
+
+    assert set(export.uuids) == want | required
+    assert _boundary_links(export.filepath) == [], 'the CREATE link of the refused producer has to go with it'
 
 
 def test_export_claimed_ancestor_still_rides(tmp_path, peers):
@@ -823,33 +888,31 @@ def test_boundary_link_to_reimported_tombstoned_node(tmp_path, peers):
         instant=export.instant,
     )
 
-    # The receiver deletes X and records its tombstone; the creator stays. Deleted through raw rows, because
-    # ``SqliteTempBackend`` does not implement ``delete_nodes_and_connections``.
-    from aiida.storage.sqlite_zip.models import DbLink, DbNode
-
-    pk = orm.QueryBuilder(backend=backend_two).append(orm.Node, filters={'uuid': deleted.uuid}, project='id').one()[0]
-
-    with backend_two.transaction() as session:
-        session.query(DbLink).filter((DbLink.input_id == pk) | (DbLink.output_id == pk)).delete(
-            synchronize_session=False
-        )
-        session.query(DbNode).filter(DbNode.id == pk).delete(synchronize_session=False)
-
+    # The receiver deletes X and records its tombstone; the creator stays.
+    delete_nodes(backend_two, [deleted.uuid])
     state_two = CollabState.read(state_two.filepath)
     state_two.tombstones.add(deleted.uuid)
     state_two.save()
 
-    # The sender builds new work on X, then the receiver syncs, claiming its tombstone as usual.
+    # The sender builds new work on X, then the receiver syncs, refusing its tombstone at the diff as usual.
     consumer = seal_calculation_with(backend_one, 'consumer', inputs=[deleted])
 
     cursor = state_two.cursors[PEER]
-    claim = state_two.imported_uuids_since(cursor) | state_two.tombstones
+    claim = state_two.imported_uuids_since(cursor)
     delta = compute_delta(state=state_one, backend=backend_one, cursor=cursor, claim=claim)
-    want = set(missing_uuids(backend_two, delta.uuids))
+    missing = set(missing_uuids(backend_two, delta.uuids))
+    refuse = missing & state_two.tombstones
+    want = missing - refuse
 
-    assert deleted.uuid in want, 'closure requires X, and the receiver does not hold it'
+    assert deleted.uuid in refuse, 'the receiver deleted X, so it does not ask for it'
 
-    export = export_delta(tmp_path / 'second.aiida', delta=delta, backend=backend_one, want=want)
+    required = required_refused(delta=delta, backend=backend_one, want=want, refuse=refuse)
+
+    assert deleted.uuid in required, 'the wanted consumer requires X, so the sender puts it back in the cut'
+
+    export = export_delta(
+        tmp_path / 'second.aiida', delta=delta, backend=backend_one, want=want | required, refuse=refuse
+    )
     import_delta(
         tmp_path / 'second.aiida',
         state=state_two,
@@ -1384,18 +1447,22 @@ def sync_pull(
     receiver_groups_mode = receiver_groups_mode or groups_mode
 
     cursor = state_receiver.cursors.get(peer)
-    claim = state_receiver.imported_uuids_since(cursor) | state_receiver.tombstones
+    claim = state_receiver.imported_uuids_since(cursor)
     delta = compute_delta(state=state_sender, backend=backend_sender, cursor=cursor, claim=claim)
     offer = refresh_offer(state=state_sender, backend=backend_sender, cursor=cursor)
     wanted = refresh_wanted(backend_receiver, offer, state_receiver.tombstones)
     members = (
         membership_offer(state=state_sender, backend=backend_sender, cursor=cursor) if groups_mode == 'grow' else []
     )
+    missing = set(missing_uuids(backend_receiver, delta.uuids))
+    refuse = missing & state_receiver.tombstones
+    want = missing - refuse
     export = export_delta(
         filepath,
         delta=delta,
         backend=backend_sender,
-        want=set(missing_uuids(backend_receiver, delta.uuids)),
+        want=want | required_refused(delta=delta, backend=backend_sender, want=want, refuse=refuse),
+        refuse=refuse,
         groups_mode=groups_mode,
     )
 

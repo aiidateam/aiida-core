@@ -204,12 +204,37 @@ def compute_delta(
     return Delta(uuid_by_pk=uuid_by_pk, links=links, instant=instant, computed=computed)
 
 
+def required_refused(
+    *, delta: Delta, backend: StorageBackend, want: frozenset[str] | set[str], refuse: frozenset[str] | set[str]
+) -> set[str]:
+    """Return the refused nodes the wanted provenance requires, which therefore travel despite the refusal.
+
+    A requester refuses the nodes it deleted, but provenance is never delivered with holes in it: a wanted
+    calculation still needs the input it consumed. The import re-filters what it receives under its own rules and
+    closes over such a node anyway, so the cut is taken under those very rules — ``create_backward`` off, since an
+    output does not need its creator — and what they reach is put back into the want here, where the archive can
+    still be built to hold it.
+    """
+    refused_pks = {pk for pk, uuid in delta.uuid_by_pk.items() if uuid in refuse}
+
+    if not refused_pks:
+        return set()
+
+    want_pks = {pk for pk, uuid in delta.uuid_by_pk.items() if uuid in want}
+    reached = get_nodes_export(
+        starting_pks=want_pks, get_links=False, backend=backend, create_backward=False, **TRAVERSAL_RULES
+    )['nodes']
+
+    return {delta.uuid_by_pk[pk] for pk in refused_pks & set(reached)}
+
+
 def export_delta(
     filepath: Path,
     *,
     delta: Delta,
     backend: StorageBackend,
     want: frozenset[str] | set[str] | None = None,
+    refuse: frozenset[str] | set[str] = frozenset(),
     groups_mode: CollabGroupsMode = 'local',
 ) -> DeltaExport:
     """Write the requested subset of a delta to an archive.
@@ -223,10 +248,15 @@ def export_delta(
     :param delta: the computed delta the subset is taken from.
     :param backend: the storage to export from.
     :param want: the UUIDs the requester asked for, or ``None`` for the whole delta.
+    :param refuse: the UUIDs the requester deleted and will not take. A link between the cut and one of them is
+        dropped rather than carried as a boundary link, because that endpoint exists neither in the archive nor on
+        the requester and the import would refuse the whole delta over it. Whatever the wanted provenance requires
+        belongs in ``want`` instead, see ``required_refused``.
     :param groups_mode: under ``grow``, the curated groups of the exported nodes travel with their memberships.
     """
     want_uuids = set(delta.uuid_by_pk.values()) if want is None else set(want) & set(delta.uuid_by_pk.values())
     want_pks = {pk for pk, uuid in delta.uuid_by_pk.items() if uuid in want_uuids}
+    refused_pks = {pk for pk, uuid in delta.uuid_by_pk.items() if uuid in refuse} - want_pks
 
     internal = []
     boundary = []
@@ -236,7 +266,7 @@ def export_delta(
 
         if in_want == 2:
             internal.append(link)
-        elif in_want == 1:
+        elif in_want == 1 and not {link.source_id, link.target_id} & refused_pks:
             boundary.append(
                 [delta.uuid_by_pk[link.source_id], delta.uuid_by_pk[link.target_id], link.link_type, link.link_label]
             )

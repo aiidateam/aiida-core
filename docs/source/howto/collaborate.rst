@@ -170,7 +170,7 @@ Day-to-day use
     $ verdi collab rotate       # replace the key of the collab (see above)
     $ verdi collab rekey <code> # adopt a replaced key
 
-Before any payload travels, ``pull`` and ``push`` negotiate with the peer and ask for confirmation with the exact node count and size of the transfer; the question defaults to no, so a bare Enter leaves both profiles untouched.
+Before any payload travels, ``pull`` and ``push`` negotiate with the peer and ask for confirmation with the node count and size they negotiated; the question defaults to no, so a bare Enter leaves both profiles untouched.
 Pass ``--force`` to skip the prompts (for scripts), or ``--dry-run`` to only see what a sync would transfer, per peer, without transferring anything.
 A peer that is offline, busy, refuses pushes, declares a different policy or runs an aiida-core whose archives this one cannot read is skipped with a warning, and the remaining peers are synced.
 A delta that arrives but cannot be imported — bytes that are not a readable archive, or provenance linked to a node the receiving profile holds nowhere — is skipped the same way, with a warning naming the peer it came from; nothing lands from it, and the next sync delivers it once whatever diverged has been sorted out.
@@ -201,13 +201,13 @@ There is no force push, and no peer can delete a node from your profile (an extr
 When you delete nodes from your own profile, they are recorded in a local *tombstone* store, and pulls skip them so that your deletions are not undone by the next sync.
 To change your mind, run ``verdi collab pull --include-deleted``: the tombstoned nodes are imported again and their tombstones dropped.
 The tombstones, the sync cursors and the log belong to your profile and are deleted with it, so a profile you later create under the same name starts afresh instead of inheriting what a dead one held.
-If provenance in a delta depends on a node you deleted (for example, a peer ran a new calculation on data you removed), that node is imported again regardless, because provenance is never imported with holes in it.
+If provenance in a delta depends on a node you deleted (for example, a peer ran a new calculation on data you removed), that node is imported again regardless, because provenance is never imported with holes in it — and it keeps its tombstone, since changing your mind is what ``--include-deleted`` is for.
 
 .. note::
 
     Tombstones are kept for good and never pruned or aged out, because a deletion is never undone: a peer that was offline for a year must still not hand the node back.
-    They also go on the wire at every contact — in your request when you pull, and in the answer your endpoint serves when a peer pushes to you — which is what keeps that peer from cutting them into a delta in the first place.
-    A profile that deleted a very large campaign therefore keeps a correspondingly large collab state file and puts a correspondingly large set on the wire on every sync, and neither comes back down.
+    What goes on the wire is bounded by the sync at hand, though, and not by everything you ever deleted: a peer offers you a list of what its delta holds, and you name back only those of them you deleted, so that it cuts them out before it builds the archive.
+    A profile that deleted a very large campaign therefore keeps a correspondingly large collab state file, and that file is the whole of what stays behind.
     Short of ``--include-deleted``, which drops the tombstones of the nodes it brings back, only deleting the profile clears them.
 
 .. _how-to:collaborate:extras:

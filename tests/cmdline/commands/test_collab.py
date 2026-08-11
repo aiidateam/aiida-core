@@ -1071,8 +1071,8 @@ def stub_transfer(monkeypatch):
     def missing_uuids(backend, uuids):
         return [uuid for uuid in uuids if uuid != 'uuid-held']
 
-    def request_delta(self, cursor, claim, want, refresh_want=frozenset()):
-        calls.append(('request', set(want)))
+    def request_delta(self, cursor, claim, want, refresh_want=frozenset(), refuse=frozenset()):
+        calls.append(('request', set(want), set(refuse)))
         # A later instant than the negotiated one, as served by a peer that recomputed its delta in between:
         # the import must advance the cursor to the negotiated instant, not this one, or in-window nodes are
         # silently never delivered.
@@ -1111,7 +1111,7 @@ def test_pull_pause_my_daemon(
     name = f'aiida-{get_profile().name}'
     assert stub_transfer == [
         ('negotiate', None, set()),
-        ('request', {'uuid-offered'}),
+        ('request', {'uuid-offered'}, set()),
         {'command': 'stop', 'properties': {'name': name, 'waiting': True}},
         ('import', False, OFFER_INSTANT),
         {'command': 'start', 'properties': {'name': name, 'waiting': True}},
@@ -1120,7 +1120,11 @@ def test_pull_pause_my_daemon(
 
 
 def test_pull_presents_cursor_and_claim(run_cli_command, config_with_profile, stub_environment, stub_transfer):
-    """Test that a pull presents the cursor of the peer and claims imported nodes and tombstones."""
+    """Test that a pull presents the cursor of the peer and claims the imported nodes, but no tombstone.
+
+    A deletion is defended at the manifest diff now, so nothing about it rides in the claim — which is what keeps
+    a large deleted campaign off every negotiation forever.
+    """
     init_collab(config_with_profile)
 
     cursor = timezone.now()
@@ -1135,19 +1139,41 @@ def test_pull_presents_cursor_and_claim(run_cli_command, config_with_profile, st
     run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
 
     assert stub_transfer == [
-        ('negotiate', cursor, {'uuid-held', 'uuid-dead'}),
-        ('request', {'uuid-offered'}),
+        ('negotiate', cursor, {'uuid-held'}),
+        ('request', {'uuid-offered'}, set()),
+        ('import', False, OFFER_INSTANT),
+    ]
+
+
+def test_pull_refuses_its_tombstones_at_the_diff(run_cli_command, config_with_profile, stub_environment, stub_transfer):
+    """Test that an offered node this profile deleted is refused with the export request instead of asked for.
+
+    ``uuid-held`` is tombstoned too, and must *not* be refused: a node can be held and tombstoned at once, since a
+    restoration keeps the tombstone, and refusing one the profile holds would make the sender drop links both ends
+    have. Only what the diff reports missing may be refused.
+    """
+    init_collab(config_with_profile)
+
+    state = CollabState.load(get_profile())
+    state.tombstones.update({'uuid-offered', 'uuid-held'})
+    state.save()
+
+    run_cli_command(cmd_collab.collab_pull, ['--force'], use_subprocess=False)
+
+    assert stub_transfer == [
+        ('negotiate', None, set()),
+        ('request', set(), {'uuid-offered'}),
         ('import', False, OFFER_INSTANT),
     ]
 
 
 def test_pull_include_deleted(run_cli_command, config_with_profile, stub_environment, stub_transfer):
-    """Test that ``--include-deleted`` rewinds the cursor, drops tombstones from the claim and reaches the import."""
+    """Test that ``--include-deleted`` rewinds the cursor, refuses nothing and drops tombstones from the claim."""
     init_collab(config_with_profile)
 
     state = CollabState.load(get_profile())
     state.cursors[PEER_UUID] = timezone.now()
-    state.tombstones.add('uuid-dead')
+    state.tombstones.update({'uuid-dead', 'uuid-offered'})
     state.events.append(
         CollabEvent(time=timezone.now(), direction='pull', peer=PEER_UUID, uuids=['uuid-held', 'uuid-dead'], size=1)
     )
@@ -1157,7 +1183,7 @@ def test_pull_include_deleted(run_cli_command, config_with_profile, stub_environ
 
     assert stub_transfer == [
         ('negotiate', None, {'uuid-held'}),
-        ('request', {'uuid-offered'}),
+        ('request', {'uuid-offered'}, set()),
         ('import', True, OFFER_INSTANT),
     ]
 
@@ -1165,7 +1191,7 @@ def test_pull_include_deleted(run_cli_command, config_with_profile, stub_environ
 def test_pull_prompts_and_decline_leaves_no_trace(
     run_cli_command, config_with_profile, stub_environment, stub_transfer
 ):
-    """Test that a pull prompts with the exact count and size, and that declining writes nothing durable."""
+    """Test that a pull prompts with the count it asked for and the size, and that declining writes nothing."""
     init_collab(config_with_profile)
 
     profile = get_profile()
@@ -1573,7 +1599,7 @@ def test_push_failed_import_then_retry(run_cli_command, config_with_profile, stu
         computes.append((cursor, set(claim)))
         return delta
 
-    def export_delta(filepath, *, delta, backend, want=None, groups_mode=None):
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
         filepath.write_bytes(b'delta')
         exports.append(set(want))
         return DeltaExport(filepath=filepath, uuids=sorted(want), instant=delta.instant)
@@ -1654,7 +1680,7 @@ def test_push_retry_renegotiates_the_memberships(run_cli_command, config_with_pr
     curation = [GroupMembers(uuid='uuid-of-group', label='curated', type_string='', nodes=['uuid-held'])]
     imports = []
 
-    def export_delta(filepath, *, delta, backend, want=None, groups_mode=None):
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
         filepath.write_bytes(b'delta')
         return DeltaExport(filepath=filepath, uuids=sorted(want), instant=delta.instant)
 
@@ -1707,7 +1733,7 @@ def test_push_prompts_and_decline_drops_cut(run_cli_command, config_with_profile
 
     init_collab(config_with_profile)
 
-    def export_delta(filepath, *, delta, backend, want=None, groups_mode=None):
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
         filepath.write_bytes(b'delta')
         return DeltaExport(filepath=filepath, uuids=['uuid-one'], instant=timezone.now())
 
@@ -1789,7 +1815,7 @@ def test_push_reports_the_refresh_count(run_cli_command, config_with_profile, st
 
     init_collab(config_with_profile, **{OPTION_POLICY: {'extras_mode': 'sync', 'groups_mode': 'local'}})
 
-    def export_delta(filepath, *, delta, backend, want=None, groups_mode=None):
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
         filepath.write_bytes(b'delta')
         return DeltaExport(filepath=filepath, uuids=['uuid-one'], instant=timezone.now())
 
@@ -1877,7 +1903,7 @@ def test_push_retry_offers_no_refresh_under_local(run_cli_command, config_with_p
 
     offered = []
 
-    def export_delta(filepath, *, delta, backend, want=None, groups_mode=None):
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
         filepath.write_bytes(b'delta')
         return DeltaExport(filepath=filepath, uuids=sorted(want), instant=delta.instant)
 
@@ -1994,7 +2020,7 @@ def test_push_refused_delta_drops_stash(run_cli_command, config_with_profile, st
 
     instant = timezone.now()
 
-    def export_delta(filepath, *, delta, backend, want=None, groups_mode=None):
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
         filepath.write_bytes(b'delta')
         return DeltaExport(filepath=filepath, uuids=['uuid-one'], instant=instant)
 
@@ -2264,7 +2290,7 @@ def test_push_nothing_is_still_logged(run_cli_command, config_with_profile, stub
 
     init_collab(config_with_profile)
 
-    def export_delta(filepath, *, delta, backend, want=None, groups_mode=None):
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
         filepath.write_bytes(b'')
         return DeltaExport(filepath=filepath, uuids=[], instant=timezone.now())
 
@@ -2331,7 +2357,7 @@ def test_push_to_a_peer_without_a_cursor_imports_the_empty_delta(
     imports = []
     instant = timezone.now()
 
-    def export_delta(filepath, *, delta, backend, want=None, groups_mode=None):
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
         filepath.write_bytes(b'')
         return DeltaExport(filepath=filepath, uuids=[], instant=instant)
 

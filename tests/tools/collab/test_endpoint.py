@@ -299,6 +299,26 @@ def test_negotiate_delta_cached(make_profile, temp_backend):
     assert not filepath.exists(), 'the superseded delta should have been removed'
 
 
+def test_the_delta_cache_is_keyed_by_the_refusal_too(make_profile, temp_backend):
+    """Test that two peers presenting one cursor, claim and want but different refusals are not served one archive.
+
+    The cut depends on the refusal beyond the nodes it removes: the links between it and a refused node are
+    dropped. Keyed by the want alone, the cache would hand the peer that refused nothing the other's archive, one
+    boundary link short — a link missing on a profile that holds both its ends. What the dropped-link rule does
+    to an archive is ``test_sync.py``'s; what this pins is that the two never share one.
+    """
+    profile = make_profile()
+    seal_calculation(temp_backend)
+    endpoint = CollabEndpoint(profile, temp_backend)
+
+    want = frozenset(endpoint.negotiate_delta(None, frozenset()).manifest)
+
+    plain = endpoint.request_delta(None, frozenset(), want)
+    refusing = endpoint.request_delta(None, frozenset(), want, refuse=frozenset({'uuid-deleted-there'}))
+
+    assert refusing.delta != plain.delta
+
+
 def test_negotiate_delta_per_requester(make_profile, temp_backend):
     """Test that requesters presenting different cursors are served their own deltas, cached side by side."""
     profile = make_profile()
@@ -756,7 +776,11 @@ def test_serve_carries_the_collab_and_its_roster(empty_config, tmp_path, monkeyp
 
 
 def test_handshake(make_profile):
-    """Test that the handshake serves the cursor of the requester and claims held nodes and tombstones."""
+    """Test that the handshake serves the cursor of the requester and claims the held nodes, but no tombstone.
+
+    A deletion is defended at the manifest diff now, so the claim carries what this profile holds and nothing
+    about what it once held — which is what keeps a large deleted campaign off every handshake forever.
+    """
     profile = make_profile()
     endpoint = CollabEndpoint(profile, backend=MagicMock())
 
@@ -773,9 +797,29 @@ def test_handshake(make_profile):
 
     assert handshake.busy is False
     assert handshake.cursor == cursor
-    assert handshake.claim == ['uuid-deleted', 'uuid-held']
+    assert handshake.claim == ['uuid-held']
 
     assert endpoint.handshake('http://unknown:9137').cursor is None
+
+
+def test_diff_manifest_refuses_the_deleted_and_asks_for_the_rest(make_profile, temp_backend):
+    """Test that the diff a pushing peer receives separates what this profile lacks from what it deleted.
+
+    Only a node that is missing can be refused: one this profile holds *and* tombstoned — which is what a
+    restoration leaves behind — has to stay out of the refusal, or the sender would drop links both ends hold.
+    """
+    profile = make_profile()
+    seal_calculation(temp_backend)
+    held = orm.QueryBuilder(backend=temp_backend).append(orm.Node, project='uuid').all(flat=True)
+
+    state = CollabState(filepath=CollabState.get_filepath(profile))
+    state.tombstones.update({'uuid-deleted', *held})
+    state.save()
+
+    diff = CollabEndpoint(profile, temp_backend).diff_manifest(['uuid-missing', 'uuid-deleted', *held])
+
+    assert diff.missing == ['uuid-missing']
+    assert diff.refuse == ['uuid-deleted']
 
 
 def test_handshake_busy_while_importing(make_profile):

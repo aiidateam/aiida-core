@@ -82,6 +82,7 @@ class StubSyncCore:
         self.push_handshake = PushHandshake(busy=False, cursor=None, claim=[])
         self.manifest = ['uuid-offered']
         self.missing = ['uuid-missing']
+        self.refused = ['uuid-deleted']
         self.instant = timezone.now()
         self.import_exception: Exception | None = None
         self.negotiated: list[tuple[datetime | None, frozenset]] = []
@@ -110,11 +111,17 @@ class StubSyncCore:
         return DeltaManifest(manifest=self.manifest, instant=self.instant, roster=self.roster)
 
     def request_delta(
-        self, cursor: datetime | None, claim: frozenset, want: frozenset, refresh_want: frozenset, requester: str = ''
+        self,
+        cursor: datetime | None,
+        claim: frozenset,
+        want: frozenset,
+        refresh_want: frozenset,
+        refuse: frozenset,
+        requester: str = '',
     ) -> DeltaOffer:
-        self.requested.append((cursor, claim, want))
+        self.requested.append((cursor, claim, want, refuse))
         return DeltaOffer(
-            delta=delta_id(cursor, claim, want),
+            delta=delta_id(cursor, claim, want, refuse),
             instant=self.instant,
             size=self.delta_path.stat().st_size,
             refresh=[ExtrasSnapshot(uuid=uuid, mtime=self.instant, extras={'k': 1}) for uuid in sorted(refresh_want)],
@@ -128,7 +135,7 @@ class StubSyncCore:
 
     def diff_manifest(self, uuids: list, refresh: dict, members: list) -> ManifestDiff:
         self.diffed.append(uuids)
-        return ManifestDiff(missing=self.missing, refresh=sorted(refresh), members=members)
+        return ManifestDiff(missing=self.missing, refresh=sorted(refresh), refuse=self.refused, members=members)
 
     def handshake(self, requester: str, roster: list | None = None) -> PushHandshake:
         self.handshakes.append(requester)
@@ -553,15 +560,16 @@ def test_negotiate_delta(transport):
 
 
 def test_request_delta(transport):
-    """The request relays cursor, claim and the wanted subset, and returns the offer of the cut archive."""
+    """The request relays cursor, claim, the wanted subset and the refusal, and returns the offer of the archive."""
     cursor = timezone.now()
     claim = frozenset({'uuid-held'})
     want = frozenset({'uuid-wanted'})
+    refuse = frozenset({'uuid-deleted'})
 
-    offer = transport.client.request_delta(cursor, claim, want, frozenset({'uuid-stale'}))
+    offer = transport.client.request_delta(cursor, claim, want, frozenset({'uuid-stale'}), refuse)
 
-    assert transport.stub.requested == [(cursor, claim, want)]
-    assert offer.delta == delta_id(cursor, claim, want)
+    assert transport.stub.requested == [(cursor, claim, want, refuse)]
+    assert offer.delta == delta_id(cursor, claim, want, refuse)
     assert offer.instant == transport.stub.instant
     assert offer.size == len(DELTA)
     assert [(snapshot.uuid, snapshot.mtime, snapshot.extras) for snapshot in offer.refresh] == [
@@ -604,6 +612,7 @@ def test_diff_manifest(transport):
 
     assert diff.missing == ['uuid-missing']
     assert diff.refresh == ['uuid-edited']
+    assert diff.refuse == ['uuid-deleted'], 'what the receiver deleted has to reach the sender that must cut it out'
     assert diff.members == members, 'the membership offer has to survive the round trip over the wire'
     assert transport.stub.diffed == [['uuid-one', 'uuid-two']]
 

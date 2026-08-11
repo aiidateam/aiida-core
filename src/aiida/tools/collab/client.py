@@ -182,6 +182,7 @@ class CollabClient:
         claim: frozenset[str] | set[str],
         want: frozenset[str] | set[str],
         refresh_want: frozenset[str] | set[str] | list[str] = frozenset(),
+        refuse: frozenset[str] | set[str] = frozenset(),
     ) -> DeltaOffer:
         """Ask the peer to export the subset of the negotiated delta this profile lacks, and receive its offer.
 
@@ -190,12 +191,15 @@ class CollabClient:
         :param want: the UUIDs of the manifest this profile is missing.
         :param refresh_want: the nodes of the manifest's refresh offer whose extras this profile holds an older
             version of; their snapshots come with the offer.
+        :param refuse: the UUIDs of the manifest this profile is missing because it deleted them, and which it
+            therefore does not ask for.
         """
         body = {
             'cursor': cursor.isoformat() if cursor is not None else None,
             'claim': sorted(claim),
             'want': sorted(want),
             'refresh_want': sorted(refresh_want),
+            'refuse': sorted(refuse),
         }
 
         return self._answer(DeltaOffer.from_dict, 'POST', ROUTE_DELTA, json=body)

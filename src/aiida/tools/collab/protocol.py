@@ -154,18 +154,26 @@ def route_delta(delta_id: str) -> str:
 
 
 def delta_id(
-    cursor: datetime | None, claim: frozenset[str] | set[str], want: frozenset[str] | set[str] | None = None
+    cursor: datetime | None,
+    claim: frozenset[str] | set[str],
+    want: frozenset[str] | set[str] | None = None,
+    refuse: frozenset[str] | set[str] | None = None,
 ) -> str:
-    """Return the identifier of the delta a cursor, claim and requested subset negotiate.
+    """Return the identifier of the delta a cursor, claim, requested subset and refusal negotiate.
 
     Derived from the request alone, so a client that re-negotiates after an interrupted download is offered the
     same identifier and can resume, and the sender can key its cache of exported deltas by it.
+
+    The refusal is a component of its own because the archive depends on it beyond the subset it removes: the links
+    between the cut and a refused node are dropped, so two requesters with the very same effective want and a
+    different refusal are owed different bytes.
     """
     key = json.dumps(
         [
             cursor.isoformat() if cursor is not None else None,
             sorted(claim),
             sorted(want) if want is not None else None,
+            sorted(refuse) if refuse is not None else None,
         ]
     )
 
@@ -356,23 +364,34 @@ class ManifestDiff:
     """The answer of a receiver to a manifest a pushing peer offers it: what of it the receiver does not have."""
 
     missing: list[str]
-    """The UUIDs of the offered nodes the receiver holds nowhere; only those are exported and uploaded."""
+    """The UUIDs of the offered nodes the receiver holds nowhere and asks for; only those are exported and
+    uploaded."""
 
     refresh: list[str]
     """The nodes whose extras the receiver holds an older version of, and whose snapshot it wants with the push."""
+
+    refuse: list[str] = dataclasses.field(default_factory=list)
+    """The offered nodes the receiver lacks because it deleted them, and which it therefore does not ask for. The
+    sender cuts them out with their links, unless the wanted provenance requires them."""
 
     members: list[GroupMembers] = dataclasses.field(default_factory=list)
     """The offered memberships the receiver can and does not yet hold; they ride the import request. Empty unless
     the receiver's own policy is ``grow``."""
 
     def as_dict(self) -> dict[str, Any]:
-        return {'missing': self.missing, 'refresh': self.refresh, 'members': members_as_dict(self.members)}
+        return {
+            'missing': self.missing,
+            'refresh': self.refresh,
+            'refuse': self.refuse,
+            'members': members_as_dict(self.members),
+        }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ManifestDiff:
         return cls(
             missing=data['missing'],
             refresh=data['refresh'],
+            refuse=data['refuse'],
             members=members_from_dict(data.get('members', [])),
         )
 
@@ -425,7 +444,8 @@ class PushHandshake:
     """The export instant of the last delta the receiver imported from the pusher, or ``None`` for none."""
 
     claim: list[str]
-    """UUIDs the receiver already holds, including its tombstones, which keeps deletions out of re-delivery."""
+    """UUIDs the receiver already holds and does not want re-delivered. Its deletions are not among them: those are
+    refused at the manifest diff, where the refusal is bounded by the delta instead of by the whole history."""
 
     roster: list[dict[str, Any]] = dataclasses.field(default_factory=list)
     """The receiver's own roster entry and every peer it knows, so that membership spreads with every sync."""

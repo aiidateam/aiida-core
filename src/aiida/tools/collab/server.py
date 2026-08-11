@@ -92,8 +92,8 @@ class CollabServer(ThreadingHTTPServer):
         ``POST /collab/v1/delta``, and merges the roster gossiped with it. Receives the requester of the
         ``X-Collab-Peer`` header, whose session the serving slot it takes belongs to.
     :param request_delta: exports (or reuses) the subset of that delta named by the ``want`` of a
-        ``POST /collab/v1/delta`` and returns its offer, with the extras snapshots of its ``refresh_want``. Also
-        receives the requester, as ``negotiate_delta`` does.
+        ``POST /collab/v1/delta`` and returns its offer, with the extras snapshots of its ``refresh_want`` and
+        without the nodes of its ``refuse``. Also receives the requester, as ``negotiate_delta`` does.
     :param resolve_delta: returns the path of the negotiated delta served at ``GET /collab/v1/delta/<id>``, or
         ``None`` when no delta with that identifier is on offer. Each identifier must keep resolving to the same
         bytes while a transfer is in progress; when the delta is re-exported, a client that resumes an interrupted
@@ -103,8 +103,8 @@ class CollabServer(ThreadingHTTPServer):
         was served to the end of the file. A peer that abandons a negotiation — a dry run, a declined prompt —
         ends its session that way instead of leaving the endpoint refusing others until the slot expires.
     :param diff_manifest: answers ``POST /collab/v1/missing`` for a peer that wants to push: which of the offered
-        nodes this profile is missing, which of the offered extras it holds an older version of, and which of the
-        offered group memberships it can apply.
+        nodes this profile is missing, which of those it refuses because it deleted them, which of the offered
+        extras it holds an older version of, and which of the offered group memberships it can apply.
     :param handshake: answers ``POST /collab/v1/handshake`` for a peer that wants to push: busy while an import is
         running, otherwise what the profile already holds of that peer. Merges the roster gossiped with it. Raising
         ``PushRefused`` means the profile does not accept pushes and is answered 403, here and at the import that
@@ -128,7 +128,9 @@ class CollabServer(ThreadingHTTPServer):
         staging_dir: Path,
         info: Callable[[datetime | None], PeerInfo],
         negotiate_delta: Callable[[datetime | None, frozenset[str], list[dict[str, Any]], str], DeltaManifest],
-        request_delta: Callable[[datetime | None, frozenset[str], frozenset[str], frozenset[str], str], DeltaOffer],
+        request_delta: Callable[
+            [datetime | None, frozenset[str], frozenset[str], frozenset[str], frozenset[str], str], DeltaOffer
+        ],
         resolve_delta: Callable[[str, str], Path | None],
         release: Callable[[str], None],
         diff_manifest: Callable[[list[str], dict[str, datetime], list[GroupMembers]], ManifestDiff],
@@ -338,7 +340,12 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
 
         if 'want' in data:
             answer = self.server.request_delta(
-                cursor, claim, frozenset(data['want']), frozenset(data.get('refresh_want', [])), self.peer
+                cursor,
+                claim,
+                frozenset(data['want']),
+                frozenset(data.get('refresh_want', [])),
+                frozenset(data.get('refuse', [])),
+                self.peer,
             )
         else:
             answer = self.server.negotiate_delta(cursor, claim, data.get('roster', []), self.peer)

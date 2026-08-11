@@ -54,9 +54,9 @@ def test_deleted_work_of_this_profile_is_not_relayed_back(collab, direction):
     contact with Bob is unbounded — she offers everything she holds — and only the tombstone stands between that
     offer and the work coming back.
 
-    It stands twice, which is why removing either defence alone leaves this green: the claim carries the
-    tombstones so the node is never cut into the delta, and the import filters them again out of whatever does
-    arrive. Both have to go before the node returns.
+    It stands twice, which is why removing either defence alone leaves this green: Bob refuses the offered node
+    at the manifest diff, so it is never cut into the delta, and his import filters the tombstones again out of
+    whatever does arrive. Both have to go before the node returns.
     """
     a, b, c = collab(3)
     created = b.seal_calculation()
@@ -120,9 +120,9 @@ def test_a_deletion_during_a_pull_is_not_undone(collab, faults):
 
     The pull holds a state object across a handshake, a negotiation and a download — minutes of wall clock — and
     the import is what has to see the tombstones as they are when it runs, not as they were before any of it.
-    Both defences fall to the same staleness: the claim was computed before the deletion, so the node is cut into
-    the delta, and the import's tombstone filter would read the same stale set. Pull-only: only the pull carries
-    a state object across a network round trip; the endpoint already re-reads its own inside the import lock.
+    Both defences fall to the same staleness: the refusal was computed before the deletion, so the node is asked
+    for and cut into the delta, and the import's tombstone filter would read the same stale set. Pull-only: only
+    the pull carries a state object across a network round trip; the endpoint re-reads its own inside the lock.
     """
     a, b, c = collab(3)
     created = b.seal_calculation()
@@ -138,6 +138,45 @@ def test_a_deletion_during_a_pull_is_not_undone(collab, faults):
 
     assert created in b.state().tombstones
     assert created not in b.uuids(), 'the deletion was undone by the import it raced'
+
+
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_new_work_built_on_a_deleted_node_arrives_whole(collab, direction):
+    """Test that provenance a peer built on a node Alice deleted arrives, while the rest of her deletion holds.
+
+    The refusal happens at the manifest diff now, so the sender is what decides what it costs: the deleted node
+    the new work *requires* is put back into the cut, and the deleted calculation that merely created it is not —
+    its CREATE link goes with it, so the node lands creator-less instead of aborting the import over a boundary
+    endpoint that exists nowhere. A restoration drops no tombstone; only ``--include-deleted`` does. Relayed
+    through Carol, because Alice's own peer is not the only route the work can take back to her.
+    """
+    a, b, c = collab(3)
+    created = a.seal_calculation()
+
+    move(a, b, direction)
+    move(a, c, direction)
+
+    calculation = a.creator(created)
+    a.delete(calculation)
+
+    consumed = b.seal_calculation(inputs=created)
+
+    move(b, c, direction)
+    move(c, a, direction)
+
+    assert consumed in a.uuids(), 'the new work has to arrive'
+    assert created in a.uuids(), 'the deleted node that new work requires comes back with it'
+    assert calculation not in a.uuids(), 'the deleted calculation nothing requires stays deleted'
+    assert a.state().tombstones == {calculation, created}, 'a restoration drops no tombstone'
+
+    # Held again, so the restored node is no longer refused and the links onto it are no longer dropped.
+    second = b.seal_calculation(inputs=created)
+
+    move(b, a, direction)
+
+    assert second in a.uuids()
+    assert a.graph()['nodes'] == [uuid for uuid in b.graph()['nodes'] if uuid != calculation]
+    assert a.graph()['links'] == [link for link in b.graph()['links'] if calculation not in link]
 
 
 # -- extras -----------------------------------------------------------------------------------------------------

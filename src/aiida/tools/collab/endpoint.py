@@ -62,6 +62,7 @@ from aiida.tools.collab.sync import (
     refresh_offer,
     refresh_snapshots,
     refresh_wanted,
+    required_refused,
 )
 
 if TYPE_CHECKING:
@@ -308,7 +309,9 @@ class CollabEndpoint:
         return PushHandshake(
             busy=False,
             cursor=cursor,
-            claim=sorted(state.imported_uuids_since(cursor) | state.tombstones),
+            # The tombstones are not claimed: this profile refuses its deletions at the manifest diff, where the
+            # refusal is bounded by the delta rather than by every deletion this profile ever made.
+            claim=sorted(state.imported_uuids_since(cursor)),
             roster=entries,
         )
 
@@ -380,6 +383,7 @@ class CollabEndpoint:
         claim: frozenset[str],
         want: frozenset[str],
         refresh_want: frozenset[str] = frozenset(),
+        refuse: frozenset[str] = frozenset(),
         requester: str = '',
     ) -> DeltaOffer:
         """Export the requested subset of a delta, reusing the cached archive while nothing changed.
@@ -389,6 +393,9 @@ class CollabEndpoint:
         the unlinked inode, and one that resumes later is served the new file from the start by the ``ETag``
         validator.
 
+        :param refuse: the nodes the requester deleted and does not ask for. The cut closes over the ones its
+            wanted provenance requires — the import would import those regardless — and drops the links to the
+            rest, which the requester could not resolve.
         :param requester: the profile UUID of the peer, whose session the granted slot belongs to.
         :raises EndpointBusy: when every serving slot is taken by another peer.
         """
@@ -396,7 +403,7 @@ class CollabEndpoint:
 
         with self._delta_lock:
             delta = self._delta(cursor, claim)
-            key = delta_id(cursor, claim, want)
+            key = delta_id(cursor, claim, want, refuse)
             cached = self._deltas.pop(key, None)
 
             # An archive built from a superseded computation of the delta serves stale bytes: the instant ties
@@ -407,11 +414,13 @@ class CollabEndpoint:
                 if cached is not None:
                     cached.filepath.unlink(missing_ok=True)
 
+                required = required_refused(delta=delta, backend=self._backend, want=want, refuse=refuse)
                 cached = export_delta(
                     self._dirpath / f'delta-{self._counter}.aiida',
                     delta=delta,
                     backend=self._backend,
-                    want=want,
+                    want=want | required,
+                    refuse=refuse,
                     groups_mode=self._groups_mode,
                 )
 
@@ -434,11 +443,19 @@ class CollabEndpoint:
         refresh: dict[str, datetime] | None = None,
         members: list[GroupMembers] | None = None,
     ) -> ManifestDiff:
-        """Return what this profile lacks of what a pushing peer offers: nodes, newer extras and memberships."""
+        """Return what this profile lacks of what a pushing peer offers: nodes, newer extras and memberships.
+
+        A node this profile deleted is missing too, and is refused rather than asked for: that is where a deletion
+        is defended now, and only what is missing can be refused — a node held *and* tombstoned, which a
+        restoration leaves behind, is one the sender must keep linking to.
+        """
         state = CollabState.read(self._state_filepath)
+        missing = set(missing_uuids(self._backend, uuids))
+        refuse = missing & state.tombstones
 
         return ManifestDiff(
-            missing=missing_uuids(self._backend, uuids),
+            missing=sorted(missing - refuse),
+            refuse=sorted(refuse),
             refresh=(
                 refresh_wanted(self._backend, refresh or {}, state.tombstones) if self._extras_mode == 'sync' else []
             ),

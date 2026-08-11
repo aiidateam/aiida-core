@@ -113,17 +113,16 @@ If you already know the older WorkChain API, or meet it in a plugin, here is how
 Before we write any code, it helps to have a mental picture of the four main objects WorkGraph is built from:
 
 - **WorkGraph**: the container. A directed graph of tasks that AiiDA runs as a single workflow process. Every WorkGraph run becomes one process node in the provenance graph.
-- **Task**: a unit of work inside the graph. Each task wraps an *executor*: a Python function, a `calcfunction`, a `CalcJob`, or even another WorkGraph. Tasks are created by calling task-wrapped functions inside a graph context.
+- **Task**: a unit of work inside the graph. Each task wraps an *executor*: a Python function, a `calcfunction`, a `CalcJob`, or even another WorkGraph.
 - **Socket**: a typed input or output port on a task. A task's arguments are its input sockets, and the values it produces are its output sockets.
 - **Link**: a directed connection between an output socket of one task and an input socket of another. Links are created automatically when you pass one task's output socket as an argument to another task.
 
 :::{important}
 Building the graph and running the graph are two separate steps.
-:::
-
 Inside a WorkGraph definition, calling a task function does not execute it.
 It creates a task in the graph and returns its **output sockets**: placeholders for values that don't exist yet.
-You are handling sockets, not AiiDA ORM nodes.
+You are handling sockets, not AiiDA ORM nodes or plain Python objects.
+:::
 
 This is the single most important shift from ordinary Python. Normally, running your code executes it; running the code that builds a WorkGraph only *assembles* the graph. Its tasks run only when you explicitly run or submit the graph via `wg.run` or `wg.submit`, respectively.
 
@@ -168,17 +167,14 @@ Concretely:
 
 This is the same `.result` convention you saw for the plain calcfunctions in {ref}`Module 2 <tutorial:module2>` (there, `node.outputs.result`).
 
-`@task()` is a decorator; for functions defined elsewhere we apply it explicitly:
+`@task()` is a Python decorator, so for functions defined elsewhere we apply it explicitly: calling `task()(fn)` is the same as writing `@task()` above the definition.
 
 ```{code-cell} ipython3
 prepare_input_task = task()(prepare_input)
 parse_output_task = task()(parse_output)
-
-# `*_task` = WorkGraph-wrapped variants; the originals stay usable under
-# their plain names.
-# `task()(fn)` is the explicit decorator-application form, equivalent to
-# writing `@task()` above the definition.
 ```
+
+We assign the wrapped versions to the original names with a `_task` suffix (`prepare_input_task`, `parse_output_task`); the original functions stay usable under their plain names.
 
 :::{note}
 Plain `task()(fn)` works whenever WorkGraph can infer the outputs from the return annotation (here, because `prepare_input` is annotated `-> orm.SinglefileData` and `parse_output` `-> ParseOutputs`).
@@ -186,18 +182,18 @@ When it can't (for example, a function you don't control that returns a plain `d
 :::
 
 With the tasks wrapped, we can write the workflow itself: a Python function decorated with `@task.graph()`.
-Its body reads like ordinary Python, but as the callouts above already noted, the calls inside register tasks and links rather than executing right away.
-The function signature becomes the graph's inputs and the return statement its outputs.
+Its body reads like ordinary Python, but as already noted above, the calls inside register tasks and links rather than executing right away.
+The function's parameters become the graph's inputs and the return statement its outputs.
 
 The canonical definition lives in `include/workflows.py` so later modules (and other notebooks) can import the same pipeline rather than redefining it.
-The file declares one extra output socket on top of what we strictly need here, `results_npz`, so Module 6 can read the V-field for follow-on analyses. It is inlined verbatim in the snippet below:
+It is inlined verbatim in the snippet below:
 
 ```{literalinclude} include/workflows.py
 :language: python
 :pyobject: gray_scott_pipeline
 ```
 
-We bring it into the current namespace with a plain import:
+The snippet above only *displays* the file; we import the workflow to bring it into the current namespace:
 
 ```{code-cell} ipython3
 from include.workflows import gray_scott_pipeline
@@ -237,19 +233,24 @@ return {
 Wires the named outputs to the graph's own outputs.
 `parsed.variance_V` and `parsed.mean_V` are the two scalar results parsed from stdout; `simulation.results_npz` is the file output declared on the `ShellJob` (`outputs=['results.npz']`), kept around so later modules can read the V and U fields directly.
 
-Before running anything, it helps to convince yourself that the function body above really is just a *specification*.
-`.build(...)` returns a `WorkGraph` object whose tasks and sockets we can inspect without running any simulation:
+`gray_scott_pipeline` is a reusable graph *blueprint*, not a `WorkGraph` yet. Passing it a concrete set of inputs through its `.build()` method produces an actual `WorkGraph` object:
 
 ```{code-cell} ipython3
-wg_preview = gray_scott_pipeline.build(
+wg = gray_scott_pipeline.build(
     parameters=BASE_PARAMS,
     command=gsrd_code,
 )
-
-print('Graph inputs: ', [name for name in wg_preview.get_input_names() if name != 'metadata'])
-print('Graph outputs:', wg_preview.get_output_names())
-print('Tasks:        ', [t.name for t in wg_preview.tasks])
 ```
+
+Building assembles the graph without running anything, so we can convince ourselves the workflow really is just a *specification* by inspecting its inputs, outputs, and tasks first:
+
+```{code-cell} ipython3
+print('Graph inputs: ', [name for name in wg.get_input_names() if name != 'metadata'])
+print('Graph outputs:', wg.get_output_names())
+print('Tasks:        ', [t.name for t in wg.tasks])
+```
+
+(The `!= 'metadata'` filter drops `metadata`, the standard `label`/`description`/caching input namespace AiiDA adds to every process, leaving just the two inputs we declared.)
 
 Two things to notice:
 
@@ -264,20 +265,10 @@ WorkGraph also exposes the same structure as an **interactive graph viewer**. Cl
 :    code_prompt_show: 'Show interactive workflow graph'
 :    code_prompt_hide: 'Hide interactive workflow graph'
 
-wg_preview
+wg
 ```
 
-`gray_scott_pipeline` is a *blueprint*: a reusable definition, not yet tied to any particular inputs. `.build(parameters, command)` makes that blueprint concrete, wiring it up for one specific set of inputs and returning a concretized `WorkGraph`.
-So, let's build it with a specific set of parameters.
-
-```{code-cell} ipython3
-wg = gray_scott_pipeline.build(
-    parameters=BASE_PARAMS,
-    command=gsrd_code,
-)
-```
-
-Now run it: calling `run()` executes the graph in-process, while `submit()` would hand it to the AiiDA daemon. You can also reuse `gray_scott_pipeline` as one step inside a bigger graph, which is exactly what {ref}`Module 3b <tutorial:module3b>` does.
+Everything so far has only *built* the graph. To execute it, we call `run()` (in-process); `submit()` would instead hand it to the AiiDA daemon. You can also reuse `gray_scott_pipeline` as one step inside a bigger graph, which is exactly what {ref}`Module 3b <tutorial:module3b>` does.
 
 ```{code-cell} ipython3
 :tags: [hide-output]

@@ -86,7 +86,7 @@ For your own work outside the tutorial, the easiest way to create a profile is `
 $ verdi presto
 ```
 
-It sets up a lightweight local profile with sensible defaults for all three: SQLite for the database, [disk-objectstore](https://github.com/aiidateam/disk-objectstore) for file storage, and the built-in **ZMQ message broker**, the same three backends the tutorial's sandbox profile uses.
+It sets up a lightweight local profile with sensible defaults for all three: SQLite for the database, [disk-objectstore](https://github.com/aiidateam/disk-objectstore) for file storage, and the built-in **ZeroMQ message broker**, the same three backends the tutorial's sandbox profile uses.
 For more advanced high-throughput production setups, see the {ref}`installation guide <installation>`.
 
 :::{note}

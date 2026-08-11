@@ -161,7 +161,7 @@ BASE_PARAMS = {
 @task.graph()
 def pipeline_with_optional_fft(
     parameters: orm.Dict,
-    command: orm.AbstractCode,
+    command: orm.InstalledCode,
     variance_threshold: float,
 ):
     """Run the Module 3 pipeline, then run the FFT only if the run looks interesting."""

@@ -99,7 +99,7 @@ We also reuse `pipeline_with_optional_fft` from {ref}`Module 6a <tutorial:module
 @task.graph()
 def pipeline_with_optional_fft(
     parameters: orm.Dict,
-    command: orm.AbstractCode,
+    command: orm.InstalledCode,
     variance_threshold: float,
 ):
     """Run the Module 3 pipeline, then run the FFT only if the run looks interesting."""
@@ -119,7 +119,7 @@ The outer graph builds the loop body once; the engine expands it into one branch
 @task.graph()
 def conditional_sweep(
     param_sweep: Annotated[dict, dynamic(dict)],
-    command: orm.AbstractCode,
+    command: orm.InstalledCode,
     variance_threshold: float,
 ):
     """A coarse F-sweep where each iteration decides for itself whether to run the FFT."""
@@ -193,7 +193,7 @@ It is one `@task.graph()` that contains two `Map` zones; the second one's source
 def adaptive_sweep(
     coarse_sweep: Annotated[dict, dynamic(dict)],
     base_parameters: orm.Dict,
-    command: orm.AbstractCode,
+    command: orm.InstalledCode,
     n_refined: orm.Int,
 ) -> namespace(
     coarse_variances=dynamic(float),

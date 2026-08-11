@@ -144,7 +144,7 @@ from include.tasks_module_3b import make_transition_plot
 @task.graph()
 def gray_scott_sweep(
     param_sweep: Annotated[dict, dynamic(dict)],
-    command: orm.AbstractCode,
+    command: orm.InstalledCode,
 ) -> namespace(
     transition_plot=orm.SinglefileData,
     variance_V=dynamic(float),

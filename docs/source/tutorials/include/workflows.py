@@ -40,7 +40,7 @@ class GrayScottOutputs(TypedDict):
 @task.graph()
 def gray_scott_pipeline(
     parameters: orm.Dict,
-    command: orm.AbstractCode,
+    command: orm.InstalledCode,
 ) -> GrayScottOutputs:
     """Run one gsrd simulation and parse its results (variance_V, mean_V, results_npz)."""
 

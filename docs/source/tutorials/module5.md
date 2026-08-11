@@ -135,6 +135,23 @@ print(f'parse_output node flagged as the transition: PK {qb.first(flat=True)}')
 
 That `note` lives on exactly one node, so the query returns it alone, out of every `parse_output` in the profile (including Module 3's WorkGraph sweep), without your having kept a Python reference to it.
 
+Because the query hands back the full node, not just a projected column, you can pick an old result up and keep working with it.
+Module 3a tagged its reproduced **labyrinth** run with `morphology='labyrinth'`; that tag pulls the run back here, in a fresh session, so we can re-plot its field and close the loop on the {ref}`Module 0 <tutorial:module0>` gallery:
+
+```{code-cell} ipython3
+from include.plotting import plot_pattern_gallery
+
+labyrinth_npz = (
+    orm.QueryBuilder()
+    .append(
+        orm.SinglefileData,
+        filters=orm.SinglefileData.fields.extras['morphology'] == 'labyrinth',
+    )
+    .first(flat=True)
+)
+plot_pattern_gallery({'labyrinth (from the database)': labyrinth_npz})
+```
+
 :::{tip}
 Reach for `project=` and `.count()` whenever you can.
 They keep the work in SQL and avoid the cost of building full ORM objects in Python, which is what makes QueryBuilder fast at scale.

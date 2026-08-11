@@ -25,14 +25,16 @@ This tutorial can be downloaded and run as a Jupyter notebook: {nb-download}`mod
 
 In this module, we run a simulation the traditional way, without AiiDA, to experience the pain points it is built to solve.
 
-Throughout this tutorial we use a **reaction-diffusion simulation** as our running example.
-It models the concentration of particles diffusing and reacting on a 2D grid, producing a variety of spatial patterns depending on its parameters.
-A typical pattern formed can look like this:
+Throughout this tutorial we use a **reaction-diffusion simulation**, the classic Gray-Scott model, as our running example.
+It models the concentration of particles diffusing and reacting on a 2D grid, producing a variety of spatial patterns.
+Depending on the feed rate, F, and kill rate, k, it forms strikingly different structures:
 
-```{image} include/reaction-diffusion-fields.png
-:width: 60%
+:::{dropdown} A gallery of Gray-Scott patterns
+```{image} include/reaction-diffusion-showcase.png
+:width: 100%
 :align: center
 ```
+:::
 
 &nbsp;
 
@@ -163,7 +165,7 @@ Then run the simulation with the modified input file:
 
 With `F=0.055`, the pattern looks completely different:
 
-```{image} include/reaction-diffusion-fields-2.png
+```{image} include/reaction-diffusion-dissolved.png
 :width: 60%
 :align: center
 ```

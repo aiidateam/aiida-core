@@ -6,6 +6,7 @@ rather than ``%run -i`` each script:
 * :func:`plot_provenance` — render the provenance graph of a process node.
 * :func:`plot_transition_curve` — variance(V) as a function of feed rate F.
 * :func:`plot_uv_fields` — side-by-side imshow of the U and V fields.
+* :func:`plot_pattern_gallery` — final V field of several runs side by side.
 * :func:`plot_2d_variance_heatmap` — variance(V) over a 2D (F, k) parameter grid.
 * :func:`plot_fft_spectrum` — 2D power spectrum + radial profile for a V field.
 * :func:`plot_adaptive_sweep` — coarse + refined transition curves on one axis.
@@ -79,6 +80,27 @@ def plot_uv_fields(u_field: NDArray[np.floating], v_field: NDArray[np.floating])
     _ = ax_v.imshow(v_field, cmap='inferno', origin='lower')
     _ = ax_v.set_title('V (activator)')
     _ = ax_v.axis('off')
+    fig.tight_layout()
+    plt.show()
+
+
+def plot_pattern_gallery(runs: Mapping[str, SinglefileData]) -> None:
+    """Plot the final V field of several gsrd runs side by side, each labelled.
+
+    :param runs: mapping from a label (e.g. ``'labyrinth'``) to the
+        ``results.npz`` SinglefileData produced by that run's ``gsrd`` ShellJob.
+    """
+    import numpy as np
+
+    fig: Figure
+    fig, ax_array = plt.subplots(nrows=1, ncols=len(runs), figsize=(4 * len(runs), 4))
+    axes = np.atleast_1d(ax_array)
+    for ax, (label, results_npz) in zip(axes, runs.items()):
+        with results_npz.open(mode='rb') as fh:
+            v_field = np.load(fh, allow_pickle=True)['V_final']
+        _ = ax.imshow(v_field, cmap='magma', origin='lower')
+        _ = ax.set_title(label)
+        _ = ax.axis('off')
     fig.tight_layout()
     plt.show()
 

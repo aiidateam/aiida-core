@@ -231,7 +231,11 @@ results = wg_sweep.run()
 `results` holds the `transition_plot` artifact plus the gathered `variance_V` and `mean_V`, each a dict keyed by the `Map` source keys:
 
 ```{code-cell} ipython3
-results
+for label, value in results.items():
+    if isinstance(value, orm.Node):
+        print(f'{label:<16}{type(value).__name__:<16}{value}')
+    else:
+        print(f'{label:<16}{type(value).__name__:<16}{len(value)} entries')
 ```
 
 Reading those values out, variance and mean side by side for each `F`:
@@ -303,7 +307,7 @@ The curve's two regimes look strikingly different in the simulated concentration
 :::
 
 :::{grid-item}
-```{image} include/reaction-diffusion-fields-2.png
+```{image} include/reaction-diffusion-dissolved.png
 :width: 100%
 :align: center
 ```
@@ -365,21 +369,7 @@ wg_2d
 results_2d = wg_2d.run()
 ```
 
-`results_2d['variance_V']` holds one `Float` per `(F, k)` point. Laid out as a grid, the pattern-forming band and the dying edge already show up in the raw numbers, before we plot anything:
-
-```{code-cell} ipython3
-variances_2d = results_2d['variance_V']
-
-print(f'{"F / k":>8}' + ''.join(f'{k:>10.3f}' for k in K_GRID))
-for f in F_GRID:
-    cells = []
-    for k in K_GRID:
-        key = f'F_{f:.3f}_k_{k:.3f}'.replace('.', '_')
-        cells.append(f'{variances_2d[key].value:>10.2e}')
-    print(f'{f:>8.3f}' + ''.join(cells))
-```
-
-Render the same numbers as a heatmap. The plotting helper lives in {download}`include/plotting.py`; it does the bookkeeping (map keys back to `(F, k)`, clamp dead-zone entries below `1e-6` for the log-norm, build the figure) so the cell stays a one-liner:
+Render the gathered variances as a heatmap. The plotting helper lives in {download}`include/plotting.py`; it does the bookkeeping (map keys back to `(F, k)`, clamp dead-zone entries below `1e-6` for the log-norm, build the figure) so the cell stays a one-liner:
 
 ```{code-cell} ipython3
 from include.plotting import plot_2d_variance_heatmap
@@ -393,6 +383,15 @@ plot_2d_variance_heatmap(
 ```
 
 The heatmap shows the edge of the **pattern-forming region** of the classic Gray-Scott phase diagram. High-variance cells (bright) develop the spots, stripes, and labyrinths the system is famous for; the low-variance corner is where the pattern dies out.
+
+:::{dropdown} The patterns behind these numbers
+```{image} include/reaction-diffusion-patterns.png
+:width: 100%
+:align: center
+```
+*A few of the morphologies the Gray-Scott model produces across the `(F, k)` plane, each a separate `gsrd` run at the labelled feed and kill rates.*
+:::
+
 Twenty-five simulations, one workflow node, full provenance attached.
 
 ## Next steps

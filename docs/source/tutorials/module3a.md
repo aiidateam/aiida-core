@@ -341,6 +341,53 @@ plot_provenance(wg.process)
 Compare this to Module 2's flat provenance: the three process nodes are the same (`prepare_input`, the `ShellJob`, `parse_output`), but they are now *children* of a `WorkGraph<gray_scott_pipeline>` orchestrator node (highlighted with a bold red border).
 The orchestrator is linked to each child step it called and back to the outputs it returned, so the **whole pipeline is one queryable, inspectable unit in the database**.
 
+## Reusing the pipeline
+
+Because `gray_scott_pipeline` is a self-contained object, we can run it on any inputs, not only `BASE_PARAMS`.
+To close the loop on {ref}`Module 0 <tutorial:module0>`, we reproduce three of its gallery patterns, this time each a tracked AiiDA workflow rather than a throwaway script run.
+We bump the grid size and step count so the morphologies are well developed; the pipeline takes whatever parameters we hand it.
+
+```{code-cell} ipython3
+:tags: [hide-output]
+:mystnb:
+:    code_prompt_show: 'Show the three workflow runs'
+:    code_prompt_hide: 'Hide the three workflow runs'
+
+# Finer grid and more steps than BASE_PARAMS, so the patterns are well resolved.
+POSTER_PARAMS = {**BASE_PARAMS, 'grid_size': 128, 'n_steps': 10000}
+morphologies = {
+    'spots': {**POSTER_PARAMS, 'F': 0.030, 'k': 0.062},
+    'stripes': {**POSTER_PARAMS, 'F': 0.026, 'k': 0.055},
+    'labyrinth': {**POSTER_PARAMS, 'F': 0.046, 'k': 0.063},
+}
+
+runs = {
+    name: gray_scott_pipeline.run(parameters=params, command=gsrd_code)
+    for name, params in morphologies.items()
+}
+```
+
+Each entry in `runs` is one workflow's resolved outputs, so `runs['spots']['results_npz']` is that run's `results.npz`, with provenance back to the parameters that produced it.
+Plotting the `V` field of each reproduces the Module 0 gallery, computed live:
+
+```{code-cell} ipython3
+from include.plotting import plot_pattern_gallery
+
+plot_pattern_gallery({name: out['results_npz'] for name, out in runs.items()})
+```
+
+These are no longer static images: each is a node you can query, inspect, and trace back to its inputs.
+To make one findable later, we attach a searchable **extra** to the labyrinth run's output, a free-form key-value tag stored on the node:
+
+```{code-cell} ipython3
+labyrinth_npz = runs['labyrinth']['results_npz']
+labyrinth_npz.base.extras.set('morphology', 'labyrinth')
+
+print(f'Tagged {labyrinth_npz} with morphology=labyrinth')
+```
+
+In {ref}`Module 5 <tutorial:module5>` we use the `QueryBuilder` to find this exact run by that tag and re-plot it, without needing to remember its PK.
+
 ## Next steps
 
 You've turned the pipeline of Module 2 into a single, reusable workflow.

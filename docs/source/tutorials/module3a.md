@@ -349,7 +349,7 @@ In {ref}`Module 3b <tutorial:module3b>`, WorkGraph's `Map` runs that same workfl
 ## Further reading
 
 - AiiDA's workflow concepts in depth: {ref}`topics:workflows`
-- CalcJob concept (for `ShellJob` background): {ref}`topics:calculations:concepts:calcjobs`
+- `aiida-shell` (the `ShellJob` launcher used in the pipeline): [aiida-shell documentation](https://aiida-shell.readthedocs.io)
 - Calcfunctions refresher: {ref}`topics:processes:functions`
 - Running versus submitting processes: {ref}`topics:processes:usage:launching`
 - WorkGraph documentation: [aiida-workgraph](https://aiida-workgraph.readthedocs.io)

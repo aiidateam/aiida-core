@@ -543,7 +543,7 @@ The remaining modules each pick up an independent thread and can be tackled in a
 
 - {ref}`Module 5 <tutorial:module5>`: querying the database with the `QueryBuilder`
 - {ref}`Module 6 <tutorial:module6>`: more advanced workflow patterns (conditionals, dynamic graphs, sub-workflow composition)
-- {ref}`Module 7 <tutorial:module7>`: handling failures and recovering from them
+- {ref}`Module 7 <tutorial:module7>`: recovering from failures with error handlers, and where to go next
 
 ## Further reading
 

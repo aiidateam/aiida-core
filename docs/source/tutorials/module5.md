@@ -380,7 +380,7 @@ You can now ask structured questions of an AiiDA database at scale, and share th
 The remaining tutorial modules each pick up an independent thread and can be tackled in any order:
 
 - {ref}`Module 6 <tutorial:module6>`: more advanced workflow patterns (conditionals, dynamic graphs, sub-workflow composition)
-- {ref}`Module 7 <tutorial:module7>`: handling failures and recovering from them
+- {ref}`Module 7 <tutorial:module7>`: recovering from failures with error handlers, and where to go next
 
 ## Further reading
 

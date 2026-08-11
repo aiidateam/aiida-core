@@ -172,8 +172,8 @@ def gray_scott_sweep(
 
 Its signature uses two annotations you have not seen yet:
 
-- `dynamic(dict)` marks `param_sweep` as a dict whose keys are only known at runtime, one entry (itself a parameter dict) per iteration.
-- `namespace(...)` declares several named outputs at once: a fixed `transition_plot`, plus `dynamic(float)` outputs that the engine fills in with one value per iteration.
+- `dynamic(...)` marks a namespace whose entries arrive one per `Map` iteration, keyed at runtime. It appears on both sides here: `dynamic(dict)` makes `param_sweep` one parameter dict per iteration, and `variance_V=dynamic(float)` collects one `Float` per iteration, keyed by the source keys.
+- `namespace(...)` bundles several named outputs into one return type. In {ref}`Module 3a <tutorial:module3a>` every output was fixed, so a `TypedDict` (`GrayScottOutputs`) sufficed; a `TypedDict` can only declare fixed fields, so here, where `variance_V` and `mean_V` vary per iteration, `namespace(...)` lets you mix the fixed `transition_plot` with those `dynamic(float)` outputs.
 
 :::{important}
 Two things to watch with `Map`:
@@ -182,19 +182,19 @@ Two things to watch with `Map`:
 - `map_zone.key` and `map_zone.value` are sockets, not Python values. You can pass them to tasks, but you cannot branch on them or build strings from them inside the graph function.
 :::
 
-That's the blueprint; no execution yet.
-We build a `param_sweep` dict with one entry per iteration, printing each as we go so you can see what flows into the `Map`:
+Again, that's the blueprint; no execution yet.
+We now construct a `param_sweep` dict with one entry per iteration, printing each as we go so you can see what flows into the `Map`:
 
 ```{code-cell} ipython3
 # {label: parameters} for Map to iterate over. Each key names one map iteration
 # in the provenance graph; WorkGraph treats '.' as a namespace separator, so
 # encode the F value with underscores (F_0_040, not F_0.040).
-param_sweep = {}
 print(f'{len(F_VALUES)} parameter sets (only F varies):')
+param_sweep = {}
 for f_val in F_VALUES:
     key = f'F_{f_val:.3f}'.replace('.', '_')
     param_sweep[key] = BASE_PARAMS | {'F': f_val}
-    print(f'  {key:<10}  ->  F = {f_val}')
+    print(f'  {key:<7}  ->  F = {f_val}')
 ```
 
 Now `.build(...)` with these concrete inputs:
@@ -217,7 +217,7 @@ The sweep graph contains the same `gray_scott_pipeline` sub-graph as before, now
 wg_sweep
 ```
 
-`.run()` to launch the sweep:
+`.run()` launches the sweep and, as in {ref}`Module 3a <tutorial:module3a>`, returns its resolved outputs, which we capture in `results`:
 
 ```{code-cell} ipython3
 :tags: [hide-output]
@@ -225,22 +225,20 @@ wg_sweep
 :    code_prompt_show: 'Show workflow execution log'
 :    code_prompt_hide: 'Hide workflow execution log'
 
-wg_sweep.run()
+results = wg_sweep.run()
 ```
 
-Running the workflow returns its outputs: the `transition_plot` artifact, plus the gathered `variance_V` and `mean_V`, each a namespace keyed by the `Map` source keys.
+`results` holds the `transition_plot` artifact plus the gathered `variance_V` and `mean_V`, each a dict keyed by the `Map` source keys:
 
 ```{code-cell} ipython3
-# `._value` unwraps an output namespace into a plain dict. This is the current
-# WorkGraph API for reading gathered outputs (may become public in future).
-wg_sweep.outputs._value
+results
 ```
 
 Reading those values out, variance and mean side by side for each `F`:
 
 ```{code-cell} ipython3
-variances = wg_sweep.outputs.variance_V._value
-means = wg_sweep.outputs.mean_V._value
+variances = results['variance_V']
+means = results['mean_V']
 
 for key in sorted(variances):
     print(f"{key}: variance(V) = {float(variances[key].value):.4e}, mean(V) = {float(means[key].value):.4e}")
@@ -262,8 +260,7 @@ print(f"Sweep WorkGraph PK: {wg_sweep.process.pk}")
 %verdi process show {wg_sweep.process.pk}
 ```
 
-Time to bring out the magnifying glass. 🔍
-Here's the same hierarchy rendered as a provenance graph:
+And, here's the same hierarchy rendered as a provenance graph:
 
 ```{code-cell} ipython3
 ---
@@ -292,7 +289,7 @@ img_bytes = sweep_node.outputs.transition_plot.get_content(mode='rb')
 Image(img_bytes)
 ```
 
-The curve's two regimes look strikingly different in real space: below the transition a rich pattern forms; above it the pattern dissolves.
+The curve's two regimes look strikingly different in the simulated concentration fields: below the transition a rich pattern forms; above it the pattern dissolves.
 
 ::::{grid} 2
 :gutter: 2
@@ -318,14 +315,14 @@ The curve's two regimes look strikingly different in real space: below the trans
 
 Now that we have the workflow blueprint, we can expand it to a full 2D scan.
 The classic Gray-Scott phase diagram is two-dimensional: the pattern type depends on both the feed rate `F` and the kill rate `k`, but so far we have varied only `F`.
-Because `gray_scott_sweep` is parameter-agnostic, extending to a 2D grid means changing nothing but the contents of `param_sweep`.
+Because `gray_scott_sweep` is parameter-agnostic, extending to a 2D grid means changing nothing but the contents of `param_sweep`. The `Map` itself still iterates a flat `{key: parameters}` mapping; we flatten the `F`&times;`k` grid into it by encoding both values in each key (`F_0_040_k_0_060`), and recover the 2D structure only at plotting time.
 
-We use a 5&times;5 grid that straddles the **boundary** of the pattern-forming region.
-Inside the band, `variance(V)` is of order `1e-2`; near the edge it drops by an order of magnitude as the V field starts decaying toward a trivial steady state.
+We keep the scan **coarse** on purpose, a 5&times;5 grid (25 simulations) that straddles the **boundary** of the pattern-forming region, so the whole sweep stays quick to run.
+Inside the band, `variance(V)` is of order `1e-2`; toward higher `k` the pattern dies and the variance collapses by orders of magnitude toward a trivial steady state.
 
 ```{code-cell} ipython3
 F_GRID = [0.040, 0.045, 0.050, 0.055, 0.060]
-K_GRID = [0.061, 0.062, 0.063, 0.064, 0.065]
+K_GRID = [0.062, 0.063, 0.064, 0.065, 0.066]
 
 param_sweep_2d = {}
 for f in F_GRID:
@@ -365,16 +362,30 @@ wg_2d
 :    code_prompt_show: 'Show workflow execution log'
 :    code_prompt_hide: 'Hide workflow execution log'
 
-wg_2d.run()
+results_2d = wg_2d.run()
 ```
 
-Render the gathered variances as a heatmap. The plotting helper lives in {download}`include/plotting.py`; it does the bookkeeping (map keys back to `(F, k)`, floor non-positive entries for the log-norm, build the figure) so the cell stays a one-liner:
+`results_2d['variance_V']` holds one `Float` per `(F, k)` point. Laid out as a grid, the pattern-forming band and the dying edge already show up in the raw numbers, before we plot anything:
+
+```{code-cell} ipython3
+variances_2d = results_2d['variance_V']
+
+print(f'{"F / k":>8}' + ''.join(f'{k:>10.3f}' for k in K_GRID))
+for f in F_GRID:
+    cells = []
+    for k in K_GRID:
+        key = f'F_{f:.3f}_k_{k:.3f}'.replace('.', '_')
+        cells.append(f'{variances_2d[key].value:>10.2e}')
+    print(f'{f:>8.3f}' + ''.join(cells))
+```
+
+Render the same numbers as a heatmap. The plotting helper lives in {download}`include/plotting.py`; it does the bookkeeping (map keys back to `(F, k)`, clamp dead-zone entries below `1e-6` for the log-norm, build the figure) so the cell stays a one-liner:
 
 ```{code-cell} ipython3
 from include.plotting import plot_2d_variance_heatmap
 
 plot_2d_variance_heatmap(
-    variances=wg_2d.outputs.variance_V._value,
+    variances=results_2d['variance_V'],
     param_sweep=param_sweep_2d,
     f_grid=F_GRID,
     k_grid=K_GRID,
@@ -392,14 +403,14 @@ The remaining modules can be tackled in whatever order matches your needs, since
 - {ref}`Module 4 <tutorial:module4>`: running on remote HPC clusters
 - {ref}`Module 5 <tutorial:module5>`: querying the database with the `QueryBuilder`
 - {ref}`Module 6 <tutorial:module6>`: more advanced workflow patterns (conditionals, dynamic graphs, sub-workflow composition)
-- {ref}`Module 7 <tutorial:module7>`: handling failures and recovering from them
+- {ref}`Module 7 <tutorial:module7>`: recovering from failures with error handlers, and where to go next
 
 ## Further reading
 
 - AiiDA's workflow concepts in depth: {ref}`topics:workflows`
-- CalcJob concept (for `ShellJob` background): {ref}`topics:calculations:concepts:calcjobs`
+- `aiida-shell` (the `ShellJob` launcher used in the pipeline): [aiida-shell documentation](https://aiida-shell.readthedocs.io)
 - Calcfunctions refresher: {ref}`topics:processes:functions`
 - Control flow (`If`, `While`, dynamic graph construction): {ref}`Module 6 <tutorial:module6>`
-- WorkGraph imperative form (`with WorkGraph() as wg:`) and `spec` helpers: [aiida-workgraph documentation](https://aiida-workgraph.readthedocs.io)
+- Alternative workflow construction APIs WorkGraph offers (beyond the `@task.graph()` decorator used here): [aiida-workgraph documentation](https://aiida-workgraph.readthedocs.io)
 - Running versus submitting processes: {ref}`topics:processes:usage:launching`
 - The AiiDA daemon (architecture and management): {ref}`topics:daemon`, {ref}`how-to:manage-daemon`

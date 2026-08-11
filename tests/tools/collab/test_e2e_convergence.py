@@ -316,3 +316,109 @@ def test_repeating_a_sync_transfers_nothing_but_is_still_logged(collab, directio
     events = caller.state().events[marks[caller.nickname] :]
 
     assert [(event.direction, event.peer, event.uuids) for event in events] == [(direction, peer.uuid, [])]
+
+
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_the_computer_marker_converges_through_the_chain(collab, direction):
+    """EXPECTED (phase 26): a computer is `lumi@collab` on every member of the collab but the one that runs it.
+
+    Every member that imports the computer writes the marker, and writing it onto a label that already carries
+    it is a no-op, so C — which never contacts A — ends up with the label B has. That is what lets `verdi collab
+    map-computer lumi@collab=...` mean the same thing wherever it is run, and the originator keeping the plain
+    `lumi` is the importer matching its own row by UUID rather than an exception made for it.
+    """
+    a, b, c = collab(3)
+    a.seal_calculation(computer='lumi')
+
+    move(a, b, direction)
+    move(b, c, direction)
+
+    assert set(a.computers().values()) == {'lumi'}
+    assert set(b.computers().values()) == {'lumi@collab'}
+    assert set(c.computers().values()) == {'lumi@collab'}, 'the second hop stacked a marker on a marked label'
+
+
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_a_clashing_peer_computer_keeps_the_marker_last(collab, direction):
+    """Test that a peer computer whose label is taken here is deduplicated with the marker still at the end.
+
+    `lumi-2@collab`, never `lumi@collab-2` — with the marker displaced the next hop stops recognizing it and
+    appends a second one, which is the ordering the convergence above rests on. Two peers who each run a `lumi`
+    is the only shape the collision still takes once the marker exists.
+
+    The last hop is where two computers of one delta want the same label: C receives B's own `lumi` beside the
+    two marked ones B relayed, and a rename that named them in an arbitrary order would collide with a label
+    another row of the same import still held, which the unique label column refuses mid-import. That regression
+    escapes when the UUID order happens to name the rows in a workable sequence — two of the six orders here, so
+    about one run in ten with both directions green. The labels asserted are the same either way.
+    """
+    a, b, c, d = collab(4)
+    a.seal_calculation(computer='lumi')
+    d.seal_calculation(computer='lumi')
+    b.seal_calculation(computer='lumi')
+
+    move(a, b, direction)
+
+    assert set(b.computers().values()) == {'lumi', 'lumi@collab'}, "the importer's own `(Imported #0)` survived"
+
+    move(d, b, direction)
+
+    assert set(b.computers().values()) == {'lumi', 'lumi@collab', 'lumi-2@collab'}
+
+    move(b, c, direction)
+
+    assert set(c.computers().values()) == {'lumi@collab', 'lumi-2@collab', 'lumi-3@collab'}
+
+
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_two_peers_marked_computers_do_not_stack_the_marker(collab, direction):
+    """Test that a marked computer arriving where its label is taken is deduplicated, not marked a second time.
+
+    The one shape that reaches the marker being stripped before the dedup re-applies it: A's machine and D's are
+    both `lumi@collab` by the time they meet at B, so the importer renames the second on the clash and its
+    current label no longer says it is marked. Deriving the new label from *that* would give `lumi@collab@collab`
+    — and stably, since the next hop leaves a marked label alone, so one collab-wide label per machine is lost
+    for good.
+
+    C's own machine rides in the same delta, which is what makes two rows of *one* import compete for one name:
+    the dedup has to count the label it just handed out, not only the ones the profile already held.
+    """
+    a, b, c, d = collab(4)
+    a.seal_calculation(computer='lumi')
+    d.seal_calculation(computer='lumi')
+
+    move(a, b, direction)
+    move(d, c, direction)
+
+    c.seal_calculation(computer='lumi')
+
+    move(c, b, direction)
+
+    assert set(b.computers().values()) == {'lumi@collab', 'lumi-2@collab', 'lumi-3@collab'}
+
+
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_a_computer_that_circles_back_is_recognized(collab, direction):
+    """Test that a computer coming back to its owner around the collab creates no second row anywhere.
+
+    Identity is the UUID, so the rename applies to the computers an import created and to nothing else: A already
+    holds the machine coming back from C, the importer matches it, and nothing is renamed. An implementation that
+    deduplicated by label would give one physical machine a second row on every lap of the circle, and split the
+    mapping — and the cache hits it exists for — along with it.
+    """
+    a, b, c = collab(3)
+    a.seal_calculation(computer='lumi')
+
+    move(a, b, direction)
+    move(b, c, direction)
+
+    # A lap needs provenance of C's own to carry the computer home: an empty delta travels nowhere.
+    c.seal_calculation(computer='lumi@collab')
+
+    move(c, a, direction)
+    move(c, b, direction)
+
+    assert set(a.computers()) == set(b.computers()) == set(c.computers()), 'one machine became two rows'
+    assert set(a.computers().values()) == {'lumi'}
+    assert set(b.computers().values()) == {'lumi@collab'}
+    assert set(c.computers().values()) == {'lumi@collab'}

@@ -43,6 +43,11 @@ CACHING_EXTRAS = (NodeCaching._HASH_EXTRA_KEY, NodeCaching.CACHED_FROM_KEY)
 # incoming snapshot never overwrites them. The caching extras are the ones AiiDA itself keeps there.
 PRIVATE_EXTRA_PREFIX = '_'
 
+# Appended to the label of every computer an import creates, so that a machine that arrived through the collab is
+# recognizable as one and a mapping can name it. Neutral rather than the peer's name: a nickname is local and never
+# travels, and on a relay it would name the wrong member anyway.
+COMPUTER_MARKER = '@collab'
+
 # Callers are left out: a process that is still running has sealed children but is not sealed itself, and the export
 # refuses to write an unsealed process. Their CALL links travel once the caller seals.
 TRAVERSAL_RULES: dict[str, Any] = {'call_calc_backward': False, 'call_work_backward': False}
@@ -550,17 +555,19 @@ def apply_members(backend: StorageBackend, offer: list[GroupMembers], tombstones
     missing = [group for group in wanted if group.uuid not in group_pks]
 
     if missing:
-        taken = {
-            (label, type_string)
-            for label, type_string in orm.QueryBuilder(backend=backend)
-            .append(orm.Group, project=['label', 'type_string'])
-            .all()
-        }
+        # Keyed by type string, because that is what the uniqueness constraint on a group label is keyed by.
+        taken: dict[str, set[str]] = {}
+        query = orm.QueryBuilder(backend=backend).append(orm.Group, project=['label', 'type_string'])
+
+        for label, type_string in query.all():
+            taken.setdefault(type_string, set()).add(label)
+
         rows = []
 
         for group in missing:
-            label = _unique_label(group.label, group.type_string, taken)
-            taken.add((label, group.type_string))
+            in_use = taken.setdefault(group.type_string, set())
+            label = _unique_label(group.label, in_use)
+            in_use.add(label)
             rows.append(
                 {
                     'uuid': group.uuid,
@@ -589,17 +596,21 @@ def apply_members(backend: StorageBackend, offer: list[GroupMembers], tombstones
     return applied
 
 
-def _unique_label(label: str, type_string: str, taken: set[tuple[str, str]]) -> str:
-    """Return ``label`` deduplicated against the labels already in use for its type, which are unique per type."""
-    if (label, type_string) not in taken:
-        return label
+def _unique_label(stem: str, taken: set[str], suffix: str = '') -> str:
+    """Return ``stem`` with ``suffix`` appended, deduplicated against ``taken`` by an index kept before the suffix.
+
+    The index goes before the suffix so that a marked label ends in its marker whatever the dedup did to it:
+    ``lumi-2@collab``, never ``lumi@collab-2``, which the next hop would no longer recognize as marked.
+    """
+    if f'{stem}{suffix}' not in taken:
+        return f'{stem}{suffix}'
 
     index = 2
 
-    while (f'{label}-{index}', type_string) in taken:
+    while f'{stem}-{index}{suffix}' in taken:
         index += 1
 
-    return f'{label}-{index}'
+    return f'{stem}-{index}{suffix}'
 
 
 def _public_extras(extras: dict[str, Any]) -> dict[str, Any]:
@@ -703,7 +714,7 @@ def import_delta(
         # migrating, so the delta is brought to the head version first — as `verdi archive import` does.
         filepath = _at_head_version(filepath, Path(dirpath) / 'migrated.aiida')
 
-        uuids, delivered = _archive_contents(filepath)
+        uuids, delivered, computers = _archive_contents(filepath)
         boundary = _boundary_links(filepath)
         tombstoned = [] if include_deleted else sorted(state.tombstones.intersection(uuids))
 
@@ -714,8 +725,11 @@ def import_delta(
             delivered = []
 
         # Which groups were held before is what tells apart the memberships the import writes by itself — it
-        # creates the rows of a group it creates — from the ones that were already here.
-        held_groups = _held_group_uuids(backend, delivered)
+        # creates the rows of a group it creates — from the ones that were already here. The same question is
+        # asked of the computers, whose answer decides which of them the import is about to create.
+        held_groups = _held_uuids(backend, orm.Group, [group.uuid for group in delivered])
+        held_computers = _held_uuids(backend, orm.Computer, list(computers))
+        arriving = {uuid: label for uuid, label in computers.items() if uuid not in held_computers}
         imported_groups = delivered
 
         # Resolved before anything lands, so that a stale mapping aborts the import instead of crashing after it,
@@ -747,11 +761,14 @@ def import_delta(
         _check_boundary_resolvable(backend, uuids, boundary)
         _check_boundary_invariants(backend, boundary)
 
-        # The boundary links are journalled before the import, which commits its own transaction: a crash between
-        # the two leaves them pending, and the next import retries them instead of losing them.
-        if boundary:
+        # The boundary links and the computers about to be created are journalled before the import, which commits
+        # its own transaction: a crash between the two leaves both pending, and the next import finishes them
+        # instead of losing them. Neither can be re-derived afterwards — by then the links look written and the
+        # computers look like this profile's own.
+        if boundary or arriving:
             with CollabState.mutate(state.filepath) as fresh:
                 fresh.pending_links.extend(link for link in boundary if link not in fresh.pending_links)
+                fresh.pending_computers.update(arriving)
 
         import_archive(
             filepath,
@@ -794,6 +811,11 @@ def import_delta(
     with CollabState.mutate(state.filepath) as fresh:
         written = _write_boundary_links(backend, fresh.pending_links, fresh.tombstones)
         fresh.pending_links = [link for link in fresh.pending_links if link not in written]
+
+        # Emptied whether or not every computer of it was there to be marked: one the delta no longer carries was
+        # never created here, and if a later delta does create it, that import journals it again.
+        _mark_imported_computers(backend, fresh.pending_computers)
+        fresh.pending_computers.clear()
 
         if include_deleted:
             fresh.tombstones.difference_update(uuids)
@@ -991,16 +1013,50 @@ def _write_boundary_links(backend: StorageBackend, pending: list[list[str]], tom
     return resolved
 
 
-def _held_group_uuids(backend: StorageBackend, groups: list[GroupMembers]) -> set[str]:
-    """Return which of the given groups this profile already holds."""
-    if not groups:
+def _held_uuids(backend: StorageBackend, entity: type[orm.Entity], uuids: list[str]) -> set[str]:
+    """Return which of the given entities this profile already holds, which is what an import cannot have created."""
+    if not uuids:
         return set()
 
-    query = orm.QueryBuilder(backend=backend).append(
-        orm.Group, filters={'uuid': {'in': sorted(group.uuid for group in groups)}}, project='uuid'
-    )
+    query = orm.QueryBuilder(backend=backend).append(entity, filters={'uuid': {'in': sorted(uuids)}}, project='uuid')
 
     return set(query.all(flat=True))
+
+
+def _mark_imported_computers(backend: StorageBackend, computers: dict[str, str]) -> None:
+    """Label every computer an import created for what it is: a machine that arrived through the collab.
+
+    ``lumi@collab`` says which computers a mapping could name, in ``verdi computer list`` and in the refusal of
+    one that names something else. It is idempotent — a label that already carries the marker keeps it — so the
+    second hop of a relay renames nothing and every member but the originator holds one machine under one label.
+    The originator keeps its plain ``lumi``: the importer matches an existing computer by UUID and never renames
+    it, which is also why a computer that circles the collab back to its owner creates no second row.
+
+    :param computers: the journalled computers an import created and has not named yet, keyed by UUID and
+        labelled as the *sender* labels them, which is what the marker is derived from — the importer may already
+        have renamed the row here on a label clash.
+    """
+    # Intersected with what the profile holds, because a computer of the archive whose nodes the tombstone
+    # re-filter dropped never reached it.
+    current = dict(orm.QueryBuilder(backend=backend).append(orm.Computer, project=['uuid', 'label']).all())
+    created = set(computers).intersection(current)
+
+    if not created:
+        return
+
+    # A row already carrying the marker is left alone, which is the idempotence: the second hop of a relay, and
+    # a row an earlier pass renamed whose journal entry outlived it — a lost state save, or a hand relabel after
+    # a crash in the window the journal exists for. Every row that is renamed therefore carries a label without
+    # the marker and is given one with it, while `taken` holds every label in use, so no update can land on a
+    # label another row still holds however the arbitrary order comes out — and the label column is unique.
+    keeps = {uuid for uuid in created if current[uuid].endswith(COMPUTER_MARKER)}
+    taken = set(current.values())
+    collection = orm.Computer.get_collection(backend)
+
+    for uuid in sorted(created - keeps):
+        label = _unique_label(computers[uuid].removesuffix(COMPUTER_MARKER), taken, COMPUTER_MARKER)
+        taken.add(label)
+        collection.get(uuid=uuid).label = label
 
 
 def _without_unsealed_provenance(nodes: list[orm.Node], *, backend: StorageBackend) -> list[orm.Node]:
@@ -1178,17 +1234,21 @@ def _at_head_version(filepath: Path, filepath_migrated: Path) -> Path:
     return filepath_migrated
 
 
-def _archive_contents(filepath: Path) -> tuple[list[str], list[GroupMembers]]:
-    """Return the UUIDs of the nodes in an archive and the groups it carries, with their members.
+def _archive_contents(filepath: Path) -> tuple[list[str], list[GroupMembers], dict[str, str]]:
+    """Return the UUIDs of the nodes in an archive, the groups it carries with their members, and its computers.
 
-    Both in one read: opening an archive extracts its database to a temporary file, so the import path asks for
+    All in one read: opening an archive extracts its database to a temporary file, so the import path asks for
     everything it needs from a single open. The groups are empty unless the sender exported under ``grow``, and
     are described exactly as an offer describes them, so that both ways a membership can arrive are applied by
     the same function. A group with no members is reported too, since it is still a group row to gate on.
+
+    The computers are keyed by UUID and carry the label the *sender* holds them under, which is what the marking
+    of an imported computer needs: the importer may already have renamed the row here on a label clash.
     """
     with get_format().open(filepath, mode='r') as reader:
         backend = reader.get_backend()
         uuids = orm.QueryBuilder(backend=backend).append(orm.Node, project='uuid').all(flat=True)
+        computers = dict(orm.QueryBuilder(backend=backend).append(orm.Computer, project=['uuid', 'label']).all())
         rows = (
             orm.QueryBuilder(backend=backend)
             .append(orm.Group, tag='group', project=['uuid', 'label', 'type_string'])
@@ -1206,7 +1266,7 @@ def _archive_contents(filepath: Path) -> tuple[list[str], list[GroupMembers]]:
         if node_uuid is not None:
             group.nodes.append(node_uuid)
 
-    return uuids, [groups[uuid] for uuid in sorted(groups)]
+    return uuids, [groups[uuid] for uuid in sorted(groups)], computers
 
 
 def _archive_uuids(filepath: Path) -> list[str]:

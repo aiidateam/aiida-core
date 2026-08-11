@@ -129,6 +129,12 @@ class CollabState:
     and cleared once they are written: the import commits its own transaction, so a crash between the two would
     otherwise lose the links between imported nodes and the ones already held."""
 
+    pending_computers: dict[str, str] = field(default_factory=dict)
+    """Computers a delta is about to create, as UUID to the label the sender holds them under, journalled before
+    the import for the same reason as the links and cleared once they are marked. Which computers an import
+    created is a question only the state *before* it can answer, so a crash between the import and the marking
+    would otherwise leave a peer's machine looking like one of this profile's own for good."""
+
     memberships: list[Membership] = field(default_factory=list)
     """The membership journal: which node joined which group here, and when. Written only under the ``grow``
     groups policy, since it exists for nothing else."""
@@ -171,6 +177,7 @@ class CollabState:
             tombstones=set(data['tombstones']),
             events=[CollabEvent.from_dict(event) for event in data['events']],
             pending_links=data['pending_links'],
+            pending_computers=data['pending_computers'],
             memberships=[Membership.from_dict(entry) for entry in data['memberships']],
         )
 
@@ -244,6 +251,7 @@ class CollabState:
             'tombstones': sorted(self.tombstones),
             'events': [event.as_dict() for event in self.events],
             'pending_links': self.pending_links,
+            'pending_computers': self.pending_computers,
             'memberships': [entry.as_dict() for entry in self.memberships],
         }
 

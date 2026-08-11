@@ -1123,6 +1123,52 @@ def seal_cached_calculation(backend, computer):
     return calculation
 
 
+def test_a_computer_the_tombstone_refilter_kept_out_is_not_marked(tmp_path, peers):
+    """Test that a computer the import never created, because its calculation was tombstoned, is left alone.
+
+    The journal names the computers a delta was *about* to create, which is one more than it created whenever the
+    re-filter took the only node carrying one out of the archive. Nothing lands, and the marking has to pass over
+    that UUID rather than look it up — after the archive has already committed.
+    """
+    backend_one, state_one = peers('one')
+    backend_two, state_two = peers('two')
+    calculation = seal_cached_calculation(backend_one, make_computer(backend_one, 'lumi'))
+
+    filepath = tmp_path / 'delta.aiida'
+    export = export_full(filepath, state=state_one, backend=backend_one, cursor=None)
+    state_two.tombstones.add(calculation.uuid)
+
+    import_delta(filepath, state=state_two, backend=backend_two, extras_mode='local', peer=PEER, instant=export.instant)
+
+    assert orm.QueryBuilder(backend=backend_two).append(orm.Computer).count() == 0
+    assert CollabState.read(state_two.filepath).pending_computers == {}, 'a computer that never landed stays pending'
+
+
+def test_marking_a_computer_twice_leaves_it_alone(peers):
+    """Test that a journal entry outliving the rename it asked for does not collide with the row it renamed.
+
+    The journal is cleared when the state is saved, which is after the renames have committed, so a death or an
+    IO error in between leaves an entry naming a row that already carries the marker — as does a user who
+    relabels by hand what a crashed import left unmarked. The next delta carrying another `lumi` must be
+    deduplicated around that row rather than handed its label, which the unique label column would refuse.
+    """
+    from aiida.tools.collab.sync import _mark_imported_computers
+
+    backend, _ = peers('one')
+    # The pass walks its rows in UUID order, so the labels are assigned by that order rather than at creation:
+    # the row wanting the taken label has to be named first for the collision to be reached at all, and a test
+    # that leaves that to chance catches the regression it exists for only half the time.
+    arrived, marked = sorted((make_computer(backend, 'one'), make_computer(backend, 'two')), key=lambda c: c.uuid)
+    arrived.label = 'lumi'
+    marked.label = 'lumi@collab'
+
+    _mark_imported_computers(backend, {marked.uuid: 'lumi', arrived.uuid: 'lumi'})
+
+    labels = orm.QueryBuilder(backend=backend).append(orm.Computer, project=['uuid', 'label']).all()
+
+    assert dict(labels) == {marked.uuid: 'lumi@collab', arrived.uuid: 'lumi-2@collab'}
+
+
 def test_remap_cache_hit(tmp_path, peers):
     """Test that a mapped calculation carries the hash of its local twin and is found by the caching engine."""
     backend_one, state_one = peers('one')
@@ -1148,6 +1194,22 @@ def test_remap_cache_hit(tmp_path, peers):
 
     assert imported.base.caching.get_hash() == twin.base.caching.compute_hash()
     assert calculation.uuid in {node.uuid for node in twin.base.caching.get_all_same_nodes()}
+
+
+def test_relabelling_a_computer_leaves_the_hash_of_its_calculations_alone(peers):
+    """Test that the hash of a calculation is bound to the UUID of its computer and not to its label.
+
+    The whole mapping feature rests on this: marking an imported computer ``@collab`` would otherwise turn every
+    calculation that ran on it into a cache miss, in every collab, silently.
+    """
+    backend, _ = peers('one')
+    computer = make_computer(backend, 'lumi')
+    calculation = seal_cached_calculation(backend, computer)
+    before = calculation.base.caching.compute_hash()
+
+    computer.label = 'lumi@collab'
+
+    assert load_node(backend, calculation.uuid).base.caching.compute_hash() == before
 
 
 def test_remap_cache_miss_without_mapping(tmp_path, peers):
@@ -1241,7 +1303,7 @@ def test_apply_computer_map_retroactively(tmp_path, peers):
 
     assert load_node(backend_two, calculation.uuid).base.caching.get_hash() is None
 
-    count = apply_computer_map(backend_two, {'lumi': 'leonardo'})
+    count = apply_computer_map(backend_two, {'lumi@collab': 'leonardo'})
     twin = seal_cached_calculation(backend_two, leonardo)
 
     assert count == 1

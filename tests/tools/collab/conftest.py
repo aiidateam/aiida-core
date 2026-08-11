@@ -173,18 +173,23 @@ class Member:
     # They take and return UUIDs rather than ORM objects: loading another member's profile closes the storage of
     # this one, so a node held across a switch is a closed-storage error waiting to happen.
 
-    def seal_calculation(self, label: str = 'calc', inputs: str | None = None, ballast: int = 0) -> str:
+    def seal_calculation(
+        self, label: str = 'calc', inputs: str | None = None, ballast: int = 0, computer: str | None = None
+    ) -> str:
         """Store and seal a one-input, one-output calculation, and return the UUID of the node it created.
 
         :param ballast: bytes of incompressible payload to put in the calculation's repository, for the scenarios
             whose subject is the size of the transfer rather than its content.
+        :param computer: label of the computer the calculation ran on, created here if this profile lacks it. A
+            calculation carrying one is what makes a computer travel in the delta at all.
         """
         import os
 
         backend = self.load()
 
         source = orm.load_node(uuid=inputs) if inputs else orm.Int(1, backend=backend).store()
-        calculation = orm.CalcJobNode(backend=backend, label=label)
+        machine = orm.Computer.get_collection(backend).get(uuid=self.computer(computer)) if computer else None
+        calculation = orm.CalcJobNode(backend=backend, label=label, computer=machine)
         calculation.base.links.add_incoming(source, link_type=LinkType.INPUT_CALC, link_label='term')
 
         if ballast:
@@ -235,6 +240,32 @@ class Member:
     def extras(self, uuid: str) -> dict[str, t.Any]:
         """Return the public extras of a node: what a refresh would carry."""
         return {key: value for key, value in self.node(uuid).base.extras.all.items() if not key.startswith('_')}
+
+    def computer(self, label: str) -> str:
+        """Return the UUID of the computer with this label, creating the computer if it does not exist yet."""
+        backend = self.load()
+        found = orm.QueryBuilder(backend=backend).append(orm.Computer, filters={'label': label}, project='uuid').all()
+
+        if found:
+            return found[0][0]
+
+        computer = orm.Computer(
+            label=label,
+            hostname='localhost',
+            transport_type='core.local',
+            scheduler_type='core.direct',
+            backend=backend,
+        )
+
+        return computer.store().uuid
+
+    def computers(self) -> dict[str, str]:
+        """Return the label of every computer of this profile, keyed by UUID.
+
+        Keyed by UUID because that is the identity of a machine across the collab: the label is what this profile
+        happens to call it, and telling one machine from two is the question the marker raises.
+        """
+        return dict(orm.QueryBuilder(backend=self.load()).append(orm.Computer, project=['uuid', 'label']).all())
 
     def group(self, label: str) -> str:
         """Return the UUID of the group with this label, creating the group if it does not exist yet."""

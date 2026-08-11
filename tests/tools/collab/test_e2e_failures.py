@@ -148,6 +148,55 @@ def test_an_import_that_died_after_its_archive_committed_claims_nothing(collab, 
     assert b.state().cursors != {}
 
 
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_a_crash_after_the_archive_leaves_the_computer_to_the_retry(collab, faults, direction):
+    """Test that the retry marks a computer the crashed import created and never got to name.
+
+    Which computers an import created is a question only the state before it can answer: by the retry they are
+    all held, so nothing distinguishes a peer's machine from one of this profile's own. Journalled before the
+    archive for that reason, beside the boundary links and with the same window in mind.
+    """
+    a, b, _ = collab(3)
+    a.seal_calculation(computer='lumi')
+
+    faults.die_after_the_archive_commits()
+
+    move(a, b, direction, raises=True)
+
+    assert set(b.computers().values()) == {'lumi'}, 'the archive did not commit, so this is not the window'
+    assert set(b.state().pending_computers.values()) == {'lumi'}
+
+    move(a, b, direction)
+
+    assert set(b.computers().values()) == {'lumi@collab'}
+    assert b.state().pending_computers == {}
+
+
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_a_crashed_import_leaves_its_computer_to_whichever_peer_syncs_next(collab, faults, direction):
+    """Test that the journal of a crashed import survives an import from a *different* peer, which finishes it.
+
+    The journal is merged rather than replaced for this: the sync that comes after the crash is whichever peer
+    the loop reaches next, and it clears the whole journal once it has marked it. A journal that only ever held
+    the current delta's computers would drop the crashed one here, and the crashed peer's own retry cannot save
+    it — by then its computer is held, so nothing journals it a second time.
+    """
+    a, b, c = collab(3)
+    a.seal_calculation(computer='lumi')
+    c.seal_calculation(computer='daint')
+
+    faults.die_after_the_archive_commits()
+
+    move(a, b, direction, raises=True)
+
+    assert set(b.computers().values()) == {'lumi'}, 'the archive did not commit, so this is not the window'
+
+    move(c, b, direction)
+
+    assert set(b.computers().values()) == {'lumi@collab', 'daint@collab'}
+    assert b.state().pending_computers == {}
+
+
 def test_corrupt_staged_bytes_are_discarded_and_uploaded_again(collab, faults):
     """Test that an upload that does not match its checksum is refused, dropped, and re-sent by the next push."""
     a, b, _ = collab(3)

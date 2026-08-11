@@ -291,6 +291,10 @@ Caching across peers
 By default, pulled calculations are **never** cache hits for your own submissions: the hash of a calculation includes the UUID of the computer it ran on, and your peer's computers are not yours.
 Pulled nodes also arrive without any hash, so they are invisible to the caching engine.
 
+A computer that arrives through the collab is labelled ``<label>@collab``, so ``verdi computer list`` tells your own machines apart from the ones a peer's calculations ran on.
+Every member that imports the computer writes the same marker, and writing it onto a label that already carries it changes nothing, so a machine your collaborator calls ``lumi`` is ``lumi@collab`` on every member of the collab except the one that runs it.
+Labels still have to be unique within your profile, so where two collaborators each run a ``lumi`` the second one to reach you is ``lumi-2@collab``: the marker stays at the end, and the number, once drawn, travels on with the machine unless it too is taken where the machine next lands.
+
 If you decide that a peer's machine is equivalent to one of yours — "same inputs on their cluster give the result mine would" is a scientific judgement, which is why it is opt-in — declare it at init time:
 
 .. code-block:: console

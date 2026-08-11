@@ -57,19 +57,10 @@ An AiiDA **profile** defines the configuration for an AiiDA instance:
 Before running any calculations, you need one.
 
 AiiDA comes with a command-line interface, `verdi`, which you will use throughout the tutorial to inspect and manage your data.
-For your own work, the easiest way to create a profile is `verdi presto`:
+We recommend running this tutorial in its own **isolated sandbox profile**, kept separate from any profile you may already have, so the data you create here never mixes with your real work and every module reproduces exactly.
 
-```console
-$ verdi presto
-```
-
-It sets up a lightweight local profile with sensible defaults for all three: SQLite for the database, [disk-objectstore](https://github.com/aiidateam/disk-objectstore) for file storage, and the built-in **ZMQ message broker**.
-For more advanced high-throughput production setups, see the {ref}`installation guide <installation>`.
-
-This tutorial, though, runs in its own **isolated sandbox profile**, kept separate from any profile you already have, so the data you create here never mixes with your real work and every module reproduces exactly.
-
-The cell below creates that profile and loads AiiDA's `%verdi` Jupyter magic.
-If you are running outside the tutorial repository (for example, cells pasted into your own notebook), it first downloads `setup_tutorial.py`, which in turn fetches the other `include/` helpers it needs; inside the repo, as in these rendered docs, that step is skipped.
+The cell below runs the setup script `setup_tutorial.py`, which creates the tutorial's sandbox profile, and then loads AiiDA's `%verdi` Jupyter magic.
+If you are running outside the tutorial repository (for example, cells pasted into your own notebook), the cell first downloads that script, which in turn fetches the other `include/` helpers it needs; inside the repo, as in these rendered docs, that step is skipped.
 Every module runs this same cell, so the data you create now is still available in later modules:
 
 ```{code-cell} ipython3
@@ -85,18 +76,18 @@ if not Path('include/setup_tutorial.py').exists():
         'include/setup_tutorial.py',
     )
 
-%load_ext aiida
 %run -i include/setup_tutorial.py
+%load_ext aiida
 ```
 
-:::{tip}
-Prefer to use an AiiDA profile you already have? Replace the `%run` line with:
+For your own work outside the tutorial, the easiest way to create a profile is `verdi presto`:
 
-```python
-from aiida import load_profile
-load_profile()
+```console
+$ verdi presto
 ```
-:::
+
+It sets up a lightweight local profile with sensible defaults for all three: SQLite for the database, [disk-objectstore](https://github.com/aiidateam/disk-objectstore) for file storage, and the built-in **ZMQ message broker**, the same three backends the tutorial's sandbox profile uses.
+For more advanced high-throughput production setups, see the {ref}`installation guide <installation>`.
 
 :::{note}
 AiiDA keeps all of its configuration, your profiles, their databases, and the daemon's state, in a single **configuration directory**, which defaults to `~/.aiida`.

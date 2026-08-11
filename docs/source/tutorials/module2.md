@@ -33,13 +33,6 @@ uv pip install "aiida-core>=2.9" git+https://github.com/aiidateam/aiida-shell ma
 :::{note}
 This module reuses the tutorial profile and the `gsrd_code` object created in {ref}`Module 1 <tutorial:module1>`.
 If you are following along locally, run that module first.
-To use your own profile instead, replace the setup cell at the top of the downloaded notebook with:
-
-```python
-from aiida import load_profile
-
-load_profile()
-```
 :::
 
 ```{code-cell} ipython3
@@ -60,8 +53,8 @@ if not Path('include/setup_tutorial.py').exists():
         'include/setup_tutorial.py',
     )
 
-%load_ext aiida
 %run -i include/setup_tutorial.py
+%load_ext aiida
 ```
 
 ## What you will learn
@@ -463,7 +456,7 @@ The pipeline, `prepare_input → ShellJob → parse_output`, is a bare sequence 
 And, the sweep is a `for` loop that runs each parameter set one after another, with no way to run independent runs in parallel.
 
 In {ref}`Module 3a <tutorial:module3a>`, you'll wrap that pipeline into a single **WorkGraph workflow**.
-Then in {ref}`Module 3b <tutorial:module3b>`, you'll map it over the whole sweep in parallel with WorkGraph's `Map`, replacing that `for` loop.
+Then in {ref}`Module 3b <tutorial:module3b>`, you'll map it over the whole sweep in parallel with WorkGraph's `Map`, replacing the `for` loop.
 
 ## Further reading
 

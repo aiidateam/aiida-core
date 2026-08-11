@@ -24,11 +24,10 @@ your running daemons are untouched. This works the same whether the cell runs in
 the docs build (CI), in a downloaded notebook, or pasted into your own notebook.
 Delete ``.aiida-tutorial/`` to remove every trace of the tutorial.
 
-If you would rather use your own existing profile (e.g. from ``verdi presto``),
-skip this setup cell entirely and load your profile instead::
-
-    from aiida import load_profile
-    load_profile()
+Running this cell is the intended path even if you already use AiiDA: the sandbox
+is fully isolated, and this file also fetches the shared ``include/`` helpers the
+modules import (see ``_ensure_tutorial_helpers`` below), so a bare ``load_profile()``
+would leave those imports unresolved.
 """
 
 import hashlib

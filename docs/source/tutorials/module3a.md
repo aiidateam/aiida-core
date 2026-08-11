@@ -36,13 +36,6 @@ uv pip install "aiida-core>=2.9" git+https://github.com/aiidateam/aiida-shell gi
 :::{note}
 This module reuses the tutorial profile and the `gsrd_code` object created in {ref}`Module 1 <tutorial:module1>`.
 If you are following along locally, run that module first.
-To use your own profile instead, replace the setup cell at the top of the downloaded notebook with:
-
-```python
-from aiida import load_profile
-
-load_profile()
-```
 :::
 
 ```{code-cell} ipython3
@@ -63,8 +56,8 @@ if not Path('include/setup_tutorial.py').exists():
         'include/setup_tutorial.py',
     )
 
-%load_ext aiida
 %run -i include/setup_tutorial.py
+%load_ext aiida
 ```
 
 ## What you will learn
@@ -75,18 +68,17 @@ After this module, you will be able to:
 - Connect tasks by passing one task's output as another task's input, so the whole pipeline is tracked as a single named process you can query and restart
 - Inspect the workflow as a single process node and explore its individual child steps
 
-Running that workflow over *many* inputs, replacing the Python `for`-loop, is the subject of {ref}`Module 3b <tutorial:module3b>`.
+Running that workflow over *multiple* inputs, replacing the Python `for`-loop, is the subject of {ref}`Module 3b <tutorial:module3b>`.
 
 ## Why workflows?
 
-In {ref}`Module 2 <tutorial:module2>`, you built a three-step pipeline (`prepare_input` &rarr; `ShellJob` &rarr; `parse_output`) and ran it in a Python `for` loop.
-That gets the job done, but leaves several gaps:
+In {ref}`Module 2 <tutorial:module2>`, you built a three-step pipeline (`prepare_input` &rarr; `ShellJob` &rarr; `parse_output`) as three separate calls, wired together only by the data you passed from one to the next.
+That gets the job done, but leaves some gaps:
 
 - **No single pipeline object**: the steps are linked in the provenance graph, but nothing ties them together into one entity you can restart, execute with different parameters, or query.
-- **Sequential only**: the Python loop waits for each iteration to finish; a workflow can run independent iterations in parallel.
-- **Tied to your session**: the loop runs inside your Python process and dies with it; a workflow submitted to the daemon runs in the background and survives you closing the notebook.
+- **Tied to your session**: the calls run inside your Python process and die with it; a workflow can instead be submitted to the daemon, which runs it in the background so it survives you closing the notebook.
 
-A **workflow** solves all of these.
+A **workflow** solves both.
 You define the steps and their connections once, and AiiDA handles execution, data transfer, and provenance tracking, with the whole pipeline recorded under a single workflow node.
 
 :::{note}
@@ -94,6 +86,8 @@ AiiDA offers two workflow systems.
 **WorkChain** (imperative, class-based) is the classical, long-standing API: you write the steps in order and pass state between them yourself.
 **WorkGraph** (declarative, graph-based) is a newer, simpler API for building workflows by connecting tasks in a graph, and is what this tutorial uses.
 :::
+
+<!-- The WorkGraph API is being refactored for inclusion into aiida-core, so this WorkChain-to-WorkGraph mapping may change; commented out until the API stabilizes.
 
 ::::{dropdown} WorkChain vs WorkGraph concept mapping
 :icon: table
@@ -112,6 +106,7 @@ If you already know the older WorkChain API, or meet it in a plugin, here is how
 | `WorkChainNode` | `WorkGraphNode` | the same kind of provenance node (`WorkGraphNode` subclasses `WorkChainNode`) |
 
 ::::
+-->
 
 ## The WorkGraph mental model
 

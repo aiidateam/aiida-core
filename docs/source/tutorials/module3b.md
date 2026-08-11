@@ -53,8 +53,8 @@ if not Path('include/setup_tutorial.py').exists():
         'include/setup_tutorial.py',
     )
 
-%load_ext aiida
 %run -i include/setup_tutorial.py
+%load_ext aiida
 ```
 
 ## What you will learn
@@ -102,6 +102,7 @@ The pipeline is unchanged from Module 3a; expand it if you need a refresher:
 
 In Module 2, you ran the pipeline for several `F` values with a plain Python `for` loop.
 But a `for` loop is not an AiiDA process: it doesn't show up in the provenance, can't be inspected with `verdi`, and can't recover from failures.
+It also runs strictly sequentially, waiting for each `F` value to finish before starting the next.
 
 WorkGraph's {class}`~aiida_workgraph.Map` lets you run the same sub-workflow over multiple input values, like a parallel `for` loop, but as a single AiiDA workflow with full provenance.
 In WorkGraph terminology, a `Map` is a **zone**: a region of the graph that controls how the tasks inside it are scheduled.

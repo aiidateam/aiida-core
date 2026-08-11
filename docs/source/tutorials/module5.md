@@ -33,13 +33,6 @@ It reuses the sweep data created in {ref}`Module 2 <tutorial:module2>`.
 :::{note}
 This module reuses the tutorial profile created in {ref}`Module 1 <tutorial:module1>` and the F-sweep data created in {ref}`Module 2 <tutorial:module2>`.
 If you are following along locally, run those modules first.
-To use your own profile instead, replace the setup cell at the top of the downloaded notebook with:
-
-```python
-from aiida import load_profile
-
-load_profile()
-```
 :::
 
 ```{code-cell} ipython3
@@ -60,8 +53,8 @@ if not Path('include/setup_tutorial.py').exists():
         'include/setup_tutorial.py',
     )
 
-%load_ext aiida
 %run -i include/setup_tutorial.py
+%load_ext aiida
 ```
 
 ## What you will learn

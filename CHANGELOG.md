@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+<!-- Group new entries under bold labels, e.g. `**Fixes**`, and keep the headings below commented out. -->
+<!-- A heading here shadows the identically named anchor of the newest release section and breaks its -->
+<!-- table of contents. The release notes turn these into real headings. Enforced by markdownlint MD024. -->
+
 <!-- ### New features -->
 
 <!-- ### Behavior changes -->
@@ -326,6 +330,7 @@ We added to aiida-core v2.7.4 and v2.8.1 migrations to downgrade the configurati
 - `QbField.is_attribute` and `QbField.is_subscriptable` are deprecated, inspect the corresponding ORM model field metadata instead ([#6990](https://github.com/aiidateam/aiida-core/pull/6990))
 - `ArrayData.save_arrays()` and `ArrayData.load_arrays()` are deprecated, use `numpy.save`/`numpy.load` with `io.BytesIO` directly instead ([#7480](https://github.com/aiidateam/aiida-core/pull/7480))
 
+<!-- markdownlint-disable-next-line MD024 -- intentional duplicate, the TOC links it as `#command-line-1` -->
 #### Command line
 
 - `verdi profile setup --use-rabbitmq/--no-use-rabbitmq` is deprecated, use `--broker` instead. `--no-use-rabbitmq` is equivalent to `--broker none` ([#7284](https://github.com/aiidateam/aiida-core/pull/7284))
@@ -338,6 +343,9 @@ We added to aiida-core v2.7.4 and v2.8.1 migrations to downgrade the configurati
 
 Both configuration options are renamed automatically by the migration to config schema version 10, see [Configuration file: schema bumped to version 10](#configuration-file-schema-bumped-to-version-10).
 
+<!-- Only the newest release section can own the shared anchors (`#fixes`, ...), so duplicate headings -->
+<!-- are checked above this marker only. Move it below the new section when writing release notes. -->
+<!-- markdownlint-disable MD024 -->
 
 ## v2.8.1 - 2026-07-25
 

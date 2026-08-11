@@ -79,16 +79,16 @@ from include.tasks_module_6 import fft_peak_wavelength, identify_transition_regi
 
 # The default Gray-Scott parameters and the feed-rate scan (same as Module 2).
 BASE_PARAMS = {
-    'grid_size': 64,
+    'grid_size': 128,
     'du': 0.16,
     'dv': 0.08,
     'F': 0.04,
-    'k': 0.065,
+    'k': 0.060,
     'dt': 1.0,
-    'n_steps': 3000,
+    'n_steps': 10000,
     'seed': 42,
 }
-F_VALUES = [0.038, 0.040, 0.042, 0.044, 0.046, 0.050, 0.055, 0.060]
+F_VALUES = [0.040, 0.043, 0.045, 0.047, 0.048, 0.049, 0.050]
 ```
 
 We also reuse `pipeline_with_optional_fft` from {ref}`Module 6a <tutorial:module6a>`, repeated here so this notebook runs standalone:
@@ -230,9 +230,7 @@ def adaptive_sweep(
 ```
 
 ```{code-cell} ipython3
-# A slightly longer simulation than the M2/M3 default so the FFT analysis
-# has well-developed patterns to measure.
-adaptive_base = {**BASE_PARAMS, 'n_steps': 8000}
+adaptive_base = dict(BASE_PARAMS)
 
 coarse_sweep_input = {
     f'F_{f:.3f}'.replace('.', '_'): {**adaptive_base, 'F': f}

@@ -72,12 +72,12 @@ We invoke `gsrd` from the command line, passing the parameters via an `input.yam
 
 ```yaml
 F: 0.04          # feed rate
-k: 0.065         # kill rate
+k: 0.060         # kill rate
 du: 0.16         # diffusion coefficient of U
 dv: 0.08         # diffusion coefficient of V
 dt: 1.0          # time step
-grid_size: 64    # grid is grid_size x grid_size
-n_steps: 3000    # number of integration steps
+grid_size: 128   # grid is grid_size x grid_size
+n_steps: 10000   # number of integration steps
 seed: 42         # RNG seed for the initial perturbation
 ```
 :::
@@ -148,11 +148,11 @@ Some codes go further and implicitly *read* leftover files from the working dire
      input is gone. The output file doesn't help either. -->
 
 All of this compounds further the moment you run more simulations. So let's do exactly that and try a different set of input parameters.
-The natural thing to do is to make a copy of the input, open it in a text editor, and change `F` from `0.04` to `0.055`.
+The natural thing to do is to make a copy of the input, open it in a text editor, and change `F` from `0.04` to `0.050`.
 ```{code-cell} ipython3
-# Change the feed rate F from 0.04 to 0.055, saved as our own editable input
+# Change the feed rate F from 0.04 to 0.050, saved as our own editable input
 # (in practice you might open input.yaml in a text editor).
-!sed 's/F: 0.04/F: 0.055/' include/input.yaml > input.yaml
+!sed 's/F: 0.04/F: 0.050/' include/input.yaml > input.yaml
 ```
 
 Then run the simulation with the modified input file:
@@ -163,7 +163,7 @@ Then run the simulation with the modified input file:
 !gsrd input.yaml
 ```
 
-With `F=0.055`, the pattern looks completely different:
+With `F=0.050`, the pattern looks completely different:
 
 ```{image} include/reaction-diffusion-dissolved.png
 :width: 60%

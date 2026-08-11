@@ -140,13 +140,13 @@ from include.tasks import prepare_input, parse_output
 
 # The fixed Gray-Scott parameters we run the pipeline with.
 BASE_PARAMS = {
-    'grid_size': 64,
+    'grid_size': 128,
     'du': 0.16,
     'dv': 0.08,
     'F': 0.04,
-    'k': 0.065,
+    'k': 0.060,
     'dt': 1.0,
-    'n_steps': 3000,
+    'n_steps': 10000,
     'seed': 42,
 }
 ```
@@ -344,8 +344,7 @@ The orchestrator is linked to each child step it called and back to the outputs 
 ## Reusing the pipeline
 
 Because `gray_scott_pipeline` is a self-contained object, we can run it on any inputs, not only `BASE_PARAMS`.
-To close the loop on {ref}`Module 0 <tutorial:module0>`, we reproduce three of its gallery patterns, this time each a tracked AiiDA workflow rather than a throwaway script run.
-We bump the grid size and step count so the morphologies are well developed; the pipeline takes whatever parameters we hand it.
+To close the loop on {ref}`Module 0 <tutorial:module0>`, we reproduce three of its gallery patterns, this time each a tracked AiiDA workflow rather than a throwaway script run: the pipeline takes whatever feed and kill rates we hand it.
 
 ```{code-cell} ipython3
 :tags: [hide-output]
@@ -353,12 +352,10 @@ We bump the grid size and step count so the morphologies are well developed; the
 :    code_prompt_show: 'Show the three workflow runs'
 :    code_prompt_hide: 'Hide the three workflow runs'
 
-# Finer grid and more steps than BASE_PARAMS, so the patterns are well resolved.
-POSTER_PARAMS = {**BASE_PARAMS, 'grid_size': 128, 'n_steps': 10000}
 morphologies = {
-    'spots': {**POSTER_PARAMS, 'F': 0.030, 'k': 0.062},
-    'stripes': {**POSTER_PARAMS, 'F': 0.026, 'k': 0.055},
-    'labyrinth': {**POSTER_PARAMS, 'F': 0.046, 'k': 0.063},
+    'spots': {**BASE_PARAMS, 'F': 0.030, 'k': 0.062},
+    'stripes': {**BASE_PARAMS, 'F': 0.026, 'k': 0.055},
+    'labyrinth': {**BASE_PARAMS, 'F': 0.046, 'k': 0.063},
 }
 
 runs = {

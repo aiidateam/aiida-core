@@ -77,16 +77,16 @@ from include.workflows import gray_scott_pipeline
 
 # The base parameters, and the feed-rate values to scan (same as Module 2).
 BASE_PARAMS = {
-    'grid_size': 64,
+    'grid_size': 128,
     'du': 0.16,
     'dv': 0.08,
     'F': 0.04,
-    'k': 0.065,
+    'k': 0.060,
     'dt': 1.0,
-    'n_steps': 3000,
+    'n_steps': 10000,
     'seed': 42,
 }
-F_VALUES = [0.038, 0.040, 0.042, 0.044, 0.046, 0.050, 0.055, 0.060]
+F_VALUES = [0.040, 0.043, 0.045, 0.047, 0.048, 0.049, 0.050]
 ```
 
 The pipeline is unchanged from Module 3a; expand it if you need a refresher:
@@ -311,7 +311,7 @@ The curve's two regimes look strikingly different in the simulated concentration
 :width: 100%
 :align: center
 ```
-*Above the transition (`F=0.055`): pattern dissolved.*
+*Above the transition (`F=0.050`): pattern dissolved.*
 :::
 ::::
 
@@ -319,20 +319,20 @@ The curve's two regimes look strikingly different in the simulated concentration
 
 Now that we have the workflow blueprint, we can expand it to a full 2D scan.
 The classic Gray-Scott phase diagram is two-dimensional: the pattern type depends on both the feed rate `F` and the kill rate `k`, but so far we have varied only `F`.
-Because `gray_scott_sweep` is parameter-agnostic, extending to a 2D grid means changing nothing but the contents of `param_sweep`. The `Map` itself still iterates a flat `{key: parameters}` mapping; we flatten the `F`&times;`k` grid into it by encoding both values in each key (`F_0_040_k_0_060`), and recover the 2D structure only at plotting time.
+Because `gray_scott_sweep` is parameter-agnostic, extending to a 2D grid means changing nothing but the contents of `param_sweep`. The `Map` itself still iterates a flat `{key: parameters}` mapping; we flatten the `F`&times;`k` grid into it by encoding both values in each key (`F_0_044_k_0_063`), and recover the 2D structure only at plotting time.
 
-We keep the scan **coarse** on purpose, a 5&times;5 grid (25 simulations) that straddles the **boundary** of the pattern-forming region, so the whole sweep stays quick to run.
-Inside the band, `variance(V)` is of order `1e-2`; toward higher `k` the pattern dies and the variance collapses by orders of magnitude toward a trivial steady state.
+We keep the scan **coarse** on purpose, a 5&times;5 grid chosen to bracket the **pattern-forming band** while keeping it to a manageable 25 simulations.
+Patterns form only within a band of kill rates: inside it `variance(V)` is of order `1e-2`, but step off either edge and the field decays to a flat, trivial steady state, with the variance collapsing by orders of magnitude.
 
 ```{code-cell} ipython3
-F_GRID = [0.040, 0.045, 0.050, 0.055, 0.060]
-K_GRID = [0.062, 0.063, 0.064, 0.065, 0.066]
+F_GRID = [0.038, 0.044, 0.050, 0.056, 0.062]
+K_GRID = [0.059, 0.061, 0.063, 0.065, 0.067]
 
 param_sweep_2d = {}
 for f in F_GRID:
     for k in K_GRID:
         # Map keys must be valid identifiers (letters, digits, underscores
-        # only); encode both 'F = 0.040' and 'k = 0.060' as `F_0_040_k_0_060`.
+        # only); encode both 'F = 0.044' and 'k = 0.063' as `F_0_044_k_0_063`.
         f_key = f'F_{f:.3f}'.replace('.', '_')
         k_key = f'k_{k:.3f}'.replace('.', '_')
         key = f'{f_key}_{k_key}'
@@ -382,15 +382,7 @@ plot_2d_variance_heatmap(
 )
 ```
 
-The heatmap shows the edge of the **pattern-forming region** of the classic Gray-Scott phase diagram. High-variance cells (bright) develop the spots, stripes, and labyrinths the system is famous for; the low-variance corner is where the pattern dies out.
-
-:::{dropdown} The patterns behind these numbers
-```{image} include/reaction-diffusion-patterns.png
-:width: 100%
-:align: center
-```
-*A few of the morphologies the Gray-Scott model produces across the `(F, k)` plane, each a separate `gsrd` run at the labelled feed and kill rates.*
-:::
+The heatmap shows the **pattern-forming band** of the classic Gray-Scott phase diagram: a bright vertical strip of high variance, where the spots, stripes, and labyrinths the system is famous for develop, flanked by dark dead zones on either side where the field decays to a flat steady state.
 
 Twenty-five simulations, one workflow node, full provenance attached.
 

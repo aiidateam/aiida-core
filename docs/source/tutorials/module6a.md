@@ -144,13 +144,13 @@ from include.workflows import gray_scott_pipeline
 
 # The default Gray-Scott parameters (same as earlier modules).
 BASE_PARAMS = {
-    'grid_size': 64,
+    'grid_size': 128,
     'du': 0.16,
     'dv': 0.08,
     'F': 0.04,
-    'k': 0.065,
+    'k': 0.060,
     'dt': 1.0,
-    'n_steps': 3000,
+    'n_steps': 10000,
     'seed': 42,
 }
 ```
@@ -194,7 +194,7 @@ pipeline_with_optional_fft.build(
 
 To see the *execution-time* difference, build the same workflow twice with the same threshold but different `F`.
 At `F = 0.04` the pattern is strong (`variance(V) ≈ 1e-2`), so the FFT fires.
-At `F = 0.060` the pattern is much weaker (`variance(V) ≈ 5e-4`), so the FFT is skipped entirely.
+At `F = 0.050` the pattern is much weaker (`variance(V) ≈ 2e-3`), so the FFT is skipped entirely.
 
 ```{code-cell} ipython3
 :tags: [hide-output]
@@ -209,7 +209,7 @@ wg_strong = pipeline_with_optional_fft.build(
 )
 wg_strong.run()
 wg_weak = pipeline_with_optional_fft.build(
-    parameters=orm.Dict({**BASE_PARAMS, 'F': 0.060}),
+    parameters=orm.Dict({**BASE_PARAMS, 'F': 0.050}),
     command=gsrd_code,
     variance_threshold=0.005,
 )
@@ -271,7 +271,7 @@ The **centre** of the panel (`k_x = k_y = 0`) is the "DC component", i.e. the sp
 
 A **uniform field** would show energy only at the centre. A **field with a single dominant wavelength** (the case here) shows a *ring* of energy at one radius: the wavelength sets the radius, but the pattern has no preferred orientation, so the energy is spread around the ring. That is exactly the structure you see: a bright annulus around the centre, with the diamond-pattern lobes coming from the square grid's discrete sampling.
 
-The **radial profile** (right panel) collapses that 2D image to 1D by averaging over all angles at each radius `k`. The peak in this 1D curve is the dominant radial wavenumber `k_peak`. Converting back to real space: a pattern with wavenumber `k` repeats every `(grid_size / k)` cells, so `k_peak = 4` on a `64`-cell grid means the dominant feature has a **wavelength of about 16 cells**, roughly four stripes/spots across the simulation box, which matches what you can see by eye in the V-field image from Module 2.
+The **radial profile** (right panel) collapses that 2D image to 1D by averaging over all angles at each radius `k`. The peak in this 1D curve is the dominant radial wavenumber `k_peak`. Converting back to real space: a pattern with wavenumber `k` repeats every `(grid_size / k)` cells, so `k_peak = 11` on a `128`-cell grid means the dominant feature has a **wavelength of about 12 cells**, roughly eleven wavelengths across the simulation box, which matches what you can see by eye in the V-field image from Module 2.
 
 The peak shifts as the pattern type changes (spots vs stripes vs labyrinthine), which is why the wavelength is a useful diagnostic to gate downstream analysis on, rather than just "is there a pattern at all" (which `variance(V)` already captures).
 ::::
@@ -288,7 +288,7 @@ with If(parsed.variance_V > variance_threshold):
         command=command,
         arguments=['{input}'],
         nodes={'input': prepare_input_task(
-            parameters={**parameters.value, 'grid_size': 128}
+            parameters={**parameters.value, 'grid_size': 256}
         ).result},
         outputs=['results.npz'],
     )
@@ -300,8 +300,8 @@ The takeaway is that an `If` zone is just "a region of the graph that runs only 
 ## Iterative simulation with `While`
 
 The next adaptive pattern is iteration.
-The Gray-Scott simulation runs for a fixed `n_steps`, and we don't always know in advance how many time steps the pattern needs to settle.
-A clean way to handle that is to keep extending the simulation, in 1000-step chunks, until `variance(V)` reaches the saturation level the parameter region produces.
+The Gray-Scott simulation runs for a fixed `n_steps`, and we don't always know in advance how many time steps the pattern needs to develop.
+A clean way to handle that is to keep extending the simulation, in short chunks, until `variance(V)` reaches a target strength.
 
 That kind of feedback loop needs three things WorkGraph exposes through `wg.ctx`:
 
@@ -358,7 +358,7 @@ The stopping criterion is just `variance >= target`, which we can write directly
 
 ```{code-cell} ipython3
 @task.graph()
-def extend_to_plateau(initial, command, target):
+def extend_until_developed(initial, command, target):
     wg = get_current_graph()
     wg.ctx = {
         'parameters': initial,
@@ -369,16 +369,16 @@ def extend_to_plateau(initial, command, target):
     with While(wg.ctx.done == False, max_iterations=8):  # noqa: E712
         result = gray_scott_pipeline(parameters=wg.ctx.parameters, command=command)
         wg.ctx.parameters = bump_n_steps_task(
-            parameters=wg.ctx.parameters, increment=orm.Int(1000)
+            parameters=wg.ctx.parameters, increment=orm.Int(200)
         ).result
         wg.ctx.done = result.variance_V >= target
 
 
-initial_params = orm.Dict({**BASE_PARAMS, 'F': 0.040, 'n_steps': 1000})
-wg_loop = extend_to_plateau.build(
+initial_params = orm.Dict({**BASE_PARAMS, 'F': 0.040, 'n_steps': 200})
+wg_loop = extend_until_developed.build(
     initial=initial_params,
     command=gsrd_code,
-    target=0.012,
+    target=0.010,
 )
 ```
 
@@ -389,16 +389,16 @@ For a one-line `>=`, the operator-overload form above is concise and consistent 
 
 ```python
 @task()
-def reached_plateau(variance: float, target: float) -> bool:
-    """Return True once variance(V) reaches the saturation target."""
+def reached_target(variance: float, target: float) -> bool:
+    """Return True once variance(V) reaches the target strength."""
     return float(variance) >= float(target)
 
 # ... inside the While body:
-done = reached_plateau(variance=parsed.variance_V, target=target)
+done = reached_target(variance=parsed.variance_V, target=target)
 wg.ctx.done = done.result
 ```
 
-The graph looks the same except the `op_ge` task is replaced by a `reached_plateau` PyFunction. `@task()` is enough here because the predicate is stateless and the inputs are plain Python values (`float`, not `orm.Float`); `@calcfunction` would also work but persists every iteration's call as a `CalcFunctionNode`, which is overkill for a one-line check.
+The graph looks the same except the `op_ge` task is replaced by a `reached_target` PyFunction. `@task()` is enough here because the predicate is stateless and the inputs are plain Python values (`float`, not `orm.Float`); `@calcfunction` would also work but persists every iteration's call as a `CalcFunctionNode`, which is overkill for a one-line check.
 :::
 
 The graph contains the loop body **once**, even though it will run several times: an `op_eq` task wraps the `wg.ctx.done == False` comparison and feeds the `while_zone`, whose body holds the `gray_scott_pipeline` sub-graph task, the `bump_n_steps` calcfunction, and the `op_ge` task that compares `variance_V` against `target`. The two write-back edges from inside the zone to `graph_ctx` (`op_ge.result → ctx.done` and `bump_n_steps.result → ctx.parameters`) are what closes the loop.
@@ -429,7 +429,7 @@ print(f'Final state: {wg_loop.state}')
 **Reassigning a Python variable inside a `While` body does *not* create a feedback edge.**
 Writing `result = gray_scott_pipeline(...)` rebinds the *Python* name `result` but does not tell WorkGraph that the next iteration's `parameters` should come from somewhere different. The next iteration is *the same static sub-graph* re-executed, not a re-walking of the Python body.
 For state that has to flow from one iteration to the next, **write it into `wg.ctx`** and read it back from `wg.ctx` at the top of the body.
-That is what the two `wg.ctx.<name>` assignments inside `extend_to_plateau` are for: `parameters` carries the growing `n_steps` between iterations, and `done` carries the stopping signal.
+That is what the two `wg.ctx.<name>` assignments inside `extend_until_developed` are for: `parameters` carries the growing `n_steps` between iterations, and `done` carries the stopping signal.
 :::
 
 The provenance shows one `ShellJob` (and the surrounding calcfunctions) per iteration:
@@ -469,7 +469,7 @@ That probes whether the integrator itself is converged, independent of how long 
 
 For the tutorial's parameter regime (`F = 0.04`, `dt = 1.0`, etc.) the integrator is already converged at `dt = 1.0` to four significant figures, so a `While` loop on `dt` would terminate after a single iteration.
 That makes for poor pedagogy: the loop reads as iterative but the data say it never had to be.
-We chose `n_steps` (i.e., simulated time) because it *does* drift across iterations at our parameters, so the loop does real work and exits on a real saturation condition.
+We chose `n_steps` (i.e., simulated time) because it *does* drift across iterations at our parameters, so the loop does real work and exits on a real condition (variance reaching the target).
 
 If your code has a tighter stability margin or your parameters sit near the numerical-stability limit for the time step (the "CFL condition" for explicit schemes; roughly, halving `dt` is required whenever the diffusion is faster or the grid is finer), the same `While`+`ctx` skeleton applies to `dt` unchanged; the only thing that moves is what `bump_n_steps` becomes.
 ::::

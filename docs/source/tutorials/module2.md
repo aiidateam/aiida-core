@@ -87,13 +87,13 @@ from aiida_shell import launch_shell_job
 
 # The Gray-Scott parameters for this run.
 BASE_PARAMS = {
-    'grid_size': 64,
+    'grid_size': 128,
     'du': 0.16,
     'dv': 0.08,
     'F': 0.04,
-    'k': 0.065,
+    'k': 0.060,
     'dt': 1.0,
-    'n_steps': 3000,
+    'n_steps': 10000,
     'seed': 42,
 }
 
@@ -333,7 +333,7 @@ def run_pipeline(f_val: float) -> GsrdRun:
 The tools below only earn their keep once you have more than one run, so let's call `run_pipeline` over a few feed rates:
 
 ```{code-cell} ipython3
-runs = [run_pipeline(f_val) for f_val in [0.038, 0.042, 0.046, 0.050]]
+runs = [run_pipeline(f_val) for f_val in [0.040, 0.045, 0.048, 0.050]]
 ```
 
 With a handful of tracked runs in the database, the payoff we are building toward is **searching** them, which is what the `QueryBuilder` does.
@@ -349,10 +349,10 @@ There are often properties you want to attach to a node *after* it was created: 
 The **extras** dictionary on every AiiDA node is AiiDA's mechanism for exactly that: unlike node attributes (immutable once stored), extras can be set and changed freely, long after the node was created, without touching the provenance graph.
 
 Having run the sweep, say you want to mark the run at the **pattern transition**, a judgement about the results that the provenance itself does not record.
-From the transition curve in {ref}`Module 3b <tutorial:module3b>`, the pattern dissolves around `F=0.046`, so we select that run and flag its `parse_output` node:
+From the transition curve in {ref}`Module 3b <tutorial:module3b>`, the pattern dissolves around `F=0.050`, so we select that run and flag its `parse_output` node:
 
 ```{code-cell} ipython3
-transition_run = next(run for run in runs if run.F == 0.046)
+transition_run = next(run for run in runs if run.F == 0.050)
 transition_run.parse.base.extras.set('note', 'pattern transition')
 ```
 

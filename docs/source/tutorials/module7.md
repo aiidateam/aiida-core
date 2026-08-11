@@ -105,13 +105,13 @@ from aiida_shell import launch_shell_job
 
 # The default Gray-Scott parameters (same as earlier modules).
 BASE_PARAMS = {
-    'grid_size': 64,
+    'grid_size': 128,
     'du': 0.16,
     'dv': 0.08,
     'F': 0.04,
-    'k': 0.065,
+    'k': 0.060,
     'dt': 1.0,
-    'n_steps': 3000,
+    'n_steps': 10000,
     'seed': 42,
 }
 
@@ -406,7 +406,7 @@ from aiida_workgraph import Map, dynamic, task
 from include.workflows import gray_scott_pipeline
 
 # Feed-rate values to scan (same as Module 2).
-F_VALUES = [0.038, 0.040, 0.042, 0.044, 0.046, 0.050, 0.055, 0.060]
+F_VALUES = [0.040, 0.043, 0.045, 0.047, 0.048, 0.049, 0.050]
 
 
 @task.graph()

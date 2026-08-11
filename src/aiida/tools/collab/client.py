@@ -295,6 +295,18 @@ class CollabClient:
                 msg = f'downloading the delta was interrupted after {offset + transferred} bytes: {exception}'
                 raise CollabRequestError(msg) from exception
 
+        # Whether a body that stops early raises is a property of the HTTP stack, not of the transfer: urllib3
+        # enforces `Content-Length` only from 2.0 on, and below it a dropped connection yields a short read that
+        # `iter_content` returns as if it were the whole delta. The archive would then be imported truncated.
+        declared = response.headers.get('Content-Length')
+
+        if declared is not None and transferred != int(declared):
+            msg = (
+                f'downloading the delta was interrupted after {offset + transferred} bytes: '
+                f'the peer declared {declared} byte(s) and served {transferred}'
+            )
+            raise CollabRequestError(msg)
+
         return transferred
 
     def upload_delta(self, filepath: Path) -> UploadReport:

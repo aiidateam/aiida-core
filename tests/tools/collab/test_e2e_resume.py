@@ -30,7 +30,9 @@ def test_a_recut_delta_is_served_whole_rather_than_spliced(collab, faults):
 
     b.run('pull', ['alice', '--force'])
 
-    assert (b.workdir / f'pull-{a.uuid}.aiida').stat().st_size == chunk
+    # Where the interrupted transfer stopped writing is the HTTP stack's business; that a prefix survived to
+    # resume from is what the recut has to invalidate.
+    assert chunk <= (b.workdir / f'pull-{a.uuid}.aiida').stat().st_size <= dropped['served'][0]
 
     # Alice produces more, so the delta is recomputed and re-exported: the bytes Bob holds describe a file that
     # no longer exists.

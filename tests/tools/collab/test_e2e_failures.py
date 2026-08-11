@@ -38,7 +38,10 @@ def test_a_dropped_download_resumes_on_the_next_pull(collab, faults):
 
     partial = b.workdir / f'pull-{a.uuid}.aiida'
 
-    assert partial.stat().st_size == chunk
+    # How much of the interrupted transfer reached the disk is the HTTP stack's business -- how much it buffers
+    # before yielding, and whether it yields the short tail at all -- so what is asserted is that a prefix of the
+    # delta survived to resume from, not where it happens to end.
+    assert chunk <= partial.stat().st_size <= dropped['served'][0]
     assert created not in b.uuids()
 
     b.run('pull', ['alice', '--force'])

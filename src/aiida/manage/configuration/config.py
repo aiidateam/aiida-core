@@ -21,7 +21,7 @@ import os
 import shutil
 import uuid
 from pathlib import Path
-from typing import Any, Literal, TypeAlias, TypedDict, cast
+from typing import Any, Literal, TypeAlias, cast
 
 from pydantic import (
     BaseModel,
@@ -31,6 +31,10 @@ from pydantic import (
     field_serializer,
     field_validator,
 )
+
+# `CollabPolicy` annotates a field of `ProfileOptionsSchema`, and pydantic cannot build a schema for a
+# `typing.TypedDict` on Python < 3.12.
+from typing_extensions import TypedDict
 
 from aiida.common.exceptions import ConfigurationError, EntryPointError, StorageMigrationError
 from aiida.common.log import AIIDA_LOGGER, AdvancedLogLevels, LogLevels

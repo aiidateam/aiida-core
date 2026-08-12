@@ -186,9 +186,12 @@ PostgreSQL profiles need no pause.
 
 The endpoint serves at most ``collab.max_concurrency`` peers at once (default 2, pulls and pushes combined); peers beyond that are answered busy and simply retry.
 
+One profile runs one sync command at a time: a second ``pull`` or ``push`` started while the first is still going — a scheduled sync overlapping a manual one, most often — stops immediately and tells you to wait, rather than negotiating against a profile the first is still writing to.
+This is about *your* commands only; pushes your daemon receives from peers are serialized separately and are unaffected.
+
 .. note::
 
-    Collabs are not supported on Windows: the locks that guard the collab state file and the configuration file, and the one that serializes imports, are all ``fcntl``-based, so on Windows concurrent syncs and daemon-received pushes run unguarded — a ``verdi collab rotate`` racing a sync the daemon is serving can be reverted by it.
+    Collabs are not supported on Windows: the locks that guard the collab state file and the configuration file, the one that serializes imports and the one that keeps your own sync commands apart, are all ``fcntl``-based, so on Windows concurrent syncs and daemon-received pushes run unguarded — a ``verdi collab rotate`` racing a sync the daemon is serving can be reverted by it.
 
 .. _how-to:collaborate:deletion:
 
@@ -202,6 +205,10 @@ When you delete nodes from your own profile, they are recorded in a local *tombs
 To change your mind, run ``verdi collab pull --include-deleted``: the tombstoned nodes are imported again and their tombstones dropped.
 The tombstones, the sync cursors and the log belong to your profile and are deleted with it, so a profile you later create under the same name starts afresh instead of inheriting what a dead one held.
 If provenance in a delta depends on a node you deleted (for example, a peer ran a new calculation on data you removed), that node is imported again regardless, because provenance is never imported with holes in it — and it keeps its tombstone, since changing your mind is what ``--include-deleted`` is for.
+
+A tombstone says "do not deliver this to me again", not "pretend I do not have it".
+So a node that is back in your profile — brought back that way, or by ``--include-deleted`` — takes part in everything a node of yours takes part in: its extras are replicated under the ``sync`` policy, and it can be curated into a shared group and that membership travels.
+What its tombstone keeps doing is the one thing it is for, which is to stop the node itself from being delivered a second time.
 
 .. note::
 
@@ -257,6 +264,11 @@ Like the extras policy, a collab agrees on one groups policy, chosen once when i
     A membership whose node the other side does not hold is simply dropped there; it arrives with the node, whenever a later sync delivers it.
     A peer that *deleted* the node drops the membership for good and does not pass it on, exactly as it stops passing on the node itself — so a third peer that still holds that node learns of the curation from whoever made it, on their next direct contact, rather than through the one that deleted it.
 
+    Removing a node from a shared group is not durable, and this is the one surprise of ``grow`` worth knowing before you rely on it.
+    A group is offered whole, because a peer that does not hold it needs the full set to create it — so the next time a collaborator curates anything into that same group, the offer that reaches you carries every member of it, the one you removed included, and it is added back.
+    Nothing tells you when that happens, and there is no way to say "not that one": under ``grow`` the set of members only ever grows.
+    The only thing that keeps a node out for good is not putting it in a shared group in the first place.
+
     One way of curating does not travel: ``verdi archive import --group`` writes its memberships straight to the database rather than through the group, which is the only door a curation is noticed at.
     Nodes the archive brings with it are unaffected — they travel as new nodes, in the groups the delta carries — but a node your collaborators *already* hold, added to a group this way, stays put.
     ``verdi group add-nodes`` on those same nodes fixes it: adding a node that is already in the group changes nothing locally and is noticed all the same, so the membership goes out on the next sync.
@@ -302,6 +314,7 @@ If you decide that such a machine is equivalent to one of yours — "same inputs
     $ verdi collab map-computer lumi@collab=leonardo
 
 Both halves have to be computers you hold, so the mapping is declared after the machine has reached you — through a pull from whoever runs it, or from any peer that already holds it — and never at ``verdi collab init``: until it arrives there is nothing here to name, and a mapping naming a computer you do not hold is refused, listing the peer computers that have arrived.
+The left half must be the peer's machine, so it has to be one that arrived through the collab and carries ``@collab``; naming your own ``lumi`` there is refused, since it would write the remapped hashes onto your own calculations. If the halves are simply the wrong way round, the refusal says so and spells the pair you meant.
 Waiting costs nothing — the command applies the mapping to the calculations you already pulled as well.
 
 Calculations that ran on the peer computer ``lumi@collab`` then carry the hash they would have on your computer ``leonardo``, and an identical local submission is a cache hit on them.

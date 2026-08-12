@@ -101,7 +101,7 @@ If you already know the older WorkChain API, or meet it in a plugin, here is how
 | `spec.input(...)` / `spec.output(...)` | input / output sockets | in WorkGraph these come from the wrapped function's signature |
 | `self.submit(SomeCalcJob, ...)` | `task`-wrapped `CalcJob` (`shelljob()` for `ShellJob`) | how each framework runs a CalcJob |
 | calling a `calcfunction` in a step | `@task`-wrapped function | `@task` turns any callable into a graph task |
-| `ToContext` / `self.ctx` | socket links, plus `wg.ctx` for shared state | most data passes via socket links; `wg.ctx` covers state that doesn't fit a socket ({ref}`Module 6 <tutorial:module6>`) |
+| `ToContext` / `self.ctx` | socket links, plus `wg.ctx` for shared state | most data passes via socket links; `wg.ctx` covers state that doesn't fit a socket |
 | `engine.submit(...)` / `engine.run(...)` | `wg.submit()` / `wg.run()` | same semantics: hand to the daemon (`submit`) or block in-process (`run`) |
 | `WorkChainNode` | `WorkGraphNode` | the same kind of provenance node (`WorkGraphNode` subclasses `WorkChainNode`) |
 
@@ -259,7 +259,7 @@ WorkGraph also renders the assembled graph in an **interactive viewer**. Click a
 wg
 ```
 
-The `graph_inputs` and `graph_outputs` nodes are built-ins that stand in for the graph's own inputs and outputs, so connections into and out of the graph look like ordinary links between tasks; a third built-in, `graph_ctx`, is a shared key-value store tasks can read and write (via `wg.ctx`), covered in {ref}`Module 6 <tutorial:module6>`.
+The `graph_inputs` and `graph_outputs` nodes are built-ins that stand in for the graph's own inputs and outputs, so connections into and out of the graph look like ordinary links between tasks; a third built-in, `graph_ctx`, is a shared key-value store tasks can read and write (via `wg.ctx`).
 
 Everything so far has only *built* the graph. To execute it, we call `run()` (in-process), or `submit()` that would instead hand it to the AiiDA daemon. You can also reuse `gray_scott_pipeline` as one step inside a bigger graph, which is exactly what {ref}`Module 3b <tutorial:module3b>` does.
 
@@ -383,7 +383,7 @@ labyrinth_npz.base.extras.set('morphology', 'labyrinth')
 print(f'Tagged {labyrinth_npz} with morphology=labyrinth')
 ```
 
-In {ref}`Module 5 <tutorial:module5>` we use the `QueryBuilder` to find this exact run by that tag and re-plot it, without needing to remember its PK.
+You can later find this exact run by that tag with the `QueryBuilder`, without needing to remember its PK.
 
 ## Next steps
 

@@ -324,7 +324,10 @@ Because `gray_scott_sweep` is parameter-agnostic, extending to a 2D grid means c
 We keep the scan **coarse** on purpose, a 5&times;5 grid chosen to bracket the **pattern-forming band** while keeping it to a manageable 25 simulations.
 Patterns form only within a band of kill rates: inside it `variance(V)` is of order `1e-2`, but step off either edge and the field decays to a flat, trivial steady state, with the variance collapsing by orders of magnitude.
 
-```{code-cell} ipython3
+Twenty-five simulations is a lot to run inside a docs page, so we do not execute this scan inline.
+Here is the full code, driven by the exact same `gray_scott_sweep` graph; only the input dict grows from a 1D list to a 2D grid. Run it yourself to reproduce the heatmap shown below.
+
+```python
 F_GRID = [0.038, 0.044, 0.050, 0.056, 0.062]
 K_GRID = [0.059, 0.061, 0.063, 0.065, 0.067]
 
@@ -338,40 +341,13 @@ for f in F_GRID:
         key = f'{f_key}_{k_key}'
         param_sweep_2d[key] = {**BASE_PARAMS, 'F': f, 'k': k}
 
-print(f'{len(param_sweep_2d)} parameter sets ({len(F_GRID)} F values x {len(K_GRID)} k values)')
-```
-
-The same `gray_scott_sweep` graph drives both the 1D and 2D scans; only the input dict changes.
-The `make_transition_plot` reduction still runs and produces its 1D transition curve, but for the 2D case we use the gathered `variance_V` outputs directly and reshape them into a 5&times;5 matrix for plotting a heatmap instead.
-
-```{code-cell} ipython3
-wg_2d = gray_scott_sweep.build(
-    param_sweep=param_sweep_2d,
-    command=gsrd_code,
-)
-```
-
-```{code-cell} ipython3
-:tags: [hide-output]
-:mystnb:
-:    code_prompt_show: 'Show interactive workflow graph'
-:    code_prompt_hide: 'Hide interactive workflow graph'
-
-wg_2d
-```
-
-```{code-cell} ipython3
-:tags: [hide-output]
-:mystnb:
-:    code_prompt_show: 'Show workflow execution log'
-:    code_prompt_hide: 'Hide workflow execution log'
-
+# The same graph drives both the 1D and 2D scans; only the input dict changes.
+wg_2d = gray_scott_sweep.build(param_sweep=param_sweep_2d, command=gsrd_code)
 results_2d = wg_2d.run()
-```
 
-Render the gathered variances as a heatmap. The plotting helper lives in {download}`include/plotting.py`; it does the bookkeeping (map keys back to `(F, k)`, clamp dead-zone entries below `1e-6` for the log-norm, build the figure) so the cell stays a one-liner:
-
-```{code-cell} ipython3
+# The plotting helper (include/plotting.py) does the bookkeeping: map keys back
+# to (F, k), clamp dead-zone entries below 1e-6 for the log-norm, build the
+# figure. That keeps the plotting call a one-liner.
 from include.plotting import plot_2d_variance_heatmap
 
 plot_2d_variance_heatmap(
@@ -382,26 +358,24 @@ plot_2d_variance_heatmap(
 )
 ```
 
-The heatmap shows the **pattern-forming band** of the classic Gray-Scott phase diagram: a bright vertical strip of high variance, where the spots, stripes, and labyrinths the system is famous for develop, flanked by dark dead zones on either side where the field decays to a flat steady state.
+```{image} include/reaction-diffusion-heatmap.png
+:width: 90%
+:align: center
+:alt: Heatmap of variance(V) over a 5x5 feed-rate-by-kill-rate grid
+```
 
-Twenty-five simulations, one workflow node, full provenance attached.
+The heatmap shows the **pattern-forming band** of the classic Gray-Scott phase diagram: a bright vertical strip of high variance, where the spots, stripes, and labyrinths the system is famous for develop, flanked by dark dead zones on either side where the field decays to a flat steady state.
 
 ## Next steps
 
 You now have the core building blocks: tracked external codes, structured data, calcfunctions, and reusable workflows.
-The remaining modules can be tackled in whatever order matches your needs, since they each pick up an independent thread:
-
-- {ref}`Module 4 <tutorial:module4>`: running on remote HPC clusters
-- {ref}`Module 5 <tutorial:module5>`: querying the database with the `QueryBuilder`
-- {ref}`Module 6 <tutorial:module6>`: more advanced workflow patterns (conditionals, dynamic graphs, sub-workflow composition)
-- {ref}`Module 7 <tutorial:module7>`: recovering from failures with error handlers, and where to go next
+Further modules build on these fundamentals and will follow: running on remote HPC clusters, querying provenance at scale with the `QueryBuilder`, advanced workflow patterns (conditionals, dynamic graphs, sub-workflow composition), and recovering from failures with error handlers.
 
 ## Further reading
 
 - AiiDA's workflow concepts in depth: {ref}`topics:workflows`
 - `aiida-shell` (the `ShellJob` launcher used in the pipeline): [aiida-shell documentation](https://aiida-shell.readthedocs.io)
 - Calcfunctions refresher: {ref}`topics:processes:functions`
-- Control flow (`If`, `While`, dynamic graph construction): {ref}`Module 6 <tutorial:module6>`
-- Alternative workflow construction APIs WorkGraph offers (beyond the `@task.graph()` decorator used here): [aiida-workgraph documentation](https://aiida-workgraph.readthedocs.io)
+- Alternative workflow construction APIs WorkGraph offers (beyond the `@task.graph()` decorator used here, including `If`/`While` control flow): [aiida-workgraph documentation](https://aiida-workgraph.readthedocs.io)
 - Running versus submitting processes: {ref}`topics:processes:usage:launching`
 - The AiiDA daemon (architecture and management): {ref}`topics:daemon`, {ref}`how-to:manage-daemon`

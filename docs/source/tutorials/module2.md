@@ -438,7 +438,7 @@ qb = orm.QueryBuilder().append(
 print(f'Transition run: parse_output PK {qb.first(flat=True)}')
 ```
 
-That last query already chains two appends (Group → its members). QueryBuilder can go much further: *projecting* single fields instead of loading whole nodes, and following the links between nodes, a run to its `Float` outputs, back to its inputs, across entire workflows. We'll cover those patterns properly in {ref}`Module 5 <tutorial:module5>`.
+That last query already chains two appends (Group → its members). QueryBuilder can go much further: *projecting* single fields instead of loading whole nodes, and following the links between nodes, a run to its `Float` outputs, back to its inputs, across entire workflows. We'll cover those patterns properly in a later module.
 
 With all this activity, our profile is filling up, so let's list every process we have run so far across all modules:
 
@@ -465,4 +465,4 @@ Then in {ref}`Module 3b <tutorial:module3b>`, you'll map it over the whole sweep
 - In-depth guide to calcfunctions: {ref}`topics:processes:functions`
 - CalcJob reference: {ref}`topics:calculations:concepts:calcjobs`
 - {ref}`Auto-serialization of plain Python types in calcfunctions <topics:calculations:concepts:calcfunctions:automatic-serialization>` (introduced in v2.1)
-- QueryBuilder (covered properly in {ref}`Module 5 <tutorial:module5>`): {ref}`querying how-to guide <how-to:query>`
+- QueryBuilder: {ref}`querying how-to guide <how-to:query>`

@@ -3,10 +3,10 @@
 ``prepare_input`` and ``parse_output`` are plain AiiDA calcfunctions (also
 shown inline in module 2): the first turns a parameter dict into a ``gsrd``
 input file, the second recovers the headline diagnostics from a ``gsrd`` run's
-stdout. They are reused across modules 2-6.
+stdout. They are reused across modules 2 and 3.
 
 Module-specific tasks live alongside this file: ``tasks_module_3b.py`` (the
-sweep reduction plot) and ``tasks_module_6.py`` (the adaptive-workflow tasks).
+sweep reduction plot).
 """
 
 from typing import TypedDict

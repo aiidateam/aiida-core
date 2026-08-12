@@ -5,33 +5,6 @@ These tutorials teach you the core concepts of AiiDA -- from running a single
 calculation to building automated, error-resilient workflows -- using a running
 example that progressively grows in complexity.
 
-<!-- AiiDA in Action teaser, commented out until content is finalized
-
-::::{grid} 1
-:gutter: 3
-
-:::{grid-item-card} {fa}`bolt;mr-1` AiiDA in Action
-:text-align: center
-:shadow: md
-
-See the full power of AiiDA in a quick demo -- then learn to build it yourself.
-
-+++
-
-```{button-ref} teaser
-:ref-type: doc
-:click-parent:
-:expand:
-:color: primary
-:outline:
-
-See the demo
-```
-:::
-::::
-
--->
-
 ## Introductory modules
 
 :::{note}
@@ -119,93 +92,6 @@ Go to Module 3
 :::
 ::::
 
-## Advanced modules
-
-:::{note}
-These modules can be worked through in any order, depending on your needs.
-They assume familiarity with the introductory modules above.
-:::
-
-::::{grid} 2 2 2 2
-:gutter: 3
-
-:::{grid-item-card} {fa}`server;mr-1` Module 4: Remote submission
-:text-align: center
-:shadow: md
-
-Run calculations on remote HPC clusters with schedulers, transports, and queue management.
-
-+++
-
-```{button-ref} module4
-:ref-type: doc
-:click-parent:
-:expand:
-:color: primary
-:outline:
-
-Go to Module 4
-```
-:::
-
-:::{grid-item-card} {fa}`magnifying-glass-chart;mr-1` Module 5: Querying and analysis
-:text-align: center
-:shadow: md
-
-Use the QueryBuilder to search, filter, and analyze your provenance graph at scale.
-
-+++
-
-```{button-ref} module5
-:ref-type: doc
-:click-parent:
-:expand:
-:color: primary
-:outline:
-
-Go to Module 5
-```
-:::
-
-:::{grid-item-card} {fa}`code-branch;mr-1` Module 6: Complex workflows
-:text-align: center
-:shadow: md
-
-Conditional logic and loops with `If`/`While` (6a), then workflows whose shape emerges at runtime (6b).
-
-+++
-
-```{button-ref} module6a
-:ref-type: doc
-:click-parent:
-:expand:
-:color: primary
-:outline:
-
-Go to Module 6
-```
-:::
-
-:::{grid-item-card} {fa}`compass;mr-1` Module 7: Where to go next
-:text-align: center
-:shadow: md
-
-Error handlers, CalcJob plugins, WorkChains, caching, and a map of the wider plugin ecosystem.
-
-+++
-
-```{button-ref} module7
-:ref-type: doc
-:click-parent:
-:expand:
-:color: primary
-:outline:
-
-Go to Module 7
-```
-:::
-::::
-
 ## Classic tutorial
 
 ::::{grid} 1 2 2 3
@@ -235,16 +121,10 @@ Go to Basic Tutorial
 :maxdepth: 1
 :hidden:
 
-teaser
 module0
 module1
 module2
 module3a
 module3b
-module4
-module5
-module6a
-module6b
-module7
 basic
 ```

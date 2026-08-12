@@ -34,6 +34,45 @@ def require_collab(profile):
         echo.echo_critical(f'profile `{profile.name}` is not part of a collab: run `verdi collab init` first.')
 
 
+def hold_the_sync_lock(ctx, profile):
+    """Refuse to run while another sync command of this profile is running, and hold the lock until this one ends.
+
+    The per-peer transfer stashes are stable paths with no guard of their own — a cron pull beside a manual push is
+    enough — and two writers tear the file. A torn push uploads cleanly, since its checksum is taken from the torn
+    bytes, fails the import as a corrupt archive and is then re-sent verbatim forever: that peer is wedged until a
+    human finds and deletes a file no message names. A torn pull loops on 416 until the peer re-exports.
+    """
+    from aiida.tools.collab.state import CollabState, exclusive_lock
+
+    # Registered on the command's context, which releases it however the command ends — including the abort below.
+    if not ctx.with_resource(exclusive_lock(CollabState.get_workdir(profile) / 'sync.lock', blocking=False)):
+        echo.echo_critical('another collab sync of this profile is running: wait for it to finish, then try again.')
+
+
+def read_stash_meta(filepath, filepath_meta):
+    """Return what a stashed push describes, or ``None`` when there is nothing usable to describe it.
+
+    The description is written whole beside the archive it describes, so one that will not parse means the run
+    that wrote it died mid-write or the disk filled. Unhandled, that ``JSONDecodeError`` escapes every handler
+    this command has and kills every future push to every peer until somebody deletes the file by hand.
+    Discarding the pair instead costs one renegotiation and re-transfer, which is what a push without a stash
+    does anyway.
+    """
+    import json
+
+    if not filepath_meta.exists():
+        return None
+
+    try:
+        return json.loads(filepath_meta.read_text(encoding='utf-8'))
+    except ValueError:
+        echo.echo_warning(f'discarding the unreadable stash at {filepath_meta}: the push is negotiated afresh.')
+        filepath_meta.unlink(missing_ok=True)
+        filepath.unlink(missing_ok=True)
+
+        return None
+
+
 def parse_computer_map(entries):
     """Parse ``PEER=LOCAL`` computer mapping entries, aborting on a malformed one."""
     mapping = {}
@@ -478,9 +517,15 @@ def collab_init(ctx, code, profile_name, bind, port, extras_mode, groups_mode, n
         if profile is None:
             echo.echo_critical('no profile loaded: create one with `verdi presto`, or join a collab with `--join`.')
 
-        if collab_config.is_enabled():
+        # Guarded on the collab's identity rather than on `collab.enabled`, because leaving a collab is defined as
+        # turning that option off: the member keeps its uuid, token, roster and cursors and comes back by turning
+        # it on again. Founding over them would overwrite all four, and nothing prints the old token a second
+        # time — the membership would be gone with no way back, since `--join` only ever creates a new profile.
+        if config.get_option(collab_config.OPTION_UUID, scope=profile.name):
             echo.echo_critical(
-                f'profile `{profile.name}` is already part of a collab. Each profile can only take part in one.'
+                f'profile `{profile.name}` already belongs to a collab. Each profile can only take part in one: '
+                f'rejoin this one with `verdi config set {collab_config.OPTION_ENABLED} True` and a daemon '
+                'restart, or found a new collab on a fresh profile.'
             )
 
     # Everything that can still be refused happens before the profile exists: an address that is not this
@@ -888,6 +933,40 @@ def collab_log(ctx):
     echo.echo_tabulate(rows, headers=['Time', 'Direction', 'Peer', 'Nodes', 'Bytes'])
 
 
+def negotiate_pull(client, *, backend, state, cursor, claim, policy, include_deleted, roster):
+    """Negotiate the delta of a peer and diff its manifest, returning everything that decision is made of.
+
+    The manifest names what the delta holds; only the nodes this profile lacks are then requested, so already-held
+    ancestors never travel. Returned together with the manifest because they are one reading of one computation:
+    a peer that can no longer serve it invalidates the want, the refusal, the extras and the memberships at once.
+
+    :param roster: what this profile gossips, which travels with the negotiation — how membership spreads and a
+        corrected address heals.
+    :return: the manifest, the nodes to ask for, the ones refused, the extras to take and the memberships to add.
+    """
+    from aiida.tools.collab.sync import members_wanted, missing_uuids, refresh_wanted
+
+    manifest = client.negotiate_delta(cursor, claim, roster)
+    missing = set(missing_uuids(backend, manifest.manifest))
+
+    # A node this profile deleted is missing too, and is refused rather than asked for: that is where a deletion
+    # is defended, bounded by the delta instead of by every deletion ever made. Only what is missing may be
+    # refused — a node held *and* tombstoned, which a restoration leaves behind, is one the sender must keep
+    # linking to. `--include-deleted` refuses nothing; that is what it means.
+    refuse = set() if include_deleted else missing & state.tombstones
+
+    return (
+        manifest,
+        missing - refuse,
+        refuse,
+        # Extras of shared nodes the peer edited more recently, and memberships of nodes this profile already
+        # holds; both empty unless the collab shares them. Asked for under the local policy, not the peer's
+        # offer, so that what is prompted for is what the import will write.
+        refresh_wanted(backend, manifest.refresh) if policy['extras_mode'] == 'sync' else [],
+        members_wanted(backend, manifest.members) if policy['groups_mode'] == 'grow' else [],
+    )
+
+
 @verdi_collab.command('pull')
 @click.argument('peers', metavar='[PEER]...', nargs=-1, shell_complete=complete_peer)
 @options.FORCE(help='Do not prompt for confirmation before transferring.')
@@ -911,6 +990,8 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
     confirmed with the node count it asked for and its size before any payload travels.
     """
     from contextlib import nullcontext
+    from functools import partial
+    from http import HTTPStatus
 
     from aiida.common.exceptions import ConfigurationError, IntegrityError
     from aiida.engine.daemon.client import get_daemon_client
@@ -920,13 +1001,7 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
     from aiida.tools.collab.endpoint import local_identity, local_info, workers_stopped
     from aiida.tools.collab.protocol import CollabRequestError, VersionSkew, member_pairs
     from aiida.tools.collab.state import CollabState, import_lock
-    from aiida.tools.collab.sync import (
-        import_delta,
-        members_wanted,
-        missing_uuids,
-        refresh_wanted,
-        resolve_computer_map,
-    )
+    from aiida.tools.collab.sync import import_delta, resolve_computer_map
 
     profile = ctx.obj.profile
     require_collab(profile)
@@ -963,6 +1038,7 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
             echo.echo_critical(str(exception))
 
     workdir.mkdir(parents=True, exist_ok=True)
+    hold_the_sync_lock(ctx, profile)
 
     for peer_uuid, entry in selected.items():
         url, nickname = entry['url'], entry['nickname']
@@ -995,36 +1071,22 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
             if include_deleted:
                 claim = claim - state.tombstones
 
+            # Bound once, because a renegotiation is the same negotiation over again: what it may not vary is the
+            # cursor and the claim, which the export request presents beside the want they were diffed with.
+            negotiate = partial(
+                negotiate_pull,
+                client,
+                backend=backend,
+                state=state,
+                cursor=cursor,
+                claim=claim,
+                policy=policy,
+                include_deleted=include_deleted,
+                roster=gossip(ctx.obj.config, profile, bump=not dry_run),
+            )
+
             try:
-                # The manifest names what the delta holds; only the nodes this profile lacks are then requested,
-                # so already-held ancestors never travel. The roster travels with it, which is how membership
-                # spreads and a corrected address heals.
-                manifest = client.negotiate_delta(cursor, claim, gossip(ctx.obj.config, profile, bump=not dry_run))
-                missing = set(missing_uuids(backend, manifest.manifest))
-
-                # A node this profile deleted is missing too, and is refused rather than asked for: that is where
-                # a deletion is defended, bounded by the delta instead of by every deletion ever made. Only what
-                # is missing may be refused — a node held *and* tombstoned, which a restoration leaves behind, is
-                # one the sender must keep linking to. `--include-deleted` refuses nothing; that is what it means.
-                refuse = set() if include_deleted else missing & state.tombstones
-                want = missing - refuse
-
-                # Extras of shared nodes the peer edited more recently; empty unless this profile syncs extras.
-                # Asked for under the local policy, not the peer's offer, so that what is prompted for is what
-                # the import will write: the import gates on the same value and would drop the rest anyway.
-                refresh_want = (
-                    refresh_wanted(backend, manifest.refresh, state.tombstones)
-                    if policy['extras_mode'] == 'sync'
-                    else []
-                )
-
-                # Memberships of nodes this profile already holds; empty unless the collab grows groups. Filtered
-                # here rather than at the import, so that what is prompted for is what will be written.
-                members = (
-                    members_wanted(backend, manifest.members, state.tombstones)
-                    if policy['groups_mode'] == 'grow'
-                    else []
-                )
+                manifest, want, refuse, refresh_want, members = negotiate()
                 curated = len(member_pairs(members))
 
                 if dry_run:
@@ -1042,7 +1104,19 @@ def collab_pull(ctx, peers, force, dry_run, include_deleted, pause_my_daemon):
                     client.release()
                     continue
 
-                offer = client.request_delta(cursor, claim, want, refresh_want, refuse)
+                try:
+                    offer = client.request_delta(cursor, claim, want, refresh_want, refuse, manifest.computed)
+                except CollabRequestError as exception:
+                    if exception.status != HTTPStatus.CONFLICT:
+                        raise
+
+                    # The peer cannot serve the computation this want was diffed against — it sealed something, or
+                    # deleted a node of the manifest. One retry and no more: a peer sealing between every
+                    # negotiation and request can refuse again, and that is a report, not something to spin on.
+                    echo.echo_report(f'{nickname} asked to renegotiate: {exception}')
+                    manifest, want, refuse, refresh_want, members = negotiate()
+                    curated = len(member_pairs(members))
+                    offer = client.request_delta(cursor, claim, want, refresh_want, refuse, manifest.computed)
 
                 if (want or refresh_want or curated) and not force:
                     prompt = f'pull {len(want)} node(s) ({offer.size} bytes) from {nickname}'
@@ -1188,6 +1262,7 @@ def collab_push(ctx, peers, force, dry_run):
     failed = []
 
     workdir.mkdir(parents=True, exist_ok=True)
+    hold_the_sync_lock(ctx, profile)
 
     for peer_uuid, entry in selected.items():
         url, nickname = entry['url'], entry['nickname']
@@ -1222,7 +1297,7 @@ def collab_push(ctx, peers, force, dry_run):
                     echo.echo_warning(f'skipping peer {nickname}: it is busy right now, try again shortly.')
                     continue
 
-                meta = json.loads(filepath_meta.read_text(encoding='utf-8')) if filepath_meta.exists() else None
+                meta = read_stash_meta(filepath, filepath_meta)
 
                 if filepath.exists() and meta is not None and meta['peer'] == peer_uuid:
                     # A previous push to this peer failed after the transfer. Retrying with the very same bytes

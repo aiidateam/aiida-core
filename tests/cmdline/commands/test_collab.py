@@ -290,10 +290,30 @@ def test_init_already_initialized(run_cli_command, config_with_profile):
 
     scope = get_profile().name
 
-    result = run_cli_command(cmd_collab.collab_init, ['--bind', '127.0.0.1'], use_subprocess=False, raises=True)
+    result = run_cli_command(cmd_collab.collab_init, ['--bind', '127.0.0.1', '-n'], use_subprocess=False, raises=True)
 
-    assert 'already part of a collab' in result.output
+    assert 'already belongs to a collab' in result.output
     assert config_with_profile.get_option(OPTION_TOKEN, scope=scope) == TOKEN
+
+
+def test_init_on_a_profile_that_left_a_collab(run_cli_command, config_with_profile):
+    """Test that a profile which left its collab is refused too, and told the two ways back rather than founded over.
+
+    Leaving is ``collab.enabled = False`` and nothing else: uuid, token, roster and cursors all stay, and turning
+    the option back on is how a member returns. Founding over that overwrites all four — nothing ever prints the
+    old token again, and `--join` only creates fresh profiles, so the membership would be unrecoverable.
+    """
+    init_collab(config_with_profile, **{OPTION_ENABLED: False})
+
+    scope = get_profile().name
+
+    result = run_cli_command(cmd_collab.collab_init, ['--bind', '127.0.0.1', '-n'], use_subprocess=False, raises=True)
+
+    assert 'already belongs to a collab' in result.output
+    assert OPTION_ENABLED in result.output, 'the refusal has to name the way back into the collab it left'
+    assert config_with_profile.get_option(OPTION_UUID, scope=scope) == COLLAB_UUID
+    assert config_with_profile.get_option(OPTION_TOKEN, scope=scope) == TOKEN
+    assert config_with_profile.get_option(OPTION_PEERS, scope=scope) == {PEER_UUID: peer_entry()}
 
 
 def test_peer_set_url(run_cli_command, config_with_profile):
@@ -1051,6 +1071,8 @@ def test_pull_refuses_a_stale_computer_map(
 
 
 OFFER_INSTANT = timezone.now()
+OFFER_COMPUTED = OFFER_INSTANT + timedelta(seconds=1)
+"""Distinct from the export instant, which a withheld seed pins: the request has to echo this one."""
 
 
 @pytest.fixture
@@ -1066,13 +1088,13 @@ def stub_transfer(monkeypatch):
 
     def negotiate_delta(self, cursor, claim, roster=None):
         calls.append(('negotiate', cursor, set(claim)))
-        return DeltaManifest(manifest=['uuid-offered', 'uuid-held'], instant=OFFER_INSTANT)
+        return DeltaManifest(manifest=['uuid-offered', 'uuid-held'], instant=OFFER_INSTANT, computed=OFFER_COMPUTED)
 
     def missing_uuids(backend, uuids):
         return [uuid for uuid in uuids if uuid != 'uuid-held']
 
-    def request_delta(self, cursor, claim, want, refresh_want=frozenset(), refuse=frozenset()):
-        calls.append(('request', set(want), set(refuse)))
+    def request_delta(self, cursor, claim, want, refresh_want=frozenset(), refuse=frozenset(), computed=None):
+        calls.append(('request', set(want), set(refuse), computed))
         # A later instant than the negotiated one, as served by a peer that recomputed its delta in between:
         # the import must advance the cursor to the negotiated instant, not this one, or in-window nodes are
         # silently never delivered.
@@ -1111,7 +1133,7 @@ def test_pull_pause_my_daemon(
     name = f'aiida-{get_profile().name}'
     assert stub_transfer == [
         ('negotiate', None, set()),
-        ('request', {'uuid-offered'}, set()),
+        ('request', {'uuid-offered'}, set(), OFFER_COMPUTED),
         {'command': 'stop', 'properties': {'name': name, 'waiting': True}},
         ('import', False, OFFER_INSTANT),
         {'command': 'start', 'properties': {'name': name, 'waiting': True}},
@@ -1140,7 +1162,7 @@ def test_pull_presents_cursor_and_claim(run_cli_command, config_with_profile, st
 
     assert stub_transfer == [
         ('negotiate', cursor, {'uuid-held'}),
-        ('request', {'uuid-offered'}, set()),
+        ('request', {'uuid-offered'}, set(), OFFER_COMPUTED),
         ('import', False, OFFER_INSTANT),
     ]
 
@@ -1162,7 +1184,7 @@ def test_pull_refuses_its_tombstones_at_the_diff(run_cli_command, config_with_pr
 
     assert stub_transfer == [
         ('negotiate', None, set()),
-        ('request', set(), {'uuid-offered'}),
+        ('request', set(), {'uuid-offered'}, OFFER_COMPUTED),
         ('import', False, OFFER_INSTANT),
     ]
 
@@ -1183,7 +1205,7 @@ def test_pull_include_deleted(run_cli_command, config_with_profile, stub_environ
 
     assert stub_transfer == [
         ('negotiate', None, {'uuid-held'}),
-        ('request', {'uuid-offered'}, set()),
+        ('request', {'uuid-offered'}, set(), OFFER_COMPUTED),
         ('import', True, OFFER_INSTANT),
     ]
 
@@ -1359,7 +1381,7 @@ def test_pull_reports_the_membership_count(
     monkeypatch.setattr(
         sync,
         'members_wanted',
-        lambda backend, offer, tombstones: [
+        lambda backend, offer: [
             GroupMembers(uuid='uuid-of-group', label='curated', type_string='', nodes=['uuid-held'])
         ],
     )
@@ -1386,7 +1408,7 @@ def test_pull_reports_the_refresh_count(
     monkeypatch.setattr(
         CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info(extras_mode='sync')
     )
-    monkeypatch.setattr(sync, 'refresh_wanted', lambda backend, offer, tombstones: ['uuid-stale'])
+    monkeypatch.setattr(sync, 'refresh_wanted', lambda backend, offer: ['uuid-stale'])
 
     result = run_cli_command(cmd_collab.collab_pull, ['--dry-run', '--force'], use_subprocess=False)
 
@@ -2057,6 +2079,61 @@ def test_push_refused_delta_drops_stash(run_cli_command, config_with_profile, st
     assert not any(workdir.glob('push-*')), 'the stashed delta should be dropped'
 
 
+def test_push_discards_a_stash_it_cannot_read(run_cli_command, config_with_profile, stub_environment, monkeypatch):
+    """Test that a stash whose description will not parse is discarded and the push negotiated afresh.
+
+    The description is written whole beside the archive it describes, so one that will not parse is a run that
+    was killed mid-write or a disk that filled. There is no recovering the bytes it was meant to describe — the
+    instant that says what they are is exactly what was lost — and left alone it is permanent: the decode error
+    escapes every handler this command has, so every future push to every peer dies on it until somebody finds
+    the file and deletes it. Discarding costs one re-transfer, which is what a push with no stash does anyway.
+    """
+    from aiida.tools.collab import sync
+    from aiida.tools.collab.client import CollabClient, UploadReport
+    from aiida.tools.collab.protocol import ManifestDiff, PushHandshake
+    from aiida.tools.collab.sync import Delta, DeltaExport
+
+    init_collab(config_with_profile)
+
+    instant = timezone.now()
+    workdir = CollabState.get_workdir(get_profile())
+    workdir.mkdir(parents=True, exist_ok=True)
+    (workdir / f'push-{PEER_UUID}.aiida').write_bytes(b'the bytes of a push that never finished')
+    (workdir / f'push-{PEER_UUID}.json').write_text('{"peer": "', encoding='utf-8')
+
+    def export_delta(filepath, *, delta, backend, want=None, refuse=frozenset(), groups_mode=None):
+        filepath.write_bytes(b'delta')
+        return DeltaExport(filepath=filepath, uuids=['uuid-one'], instant=instant)
+
+    monkeypatch.setattr(
+        sync,
+        'compute_delta',
+        lambda **kwargs: Delta(uuid_by_pk={1: 'uuid-one'}, links=[], instant=instant, computed=instant),
+    )
+    monkeypatch.setattr(sync, 'export_delta', export_delta)
+    monkeypatch.setattr(CollabClient, 'check_version_skew', lambda self, local, **kwargs: make_peer_info())
+    monkeypatch.setattr(
+        CollabClient,
+        'push_handshake',
+        lambda self, requester, roster=None: PushHandshake(busy=False, cursor=None, claim=[]),
+    )
+    monkeypatch.setattr(
+        CollabClient,
+        'diff_manifest',
+        lambda self, uuids, refresh=None, members=None: ManifestDiff(missing=uuids, refresh=[]),
+    )
+    monkeypatch.setattr(
+        CollabClient, 'upload_delta', lambda self, filepath: UploadReport(sha256='0' * 64, sent=5, staged=5)
+    )
+    monkeypatch.setattr(CollabClient, 'trigger_import', lambda self, sha256, **kwargs: {'uuids': ['uuid-one']})
+
+    result = run_cli_command(cmd_collab.collab_push, ['--force'], use_subprocess=False)
+
+    assert 'discarding the unreadable stash' in result.output
+    assert 'retrying the delta of the previous failed push' not in result.output, 'the stash must not be reused'
+    assert 'pushed 1 node(s)' in result.output
+
+
 def test_push_busy_peer(run_cli_command, config_with_profile, stub_environment, monkeypatch):
     """Test that a push against a busy peer warns and skips it, before exporting or uploading anything."""
     from aiida.tools.collab import sync
@@ -2215,6 +2292,28 @@ def test_map_computer_refuses_unknown_peer_computers(run_cli_command, config_wit
     assert 'lumi@collab' in result.output, 'the labels that could be mapped are what makes the refusal actionable'
     assert config_with_profile.get_option(OPTION_COMPUTER_MAP, scope=get_profile().name) == {}
     assert calculation.base.caching.get_hash() == before, 'the pair that resolved was applied anyway'
+
+
+def test_map_computer_refuses_a_reversed_pair(run_cli_command, config_with_profile, storage):
+    """Test that PEER=LOCAL written the natural way round is refused, with the right spelling suggested.
+
+    `lumi=lumi@collab` passes every other check and then rewrites `_aiida_hash` on every calculation of this
+    profile's own `lumi`, with the arrived computer's UUID inside: local caching breaks, the mapping matches
+    nothing that ever arrives, and nothing says so. The peer half is the machine that arrived through the collab,
+    which is exactly what the marker on its label says.
+    """
+    from aiida.tools.collab.config import OPTION_COMPUTER_MAP
+
+    init_collab(config_with_profile)
+    calculation_on(storage, 'lumi@collab')
+    local = calculation_on(storage, 'lumi')
+    before = local.base.caching.get_hash()
+
+    result = run_cli_command(cmd_collab.collab_map_computer, ['lumi=lumi@collab'], use_subprocess=False, raises=True)
+
+    assert '`lumi@collab=lumi`' in result.output, 'the refusal has to name the spelling that would work'
+    assert config_with_profile.get_option(OPTION_COMPUTER_MAP, scope=get_profile().name) == {}
+    assert local.base.caching.get_hash() == before, "this profile's own calculations were remapped anyway"
 
 
 def test_map_computer_refuses_a_computer_mapped_onto_itself(run_cli_command, config_with_profile, storage):

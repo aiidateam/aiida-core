@@ -18,6 +18,8 @@ from ..params import options, types
 
 # Pass the version explicitly to ``version_option`` otherwise editable installs can show the wrong version number
 @click.group(cls=VerdiCommandGroup, context_settings={'help_option_names': ['--help', '-h']})
+@options.USE_CACHE()
+@options.FORCE_CACHE()
 @options.PROFILE(type=types.ProfileParamType(load_profile=True, accept_archive_location=True), expose_value=False)
 @options.VERBOSITY()
 @click.version_option(__version__, package_name='aiida_core', message='AiiDA version %(version)s')

@@ -123,9 +123,21 @@ def register_json_contains(dbapi_connection, _):
     dbapi_connection.create_function('json_contains', 2, _json_contains)
 
 
-def create_sqla_engine(path: Union[str, Path], *, enforce_foreign_keys: bool = True, **kwargs) -> Engine:
-    """Create a new engine instance."""
-    engine = create_engine(f'sqlite:///{path}', json_serializer=json.dumps, json_deserializer=json.loads, **kwargs)
+def create_sqla_engine(
+    path: Union[str, Path], *, enforce_foreign_keys: bool = True, read_only: bool = False, **kwargs
+) -> Engine:
+    """Create a new engine instance.
+
+    :param path: path of the database file.
+    :param enforce_foreign_keys: whether to enforce foreign key constraints.
+    :param read_only: open the database in read-only mode (sqlite URI options ``mode=ro&immutable=1``). The file must
+        not be modified in place for the lifetime of the engine (atomically replacing it is fine).
+    """
+    if read_only:
+        uri = f'sqlite:///file:{path}?mode=ro&immutable=1&uri=true'
+    else:
+        uri = f'sqlite:///{path}'
+    engine = create_engine(uri, json_serializer=json.dumps, json_deserializer=json.loads, **kwargs)
     event.listen(engine, 'connect', sqlite_case_sensitive_like)
     if enforce_foreign_keys:
         event.listen(engine, 'connect', sqlite_enforce_foreign_keys)

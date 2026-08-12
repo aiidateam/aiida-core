@@ -284,6 +284,81 @@ def _profile_set_default(profile):
     echo.echo_success(f'{profile.name} set as default profile')
 
 
+@verdi_profile.command('cache-refresh')
+@arguments.PROFILE(required=True, default=None)
+def profile_cache_refresh(profile):
+    """Refresh the cached database for a profile using the `core.sqlite_zip` storage backend.
+
+    The database file of the archive is extracted (or for remote archives, downloaded) and stored in the local
+    cache, and it is recorded for the profile in the configuration file, replacing any previously recorded version.
+    """
+    from aiida.storage.sqlite_zip.backend import SqliteZipBackend
+    from aiida.storage.sqlite_zip.cache import get_cache_dirpath
+
+    if profile.storage_backend != 'core.sqlite_zip':
+        echo.echo_critical(f'profile `{profile.name}` does not use the `core.sqlite_zip` storage backend.')
+
+    # Re-fetch the pristine profile from the configuration: the ``profile`` argument may be a detached copy carrying
+    # transient keys injected by the ``verdi --use-cache/--force-cache`` flags, which must never be persisted.
+    config = get_config()
+    profile = config.get_profile(profile.name)
+    filename_old = profile.storage_config.get('cached_database')
+
+    try:
+        filename = SqliteZipBackend.refresh_cache(profile)
+    except exceptions.AiidaException as exception:
+        echo.echo_critical(f'could not refresh the cache: {exception}')
+
+    config.update_profile(profile)
+    config.store()
+
+    if filename_old is not None and filename_old != filename:
+        # The previously recorded entry is deleted, unless another profile still records it.
+        if any(
+            other.storage_config.get('cached_database') == filename_old
+            for other in config.profiles
+            if other.name != profile.name
+        ):
+            echo.echo_report(f'The previously cached database `{filename_old}` is recorded by other profiles: kept.')
+        else:
+            (get_cache_dirpath() / filename_old).unlink(missing_ok=True)
+            echo.echo_report(f'Deleted the previously cached database `{filename_old}`.')
+
+    echo.echo_success(f'Cached database `{filename}` recorded for profile `{profile.name}`.')
+
+
+@verdi_profile.command('cache-clear')
+@options.FORCE(help='Skip any prompts for confirmation.')
+def profile_cache_clear(force):
+    """Delete all locally cached database files of `core.sqlite_zip` storages.
+
+    Cached databases are recreated on the first use of a profile configured for caching, and profiles that are not,
+    are unaffected. Note however that recreating an entry requires access to the archive: if you rely on `verdi
+    --force-cache` to work with an unreachable archive, clearing the cache deletes your only usable copy of the data.
+    """
+    from aiida.storage.sqlite_zip.cache import get_cache_dirpath
+
+    dirpath = get_cache_dirpath()
+    filepaths = sorted(filepath for filepath in dirpath.iterdir() if filepath.is_file()) if dirpath.is_dir() else []
+
+    if not filepaths:
+        echo.echo_report(f'The cache at `{dirpath}` is empty: nothing to delete.')
+        return
+
+    size_mb = sum(filepath.stat().st_size for filepath in filepaths) / 1e6
+
+    if not force:
+        echo.echo_warning(
+            f'This will delete {len(filepaths)} cached database file(s) ({size_mb:.1f} MB) at `{dirpath}`.'
+        )
+        click.confirm('Do you want to continue?', abort=True)
+
+    for filepath in filepaths:
+        filepath.unlink()
+
+    echo.echo_success(f'Deleted {len(filepaths)} cached database file(s) ({size_mb:.1f} MB).')
+
+
 @verdi_profile.command('delete')
 @options.FORCE(help='Skip any prompts for confirmation.')
 @click.option(

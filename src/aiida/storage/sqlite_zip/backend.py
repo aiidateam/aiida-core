@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import os
@@ -20,11 +21,11 @@ import tempfile
 import weakref
 import zipfile
 from collections.abc import Iterable, Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, BinaryIO, NoReturn, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, BinaryIO, ContextManager, NoReturn, Optional, Tuple, Union, cast
 from zipfile import ZipFile, is_zipfile
 
 from pydantic import field_validator
@@ -32,10 +33,13 @@ from sqlalchemy.future.engine import Engine
 from sqlalchemy.orm import Session
 
 from aiida import __version__
+from aiida.cmdline.params.options.interactive import InteractiveOption
 from aiida.common.exceptions import (
     ClosedStorage,
+    ConfigurationError,
     CorruptStorage,
     IncompatibleExternalDependencies,
+    IncompatibleStorageSchema,
     StorageMigrationError,
     UnreachableStorage,
 )
@@ -145,6 +149,15 @@ class SqliteZipBackend(StorageBackend):
         filepath: str = MetadataField(
             title='Filepath of the archive', description='Filepath or URL (http/https) of the archive.'
         )
+        use_cache: bool = MetadataField(
+            False,
+            title='Use cache',
+            description='Cache the extracted database file in the AiiDA configuration folder, such that subsequent '
+            'loads of the profile do not need to extract (or for remote archives, download) it again.',
+            # Do not prompt for this niche performance knob in interactive mode; it remains settable with the
+            # explicit ``--use-cache`` option.
+            option_cls=functools.partial(InteractiveOption, prompt_fn=lambda ctx: False),
+        )
 
         @field_validator('filepath')
         @classmethod
@@ -226,6 +239,7 @@ class SqliteZipBackend(StorageBackend):
                 )
                 raise StorageMigrationError(msg)
             LOGGER.report(f'Remote {cls.__name__} is already at target version {target_version}.')
+            cls._refresh_cache_if_requested(profile)
             return False
 
         filepath_archive = Path(filepath)
@@ -241,6 +255,7 @@ class SqliteZipBackend(StorageBackend):
                 LOGGER.report(
                     f'Existing {cls.__name__} is already at target version {target_version}. No migration needed.'
                 )
+                cls._refresh_cache_if_requested(profile)
                 return False
 
             # The archive exists but ``reset == False``, so we try to migrate to the latest schema version. If the
@@ -252,6 +267,7 @@ class SqliteZipBackend(StorageBackend):
                 )
                 migrate(filepath_archive, filepath_migrated, target_version)
                 shutil.move(filepath_migrated, filepath_archive)
+                cls._refresh_cache_if_requested(profile)
                 return False
 
         # Here the original archive either doesn't exist or ``reset == True`` so we simply create an empty base archive
@@ -286,7 +302,54 @@ class SqliteZipBackend(StorageBackend):
 
             shutil.move(filepath_zip, filepath_archive)
 
+        cls._refresh_cache_if_requested(profile)
+
         return True
+
+    @classmethod
+    def refresh_cache(cls, profile: Profile) -> str:
+        """Cache the database of the archive and record it under the ``cached_database`` storage configuration key.
+
+        The archive schema version is recorded alongside, under the ``cached_database_version`` key, such that a
+        cached database can be detected as stale after upgrading ``aiida-core`` even when the archive itself is not
+        consulted (see the ``force_cache`` storage configuration key).
+
+        Note that this only updates the profile instance; persisting the recorded keys to the configuration file,
+        where applicable, is the responsibility of the caller.
+
+        :param profile: the profile whose database to cache.
+        :returns: the filename of the cached database.
+        """
+        from .cache import get_cache_filename, lookup_cache, store_in_cache
+
+        filepath = profile.storage_config['filepath']
+
+        with cls._open_zip(filepath) as zip_handle:
+            try:
+                info = zip_handle.getinfo(DB_FILENAME)
+            except KeyError as exc:
+                msg = f'database could not be read: no `{DB_FILENAME}` in the archive'
+                raise CorruptStorage(msg) from exc
+
+            filename = get_cache_filename(info)
+
+            if lookup_cache(filename) is None:
+                with zip_handle.open(DB_FILENAME) as source:
+                    store_in_cache(source, filename)
+                LOGGER.report(f'Cached the database of the archive as `{filename}`.')
+
+            version = read_version(filepath, zip_handle=zip_handle if is_url(filepath) else None)
+
+        profile.storage_config['cached_database'] = filename
+        profile.storage_config['cached_database_version'] = version
+
+        return filename
+
+    @classmethod
+    def _refresh_cache_if_requested(cls, profile: Profile) -> None:
+        """Populate the database cache and record it in the storage configuration, if the profile requests caching."""
+        if profile.storage_config.get('use_cache', False):
+            cls.refresh_cache(profile)
 
     @classmethod
     def migrate(cls, profile: Profile) -> NoReturn:
@@ -306,11 +369,15 @@ class SqliteZipBackend(StorageBackend):
         # ``__del__`` would).
         self._resources = _ArchiveResources()
         self._finalizer = weakref.finalize(self, self._resources.close)
-        if is_url(filepath):
-            # Open a single handle to the remote zip file, reused for the metadata, the database and the repository:
-            # each new handle downloads the full central directory of the zip file, which can be expensive.
-            self._resources.remote_zip = open_remote_zip(filepath)
-        validate_storage(self._path, zip_handle=self._resources.remote_zip)
+        if not profile.storage_config.get('force_cache', False):
+            # With ``force_cache`` the archive is deliberately not accessed: the schema version was already validated
+            # when the cached database was recorded for the profile.
+            if is_url(filepath):
+                # Open a single handle to the remote zip file, reused for the metadata, the database and the
+                # repository: each new handle downloads the full central directory of the zip file, which can be
+                # expensive.
+                self._resources.remote_zip = open_remote_zip(filepath)
+            validate_storage(self._path, zip_handle=self._resources.remote_zip)
         self._closed = False
 
     def __str__(self) -> str:
@@ -332,51 +399,141 @@ class SqliteZipBackend(StorageBackend):
 
     def get_session(self) -> Session:
         """Return an SQLAlchemy session."""
-        from archive_path import extract_file_in_zip
-
         if self._closed:
             raise ClosedStorage(str(self))
         if self._resources.session is None:
-            if is_url(self._path) or is_zipfile(self._path):
+            force_cache = self.profile.storage_config.get('force_cache', False)
+            if force_cache or is_url(self._path) or is_zipfile(self._path):
+                db_file = self._get_database_file()
+                # If the database did not need to be extracted to a private temporary file, it comes from the cache,
+                # which is shared between all profiles and processes whose archives have the same content: open it
+                # read-only so that no consumer can corrupt it for the others.
+                read_only = self._resources.db_file is None
+            else:
+                db_file = Path(self._path) / DB_FILENAME
+                if not db_file.exists():
+                    raise CorruptStorage(f'database could not be read: non-existent {db_file}')
+                read_only = False
+            self._resources.session = Session(create_sqla_engine(db_file, read_only=read_only), future=True)
+        return self._resources.session
+
+    @staticmethod
+    def _open_zip(path: Union[str, Path]) -> ZipFile:
+        """Open the zip archive at the given location, either from the local file system or remotely over HTTP."""
+        if is_url(path):
+            return open_remote_zip(str(path))
+        try:
+            return ZipFile(path, mode='r')
+        except Exception as exc:
+            msg = f'archive could not be read {path}: {exc}'
+            raise CorruptStorage(msg) from exc
+
+    def _get_database_file(self) -> Path:
+        """Return the path of the extracted database file, extracting or downloading it if necessary.
+
+        The local cache (see :mod:`aiida.storage.sqlite_zip.cache`) is always consulted: if it contains the database
+        of the archive, no extraction (or for remote archives, download) is needed. The cache is only written to if
+        the ``use_cache`` key of the storage configuration is set, or if the profile records a ``cached_database``
+        (meaning it was configured for caching), in which case a missing cache file is simply repopulated. If the
+        recorded ``cached_database`` no longer corresponds to the content of the archive, an exception is raised. If
+        the ``force_cache`` key is set, the recorded cached database is used directly, without opening the archive.
+
+        Without caching, the database is extracted to a temporary file that is deleted when the storage is closed.
+        """
+        import requests
+        from remotezip import RemoteZipError
+
+        from .cache import get_cache_dirpath, get_cache_filename, lookup_cache, store_in_cache
+
+        storage_config = self.profile.storage_config
+        pointer: Optional[str] = storage_config.get('cached_database')
+        use_cache: bool = storage_config.get('use_cache', False)
+
+        if storage_config.get('force_cache', False):
+            if pointer is None:
+                msg = (
+                    'cannot force usage of the cached database: the profile does not record one. Only profiles set '
+                    'up with `--use-cache`, or refreshed with `verdi profile cache-refresh`, record it.'
+                )
+                raise ConfigurationError(msg)
+            version = storage_config.get('cached_database_version')
+            if version is not None and version != self.version_head():
+                msg = (
+                    f'the database cached for profile `{self.profile.name}` was recorded for archive schema version '
+                    f'`{version}`, but this version of AiiDA requires version `{self.version_head()}`. Migrate the '
+                    f'archive and refresh the cache with `verdi profile cache-refresh {self.profile.name}` (this '
+                    'requires the archive to be reachable).'
+                )
+                raise IncompatibleStorageSchema(msg)
+            filepath = get_cache_dirpath() / pointer
+            if not filepath.is_file():
+                msg = f'the cached database `{filepath}` recorded for the profile does not exist'
+                raise UnreachableStorage(msg)
+            LOGGER.warning(
+                f'Using the cached database `{pointer}` without validating it against the archive. The data may be '
+                'outdated, and repository files will not be accessible if the archive cannot be reached.'
+            )
+            return filepath
+
+        if is_url(self._path):
+            # Reuse the single remote zip handle opened in the constructor without closing it: it is shared with the
+            # repository and owned by the resources container.
+            zip_context: ContextManager[ZipFile] = nullcontext(cast(ZipFile, self._resources.remote_zip))
+        else:
+            zip_context = self._open_zip(self._path)
+
+        with zip_context as zip_handle:
+            try:
+                info = zip_handle.getinfo(DB_FILENAME)
+            except KeyError as exc:
+                msg = f'database could not be read: no `{DB_FILENAME}` in the archive'
+                raise CorruptStorage(msg) from exc
+
+            filename = get_cache_filename(info)
+
+            if pointer is not None and pointer != filename:
+                msg = (
+                    f'the content of the archive at `{self._path}` no longer corresponds to the database cached for '
+                    f'profile `{self.profile.name}`. If the archive is expected to have changed, refresh the cache '
+                    f'with: verdi profile cache-refresh {self.profile.name}'
+                )
+                raise ConfigurationError(msg)
+
+            filepath_cached = lookup_cache(filename)
+            if filepath_cached is not None:
+                return filepath_cached
+
+            try:
+                if use_cache or pointer is not None:
+                    with zip_handle.open(DB_FILENAME) as source:
+                        return store_in_cache(source, filename)
+
+                # Extract to a temporary file, which is deleted again when the storage is closed
                 fd, path = tempfile.mkstemp()
                 os.close(fd)
                 db_file = self._resources.db_file = Path(path)
                 try:
-                    with db_file.open('wb') as handle:
-                        if is_url(self._path):
-                            import requests
-                            from remotezip import RemoteZipError
-
-                            # Fetch only the database file from the remote zip, using HTTP range requests. The
-                            # handle is always set in the constructor for URL paths.
-                            zip_handle = cast('RemoteZip', self._resources.remote_zip)
-                            try:
-                                with zip_handle.open(DB_FILENAME) as source:
-                                    shutil.copyfileobj(source, handle)
-                            except (RemoteZipError, requests.RequestException) as exc:
-                                msg = f'Could not read the database from the remote archive `{self._path}`: {exc}'
-                                raise UnreachableStorage(msg) from exc
-                            except Exception as exc:
-                                msg = f'database could not be read: {exc}'
-                                raise CorruptStorage(msg) from exc
-                        else:
-                            try:
-                                extract_file_in_zip(self._path, DB_FILENAME, handle, search_limit=4)
-                            except Exception as exc:
-                                msg = f'database could not be read: {exc}'
-                                raise CorruptStorage(msg) from exc
+                    with zip_handle.open(DB_FILENAME) as source, db_file.open('wb') as handle:
+                        shutil.copyfileobj(source, handle)
                 except BaseException:
                     # Do not leave the temporary file behind if the extraction fails: a subsequent call would
                     # create a new temporary file, orphaning this one forever.
                     db_file.unlink(missing_ok=True)
                     self._resources.db_file = None
                     raise
-            else:
-                db_file = Path(self._path) / DB_FILENAME
-                if not db_file.exists():
-                    raise CorruptStorage(f'database could not be read: non-existent {db_file}')
-            self._resources.session = Session(create_sqla_engine(db_file), future=True)
-        return self._resources.session
+                return db_file
+            except (RemoteZipError, requests.RequestException) as exc:
+                msg = f'Could not read the database from the remote archive `{self._path}`: {exc}'
+                raise UnreachableStorage(msg) from exc
+            except (UnreachableStorage, CorruptStorage):
+                raise
+            except OSError:
+                # A failure to write to the local file system (e.g. an unwritable cache directory or a full disk) is
+                # not an archive problem: let it propagate as-is instead of misreporting it as archive corruption.
+                raise
+            except Exception as exc:
+                msg = f'database could not be read: {exc}'
+                raise CorruptStorage(msg) from exc
 
     def get_repository(self) -> '_RoBackendRepository':
         if self._closed:

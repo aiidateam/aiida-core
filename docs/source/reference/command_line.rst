@@ -412,6 +412,8 @@ Below is a list with all available subcommands.
       --help  Show this message and exit.
 
     Commands:
+      cache-clear         Delete all locally cached database files of `core.sqlite_zip`...
+      cache-refresh       Refresh the cached database for a profile using the...
       configure-rabbitmq  Configure RabbitMQ for a profile.
       delete              Delete one or more profiles.
       dump                Dump all data in an AiiDA profile's storage to disk.

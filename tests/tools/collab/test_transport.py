@@ -10,6 +10,7 @@
 
 import socket
 import threading
+import time
 from dataclasses import dataclass, replace
 from datetime import datetime
 from http import HTTPStatus
@@ -87,8 +88,11 @@ class StubSyncCore:
         self.import_exception: Exception | None = None
         self.negotiated: list[tuple[datetime | None, frozenset]] = []
         self.requested: list[tuple[datetime | None, frozenset, frozenset]] = []
+        self.instants: list[datetime | None] = []
         self.requesters: list[str] = []
+        self.offered: set[str] = set()
         self.released: list[str] = []
+        self.stagings: list[str] = []
         self.diffed: list[list[str]] = []
         self.handshakes: list[str] = []
         self.joined: list[dict] = []
@@ -98,6 +102,8 @@ class StubSyncCore:
         self.info_cursors: list[datetime | None] = []
         self.imported: list[tuple[str, datetime, bytes]] = []
         self.applied: list = []
+        self.delay = 0.0
+        """Seconds the two routes that compute a delta take to answer, as a large profile makes them take."""
 
     def info(self, cursor: datetime | None) -> PeerInfo:
         self.info_cursors.append(cursor)
@@ -106,6 +112,7 @@ class StubSyncCore:
     def negotiate_delta(
         self, cursor: datetime | None, claim: frozenset, roster: list | None = None, requester: str = ''
     ) -> DeltaManifest:
+        time.sleep(self.delay)
         self.negotiated.append((cursor, claim))
         self.requesters.append(requester)
         return DeltaManifest(manifest=self.manifest, instant=self.instant, roster=self.roster)
@@ -118,8 +125,12 @@ class StubSyncCore:
         refresh_want: frozenset,
         refuse: frozenset,
         requester: str = '',
+        computed: datetime | None = None,
     ) -> DeltaOffer:
+        time.sleep(self.delay)
         self.requested.append((cursor, claim, want, refuse))
+        self.instants.append(computed)
+        self.offered.add(delta_id(cursor, claim, want, refuse))
         return DeltaOffer(
             delta=delta_id(cursor, claim, want, refuse),
             instant=self.instant,
@@ -128,16 +139,23 @@ class StubSyncCore:
         )
 
     def resolve_delta(self, requested_id: str, requester: str = '') -> Path | None:
-        return self.delta_path if self.delta_path.exists() else None
+        time.sleep(self.delay)
+        # Whether an identifier is on offer, never whether its file is still there — the endpoint looks it up in
+        # its cache of computations, and an eviction that unlinks the file does not go back and tell the caller.
+        return self.delta_path if requested_id in self.offered else None
 
     def release(self, requester: str) -> None:
         self.released.append(requester)
+
+    def staging(self, requester: str) -> None:
+        self.stagings.append(requester)
 
     def diff_manifest(self, uuids: list, refresh: dict, members: list) -> ManifestDiff:
         self.diffed.append(uuids)
         return ManifestDiff(missing=self.missing, refresh=sorted(refresh), refuse=self.refused, members=members)
 
     def handshake(self, requester: str, roster: list | None = None) -> PushHandshake:
+        time.sleep(self.delay)
         self.handshakes.append(requester)
         return self.push_handshake
 
@@ -183,6 +201,7 @@ def build_server(host: str, port: int, stub: StubSyncCore, staging_dir: Path) ->
         request_delta=stub.request_delta,
         resolve_delta=stub.resolve_delta,
         release=stub.release,
+        staging=stub.staging,
         diff_manifest=stub.diff_manifest,
         handshake=stub.handshake,
         import_staged=stub.import_staged,
@@ -204,12 +223,15 @@ def transport(tmp_path):
 
     url = f'http://127.0.0.1:{server.server_address[1]}'
 
-    with CollabClient(url, TOKEN, collab=COLLAB, peer=PEER, timeout=10) as client:
-        yield Transport(client=client, stub=stub, staging_dir=staging_dir, url=url)
-
-    server.shutdown()
-    server.server_close()
-    thread.join()
+    try:
+        with CollabClient(url, TOKEN, collab=COLLAB, peer=PEER, timeout=10) as client:
+            yield Transport(client=client, stub=stub, staging_dir=staging_dir, url=url)
+    finally:
+        # Torn down however the test ended: a failing one would otherwise leak its thread and its port for the
+        # rest of the session, and the next failure would be an unrelated bind error.
+        server.shutdown()
+        server.server_close()
+        thread.join()
 
 
 @pytest.mark.parametrize('host', ['0.0.0.0', '', '::', '::0', '0'])
@@ -333,6 +355,114 @@ def test_client_foreign_service(tmp_path):
         server.shutdown()
         server.server_close()
         thread.join()
+
+
+def test_client_error_body_that_is_not_an_object(tmp_path):
+    """An error status whose body is valid JSON but not an object still surfaces as ``CollabRequestError``.
+
+    A reverse proxy in front of a peer answers its own 500 with whatever body it likes, a JSON list among them,
+    and subscripting that by a string raises ``TypeError``. Uncaught it escapes the client entirely, so the sync
+    loop that is prepared to warn and skip an unreachable peer instead aborts the whole run over one bad peer.
+    """
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    class ProxyHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            body = b'["upstream is down"]'
+            self.send_response(HTTPStatus.INTERNAL_SERVER_ERROR)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format, *args):
+            pass
+
+    server = HTTPServer(('127.0.0.1', 0), ProxyHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    try:
+        with CollabClient(f'http://127.0.0.1:{server.server_address[1]}', TOKEN) as client:
+            with pytest.raises(CollabRequestError) as excinfo:
+                client.info()
+
+        assert excinfo.value.status == HTTPStatus.INTERNAL_SERVER_ERROR
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_an_upload_without_a_matching_length_is_refused(transport):
+    """A ``PUT`` whose ``Content-Length`` is absent or contradicts its range is refused before anything is staged.
+
+    Without the header there is nothing to read the body to, and the handler would read the declared range out of
+    a socket the client is not sending on — hanging until the timeout with the slot held. With a length that
+    disagrees with the range, the bytes staged are not the bytes the range says they are, and the checksum that
+    would catch it is only verified once the whole file is claimed complete.
+    """
+    sha256 = 'd' * 64
+    host, port = transport.url.removeprefix('http://').split(':')
+
+    def refused(*headers: str) -> bytes:
+        lines = [
+            f'PUT {route_upload(sha256)} HTTP/1.1',
+            f'Host: {host}:{port}',
+            f'Authorization: Bearer {TOKEN}',
+            f'{HEADER_COLLAB}: {COLLAB}',
+            'Content-Range: bytes 0-63/64',
+            *headers,
+        ]
+        answer = b''
+
+        with socket.create_connection((host, int(port)), timeout=10) as connection:
+            # latin-1, which is how a header value reaches the handler: encoded as UTF-8 a superscript
+            # arrives as two characters and never reaches `int` at all.
+            connection.sendall(('\r\n'.join(lines) + '\r\n\r\n').encode('latin-1'))
+
+            # Read to end of stream: a refusal that left the connection open would hang here until the timeout,
+            # and that is the very failure the close exists to prevent.
+            while chunk := connection.recv(4096):
+                answer += chunk
+
+        return answer
+
+    assert refused().startswith(b'HTTP/1.1 400'), 'a body with no length to read to must be refused'
+    assert refused('Content-Length: 8').startswith(b'HTTP/1.1 400'), 'a length that is not the range is refused'
+    # `str.isdigit` is true of this and `int` refuses it, so a guard using the first raises out of its own
+    # condition and answers the 500-on-an-unread-body it exists to prevent.
+    assert refused('Content-Length: \u00b2').startswith(b'HTTP/1.1 400'), 'a digit `int` cannot parse is refused'
+    assert not (transport.staging_dir / sha256).exists()
+
+
+def test_a_delta_evicted_while_it_is_being_served_is_never_a_short_body(transport, tmp_path, monkeypatch):
+    """A delta unlinked in the window between measuring it and reading it is served whole, not truncated.
+
+    The eviction of a cached delta unlinks the file, and nothing holds it against a download that is starting:
+    measuring the file and then opening it are two syscalls, and an eviction landing between them leaves a
+    response that already promised 200 and a length with no bytes to send. What the client writes then is a
+    short file the length check should have caught, and an import that fails on a corrupt archive.
+
+    The window is entered deterministically through ``_parse_range``, which is the one call the handler makes
+    between the two — a race is only testable by standing in it. On a handler that opens first, the unlink is
+    what it must be: harmless, because the bytes are already reachable through an open descriptor.
+    """
+    from aiida.tools.collab.server import CollabRequestHandler
+
+    offer = transport.client.request_delta(None, frozenset(), frozenset())
+    parse_range = CollabRequestHandler._parse_range
+
+    def evict_then_parse(header):
+        transport.stub.delta_path.unlink(missing_ok=True)
+        return parse_range(header)
+
+    monkeypatch.setattr(CollabRequestHandler, '_parse_range', staticmethod(evict_then_parse))
+    filepath = tmp_path / 'download.aiida'
+
+    assert transport.client.download_delta(filepath, offer.delta) == len(DELTA)
+    assert not transport.stub.delta_path.exists(), 'the eviction has to land, or the window is never entered'
+    assert filepath.read_bytes() == DELTA
 
 
 def test_auth_rejected(transport):
@@ -560,21 +690,47 @@ def test_negotiate_delta(transport):
 
 
 def test_request_delta(transport):
-    """The request relays cursor, claim, the wanted subset and the refusal, and returns the offer of the archive."""
+    """The request relays cursor, claim, the wanted subset, the refusal and the manifest's own export instant."""
     cursor = timezone.now()
     claim = frozenset({'uuid-held'})
     want = frozenset({'uuid-wanted'})
     refuse = frozenset({'uuid-deleted'})
+    negotiated = timezone.now()
 
-    offer = transport.client.request_delta(cursor, claim, want, frozenset({'uuid-stale'}), refuse)
+    offer = transport.client.request_delta(cursor, claim, want, frozenset({'uuid-stale'}), refuse, negotiated)
 
     assert transport.stub.requested == [(cursor, claim, want, refuse)]
+    assert transport.stub.instants == [negotiated], 'the export serves only the computation the want was diffed with'
     assert offer.delta == delta_id(cursor, claim, want, refuse)
     assert offer.instant == transport.stub.instant
     assert offer.size == len(DELTA)
     assert [(snapshot.uuid, snapshot.mtime, snapshot.extras) for snapshot in offer.refresh] == [
         ('uuid-stale', transport.stub.instant, {'k': 1})
     ], 'the extras snapshots of the requested refreshes travel with the offer'
+
+
+def test_the_delta_requests_get_the_time_an_export_takes(transport, tmp_path):
+    """The two delta requests wait as long as a serving slot lives; every other route keeps the plain timeout.
+
+    The endpoint computes the delta and exports its archive while those two are open, and holds one lock across
+    both, so a first pull of a large profile times out client-side *systematically* under the plain timeout — the
+    orphaned handler finishes and caches, so only the retry ever succeeds — and a second peer queued behind it
+    starves into a connection error instead of the busy answer the slot machinery promises.
+    """
+    transport.stub.delay = 0.5
+
+    with CollabClient(transport.url, TOKEN, collab=COLLAB, peer=PEER, timeout=0.2) as client:
+        with pytest.raises(CollabRequestError):
+            client.push_handshake(PEER)
+
+        assert client.negotiate_delta(None, frozenset()).manifest == transport.stub.manifest
+
+        offer = client.request_delta(None, frozenset(), frozenset({'uuid-wanted'}))
+
+        assert offer.size == len(DELTA)
+        # The download too: resolving a delta waits on the lock an export holds, so under the plain timeout a
+        # peer queued behind one gets a read timeout reported as the peer being unreachable.
+        assert client.download_delta(tmp_path / 'download.aiida', offer.delta) == len(DELTA)
 
 
 def test_release_ends_the_session_of_the_requester(transport):
@@ -619,8 +775,6 @@ def test_diff_manifest(transport):
 
 def test_download_unknown_delta(transport, tmp_path):
     """Requesting a delta that is not on offer, such as after an endpoint restart, is a clean 404."""
-    transport.stub.delta_path.unlink()
-
     with pytest.raises(CollabRequestError) as excinfo:
         transport.client.download_delta(tmp_path / 'download.aiida', '0' * 64)
 
@@ -685,7 +839,12 @@ def test_import_requires_peer_and_instant(transport, tmp_path):
 
 
 def test_upload(transport, tmp_path):
-    """A delta uploads in full and is staged under its checksum."""
+    """A delta uploads in full, is staged under its checksum, and tells the endpoint its sender is still there.
+
+    The last of those is what keeps a transfer longer than a serving slot lives from losing the slot while it is
+    actively sending. It is asserted here rather than in a test of its own because it is a property of the
+    upload: reached through the real probe and chunk requests, not by calling the hook.
+    """
     filepath = tmp_path / 'upload.aiida'
     filepath.write_bytes(UPLOAD)
 
@@ -694,6 +853,7 @@ def test_upload(transport, tmp_path):
     assert report.sent == len(UPLOAD)
     assert report.staged == len(UPLOAD)
     assert (transport.staging_dir / report.sha256).read_bytes() == UPLOAD
+    assert transport.stub.stagings == [PEER, PEER], 'the probe and the chunk each refresh the slot of the sender'
 
 
 def test_upload_resume(transport, tmp_path):

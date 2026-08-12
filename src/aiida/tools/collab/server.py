@@ -15,6 +15,7 @@ injected by the caller, so the endpoint can be wired to the sync core by the dae
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 from collections.abc import Callable
@@ -47,6 +48,7 @@ from aiida.tools.collab.protocol import (
     ExtrasSnapshot,
     GroupMembers,
     PushRefused,
+    RenegotiationRequired,
     file_sha256,
     members_from_dict,
     refresh_from_dict,
@@ -93,7 +95,10 @@ class CollabServer(ThreadingHTTPServer):
         ``X-Collab-Peer`` header, whose session the serving slot it takes belongs to.
     :param request_delta: exports (or reuses) the subset of that delta named by the ``want`` of a
         ``POST /collab/v1/delta`` and returns its offer, with the extras snapshots of its ``refresh_want`` and
-        without the nodes of its ``refuse``. Also receives the requester, as ``negotiate_delta`` does.
+        without the nodes of its ``refuse``. Also receives the requester, as ``negotiate_delta`` does, and the
+        ``computed`` of the manifest the ``want`` was diffed against. Raising ``RenegotiationRequired`` means that
+        computation cannot be served anymore; it is answered 409, telling the requester to negotiate afresh
+        instead of taking bytes cut from something it never diffed.
     :param resolve_delta: returns the path of the negotiated delta served at ``GET /collab/v1/delta/<id>``, or
         ``None`` when no delta with that identifier is on offer. Each identifier must keep resolving to the same
         bytes while a transfer is in progress; when the delta is re-exported, a client that resumes an interrupted
@@ -102,6 +107,9 @@ class CollabServer(ThreadingHTTPServer):
     :param release: frees the serving slots of the requester, at ``DELETE /collab/v1/session`` and when a download
         was served to the end of the file. A peer that abandons a negotiation — a dry run, a declined prompt —
         ends its session that way instead of leaving the endpoint refusing others until the slot expires.
+    :param staging: refreshes the serving slot of a peer that is uploading, called on the probe and on every
+        chunk request of ``/collab/v1/upload/<sha256>``. The counterpart of what ``resolve_delta`` does for a
+        download: a transfer longer than a slot lives is its holder being active, not going silent.
     :param diff_manifest: answers ``POST /collab/v1/missing`` for a peer that wants to push: which of the offered
         nodes this profile is missing, which of those it refuses because it deleted them, which of the offered
         extras it holds an older version of, and which of the offered group memberships it can apply.
@@ -129,10 +137,12 @@ class CollabServer(ThreadingHTTPServer):
         info: Callable[[datetime | None], PeerInfo],
         negotiate_delta: Callable[[datetime | None, frozenset[str], list[dict[str, Any]], str], DeltaManifest],
         request_delta: Callable[
-            [datetime | None, frozenset[str], frozenset[str], frozenset[str], frozenset[str], str], DeltaOffer
+            [datetime | None, frozenset[str], frozenset[str], frozenset[str], frozenset[str], str, datetime | None],
+            DeltaOffer,
         ],
         resolve_delta: Callable[[str, str], Path | None],
         release: Callable[[str], None],
+        staging: Callable[[str], None],
         diff_manifest: Callable[[list[str], dict[str, datetime], list[GroupMembers]], ManifestDiff],
         handshake: Callable[[str, list[dict[str, Any]]], PushHandshake],
         import_staged: Callable[[Path, str, datetime, list[ExtrasSnapshot], list[GroupMembers]], dict[str, Any]],
@@ -153,6 +163,7 @@ class CollabServer(ThreadingHTTPServer):
         self.request_delta = request_delta
         self.resolve_delta = resolve_delta
         self.release = release
+        self.staging = staging
         self.diff_manifest = diff_manifest
         self.handshake = handshake
         self.import_staged = import_staged
@@ -283,6 +294,10 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
             self.close_connection = True
         except EndpointBusy as exception:
             self._send_json(HTTPStatus.SERVICE_UNAVAILABLE, {'detail': str(exception)})
+        except RenegotiationRequired as exception:
+            # A conflict between what the requester diffed and what this endpoint can serve, which one further
+            # round trip resolves — as against the 503 of a peer that is simply full.
+            self._send_json(HTTPStatus.CONFLICT, {'detail': str(exception)})
         except PushRefused as exception:
             # A profile that has not opted in to being written to is refusing, not malfunctioning: answering it as
             # the refusal it is keeps a traceback out of the daemon log and tells the pusher what to ask for.
@@ -346,6 +361,7 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
                 frozenset(data.get('refresh_want', [])),
                 frozenset(data.get('refuse', [])),
                 self.peer,
+                datetime.fromisoformat(data['computed']) if data.get('computed') else None,
             )
         else:
             answer = self.server.negotiate_delta(cursor, claim, data.get('roster', []), self.peer)
@@ -370,49 +386,52 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
         filepath = self.server.resolve_delta(delta_id, self.peer)
 
         try:
-            # The eviction of a delta can unlink the file after it was resolved; that is the same answer as an
-            # unknown identifier, and the client recovers from either by negotiating again.
-            stat = filepath.stat() if filepath is not None else None
+            # Opened before a single header is sent, and measured through that handle: the eviction of a delta can
+            # unlink the file at any moment, and finding out afterwards would write a 500 into the body of a
+            # response that already promised 200 and a length — bytes the client counts as archive. Vanished
+            # beforehand is the same answer as an unknown identifier, which a fresh negotiation recovers from.
+            handle = filepath.open('rb') if filepath is not None else None
         except FileNotFoundError:
-            stat = None
+            handle = None
 
-        if filepath is None or stat is None:
+        if handle is None:
             self._send_json(HTTPStatus.NOT_FOUND, {'detail': f'no delta on offer with identifier {delta_id}'})
             return
 
-        # A weak validator in the style of nginx: producing a new delta changes size or mtime, which is what has
-        # to invalidate resumption, and hashing the file on every request would not scale to large deltas.
-        etag = f'"{stat.st_size:x}-{stat.st_mtime_ns:x}"'
+        with handle:
+            stat = os.fstat(handle.fileno())
 
-        offset = self._parse_range(self.headers.get('Range'))
+            # A weak validator in the style of nginx: producing a new delta changes size or mtime, which is what
+            # has to invalidate resumption, and hashing the file on every request would not scale to large deltas.
+            etag = f'"{stat.st_size:x}-{stat.st_mtime_ns:x}"'
 
-        # The file changed under the client: resuming would splice two different deltas, so serve it in full.
-        if (if_range := self.headers.get('If-Range')) is not None and if_range != etag:
-            offset = None
+            offset = self._parse_range(self.headers.get('Range'))
 
-        if offset is not None and offset >= stat.st_size:
-            self.send_response(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
-            self.send_header('Content-Range', f'bytes */{stat.st_size}')
-            self.send_header('Content-Length', '0')
+            # The file changed under the client: resuming would splice two different deltas, so serve it in full.
+            if (if_range := self.headers.get('If-Range')) is not None and if_range != etag:
+                offset = None
+
+            if offset is not None and offset >= stat.st_size:
+                self.send_response(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                self.send_header('Content-Range', f'bytes */{stat.st_size}')
+                self.send_header('Content-Length', '0')
+                self.end_headers()
+
+                # This is how a client whose file is already complete learns so: its download is done too.
+                self.server.release(self.peer)
+
+                return
+
+            self.send_response(HTTPStatus.OK if offset is None else HTTPStatus.PARTIAL_CONTENT)
+            self.send_header('Content-Type', 'application/octet-stream')
+            self.send_header('Accept-Ranges', 'bytes')
+            self.send_header('ETag', etag)
+            self.send_header('Content-Length', str(stat.st_size - (offset or 0)))
+
+            if offset is not None:
+                self.send_header('Content-Range', f'bytes {offset}-{stat.st_size - 1}/{stat.st_size}')
+
             self.end_headers()
-
-            # This is how a client whose file is already complete learns so: its download is done too.
-            self.server.release(self.peer)
-
-            return
-
-        self.send_response(HTTPStatus.OK if offset is None else HTTPStatus.PARTIAL_CONTENT)
-        self.send_header('Content-Type', 'application/octet-stream')
-        self.send_header('Accept-Ranges', 'bytes')
-        self.send_header('ETag', etag)
-        self.send_header('Content-Length', str(stat.st_size - (offset or 0)))
-
-        if offset is not None:
-            self.send_header('Content-Range', f'bytes {offset}-{stat.st_size - 1}/{stat.st_size}')
-
-        self.end_headers()
-
-        with filepath.open('rb') as handle:
             handle.seek(offset or 0)
             shutil.copyfileobj(handle, self.wfile, CHUNK_SIZE)
 
@@ -421,12 +440,14 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
         self.server.release(self.peer)
 
     def _head_upload(self, sha256: str) -> None:
+        self.server.staging(self.peer)
         self.send_response(HTTPStatus.OK)
         self.send_header(HEADER_STAGED, str(self._staged_size(sha256)))
         self.send_header('Content-Length', '0')
         self.end_headers()
 
     def _put_upload(self, sha256: str) -> None:
+        self.server.staging(self.peer)
         match = re.fullmatch(r'bytes (\d+)-(\d+)/(\d+)', self.headers.get('Content-Range', ''))
 
         if match is None:
@@ -436,7 +457,23 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
             )
             return
 
-        first = int(match[1])
+        first, last = int(match[1]), int(match[2])
+        declared = self.headers.get('Content-Length', '')
+
+        # A chunked or header-less request has no length to read to, and one whose length contradicts the range it
+        # declares would stage bytes the range does not describe. Both leave the body unread, so the connection
+        # cannot carry another response and is closed, as the two refusals around this one are.
+        # `isdecimal` and not `isdigit`: the latter admits superscripts that `int` refuses, so the guard would
+        # raise out of its own condition into the unread-body 500 it stands here to prevent.
+        if not declared.isdecimal() or int(declared) != last - first + 1:
+            self.close_connection = True
+            self._send_json(
+                HTTPStatus.BAD_REQUEST,
+                {'detail': f'upload of bytes {first}-{last} requires a matching `Content-Length` header'},
+                headers={'Connection': 'close'},
+            )
+            return
+
         staged = self._staged_size(sha256)
 
         if first != staged:
@@ -448,7 +485,7 @@ class CollabRequestHandler(BaseHTTPRequestHandler):
             )
             return
 
-        remaining = int(self.headers['Content-Length'])
+        remaining = int(declared)
 
         with self._staging_path(sha256).open('ab') as handle:
             while remaining:

@@ -30,6 +30,7 @@ from aiida.tools.collab.protocol import (
     ROUTE_MISSING,
     ROUTE_RETIRED,
     ROUTE_SESSION,
+    SLOT_IDLE_SECONDS,
     CollabRequestError,
     DeltaManifest,
     DeltaOffer,
@@ -61,6 +62,13 @@ TIMEOUT = 60.0
 # does not answer it at once is one whose slot the expiry has to reclaim anyway, and waiting out the full timeout
 # for it would add a second stall to a command that is already reporting a failure.
 RELEASE_TIMEOUT = 5.0
+
+# What the three delta requests wait for an answer, as against the handshake, the info and the release. The endpoint
+# computes the delta and exports its archive while they are open, and holds one lock across both, so a first pull
+# of a large profile times out systematically under the plain timeout — the orphaned handler finishes and caches,
+# so only the retry ever succeeds — and a second peer queued behind it starves into a connection error instead of
+# the busy answer the slot machinery promises. Misattributed to the network in every message it produces.
+DELTA_TIMEOUT = float(SLOT_IDLE_SECONDS)
 
 
 @dataclass
@@ -174,7 +182,9 @@ class CollabClient:
             'roster': roster or [],
         }
 
-        return self._answer(DeltaManifest.from_dict, 'POST', ROUTE_DELTA, json=body)
+        return self._answer(
+            DeltaManifest.from_dict, 'POST', ROUTE_DELTA, json=body, timeout=(self._timeout, DELTA_TIMEOUT)
+        )
 
     def request_delta(
         self,
@@ -183,6 +193,7 @@ class CollabClient:
         want: frozenset[str] | set[str],
         refresh_want: frozenset[str] | set[str] | list[str] = frozenset(),
         refuse: frozenset[str] | set[str] = frozenset(),
+        computed: datetime | None = None,
     ) -> DeltaOffer:
         """Ask the peer to export the subset of the negotiated delta this profile lacks, and receive its offer.
 
@@ -193,6 +204,11 @@ class CollabClient:
             version of; their snapshots come with the offer.
         :param refuse: the UUIDs of the manifest this profile is missing because it deleted them, and which it
             therefore does not ask for.
+        :param computed: when the peer took the computation the ``want`` above was diffed against, as its
+            manifest reported. Naming it is what keeps the two round trips of a negotiation one negotiation: a
+            peer that recomputed in between answers 409 rather than cutting an archive against a manifest this
+            profile never saw. The manifest's export instant would not do — a withheld seed pins that one.
+        :raises CollabRequestError: with status 409 when the peer can no longer serve that computation.
         """
         body = {
             'cursor': cursor.isoformat() if cursor is not None else None,
@@ -200,9 +216,12 @@ class CollabClient:
             'want': sorted(want),
             'refresh_want': sorted(refresh_want),
             'refuse': sorted(refuse),
+            'computed': computed.isoformat() if computed is not None else None,
         }
 
-        return self._answer(DeltaOffer.from_dict, 'POST', ROUTE_DELTA, json=body)
+        return self._answer(
+            DeltaOffer.from_dict, 'POST', ROUTE_DELTA, json=body, timeout=(self._timeout, DELTA_TIMEOUT)
+        )
 
     def release(self) -> None:
         """Tell the peer that this profile is done with it, so the serving slot it granted is freed at once.
@@ -270,6 +289,9 @@ class CollabClient:
             route_delta(delta_id),
             headers=headers,
             stream=True,
+            # Resolving a delta waits on the lock an export holds, so a peer queued behind one would otherwise
+            # see a read timeout and report the peer unreachable.
+            timeout=(self._timeout, DELTA_TIMEOUT),
             allowed=(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE,),
         )
 
@@ -284,13 +306,15 @@ class CollabClient:
             msg = f'the peer cannot serve the delta from offset {offset}'
             raise CollabRequestError(msg, status=response.status_code)
 
-        if etag := response.headers.get('ETag'):
-            # Recorded before consuming the body, so that an interrupted transfer leaves it for the resumption.
-            filepath_etag.write_text(etag, encoding='utf-8')
-
         transferred = 0
 
         with filepath.open('ab' if response.status_code == HTTPStatus.PARTIAL_CONTENT else 'wb') as handle:
+            # Recorded after the mode above truncated a stale file and before the body is consumed: an interrupted
+            # transfer has to leave the validator for the resumption, but a crash between writing it and
+            # truncating would leave the old bytes under the new validator and splice two deltas on the retry.
+            if etag := response.headers.get('ETag'):
+                filepath_etag.write_text(etag, encoding='utf-8')
+
             try:
                 for chunk in response.iter_content(CHUNK_SIZE):
                     handle.write(chunk)
@@ -404,7 +428,10 @@ class CollabClient:
         if response.status_code >= HTTPStatus.BAD_REQUEST and response.status_code not in allowed:
             try:
                 detail = response.json()['detail']
-            except (ValueError, KeyError):
+            except (KeyError, TypeError, ValueError):
+                # A service that is not a collab endpoint answers an error status with whatever body it likes; a
+                # JSON list among them, which subscripting by a string raises `TypeError` on. It has to fail like
+                # an unreachable peer, as `_answer` above catches the same three for the same reason.
                 detail = response.reason
 
             msg = f'the peer at {self._base_url} responded {response.status_code} to {method} {route}: {detail}'

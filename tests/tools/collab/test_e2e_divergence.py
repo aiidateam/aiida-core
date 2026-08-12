@@ -179,6 +179,40 @@ def test_new_work_built_on_a_deleted_node_arrives_whole(collab, direction):
     assert a.graph()['links'] == [link for link in b.graph()['links'] if calculation not in link]
 
 
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_a_restored_node_takes_part_in_extras_and_groups_again(collab, direction):
+    """Test that a node Alice deleted and provenance brought back receives extras and memberships once more.
+
+    The restoration leaves the tombstone standing — only ``--include-deleted`` expresses a change of mind — so
+    held-and-tombstoned is a state a profile stays in for good. The tombstone gates delivery of the node, not the
+    node's participation: were the mutable surfaces to keep reading it as "frozen", this one node would diverge
+    from every peer forever, silently, with no command that surfaces it and none that heals it.
+    """
+    a, b, c = collab(3, extras_mode='sync', groups_mode='grow')
+    created = a.seal_calculation()
+
+    move(a, b, direction)
+    move(a, c, direction)
+
+    a.delete(a.creator(created))
+
+    b.seal_calculation(inputs=created)
+
+    move(b, c, direction)
+    move(c, a, direction)
+
+    assert created in a.uuids(), 'the deleted node that new work requires comes back with it'
+    assert created in a.state().tombstones, 'a restoration drops no tombstone'
+
+    b.set_extra(created, 'note', 'from-bob')
+    group = b.curate('band', created)
+
+    move(b, a, direction)
+
+    assert a.extras(created) == {'note': 'from-bob'}
+    assert (group, created) in a.graph()['members']
+
+
 # -- extras -----------------------------------------------------------------------------------------------------
 
 
@@ -360,10 +394,11 @@ def test_clock_skew_decides_an_extras_exchange(collab):
 
 @pytest.mark.parametrize('direction', DIRECTIONS)
 def test_a_group_removal_does_not_travel(collab, direction):
-    """EXPECTED (phase 11): under `grow` the set of members only ever grows, so removing one is local forever.
+    """EXPECTED (phase 11): under `grow` the set of members only ever grows, so a removal is never sent onward.
 
     Upheld by the journal recording additions and nothing else: a removal is never offered, so there is nothing
-    on the receiving side to refuse. That is the whole of the mechanism — there is no second gate behind it.
+    on the receiving side to refuse. That is the whole of the mechanism — there is no second gate behind it, and
+    in particular nothing keeps the pair from coming back the other way, which the test below is about.
     """
     a, b, _ = collab(3, groups_mode='grow')
     created = a.seal_calculation()
@@ -380,6 +415,42 @@ def test_a_group_removal_does_not_travel(collab, direction):
 
     assert (group, created) in b.graph()['members']
     assert (group, created) not in a.graph()['members']
+
+
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_a_removal_is_resurrected_by_the_peer_that_kept_it(collab, direction):
+    """EXPECTED (phase 28): a removal survives only until the peer that kept it curates into the same group.
+
+    The other half of the test above, and the half that says what "local forever" is worth. The cursor protects
+    the *pair* but the offer is keyed by the *group*: anything curated into it after the cursor puts its whole
+    membership back on the wire, since a receiver that lacks the group needs the whole set to build it. So B,
+    which removed nothing, hands A back exactly the membership A dropped — and under `grow` nothing refuses an
+    addition on its merits.
+
+    Consistent with the rule as written, which is that the set only ever grows; the cost is that the rule reads
+    like a promise the removal is respected, and it is not. Recorded in this phase's `deferred.md`.
+    """
+    a, b, _ = collab(3, groups_mode='grow')
+    created = a.seal_calculation()
+    group = a.curate('band', created)
+
+    move(a, b, direction)
+
+    assert (group, created) in b.graph()['members']
+
+    _group_of(a, group).remove_nodes([a.node(created)])
+
+    assert (group, created) not in a.graph()['members'], 'the removal has to take effect, or there is none to resurrect'
+
+    # Something else curated into the same group at B, so the group is offered again on the way back. Without it
+    # the group is simply never mentioned again and the removal stands — by silence, not by any rule.
+    second = b.seal_calculation()
+    b.curate('band', second)
+
+    move(b, a, direction)
+
+    assert (group, second) in a.graph()['members'], 'the hop back has to carry the group, or nothing is tested'
+    assert (group, created) in a.graph()['members'], 'the whole membership travels, the dropped pair with it'
 
 
 @pytest.mark.parametrize('direction', DIRECTIONS)

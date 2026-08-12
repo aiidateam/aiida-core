@@ -96,6 +96,40 @@ def test_an_extras_edit_relays_before_its_author_was_ever_synced_from(collab, di
     assert c.state().cursors.get(b.uuid) is None, 'Carol took the edit from Alice rather than from Bob'
 
 
+def test_an_extras_edit_that_arrived_inside_a_delta_is_offered_onward(collab):
+    """Test that an edit which reached Bob baked into the node itself still reaches Carol, who holds the node.
+
+    Bob receives the node for the first time *after* the edit, so the new extras ride the archive row under Alice's
+    mtime and Bob records a pull, not a refresh. Carol's cursor for Bob is already past that mtime, so neither the
+    mtime bound nor the refresh journal of Bob's offer names the node: only the leg that unions what Bob imported
+    does, and without it the edit reaches Carol through nobody, ever.
+
+    Alice reaches Carol by pushing rather than by being pulled from, so that Bob's later pull cuts its own archive:
+    two newcomers present the same cursor, claim and want, so a pull would be served the bytes Carol's was cut
+    from — which predate the edit, since an extras edit is not a staleness signal for the export cache.
+    """
+    a, b, c = collab(3, extras_mode='sync')
+    created = a.seal_calculation()
+
+    a.run('push', ['carol', '--force'])
+    shared = c.state().cursors[a.uuid]
+
+    a.set_extra(created, 'note', 'from-alice')
+
+    # Pins Carol's cursor for Bob past the edit while Bob still holds nothing of the node.
+    c.run('pull', ['bob', '--force'])
+
+    b.run('pull', ['alice', '--force'])
+
+    assert b.extras(created) == {'note': 'from-alice'}, 'the edit has to reach Bob inside the node, not as a refresh'
+    assert [event.direction for event in b.state().events] == ['pull']
+
+    c.run('pull', ['bob', '--force'])
+
+    assert c.extras(created) == {'note': 'from-alice'}
+    assert c.state().cursors[a.uuid] == shared, 'Carol took the edit from Bob rather than from Alice'
+
+
 def test_a_refreshed_extra_survives_a_failed_push_and_relays_through_the_chain(collab, faults):
     """Test that an extras edit whose push failed at the import still reaches C through B, once the retry lands it.
 
@@ -369,11 +403,10 @@ def test_a_clashing_peer_computer_keeps_the_marker_last(collab, direction):
     appends a second one, which is the ordering the convergence above rests on. Two peers who each run a `lumi`
     is the only shape the collision still takes once the marker exists.
 
-    The last hop is where two computers of one delta want the same label: C receives B's own `lumi` beside the
-    two marked ones B relayed, and a rename that named them in an arbitrary order would collide with a label
-    another row of the same import still held, which the unique label column refuses mid-import. That regression
-    escapes when the UUID order happens to name the rows in a workable sequence — two of the six orders here, so
-    about one run in ten with both directions green. The labels asserted are the same either way.
+    Three hops, because the shape only appears once a marked label has been relayed: what B hands C is a label B
+    itself derived, so a marker the dedup displaced at B is what C would fail to recognize. Two rows of one
+    import competing for one name is the neighbouring case and belongs to the test below, which reaches it in
+    every UUID order; here only C's arrival of B's own `lumi` is ever renamed, so this one never does.
     """
     a, b, c, d = collab(4)
     a.seal_calculation(computer='lumi')
@@ -445,3 +478,27 @@ def test_a_computer_that_circles_back_is_recognized(collab, direction):
     assert set(a.computers().values()) == {'lumi'}
     assert set(b.computers().values()) == {'lumi@collab'}
     assert set(c.computers().values()) == {'lumi@collab'}
+
+
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_a_mapped_peer_computer_makes_an_arrived_calculation_a_cache_hit(collab, direction):
+    """Test that a calculation from a peer is found by the caching engine once its computer is mapped to a local one.
+
+    The whole point of the marker and the mapping, end to end and nothing mocked: the hash of a calculation
+    includes the UUID of the machine it ran on, which differs between the profiles of a collab, so an arrived
+    calculation is a cache miss until its user declares that machine equivalent to one of theirs — under the
+    `@collab` label the import gave it, which is the only name that mapping may use.
+    """
+    a, b, _ = collab(3)
+    arrived = a.seal_cached_calculation('lumi')
+
+    move(a, b, direction)
+
+    assert 'lumi@collab' in b.computers().values(), 'the mapping can only name the machine by its marker'
+
+    b.computer('leonardo')
+    b.run('map-computer', ['lumi@collab=leonardo'])
+
+    twin = b.seal_cached_calculation('leonardo')
+
+    assert arrived in {node.uuid for node in b.node(twin).base.caching.get_all_same_nodes()}

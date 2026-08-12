@@ -565,6 +565,100 @@ def test_a_refused_import_frees_the_slot_of_the_pusher(collab, faults):
     assert b.uuid in c.state().cursors, f'the failed push of alice was still counted against the cap: {result.output}'
 
 
+def test_work_sealed_between_the_negotiation_and_the_request_renegotiates(collab, faults):
+    """Test that a pull whose peer sealed work between its two round trips renegotiates instead of failing.
+
+    The want was diffed against one manifest; the export request arrives at a peer that has computed another, and
+    the new work links onto a node of the old one. Cut against the fresh computation, the archive carries a
+    boundary link to a node this profile was never offered and its import refuses the whole delta — every time,
+    against a peer whose daemon seals continuously. Pull-only: a pusher exports from the delta it diffed itself.
+    """
+    a, b, _ = collab(3)
+    created = a.seal_calculation()
+
+    faults.seal_after_the_negotiation(a, inputs=created)
+
+    result = b.run('pull', ['alice', '--force'])
+
+    assert 'renegotiate' in result.output
+    assert b.graph() == a.graph()
+
+
+def test_a_node_deleted_between_the_negotiation_and_the_request_renegotiates(collab, faults):
+    """Test that a pull whose peer deleted a manifest node between its two round trips renegotiates.
+
+    The quieter sibling: a local deletion is no staleness signal, so the peer would cut its cached computation and
+    name a row that is gone. Pull-only, for the same reason.
+    """
+    a, b, _ = collab(3)
+    kept = a.seal_calculation()
+    dropped = a.seal_calculation()
+
+    faults.delete_after_the_negotiation(a, dropped)
+
+    result = b.run('pull', ['alice', '--force'])
+
+    assert 'renegotiate' in result.output
+    assert kept in b.uuids(), 'the computation that replaced the stale one still delivers what survives'
+    assert dropped not in b.uuids()
+    assert b.uuids() <= a.uuids(), 'nothing may be delivered that the sender no longer holds'
+
+
+def test_a_negotiation_racing_the_closing_write_still_sees_the_import(collab, faults):
+    """Test that what Alice pushed into Bob reaches Carol, though her negotiation raced Bob's closing write.
+
+    A push into Bob and a negotiation out of Bob overlapping is routine — the endpoint serves both at once. The
+    negotiation caches the computation it makes under the instant it read the state at, and only a pull event
+    younger than that instant ever invalidates it. Stamping the event before waiting for the state lock puts it
+    on the wrong side: no later negotiation for this cursor recomputes, the imported nodes carry Alice's older
+    mtimes so no seed count notices them either, and Carol is never offered them by Bob again.
+    """
+    a, b, c = collab(3)
+    created = a.seal_calculation()
+
+    # Gives Carol a cursor for Bob, so that the negotiation the fault runs is the one her next pull repeats.
+    c.run('pull', ['bob', '--force'])
+
+    faults.negotiate_during_the_closing_write(b, c)
+
+    a.run('push', ['bob', '--force'])
+
+    c.run('pull', ['bob', '--force'])
+
+    assert created in c.uuids()
+    assert c.graph() == a.graph()
+
+
+@pytest.mark.parametrize('direction', DIRECTIONS)
+def test_a_second_sync_of_one_profile_is_refused_before_any_contact(collab, faults, direction):
+    """Test that a sync started while another one of the same profile runs is refused, contacting nobody.
+
+    The per-peer transfer stashes are stable paths with no guard, and a cron pull beside a manual push is enough
+    to have two writers on one of them. A torn push uploads cleanly — its checksum is taken from the torn bytes —
+    then fails every import of those bytes forever, wedging that peer until a human deletes a file no message
+    names. Refused before the first request, so a run that will not proceed costs no peer a serving slot.
+    """
+    from aiida.tools.collab.state import exclusive_lock
+
+    a, b, _ = collab(3)
+    created = a.seal_calculation()
+    # The profile whose command it is, which is the one whose stashes two runs would tear.
+    syncing, peer = (b, 'alice') if direction == 'pull' else (a, 'bob')
+
+    move(a, b, direction)
+    # A second run, which is refused unless the first one gave its lock back when it ended.
+    move(a, b, direction)
+
+    assert created in b.uuids()
+
+    faults.refuse_every_contact()
+
+    with exclusive_lock(syncing.workdir / 'sync.lock'):
+        result = syncing.run(direction, [peer, '--force'], raises=True)
+
+    assert 'another collab sync of this profile is running' in result.output
+
+
 def test_concurrent_pushes_into_one_profile_serialize(collab, tmp_path):
     """Test that two peers importing into the same profile at once produce one correct graph, not a race.
 

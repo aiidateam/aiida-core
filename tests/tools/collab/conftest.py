@@ -16,6 +16,7 @@ it tests -- ``a.run('push', ['bob'])``, ``assert c.graph() == a.graph()``.
 
 from __future__ import annotations
 
+import hashlib
 import shutil
 import threading
 import typing as t
@@ -82,6 +83,7 @@ class Member:
             request_delta=self.endpoint.request_delta,
             resolve_delta=self.endpoint.resolve_delta,
             release=self.endpoint.release,
+            staging=self.endpoint.staging,
             diff_manifest=self.endpoint.diff_manifest,
             handshake=self.endpoint.handshake,
             import_staged=self.endpoint.import_staged,
@@ -192,8 +194,12 @@ class Member:
         calculation = orm.CalcJobNode(backend=backend, label=label, computer=machine)
         calculation.base.links.add_incoming(source, link_type=LinkType.INPUT_CALC, link_label='term')
 
+        # Every real calculation writes an input file, and without one here no scenario would ever notice an
+        # export that streams the rows of a node and none of its repository.
+        calculation.base.repository.put_object_from_bytes(f'{label}\n'.encode(), 'aiida.in')
+
         if ballast:
-            calculation.base.repository.put_object_from_bytes(os.urandom(ballast), 'aiida.in')
+            calculation.base.repository.put_object_from_bytes(os.urandom(ballast), 'ballast.dat')
 
         calculation.store()
 
@@ -203,6 +209,30 @@ class Member:
         calculation.seal()
 
         return created.uuid
+
+    def seal_cached_calculation(self, computer: str) -> str:
+        """Store and seal a finished calculation on a named computer, valid as a cache source, and return its UUID.
+
+        Identical on every call and in every profile but for the machine it ran on, which is the whole point: the
+        hash of a calculation includes the UUID of that machine, and a computer mapping is what equates two of them.
+        """
+        from aiida.engine import ProcessState
+
+        backend = self.load()
+        machine = orm.Computer.get_collection(backend).get(uuid=self.computer(computer))
+        calculation = orm.CalcJobNode(
+            backend=backend, computer=machine, process_type='aiida.calculations:core.arithmetic.add'
+        )
+        calculation.base.links.add_incoming(
+            orm.Int(1, backend=backend).store(), link_type=LinkType.INPUT_CALC, link_label='term'
+        )
+        calculation.base.repository.put_object_from_bytes(b'1 + 1', 'aiida.in')
+        calculation.set_process_state(ProcessState.FINISHED)
+        calculation.set_exit_status(0)
+        calculation.store()
+        calculation.seal()
+
+        return calculation.uuid
 
     def node(self, uuid: str) -> orm.Node:
         """Return a node of this profile by UUID, valid until another member's profile is loaded."""
@@ -352,9 +382,14 @@ class Member:
         """Return a canonical digest of this profile: what "did they converge" means.
 
         Nodes by UUID, links as ``(input, output, type, label)`` quadruples, group memberships as
-        ``(group uuid, node uuid)`` pairs and the public extras of every node -- everything a sync can carry, and
-        nothing that legitimately differs between two profiles (primary keys, users, import groups, labels a
-        collision renamed).
+        ``(group uuid, node uuid)`` pairs, the public extras of every node, and per node its attributes and the
+        bytes of its repository -- everything a sync can carry, and nothing that legitimately differs between two
+        profiles (primary keys, users, import groups, labels a collision renamed, the checkpoint the export
+        strips).
+
+        The content half is not decoration. The transfer rides a bespoke archive writer, and a digest that
+        stopped at the shape of the graph would call two profiles converged while one of them held nodes with no
+        attributes and empty repositories -- which is precisely what a regression in that writer produces.
         """
         backend = self.load()
 
@@ -378,7 +413,32 @@ class Member:
             for uuid, values in orm.QueryBuilder(backend=backend).append(orm.Node, project=['uuid', 'extras']).all()
         }
 
-        return {'nodes': nodes, 'links': links, 'members': members, 'extras': extras}
+        content = {}
+
+        for node in orm.QueryBuilder(backend=backend).append(orm.Node).all(flat=True):
+            files = {}
+
+            for root, _, filenames in node.base.repository.walk():
+                for name in filenames:
+                    path = str(root / name)
+
+                    try:
+                        digest = hashlib.sha256(node.base.repository.get_object_content(path, 'rb')).hexdigest()
+                    except Exception as exception:
+                        # The row promised a file the object store does not hold, which is what an export that
+                        # wrote the metadata and skipped the bytes leaves behind. Recorded rather than raised, so
+                        # the comparison that fails names the node and the path instead of dying inside a digest.
+                        digest = f'unreadable: {type(exception).__name__}'
+
+                    files[path] = digest
+
+            attributes = dict(node.base.attributes.all)
+            # Dropped by the export by design -- a checkpoint is where *this* daemon left a process, and means
+            # nothing anywhere else -- so it differs legitimately, like the `_`-prefixed extras above.
+            attributes.pop(orm.ProcessNode.CHECKPOINT_KEY, None)
+            content[node.uuid] = {'attributes': attributes, 'files': files}
+
+        return {'nodes': nodes, 'links': links, 'members': members, 'extras': extras, 'content': content}
 
 
 def move(source: Member, target: Member, direction: str, *args: str, **kwargs):
@@ -785,6 +845,74 @@ class _Faults:
 
         return state
 
+    def negotiate_during_the_closing_write(self, member: Member, peer: Member) -> dict:
+        """Serve ``peer`` a negotiation from inside the closing write of ``member``'s own in-flight import.
+
+        The window between an import committing its archive and its event reaching the state file. A negotiation
+        served in it reads a state that does not name the imported nodes yet, and stamps the computation it caches
+        with the instant it read at -- so whether any later negotiation ever unions those nodes turns on which
+        side of that instant the event's own stamp falls. Driven from inside the import for the reason
+        ``rotate_during_import`` is: two requests cannot genuinely overlap in one interpreter.
+        """
+        from aiida.tools.collab import sync as collab_sync
+
+        state = {'negotiated': False}
+        original = collab_sync._write_boundary_links
+
+        def writing(backend, pending, tombstones):
+            if not state['negotiated']:
+                state['negotiated'] = True
+                member.endpoint.negotiate_delta(peer.state().cursors.get(member.uuid), frozenset(), requester=peer.uuid)
+
+            return original(backend, pending, tombstones)
+
+        self._monkeypatch.setattr(collab_sync, '_write_boundary_links', writing)
+
+        return state
+
+    def seal_after_the_negotiation(self, member: Member, inputs: str) -> dict:
+        """Seal work on ``member`` consuming ``inputs``, after its manifest was served and before the export is.
+
+        The window the export request's instant exists for. The new work links onto a node of the manifest, so a
+        cut taken from the recomputed delta carries a boundary link to a node the requester was never offered --
+        which its import refuses whole.
+        """
+        return self._after_the_negotiation(lambda: _seal_calculation(member.backend, inputs))
+
+    def delete_after_the_negotiation(self, member: Member, uuid: str) -> dict:
+        """Delete a node of ``member``'s own profile in that same window, as a ``verdi node delete`` there would.
+
+        The sibling trigger, and the quieter one: a deletion moves no seal and records no import, so it makes no
+        computation stale at all. The cut simply names a row that is gone.
+        """
+        return self._after_the_negotiation(lambda: _delete_node(member.backend, uuid))
+
+    def _after_the_negotiation(self, action: t.Callable[[], None]) -> dict:
+        """Run ``action`` once, after a manifest was served and before the export request that follows it.
+
+        Hooked on the client's negotiation and driven from inside it for the reason ``rotate_during_import`` is:
+        two ``verdi`` runs cannot genuinely overlap in one interpreter. The action is written straight to the
+        sender's own storage handle, because loading a second profile mid-command closes the storage the command
+        under test is using.
+        """
+        from aiida.tools.collab.client import CollabClient
+
+        state = {'fired': False}
+        original = CollabClient.negotiate_delta
+
+        def negotiating(self, *args, **kwargs):
+            manifest = original(self, *args, **kwargs)
+
+            if not state['fired']:
+                state['fired'] = True
+                action()
+
+            return manifest
+
+        self._monkeypatch.setattr(CollabClient, 'negotiate_delta', negotiating)
+
+        return state
+
     def delete_during_negotiation(self, member: Member, uuid: str) -> dict:
         """Delete a node of a member's own profile from inside that member's in-flight pull.
 
@@ -809,6 +937,16 @@ class _Faults:
         self._monkeypatch.setattr(CollabClient, 'negotiate_delta', negotiating)
 
         return state
+
+    def refuse_every_contact(self) -> None:
+        """Fail the test outright on any request to any peer, for the paths whose claim is that they make none."""
+        from aiida.tools.collab.client import CollabClient
+
+        def contacting(self, method, route, **kwargs):
+            msg = f'a peer was contacted -- {method} {route} -- where nothing may be'
+            raise AssertionError(msg)
+
+        self._monkeypatch.setattr(CollabClient, '_request', contacting)
 
     def claims(self, member: Member, **fields) -> None:
         """Make one member's handshake declare something other than the truth about itself.
@@ -878,10 +1016,31 @@ class _Faults:
             state['corrupted'] = True
             filepath.write_bytes(b'not an archive' * 64)
 
-            return DeltaExport(filepath=filepath, uuids=export.uuids, instant=export.instant)
+            return DeltaExport(filepath=filepath, uuids=export.uuids, instant=export.instant, computed=export.computed)
 
         self._monkeypatch.setattr(collab_sync, 'export_delta', corrupting)
         self._monkeypatch.setattr(collab_endpoint, 'export_delta', corrupting)
+
+
+def _seal_calculation(backend, inputs: str) -> None:
+    """Store and seal a calculation consuming an existing node, in a storage handle whose profile is not loaded."""
+    source = orm.QueryBuilder(backend=backend).append(orm.Node, filters={'uuid': inputs}).one()[0]
+    calculation = orm.CalcJobNode(backend=backend)
+    calculation.base.links.add_incoming(source, link_type=LinkType.INPUT_CALC, link_label='term')
+    calculation.store()
+
+    created = orm.Int(3, backend=backend)
+    created.base.links.add_incoming(calculation, link_type=LinkType.CREATE, link_label='result')
+    created.store()
+    calculation.seal()
+
+
+def _delete_node(backend, uuid: str) -> None:
+    """Delete a node in a storage handle whose profile is not loaded, through the real deletion path."""
+    from aiida.tools.graph.deletions import delete_nodes
+
+    pk = orm.QueryBuilder(backend=backend).append(orm.Node, filters={'uuid': uuid}, project='id').one()[0]
+    delete_nodes([pk], backend=backend, dry_run=False)
 
 
 @pytest.fixture

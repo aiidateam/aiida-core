@@ -82,6 +82,30 @@ def test_join_code_rejects_a_policy_it_cannot_honour(policy):
         JoinCode.decode(code.rstrip('='))
 
 
+def test_join_code_rejects_a_missing_identity():
+    """Test that a code whose collab, address or token is null or empty is refused at the boundary.
+
+    Such a code decodes cleanly as JSON, so without this it fails at the first contact — which is after the
+    profile it governs was created, leaving a half-made one behind and a retry that cannot reuse its name. That
+    is the same failure the policy check above prevents, and it has to be prevented in the same place.
+    """
+    import base64
+    import json
+
+    # One field null, because one `any(...)` over the three decides them together: a second case could only
+    # re-run the same rule against a different key.
+    payload = {
+        'collab': 'uuid-of-the-collab',
+        'url': None,
+        'token': 'the-token',
+        'policy': {'extras_mode': 'sync', 'groups_mode': 'grow'},
+    }
+    code = base64.urlsafe_b64encode(json.dumps(payload).encode('utf-8')).decode('ascii')
+
+    with pytest.raises(ValueError, match='not a valid join code'):
+        JoinCode.decode(code.rstrip('='))
+
+
 def test_merge_adds_an_unknown_peer():
     """Test that a gossiped peer this profile does not know is added under its own announced name, and reported."""
     merged, reports = merge_roster({}, [entry()], OWN)
@@ -154,6 +178,19 @@ def test_merge_skips_a_malformed_entry():
 
     assert list(merged) == ['ok']
     assert merged['ok']['nickname'] == 'ok', 'a nameless entry falls back to its UUID'
+    assert len(reports) == 1
+
+
+def test_merge_skips_an_entry_that_is_not_a_mapping():
+    """Test that a roster carrying something that is not an entry at all merges the rest instead of raising.
+
+    A string or a number in that list is not a shape any peer of this version sends, which is exactly why it has
+    to be survivable: what sent it is a peer running something else, and the merge happens after the delta has
+    already been imported. An ``AttributeError`` there would abort the pull that just landed.
+    """
+    merged, reports = merge_roster({}, ['garbage', entry()], OWN)
+
+    assert list(merged) == ['uuid-of-alice']
     assert len(reports) == 1
 
 

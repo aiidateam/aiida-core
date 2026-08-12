@@ -9,13 +9,14 @@
 """Tests for the local state of a collab."""
 
 import threading
+from datetime import timedelta
 
 import pytest
 
 from aiida import get_profile
 from aiida.common import timezone
 from aiida.manage.configuration.settings import AiiDAConfigPathResolver
-from aiida.tools.collab.state import CollabEvent, CollabState, import_lock, import_lock_held
+from aiida.tools.collab.state import CollabEvent, CollabState, exclusive_lock, import_lock, import_lock_held
 
 PEER = 'http://100.64.0.2:9137'
 
@@ -52,7 +53,10 @@ def test_save_load():
 
 def test_imported_uuids_since(tmp_path):
     """Test that the imported UUIDs are those of pull events at or after the instant, from any peer."""
-    early, late = timezone.now(), timezone.now()
+    # Built apart rather than taken twice, since a coarse clock returns one instant for both and the `>=` filter
+    # then answers with the early event too, passing the assertion below for the wrong reason.
+    early = timezone.now()
+    late = early + timedelta(seconds=1)
     state = CollabState(
         filepath=tmp_path / 'state.json',
         events=[
@@ -73,8 +77,6 @@ def test_compaction(tmp_path, monkeypatch):
     unchanged; one bounded inside the folded range may see more than it strictly should (over-delivery, dropped by
     the manifest diff and the mtime comparison), but never less.
     """
-    from datetime import timedelta
-
     from aiida.tools.collab import state as state_module
 
     monkeypatch.setattr(state_module, 'COMPACT_THRESHOLD', 4)
@@ -107,6 +109,51 @@ def test_compaction(tmp_path, monkeypatch):
     # folding one synthetic event per direction produces.
     loaded.save()
     assert len(CollabState.read(tmp_path / 'state.json').events) == 5
+
+
+def test_a_lock_that_cannot_be_taken_raises_in_either_mode(tmp_path, monkeypatch):
+    """Test that a filesystem without locking raises, rather than being reported as a lock somebody else holds.
+
+    Both modes have to say so, for different reasons. The blocking callers — the state file, the configuration,
+    the imports — spell this ``with exclusive_lock(p):`` and never read what it yields, so a failure they are not
+    told about is a write that believes it holds a lock it does not. The non-blocking caller does read it, but
+    ``False`` means "somebody is syncing": answering that here refuses every sync of the profile forever, and it
+    is the first lock either command takes, so nothing louder follows to correct the diagnosis.
+    """
+    import errno
+    import fcntl
+
+    def refuse(handle, operation):
+        raise OSError(errno.ENOLCK, 'no locks available')
+
+    monkeypatch.setattr(fcntl, 'flock', refuse)
+    lockpath = tmp_path / 'guarded.lock'
+
+    for blocking in (True, False):
+        with pytest.raises(OSError):
+            with exclusive_lock(lockpath, blocking=blocking):
+                pytest.fail('the body must not run when the lock could not be taken')
+
+
+def test_two_probes_do_not_report_each_other(tmp_path):
+    """Test that asking whether an import is running does not itself look like one to a second asker.
+
+    The probe is a question, so it takes the lock in the shared mode that answers one. Asking for the exclusive
+    mode instead would make two peers handshaking at the same moment report each other as a running import —
+    both told busy while the profile is idle, which is precisely the moment the busy answer is supposed to
+    distinguish from. The concurrent probe is a second descriptor here rather than a thread: ``flock`` contends
+    per open file, so this is the same contention with none of the race.
+    """
+    import fcntl
+
+    filepath = tmp_path / 'state.json'
+    lockpath = filepath.with_name(f'{filepath.name}.import.lock')
+    lockpath.touch()
+
+    with lockpath.open('w') as concurrent_probe:
+        fcntl.flock(concurrent_probe, fcntl.LOCK_SH)
+
+        assert not import_lock_held(filepath)
 
 
 def test_import_lock(tmp_path):

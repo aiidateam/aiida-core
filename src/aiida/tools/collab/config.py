@@ -223,7 +223,7 @@ def unique_nickname(peers: dict[str, dict[str, Any]], name: str) -> str:
 
 
 def merge_roster(
-    peers: dict[str, dict[str, Any]], entries: list[dict[str, Any]], own_uuid: str
+    peers: dict[str, dict[str, Any]], entries: list[Any], own_uuid: str
 ) -> tuple[dict[str, dict[str, Any]], list[str]]:
     """Merge gossiped roster entries into the peers of this profile.
 
@@ -235,7 +235,8 @@ def merge_roster(
     after a rotation is found by its profile UUID and resumes at the cursor its dormant entry kept.
 
     :param peers: the roster of this profile, keyed by profile UUID.
-    :param entries: what a peer gossiped: its own entry **first**, as ``roster_entries`` builds it, and the ones
+    :param entries: what a peer gossiped, of whatever shape it sent — this is wire data, hence the loose type:
+        its own entry **first**, as ``roster_entries`` builds it, and the ones
         it knows after it. That first entry is the only one this contact is direct evidence about; the rest are
         hearsay, which is enough to vouch for a member but not to speak for one.
     :param own_uuid: the profile UUID of this profile, whose entry the peers gossip back and which only this
@@ -244,9 +245,15 @@ def merge_roster(
     """
     merged = {uuid: dict(entry) for uuid, entry in peers.items()}
     reports = []
-    contact = entries[0].get('uuid') if entries else None
+    contact = entries[0].get('uuid') if entries and isinstance(entries[0], dict) else None
 
     for gossiped in entries:
+        # An entry that is not even a mapping is skipped like an incomplete one. It arrives from whatever a peer
+        # is running, and raising here would abort a pull that has already imported — the one place the design's
+        # own rule for wire data, "malformed, so skip silently", must not be broken.
+        if not isinstance(gossiped, dict):
+            continue
+
         uuid, url, stamp, name = gossiped.get('uuid'), gossiped.get('url'), gossiped.get('stamp'), gossiped.get('name')
 
         # Typed as strictly as the entry is used, since a peer running anything is what hands these over: an
@@ -296,9 +303,11 @@ def merge_roster(
         if uuid == contact:
             # The signal says "the key we share is retired", and this profile hearing from its sender under the
             # current key is what falsifies it — a rotator that rekeyed onto somebody else's code instead would
-            # otherwise leave its peers told forever to rekey onto a code that no longer exists. Only the sender
-            # can retract it: were a relayed entry to clear the flag, any third party's gossip would erase a
-            # warning it knows nothing about, and nothing would ever restore it.
+            # otherwise leave its peers told forever to rekey onto a code that no longer exists. Restricted to
+            # the entry the contact speaks for, so that a *relayed* entry cannot clear the flag: third-party
+            # gossip would otherwise erase a warning it knows nothing about, and nothing would restore it. Which
+            # entry that is comes from the contact's own first entry and is not verified, so this orders honest
+            # gossip rather than preventing a member from retracting another's signal.
             entry['signalled'] = False
 
         merged[uuid] = entry

@@ -15,6 +15,7 @@ invocation.
 
 from __future__ import annotations
 
+import errno
 import json
 import os
 import sys
@@ -39,24 +40,50 @@ COMPACTED_PEER = '(compacted)'
 
 
 @contextmanager
-def exclusive_lock(lockpath: Path) -> Iterator[None]:
+def exclusive_lock(lockpath: Path, *, blocking: bool = True) -> Iterator[bool]:
     """Hold the exclusive advisory lock kept at ``lockpath``, waiting for it if another holder has it.
 
     The one lock of the collab, taken by everything that has a second writer: the state file, the configuration
-    file and the imports. It always lives on a sidecar rather than on what it guards — the state and the
-    configuration are replaced rather than written in place, and an import guards no single file at all.
+    file, the imports and one sync command per profile. It always lives on a sidecar rather than on what it
+    guards — the state and the configuration are replaced rather than written in place, and neither an import nor
+    a sync guards a single file at all.
+
+    :param blocking: wait for whoever holds it. Passed ``False`` the body is entered either way and told which it
+        was, which is what lets a caller refuse rather than queue behind a transfer that may run for hours.
+    :returns: whether the lock is held, which only a non-blocking caller has any reason to look at.
     """
     lockpath.parent.mkdir(parents=True, exist_ok=True)
 
     with lockpath.open('w') as handle:
         # On Windows there is no ``fcntl``, so writers there stay unguarded, as all writers are on any platform
         # before the daemon serves the collab endpoint and becomes the second one.
-        if sys.platform != 'win32':
-            import fcntl
+        if sys.platform == 'win32':
+            yield True
+            return
 
+        import fcntl
+
+        if blocking:
+            # Unguarded, as it was before there was a second mode: a blocking acquisition fails only when the
+            # lock cannot be taken at all — no locking on the filesystem, a bad descriptor — and a caller that
+            # never looks at what is yielded would then write where it believes it holds the lock. Those callers
+            # guard the state file, the configuration and the imports, so the error has to keep propagating.
             fcntl.flock(handle, fcntl.LOCK_EX)
+            yield True
+            return
 
-        yield
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exception:
+            # Only "somebody holds it" answers `False`. A filesystem with no locking raises here too, and this is
+            # the first lock a sync command takes, so swallowing that would wedge it behind a peer that is not there.
+            if exception.errno not in (errno.EAGAIN, errno.EWOULDBLOCK):
+                raise
+
+            yield False
+            return
+
+        yield True
 
 
 @dataclass
@@ -346,7 +373,10 @@ def import_lock_held(filepath: Path) -> bool:
 
     with lockpath.open('w') as handle:
         try:
-            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            # A shared lock, because this only ever asks a question: two probes running at once would report each
+            # other as a running import were they to ask for an exclusive one, which is the very moment the busy
+            # answer exists for.
+            fcntl.flock(handle, fcntl.LOCK_SH | fcntl.LOCK_NB)
         except OSError:
             return True
 

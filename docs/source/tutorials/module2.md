@@ -407,7 +407,7 @@ That counts by node *type*. You can just as well filter by a stored **attribute*
 # Filter input Dict nodes by a stored parameter value.
 qb = orm.QueryBuilder().append(
     orm.Dict,
-    filters=orm.Dict.fields.attributes['F'] == 0.046,
+    filters=orm.Dict.fields.attributes['F'] == 0.045,
     project=['pk', 'attributes.F'],
 )
 pk, f_value = qb.first()
